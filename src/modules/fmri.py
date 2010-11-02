@@ -112,7 +112,7 @@ class PkgFmri(object):
         # Stored in a class variable so that subclasses can override
         valid_pkg_name = g_valid_pkg_name
 
-        __slots__ = ["version", "publisher", "pkg_name", "_hash"]
+        __slots__ = ["version", "publisher", "pkg_name"]
 
         def __init__(self, fmri, build_release = None, publisher = None):
                 """XXX pkg:/?pkg_name@version not presently supported."""
@@ -131,10 +131,9 @@ class PkgFmri(object):
                 else:
                         self.version = veridx = None
 
+                self.publisher = publisher
                 if fmri.startswith("pkg://"):
-                        self.publisher = intern(fmri[6:nameidx - 1])
-                else:
-                        self.publisher = publisher and intern(publisher)
+                        self.publisher = fmri[6:nameidx - 1]
 
                 if veridx != None:
                         self.pkg_name = fmri[nameidx:veridx]
@@ -148,8 +147,6 @@ class PkgFmri(object):
                 if not self.valid_pkg_name.match(self.pkg_name):
                         raise IllegalFmri(fmri, IllegalFmri.BAD_PACKAGENAME,
                             detail=self.pkg_name)
-
-                self._hash = None
 
         def copy(self):
                 return PkgFmri(str(self))
@@ -198,9 +195,9 @@ class PkgFmri(object):
                 publisher, set preferred to True."""
 
                 if preferred and not publisher.startswith(PREF_PUB_PFX):
-                        self.publisher = intern("%s_%s" % (PREF_PUB_PFX, publisher))
+                        self.publisher = "%s_%s" % (PREF_PUB_PFX, publisher)
                 else:
-                        self.publisher = publisher and intern(publisher)
+                        self.publisher = publisher
 
         def remove_publisher(self):
                 self.publisher = None
@@ -243,11 +240,9 @@ class PkgFmri(object):
 
         def set_name(self, name):
                 self.pkg_name = name
-                self._hash = None
 
         def set_timestamp(self, new_ts):
-                self.version = self.version.with_timestamp(new_ts)
-                self._hash = None
+                self.version.set_timestamp(new_ts)
 
         def get_timestamp(self):
                 return self.version.get_timestamp()
@@ -348,43 +343,18 @@ class PkgFmri(object):
                 # __hash__ need not generate a unique hash value for all
                 # possible objects-- it must simply guarantee that two
                 # items which are equal (i.e. cmp(a,b) == 0) always hash to
-                # the same value.
+                # the same value.  When timestamps are available we use
+                # those, as a short and fairly unique string.  If not,
+                # we punt to the package name, the fastest-to-hash thing
+                # we have at our disposal.
                 #
-                h = self._hash
-                if h is None:
-                        h = self._hash = hash(self.version) + hash(self.pkg_name)
-                return h
-
-        def __eq__(self, other):
-                if other is None:
-                        return False
-                if not isinstance(other, PkgFmri):
-                        return False
-                # Shortcut
-                if hash(self) != hash(other):
-                        return False
-                if self.pkg_name != other.pkg_name:
-                        return False
-                if self.publisher != self.publisher:
-                        return False
-                return self.version == other.version
-
-        def __ne__(self, other):
-                if other is None:
-                        return True
-                if not isinstance(other, PkgFmri):
-                        return True
-                # Shortcut
-                if hash(self) != hash(other):
-                        return True
-                if self.pkg_name != other.pkg_name:
-                        return True
-                if self.publisher != self.publisher:
-                        return True
-                return self.version != other.version
+                if self.version and self.version.timestr:
+                        return hash(self.version.timestr)
+                else:
+                        return hash(self.pkg_name)
 
         def __cmp__(self, other):
-                if other is None:
+                if not other:
                         return 1
 
                 if not isinstance(other, PkgFmri):

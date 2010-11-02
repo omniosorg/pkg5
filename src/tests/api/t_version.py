@@ -346,10 +346,8 @@ class TestVersion(pkg5unittest.Pkg5TestCase):
                 d = datetime.datetime.utcnow()
                 # 'd' includes microseconds, so we trim those off.
                 d = d.replace(microsecond=0)
-                v1b = self.v1.with_timestamp(d)
-                self.assert_(self.v1.get_timestamp() != d)
-                self.assert_(v1b.get_timestamp() == d)
-                self.assert_(str(v1b).startswith("5.5.1,5.5.1-10:"))
+                self.v1.set_timestamp(d)
+                self.assert_(self.v1.get_timestamp() == d)
 
 if __name__ == "__main__":
         unittest.main()
