@@ -53,17 +53,22 @@ class VersionError(Exception):
 class IllegalDotSequence(VersionError):
         """Used to indicate that the specified DotSequence is not valid."""
 
-class DotSequence(list):
+class DotSequence(tuple):
         """A DotSequence is the typical "x.y.z" string used in software
         versioning.  We define the "major release" value and the "minor release"
         value as the first two numbers in the sequence."""
+        __slots__ = ()
 
         #
         # We employ the Flyweight design pattern for dotsequences, since they
         # are used immutably, are highly repetitive (0.5.11 over and over) and,
         # for what they contain, are relatively expensive memory-wise.
+        # The pool keeps at most __POOL_SIZE allocated DotSequence objects
+        # (we avoid weakref dicts because they are slower and bigger, and item
+        #  lookup is on the critical path)
         #
-        __dotseq_pool = weakref.WeakValueDictionary()
+        __pool = dict()
+        __POOL_SIZE = 200000
 
         @staticmethod
         def dotsequence_val(elem):
@@ -76,48 +81,36 @@ class DotSequence(list):
                         raise ValueError, "Zero padded number"
                 return x
 
-        def __new__(cls, dotstring):
-                ds = DotSequence.__dotseq_pool.get(dotstring, None)
+        def __new__(cls, dotstring, _get=__pool.get):
+                ds = _get(dotstring)
                 if ds is not None:
                         return ds
 
-                ds = list.__new__(cls)
-                cls.__dotseq_pool[dotstring] = ds
-                return ds
-
-        def __init__(self, dotstring):
-                # Was I already initialized?  See __new__ above.
-                if len(self) != 0:
-                        return
-
                 try:
-                        list.__init__(self,
-                            map(DotSequence.dotsequence_val,
-                                dotstring.split(".")))
+                        ds = tuple.__new__(cls, [cls.dotsequence_val(x)
+                                                 for x in dotstring.split(".")])
                 except ValueError:
                         raise IllegalDotSequence(dotstring)
 
-                if len(self) == 0:
+                if len(ds) == 0:
                         raise IllegalDotSequence("Empty DotSequence")
+
+                pool = cls.__pool
+                if len(pool) > cls.__POOL_SIZE:
+                    pool.clear()
+                pool[dotstring] = ds
+                return ds
 
         def __str__(self):
                 return ".".join(map(str, self))
-
-        def __hash__(self):
-                return hash(tuple(self))
 
         def is_subsequence(self, other):
                 """Return true if self is a "subsequence" of other, meaning that
                 other and self have identical components, up to the length of
                 self's sequence."""
-
-                if len(self) > len(other):
-                        return False
-
-                for a, b in zip(self, other):
-                        if a != b:
-                                return False
-                return True
+                ls = len(self)
+                lo = len(other)
+                return lo >= ls and other[:ls] == self
 
         def is_same_major(self, other):
                 """ Test if DotSequences have the same major number """
@@ -141,16 +134,17 @@ class MatchingDotSequence(DotSequence):
 
                 return DotSequence.dotsequence_val(elem)
 
-        def __init__(self, dotstring):
+        def __new__(cls, dotstring):
                 try:
-                        list.__init__(self,
-                            map(self.dotsequence_val,
+                        self = tuple.__new__(cls,
+                            map(cls.dotsequence_val,
                                 dotstring.split(".")))
                 except ValueError:
                         raise IllegalDotSequence(dotstring)
 
                 if len(self) == 0:
                         raise IllegalDotSequence("Empty MatchingDotSequence")
+                return self
 
         def __ne__(self, other):
                 if not isinstance(other, DotSequence):
@@ -235,9 +229,28 @@ class Version(object):
         b1 < b2, a b1 package can be run on either b1 or b2 systems,while a b2
         package can only be run on a b2 system."""
 
-        __slots__ = ["release", "branch", "build_release", "timestr"]
+        __slots__ = ["release", "branch", "build_release", "timestr", "_hash"]
 
-        def __init__(self, version_string, build_string):
+        # Allocation pool for reuse of identical Version objects.  This forces
+        # them to be immutable!
+        __pool = dict()
+        __POOL_SIZE = 10000
+
+        def __new__(cls, version_string, build_string, _pool=__pool):
+                if cls is Version:
+                        pool_key = version_string, build_string
+                        self = _pool.get(pool_key)
+                        if self is not None:
+                                return self
+                self = object.__new__(cls)
+                self._parse_items(version_string, build_string)
+                if len(_pool) > self.__POOL_SIZE:
+                        _pool.clear()
+                self._hash = None
+                _pool[pool_key] = self
+                return self
+
+        def _parse_items(self, version_string, build_string):
                 # XXX If illegally formatted, raise exception.
 
                 if not version_string:
@@ -252,30 +265,21 @@ class Version(object):
                 #
 
                 # Locate and extract the time string, if specified.
-                timeidx = version_string.find(":")
-                if timeidx != -1:
-                        timestr = version_string[timeidx + 1:]
-                else:
-                        timeidx = None
+                remaining, sep, timestr = version_string.partition(':')
+                if not sep:
                         timestr = None
 
                 # Locate and extract the branch string, if specified.
-                branchidx = version_string.find("-")
-                if branchidx != -1:
-                        branch = version_string[branchidx + 1:timeidx]
-                else:
-                        branchidx = timeidx
+                remaining, sep, branch = remaining.partition('-')
+                if not sep:
                         branch = None
 
                 # Locate and extract the build string, if specified.
-                buildidx = version_string.find(",")
-                if buildidx != -1:
-                        build = version_string[buildidx + 1:branchidx]
-                else:
-                        buildidx = branchidx
+                remaining, sep, build = remaining.partition(',')
+                if not sep:
                         build = None
 
-                if buildidx == 0:
+                if not remaining:
                         raise IllegalVersion, \
                             "Versions must have a release value"
 
@@ -284,7 +288,7 @@ class Version(object):
                 # begins here.
                 #
                 try:
-                        self.release = DotSequence(version_string[:buildidx])
+                        self.release = DotSequence(remaining)
 
                         if branch is not None:
                                 self.branch = DotSequence(branch)
@@ -352,13 +356,20 @@ class Version(object):
         def get_short_version(self):
                 branch_str = ""
                 if self.branch is not None:
-                        branch_str = "-%s" % self.branch
+                        branch_str = "-%s" % (self.branch,)
                 return "%s%s" % (self.release, branch_str)
 
-        def set_timestamp(self, timestamp=datetime.datetime.utcnow()):
+        def with_timestamp(self, timestamp=datetime.datetime.utcnow()):
                 assert type(timestamp) == datetime.datetime
                 assert timestamp.tzname() == None or timestamp.tzname() == "UTC"
-                self.timestr = timestamp.strftime("%Y%m%dT%H%M%SZ")
+                timestr = timestamp.strftime("%Y%m%dT%H%M%SZ")
+                obj = object.__new__(Version)
+                obj.release = self.release
+                obj.branch = self.branch
+                obj.build_release = self.build_release
+                obj.timestr = timestr
+                obj._hash = None
+                return obj
 
         def get_timestamp(self):
                 if not self.timestr:
@@ -396,14 +407,18 @@ class Version(object):
                 if not isinstance(other, Version):
                         return False
 
-                if self.release < other.release:
+                release = self.release
+                other_release = other.release
+                if release < other_release:
                         return True
-                if self.release != other.release:
+                if release != other_release:
                         return False
 
-                if self.branch < other.branch:
+                branch = self.branch
+                other_branch = other.branch
+                if branch < other_branch:
                         return True
-                if self.branch != other.branch:
+                if branch != other_branch:
                         return False
 
                 return self.timestr < other.timestr
@@ -418,14 +433,18 @@ class Version(object):
                 if not isinstance(other, Version):
                         return True
 
-                if self.release > other.release:
+                release = self.release
+                other_release = other.release
+                if release > other_release:
                         return True
-                if self.release != other.release:
+                if release != other_release:
                         return False
 
-                if self.branch > other.branch:
+                branch = self.branch
+                other_branch = other.branch
+                if branch > other_branch:
                         return True
-                if self.branch != other.branch:
+                if branch != other_branch:
                         return False
 
                 return self.timestr > other.timestr
@@ -433,12 +452,14 @@ class Version(object):
         def __cmp__(self, other):
                 if self < other:
                         return -1
-                if self > other:
+                if self != other:
                         return 1
 
-                if self.build_release < other.build_release:
+                build_release = self.build_release
+                other_build_release = other.build_release
+                if build_release < other_build_release:
                         return -1
-                if self.build_release > other.build_release:
+                if build_release != other_build_release:
                         return 1
                 return 0
 
@@ -446,10 +467,14 @@ class Version(object):
                 # If a timestamp is present, it's enough to hash on, and is
                 # nicely unique.  If not, use release and branch, which are
                 # not very unique.
-                if self.timestr:
-                        return hash(self.timestr)
-                else:
-                        return hash((self.release, self.branch))
+                h = self._hash
+                if h is None:
+                        if self.timestr:
+                                h = hash(self.timestr)
+                        else:
+                                h = hash((self.release, self.branch))
+                        self._hash = h
+                return h
 
         def is_successor(self, other, constraint):
                 """Evaluate true if self is a successor version to other.
@@ -593,7 +618,9 @@ class MatchingVersion(Version):
         """An alternative for Version with (much) weaker rules about its format.
         This is intended to accept user input with globbing characters."""
 
-        def __init__(self, version_string, build_string):
+        def __new__(cls, version_string, build_string):
+                self = object.__new__(cls)
+
                 # XXX If illegally formatted, raise exception.
 
                 if version_string is None or not len(version_string):
@@ -657,6 +684,7 @@ class MatchingVersion(Version):
                 # Store the re-constructed input value for use as a string
                 # representation of this object.
                 self.__original = outstr
+                return self
 
         def __str__(self):
                 return self.__original
