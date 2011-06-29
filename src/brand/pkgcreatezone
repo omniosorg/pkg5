@@ -296,6 +296,10 @@ if (( $brand_labeled == 1 )); then
 	done
 fi
 
+# Create /system/volatile link pointing at /var/tmp so zoneproxyd can
+# create a door there.
+[ -h $ZONEROOT/system/volatile ] || ln -s ../var/tmp $ZONEROOT/system/volatile
+
 printf "$m_complete\n\n" ${SECONDS}
 if (( $brand_labeled == 0 )); then
 	printf "$m_postnote\n"
