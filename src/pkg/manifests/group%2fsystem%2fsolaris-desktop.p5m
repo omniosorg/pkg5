@@ -492,9 +492,8 @@ depend fmri=release/notices type=group
 depend fmri=release/os-welcome type=group
 depend fmri=release/registration type=group
 depend fmri=runtime/java type=group
-depend fmri=runtime/perl-584 type=group
-depend fmri=runtime/perl-584/extra type=group
-depend fmri=runtime/perl-584/manual type=group
+depend fmri=runtime/perl-510 type=group
+depend fmri=runtime/perl-510/extra type=group
 depend fmri=runtime/python-26 type=group
 depend fmri=runtime/tcl-8 type=group
 depend fmri=runtime/tk-8 type=group

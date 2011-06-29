@@ -38,10 +38,10 @@ depend fmri=compress/unzip type=group
 depend fmri=compress/zip type=group
 depend fmri=developer/dtrace type=group
 depend fmri=developer/linker type=group
-depend fmri=editor/vim/vim-core type=group
+depend fmri=editor/vim type=group
 depend fmri=naming/ldap type=group
 depend fmri=network/dns/bind type=group
-depend fmri=network/ping type=group
+depend fmri=network/ftp type=group
 depend fmri=network/ssh type=group
 depend fmri=network/ssh/ssh-key type=group
 depend fmri=package/pkg type=group
@@ -55,7 +55,6 @@ depend fmri=system/extended-system-utilities type=group
 depend fmri=system/file-system/autofs type=group
 depend fmri=system/file-system/nfs type=group
 depend fmri=system/install type=group
-depend fmri=system/install/configuration type=group
 depend fmri=system/library/install type=group
 depend fmri=system/management/sysidtool type=group
 depend fmri=system/network type=group

@@ -226,8 +226,8 @@ depend fmri=package/pkg type=group
 depend fmri=package/svr4 type=group
 depend fmri=release/name type=group
 depend fmri=release/notices type=group
-depend fmri=runtime/perl-584 type=group
-depend fmri=runtime/perl-584/extra type=group
+depend fmri=runtime/perl-510 type=group
+depend fmri=runtime/perl-510/extra type=group
 depend fmri=runtime/python-26 type=group
 depend fmri=runtime/tcl-8 type=group
 depend fmri=runtime/tk-8 type=group

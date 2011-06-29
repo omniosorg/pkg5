@@ -36,7 +36,7 @@ depend fmri=pkg:/developer/versioning/mercurial type=require
 depend fmri=pkg:/gnome/accessibility/gnome-a11y-libs type=require
 depend fmri=pkg:/library/python-2/setuptools-26 type=require
 depend fmri=pkg:/package/svr4 type=require
-depend fmri=pkg:/runtime/perl-584/extra type=require
+depend fmri=pkg:/runtime/perl-510/extra type=require
 depend fmri=pkg:/system/zones/internal type=require
 depend fmri=pkg:/text/tidy type=require
 depend fmri=pkg:/web/server/apache-22 type=require
