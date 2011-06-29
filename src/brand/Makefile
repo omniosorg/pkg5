@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright (c) 2007, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
 MACH:sh = uname -p
@@ -58,7 +58,6 @@ ROOTBINS = \
 	$(ROOTBRANDPKG)/poststate \
 	$(ROOTBRANDPKG)/prestate \
 	$(ROOTBRANDPKG)/support \
-	$(ROOTBRANDPKG)/sysboot \
 	$(ROOTBRANDPKG)/uninstall
 
 ROOTFILES = \

@@ -58,10 +58,10 @@ m_done=$(gettext      " done.")
 
 trap_cleanup() {
 	print "$f_interrupted"
-	exit $EXIT_CODE
+	exit $int_code
 }
 
-EXIT_CODE=$ZONE_SUBPROC_NOTCOMPLETE
+int_code=$ZONE_SUBPROC_NOTCOMPLETE
 trap trap_cleanup INT
 
 extra_packages=""
@@ -109,12 +109,16 @@ if [[ -z $ZONEPATH || -z $ZONENAME ]]; then
 	print -u2 "Brand error: No zone path or name"
 	exit $ZONE_SUBPROC_USAGE
 fi
-zone=
-init_zone zone "$ZONENAME" "$ZONEPATH"
-eval $(bind_legacy_zone_globals zone)
+
+# XXX shared/common script currently uses lower case zonename & zonepath
+zonename="$ZONENAME"
+zonepath="$ZONEPATH"
 
 is_brand_labeled
 brand_labeled=$?
+
+ZONEROOT=$ZONEPATH/root
+secinfo=""
 
 # An image install can't use both -a AND -d...
 [[ -n "$install_archive" && -n "$source_dir" ]] &&
@@ -153,8 +157,7 @@ entire_fmri=$(get_entire_incorp)
 # Before installing the zone, set up ZFS dataset hierarchy for the zone root
 # dataset.
 #
-create_active_ds zone || fail_fatal "$f_no_ds"
-mount_active_be -c zone || fail_fatal "$f_no_ds"
+create_active_ds
 
 #
 # If we're installing from an image, branch off to that installer.

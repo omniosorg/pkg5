@@ -18,10 +18,9 @@
 # information: Portions Copyright [yyyy] [name of copyright owner]
 #
 # CDDL HEADER END
-#
 
 #
-# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
 . /usr/lib/brand/ipkg/common.ksh
@@ -48,15 +47,10 @@ state=$3
 cmd=$4
 ALTROOT=$5
 
-typeset zone
-init_zone zone "$ZONENAME" "$ZONEPATH"
-eval $(bind_legacy_zone_globals zone)
-
 # If we're not readying the zone, then just return.
-case $cmd in
-	0)
-		mount_active_be zone || exit $ZONE_SUBPROC_NOTCOMPLETE
-		;;
-esac
+if [ $cmd -eq 0 ]; then
+	# Mount active dataset on the root.
+	mount_active_ds
+fi
 
 exit $ZONE_SUBPROC_OK

@@ -28,13 +28,9 @@
 # zone, so care should be taken to validate any modifications so that they
 # are safe.
 
-#
-# Only change PATH if you give full consideration to GNU or other variants
-# of common commands having different arguments and output.  Setting PATH is
-# and not using the full path to executables provides a performance improvement
-# by using the ksh builtin equivalent of many common commands.
-#
-export PATH=/usr/bin:/usr/sbin
+# Restrict executables to /usr/bin and /usr/sbin
+PATH=/usr/bin:/usr/sbin
+export PATH
 unset LD_LIBRARY_PATH
 
 . /usr/lib/brand/ipkg/common.ksh
@@ -355,8 +351,10 @@ shift OPTIND-1
 (( $# != 2 )) && exit 1
 
 [[ -n $LOGFILE ]] && exec 2>>$LOGFILE
-init_zone zone "$1" "$2"
-eval $(bind_legacy_zone_globals zone)
+
+ZONENAME=$1
+ZONEPATH=$2
+ZONEROOT=$ZONEPATH/root
 
 e_badinfo=$(gettext "Failed to get '%s' zone resource")
 e_badfile=$(gettext "Invalid '%s' file within the zone")
@@ -468,7 +466,7 @@ brand_labeled=$?
 if (( $brand_labeled == 1 )); then
 	# The labeled brand needs to mount the zone's root dataset back onto
 	# ZONEROOT so we can finish processing.
-	mount_active_be zone
+	mount_active_ds
 fi
 
 #
@@ -504,7 +502,7 @@ log "$v_updatedone"
 
 [[ -n $OPT_U ]] && unconfigure_zone
 
-(( $brand_labeled == 1 )) && mount_active_be zone
+(( $brand_labeled == 1 )) && mount_active_ds
 
 trap - EXIT
 vlog "$v_exitgood"
