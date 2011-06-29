@@ -1203,16 +1203,24 @@ static void
 fattach_all_zones(boolean_t detach_only)
 {
 	zoneid_t *zids;
-	uint_t nzids;
+	uint_t nzids, nzids_last;
 	int i;
 
-	if (zone_get_zoneids(&zids, &nzids) != 0) {
-		(void) fprintf(stderr, "Could not get list of zones");
-		return;
-	}
+again:
+	(void) zone_list(NULL, &nzids);
+	nzids_last = nzids;
+	zids = (zoneid_t *)malloc(sizeof (zoneid_t) * nzids_last);
+	if (zids == NULL)
+		(void) fprintf(stderr, "Out of memory");
 
+	(void) zone_list(zids, &nzids);
+	if (nzids > nzids_last) {
+		free(zids);
+		goto again;
+    }
 	for (i = 0; i < nzids; i++)
 		zpd_fattach_zone(zids[i], g_door, detach_only);
+
 	free(zids);
 }
 
