@@ -25,6 +25,8 @@ set name=pkg.fmri value=pkg:/package/pkg@$(PKGVERS)
 set name=pkg.summary value="Image Packaging System"
 set name=pkg.description \
     value="The Image Packaging System (IPS), or pkg(5), is the software delivery system used on OpenSolaris systems.  This package contains the core command-line components and depot server."
+set name=com.oracle.service.bugid value=7104872 \
+    last-fmri=package/pkg@0.5.11,5.11-0.175.0.0.0.2.2576:20111020T063649Z
 
 # XXX needed due to bug 18673
 set name=pkg.linted.pkglint.manifest003.1 value=true
