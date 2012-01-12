@@ -31,7 +31,7 @@ UPDATENUM         = 0
 SRUNUM            = 0
 PLATNUM           = 0
 BUILDID           = 0
-NIGHTLYID:sh      = hg parents --template '{rev}' || git rev-list --all | wc -l
+NIGHTLYID:sh      = hg parents --template '{rev}' || git rev-list --all | wc -l | sed s/\ //g
 CHANGESET.cmd     = hg id -i || git log --pretty=format:'%h' -1..
 CHANGESET         = $(CHANGESET.cmd:sh)
 CURBUILD.cmd      = \
