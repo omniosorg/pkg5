@@ -1156,7 +1156,7 @@ compile_args = None
 if osname in ("sunos", "linux", "darwin"):
         compile_args = [ "-O3" ]
 if osname == "sunos":
-        link_args = [ "-zstrip-class=nonalloc" ]
+        link_args = []
 else:
         link_args = []
 ext_modules = [
