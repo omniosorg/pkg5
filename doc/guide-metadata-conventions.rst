@@ -106,9 +106,9 @@ Common attributes
        A descriptive paragraph for the package.  Exact numerical version
        strings can be embedded in the paragraph.
 
-    pkg.detailed_url
+    pkg.detailed-url
        One or more URLs to pages or sites with further information about
-       the package. pkg.detailed_url:fr would be the URL to a page with
+       the package. pkg.detailed-url:fr would be the URL to a page with
        information in French.
 
     pkg.renamed
@@ -118,6 +118,14 @@ Common attributes
     pkg.obsolete
        A value of "true" indicates the package is obsolete and should be
        removed on upgrade.
+
+    pkg.human-version
+       For components whose upstream version isn't a dot-separated sequence
+       of nonnegative integers (OpenSSL's 0.9.8r, for example), this
+       attribute can be set to that string, and will be displayed when
+       appropriate.  It cannot be used in an FMRI to install a particular
+       version; package authors must still convert the version into a
+       sequence of integers.
 
     variant.*
        See facets.txt
@@ -170,7 +178,7 @@ info.maintainer
     package.  For an individual, this string is expected to be their
     name, or name and email.
 
-info.maintainer_url
+info.maintainer-url
     A URL associated with the entity providing the package.
 
 info.upstream
@@ -178,20 +186,20 @@ info.upstream
     software.  For an individual, this string is expected to be
     their name, or name and email.
 
-info.upstream_url
+info.upstream-url
     A URL associated with the entity that creates the 
     software delivered within the package.
 
-info.source_url
+info.source-url
     A URL to the source code bundle, if appropriate, for the package.
 
-info.repository_url
+info.repository-url
     A URL to the source code repository, if appropriate, for the
     package.
 
-info.repository_changeset
+info.repository-changeset
     A changeset ID for the version of the source code contained in
-    info.repository_url.
+    info.repository-url.
 
 Attributes common to all packages for an OS platform
 ````````````````````````````````````````````````````
@@ -203,9 +211,10 @@ Attributes common to all packages for an OS platform
 OpenSolaris attributes
 ^^^^^^^^^^^^^^^^^^^^^^
 
-    opensolaris.arc_url
-        One or more URLs associated with the ARC case or cases
-	associated with the component(s) delivered by the package.
+    org.opensolaris.arc-caseid
+        One or more case identifiers (e.g., PSARC/2008/190) associated with
+        the ARC case or cases associated with the component(s) delivered by
+        the package.
 
     org.opensolaris.smf.fmri
 	One or more FMRI's representing SMF services delivered by this
@@ -234,8 +243,8 @@ Organization specific attributes
     or to amend an existing package's metadata (in a repository that
     they have control over) must use an organization-specific prefix.
     For example, a service organization might introduce
-    ``service.example.com,support_level`` or
-    ``com.example.service,support_level`` to describe a level of support
+    ``service.example.com,support-level`` or
+    ``com.example.service,support-level`` to describe a level of support
     for a package and its contents.
 
 Attributes specific to certain types of actions

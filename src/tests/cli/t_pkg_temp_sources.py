@@ -514,7 +514,7 @@ Packaging Date: %(quux10_pkg_date)s
  Build Release: 5.11
         Branch: None
 Packaging Date: %(signed10_pkg_date)s
-          Size: 22.92 kB
+          Size: 7.79 kB
           FMRI: %(signed10_pkg_fmri)s
 """ % { "foo10_pkg_date": pd(self.foo10), "foo10_pkg_fmri": self.foo10,
     "incorp20_pkg_date": pd(self.incorp20), "incorp20_pkg_fmri": self.incorp20,
@@ -676,9 +676,37 @@ link path=usr/local/bin/soft-foo target=usr/bin/foo
                 """
 
                 #
+                # Create an image with no configured package sources, and
+                # verify that a package can be installed from a temporary
+                # source.
+                #
+                self.image_create(self.empty_rurl, prefix=None)
+                self.pkg("set-property signature-policy ignore")
+                self.pkg("list -a", exit=1)
+                self.pkg("install -g %s foo" % self.foo_arc)
+
+                #
+                # Create an image with a network-based source, then make that
+                # source unreachable and verify that a package can be installed
+                # from a temporary source.
+                #
+                self.dcs[4].start()
+                self.image_create(self.dcs[4].get_depot_url(), prefix=None)
+                self.dcs[4].stop()
+                self.pkg("set-property signature-policy ignore")
+                self.pkg("list -a")
+                # --no-refresh is required for now because -g combines temporary
+                # sources with configured soures and pkg(5) currently treats
+                # refresh failure as fatal.  See bug 18323.
+                self.pkg("install --no-refresh -g %s foo" % self.foo_arc)
+
+                #
                 # Create an image and verify no packages are known.
                 #
                 self.image_create(self.empty_rurl, prefix=None)
+                self.pkg("set-property signature-policy ignore")
+                self.pkg("set-publisher --set-property signature-policy=ignore "
+                    "test")
                 self.pkg("list -a", exit=1)
 
                 # Verify graceful failure if source doesn't exist.
@@ -789,7 +817,6 @@ test2
                 #
                 self.image_create(self.empty_rurl, prefix=None)
                 self.pkg("list -a", exit=1)
-                self.pkg("set-property flush-content-cache-on-sucess True")
 
                 # Install a package from an archive.
                 self.pkg("install -g %s foo" % self.foo_arc)

@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 import cStringIO
@@ -75,12 +75,17 @@ class TransportCfg(object):
                 self.pkg_pub_map = None
                 self.alt_pubs = None
 
-        def add_cache(self, path, pub=None, readonly=True):
+        def add_cache(self, path, layout=None, pub=None, readonly=True):
                 """Adds the directory specified by 'path' as a location to read
                 file data from, and optionally to store to for the specified
                 publisher. 'path' must be a directory created for use with the
                 pkg.file_manager module.  If the cache already exists for the
                 specified 'pub', its 'readonly' status will be updated.
+
+                'layout' is an optional FileManager layout object that indicates
+                how file content in the cache is structured.  If None, the
+                structure will automatically be determined at runtime for each
+                cache lookup request.
 
                 'pub' is an optional publisher prefix to restrict usage of this
                 cache to.  If not provided, it is assumed that file data for any
@@ -131,7 +136,8 @@ class TransportCfg(object):
                 else:
                         # Either no caches exist for this publisher, or this is
                         # a new cache.
-                        pub_caches.append(fm.FileManager(path, readonly))
+                        pub_caches.append(fm.FileManager(path, readonly,
+                            layouts=layout))
 
         def gen_publishers(self):
                 raise NotImplementedError
@@ -263,9 +269,29 @@ class TransportCfg(object):
                                                         # a different publisher,
                                                         # skip it.
                                                         continue
-                                                self.add_cache(rstore.file_root,
-                                                    pub=rstore.publisher,
-                                                    readonly=True)
+
+                                                # Only add caches if they
+                                                # physically exist at this
+                                                # point.  This avoids a storm of
+                                                # ENOENT errors that might occur
+                                                # during transfers for caches
+                                                # that will never exist on-disk.
+                                                # This is especially important
+                                                # for NFS-based repositories as
+                                                # they can significantly degrade
+                                                # transfer performance.  This
+                                                # should be ok as transport will
+                                                # attempt to retrieve any
+                                                # resources that might have been
+                                                # cached here instead and fail
+                                                # gracefully if necessary.
+                                                if os.path.exists(
+                                                    rstore.file_root):
+                                                        self.add_cache(
+                                                            rstore.file_root,
+                                                            layout=rstore.file_layout,
+                                                            pub=rstore.publisher,
+                                                            readonly=True)
                                 except (sr.RepositoryError, apx.ApiException):
                                         # Cache isn't currently valid, so skip
                                         # it for now.  This essentially defers
@@ -347,8 +373,9 @@ class ImageTransportCfg(TransportCfg):
                 TransportCfg.reset_caches(self, shared=True)
 
                 # Then add image-specific cache data after.
-                for path, readonly, pub in self.__img.get_cachedirs():
-                        self.add_cache(path, pub=pub, readonly=readonly)
+                for path, readonly, pub, layout in self.__img.get_cachedirs():
+                        self.add_cache(path, layout=layout, pub=pub,
+                            readonly=readonly)
 
         def __get_user_agent(self):
                 return misc.user_agent_str(self.__img,
@@ -553,7 +580,7 @@ class Transport(object):
 
                 # If captive portal test hasn't been executed, run it
                 # prior to this operation.
-                self._captive_portal_test(ccancel=ccancel)
+                self._captive_portal_test(ccancel=ccancel, alt_repo=alt_repo)
 
                 # For search, prefer remote sources if available.  This allows
                 # consumers to configure both a file-based and network-based set
@@ -657,7 +684,7 @@ class Transport(object):
 
                 # If captive portal test hasn't been executed, run it
                 # prior to this operation.
-                self._captive_portal_test(ccancel=ccancel)
+                self._captive_portal_test(ccancel=ccancel, alt_repo=alt_repo)
 
                 for d in self.__gen_repo(pub, retry_count, origin_only=True,
                     alt_repo=alt_repo):
@@ -793,7 +820,7 @@ class Transport(object):
 
                 # If captive portal test hasn't been executed, run it
                 # prior to this operation.
-                self._captive_portal_test(ccancel=ccancel)
+                self._captive_portal_test(ccancel=ccancel, alt_repo=alt_repo)
 
                 # Check if the download_dir exists.  If it doesn't, create
                 # the directories.
@@ -1198,7 +1225,7 @@ class Transport(object):
 
                 # If captive portal test hasn't been executed, run it
                 # prior to this operation.
-                self._captive_portal_test(ccancel=ccancel)
+                self._captive_portal_test(ccancel=ccancel, alt_repo=alt_repo)
 
                 # Check if the download_dir exists.  If it doesn't create
                 # the directories.
@@ -1279,7 +1306,8 @@ class Transport(object):
                 # If captive portal test hasn't been executed, run it
                 # prior to this operation.
                 try:
-                        self._captive_portal_test(ccancel=ccancel)
+                        self._captive_portal_test(ccancel=ccancel,
+                            alt_repo=alt_repo)
                 except apx.InvalidDepotResponseException:
                         return
 
@@ -1720,7 +1748,8 @@ class Transport(object):
 
                 # If captive portal test hasn't been executed, run it
                 # prior to this operation.
-                self._captive_portal_test(ccancel=mfile.get_ccancel())
+                self._captive_portal_test(ccancel=mfile.get_ccancel(),
+                    alt_repo=mfile.get_alt_repo())
 
                 # Check if the download_dir exists.  If it doesn't create
                 # the directories.
@@ -1782,7 +1811,7 @@ class Transport(object):
 
                 # If captive portal test hasn't been executed, run it
                 # prior to this operation.
-                self._captive_portal_test(ccancel=ccancel)
+                self._captive_portal_test(ccancel=ccancel, alt_repo=alt_repo)
 
                 for d in self.__gen_repo(pub, retry_count, origin_only=True,
                     alt_repo=alt_repo):
@@ -2088,7 +2117,7 @@ class Transport(object):
                 finally:
                         self._lock.release()
 
-        def _captive_portal_test(self, ccancel=None):
+        def _captive_portal_test(self, ccancel=None, alt_repo=None):
                 """Implementation of captive_portal_test."""
 
                 fail = tx.TransportFailures()
@@ -2099,9 +2128,18 @@ class Transport(object):
                 self.__portal_test_executed = True
                 vd = None
 
-                for pub in self.cfg.gen_publishers():
+                pubs = [pub for pub in self.cfg.gen_publishers()]
+                if not pubs and alt_repo:
+                        # Special case -- no configured publishers exist, but
+                        # an alternate package source was specified, so create
+                        # a temporary publisher using alternate repository.
+                        pubs = [publisher.Publisher("temporary",
+                            repository=alt_repo)]
+
+                for pub in pubs:
                         try:
-                                vd = self._get_versions(pub, ccancel=ccancel)
+                                vd = self._get_versions(pub, ccancel=ccancel,
+                                    alt_repo=alt_repo)
                         except tx.TransportException, ex:
                                 # Encountered a transport error while
                                 # trying to contact this publisher.
@@ -2914,11 +2952,29 @@ class MultiFileNI(MultiFile):
                                 filesz = int(misc.get_pkg_otw_size(action))
                                 self._progtrack.download_add_progress(1, filesz)
                         return
-
                 self.add_hash(hashval, action)
                 if action.name == "signature":
                         for c in action.get_chain_certs():
-                                self.add_hash(c, action)
+                                # file_done does some magical accounting for
+                                # files which may have been downloaded multiple
+                                # times but this accounting breaks when the
+                                # chain certificates are involved.  For now,
+                                # adjusting the pkg size and csize for the
+                                # action associated with the certificates solves
+                                # the problem by working around the special
+                                # accounting.  This fixes the problem because it
+                                # tells file_done that no other data was
+                                # expected for this hash of this action.
+                                a = copy.copy(action)
+                                # Copying the attrs separately is needed because
+                                # otherwise the two copies of the actions share
+                                # the dictionary.
+                                a.attrs = copy.copy(action.attrs)
+                                a.attrs["pkg.size"] = str(
+                                    action.get_chain_size(c))
+                                a.attrs["pkg.csize"] = str(
+                                    action.get_chain_csize(c))
+                                self.add_hash(c, a)
 
         def file_done(self, hashval, current_path):
                 """Tell MFile that the transfer completed successfully."""

@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2012, Oracle and/or its affiliates. All rights reserved.
 
 """centralized object for insert, lookup, and removal of files.
 
@@ -39,6 +39,7 @@ wil be moved to that location.  When a file is removed, the layouts are
 checked in turn until a file is found and removed.  The FileManager also
 provides a way to generate all hashes stored by the FileManager."""
 
+import collections
 import errno
 import os
 
@@ -125,6 +126,8 @@ class FileManager(object):
                 self.root = root
                 self.readonly = readonly
                 if layouts is not None:
+                        if not isinstance(layouts, collections.Iterable):
+                                layouts = [layouts]
                         self.layouts = layouts
                 else:
                         self.layouts = layout.get_default_layouts()
@@ -285,7 +288,8 @@ class FileManager(object):
 
                                         # Parent directory created successsfully
                                         # so loop again to retry rename.
-                                elif e.errno == errno.ENOENT:
+                                elif e.errno == errno.ENOENT and \
+                                    not os.path.exists(src_path):
                                         if os.path.exists(dest_full_path):
                                                 # Item has already been moved
                                                 # into cache by another process;
@@ -298,7 +302,7 @@ class FileManager(object):
                                 elif e.errno == errno.EACCES or \
                                     e.errno == errno.EROFS:
                                         raise FMPermissionsException(e.filename)
-                                else:
+                                elif e.errno != errno.ENOENT:
                                         raise apx._convert_error(e)
                         else:
                                 # Success!

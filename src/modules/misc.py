@@ -30,20 +30,22 @@ import errno
 import getopt
 import hashlib
 import locale
-import operator
 import os
-import pkg.client.api_errors as api_errors
-import pkg.portable as portable
 import platform
 import re
 import shutil
-import stat
+import simplejson as json
+import socket
+from stat import *
 import struct
 import sys
 import time
 import urllib
 import urlparse
 import zlib
+
+import pkg.client.api_errors as api_errors
+import pkg.portable as portable
 
 from pkg import VERSION
 from pkg.client import global_settings
@@ -60,9 +62,20 @@ PKG_STATE_INSTALLED = 2
 # Constant string used across many modules as a property name.
 SIGNATURE_POLICY = "signature-policy"
 
-# Bug URI Constants
+# Bug URI Constants (deprecated)
 BUG_URI_CLI = "https://defect.opensolaris.org/bz/enter_bug.cgi?product=pkg&component=cli"
 BUG_URI_GUI = "https://defect.opensolaris.org/bz/enter_bug.cgi?product=pkg&component=gui"
+
+# Traceback message.
+def get_traceback_message():
+        """This function returns the standard traceback message.  A function
+        is necessary since the _() call must be done at runtime after locale
+        setup."""
+
+        return _("""\n
+This is an internal error in pkg(5) version %(version)s.  Please log a
+Service Request about this issue including the information above and this
+message.""") % { "version": VERSION }
 
 def get_release_notes_url():
         """Return a release note URL pointing to the correct release notes
@@ -70,7 +83,7 @@ def get_release_notes_url():
 
         # TBD: replace with a call to api.info() that can return a "release"
         # attribute of form YYYYMM against the SUNWsolnm package
-        return "http://download.oracle.com/docs/cd/E19963-01/"
+        return "http://www.oracle.com/pls/topic/lookup?ctx=E23824&id=SERNS"
 
 def time_to_timestamp(t):
         """convert seconds since epoch to %Y%m%dT%H%M%SZ format"""
@@ -95,6 +108,91 @@ def copyfile(src_path, dst_path):
         except OSError, e:
                 if e.errno != errno.EPERM:
                         raise
+
+def copytree(src, dst):
+        """Rewrite of shutil.copytree() that can handle special files such as
+        FIFOs, sockets, and device nodes.  It re-creates all symlinks rather
+        than copying the data behind them, and supports neither the 'symlinks'
+        nor the 'ignore' keyword arguments of the shutil version.
+        """
+
+        os.makedirs(dst, PKG_DIR_MODE)
+        src_stat = os.stat(src)
+        for name in sorted(os.listdir(src)):
+                s_path = os.path.join(src, name)
+                d_path = os.path.join(dst, name)
+                s = os.lstat(s_path)
+                if S_ISDIR(s.st_mode):
+                        copytree(s_path, d_path)
+                        os.chmod(d_path, S_IMODE(s.st_mode))
+                        os.chown(d_path, s.st_uid, s.st_gid)
+                        os.utime(d_path, (s.st_atime, s.st_mtime))
+                elif S_ISREG(s.st_mode):
+                        shutil.copyfile(s_path, d_path)
+                        os.chmod(d_path, S_IMODE(s.st_mode))
+                        os.chown(d_path, s.st_uid, s.st_gid)
+                        os.utime(d_path, (s.st_atime, s.st_mtime))
+                elif S_ISLNK(s.st_mode):
+                        os.symlink(os.readlink(s_path), d_path)
+                elif S_ISFIFO(s.st_mode):
+                        os.mkfifo(d_path, S_IMODE(s.st_mode))
+                        os.chown(d_path, s.st_uid, s.st_gid)
+                        os.utime(d_path, (s.st_atime, s.st_mtime))
+                elif S_ISSOCK(s.st_mode):
+                        sock = socket.socket(socket.AF_UNIX)
+                        sock.bind(d_path)
+                        sock.close()
+                        os.chown(d_path, s.st_uid, s.st_gid)
+                        os.utime(d_path, (s.st_atime, s.st_mtime))
+                elif S_ISCHR(s.st_mode) or S_ISBLK(s.st_mode):
+                        if hasattr(os, "mknod"):
+                                os.mknod(d_path, mode=s.st_mode,
+                                    device=s.st_dev)
+                                os.chown(d_path, s.st_uid, s.st_gid)
+                                os.utime(d_path, (s.st_atime, s.st_mtime))
+                elif S_IFMT(s.st_mode) == 0xd000: # doors
+                        pass
+                elif S_IFMT(s.st_mode) == 0xe000: # event ports
+                        pass
+                else:
+                        print "unknown file type:", oct(S_IFMT(s.st_mode))
+
+        os.chmod(dst, S_IMODE(src_stat.st_mode))
+        os.chown(dst, src_stat.st_uid, src_stat.st_gid)
+        os.utime(dst, (src_stat.st_atime, src_stat.st_mtime))
+
+def move(src, dst):
+        """Rewrite of shutil.move() that uses our copy of copytree()."""
+
+        # If dst is a directory, then we try to move src into it.
+        if os.path.isdir(dst):
+                dst = os.path.join(dst,
+                    os.path.basename(src).rstrip(os.path.sep))
+
+        try:
+                os.rename(src, dst)
+        except EnvironmentError, e:
+                s = os.lstat(src)
+
+                if e.errno == errno.EXDEV:
+                        if S_ISDIR(s.st_mode):
+                                copytree(src, dst)
+                                shutil.rmtree(src)
+                        else:
+                                shutil.copyfile(src, dst)
+                                os.chmod(dst, S_IMODE(s.st_mode))
+                                os.chown(dst, s.st_uid, s.st_gid)
+                                os.utime(dst, (s.st_atime, s.st_mtime))
+                                os.unlink(src)
+                elif e.errno == errno.EINVAL and S_ISDIR(s.st_mode):
+                        raise shutil.Error, "Cannot move a directory '%s' " \
+                            "into itself '%s'." % (src, dst)
+                elif e.errno == errno.ENOTDIR and S_ISDIR(s.st_mode):
+                        raise shutil.Error, "Destination path '%s' already " \
+                            "exists" % dst
+                else:
+                        raise
+
 def expanddirs(dirs):
         """given a set of directories, return expanded set that includes
         all components"""
@@ -754,7 +852,7 @@ def parse_uri(uri, cwd=None):
                 if not cwd:
                         uri = os.path.abspath(uri)
                 elif not os.path.isabs(uri):
-                        uri = os.path.join(cwd, uri)
+                        uri = os.path.normpath(os.path.join(cwd, uri))
 
                 uri = urlparse.urlunparse(("file", "",
                     urllib.pathname2url(uri), "", "", ""))
@@ -844,10 +942,9 @@ EmptyDict = ImmutableDict()
 # gains on certain files.
 PKG_FILE_BUFSIZ = 128 * 1024
 
-PKG_FILE_MODE = stat.S_IWUSR | stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH
-PKG_DIR_MODE = (stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP | stat.S_IROTH |
-    stat.S_IXOTH)
-PKG_RO_FILE_MODE = stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH
+PKG_FILE_MODE = S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH
+PKG_DIR_MODE = (S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH)
+PKG_RO_FILE_MODE = S_IRUSR | S_IRGRP | S_IROTH
 
 def relpath(path, start="."):
         """Version of relpath to workaround python bug:
@@ -1013,7 +1110,8 @@ def opts_parse(op, api_inst, args, table, pargs_limit, usage_cb):
                 # check for duplicate options
                 if k in opts_seen and (type(v) != list and type(v) != int):
                         if opt == opts_seen[k]:
-                                opts_err_repeated(opt, op)
+                                usage_cb(_("option '%s' repeated") % opt,
+                                    cmd=op)
                         usage_cb(_("'%s' and '%s' have the same meaning") %
                             (opts_seen[k], opt), cmd=op)
                 opts_seen[k] = opt
@@ -1063,3 +1161,201 @@ def liveroot():
         if not live_root:
                 live_root = "/"
         return live_root
+
+def spaceavail(path):
+        """Find out how much space is available at the specified path if
+        it exists; return -1 if path doesn't exist"""
+        try:
+                res = os.statvfs(path)
+                return res.f_frsize * res.f_bavail
+        except OSError:
+                return -1
+
+def get_dir_size(path):
+        """Return the size (in bytes) of a directory and all of its contents."""
+        try:
+                return sum(
+                    os.path.getsize(os.path.join(d, fname))
+                    for d, dnames, fnames in os.walk(path)
+                    for fname in fnames
+                )
+        except EnvironmentError, e:
+                raise api_errors._convert_error(e)
+
+def get_listing(desired_field_order, field_data, field_values, out_format,
+    def_fmt, omit_headers, escape_output=True):
+        """Returns a string containing a listing defined by provided values
+        in the specified output format.
+
+        'desired_field_order' is the list of the fields to show in the order
+        they should be output left to right.
+
+        'field_data' is a dictionary of lists of the form:
+          {
+            field_name1: {
+              [(output formats), field header, initial field value]
+            },
+            field_nameN: {
+              [(output formats), field header, initial field value]
+            }
+          }
+
+        'field_values' is a generator or list of dictionaries of the form:
+          {
+            field_name1: field_value,
+            field_nameN: field_value
+          }
+
+        'out_format' is the format to use for output.  Currently 'default',
+        'tsv', 'json', and 'json-formatted' are supported.  The first is
+        intended for columnar, human-readable output, and the others for
+        parsable output.
+
+        'def_fmt' is the default Python formatting string to use for the
+        'default' human-readable output.  It must match the fields defined
+        in 'field_data'.
+
+        'omit_headers' is a boolean specifying whether headers should be
+        included in the listing.  (If applicable to the specified output
+        format.)
+
+        'escape_output' is an optional boolean indicating whether shell
+        metacharacters or embedded control sequences should be escaped
+        before display.  (If applicable to the specified output format.)
+        """
+
+        # Custom sort function for preserving field ordering
+        def sort_fields(one, two):
+                return desired_field_order.index(get_header(one)) - \
+                    desired_field_order.index(get_header(two))
+
+        # Functions for manipulating field_data records
+        def filter_default(record):
+                return "default" in record[0]
+
+        def filter_tsv(record):
+                return "tsv" in record[0]
+
+        def get_header(record):
+                return record[1]
+
+        def get_value(record):
+                return record[2]
+
+        def quote_value(val):
+                if out_format == "tsv":
+                        # Expand tabs if tsv output requested.
+                        val = val.replace("\t", " " * 8)
+                nval = val
+                # Escape bourne shell metacharacters.
+                for c in ("\\", " ", "\t", "\n", "'", "`", ";", "&", "(", ")",
+                    "|", "^", "<", ">"):
+                        nval = nval.replace(c, "\\" + c)
+                return nval
+
+        def set_value(entry):
+                val = entry[1]
+                multi_value = False
+                if isinstance(val, (list, tuple, set, frozenset)):
+                        multi_value = True
+                elif val == "":
+                        entry[0][2] = '""'
+                        return
+                elif val is None:
+                        entry[0][2] = ''
+                        return
+                else:
+                        val = [val]
+
+                nval = []
+                for v in val:
+                        if v == "":
+                                # Indicate empty string value using "".
+                                nval.append('""')
+                        elif v is None:
+                                # Indicate no value using empty string.
+                                nval.append('')
+                        elif escape_output:
+                                # Otherwise, escape the value to be displayed.
+                                nval.append(quote_value(str(v)))
+                        else:
+                                # Caller requested value not be escaped.
+                                nval.append(str(v))
+
+                val = " ".join(nval)
+                nval = None
+                if multi_value:
+                        val = "(%s)" % val
+                entry[0][2] = val
+
+        if out_format == "default":
+                # Create a formatting string for the default output
+                # format.
+                fmt = def_fmt
+                filter_func = filter_default
+        elif out_format == "tsv":
+                # Create a formatting string for the tsv output
+                # format.
+                num_fields = sum(
+                    1 for k in field_data
+                    if filter_tsv(field_data[k])
+                )
+                fmt = "\t".join('%s' for x in xrange(num_fields))
+                filter_func = filter_tsv
+        elif out_format == "json" or out_format == "json-formatted":
+                args = { "sort_keys": True }
+                if out_format == "json-formatted":
+                        args["indent"] = 2
+
+                # 'json' formats always include any extra fields returned;
+                # any explicitly named fields are only included if 'json'
+                # is explicitly listed.
+                def fmt_val(v):
+                        if isinstance(v, basestring):
+                                return v
+                        if isinstance(v, (list, tuple, set, frozenset)):
+                                return [fmt_val(e) for e in v]
+                        if isinstance(v, dict):
+                                for k, e in v.items():
+                                        v[k] = fmt_val(e)
+                                return v
+                        return str(v)
+
+                output = json.dumps([
+                    dict(
+                        (k, fmt_val(entry[k]))
+                        for k in entry
+                        if k not in field_data or "json" in field_data[k][0]
+                    )
+                    for entry in field_values
+                ], **args)
+
+                if out_format == "json-formatted":
+                        # Include a trailing newline for readability.
+                        return output + "\n"
+                return output
+
+        # Extract the list of headers from the field_data dictionary.  Ensure
+        # they are extracted in the desired order by using the custom sort
+        # function.
+        hdrs = map(get_header, sorted(filter(filter_func, field_data.values()),
+            sort_fields))
+
+        # Output a header if desired.
+        output = ""
+        if not omit_headers:
+                output += fmt % tuple(hdrs)
+                output += "\n"
+
+        for entry in field_values:
+                map(set_value, (
+                    (field_data[f], v)
+                    for f, v in entry.iteritems()
+                    if f in field_data
+                ))
+                values = map(get_value, sorted(filter(filter_func,
+                    field_data.values()), sort_fields))
+                output += fmt % tuple(values)
+                output += "\n"
+
+        return output

@@ -28,6 +28,7 @@ import errno
 import os.path
 import platform
 import re
+import urllib
 
 from pkg.client import global_settings
 logger = global_settings.logger
@@ -51,13 +52,17 @@ from pkg.client.transport.exception import TransportFailures
 # pkg(5) and their default values. Calls to the ImageConfig.get_policy method
 # should use the constants defined here.
 
+BE_POLICY = "be-policy"
 FLUSH_CONTENT_CACHE = "flush-content-cache-on-success"
 MIRROR_DISCOVERY = "mirror-discovery"
 SEND_UUID = "send-uuid"
 USE_SYSTEM_REPO = "use-system-repo"
+CHECK_CERTIFICATE_REVOCATION = "check-certificate-revocation"
 
 default_policies = {
-    FLUSH_CONTENT_CACHE: False,
+    BE_POLICY: "default",
+    CHECK_CERTIFICATE_REVOCATION: False,
+    FLUSH_CONTENT_CACHE: True,
     MIRROR_DISCOVERY: False,
     SEND_UUID: True,
     SIGNATURE_POLICY: sigpolicy.DEFAULT_POLICY,
@@ -91,7 +96,7 @@ class ImageConfig(cfg.FileConfig):
         URLs, publishers, properties, etc. that allow an Image to operate."""
 
         # This dictionary defines the set of default properties and property
-        # groups for a repository configuration indexed by version.
+        # groups for an image configuration indexed by version.
         __defs = {
             2: [
                 cfg.PropertySection("filter", properties=[]),
@@ -152,6 +157,9 @@ class ImageConfig(cfg.FileConfig):
                 cfg.PropertySection("property", properties=[
                     cfg.PropPublisher("preferred-authority"),
                     cfg.PropList("publisher-search-order"),
+                    cfg.PropDefined(BE_POLICY, allowed=["default",
+                        "always-new", "create-backup", "when-required"],
+                        default=default_policies[BE_POLICY]),
                     cfg.PropBool(FLUSH_CONTENT_CACHE,
                         default=default_policies[FLUSH_CONTENT_CACHE]),
                     cfg.PropBool(MIRROR_DISCOVERY,
@@ -168,9 +176,25 @@ class ImageConfig(cfg.FileConfig):
                     cfg.Property("trust-anchor-directory",
                         default=DEF_TOKEN),
                     cfg.PropList("signature-required-names"),
+                    cfg.Property(CHECK_CERTIFICATE_REVOCATION,
+                        default=default_policies[
+                            CHECK_CERTIFICATE_REVOCATION])
                 ]),
                 cfg.PropertySection("facet", properties=[
                     cfg.PropertyTemplate("^facet\..*", prop_type=cfg.PropBool),
+                ]),
+                cfg.PropertySection("mediators", properties=[
+                    cfg.PropertyTemplate("^[A-Za-z0-9\-]+\.implementation$"),
+                    cfg.PropertyTemplate("^[A-Za-z0-9\-]+\.implementation-version$",
+                        prop_type=cfg.PropVersion),
+                    cfg.PropertyTemplate("^[A-Za-z0-9\-]+\.implementation-source$",
+                        prop_type=cfg.PropDefined, allowed=["site", "vendor",
+                        "local", "system"], default="local"),
+                    cfg.PropertyTemplate("^[A-Za-z0-9\-]+\.version$",
+                        prop_type=cfg.PropVersion),
+                    cfg.PropertyTemplate("^[A-Za-z0-9\-]+\.version-source$",
+                        prop_type=cfg.PropDefined, allowed=["site", "vendor",
+                        "local", "system"], default="local"),
                 ]),
                 cfg.PropertySection("variant", properties=[]),
 
@@ -233,6 +257,7 @@ class ImageConfig(cfg.FileConfig):
                 self.__publishers = {}
                 self.__validate = False
                 self.facets = facet.Facets()
+                self.mediators = {}
                 self.variants = variant.Variants()
                 self.linked_children = {}
                 cfg.FileConfig.__init__(self, cfgpathname,
@@ -255,10 +280,14 @@ class ImageConfig(cfg.FileConfig):
 
                 so = self.get_property("property", "publisher-search-order")
                 so.remove(being_moved)
+                try:
+                        ind = so.index(staying_put)
+                except ValueError:
+                        raise apx.MoveRelativeToUnknown(staying_put)
                 if after:
-                        so.insert(so.index(staying_put) + 1, being_moved)
+                        so.insert(ind + 1, being_moved)
                 else:
-                        so.insert(so.index(staying_put), being_moved)
+                        so.insert(ind, being_moved)
                 self.set_property("property", "publisher-search-order", so)
 
         def __get_publisher(self, prefix):
@@ -354,7 +383,10 @@ class ImageConfig(cfg.FileConfig):
                 # how ssl cert and key paths are interpreted.)
                 idx = self.get_index()
                 self.variants.update(idx.get("variant", {}))
-                self.facets.update(idx.get("facet", {}))
+                # facets are encoded so they can contain '/' characters.
+                for k, v in idx.get("facet", {}).iteritems():
+                        self.facets[urllib.unquote(k)] = v
+
 
                 # Ensure architecture and zone variants are defined.
                 if "variant.arch" not in self.variants:
@@ -417,6 +449,11 @@ class ImageConfig(cfg.FileConfig):
                 pso.extend(sorted(new_pubs))
                 self.set_property("property", "publisher-search-order", pso)
 
+                # Load mediator data.
+                for entry, value in idx.get("mediators", {}).iteritems():
+                        mname, mtype = entry.rsplit(".", 1)
+                        self.mediators.setdefault(mname, {})[mtype] = value
+
                 # Now re-enable validation and validate the properties.
                 self.__validate = True
                 self.__validate_properties()
@@ -470,9 +507,9 @@ class ImageConfig(cfg.FileConfig):
         def write(self, ignore_unprivileged=False):
                 """Write the image configuration."""
 
-                # The variant and facet sections must be removed so that the
-                # private variant and facet objects can have their information
-                # transferred to the configuration object verbatim.
+                # The variant, facet, and mediator sections must be removed so
+                # the private copies can be transferred to the configuration
+                # object.
                 try:
                         self.remove_section("variant")
                 except cfg.UnknownSectionError:
@@ -485,7 +522,19 @@ class ImageConfig(cfg.FileConfig):
                 except cfg.UnknownSectionError:
                         pass
                 for f in self.facets:
-                        self.set_property("facet", f, self.facets[f])
+                        self.set_property("facet", urllib.quote(f, ""), 
+                            self.facets[f])
+
+                try:
+                        self.remove_section("mediators")
+                except cfg.UnknownSectionError:
+                        pass
+                for mname, mvalues in self.mediators.iteritems():
+                        for mtype, mvalue in mvalues.iteritems():
+                                # name.implementation[-(source|version)]
+                                # name.version[-source]
+                                pname = mname + "." + mtype
+                                self.set_property("mediators", pname, mvalue)
 
                 # remove all linked image child configuration
                 idx = self.get_index()
@@ -521,25 +570,13 @@ class ImageConfig(cfg.FileConfig):
                                 # Already gone.
                                 pass
 
-                        #
-                        # For zones, where the reachability of an absolute path
-                        # changes depending on whether you're in the zone or
-                        # not.  So we have a different policy: ssl_key and
-                        # ssl_cert are treated as zone root relative.
-                        #
+                        # Store SSL Cert and Key data.
                         repo = pub.repository
-                        ngz = self.variants.get("variant.opensolaris.zone",
-                            "global") == "nonglobal"
-
                         p = ""
                         for o in repo.origins:
                                 if o.ssl_key:
                                         p = str(o.ssl_key)
                                         break
-                        if ngz and self.__imgroot != os.sep and p != "None":
-                                # Trim the imageroot from the path.
-                                if p.startswith(self.__imgroot):
-                                        p = p[len(self.__imgroot):]
                         self.set_property(section, "ssl_key", p)
 
                         p = ""
@@ -547,11 +584,9 @@ class ImageConfig(cfg.FileConfig):
                                 if o.ssl_cert:
                                         p = str(o.ssl_cert)
                                         break
-                        if ngz and self.__imgroot != os.sep and p != "None":
-                                # Trim the imageroot from the path.
-                                if p.startswith(self.__imgroot):
-                                        p = p[len(self.__imgroot):]
                         self.set_property(section, "ssl_cert", p)
+
+                        # Store publisher UUID.
                         self.set_property(section, "uuid", pub.client_uuid)
 
                         # Write selected repository data.
@@ -721,38 +756,9 @@ class ImageConfig(cfg.FileConfig):
                         repo_data["refresh_seconds"] = \
                             str(REPO_REFRESH_SECONDS_DEFAULT)
 
-                #
-                # For zones, where the reachability of an absolute path
-                # changes depending on whether you're in the zone or not.  So
-                # we have a different policy: ssl_key and ssl_cert are treated
-                # as zone root relative.
-                #
                 prefix = sec_idx["prefix"]
-                ngz = self.variants["variant.opensolaris.zone"] == "nonglobal"
                 ssl_key = sec_idx["ssl_key"]
-                if ssl_key:
-                        if ngz:
-                                ssl_key = os.path.normpath(self.__imgroot +
-                                    os.sep + ssl_key)
-                        else:
-                                ssl_key = os.path.abspath(ssl_key)
-                        if not os.path.exists(ssl_key):
-                                logger.error(apx.NoSuchKey(ssl_key,
-                                    uri=list(origins)[0], publisher=prefix))
-                                ssl_key = None
-
                 ssl_cert = sec_idx["ssl_cert"]
-                if ssl_cert:
-                        if ngz:
-                                ssl_cert = os.path.normpath(self.__imgroot +
-                                    os.sep + ssl_cert)
-                        else:
-                                ssl_cert = os.path.abspath(ssl_cert)
-                        if not os.path.exists(ssl_cert):
-                                logger.error(apx.NoSuchCertificate(
-                                    ssl_cert, uri=list(origins)[0],
-                                    publisher=prefix))
-                                ssl_cert = None
 
                 r = publisher.Repository(**repo_data)
                 for o in origins:
@@ -788,14 +794,14 @@ class ImageConfig(cfg.FileConfig):
                 try:
                         polval = self.get_property("property", SIGNATURE_POLICY)
                 except cfg.PropertyConfigError:
-                        # If it hasn't been set yet, there's nothing to 
+                        # If it hasn't been set yet, there's nothing to
                         # validate.
                         return
 
                 if polval == "require-names":
                         signames = self.get_property("property",
                             "signature-required-names")
-                        if not signames: 
+                        if not signames:
                                 raise apx.InvalidPropertyValue(_(
                                     "At least one name must be provided for "
                                     "the signature-required-names policy."))
@@ -844,7 +850,7 @@ class NullSystemPublisher(object):
 class BlendedConfig(object):
         """Class which handles combining the system repository configuration
         with the image configuration."""
-        
+
         def __init__(self, img_cfg, pkg_counts, imgdir, transport,
             use_system_pub):
                 """The 'img_cfg' parameter is the ImageConfig object for the
@@ -965,6 +971,7 @@ class BlendedConfig(object):
                                     props["publisher-search-order"])
                 else:
                         self.sys_cfg = NullSystemPublisher()
+
                 self.__publishers, self.added_pubs, self.removed_pubs = \
                     self.__merge_publishers(self.img_cfg, self.sys_cfg,
                         pkg_counts, old_sysconfig, self.__proxy_url,
@@ -1005,7 +1012,7 @@ class BlendedConfig(object):
 
                 added_pubs = set()
                 removed_pubs = set()
-                        
+
                 for prefix, cnt, ver_cnt in pkg_counts:
                         if cnt > 0:
                                 pubs_with_installed_pkgs.add(prefix)
@@ -1048,6 +1055,8 @@ class BlendedConfig(object):
                                 repo = p.repository
                                 for o in repo.origins:
                                         res[p.prefix].repository.add_origin(o)
+                                for m in repo.mirrors:
+                                        res[p.prefix].repository.add_mirror(m)
                         else:
                                 res[p.prefix] = p
 
@@ -1067,34 +1076,39 @@ class BlendedConfig(object):
                 then write it."""
 
                 for p in self.__publishers.values():
-                        repo = p.repository
-                        user_origins = [o for o in repo.origins if not o.system]
-                        sys_origins = [o for o in repo.origins if o.system]
-                        # If there aren't any origins configured from the system
-                        # repository, then make sure the publisher is configured
-                        # in the image.
-                        if not sys_origins:
+
+                        if not p.sys_pub:
                                 self.img_cfg.publishers[p.prefix] = p
                                 continue
 
-                        user_pub = self.img_cfg.publishers.get(p.prefix, None)
-                        # If there aren't any user origins and the publisher has
-                        # not been configured manually, then remove the
-                        # publisher from the image.
-                        if not user_origins and \
-                            (not user_pub or not user_pub.has_configuration()):
-                                if user_pub:
-                                        del self.img_cfg.publishers[p.prefix]
+                        # If we had previous user-configuration for this
+                        # publisher, only store non-system publisher changes
+                        repo = p.repository
+                        sticky = p.sticky
+                        user_origins = [o for o in repo.origins if not o.system]
+                        user_mirrors = [o for o in repo.mirrors if not o.system]
+                        old_origins = []
+                        old_mirrors = []
+
+                        # look for any previously set configuration
+                        if p.prefix in self.img_cfg.publishers:
+                                old_pub = self.img_cfg.publishers[p.prefix]
+                                old_origins = old_pub.repository.origins
+                                old_mirrors = old_pub.repository.mirrors
+                                sticky = old_pub.sticky
+
+                        # no user changes, so nothing new to write
+                        if set(user_origins) == set(old_origins) and \
+                            set(user_mirrors) == set(old_mirrors):
                                 continue
 
-                        # If there isn't a publisher in the image configuration,
-                        # then create one and give it the right set of origins.
-                        if not user_pub:
-                                user_pub = publisher.Publisher(prefix=p.prefix)
-                                self.img_cfg.publishers[p.prefix] = user_pub
-                        if not user_pub.repository:
-                                user_pub.repository = publisher.Repository()
+                        # store a publisher with this configuration
+                        user_pub = publisher.Publisher(prefix=p.prefix,
+                            sticky=sticky)
+                        user_pub.repository = publisher.Repository()
                         user_pub.repository.origins = user_origins
+                        user_pub.repository.mirrors = user_mirrors
+                        self.img_cfg.publishers[p.prefix] = user_pub
 
                 # Write out the image configuration.
                 self.img_cfg.write()
@@ -1159,6 +1173,14 @@ class BlendedConfig(object):
         def variants(self):
                 return self.img_cfg.variants
 
+        def __get_mediators(self):
+                return self.img_cfg.mediators
+
+        def __set_mediators(self, mediators):
+                self.img_cfg.mediators = mediators
+
+        mediators = property(__get_mediators, __set_mediators)
+
         def __get_facets(self):
                 return self.img_cfg.facets
 
@@ -1192,7 +1214,7 @@ class BlendedConfig(object):
             after):
                 """Change the publisher search order by moving the publisher
                 'being_moved' relative to the publisher 'staying put.'  The
-                boolean 'after' determins whether 'being_moved' is placed before
+                boolean 'after' determines whether 'being_moved' is placed before
                 or after 'staying_put'."""
 
                 if being_moved == staying_put:
@@ -1208,7 +1230,7 @@ class BlendedConfig(object):
                             "be moved relative to it.") % staying_put)
                 self.img_cfg.change_publisher_search_order(being_moved,
                     staying_put, after)
-                
+
         def reset(self, overrides=misc.EmptyDict):
                 """Discards current configuration state and returns the
                 configuration object to its initial state.

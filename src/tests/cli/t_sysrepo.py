@@ -32,6 +32,7 @@ import os
 import os.path
 import unittest
 import urllib2
+import shutil
 
 class TestBasicSysrepoCli(pkg5unittest.CliTestCase):
         """Some basic tests checking that we can deal with all of our arguments
@@ -68,12 +69,7 @@ class TestBasicSysrepoCli(pkg5unittest.CliTestCase):
                 self.next_free_port += 1
                 self.sc = pkg5unittest.SysrepoController(self.default_sc_conf,
                     self.sysrepo_port, runtime_dir, testcase=self)
-                started = True
-                try:
-                        self.sc.start()
-                except pkg5unittest.SysrepoStateException:
-                        started = False
-                return started
+                self.sc.start()
 
         def test_0_sysrepo(self):
                 """A very basic test to see that we can start the sysrepo."""
@@ -82,8 +78,7 @@ class TestBasicSysrepoCli(pkg5unittest.CliTestCase):
                 self.sysrepo("", exit=2, fill_missing_args=False)
 
                 self.sysrepo("")
-                started = self._start_sysrepo()
-                self.assert_(started, "sysrepo was unable to start.")
+                self._start_sysrepo()
                 self.sc.stop()
 
         def test_1_sysrepo_usage(self):
@@ -133,9 +128,8 @@ class TestBasicSysrepoCli(pkg5unittest.CliTestCase):
                         port = self.next_free_port
                         ret, output, err = self.sysrepo("-l %s -p %s" %
                             (invalid_log, port), out=True, stderr=True, exit=0)
-                        started = self._start_sysrepo()
-                        self.assertFalse(started, "sysrepo unexpectedly started"
-                           " with invalid logdir %s" % invalid_log)
+                        self.assertRaises(pkg5unittest.SysrepoStateException,
+                            self._start_sysrepo)
                         self.sc.stop()
 
         def test_6_invalid_port(self):
@@ -174,6 +168,29 @@ class TestBasicSysrepoCli(pkg5unittest.CliTestCase):
                         self.assert_(invalid_tmp in err, "error message "
                             "did not contain %s: %s" % (invalid_tmp, err))
 
+        def test_10_invalid_http_timeout(self):
+                """We return an error given an invalid http_timeout"""
+
+                for invalid_time in ["cats", "0", "-1"]:
+                        ret, output, err = self.sysrepo("-T %s" %invalid_time,
+                            out=True, stderr=True, exit=1)
+                        self.assert_("http_timeout" in err, "error message "
+                             "did not contain http_timeout: %s" % err)
+
+        def test_11_invalid_proxies(self):
+                """We return an error given invalid proxies"""
+
+                for invalid_proxy in ["http://", "https://foo.bar", "-1"]:
+                        ret, output, err = self.sysrepo("-w %s" % invalid_proxy,
+                            out=True, stderr=True, exit=1)
+                        self.assert_("http_proxy" in err, "error message "
+                             "did not contain http_proxy: %s" % err)
+                        ret, output, err = self.sysrepo("-W %s" % invalid_proxy,
+                            out=True, stderr=True, exit=1)
+                        self.assert_("https_proxy" in err, "error message "
+                             "did not contain https_proxy: %s" % err)
+
+
 class TestDetailedSysrepoCli(pkg5unittest.ManyDepotTestCase):
 
         persistent_setup = True
@@ -205,7 +222,6 @@ class TestDetailedSysrepoCli(pkg5unittest.ManyDepotTestCase):
                 for dc_num in self.dcs:
                         durl = self.dcs[dc_num].get_depot_url()
                         self.pkgsend_bulk(durl, self.sample_pkg)
-                self.image_create(prefix="test1", repourl=self.durl1)
 
         def killalldepots(self):
                 try:
@@ -229,12 +245,7 @@ class TestDetailedSysrepoCli(pkg5unittest.ManyDepotTestCase):
                 self.next_free_port += 1
                 self.sc = pkg5unittest.SysrepoController(self.default_sc_conf,
                     self.sysrepo_port, runtime_dir, testcase=self)
-                started = True
-                try:
-                        self.sc.start()
-                except pkg5unittest.SysrepoStateException:
-                        started = False
-                self.assert_(started, "Unable to start sysrepo!")
+                self.sc.start()
 
         def test_1_substring_proxy(self):
                 """We can proxy publishers that are substrings of each other"""
@@ -248,6 +259,8 @@ class TestDetailedSysrepoCli(pkg5unittest.ManyDepotTestCase):
 
         def test_3_cache_dir(self):
                 """Our cache_dir value is used"""
+
+                self.image_create(prefix="test1", repourl=self.durl1)
 
                 cache_dir = os.path.join(self.test_root, "t_sysrepo_cache")
                 port = self.next_free_port
@@ -287,6 +300,8 @@ class TestDetailedSysrepoCli(pkg5unittest.ManyDepotTestCase):
         def test_4_logs_dir(self):
                 """Our logs_dir value is used"""
 
+                self.image_create(prefix="test1", repourl=self.durl1)
+
                 logs_dir = os.path.join(self.test_root, "t_sysrepo_logs")
                 port = self.next_free_port
                 self.sysrepo("-l %s -p %s" % (logs_dir, port))
@@ -304,6 +319,7 @@ class TestDetailedSysrepoCli(pkg5unittest.ManyDepotTestCase):
 
         def test_5_port_host(self):
                 """Our port value is used"""
+                self.image_create(prefix="test1", repourl=self.durl1)
 
                 port = self.next_free_port
                 self.sysrepo("-p %s -h localhost" % port)
@@ -322,6 +338,8 @@ class TestDetailedSysrepoCli(pkg5unittest.ManyDepotTestCase):
         def test_7_response_overlaps(self):
                 """We can proxy publishers that are == or substrings of our
                 known responses"""
+
+                self.image_create(prefix="test1", repourl=self.durl1)
 
                 overlap_dcs = []
                 # identify the interesting repos, those that we've configured
@@ -365,6 +383,8 @@ class TestDetailedSysrepoCli(pkg5unittest.ManyDepotTestCase):
                 # The standard system publisher client code does not use the
                 # "publisher/0" response, so we need this test to exercise that.
 
+                self.image_create(prefix="test1", repourl=self.durl1)
+
                 # create a version of this url with a symlink, to ensure we
                 # can follow links in urls
                 urlresult = urllib2.urlparse.urlparse(self.rurl1)
@@ -404,6 +424,37 @@ class TestDetailedSysrepoCli(pkg5unittest.ManyDepotTestCase):
                         self.image_create(repourl="file://%s" % path)
                         self.sysrepo("-R %s" % self.img_path(), exit=1)
 
+        def test_10_missing_file_repo(self):
+                """Ensure we print the right error message in the face of
+                a missing repository."""
+                repo_path = os.path.join(self.test_root, "test_10_missing_repo")
+                self.pkgrepo("create %s" % repo_path)
+                self.pkgrecv(server_url=self.durl1, command="-d %s sample" %
+                    repo_path)
+                self.pkgrepo("-s %s set publisher/prefix=foo" % repo_path)
+                self.pkgrepo("-s %s rebuild" % repo_path)
+                self.image_create(repourl="file://%s" % repo_path)
+                shutil.rmtree(repo_path)
+                ret, output, err = self.sysrepo("-R %s" % self.img_path(),
+                    out=True, stderr=True, exit=1)
+                # restore our image before going any further
+                self.assert_("does not exist" in err, "unable to find expected "
+                    "error message in stderr: %s" % err)
+
+        def test_11_proxy_args(self):
+                """Ensure we write configuration to tell Apache to use a remote
+                proxy when proxying requests when using -w or -W"""
+                self.image_create(prefix="test1", repourl=self.durl1)
+
+                for arg, directives in [
+                    ("-w http://foo", ["ProxyRemote http http://foo"]),
+                    ("-W http://foo", ["ProxyRemote https http://foo"]),
+                    ("-w http://foo -W http://foo",
+                    ["ProxyRemote http http://foo",
+                    "ProxyRemote https http://foo"])]:
+                            self.sysrepo(arg)
+                            for d in directives:
+                                    self.file_contains(self.default_sc_conf, d)
 
 if __name__ == "__main__":
         unittest.main()

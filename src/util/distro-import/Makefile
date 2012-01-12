@@ -23,6 +23,8 @@
 # Copyright (c) 2007, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
+include ../Makefile.buildnum
+
 #set default
 ARCH=i386
 NATIVE_ARCH:sh = uname -p
@@ -32,7 +34,7 @@ PROTO_AREA=../../../proto/root_$(NATIVE_ARCH)
 # Needs to point to filesystem on Solaris install dvd
 # replace as needed with a local solaris install image
 #
-WOS_PKGS_BASE=/net/pkgdock.us.oracle.com/export/integrate_dock/nv/nv_solnext_$(BUILDID)
+WOS_PKGS_BASE=/net/pkgdock.us.oracle.com/export/integrate_dock/nv/nv_solnext_$(TRUNKID)
 WOS_PKGS=$(WOS_PKGS_BASE)/$(ARCH)
 WOS_EXTRA_PKGS=$(WOS_PKGS_BASE)/all
 NONWOS_DOCK=
@@ -42,64 +44,91 @@ TEST_PKGS=
 REPO=http://localhost:10000
 
 ON_REPO=http://localhost:20000
-ON_BUILDID=$(BUILDID)
-ON_INCORPORATION=consolidation/osnet/osnet-incorporation@0.5.11-0.$(ON_BUILDID)
+ON_BRANCHID=$(BRANCHID)
+ON_INCORPORATION=consolidation/osnet/osnet-incorporation@0.5.11-0.$(ON_BRANCHID)
 
 INSTALL_REPO=http://localhost:20001
-INSTALL_BUILDID=$(BUILDID)
-INSTALL_INCORPORATION=consolidation/install/install-incorporation@0.5.11-0.$(INSTALL_BUILDID)
+INSTALL_BRANCHID=$(BRANCHID)
+INSTALL_INCORPORATION=consolidation/install/install-incorporation@0.5.11-0.$(INSTALL_BRANCHID)
 
 X_REPO=http://localhost:20002
-X_BUILDID=$(BUILDID)
-X_INCORPORATION=consolidation/X/X-incorporation@0.5.11-0.$(X_BUILDID)
+X_BRANCHID=$(BRANCHID)
+X_INCORPORATION=consolidation/X/X-incorporation@0.5.11-0.$(X_BRANCHID)
 
 IPS_REPO=http://localhost:20003
-IPS_BUILDID=$(BUILDID)
-IPS_INCORPORATION=consolidation/ips/ips-incorporation@0.5.11-0.$(IPS_BUILDID)
+IPS_BRANCHID=$(BRANCHID)
+IPS_INCORPORATION=consolidation/ips/ips-incorporation@0.5.11-0.$(IPS_BRANCHID)
 
 VPANELS_REPO=http://localhost:20004
-VPANELS_BUILDID=$(BUILDID)
-VPANELS_INCORPORATION=consolidation/vpanels/vpanels-incorporation@0.5.11-0.$(VPANELS_BUILDID)
+VPANELS_BRANCHID=$(BRANCHID)
+VPANELS_INCORPORATION=consolidation/vpanels/vpanels-incorporation@0.5.11-0.$(VPANELS_BRANCHID)
 
 USERLAND_REPO=http://localhost:20005
-USERLAND_BUILDID=$(BUILDID)
+USERLAND_BRANCHID=$(BRANCHID)
+USERLAND_INCORPORATION=consolidation/userland/userland-incorporation@0.5.11-0.$(USERLAND_BRANCHID)
 
 L10N_REPO=http://localhost:20006
-L10N_BUILDID=$(BUILDID)
-L10N_INCORPORATION=consolidation/l10n/l10n-incorporation@0.5.11-0.$(L10N_BUILDID)
+L10N_BRANCHID=$(BRANCHID)
+L10N_INCORPORATION=consolidation/l10n/l10n-incorporation@0.5.11-0.$(L10N_BRANCHID)
 
 DESKTOP_REPO=http://localhost:20007
-DESKTOP_BUILDID=$(BUILDID)
-GNOME_L10N_INCORPORATION=consolidation/gnome_l10n/gnome_l10n-incorporation@0.5.11-0.$(DESKTOP_BUILDID)
-GNOME_INCORPORATION=consolidation/gnome/gnome-incorporation@0.5.11-0.$(DESKTOP_BUILDID)
+DESKTOP_BRANCHID=$(BRANCHID)
+DESKTOP_INCORPORATION=consolidation/desktop/desktop-incorporation@0.5.11-0.$(DESKTOP_BRANCHID)
+DESKTOP_GNOME_INCORPORATION=consolidation/desktop/gnome-incorporation@0.5.11-0.$(DESKTOP_BRANCHID)
 
 CDE_REPO=http://localhost:20008
-CDE_BUILDID=$(BUILDID)
-CDE_INCORPORATION=consolidation/cde/cde-incorporation@0.5.11-0.$(CDE_BUILDID)
+CDE_BRANCHID=$(BRANCHID)
+CDE_INCORPORATION=consolidation/cde/cde-incorporation@0.5.11-0.$(CDE_BRANCHID)
 
 FOSS_REPO=http://localhost:20009
-FOSS_BUILDID=$(BUILDID)
+FOSS_BRANCHID=$(BRANCHID)
 
 CACAO_REPO=http://localhost:20010
-CACAO_BUILDID=$(BUILDID)
-CACAO_INCORPORATION=consolidation/cacao/cacao-incorporation@0.5.11-0.$(CACAO_BUILDID)
+CACAO_BRANCHID=$(BRANCHID)
+CACAO_INCORPORATION=consolidation/cacao/cacao-incorporation@0.5.11-0.$(CACAO_BRANCHID)
 
 CNS_REPO=http://localhost:20011
-CNS_BUILDID=$(BUILDID)
-CNS_INCORPORATION=consolidation/cns/cns-incorporation@0.5.11-0.$(CNS_BUILDID)
+CNS_BRANCHID=$(BRANCHID)
+CNS_INCORPORATION=consolidation/cns/cns-incorporation@0.5.11-0.$(CNS_BRANCHID)
 
 JDMK_REPO=http://localhost:20012
-JDMK_BUILDID=$(BUILDID)
-JDMK_INCORPORATION=consolidation/jdmk/jdmk-incorporation@0.5.11-0.$(JDMK_BUILDID)
+JDMK_BRANCHID=$(BRANCHID)
+JDMK_INCORPORATION=consolidation/jdmk/jdmk-incorporation@0.5.11-0.$(JDMK_BRANCHID)
 
 NVIDIA_REPO=http://localhost:20013
-NVIDIA_BUILDID=$(BUILDID)
-NVIDIA_INCORPORATION=consolidation/nvidia/nvidia-incorporation@0.5.11-0.$(NVIDIA_BUILDID)
+NVIDIA_BRANCHID=$(BRANCHID)
+NVIDIA_INCORPORATION=consolidation/nvidia/nvidia-incorporation@0.5.11-0.$(NVIDIA_BRANCHID)
 
-BUILDID_NORESPIN=/usr/bin/echo $(BUILDID) | sed -e 's/\([0-9]\)[a-z]*$$/\1/g'
+DEVPRO_REPO=http://localhost:20014
+DEVPRO_BRANCHID=$(BRANCHID)
+DEVPRO_INCORPORATION=consolidation/sunpro/sunpro-incorporation@0.5.11-0.$(DEVPRO_BRANCHID)
 
-REF_REPO=http://ipkg.sfbay/release
-REF_URIS=$(REF_REPO)@entire@0.5.11,5.11-0.$(BUILDID_NORESPIN:sh)
+SOLARIS_RE_REPO=http://localhost:20015
+SOLARIS_RE_BRANCHID=$(BRANCHID)
+SOLARIS_RE_INCORPORATION=consolidation/solaris_re/solaris_re-incorporation@0.5.11-0.$(SOLARIS_RE_BRANCHID)
+
+MAN_REPO=http://localhost:20016
+MAN_BRANCHID=$(BRANCHID)
+MAN_INCORPORATION=consolidation/man/man-incorporation@0.5.11-0.$(MAN_BRANCHID)
+
+LDOMS_REPO=http://localhost:20017
+LDOMS_BRANCHID=$(BRANCHID)
+LDOMS_INCORPORATION=consolidation/ldoms/ldoms-incorporation@0.5.11-0.$(LDOMS_BRANCHID)
+
+SIC_TEAM_REPO=http://localhost:20018
+SIC_TEAM_BRANCHID=$(BRANCHID)
+SIC_TEAM_INCORPORATION=consolidation/sic_team/sic_team-incorporation@0.5.11-0.$(SIC_TEAM_BRANCHID)
+
+SUNVTS_REPO=http://localhost:20019
+SUNVTS_BRANCHID=$(BRANCHID)
+SUNVTS_INCORPORATION=consolidation/SunVTS/SunVTS-incorporation@0.5.11-0.$(SUNVTS_BRANCHID)
+
+JAVA_REPO=http://localhost:20020
+JAVA_BRANCHID=$(BRANCHID)
+JAVA_INCORPORATION=consolidation/java/java-incorporation@0.5.11-0.$(JAVA_BRANCHID)
+
+REF_REPO=http://ipkg.us.oracle.com/release
+REF_URIS=$(REF_REPO)@solaris@0.5.11,5.11-0.$(BRANCHID)
 
 JUST_THESE_PKGS=
 EXTRA_ENTIRE_CONTENTS=
@@ -158,7 +187,8 @@ VPANELS_CONSOLIDATION_OPTIONS = \
 
 USERLAND_CONSOLIDATION_OPTIONS = \
 	-C userland \
-	-R $(USERLAND_REPO)@"*"
+	-R $(USERLAND_REPO)@$(USERLAND_INCORPORATION) \
+	-E $(USERLAND_INCORPORATION)
 
 L10N_CONSOLIDATION_OPTIONS = \
 	-C l10n \
@@ -166,21 +196,18 @@ L10N_CONSOLIDATION_OPTIONS = \
 	-E $(L10N_INCORPORATION)
 
 DESKTOP_CONSOLIDATION_OPTIONS = \
-	-C gnome_l10n \
-	-R $(DESKTOP_REPO)@$(GNOME_L10N_INCORPORATION) \
-	-E $(GNOME_L10N_INCORPORATION) \
-	-C gnome \
-	-R $(DESKTOP_REPO)@$(GNOME_INCORPORATION) \
-	-E $(GNOME_INCORPORATION)
+	-C desktop \
+	-R $(DESKTOP_REPO)@$(DESKTOP_GNOME_INCORPORATION) \
+	-E $(DESKTOP_GNOME_INCORPORATION) \
+	-R $(DESKTOP_REPO)@$(DESKTOP_INCORPORATION) \
+	-E $(DESKTOP_INCORPORATION)
 
 CDE_CONSOLIDATION_OPTIONS = \
 	-C cde \
 	-R $(CDE_REPO)@$(CDE_INCORPORATION) \
 	-E $(CDE_INCORPORATION)
 
-FOSS_CONSOLIDATION_OPTIONS = \
-	-C foss \
-	-R $(FOSS_REPO)@"*"
+FOSS_CONSOLIDATION_OPTIONS =
 
 CACAO_CONSOLIDATION_OPTIONS = \
 	-C cacao \
@@ -202,8 +229,42 @@ NVIDIA_CONSOLIDATION_OPTIONS = \
 	-R $(NVIDIA_REPO)@$(NVIDIA_INCORPORATION) \
 	-E $(NVIDIA_INCORPORATION)
 
-SFW_CONSOLIDATION_OPTIONS = \
-	-U sfw
+DEVPRO_CONSOLIDATION_OPTIONS = \
+	-C sunpro \
+	-R $(DEVPRO_REPO)@$(DEVPRO_INCORPORATION) \
+	-E $(DEVPRO_INCORPORATION)
+
+SOLARIS_RE_CONSOLIDATION_OPTIONS = \
+	-C solaris_re \
+	-R $(SOLARIS_RE_REPO)@$(SOLARIS_RE_INCORPORATION) \
+	-E $(SOLARIS_RE_INCORPORATION)
+
+MAN_CONSOLIDATION_OPTIONS = \
+	-C man \
+	-R $(MAN_REPO)@$(MAN_INCORPORATION) \
+	-E $(MAN_INCORPORATION)
+
+LDOMS_CONSOLIDATION_OPTIONS = \
+	-C ldoms \
+	-R $(LDOMS_REPO)@$(LDOMS_INCORPORATION) \
+	-E $(LDOMS_INCORPORATION)
+
+SIC_TEAM_CONSOLIDATION_OPTIONS = \
+	-C sic_team \
+	-R $(SIC_TEAM_REPO)@$(SIC_TEAM_INCORPORATION) \
+	-E $(SIC_TEAM_INCORPORATION)
+
+SUNVTS_CONSOLIDATION_OPTIONS = \
+	-C SunVTS \
+	-R $(SUNVTS_REPO)@$(SUNVTS_INCORPORATION) \
+	-E $(SUNVTS_INCORPORATION)
+
+JAVA_CONSOLIDATION_OPTIONS = \
+	-C java \
+	-R $(JAVA_REPO)@$(JAVA_INCORPORATION) \
+	-E $(JAVA_INCORPORATION)
+
+SFW_CONSOLIDATION_OPTIONS =
 
 CONSOLIDATION_OPTIONS_136 = \
 	$(OSNET_CONSOLIDATION_OPTIONS)
@@ -252,7 +313,29 @@ CONSOLIDATION_OPTIONS_166 = $(CONSOLIDATION_OPTIONS_165) \
 	$(JDMK_CONSOLIDATION_OPTIONS) \
 	$(NVIDIA_CONSOLIDATION_OPTIONS) \
 	$(SFW_CONSOLIDATION_OPTIONS)
-CONSOLIDATION_OPTIONS = $(CONSOLIDATION_OPTIONS_$(BUILDID))
+CONSOLIDATION_OPTIONS_167 = $(CONSOLIDATION_OPTIONS_166)
+CONSOLIDATION_OPTIONS_168 = $(CONSOLIDATION_OPTIONS_166) \
+	$(DEVPRO_CONSOLIDATION_OPTIONS)
+CONSOLIDATION_OPTIONS_169 = $(CONSOLIDATION_OPTIONS_168) \
+	$(SOLARIS_RE_CONSOLIDATION_OPTIONS)
+CONSOLIDATION_OPTIONS_170 = $(CONSOLIDATION_OPTIONS_169)
+CONSOLIDATION_OPTIONS_171 = $(CONSOLIDATION_OPTIONS_169) \
+	$(MAN_CONSOLIDATION_OPTIONS) \
+	$(LDOMS_CONSOLIDATION_OPTIONS)
+CONSOLIDATION_OPTIONS_172 = $(CONSOLIDATION_OPTIONS_171) \
+	$(SIC_TEAM_CONSOLIDATION_OPTIONS) \
+	$(SUNVTS_CONSOLIDATION_OPTIONS) \
+	$(JAVA_CONSOLIDATION_OPTIONS)
+CONSOLIDATION_OPTIONS_173 = $(CONSOLIDATION_OPTIONS_172)
+CONSOLIDATION_OPTIONS_174.0.0.0.0.0 = $(CONSOLIDATION_OPTIONS_172)
+CONSOLIDATION_OPTIONS_175.0.0.0.0.0 = $(CONSOLIDATION_OPTIONS_172)
+CONSOLIDATION_OPTIONS_175.0.0.0.1.0 = $(CONSOLIDATION_OPTIONS_172)
+CONSOLIDATION_OPTIONS_175.0.0.0.2.0 = $(CONSOLIDATION_OPTIONS_172)
+CONSOLIDATION_OPTIONS_175.1.0.0.2.0 = $(CONSOLIDATION_OPTIONS_172)
+CONSOLIDATION_OPTIONS_175.1.0.0.3.0 = $(CONSOLIDATION_OPTIONS_172)
+CONSOLIDATION_OPTIONS_175.1.0.0.4.0 = $(CONSOLIDATION_OPTIONS_172)
+CONSOLIDATION_OPTIONS_175.1.0.0.5.0 = $(CONSOLIDATION_OPTIONS_172)
+CONSOLIDATION_OPTIONS = $(CONSOLIDATION_OPTIONS_$(BRANCHID))
 
 GLOBAL_CHATTRS_BASE=	\
 	reboot		\
@@ -335,10 +418,25 @@ GLOBAL_CHATTRS_163 = $(GLOBAL_CHATTRS_124)
 GLOBAL_CHATTRS_164 = $(GLOBAL_CHATTRS_124)
 GLOBAL_CHATTRS_165 = $(GLOBAL_CHATTRS_124)
 GLOBAL_CHATTRS_166 = $(GLOBAL_CHATTRS_124)
-GLOBAL_CHATTRS = $(GLOBAL_CHATTRS_$(BUILDID))
+GLOBAL_CHATTRS_167 = $(GLOBAL_CHATTRS_124)
+GLOBAL_CHATTRS_168 = $(GLOBAL_CHATTRS_124)
+GLOBAL_CHATTRS_169 = $(GLOBAL_CHATTRS_124)
+GLOBAL_CHATTRS_170 = $(GLOBAL_CHATTRS_124)
+GLOBAL_CHATTRS_171 = $(GLOBAL_CHATTRS_124)
+GLOBAL_CHATTRS_172 = $(GLOBAL_CHATTRS_124)
+GLOBAL_CHATTRS_173 = $(GLOBAL_CHATTRS_124)
+GLOBAL_CHATTRS_174.0.0.0.0.0 = $(GLOBAL_CHATTRS_124)
+GLOBAL_CHATTRS_175.0.0.0.0.0 = $(GLOBAL_CHATTRS_124)
+GLOBAL_CHATTRS_175.0.0.0.1.0 = $(GLOBAL_CHATTRS_124)
+GLOBAL_CHATTRS_175.0.0.0.2.0 = $(GLOBAL_CHATTRS_124)
+GLOBAL_CHATTRS_175.1.0.0.2.0 = $(GLOBAL_CHATTRS_124)
+GLOBAL_CHATTRS_175.1.0.0.3.0 = $(GLOBAL_CHATTRS_124)
+GLOBAL_CHATTRS_175.1.0.0.4.0 = $(GLOBAL_CHATTRS_124)
+GLOBAL_CHATTRS_175.1.0.0.5.0 = $(GLOBAL_CHATTRS_124)
+GLOBAL_CHATTRS = $(GLOBAL_CHATTRS_$(BRANCHID))
 
 SOLARIS.PY=PYTHONPATH=$(PROTO_AREA)/usr/lib/python2.6/vendor-packages \
-	./importer.py -b 0.$(BUILDID) $(EXTRA_OPTIONS) -T \*.py \
+	./importer.py -b 0.$(BRANCHID) $(EXTRA_OPTIONS) -T \*.py \
 	$(GLOBAL_CHATTRS:%= -G %) $(ARCH_DEFINES:%= -m %) \
 	-p $(PROTO_AREA) $(EXTRA_ENTIRE_CONTENTS:%= -E %)
 
@@ -437,7 +535,22 @@ ELIDED_FILES_163 = $(ELIDED_FILES_BASE)
 ELIDED_FILES_164 = $(ELIDED_FILES_BASE)
 ELIDED_FILES_165 = $(ELIDED_FILES_BASE)
 ELIDED_FILES_166 = $(ELIDED_FILES_BASE)
-ELIDED_FILES = $(ELIDED_FILES_$(BUILDID))
+ELIDED_FILES_167 = $(ELIDED_FILES_BASE)
+ELIDED_FILES_168 = $(ELIDED_FILES_BASE)
+ELIDED_FILES_169 = $(ELIDED_FILES_BASE)
+ELIDED_FILES_170 = $(ELIDED_FILES_BASE)
+ELIDED_FILES_171 = $(ELIDED_FILES_BASE)
+ELIDED_FILES_172 = $(ELIDED_FILES_BASE)
+ELIDED_FILES_173 = $(ELIDED_FILES_BASE)
+ELIDED_FILES_174.0.0.0.0.0 = $(ELIDED_FILES_BASE)
+ELIDED_FILES_175.0.0.0.0.0 = $(ELIDED_FILES_BASE)
+ELIDED_FILES_175.0.0.0.1.0 = $(ELIDED_FILES_BASE)
+ELIDED_FILES_175.0.0.0.2.0 = $(ELIDED_FILES_BASE)
+ELIDED_FILES_175.1.0.0.2.0 = $(ELIDED_FILES_BASE)
+ELIDED_FILES_175.1.0.0.3.0 = $(ELIDED_FILES_BASE)
+ELIDED_FILES_175.1.0.0.4.0 = $(ELIDED_FILES_BASE)
+ELIDED_FILES_175.1.0.0.5.0 = $(ELIDED_FILES_BASE)
+ELIDED_FILES = $(ELIDED_FILES_$(BRANCHID))
 
 #
 # these files get placed into proto area from per-build cached versions
@@ -559,7 +672,22 @@ CACHED_FILES_163 =
 CACHED_FILES_164 =
 CACHED_FILES_165 =
 CACHED_FILES_166 =
-CACHED_FILES = $(CACHED_FILES_$(BUILDID))
+CACHED_FILES_167 =
+CACHED_FILES_168 =
+CACHED_FILES_169 =
+CACHED_FILES_170 =
+CACHED_FILES_171 =
+CACHED_FILES_172 =
+CACHED_FILES_173 =
+CACHED_FILES_174.0.0.0.0.0 =
+CACHED_FILES_175.0.0.0.0.0 =
+CACHED_FILES_175.0.0.0.1.0 =
+CACHED_FILES_175.0.0.0.2.0 =
+CACHED_FILES_175.1.0.0.2.0 =
+CACHED_FILES_175.1.0.0.3.0 =
+CACHED_FILES_175.1.0.0.4.0 =
+CACHED_FILES_175.1.0.0.5.0 =
+CACHED_FILES = $(CACHED_FILES_$(BRANCHID))
 
 FIX_FILES_BASE =				\
 	$(CACHED_FILES)				\
@@ -708,7 +836,22 @@ FIX_FILES_163 =
 FIX_FILES_164 =
 FIX_FILES_165 =
 FIX_FILES_166 =
-FIX_FILES = $(FIX_FILES_$(BUILDID))
+FIX_FILES_167 =
+FIX_FILES_168 =
+FIX_FILES_169 =
+FIX_FILES_170 =
+FIX_FILES_171 =
+FIX_FILES_172 =
+FIX_FILES_173 =
+FIX_FILES_174.0.0.0.0.0 =
+FIX_FILES_175.0.0.0.0.0 =
+FIX_FILES_175.0.0.0.1.0 =
+FIX_FILES_175.0.0.0.2.0 =
+FIX_FILES_175.1.0.0.2.0 =
+FIX_FILES_175.1.0.0.3.0 =
+FIX_FILES_175.1.0.0.4.0 =
+FIX_FILES_175.1.0.0.5.0 =
+FIX_FILES = $(FIX_FILES_$(BRANCHID))
 
 JDKFILES = LICENSE README.html
 JREFILES = LICENSE README
@@ -822,40 +965,55 @@ BUILDS=	75a			\
 	163			\
 	164			\
 	165			\
-	166
+	166			\
+	167			\
+	168			\
+	169			\
+	170			\
+	171			\
+	172			\
+	173			\
+	174.0.0.0.0.0		\
+	175.0.0.0.0.0		\
+	175.0.0.0.1.0		\
+	175.0.0.0.2.0		\
+	175.1.0.0.2.0		\
+	175.1.0.0.3.0		\
+	175.1.0.0.4.0		\
+	175.1.0.0.5.0
 
 #
 # Starting in build 80, filelist.ramdisk began moving between various
 # packages.
 #
-FILELIST_RAMDISK_PKG_$(BUILDID)	= SUNWckr
-FILELIST_RAMDISK_PKG_79b	= SUNWcakr.i
-FILELIST_RAMDISK_PKG_75a	= SUNWcakr.i
-FILELIST_RAMDISK_PKG_74		= SUNWcakr.i
-FILELIST_RAMDISK_PKG_72		= SUNWcakr.i
-FILELIST_RAMDISK_PKG_71		= SUNWcakr.i
+FILELIST_RAMDISK_PKG_$(BRANCHID)	= SUNWckr
+FILELIST_RAMDISK_PKG_79b		= SUNWcakr.i
+FILELIST_RAMDISK_PKG_75a		= SUNWcakr.i
+FILELIST_RAMDISK_PKG_74			= SUNWcakr.i
+FILELIST_RAMDISK_PKG_72			= SUNWcakr.i
+FILELIST_RAMDISK_PKG_71			= SUNWcakr.i
 
-default:	166/redist_import
+default:	$(BRANCHID)/redist_import
 
 cluster.import:	$(WOS_PKGS)/.clustertoc Makefile
 	./clustertoc2import.py $(WOS_PKGS)/.clustertoc | \
 	sed "s/version 2.2.1a/version 2.2.1.1/" > $@
 
-proto/etc/user_attr.cdonly: proto $(BUILDID)/user_attr
-	( cat $(BUILDID)/user_attr; \
+proto/etc/user_attr.cdonly: proto $(BRANCHID)/user_attr
+	( cat $(BRANCHID)/user_attr; \
 	  echo "jack::::profiles=Primary Administrator;roles=root") > $@
 
-$(BUILDID)/driver_aliases:	$(BUILDID)/redist_cluster cluster.import
+$(BRANCHID)/driver_aliases:	$(BRANCHID)/redist_cluster cluster.import
 	./get_file_from_pkg.py $(WOS_PKGS)/SUNWcsd etc/driver_aliases | \
-	./driver_names.py $(INCLUDE_PATH_$(BUILDID)) \
-	$(BUILDID)/redist_cluster > $@
+	./driver_names.py $(INCLUDE_PATH_$(BRANCHID)) \
+	$(BRANCHID)/redist_cluster > $@
 
-$(BUILDID)/name_to_major:	$(BUILDID)/redist_cluster cluster.import
+$(BRANCHID)/name_to_major:	$(BRANCHID)/redist_cluster cluster.import
 	./get_file_from_pkg.py $(WOS_PKGS)/SUNWcsd etc/name_to_major | \
-	./driver_names.py $(INCLUDE_PATH_$(BUILDID)) \
-	$(BUILDID)/redist_cluster > $@
+	./driver_names.py $(INCLUDE_PATH_$(BRANCHID)) \
+	$(BRANCHID)/redist_cluster > $@
 
-$(BUILDID)/nsswitch.conf:	Makefile
+$(BRANCHID)/nsswitch.conf:	Makefile
 	./get_file_from_pkg.py $(WOS_PKGS)/SUNWcsr etc/nsswitch.files > $@
 
 proto/etc/X11/gdm/custom.conf:	proto Makefile
@@ -867,11 +1025,12 @@ proto/etc/X11/gdm/custom.conf:	proto Makefile
 			    continue }  { print $$0 }' > $@
 
 proto/boot/solaris/filelist.ramdisk:	proto
-	(./get_file_from_pkg.py $(WOS_PKGS)/$(FILELIST_RAMDISK_PKG_$(BUILDID)) \
+	(./get_file_from_pkg.py \
+	    $(WOS_PKGS)/$(FILELIST_RAMDISK_PKG_$(BRANCHID)) \
 	    boot/solaris/filelist.ramdisk; \
-	echo etc/zfs/zpool.cache) > $@
+	    echo etc/zfs/zpool.cache) > $@
 
-$(BUILDID)/pam.conf:
+$(BRANCHID)/pam.conf:
 	(./get_file_from_pkg.py $(WOS_PKGS)/SUNWcsr etc/pam.conf;	\
 	echo "gdm-autologin auth  required    pam_unix_cred.so.1";	\
 	echo "gdm-autologin auth  sufficient  pam_allow.so.1";		\
@@ -909,15 +1068,15 @@ proto/usr/share/man/man.cf:	proto
 	'/MANSECTS/s/$$/,1openssl,3openssl,5openssl,7openssl/' \
 	> $@
 
-$(BUILDID)/ksh:	$(PROG)
+$(BRANCHID)/ksh:	$(PROG)
 	cp $(PROG) $@
 
-$(BUILDID)/shares.desktop:
+$(BRANCHID)/shares.desktop:
 	./get_file_from_pkg.py $(WOS_PKGS)/SUNWgnome-system-tools \
 	usr/share/applications/shares.desktop | \
 	./desktop_exec.sh /usr/lib/vp-shares > $@
 
-$(BUILDID)/services.desktop: proto
+$(BRANCHID)/services.desktop: proto
 	./get_file_from_pkg.py $(WOS_PKGS)/SUNWgnome-system-tools \
 	usr/share/applications/services.desktop | \
 	./desktop_exec.sh /usr/lib/vp-services > $@
@@ -925,30 +1084,30 @@ $(BUILDID)/services.desktop: proto
 #
 # change root's default shell, homedir, password
 #
-$(BUILDID)/passwd:	Makefile
+$(BRANCHID)/passwd:	Makefile
 	(./get_file_from_pkg.py $(WOS_PKGS)/SUNWcsr etc/passwd | nawk -F: \
 	'/^root/{ print "root:x:0:0:Super-User:/root:/usr/bin/bash";continue} {print $$0}') > $@
 
-$(BUILDID)/shadow:	Makefile
+$(BRANCHID)/shadow:	Makefile
 	(./get_file_from_pkg.py $(WOS_PKGS)/SUNWcsr etc/shadow | nawk -F: \
 	'/^root/{ print "root:$$5$$VgppCOxA$$ycFmYW4ObRRHhtsGEygDdexk5bugqgSiaSR9niNCouC:14146::::::";continue} {print $$0}') > $@
 
-$(BUILDID)/sh:	Makefile
+$(BRANCHID)/sh:	Makefile
 	./get_file_from_pkg.py $(WOS_PKGS)/SUNWcsr sbin/sh > $@
 
-$(BUILDID)/vi:	Makefile
+$(BRANCHID)/vi:	Makefile
 	./get_file_from_pkg.py $(WOS_PKGS)/SUNWcsu usr/bin/edit > $@
 
-$(BUILDID)/auth_attr:	Makefile
+$(BRANCHID)/auth_attr:	Makefile
 	./get_file_from_pkg.py $(WOS_PKGS)/SUNWcsr etc/security/auth_attr > $@
 
-$(BUILDID)/exec_attr:	Makefile
+$(BRANCHID)/exec_attr:	Makefile
 	./get_file_from_pkg.py $(WOS_PKGS)/SUNWcsr etc/security/exec_attr > $@
 
-$(BUILDID)/prof_attr:	Makefile
+$(BRANCHID)/prof_attr:	Makefile
 	./get_file_from_pkg.py $(WOS_PKGS)/SUNWcsr etc/security/prof_attr > $@
 
-$(BUILDID)/user_attr:	Makefile
+$(BRANCHID)/user_attr:	Makefile
 	./get_file_from_pkg.py $(WOS_PKGS)/SUNWcsr etc/user_attr > $@
 
 proto/usr/sbin/extract_hostid:	proto ../misc/extract_hostid
@@ -960,8 +1119,8 @@ $(JDKFILES:%=proto/usr/jdk/instances/jdk1.6.0/%):	proto DLJ/$(@F)
 $(JREFILES:%=proto/usr/jdk/instances/jdk1.6.0/jre/%):	proto DLJ/$(@F)
 	cp DLJ/$(@F) $@
 
-$(CACHED_FILES:%=proto/%):	proto $(BUILDID)/$(@F) Makefile
-	cat $(BUILDID)/$(@F) > $@
+$(CACHED_FILES:%=proto/%):	proto $(BRANCHID)/$(@F) Makefile
+	cat $(BRANCHID)/$(@F) > $@
 
 proto:	Makefile
 	mkdir -p proto/boot/grub
@@ -1070,42 +1229,57 @@ INCLUDE_PATH_163 = 163:$(INCLUDE_PATH_162)
 INCLUDE_PATH_164 = 164:$(INCLUDE_PATH_163)
 INCLUDE_PATH_165 = 165:$(INCLUDE_PATH_164)
 INCLUDE_PATH_166 = 166:$(INCLUDE_PATH_165)
+INCLUDE_PATH_167 = 167:$(INCLUDE_PATH_166)
+INCLUDE_PATH_168 = 168:$(INCLUDE_PATH_167)
+INCLUDE_PATH_169 = 169:$(INCLUDE_PATH_168)
+INCLUDE_PATH_170 = 170:$(INCLUDE_PATH_169)
+INCLUDE_PATH_171 = 171:$(INCLUDE_PATH_170)
+INCLUDE_PATH_172 = 172:$(INCLUDE_PATH_171)
+INCLUDE_PATH_173 = 173:$(INCLUDE_PATH_172)
+INCLUDE_PATH_174.0.0.0.0.0 = 174.0.0.0.0.0:$(INCLUDE_PATH_173)
+INCLUDE_PATH_175.0.0.0.0.0 = 175.0.0.0.0.0:$(INCLUDE_PATH_174.0.0.0.0.0)
+INCLUDE_PATH_175.0.0.0.1.0 = 175.0.0.0.1.0:$(INCLUDE_PATH_175.0.0.0.0.0)
+INCLUDE_PATH_175.0.0.0.2.0 = 175.0.0.0.2.0:$(INCLUDE_PATH_175.0.0.0.1.0)
+INCLUDE_PATH_175.1.0.0.2.0 = 175.1.0.0.2.0:$(INCLUDE_PATH_175.0.0.0.2.0)
+INCLUDE_PATH_175.1.0.0.3.0 = 175.1.0.0.3.0:$(INCLUDE_PATH_175.1.0.0.2.0)
+INCLUDE_PATH_175.1.0.0.4.0 = 175.1.0.0.4.0:$(INCLUDE_PATH_175.1.0.0.3.0)
+INCLUDE_PATH_175.1.0.0.5.0 = 175.1.0.0.5.0:$(INCLUDE_PATH_175.1.0.0.4.0)
 
-import:	cluster.import $(FIX_FILES:%=$(BUILDID)/%)
+import:	cluster.import $(FIX_FILES:%=$(BRANCHID)/%)
 	$(SOLARIS.PY) -s $(REPO) -w $(WOS_PKGS) $(ELIDED_FILES:%=-D %) \
-		$(INCLUDE_PATH_$(BUILDID):%=-I %) $(BUILDID)/all.i386
+		$(INCLUDE_PATH_$(BRANCHID):%=-I %) $(BRANCHID)/all.i386
 
 %/import:
-	$(MAKE) BUILDID=$(@:%/import=%) import
+	$(MAKE) BRANCHID=$(@:%/import=%) import
 
-redist_import:	$(BUILDID)/redist_cluster $(FIX_FILES:%=$(BUILDID)/%)
+redist_import:	$(BRANCHID)/redist_cluster $(FIX_FILES:%=$(BRANCHID)/%)
 	$(SOLARIS.PY) -s $(REPO) $(ALL_PKGS:%=-w %) $(ELIDED_FILES:%=-D %) \
-		$(JUST_THESE_PKGS:%=-j %) $(INCLUDE_PATH_$(BUILDID):%=-I %) \
-		$(CONSOLIDATION_OPTIONS) $(BUILDID)/redist_cluster
+		$(JUST_THESE_PKGS:%=-j %) $(INCLUDE_PATH_$(BRANCHID):%=-I %) \
+		$(CONSOLIDATION_OPTIONS) $(BRANCHID)/redist_cluster
 
 %/redist_import:
 	if test -z "$(JUST_THESE_PKGS)"; then \
 		$(MAKE) clobber; \
 	fi
-	$(MAKE) BUILDID=$(@:%/redist_import=%) redist_import
+	$(MAKE) BRANCHID=$(@:%/redist_import=%) redist_import
 
 $(UNBUNDLED_TARGETS:%=$(BUILDS)/%) $(UNBUNDLED_CLUSTERS:%=$(BUILDS)/%):
-	$(MAKE) BUILDID=$(@D) $(@F)
+	$(MAKE) BRANCHID=$(@D) $(@F)
 
 $(UNBUNDLED_TARGETS): unbundleds/$$(@:%.import=%)
 	$(SOLARIS.PY) -s $(REPO) $(ALL_PKGS:%=-w %) $(ELIDED_FILES:%=-D %) \
-		$(INCLUDE_PATH_$(BUILDID):%=-I %) \
+		$(INCLUDE_PATH_$(BRANCHID):%=-I %) \
 		$(REF_URIS:%=-R %) $(JUST_THESE_PKGS:%=-j %) \
 		unbundleds/$(@:%.import=%)
 
 $(UNBUNDLED_CLUSTERS): unbundleds/$$(@:%.import=%)
 	$(SOLARIS.PY) -s $(REPO) $(ALL_PKGS:%=-w %) $(ELIDED_FILES:%=-D %) \
-		$(INCLUDE_PATH_$(BUILDID):%=-I %) \
+		$(INCLUDE_PATH_$(BRANCHID):%=-I %) \
 		$(REF_URIS:%=-R %) $(JUST_THESE_PKGS:%=-j %) \
 		unbundleds/$(@:%.import=%)
 
 %/all_unbundleds:
-	$(MAKE) BUILDID=$(@D) $(@F)
+	$(MAKE) BRANCHID=$(@D) $(@F)
 
 all_unbundleds:	$(UNBUNDLED_TARGETS) $(UNBUNDLED_CLUSTERS)
 
@@ -1117,22 +1291,22 @@ guiclassification:
 	./gen_os_files.py
 
 %/SUNWipkg %/backpublish:
-	$(MAKE) BUILDID=$(@D) $(@F)
+	$(MAKE) BRANCHID=$(@D) $(@F)
 
 SUNWipkg:
-	PKG_REPO=$(REPO) ./publish_ips $(BUILDID) SUNWipkg
+	PKG_REPO=$(REPO) ./publish_ips $(BRANCHID) SUNWipkg
 
 backpublish:
-	PKG_REPO=$(REPO) ./publish_ips $(BUILDID) SUNWipkg
-	PKG_REPO=$(REPO) ./publish_ips $(BUILDID) SUNWipkg-gui
-	PKG_REPO=$(REPO) ./publish_ips $(BUILDID) SUNWipkg-gui-l10n
-	PKG_REPO=$(REPO) ./publish_ips $(BUILDID) SUNWpython-cherrypy
-	PKG_REPO=$(REPO) ./publish_ips $(BUILDID) SUNWpython-pyopenssl
+	PKG_REPO=$(REPO) ./publish_ips $(BRANCHID) SUNWipkg
+	PKG_REPO=$(REPO) ./publish_ips $(BRANCHID) SUNWipkg-gui
+	PKG_REPO=$(REPO) ./publish_ips $(BRANCHID) SUNWipkg-gui-l10n
+	PKG_REPO=$(REPO) ./publish_ips $(BRANCHID) SUNWpython-cherrypy
+	PKG_REPO=$(REPO) ./publish_ips $(BRANCHID) SUNWpython-pyopenssl
 
 clean:
 	rm -f $(OBJS)
 	rm -rf proto
-	rm -f $(FIX_FILES:%=$(BUILDID)/%)
+	rm -f $(FIX_FILES:%=$(BRANCHID)/%)
 
 clobber: clean
 	rm -f $(PROG)

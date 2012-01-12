@@ -36,21 +36,29 @@ import tempfile
 import urllib
 import py_compile
 import hashlib
+import time
 
-from distutils.errors import DistutilsError
+from distutils.errors import DistutilsError, DistutilsFileError
 from distutils.core import setup, Extension
 from distutils.cmd import Command
 from distutils.command.install import install as _install
+from distutils.command.install_data import install_data as _install_data
+from distutils.command.install_lib import install_lib as _install_lib
 from distutils.command.build import build as _build
+from distutils.command.build_ext import build_ext as _build_ext
 from distutils.command.build_py import build_py as _build_py
 from distutils.command.bdist import bdist as _bdist
 from distutils.command.clean import clean as _clean
 from distutils.dist import Distribution
+from distutils import log
 
 from distutils.sysconfig import get_python_inc
-import distutils.file_util as file_util
+import distutils.dep_util as dep_util
 import distutils.dir_util as dir_util
+import distutils.file_util as file_util
 import distutils.util as util
+import distutils.ccompiler
+from distutils.unixccompiler import UnixCCompiler
 
 osname = platform.uname()[0].lower()
 ostype = arch = 'unknown'
@@ -69,87 +77,6 @@ elif osname == 'darwin':
 elif osname == 'aix':
         arch = "aix"
         ostype = "posix"
-
-# 3rd party software required for the build
-CP = 'CherryPy'
-CPIDIR = 'cherrypy'
-CPVER = '3.1.2'
-CPARC = '%s-%s.tar.gz' % (CP, CPVER)
-CPDIR = '%s-%s' % (CP, CPVER)
-CPURL = 'http://download.cherrypy.org/cherrypy/%s/%s' % (CPVER, CPARC)
-CPHASH = 'a94aedfd0e675858dbcc32dd250c23d285ee9b88'
-
-PO = 'pyOpenSSL'
-POIDIR = 'OpenSSL'
-POVER = '0.7'
-POARC = '%s-%s.tar.gz' % (PO, POVER)
-PODIR = '%s-%s' % (PO, POVER)
-POURL = 'http://downloads.sourceforge.net/pyopenssl/%s' % (POARC)
-POHASH = 'bd072fef8eb36241852d25a9161282a051f0a63e'
-
-COV = 'coveragepy'
-COVIDIR = 'coverage'
-COVVER = '3.2b2'
-COVPVER = '3.2'
-COVARC = '%s-%s.tar.gz' % (COVIDIR, COVVER)
-COVDIR = '%s-%s' % (COVIDIR, COVVER)
-COVURL = 'http://pypi.python.org/packages/source/c/coverage/%s' % COVARC
-COVHASH = '4710d033b8c6de1efaa562243e5b29e0a31fb8b9'
-
-LDTP = 'ldtp'
-LDTPIDIR = 'ldtp'
-LDTPVER = '1.7.1'
-LDTPMINORVER = '1.7.x'
-LDTPMAJORVER = '1.x'
-LDTPARC = '%s-%s.tar.gz' % (LDTP, LDTPVER)
-LDTPDIR = '%s-%s' % (LDTP, LDTPVER)
-LDTPURL = 'http://download.freedesktop.org/ldtp/%s/%s/%s' % \
-    (LDTPMAJORVER, LDTPMINORVER, LDTPARC)
-LDTPHASH = 'd31213d2b1449a0dadcace723b9ff7041169f7ce'
-
-MAKO = 'Mako'
-MAKOIDIR = 'mako'
-MAKOVER = '0.2.2'
-MAKOARC = '%s-%s.tar.gz' % (MAKO, MAKOVER)
-MAKODIR = '%s-%s' % (MAKO, MAKOVER)
-MAKOURL = 'http://www.makotemplates.org/downloads/%s' % (MAKOARC)
-MAKOHASH = '85c04ab3a6a26a1cab47067449712d15a8b29790'
-
-PLY = 'ply'
-PLYIDIR = 'ply'
-PLYVER = '3.1'
-PLYARC = '%s-%s.tar.gz' % (PLY, PLYVER)
-PLYDIR = '%s-%s' % (PLY, PLYVER)
-PLYURL = 'http://www.dabeaz.com/ply/%s' % (PLYARC)
-PLYHASH = '38efe9e03bc39d40ee73fa566eb9c1975f1a8003'
-
-PBJ = 'pybonjour'
-PBJIDIR = 'pybonjour'
-PBJVER = '1.1.1'
-PBJARC = '%s-%s.tar.gz' % (PBJ, PBJVER)
-PBJDIR = '%s-%s' % (PBJ, PBJVER)
-PBJURL = 'http://pybonjour.googlecode.com/files/%s' % (PBJARC)
-PBJHASH = '92cabd14e04c5f62ce067c47c2057ee3d424d29b'
-
-PC = 'pycurl'
-PCIDIR = 'curl'
-PCVER = '7.19.0'
-PCPVER= '7.19.0.1'
-PCARC = '%s-%s.tar.gz' % (PC, PCVER)
-PCDIR = '%s-%s' % (PC, PCVER)
-PCURL = 'http://pycurl.sourceforge.net/download/%s' % PCARC
-PCHASH = '3fb59eca1461331bb9e9e8d6fe3b23eda961a416'
-PCENVIRON = {}
-if osname in ("sunos", "linux", "darwin"):
-        PCENVIRON = {'CFLAGS': '-O3'}
-
-M2C = 'M2Crypto'
-M2CIDIR = 'm2crypto'
-M2CVER = '0.21.1'
-M2CARC = '%s-%s.tar.gz' % (M2C, M2CVER)
-M2CDIR = '%s-%s' % (M2C, M2CVER)
-M2CURL = 'http://pypi.python.org/packages/source/M/M2Crypto/%s' % (M2CARC)
-M2CHASH = '3c7135b952092e4f2eee7a94c5153319cccba94e'
 
 pwd = os.path.normpath(sys.path[0])
 
@@ -175,20 +102,34 @@ scripts_dir = 'usr/bin'
 lib_dir = 'usr/lib'
 svc_method_dir = 'lib/svc/method'
 
-man1_dir = 'usr/share/man/cat1'
-man1m_dir = 'usr/share/man/cat1m'
-man5_dir = 'usr/share/man/cat5'
+man1_dir = 'usr/share/man/man1'
+man1m_dir = 'usr/share/man/man1m'
+man5_dir = 'usr/share/man/man5'
+man1_ja_JP_dir = 'usr/share/man/ja_JP.UTF-8/man1'
+man1m_ja_JP_dir = 'usr/share/man/ja_JP.UTF-8/man1m'
+man5_ja_JP_dir = 'usr/share/man/ja_JP.UTF-8/man5'
+man1_zh_CN_dir = 'usr/share/man/zh_CN.UTF-8/man1'
+man1m_zh_CN_dir = 'usr/share/man/zh_CN.UTF-8/man1m'
+man5_zh_CN_dir = 'usr/share/man/zh_CN.UTF-8/man5'
+
 resource_dir = 'usr/share/lib/pkg'
-smf_app_dir = 'lib/svc/manifest/application'
-smf_sys_dir = 'lib/svc/manifest/system'
-zones_dir = 'etc/zones'
-etcbrand_dir = 'etc/brand/ipkg'
-brand_dir = 'usr/lib/brand/ipkg'
+transform_dir = 'usr/share/pkg/transforms'
+smf_app_dir = 'lib/svc/manifest/application/pkg'
 execattrd_dir = 'etc/security/exec_attr.d'
 authattrd_dir = 'etc/security/auth_attr.d'
 sysrepo_dir = 'etc/pkg/sysrepo'
 sysrepo_logs_dir = 'var/log/pkg/sysrepo'
 sysrepo_cache_dir = 'var/cache/pkg/sysrepo'
+autostart_dir = 'etc/xdg/autostart'
+desktop_dir = 'usr/share/applications'
+gconf_dir = 'etc/gconf/schemas'
+help_dir = 'usr/share/gnome/help/package-manager'
+omf_dir = 'usr/share/omf/package-manager'
+startpage_dir = 'usr/share/package-manager/data/startpagebase'
+um_lib_dir = 'usr/lib/update-manager'
+um_share_dir = 'usr/share/update-manager'
+pm_share_dir = 'usr/share/package-manager'
+locale_dir = 'usr/share/locale'
 
 
 # A list of source, destination tuples of modules which should be hardlinked
@@ -218,10 +159,14 @@ scripts_sunos = {
                 ['launch.py', 'pm-launch'],
                 ['sysrepo.py', 'pkg.sysrepo'],
                 ],
+        um_lib_dir: [
+                ['um/update-refresh.sh', 'update-refresh.sh'],
+        ],
         svc_method_dir: [
                 ['svc/svc-pkg-depot', 'svc-pkg-depot'],
                 ['svc/svc-pkg-mdns', 'svc-pkg-mdns'],
                 ['svc/svc-pkg-sysrepo', 'svc-pkg-sysrepo'],
+                ['um/pkg-update', 'pkg-update'],
                 ],
         }
 
@@ -292,6 +237,53 @@ man1m_files = [
 man5_files = [
         'man/pkg.5'
         ]
+
+man1_ja_files = [
+        'man/ja_JP/packagemanager.1',
+        'man/ja_JP/pkg.1',
+        'man/ja_JP/pkgdepend.1',
+        'man/ja_JP/pkgdiff.1',
+        'man/ja_JP/pkgfmt.1',
+        'man/ja_JP/pkglint.1',
+        'man/ja_JP/pkgmerge.1',
+        'man/ja_JP/pkgmogrify.1',
+        'man/ja_JP/pkgsend.1',
+        'man/ja_JP/pkgsign.1',
+        'man/ja_JP/pkgrecv.1',
+        'man/ja_JP/pkgrepo.1',
+        'man/ja_JP/pm-updatemanager.1',
+        ]
+man1m_ja_files = [
+        'man/ja_JP/pkg.depotd.1m',
+        'man/ja_JP/pkg.sysrepo.1m'
+        ]
+man5_ja_files = [
+        'man/ja_JP/pkg.5'
+        ]
+
+man1_zh_CN_files = [
+        'man/zh_CN/packagemanager.1',
+        'man/zh_CN/pkg.1',
+        'man/zh_CN/pkgdepend.1',
+        'man/zh_CN/pkgdiff.1',
+        'man/zh_CN/pkgfmt.1',
+        'man/zh_CN/pkglint.1',
+        'man/zh_CN/pkgmerge.1',
+        'man/zh_CN/pkgmogrify.1',
+        'man/zh_CN/pkgsend.1',
+        'man/zh_CN/pkgsign.1',
+        'man/zh_CN/pkgrecv.1',
+        'man/zh_CN/pkgrepo.1',
+        'man/zh_CN/pm-updatemanager.1',
+        ]
+man1m_zh_CN_files = [
+        'man/zh_CN/pkg.depotd.1m',
+        'man/zh_CN/pkg.sysrepo.1m'
+        ]
+man5_zh_CN_files = [
+        'man/zh_CN/pkg.5'
+        ]
+
 packages = [
         'pkg',
         'pkg.actions',
@@ -301,6 +293,7 @@ packages = [
         'pkg.client.transport',
         'pkg.file_layout',
         'pkg.flavor',
+        'pkg.gui',
         'pkg.lint',
         'pkg.portable',
         'pkg.publish',
@@ -323,36 +316,23 @@ for entry in os.walk("web"):
             if f != "Makefile"
             ]))
 
-zones_files = [
-        'brand/SUNWipkg.xml',
-        ]
-brand_files = [
-        'brand/pkgcreatezone',
-        'brand/attach',
-        'brand/clone',
-        'brand/detach',
-        'brand/prestate',
-        'brand/poststate',
-        'brand/uninstall',
-        'brand/common.ksh',
-        ]
-etcbrand_files = [
-        'brand/pkgrm.conf',
-        'brand/smf_disable.conf',
-        ]
 smf_app_files = [
         'svc/pkg-mdns.xml',
         'svc/pkg-server.xml',
-        'svc/pkg-system-repository.xml',
         'svc/pkg-update.xml',
-        ]
-smf_sys_files = [
+        'svc/pkg-system-repository.xml',
         'svc/zoneproxy-client.xml',
         'svc/zoneproxyd.xml'
         ]
 resource_files = [
         'util/opensolaris.org.sections',
         'util/pkglintrc',
+        ]
+transform_files = [
+        'util/publish/transforms/developer',
+        'util/publish/transforms/documentation',
+        'util/publish/transforms/locale',
+        'util/publish/transforms/smf-manifests'
         ]
 sysrepo_files = [
         'util/apache2/sysrepo/sysrepo_httpd.conf.mako',
@@ -362,9 +342,69 @@ sysrepo_log_stubs = [
         'util/apache2/sysrepo/logs/access_log',
         'util/apache2/sysrepo/logs/error_log',
         ]
-execattrd_files = ['util/misc/exec_attr.d/SUNWipkg',
-                   'util/misc/exec_attr.d/SUNWipkg-gui']
-authattrd_files = ['util/misc/auth_attr.d/SUNWipkg']
+execattrd_files = [
+        'util/misc/exec_attr.d/package:pkg',
+        'util/misc/exec_attr.d/package:pkg:package-manager'
+]
+authattrd_files = ['util/misc/auth_attr.d/package:pkg']
+autostart_files = [
+        'um/data/updatemanagernotifier.desktop',
+]
+desktop_files = [
+        'gui/data/addmoresoftware.desktop',
+        'gui/data/packagemanager.desktop',
+        'um/data/updatemanager.desktop',
+]
+gconf_files = [
+        'gui/data/packagemanager-preferences.schemas',
+        'um/data/updatemanager-preferences.schemas',
+]
+intl_files = [
+        'gui/data/addmoresoftware.desktop.in',
+        'gui/data/packagemanager-info.xml.in',
+        'gui/data/packagemanager-preferences.schemas.in',
+        'gui/data/packagemanager.desktop.in',
+        'um/data/updatemanager-preferences.schemas.in',
+        'um/data/updatemanager.desktop.in',
+        'um/data/updatemanagernotifier.desktop.in',
+]
+help_locales = \
+    'C ar ca cs de es fr hu id it ja ko pl pt_BR ru sv zh_CN zh_HK zh_TW'.split()
+help_files = {
+        'C': ['gui/help/C/package-manager.xml'],
+        'C/figures': [
+            'gui/help/C/figures/%s.png' % n
+            for n in 'pkgmgr-main startpage_new update_all_new webinstall'.split()
+        ]
+}
+help_files.update(
+        (locale, ['gui/help/%s/package-manager.xml' % locale])
+        for locale in help_locales[1:]
+)
+omf_files = [
+        'gui/help/package-manager-%s.omf' % locale
+        for locale in help_locales
+]
+startpage_locales = \
+    'C ar ca cs de es fr hu id it ja ko nl pt_BR ru sv zh_CN zh_HK zh_TW'.split()
+startpage_files = {
+        'C': [
+            'gui/data/startpagebase/C/%s.png' % n
+            for n in [
+                'dialog-information', 'dialog-warning', 'hc_dialog-information',
+                'hc_dialog-warning', 'hc_install', 'hc_opensolaris',
+                'hci_dialog-information', 'hci_dialog-warning', 'hci_install',
+                'hci_opensolaris', 'install', 'opensolaris'
+            ]
+        ] + ['gui/data/startpagebase/C/startpage.html']
+}
+startpage_files.update(
+        (locale, ['gui/data/startpagebase/%s/startpage.html' % locale])
+        for locale in startpage_locales[1:]
+)
+pkg_locales = \
+    'ar ca cs de es fr he hu id it ja ko nl pl pt_BR ru sk sv zh_CN zh_HK zh_TW'.split()
+
 syscallat_srcs = [
         'modules/syscallat.c'
         ]
@@ -383,7 +423,7 @@ _actions_srcs = [
         'modules/actions/_actions.c'
         ]
 solver_srcs = [
-        'modules/solver/solver.c', 
+        'modules/solver/solver.c',
         'modules/solver/py_solver.c'
         ]
 solver_link_args = ["-lm", "-lc"]
@@ -539,15 +579,10 @@ class install_func(_install):
                 self.root_dir = root_dir
 
         def run(self):
+                """At the end of the install function, we need to rename some
+                files because distutils provides no way to rename files as they
+                are placed in their install locations.
                 """
-                At the end of the install function, we need to rename some files
-                because distutils provides no way to rename files as they are
-                placed in their install locations.
-                Also, make sure that cherrypy and other external dependencies
-                are installed.
-                """
-                for f in man1_files + man1m_files + man5_files:
-                        file_util.copy_file(f + ".txt", f, update=1)
 
                 _install.run(self)
 
@@ -571,172 +606,84 @@ class install_func(_install):
                                 dst_dir = util.change_root(self.root_dir, d)
                                 dst_path = util.change_root(self.root_dir,
                                        os.path.join(d, dstname))
-                                dir_util.mkpath(dst_dir, verbose = True)
-                                file_util.copy_file(srcname, dst_path, update = True)
+                                dir_util.mkpath(dst_dir, verbose=True)
+                                file_util.copy_file(srcname, dst_path, update=True)
                                 # make scripts executable
                                 os.chmod(dst_path,
                                     os.stat(dst_path).st_mode
                                     | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
-                prep_sw(CP, CPARC, CPDIR, CPURL, CPHASH)
-                install_sw(CP, CPDIR, CPIDIR)
-                if osname == "sunos" and platform.uname()[2] == "5.11":
-                        prep_sw(LDTP, LDTPARC, LDTPDIR, LDTPURL,
-                            LDTPHASH)
-                        saveenv = os.environ.copy()
-                        os.environ["LDFLAGS"] = os.environ.get("LDFLAGS", "") + \
-                            " -lsocket -lnsl"
-                        install_ldtp(LDTP, LDTPDIR, LDTPIDIR)
-                        os.environ = saveenv
+class install_lib_func(_install_lib):
+        """Remove the target files prior to the standard install_lib procedure
+        if the build_py module has determined that they've actually changed.
+        This may be needed when a module's timestamp goes backwards in time, if
+        a working-directory change is reverted, or an older changeset is checked
+        out.
+        """
 
-                if "BUILD_PYOPENSSL" in os.environ and \
-                    os.environ["BUILD_PYOPENSSL"] != "":
-                        #
-                        # Include /usr/sfw/lib in the build environment
-                        # to ensure that this builds and runs on older
-                        # nevada builds, before openssl moved out of /usr/sfw.
-                        #
-                        saveenv = os.environ.copy()
-                        if osname == "sunos":
-                                os.environ["CFLAGS"] = "-I/usr/sfw/include " + \
-                                    os.environ.get("CFLAGS", "")
-                                os.environ["LDFLAGS"] = \
-                                    "-L/usr/sfw/lib -R/usr/sfw/lib " + \
-                                    os.environ.get("LDFLAGS", "")
-                        prep_sw(PO, POARC, PODIR, POURL, POHASH)
-                        install_sw(PO, PODIR, POIDIR)
-                        os.environ = saveenv
-                prep_sw(M2C, M2CARC, M2CDIR, M2CURL, M2CHASH)
-                install_sw(M2C, M2CDIR, M2CIDIR)
-                prep_sw(MAKO, MAKOARC, MAKODIR, MAKOURL, MAKOHASH)
-                install_sw(MAKO, MAKODIR, MAKOIDIR)
-                prep_sw(PLY, PLYARC, PLYDIR, PLYURL, PLYHASH)
-                install_sw(PLY, PLYDIR, PLYIDIR)
-                prep_sw(PC, PCARC, PCDIR, PCURL, PCHASH)
-                install_sw(PC, PCDIR, PCIDIR, extra_env=PCENVIRON)
-                prep_sw(COV, COVARC, COVDIR, COVURL, COVHASH)
-                install_sw(COV, COVDIR, COVIDIR)
-                prep_sw(PBJ, PBJARC, PBJDIR, PBJURL, PBJHASH)
-                install_sw(PBJ, PBJDIR, PBJIDIR)
+        def install(self):
+                build_py = self.get_finalized_command("build_py")
+                prefix_len = len(self.build_dir) + 1
+                for p in build_py.copied:
+                        id_p = os.path.join(self.install_dir, p[prefix_len:])
+                        rm_f(id_p)
+                        if self.compile:
+                                rm_f(id_p + "c")
+                        if self.optimize > 0:
+                                rm_f(id_p + "o")
+                return _install_lib.install(self)
 
-                # Remove some bits that we're not going to package, but be sure
-                # not to complain if we try to remove them twice.
-                def onerror(func, path, exc_info):
-                        if exc_info[1].errno != errno.ENOENT:
+class install_data_func(_install_data):
+        """Enhance the standard install_data subcommand to take not only a list
+        of filenames, but a list of source and destination filename tuples, for
+        the cases where a filename needs to be renamed between the two
+        locations."""
+
+        def run(self):
+                self.mkpath(self.install_dir)
+                for f in self.data_files:
+                        dir, files = f
+                        dir = util.convert_path(dir)
+                        if not os.path.isabs(dir):
+                                dir = os.path.join(self.install_dir, dir)
+                        elif self.root:
+                                dir = change_root(self.root, dir)
+                        self.mkpath(dir)
+
+                        if not files:
+                                self.outfiles.append(dir)
+                        else:
+                                for file in files:
+                                        if isinstance(file, basestring):
+                                                infile = file
+                                                outfile = os.path.join(dir,
+                                                    os.path.basename(file))
+                                        else:
+                                                infile, outfile = file
+                                        infile = util.convert_path(infile)
+                                        outfile = util.convert_path(outfile)
+                                        if os.path.sep not in outfile:
+                                                outfile = os.path.join(dir,
+                                                    outfile)
+                                        self.copy_file(infile, outfile)
+                                        self.outfiles.append(outfile)
+
+                # Don't bother making this generic for the one symlink.
+                src = "HighContrastInverse"
+                dst = os.path.join(self.install_dir, pm_share_dir,
+                    "icons/HighContrastLargePrintInverse")
+                try:
+                        targ = os.readlink(dst)
+                except OSError, e:
+                        if e.errno in (errno.ENOENT, errno.EINVAL):
+                                targ = None
+                        else:
                                 raise
 
-                for dir in ("cherrypy/scaffold", "cherrypy/test",
-                    "cherrypy/tutorial"):
-                        shutil.rmtree(os.path.join(root_dir, py_install_dir, dir),
-                            onerror=onerror)
-                try:
-                        os.remove(os.path.join(root_dir, "usr/bin/mako-render"))
-                except EnvironmentError, e:
-                        if e.errno != errno.ENOENT:
-                                raise
-
-def hash_sw(swname, swarc, swhash):
-        if swhash == None:
-                return True
-
-        print "checksumming %s" % swname
-        hash = hashlib.sha1()
-        f = open(swarc, "rb")
-        while True:
-                data = f.read(65536)
-                if data == "":
-                        break
-                hash.update(data)
-        f.close()
-
-        if hash.hexdigest() == swhash:
-                return True
-        else:
-                print >> sys.stderr, "bad checksum! %s != %s" % \
-                    (swhash, hash.hexdigest())
-                return False
-
-def prep_sw(swname, swarc, swdir, swurl, swhash):
-        swarc = os.path.join(extern_dir, swarc)
-        swdir = os.path.join(extern_dir, swdir)
-        if not os.path.exists(extern_dir):
-                os.mkdir(extern_dir)
-
-        if not os.path.exists(swarc):
-                print "downloading %s" % swname
-                try:
-                        fname, hdr = urllib.urlretrieve(swurl, swarc)
-                except IOError:
-                        pass
-                if not os.path.exists(swarc):
-                        print >> sys.stderr, "Unable to retrieve %s.\n" \
-                            "Please retrieve the file " \
-                            "and place it at: %s\n" % (swurl, swarc)
-                        # remove a partial download or error message from proxy
-                        remove_sw(swname)
-                        sys.exit(1)
-        if not os.path.exists(swdir):
-                if not hash_sw(swname, swarc, swhash):
-                        sys.exit(1)
-
-                print "unpacking %s" % swname
-                tar = tarfile.open(swarc)
-                # extractall doesn't exist until python 2.5
-                for m in tar.getmembers():
-                        tar.extract(m, extern_dir)
-                tar.close()
-
-        # If there are patches, apply them now.
-        patchdir = os.path.join("patch", swname)
-        already_patched = os.path.join(swdir, ".patched")
-        if os.path.exists(patchdir) and not os.path.exists(already_patched):
-                patches = os.listdir(patchdir)
-                for p in patches:
-                        patchpath = os.path.join(os.path.pardir,
-                            os.path.pardir, patchdir, p)
-                        print "Applying %s to %s" % (p, swname)
-                        args = ["patch", "-d", swdir, "-i", patchpath, "-p0"]
-                        if osname == "windows":
-                                args.append("--binary")
-                        ret = subprocess.Popen(args).wait()
-                        if ret != 0:
-                                print >> sys.stderr, \
-                                    "patch failed and returned %d." % ret
-                                print >> sys.stderr, \
-                                    "Command was: %s" % " ".join(args)
-                                sys.exit(1)
-                file(already_patched, "w").close()
-
-def install_ldtp(swname, swdir, swidir):
-        swdir = os.path.join(extern_dir, swdir)
-        swinst_file = os.path.join(root_dir, py_install_dir, swidir + ".py")
-        if not os.path.exists(swinst_file):
-                print "installing %s" % swname
-                args_config = ['./configure',
-                    '--prefix=/usr',
-                    '--bindir=/usr/bin',
-                    'PYTHONPATH=""',
-                       ]
-                args_make_install = ['make', 'install', 
-                    'DESTDIR=%s' % root_dir
-                       ]
-                run_cmd(args_config, swdir)
-                run_cmd(args_make_install, swdir)
-
-def install_sw(swname, swdir, swidir, extra_env=None):
-        swdir = os.path.join(extern_dir, swdir)
-        swinst_dir = os.path.join(root_dir, py_install_dir, swidir)
-        inst_env = os.environ.copy()
-        if extra_env:
-                inst_env.update(extra_env)
-
-        if not os.path.exists(swinst_dir):
-                print "installing %s" % swname
-                args = ['python2.6', 'setup.py', 'install',
-                    '--root=%s' % root_dir,
-                    '--install-lib=%s' % py_install_dir,
-                    '--install-data=%s' % py_install_dir]
-                run_cmd(args, swdir, env=inst_env)
+                if src != targ:
+                        log.info("linking %s -> %s" % (src, dst))
+                        rm_f(dst)
+                        os.symlink(src, dst)
 
 def run_cmd(args, swdir, env=None):
                 if env is None:
@@ -749,17 +696,118 @@ def run_cmd(args, swdir, env=None):
                             "Command was: %s" % " ".join(args)
                         sys.exit(1)
 
-def remove_sw(swname):
-        print("deleting %s" % swname)
-        for file in os.listdir(extern_dir):
-                if fnmatch.fnmatch(file, "%s*" % swname):
-                        fpath = os.path.join(extern_dir, file)
-                        if os.path.isfile(fpath):
-                                os.unlink(fpath)
-                        else:
-                                shutil.rmtree(fpath, True)
+def _copy_file_contents(src, dst, buffer_size=16*1024):
+        """A clone of distutils.file_util._copy_file_contents() that strips the
+        CDDL text.  For Python files, we replace the CDDL text with an equal
+        number of empty comment lines so that line numbers match between the
+        source and destination files."""
+
+        # Match the lines between and including the CDDL header signposts, as
+        # well as empty comment lines before and after, if they exist.
+        cddl_re = re.compile("\n(#\s*\n)?^[^\n]*CDDL HEADER START.+"
+            "CDDL HEADER END[^\n]*$(\n#\s*$)?", re.MULTILINE|re.DOTALL)
+
+        with file(src, "r") as sfp:
+                try:
+                        os.unlink(dst)
+                except EnvironmentError, e:
+                        if e.errno != errno.ENOENT:
+                                raise DistutilsFileError("could not delete "
+                                    "'%s': %s" % (dst, e))
+
+                with file(dst, "w") as dfp:
+                        while True:
+                                buf = sfp.read(buffer_size)
+                                if not buf:
+                                        break
+                                if src.endswith(".py"):
+                                        match = cddl_re.search(buf)
+                                        if match:
+                                                # replace the CDDL expression
+                                                # with the same number of empty
+                                                # comment lines as the cddl_re
+                                                # matched.
+                                                substr = buf[
+                                                    match.start():match.end()]
+                                                count = len(
+                                                    substr.split("\n")) - 2
+                                                blanks = "#\n" * count
+                                                buf = cddl_re.sub("\n" + blanks,
+                                                    buf)
+                                else:
+                                         buf = cddl_re.sub("", buf)
+                                dfp.write(buf)
+
+# Make file_util use our version of _copy_file_contents
+file_util._copy_file_contents = _copy_file_contents
+
+def intltool_merge(src, dst):
+        if not dep_util.newer(src, dst):
+                return
+
+        args = [
+            "/usr/bin/intltool-merge", "-d", "-u",
+            "-c", "po/.intltool-merge-cache", "po", src, dst
+        ]
+        print " ".join(args)
+        run_cmd(args, os.getcwd(), os.environ.copy().update({"LC_ALL": "C"}))
+
+def msgfmt(src, dst):
+        if not dep_util.newer(src, dst):
+                return
+
+        args = ["/usr/bin/msgfmt", "-o", dst, src]
+        print " ".join(args)
+        run_cmd(args, os.getcwd())
+
+def xml2po(src, dst, mofile):
+        msgfmt(mofile[:-3] + ".po", mofile)
+
+        monewer = dep_util.newer(mofile, dst)
+        srcnewer = dep_util.newer(src, dst)
+
+        if not srcnewer and not monewer:
+                return
+
+        args = ["/usr/bin/xml2po", "-t", mofile, "-o", dst, src]
+        print " ".join(args)
+        run_cmd(args, os.getcwd())
+
+class installfile(Command):
+        user_options = [
+            ("file=", "f", "source file to copy"),
+            ("dest=", "d", "destination directory"),
+            ("mode=", "m", "file mode"),
+        ]
+
+        description = "De-CDDLing file copy"
+
+        def initialize_options(self):
+                self.file = None
+                self.dest = None
+                self.mode = None
+
+        def finalize_options(self):
+                if self.mode is None:
+                        self.mode = 0644
+                elif isinstance(self.mode, basestring):
+                        try:
+                                self.mode = int(self.mode, 8)
+                        except ValueError:
+                                self.mode = 0644
+
+        def run(self):
+                dest_file = os.path.join(self.dest, os.path.basename(self.file))
+                ret = self.copy_file(self.file, dest_file)
+
+                os.chmod(dest_file, self.mode)
+                os.utime(dest_file, None)
+
+                return ret
 
 class build_func(_build):
+        sub_commands = _build.sub_commands + [('build_data', None)]
+
         def initialize_options(self):
                 _build.initialize_options(self)
                 self.build_base = build_dir
@@ -793,9 +841,90 @@ def syntax_check(filename):
 
                 raise DistutilsError(res)
 
+# On Solaris, ld inserts the full argument to the -o option into the symbol
+# table.  This means that the resulting object will be different depending on
+# the path at which the workspace lives, and not just on the interesting content
+# of the object.
+#
+# In order to work around that bug (7076871), we create a new compiler class
+# that looks at the argument indicating the output file, chdirs to its
+# directory, and runs the real link with the output file set to just the base
+# name of the file.
+#
+# Unfortunately, distutils isn't too customizable in this regard, so we have to
+# twiddle with a couple of the names in the distutils.ccompiler namespace: we
+# have to add a new entry to the compiler_class dict, and we have to override
+# the new_compiler() function to point to our own.  Luckily, our copy of
+# new_compiler() gets to be very simple, since we always know what we want to
+# return.
+class MyUnixCCompiler(UnixCCompiler):
+
+        def link(self, *args, **kwargs):
+
+                output_filename = args[2]
+                output_dir = kwargs.get('output_dir')
+                cwd = os.getcwd()
+
+                assert(not output_dir)
+                output_dir = os.path.join(cwd, os.path.dirname(output_filename))
+                output_filename = os.path.basename(output_filename)
+                nargs = args[:2] + (output_filename,) + args[3:]
+                os.chdir(output_dir)
+
+                UnixCCompiler.link(self, *nargs, **kwargs)
+
+                os.chdir(cwd)
+
+distutils.ccompiler.compiler_class['myunix'] = (
+    'unixccompiler', 'MyUnixCCompiler',
+    'standard Unix-style compiler with a link stage modified for Solaris'
+)
+
+def my_new_compiler(plat=None, compiler=None, verbose=0, dry_run=0, force=0):
+        return MyUnixCCompiler(None, dry_run, force)
+
+if osname == 'sunos':
+        distutils.ccompiler.new_compiler = my_new_compiler
+
+class build_ext_func(_build_ext):
+
+        def initialize_options(self):
+                _build_ext.initialize_options(self)
+                if osname == 'sunos':
+                        self.compiler = 'myunix'
 
 class build_py_func(_build_py):
-        # override the build_module method to do VERSION substitution on pkg/__init__.py
+
+        def __init__(self, dist):
+                ret = _build_py.__init__(self, dist)
+
+                self.copied = []
+
+                # Gather the timestamps of the .py files in the gate, so we can
+                # force the mtimes of the built and delivered copies to be
+                # consistent across builds, causing their corresponding .pyc
+                # files to be unchanged unless the .py file content changed.
+
+                self.timestamps = {}
+
+                p = subprocess.Popen(
+                    [sys.executable, os.path.join(pwd, "pydates")],
+                    stdout=subprocess.PIPE)
+
+                for line in p.stdout:
+                        stamp, path = line.split()
+                        stamp = float(stamp)
+                        self.timestamps[path] = stamp
+
+                if p.wait() != 0:
+                        print >> sys.stderr, "ERROR: unable to gather .py " \
+                            "timestamps"
+                        sys.exit(1)
+
+                return ret
+
+        # override the build_module method to do VERSION substitution on
+        # pkg/__init__.py
         def build_module (self, module, module_file, package):
 
                 if module == "__init__" and package == "pkg":
@@ -831,10 +960,107 @@ class build_py_func(_build_py):
 
                 return _build_py.build_module(self, module, module_file, package)
 
+        def copy_file(self, infile, outfile, preserve_mode=1, preserve_times=1,
+            link=None, level=1):
+
+                # If the timestamp on the source file (coming from mercurial if
+                # unchanged, or from the filesystem if changed) doesn't match
+                # the filesystem timestamp on the destination, then force the
+                # copy to make sure the right data is in place.
+
+                try:
+                        dst_mtime = os.stat(outfile).st_mtime
+                except OSError, e:
+                        if e.errno != errno.ENOENT:
+                                raise
+                        dst_mtime = time.time()
+
+                # The timestamp for __init__.py is the timestamp for the
+                # workspace itself.
+                if outfile.endswith("/pkg/__init__.py"):
+                        src_mtime = self.timestamps["."]
+                else:
+                        src_mtime = self.timestamps.get(
+                            os.path.join("src", infile), self.timestamps["."])
+
+                # Force a copy of the file if the source timestamp is different
+                # from that of the destination, not just if it's newer.  This
+                # allows timestamps in the working directory to regress (for
+                # instance, following the reversion of a change).
+                if dst_mtime != src_mtime:
+                        f = self.force
+                        self.force = True
+                        dst, copied = _build_py.copy_file(self, infile, outfile,
+                            preserve_mode, preserve_times, link, level)
+                        self.force = f
+                else:
+                        dst, copied = outfile, 0
+
+                # If we copied the file, then we need to go and readjust the
+                # timestamp on the file to match what we have in our database.
+                # Save the filename aside for our version of install_lib.
+                if copied and dst.endswith(".py"):
+                        os.utime(dst, (src_mtime, src_mtime))
+                        self.copied.append(dst)
+
+                return dst, copied
+
+class build_data_func(Command):
+        description = "build data files whose source isn't in deliverable form"
+        user_options = []
+
+        # As a subclass of distutils.cmd.Command, these methods are required to
+        # be implemented.
+        def initialize_options(self):
+                pass
+
+        def finalize_options(self):
+                pass
+
+        def run(self):
+                # Anything that gets created here should get deleted in
+                # clean_func.run() below.
+                for f in intl_files:
+                        intltool_merge(f, f[:-3])
+
+                for l in help_locales:
+                        path = "gui/help/%s/" % l
+                        xml2po(path + "package-manager.xml.in",
+                            path + "package-manager.xml",
+                            path + "%s.mo" % l)
+
+                for l in pkg_locales:
+                        msgfmt("po/%s.po" % l, "po/%s.mo" % l)
+
+def rm_f(filepath):
+        """Remove a file without caring whether it exists."""
+
+        try:
+                os.unlink(filepath)
+        except OSError, e:
+                if e.errno != errno.ENOENT:
+                        raise
+
 class clean_func(_clean):
         def initialize_options(self):
                 _clean.initialize_options(self)
                 self.build_base = build_dir
+
+        def run(self):
+                _clean.run(self)
+
+                rm_f("po/.intltool-merge-cache")
+
+                for f in intl_files:
+                        rm_f(f[:-3])
+
+                for l in pkg_locales:
+                        rm_f("po/%s.mo" % l)
+
+                for l in help_locales:
+                        path = "gui/help/%s/" % l
+                        rm_f(path + "package-manager.xml")
+                        rm_f(path + "%s.mo" % l)
 
 class clobber_func(Command):
         user_options = []
@@ -877,6 +1103,8 @@ class test_func(Command):
             ("showonexpectedfail", 'f',
                 "show all failure info, even for expected fails"),
             ("startattest=", 's', "start at indicated test"),
+            ("jobs=", 'j', "number of parallel processes to use"),
+            ("quiet", "q", "use the dots as the output format"),
         ]
         description = "Runs unit and functional tests"
 
@@ -894,6 +1122,8 @@ class test_func(Command):
                 self.startattest = ""
                 self.archivedir = ""
                 self.port = 12001
+                self.jobs = 1
+                self.quiet = False
 
         def finalize_options(self):
                 pass
@@ -916,40 +1146,14 @@ class dist_func(_bdist):
                 _bdist.initialize_options(self)
                 self.dist_dir = dist_dir
 
-class info_func(Command):
-        user_options = [
-            ("pkg=", None, "Component package name")
-        ]
-        description = "Print component information"
-
-        def initialize_options(self):
-                self.pkg = ""
-
-        def finalize_options(self):
-                self.pkg = urllib.unquote(self.pkg.rsplit(".", 1)[0])
-
-        pkginfo = {
-            "library/python-2/cherrypy": (CPVER, CPVER, CPURL),
-            "library/python-2/coverage": (COVVER, COVPVER, COVURL),
-            "library/python-2/m2crypto": (M2CVER, M2CVER, M2CURL),
-            "library/python-2/mako": (MAKOVER, MAKOVER, MAKOURL),
-            "library/python-2/ply": (PLYVER, PLYVER, PLYURL),
-            "library/python-2/pybonjour": (PBJVER, PBJVER, PBJURL),
-            "library/python-2/pycurl": (PCVER, PCPVER, PCURL),
-            "system/desktop/ldtp": (LDTPVER, LDTPVER, LDTPURL)
-        }
-
-        def run(self):
-                if self.pkg in self.pkginfo:
-                        print "-D SOURCE_VER=%s -D PKG_VER=%s " \
-                            "-D SOURCE_URL=%s" % self.pkginfo[self.pkg]
-
-
 # These are set to real values based on the platform, down below
 compile_args = None
 if osname in ("sunos", "linux", "darwin"):
         compile_args = [ "-O3" ]
-link_args = None
+if osname == "sunos":
+        link_args = [ "-zstrip-class=nonalloc" ]
+else:
+        link_args = []
 ext_modules = [
         Extension(
                 'actions._actions',
@@ -963,7 +1167,7 @@ ext_modules = [
                 solver_srcs,
                 include_dirs = include_dirs + ["."],
                 extra_compile_args = compile_args,
-                extra_link_args = solver_link_args,
+                extra_link_args = link_args + solver_link_args,
                 define_macros = [('_FILE_OFFSET_BITS', '64')]
                 ),
         ]
@@ -971,7 +1175,11 @@ elf_libraries = None
 data_files = web_files
 cmdclasses = {
         'install': install_func,
+        'install_data': install_data_func,
+        'install_lib': install_lib_func,
         'build': build_func,
+        'build_data': build_data_func,
+        'build_ext': build_ext_func,
         'build_py': build_py_func,
         'bdist': dist_func,
         'lint': lint_func,
@@ -981,7 +1189,7 @@ cmdclasses = {
         'clean': clean_func,
         'clobber': clobber_func,
         'test': test_func,
-        'info': info_func,
+        'installfile': installfile,
         }
 
 # all builds of IPS should have manpages
@@ -989,22 +1197,90 @@ data_files += [
         (man1_dir, man1_files),
         (man1m_dir, man1m_files),
         (man5_dir, man5_files),
+        (man1_ja_JP_dir, man1_ja_files),
+        (man1m_ja_JP_dir, man1m_ja_files),
+        (man5_ja_JP_dir, man5_ja_files),
+        (man1_zh_CN_dir, man1_zh_CN_files),
+        (man1m_zh_CN_dir, man1m_zh_CN_files),
+        (man5_zh_CN_dir, man5_zh_CN_files),
         (resource_dir, resource_files),
         ]
-
+# add transforms
+data_files += [
+        (transform_dir, transform_files)
+        ]
 if osname == 'sunos':
         # Solaris-specific extensions are added here
         data_files += [
-                (zones_dir, zones_files),
-                (brand_dir, brand_files),
-                (etcbrand_dir, etcbrand_files),
                 (smf_app_dir, smf_app_files),
-                (smf_sys_dir, smf_sys_files),
                 (execattrd_dir, execattrd_files),
                 (authattrd_dir, authattrd_files),
                 (sysrepo_dir, sysrepo_files),
                 (sysrepo_logs_dir, sysrepo_log_stubs),
-                (sysrepo_cache_dir, {})
+                (sysrepo_cache_dir, {}),
+                (autostart_dir, autostart_files),
+                (desktop_dir, desktop_files),
+                (gconf_dir, gconf_files),
+                (omf_dir, omf_files),
+                ('usr/share/icons/hicolor/48x48/mimetypes',
+                    ['gui/data/gnome-mime-application-vnd.pkg5.info.png']),
+                ('usr/share/mime/packages', ['gui/data/packagemanager-info.xml']),
+                (pm_share_dir, ['gui/data/packagemanager.ui']),
+                ]
+        data_files += [
+            (os.path.join(startpage_dir, locale), files)
+            for locale, files in startpage_files.iteritems()
+        ]
+        data_files += [
+            (os.path.join(help_dir, locale), files)
+            for locale, files in help_files.iteritems()
+        ]
+        data_files += [
+            (os.path.join(locale_dir, locale, 'LC_MESSAGES'),
+                [('po/%s.mo' % locale, 'pkg.mo')])
+            for locale in pkg_locales
+        ]
+        for t in 'HighContrast', 'HighContrastInverse', '':
+                for px in '24', '36', '48':
+                        data_files += [(
+                            '%s/icons/%s/%sx%s/actions' % (um_share_dir, t or 'hicolor', px, px),
+                            ['um/data/icons/%s/%sx%s/updatemanager.png' % (t, px, px)]
+                        )]
+                data_files += [(
+                    '%s/icons/%s/16x16/actions' % (pm_share_dir, t or 'hicolor'),
+                    [
+                        'gui/data/icons/%s/16x16/%s.png' % (t, n)
+                        for n in ('filter_all', 'filter_selected', 'progress_checkmark',
+                            'selection', 'status_checkmark', 'status_installed',
+                            'status_newupdate', 'status_notinstalled')
+                    ]
+                )]
+                data_files += [
+                    ('%s/icons/%s/%sx%s/actions' % (pm_share_dir, t or 'hicolor', px, px),
+                    [
+                        'gui/data/icons/%s/%sx%s/%s.png' % (t, px, px, n)
+                        for n in ('pm-install_update', 'pm-refresh',
+                            'pm-remove', 'pm-update_all')
+                    ])
+                    for px in (24, 48)
+                ]
+                data_files += [(
+                    '%s/icons/%s/48x48/actions' % (pm_share_dir, t or 'hicolor'),
+                    ['gui/data/icons/%s/48x48/packagemanager.png' % t]
+                )]
+                data_files += [
+                    ('usr/share/icons/%s/48x48/apps' % (t or 'hicolor'),
+                        [
+                            'um/data/icons/%s/48x48/updatemanager.png' % t,
+                            'gui/data/icons/%s/48x48/packagemanager.png' % t
+                        ]),
+                ]
+                # These two icons don't fit any patterns.
+                data_files += [
+                    (os.path.join(pm_share_dir, 'icons/hicolor/16x16/actions'), [
+                        'gui/data/icons/16x16/progress_blank.png']),
+                    (os.path.join(pm_share_dir, 'icons/hicolor/24x24/actions'), [
+                        'gui/data/icons/24x24/pm-check.png']),
                 ]
 
 if osname == 'sunos' or osname == "linux":

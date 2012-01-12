@@ -2457,7 +2457,7 @@ msgstr[0] "Просмотр пакета, на который повлияет �
 msgstr[1] "Просмотр пакетов, на которые повлияет операция \"Обновления\""
 
 #: ../gui/modules/installupdate.py:1128 ../gui/modules/installupdate.py:1187
-msgid "No futher information available"
+msgid "No further information available"
 msgstr "Дополнительная информация отсутствует."
 
 #: ../gui/modules/installupdate.py:1132 ../gui/modules/installupdate.py:1178
@@ -3668,7 +3668,7 @@ msgstr "политика устройства '%s' отсутствует в etc
 #: ../modules/actions/driver.py:836
 #, python-format
 msgid "extra device privilege '%s' found in etc/security/extra_privs"
-msgstr "в etc/security/extra_privs найдены дополнительные полномочия устройства"
+msgstr ""
 
 #: ../modules/actions/driver.py:839
 #, python-format

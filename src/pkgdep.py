@@ -37,11 +37,12 @@ import pkg.actions as actions
 import pkg.client.api as api
 import pkg.client.api_errors as api_errors
 import pkg.client.progress as progress
+import pkg.manifest as manifest
 import pkg.misc as misc
 import pkg.publish.dependencies as dependencies
 from pkg.misc import msg, emsg, PipeError
 
-CLIENT_API_VERSION = 60
+CLIENT_API_VERSION = 71
 PKG_CLIENT_NAME = "pkgdepend"
 
 DEFAULT_SUFFIX = ".res"
@@ -211,13 +212,19 @@ def resolve(args, img_dir):
         suffix = None
         verbose = False
         use_system_to_resolve = True
+        constraint_files = []
+        extra_external_info = False
         try:
-                opts, pargs = getopt.getopt(args, "d:mos:Sv")
+                opts, pargs = getopt.getopt(args, "d:e:Emos:Sv")
         except getopt.GetoptError, e:
                 usage(_("illegal global option -- %s") % e.opt)
         for opt, arg in opts:
                 if opt == "-d":
                         out_dir = arg
+                elif opt == "-e":
+                        constraint_files.append(arg)
+                elif opt == "-E":
+                        extra_external_info = True
                 elif opt == "-m":
                         echo_manifest = True
                 elif opt == "-o":
@@ -248,24 +255,45 @@ def resolve(args, img_dir):
         provided_image_dir = True
         pkg_image_used = False
         if img_dir == None:
+                orig_cwd = None
                 try:
-                        img_dir = os.environ["PKG_IMAGE"]
+                        orig_cwd = os.getcwd()
+                except OSError:
+                        # May be unreadable by user or have other problem.
+                        pass
+
+                img_dir, provided_image_dir = api.get_default_image_root(
+                    orig_cwd=orig_cwd)
+                if os.environ.get("PKG_IMAGE"):
+                        # It's assumed that this has been checked by the above
+                        # function call and hasn't been removed from the
+                        # environment.
                         pkg_image_used = True
-                except KeyError:
-                        provided_image_dir = False
-                        try:
-                                img_dir = os.getcwd()
-                        except OSError, e:
-                                try:
-                                        img_dir = os.environ["PWD"]
-                                        if not img_dir or img_dir[0] != "/":
-                                                img_dir = None
-                                except KeyError:
-                                        img_dir = None
+
         if not img_dir:
                 error(_("Could not find image.  Use the -R option or set "
                     "$PKG_IMAGE to the\nlocation of an image."))
                 return 1
+
+        system_patterns = misc.EmptyI
+        if constraint_files:
+                system_patterns = []
+                for f in constraint_files:
+                        try:
+                                with open(f, "rb") as fh:
+                                        for l in fh:
+                                                l = l.strip()
+                                                if l and not l.startswith("#"):
+                                                        system_patterns.append(
+                                                            l)
+                        except EnvironmentError, e:
+                                raise api_errors._convert_error(e)
+                if not system_patterns:
+                        error(_("External package list files were provided but "
+                            "did not contain any fmri patterns."))
+                        return 1
+        elif use_system_to_resolve:
+                system_patterns = ["*"]
 
         # Becuase building an ImageInterface permanently changes the cwd for
         # python, it's necessary to do this step after resolving the paths to
@@ -274,34 +302,6 @@ def resolve(args, img_dir):
                 api_inst = api.ImageInterface(img_dir, CLIENT_API_VERSION,
                     progress.QuietProgressTracker(), None, PKG_CLIENT_NAME,
                     exact_match=provided_image_dir)
-        except api_errors.ImageLocationAmbiguous, e:
-                def qv(val):
-                        # Escape shell metacharacters; '\' must be escaped first
-                        # to prevent escaping escapes.
-                        for c in "\\ \t\n'`;&()|^<>?*":
-                                val = val.replace(c, "\\" + c)
-                        return val
-
-                # This should only be raised if exact_match is False.
-                assert provided_image_dir is False
-                error(e)
-                if pkg_image_used:
-                        emsg(_("(Image location set by $PKG_IMAGE.)"))
-                # This attempts to rebuild the pkgdepend command so users can
-                # just copy & paste the correct one, but it can't perfectly
-                # handle all possible shell escaping requirements or detect
-                # executions using sudo, pfexec, etc.  It's a best effort
-                # convenience feature.
-                emsg(_("""
-To use this image, execute pkgdepend again as follows:
-
-pkgdepend -R %(root)s %(args)s
-
-To use the system image, execute pkgdepend again as follows:
-
-pkgdepend -R / %(args)s
-""") % { "root": qv(e.root), "args": " ".join(map(qv, sys.argv[1:]))})
-                return 1
         except api_errors.ImageNotFoundException, e:
                 if e.user_specified:
                         if pkg_image_used:
@@ -321,17 +321,19 @@ pkgdepend -R / %(args)s
                 return 1
 
         try:
-                pkg_deps, errs = dependencies.resolve_deps(manifest_paths,
-                    api_inst, prune_attrs=not verbose,
-                    use_system=use_system_to_resolve)
+                pkg_deps, errs, unused_fmris, external_deps = \
+                    dependencies.resolve_deps(manifest_paths, api_inst,
+                        system_patterns, prune_attrs=not verbose)
         except (actions.MalformedActionError, actions.UnknownActionError), e:
                 error(_("Could not parse one or more manifests because of "
                     "the following line:\n%s") % e.actionstr)
                 return 1
+        except dependencies.DependencyError, e:
+                error(e)
+                return 1
         except api_errors.ApiException, e:
                 error(e)
                 return 1
-
         ret_code = 0
 
         if output_to_screen:
@@ -344,13 +346,26 @@ pkgdepend -R / %(args)s
                 ret_code = pkgdeps_in_place(pkg_deps, manifest_paths, suffix,
                     echo_manifest)
 
+        if extra_external_info:
+                if constraint_files and unused_fmris:
+                        msg(_("\nThe following fmris matched a pattern in a "
+                            "constraint file but were not used in\ndependency "
+                            "resolution:"))
+                        for pfmri in sorted(unused_fmris):
+                                msg("\t%s" % pfmri)
+                if not constraint_files and external_deps:
+                        msg(_("\nThe following fmris had dependencies resolve "
+                            "to them:"))
+                        for pfmri in sorted(external_deps):
+                                msg("\t%s" % pfmri)
+
         for e in errs:
                 if ret_code == 0:
                         ret_code = 1
                 emsg(e)
         return ret_code
 
-def resolve_echo_line(l):
+def __resolve_echo_line(l):
         """Given a line from a manifest, determines whether that line should
         be repeated in the output file if echo manifest has been set."""
 
@@ -362,6 +377,34 @@ def resolve_echo_line(l):
                 return True
         else:
                 return not act.name == "depend"
+
+def __echo_manifest(pth, out_func, strip_newline=False):
+        try:
+                with open(pth, "rb") as fh:
+                        text = ""
+                        act = ""
+                        for l in fh:
+                                text += l
+                                act += l.rstrip()
+                                if act.endswith("\\"):
+                                        act = act.rstrip("\\")
+                                        continue
+                                if __resolve_echo_line(act):
+                                        if strip_newline:
+                                                text = text.rstrip()
+                                        elif text[-1] != "\n":
+                                                text += "\n"
+                                        out_func(text)
+                                text = ""
+                                act = ""
+                        if text != "" and __resolve_echo_line(act):
+                                if text[-1] != "\n":
+                                        text += "\n"
+                                out_func(text)
+        except EnvironmentError:
+                ret_code = 1
+                emsg(_("Could not open %s to echo manifest") %
+                    manifest_path)
 
 def pkgdeps_to_screen(pkg_deps, manifest_paths, echo_manifest):
         """Write the resolved package dependencies to stdout.
@@ -383,16 +426,7 @@ def pkgdeps_to_screen(pkg_deps, manifest_paths, echo_manifest):
                 first = False
                 msg("# %s" % p)
                 if echo_manifest:
-                        try:
-                                fh = open(p, "rb")
-                                for l in fh:
-                                        if resolve_echo_line(l):
-                                                msg(l.rstrip())
-                                fh.close()
-                        except EnvironmentError:
-                                emsg(_("Could not open %s to echo manifest") %
-                                    p)
-                                ret_code = 1
+                        __echo_manifest(p, msg, strip_newline=True)
                 for d in pkg_deps[p]:
                         msg(d)
         return ret_code
@@ -420,18 +454,7 @@ def write_res(deps, out_file, echo_manifest, manifest_path):
                     out_file)
                 return ret_code
         if echo_manifest:
-                try:
-                        fh = open(manifest_path, "rb")
-                except EnvironmentError:
-                        ret_code = 1
-                        emsg(_("Could not open %s to echo manifest") %
-                            manifest_path)
-                for l in fh:
-                        if resolve_echo_line(l):
-                                if l[-1] != "\n":
-                                        l += "\n"
-                                out_fh.write(l)
-                fh.close()
+                __echo_manifest(manifest_path, out_fh.write)
         for d in deps:
                 out_fh.write("%s\n" % d)
         out_fh.close()
@@ -565,6 +588,9 @@ if __name__ == "__main__":
                      "api": __e.expected_version
                     })
                 __ret = 1
+        except api_errors.ApiException, e:
+                error(e)
+                __ret = 1
         except RuntimeError, _e:
                 emsg("%s: %s" % (PKG_CLIENT_NAME, _e))
                 __ret = 1
@@ -576,11 +602,6 @@ if __name__ == "__main__":
                 raise _e
         except:
                 traceback.print_exc()
-                error(_("""\n
-This is an internal error in pkg(5) version %(version)s.  Please let the
-developers know about this problem by including the information above (and
-this message) when filing a bug at:
-
-%(bug_uri)s""") % { "version": pkg.VERSION, "bug_uri": misc.BUG_URI_CLI })
+                error(misc.get_traceback_message())
                 __ret = 99
         sys.exit(__ret)

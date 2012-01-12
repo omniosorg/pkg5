@@ -34,13 +34,14 @@ import errno
 import tempfile
 import stat
 import generic
+import zlib
+
+import pkg.actions
+import pkg.client.api_errors as api_errors
 import pkg.misc as misc
 import pkg.portable as portable
-import pkg.client.api_errors as api_errors
-import pkg.actions
 
 from pkg.client.api_errors import ActionExecutionError
-from pkg.client.debugvalues import DebugValues
 
 try:
         import pkg.elf as elf
@@ -215,19 +216,23 @@ class FileAction(generic.Action):
                         try:
                                 shasum = misc.gunzip_from_stream(stream, tfile)
                         except zlib.error, e:
-                                raise ActionExecutionError("zlib.error: %s" %
-                                    (" ".join([str(a) for a in e.args])))
+                                raise ActionExecutionError(self,
+                                    details=_("Error decompressing payload: %s")
+                                    % (" ".join([str(a) for a in e.args])),
+                                    error=e)
                         finally:
                                 tfile.close()
                                 stream.close()
 
                         if shasum != self.hash:
-                                raise ActionExecutionError(_("Action data "
-                                   "hash verification failure: expected: "
-                                   "%(expected)s computed: %(actual)s "
-                                   "action: %(action)s") % {
-                                   "expected": self.hash, "actual": shasum,
-                                   "action": self })
+                                raise ActionExecutionError(self,
+                                    details=_("Action data hash verification "
+                                    "failure: expected: %(expected)s computed: "
+                                    "%(actual)s action: %(action)s") % {
+                                        "expected": self.hash,
+                                        "actual": shasum,
+                                        "action": self
+                                    })
                 else:
                         temp = final_path
 
@@ -333,9 +338,14 @@ class FileAction(generic.Action):
                 # Check file contents
                 #
                 try:
+                        # This is a generic mechanism, but only used for libc on
+                        # x86, where the "best" version of libc is lofs-mounted
+                        # on the canonical path, foiling the standard verify
+                        # checks.
+                        is_mtpt = self.attrs.get("mountpoint", "").lower() == "true"
                         elfhash = None
                         elferror = None
-                        if "elfhash" in self.attrs and haveelf:
+                        if "elfhash" in self.attrs and haveelf and not is_mtpt:
                                 #
                                 # It's possible for the elf module to
                                 # throw while computing the hash,
@@ -360,7 +370,7 @@ class FileAction(generic.Action):
                         # matches, it indicates that the content hash algorithm
                         # changed, since obviously the file hash is a superset
                         # of the content hash.
-                        if elfhash is None or elferror:
+                        if (elfhash is None or elferror) and not is_mtpt:
                                 hashvalue, data = misc.get_data_digest(path)
                                 if hashvalue != self.hash:
                                         # Prefer the content hash error message.
@@ -445,7 +455,7 @@ class FileAction(generic.Action):
                 # system expected it to be, then we preserve the original file
                 # in some way, depending on the value of preserve.  If the
                 # action is an overlay, then we always overwrite.
-                overlay = self.attrs.get("overlay", "false") == "true"
+                overlay = self.attrs.get("overlay") == "true"
                 if is_file and not overlay:
                         chash, cdata = misc.get_data_digest(final_path)
                         if not orig or chash != orig.hash:
@@ -606,4 +616,12 @@ class FileAction(generic.Action):
                 'fmri' is an optional package FMRI (object or string) indicating
                 what package contained this action."""
 
-                return self.validate_fsobj_common(fmri=fmri)
+                errors = generic.Action._validate(self, fmri=fmri,
+                    numeric_attrs=("pkg.csize", "pkg.size"), raise_errors=False,
+                    required_attrs=("owner", "group"), single_attrs=("chash",
+                    "preserve", "overlay", "elfarch", "elfbits", "elfhash",
+                    "original_name"))
+                errors.extend(self._validate_fsobj_common())
+                if errors:
+                        raise pkg.actions.InvalidActionAttributesError(self,
+                            errors, fmri=fmri)

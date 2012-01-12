@@ -62,7 +62,8 @@ import pkg.portable as portable
 import pkg.server.catalog as old_catalog
 import M2Crypto as m2
 
-from pkg.misc import EmptyDict, EmptyI, SIGNATURE_POLICY, DictProperty
+from pkg.misc import EmptyDict, EmptyI, SIGNATURE_POLICY, DictProperty, \
+    PKG_RO_FILE_MODE
 
 # The "core" type indicates that a repository contains all of the dependencies
 # declared by packages in the repository.  It is primarily used for operating
@@ -208,13 +209,9 @@ class RepositoryURI(object):
                         if not isinstance(filename, basestring):
                                 raise api_errors.BadRepositoryAttributeValue(
                                     "ssl_cert", value=filename)
-                        filename = os.path.abspath(filename)
-                        if not os.path.exists(filename):
-                                raise api_errors.NoSuchCertificate(filename,
-                                    uri=self.uri)
+                        filename = os.path.normpath(filename)
                 if filename == "":
                         filename = None
-                # XXX attempt certificate verification here?
                 self.__ssl_cert = filename
 
         def __set_ssl_key(self, filename):
@@ -225,13 +222,9 @@ class RepositoryURI(object):
                         if not isinstance(filename, basestring):
                                 raise api_errors.BadRepositoryAttributeValue(
                                     "ssl_key", value=filename)
-                        filename = os.path.abspath(filename)
-                        if not os.path.exists(filename):
-                                raise api_errors.NoSuchKey(filename,
-                                    uri=self.uri)
+                        filename = os.path.normpath(filename)
                 if filename == "":
                         filename = None
-                # XXX attempt key verification here?
                 self.__ssl_key = filename
 
         def __set_trailing_slash(self, value):
@@ -813,6 +806,10 @@ class Publisher(object):
         # from during __copy__.
         _source_object_id = None
 
+        # Used to record those CRLs which are unreachable during the current
+        # operation.
+        __bad_crls = set()
+
         def __init__(self, prefix, alias=None, catalog=None, client_uuid=None,
             disabled=False, meta_root=None, repository=None,
             transport=None, sticky=True, props=None, revoked_ca_certs=EmptyI,
@@ -849,6 +846,7 @@ class Publisher(object):
                 self.__delay_validation = False
 
                 self.__properties = {}
+                self.__tmp_crls = {}
 
                 # Writing out an EmptyI to a config file and reading it back
                 # in doesn't work correctly at the moment, but reading and
@@ -875,6 +873,10 @@ class Publisher(object):
                 if repository:
                         self.repository = repository
                 self.sys_pub = sys_pub
+
+                # A dictionary to story the mapping for subject -> certificate
+                # for those certificates we couldn't store on disk.
+                self.__issuers = {}
 
                 # Must be done last.
                 self.__catalog = catalog
@@ -1242,7 +1244,7 @@ pkg unset-publisher %s
 
                 # Index origins by tuple of (catalog creation, catalog modified)
                 osets = collections.defaultdict(list)
-                
+
                 for origin, opath in self.__gen_origin_paths():
                         cat = pkg.catalog.Catalog(meta_root=opath,
                             read_only=True)
@@ -1270,7 +1272,7 @@ pkg unset-publisher %s
                 return bool(self.__repository.origins or
                     self.__repository.mirrors or self.__sig_policy or
                     self.approved_ca_certs or self.revoked_ca_certs)
- 
+
         @property
         def needs_refresh(self):
                 """A boolean value indicating whether the publisher's
@@ -1399,7 +1401,7 @@ pkg unset-publisher %s
 
                                 npart = ncat.get_part(name)
                                 base = name.startswith("catalog.base.")
-                                
+
                                 # Avoid accessor overhead since these will be
                                 # used for every entry.
                                 cat_ver = src_cat.version
@@ -1973,6 +1975,7 @@ pkg unset-publisher %s
                 The 'cert' parameter is a string of the certificate to add.
                 """
 
+                cert = self.__string_to_cert(cert)
                 hsh = self.__add_cert(cert)
                 # If the user had previously revoked this certificate, remove
                 # the certificate from that list.
@@ -2009,38 +2012,43 @@ pkg unset-publisher %s
                         self.revoked_ca_certs = list(t)
 
         @staticmethod
-        def __hash_cert(s):
-                return hashlib.sha1(s).hexdigest()
+        def __hash_cert(c):
+                return hashlib.sha1(c.as_pem()).hexdigest()
 
-        def __add_cert(self, s):
-                """Add the certificate stored as a string in 's' to the
+        @staticmethod
+        def __string_to_cert(s, pkg_hash=None):
+                """Convert a string to a X509 cert."""
+
+                try:
+                        return m2.X509.load_cert_string(s)
+                except m2.X509.X509Error, e:
+                        if pkg_hash is not None:
+                                raise api_errors.BadFileFormat(_("The file "
+                                    "with hash %s was expected to be a PEM "
+                                    "certificate but it could not be read.") %
+                                    pkg_hash)
+                        raise api_errors.BadFileFormat(_("The following string "
+                            "was expected to be a PEM certificate, but it "
+                            "could not be parsed as such:\n%s" % s))
+
+        def __add_cert(self, cert):
+                """Add the pem representation of the certificate 'cert' to the
                 certificates this publisher knows about."""
 
                 self.create_meta_root()
-                pkg_hash = self.__hash_cert(s)
+                pkg_hash = self.__hash_cert(cert)
                 pkg_hash_pth = os.path.join(self.cert_root, pkg_hash)
+                file_problem = False
                 try:
                         with open(pkg_hash_pth, "wb") as fh:
-                                fh.write(s)
+                                fh.write(cert.as_pem())
                 except EnvironmentError, e:
-                        raise api_errors._convert_error(e)
-                try:
-                        c = m2.X509.load_cert_string(s)
-                except m2.X509.X509Error, e:
-                        try:
-                                portable.remove(pkg_hash_pth)
-                        except:
-                                # Pass because the bad file format error is the
-                                # more important one.
-                                pass
-                        raise api_errors.BadFileFormat(_("The file with hash "
-                            "%s was expected to be a PEM certificate but it "
-                            "could not be read.") % pkg_hash)
+                        file_problem = True
 
                 # Note that while we store certs by their subject hashes,
                 # M2Crypto's subject hashes differ from what openssl reports
                 # the subject hash to be.
-                subj_hsh = c.get_subject().as_hash()
+                subj_hsh = cert.get_subject().as_hash()
                 c = 0
                 made_link = False
                 while not made_link:
@@ -2048,11 +2056,16 @@ pkg unset-publisher %s
                             "%s.%s" % (subj_hsh, c))
                         if os.path.exists(fn):
                                 c += 1
-                        else:
+                                continue
+                        if not file_problem:
                                 try:
                                         portable.link(pkg_hash_pth, fn)
+                                        made_link = True
                                 except EnvironmentError, e:
-                                        raise api_errors._convert_error(e)
+                                        pass
+                        if not made_link:
+                                self.__issuers.setdefault(subj_hsh, []).append(
+                                    c)
                                 made_link = True
                 return pkg_hash
 
@@ -2073,14 +2086,22 @@ pkg unset-publisher %s
 
                 assert not (verify_hash and only_retrieve)
                 pth = os.path.join(self.cert_root, pkg_hash)
-                if not os.path.exists(pth):
-                        self.__add_cert(self.transport.get_content(self,
-                            pkg_hash))
+                pth_exists = os.path.exists(pth)
+                if pth_exists and only_retrieve:
+                        return None
+                if pth_exists:
+                        with open(pth, "rb") as fh:
+                                s = fh.read()
+                else:
+                        s = self.transport.get_content(self, pkg_hash)
+                c = self.__string_to_cert(s, pkg_hash)
+                if not pth_exists:
+                        try:
+                                self.__add_cert(c)
+                        except api_errors.PermissionsException:
+                                pass
                 if only_retrieve:
                         return None
-                with open(pth, "rb") as fh:
-                        s = fh.read()
-                        c = m2.X509.load_cert_string(s)
 
                 if verify_hash:
                         h = misc.get_data_digest(cStringIO.StringIO(s),
@@ -2109,6 +2130,7 @@ pkg unset-publisher %s
                             [errno.ENOENT])
                         if t:
                                 raise t
+                res.extend(self.__issuers.get(name_hsh, []))
                 return res
 
         def get_ca_certs(self):
@@ -2224,35 +2246,61 @@ pkg unset-publisher %s
                             path=orig.path,
                             params=orig.params, query=orig.params,
                             fragment=orig.fragment))
+                # If we've already read the CRL, use the previously created
+                # object.
+                if uri in self.__tmp_crls:
+                        return self.__tmp_crls[uri]
                 fn = urllib.quote(uri, "")
                 assert os.path.isdir(self.__crl_root)
                 fpath = os.path.join(self.__crl_root, fn)
                 crl = None
                 # Check if we already have a CRL for this URI.
                 if os.path.exists(fpath):
-                        # If we already have a CRL, check whether it's time
-                        # to retrieve a new one from the location.
-                        crl = self.__format_safe_read_crl(fpath)
-                        nu = crl.get_next_update().get_datetime()
-                        # get_datetime is supposed to return a UTC time, so
-                        # assert that's the case.
-                        assert nu.tzinfo.utcoffset(nu) == dt.timedelta(0)
-                        # Add timezone info to cur_time so that cur_time and
-                        # nu can be compared.
-                        cur_time = dt.datetime.now(nu.tzinfo)
-                        if cur_time < nu:
-                                return crl
+                        # If we already have a CRL that we can read, check
+                        # whether it's time to retrieve a new one from the
+                        # location.
+                        try:
+                                crl = self.__format_safe_read_crl(fpath)
+                        except EnvironmentError:
+                                pass
+                        else:
+                                nu = crl.get_next_update().get_datetime()
+                                # get_datetime is supposed to return a UTC time,
+                                # so assert that's the case.
+                                assert nu.tzinfo.utcoffset(nu) == \
+                                    dt.timedelta(0)
+                                # Add timezone info to cur_time so that cur_time
+                                # and nu can be compared.
+                                cur_time = dt.datetime.now(nu.tzinfo)
+                                if cur_time < nu:
+                                        self.__tmp_crls[uri] = crl
+                                        return crl
+                # If the CRL is already known to be unavailable, don't try
+                # connecting to it again.
+                if uri in Publisher.__bad_crls:
+                        return crl
                 # If no CRL already exists or it's time to try to get a new one,
                 # try to retrieve it from the server.
-                tmp_pth = fpath + ".tmp"
-                with open(tmp_pth, "wb") as fh:
+                try:
+                        tmp_fd, tmp_pth = tempfile.mkstemp(dir=self.__crl_root)
+                except EnvironmentError, e:
+                        if e.errno in (errno.EACCES, errno.EPERM):
+                                tmp_fd, tmp_pth = tempfile.mkstemp()
+                        else:
+                                raise apx._convert_error(e)
+                with os.fdopen(tmp_fd, "wb") as fh:
                         hdl = pycurl.Curl()
                         hdl.setopt(pycurl.URL, uri)
                         hdl.setopt(pycurl.WRITEDATA, fh)
                         hdl.setopt(pycurl.FAILONERROR, 1)
+                        hdl.setopt(pycurl.CONNECTTIMEOUT,
+                            global_settings.PKG_CLIENT_CONNECT_TIMEOUT)
                         try:
                                 hdl.perform()
                         except pycurl.error:
+                                # If the CRL is unavailable, add it to the list
+                                # of bad crls.
+                                Publisher.__bad_crls.add(uri)
                                 # If we should treat failure to get a new CRL
                                 # as a failure, raise an exception here. If not,
                                 # if we should use an old CRL if it exists,
@@ -2265,7 +2313,17 @@ pkg unset-publisher %s
                 except api_errors.BadFileFormat:
                         portable.remove(tmp_pth)
                         return crl
-                portable.rename(tmp_pth, fpath)
+                try:
+                        portable.rename(tmp_pth, fpath)
+                        # Because the file was made using mkstemp, we need to
+                        # chmod it to match the other files in var/pkg.
+                        os.chmod(fpath, PKG_RO_FILE_MODE)
+                except EnvironmentError:
+                        self.__tmp_crls[uri] = ncrl
+                        try:
+                                portable.remove(tmp_pth)
+                        except EnvironmentError:
+                                pass
                 return ncrl
 
         def __check_crls(self, cert, ca_dict):
@@ -2315,7 +2373,8 @@ pkg unset-publisher %s
                                 if crl.verify(c.get_pubkey()):
                                         try:
                                                 self.verify_chain(c, ca_dict, 0,
-                                                    usages=CRL_SIGNING_USE,)
+                                                    True,
+                                                    usages=CRL_SIGNING_USE)
                                         except api_errors.SigningException:
                                                 pass
                                         else:
@@ -2329,13 +2388,13 @@ pkg unset-publisher %s
                 if rev:
                         raise api_errors.RevokedCertificate(cert, rev[1])
 
-        def __check_revocation(self, cert, ca_dict):
-                txt = cert.as_text() + cert.as_pem()
-                hsh = self.__hash_cert(txt)
+        def __check_revocation(self, cert, ca_dict, use_crls):
+                hsh = self.__hash_cert(cert)
                 if hsh in self.revoked_ca_certs:
                         raise api_errors.RevokedCertificate(cert,
                             "User manually revoked certificate.")
-                self.__check_crls(cert, ca_dict)
+                if use_crls:
+                        self.__check_crls(cert, ca_dict)
 
         def __check_extensions(self, cert, usages, cur_pathlen):
                 """Check whether the critical extensions in this certificate
@@ -2388,9 +2447,9 @@ pkg unset-publisher %s
                         elif ext.get_critical():
                                 raise api_errors.UnsupportedCriticalExtension(
                                     cert, ext)
-        
-        def verify_chain(self, cert, ca_dict, cur_pathlen, required_names=None,
-            usages=None):
+
+        def verify_chain(self, cert, ca_dict, cur_pathlen, use_crls,
+            required_names=None, usages=None):
                 """Validates the certificate against the given trust anchors.
 
                 The 'cert' parameter is the certificate to validate.
@@ -2400,6 +2459,9 @@ pkg unset-publisher %s
 
                 The 'cur_pathlen' parameter is an integer indicating how many
                 certificates have been found between cert and the leaf cert.
+
+                The 'use_crls' parameter is a boolean indicating whether
+                certificates should be checked to see if they've been revoked.
 
                 The 'required_names' parameter is a set of strings that must
                 be seen as a CN in the chain of trust for the certificate."""
@@ -2445,7 +2507,7 @@ pkg unset-publisher %s
                 self.__check_extensions(cert, usages, cur_pathlen)
 
                 # Check whether this certificate has been revoked.
-                self.__check_revocation(cert, ca_dict)
+                self.__check_revocation(cert, ca_dict, use_crls)
 
                 while continue_loop:
                         # If this certificate's CN is in the set of required
@@ -2512,7 +2574,7 @@ pkg unset-publisher %s
                                                             c, CERT_SIGNING_USE,
                                                             cur_pathlen)
                                                         self.__check_revocation(c,
-                                                            ca_dict)
+                                                            ca_dict, use_crls)
                                                 except (api_errors.UnsupportedCriticalExtension, api_errors.RevokedCertificate), e:
                                                         certs_with_problems.append(e)
                                                         problem = True

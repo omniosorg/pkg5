@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 """module describing a legacy packaging object
@@ -33,6 +33,7 @@ empty."""
 
 import os
 import errno
+import itertools
 import time
 
 import generic
@@ -67,50 +68,41 @@ class LegacyAction(generic.Action):
 
                 pkginfo = os.path.join(pkgdir, "pkginfo")
 
-                if not os.path.isfile(pkginfo):
-                        pkg_summary = pkgplan.pkg_summary
-                        if len(pkg_summary) > 256:
-                                # The len check is done to avoid slice creation.
-                                pkg_summary = pkg_summary[:256]
+                self.__old_refcount_cleanup(pkginfo, pkgdir)
 
-                        svr4attrs = {
-                            "arch": pkgplan.image.get_arch(),
-                            "basedir": "/",
-                            "category": "system",
-                            "desc": None,
-                            "hotline": None,
-                            "name": pkg_summary,
-                            "pkg": self.attrs["pkg"],
-                            "pkginst": self.attrs["pkg"],
-                            "pstamp": None,
-                            "sunw_prodvers": None,
-                            "vendor": None,
-                            "version": str(pkgplan.destination_fmri.version),
-                        }
+                pkg_summary = pkgplan.pkg_summary
+                if len(pkg_summary) > 256:
+                        # The len check is done to avoid slice creation.
+                        pkg_summary = pkg_summary[:256]
 
-                        attrs = [
-                            (a.upper(), b)
-                            for a in svr4attrs
-                            for b in ( self.attrs.get(a, svr4attrs[a]), )
-                            if b
-                        ]
-                        # Always overwrite installation timestamp
-                        attrs.append(("INSTDATE",
-                            time.strftime("%b %d %Y %H:%M")))
+                svr4attrs = {
+                    "arch": pkgplan.image.get_arch(),
+                    "basedir": "/",
+                    "category": "system",
+                    "desc": None,
+                    "hotline": None,
+                    "name": pkg_summary,
+                    "pkg": self.attrs["pkg"],
+                    "pkginst": self.attrs["pkg"],
+                    "pstamp": None,
+                    "sunw_prodvers": None,
+                    "vendor": None,
+                    "version": str(pkgplan.destination_fmri.version),
+                }
 
-                        pfile = file(pkginfo, "w")
+                attrs = [
+                    (a.upper(), b)
+                    for a in svr4attrs
+                    for b in ( self.attrs.get(a, svr4attrs[a]), )
+                    if b
+                ]
+                # Always overwrite installation timestamp
+                attrs.append(("INSTDATE",
+                    time.strftime("%b %d %Y %H:%M")))
+
+                with open(pkginfo, "wb") as pfile:
                         for k, v in attrs:
                                 pfile.write("%s=%s\n" % (k, v))
-                        pfile.close()
-
-                # create another hardlink to pkginfo file if
-                # this is not just an upgrade; we use this to make
-                # uninstall easier
-
-                if not orig:
-                        linkfile = os.path.join(pkgdir, "pkginfo.%d" %
-                            (os.stat(pkginfo).st_nlink + 1))
-                        os.link(pkginfo, linkfile)
 
                 # the svr4 pkg commands need contents file to work, but the
                 # needed directories are in the SUNWpkgcmds package....
@@ -126,6 +118,20 @@ class LegacyAction(generic.Action):
                                 raise
 
                 os.chmod(pkginfo, misc.PKG_FILE_MODE)
+
+        def __old_refcount_cleanup(self, pkginfo, pkgdir):
+                """Clean up the turds of the old refcounting implementation."""
+
+                # Don't assume that the hardlinks are still in place; just
+                # remove all consecutively numbered files.
+                for i in itertools.count(2):
+                        lfile = os.path.join(pkgdir, "pkginfo.%d" % i)
+                        try:
+                                os.unlink(lfile)
+                        except OSError, e:
+                                if e.errno == errno.ENOENT:
+                                        break
+                                raise
 
         def verify(self, img, **args):
                 """Returns a tuple of lists of the form (errors, warnings,
@@ -160,21 +166,34 @@ class LegacyAction(generic.Action):
 
                 pkginfo = os.path.join(pkgdir, "pkginfo")
 
-                if os.path.isfile(pkginfo):
-                        link_count = os.stat(pkginfo).st_nlink
-                        linkfile = os.path.join(pkgdir,
-                            "pkginfo.%d" % (link_count))
+                self.__old_refcount_cleanup(pkginfo, pkgdir)
 
-                        if os.path.isfile(linkfile):
-                                os.unlink(linkfile)
-
-                        # do this conditionally to be kinder
-                        # to installations done w/ older versions
-                        if link_count <= 2: # last one
-                                os.unlink(pkginfo)
+                try:
+                        os.unlink(pkginfo)
+                except OSError, e:
+                        if e.errno != errno.ENOENT:
+                                raise
 
         def generate_indices(self):
                 """Generates the indices needed by the search dictionary.  See
                 generic.py for a more detailed explanation."""
 
-                return [("legacy", "legacy_pkg", self.attrs["pkg"], None)]
+                return [
+                    ("legacy", "legacy_pkg", self.attrs["pkg"], None),
+                    ("legacy", "pkg", self.attrs["pkg"], None)
+                ]
+
+        def validate(self, fmri=None):
+                """Performs additional validation of action attributes that
+                for performance or other reasons cannot or should not be done
+                during Action object creation.  An ActionError exception (or
+                subclass of) will be raised if any attributes are not valid.
+                This is primarily intended for use during publication or during
+                error handling to provide additional diagonostics.
+
+                'fmri' is an optional package FMRI (object or string) indicating
+                what package contained this action."""
+
+                generic.Action._validate(self, fmri=fmri,
+                    single_attrs=("category", "desc", "hotline", "name",
+                    "vendor", "version"))

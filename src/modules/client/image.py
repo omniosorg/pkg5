@@ -21,11 +21,13 @@
 #
 
 #
-# Copyright (c) 2007, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 import M2Crypto as m2
 import atexit
+import calendar
+import collections
 import copy
 import datetime
 import errno
@@ -57,9 +59,11 @@ import pkg.client.publisher             as publisher
 import pkg.client.sigpolicy             as sigpolicy
 import pkg.client.transport.transport   as transport
 import pkg.config                       as cfg
+import pkg.file_layout.layout           as fl
 import pkg.fmri
 import pkg.lockfile                     as lockfile
 import pkg.manifest                     as manifest
+import pkg.mediator                     as med
 import pkg.misc                         as misc
 import pkg.nrlock
 import pkg.pkgsubprocess                as subprocess
@@ -152,11 +156,13 @@ class Image(object):
         PKG_STATE_UNSUPPORTED = 10      # Package contains invalid or
                                         # unsupported metadata.
 
+        # This state indicates that this package is frozen.
+        PKG_STATE_FROZEN = 11
+
         def __init__(self, root, user_provided_dir=False, progtrack=None,
             should_exist=True, imgtype=None, force=False,
             augment_ta_from_parent_image=True, allow_ondisk_upgrade=None,
-            allow_ambiguous=False, props=misc.EmptyDict, cmdpath=None,
-            runid=-1):
+            props=misc.EmptyDict, cmdpath=None, runid=-1):
 
                 if should_exist:
                         assert(imgtype is None)
@@ -198,11 +204,13 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 # Indicates whether automatic image format upgrades of the
                 # on-disk format are allowed.
                 self.allow_ondisk_upgrade = allow_ondisk_upgrade
-                self.allow_ambiguous = allow_ambiguous
                 self.__upgraded = False
 
                 # Must happen after upgraded assignment.
                 self.__init_catalogs()
+
+                self.__imgdir = None
+                self.__root = root
 
                 self.attrs = { "Build-Release": "5.11" } # XXX real data needed
                 self.blocking_locks = False
@@ -210,10 +218,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 self.history = history.History()
                 self.imageplan = None
                 self.img_prefix = None
-                self.imgdir = None
                 self.index_dir = None
                 self.plandir = None
-                self.root = root
                 self.version = -1
 
                 # Can have multiple read cache dirs...
@@ -232,6 +238,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 self.__lockfile = None
                 self.__sig_policy = None
                 self.__trust_anchors = None
+                self.__bad_trust_anchors = []
 
                 # cache for presence of boot-archive
                 self.__boot_archive = None
@@ -251,6 +258,10 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 # set of pkg stems subject to group
                 # dependency but removed because obsolete
                 self.__group_obsolete = None
+
+                # The action dictionary that's returned by __load_actdict.
+                self.__actdict = None
+                self.__actdict_timestamp = None
 
                 self.__property_overrides = { "property": props }
 
@@ -285,10 +296,6 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
 
                 self.augment_ta_from_parent_image = augment_ta_from_parent_image
 
-        @staticmethod
-        def alloc(*args, **kwargs):
-                return Image(*args, **kwargs)
-
         def __catalog_loaded(self, name):
                 """Returns a boolean value indicating whether the named catalog
                 has already been loaded.  This is intended to be used as an
@@ -309,9 +316,30 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 self.__catalogs = {}
                 self.__alt_pkg_sources_loaded = False
 
+        @staticmethod
+        def alloc(*args, **kwargs):
+                return Image(*args, **kwargs)
+
+        @property
+        def imgdir(self):
+                """The absolute path of the image's metadata."""
+                return self.__imgdir
+
+        @property
+        def locked(self):
+                """A boolean value indicating whether the image is currently
+                locked."""
+
+                return self.__lock and self.__lock.locked
+
+        @property
+        def root(self):
+                """The absolute path of the image's location."""
+                return self.__root
+
         @property
         def signature_policy(self):
-                """Returns the signature policy for this image."""
+                """The current signature policy for this image."""
 
                 if self.__sig_policy is not None:
                         return self.__sig_policy
@@ -323,10 +351,10 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
 
         @property
         def trust_anchors(self):
-                """Return a dictionary mapping subject hashes for certificates
-                this image trusts to those certs.  The image trusts those
-                trust anchors in its trust_anchor_dir and those in the from
-                which pkg was run."""
+                """A dictionary mapping subject hashes for certificates this
+                image trusts to those certs.  The image trusts the trust anchors
+                in its trust_anchor_dir and those in the image from which the
+                client was run."""
 
                 if self.__trust_anchors is not None:
                         return self.__trust_anchors
@@ -341,7 +369,6 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 if self.__cmddir and self.augment_ta_from_parent_image:
                         pkg_trust_anchors = Image(self.__cmddir,
                             augment_ta_from_parent_image=False,
-                            allow_ambiguous=True,
                             cmdpath=self.cmdpath).trust_anchors
                 if not loc_is_dir and os.path.exists(trust_anchor_loc):
                         raise apx.InvalidPropertyValue(_("The trust "
@@ -355,24 +382,43 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                 pth = os.path.join(trust_anchor_loc, fn)
                                 if os.path.islink(pth):
                                         continue
-                                trusted_ca = m2.X509.load_cert(pth)
-                                # M2Crypto's subject hash doesn't match
-                                # openssl's subject hash so recompute it so all
-                                # hashes are in the same universe.
-                                s = trusted_ca.get_subject().as_hash()
-                                self.__trust_anchors.setdefault(s, [])
-                                self.__trust_anchors[s].append(trusted_ca)
+                                try:
+                                        trusted_ca = m2.X509.load_cert(pth)
+                                except m2.X509.X509Error, e:
+                                        self.__bad_trust_anchors.append(
+                                            (pth, str(e)))
+                                else:
+                                        # M2Crypto's subject hash doesn't match
+                                        # openssl's subject hash so recompute it
+                                        # so all hashes are in the same
+                                        # universe.
+                                        s = trusted_ca.get_subject().as_hash()
+                                        self.__trust_anchors.setdefault(s, [])
+                                        self.__trust_anchors[s].append(
+                                            trusted_ca)
                 for s in pkg_trust_anchors:
                         if s not in self.__trust_anchors:
                                 self.__trust_anchors[s] = pkg_trust_anchors[s]
                 return self.__trust_anchors
 
         @property
-        def locked(self):
-                """Returns a boolean value indicating whether the image is
-                currently locked."""
+        def bad_trust_anchors(self):
+                """A list of strings decribing errors encountered while parsing
+                trust anchors."""
 
-                return self.__lock and self.__lock.locked
+                return [_("%s is expected to be a certificate but could not be "
+                    "parsed.  The error encountered was:\n\t%s") % (p, e)
+                    for p, e in self.__bad_trust_anchors
+                ]
+
+        @property
+        def write_cache_path(self):
+                """The path to the filesystem that holds the write cache--used
+                to compute whether sufficent space is available for
+                downloads."""
+
+                return self.__user_cache_dir or \
+                    os.path.join(self.imgdir, IMG_PUB_DIR)
 
         @contextmanager
         def locked_op(self, op, allow_unprivileged=False, new_history_op=True):
@@ -442,7 +488,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         if e.errno == errno.ENOENT:
                                 return
                         if e.errno == errno.EACCES:
-                                exc = apx.PermissionsException(e.filename)
+                                exc = apx.UnprivilegedUserError(e.filename)
                         elif e.errno == errno.EROFS:
                                 exc = apx.ReadOnlyFileSystemException(
                                     e.filename)
@@ -520,20 +566,6 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                     os.path.realpath(d):
                                         raise apx.ImageNotFoundException(
                                             exact_match, startd, d)
-                                live_root = misc.liveroot()
-                                if not exact_match and d != live_root and \
-                                    not self.allow_ambiguous and \
-                                    portable.osname == "sunos":
-                                        # On Solaris, consider an image found
-                                        # somewhere other than the live root an
-                                        # an error if an exact match wasn't
-                                        # requested.  (This prevents accidental
-                                        # use of nested images.) It is not
-                                        # desirable to do this on other
-                                        # platforms as non-root images are the
-                                        # norm.
-                                        raise apx.ImageLocationAmbiguous(d,
-                                            live_root=live_root)
                                 self.__set_dirs(imgtype=imgtype, root=d,
                                     startd=startd, progtrack=progtrack)
                                 return
@@ -581,11 +613,107 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                             self.imgdir, self.transport,
                             self.cfg.get_policy("use-system-repo"))
 
+                self.__load_publisher_ssl()
+
+        def __store_publisher_ssl(self):
+                """Normalizes publisher SSL configuration data, storing any
+                certificate files as needed in the image's SSL directory.  This
+                logic is performed here in the image instead of ImageConfig as
+                it relies on special knowledge of the image structure."""
+
+                ssl_dir = os.path.join(self.imgdir, "ssl")
+
+                def store_ssl_file(src):
+                        try:
+                                if not src or not os.path.exists(src):
+                                        # If SSL file doesn't exist (for
+                                        # whatever reason), then don't update
+                                        # configuration.  (Let the failure
+                                        # happen later during an operation
+                                        # that requires the file.)
+                                        return
+                        except EnvironmentError, e:
+                                raise apx._convert_error(e)
+
+                        # Ensure ssl_dir exists; makedirs handles any errors.
+                        misc.makedirs(ssl_dir)
+
+                        try:
+                                # Destination name is based on digest of file.
+                                dest = os.path.join(ssl_dir,
+                                    misc.get_data_digest(src)[0])
+                                if src != dest:
+                                        portable.copyfile(src, dest)
+
+                                # Ensure file can be read by unprivileged users.
+                                os.chmod(dest, misc.PKG_FILE_MODE)
+                        except EnvironmentError, e:
+                                raise apx._convert_error(e)
+                        return dest
+
+                for pub in self.cfg.publishers.values():
+                        # self.cfg.publishers is used because gen_publishers
+                        # includes temporary publishers and this is only for
+                        # configured ones.
+                        repo = pub.repository
+                        if not repo:
+                                continue
+
+                        # Store and normalize ssl_cert and ssl_key.
+                        for u in repo.origins + repo.mirrors:
+                                for prop in ("ssl_cert", "ssl_key"):
+                                        pval = getattr(u, prop)
+                                        if pval:
+                                                pval = store_ssl_file(pval)
+                                        if not pval:
+                                                continue
+                                        # Store path as absolute to image root,
+                                        # it will be corrected on load to match
+                                        # actual image location if needed.
+                                        setattr(u, prop,
+                                            os.path.splitdrive(self.root)[0] +
+                                            os.path.sep +
+                                            misc.relpath(pval, start=self.root))
+
+        def __load_publisher_ssl(self):
+                """Should be called every time image configuration is loaded;
+                ensure ssl_cert and ssl_key properties of publisher repository
+                URI objects match current image location."""
+
+                ssl_dir = os.path.join(self.imgdir, "ssl")
+
+                for pub in self.cfg.publishers.values():
+                        # self.cfg.publishers is used because gen_publishers
+                        # includes temporary publishers and this is only for
+                        # configured ones.
+                        repo = pub.repository
+                        if not repo:
+                                continue
+
+                        for u in repo.origins + repo.mirrors:
+                                for prop in ("ssl_cert", "ssl_key"):
+                                        pval = getattr(u, prop)
+                                        if not pval:
+                                                continue
+                                        if not os.path.join(self.img_prefix,
+                                            "ssl") in os.path.dirname(pval):
+                                                continue
+                                        # If special image directory is part
+                                        # of path, then assume path should be
+                                        # rewritten to match current image
+                                        # location.
+                                        setattr(u, prop, os.path.join(ssl_dir,
+                                           os.path.basename(pval)))
+
         def save_config(self):
                 # First, create the image directories if they haven't been, so
                 # the configuration file can be written.
                 self.mkdirs()
+
+                self.__store_publisher_ssl()
                 self.cfg.write()
+                self.__load_publisher_ssl()
+
                 if self.is_liveroot() and \
                     smf.get_state(
                         "svc:/application/pkg/system-repository:default") in \
@@ -643,8 +771,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                            attempted.\nliveroot: %s\nimage path: %s" % \
                            (misc.liveroot(), startd)
 
+                self.__root = root
                 self.type = imgtype
-                self.root = root
                 if self.type == IMG_USER:
                         self.img_prefix = img_user_prefix
                 else:
@@ -656,10 +784,21 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
 
                 # cleanup specified path
                 if os.path.isdir(root):
-                        cwd = os.getcwd()
-                        os.chdir(root)
-                        self.root = os.getcwd()
-                        os.chdir(cwd)
+                        try:
+                                cwd = os.getcwd()
+                        except Exception, e:
+                                # If current directory can't be obtained for any
+                                # reason, ignore the error.
+                                cwd = None
+
+                        try:
+                                os.chdir(root)
+                                self.__root = os.getcwd()
+                        except EnvironmentError, e:
+                                raise apx._convert_error(e)
+                        finally:
+                                if cwd:
+                                        os.chdir(cwd)
 
                 # If current image is locked, then it should be unlocked
                 # and then relocked after the imgdir is changed.  This
@@ -669,7 +808,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         self.unlock()
 
                 # Must set imgdir first.
-                self.imgdir = os.path.join(self.root, self.img_prefix)
+                self.__imgdir = os.path.join(self.root, self.img_prefix)
 
                 # Force a reset of version.
                 self.version = -1
@@ -886,6 +1025,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         if changed:
                                 self.__rebuild_image_catalogs()
 
+                self.__load_publisher_ssl()
                 if purge:
                         # Configuration shouldn't be written again unless this
                         # is an image creation operation (hence the purge).
@@ -1477,23 +1617,33 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 return [ addslash(l.strip()) for l in file(f) ] + [p]
 
         def get_cachedirs(self):
-                """Returns a list of tuples of the form (dir, readonly, pub)
-                where 'dir' is the absolute path of the cache directory,
+                """Returns a list of tuples of the form (dir, readonly, pub,
+                layout) where 'dir' is the absolute path of the cache directory,
                 'readonly' is a boolean indicating whether the cache can
-                be written to, and 'pub' is the prefix of the publisher that
-                the cache directory should be used for.  If 'pub' is None, the
-                cache directory is intended for all publishers.
+                be written to, 'pub' is the prefix of the publisher that
+                the cache directory should be used for, and 'layout' is a
+                FileManager object used to access file content in the cache.
+                If 'pub' is None, the cache directory is intended for all
+                publishers.  If 'layout' is None, file content layout can
+                vary.
                 """
+
+                file_layout = None
+                if self.version >= 4:
+                        # Assume cache directories are in V1 Layout if image
+                        # format is v4+.
+                        file_layout = fl.V1Layout()
 
                 # Get all readonly cache directories.
                 cdirs = [
-                    (cdir, True, None)
+                    (cdir, True, None, file_layout)
                     for cdir in self.__read_cache_dirs
                 ]
 
                 # Get global write cache directory.
                 if self.__write_cache_dir:
-                        cdirs.append((self.__write_cache_dir, False, None))
+                        cdirs.append((self.__write_cache_dir, False, None,
+                            file_layout))
 
                 # For images newer than version 3, file data can be stored
                 # in the publisher's file root.
@@ -1504,7 +1654,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                 if self.__write_cache_dir or \
                                     self.__write_cache_root:
                                         readonly = True
-                                cdirs.append((froot, readonly, pub.prefix))
+                                cdirs.append((froot, readonly, pub.prefix,
+                                    file_layout))
 
                                 if self.__write_cache_root:
                                         # Cache is a tree structure like
@@ -1512,7 +1663,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                         froot = os.path.join(
                                             self.__write_cache_root, pub.prefix,
                                             "file")
-                                        cdirs.append((froot, False, pub.prefix))
+                                        cdirs.append((froot, False, pub.prefix,
+                                            file_layout))
 
                 return cdirs
 
@@ -1618,23 +1770,35 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 for p in self.gen_publishers():
                         return p
                 for p in self.get_installed_pubs():
-                        return p
+                        return publisher.Publisher(p)
                 return None
 
-        def check_cert_validity(self):
-                """Look through the publishers defined for the image.  Print
-                a message and exit with an error if one of the certificates
-                has expired.  If certificates are getting close to expiration,
-                print a warning instead."""
+        def check_cert_validity(self, pubs=EmptyI):
+                """Validate the certificates of the specified publishers.
 
-                for p in self.gen_publishers():
+                Raise an exception if any of the certificates has expired or
+                is close to expiring."""
+
+                if not pubs:
+                        pubs = self.gen_publishers()
+
+                for p in pubs:
                         r = p.repository
                         for uri in r.origins:
                                 if uri.ssl_cert:
                                         misc.validate_ssl_cert(
                                             uri.ssl_cert,
                                             prefix=p.prefix, uri=uri)
-                return True
+                                if uri.ssl_key:
+                                        try:
+                                                if not os.path.exists(
+                                                    uri.ssl_key):
+                                                        raise apx.NoSuchKey(
+                                                            uri.ssl_key,
+                                                            publisher=p,
+                                                            uri=uri)
+                                        except EnvironmentError, e:
+                                                raise apx._convert_error(e)
 
         def has_publisher(self, prefix=None, alias=None):
                 """Returns a boolean value indicating whether a publisher
@@ -1973,6 +2137,13 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 pub.meta_root = self._get_publisher_meta_root(
                     pub.prefix)
                 pub.transport = self.transport
+
+                # Before continuing, validate SSL information.
+                try:
+                        self.check_cert_validity()
+                except apx.ExpiringCertificate, e:
+                        logger.error(str(e))
+
                 self.cfg.publishers[pub.prefix] = pub
 
                 self.__update_publisher_catalogs(pub, progtrack=progtrack,
@@ -2033,7 +2204,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         sig_pol = self.signature_policy.combine(
                             pub.signature_policy)
 
-                manf = self.get_manifest(fmri, all_variants=True)
+                manf = self.get_manifest(fmri, use_excludes=True)
                 sigs = list(manf.gen_actions_by_type("signature",
                     self.list_excludes()))
                 if sig_pol and (sigs or sig_pol.name != "ignore"):
@@ -2044,54 +2215,100 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                 # the actions from the manifest, not just the
                                 # ones for this image's variants.
                                 sig_pol.process_signatures(sigs,
-                                    manf.gen_actions(), pub, self.trust_anchors)
+                                    manf.gen_actions(), pub, self.trust_anchors,
+                                    self.cfg.get_policy(
+                                        "check-certificate-revocation"))
                         except apx.SigningException, e:
                                 e.pfmri = fmri
                                 yield e.sig, [e], [], []
                         except apx.InvalidResourceLocation, e:
                                 yield [], [e], [], []
 
-                for act in manf.gen_actions(
-                    self.list_excludes()):
-                        errors, warnings, info = act.verify(self, pfmri=fmri,
-                            **kwargs)
-                        progresstracker.verify_add_progress(fmri)
-                        actname = act.distinguished_name()
-                        if errors:
-                                progresstracker.verify_yield_error(actname,
-                                    errors)
-                        if warnings:
-                                progresstracker.verify_yield_warning(actname,
-                                    warnings)
-                        if info:
-                                progresstracker.verify_yield_info(actname,
-                                    info)
-                        if errors or warnings or info:
-                                yield act, errors, warnings, info
+                def mediation_allowed(act):
+                        """Helper function to determine if the mediation
+                        delivered by a link is allowed.  If it is, then
+                        the link should be verified.  (Yes, this does mean
+                        that the non-existence of links is not verified.)
+                        """
 
-        def image_config_update(self, new_variants, new_facets):
+                        mediator = act.attrs.get("mediator")
+                        if not mediator or mediator not in self.cfg.mediators:
+                                # Link isn't mediated or mediation is unknown.
+                                return True
+
+                        cfg_med_version = self.cfg.mediators[mediator].get(
+                            "version")
+                        cfg_med_impl = self.cfg.mediators[mediator].get(
+                            "implementation")
+
+                        med_version = act.attrs.get("mediator-version")
+                        if med_version:
+                                # 5.11 doesn't matter here and is never exposed
+                                # to users.
+                                med_version = pkg.version.Version(
+                                    med_version, "5.11")
+                        med_impl = act.attrs.get("mediator-implementation")
+
+                        return med_version == cfg_med_version and \
+                            med.mediator_impl_matches(med_impl, cfg_med_impl)
+
+                try:
+                        for act in manf.gen_actions(
+                            self.list_excludes()):
+                                if (act.name == "link" or act.name == "hardlink") and \
+                                    not mediation_allowed(act):
+                                        # Link doesn't match configured
+                                        # mediation, so shouldn't be verified.
+                                        continue
+
+                                errors, warnings, info = act.verify(self,
+                                    pfmri=fmri, **kwargs)
+                                progresstracker.verify_add_progress(fmri)
+                                actname = act.distinguished_name()
+                                if errors:
+                                        progresstracker.verify_yield_error(
+                                            actname, errors)
+                                if warnings:
+                                        progresstracker.verify_yield_warning(
+                                            actname, warnings)
+                                if info:
+                                        progresstracker.verify_yield_info(
+                                            actname, info)
+                                if errors or warnings or info:
+                                        yield act, errors, warnings, info
+                finally:
+                        progresstracker.verify_done()
+
+        def image_config_update(self, new_variants, new_facets, new_mediators):
                 """update variants in image config"""
 
                 if new_variants is not None:
                         self.cfg.variants.update(new_variants)
                 if new_facets is not None:
                         self.cfg.facets = new_facets
-                self.cfg.write()
+                if new_mediators is not None:
+                        self.cfg.mediators = new_mediators
+                self.save_config()
 
-        def repair(self, *args, **kwargs):
+        def repair(self, repair, progtrack, **kwargs):
                 """Repair any actions in the fmri that failed a verify."""
 
                 # prune off any new_history_op keyword argument, used for
                 # locked_op(), but not for __repair()
                 need_history_op = kwargs.pop("new_history_op", True)
 
-                with self.locked_op("fix", new_history_op=need_history_op):
-                        try:
-                                return self.__repair(*args, **kwargs)
-                        except apx.ActionExecutionError, e:
-                                raise
-                        except pkg.actions.ActionError, e:
-                                raise apx.InvalidPackageErrors([e])
+                try:
+                        with self.locked_op("fix",
+                            new_history_op=need_history_op):
+                                try:
+                                        return self.__repair(repair, progtrack,
+                                            **kwargs)
+                                except apx.ActionExecutionError, e:
+                                        raise
+                                except pkg.actions.ActionError, e:
+                                        raise apx.InvalidPackageErrors([e])
+                finally:
+                        progtrack.verify_done()
 
         def __repair(self, repairs, progtrack, accept=False,
             show_licenses=False):
@@ -2116,9 +2333,11 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 pps = []
                 for fmri, actions in repairs:
                         logger.info("Repairing: %-50s" % fmri.get_pkg_stem())
-                        m = self.get_manifest(fmri)
+                        # Need to get all variants otherwise evaluating the
+                        # pkgplan will fail in signature verification.
+                        m = self.get_manifest(fmri, use_excludes=True)
                         pp = pkgplan.PkgPlan(self, progtrack, lambda: False)
-                        pp.propose_repair(fmri, m, actions)
+                        pp.propose_repair(fmri, m, actions, [])
                         pp.evaluate(self.list_excludes(), self.list_excludes())
                         pps.append(pp)
 
@@ -2255,18 +2474,19 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                             intent, pub=alt_pub)
                 return ret
 
-        def get_manifest(self, fmri, all_variants=False, intent=None,
+        def get_manifest(self, fmri, use_excludes=False, intent=None,
             alt_pub=None):
                 """return manifest; uses cached version if available.
-                all_variants controls whether manifest contains actions
+                use_excludes controls whether manifest contains actions
                 for all variants"""
 
                 # Normally elide other arch variants, facets
 
-                if all_variants:
+                if use_excludes:
                         excludes = EmptyI
                 else:
-                        excludes = [ self.cfg.variants.allow_action ]
+                        excludes = [self.cfg.variants.allow_action,
+                            self.cfg.facets.allow_action]
 
                 try:
                         m = self.__get_manifest(fmri, excludes=excludes,
@@ -2429,7 +2649,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                 # Must copy the old catalog data to the new
                                 # destination as only changed files will be
                                 # written.
-                                shutil.copytree(cat.meta_root, cpath)
+                                misc.copytree(cat.meta_root, cpath)
                                 cat.meta_root = cpath
                                 cat.finalize(pfmris=added)
                                 cat.save()
@@ -2447,7 +2667,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
 
                         # Next, preserve the old installed state dir, rename the
                         # new one into place, and then remove the old one.
-                        orig_state_root, ignored = self.salvage(self._statedir)
+                        orig_state_root = self.salvage(self._statedir, full_path=True)
                         portable.rename(tmp_state_root, self._statedir)
                         shutil.rmtree(orig_state_root, True)
                 except EnvironmentError, e:
@@ -2516,7 +2736,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 entry = cat.get_entry(f)
                 states = entry["metadata"]["states"]
                 if self.PKG_STATE_V1 not in states:
-                        return self.get_manifest(f, all_variants=True)
+                        return self.get_manifest(f, use_excludes=True)
                 return
 
         def __get_catalog(self, name):
@@ -2565,22 +2785,6 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 for ver, fmris in cat.fmris_by_version(pfmri.pkg_name):
                         return fmris[0]
                 return None
-
-        def has_version_installed(self, fmri):
-                """Check that the version given in the FMRI or a successor is
-                installed in the current image."""
-
-                v = self.get_version_installed(fmri)
-
-                if v and not fmri.publisher:
-                        fmri.set_publisher(v.get_publisher_str())
-                elif not fmri.publisher:
-                        fmri.set_publisher(self.get_highest_ranked_publisher(),
-                            True)
-
-                if v and v.is_successor(fmri):
-                        return True
-                return False
 
         def get_pkg_repo(self, pfmri):
                 """Returns the repository object containing the origins that
@@ -2777,6 +2981,10 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                     self.IMG_CATALOG_INSTALLED), sign=False)
 
                 excludes = self.list_excludes()
+
+                frozen_pkgs = dict([
+                    (p[0].pkg_name, p[0]) for p in self.get_frozen_list()
+                ])
                 for pfx, cat, name, spart in sparts:
                         # 'spart' is the source part.
                         if spart is None:
@@ -2837,6 +3045,18 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                 nver, snver = newest.get(stem, (None, None))
                                 if snver is not None and ver != snver:
                                         states.append(self.PKG_STATE_UPGRADABLE)
+
+                                # Check if the package is frozen.
+                                if stem in frozen_pkgs:
+                                        f_ver = frozen_pkgs[stem].version
+                                        if f_ver == ver or \
+                                            pkg.version.Version(ver,
+                                            self.attrs["Build-Release"]
+                                            ).is_successor(f_ver,
+                                            constraint=
+                                            pkg.version.CONSTRAINT_AUTO):
+                                                states.append(
+                                                    self.PKG_STATE_FROZEN)
 
                                 # Determine if package is obsolete or has been
                                 # renamed and mark with appropriate state.
@@ -2949,7 +3169,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
 
                 # Next, preserve the old installed state dir, rename the
                 # new one into place, and then remove the old one.
-                orig_state_root, ignored = self.salvage(self._statedir)
+                orig_state_root = self.salvage(self._statedir, full_path=True)
                 portable.rename(tmp_state_root, self._statedir)
                 shutil.rmtree(orig_state_root, True)
 
@@ -3203,6 +3423,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 given offset and read until you hit an action that doesn't
                 match."""
 
+                self.__actdict = None
+                self.__actdict_timestamp = None
                 stripped_path = os.path.join(self.__action_cache_dir,
                     "actions.stripped")
                 offsets_path = os.path.join(self.__action_cache_dir,
@@ -3214,13 +3436,18 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 from heapq import heappush, heappop
 
                 for pfmri in self.gen_installed_pkgs():
-                        m = self.get_manifest(pfmri, all_variants=True)
+                        m = self.get_manifest(pfmri, use_excludes=True)
                         for act in m.gen_actions(excludes):
                                 if not act.globally_identical:
                                         continue
                                 for key in act.attrs.keys():
                                         if (act.unique_attrs and
-                                            key not in act.unique_attrs) or \
+                                            key not in act.unique_attrs and
+                                            not (act.name == "file" and
+                                                key == "overlay") and
+                                            not ((act.name == "link" or
+                                                  act.name == "hardlink") and
+                                                 key.startswith("mediator"))) or \
                                             key.startswith("variant.") or \
                                             key.startswith("facet."):
                                                 del act.attrs[key]
@@ -3237,21 +3464,43 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         of = os.fdopen(of, "wb")
 
                         # We need to make sure the files are coordinated.
-                        t = int(time.time())
-                        sf.write("VERSION 1\n%s\n" % t)
-                        of.write("VERSION 1\n%s\n" % t)
+                        timestamp = int(time.time())
+                        sf.write("VERSION 1\n%s\n" % timestamp)
+                        of.write("VERSION 2\n%s\n" % timestamp)
 
-                        last_name, last_key = None, None
+                        last_name, last_key, last_offset = None, None, sf.tell()
+                        cnt = 0
                         while heap:
                                 item = heappop(heap)
                                 fmri, act = item[2:]
-                                offset = sf.tell()
-                                sf.write("%s %s\n" % (fmri, act))
                                 key = act.attrs[act.key_attr]
                                 if act.name != last_name or key != last_key:
-                                        of.write("%s %s %s\n" % (act.name, offset, key))
-                                        actdict[(act.name, key)] = offset
-                                        last_name, last_key = act.name, key
+                                        if last_name is None:
+                                                assert last_key is None
+                                                cnt += 1
+                                                last_name = act.name
+                                                last_key = key
+                                        else:
+                                                assert cnt > 0
+                                                of.write("%s %s %s %s\n" %
+                                                    (last_name, last_offset,
+                                                    cnt, last_key))
+                                                actdict[(last_name, last_key)] = last_offset, cnt
+                                                last_name, last_key, last_offset = \
+                                                    act.name, key, sf.tell()
+                                                cnt = 1
+                                else:
+                                        cnt += 1
+                                sf.write("%s %s\n" % (fmri, act))
+                        if last_name is not None:
+                                assert last_key is not None
+                                assert last_offset is not None
+                                assert cnt > 0
+                                of.write("%s %s %s %s\n" %
+                                    (last_name, last_offset, cnt, last_key))
+                                actdict[(last_name, last_key)] = \
+                                    last_offset, cnt
+
                         sf.close()
                         of.close()
                         os.chmod(sp, misc.PKG_FILE_MODE)
@@ -3263,7 +3512,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         except:
                                 if isinstance(e, KeyboardInterrupt):
                                         raise
-                                return actdict
+                                return actdict, timestamp
                         if isinstance(e, KeyboardInterrupt):
                                 raise
                         return
@@ -3274,7 +3523,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 try:
                         portable.rename(sp, stripped_path)
                         portable.rename(op, offsets_path)
-                        return actdict
+                        return actdict, timestamp
                 except EnvironmentError, e:
                         if e.errno == errno.EACCES or e.errno == errno.EROFS:
                                 self.__action_cache_dir = self.temporary_dir()
@@ -3284,7 +3533,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                     self.__action_cache_dir, "actions.offsets")
                                 portable.rename(sp, stripped_path)
                                 portable.rename(op, offsets_path)
-                                return actdict
+                                return actdict, timestamp
                         try:
                                 os.unlink(stripped_path)
                                 os.unlink(offsets_path)
@@ -3296,42 +3545,53 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 and return the dictionary mapping action name and key value to
                 offset."""
 
-                actdict = {}
-
                 try:
                         of = open(os.path.join(self.__action_cache_dir,
                             "actions.offsets"), "rb")
                 except IOError, e:
                         if e.errno != errno.ENOENT:
                                 raise
-
-                        actdict = self._create_fast_lookups()
+                        actdict, otimestamp = self._create_fast_lookups()
                         if actdict is not None:
+                                self.__actdict = actdict
+                                self.__actdict_timestamp = otimestamp
                                 return actdict
 
                 # Make sure the files are paired, and try to create them if not.
                 oversion = of.readline().rstrip()
                 otimestamp = of.readline().rstrip()
-                sversion, stimestamp = self._get_stripped_actions_file(internal=True)
+
+                if self.__actdict and otimestamp == self.__actdict_timestamp:
+                        return self.__actdict
+
+                sversion, stimestamp = self._get_stripped_actions_file(
+                    internal=True)
 
                 # If we recognize neither file's version or their timestamps
                 # don't match, then we blow them away and try again.
-                if oversion != "VERSION 1" or sversion != "VERSION 1" or \
+                if oversion != "VERSION 2" or sversion != "VERSION 1" or \
                     stimestamp != otimestamp:
                         of.close()
-                        actdict = self._create_fast_lookups()
+                        actdict, otimestamp = self._create_fast_lookups()
                         if actdict is not None:
+                                self.__actdict = actdict
+                                self.__actdict_timestamp = otimestamp
                                 return actdict
                         of = file(os.path.join(self.__action_cache_dir,
                             "actions.offsets"), "rb")
                         oversion = of.readline().rstrip()
                         otimestamp = of.readline().rstrip()
 
+                actdict = {}
+
                 for line in of:
-                        actname, offset, key_attr = line.rstrip().split(None, 2)
-                        actdict[(actname, key_attr)] = int(offset)
+                        actname, offset, cnt, key_attr = \
+                            line.rstrip().split(None, 3)
+                        actdict[(actname, key_attr)] = (int(offset), int(cnt))
 
                 of.close()
+                self.__actdict = actdict
+                self.__actdict_timestamp = otimestamp
                 return actdict
 
         def _get_stripped_actions_file(self, internal=False):
@@ -3446,18 +3706,20 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 PKG_CACHEROOT. """
 
                 if self.cfg.get_policy(imageconfig.FLUSH_CONTENT_CACHE):
-                        logger.info("Deleting content cache")
-                        for path, readonly, pub in self.get_cachedirs():
+                        for path, readonly, pub, layout in self.get_cachedirs():
                                 if readonly or (self.__user_cache_dir and
                                     path.startswith(self.__user_cache_dir)):
                                         continue
                                 shutil.rmtree(path, True)
 
-        def salvage(self, path):
+        def salvage(self, path, full_path=False):
                 """Called when unexpected file or directory is found during
-                package operations; returns a tuple of the path of the salvage
-                directory where the item was stored and the new path of the
-                salvaged item.  path is rooted in /...."""
+                package operations; returns the path of the salvage
+                directory where the item was stored. Can be called with
+                either image-relative or absolute (current) path to file/dir
+                to be salvaged.  If full_path is False (the default), remove
+                the current mountpoint of the image from the returned
+                directory path"""
 
                 # This ensures that if the path is already rooted in the image,
                 # that it will be stored in lost+found (due to os.path.join
@@ -3482,8 +3744,20 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         misc.makedirs(parent)
 
                 orig = os.path.normpath(os.path.join(self.root, path))
-                shutil.move(orig, sdir)
-                return sdir, os.path.join(sdir, sdir)
+
+                misc.move(orig, sdir)
+                # remove current mountpoint from sdir
+                if not full_path:
+                        sdir.replace(self.root, "", 1)
+                return sdir
+
+        def recover(self, local_spath, full_dest_path):
+                """Called when recovering directory contents to implement
+                "salvage-from" directive... full_dest_path must exist."""
+                source_path = os.path.normpath(os.path.join(self.root, local_spath))
+                for file_name in os.listdir(source_path):
+                        misc.move(os.path.join(source_path, file_name),
+                            os.path.join(full_dest_path, file_name))
 
         def temporary_dir(self):
                 """Create a temp directory under the image directory for various
@@ -3654,6 +3928,90 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                 ret[group].append(fmri.pkg_name)
                 return ret
 
+        def freeze_pkgs(self, pat_list, progtrack, check_cancel, dry_run,
+            comment):
+                """Freeze the specified packages... use pattern matching on
+                names.
+
+                The 'pat_list' parameter contains the list of patterns of
+                packages to freeze.
+
+                The 'progtrack' parameter contains the progress tracker for this
+                operation.
+
+                The 'check_cancel' parameter contains a function to call to
+                check if the operation has been canceled.
+
+                The 'dry_run' parameter controls whether packages are actually
+                frozen.
+
+                The 'comment' parameter contains the comment, if any, which will
+                be associated with the packages that are frozen.
+                """
+
+                def __make_publisherless_fmri(pat):
+                        p = pkg.fmri.MatchingPkgFmri(pat, "5.11")
+                        p.publisher = None
+                        return p
+
+                def __calc_frozen():
+                        ip = imageplan.ImagePlan(self, progtrack, check_cancel,
+                            noexecute=False)
+                        stems_and_pats = ip.freeze_pkgs_match(pat_list)
+                        return dict([(s, __make_publisherless_fmri(p))
+                            for s, p in stems_and_pats.iteritems()])
+                if dry_run:
+                        return __calc_frozen().values()
+                with self.locked_op("freeze"):
+                        stems_and_pats = __calc_frozen()
+                        # Get existing dictionary of frozen packages.
+                        d = self.__freeze_dict_load()
+                        # Update the dictionary with the new freezes and
+                        # comment.
+                        timestamp = calendar.timegm(time.gmtime())
+                        d.update([(s, (str(p), comment, timestamp))
+                            for s, p in stems_and_pats.iteritems()])
+                        self._freeze_dict_save(d)
+                        return stems_and_pats.values()
+
+        def unfreeze_pkgs(self, pat_list, progtrack, check_cancel, dry_run):
+                """Unfreeze the specified packages... use pattern matching on
+                names; ignore versions.
+
+                The 'pat_list' parameter contains the list of patterns of
+                packages to freeze.
+
+                The 'progtrack' parameter contains the progress tracker for this
+                operation.
+
+                The 'check_cancel' parameter contains a function to call to
+                check if the operation has been canceled.
+
+                The 'dry_run' parameter controls whether packages are actually
+                frozen."""
+
+                def __calc_unfrozen():
+                        ip = imageplan.ImagePlan(self, progtrack, check_cancel,
+                            noexecute=False)
+                        # Get existing dictionary of frozen packages.
+                        d = self.__freeze_dict_load()
+                        # Match the user's patterns against the frozen packages
+                        # and return the stems which matched, and the dictionary
+                        # of the currently frozen packages.
+                        return set(ip.match_user_stems(pat_list, ip.MATCH_ALL,
+                            raise_unmatched=False,
+                            universe=[(None, k) for k in d.keys()])), d
+
+                if dry_run:
+                        return __calc_unfrozen()[0]
+                with self.locked_op("freeze"):
+                        unfrozen_set, d = __calc_unfrozen()
+                        # Remove the specified packages from the frozen set.
+                        for n in unfrozen_set:
+                                d.pop(n, None)
+                        self._freeze_dict_save(d)
+                        return unfrozen_set
+
         def __call_imageplan_evaluate(self, ip):
                 # A plan can be requested without actually performing an
                 # operation on the image.
@@ -3680,8 +4038,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                             ip.get_plan(full=False)
 
         def __make_plan_common(self, _op, _progtrack, _check_cancel,
-            _ip_mode, _noexecute, _ip_noop=False,
-            **kwargs):
+            _ip_mode, _noexecute, _ip_noop=False, **kwargs):
                 """Private helper function to perform base plan creation and
                 cleanup.
                 """
@@ -3714,6 +4071,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                         ip.plan_install(**kwargs)
                                 elif _op == pkgdefs.API_OP_REVERT:
                                         ip.plan_revert(**kwargs)
+                                elif _op == pkgdefs.API_OP_SET_MEDIATOR:
+                                        ip.plan_set_mediators(**kwargs)
                                 elif _op == pkgdefs.API_OP_UNINSTALL:
                                         ip.plan_uninstall(**kwargs)
                                 elif _op == pkgdefs.API_OP_UPDATE:
@@ -3738,7 +4097,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         self.__cleanup_alt_pkg_certs()
 
         def make_install_plan(self, op, progtrack, check_cancel, ip_mode,
-            noexecute, pkgs_inst=None, reject_list=None):
+            noexecute, pkgs_inst=None, reject_list=misc.EmptyI):
                 """Take a list of packages, specified in pkgs_inst, and attempt
                 to assemble an appropriate image plan.  This is a helper
                 routine for some common operations in the client.
@@ -3749,7 +4108,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                     reject_list=reject_list)
 
         def make_change_varcets_plan(self, op, progtrack, check_cancel,
-            ip_mode, noexecute, facets=None, reject_list=None,
+            ip_mode, noexecute, facets=None, reject_list=misc.EmptyI,
             variants=None):
                 """Take a list of variants and/or facets and attempt to
                 assemble an image plan which changes them.  This is a helper
@@ -3765,8 +4124,67 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                     noexecute, new_variants=variants, new_facets=facets,
                     reject_list=reject_list)
 
+        def make_set_mediators_plan(self, op, progtrack, check_cancel, ip_mode,
+            noexecute, mediators):
+                """Take a dictionary of mediators and attempt to assemble an
+                appropriate image plan to set or revert them based on the
+                provided version and implementation values.  This is a helper
+                routine for some common operations in the client.
+                """
+
+                # Compute dict of changing mediators.
+                new_mediators = copy.deepcopy(mediators)
+                old_mediators = self.cfg.mediators
+                invalid_mediations = collections.defaultdict(dict)
+                for m in new_mediators.keys():
+                        new_values = new_mediators[m]
+                        if not new_values:
+                                if m not in old_mediators:
+                                        # Nothing to revert.
+                                        del new_mediators[m]
+                                        continue
+
+                                # Revert mediator to defaults.
+                                new_mediators[m] = {}
+                                continue
+
+                        # Validate mediator, provided version, implementation,
+                        # and source.
+                        valid, error = med.valid_mediator(m)
+                        if not valid:
+                                invalid_mediations[m]["mediator"] = (m, error)
+
+                        med_version = new_values.get("version")
+                        if med_version:
+                                valid, error = med.valid_mediator_version(
+                                    med_version)
+                                if valid:
+                                        # 5.11 doesn't matter here and is never
+                                        # exposed to users.
+                                         new_mediators[m]["version"] = \
+                                            pkg.version.Version(
+                                            med_version, "5.11")
+                                else:
+                                        invalid_mediations[m]["version"] = \
+                                            (med_version, error)
+
+                        med_impl = new_values.get("implementation")
+                        if med_impl:
+                                valid, error = med.valid_mediator_implementation(
+                                    med_impl, allow_empty_version=True)
+                                if not valid:
+                                        invalid_mediations[m]["version"] = \
+                                            (med_impl, error)
+
+                if invalid_mediations:
+                        raise apx.PlanCreationException(
+                            invalid_mediations=invalid_mediations)
+
+                self.__make_plan_common(op, progtrack, check_cancel,
+                    ip_mode, noexecute, new_mediators=new_mediators)
+
         def make_sync_plan(self, op, progtrack, check_cancel, ip_mode,
-            noexecute, li_pkg_updates=True, reject_list=None):
+            noexecute, li_pkg_updates=True, reject_list=misc.EmptyI):
                 """Attempt to create an appropriate image plan to bring an
                 image in sync with it's linked image constraints.  This is a
                 helper routine for some common operations in the client."""
@@ -3783,7 +4201,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                     ip_mode, noexecute, pkgs_to_uninstall=pkgs_to_uninstall)
 
         def make_update_plan(self, op, progtrack, check_cancel, ip_mode,
-            noexecute, pkgs_update=None, reject_list=None):
+            noexecute, pkgs_update=None, reject_list=misc.EmptyI):
                 """Create a plan to update all packages or the specific ones as
                 far as possible.  This is a helper routine for some common
                 operations in the client.
@@ -3849,8 +4267,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         # workspace, for example.
                         #
                         newimg = Image(self.__cmddir,
-                            allow_ondisk_upgrade=False, allow_ambiguous=True,
-                            progtrack=progtrack, cmdpath=self.cmdpath)
+                            allow_ondisk_upgrade=False, progtrack=progtrack,
+                            cmdpath=self.cmdpath)
                         useimg = True
                         if refresh_allowed:
                                 # If refreshing publisher metadata is allowed,
@@ -3953,3 +4371,56 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         return
 
                 self.__avoid_set_altered = False
+
+        # frozen dict implementation uses simplejson to store a dictionary of
+        # pkg_stems that are frozen, the versions at which they're frozen, and
+        # the reason, if given, why the package was frozen.
+        #
+        # format is (version, dict((pkg stem, (fmri, comment, timestamp))))
+
+        __FROZEN_DICT_VERSION = 1
+
+        def get_frozen_list(self):
+                """Return a list of tuples containing the fmri that was frozen,
+                and the reason it was frozen."""
+
+                return [
+                    (pkg.fmri.MatchingPkgFmri(v[0], build_release="5.11"),
+                        v[1], v[2])
+                    for v in self.__freeze_dict_load().values()
+                ]
+
+        def __freeze_dict_load(self):
+                """Load the dictionary containing the current state of frozen
+                packages."""
+
+                state_file = os.path.join(self._statedir, "frozen_dict")
+                if os.path.isfile(state_file):
+                        try:
+                                version, d = json.load(file(state_file))
+                        except EnvironmentError, e:
+                                raise apx._convert_error(e)
+                        except ValueError, e:
+                                raise apx.InvalidFreezeFile(state_file)
+                        if version != self.__FROZEN_DICT_VERSION:
+                                raise apx.UnknownFreezeFileVersion(
+                                    version, self.__FROZEN_DICT_VERSION,
+                                    state_file)
+                        return d
+                return {}
+
+        def _freeze_dict_save(self, new_dict):
+                """Save the dictionary of frozen packages."""
+
+                # Save the dictionary to disk.
+                state_file = os.path.join(self._statedir, "frozen_dict")
+                tmp_file   = os.path.join(self._statedir, "frozen_dict.new")
+
+                try:
+                        with open(tmp_file, "w") as tf:
+                                json.dump(
+                                    (self.__FROZEN_DICT_VERSION, new_dict), tf)
+                        portable.rename(tmp_file, state_file)
+                except EnvironmentError, e:
+                        raise apx._convert_error(e)
+                self.__rebuild_image_catalogs()

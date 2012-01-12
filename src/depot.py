@@ -86,6 +86,7 @@ except ImportError:
         sys.exit(2)
 
 import cherrypy.process.servers
+from cherrypy.process.plugins import Daemonizer
 
 from pkg.misc import msg, emsg, setlocale
 import pkg.client.api_errors as api_errors
@@ -127,7 +128,7 @@ def usage(text=None, retcode=2, full=False):
 Usage: /usr/lib/pkg.depotd [-a address] [-d inst_root] [-p port] [-s threads]
            [-t socket_timeout] [--cfg] [--content-root]
            [--disable-ops op[/1][,...]] [--debug feature_list]
-           [--file-root dir] [--log-access dest] [--log-errors dest]
+           [--image-root dir] [--log-access dest] [--log-errors dest]
            [--mirror] [--nasty] [--proxy-base url] [--readonly]
            [--ssl-cert-file] [--ssl-dialog] [--ssl-key-file]
            [--sort-file-max-size size] [--writable-root dir]
@@ -164,9 +165,8 @@ Usage: /usr/lib/pkg.depotd [-a address] [-d inst_root] [-p port] [-s threads]
         --debug         The name of a debug feature to enable; or a whitespace
                         or comma separated list of features to enable.
                         Possible values are: headers.
-        --file-root     The path to the root of the file content for a given
-                        repository.  This is used to override the default,
-                        <inst_root>/file or <inst_root>/publisher/<prefix>/file.
+        --image-root    The path to the image whose file information will be
+                        used as a cache for file data.
         --log-access    The destination for any access related information
                         logged by the depot process.  Possible values are:
                         stderr, stdout, none, or an absolute pathname.  The
@@ -263,7 +263,7 @@ if __name__ == "__main__":
         try:
                 long_opts = ["add-content", "cfg=", "cfg-file=",
                     "content-root=", "debug=", "disable-ops=", "exit-ready",
-                    "file-root=", "help", "log-access=", "log-errors=",
+                    "help", "image-root=", "log-access=", "log-errors=",
                     "llmirror", "mirror", "nasty=", "proxy-base=", "readonly",
                     "rebuild", "refresh-index", "set-property=",
                     "ssl-cert-file=", "ssl-dialog=", "ssl-key-file=",
@@ -333,8 +333,8 @@ if __name__ == "__main__":
                                         disable_ops.append(s)
                         elif opt == "--exit-ready":
                                 exit_ready = True
-                        elif opt == "--file-root":
-                                ivalues["pkg"]["file_root"] = arg
+                        elif opt == "--image-root":
+                                ivalues["pkg"]["image_root"] = arg
                         elif opt.startswith("--log-"):
                                 prop = "log_%s" % opt.lstrip("--log-")
                                 ivalues["pkg"][prop] = arg
@@ -510,6 +510,8 @@ if __name__ == "__main__":
                         dconf.set_property("pkg", "log_access", "none")
 
         # Check for invalid option combinations.
+        image_root = dconf.get_property("pkg", "image_root")
+        inst_root = dconf.get_property("pkg", "inst_root")
         mirror = dconf.get_property("pkg", "mirror")
         ll_mirror = dconf.get_property("pkg", "ll_mirror")
         readonly = dconf.get_property("pkg", "readonly")
@@ -526,6 +528,17 @@ if __name__ == "__main__":
         if reindex and readonly and not writable_root:
                 usage("--readonly can only be used with --refresh-index if "
                     "--writable-root is used")
+        if image_root and not ll_mirror:
+                usage("--image-root can only be used with --llmirror.")
+        if image_root and writable_root:
+                usage("--image_root and --writable-root cannot be used "
+                    "together.")
+        if image_root and inst_root:
+                usage("--image-root and -d cannot be used together.")
+
+        # If the image format changes this may need to be reexamined.
+        if image_root:
+                inst_root = os.path.join(image_root, "var", "pkg")
 
         # Set any values using defaults if they weren't provided.
 
@@ -538,11 +551,8 @@ if __name__ == "__main__":
                 dconf.set_property("pkg", "address", [HOST_DEFAULT])
                 address = dconf.get_property("pkg", "address")[0]
 
-        inst_root = dconf.get_property("pkg", "inst_root")
-        file_root = dconf.get_property("pkg", "file_root")
-        if not inst_root and not file_root:
-                usage("At least one of PKG_REPO, -d, or --file-root" 
-                    " must be provided")
+        if not inst_root:
+                usage("Either PKG_REPO or -d must be provided")
 
         content_root = dconf.get_property("pkg", "content_root")
         if not content_root:
@@ -598,9 +608,6 @@ if __name__ == "__main__":
 
         if content_root and not os.path.isabs(content_root):
                 content_root = os.path.join(pkg_root, content_root)
-
-        if file_root and not os.path.isabs(file_root):
-                file_root = os.path.join(pkg_root, file_root)
 
         if inst_root and not os.path.isabs(inst_root):
                 inst_root = os.path.join(pkg_root, inst_root)
@@ -768,9 +775,9 @@ if __name__ == "__main__":
                     "sort_file_max_size")
 
                 repo = sr.Repository(cfgpathname=repo_config_file,
-                    file_root=file_root, log_obj=cherrypy, mirror=mirror,
-                    properties=repo_props, read_only=readonly,
-                    root=inst_root, sort_file_max_size=sort_file_max_size,
+                    log_obj=cherrypy, mirror=mirror, properties=repo_props,
+                    read_only=readonly, root=inst_root,
+                    sort_file_max_size=sort_file_max_size,
                     writable_root=writable_root)
         except (RuntimeError, sr.RepositoryError), _e:
                 emsg("pkg.depotd: %s" % _e)
@@ -877,6 +884,12 @@ if __name__ == "__main__":
                 # can be served immediately while search indexes are
                 # still being updated.
                 depot._queue_refresh_index()
+
+        # If stdin is not a tty and the pkgdepot controller isn't being used,
+        # then assume process should be daemonized.
+        if not os.environ.get("PKGDEPOT_CONTROLLER") and \
+            not os.isatty(sys.stdin.fileno()):
+                Daemonizer(cherrypy.engine).subscribe()
 
         try:
                 root = cherrypy.Application(depot)

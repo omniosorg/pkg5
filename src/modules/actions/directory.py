@@ -155,6 +155,15 @@ class DirectoryAction(generic.Action):
                                         # ensure that the mode matches what's
                                         # expected.
                                         os.chmod(path, mode)
+                        # if we're salvaging contents, move 'em now.
+                        # directories with "salvage-from" attribute
+                        # set will scavenge any available contents
+                        # that matches specified directory and
+                        # move it underneath itself on initial install.
+                        # This is here to support directory rename
+                        # when old directory has unpackaged contents
+                        for salvage_from in self.attrlist("salvage-from"):
+                                pkgplan.salvage_from(salvage_from, path)
 
                 # The downside of chmodding the directory is that as a non-root
                 # user, if we set perms u-w, we won't be able to put anything in
@@ -250,4 +259,9 @@ class DirectoryAction(generic.Action):
                 'fmri' is an optional package FMRI (object or string) indicating
                 what package contained this action."""
 
-                return self.validate_fsobj_common(fmri=fmri)
+                errors = generic.Action._validate(self, fmri=fmri,
+                    raise_errors=False, required_attrs=("owner", "group"))
+                errors.extend(self._validate_fsobj_common())
+                if errors:
+                        raise pkg.actions.InvalidActionAttributesError(self,
+                            errors, fmri=fmri)

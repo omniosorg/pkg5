@@ -2158,6 +2158,10 @@ class BackgroundTaskPlugin(SimplePlugin):
                         # Create and start a thread for the caller.
                         self.__thread = threading.Thread(target=self.run)
                         self.__thread.start()
+        # Priority must be higher than the Daemonizer plugin to avoid threads
+        # starting before fork().  Daemonizer has a priority of 65, as noted
+        # at this URI: http://www.cherrypy.org/wiki/BuiltinPlugins
+        start.priority = 66 
 
         def stop(self):
                 """Stop the background task plugin."""
@@ -2201,7 +2205,8 @@ class DepotConfig(object):
                     cfg.Property("content_root"),
                     cfg.PropList("debug", allowed=["", "headers"]),
                     cfg.PropList("disable_ops"),
-                    cfg.PropDefined("file_root", allowed=["", "<pathname>"]),
+                    cfg.PropDefined("image_root", allowed=["",
+                        "<abspathname>"]),
                     cfg.PropDefined("inst_root", allowed=["", "<pathname>"]),
                     cfg.PropBool("ll_mirror"),
                     cfg.PropDefined("log_access", allowed=["", "stderr",

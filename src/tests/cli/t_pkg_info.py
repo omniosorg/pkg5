@@ -38,7 +38,7 @@ class TestPkgInfoBasics(pkg5unittest.SingleDepotTestCase):
         persistent_setup = True
 
         bronze10 = """
-            open bronze@1.0,5.11-0
+            open bronze@1.0,5.11-0:20110908T004546Z
             add dir mode=0755 owner=root group=bin path=/usr
             add dir mode=0755 owner=root group=bin path=/usr/bin
             add file tmp/sh mode=0555 owner=root group=bin path=/usr/bin/sh
@@ -62,6 +62,12 @@ class TestPkgInfoBasics(pkg5unittest.SingleDepotTestCase):
             close
         """
 
+        human = """
+            open human@0.9.8.18,5.11-0:20110908T004546Z
+            add set name=pkg.human-version value=0.9.8r
+            close
+        """
+
         misc_files = [ "tmp/bronzeA1",  "tmp/bronzeA2", "tmp/bronze1",
             "tmp/bronze2", "tmp/copyright1", "tmp/sh", "tmp/baz"]
 
@@ -69,7 +75,7 @@ class TestPkgInfoBasics(pkg5unittest.SingleDepotTestCase):
                 pkg5unittest.SingleDepotTestCase.setUp(self)
                 self.make_misc_files(self.misc_files)
                 self.plist = self.pkgsend_bulk(self.rurl, (self.badfile10,
-                    self.baddir10, self.bronze10))
+                    self.baddir10, self.bronze10, self.human))
 
         def test_pkg_info_bad_fmri(self):
                 """Test bad frmi's with pkg info."""
@@ -256,6 +262,164 @@ class TestPkgInfoBasics(pkg5unittest.SingleDepotTestCase):
                                 bad_mdata = mdata + "%s\n" % bad_act
                                 self.write_img_manifest(pfmri, bad_mdata)
                                 self.pkg("info -r %s" % pfmri.pkg_name, exit=0)
+
+        def test_human_version(self):
+                """Verify that info returns the expected output for packages
+                with a human-readable version defined."""
+
+                self.image_create(self.rurl)
+                self.pkg("info -r human | grep 'Version: 0.9.8.18 (0.9.8r)'")
+
+        def test_ranked(self):
+                """Verify that pkg info -r returns expected results when
+                multiple publishers provide the same package based on
+                publisher search order."""
+
+                # Create an isolated repository for this test
+                repodir = os.path.join(self.test_root, "test-ranked")
+                self.create_repo(repodir)
+                self.pkgrepo("add-publisher -s %s test" % repodir)
+                self.pkgsend_bulk(repodir, (self.bronze10, self.human))
+
+                self.pkgrepo("add-publisher -s %s test2" % repodir)
+                self.pkgrepo("set -s %s publisher/prefix=test2" % repodir)
+                self.pkgsend_bulk(repodir, self.bronze10)
+
+                self.pkgrepo("add-publisher -s %s test3" % repodir)
+                self.pkgrepo("set -s %s publisher/prefix=test3" % repodir)
+                self.pkgsend_bulk(repodir, self.bronze10)
+
+                # Create a test image.
+                self.image_create()
+                self.pkg("set-publisher -p %s" % repodir)
+
+                # Test should be higher ranked than test2 since the default
+                # for auto-configuration is to use lexical order when
+                # multiple publishers are found.  As such, info -r should
+                # return results for 'test' by default.
+                self.pkg("info -r bronze human")
+                expected = """\
+ Name: bronze
+ Summary: 
+ State: Not installed
+ Publisher: test
+ Version: 1.0
+ Build Release: 5.11
+ Branch: 0
+Packaging Date: Thu Sep 08 00:45:46 2011
+ Size: 54.00 B
+ FMRI: pkg://test/bronze@1.0,5.11-0:20110908T004546Z
+
+ Name: human
+ Summary: 
+ State: Not installed
+ Publisher: test
+ Version: 0.9.8.18 (0.9.8r)
+ Build Release: 5.11
+ Branch: 0
+Packaging Date: Thu Sep 08 00:45:46 2011
+ Size: 0.00 B
+ FMRI: pkg://test/human@0.9.8.18,5.11-0:20110908T004546Z
+"""
+                self.assertEqualDiff(expected, self.reduceSpaces(self.output))
+
+                # Verify that if the publisher is specified, that is preferred
+                # over rank.
+                self.pkg("info -r //test2/bronze")
+                expected = """\
+ Name: bronze
+ Summary: 
+ State: Not installed
+ Publisher: test2
+ Version: 1.0
+ Build Release: 5.11
+ Branch: 0
+Packaging Date: Thu Sep 08 00:45:46 2011
+ Size: 54.00 B
+ FMRI: pkg://test2/bronze@1.0,5.11-0:20110908T004546Z
+"""
+                self.assertEqualDiff(expected, self.reduceSpaces(self.output))
+
+                # Verify that if stem is specified with and without publisher,
+                # both matches are listed if the higher-ranked publisher differs
+                # from the publisher specified.
+                self.pkg("info -r //test/bronze bronze")
+                expected = """\
+ Name: bronze
+ Summary: 
+ State: Not installed
+ Publisher: test
+ Version: 1.0
+ Build Release: 5.11
+ Branch: 0
+Packaging Date: Thu Sep 08 00:45:46 2011
+ Size: 54.00 B
+ FMRI: pkg://test/bronze@1.0,5.11-0:20110908T004546Z
+"""
+                self.assertEqualDiff(expected, self.reduceSpaces(self.output))
+
+                self.pkg("info -r //test2/bronze bronze")
+                expected = """\
+ Name: bronze
+ Summary: 
+ State: Not installed
+ Publisher: test
+ Version: 1.0
+ Build Release: 5.11
+ Branch: 0
+Packaging Date: Thu Sep 08 00:45:46 2011
+ Size: 54.00 B
+ FMRI: pkg://test/bronze@1.0,5.11-0:20110908T004546Z
+
+ Name: bronze
+ Summary: 
+ State: Not installed
+ Publisher: test2
+ Version: 1.0
+ Build Release: 5.11
+ Branch: 0
+Packaging Date: Thu Sep 08 00:45:46 2011
+ Size: 54.00 B
+ FMRI: pkg://test2/bronze@1.0,5.11-0:20110908T004546Z
+"""
+                self.assertEqualDiff(expected, self.reduceSpaces(self.output))
+
+                self.pkg("info -r //test3/bronze //test2/bronze bronze")
+                expected = """\
+ Name: bronze
+ Summary: 
+ State: Not installed
+ Publisher: test
+ Version: 1.0
+ Build Release: 5.11
+ Branch: 0
+Packaging Date: Thu Sep 08 00:45:46 2011
+ Size: 54.00 B
+ FMRI: pkg://test/bronze@1.0,5.11-0:20110908T004546Z
+
+ Name: bronze
+ Summary: 
+ State: Not installed
+ Publisher: test2
+ Version: 1.0
+ Build Release: 5.11
+ Branch: 0
+Packaging Date: Thu Sep 08 00:45:46 2011
+ Size: 54.00 B
+ FMRI: pkg://test2/bronze@1.0,5.11-0:20110908T004546Z
+
+ Name: bronze
+ Summary: 
+ State: Not installed
+ Publisher: test3
+ Version: 1.0
+ Build Release: 5.11
+ Branch: 0
+Packaging Date: Thu Sep 08 00:45:46 2011
+ Size: 54.00 B
+ FMRI: pkg://test3/bronze@1.0,5.11-0:20110908T004546Z
+"""
+                self.assertEqualDiff(expected, self.reduceSpaces(self.output))
 
         def test_renamed_packages(self):
                 """Verify that info returns the expected output for renamed

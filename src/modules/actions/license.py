@@ -39,6 +39,7 @@ import generic
 import pkg.misc as misc
 import pkg.portable as portable
 import urllib
+import zlib
 
 from pkg.client.api_errors import ActionExecutionError
 
@@ -117,18 +118,22 @@ class LicenseAction(generic.Action):
                 try:
                         shasum = misc.gunzip_from_stream(stream, lfile)
                 except zlib.error, e:
-                        raise ActionExecutionError("zlib.error: %s" %
-                            (" ".join([str(a) for a in e.args])))
+                        raise ActionExecutionError(self, details=_("Error "
+                            "decompressing payload: %s") %
+                            (" ".join([str(a) for a in e.args])), error=e)
                 finally:
                         lfile.close()
                         stream.close()
 
                 if shasum != self.hash:
-                        raise ActionExecutionError(_("Action data hash "
-                           "verification failure: expected: %(expected)s "
-                           "computed: %(actual)s action: %(action)s") % {
-                           "expected": self.hash, "actual": shasum,
-                           "action": self })
+                        raise ActionExecutionError(self, details=_("Action "
+                            "data hash verification failure: expected: "
+                            "%(expected)s computed: %(actual)s action: "
+                            "%(action)s") % {
+                                "expected": self.hash,
+                                "actual": shasum,
+                                "action": self
+                            })
 
                 os.chmod(path, misc.PKG_RO_FILE_MODE)
 
@@ -258,3 +263,17 @@ class LicenseAction(generic.Action):
 
                 return self.attrs.get("must-display", "").lower() == "true"
 
+        def validate(self, fmri=None):
+                """Performs additional validation of action attributes that
+                for performance or other reasons cannot or should not be done
+                during Action object creation.  An ActionError exception (or
+                subclass of) will be raised if any attributes are not valid.
+                This is primarily intended for use during publication or during
+                error handling to provide additional diagonostics.
+
+                'fmri' is an optional package FMRI (object or string) indicating
+                what package contained this action."""
+
+                generic.Action._validate(self, fmri=fmri,
+                    numeric_attrs=("pkg.csize", "pkg.size"),
+                    single_attrs=("chash", "must-accept", "must-display"))

@@ -21,12 +21,10 @@
 #
 
 #
-# Copyright (c) 2007, 2011, Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2007, 2012, Oracle and/or its affiliates.  All rights reserved.
 #
 
-import errno
 import itertools
-import os
 import cPickle as pickle
 
 from pkg.client import global_settings
@@ -38,6 +36,7 @@ import pkg.client.api_errors as apx
 import pkg.manifest as manifest
 from pkg.misc import expanddirs, get_pkg_otw_size, EmptyI
 
+import os.path
 
 class PkgPlan(object):
         """A package plan takes two package FMRIs and an Image, and produces the
@@ -70,7 +69,7 @@ class PkgPlan(object):
                 self.__executed = False
                 self.__license_status = {}
                 self.__progtrack = progtrack
-                self.__repair_actions = []
+                self.__repair_actions = {}
                 self.__xferfiles = -1
                 self.__xfersize = -1
                 self._autofix_pkgs = []
@@ -112,7 +111,7 @@ class PkgPlan(object):
         @staticmethod
         def __unpickle_actions(pickled_actions):
                 """Return a list of unpickled actions."""
-                action_list=[]
+                action_list = []
                 for pair in pickled_actions:
                         newpair = [None, None]
                         if pair[0]:
@@ -148,7 +147,7 @@ class PkgPlan(object):
                     self.__unpickle_actions(state["remove"]))
                 for src, dest in itertools.chain(self.gen_update_actions(),
                     self.gen_install_actions()):
-                       if dest.name == "license":
+                        if dest.name == "license":
                                 self.__add_license(src, dest)
 
         def getstate(self):
@@ -171,20 +170,22 @@ class PkgPlan(object):
                 self.destination_fmri = df
                 self.__destination_mfst = dm
 
-        def propose_repair(self, fmri, mfst, actions, autofix=False):
+        def propose_repair(self, fmri, mfst, install, remove, autofix=False):
                 self.propose(fmri, mfst, fmri, mfst)
                 # self.origin_fmri = None
                 # I'd like a cleaner solution than this; we need to actually
-                # construct a list of actions as things currently are rather than
-                # just re-applying the current set of actions.
+                # construct a list of actions as things currently are rather
+                # than just re-applying the current set of actions.
                 #
                 # Create a list of (src, dst) pairs for the actions to send to
-                # execute_repair.  src is none in this case since we aren't
-                # upgrading, just repairing.
-                lst = [(None, x) for x in actions]
+                # execute_repair.
 
-                # Only install actions, no update or remove
-                self.__repair_actions = lst
+                self.__repair_actions = {
+                    # src is none for repairs.
+                    "install": [(None, x) for x in install],
+                    # dest is none for removals.
+                    "remove": [(x, None) for x in remove],
+                }
 
                 if autofix:
                         self._autofix_pkgs.append(fmri)
@@ -206,7 +207,8 @@ class PkgPlan(object):
                 if self.destination_fmri:
                         fmri_set.add(self.destination_fmri)
 
-        def evaluate(self, old_excludes=EmptyI, new_excludes=EmptyI):
+        def evaluate(self, old_excludes=EmptyI, new_excludes=EmptyI,
+            can_exclude=False):
                 """Determine the actions required to transition the package."""
 
                 # If new actions are being installed, check the destination
@@ -234,12 +236,25 @@ class PkgPlan(object):
                                 try:
                                         sig_pol.process_signatures(sigs,
                                             self.__destination_mfst.gen_actions(),
-                                            dest_pub, self.image.trust_anchors)
-                                        self.__destination_mfst.exclude_content(
-                                            new_excludes)
+                                            dest_pub, self.image.trust_anchors,
+                                            self.image.cfg.get_policy(
+                                                "check-certificate-revocation"))
                                 except apx.SigningException, e:
                                         e.pfmri = self.destination_fmri
+                                        if isinstance(e, apx.BrokenChain):
+                                                e.ext_exs.extend(
+                                                    self.image.bad_trust_anchors
+                                                    )
                                         raise
+                if can_exclude:
+                        if self.__destination_mfst is not None:
+                                self.__destination_mfst.exclude_content(
+                                    new_excludes)
+                        if self.__origin_mfst is not None and \
+                            self.__destination_mfst != self.__origin_mfst:
+                                self.__origin_mfst.exclude_content(old_excludes)
+                        old_excludes = EmptyI
+                        new_excludes = EmptyI
 
                 self.actions = self.__destination_mfst.difference(
                     self.__origin_mfst, old_excludes, new_excludes)
@@ -254,9 +269,6 @@ class PkgPlan(object):
                 # destination manifest when it isn't needed.
                 origin_dirs = expanddirs(self.__origin_mfst.get_directories(
                     old_excludes))
-
-                # No longer needed.
-                self.__origin_mfst = None
 
                 # Manifest.get_directories() returns implicit directories, which
                 # means that this computation ends up re-adding all the explicit
@@ -276,19 +288,21 @@ class PkgPlan(object):
                     self.__destination_mfst.get("pkg.summary",
                     self.__destination_mfst.get("description", "none provided"))
 
-                # No longer needed.
-                self.__destination_mfst = None
+                # Add any install repair actions to the update list
+                self.actions.changed.extend(self.__repair_actions.get("install",
+                    EmptyI))
+                self.actions.removed.extend(self.__repair_actions.get("remove",
+                    EmptyI))
 
-                # Add any repair actions to the update list
-                self.actions.changed.extend(self.__repair_actions)
+                # No longer needed.
+                self.__repair_actions = None
 
                 for src, dest in itertools.chain(self.gen_update_actions(),
                     self.gen_install_actions()):
                         if dest.name == "license":
                                 self.__add_license(src, dest)
-                                if not src or self.__repair_actions:
-                                        # Never assume acceptance for
-                                        # fix/repair scenario.
+                                if not src:
+                                        # Initial installs require acceptance.
                                         continue
                                 src_ma = src.attrs.get("must-accept", False)
                                 dest_ma = dest.attrs.get("must-accept", False)
@@ -353,6 +367,19 @@ class PkgPlan(object):
                                                 "").split())
 
                 return (self.__xferfiles, self.__xfersize)
+
+        def get_bytes_added(self):
+                """Return tuple of compressed bytes possibly downloaded
+                and number of bytes laid down; ignore removals
+                because they're usually pinned by snapshots"""
+                def sum_dest_size(a, b):
+                        if b[1]:
+                                return (a[0] + int(b[1].attrs.get("pkg.csize" ,0)),
+                                    a[1] + int(b[1].attrs.get("pkg.size", 0)))
+                        return (a[0], a[1])
+
+                return reduce(sum_dest_size, itertools.chain(*self.actions),
+                    (0, 0))
 
         def get_xfername(self):
                 if self.destination_fmri:
@@ -486,5 +513,36 @@ class PkgPlan(object):
                 """
 
                 assert self.__executed
-                ignored, spath = self.image.salvage(path)
-                self.image.imageplan.salvaged.append((path, spath))
+                spath = self.image.salvage(path)
+                # get just the file path that was salvaged 
+                fpath = path[len(self.image.get_root()) + 1:]
+                self.image.imageplan.salvaged.append((fpath, spath))
+
+        def salvage_from(self, local_path, full_destination):
+                """move unpackaged contents to specified destination"""
+                # remove leading / if present
+                if local_path.startswith(os.path.sep):
+                        local_path = local_path[1:]
+
+                for fpath, spath in self.image.imageplan.salvaged[:]:
+                        if fpath.startswith(local_path):
+                                self.image.imageplan.salvaged.remove((fpath, spath))
+                                break
+                else:
+                        return
+
+                self.image.recover(spath, full_destination)
+
+        @property
+        def destination_manifest(self):
+                return self.__destination_mfst
+
+        def clear_dest_manifest(self):
+                self.__destination_mfst = None
+
+        @property
+        def origin_manifest(self):
+                return self.__origin_mfst
+
+        def clear_origin_manifest(self):
+                self.__origin_mfst = None

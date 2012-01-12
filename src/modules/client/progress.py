@@ -57,8 +57,9 @@ class ProgressTracker(object):
             External consumers should base their subclasses on the
             NullProgressTracker class. """
 
-        def __init__(self, quiet=False, verbose=0):
+        def __init__(self, parsable_version=None, quiet=False, verbose=0):
 
+                self.parsable_version = parsable_version
                 self.quiet = quiet
                 self.verbose = verbose
 
@@ -264,9 +265,15 @@ class ProgressTracker(object):
                             "instead." % (self.dl_goal_nbytes,
                             self.dl_cur_nbytes))
 
-                assert self.dl_cur_npkgs == self.dl_goal_npkgs
-                assert self.dl_cur_nfiles == self.dl_goal_nfiles
-                assert self.dl_cur_nbytes == self.dl_goal_nbytes
+                assert self.dl_cur_npkgs == self.dl_goal_npkgs, \
+                    "Expected %s packages but got %s" % \
+                    (self.dl_goal_npkgs, self.dl_cur_npkgs)
+                assert self.dl_cur_nfiles == self.dl_goal_nfiles, \
+                    "Expected %s files but got %s" % \
+                    (self.dl_goal_nfiles, self.dl_cur_nfiles)
+                assert self.dl_cur_nbytes == self.dl_goal_nbytes, \
+                    "Expected %s bytes but got %s" % \
+                    (self.dl_goal_nbytes, self.dl_cur_nbytes)
 
         def download_get_progress(self):
                 return (self.dl_cur_npkgs, self.dl_cur_nfiles,
@@ -513,8 +520,9 @@ class QuietProgressTracker(ProgressTracker):
         """ This progress tracker outputs nothing, but is semantically
             intended to be "quiet"  See also NullProgressTracker below. """
 
-        def __init__(self):
-                ProgressTracker.__init__(self, quiet=True)
+        def __init__(self, parsable_version=None):
+                ProgressTracker.__init__(self,
+                    parsable_version=parsable_version, quiet=True)
 
         def cat_output_start(self):
                 return
@@ -622,8 +630,9 @@ class CommandLineProgressTracker(ProgressTracker):
             and so is appropriate for sending through a pipe.  This code
             is intended to be platform neutral. """
 
-        def __init__(self, quiet=False, verbose=0):
-                ProgressTracker.__init__(self, quiet=quiet,
+        def __init__(self, parsable_version=None, quiet=False, verbose=0):
+                ProgressTracker.__init__(self,
+                    parsable_version=parsable_version, quiet=quiet,
                     verbose=verbose)
                 self.last_printed_pkg = None
                 self.msg_prefix = ""
@@ -803,8 +812,10 @@ class FancyUNIXProgressTracker(ProgressTracker):
         #
         TERM_DELAY = 0.10
 
-        def __init__(self, quiet=False, verbose=0):
-                ProgressTracker.__init__(self, quiet=quiet, verbose=verbose)
+        def __init__(self, parsable_version=None, quiet=False, verbose=0):
+                ProgressTracker.__init__(self,
+                    parsable_version=parsable_version, quiet=quiet,
+                    verbose=verbose)
 
                 self.act_started = False
                 self.ind_started = False
@@ -989,7 +1000,7 @@ class FancyUNIXProgressTracker(ProgressTracker):
                         self.last_print_time = time.time()
                         self.spinner = (self.spinner + 1) % \
                             len(self.spinner_chars)
-                        s = "%-50s..... %c%c" % \
+                        s = "%-70s..... %c%c" % \
                             (self.ver_cur_fmri.get_pkg_stem(),
                              self.spinner_chars[self.spinner],
                              self.spinner_chars[self.spinner])
@@ -1233,7 +1244,6 @@ class FancyUNIXProgressTracker(ProgressTracker):
                 self.__generic_simple_done()
 
         def index_optimize(self):
-                self.ind_output_done()
                 self.ind_started = False
                 self.last_print_time = 0
                 try:

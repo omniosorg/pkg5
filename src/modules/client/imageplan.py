@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2007, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 from collections import defaultdict, namedtuple
@@ -32,6 +32,7 @@ import os
 import simplejson as json
 import sys
 import traceback
+import weakref
 
 from pkg.client import global_settings
 logger = global_settings.logger
@@ -39,17 +40,20 @@ logger = global_settings.logger
 import pkg.actions
 import pkg.catalog
 import pkg.client.actuator as actuator
-import pkg.client.indexer as indexer
 import pkg.client.api_errors as api_errors
-import pkg.client.pkgplan as pkgplan
+import pkg.client.indexer as indexer
 import pkg.client.pkg_solver as pkg_solver
+import pkg.client.pkgdefs as pkgdefs
+import pkg.client.pkgplan as pkgplan
 import pkg.fmri
 import pkg.manifest as manifest
 import pkg.misc as misc
+import pkg.mediator as med
 import pkg.search_errors as se
 import pkg.version
 
 from pkg.client.debugvalues import DebugValues
+from pkg.mediator import mediator_impl_matches
 
 UNEVALUATED       = 0 # nothing done yet
 EVALUATED_PKGS    = 1 # established fmri changes
@@ -81,20 +85,23 @@ class ImagePlan(object):
         and buildig lists of removeal, install and update actions
         and their execution is all common code"""
 
-        PLANNED_FIX       = "fix"
-        PLANNED_INSTALL   = "install"
-        PLANNED_NOOP      = "no-op"
-        PLANNED_NOTHING   = "no-plan"
-        PLANNED_REVERT    = "revert"
-        PLANNED_SYNC      = "sync"
-        PLANNED_UNINSTALL = "uninstall"
-        PLANNED_UPDATE    = "update"
-        PLANNED_VARIANT   = "change-variant"
+        PLANNED_FIX           = "fix"
+        PLANNED_INSTALL       = "install"
+        PLANNED_NOOP          = "no-op"
+        PLANNED_NOTHING       = "no-plan"
+        PLANNED_REVERT        = "revert"
+        PLANNED_MEDIATOR      = "set-mediator"
+        PLANNED_SYNC          = "sync"
+        PLANNED_UNINSTALL     = "uninstall"
+        PLANNED_UPDATE        = "update"
+        PLANNED_VARIANT       = "change-variant"
         __planned_values  = frozenset([
                 PLANNED_FIX,
                 PLANNED_INSTALL,
                 PLANNED_NOTHING,
+
                 PLANNED_REVERT,
+                PLANNED_MEDIATOR,
                 PLANNED_SYNC,
                 PLANNED_UNINSTALL,
                 PLANNED_UPDATE,
@@ -151,6 +158,7 @@ class ImagePlan(object):
                 self.__licenses = None
                 self.__legacy = None
                 self.__cached_actions = {}
+                self.__fixups = {}
 
                 self.__old_excludes = image.list_excludes()
                 self.__new_excludes = self.__old_excludes
@@ -164,8 +172,12 @@ class ImagePlan(object):
                 self.__preexecuted_indexing_error = None
                 self._planned_op = self.PLANNED_NOTHING
                 self.__pkg_solver = None
+                self.__new_mediators = None
+                self.__mediators_change = False
                 self.__new_variants = None
                 self.__new_facets = None
+                self.__changed_facets = {}
+                self.__removed_facets = set()
                 self.__varcets_change = False
                 self.__match_inst = {} # dict of fmri -> pattern
                 self.__match_rm = {} # dict of fmri -> pattern
@@ -174,6 +186,10 @@ class ImagePlan(object):
                 self.__new_avoid_obs = (None, None)
                 self.__salvaged = []
                 self.__mode = mode
+                self.__cbytes_added = 0  # size of compressed files
+                self.__bytes_added = 0   # size of files added
+                self.__cbytes_avail = 0  # avail space for downloads
+                self.__bytes_avail = 0   # avail space for fs
 
                 if noexecute:
                         return
@@ -220,7 +236,109 @@ class ImagePlan(object):
                         s = s + "\nVariants/Facet changes:\n %s -> %s\n" % \
                             (self.__old_excludes, self.__new_excludes)
 
+                if self.__new_mediators:
+                        s = s + "\nMediator changes:\n %s" % \
+                            "\n".join(self.mediators_to_strings())
+
                 return s
+
+        @property
+        def mediators(self):
+                """Returns a list of three-tuples containing information about
+                the mediators.  The first element in the tuple is the name of
+                the mediator.  The second element is a tuple containing the
+                original version and source and the new version and source of
+                the mediator.  The third element is a tuple containing the
+                original implementation and source and new implementation and
+                source."""
+
+                ret = []
+                cfg_mediators = self.image.cfg.mediators
+                if not (self.__mediators_change and
+                    (self.__new_mediators or cfg_mediators)):
+                        return ret
+
+                def get_mediation(mediators):
+                        mimpl = mver = mimpl_source = \
+                            mver_source = None
+                        if m in mediators:
+                                mimpl = mediators[m].get(
+                                    "implementation")
+                                mimpl_ver = mediators[m].get(
+                                    "implementation-version")
+                                if mimpl_ver:
+                                        mimpl_ver = \
+                                            mimpl_ver.get_short_version()
+                                if mimpl and mimpl_ver:
+                                        mimpl += "(@%s)" % mimpl_ver
+                                mimpl_source = mediators[m].get(
+                                    "implementation-source")
+
+                                mver = mediators[m].get("version")
+                                if mver:
+                                        mver = mver.get_short_version()
+                                mver_source = mediators[m].get(
+                                    "version-source")
+                        return mimpl, mver, mimpl_source, mver_source
+
+                for m in sorted(set(self.__new_mediators.keys() +
+                    cfg_mediators.keys())):
+                        orig_impl, orig_ver, orig_impl_source, \
+                            orig_ver_source = get_mediation(cfg_mediators)
+                        new_impl, new_ver, new_impl_source, new_ver_source = \
+                            get_mediation(self.__new_mediators)
+
+                        if orig_ver == new_ver and \
+                            orig_ver_source == new_ver_source and \
+                            orig_impl == new_impl and \
+                            orig_impl_source == new_impl_source:
+                                # Mediation not changed.
+                                continue
+
+                        out = (m,
+                            ((orig_ver, orig_ver_source),
+                            (new_ver, new_ver_source)),
+                            ((orig_impl, orig_impl_source),
+                            (new_impl, new_impl_source)))
+
+                        ret.append(out)
+
+                return ret
+
+        def mediators_to_strings(self):
+                """Returns list of strings describing mediator changes."""
+                ret = []
+                for m, ver, impl in self.mediators:
+                        ((orig_ver, orig_ver_source),
+                            (new_ver, new_ver_source)) = ver
+                        ((orig_impl, orig_impl_source),
+                            (new_impl, new_impl_source)) = impl
+                        out = "mediator %s:\n" % m
+                        if orig_ver and new_ver:
+                                out += "           version: %s (%s default) " \
+                                    "-> %s (%s default)\n" % (orig_ver,
+                                    orig_ver_source, new_ver, new_ver_source)
+                        elif orig_ver:
+                                out += "           version: %s (%s default) " \
+                                    "-> None\n" % (orig_ver, orig_ver_source)
+                        elif new_ver:
+                                out += "           version: None -> " \
+                                    "%s (%s default)\n" % (new_ver,
+                                    new_ver_source)
+
+                        if orig_impl and new_impl:
+                                out += "    implementation: %s (%s default) " \
+                                    "-> %s (%s default)\n" % (orig_impl,
+                                    orig_impl_source, new_impl, new_impl_source)
+                        elif orig_impl:
+                                out += "    implementation: %s (%s default) " \
+                                    "-> None\n" % (orig_impl, orig_impl_source)
+                        elif new_impl:
+                                out += "    implementation: None -> " \
+                                    "%s (%s default)\n" % (new_impl,
+                                    new_impl_source)
+                        ret.append(out)
+                return ret
 
         @property
         def salvaged(self):
@@ -234,24 +352,25 @@ class ImagePlan(object):
 
         @property
         def services(self):
-                """Returns a list of strings describing affected services"""
-                return [
-                    "%s: %s" % (fmri, smf)
-                    for fmri, smf in self.__actuators.get_services_list()
-                ]
+                """Returns a list of string tuples describing affected services
+                (action, SMF FMRI)."""
+                return sorted(
+                    ((str(action), str(smf_fmri))
+                    for action, smf_fmri in self.__actuators.get_services_list()),
+                    key=operator.itemgetter(0, 1)
+                )
 
         @property
         def varcets(self):
                 """Returns list of variant/facet changes"""
-                ret = []
                 if self.__new_variants:
-                        ret += ["variant %s: %s" % a
-                            for a in self.__new_variants.iteritems()]
-                if self.__new_facets:
-                        ret += ["  facet %s: %s" % a
-                            for a in self.__new_facets.iteritems()]
-
-                return ret
+                        vs = self.__new_variants.items()
+                else:
+                        vs = []
+                fs = []
+                fs.extend(self.__changed_facets.items())
+                fs.extend([(f, None) for f in self.__removed_facets])
+                return vs, fs
 
         def __verbose_str(self):
                 s = str(self)
@@ -287,6 +406,24 @@ class ImagePlan(object):
                 """Get the proposed fmri changes."""
                 return self.__fmri_changes
 
+        @property
+        def bytes_added(self):
+                """get the (approx) number of bytes added"""
+                return self.__bytes_added
+        @property
+        def cbytes_added(self):
+                """get the (approx) number of bytes needed in download cache"""
+                return self.__cbytes_added
+
+        @property
+        def bytes_avail(self):
+                """get the (approx) number of bytes space available"""
+                return self.__bytes_avail
+        @property
+        def cbytes_avail(self):
+                """get the (approx) number of download space available"""
+                return self.__cbytes_avail
+
         def __vector_2_fmri_changes(self, installed_dict, vector,
             li_pkg_updates=True, new_variants=None, new_facets=None):
                 """Given an installed set of packages, and a proposed vector
@@ -319,7 +456,7 @@ class ImagePlan(object):
                                 # enforced this requirement that packages with
                                 # action variant tags declare their variants.
                                 # So now we're stuck just re-installing every
-                                # pacakge.  sigh.
+                                # package.  sigh.
                                 #
                                 fmri_updates.append((a, b))
                                 continue
@@ -345,20 +482,31 @@ class ImagePlan(object):
 
         def __plan_install_solver(self, li_pkg_updates=True, li_sync_op=False,
             new_facets=None, new_variants=None, pkgs_inst=None,
-            reject_list=None):
+            reject_list=misc.EmptyI):
                 """Use the solver to determine the fmri changes needed to
                 install the specified pkgs, sync the specified image, and/or
                 change facets/variants within the current image."""
 
-                if not (new_variants or new_facets or pkgs_inst or li_sync_op):
+                if not (new_variants or pkgs_inst or li_sync_op or
+                    new_facets is not None):
                         # nothing to do
                         self.__fmri_changes = []
                         return
 
-                if new_variants or new_facets:
+                old_facets = self.image.cfg.facets
+                if new_variants or \
+                    (new_facets is not None and new_facets != old_facets):
                         self.__varcets_change = True
                         self.__new_variants = new_variants
                         self.__new_facets   = new_facets
+                        tmp_new_facets = new_facets
+                        if tmp_new_facets is None:
+                                tmp_new_facets = pkg.facet.Facets()
+                        self.__changed_facets = pkg.facet.Facets(dict(
+                            set(tmp_new_facets.iteritems()) -
+                            set(old_facets.iteritems())))
+                        self.__removed_facets = set(old_facets.keys()) - \
+                            set(tmp_new_facets.keys())
 
                 # get ranking of publishers
                 pub_ranks = self.image.get_publisher_ranks()
@@ -367,19 +515,19 @@ class ImagePlan(object):
                 installed_dict = ImagePlan.__fmris2dict(
                     self.image.gen_installed_pkgs())
 
-                if pkgs_inst:
-                        inst_dict, references = self.__match_user_fmris(
-                            pkgs_inst, self.MATCH_ALL, pub_ranks=pub_ranks,
-                            installed_pkgs=installed_dict)
-                        self.__match_inst = references
-                else:
-                        inst_dict = {}
-
                 if reject_list:
                         reject_set = self.match_user_stems(reject_list,
                             self.MATCH_ALL)
                 else:
                         reject_set = set()
+
+                if pkgs_inst:
+                        inst_dict, references = self.__match_user_fmris(
+                            pkgs_inst, self.MATCH_ALL, pub_ranks=pub_ranks,
+                            installed_pkgs=installed_dict, reject_set=reject_set)
+                        self.__match_inst = references
+                else:
+                        inst_dict = {}
 
                 self.__new_excludes = self.image.list_excludes(new_variants,
                     new_facets)
@@ -397,12 +545,12 @@ class ImagePlan(object):
                     variants,
                     self.image.avoid_set_get(),
                     self.image.linked.parent_fmris(),
-                    self.image.linked.extra_dep_actions(self.__new_excludes),
                     self.__progtrack)
 
                 # Solve... will raise exceptions if no solution is found
                 new_vector, self.__new_avoid_obs = \
-                    self.__pkg_solver.solve_install([], inst_dict,
+                    self.__pkg_solver.solve_install(
+                        self.image.get_frozen_list(), inst_dict,
                         new_variants=new_variants, new_facets=new_facets,
                         excludes=self.__new_excludes, reject_set=reject_set,
                         relax_all=li_sync_op)
@@ -414,7 +562,7 @@ class ImagePlan(object):
 
         def __plan_install(self, li_pkg_updates=True, li_sync_op=False,
             new_facets=None, new_variants=None, pkgs_inst=None,
-            reject_list=None):
+            reject_list=misc.EmptyI):
                 """Determine the fmri changes needed to install the specified
                 pkgs, sync the image, and/or change facets/variants within the
                 current image."""
@@ -441,7 +589,7 @@ class ImagePlan(object):
 
                 self.state = EVALUATED_PKGS
 
-        def plan_install(self, pkgs_inst=None, reject_list=None):
+        def plan_install(self, pkgs_inst=None, reject_list=misc.EmptyI):
                 """Determine the fmri changes needed to install the specified
                 pkgs"""
 
@@ -450,7 +598,7 @@ class ImagePlan(object):
                      reject_list=reject_list)
 
         def plan_change_varcets(self, new_facets=None, new_variants=None,
-            reject_list=None):
+            reject_list=misc.EmptyI):
                 """Determine the fmri changes needed to change the specified
                 facets/variants."""
 
@@ -458,10 +606,167 @@ class ImagePlan(object):
                 self.__plan_install(new_facets=new_facets,
                      new_variants=new_variants, reject_list=reject_list)
 
-        def plan_sync(self, li_pkg_updates=True, reject_list=None):
+        def plan_set_mediators(self, new_mediators):
+                """Determine the changes needed to set the specified mediators.
+
+                'new_mediators' is a dict of dicts of the mediators to set
+                version and implementation for.  It should be of the form:
+
+                   {
+                       mediator-name: {
+                           "implementation": mediator-implementation-string,
+                           "version": mediator-version-string
+                       }
+                   }
+
+                   'implementation' is an optional string that specifies the
+                   implementation of the mediator for use in addition to or
+                   instead of 'version'.  A value of None will be interpreted
+                   as requesting a reset of implementation to its optimal
+                   default.
+
+                   'version' is an optional string that specifies the version
+                   (expressed as a dot-separated sequence of non-negative
+                   integers) of the mediator for use.  A value of None will be
+                   interpreted as requesting a reset of version to its optimal
+                   default.
+                """
+
+                self.__plan_op(self.PLANNED_MEDIATOR)
+
+                self.__mediators_change = True
+                self.__new_mediators = new_mediators
+                self.__fmri_changes = []
+
+                cfg_mediators = self.image.cfg.mediators
+
+                # keys() is used since entries are deleted during iteration.
+                update_mediators = {}
+                for m in self.__new_mediators.keys():
+                        for k in ("implementation", "version"):
+                                if k in self.__new_mediators[m]:
+                                        if self.__new_mediators[m][k] is not None:
+                                                # Any mediators being set this
+                                                # way are forced to be marked as
+                                                # being set by local administrator.
+                                                self.__new_mediators[m]["%s-source" % k] = \
+                                                    "local"
+                                                continue
+
+                                        # Explicit reset requested.
+                                        del self.__new_mediators[m][k]
+                                        self.__new_mediators[m].pop(
+                                            "%s-source" % k, None)
+                                        if k == "implementation":
+                                                self.__new_mediators[m].pop(
+                                                    "implementation-version",
+                                                    None)
+                                        continue
+
+                                if m not in cfg_mediators:
+                                        # Nothing to do if not previously
+                                        # configured.
+                                        continue
+
+                                # If the mediator was configured by the local
+                                # administrator, merge existing configuration.
+                                # This is necessary since callers are only
+                                # required to specify the components they want
+                                # to change.
+                                med_source = cfg_mediators[m].get("%s-source" % k)
+                                if med_source != "local":
+                                        continue
+
+                                self.__new_mediators[m][k] = \
+                                    cfg_mediators[m].get(k)
+                                self.__new_mediators[m]["%s-source" % k] = "local"
+
+                                if k == "implementation" and \
+                                    "implementation-version" in cfg_mediators[m]:
+                                        self.__new_mediators[m]["implementation-version"] = \
+                                            cfg_mediators[m].get("implementation-version")
+
+                        if m not in cfg_mediators:
+                                # mediation changed.
+                                continue
+
+                        # Determine if the only thing changing for mediations is
+                        # whether configuration source is changing.  If so,
+                        # optimize planning by not loading any package data.
+                        for k in ("implementation", "version"):
+                                if self.__new_mediators[m].get(k) != \
+                                    cfg_mediators[m].get(k):
+                                        break
+                        else:
+                                if (self.__new_mediators[m].get("version-source") != \
+                                    cfg_mediators[m].get("version-source")) or \
+                                    (self.__new_mediators[m].get("implementation-source") != \
+                                    cfg_mediators[m].get("implementation-source")):
+                                        update_mediators[m] = \
+                                            self.__new_mediators[m]
+                                del self.__new_mediators[m]
+
+                if self.__new_mediators:
+                        # Some mediations are changing, so merge the update only
+                        # ones back in.
+                        self.__new_mediators.update(update_mediators)
+
+                        # Determine which packages will be affected.
+                        for f in self.image.gen_installed_pkgs():
+                                self.__progtrack.evaluate_progress()
+                                m = self.image.get_manifest(f)
+                                mediated = []
+                                for act in m.gen_actions_by_types(("hardlink",
+                                    "link")):
+                                        try:
+                                                mediator = act.attrs["mediator"]
+                                        except KeyError:
+                                                continue
+                                        if mediator in new_mediators:
+                                                mediated.append(act)
+
+                                if mediated:
+                                        pp = pkgplan.PkgPlan(self.image,
+                                            self.__progtrack,
+                                            self.__check_cancel)
+                                        pp.propose_repair(f, m, mediated,
+                                            misc.EmptyI)
+                                        pp.evaluate(self.__new_excludes,
+                                            self.__new_excludes)
+                                        self.pkg_plans.append(pp)
+                else:
+                        # Only the source property is being updated for
+                        # these mediators, so no packages needed loading.
+                        self.__new_mediators = update_mediators
+
+                self.state = EVALUATED_PKGS
+
+        def plan_sync(self, li_pkg_updates=True, reject_list=misc.EmptyI):
                 """Determine the fmri changes needed to sync the image."""
 
                 self.__plan_op(self.PLANNED_SYNC)
+
+                # check if the sync will try to uninstall packages.
+                uninstall = False
+                reject_set = self.match_user_stems(reject_list,
+                    self.MATCH_INST_VERSIONS, raise_not_installed=False)
+                if reject_set:
+                        # at least one reject pattern matched an installed
+                        # package
+                        uninstall = True
+
+                # audits are fast, so do an audit to check if we're in sync.
+                rv, err, p_dict = self.image.linked.audit_self(
+                    li_parent_sync=False)
+
+                # if we're not trying to uninstall packages and we're
+                # already in sync then don't bother invoking the solver.
+                if not uninstall and rv == pkgdefs.EXIT_OK:
+                        # we don't need to do anything
+                        self.__fmri_changes = []
+                        self.state = EVALUATED_PKGS
+                        return
+
                 self.__plan_install(li_pkg_updates=li_pkg_updates,
                     li_sync_op=True, reject_list=reject_list)
 
@@ -488,12 +793,12 @@ class ImagePlan(object):
                     self.image.get_variants(),
                     self.image.avoid_set_get(),
                     self.image.linked.parent_fmris(),
-                    self.image.linked.extra_dep_actions(self.__new_excludes),
                     self.__progtrack)
 
                 new_vector, self.__new_avoid_obs = \
-                    self.__pkg_solver.solve_uninstall([],  proposed_removals,
-                    self.__new_excludes)
+                    self.__pkg_solver.solve_uninstall(
+                        self.image.get_frozen_list(), proposed_removals,
+                        self.__new_excludes)
 
                 self.__fmri_changes = [
                     (a, b)
@@ -504,7 +809,8 @@ class ImagePlan(object):
 
                 self.state = EVALUATED_PKGS
 
-        def __plan_update_solver(self, pkgs_update=None, reject_list=None):
+        def __plan_update_solver(self, pkgs_update=None,
+            reject_list=misc.EmptyI):
                 """Use the solver to determine the fmri changes needed to
                 update the specified pkgs or all packages if none were
                 specified."""
@@ -517,17 +823,18 @@ class ImagePlan(object):
 
                 # If specific packages or patterns were provided, then
                 # determine the proposed set to pass to the solver.
-                if pkgs_update:
-                        update_dict, references = self.__match_user_fmris(
-                            pkgs_update, self.MATCH_INST_STEMS,
-                            pub_ranks=pub_ranks, installed_pkgs=installed_dict)
-                        self.__match_update = references
-
                 if reject_list:
                         reject_set = self.match_user_stems(reject_list,
                             self.MATCH_ALL)
                 else:
                         reject_set = set()
+
+                if pkgs_update:
+                        update_dict, references = self.__match_user_fmris(
+                            pkgs_update, self.MATCH_INST_STEMS,
+                            pub_ranks=pub_ranks, installed_pkgs=installed_dict,
+                            reject_set=reject_set)
+                        self.__match_update = references
 
                 # instantiate solver
                 self.__pkg_solver = pkg_solver.PkgSolver(
@@ -537,12 +844,12 @@ class ImagePlan(object):
                     self.image.get_variants(),
                     self.image.avoid_set_get(),
                     self.image.linked.parent_fmris(),
-                    self.image.linked.extra_dep_actions(self.__new_excludes),
                     self.__progtrack)
 
                 if pkgs_update:
                         new_vector, self.__new_avoid_obs = \
-                            self.__pkg_solver.solve_install([],
+                            self.__pkg_solver.solve_install(
+                                self.image.get_frozen_list(),
                                 update_dict, excludes=self.__new_excludes,
                                 reject_set=reject_set,
                                 trim_proposed_installed=False)
@@ -550,14 +857,15 @@ class ImagePlan(object):
                         # Updating all installed packages requires a different
                         # solution path.
                         new_vector, self.__new_avoid_obs = \
-                            self.__pkg_solver.solve_update_all([],
+                            self.__pkg_solver.solve_update_all(
+                                self.image.get_frozen_list(),
                                 excludes=self.__new_excludes,
                                 reject_set=reject_set)
 
                 self.__fmri_changes = self.__vector_2_fmri_changes(
                     installed_dict, new_vector)
 
-        def plan_update(self, pkgs_update=None, reject_list=None):
+        def plan_update(self, pkgs_update=None, reject_list=misc.EmptyI):
                 """Determine the fmri changes needed to update the specified
                 pkgs or all packages if none were specified."""
                 self.__plan_op(self.PLANNED_UPDATE)
@@ -603,25 +911,36 @@ class ImagePlan(object):
                                         if "revert-tag" in act.attrs and \
                                             (set(act.attrlist("revert-tag")) &
                                              tag_set):
-                                                revert_dict[(f,m)].append(act)
+                                                revert_dict[(f, m)].append(act)
                 else:
                         # look through all the packages, looking for our files
                         # we could use search for this.
 
-                        def peelslash(a):
-                                if os.path.isabs(a):
-                                        return a[1:]
-                                return a
-                        revertpaths = set([peelslash(a) for a in args])
+                        revertpaths = set([a.lstrip(os.path.sep) for a in args])
+                        overlaypaths = set()
                         for f in self.image.gen_installed_pkgs():
                                 self.__progtrack.evaluate_progress()
                                 m = self.image.get_manifest(f)
                                 for act in m.gen_actions_by_type("file",
                                     self.__new_excludes):
-                                        if act.attrs["path"] in revertpaths:
-                                                revert_dict[(f,m)].append(act)
-                                                revertpaths.remove(
-                                                    act.attrs["path"])
+                                        path = act.attrs["path"]
+                                        if path in revertpaths or \
+                                            path in overlaypaths:
+                                                revert_dict[(f, m)].append(act)
+                                                if act.attrs.get("overlay") == \
+                                                    "allow":
+                                                        # Action allows overlay,
+                                                        # all matching actions
+                                                        # must be collected.
+                                                        # The imageplan will
+                                                        # automatically handle
+                                                        # the overlaid action
+                                                        # if an overlaying
+                                                        # action is present.
+                                                        overlaypaths.add(path)
+                                                revertpaths.discard(path)
+
+                        revertpaths.difference_update(overlaypaths)
                         if revertpaths:
                                 raise api_errors.PlanCreationException(
                                     nofiles=list(revertpaths))
@@ -631,7 +950,7 @@ class ImagePlan(object):
                         # no sense in replacing files that are original already
                         needs_change = []
                         self.__progtrack.evaluate_progress()
-                        for act in revert_dict[(f,m)]:
+                        for act in revert_dict[(f, m)]:
                                 # delete preserve attribute to both find and
                                 # enable replacement of modified editable files.
                                 act.attrs.pop("preserve", None)
@@ -641,7 +960,8 @@ class ImagePlan(object):
                         if needs_change:
                                 pp = pkgplan.PkgPlan(self.image,
                                     self.__progtrack, self.__check_cancel)
-                                pp.propose_repair(f, m, needs_change)
+                                pp.propose_repair(f, m, needs_change,
+                                    misc.EmptyI)
                                 pp.evaluate(self.__new_excludes,
                                     self.__new_excludes)
                                 self.pkg_plans.append(pp)
@@ -673,6 +993,11 @@ class ImagePlan(object):
                     (olddict.get(k, None), newdict.get(k, None))
                     for k in set(olddict.keys() + newdict.keys())
                 ]
+
+        def reboot_advised(self):
+                """Check if evaluated imageplan suggests a reboot"""
+                assert self.state >= MERGED_OK
+                return self.__actuators.reboot_advised()
 
         def reboot_needed(self):
                 """Check if evaluated imageplan requires a reboot"""
@@ -722,22 +1047,26 @@ class ImagePlan(object):
                 for pfmri in fmri_set:
                         yield pfmri
 
-        def gen_only_new_installed_pkgs(self):
-                """Generates all the fmris which are being installed (or fixed,
-                etc.)."""
+        def __gen_only_new_installed_info(self):
+                """Generates fmri-manifest pairs for all packages which are
+                being installed (or fixed, etc.)."""
                 assert self.state >= EVALUATED_PKGS
 
                 for p in self.pkg_plans:
                         if p.destination_fmri:
-                                yield p.destination_fmri
+                                assert p.destination_manifest
+                                yield p.destination_fmri, p.destination_manifest
 
-        def gen_outgoing_pkgs(self):
-                """Generates all the fmris which are being removed."""
+        def __gen_outgoing_info(self):
+                """Generates fmri-manifest pairs for all the packages which are
+                being removed."""
                 assert self.state >= EVALUATED_PKGS
 
                 for p in self.pkg_plans:
-                        if p.origin_fmri and p.origin_fmri != p.destination_fmri:
-                                yield p.origin_fmri
+                        if p.origin_fmri and \
+                            p.origin_fmri != p.destination_fmri:
+                                assert p.origin_manifest
+                                yield p.origin_fmri, p.origin_manifest
 
         def gen_new_installed_actions_bytype(self, atype, implicit_dirs=False):
                 """Generates actions of type 'atype' from the packages in the
@@ -746,19 +1075,23 @@ class ImagePlan(object):
                 return self.__gen_star_actions_bytype(atype,
                     self.gen_new_installed_pkgs, implicit_dirs=implicit_dirs)
 
-        def gen_only_new_installed_actions_bytype(self, atype, implicit_dirs=False):
+        def gen_only_new_installed_actions_bytype(self, atype,
+            implicit_dirs=False, excludes=misc.EmptyI):
                 """Generates actions of type 'atype' from packages being
                 installed."""
 
-                return self.__gen_star_actions_bytype(atype,
-                    self.gen_only_new_installed_pkgs, implicit_dirs=implicit_dirs)
+                return self.__gen_star_actions_bytype_from_extant_manifests(
+                    atype, self.__gen_only_new_installed_info, excludes,
+                    implicit_dirs=implicit_dirs)
 
-        def gen_outgoing_actions_bytype(self, atype, implicit_dirs=False):
+        def gen_outgoing_actions_bytype(self, atype,
+            implicit_dirs=False, excludes=misc.EmptyI):
                 """Generates actions of type 'atype' from packages being
                 removed (not necessarily actions being removed)."""
 
-                return self.__gen_star_actions_bytype(atype,
-                    self.gen_outgoing_pkgs, implicit_dirs=implicit_dirs)
+                return self.__gen_star_actions_bytype_from_extant_manifests(
+                    atype, self.__gen_outgoing_info, excludes,
+                    implicit_dirs=implicit_dirs)
 
         def __gen_star_actions_bytype(self, atype, generator, implicit_dirs=False):
                 """Generate installed actions of type 'atype' from the package
@@ -786,6 +1119,37 @@ class ImagePlan(object):
                                 for d in m.get_directories(self.__new_excludes):
                                         if d not in dirs:
                                                 yield da(path=d, implicit="true"), pfmri
+
+        def __gen_star_actions_bytype_from_extant_manifests(self, atype,
+            generator, excludes, implicit_dirs=False):
+                """Generate installed actions of type 'atype' from the package
+                manifests emitted by 'generator'.  'excludes' is a list of
+                variants and facets which should be excluded from the actions
+                generated.  If 'implicit_dirs' is True, then when 'atype' is
+                'dir', directories only implicitly delivered in the image will
+                be emitted as well."""
+
+                assert self.state >= EVALUATED_PKGS
+
+                # Don't bother accounting for implicit directories if we're not
+                # looking for them.
+                if implicit_dirs and atype != "dir":
+                        implicit_dirs = False
+
+                for pfmri, m in generator():
+                        dirs = set() # Keep track of explicit dirs
+                        for act in m.gen_actions_by_type(atype,
+                            excludes):
+                                if implicit_dirs:
+                                        dirs.add(act.attrs["path"])
+                                yield act, pfmri
+
+                        if implicit_dirs:
+                                da = pkg.actions.directory.DirectoryAction
+                                for d in m.get_directories(excludes):
+                                        if d not in dirs:
+                                                yield da(path=d,
+                                                    implicit="true"), pfmri
 
         def __get_directories(self):
                 """ return set of all directories in target image """
@@ -929,18 +1293,45 @@ class ImagePlan(object):
                     all(o[0] == n[0] for o, n, in zip(oactions, actions)):
                         return "nothing", None
 
-                # Some very rare cases require us to allow two actions to be
-                # delivered at a single point in their namespace.  Don't use
-                # this unless you know you're supposed to!
-                if DebugValues["allow-overlays"] and \
-                    any(act[0].attrs.get("overlay") == "true" for act in actions):
-                        return None
+                # For file actions, delivery of two actions to a single point is
+                # permitted if:
+                #   * there are only two actions in conflict
+                #   * one action has 'preserve' set and 'overlay=allow'
+                #   * the other action has 'overlay=true'
+                if len(actions) == 2:
+                        overlayable = overlay = None
+                        for act, ignored in actions:
+                                if (act.name == "file" and
+                                    act.attrs.get("overlay") == "allow" and
+                                    "preserve" in act.attrs):
+                                        overlayable = act
+                                elif (act.name == "file" and
+                                    act.attrs.get("overlay") == "true"):
+                                        overlay = act
+                        if overlayable and overlay:
+                                # Found both an overlayable action and the
+                                # action that overlays it.
+                                errors = self.__find_inconsistent_attrs(actions,
+                                    ignore=["preserve"])
+                                if errors:
+                                        # overlay is not permitted if unique
+                                        # attributes (except 'preserve') are
+                                        # inconsistent
+                                        return ("error", actions,
+                                            api_errors.InconsistentActionAttributeError)
+                                return "overlay", None
 
                 return "error", actions
 
         @staticmethod
-        def __find_inconsistent_attrs(actions):
-                """Find all the problem action pairs."""
+        def __find_inconsistent_attrs(actions, ignore=misc.EmptyI):
+                """Find all the problem Action pairs.
+
+                'ignore' is an optional list of attributes to ignore when
+                checking for inconsistent attributes.  By default, all
+                attributes listed in the 'unique_attrs' property of an
+                Action are checked.
+                """
 
                 # We iterate over all pairs of actions to see if any conflict
                 # with the rest.  If two actions are "safe" together, then we
@@ -969,7 +1360,23 @@ class ImagePlan(object):
 
                         # If none of the different attributes is one that must
                         # be identical, then we can skip this action.
-                        if not any(d for d in diffs if d in a1[0].unique_attrs):
+                        if not any(
+                            d for d in diffs
+                            if (d in a1[0].unique_attrs and
+                                d not in ignore)):
+                                seen.add(a2)
+                                continue
+
+                        if ((a1[0].name == "link" or a1[0].name == "hardlink") and
+                           (a1[0].attrs.get("mediator") == a2[0].attrs.get("mediator")) and
+                           (a1[0].attrs.get("mediator-version") != a2[0].attrs.get("mediator-version") or
+                            a1[0].attrs.get("mediator-implementation") != a2[0].attrs.get("mediator-implementation"))):
+                                # If two links share the same mediator and have
+                                # different mediator versions and/or
+                                # implementations, then permit them to collide.
+                                # The imageplan will select which ones to remove
+                                # and install based on the mediator configuration
+                                # in the image.
                                 seen.add(a2)
                                 continue
 
@@ -1005,33 +1412,50 @@ class ImagePlan(object):
                         else:
                                 return "nothing", None
 
-        def __propose_fixup(self, action, pfmri):
+        def __propose_fixup(self, inst_action, rem_action, pfmri):
                 """Add to the current plan a pseudo repair plan to fix up
                 correctable conflicts."""
 
-                pp, al = self.__fixups.get(pfmri, (None, []))
+                pp, install, remove = self.__fixups.get(pfmri,
+                    (None, None, None))
                 if pp is None:
                         # XXX The lambda: False is temporary until fix is moved
                         # into the API and self.__check_cancel can be used.
                         pp = pkgplan.PkgPlan(self.image, self.__progtrack,
                             lambda: False)
-                        self.__fixups[pfmri] = pp, [action]
+                        if inst_action:
+                                install = [inst_action]
+                                remove = []
+                        else:
+                                install = []
+                                remove = [rem_action]
+                        self.__fixups[pfmri] = pp, install, remove
+                elif inst_action:
+                        install.append(inst_action)
                 else:
-                        al.append(action)
+                        remove.append(rem_action)
 
         def __evaluate_fixups(self):
                 nfm = manifest.NullFactoredManifest
-                for pfmri, (pp, al) in self.__fixups.items():
-                        pp.propose_repair(pfmri, nfm, al, autofix=True)
+                for pfmri, (pp, install, remove) in self.__fixups.items():
+                        pp.propose_repair(pfmri, nfm, install, remove,
+                            autofix=True)
                         pp.evaluate(self.__old_excludes, self.__new_excludes)
                         self.pkg_plans.append(pp)
 
                         # Repairs end up going into the package plan's update
-                        # list, so we need to append ActionPlans for each action
-                        # in this fixup pkgplan to the list of update actions.
-                        for action in al:
+                        # and remove lists, so ActionPlans needed to be appended
+                        # for each action in this fixup pkgplan to the list of
+                        # related actions.
+                        for action in install:
                                 self.update_actions.append(ActionPlan(pp, None,
                                     action))
+                        for action in remove:
+                                self.removal_actions.append(ActionPlan(pp,
+                                    action, None))
+
+                # Don't process this particular set of fixups again.
+                self.__fixups = {}
 
         def __process_conflicts(self, key, func, actions, oactions, errclass, errs):
                 """The conflicting action checking functions all need to be
@@ -1042,26 +1466,268 @@ class ImagePlan(object):
                 if ret is None:
                         return False
 
-                msg, actions = ret
+                if len(ret) == 3:
+                        # Allow checking functions to override default errclass.
+                        msg, actions, errclass = ret
+                else:
+                        msg, actions = ret
 
                 if not isinstance(msg, basestring):
                         return False
 
                 if msg == "nothing":
                         for i, ap in enumerate(self.removal_actions):
-                                if ap and ap.src.attrs.get(ap.src.key_attr, None) == key:
+                                if ap and ap.src.attrs.get(ap.src.key_attr,
+                                    None) == key:
                                         self.removal_actions[i] = None
+                elif msg == "overlay":
+                        pp_needs_trimming = {}
+                        for al in (self.install_actions, self.update_actions):
+                                for i, ap in enumerate(al):
+                                        if not (ap and ap.dst.attrs.get(
+                                            ap.dst.key_attr, None) == key):
+                                                continue
+                                        if ap.dst.attrs.get("overlay") == \
+                                            "allow":
+                                                # Remove overlaid actions from
+                                                # plan.
+                                                al[i] = None
+                                                pp_needs_trimming.setdefault(id(ap.p),
+                                                    { "plan": ap.p, "trim": [] })
+                                                pp_needs_trimming[id(ap.p)]["trim"].append(
+                                                    id(ap.dst))
+                                                break
+
+                        for entry in pp_needs_trimming.values():
+                                p = entry["plan"]
+                                trim = entry["trim"]
+                                # Can't modify the p.actions tuple, so modify
+                                # the added member in-place.
+                                for prop in ("added", "changed"):
+                                        pval = getattr(p.actions, prop)
+                                        pval[:] = [
+                                            a
+                                            for a in pval
+                                            if id(a[1]) not in trim
+                                        ]
                 elif msg == "fixup":
-                        self.__propose_fixup(*actions)
+                        self.__propose_fixup(actions[0], None, actions[1])
                 elif msg == "error":
                         errs.append(errclass(actions))
                 else:
                         assert False, "%s() returned something other than " \
-                            "'nothing', 'error', or 'fixup': '%s'" % \
+                            "'nothing', 'overlay', 'error', or 'fixup': '%s'" % \
                             (func.__name__, msg)
 
                 return True
 
+        def __seed(self, gen_func, action_classes, excludes):
+                """Build a mapping from action keys to action, pfmri tuples for
+                a set of action types.
+
+                The 'gen_func' is a function which takes an action type and
+                'implicit_dirs' and returns action-pfmri pairs.
+
+                The 'action_classes' parameter is a list of action types."""
+
+                d = {}
+                for klass in action_classes:
+                        for a, pfmri in \
+                            gen_func(klass.name, implicit_dirs=True,
+                            excludes=excludes):
+                                self.__progtrack.evaluate_progress()
+                                d.setdefault(a.attrs[klass.key_attr],
+                                    []).append((a, pfmri))
+                return d
+
+        def __update_old(self, new, old, offset_dict, action_classes, sf,
+            gone_fmris, fmri_dict):
+                """Update the 'old' dictionary with all actions from the action
+                cache which could conflict with the newly actions delivered
+                actions contained in 'new.'
+
+                The 'offset_dict' parameter contains a mapping from key to
+                offsets into the actions.stripped file and the number of lines
+                to read.
+
+                The 'action_classes' parameter contains the list of action types
+                where one action can conflict with another action.
+
+                The 'sf' parameter is the actions.stripped file from which we
+                read the actual actions indicated by the offset dictionary
+                'offset_dict.'
+
+                The 'gone_fmris' parameter contains a set of strings
+                representing the packages which are being removed from the
+                system.
+
+                The 'fmri_dict' parameter is a cache of previously built PkgFmri
+                objects which is used so the same string isn't translated into
+                the same PkgFmri object multiple times."""
+
+                build_release = self.image.attrs["Build-Release"]
+
+                for key in set(itertools.chain(new.iterkeys(), old.keys())):
+                        offsets = []
+                        for klass in action_classes:
+                                offset = offset_dict.get((klass.name, key),
+                                    None)
+                                if offset is not None:
+                                        offsets.append(offset)
+
+                        for offset, cnt in offsets:
+                                sf.seek(offset)
+                                pns = None
+                                for i, line in enumerate(sf, start=1):
+                                        if i > cnt:
+                                                break
+                                        fmristr, actstr = \
+                                            line.rstrip().split(None, 1)
+                                        if fmristr in gone_fmris:
+                                                continue
+                                        act = pkg.actions.fromstr(actstr)
+                                        assert act.attrs[act.key_attr] == key
+                                        assert pns is None or \
+                                            act.namespace_group == pns
+                                        pns = act.namespace_group
+
+                                        try:
+                                                pfmri = fmri_dict[fmristr]
+                                        except KeyError:
+                                                pfmri = pkg.fmri.PkgFmri(
+                                                    fmristr,
+                                                    build_release)
+                                                fmri_dict[fmristr] = pfmri
+                                        old.setdefault(key, []).append(
+                                            (act, pfmri))
+
+        def __update_new(self, new, old, offset_dict, action_classes, sf,
+            gone_fmris, fmri_dict):
+                """Update 'new' with all the actions from the action cache which
+                are staying on the system and could conflict with the newly
+                installed actions.
+
+                The 'offset_dict' parameter contains a mapping from key to
+                offsets into the actions.stripped file and the number of lines
+                to read.
+
+                The 'action_classes' parameter contains the list of action types
+                where one action can conflict with another action.
+
+                The 'sf' parameter is the actions.stripped file from which we
+                read the actual actions indicated by the offset dictionary
+                'offset_dict.'
+
+                The 'gone_fmris' parameter contains a set of strings
+                representing the packages which are being removed from the
+                system.
+
+                The 'fmri_dict' parameter is a cache of previously built PkgFmri
+                objects which is used so the same string isn't translated into
+                the same PkgFmri object multiple times."""
+
+                # If we're not changing any fmris, as in the case of a
+                # change-facet/variant, revert, fix, or set-mediator, then we
+                # need to skip modifying new, as it'll just end up with
+                # incorrect duplicates.
+                if self.planned_op in (self.PLANNED_FIX,
+                    self.PLANNED_VARIANT, self.PLANNED_REVERT,
+                    self.PLANNED_MEDIATOR):
+                        return
+
+                build_release = self.image.attrs["Build-Release"]
+
+                for key in old.iterkeys():
+                        offsets = []
+                        for klass in action_classes:
+                                offset = offset_dict.get((klass.name, key),
+                                    None)
+                                if offset is not None:
+                                        offsets.append(offset)
+
+                        for offset, cnt in offsets:
+                                sf.seek(offset)
+                                pns = None
+                                for i, line in enumerate(sf, start=1):
+                                        if i > cnt:
+                                                break
+                                        fmristr, actstr = line.rstrip().split(
+                                            None, 1)
+                                        if fmristr in gone_fmris:
+                                                continue
+                                        act = pkg.actions.fromstr(actstr)
+                                        assert act.attrs[act.key_attr] == key
+                                        assert pns is None or \
+                                            act.namespace_group == pns
+                                        pns = act.namespace_group
+
+                                        try:
+                                                pfmri = fmri_dict[fmristr]
+                                        except KeyError:
+                                                pfmri = pkg.fmri.PkgFmri(
+                                                    fmristr, build_release)
+                                                fmri_dict[fmristr] = pfmri
+                                        new.setdefault(key, []).append(
+                                            (act, pfmri))
+
+        def __check_conflicts(self, new, old, offset_dict, action_classes, ns,
+            errs):
+                """Check all the newly installed actions for conflicts with
+                existing actions."""
+
+                for key, actions in new.iteritems():
+                        oactions = old.get(key, [])
+
+                        self.__progtrack.evaluate_progress()
+
+                        if len(actions) == 1 and len(oactions) < 2:
+                                continue
+
+                        # Actions delivering to the same point in a
+                        # namespace group's namespace should have the
+                        # same type.
+                        if type(ns) != int:
+                                if self.__process_conflicts(key,
+                                    self.__check_inconsistent_types,
+                                    actions, oactions,
+                                    api_errors.InconsistentActionTypeError,
+                                    errs):
+                                        continue
+
+                        # By virtue of the above check, all actions at
+                        # this point in this namespace are the same.
+                        assert(len(set(a[0].name for a in actions)) <= 1)
+                        assert(len(set(a[0].name for a in oactions)) <= 1)
+
+                        # Multiple non-refcountable actions delivered to
+                        # the same name is an error.
+                        if not actions[0][0].refcountable and \
+                            actions[0][0].globally_identical:
+                                if self.__process_conflicts(key,
+                                    self.__check_duplicate_actions,
+                                    actions, oactions,
+                                    api_errors.DuplicateActionError,
+                                    errs):
+                                        continue
+
+                        # Multiple refcountable but globally unique
+                        # actions delivered to the same name must be
+                        # identical.
+                        elif actions[0][0].globally_identical:
+                                if self.__process_conflicts(key,
+                                    self.__check_inconsistent_attrs,
+                                    actions, oactions,
+                                    api_errors.InconsistentActionAttributeError,
+                                    errs):
+                                        continue
+
+        def __clear_pkg_plans(self):
+                """Now that we're done reading the manifests, we can clear them
+                from the pkgplans."""
+
+                for p in self.pkg_plans:
+                        p.clear_dest_manifest()
+                        p.clear_origin_manifest()
 
         def __find_all_conflicts(self):
                 """Find all instances of conflicting actions.
@@ -1088,6 +1754,22 @@ class ImagePlan(object):
                 if DebugValues["broken-conflicting-action-handling"]:
                         return
 
+                errs = []
+
+                # Using strings instead of PkgFmri objects in sets allows for
+                # much faster performance.
+                new_fmris = set((str(s) for s in self.gen_new_installed_pkgs()))
+
+                # If we're removing all packages, there won't be any conflicts.
+                if not new_fmris:
+                        return
+
+                old_fmris = set((
+                    str(s) for s in self.image.gen_installed_pkgs()
+                ))
+                gone_fmris = old_fmris - new_fmris
+
+
                 # Group action types by namespace groups
                 kf = operator.attrgetter("namespace_group")
                 types = sorted(pkg.actions.types.itervalues(), key=kf)
@@ -1097,159 +1779,51 @@ class ImagePlan(object):
                     for ns, action_classes in itertools.groupby(types, kf)
                 )
 
-                self.__fixups = {}
-                errs = []
-
-                old_fmris = set(self.image.gen_installed_pkgs())
-                new_fmris = set(self.gen_new_installed_pkgs())
-                gone_fmris = old_fmris - new_fmris
-
-                # If we're removing all packages, there won't be any conflicts.
-                if not new_fmris:
-                        return
-
                 # Load information about the actions currently on the system.
-                actdict = self.image._load_actdict()
+                offset_dict = self.image._load_actdict()
                 sf = self.image._get_stripped_actions_file()
 
+                fmri_dict = weakref.WeakValueDictionary()
                 # Iterate over action types in namespace groups first; our first
                 # check should be for action type consistency.
                 for ns, action_classes in namespace_dict.iteritems():
                         # There's no sense in checking actions which have no
                         # limits
-                        if all(not c.globally_identical for c in action_classes):
+                        if all(not c.globally_identical
+                            for c in action_classes):
                                 continue
 
                         # The 'new' dict contains information about the system
                         # as it will be.  We start by accumulating actions from
                         # the manifests of the packages being installed.
-                        new = {}
-                        for klass in action_classes:
-                                for a, pfmri in self.gen_only_new_installed_actions_bytype(klass.name, implicit_dirs=True):
-                                        self.__progtrack.evaluate_progress()
-                                        new.setdefault(a.attrs[klass.key_attr], []).append((a, pfmri))
+                        new = self.__seed(
+                            self.gen_only_new_installed_actions_bytype,
+                            action_classes, self.__new_excludes)
 
                         # The 'old' dict contains information about the system
                         # as it is now.  We start by accumulating actions from
                         # the manifests of the packages being removed.
-                        old = {}
-                        for klass in action_classes:
-                                for a, pfmri in self.gen_outgoing_actions_bytype(klass.name, implicit_dirs=True):
-                                        self.__progtrack.evaluate_progress()
-                                        old.setdefault(a.attrs[klass.key_attr], []).append((a, pfmri))
+                        old = self.__seed(self.gen_outgoing_actions_bytype,
+                            action_classes, self.__old_excludes)
 
                         # Update 'old' with all actions from the action cache
                         # which could conflict with the new actions being
                         # installed, or with actions already installed, but not
                         # getting removed.
-                        for key in set(itertools.chain(new.iterkeys(), old.keys())):
-                                offsets = []
-                                for klass in action_classes:
-                                        offset = actdict.get((klass.name, key), None)
-                                        if offset is not None:
-                                                offsets.append(offset)
-
-                                for offset in offsets:
-                                        sf.seek(offset)
-                                        pns = None
-                                        for line in sf:
-                                                fmristr, actstr = line.rstrip().split(None, 1)
-                                                act = pkg.actions.fromstr(actstr)
-                                                if act.attrs[act.key_attr] != key:
-                                                        break
-                                                if pns is not None and \
-                                                    act.namespace_group != pns:
-                                                        break
-                                                pns = act.namespace_group
-                                                pfmri = pkg.fmri.PkgFmri(fmristr, "5.11")
-                                                if pfmri not in gone_fmris:
-                                                        old.setdefault(key, []).append((act, pfmri))
+                        self.__update_old(new, old, offset_dict, action_classes,
+                            sf, gone_fmris, fmri_dict)
 
                         # Now update 'new' with all actions from the action
                         # cache which are staying on the system, and could
                         # conflict with the actions being installed.
-                        for key in old.iterkeys():
-                                # If we're not changing any fmris, as in the
-                                # case of a change-facet/variant, revert, or
-                                # fix, then we need to skip modifying new, as
-                                # it'll just end up with incorrect duplicates.
-                                if self.planned_op in ("fix", "change-variant",
-                                    "revert"):
-                                        break
-                                offsets = []
-                                for klass in action_classes:
-                                        offset = actdict.get((klass.name, key), None)
-                                        if offset is not None:
-                                                offsets.append(offset)
+                        self.__update_new(new, old, offset_dict, action_classes,
+                            sf, gone_fmris, fmri_dict)
 
-                                for offset in offsets:
-                                        sf.seek(offset)
-                                        pns = None
-                                        for line in sf:
-                                                fmristr, actstr = line.rstrip().split(None, 1)
-                                                act = pkg.actions.fromstr(actstr)
-                                                if act.attrs[act.key_attr] != key:
-                                                        break
-                                                if pns is not None and \
-                                                    act.namespace_group != pns:
-                                                        break
-                                                pns = act.namespace_group
-                                                pfmri = pkg.fmri.PkgFmri(fmristr, "5.11")
-                                                if pfmri not in gone_fmris:
-                                                        new.setdefault(key, []).append((act, pfmri))
+                        self.__check_conflicts(new, old, offset_dict,
+                            action_classes, ns, errs)
 
-                        for key, actions in new.iteritems():
-                                offsets = []
-                                for klass in action_classes:
-                                        offset = actdict.get((klass.name, key), None)
-                                        if offset is not None:
-                                                offsets.append(offset)
-
-                                oactions = old.get(key, [])
-
-                                self.__progtrack.evaluate_progress()
-
-                                if len(actions) == 1 and len(oactions) < 2:
-                                        continue
-
-                                # Actions delivering to the same point in a
-                                # namespace group's namespace should have the
-                                # same type.
-                                if type(ns) != int:
-                                        if self.__process_conflicts(key,
-                                            self.__check_inconsistent_types,
-                                            actions, oactions,
-                                            api_errors.InconsistentActionTypeError,
-                                            errs):
-                                                continue
-
-                                # By virtue of the above check, all actions at
-                                # this point in this namespace are the same.
-                                assert(len(set(a[0].name for a in actions)) <= 1)
-                                assert(len(set(a[0].name for a in oactions)) <= 1)
-
-                                # Multiple non-refcountable actions delivered to
-                                # the same name is an error.
-                                if not actions[0][0].refcountable and \
-                                    actions[0][0].globally_identical:
-                                        if self.__process_conflicts(key,
-                                            self.__check_duplicate_actions,
-                                            actions, oactions,
-                                            api_errors.DuplicateActionError,
-                                            errs):
-                                                continue
-
-                                # Multiple refcountable but globally unique
-                                # actions delivered to the same name must be
-                                # identical.
-                                elif actions[0][0].globally_identical:
-                                        if self.__process_conflicts(key,
-                                            self.__check_inconsistent_attrs,
-                                            actions, oactions,
-                                            api_errors.InconsistentActionAttributeError,
-                                            errs):
-                                                continue
-
+                del fmri_dict
+                self.__clear_pkg_plans()
                 sf.close()
                 self.__evaluate_fixups()
 
@@ -1291,11 +1865,11 @@ class ImagePlan(object):
                 self.__cached_actions[(name, key)] = d
                 return self.__cached_actions[(name, key)]
 
-        def __get_manifest(self, pfmri, intent, all_variants=False):
+        def __get_manifest(self, pfmri, intent, use_excludes=False):
                 """Return manifest for pfmri"""
                 if pfmri:
                         return self.image.get_manifest(pfmri,
-                            all_variants=all_variants or self.__varcets_change,
+                            use_excludes=use_excludes or self.__varcets_change,
                             intent=intent)
                 else:
                         return manifest.NullFactoredManifest
@@ -1400,6 +1974,60 @@ class ImagePlan(object):
 
                 self.merge_actions()
 
+                for p in self.pkg_plans:
+                        cpbytes, pbytes = p.get_bytes_added()
+                        if p.destination_fmri:
+                                mpath = self.image.get_manifest_path(
+                                    p.destination_fmri)
+                                try:
+                                        # Manifest data is essentially stored
+                                        # three times (original, cache, catalog).
+                                        # For now, include this in cbytes_added
+                                        # since that's closest to where the
+                                        # download cache is stored.
+                                        self.__cbytes_added += \
+                                            os.stat(mpath).st_size * 3
+                                except EnvironmentError, e:
+                                        raise api_errors._convert_error(e)
+                        self.__cbytes_added += cpbytes
+                        self.__bytes_added += pbytes
+
+                # Include state directory in cbytes_added for now since it's
+                # closest to where the download cache is stored.  (Twice the
+                # amount is used because image state update involves using
+                # a complete copy of existing state.)
+                self.__cbytes_added += \
+                    misc.get_dir_size(self.image._statedir) * 2
+
+                # Our slop factor is 25%; overestimating is safer than under-
+                # estimating.  This attempts to approximate how much overhead
+                # the filesystem will impose on the operation.  Empirical
+                # testing suggests that overhead can vary wildly depending on
+                # average file size, fragmentation, zfs metadata overhead, etc.
+                # For an install of a package such as solaris-small-server into
+                # an image, a 12% difference between actual size and installed
+                # size was found, so this seems safe enough.  (And helps account
+                # for any bootarchives, fs overhead, etc.)
+                self.__cbytes_added *= 1.25
+                self.__bytes_added *= 1.25
+
+                # XXX For now, include cbytes_added in bytes_added total; in the
+                # future, this should only happen if they share the same
+                # filesystem.
+                self.__bytes_added += self.__cbytes_added
+
+                self.__update_avail_space()
+
+        def __update_avail_space(self):
+                """Update amount of available space on FS"""
+                self.__cbytes_avail = misc.spaceavail(
+                    self.image.write_cache_path)
+
+                self.__bytes_avail = misc.spaceavail(self.image.root)
+                # if we don't have a full image yet
+                if self.__cbytes_avail < 0:
+                        self.__cbytes_avail = self.__bytes_avail
+
         def evaluate_pkg_plans(self):
                 """Internal helper function that does the work of converting
                 fmri changes into pkg plans."""
@@ -1439,16 +2067,34 @@ class ImagePlan(object):
                 # No longer needed.
                 del prefetch_mfsts
 
+                same_excludes = self.__old_excludes == self.__new_excludes
+
                 for oldfmri, old_in, newfmri, new_in in eval_list:
                         pp = pkgplan.PkgPlan(self.image, self.__progtrack,
                             self.__check_cancel)
 
-                        pp.propose(
-                            oldfmri, self.__get_manifest(oldfmri, old_in),
-                            newfmri, self.__get_manifest(newfmri, new_in,
-                            all_variants=True))
+                        if oldfmri == newfmri:
+                                # When creating intent, we always prefer to send
+                                # the new intent over old intent (see
+                                # __create_intent), so it's not necessary to
+                                # touch the old manifest in this situation.
+                                m = self.__get_manifest(newfmri, new_in,
+                                    use_excludes=True)
+                                pp.propose(
+                                    oldfmri, m,
+                                    newfmri, m)
+                                can_exclude = same_excludes
+                        else:
+                                pp.propose(
+                                    oldfmri,
+                                    self.__get_manifest(oldfmri, old_in),
+                                    newfmri,
+                                    self.__get_manifest(newfmri, new_in,
+                                    use_excludes=True))
+                                can_exclude = True
 
-                        pp.evaluate(self.__old_excludes, self.__new_excludes)
+                        pp.evaluate(self.__old_excludes, self.__new_excludes,
+                            can_exclude=can_exclude)
 
                         self.pkg_plans.append(pp)
                         pp = None
@@ -1457,10 +2103,356 @@ class ImagePlan(object):
                 # No longer needed.
                 del eval_list
 
+        def __mediate_links(self, mediated_removed_paths):
+                """Mediate links in the plan--this requires first determining the
+                possible mediation for each mediator.  This is done solely based
+                on the metadata of the links that are still or will be installed.
+                Returns a dictionary of the proposed mediations."""
+
+                prop_mediators = defaultdict(set)
+                mediated_installed_paths = defaultdict(set)
+                for a, pfmri in itertools.chain(
+                    self.gen_new_installed_actions_bytype("link"),
+                    self.gen_new_installed_actions_bytype("hardlink")):
+                        mediator = a.attrs.get("mediator")
+                        if not mediator:
+                                # Link is not mediated.
+                                continue
+                        med_ver = a.attrs.get("mediator-version")
+                        if med_ver:
+                                # 5.11 doesn't matter here and is never exposed
+                                # to users.
+                                med_ver = pkg.version.Version(med_ver, "5.11")
+                        med_impl = a.attrs.get("mediator-implementation")
+                        if not (med_ver or med_impl):
+                                # Link mediation is incomplete.
+                                continue
+                        med_priority = a.attrs.get("mediator-priority")
+                        prop_mediators[mediator].add((med_priority, med_ver,
+                            med_impl))
+                        mediated_installed_paths[a.attrs["path"]].add((a, pfmri,
+                            mediator, med_ver, med_impl))
+
+                # Now select only the "best" mediation for each mediator; items()
+                # is used here as the dictionary is altered during iteration.
+                cfg_mediators = self.image.cfg.mediators
+                changed_mediators = set()
+                for mediator, values in prop_mediators.items():
+                        med_ver_source = med_impl_source = med_priority = \
+                            med_ver = med_impl = med_impl_ver = None
+
+                        mediation = self.__new_mediators.get(mediator)
+                        cfg_mediation = cfg_mediators.get(mediator)
+                        if mediation:
+                                med_ver = mediation.get("version")
+                                med_ver_source = mediation.get("version-source")
+                                med_impl = mediation.get("implementation")
+                                med_impl_source = mediation.get(
+                                    "implementation-source")
+                        elif mediation is None and cfg_mediation:
+                                # If a reset of mediation was not requested,
+                                # use previously configured mediation as the
+                                # default.
+                                med_ver = cfg_mediation.get("version")
+                                med_ver_source = cfg_mediation.get(
+                                    "version-source")
+                                med_impl = cfg_mediation.get("implementation")
+                                med_impl_source = cfg_mediation.get(
+                                    "implementation-source")
+
+                        # Pick first "optimal" version and/or implementation.
+                        for opt_priority, opt_ver, opt_impl in sorted(values,
+                            cmp=med.cmp_mediations):
+                                if med_ver_source == "local":
+                                        if opt_ver != med_ver:
+                                                # This mediation not allowed
+                                                # by local configuration.
+                                                continue
+                                if med_impl_source == "local":
+                                        if not mediator_impl_matches(opt_impl,
+                                            med_impl):
+                                                # This mediation not allowed
+                                                # by local configuration.
+                                                continue
+
+                                med_source = opt_priority
+                                if not med_source:
+                                        # 'source' is equivalent to priority,
+                                        # but if no priority was specified,
+                                        # treat this as 'system' to indicate
+                                        # the mediation component was arbitrarily
+                                        # selected.
+                                        med_source = "system"
+
+                                if med_ver_source != "local":
+                                        med_ver = opt_ver
+                                        med_ver_source = med_source
+                                if med_impl_source != "local":
+                                        med_impl = opt_impl
+                                        med_impl_source = med_source
+                                elif med_impl and "@" not in med_impl:
+                                        # In the event a versionless
+                                        # implementation is set by the
+                                        # administrator, the version component
+                                        # has to be stored separately for display
+                                        # purposes.
+                                        impl_ver = \
+                                            med.parse_mediator_implementation(
+                                            opt_impl)[1]
+                                        if impl_ver:
+                                                med_impl_ver = impl_ver
+                                break
+
+                        if cfg_mediation and \
+                             (med_ver != cfg_mediation.get("version") or
+                             not mediator_impl_matches(med_impl,
+                                 cfg_mediation.get("implementation"))):
+                                # If mediation has changed for a mediator, then
+                                # all links for already installed packages will
+                                # have to be removed if they are for the old
+                                # mediation or repaired (installed) if they are
+                                # for the new mediation.
+                                changed_mediators.add(mediator)
+
+                        prop_mediators[mediator] = {}
+                        if med_ver:
+                                prop_mediators[mediator]["version"] = med_ver
+                        if med_ver_source:
+                                prop_mediators[mediator]["version-source"] = \
+                                    med_ver_source
+                        if med_impl:
+                                prop_mediators[mediator]["implementation"] = \
+                                    med_impl
+                        if med_impl_ver:
+                                prop_mediators[mediator]["implementation-version"] = \
+                                    med_impl_ver
+                        if med_impl_source:
+                                prop_mediators[mediator]["implementation-source"] = \
+                                    med_impl_source
+
+                # Determine which install and update actions should not be
+                # executed based on configured and proposed mediations.  Also
+                # transform any install or update actions belonging to a
+                # changing mediation into removals.
+
+                # This keeps track of which pkgplans need to be trimmed.
+                act_removals = {}
+
+                # This keeps track of which mediated paths are being delivered
+                # and which need removal.
+                act_mediated_paths = { "installed": {}, "removed": {} }
+
+                cfg_mediators = self.image.cfg.mediators
+                for al, ptype in ((self.install_actions, "added"),
+                    (self.update_actions, "changed")):
+                        for i, ap in enumerate(al):
+                                if not ap or not (ap.dst.name == "link" or
+                                    ap.dst.name == "hardlink"):
+                                        continue
+
+                                mediator = ap.dst.attrs.get("mediator")
+                                if not mediator:
+                                        # Link is not mediated.
+                                        continue
+
+                                med_ver = ap.dst.attrs.get("mediator-version")
+                                if med_ver:
+                                        # 5.11 doesn't matter here and is never
+                                        # exposed to users.
+                                        med_ver = pkg.version.Version(med_ver,
+                                            "5.11")
+                                med_impl = ap.dst.attrs.get(
+                                    "mediator-implementation")
+
+                                prop_med_ver = prop_mediators[mediator].get(
+                                    "version")
+                                prop_med_impl = prop_mediators[mediator].get(
+                                    "implementation")
+
+                                if med_ver == prop_med_ver and \
+                                    mediator_impl_matches(med_impl,
+                                        prop_med_impl):
+                                        # Action should be delivered.
+                                        act_mediated_paths["installed"][ap.dst.attrs["path"]] = \
+                                            None
+                                        mediated_installed_paths.pop(
+                                            ap.dst.attrs["path"], None)
+                                        continue
+
+                                # Ensure action is not delivered.
+                                al[i] = None
+
+                                act_removals.setdefault(id(ap.p),
+                                    { "plan": ap.p, "added": [], "changed": [] })
+                                act_removals[id(ap.p)][ptype].append(id(ap.dst))
+
+                                cfg_med_ver = cfg_mediators.get(mediator,
+                                    misc.EmptyDict).get("version")
+                                cfg_med_impl = cfg_mediators.get(mediator,
+                                    misc.EmptyDict).get("implementation")
+
+                                if (mediator in cfg_mediators and
+                                    mediator in prop_mediators and
+                                    (med_ver == cfg_med_ver and
+                                    mediator_impl_matches(med_impl,
+                                        cfg_med_impl))):
+                                        # Install / update actions should only be
+                                        # transformed into removals if they match
+                                        # the previous configuration and are not
+                                        # allowed by the proposed mediation.
+                                        act_mediated_paths["removed"].setdefault(
+                                            ap.dst.attrs["path"], []).append(ap)
+
+                # As an optimization, only remove rejected, mediated paths if
+                # another link is not being delivered to the same path.
+                for ap in (
+                    ap
+                    for path in act_mediated_paths["removed"]
+                    for ap in act_mediated_paths["removed"][path]
+                    if path not in act_mediated_paths["installed"]
+                ):
+                        ap.p.actions.removed.append((ap.dst,
+                            None))
+                        self.removal_actions.append(ActionPlan(
+                            ap.p, ap.dst, None))
+                act_mediated_paths = None
+
+                for a, pfmri, mediator, med_ver, med_impl in (
+                    med_link
+                    for entry in mediated_installed_paths.values()
+                    for med_link in entry):
+                        if mediator not in changed_mediators:
+                                # Action doesn't need repairing.
+                                continue
+
+                        new_med_ver = prop_mediators[mediator].get("version")
+                        new_med_impl = prop_mediators[mediator].get(
+                            "implementation")
+
+                        if med_ver == new_med_ver and \
+                            mediator_impl_matches(med_impl, new_med_impl):
+                                # Action needs to be repaired (installed) since
+                                # mediation now applies.
+                                self.__propose_fixup(a, None, pfmri)
+                                continue
+
+                        if mediator not in cfg_mediators:
+                                # Nothing to do.
+                                continue
+
+                        cfg_med_ver = cfg_mediators[mediator].get("version")
+                        cfg_med_impl = cfg_mediators[mediator].get(
+                            "implementation")
+                        if a.attrs["path"] not in mediated_removed_paths and \
+                            med_ver == cfg_med_ver and \
+                            mediator_impl_matches(med_impl, cfg_med_impl):
+                                # Action needs to be removed since mediation no
+                                # longer applies and is not already set for
+                                # removal.
+                                self.__propose_fixup(None, a, pfmri)
+
+                # Now trim pkgplans and elide empty entries from list of actions
+                # to execute.
+                for entry in act_removals.values():
+                        p = entry["plan"]
+                        for prop in ("added", "changed"):
+                                trim = entry[prop]
+                                # Can't modify the p.actions tuple directly, so
+                                # modify the members in place.
+                                pval = getattr(p.actions, prop)
+                                pval[:] = [
+                                    a
+                                    for a in pval
+                                    if id(a[1]) not in trim
+                                ]
+
+                return prop_mediators
+
+        def __finalize_mediation(self, prop_mediators):
+                """Merge requested and previously configured mediators that are
+                being set but don't affect the plan and update proposed image
+                configuration."""
+
+                cfg_mediators = self.image.cfg.mediators
+                for m in self.__new_mediators:
+                        prop_mediators.setdefault(m, self.__new_mediators[m])
+                for m in cfg_mediators:
+                        if m in prop_mediators:
+                                continue
+
+                        mediation = cfg_mediators[m]
+                        new_mediation = mediation.copy()
+                        if mediation.get("version-source") != "local":
+                                new_mediation.pop("version", None)
+                                del new_mediation["version-source"]
+                        if mediation.get("implementation-source") != "local":
+                                new_mediation.pop("implementation", None)
+                                new_mediation.pop("implementation-version", None)
+                                del new_mediation["implementation-source"]
+
+                        if new_mediation:
+                                # Only preserve the portion of configured
+                                # mediations provided by the image administrator.
+                                prop_mediators[m] = new_mediation
+
+                for m, new_mediation in prop_mediators.iteritems():
+                        # If after processing all mediation data, a source wasn't
+                        # marked for a particular component, mark it as being
+                        # sourced from 'system'.
+                        if "implementation-source" in new_mediation and \
+                            "version-source" not in new_mediation:
+                                new_mediation["version-source"] = "system"
+                        elif "version-source" in new_mediation and \
+                            "implementation-source" not in new_mediation:
+                                new_mediation["implementation-source"] = "system"
+
+                # The proposed mediators become the new mediators (this accounts
+                # for mediation selection done as part of a packaging operation
+                # instead of being explicitly requested).
+
+                # Initially assume mediation is changing.
+                self.__mediators_change = True
+
+                for m in prop_mediators.keys():
+                        if m not in cfg_mediators:
+                                if prop_mediators[m]:
+                                        # Fully-defined mediation not in previous
+                                        # configuration; mediation has changed.
+                                        break
+
+                                # No change in mediation; elide it.
+                                del prop_mediators[m]
+                                continue
+
+                        mediation = cfg_mediators[m]
+                        if any(
+                            k
+                            for k in set(prop_mediators[m].keys() +
+                                mediation.keys())
+                            if prop_mediators[m].get(k) != mediation.get(k)):
+                                # Mediation has changed.
+                                break
+                else:
+                        for m in cfg_mediators:
+                                if m not in prop_mediators:
+                                        # Mediation has been removed from
+                                        # configuration.
+                                        break
+                        else:
+                                self.__mediators_change = False
+
+                self.__new_mediators = prop_mediators
+
+                # Link mediation is complete.
+                self.__progtrack.evaluate_progress()
+
         def merge_actions(self):
                 """Given a set of fmri changes and their associated pkg plan,
                 merge all the resultant actions for the packages being
                 updated."""
+
+                if self.__new_mediators is None:
+                        self.__new_mediators = {}
 
                 if self.image.has_boot_archive():
                         ramdisk_prefixes = tuple(
@@ -1489,6 +2481,8 @@ class ImagePlan(object):
                 # package to package.  See theory comment in execute, below.
 
                 self.removal_actions = []
+                cfg_mediators = self.image.cfg.mediators
+                mediated_removed_paths = set()
                 for p in self.pkg_plans:
                         for src, dest in p.gen_removal_actions():
                                 if src.name == "user":
@@ -1497,8 +2491,42 @@ class ImagePlan(object):
                                 elif src.name == "group":
                                         self.removed_groups[src.attrs["groupname"]] = \
                                             p.origin_fmri
+
                                 self.removal_actions.append(ActionPlan(p, src,
                                     dest))
+                                if (not (src.name == "link" or
+                                    src.name == "hardlink") or
+                                    "mediator" not in src.attrs):
+                                        continue
+
+                                # Keep track of which mediated paths have been
+                                # removed from the system so that which paths
+                                # need to be repaired can be determined.
+                                mediator = src.attrs["mediator"]
+                                src_version = src.attrs.get(
+                                    "mediator-version")
+                                src_impl = src.attrs.get(
+                                    "mediator-implementation")
+
+                                mediation = cfg_mediators.get(mediator)
+                                if not mediation:
+                                        # Shouldn't happen, but if it does,
+                                        # drive on.
+                                        continue
+
+                                cfg_version = mediation.get("version")
+                                if cfg_version:
+                                        # For comparison, version must be a
+                                        # string.
+                                        cfg_version = \
+                                            cfg_version.get_short_version()
+                                cfg_impl = mediation.get("implementation")
+
+                                if src_version == cfg_version and \
+                                    mediator_impl_matches(src_impl, cfg_impl):
+                                        mediated_removed_paths.add(
+                                            src.attrs["path"])
+
                 self.__progtrack.evaluate_progress()
 
                 self.update_actions = []
@@ -1563,34 +2591,69 @@ class ImagePlan(object):
                 for i, ap in enumerate(self.removal_actions):
                         if ap is None:
                                 continue
-
                         self.__progtrack.evaluate_progress()
 
                         # If the action type needs to be reference-counted, make
                         # sure it doesn't get removed if another instance
                         # remains in the target image.
+                        remove = True
                         if ap.src.name == "dir" and \
                             os.path.normpath(ap.src.attrs["path"]) in \
                             self.__get_directories():
-                                self.removal_actions[i] = None
-                                continue
-                        elif ap.src.name == "link" and \
-                            os.path.normpath(ap.src.attrs["path"]) in \
-                            self.__get_symlinks():
-                                self.removal_actions[i] = None
-                                continue
-                        elif ap.src.name == "hardlink" and \
-                            os.path.normpath(ap.src.attrs["path"]) in \
-                            self.__get_hardlinks():
-                                self.removal_actions[i] = None
-                                continue
+                                remove = False
+                        elif ap.src.name == "link" or ap.src.name == "hardlink":
+                                lpath = os.path.normpath(ap.src.attrs["path"])
+                                if ap.src.name == "link":
+                                        inst_links = self.__get_symlinks()
+                                else:
+                                        inst_links = self.__get_hardlinks()
+                                if lpath in inst_links:
+                                        # Another link delivers to the same
+                                        # location, so assume it can't be
+                                        # safely removed initially.
+                                        remove = False
+
+                                        # If link is mediated, and the mediator
+                                        # doesn't match the new mediation
+                                        # criteria, it is safe to remove.
+                                        mediator = ap.src.attrs.get("mediator")
+                                        if mediator in self.__new_mediators:
+                                                src_version = ap.src.attrs.get(
+                                                    "mediator-version")
+                                                src_impl = ap.src.attrs.get(
+                                                    "mediator-implementation")
+                                                dest_version = \
+                                                    self.__new_mediators[mediator].get(
+                                                        "version")
+                                                if dest_version:
+                                                        # Requested version needs
+                                                        # to be a string for
+                                                        # comparison.
+                                                        dest_version = \
+                                                            dest_version.get_short_version()
+                                                dest_impl = \
+                                                    self.__new_mediators[mediator].get(
+                                                        "implementation")
+                                                if dest_version is not None and \
+                                                    src_version != dest_version:
+                                                        remove = True
+                                                if dest_impl is not None and \
+                                                    not mediator_impl_matches(
+                                                        src_impl, dest_impl):
+                                                        remove = True
+
                         elif ap.src.name == "license" and \
                             ap.src.attrs["license"] in self.__get_licenses():
-                                self.removal_actions[i] = None
-                                continue
+                                remove = False
                         elif ap.src.name == "legacy" and \
                             ap.src.attrs["pkg"] in self.__get_legacy():
+                                remove = False
+
+                        if not remove:
                                 self.removal_actions[i] = None
+                                if "mediator" in ap.src.attrs:
+                                        mediated_removed_paths.discard(
+                                            ap.src.attrs["path"])
                                 continue
 
                         # store names of files being removed under own name
@@ -1600,7 +2663,8 @@ class ImagePlan(object):
                                 # Store the index into removal_actions and the
                                 # id of the action object in that slot.
                                 re = ConsolidationEntry(i, id(ap.src))
-                                cons_generic[(ap.src.name, hashify(attrs[ap.src.key_attr]))] = re
+                                cons_generic[(ap.src.name,
+                                    hashify(attrs[ap.src.key_attr]))] = re
                                 if ap.src.name == "file":
                                         fname = attrs.get("original_name",
                                             "%s:%s" % (ap.p.origin_fmri.get_name(),
@@ -1631,7 +2695,7 @@ class ImagePlan(object):
 
                 # This keeps track of which pkgplans have had install actions
                 # consolidated away.
-                pp_needs_trimming = []
+                pp_needs_trimming = set()
 
                 # This maps destination actions to the pkgplans they're
                 # associated with, which allows us to create the newly
@@ -1640,7 +2704,10 @@ class ImagePlan(object):
 
                 new_updates = []
                 for i, ap in enumerate(self.install_actions):
+                        if ap is None:
+                                continue
                         self.__progtrack.evaluate_progress()
+
                         # In order to handle editable files that move their path
                         # or change pkgs, for all new files with original_name
                         # attribute, make sure file isn't being removed by
@@ -1694,7 +2761,7 @@ class ImagePlan(object):
                                         # install list.
                                         ap.p.actions.changed.append((ra, ap.dst))
                                         ap.p.actions.added[plan_pos[id(ap.dst)]] = None
-                                        pp_needs_trimming.append(ap.p)
+                                        pp_needs_trimming.add(ap.p)
                                 nkv = index = ra = None
 
                         self.__actuators.scan_install(ap.dst.attrs)
@@ -1745,19 +2812,26 @@ class ImagePlan(object):
 
                 del dest_pkgplans, nu_chg
 
-                self.removal_actions = [
-                    a
-                    for a in self.removal_actions
-                    if a is not None
-                ]
-
-                self.install_actions = [
-                    a
-                    for a in self.install_actions
-                    if a is not None
-                ]
-
                 self.__progtrack.evaluate_progress()
+
+                # Mediate and repair links affected by the plan.
+                prop_mediators = self.__mediate_links(mediated_removed_paths)
+
+                for prop in ("removal_actions", "install_actions",
+                    "update_actions"):
+                        pval = getattr(self, prop)
+                        pval[:] = [
+                            a
+                            for a in pval
+                            if a is not None
+                        ]
+
+                # Add any necessary repairs to plan.
+                self.__evaluate_fixups()
+
+                # Finalize link mediation.
+                self.__finalize_mediation(prop_mediators)
+
                 # Go over update actions
                 l_actions = self.get_actions("hardlink", self.hardlink_keyfunc)
                 l_refresh = []
@@ -1820,12 +2894,17 @@ class ImagePlan(object):
 
         def nothingtodo(self):
                 """Test whether this image plan contains any work to do """
+
                 if self.state == EVALUATED_PKGS:
-                        return not (self.__fmri_changes or self.__new_variants
-                            or self.__new_facets or self.pkg_plans)
+                        return not (self.__fmri_changes or
+                            self.__new_variants or
+                            (self.__new_facets is not None) or
+                            self.__mediators_change or
+                            self.pkg_plans)
                 elif self.state >= EVALUATED_OK:
                         return not (self.pkg_plans or self.__new_variants or
-                            self.__new_facets)
+                            (self.__new_facets is not None) or
+                            self.__mediators_change)
 
         def preexecute(self):
                 """Invoke the evaluated image plan
@@ -1895,6 +2974,20 @@ class ImagePlan(object):
                         # No longer needed.
                         del ind
 
+                # check if we're going to have enough room
+                # stat fs again just in case someone else is using space...
+                self.__update_avail_space()
+                if self.__cbytes_added > self.__cbytes_avail: 
+                        raise api_errors.ImageInsufficentSpace(
+                            self.__cbytes_added,
+                            self.__cbytes_avail,
+                            _("Download cache"))
+                if self.__bytes_added > self.__bytes_avail:
+                        raise api_errors.ImageInsufficentSpace(
+                            self.__bytes_added,
+                            self.__bytes_avail,
+                            _("Root filesystem"))
+
                 # Remove history about manifest/catalog transactions.  This
                 # helps the stats engine by only considering the performance of
                 # bulk downloads.
@@ -1936,7 +3029,7 @@ class ImagePlan(object):
                                 raise
                         except (api_errors.InvalidDepotResponseException,
                             api_errors.TransportError), e:
-                                if p._autofix_pkgs:
+                                if p and p._autofix_pkgs:
                                         e._autofix_pkgs = p._autofix_pkgs
                                 raise
 
@@ -1961,6 +3054,14 @@ class ImagePlan(object):
                         self.state = EXECUTED_ERROR
                         raise api_errors.InvalidPlanError()
 
+                # check for available space
+                self.__update_avail_space()
+                if self.__bytes_added > self.__bytes_avail:
+                        raise api_errors.ImageInsufficentSpace(
+                            self.__bytes_added,
+                            self.__bytes_avail,
+                            _("Root filesystem"))
+
                 #
                 # what determines execution order?
                 #
@@ -1976,7 +3077,7 @@ class ImagePlan(object):
                 # it must be a directory in all packages, never a symbolic link;
                 # this includes implicitly defined directories.
                 #
-                # A key goal in IPS is to be able to undergo an arbtrary
+                # A key goal in IPS is to be able to undergo an arbitrary
                 # transformation in package contents in a single step.  Packages
                 # must be able to exchange files, convert directories to
                 # symbolic links, etc.; so long as the start and end states meet
@@ -2080,10 +3181,12 @@ class ImagePlan(object):
                                     executed_pp, self.__progtrack)
 
                                 # write out variant changes to the image config
-                                if self.__varcets_change:
+                                if self.__varcets_change or \
+                                    self.__mediators_change:
                                         self.image.image_config_update(
                                             self.__new_variants,
-                                            self.__new_facets)
+                                            self.__new_facets,
+                                            self.__new_mediators)
                                 # write out any changes
                                 self.image._avoid_set_save(*self.__new_avoid_obs)
 
@@ -2095,6 +3198,14 @@ class ImagePlan(object):
                                 elif e.errno == errno.EROFS:
                                         raise api_errors.ReadOnlyFileSystemException(
                                             e.filename)
+                                elif e.errno == errno.ELOOP:
+                                        act = pkg.actions.unknown.UnknownAction()
+                                        raise api_errors.ActionExecutionError(
+                                            act, _("A link targeting itself or "
+                                            "part of a link loop was found at "
+                                            "'%s'; a file or directory was "
+                                            "expected.  Please remove the link "
+                                            "and try again.") % e.filename)
                                 raise
                 except pkg.actions.ActionError:
                         exc_type, exc_value, exc_tb = sys.exc_info()
@@ -2210,7 +3321,8 @@ class ImagePlan(object):
                 except StopIteration:
                         return True
 
-        def match_user_stems(self, patterns, match_type):
+        def match_user_stems(self, patterns, match_type, raise_unmatched=True,
+            raise_not_installed=True, return_matchdict=False, universe=None):
                 """Given a user specified list of patterns, return a set
                 of matching package stems.  Any versions specified are
                 ignored.
@@ -2226,7 +3338,7 @@ class ImagePlan(object):
                         stems.
 
                     MATCH_UNINSTALLED
-                        Matching is peformed using uninstalled packages;
+                        Matching is performed using uninstalled packages;
                         it is an error for a pattern to match an installed
                         package.
 
@@ -2240,6 +3352,19 @@ class ImagePlan(object):
                 illegal to specify multiple different patterns that match the
                 same pkg name.  Only patterns that contain wildcards are allowed
                 to match multiple packages.
+
+                'raise_unmatched' determines whether an exception will be
+                raised if any patterns didn't match any packages.
+
+                'raise_not_installed' determines whether an exception will be
+                raised if any pattern matches a package that's not installed.
+
+                'return_matchdict' determines whether the dictionary containing
+                which patterns matched which stems or the list of stems is
+                returned.
+
+                'universe' contains a list of tuples of publishers and package
+                names against which the patterns should be matched.
                 """
                 # avoid checking everywhere
                 if not patterns:
@@ -2261,7 +3386,6 @@ class ImagePlan(object):
 
                 # ignore dups
                 patterns = list(set(patterns))
-                # print patterns, match_type, pub_ranks
 
                 # figure out which kind of matching rules to employ
                 seen = set()
@@ -2310,15 +3434,20 @@ class ImagePlan(object):
                 # set of pkg names that match that pattern.
                 ret = dict(zip(patterns, [set() for i in patterns]))
 
-                if match_type != self.MATCH_INST_VERSIONS:
-                        cat = self.image.get_catalog(
-                            self.image.IMG_CATALOG_KNOWN)
+                if universe is not None:
+                        assert match_type == self.MATCH_ALL
+                        pkg_names = universe
                 else:
-                        cat = self.image.get_catalog(
-                            self.image.IMG_CATALOG_INSTALLED)
+                        if match_type != self.MATCH_INST_VERSIONS:
+                                cat = self.image.get_catalog(
+                                    self.image.IMG_CATALOG_KNOWN)
+                        else:
+                                cat = self.image.get_catalog(
+                                    self.image.IMG_CATALOG_INSTALLED)
+                        pkg_names = cat.pkg_names()
 
                 # construct matches for each pattern
-                for pkg_pub, name in cat.pkg_names():
+                for pkg_pub, name in pkg_names:
                         for pat, matcher, fmri, pub in \
                             zip(patterns, matchers, fmris, pubs):
                                 if pub and pkg_pub != pub:
@@ -2355,8 +3484,9 @@ class ImagePlan(object):
                             self.image.IMG_CATALOG_INSTALLED).names()
                             if name in matchdict
                         ]
-                if illegals or nonmatch or multimatch or not_installed or \
-                    multispec or already_installed:
+                if illegals or (raise_unmatched and nonmatch) or multimatch \
+                    or (not_installed and raise_not_installed) or multispec \
+                    or already_installed:
                         raise api_errors.PlanCreationException(
                             already_installed=already_installed,
                             illegal=illegals,
@@ -2365,10 +3495,13 @@ class ImagePlan(object):
                             multispec=multispec,
                             unmatched_fmris=nonmatch)
 
+                if return_matchdict:
+                        return matchdict
                 return set(matchdict.keys())
 
         def __match_user_fmris(self, patterns, match_type,
-            pub_ranks=misc.EmptyDict, installed_pkgs=misc.EmptyDict):
+            pub_ranks=misc.EmptyDict, installed_pkgs=misc.EmptyDict,
+            raise_not_installed=True, reject_set=misc.EmptyI):
                 """Given a user-specified list of patterns, return a dictionary
                 of matching fmris:
 
@@ -2411,6 +3544,12 @@ class ImagePlan(object):
                 FMRI lists are trimmed by publisher, either by pattern
                 specification, installed version or publisher ranking (in that
                 order) when match_type is not MATCH_INST_VERSIONS.
+
+                'raise_not_installed' determines whether an exception will be
+                raised if any pattern matches a package that's not installed.
+
+                'reject_set' is a set() containing the stems of packages that
+                should be excluded from matches.
                 """
 
                 # problems we check for
@@ -2419,6 +3558,7 @@ class ImagePlan(object):
                 multimatch    = []
                 not_installed = []
                 multispec     = []
+                exclpats      = []
                 wrongpub      = []
                 wrongvar      = set()
 
@@ -2515,6 +3655,9 @@ class ImagePlan(object):
                 # dictionary of pkg names & fmris that match that pattern.
                 ret = dict(zip(patterns, [dict() for i in patterns]))
 
+                # Track patterns rejected due to user request (--reject).
+                rejected_pats = set()
+
                 # Track patterns rejected due to variants.
                 rejected_vars = set()
 
@@ -2559,6 +3702,10 @@ class ImagePlan(object):
                                                         # Matched stem is not
                                                         # in list of installed
                                                         # stems.
+                                                        continue
+                                                elif f.pkg_name in reject_set:
+                                                        # Pattern is excluded.
+                                                        rejected_pats.add(pat)
                                                         continue
 
                                                 states = metadata["metadata"]["states"]
@@ -2665,11 +3812,12 @@ class ImagePlan(object):
                         if l == 0: # no matches at all
                                 if p in rejected_vars:
                                         wrongvar.add(p)
-                                elif match_type != self.MATCH_INST_VERSIONS or \
-                                    p not in rejected_pubs:
-                                        nonmatch.append(p)
                                 elif p in rejected_pubs:
                                         wrongpub.append((p, rejected_pubs[p]))
+                                elif p in rejected_pats:
+                                        exclpats.append(p)
+                                else:
+                                        nonmatch.append(p)
                         elif l > 1 and p not in wildcard_patterns:
                                 # multiple matches
                                 multimatch.append((p, set([
@@ -2692,13 +3840,17 @@ class ImagePlan(object):
                 if match_type != self.MATCH_ALL:
                         not_installed, nonmatch = nonmatch, not_installed
 
-                if illegals or nonmatch or multimatch or not_installed or \
-                    multispec or wrongpub or wrongvar:
+                if illegals or nonmatch or multimatch or \
+                    (not_installed and raise_not_installed) or multispec or \
+                    wrongpub or wrongvar or exclpats:
+                        if not raise_not_installed:
+                                not_installed = []
                         raise api_errors.PlanCreationException(
                             unmatched_fmris=nonmatch,
                             multiple_matches=multimatch, illegal=illegals,
                             missing_matches=not_installed, multispec=multispec,
-                            wrong_publishers=wrongpub, wrong_variants=wrongvar)
+                            wrong_publishers=wrongpub, wrong_variants=wrongvar,
+                            rejected_pats=exclpats)
 
                 # merge patterns together now that there are no conflicts
                 proposed_dict = {}
@@ -2893,3 +4045,99 @@ class ImagePlan(object):
                                 pp.setstate(item)
                                 pkg_plans.append(pp)
                         return pkg_plans
+
+        def freeze_pkgs_match(self, pats):
+                """Find the packages which match the given patterns and thus
+                should be frozen."""
+
+                pats = set(pats)
+                freezes = set()
+                pub_ranks = self.image.get_publisher_ranks()
+                installed_version_mismatches = {}
+                versionless_uninstalled = set()
+                multiversions = []
+
+                # Find the installed packages that match the provided patterns.
+                inst_dict, references = self.__match_user_fmris(pats,
+                    self.MATCH_INST_VERSIONS, pub_ranks=pub_ranks,
+                    raise_not_installed=False)
+
+                # Find the installed package stems that match the provided
+                # patterns.
+                installed_stems_dict = self.match_user_stems(pats,
+                    self.MATCH_INST_VERSIONS, raise_unmatched=False,
+                    raise_not_installed=False, return_matchdict=True)
+
+                stems_of_fmri_matches = set(inst_dict.keys())
+                stems_of_stems_matches = set(installed_stems_dict.keys())
+
+                assert stems_of_fmri_matches.issubset(stems_of_stems_matches)
+
+                # For each package stem which matched a pattern only when
+                # versions were ignored ...
+                for stem in stems_of_stems_matches - stems_of_fmri_matches:
+                        # If more than one pattern matched this stem, then
+                        # match_user_stems should've raised an exception.
+                        assert len(installed_stems_dict[stem]) == 1
+                        bad_pat = installed_stems_dict[stem][0]
+                        installed_version_mismatches.setdefault(
+                            bad_pat, []).append(stem)
+                        # If this pattern is bad, then we don't care about it
+                        # anymore.
+                        pats.discard(bad_pat)
+
+                # For each fmri, pattern where the pattern matched the fmri
+                # including the version ...
+                for full_fmri, pat in references.iteritems():
+                        parts = pat.split("@", 1)
+                        # If the pattern doesn't include a version, then add the
+                        # version the package is installed at to the list of
+                        # things to freeze.  If it does include a version, then
+                        # just freeze using the version from the pattern, and
+                        # the name from the matching fmri.
+                        if len(parts) < 2 or parts[1] == "":
+                                freezes.add(full_fmri.get_fmri(anarchy=True,
+                                    include_scheme=False))
+                        else:
+                                freezes.add(full_fmri.pkg_name + "@" + parts[1])
+                        # We're done with this pattern now.
+                        pats.discard(pat)
+
+                # Any wildcarded patterns remaining matched no installed
+                # packages and so are invalid arguments to freeze.
+                unmatched_wildcards = set([
+                    pat for pat in pats if "*" in pat or "?" in pat
+                ])
+                pats -= unmatched_wildcards
+
+                # Now check the remaining pats to ensure they have a version
+                # component.  If they don't, then they can't be used to freeze
+                # uninstalled packages.
+                for pat in pats:
+                        parts = pat.split("@", 1)
+                        if len(parts) < 2 or parts[1] == "":
+                                versionless_uninstalled.add(pat)
+                pats -= versionless_uninstalled
+                freezes |= pats
+
+                stems = {}
+                for p in freezes:
+                        stems.setdefault(pkg.fmri.PkgFmri(p,
+                            build_release="5.11").get_pkg_stem(anarchy=True,
+                            include_scheme=False), set()).add(p)
+                # Check whether one stem has been frozen at non-identical
+                # versions.
+                for k, v in stems.iteritems():
+                        if len(v) > 1:
+                                multiversions.append((k, v))
+                        else:
+                                stems[k] = v.pop()
+                        
+                if versionless_uninstalled or unmatched_wildcards or \
+                    installed_version_mismatches or multiversions:
+                        raise api_errors.FreezePkgsException(
+                            multiversions=multiversions,
+                            unmatched_wildcards=unmatched_wildcards,
+                            version_mismatch=installed_version_mismatches,
+                            versionless_uninstalled=versionless_uninstalled)
+                return stems

@@ -30,6 +30,7 @@ if __name__ == "__main__":
 import pkg5unittest
 
 import os
+import shutil
 import sys
 import traceback
 
@@ -46,6 +47,14 @@ from pkg.client.debugvalues import DebugValues
 from pkg.client.pkgdefs import *
 
 p_update_index = 0
+
+def substring_verify(string, substring):
+        if string.find(substring) == -1:
+                raise RuntimeError("""
+Expected "%s" to be contained in:
+%s
+"""
+                % (substring, string))
 
 def apx_verify(e, e_type, e_member=None):
 
@@ -90,6 +99,7 @@ def assertRaises(validate_cb, func, *args, **kwargs):
                 e_type, e, e_tb = sys.exc_info()
                 pass
         validate_func(e, **validate_args)
+        return e
 
 
 class TestLinkedImageName(pkg5unittest.Pkg5TestCase):
@@ -120,7 +130,8 @@ class TestLinkedImageName(pkg5unittest.Pkg5TestCase):
                 DebugValues["zone_name"] = ["/bin/false"]
                 assertRaises(
                     (apx_verify, {
-                        "e_type": apx.SubprocessError}),
+                        "e_type": apx.LinkedImageException,
+                        "e_member": "cmd_failed"}),
                         li.zone._zonename)
 
 
@@ -133,7 +144,7 @@ class TestApiLinked(pkg5unittest.ManyDepotTestCase):
         pub3 = "pussycat"
 
         p_all = []
-        p_vers = [
+        vers = [
             "@1.2,5.11-145:19700101T000001Z",
             "@1.2,5.11-145:19700101T000000Z", # old time
             "@1.1,5.11-145:19700101T000000Z", # old ver
@@ -147,22 +158,49 @@ class TestApiLinked(pkg5unittest.ManyDepotTestCase):
 
         # generate packages that don't need to be synced
         p_foo1_name_gen = "foo1"
-        pkgs = [p_foo1_name_gen + ver for ver in p_vers]
-        p_foo1_name = dict(zip(range(len(pkgs)), pkgs))
-        for i in p_foo1_name:
+        p_foo1_name = dict()
+        for i, v in zip(range(len(vers)), vers):
+                p_foo1_name[i] = p_foo1_name_gen + v
                 p_data = "open %s\n" % p_foo1_name[i]
                 p_data += """
                     add set name=variant.foo value=bar value=baz
-                    add file tmp/bar mode=0555 owner=root group=bin path=foo_bar variant.foo=bar
-                    add file tmp/baz mode=0555 owner=root group=bin path=foo_baz variant.foo=baz
+                    add file tmp/bar mode=0555 owner=root group=bin path=foo1_bar variant.foo=bar
+                    add file tmp/baz mode=0555 owner=root group=bin path=foo1_baz variant.foo=baz
+                    close\n"""
+                p_all.append(p_data)
+
+        # generate packages that don't need to be synced
+        p_foo2_name_gen = "foo2"
+        p_foo2_name = dict()
+        for i, v in zip(range(len(vers)), vers):
+                p_foo2_name[i] = p_foo2_name_gen + v
+                p_data = "open %s\n" % p_foo2_name[i]
+                p_data += """
+                    add set name=variant.foo value=bar value=baz
+                    add file tmp/bar mode=0555 owner=root group=bin path=foo2_bar variant.foo=bar
+                    add file tmp/baz mode=0555 owner=root group=bin path=foo2_baz variant.foo=baz
+                    close\n"""
+                p_all.append(p_data)
+
+        p_foo_incorp_name_gen = "foo-incorp"
+        p_foo_incorp_name = dict()
+        for i, v in zip(range(len(vers)), vers):
+                p_foo_incorp_name[i] = p_foo_incorp_name_gen + v
+                p_data = "open %s\n" % p_foo_incorp_name[i]
+                p_data += "add depend type=incorporate fmri=%s\n" % \
+                    p_foo1_name[i]
+                p_data += "add depend type=incorporate fmri=%s\n" % \
+                    p_foo2_name[i]
+                p_data += """
+                    add set name=variant.foo value=bar value=baz
                     close\n"""
                 p_all.append(p_data)
 
         # generate packages that do need to be synced
         p_sync1_name_gen = "sync1"
-        pkgs = [p_sync1_name_gen + ver for ver in p_vers]
-        p_sync1_name = dict(zip(range(len(pkgs)), pkgs))
-        for i in p_sync1_name:
+        p_sync1_name = dict()
+        for i, v in zip(range(len(vers)), vers):
+                p_sync1_name[i] = p_sync1_name_gen + v
                 p_data = "open %s\n" % p_sync1_name[i]
                 p_data += "add depend type=parent fmri=%s" % \
                     pkg.actions.depend.DEPEND_SELF
@@ -173,49 +211,58 @@ class TestApiLinked(pkg5unittest.ManyDepotTestCase):
                     close\n"""
                 p_all.append(p_data)
 
-        # these packages will be synced indirectly by virtue of being
-        # incorporated by an osnet incorporation
-        p_osnet_sync1_name_gen = "osnet_sync1"
-        pkgs = [p_osnet_sync1_name_gen + ver for ver in p_vers]
-        p_osnet_sync1_name = dict(zip(range(len(pkgs)), pkgs))
-        for i in p_osnet_sync1_name:
-                p_data = "open %s\n" % p_osnet_sync1_name[i]
+        # generate packages that do need to be synced
+        p_sync2_name_gen = "sync2"
+        p_sync2_name = dict()
+        for i, v in zip(range(len(vers)), vers):
+                p_sync2_name[i] = p_sync2_name_gen + v
+                p_data = "open %s\n" % p_sync2_name[i]
+                p_data += "add depend type=parent fmri=%s" % \
+                    pkg.actions.depend.DEPEND_SELF
                 p_data += """
                     add set name=variant.foo value=bar value=baz
-                    add file tmp/bar mode=0555 owner=root group=bin path=osnet_sync1_bar variant.foo=bar
-                    add file tmp/baz mode=0555 owner=root group=bin path=osnet_sync1_baz variant.foo=baz
+                    add file tmp/bar mode=0555 owner=root group=bin path=sync2_bar variant.foo=bar
+                    add file tmp/baz mode=0555 owner=root group=bin path=sync2_baz variant.foo=baz
                     close\n"""
                 p_all.append(p_data)
 
-        # these packages don't get synced indirectly by virtue of being
-        # incorporated by an osnet incorporation because they are group
-        # packages.
-        p_osnet_group1_name_gen = "group/osnet_group1"
-        pkgs = [p_osnet_group1_name_gen + ver for ver in p_vers]
-        p_osnet_group1_name = dict(zip(range(len(pkgs)), pkgs))
-        for i in p_osnet_group1_name:
-                p_data = "open %s\n" % p_osnet_group1_name[i]
+        # generate packages that do need to be synced
+        p_sync3_name_gen = "sync3"
+        p_sync3_name = dict()
+        for i, v in zip(range(len(vers)), vers):
+                p_sync3_name[i] = p_sync3_name_gen + v
+                p_data = "open %s\n" % p_sync3_name[i]
+                p_data += "add depend type=parent fmri=%s" % \
+                    pkg.actions.depend.DEPEND_SELF
                 p_data += """
                     add set name=variant.foo value=bar value=baz
-                    add file tmp/bar mode=0555 owner=root group=bin path=osnet_group1_bar variant.foo=bar
-                    add file tmp/baz mode=0555 owner=root group=bin path=osnet_group1_baz variant.foo=baz
+                    add file tmp/bar mode=0555 owner=root group=bin path=sync3_bar variant.foo=bar
+                    add file tmp/baz mode=0555 owner=root group=bin path=sync3_baz variant.foo=baz
                     close\n"""
                 p_all.append(p_data)
 
-        # osnet incorporation is magical
-        p_osnet_name_gen = "consolidation/osnet/osnet-incorporation"
-        pkgs = [p_osnet_name_gen + ver for ver in p_vers]
-        p_osnet_name = dict(zip(range(len(pkgs)), pkgs))
-        p_osnet_dep = dict()
-        for i in p_osnet_name:
-                p_data = "open %s\n" % p_osnet_name[i]
-                p_data += "add depend fmri=%s type=incorporate\n" % \
-                    p_osnet_sync1_name[i]
-                p_data += "add depend fmri=%s type=incorporate\n" % \
-                    p_osnet_group1_name[i]
+        # generate packages that do need to be synced
+        p_sync4_name_gen = "sync4"
+        p_sync4_name = dict()
+        for i, v in zip(range(len(vers)), vers):
+                p_sync4_name[i] = p_sync4_name_gen + v
+                p_data = "open %s\n" % p_sync4_name[i]
+                p_data += "add depend type=parent fmri=%s" % \
+                    pkg.actions.depend.DEPEND_SELF
                 p_data += """
+                    add set name=variant.foo value=bar value=baz
+                    add file tmp/bar mode=0555 owner=root group=bin path=sync4_bar variant.foo=bar
+                    add file tmp/baz mode=0555 owner=root group=bin path=sync4_baz variant.foo=baz
                     close\n"""
                 p_all.append(p_data)
+
+        # create a fake zones package
+        p_zones_name = "system/zones@0.5.11,5.11-0.169"
+        p_data = "open %s\n" % p_zones_name
+        p_data += """
+            add dir mode=0755 owner=root group=bin path=etc
+            close\n"""
+        p_all.append(p_data)
 
         def setUp(self):
                 self.i_count = 5
@@ -244,6 +291,7 @@ class TestApiLinked(pkg5unittest.ManyDepotTestCase):
                         self.i_lin2index[lin] = i
                         self.set_image(i)
                         self.i_path.insert(i, self.img_path())
+                self.set_image(0)
 
         def _cat_update(self):
                 global p_update_index
@@ -261,22 +309,23 @@ class TestApiLinked(pkg5unittest.ManyDepotTestCase):
                 pkg_list = apio.get_pkg_list(api.ImageInterface.LIST_INSTALLED)
                 return set(sorted([
                         "pkg://%s/%s@%s" % (pfmri[0], pfmri[1], pfmri[2])
-                        for pfmri, summ, cats, states in pkg_list
+                        for pfmri, summ, cats, states, attrs in pkg_list
                 ]))
 
         def _list_all_packages(self, apio):
                 pkg_list = apio.get_pkg_list(api.ImageInterface.LIST_ALL)
                 return set(sorted([
                         "pkg://%s/%s@%s" % (pfmri[0], pfmri[1], pfmri[2])
-                        for pfmri, summ, cats, states in pkg_list
+                        for pfmri, summ, cats, states, attrs in pkg_list
                 ]))
 
         # utility functions for use by test cases
-        def _imgs_create(self, limit, **ic_opts):
-                variants = {
-                    "variant.foo": "bar",
-                    "variant.opensolaris.zone": "nonglobal",
-                }
+        def _imgs_create(self, limit, variants=None, **ic_opts):
+                if variants == None:
+                        variants = {
+                            "variant.foo": "bar",
+                            "variant.opensolaris.zone": "nonglobal",
+                        }
 
                 rv = []
 
@@ -317,9 +366,14 @@ class TestApiLinked(pkg5unittest.ManyDepotTestCase):
                 # attach each child to parent
                 for c in cl:
                         rv = rvdict.get(c, EXIT_OK)
-                        (c_rv, c_err) = self.api_objs[i].attach_linked_child(
+                        (c_rv, c_err, p_dict) = \
+                            self.api_objs[i].attach_linked_child(
                             lin=self.i_lin[c], li_path=self.i_path[c], **args)
-                        self.assertEqual(c_rv, rv)
+                        self.assertEqual(rv, c_rv, """
+Child attach returned unexpected error code.  Expected %d, got: %d.
+Error output:
+%s""" %
+                                   (rv, c_rv, str(c_err)))
                         self.api_objs[c].reset()
 
         def _children_op(self, i, cl, op, rv=None, rvdict=None, **args):
@@ -345,7 +399,7 @@ class TestApiLinked(pkg5unittest.ManyDepotTestCase):
 
                 # check that the actual return values match up with expected
                 # return values in rvdict
-                for c_lin, (c_rv, c_err) in c_rvdict.items():
+                for c_lin, (c_rv, c_err, p_dict) in c_rvdict.items():
                         rv = rvdict.get(self.i_lin2index[c_lin], EXIT_OK)
                         self.assertEqual(c_rv, rv)
 
@@ -366,7 +420,7 @@ unexpected verification error for pkg: %s
 action: %s
 error: %s
 warning: %s
-pinfo: %s""" % \
+pinfo: %s""" %
                             (pfmri, str(act), str(err), str(warn), str(pinfo)))
 
 
@@ -384,7 +438,7 @@ packages removed:
 packages added:
     %s
 packages known:
-    %s""" % \
+    %s""" %
                     (i, self.i_path[i], "\n    ".join(pl_removed),
                     "\n    ".join(pl_added), "\n    ".join(pl)))
 
@@ -607,10 +661,10 @@ packages known:
                         self.assertKnownPkgCount(api_objs, i, pl_init[i])
 
                 # Update to newest package in 0 and 1
-                self._api_image_update(api_objs[0], refresh_catalogs=False)
+                self._api_update(api_objs[0], refresh_catalogs=False)
 
                 # Update to newest package in 2
-                self._api_image_update(api_objs[2], refresh_catalogs=False)
+                self._api_update(api_objs[2], refresh_catalogs=False)
 
                 for i in range(3):
                         api_objs[i].reset()
@@ -766,17 +820,17 @@ packages known:
                 api_objs[1].reset()
 
                 # Attach p2c, 0 -> 2 (sync error)
-                (rv, err) = api_objs[0].attach_linked_child(
+                (rv, err, p_dict) = api_objs[0].attach_linked_child(
                     lin=self.i_lin[2], li_path=self.i_path[2])
                 self.assertEqual(rv, EXIT_OOPS)
 
                 # Attach p2c, 0 -> 3 (sync error)
-                (rv, err) = api_objs[0].attach_linked_child(
+                (rv, err, p_dict) = api_objs[0].attach_linked_child(
                     lin=self.i_lin[3], li_path=self.i_path[3])
                 self.assertEqual(rv, EXIT_OOPS)
 
                 # Attach p2c, 0 -> 4 (sync error)
-                (rv, err) = api_objs[0].attach_linked_child(
+                (rv, err, p_dict) = api_objs[0].attach_linked_child(
                     lin=self.i_lin[4], li_path=self.i_path[4])
                 self.assertEqual(rv, EXIT_OOPS)
 
@@ -806,27 +860,27 @@ packages known:
                 assertRaises(
                     (apx_verify, {
                         "e_type": apx.LinkedImageException,
-                        "e_member": "recursive_cmd_fail"}),
+                        "e_member": "pkg_op_failed"}),
                     lambda *args, **kwargs: list(
                         api_objs[0].gen_plan_install(*args, **kwargs)),
                         [self.p_sync1_name[0]])
                 assertRaises(
                     (apx_verify, {
                         "e_type": apx.LinkedImageException,
-                        "e_member": "recursive_cmd_fail"}),
+                        "e_member": "pkg_op_failed"}),
                     lambda *args, **kwargs: list(
                         api_objs[0].gen_plan_update(*args, **kwargs)))
                 assertRaises(
                     (apx_verify, {
                         "e_type": apx.LinkedImageException,
-                        "e_member": "recursive_cmd_fail"}),
+                        "e_member": "pkg_op_failed"}),
                     lambda *args, **kwargs: list(
                         api_objs[0].gen_plan_change_varcets(*args, **kwargs)),
                         variants={"variant.foo": "baz"})
                 assertRaises(
                     (apx_verify, {
                         "e_type": apx.LinkedImageException,
-                        "e_member": "recursive_cmd_fail"}),
+                        "e_member": "pkg_op_failed"}),
                     lambda *args, **kwargs: list(
                         api_objs[0].gen_plan_uninstall(*args, **kwargs)),
                         [self.p_sync1_name_gen])
@@ -869,7 +923,7 @@ packages known:
                                 [self.p_foo1_name[1]])
 
                 # test update
-                self._api_image_update(api_objs[1])
+                self._api_update(api_objs[1])
                 for c in [2, 3, 4]:
                         assertRaises(
                             (apx_verify, {
@@ -907,72 +961,239 @@ packages known:
                 for c in [1, 2, 3, 4]:
                         self._api_detach(api_objs[c])
 
-        def test_osnet_magic(self):
-                """Verify that osnet is magical and automatically
-                causes packages that it incorporates to be synced, except
-                for group packages."""
+        def test_update_recursion(self):
+                """Verify that update is recursive, but update with arguments
+                is not."""
+
+                api_objs = self._imgs_create(2)
+
+                # install packages that don't need to be synced.
+                self._api_install(api_objs[0], [self.p_foo1_name[2]])
+                self._api_install(api_objs[1], [self.p_foo1_name[2]])
+
+                # attach our images
+                self._children_attach(0, [1])
+
+                # update a specific package
+                self._api_update(api_objs[0], pkgs_update=[self.p_foo1_name[1]])
+
+                # the parent recursed into the child so make sure to reset the
+                # child api object
+                api_objs[1].reset()
+
+                # verify that the child image hasn't changed
+                pkg_list = list(api_objs[1].get_pkg_list(
+                    api.ImageInterface.LIST_INSTALLED))
+                self.assertEqual(len(pkg_list), 1)
+                pfmri, summ, cats, states, attrs = pkg_list[0]
+                pkg_installed = "%s@%s" % (pfmri[1], pfmri[2])
+                self.assertEqual(pkg_installed, self.p_foo1_name[2])
+
+                # update all packages
+                self._api_update(api_objs[0])
+
+                # the parent recursed into the child so make sure to reset the
+                # child api object
+                api_objs[1].reset()
+
+                # verify that the child image was updated as well
+                pkg_list = list(api_objs[1].get_pkg_list(
+                    api.ImageInterface.LIST_INSTALLED))
+                self.assertEqual(len(pkg_list), 1)
+                pfmri, summ, cats, states, attrs = pkg_list[0]
+                pkg_installed = "%s@%s" % (pfmri[1], pfmri[2])
+                self.assertEqual(pkg_installed, self.p_foo1_name[0])
+
+
+        def test_solver_err_aggregation(self):
+                """Verify that when the solver reports errors on packages that
+                can't be installed, those errors include information about
+                all the proposed packages (and not a subset of the proposed
+                packages)."""
 
                 api_objs = self._imgs_create(2)
                 self._parent_attach(0, [1])
 
-                # can't install osnet because it's synced
+                # since we're check the default output of the solver, disable
+                # the collection of extended solver dependency errors.
+                if "plan" in DebugValues:
+                        del DebugValues["plan"]
+
+                # install synced packages in the parent
+                self._api_install(api_objs[0], [
+                    self.p_sync3_name[1], self.p_sync4_name[1]])
+
+                # install synced packages and an incorporation which
+                # constrains the foo* packages in the child
+                self._api_install(api_objs[1], [self.p_foo_incorp_name[1],
+                    self.p_sync3_name[1], self.p_sync4_name[1]])
+
+                # try to install packages that can't be installed
+                e = assertRaises(
+                    (apx_verify, {
+                        "e_type": apx.PlanCreationException,
+                        "e_member": "no_version"}),
+                    lambda *args, **kwargs: list(
+                        api_objs[1].gen_plan_install(*args, **kwargs)),
+                        [self.p_foo1_name[0], self.p_foo2_name[0]])
+
+                # make sure the error message mentions both packages.
+                substring_verify(str(e), self.p_foo1_name[0])
+                substring_verify(str(e), self.p_foo2_name[0])
+
+                # try to install packages with missing parent dependencies
+                e = assertRaises(
+                    (apx_verify, {
+                        "e_type": apx.PlanCreationException,
+                        "e_member": "no_version"}),
+                    lambda *args, **kwargs: list(
+                        api_objs[1].gen_plan_install(*args, **kwargs)),
+                        [self.p_sync1_name[0], self.p_sync2_name[0]])
+
+                # make sure the error message mentions both packages.
+                substring_verify(str(e), self.p_sync1_name[0])
+                substring_verify(str(e), self.p_sync2_name[0])
+
+                # uninstall synced packages in the parent
+                self._api_uninstall(api_objs[0], [
+                    self.p_sync3_name[1], self.p_sync4_name[1]])
+
+                # try to install a newer version of the incorporation
+                e = assertRaises(
+                    (apx_verify, {
+                        "e_type": apx.PlanCreationException,
+                        "e_member": "no_version"}),
+                    lambda *args, **kwargs: list(
+                        api_objs[1].gen_plan_install(*args, **kwargs)),
+                        [self.p_foo_incorp_name[0]])
+
+                # make sure the error message mentions both synced packages.
+                substring_verify(str(e), self.p_sync3_name[1])
+                substring_verify(str(e), self.p_sync4_name[1])
+
+                # try to update
+                e = assertRaises(
+                    (apx_verify, {
+                        "e_type": apx.PlanCreationException,
+                        "e_member": "no_version"}),
+                    lambda *args, **kwargs: list(
+                        api_objs[1].gen_plan_update(*args, **kwargs)))
+
+                # make sure the error message mentions both synced packages.
+                substring_verify(str(e), self.p_sync3_name[1])
+                substring_verify(str(e), self.p_sync4_name[1])
+
+
+        def test_sync_nosolver(self):
+                """Verify that the solver is not invoked when syncing in-sync
+                images."""
+
+                api_objs = self._imgs_create(2)
+
+                # install a synced package into the images
+                self._api_install(api_objs[0], [self.p_sync1_name[1]])
+                self._api_install(api_objs[1], [self.p_sync1_name[1]])
+
+                # install a random package into the image
+                self._api_install(api_objs[1], [self.p_foo1_name[1]])
+
+                # link the images
+                self._parent_attach(0, [1])
+
+                # raise an exception of the solver is invoked
+                DebugValues["no_solver"] = 1
+
+                # the child is in sync and we're not rejecting an installed
+                # package, so a sync shound not invoke the solver.
+                self._api_sync(api_objs[1])
+                self._api_sync(api_objs[1], reject_list=[self.p_foo2_name[1]])
+
+                # the child is in sync, but we're rejecting an installed
+                # package, so a sync must invoke the solver.
                 assertRaises(
-                    (apx_verify, {"e_type": apx.PlanCreationException}),
-                    self._api_install, api_objs[1], [self.p_osnet_name[4]])
-
-                # install osnet into the parent
-                self._api_install(api_objs[0], [self.p_osnet_name[3]])
-
-                # can't newer or older osnet
+                    (apx_verify, {"e_type": RuntimeError}),
+                    self._api_sync, api_objs[1],
+                    reject_list=[self.p_sync1_name[1]])
                 assertRaises(
-                    (apx_verify, {"e_type": apx.PlanCreationException}),
-                    self._api_install, api_objs[1], [self.p_osnet_name[4]])
-                assertRaises(
-                    (apx_verify, {"e_type": apx.PlanCreationException}),
-                    self._api_install, api_objs[1], [self.p_osnet_name[2]])
+                    (apx_verify, {"e_type": RuntimeError}),
+                    self._api_sync, api_objs[1],
+                    reject_list=[self.p_sync1_name[1], self.p_foo2_name[1]])
 
-                # can install synced osnet
-                self._api_install(api_objs[1], [self.p_osnet_name[3]])
-                self._api_uninstall(api_objs[1], [self.p_osnet_name[3]])
-                self.assertEqual(0, len(self._list_inst_packages(api_objs[1])))
+        def test_corrupt_zone_metadata(self):
+                """Verify that some corrupt zone metadata states are
+                handled reasonably."""
 
-                # can't install osnet_sync1 because it's synced
-                assertRaises(
-                    (apx_verify, {"e_type": apx.PlanCreationException}),
-                    self._api_install, api_objs[1],
-                    [self.p_osnet_sync1_name[4]])
+                def __do_tests(li_count):
+                        # if /etc/zones doesn't exists we don't have zones
+                        # children and we don't run the zone commands.
+                        api_objs[0].reset()
+                        linked = api_objs[0].list_linked()
+                        assert len(linked) == li_count
 
-                # install osnet_sync1 into the parent
-                self._api_install(api_objs[0], [self.p_osnet_sync1_name[3]])
+                        #
+                        # an empty /etc/zones directory will cause the zone
+                        # commands to fail which will cause linked image
+                        # operations to fail.
+                        #
+                        os.mkdir(os.path.join(self.img_path(), "etc/zones"),
+                            0755)
+                        api_objs[0].reset()
+                        assertRaises(
+                            (apx_verify, {
+                                "e_type": apx.LinkedImageException,
+                                "e_member": "cmd_failed"}),
+                            api_objs[0].list_linked)
 
-                # can't newer or older osnet_sync1
-                assertRaises(
-                    (apx_verify, {"e_type": apx.PlanCreationException}),
-                    self._api_install, api_objs[1],
-                    [self.p_osnet_sync1_name[4]])
-                assertRaises(
-                    (apx_verify, {"e_type": apx.PlanCreationException}),
-                    self._api_install, api_objs[1],
-                    [self.p_osnet_sync1_name[2]])
+                        # ignoring all linked children should allow the
+                        # operation to succeed.
+                        linked = api_objs[0].list_linked(li_ignore=[])
+                        assert len(linked) == 0
 
-                # can install synced osnet_sync1
-                self._api_install(api_objs[1], [self.p_osnet_sync1_name[3]])
-                self._api_uninstall(api_objs[1], [self.p_osnet_sync1_name[3]])
-                self.assertEqual(0, len(self._list_inst_packages(api_objs[1])))
+                        # reset the image
+                        os.rmdir(os.path.join(self.img_path(), "etc/zones"))
 
-                # ok to install osnet_group1 because it's a group package
-                self._api_install(api_objs[1], [self.p_osnet_group1_name[3]])
-                self._api_uninstall(api_objs[1], [self.p_osnet_group1_name[3]])
-                self.assertEqual(0, len(self._list_inst_packages(api_objs[1])))
+                #
+                # create a global zone image and install a fake zones package
+                # within the image.  this makes the linked image zones plugin
+                # think it's dealing with an image that could have zone
+                # children so it will invoke the zone tools on the image to
+                # try and discover zones installed in the image.
+                #
+                api_objs = self._imgs_create(2)
+                self._api_change_varcets(api_objs[0],
+                    variants={"variant.opensolaris.zone": "global"})
+                self._api_install(api_objs[0], [self.p_zones_name])
 
-                # install osnet_group1 into the parent
-                self._api_install(api_objs[0], [self.p_osnet_group1_name[3]])
+                # run tests
+                __do_tests(0)
 
-                # ok to install newer, older, or synced osnet_group1 because
-                # it's a group package
-                self._api_install(api_objs[1], [self.p_osnet_group1_name[4]])
-                self._api_install(api_objs[1], [self.p_osnet_group1_name[3]])
-                self._api_install(api_objs[1], [self.p_osnet_group1_name[2]])
+                # link a system image child to the image and run tests
+                self._children_attach(0, [1])
+                __do_tests(2)
+
+                # remove linked image metadata from the parent and run tests
+                shutil.rmtree(os.path.join(self.img_path(), "var/pkg/linked"))
+                __do_tests(2)
+
+        def test_attach_reject(self):
+                """Verify that we can reject packages during attach."""
+
+                api_objs = self._imgs_create(3)
+
+                # install a random package into the image
+                pkg = self.p_foo1_name_gen
+                self._api_install(api_objs[1], [pkg])
+                self._api_install(api_objs[2], [pkg])
+
+                # attach c2p
+                assert len(self._list_inst_packages(api_objs[1])) == 1
+                self._parent_attach(0, [1], reject_list=[pkg])
+                assert len(self._list_inst_packages(api_objs[1])) == 0
+
+                # attach p2c
+                assert len(self._list_inst_packages(api_objs[2])) == 1
+                self._children_attach(0, [2], reject_list=[pkg])
+                assert len(self._list_inst_packages(api_objs[2])) == 0
 
 
 if __name__ == "__main__":

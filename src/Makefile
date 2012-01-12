@@ -38,7 +38,7 @@ test-verbose := TARGET = test-verbose
 test-generate := TARGET = test-generate
 test-leaks := TARGET = test-leaks
 
-SUBDIRS=web gui um po util/misc brand zoneproxy tsol
+SUBDIRS=zoneproxy tsol
 
 all: $(SUBDIRS)
 	$(PYTHON) setup.py build
@@ -57,7 +57,6 @@ clobber: $(SUBDIRS)
 #
 install: $(SUBDIRS)
 	$(PYTHON) setup.py install
-	$(PYTHON) setup.py pylint_quiet
 
 lint:
 	$(PYTHON) setup.py lint
@@ -76,7 +75,7 @@ $(SUBDIRS): FRC
 	@cd $@; pwd; $(MAKE) $(TARGET)
 
 # Use the bits we just built to create the packages.
-packages: install
+packages: install pylint
 	@cd pkg; pwd; $(MAKE) $(TARGET) check svr4_test \
 		PATH=$$(hg root)/proto/root_$$(uname -p)/usr/bin:$$PATH \
 		PYTHONPATH=$$(hg root)/proto/root_$$(uname -p)/usr/lib/python2.6/vendor-packages

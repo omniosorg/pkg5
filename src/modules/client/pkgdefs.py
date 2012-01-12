@@ -52,6 +52,8 @@ PKG_OP_INSTALL         = "install"
 PKG_OP_LIST            = "list"
 PKG_OP_LIST_LINKED     = "list-linked"
 PKG_OP_PROP_LINKED     = "property-linked"
+PKG_OP_REVERT          = "revert"
+PKG_OP_SET_MEDIATOR    = "set-mediator"
 PKG_OP_SET_PROP_LINKED = "set-property-linked"
 PKG_OP_SYNC            = "sync-linked"
 PKG_OP_UNINSTALL       = "uninstall"
@@ -66,6 +68,8 @@ pkg_op_values          = frozenset([
     PKG_OP_LIST,
     PKG_OP_LIST_LINKED,
     PKG_OP_PROP_LINKED,
+    PKG_OP_REVERT,
+    PKG_OP_SET_MEDIATOR,
     PKG_OP_SET_PROP_LINKED,
     PKG_OP_SYNC,
     PKG_OP_UNINSTALL,
@@ -78,6 +82,7 @@ API_OP_CHANGE_VARIANT = "change-variant"
 API_OP_DETACH         = "detach-linked"
 API_OP_INSTALL        = "install"
 API_OP_REVERT         = "revert"
+API_OP_SET_MEDIATOR   = "set-mediator"
 API_OP_SYNC           = "sync-linked"
 API_OP_UNINSTALL      = "uninstall"
 API_OP_UPDATE         = "update"
@@ -88,6 +93,7 @@ api_op_values         = frozenset([
     API_OP_DETACH,
     API_OP_INSTALL,
     API_OP_REVERT,
+    API_OP_SET_MEDIATOR,
     API_OP_SYNC,
     API_OP_UNINSTALL,
     API_OP_UPDATE

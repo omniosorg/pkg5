@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 
 import testutils
 if __name__ == "__main__":
@@ -30,6 +30,7 @@ import pkg5unittest
 import unittest
 import os
 
+import pkg.fmri as pfmri
 
 class TestPkgContentsBasics(pkg5unittest.SingleDepotTestCase):
         # Only start/stop the depot once (instead of for every test)
@@ -74,7 +75,7 @@ class TestPkgContentsBasics(pkg5unittest.SingleDepotTestCase):
         def setUp(self):
                 pkg5unittest.SingleDepotTestCase.setUp(self)
                 self.make_misc_files(self.misc_files)
-                self.pkgsend_bulk(self.rurl, (self.bronze10,
+                self.plist = self.pkgsend_bulk(self.rurl, (self.bronze10,
                     self.nopathA10, self.nopathB10))
 
 	def test_contents_bad_opts(self):
@@ -88,6 +89,10 @@ class TestPkgContentsBasics(pkg5unittest.SingleDepotTestCase):
                 self.pkg("contents -t", exit=2)
                 self.pkg("contents foo@x.y", exit=1)
                 self.pkg("contents -a foo", exit=2)
+                self.pkg("contents -m -o action.hash", exit=2)
+                self.pkg("contents -m -a path=usr/bin/sh", exit=2)
+                self.pkg("contents -m -s path", exit=2)
+                self.pkg("contents -m -t depend", exit=2)
 
         def test_contents_empty_image(self):
                 """local pkg contents should fail in an empty image; remote
@@ -154,7 +159,7 @@ class TestPkgContentsBasics(pkg5unittest.SingleDepotTestCase):
                 # Multiple -a
                 self.pkg("contents -H -o action.hash -a path=etc/bronze1 "
                     "-a mode=0555")
-                self.assert_(self.output.splitlines() == [
+                self.assertEqualDiff(self.output.splitlines(),[
                     "02cdf31d12ccfb6d35e4b8eeff10535e22da3f7e",
                     "422bdb3eb2d613367933194e3f11220aebe56226"])
 
@@ -194,6 +199,80 @@ class TestPkgContentsBasics(pkg5unittest.SingleDepotTestCase):
 
                 self.pkg("contents -o noodles -o mice nopathA nopathB")
                 self.assert_(nofield_plural in self.errout)
+
+        def test_bug_4315(self):
+                """Test that when multiple manifests are given and -m is used,
+                their contents aren't comingled."""
+
+                self.image_create(self.rurl)
+                self.pkg("contents -r -m %s" % " ".join(self.plist))
+                expected_res = reduce(lambda x, y: x + y,
+                    [
+                        self.get_img_manifest(pfmri.PkgFmri(s))
+                        for s in self.plist
+                    ], "")
+
+                self.assertEqualDiff(expected_res, self.output)
+
+        def test_ranked(self):
+                """Verify that pkg contents -r returns expected results
+                when multiple publishers provide the same package based
+                on publisher search order."""
+
+                # Create an isolated repository for this test
+                repodir = os.path.join(self.test_root, "test-ranked")
+                self.create_repo(repodir)
+                self.pkgrepo("add-publisher -s %s test" % repodir)
+                self.pkgsend_bulk(repodir, self.bronze10)
+
+                self.pkgrepo("add-publisher -s %s test2" % repodir)
+                self.pkgrepo("set -s %s publisher/prefix=test2" % repodir)
+                self.pkgsend_bulk(repodir, self.bronze10)
+
+                self.pkgrepo("add-publisher -s %s test3" % repodir)
+                self.pkgrepo("set -s %s publisher/prefix=test3" % repodir)
+                self.pkgsend_bulk(repodir, self.bronze10)
+
+                # Create a test image.
+                self.image_create()
+                self.pkg("set-publisher -p %s" % repodir)
+
+                # Test should be higher ranked than test2 since the default
+                # for auto-configuration is to use lexical order when
+                # multiple publishers are found.  As such, info -r should
+                # return results for 'test' by default.
+                self.pkg("contents -H -r -t set -o pkg.fmri bronze")
+                self.assert_(self.output.startswith("pkg://test/bronze"))
+                self.assert_("pkg://test2/bronze" not in self.output)
+                self.assert_("pkg://test3/bronze" not in self.output)
+
+                # Verify that if the publisher is specified, that is preferred
+                # over rank.
+                self.pkg("contents -H -r -t set -o pkg.fmri //test2/bronze")
+                self.assert_("pkg://test/bronze" not in self.output)
+                self.assert_(self.output.startswith("pkg://test2/bronze"))
+                self.assert_("pkg://test3/bronze" not in self.output)
+
+                # Verify that if stem is specified with and without publisher,
+                # both matches are listed if the higher-ranked publisher differs
+                # from the publisher specified.
+                self.pkg("contents -H -r -t set -o pkg.fmri //test/bronze "
+                    "bronze")
+                self.assert_(self.output.startswith("pkg://test/bronze"))
+                self.assert_("pkg://test2/bronze" not in self.output)
+                self.assert_("pkg://test3/bronze" not in self.output)
+
+                self.pkg("contents -H -r -t set -o pkg.fmri //test2/bronze "
+                    "bronze")
+                self.assert_(self.output.startswith("pkg://test/bronze"))
+                self.assert_("pkg://test2/bronze" in self.output)
+                self.assert_("pkg://test3/bronze" not in self.output)
+
+                self.pkg("contents -H -r -t set -o pkg.fmri //test3/bronze "
+                    "//test2/bronze bronze")
+                self.assert_(self.output.startswith("pkg://test/bronze"))
+                self.assert_("pkg://test2/bronze" in self.output)
+                self.assert_("pkg://test3/bronze" in self.output)
 
 
 if __name__ == "__main__":

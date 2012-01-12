@@ -144,7 +144,8 @@ Options:
 
         --key keyfile   Specify a client SSL key file to use for pkg retrieval.
 
-        --cert certfile Specify a client SSL certificate file to use for pkg retrieval.
+        --cert certfile Specify a client SSL certificate file to use for pkg
+                        retrieval.
 
 Environment:
         PKG_DEST        Destination directory or URI
@@ -276,6 +277,9 @@ def add_hashes_to_multi(mfst, multi):
                         getf += 1
                         sendb += int(a.attrs.get("pkg.size", 0))
                         sendcb += int(a.attrs.get("pkg.csize", 0))
+                        if a.name == "signature":
+                                getf += len(a.get_chain_certs())
+                                getb += a.get_action_chain_csize()
         return getb, getf, sendb, sendcb
 
 def prune(fmri_list, all_versions, all_timestamps):
@@ -463,8 +467,7 @@ def get_matches(src_pub, tracker, xport, pargs, any_unmatched, any_matched,
         if "*" not in pargs and "*@*" not in pargs:
                 try:
                         matches, refs, unmatched = \
-                            src_cat.get_matching_fmris(pargs,
-                            raise_unmatched=False)
+                            src_cat.get_matching_fmris(pargs)
                 except apx.PackageMatchErrors, e:
                         abort(str(e))
 
@@ -733,19 +736,11 @@ def transfer_pkgs(pargs, target, list_newest, all_versions, all_timestamps,
                             npkgs)
 
                 tracker.evaluate_start(npkgs=npkgs)
-                skipped = False
                 retrieve_list = []
                 while matches:
                         f = matches.pop()
 
                         if republish and targ_cat.get_entry(f):
-                                if not skipped:
-                                        # Ensure a new line is output so message
-                                        # is on separate line from spinner.
-                                        msg("")
-                                msg(_("Skipping %s: already present "
-                                    "at destination") % f)
-                                skipped = True
                                 continue
 
                         m = get_manifest(f, xport_cfg)
@@ -951,12 +946,7 @@ if __name__ == "__main__":
                 __ret = 1
         except:
                 traceback.print_exc()
-                error(_("""\n
-This is an internal error in pkg(5) version %(version)s.  Please let the
-developers know about this problem by including the information above (and
-this message) when filing a bug at:
-
-%(bug_uri)s""") % { "version": pkg.VERSION, "bug_uri": misc.BUG_URI_CLI })
+                error(misc.get_traceback_message())
                 __ret = 99
                 # Cleanup must be called *after* error messaging so that
                 # exceptions processed during cleanup don't cause the wrong

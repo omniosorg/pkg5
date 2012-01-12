@@ -1,3 +1,157 @@
+Version 71:
+Compatible with clients using versions 66-70.
+
+    pkg.client.api_errors has changed as follows:
+
+        * Added UnprivilegedUserError to indicate when the current user
+          does not have sufficient privileges to modify the image.
+
+Version 70:
+Compatible with clients using versions 66-69.
+
+    pkg.client.api.ImageInterface has changed as follows:
+        * A new boolean property named is_liveroot has been added to
+          allow API consumers to determine if the image to be modified
+          is for the live system root.
+
+Version 69:
+Compatible with clients using versions 66-68.
+
+    pkg.client.api.ImageInterface has changed as follows:
+        * get_pkg_list() and info() now have an optional boolean
+          parameter named 'ranked' that controls whether only
+          packages for the highest-ranked matching publisher should
+          be returned. See 'pydoc pkg.client.api' for details.
+
+Version 68:
+Compatible with clients using versions 66-67.
+
+    pkg.client.api.ImageInterface has changed as follows:
+
+        * New functions for managing client history have been added:
+          abort(), gen_history(), clear_history(), and purge_history().
+          See 'pydoc pkg.client.api' for details.
+
+        * New constants for decoding history entries have been added
+          named after the pattern RESULT_*.  See 'pydoc pkg.client.api'
+          for details.
+
+    pkg.client.api_errors has changed as follows:
+
+        * New exceptions for bad history requests or history parsing
+          errors have been added. (HistoryLoadException, etc.)
+
+Version 67:
+Compatible with clients using version 66.
+
+    pkg.client.api.ImageInterface has changed as follows:
+
+        * planning functions such as gen_plan_install that allow
+          specifying a be_name now also support specifying a
+          backup_be_name, and the ability to create a backup BE
+          by setting backup_be=True.
+
+    pkg.client.api.PlanDescription has changed as follows:
+
+        * New properties named 'backup_be' and 'backup_be_name' have been
+          added to allow callers to determine whether a backup BE will be
+          created and what name was specified for it.
+
+        * The new property 'is_active_root_be' has been added to allow
+          consumers to determine if the image being modified is for the
+          live, active root BE.
+
+Version 66:
+Incompatible with clients using versions 0-63.
+
+    The incompatible change is that attach_linked_child, audit_linked,
+    audit_linked_children, and detach_linked_children now return a tuple
+    containing the return value, any errors, and either None or a dictionary
+    representing the parsable output for the operation. All the *_rvdict2rv
+    functions have been changed similar except they return a list of
+    dictionaries.
+
+    The following are the compatible changes:
+    pkg.client.api.ImageInterface has changed as follows:
+        * gen_plan_* now takes an optional argument, parsable version, which is
+          either None or contains the version of parsable output to generate.
+
+    pkg.client.api.PlanDescription has changed as follows:
+
+        * get_parsable_mediators and get_parsable_varcets have been added as
+          functions which return the raw structures for mediators, variants, and
+          facets rather than the formatted strings which get_mediators and
+          get_varcets do.
+
+Version 65:
+Incompatible with clients using versions 0-64.
+
+    pkg.client.api.ImageInterface has changed as follows:
+        * get_pkg_list() yields five values instead of four; the fifth is a
+          dictionary of package attributes.
+
+    pkg.client.api.PackageInfo has changed as follows:
+        * added get_attr_values() to return the values of named package
+          attributes.
+
+Version 64:
+Incompatible with clients using versions 0-63.
+
+    pkg.client.api_errors has changed as follows:
+       * The ImageLocationAmbiguous exception has been removed.  The client
+         API no longer requires the image to be found at '/' on Solaris.
+         Clients are free to enforce whatever restrictions on image root
+         they desire.
+
+Version 63:
+Compatible with clients using version 62.
+
+    pkg.client.api.ImageInterface has changed as follows:
+        * added new 'mediators' property has been added
+          to get a dictionary of the configured mediation
+          information.
+
+        * added gen_available_mediators() to get the list of
+          available mediations for installed packages.
+
+        * added gen_plan_set_mediators() for planning an
+          operation to set link mediation.
+
+    pkg.client.api.PlanDescription has changed as follows:
+        * added get_mediators() method to get a list of
+          strings describing the mediation changes for a plan.
+
+    pkg.client.api_errors has changed as follows:
+        * added an invalid_mediations property to PlanCreationException
+          that contains a dictionary of any mediations found to be
+          invalid for the plan with a key set for each aspect that was
+          faulty.
+
+Version 62:
+Incompatible with clients using versions 0-61.
+
+    pkg.client.api.PackageInfo has changed as follows:
+        * the 'fmri' property is now a PkgFmri object instead of a
+          string.
+
+    pkg.client.api.PlanDescription has changed as follows:
+        * get_services() now returns a list of tuples of strings,
+          see pkg.client.api for details.
+
+Version 61:
+Compatible with clients using version 60.
+    pkg.client.api.PlanDescription has changed as follows:
+        * Added the following new interfaces
+                get_bytes_added()
+                get_cbytes_added()
+                get_bytes_avail()
+                get_cbytes_avail()
+    pkg.client.api.prepare has changed as follows:
+        * may now raise api_errors.ImageInsufficientSpace exception
+
+    pkg.client.api.execute has changed as follows:
+        * may now raise api_errors.ImageInsufficientSpace exception
+
 Version 60:
 Incompatible with clients using versions 0-59.
 
@@ -547,23 +701,23 @@ Version 24:
 Incompatible with clients using versions 0-23.
     The pkg.client.api module has changed as follows:
         * plan_install no longer takes a filters argument
-	* plan_change_variant changed to plan_change_varcets.
-	  w/ argument list changes.
-	* Added get_pub_search_order
-	* Added set_pub_search_after
-	* Added set_pub_search_before
+        * plan_change_variant changed to plan_change_varcets.
+          w/ argument list changes.
+        * Added get_pub_search_order
+        * Added set_pub_search_after
+        * Added set_pub_search_before
 
 Version 23:
 Incompatible with clients using versions 0-22.
     The pkg.client.api module has changed as follows:
         * PackageInfo objects no longer take a "state" parameter, but a
-	  "states" parameter, and the corresponding "state" member is now
-	  "states", and is a list of states, rather than a single value.
+          "states" parameter, and the corresponding "state" member is now
+          "states", and is a list of states, rather than a single value.
 
 Version 22:
 Compatible with clients using version 21.
 Changes:
-	Adds the description field to the PackageInfo class.
+        Adds the description field to the PackageInfo class.
 
 Version 21:
 Incompatible with clients using versions 0-20.

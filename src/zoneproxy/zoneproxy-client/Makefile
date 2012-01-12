@@ -32,6 +32,8 @@ CPPFLAGS +=     -mt -D_REENTRANT -D_FILE_OFFSET_BITS=64
 
 .KEEP_STATE:
 
+all:	$(PROG)
+
 install: $(ZONES_PROG)
 
 lint: lint_PROG

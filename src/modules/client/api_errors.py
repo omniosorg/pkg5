@@ -26,6 +26,7 @@
 
 import errno
 import os
+import xml.parsers.expat as expat
 import urlparse
 
 # pkg classes
@@ -58,18 +59,55 @@ class SuidUnsupportedError(ApiException):
                 return _("""
 The pkg client api module can not be invoked from an setuid executable.""")
 
-class SubprocessError(ApiException):
 
-        def __init__(self, rv, cmd):
-                if type(cmd) == list:
-                        cmd = " ".join(cmd)
-                assert type(cmd) == str
-                self.err = _("The following subprocess returned an "
-                    "unexpected exit code of %(rv)d:\n%(cmd)s") % \
-                    {"rv": rv, "cmd": cmd}
+class HistoryException(ApiException):
+        """Private base exception class for all History exceptions."""
+
+        def __init__(self, *args):
+                Exception.__init__(self, *args)
+                self.error = args[0]
 
         def __str__(self):
-                return self.err
+                return str(self.error)
+
+
+class HistoryLoadException(HistoryException):
+        """Used to indicate that an unexpected error occurred while loading
+        History operation information.
+
+        The first argument should be an exception object related to the
+        error encountered.
+        """
+        def __init__(self, *args):
+                HistoryException.__init__(self, *args)
+                self.parse_failure = isinstance(self.error, expat.ExpatError)
+
+
+class HistoryRequestException(HistoryException):
+        """Used to indicate that invalid time / range values were provided to
+        history API functions."""
+        pass
+
+
+class HistoryStoreException(HistoryException):
+        """Used to indicate that an unexpected error occurred while storing
+        History operation information.
+
+        The first argument should be an exception object related to the
+        error encountered.
+        """
+        pass
+
+
+class HistoryPurgeException(HistoryException):
+        """Used to indicate that an unexpected error occurred while purging
+        History operation information.
+
+        The first argument should be an exception object related to the
+        error encountered.
+        """
+        pass
+
 
 class ImageLockedError(ApiException):
         """Used to indicate that the image is currently locked by another thread
@@ -111,24 +149,6 @@ class ImageNotFoundException(ApiException):
                 self.root_dir = root_dir
 
 
-class ImageLocationAmbiguous(ApiException):
-        """Used to indicate that an image was found at a location other than
-        '/' on the Solaris platform when requesting automatic image location
-        discovery.  Clients should trap this exception and add their own
-        messaging telling the user how to specify an image root explicitly
-        for the location."""
-
-        def __init__(self, root, live_root="/"):
-                ApiException.__init__(self)
-                self.root = root
-                self.live_root = live_root
-
-        def __str__(self):
-                return _("pkg(5) image found at '%(found)s' instead of "
-                    "'%(expected)s'.") % { "found": self.root,
-                    "expected": self.live_root }
-
-
 class ImageFormatUpdateNeeded(ApiException):
         """Used to indicate that an image cannot be used until its format is
         updated."""
@@ -142,6 +162,22 @@ class ImageFormatUpdateNeeded(ApiException):
                     "and must be updated before the requested operation can be "
                     "performed.") % self.path
 
+class ImageInsufficentSpace(ApiException):
+        """Used when insuffcient space exists for proposed operation"""
+        def __init__(self, needed, avail, use):
+                self.needed = needed
+                self.avail = avail
+                self.use = use
+
+        def __str__(self):
+                from pkg.misc import bytes_to_str
+                return _("Insufficent disk space available (%(avail)s)"
+                    "for estimated need (%(needed)s) for %(use)s") % {
+                    "avail":  bytes_to_str(self.avail),
+                    "needed": bytes_to_str(self.needed),
+                    "use": self.use
+                    }
+                    
 
 class VersionException(ApiException):
         def __init__(self, expected_version, received_version):
@@ -344,6 +380,16 @@ class FileInUseException(PermissionsException):
                     "operation again.") % self.path
 
 
+class UnprivilegedUserError(PermissionsException):
+        def __init__(self, path):
+                PermissionsException.__init__(self, path)
+
+        def __str__(self):
+                return _("Insufficient access to complete the requested "
+                    "operation.\nPlease try the operation again as a "
+                    "privileged user.")
+
+
 class ReadOnlyFileSystemException(PermissionsException):
         """Used to indicate that the operation was attempted on a
         read-only filesystem"""
@@ -361,6 +407,9 @@ class ReadOnlyFileSystemException(PermissionsException):
 
 
 class PackageMatchErrors(ApiException):
+        """Used to indicate which patterns were not matched or illegal during
+        a package name matching operation."""
+
         def __init__(self, unmatched_fmris=EmptyI, multiple_matches=EmptyI,
             illegal=EmptyI, multispec=EmptyI):
                 ApiException.__init__(self)
@@ -408,6 +457,7 @@ class PlanCreationException(ApiException):
             badarch=EmptyI,
             illegal=EmptyI,
             installed=EmptyI,
+            invalid_mediations=EmptyI,
             linked_pub_error=EmptyI,
             missing_dependency=EmptyI,
             missing_matches=EmptyI,
@@ -416,9 +466,11 @@ class PlanCreationException(ApiException):
             no_solution=False,
             no_tmp_origins=False,
             no_version=EmptyI,
+            not_avoided=EmptyI,
             nofiles=EmptyI,
             obsolete=EmptyI,
             pkg_updates_required=EmptyI,
+            rejected_pats=EmptyI,
             solver_errors=EmptyI,
             unmatched_fmris=EmptyI,
             would_install=EmptyI,
@@ -430,6 +482,7 @@ class PlanCreationException(ApiException):
                 self.badarch               = badarch
                 self.illegal               = illegal
                 self.installed             = installed
+                self.invalid_mediations    = invalid_mediations
                 self.linked_pub_error      = linked_pub_error
                 self.missing_dependency    = missing_dependency
                 self.missing_matches       = missing_matches
@@ -438,9 +491,11 @@ class PlanCreationException(ApiException):
                 self.no_solution           = no_solution
                 self.no_tmp_origins        = no_tmp_origins
                 self.no_version            = no_version
+                self.not_avoided           = not_avoided
                 self.nofiles               = nofiles
                 self.obsolete              = obsolete
                 self.pkg_updates_required  = pkg_updates_required
+                self.rejected_pats         = rejected_pats
                 self.solver_errors         = solver_errors
                 self.unmatched_fmris       = unmatched_fmris
                 self.would_install         = would_install
@@ -452,10 +507,18 @@ class PlanCreationException(ApiException):
                 if self.unmatched_fmris:
                         s = _("""\
 The following pattern(s) did not match any allowable packages.  Try
-using a different matching pattern, or refreshing the image:
+using a different matching pattern, or refreshing publisher information:
 """)
                         res += [s]
                         res += ["\t%s" % p for p in self.unmatched_fmris]
+
+                if self.rejected_pats:
+                        s = _("""\
+The following pattern(s) only matched packages rejected by user request.  Try
+using a different matching pattern, or refreshing publisher information:
+""")
+                        res += [s]
+                        res += ["\t%s" % p for p in self.rejected_pats]
 
                 if self.wrong_variants:
                         s = _("""\
@@ -502,6 +565,13 @@ for the current image's architecture, zone type, and/or other variant:""")
                             "installed: ")
                         res += [s]
                         res += ["\t%s" % p for p in self.installed]
+
+                if self.invalid_mediations:
+                        s = _("The following mediations are not syntactically "
+                            "valid:")
+                        for m, entries in self.invalid_mediations.iteritems():
+                                for value, error in entries.values():
+                                        res.append(error)
 
                 if self.multispec:
                         s = _("The following different patterns specify the "
@@ -564,6 +634,11 @@ persistently.""")
                             "of group dependencies; use install to unavoid "
                             "these:")]
                         res += [ "\t%s" % s for s in self.would_install]
+
+                if self.not_avoided:
+                        res += [_("The following packages are not on the "
+                            "avoid list, so they\ncannot be removed from it.")]
+                        res += [ "\t%s" % s for s in sorted(self.not_avoided)]
 
                 def __format_li_pubs(pubs, res):
                         i = 0
@@ -699,7 +774,10 @@ class InconsistentActionAttributeError(ConflictingActionError):
                         ua = dict(
                             (k, v)
                             for k, v in action.attrs.iteritems()
-                            if k in action.unique_attrs
+                            if ((k in action.unique_attrs and
+                                not (k == "preserve" and "overlay" in action.attrs)) or
+                                ((action.name == "link" or action.name == "hardlink") and
+                                k.startswith("mediator")))
                         )
                         action.attrs = ua
                         return action
@@ -1647,6 +1725,18 @@ class MoveRelativeToSelf(PublisherError):
                 return _("Cannot search a repository before or after itself")
 
 
+class MoveRelativeToUnknown(PublisherError):
+        """Used to indicate an attempt to order a publisher relative to an
+        unknown publisher."""
+
+        def __init__(self, unknown_pub):
+                self.__unknown_pub = unknown_pub
+
+        def __str__(self):
+                return _("%s is an unknown publisher; no other publishers can "
+                    "be ordered relative to it.") % self.__unknown_pub
+
+
 class SelectedRepositoryRemoval(PublisherError):
         """Used to indicate that an attempt to remove the selected repository
         for a publisher was made."""
@@ -2444,10 +2534,10 @@ class LinkedImageException(ApiException):
             child_nested=None,
             child_not_in_altroot=None,
             child_not_nested=None,
-            child_op_failed=None,
             child_path_eaccess=None,
             child_path_notabs=None,
             child_unknown=None,
+            cmd_failed=None,
             detach_child_notsup=None,
             detach_from_parent=None,
             detach_parent_notsup=None,
@@ -2458,7 +2548,7 @@ class LinkedImageException(ApiException):
             parent_bad_notabs=None,
             parent_bad_path=None,
             parent_not_in_altroot=None,
-            recursive_cmd_fail=None,
+            pkg_op_failed=None,
             self_linked=None,
             self_not_child=None):
 
@@ -2473,10 +2563,10 @@ class LinkedImageException(ApiException):
                 self.child_nested = child_nested
                 self.child_not_in_altroot = child_not_in_altroot
                 self.child_not_nested = child_not_nested
-                self.child_op_failed = child_op_failed
                 self.child_path_eaccess = child_path_eaccess
                 self.child_path_notabs = child_path_notabs
                 self.child_unknown = child_unknown
+                self.cmd_failed = cmd_failed
                 self.detach_child_notsup = detach_child_notsup
                 self.detach_from_parent = detach_from_parent
                 self.detach_parent_notsup = detach_parent_notsup
@@ -2487,7 +2577,7 @@ class LinkedImageException(ApiException):
                 self.parent_bad_notabs = parent_bad_notabs
                 self.parent_bad_path = parent_bad_path
                 self.parent_not_in_altroot = parent_not_in_altroot
-                self.recursive_cmd_fail = recursive_cmd_fail
+                self.pkg_op_failed = pkg_op_failed
                 self.self_linked = self_linked
                 self.self_not_child = self_not_child
 
@@ -2576,11 +2666,6 @@ class LinkedImageException(ApiException):
                                 "ppath": ppath,
                             }
 
-                if child_op_failed:
-                        assert lin
-                        err = _("Linked image %(op)s failed for: %(lin)s") % \
-                            {"op": child_op_failed, "lin": lin}
-
                 if child_path_eaccess:
                         if exitrv == None:
                                 exitrv = pkgdefs.EXIT_EACCESS
@@ -2601,6 +2686,16 @@ class LinkedImageException(ApiException):
                 if child_unknown:
                         err = _("Unknown child linked image: %s") % \
                             child_unknown
+
+                if cmd_failed:
+                        (rv, cmd, errout) = cmd_failed
+                        err = _("The following subprocess returned an "
+                            "unexpected exit code of %(rv)d:\n    %(cmd)s") % \
+                            {"rv": rv, "cmd": cmd}
+                        if not errout:
+                                return
+                        err += _("\nAnd generated the following error "
+                            "message:\n%(errout)s" % {"errout": errout})
 
                 if detach_child_notsup:
                         err = _("Linked image type does not support "
@@ -2651,19 +2746,24 @@ class LinkedImageException(ApiException):
                                 "altroot": altroot
                             }
 
-                if recursive_cmd_fail:
-                        if type(recursive_cmd_fail) == list:
-                                recursive_cmd_fail = \
-                                    " ".join(recursive_cmd_fail)
-                        assert type(recursive_cmd_fail) == str
+                if pkg_op_failed:
+                        assert lin
+                        assert len(pkg_op_failed) == 3
+                        op = pkg_op_failed[0]
+                        exitrv = pkg_op_failed[1]
+                        errout = pkg_op_failed[2]
+
                         err = _("""
-Recursive linked image operation failed for child '%(lin)s'.
-The following subprocess returned an unexpected exit code of %(exitrv)d:
-    %(recursive_cmd_fail)s"""
+A '%(op)s' operation failed for child '%(lin)s' with an unexpected
+return value of %(exitrv)d and the following error message:
+%(errout)s
+
+"""
                         ) % {
                             "lin": lin,
+                            "op": op,
                             "exitrv": exitrv,
-                            "recursive_cmd_fail": recursive_cmd_fail,
+                            "errout": errout,
                         }
 
                 if self_linked:
@@ -2699,3 +2799,94 @@ The following subprocess returned an unexpected exit code of %(exitrv)d:
                 for e in self.lix_bundle:
                         bundle_str.append(str(e))
                 return "\n".join(bundle_str)
+
+
+class FreezePkgsException(ApiException):
+        """Used if an argument to pkg freeze isn't valid."""
+
+        def __init__(self, multiversions=None, unmatched_wildcards=None,
+            version_mismatch=None, versionless_uninstalled=None):
+                ApiException.__init__(self)
+                self.multiversions = multiversions
+                self.unmatched_wildcards = unmatched_wildcards
+                self.version_mismatch = version_mismatch
+                self.versionless_uninstalled = versionless_uninstalled
+
+        def __str__(self):
+                res = []
+                if self.multiversions:
+                        s = _("""\
+The following packages were frozen at two different versions by
+the patterns provided.  The package stem and the versions it was frozen at are
+provided:""")
+                        res += [s]
+                        res += ["\t%s\t%s" % (stem, " ".join([
+                            str(v) for v in versions]))
+                            for stem, versions in sorted(self.multiversions)]
+
+                if self.unmatched_wildcards:
+                        s = _("""\
+The following patterns contained wildcards but matched no
+installed packages.""")
+                        res += [s]
+                        res += ["\t%s" % pat for pat in sorted(
+                            self.unmatched_wildcards)]
+
+                if self.version_mismatch:
+                        s = _("""\
+The following patterns attempted to freeze the listed packages
+at a version different from the version at which the packages are installed.""")
+                        res += [s]
+                        for pat in sorted(self.version_mismatch):
+                                res += ["\t%s" % pat]
+                                if len(self.version_mismatch[pat]) > 1:
+                                        res += [
+                                            "\t\t%s" % stem
+                                            for stem
+                                            in self.version_mismatch[pat]
+                                        ]
+
+                if self.versionless_uninstalled:
+                        s = _("""\
+The following patterns don't match installed packages and
+contain no version information.  Uninstalled packages can only be frozen by
+providing a version at which to freeze them.""")
+                        res += [s]
+                        res += ["\t%s" % p for p in sorted(
+                            self.versionless_uninstalled)]
+                return "\n".join(res)
+
+class InvalidFreezeFile(ApiException):
+        """Used to indicate the freeze state file could not be loaded."""
+
+        def __str__(self):
+                return _("The freeze state file '%s' is invalid.") % self.data
+
+class UnknownFreezeFileVersion(ApiException):
+        """Used when the version on the freeze state file isn't the version
+        that's expected."""
+
+        def __init__(self, found_ver, expected_ver, location):
+                self.found = found_ver
+                self.expected = expected_ver
+                self.loc = location
+
+        def __str__(self):
+                return _("The freeze state file '%(loc)s' was expected to have "
+                    "a version of %(exp)s, but its version was %(found)s") % {
+                    "exp": self.expected,
+                    "found": self.found,
+                    "loc": self.loc,
+                }
+
+class UnparsableJSON(ApiException):
+        """Used when JSON has been asked to parse an unparsable string."""
+
+        def __init__(self, s, e):
+                self.unparsable = s
+                self.json_exception = e
+
+        def __str__(self):
+                return _("Because of this error:\n%(err)s\nJSON could not "
+                    "parse the following data:\n%(data)s") % \
+                    {"err": str(self.json_exception), "data": self.unparsable}

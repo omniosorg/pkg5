@@ -23,6 +23,8 @@
 # Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
+include ../Makefile.buildnum
+
 ARCH:sh=	uname -p
 REPO=http://localhost:10000
 MERGEDIR=../../../proto/merge
@@ -44,11 +46,17 @@ USERLAND_REPO=http://localhost:20005
 L10N_REPO=http://localhost:20006
 DESKTOP_REPO=http://localhost:20007
 CDE_REPO=http://localhost:20008
-FOSS_REPO=http://localhost:20009
 CACAO_REPO=http://localhost:20010
 CNS_REPO=http://localhost:20011
 JDMK_REPO=http://localhost:20012
 NVIDIA_REPO=http://localhost:20013
+DEVPRO_REPO=http://localhost:20014
+SOLARIS_RE_REPO=http://localhost:20015
+MAN_REPO=http://localhost:20016
+LDOMS_REPO=http://localhost:20017
+SIC_TEAM_REPO=http://localhost:20018
+SUNVTS_REPO=http://localhost:20019
+JAVA_REPO=http://localhost:20020
 
 INPUT_REPOS = \
     $(ON_REPO) \
@@ -60,27 +68,26 @@ INPUT_REPOS = \
     $(L10N_REPO) \
     $(DESKTOP_REPO) \
     $(CDE_REPO) \
-    $(FOSS_REPO) \
     $(CACAO_REPO) \
     $(CNS_REPO) \
     $(JDMK_REPO) \
-    $(NVIDIA_REPO)
+    $(NVIDIA_REPO) \
+    $(DEVPRO_REPO) \
+    $(SOLARIS_RE_REPO) \
+    $(MAN_REPO) \
+    $(LDOMS_REPO) \
+    $(SIC_TEAM_REPO) \
+    $(SUNVTS_REPO) \
+    $(JAVA_REPO)
 
 ON_EXTRA_REPO=http://localhost:30000
-L10N_EXTRA_REPO=http://localhost:30006
 
 ON_EXTRA_CONTENT = \
     driver/management/bmc \
+    driver/management/ipmi \
     driver/storage/ifp \
     driver/storage/isp \
-    driver/storage/qus \
-    shell/ksh88 \
-    system/header/header-ifp
-
-L10N_EXTRA_CONTENT = \
-    system/font/truetype/fonts-core \
-    system/input-method/iiim/atok \
-    system/input-method/iiim/wnn
+    shell/ksh88
 
 $(MERGEDIR):
 	mkdir -p $(MERGEDIR)
@@ -112,13 +119,12 @@ publish: $(MERGEDIR)
 
 publish_setpublisher: $(SETPUBLISHERDIR)
 	PATH=$(PROTO)/usr/bin:${PATH} PYTHONPATH=$(PYTHONPATH) \
-	    ./set-publisher.sh $(BUILDID:%=-b %) -d $(SETPUBLISHERDIR) \
+	    ./set-publisher.sh $(BRANCHID:%=-b %) -d $(SETPUBLISHERDIR) \
 	    $(JUST_THESE_PKGS:%=-j %) $(EXCLUDE_THESE_PKGS:%=-x %) -p $(REPO) \
 	    $(INPUT_REPOS)
 
 publish_setpublisher-extra: $(SETPUBLISHERDIR)
-	INPUT_REPOS="$(ON_EXTRA_REPO) $(L10N_EXTRA_REPO)" \
-	    JUST_THESE_PKGS="$(ON_EXTRA_CONTENT) $(L10N_EXTRA_CONTENT)" \
+	INPUT_REPOS="$(ON_EXTRA_REPO)" JUST_THESE_PKGS="$(ON_EXTRA_CONTENT)" \
 	    $(MAKE) publish_setpublisher
 
 clobber_setpublisher:

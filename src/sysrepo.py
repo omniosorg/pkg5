@@ -53,7 +53,7 @@ logger = global_settings.logger
 orig_cwd = None
 
 PKG_CLIENT_NAME = "pkg.sysrepo"
-CLIENT_API_VERSION = 60
+CLIENT_API_VERSION = 71
 pkg.client.global_settings.client_name = PKG_CLIENT_NAME
 
 # exit codes
@@ -157,8 +157,9 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT):
 
         msg(_("""\
 Usage:
-        pkg.sysrepo -p <port> [-R image_root] [ -c cache_dir] [-h hostname] [-l logs_dir]
-                [-r runtime_dir] [-s cache_size] [-t template_dir]
+        pkg.sysrepo -p <port> [-R image_root] [ -c cache_dir] [-h hostname]
+                [-l logs_dir] [-r runtime_dir] [-s cache_size] [-t template_dir]
+                [-T http_timeout] [-w http_proxy] [-W https_proxy]
      """))
         sys.exit(retcode)
 
@@ -177,7 +178,7 @@ def _get_image(image_dir):
                     tracker, None, PKG_CLIENT_NAME)
 
                 if api_inst.root != image_dir:
-                        print "Problem getting image at %s" % image_dir
+                        msg(_("Problem getting image at %s") % image_dir)
         except Exception, err:
                 raise SysrepoException(
                     _("Unable to get image at %(dir)s: %(reason)s") %
@@ -188,12 +189,56 @@ def _get_image(image_dir):
         os.chdir(cdir)
         return api_inst
 
-def _get_publisher_info(api_inst):
+def _follow_redirects(uri_list, http_timeout):
+        """ Follow HTTP redirects from servers.  Needed so that we can create
+        RewriteRules for all repository URLs that pkg clients may encounter."""
+
+        ret_uris = set(uri_list)
+
+        class SysrepoRedirectHandler(urllib2.HTTPRedirectHandler):
+                """ A HTTPRedirectHandler that saves URIs we've been
+                redirected to along the path to our eventual destination."""
+                def __init__(self):
+                        self.redirects = set()
+
+                def redirect_request(self, req, fp, code, msg, hdrs, newurl):
+                        self.redirects.add(newurl)
+                        return urllib2.HTTPRedirectHandler.redirect_request(
+                            self, req, fp, code, msg, hdrs, newurl)
+
+        for uri in uri_list:
+                handler = SysrepoRedirectHandler()
+                opener = urllib2.build_opener(handler)
+                if not uri.startswith("http:"):
+                        ret_uris.update([uri])
+                        continue
+
+                # otherwise, open a known url to check for redirects
+                try:
+                        opener.open("%s/versions/0" % uri, None, http_timeout)
+                        ret_uris.update(set(
+                            [item.replace("/versions/0", "").rstrip("/")
+                            for item in handler.redirects]))
+                except urllib2.URLError, err:
+                        # We need to log this, and carry on - the url
+                        # could become available at a later date.
+                        msg(_("WARNING: unable to access %(uri)s when checking "
+                            "for redirects: %(err)s") % locals())
+        return sorted(list(ret_uris))
+
+def _get_publisher_info(api_inst, http_timeout):
         """Returns information about the publishers configured for the given
-        ImageInterface"""
+        ImageInterface.
+
+        The first item returned is a map of uris to tuples, (prefix, cert, key,
+        hash of the uri)
+
+        The second item returned is a list of publisher prefixes which specify
+        no uris."""
 
         # build a map of URI to (pub.prefix, cert, key, hash) tuples
         uri_pub_map = {}
+        no_uri_pubs = []
 
         for pub in api_inst.get_publishers():
                 if pub.disabled:
@@ -201,13 +246,21 @@ def _get_publisher_info(api_inst):
 
                 prefix = pub.prefix
                 repo = pub.repository
-                for repo_uri in repo.mirrors + repo.origins:
-                        uri = repo_uri.uri.rstrip("/")
+                uri_list = _follow_redirects(
+                    [repo_uri.uri.rstrip("/")
+                    for repo_uri in repo.mirrors + repo.origins],
+                    http_timeout)
+
+                for uri in uri_list:
                         # we don't support p5p archives, only directory-based
                         # repositories.  We also don't support file repositories
                         # of < version 4.
-                        if uri.startswith("file:/"):
+                        if uri.startswith("file:"):
                                 urlresult = urllib2.urlparse.urlparse(uri)
+                                if not os.path.exists(urlresult.path):
+                                        raise SysrepoException(
+                                            _("file repository %s does not "
+                                            "exist or is not accessible") % uri)
                                 if not os.path.isdir(urlresult.path):
                                         raise SysrepoException(
                                             _("p5p-based file repository %s "
@@ -228,10 +281,13 @@ def _get_publisher_info(api_inst):
                                     hash))
                         else:
                                 uri_pub_map[uri] = [(prefix, cert, key, hash)]
-        return uri_pub_map
+
+                if not repo.mirrors + repo.origins:
+                        no_uri_pubs.append(prefix)
+        return uri_pub_map, no_uri_pubs
 
 def _write_httpd_conf(runtime_dir, log_dir, template_dir, host, port, cache_dir,
-    cache_size, uri_pub_map):
+    cache_size, uri_pub_map, http_proxy, https_proxy):
         """Writes the apache configuration for the system repository."""
 
         try:
@@ -272,6 +328,24 @@ def _write_httpd_conf(runtime_dir, log_dir, template_dir, host, port, cache_dir,
                         raise SysrepoException(_("invalid cache size: %s") %
                             cache_size)
 
+                # check our proxy arguments - we can use a proxy to handle
+                # incoming http or https requests, but that proxy must use http.
+                for key, val in [("http_proxy", http_proxy),
+                    ("https_proxy", https_proxy)]:
+                        if not val:
+                                continue
+                        try:
+                                result = urllib2.urlparse.urlparse(val)
+                                if result.scheme != "http":
+                                        raise Exception(
+                                            _("scheme must be http"))
+                                if not result.netloc:
+                                        raise Exception("missing netloc")
+                        except Exception, e:
+                                raise SysrepoException(
+                                    _("invalid %(key)s: %(val)s: %(err)s") %
+                                    {"key": key, "val": val, "err": str(e)})
+
                 httpd_conf_template_path = os.path.join(template_dir,
                     SYSREPO_HTTP_TEMPLATE)
                 httpd_conf_template = Template(
@@ -286,7 +360,9 @@ def _write_httpd_conf(runtime_dir, log_dir, template_dir, host, port, cache_dir,
                     host=host,
                     port=port,
                     cache_dir=cache_dir,
-                    cache_size=int(cache_size) * 1024)
+                    cache_size=int(cache_size) * 1024,
+                    http_proxy=http_proxy,
+                    https_proxy=https_proxy)
                 httpd_conf_path = os.path.join(runtime_dir,
                     SYSREPO_HTTP_FILENAME)
                 httpd_conf_file = file(httpd_conf_path, "w")
@@ -352,7 +428,7 @@ def _write_publisher_response(uri_pub_map, htdocs_path, template_dir):
                 for pub in pub_uri_map:
                         for (uri, cert_path, key_path, hash) in \
                             pub_uri_map[pub]:
-                                if uri.startswith("file://"):
+                                if uri.startswith("file:"):
                                         publisher_text = \
                                             publisher_template.render(
                                             uri=uri, pub=pub)
@@ -385,7 +461,7 @@ def _write_versions_response(htdocs_path):
                 raise SysrepoException(
                     _("Unable to write versions response: %s") % err)
 
-def _write_sysrepo_response(api_inst, htdocs_path, uri_pub_map):
+def _write_sysrepo_response(api_inst, htdocs_path, uri_pub_map, no_uri_pubs):
         """Writes a static syspub/0 response for the system repository."""
 
         try:
@@ -397,6 +473,7 @@ def _write_sysrepo_response(api_inst, htdocs_path, uri_pub_map):
                     for uri in uri_pub_map.keys()
                     for info in uri_pub_map[uri]
                 ]
+                pub_prefixes.extend(no_uri_pubs)
                 api_inst.write_syspub(os.path.join(sysrepo_path, "index.html"),
                     pub_prefixes, 0)
         except (OSError, apx.ApiException), err:
@@ -433,7 +510,7 @@ def cleanup_conf(runtime_dir=None):
 
 def refresh_conf(image_root="/", port=None, runtime_dir=None,
     log_dir=None, template_dir=None, host="127.0.0.1", cache_dir=None,
-    cache_size=1024):
+    cache_size=1024, http_timeout=3, http_proxy=None, https_proxy=None):
         """Creates a new configuration for the system repository.
         That is, it copies /var/pkg/pkg5.image file the htdocs
         directory and creates an apache .conf file.
@@ -444,8 +521,17 @@ def refresh_conf(image_root="/", port=None, runtime_dir=None,
                 ret = EXIT_OK
                 cleanup_conf(runtime_dir=runtime_dir)
                 try:
+                        http_timeout = int(http_timeout)
+                except ValueError, err:
+                        raise SysrepoException(
+                            _("invalid value for http_timeout: %s") % err)
+                if http_timeout < 1:
+                        raise SysrepoException(
+                            _("http_timeout must a positive integer"))
+                try:
                         api_inst = _get_image(image_root)
-                        uri_pub_map = _get_publisher_info(api_inst)
+                        uri_pub_map, no_uri_pubs = _get_publisher_info(api_inst,
+                            http_timeout)
                 except SysrepoException, err:
                         raise SysrepoException(
                             _("unable to get publisher information: %s") %
@@ -459,12 +545,14 @@ def refresh_conf(image_root="/", port=None, runtime_dir=None,
                             _("unable to create htdocs dir: %s") % err)
 
                 _write_httpd_conf(runtime_dir, log_dir, template_dir, host,
-                    port, cache_dir, cache_size, uri_pub_map)
+                    port, cache_dir, cache_size, uri_pub_map, http_proxy,
+                    https_proxy)
                 _write_crypto_conf(runtime_dir, uri_pub_map)
                 _write_publisher_response(uri_pub_map, htdocs_path,
                     template_dir)
                 _write_versions_response(htdocs_path)
-                _write_sysrepo_response(api_inst, htdocs_path, uri_pub_map)
+                _write_sysrepo_response(api_inst, htdocs_path, uri_pub_map,
+                    no_uri_pubs)
                 _chown_runtime_dir(runtime_dir)
         except SysrepoException, err:
                 error(err)
@@ -497,10 +585,13 @@ def main_func():
         template_dir = "%s/etc/pkg/sysrepo" % image_root
         runtime_dir = "%s/var/run/pkg/sysrepo" % image_root
         log_dir = "%s/var/log/pkg/sysrepo" % image_root
+        http_timeout = 4
+        http_proxy = None
+        https_proxy = None
 
         try:
-                opts, pargs = getopt.getopt(sys.argv[1:], "c:h:l:p:r:R:s:t:?",
-                    ["help"])
+                opts, pargs = getopt.getopt(sys.argv[1:],
+                    "c:h:l:p:r:R:s:t:T:w:W:?", ["help"])
                 for opt, arg in opts:
                         if opt == "-c":
                                 cache_dir = arg
@@ -518,6 +609,12 @@ def main_func():
                                 cache_size = arg
                         elif opt == "-t":
                                 template_dir = arg
+                        elif opt == "-T":
+                                http_timeout = arg
+                        elif opt == "-w":
+                                http_proxy = arg
+                        elif opt == "-W":
+                                https_proxy = arg
                         else:
                                 usage()
 
@@ -530,7 +627,8 @@ def main_func():
         ret = refresh_conf(image_root=image_root, log_dir=log_dir,
             host=host, port=port, runtime_dir=runtime_dir,
             template_dir=template_dir, cache_dir=cache_dir,
-            cache_size=cache_size)
+            cache_size=cache_size, http_timeout=http_timeout,
+            http_proxy=http_proxy, https_proxy=https_proxy)
         return ret
 
 #
@@ -542,12 +640,7 @@ def handle_errors(func, *args, **kwargs):
         a message and/or exit with an appropriate return code.
         """
 
-        traceback_str = _("""\n
-This is an internal error in pkg(5) version %(version)s.  Please let the
-developers know about this problem by including the information above (and
-this message) when filing a bug at:
-
-%(bug_uri)s""") % { "version": pkg.VERSION, "bug_uri": misc.BUG_URI_CLI }
+        traceback_str = misc.get_traceback_message()
 
         try:
                 # Out of memory errors can be raised as EnvironmentErrors with

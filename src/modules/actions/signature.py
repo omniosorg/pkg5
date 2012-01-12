@@ -140,9 +140,15 @@ class SignatureAction(generic.Action):
                 return res
 
         def get_chain_csize(self, chain):
-                found = False
                 for c, s in zip(self.attrs.get("chain", "").split(),
                     self.attrs.get("chain.csizes", "").split()):
+                        if c == chain:
+                                return int(s)
+                return None
+
+        def get_chain_size(self, chain):
+                for c, s in zip(self.attrs.get("chain", "").split(),
+                    self.attrs.get("chain.sizes", "").split()):
                         if c == chain:
                                 return int(s)
                 return None
@@ -263,7 +269,8 @@ class SignatureAction(generic.Action):
                                 return None, h
                 return None, None
 
-        def verify_sig(self, acts, pub, trust_anchors, required_names=None):
+        def verify_sig(self, acts, pub, trust_anchors, use_crls,
+            required_names=None):
                 """Try to verify this signature.  It can return True or
                 None.  None means we didn't know how to verify this signature.
                 If we do know how to verify the signature but it doesn't verify,
@@ -323,7 +330,7 @@ class SignatureAction(generic.Action):
                         from pkg.client.publisher import CODE_SIGNING_USE
                         # Verify the certificate whose key created this
                         # signature action.
-                        pub.verify_chain(cert, trust_anchors, 0,
+                        pub.verify_chain(cert, trust_anchors, 0, use_crls,
                             required_names=required_names,
                             usages=CODE_SIGNING_USE)
                 except apx.SigningException, e:
@@ -406,7 +413,7 @@ class SignatureAction(generic.Action):
                 if self.hash is not None:
                         res.append((self.name, "certificate", self.hash,
                             self.hash))
-                res.append((self.name, "hash type",
+                res.append((self.name, "algorithm",
                     self.attrs["algorithm"], self.attrs["algorithm"]))
                 res.append((self.name, "signature", self.attrs["value"],
                     self.attrs["value"]))
@@ -458,3 +465,23 @@ class SignatureAction(generic.Action):
                 generic.Action.__setstate__(self, pstate)
                 for name in state:
                         setattr(self, name, state[name])
+
+        def validate(self, fmri=None):
+                """Performs additional validation of action attributes that
+                for performance or other reasons cannot or should not be done
+                during Action object creation.  An ActionError exception (or
+                subclass of) will be raised if any attributes are not valid.
+                This is primarily intended for use during publication or during
+                error handling to provide additional diagonostics.
+
+                'fmri' is an optional package FMRI (object or string) indicating
+                what package contained this action.
+                """
+
+                # 'value' can only be required at publication time since signing
+                # relies on the ability to construct actions without one despite
+                # the fact that it is the key attribute.
+                generic.Action._validate(self, fmri=fmri,
+                    numeric_attrs=("pkg.csize", "pkg.size"),
+                    required_attrs=("value",), single_attrs=("algorithm",
+                    "chash", "value"))

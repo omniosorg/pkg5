@@ -44,13 +44,14 @@
 
 try:
         import calendar
+        import collections
         import datetime
         import errno
         import fnmatch
         import getopt
         import gettext
-        import glob
         import itertools
+        import simplejson as json
         import locale
         import logging
         import os
@@ -65,7 +66,6 @@ try:
         import pkg.client.api as api
         import pkg.client.api_errors as api_errors
         import pkg.client.bootenv as bootenv
-        import pkg.client.history as history
         import pkg.client.progress as progress
         import pkg.client.linkedimage as li
         import pkg.client.publisher as publisher
@@ -74,21 +74,20 @@ try:
         import pkg.version as version
 
         from pkg.client import global_settings
-        from pkg.client.api import IMG_TYPE_ENTIRE, IMG_TYPE_PARTIAL, \
-            IMG_TYPE_USER
-        from pkg.client.debugvalues import DebugValues
-        from pkg.client.history import (RESULT_CANCELED,
-            RESULT_FAILED_BAD_REQUEST, RESULT_FAILED_CONFIGURATION,
-            RESULT_FAILED_LOCKED, RESULT_FAILED_STORAGE,
-            RESULT_FAILED_TRANSPORT, RESULT_FAILED_UNKNOWN,
+        from pkg.client.api import (IMG_TYPE_ENTIRE, IMG_TYPE_PARTIAL,
+            IMG_TYPE_USER, RESULT_CANCELED, RESULT_FAILED_BAD_REQUEST,
+            RESULT_FAILED_CONFIGURATION, RESULT_FAILED_CONSTRAINED,
+            RESULT_FAILED_LOCKED, RESULT_FAILED_STORAGE, RESULT_NOTHING_TO_DO,
+            RESULT_SUCCEEDED, RESULT_FAILED_TRANSPORT, RESULT_FAILED_UNKNOWN,
             RESULT_FAILED_OUTOFMEMORY)
+        from pkg.client.debugvalues import DebugValues
         from pkg.client.pkgdefs import *
         from pkg.misc import EmptyI, msg, PipeError
 except KeyboardInterrupt:
         import sys
         sys.exit(1)
 
-CLIENT_API_VERSION = 60
+CLIENT_API_VERSION = 71
 PKG_CLIENT_NAME = "pkg"
 
 JUST_UNKNOWN = 0
@@ -142,23 +141,28 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False):
 
         basic_usage = {}
         adv_usage = {}
+        priv_usage = {}
 
         basic_cmds = ["refresh", "install", "uninstall", "update", "list",
             "version"]
 
         basic_usage["install"] = _(
-            "[-nvq] [-g path_or_uri ...] [--accept] [--licenses]\n"
-            "            [--no-be-activate] [--no-index] [--no-refresh] [--deny-new-be |\n"
-            "            --require-new-be] [--be-name name] [--reject pkg_fmri_pattern ... ]\n"
-            "            pkg_fmri_pattern ...")
+            "[-nvq] [-g path_or_uri ...] [--accept]\n"
+            "            [--licenses] [--no-be-activate] [--no-index] [--no-refresh]\n"
+            "            [--no-backup-be | --require-backup-be] [--backup-be-name name]\n"
+            "            [--deny-new-be | --require-new-be] [--be-name name]\n"
+            "            [--reject pkg_fmri_pattern ... ] pkg_fmri_pattern ...")
         basic_usage["uninstall"] = _(
-            "[-nvq] [--no-be-activate] [--no-index] [--deny-new-be |\n"
-            "            --require-new-be] [--be-name name] pkg_fmri_pattern ...")
+            "[-nvq] [--no-be-activate] [--no-index]\n"
+            "            [--no-backup-be | --require-backup-be] [--backup-be-name]\n"
+            "            [--deny-new-be | --require-new-be] [--be-name name]\n"
+            "            pkg_fmri_pattern ...")
         basic_usage["update"] = _(
-            "[-fnvq] [-g path_or_uri ...] [--accept] [--licenses]\n"
-            "            [--no-be-activate] [--no-index] [--no-refresh] [--deny-new-be |\n"
-            "            --require-new-be] [--be-name name] [--reject pkg_fmri_pattern ...]\n"
-            "            [pkg_fmri_pattern ...]")
+            "[-fnvq] [-g path_or_uri ...] [--accept]\n"
+            "            [--licenses] [--no-be-activate] [--no-index] [--no-refresh]\n"
+            "            [--no-backup-be | --require-backup-be] [--backup-be-name]\n"
+            "            [--deny-new-be | --require-new-be] [--be-name name]\n"
+            "            [--reject pkg_fmri_pattern ...] [pkg_fmri_pattern ...]")
         basic_usage["list"] = _(
             "[-Hafnsuv] [-g path_or_uri ...] [--no-refresh]\n"
             "            [pkg_fmri_pattern ...]")
@@ -174,6 +178,10 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False):
             "fix",
             "revert",
             "",
+            "mediator",
+            "set-mediator",
+            "unset-mediator",
+            "",
             "variant",
             "change-variant",
             "",
@@ -182,6 +190,9 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False):
             "",
             "avoid",
             "unavoid",
+            "",
+            "freeze",
+            "unfreeze",
             "",
             "property",
             "set-property",
@@ -199,13 +210,6 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False):
             "rebuild-index",
             "update-format",
             "image-create",
-            "",
-            "attach-linked",
-            "detach-linked",
-            "list-linked",
-            "audit-linked",
-            "sync-linked",
-            "property-linked",
         ]
 
         adv_usage["info"] = \
@@ -220,8 +224,10 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False):
         adv_usage["verify"] = _("[-Hqv] [pkg_fmri_pattern ...]")
         adv_usage["fix"] = _("[--accept] [--licenses] [pkg_fmri_pattern ...]")
         adv_usage["revert"] = _(
-            "[-nv] [--no-be-activate] [--be-name name] [--deny-new-be |\n"
-            "            --require-new-be] (--tagged tag-name ... | path-to-file ...)")
+            "[-nv] [--no-be-activate]\n"
+            "            [--no-backup-be | --require-backup-be] [--backup-be-name name]\n"
+            "            [--deny-new-be | --require-new-be] [--be-name name]\n"
+            "            (--tagged tag-name ... | path-to-file ...)")
 
         adv_usage["image-create"] = _(
             "[-FPUfz] [--force] [--full|--partial|--user] [--zone]\n"
@@ -229,21 +235,39 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False):
             "            [--variant <variant_spec>=<instance> ...]\n"
             "            [-g uri|--origin=uri ...] [-m uri|--mirror=uri ...]\n"
             "            [--facet <facet_spec>=(True|False) ...]\n"
-            "            (-p|--publisher) [<name>=]<repo_uri> dir")
+            "            [(-p|--publisher) [<name>=]<repo_uri>] dir")
         adv_usage["change-variant"] = _(
-            "[-nvq] [-g path_or_uri ...] [--accept] [--licenses]\n"
-            "            [--no-be-activate] [--deny-new-be | --require-new-be]\n"
-            "            [--be-name name] <variant_spec>=<instance> ...")
+            "[-nvq] [-g path_or_uri ...]\n"
+            "            [--accept] [--licenses] [--no-be-activate]\n"
+            "            [--no-backup-be | --require-backup-be] [--backup-be-name name]\n"
+            "            [--deny-new-be | --require-new-be] [--be-name name]\n"
+            "            <variant_spec>=<instance> ...")
 
         adv_usage["change-facet"] = _(
-            "[-nvq] [-g path_or_uri ...] [--accept] [--licenses]\n"
-            "            [--no-be-activate] [--deny-new-be | --require-new-be]\n"
-            "            [--be-name name] <facet_spec>=[True|False|None] ...")
+            "[-nvq] [-g path_or_uri ...]\n"
+            "            [--accept] [--licenses] [--no-be-activate]\n"
+            "            [--no-backup-be | --require-backup-be] [--backup-be-name name]\n"
+            "            [--deny-new-be | --require-new-be] [--be-name name]\n"
+            "            <facet_spec>=[True|False|None] ...")
+
+        adv_usage["mediator"] = _("[-aH] [-F format] [<mediator> ...]")
+        adv_usage["set-mediator"] = _(
+            "[-nv] [-I <implementation>]\n"
+            "            [-V <version>] [--no-be-activate]\n"
+            "            [--no-backup-be | --require-backup-be] [--backup-be-name name]\n"
+            "            [--deny-new-be | --require-new-be] [--be-name name]\n"
+            "            <mediator> ...")
+        adv_usage["unset-mediator"] = _("[-nvIV] [--no-be-activate]\n"
+            "            [--no-backup-be | --require-backup-be] [--backup-be-name]\n"
+            "            [--deny-new-be | --require-new-be] [--be-name name]\n"
+            "            <mediator> ...")
 
         adv_usage["variant"] = _("[-H] [<variant_spec>]")
         adv_usage["facet"] = ("[-H] [<facet_spec>]")
         adv_usage["avoid"] = _("[pkg_fmri_pattern] ...")
         adv_usage["unavoid"] = _("[pkg_fmri_pattern] ...")
+        adv_usage["freeze"] = _("[-n] [-c reason] [pkg_fmri_pattern] ...")
+        adv_usage["unfreeze"] = _("[-n] [pkg_name_pattern] ...")
         adv_usage["set-property"] = _("propname propvalue")
         adv_usage["add-property-value"] = _("propname propvalue")
         adv_usage["remove-property-value"] = _("propname propvalue")
@@ -259,7 +283,7 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False):
             "            [--reset-uuid] [--non-sticky] [--sticky]\n"
             "            [--search-after=publisher]\n"
             "            [--search-before=publisher]\n"
-            "            [--search-first=publisher]\n"
+            "            [--search-first]\n"
             "            [--approve-ca-cert=path_to_CA]\n"
             "            [--revoke-ca-cert=hash_of_CA_to_revoke]\n"
             "            [--unset-ca-cert=hash_of_CA_to_unset]\n"
@@ -276,22 +300,22 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False):
         adv_usage["rebuild-index"] = ""
         adv_usage["update-format"] = ""
 
-        adv_usage["list-linked"] = _("-H")
-        adv_usage["attach-linked"] = _(
-            "[-fnvq] [--accept] [--licenses] [--no-index] [--no-refresh]\n"
-            "            [--no-pkg-updates] [--linked-md-only]\n"
+        priv_usage["list-linked"] = _("-H")
+        priv_usage["attach-linked"] = _(
+            "[-fnvq] [--accept] [--licenses] [--no-index]\n"
+            "            [--no-refresh] [--no-pkg-updates] [--linked-md-only]\n"
             "            [--allow-relink]\n"
             "            [--prop-linked <propname>=<propvalue> ...]\n"
             "            (-c|-p) <li-name> <dir>")
-        adv_usage["detach-linked"] = _(
+        priv_usage["detach-linked"] = _(
             "[-fnvq] [-a|-l <li-name>] [--linked-md-only]")
-        adv_usage["property-linked"] = _("[-H] [-l <li-name>] [propname ...]")
-        adv_usage["audit-linked"] = _("[-a|-l <li-name>]")
-        adv_usage["sync-linked"] = _(
-            "[-nvq] [--accept] [--licenses] [--no-index] [--no-refresh]\n"
-            "            [--no-parent-sync] [--no-pkg-updates]\n"
+        priv_usage["property-linked"] = _("[-H] [-l <li-name>] [propname ...]")
+        priv_usage["audit-linked"] = _("[-a|-l <li-name>]")
+        priv_usage["sync-linked"] = _(
+            "[-nvq] [--accept] [--licenses] [--no-index]\n"
+            "            [--no-refresh] [--no-parent-sync] [--no-pkg-updates]\n"
             "            [--linked-md-only] [-a|-l <name>]")
-        adv_usage["set-property-linked"] = _(
+        priv_usage["set-property-linked"] = _(
             "[-nvq] [--accept] [--licenses] [--no-index] [--no-refresh]\n"
             "            [--no-parent-sync] [--no-pkg-updates]\n"
             "            [--linked-md-only] <propname>=<propvalue> ...")
@@ -316,10 +340,15 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False):
                                 else:
                                         logger.error("        pkg %s" % cmd)
         if not full and cmd:
-                logger.error("Usage:")
+                if cmd not in priv_usage:
+                        logger.error(_("Usage:"))
+                else:
+                        logger.error(_("Private subcommand usage, options "
+                            "subject to change at any time:"))
                 combined = {}
                 combined.update(basic_usage)
                 combined.update(adv_usage)
+                combined.update(priv_usage)
                 print_cmds([cmd], combined)
                 sys.exit(retcode)
 
@@ -394,7 +423,7 @@ def list_inventory(op, api_inst, pargs,
         elif summary:
                 fmt_str = "%-55s %s"
         else:
-                fmt_str = "%-55s %-20s %s"
+                fmt_str = "%-49s %-26s %s"
 
         # Each pattern in pats can be a partial or full FMRI, so
         # extract the individual components.  These patterns are
@@ -450,7 +479,7 @@ def list_inventory(op, api_inst, pargs,
         try:
                 res = api_inst.get_pkg_list(pkg_list, patterns=pargs,
                     raise_unmatched=True, repos=origins, variants=variants)
-                for pt, summ, cats, states in res:
+                for pt, summ, cats, states, attrs in res:
                         found = True
                         if not omit_headers:
                                 if verbose:
@@ -504,24 +533,24 @@ def list_inventory(op, api_inst, pargs,
                         if pkg_list == api_inst.LIST_INSTALLED:
                                 error(_("no packages installed"))
                                 api_inst.log_operation_end(
-                                    result=history.RESULT_NOTHING_TO_DO)
+                                    result=RESULT_NOTHING_TO_DO)
                                 return EXIT_OOPS
                         elif pkg_list == api_inst.LIST_INSTALLED_NEWEST:
                                 error(_("no packages installed or available "
                                     "for installation"))
                                 api_inst.log_operation_end(
-                                    result=history.RESULT_NOTHING_TO_DO)
+                                    result=RESULT_NOTHING_TO_DO)
                                 return EXIT_OOPS
                         elif pkg_list == api_inst.LIST_UPGRADABLE:
                                 error(_("no packages are installed or are "
                                     "installed and have newer versions "
                                     "available"))
                                 api_inst.log_operation_end(
-                                    result=history.RESULT_NOTHING_TO_DO)
+                                    result=RESULT_NOTHING_TO_DO)
                                 return EXIT_OOPS
                         else:
                                 api_inst.log_operation_end(
-                                    result=history.RESULT_NOTHING_TO_DO)
+                                    result=RESULT_NOTHING_TO_DO)
                                 return EXIT_OOPS
 
                 api_inst.log_operation_end()
@@ -536,7 +565,7 @@ def list_inventory(op, api_inst, pargs,
                         for i in e.illegal:
                                 error(i)
                         api_inst.log_operation_end(
-                            result=history.RESULT_FAILED_BAD_REQUEST)
+                            result=RESULT_FAILED_BAD_REQUEST)
                         return EXIT_OOPS
 
                 if found:
@@ -550,7 +579,7 @@ def list_inventory(op, api_inst, pargs,
                             ", ".join(e.notfound), cmd=op)
                 elif pkg_list == api.ImageInterface.LIST_INSTALLED_NEWEST:
                         error(_("no packages matching '%s' allowed by "
-                            "installed incorporations or image variants that "
+                            "installed incorporations, or image variants that "
                             "are known or installed") % \
                             ", ".join(e.notfound), cmd=op)
                         logger.error("Use -af to allow all versions.")
@@ -566,24 +595,27 @@ def list_inventory(op, api_inst, pargs,
                         # Only some patterns matched.
                         api_inst.log_operation_end()
                         return EXIT_PARTIAL
-                api_inst.log_operation_end(result=history.RESULT_NOTHING_TO_DO)
+                api_inst.log_operation_end(result=RESULT_NOTHING_TO_DO)
                 return EXIT_OOPS
 
-def get_tracker(quiet=False, verbose=0):
+def get_tracker(parsable_version=None, quiet=False, verbose=0):
         if quiet:
-                progresstracker = progress.QuietProgressTracker()
+                progresstracker = progress.QuietProgressTracker(
+                    parsable_version=parsable_version)
         else:
                 try:
                         progresstracker = \
                             progress.FancyUNIXProgressTracker(
-                                quiet=quiet, verbose=verbose)
+                                parsable_version=parsable_version, quiet=quiet,
+                                verbose=verbose)
                 except progress.ProgressTrackerException:
                         progresstracker = progress.CommandLineProgressTracker(
-                            quiet=quiet, verbose=verbose)
+                            parsable_version=parsable_version, quiet=quiet,
+                            verbose=verbose)
         return progresstracker
 
 def fix_image(api_inst, args):
-        progresstracker = get_tracker(False)
+        progresstracker = get_tracker(quiet=False)
 
         opts, pargs = getopt.getopt(args, "", ["accept", "licenses"])
 
@@ -688,17 +720,13 @@ def fix_image(api_inst, args):
                     api_errors.SigningException,
                     api_errors.InvalidResourceLocation,
                     api_errors.ConflictingActionErrors), e:
-                        logger.error("\n")
                         logger.error(str(e))
                 except api_errors.ImageFormatUpdateNeeded, e:
                         format_update_error(e)
                         api_inst.log_operation_end(
-                            result=history.RESULT_FAILED_CONFIGURATION)
+                            result=RESULT_FAILED_CONFIGURATION)
                         return EXIT_OOPS
                 except api_errors.PlanLicenseErrors, e:
-                        # Prepend a newline because otherwise the exception will
-                        # be printed on the same line as the spinner.
-                        logger.error("\n")
                         error(_("The following packages require their "
                             "licenses to be accepted before they can be "
                             "repaired: "))
@@ -709,7 +737,7 @@ def fix_image(api_inst, args):
                             "display all of the related licenses, use the "
                             "--licenses option."))
                         api_inst.log_operation_end(
-                            result=history.RESULT_FAILED_CONSTRAINED)
+                            result=RESULT_FAILED_CONSTRAINED)
                         return EXIT_LICENSE
                 except api_errors.RebootNeededOnLiveImageException:
                         error(_("Requested \"fix\" operation would affect "
@@ -717,18 +745,17 @@ def fix_image(api_inst, args):
                             "Please retry this operation on an alternate boot "
                             "environment."))
                         api_inst.log_operation_end(
-                            result=history.RESULT_FAILED_CONSTRAINED)
+                            result=RESULT_FAILED_CONSTRAINED)
                         return EXIT_NOTLIVE
                 except Exception, e:
                         api_inst.log_operation_end(error=e)
                         raise
 
-                progresstracker.verify_done()
                 if not success:
                         api_inst.log_operation_end(
-                            result=history.RESULT_FAILED_UNKNOWN)
+                            result=RESULT_FAILED_UNKNOWN)
                         return EXIT_OOPS
-                api_inst.log_operation_end(result=history.RESULT_SUCCEEDED)
+                api_inst.log_operation_end(result=RESULT_SUCCEEDED)
         return EXIT_OK
 
 def verify_image(api_inst, args):
@@ -759,7 +786,7 @@ def verify_image(api_inst, args):
         any_errors = False
         processed = False
         notfound = EmptyI
-        progresstracker = get_tracker(quiet, verbose)
+        progresstracker = get_tracker(quiet=quiet, verbose=verbose)
         try:
                 res = api_inst.get_pkg_list(api.ImageInterface.LIST_INSTALLED,
                     patterns=pargs, raise_unmatched=True, return_fmris=True)
@@ -794,14 +821,13 @@ def verify_image(api_inst, args):
                                 # Nothing more to do.
                                 continue
 
-                        # Could this be moved into the progresstracker?
                         if display_headers:
                                 display_headers = False
-                                msg(_("Verifying: %(pkg_name)-50s "
-                                    "%(result)7s") % { "pkg_name": _("PACKAGE"),
+                                msg(_("%(pkg_name)-70s %(result)7s") % {
+                                    "pkg_name": _("PACKAGE"),
                                     "result": _("STATUS") })
 
-                        msg(_("%(pkg_name)-50s %(result)7s") % {
+                        msg(_("%(pkg_name)-70s %(result)7s") % {
                             "pkg_name": pfmri.get_pkg_stem(),
                             "result": result })
 
@@ -827,9 +853,6 @@ def verify_image(api_inst, args):
                 format_update_error(e)
                 return EXIT_OOPS
 
-        if processed:
-                progresstracker.verify_done()
-
         if notfound:
                 if processed:
                         # Ensure a blank line is inserted after verify output.
@@ -840,9 +863,9 @@ def verify_image(api_inst, args):
 
                 if processed:
                         if any_errors:
-                                msg2 = "See above for\nverification failures."
+                                msg2 = _("See above for\nverification failures.")
                         else:
-                                msg2 = "No packages failed\nverification."
+                                msg2 = _("No packages failed\nverification.")
                         logger.error(_("\nAll other patterns matched "
                             "installed packages.  %s" % msg2))
                 any_errors = True
@@ -873,8 +896,8 @@ def __display_plan(api_inst, verbose):
         if isinstance(verbose, int):
                 disp = ["basic"]
                 if verbose > 0:
-                        disp.extend(["fmris", "services", "variants/facets",
-                            "boot-archive"])
+                        disp.extend(["fmris", "mediators", "services",
+                            "variants/facets", "boot-archive"])
                 if verbose > 1:
                         disp.append("actions")
                 if verbose > 2:
@@ -887,90 +910,270 @@ def __display_plan(api_inst, verbose):
 
         plan = api_inst.describe()
 
-        a, r, i, c = [], [], [], []
+        if api_inst.is_liveroot and not api_inst.is_zone and \
+            not plan.is_active_root_be:
+                # Warn the user since this isn't likely what they wanted.
+                if plan.new_be:
+                        logger.warning(_("""\
+WARNING: The boot environment being modified is not the active one.  Changes
+made in the active BE will not be reflected on the next boot.
+"""))
+                else:
+                        logger.warning(_("""\
+WARNING: The boot environment being modified is not the active one.  Changes
+made will not be reflected on the next boot.
+"""))
 
+        a, r, i, c = [], [], [], []
         for src, dest in plan.get_changes():
                 if dest is None:
                         r.append((src, dest))
                 elif src is None:
                         i.append((src, dest))
-                elif str(src) != str(dest):
+                elif src != dest:
                         c.append((src, dest))
                 else:
                         a.append((src, dest))
-        v = plan.get_varcets()
 
         def bool_str(val):
                 if val:
                         return _("Yes")
                 return _("No")
 
+        status = []
+        varcets = plan.get_varcets()
+        mediators = plan.get_mediators()
         if "basic" in disp:
-                def cond_show(s, v):
+                def cond_show(s1, s2, v):
                         if v:
-                                logger.info(s % v)
+                                status.append((s1, s2 % v))
 
-                cond_show(_("                Packages to remove: %5d"), len(r))
-                cond_show(_("               Packages to install: %5d"), len(i))
-                cond_show(_("                Packages to update: %5d"), len(c))
-                cond_show(_("         Variants/facets to change: %5d"), len(v))
-                if len(v):
-                        s = "                Packages to change: %5d"
+                cond_show(_("Packages to remove:"), "%d", len(r))
+                cond_show(_("Packages to install:"), "%d", len(i))
+                cond_show(_("Packages to update:"), "%d", len(c))
+                cond_show(_("Mediators to change:"), "%d", len(mediators))
+                cond_show(_("Variants/Facets to change:"), "%d", len(varcets))
+
+                if verbose:
+                        # Only show space information in verbose mode.
+                        abytes = plan.bytes_added
+                        if abytes:
+                                status.append((_("Estimated space available:"),
+                                    misc.bytes_to_str(plan.bytes_avail)))
+                                status.append((
+                                    _("Estimated space to be consumed:"),
+                                    misc.bytes_to_str(plan.bytes_added)))
+
+                if varcets or mediators:
+                        cond_show(_("Packages to change:"), "%d", len(a))
                 else:
-                        s = "                   Packages to fix: %5d"
-                cond_show(s, len(a))
+                        cond_show(_("Packages to fix:"), "%d", len(a))
 
-                logger.info(_("           Create boot environment: %5s") %
-                    bool_str(plan.new_be))
+                status.append((_("Create boot environment:"),
+                    bool_str(plan.new_be)))
 
                 if plan.new_be and (verbose or not plan.activate_be):
                         # Only show activation status if verbose or if new BE
                         # will not be activated.
-                        logger.info(_("         Activate boot environment: %5s") %
-                            bool_str(plan.activate_be))
+                        status.append((_("Activate boot environment:"),
+                            bool_str(plan.activate_be)))
+
+                status.append((_("Create backup boot environment:"),
+                    bool_str(plan.backup_be)))
 
                 if not plan.new_be:
-                        cond_show(_("               Services to restart: %5d"),
+                        cond_show(_("Services to change:"), "%d",
                             len(plan.get_services()))
 
         if "boot-archive" in disp:
-                logger.info(_("              Rebuild boot archive: %5s") %
-                    bool_str(plan.update_boot_archive))
+                status.append((_("Rebuild boot archive:"),
+                    bool_str(plan.update_boot_archive)))
 
-        if "variants/facets" in disp and v:
+        # Right-justify all status strings based on length of longest string.
+        rjust_status = max(len(s[0]) for s in status)
+        rjust_value = max(len(s[1]) for s in status)
+        for s in status:
+                logger.info("%s %s" % (s[0].rjust(rjust_status),
+                    s[1].rjust(rjust_value)))
+
+        if status:
+                # Ensure there is a blank line between status information and
+                # remainder.
+                logger.info("")
+
+        if "mediators" in disp and mediators:
+                logger.info(_("Changed mediators:"))
+                for x in mediators:
+                        logger.info("  %s" % x)
+
+        if "variants/facets" in disp and varcets:
                 logger.info(_("Changed variants/facets:"))
-                for x in v:
+                for x in varcets:
                         logger.info("  %s" % x)
 
         if "solver-errors" in disp:
-                logger.info(_("Solver dependency errors:"))
+                first = True
                 for l in plan.get_solver_errors():
+                        if first:
+                                logger.info(_("Solver dependency errors:"))
+                                first = False
                         logger.info(l)
 
         if "fmris" in disp:
-                if len(c) + len(r) + len(i) > 0:
-                        logger.info(_("Changed fmris:"))
-                        for src, dest in r + i + c:
-                                logger.info("  %s -> %s", src, dest)
+                changed = collections.defaultdict(list)
+                for src, dest in itertools.chain(r, i, c):
+                        if src and dest:
+                                if src.publisher != dest.publisher:
+                                        pparent = "%s -> %s" % (src.publisher,
+                                            dest.publisher)
+                                else:
+                                        pparent = dest.publisher
+                                pname = dest.pkg_stem
+                                pver = "%s -> %s" % (src.fmri.version,
+                                    dest.fmri.version)
+                        elif dest:
+                                pparent = dest.publisher
+                                pname = dest.pkg_stem
+                                pver = "None -> %s" % dest.fmri.version
+                        else:
+                                pparent = src.publisher
+                                pname = src.pkg_stem
+                                pver = "%s -> None" % src.fmri.version
+
+                        changed[pparent].append((pname, pver))
+
+                if changed:
+                        logger.info(_("Changed packages:"))
+                        last_parent = None
+                        for pparent, pname, pver in (
+                            (pparent, pname, pver)
+                            for pparent in sorted(changed)
+                            for pname, pver in changed[pparent]
+                        ):
+                                if pparent != last_parent:
+                                        logger.info(pparent)
+
+                                logger.info("  %s" % pname)
+                                logger.info("    %s" % pver)
+                                last_parent = pparent
+
                 if len(a):
                         logger.info(_("Affected fmris:"))
                         for src, dest in a:
                                 logger.info("  %s", src)
 
-        if "services" in disp:
-                if not plan.new_be:
-                        logger.info(_("Services:"))
-                        l = plan.get_services()
-                        if l:
-                                for a in l:
-                                        logger.info("  %s" % a)
-                        else:
-                                logger.info(_("  None"))
+        if "services" in disp and not plan.new_be:
+                last_action = None
+                for action, smf_fmri in plan.get_services():
+                        if last_action is None:
+                                logger.info("Services:")
+                        if action != last_action:
+                                logger.info("  %s:" % action)
+                        logger.info("    %s" % smf_fmri)
+                        last_action = action
 
         if "actions" in disp:
-                logger.info("Actions")
+                logger.info("Actions:")
                 for a in plan.get_actions():
                         logger.info("  %s" % a)
+
+def __display_parsable_plan(api_inst, parsable_version,
+    child_images=None):
+        """Display the parsable version of the plan."""
+
+        assert parsable_version == 0, "parsable_version was %r" % \
+            parsable_version
+        plan = api_inst.describe()
+        # Set the default values.
+        added_fmris = []
+        removed_fmris = []
+        changed_fmris = []
+        affected_fmris = []
+        backup_be_created = False
+        new_be_created = False
+        backup_be_name = None
+        be_name = None
+        boot_archive_rebuilt = False
+        be_activated = True
+        space_available = None
+        space_required = None
+        facets_changed = []
+        variants_changed = []
+        services_affected = []
+        mediators_changed = []
+        licenses = []
+        if child_images is None:
+                child_images = []
+
+        if plan:
+                for rem, add in plan.get_changes():
+                        assert rem is not None or add is not None
+                        if rem is not None and add is not None:
+                                # Lists of lists are used here becuase json will
+                                # convert lists of tuples into lists of lists
+                                # anyway.
+                                if rem.fmri == add.fmri:
+                                        affected_fmris.append(str(rem))
+                                else:
+                                        changed_fmris.append(
+                                            [str(rem), str(add)])
+                        elif rem is not None:
+                                removed_fmris.append(str(rem))
+                        else:
+                                added_fmris.append(str(add))
+                variants_changed, facets_changed = plan.get_parsable_varcets()
+                backup_be_created = plan.backup_be
+                new_be_created = plan.new_be
+                backup_be_name = plan.backup_be_name
+                be_name = plan.be_name
+                boot_archive_rebuilt = plan.update_boot_archive
+                be_activated = plan.activate_be
+                space_available = plan.bytes_avail
+                space_required = plan.bytes_added
+                services_affected = plan.get_services()
+                mediators_changed = plan.get_parsable_mediators()
+                for dfmri, src_li, dest_li, acc, disp in \
+                    plan.get_licenses():
+                        src_tup = None
+                        if src_li:
+                                src_tup = (str(src_li.fmri), src_li.license,
+                                    src_li.get_text(), src_li.must_accept,
+                                    src_li.must_display)
+                        dest_tup = None
+                        if dest_li:
+                                dest_tup = (str(dest_li.fmri),
+                                    dest_li.license, dest_li.get_text(),
+                                    dest_li.must_accept, dest_li.must_display)
+                        licenses.append(
+                            (str(dfmri), src_tup, dest_tup))
+                        api_inst.set_plan_license_status(dfmri, dest_li.license,
+                            displayed=True)
+        ret = {
+            "create-backup-be": backup_be_created,
+            "create-new-be": new_be_created,
+            "backup-be-name": backup_be_name,
+            "be-name": be_name,
+            "boot-archive-rebuild": boot_archive_rebuilt,
+            "activate-be": be_activated,
+            "space-available": space_available,
+            "space-required": space_required,
+            "remove-packages": sorted(removed_fmris),
+            "add-packages": sorted(added_fmris),
+            "change-packages": sorted(changed_fmris),
+            "affect-packages": sorted(affected_fmris),
+            "change-facets": sorted(facets_changed),
+            "change-variants": sorted(variants_changed),
+            "affect-services": sorted(services_affected),
+            "change-mediators": sorted(mediators_changed),
+            "image-name": None,
+            "child-images": child_images,
+            "version": parsable_version,
+            "licenses": sorted(licenses)
+        }
+        # The image name for the parent image is always None.  If this image is
+        # a child image, then the image name will be set when the parent image
+        # processes this dictionary.
+        logger.info(json.dumps(ret))
 
 def display_plan_licenses(api_inst, show_all=False, show_req=True):
         """Helper function to display licenses for the current plan.
@@ -999,8 +1202,8 @@ def display_plan_licenses(api_inst, show_all=False, show_req=True):
                 # Mark license as having been displayed.
                 api_inst.set_plan_license_status(pfmri, lic, displayed=True)
 
-def display_plan(api_inst, noexecute, op, quiet, show_licenses,
-    stage, verbose):
+def display_plan(api_inst, child_image_plans, noexecute, op, parsable_version,
+    quiet, show_licenses, stage, verbose):
 
         plan = api_inst.describe()
         if not plan:
@@ -1023,10 +1226,14 @@ def display_plan(api_inst, noexecute, op, quiet, show_licenses,
                 msg(s)
                 return
 
-        display_plan_licenses(api_inst, show_all=show_licenses)
+        if parsable_version is None:
+                display_plan_licenses(api_inst, show_all=show_licenses)
 
         if not quiet:
                 __display_plan(api_inst, verbose)
+        if parsable_version is not None:
+                __display_parsable_plan(api_inst, parsable_version,
+                    child_image_plans)
 
 def __api_prepare(operation, api_inst, accept=False):
         # Exceptions which happen here are printed in the above level, with
@@ -1065,6 +1272,9 @@ def __api_prepare(operation, api_inst, accept=False):
                 return EXIT_OOPS
         except api_errors.ImageFormatUpdateNeeded, e:
                 format_update_error(e)
+                return EXIT_OOPS
+        except api_errors.ImageInsufficentSpace, e:
+                error(str(e))
                 return EXIT_OOPS
         except KeyboardInterrupt:
                 raise
@@ -1124,6 +1334,9 @@ def __api_execute_plan(operation, api_inst):
                 rval = EXIT_OOPS
         except api_errors.WrapSuccessfulIndexingException:
                 raise
+        except api_errors.ImageInsufficentSpace, e:
+                error(str(e))
+                rval = EXIT_OOPS
         except Exception, e:
                 error(_("An unexpected error happened during "
                     "%s: %s") % (operation, e))
@@ -1143,7 +1356,7 @@ def __api_execute_plan(operation, api_inst):
                                     "editable files and directories were\n"
                                     "salvaged while executing the requested "
                                     "package operation; they\nhave been moved "
-                                    "to the displayed location:\n"))
+                                    "to the displayed location in the image:\n"))
                                 for opath, spath in salvaged:
                                         logger.error("  %s -> %s" % (opath,
                                             spath))
@@ -1159,7 +1372,7 @@ def __api_execute_plan(operation, api_inst):
         return rval
 
 def __api_alloc(imgdir, exact_match, pkg_image_used, quiet, runid=-1):
-        progresstracker = get_tracker(quiet)
+        progresstracker = get_tracker(quiet=quiet)
 
         def qv(val):
                 # Escape shell metacharacters; '\' must be escaped first to
@@ -1172,27 +1385,6 @@ def __api_alloc(imgdir, exact_match, pkg_image_used, quiet, runid=-1):
                 return api.ImageInterface(imgdir, CLIENT_API_VERSION,
                     progresstracker, None, PKG_CLIENT_NAME,
                     exact_match=exact_match, runid=runid)
-        except api_errors.ImageLocationAmbiguous, e:
-                # This should only be raised if exact_match is False.
-                assert exact_match is False
-                error(e)
-                if pkg_image_used:
-                        logger.error(_("(Image location set by $PKG_IMAGE.)"))
-                # This attempts to rebuild the pkg command so users can
-                # just copy & paste the correct one, but it can't perfectly
-                # handle all possible shell escaping requirements or detect
-                # executions using sudo, pfexec, etc.  It's a best effort
-                # convenience feature.
-                logger.error(_("""
-To use this image, execute pkg again as follows:
-
-pkg -R %(root)s %(args)s
-
-To use the system image, execute pkg again as follows:
-
-pkg -R / %(args)s
-""") % { "root": qv(e.root), "args": " ".join(map(qv, sys.argv[1:]))})
-                return
         except api_errors.ImageNotFoundException, e:
                 if e.user_specified:
                         if pkg_image_used:
@@ -1278,13 +1470,16 @@ Cannot remove '%s' due to the following packages that depend on it:"""
                 error("\n" + txt, cmd=op)
                 if verbose:
                         logger.error("\n".join(e.verbose_info))
+                if e.invalid_mediations:
+                        # Bad user input for mediation.
+                        return EXIT_BADOPT
                 return EXIT_OOPS
 
-        if e_type in (api_errors.CertificateError,
+        if isinstance(e, (api_errors.CertificateError,
             api_errors.UnknownErrors,
             api_errors.PermissionsException,
             api_errors.InvalidPropertyValue,
-            api_errors.InvalidResourceLocation):
+            api_errors.InvalidResourceLocation)):
                 # Prepend a newline because otherwise the exception will
                 # be printed on the same line as the spinner.
                 error("\n" + str(e), cmd=op)
@@ -1305,8 +1500,9 @@ Cannot remove '%s' due to the following packages that depend on it:"""
         # NOTREACHED
 
 def __api_op(_op, _api_inst, _accept=False, _li_ignore=None, _noexecute=False,
-    _origins=None, _quiet=False, _review_release_notes=False,
-    _show_licenses=False, _stage=API_STAGE_DEFAULT, _verbose=0, **kwargs):
+    _origins=None, _parsable_version=None, _quiet=False,
+    _review_release_notes=False, _show_licenses=False, _stage=API_STAGE_DEFAULT,
+    _verbose=0, **kwargs):
         """Do something that involves the api.
 
         Arguments prefixed with '_' are primarily used within this
@@ -1321,8 +1517,9 @@ def __api_op(_op, _api_inst, _accept=False, _li_ignore=None, _noexecute=False,
 
         # All the api interface functions that we inovke have some
         # common arguments.  Set those up now.
-        kwargs["accept"] = _accept
-        kwargs["li_ignore"] = _li_ignore
+        if _op != PKG_OP_REVERT:
+                kwargs["accept"] = _accept
+                kwargs["li_ignore"] = _li_ignore
         kwargs["noexecute"] = _noexecute
         if _origins != None:
                 kwargs["repos"] = _origins
@@ -1342,6 +1539,8 @@ def __api_op(_op, _api_inst, _accept=False, _li_ignore=None, _noexecute=False,
                 api_plan_func = _api_inst.gen_plan_detach
         elif _op == PKG_OP_INSTALL:
                 api_plan_func = _api_inst.gen_plan_install
+        elif _op == PKG_OP_REVERT:
+                api_plan_func = _api_inst.gen_plan_revert
         elif _op == PKG_OP_SYNC:
                 api_plan_func = _api_inst.gen_plan_sync
         elif _op == PKG_OP_UNINSTALL:
@@ -1353,29 +1552,38 @@ def __api_op(_op, _api_inst, _accept=False, _li_ignore=None, _noexecute=False,
 
         first_plan = True
         plan_displayed = False
+        child_plans = []
         try:
                 for pd in api_plan_func(**kwargs):
                         if not first_plan:
                                 #
                                 # we don't display anything for child images
                                 # since they currently do their own display
-                                # work.
+                                # work unless parsable output is requested.
                                 #
+                                child_plans.append(pd)
                                 continue
 
                         # the first plan description is always for ourself.
                         first_plan = False
-                        display_plan(_api_inst, _noexecute, _op, _quiet,
-                            _show_licenses, _stage, _verbose)
-                        plan_displayed = True
+                        if _parsable_version is None:
+                                display_plan(_api_inst, [], _noexecute,
+                                    _op, _parsable_version, _quiet,
+                                    _show_licenses, _stage, _verbose)
+                                plan_displayed = True
         except:
                 rv = __api_plan_exception(_op, _noexecute, _verbose, _api_inst)
                 if rv != EXIT_OK:
                         return rv
 
         if not plan_displayed:
-                display_plan(_api_inst, _noexecute, _op, _quiet,
-                    _show_licenses, _stage, _verbose)
+                try:
+                        display_plan(_api_inst, child_plans, _noexecute, _op,
+                            _parsable_version, _quiet, _show_licenses, _stage,
+                            _verbose)
+                except api_errors.ApiException, e:
+                        error(e, cmd=_op)
+                        return EXIT_OOPS
 
         stuff_to_do = not _api_inst.planned_nothingtodo()
         if not stuff_to_do:
@@ -1404,18 +1612,18 @@ def __api_op(_op, _api_inst, _accept=False, _li_ignore=None, _noexecute=False,
         return ret_code
 
 def opts_err_opt1_req_opt2(opt1, opt2, op):
-        msg = _("%(opt1)s may only be used in combination with %(opt2)s") % \
+        txt = _("%(opt1)s may only be used in combination with %(opt2)s") % \
             {"opt1": opt1, "opt2": opt2}
-        usage(msg, cmd=op)
+        usage(txt, cmd=op)
 
 def opts_err_incompat(opt1, opt2, op):
-        msg = _("the %(opt1)s and %(opt2)s options may not be combined") % \
+        txt = _("the %(opt1)s and %(opt2)s options may not be combined") % \
             {"opt1": opt1, "opt2": opt2}
-        usage(msg, cmd=op)
+        usage(txt, cmd=op)
 
 def opts_err_repeated(opt1, op):
-        msg = _("option '%s' repeated") % (opt1)
-        usage(msg, cmd=op)
+        txt = _("option '%s' repeated") % (opt1)
+        usage(txt, cmd=op)
 
 def opts_table_cb_beopts(op, api_inst, opts, opts_new):
 
@@ -1424,14 +1632,33 @@ def opts_table_cb_beopts(op, api_inst, opts, opts_new):
         del opts_new["deny_new_be"]
         opts_new["new_be"] = None
 
-        if opts["require_new_be"] and opts["deny_new_be"]:
+        if (opts["be_name"] or opts["require_new_be"]) and opts["deny_new_be"]:
                 opts_err_incompat("--require-new-be", "--deny-new-be", op)
 
-        # create a new key called "new_be" in the options array
-        if opts["require_new_be"]:
+        # create a new key called "backup_be" in the options array
+        if opts["require_new_be"] or opts["be_name"]:
                 opts_new["new_be"] = True
         if opts["deny_new_be"]:
                 opts_new["new_be"] = False
+
+        # synthesize require_backup_be and no_backup_be into backup_be
+        del opts_new["require_backup_be"]
+        del opts_new["no_backup_be"]
+        opts_new["backup_be"] = None
+
+        if (opts["require_backup_be"] or opts["backup_be_name"]) and \
+            opts["no_backup_be"]:
+                opts_err_incompat("--require-backup-be", "--no-backup-be", op)
+
+        if (opts["require_backup_be"] or opts["backup_be_name"]) and \
+            (opts["require_new_be"] or opts["be_name"]):
+                opts_err_incompat("--require-backup-be", "--require-new-be", op)
+
+        # create a new key called "backup_be" in the options array
+        if opts["require_backup_be"] or opts["backup_be_name"]:
+                opts_new["backup_be"] = True
+        if opts["no_backup_be"]:
+                opts_new["backup_be"] = False
 
 def opts_table_cb_li_ignore(op, api_inst, opts, opts_new):
 
@@ -1522,7 +1749,7 @@ def opts_table_cb_li_target(op, api_inst, opts, opts_new):
         if "require_new_be" in opts and opts["require_new_be"]:
                 opts_err_incompat(arg1, "--require-new-be", op)
         if "reject_pats" in opts and opts["reject_pats"]:
-                opts_err_incompat(arg1, "--require", op)
+                opts_err_incompat(arg1, "--reject", op)
         if "origins" in opts and opts["origins"]:
                 opts_err_incompat(arg1, "-g", op)
 
@@ -1570,6 +1797,18 @@ def opts_table_cb_nqv(op, api_inst, opts, opts_new):
         if opts["verbose"] and opts["quiet"]:
                 opts_err_incompat("-v", "-q", op)
 
+def opts_table_cb_parsable(op, api_inst, opts, opts_new):
+        if opts["parsable_version"] and opts.get("verbose", False):
+                opts_err_incompat("--parsable", "-v", op)
+        if opts["parsable_version"]:
+                try:
+                        opts_new["parsable_version"] = int(
+                            opts["parsable_version"])
+                except ValueError:
+                        usage(_("--parsable expects an integer argument."),
+                            cmd=op)
+                opts_new["quiet"] = True
+
 def opts_table_cb_origins(op, api_inst, opts, opts_new):
         origins = set()
         for o in opts["origins"]:
@@ -1605,7 +1844,7 @@ def opts_table_cb_md_only(op, api_inst, opts, opts_new):
         if not opts["li_md_only"]:
                 return
 
-        # li_md_only implies li_pkg_updates
+        # li_md_only implies no li_pkg_updates
         if "li_pkg_updates" in opts:
                 opts_new["li_pkg_updates"] = False
 
@@ -1624,6 +1863,8 @@ def opts_table_cb_md_only(op, api_inst, opts, opts_new):
                 opts_err_incompat(arg1, "--require-new-be", op)
         if "li_parent_sync" in opts and not opts["li_parent_sync"]:
                 opts_err_incompat(arg1, "--no-parent-sync", op)
+        if "reject_pats" in opts and opts["reject_pats"]:
+                opts_err_incompat(arg1, "--reject", op)
 
 def opts_cb_list(op, api_inst, opts, opts_new):
         if opts_new["origins"] and not opts_new["list_newest"]:
@@ -1660,10 +1901,13 @@ def opts_cb_list(op, api_inst, opts, opts_new):
 #
 opts_table_beopts = [
     opts_table_cb_beopts,
-    ("",  "be-name=",        "be_name",              None),
-    ("",  "deny-new-be",     "deny_new_be",          False),
-    ("",  "no-be-activate",  "be_activate",          True),
-    ("",  "require-new-be",  "require_new_be",       False),
+    ("",  "backup-be-name=",   "backup_be_name",     None),
+    ("",  "be-name=",          "be_name",            None),
+    ("",  "deny-new-be",       "deny_new_be",        False),
+    ("",  "no-backup-be",      "no_backup_be",       False),
+    ("",  "no-be-activate",    "be_activate",        True),
+    ("",  "require-backup-be", "require_backup_be",  False),
+    ("",  "require-new-be",    "require_new_be",     False),
 ]
 
 opts_table_force = [
@@ -1736,6 +1980,11 @@ opts_table_quiet = [
     ("q", "",                "quiet",                False),
 ]
 
+opts_table_parsable = [
+    opts_table_cb_parsable,
+    ("", "parsable=",        "parsable_version",     None),
+]
+
 opts_table_nqv = \
     opts_table_quiet + \
     opts_table_verbose + \
@@ -1767,6 +2016,7 @@ opts_install = \
     opts_table_no_index + \
     opts_table_no_refresh + \
     opts_table_nqv + \
+    opts_table_parsable + \
     opts_table_origins + \
     []
 
@@ -1791,6 +2041,41 @@ opts_attach_linked = \
     ("p", "",               "attach_parent",        False),
 ]
 
+opts_list_mediator = \
+    opts_table_no_headers + \
+    [
+    ("a", "",                "list_available",      False),
+    ("F", "output-format",   "output_format",       None)
+]
+
+opts_revert = \
+    opts_table_beopts + \
+    opts_table_nqv + \
+    opts_table_parsable + \
+    [
+    ("",  "tagged",          "tagged",               False),
+]
+
+opts_set_mediator = \
+    opts_table_beopts + \
+    opts_table_no_index + \
+    opts_table_nqv + \
+    opts_table_parsable + \
+    [
+    ("I", "implementation",  "med_implementation",   None),
+    ("V", "version",         "med_version",          None)
+]
+
+opts_unset_mediator = \
+    opts_table_beopts + \
+    opts_table_no_index + \
+    opts_table_nqv + \
+    opts_table_parsable + \
+    [
+    ("I", "",               "med_implementation",   False),
+    ("V", "",               "med_version",          False)
+]
+
 # "set-property-linked" cmd inherits all "install" cmd options
 opts_set_property_linked = \
     opts_install + \
@@ -1813,6 +2098,7 @@ opts_uninstall = \
     opts_table_li_ignore + \
     opts_table_no_index + \
     opts_table_nqv + \
+    opts_table_parsable + \
     opts_table_stage
 
 opts_audit_linked = \
@@ -1854,13 +2140,14 @@ opts_list_inventory = \
 ]
 
 def change_variant(op, api_inst, pargs,
-    accept, be_activate, be_name, li_ignore, li_parent_sync, new_be,
-    noexecute, origins, quiet, refresh_catalogs, reject_pats,
-    show_licenses, update_index, verbose):
+    accept, backup_be, backup_be_name, be_activate, be_name, li_ignore,
+    li_parent_sync, new_be, noexecute, origins, parsable_version, quiet,
+    refresh_catalogs, reject_pats, show_licenses, update_index, verbose):
         """Attempt to change a variant associated with an image, updating
         the image contents as necessary."""
 
-        api_inst.progresstracker = get_tracker(quiet, verbose)
+        api_inst.progresstracker = get_tracker(
+            parsable_version=parsable_version, quiet=quiet, verbose=verbose)
 
         xrval, xres = get_fmri_args(api_inst, reject_pats, cmd=op)
         if not xrval:
@@ -1888,21 +2175,24 @@ def change_variant(op, api_inst, pargs,
                 variants[name] = value
 
         return __api_op(op, api_inst, _accept=accept, _li_ignore=li_ignore,
-            _noexecute=noexecute, _origins=origins, _quiet=quiet,
+            _noexecute=noexecute, _origins=origins,
+            _parsable_version=parsable_version, _quiet=quiet,
             _show_licenses=show_licenses, _verbose=verbose,
+            backup_be=backup_be, backup_be_name=backup_be_name,
             be_activate=be_activate, be_name=be_name,
             li_parent_sync=li_parent_sync, new_be=new_be,
             refresh_catalogs=refresh_catalogs, reject_list=reject_pats,
             update_index=update_index, variants=variants)
 
 def change_facet(op, api_inst, pargs,
-    accept, be_activate, be_name, li_ignore, li_parent_sync, new_be,
-    noexecute, origins, quiet, refresh_catalogs, reject_pats,
-    show_licenses, update_index, verbose):
+    accept, backup_be, backup_be_name, be_activate, be_name, li_ignore,
+    li_parent_sync, new_be, noexecute, origins, parsable_version, quiet,
+    refresh_catalogs, reject_pats, show_licenses, update_index, verbose):
         """Attempt to change the facets as specified, updating
         image as necessary"""
 
-        api_inst.progresstracker = get_tracker(quiet, verbose)
+        api_inst.progresstracker = get_tracker(
+            parsable_version=parsable_version, quiet=quiet, verbose=verbose)
 
         xrval, xres = get_fmri_args(api_inst, reject_pats, cmd=op)
         if not xrval:
@@ -1937,28 +2227,31 @@ def change_facet(op, api_inst, pargs,
 
                 v = allowed_values[value.upper()]
 
-                if v is None and name in facets:
-                        del facets[name]
+                if v is None:
+                        facets.pop(name, None)
                 else:
                         facets[name] = v
 
         return __api_op(op, api_inst, _accept=accept, _li_ignore=li_ignore,
-            _noexecute=noexecute, _origins=origins, _quiet=quiet,
+            _noexecute=noexecute, _origins=origins,
+            _parsable_version=parsable_version, _quiet=quiet,
             _show_licenses=show_licenses, _verbose=verbose,
+            backup_be=backup_be, backup_be_name=backup_be_name,
             be_activate=be_activate, be_name=be_name,
             li_parent_sync=li_parent_sync, new_be=new_be, facets=facets,
             refresh_catalogs=refresh_catalogs, reject_list=reject_pats,
             update_index=update_index)
 
 def install(op, api_inst, pargs,
-    accept, be_activate, be_name, li_ignore, li_parent_sync, new_be,
-    noexecute, origins, quiet, refresh_catalogs, reject_pats,
-    show_licenses, update_index, verbose):
+    accept, backup_be, backup_be_name, be_activate, be_name, li_ignore,
+    li_parent_sync, new_be, noexecute, origins, parsable_version, quiet,
+    refresh_catalogs, reject_pats, show_licenses, update_index, verbose):
 
         """Attempt to take package specified to INSTALLED state.  The operands
         are interpreted as glob patterns."""
 
-        api_inst.progresstracker = get_tracker(quiet, verbose)
+        api_inst.progresstracker = get_tracker(
+            parsable_version=parsable_version, quiet=quiet, verbose=verbose)
 
         if not pargs:
                 usage(_("at least one package name required"), cmd=op)
@@ -1974,17 +2267,20 @@ def install(op, api_inst, pargs,
         return __api_op(op, api_inst, _accept=accept, _li_ignore=li_ignore,
             _noexecute=noexecute, _origins=origins, _quiet=quiet,
             _show_licenses=show_licenses, _verbose=verbose,
+            backup_be=backup_be, backup_be_name=backup_be_name,
             be_activate=be_activate, be_name=be_name,
-            li_parent_sync=li_parent_sync, new_be=new_be, pkgs_inst=pargs,
+            li_parent_sync=li_parent_sync, new_be=new_be,
+            _parsable_version=parsable_version, pkgs_inst=pargs,
             refresh_catalogs=refresh_catalogs, reject_list=reject_pats,
             update_index=update_index)
 
 def uninstall(op, api_inst, pargs,
-    be_activate, be_name, new_be, li_ignore, update_index, noexecute,
-    quiet, verbose, stage):
+    be_activate, backup_be, backup_be_name, be_name, new_be, li_ignore,
+    update_index, noexecute, parsable_version, quiet, verbose, stage):
         """Attempt to take package specified to DELETED state."""
 
-        api_inst.progresstracker = get_tracker(quiet, verbose)
+        api_inst.progresstracker = get_tracker(
+            parsable_version=parsable_version, quiet=quiet, verbose=verbose)
 
         if not pargs:
                 usage(_("at least one package name required"), cmd=op)
@@ -1998,17 +2294,20 @@ def uninstall(op, api_inst, pargs,
 
         return __api_op(op, api_inst, _li_ignore=li_ignore,
             _noexecute=noexecute, _quiet=quiet, _stage=stage,
-            _verbose=verbose, be_activate=be_activate, be_name=be_name,
-            new_be=new_be, pkgs_to_uninstall=pargs, update_index=update_index)
+            _verbose=verbose, backup_be=backup_be,
+            backup_be_name=backup_be_name, be_activate=be_activate,
+            be_name=be_name, new_be=new_be, _parsable_version=parsable_version,
+            pkgs_to_uninstall=pargs, update_index=update_index)
 
 def update(op, api_inst, pargs,
-    accept, be_activate, be_name, force, li_ignore, li_parent_sync,
-    new_be, noexecute, origins, quiet, refresh_catalogs, reject_pats,
-    show_licenses, stage, update_index, verbose):
+    accept, backup_be, backup_be_name, be_activate, be_name, force, li_ignore,
+    li_parent_sync, new_be, noexecute, origins, parsable_version, quiet,
+    refresh_catalogs, reject_pats, show_licenses, stage, update_index, verbose):
         """Attempt to take all installed packages specified to latest
         version."""
 
-        api_inst.progresstracker = get_tracker(quiet, verbose)
+        api_inst.progresstracker = get_tracker(
+            parsable_version=parsable_version, quiet=quiet, verbose=verbose)
 
         rval, res = get_fmri_args(api_inst, pargs, cmd=op)
         if not rval:
@@ -2034,58 +2333,182 @@ def update(op, api_inst, pargs,
                 review_release_notes = True
 
         return __api_op(op, api_inst, _accept=accept, _li_ignore=li_ignore,
-            _noexecute=noexecute, _origins=origins, _quiet=quiet,
+            _noexecute=noexecute, _origins=origins,
+            _parsable_version=parsable_version, _quiet=quiet,
             _review_release_notes=review_release_notes,
             _show_licenses=show_licenses, _stage=stage, _verbose=verbose,
+            backup_be=backup_be, backup_be_name=backup_be_name,
             be_activate=be_activate, be_name=be_name, force=force,
             li_parent_sync=li_parent_sync, new_be=new_be,
             pkgs_update=pkgs_update, refresh_catalogs=refresh_catalogs,
             reject_list=reject_pats, update_index=update_index)
 
-def revert(api_inst, args):
+def revert(op, api_inst, pargs,
+    backup_be, backup_be_name, be_activate, be_name, new_be, noexecute,
+    parsable_version, quiet, tagged, verbose):
         """Attempt to revert files to their original state, either
         via explicit path names or via tagged contents."""
 
-        op = "revert"
-        opts, pargs = getopt.getopt(args, "nvq", ["tagged", "deny-new-be",
-            "no-be-activate", "require-new-be", "be-name="])
-
-        quiet = tagged = noexecute = False
-        verbose = 0
-        new_be = None
-        be_activate = True
-        be_name = None
-
-        for opt, arg in opts:
-                if opt == "-n":
-                        noexecute = True
-                elif opt == "-v":
-                        verbose = verbose + 1
-                elif opt == "-q":
-                        quiet = True
-                elif opt == "--deny-new-be":
-                        new_be = False
-                elif opt == "--no-be-activate":
-                        be_activate = False
-                elif opt == "--require-new-be":
-                        new_be = True
-                elif opt == "--be-name":
-                        be_name = arg
-                elif opt == "--tagged":
-                        tagged = True
-
         if not pargs:
                 usage(_("at least one file path or tag name required"), cmd=op)
+
+        api_inst.progresstracker = get_tracker(
+            parsable_version=parsable_version, quiet=quiet, verbose=verbose)
+
+        return __api_op(op, api_inst, _noexecute=noexecute, _quiet=quiet,
+            _verbose=verbose, be_activate=be_activate, be_name=be_name,
+            new_be=new_be, _parsable_version=parsable_version, args=pargs,
+            tagged=tagged)
+
+def list_mediators(op, api_inst, pargs, omit_headers, output_format,
+    list_available):
+        """Display configured or available mediator version(s) and
+        implementation(s)."""
+
+        subcommand = "mediator"
+        if output_format is None:
+                output_format = "default"
+
+        # mediator information is returned as a dictionary of dictionaries
+        # of version and implementation indexed by mediator name.
+        mediations = collections.defaultdict(list)
+        if list_available:
+                gen_mediators = api_inst.gen_available_mediators()
+        else:
+                # Configured mediator information
+                gen_mediators = (
+                    (mediator, mediation)
+                    for mediator, mediation in api_inst.mediators.iteritems()
+                )
+
+        # Set minimum widths for mediator and version columns by using the
+        # length of the column headers and values to be displayed.
+        mediators = set()
+        max_mname_len = len(_("MEDIATOR"))
+        max_vsrc_len = len(_("VER. SRC."))
+        max_version_len = len(_("VERSION"))
+        max_isrc_len = len(_("IMPL. SRC."))
+        for mname, values in gen_mediators:
+                max_mname_len = max(max_mname_len, len(mname))
+                med_version = values.get("version", "")
+                max_version_len = max(max_version_len, len(med_version))
+                mediators.add(mname)
+                mediations[mname].append(values)
+
+        requested_mediators = set(pargs)
+        if requested_mediators:
+                found = mediators & requested_mediators
+                notfound = requested_mediators - found
+        else:
+                found = mediators
+                notfound = set()
+
+        def gen_listing():
+                for mediator, mediation in (
+                    (mname, mentry)
+                    for mname in sorted(found)
+                    for mentry in mediations[mname]
+                ):
+                        med_impl = mediation.get("implementation")
+                        med_impl_ver = mediation.get("implementation-version")
+                        if output_format == "default" and med_impl and \
+                            med_impl_ver:
+                                med_impl += "(@%s)" % med_impl_ver
+                        yield {
+                            "mediator": mediator,
+                            "version": mediation.get("version"),
+                            "version-source": mediation.get("version-source"),
+                            "implementation": med_impl,
+                            "implementation-source": mediation.get(
+                                "implementation-source"),
+                            "implementation-version": med_impl_ver,
+                        }
+
+        #    MEDIATOR VER. SRC.  VERSION IMPL. SRC. IMPLEMENTATION IMPL. VER.
+        #    <med_1>  <src_1>    <ver_1> <src_1>    <impl_1_value> <impl_1_ver>
+        #    <med_2>  <src_2>    <ver_2> <src_2>    <impl_2_value> <impl_2_ver>
+        #    ...
+        field_data = {
+            "mediator" : [("default", "json", "tsv"), _("MEDIATOR"), ""],
+            "version" : [("default", "json", "tsv"), _("VERSION"), ""],
+            "version-source": [("default", "json", "tsv"), _("VER. SRC."), ""],
+            "implementation" : [("default", "json", "tsv"), _("IMPLEMENTATION"),
+                ""],
+            "implementation-source": [("default", "json", "tsv"),
+                _("IMPL. SRC."), ""],
+            "implementation-version" : [("json", "tsv"), _("IMPL. VER."), ""],
+        }
+        desired_field_order = (_("MEDIATOR"), _("VER. SRC."), _("VERSION"),
+            _("IMPL. SRC."), _("IMPLEMENTATION"), _("IMPL. VER."))
+
+        # Default output formatting.
+        def_fmt = "%-" + str(max_mname_len) + "s %-" + str(max_vsrc_len) + \
+            "s %-" + str(max_version_len) + "s %-" + str(max_isrc_len) + "s %s"
+
+        if found or (not requested_mediators and output_format == "default"):
+                sys.stdout.write(misc.get_listing(desired_field_order,
+                    field_data, gen_listing(), output_format, def_fmt,
+                    omit_headers, escape_output=False))
+
+        if found and notfound:
+                return EXIT_PARTIAL
+        if requested_mediators and not found:
+                if output_format == "default":
+                        # Don't pollute other output formats.
+                        error(_("no matching mediators found"),
+                            cmd=subcommand)
+                return EXIT_OOPS
+        return EXIT_OK
+
+def set_mediator(op, api_inst, pargs,
+    backup_be, backup_be_name, be_activate, be_name, med_implementation,
+    med_version, new_be, noexecute, parsable_version, quiet, update_index,
+    verbose):
+        """Set the version and/or implementation for the specified
+        mediator(s)."""
+
+        if not pargs:
+                usage(_("at least one mediator must be specified"),
+                    cmd=op)
+        if not (med_version or med_implementation):
+                usage(_("a mediator version and/or implementation must be "
+                    "specified using -V and -I"), cmd=op)
+
         if verbose > 2:
                 DebugValues.set_value("plan", "True")
 
-        api_inst.progresstracker = get_tracker(quiet, verbose)
+        api_inst.progresstracker = get_tracker(
+            parsable_version=parsable_version, quiet=quiet, verbose=verbose)
+
+        # Now set version and/or implementation for all matching mediators.
+        # The user may specify 'None' as a special value to explicitly
+        # request mediations that do not have the related component.
+        mediators = collections.defaultdict(dict)
+        for m in pargs:
+                if med_version == "":
+                        # Request reset of version.
+                        mediators[m]["version"] = None
+                elif med_version == "None":
+                        # Explicit selection of no version.
+                        mediators[m]["version"] = ""
+                elif med_version:
+                        mediators[m]["version"] = med_version
+
+                if med_implementation == "":
+                        # Request reset of implementation.
+                        mediators[m]["implementation"] = None
+                elif med_implementation == "None":
+                        # Explicit selection of no implementation.
+                        mediators[m]["implementation"] = ""
+                elif med_implementation:
+                        mediators[m]["implementation"] = med_implementation
 
         stuff_to_do = None
         try:
-                for pd in api_inst.gen_plan_revert(pargs, tagged=tagged,
-                    noexecute=noexecute, be_name=be_name, new_be=new_be,
-                    be_activate=be_activate):
+                for pd in api_inst.gen_plan_set_mediators(mediators,
+                    noexecute=noexecute, backup_be=backup_be,
+                    backup_be_name=backup_be_name, be_name=be_name,
+                    new_be=new_be, be_activate=be_activate):
                         continue
                 stuff_to_do = not api_inst.planned_nothingtodo()
         except:
@@ -2097,17 +2520,107 @@ def revert(api_inst, args):
         if not stuff_to_do:
                 if verbose:
                         __display_plan(api_inst, verbose)
-                msg(_("No files need to be reverted."))
+                if parsable_version is not None:
+                        try:
+                                __display_parsable_plan(api_inst,
+                                    parsable_version)
+                        except api_errors.ApiException, e:
+                                error(e, cmd=op)
+                                return EXIT_OOPS
+                else:
+                        msg(_("No changes required."))
                 return EXIT_NOP
 
         if not quiet:
                 __display_plan(api_inst, verbose)
+        if parsable_version is not None:
+                try:
+                        __display_parsable_plan(api_inst, parsable_version)
+                except api_errors.ApiException, e:
+                        error(e, cmd=op)
+                        return EXIT_OOPS
 
         if noexecute:
                 return EXIT_OK
 
-        # Exceptions which happen here are printed in the above level, with
-        # or without some extra decoration done here.
+        ret_code = __api_prepare(op, api_inst, accept=False)
+        if ret_code != EXIT_OK:
+                return ret_code
+
+        ret_code = __api_execute_plan(op, api_inst)
+
+        return ret_code
+
+def unset_mediator(op, api_inst, pargs,
+    backup_be, backup_be_name, be_activate, be_name, med_implementation,
+    med_version, new_be, noexecute, parsable_version, quiet, update_index,
+    verbose):
+        """Unset the version and/or implementation for the specified
+        mediator(s)."""
+
+        if not pargs:
+                usage(_("at least one mediator must be specified"),
+                    cmd=op)
+        if verbose > 2:
+                DebugValues.set_value("plan", "True")
+
+        api_inst.progresstracker = get_tracker(
+            parsable_version=parsable_version, quiet=quiet, verbose=verbose)
+
+        # Build dictionary of mediators to unset based on input.
+        mediators = collections.defaultdict(dict)
+        if not (med_version or med_implementation):
+                # Unset both if nothing specific requested.
+                med_version = True
+                med_implementation = True
+
+        # Now unset version and/or implementation for all matching mediators.
+        for m in pargs:
+                if med_version:
+                        mediators[m]["version"] = None
+                if med_implementation:
+                        mediators[m]["implementation"] = None
+
+        stuff_to_do = None
+        try:
+                for pd in api_inst.gen_plan_set_mediators(mediators,
+                    noexecute=noexecute, backup_be=backup_be,
+                    backup_be_name=backup_be_name, be_name=be_name,
+                    new_be=new_be, be_activate=be_activate):
+                        continue
+                stuff_to_do = not api_inst.planned_nothingtodo()
+        except:
+                ret_code = __api_plan_exception(op, api_inst, noexecute,
+                    verbose)
+                if ret_code != EXIT_OK:
+                        return ret_code
+
+        if not stuff_to_do:
+                if verbose:
+                        __display_plan(api_inst, verbose)
+                if parsable_version is not None:
+                        try:
+                                __display_parsable_plan(api_inst,
+                                    parsable_version)
+                        except api_errors.ApiException, e:
+                                error(e, cmd=op)
+                                return EXIT_OOPS
+                else:
+                        msg(_("No changes required."))
+                return EXIT_NOP
+
+        if not quiet:
+                __display_plan(api_inst, verbose)
+        if parsable_version is not None:
+                try:
+                        __display_parsable_plan(api_inst, parsable_version)
+                except api_errors.ApiException, e:
+                        error(e, cmd=op)
+                        return EXIT_OOPS
+
+        if noexecute:
+                return EXIT_OK
+
         ret_code = __api_prepare(op, api_inst, accept=False)
         if ret_code != EXIT_OK:
                 return ret_code
@@ -2125,7 +2638,7 @@ def avoid(api_inst, args):
                 api_inst.avoid_pkgs(args)
                 return EXIT_OK
         except:
-                return __api_plan_exception("avoid", api_inst, False, 0)
+                return __api_plan_exception("avoid", False, 0, api_inst)
 
 def unavoid(api_inst, args):
         """Remove the specified packages from the avoid list"""
@@ -2136,7 +2649,7 @@ def unavoid(api_inst, args):
                 api_inst.avoid_pkgs(args, unavoid=True)
                 return EXIT_OK
         except:
-                return __api_plan_exception("unavoid", api_inst, False, 0)
+                return __api_plan_exception("unavoid", False, 0, api_inst)
 
 def __display_avoids(api_inst):
         """Display the current avoid list, and the pkgs that are tracking
@@ -2149,6 +2662,109 @@ def __display_avoids(api_inst):
                 else:
                         logger.info("    %s" % a[0])
 
+        return EXIT_OK
+
+def freeze(api_inst, args):
+        """Place the specified packages on the frozen list"""
+
+        opts, pargs = getopt.getopt(args, "Hc:n")
+        comment = None
+        display_headers = True
+        dry_run = False
+        for opt, arg in opts:
+                if opt == "-H":
+                        display_headers = False
+                elif opt == "-c":
+                        comment = arg
+                elif opt == "-n":
+                        dry_run = True
+
+        if comment and not pargs:
+                usage(usage_error=_("At least one package to freeze must be "
+                    "given when -c is used."), cmd="freeze")
+        if not display_headers and pargs:
+                usage(usage_error=_("-H may only be specified when listing the "
+                    "currently frozen packages."))
+        if not pargs:
+                return __display_cur_frozen(api_inst, display_headers)
+
+        try:
+                pfmris = api_inst.freeze_pkgs(pargs, dry_run=dry_run,
+                    comment=comment)
+                for pfmri in pfmris:
+                        vertext = pfmri.version.get_short_version()
+                        ts = pfmri.version.get_timestamp()
+                        if ts:
+                                vertext += ":" + pfmri.version.timestr
+                        logger.info(_("%(name)s was frozen at %(ver)s") %
+                            {"name": pfmri.pkg_name, "ver": vertext})
+                return EXIT_OK
+        except api_errors.FreezePkgsException, e:
+                error("\n%s" % e, cmd="freeze")
+                return EXIT_OOPS
+        except:
+                return __api_plan_exception("freeze", False, 0, api_inst)
+
+def unfreeze(api_inst, args):
+        """Remove the specified packages from the frozen list"""
+
+        opts, pargs = getopt.getopt(args, "Hn")
+        display_headers = True
+        dry_run = False
+        for opt, arg in opts:
+                if opt == "-H":
+                        display_headers = False
+                elif opt == "-n":
+                        dry_run = True
+
+        if not pargs:
+                return __display_cur_frozen(api_inst, display_headers)
+
+        try:
+                pkgs = api_inst.freeze_pkgs(pargs, unfreeze=True,
+                    dry_run=dry_run)
+                if not pkgs:
+                        return EXIT_NOP
+                for s in pkgs:
+                        logger.info(_("%s was unfrozen.") % s)
+                return EXIT_OK
+        except:
+                return __api_plan_exception("unfreeze", False, 0, api_inst)
+
+def __display_cur_frozen(api_inst, display_headers):
+        """Display the current frozen list"""
+
+        try:
+                lst = sorted(api_inst.get_frozen_list())
+        except api_errors.ApiException, e:
+                error(e)
+                return EXIT_OOPS
+        if len(lst) == 0:
+                return EXIT_OK
+
+        fmt = "%(name)-18s %(ver)-27s %(time)-24s %(comment)s"
+        if display_headers:
+                logger.info(fmt % {
+                    "name": _("NAME"),
+                    "ver": _("VERSION"),
+                    "time": _("DATE"),
+                    "comment": _("COMMENT")
+                })
+        
+        for pfmri, comment, timestamp in lst:
+                vertext = pfmri.version.get_short_version()
+                ts = pfmri.version.get_timestamp()
+                if ts:
+                        vertext += ":" + pfmri.version.timestr
+                if not comment:
+                        comment = "None"
+                logger.info(fmt % {
+                    "name": pfmri.pkg_name,
+                    "comment": comment,
+                    "time": time.strftime("%d %b %Y %H:%M:%S %Z",
+                                time.localtime(timestamp)),
+                    "ver": vertext
+                })
         return EXIT_OK
 
 def __convert_output(a_str, match):
@@ -2498,7 +3114,7 @@ def info(api_inst, args):
 
         try:
                 ret = api_inst.info(pargs, info_local, info_needed,
-                    repos=origins)
+                    ranked=info_remote, repos=origins)
         except api_errors.ImageFormatUpdateNeeded, e:
                 format_update_error(e)
                 return EXIT_OOPS
@@ -2534,22 +3150,27 @@ def info(api_inst, args):
                         continue
 
                 state = ""
-                if api.PackageInfo.OBSOLETE in pi.states:
-                        state = _("Obsolete")
-                elif api.PackageInfo.RENAMED in pi.states:
-                        state = _("Renamed")
-
-                if state:
-                        fmt = "%%s (%s)" % state
-                else:
-                        fmt = "%s"
-
                 if api.PackageInfo.INSTALLED in pi.states:
-                        state = fmt % _("Installed")
+                        state = _("Installed")
                 elif api.PackageInfo.UNSUPPORTED in pi.states:
-                        state = fmt % _("Unsupported")
+                        state = _("Unsupported")
                 else:
-                        state = fmt % _("Not installed")
+                        state = _("Not installed")
+
+                lparen = False
+                if api.PackageInfo.OBSOLETE in pi.states:
+                        state += " (%s" % _("Obsolete")
+                        lparen = True
+                elif api.PackageInfo.RENAMED in pi.states:
+                        state += " (%s" % _("Renamed")
+                        lparen = True
+                if api.PackageInfo.FROZEN in pi.states:
+                        if lparen:
+                                state += ", %s)" % _("Frozen")
+                        else:
+                                state += " (%s)" % _("Frozen")
+                elif lparen:
+                        state += ")"
 
                 name_str = _("          Name:")
                 msg(name_str, pi.pkg_stem)
@@ -2587,7 +3208,12 @@ def info(api_inst, args):
 
                 # XXX even more info on the publisher would be nice?
                 msg(_("     Publisher:"), pi.publisher)
-                msg(_("       Version:"), pi.version)
+                hum_ver = pi.get_attr_values("pkg.human-version")
+                if hum_ver and hum_ver[0] != pi.version:
+                        msg(_("       Version:"), "%s (%s)" %
+                            (pi.version, hum_ver[0]))
+                else:
+                        msg(_("       Version:"), pi.version)
                 msg(_(" Build Release:"), pi.build_release)
                 msg(_("        Branch:"), pi.branch)
                 msg(_("Packaging Date:"), pi.packaging_date)
@@ -2695,7 +3321,7 @@ def produce_lines(actionlist, attrs, action_types=None, show_all=False,
                                 a = action.attrs[action.key_attr]
                         elif attr == "action.raw":
                                 a = action
-                        elif attr == "action.hash":
+                        elif attr in ("hash", "action.hash"):
                                 a = getattr(action, "hash", "")
                         elif attr == "pkg.name":
                                 a = pfmri.get_name()
@@ -2817,24 +3443,28 @@ def display_contents_results(actionlist, attrs, sort_attrs, action_types,
         lines = produce_lines(actionlist, attrs, action_types)
         widths = calc_widths(lines, attrs)
 
-        sortidx = 0
-        for i, attr in enumerate(attrs):
-                if attr == sort_attrs[0]:
-                        sortidx = i
-                        break
+        if sort_attrs:
+                sortidx = 0
+                for i, attr in enumerate(attrs):
+                        if attr == sort_attrs[0]:
+                                sortidx = i
+                                break
 
-        # Sort numeric columns numerically.
-        if justs[sortidx] == JUST_RIGHT:
-                def key_extract(x):
-                        try:
-                                return int(x[sortidx])
-                        except (ValueError, TypeError):
-                                return 0
+                # Sort numeric columns numerically.
+                if justs[sortidx] == JUST_RIGHT:
+                        def key_extract(x):
+                                try:
+                                        return int(x[sortidx])
+                                except (ValueError, TypeError):
+                                        return 0
+                else:
+                        key_extract = lambda x: x[sortidx]
+                line_gen = sorted(lines, key=key_extract)
         else:
-                key_extract = lambda x: x[sortidx]
+                line_gen = lines
 
         printed_output = False
-        for line in sorted(lines, key=key_extract):
+        for line in line_gen:
                 text = (create_output_format(display_headers, widths, justs,
                     line) % tuple(line)).rstrip()
                 if not text:
@@ -2917,7 +3547,7 @@ def list_contents(api_inst, args):
                 display_headers = False
                 attrs = ["action.raw"]
 
-                invalid = set(("-H", "-o", "-t")). \
+                invalid = set(("-H", "-o", "-t", "-s", "-a")). \
                     intersection(set([x[0] for x in opts]))
 
                 if len(invalid) > 0:
@@ -2943,7 +3573,7 @@ def list_contents(api_inst, args):
                 # dependencies.
                 attrs = ["path"]
 
-        if not sort_attrs:
+        if not sort_attrs and not display_raw:
                 # XXX reverse sorting
                 # Most likely want to sort by path, so don't force people to
                 # make it explicit
@@ -2989,11 +3619,11 @@ def list_contents(api_inst, args):
         notfound = EmptyI
         try:
                 res = api_inst.get_pkg_list(pkg_list, patterns=pargs,
-                    raise_unmatched=True, return_fmris=True, variants=True,
-                    repos=origins)
+                    raise_unmatched=True, ranked=remote, return_fmris=True,
+                    variants=True, repos=origins)
                 manifests = []
 
-                for pfmri, summ, cats, states in res:
+                for pfmri, summ, cats, states, pattrs in res:
                         manifests.append(api_inst.get_manifest(pfmri,
                             all_variants=display_raw, repos=origins))
         except api_errors.ImageFormatUpdateNeeded, e:
@@ -3002,21 +3632,21 @@ def list_contents(api_inst, args):
         except api_errors.InvalidPackageErrors, e:
                 error(str(e), cmd=subcommand)
                 api_inst.log_operation_end(
-                    result=history.RESULT_FAILED_UNKNOWN)
+                    result=RESULT_FAILED_UNKNOWN)
                 return EXIT_OOPS
         except api_errors.InventoryException, e:
                 if e.illegal:
                         for i in e.illegal:
                                 error(i)
                         api_inst.log_operation_end(
-                            result=history.RESULT_FAILED_BAD_REQUEST)
+                            result=RESULT_FAILED_BAD_REQUEST)
                         return EXIT_OOPS
                 notfound = e.notfound
         else:
                 if local and not manifests and not pargs:
                         error(_("no packages installed"), cmd=subcommand)
                         api_inst.log_operation_end(
-                            result=history.RESULT_NOTHING_TO_DO)
+                            result=RESULT_NOTHING_TO_DO)
                         return EXIT_OOPS
 
         actionlist = [
@@ -3070,10 +3700,9 @@ examining the catalogs:"""))
                 logger.error("")
                 for p in notfound:
                         logger.error("        %s" % p)
-                api_inst.log_operation_end(
-                    result=history.RESULT_NOTHING_TO_DO)
+                api_inst.log_operation_end(result=RESULT_NOTHING_TO_DO)
         else:
-                api_inst.log_operation_end(result=history.RESULT_SUCCEEDED)
+                api_inst.log_operation_end(result=RESULT_SUCCEEDED)
         return rval
 
 
@@ -3463,7 +4092,7 @@ assistance."""))
                                 # that the origin for the new publisher
                                 # matches the URI provided.
                                 add_origins.append(repo_uri)
-                                
+
                         rval, rmsg = _set_pub_error_wrap(_add_update_pub, name,
                             [], api_inst, prefix, pub=src_pub,
                             add_origins=add_origins, ssl_cert=ssl_cert,
@@ -3800,7 +4429,7 @@ def publisher_list(api_inst, args):
         preferred_only = False
         inc_disabled = True
         valid_formats = ( "tsv", )
-        format = "default"
+        output_format = "default"
         field_data = {
             "publisher" : [("default", "tsv"), _("PUBLISHER"), ""],
             "attrs" : [("default"), "", ""],
@@ -3848,11 +4477,11 @@ def publisher_list(api_inst, args):
                 if opt == "-n":
                         inc_disabled = False
                 if opt == "-F":
-                        format = arg
-                        if format not in valid_formats:
+                        output_format = arg
+                        if output_format not in valid_formats:
                                 usage(_("Unrecognized format %(format)s."
                                     " Supported formats: %(valid)s") % \
-                                    { "format": format,
+                                    { "format": output_format,
                                     "valid": valid_formats }, cmd="publisher")
                                 return EXIT_OOPS
 
@@ -3907,13 +4536,13 @@ def publisher_list(api_inst, args):
                         ]
                 # Create a formatting string for the default output
                 # format
-                if format == "default":
+                if output_format == "default":
                         fmt = "%-24s %-12s %-8s %-8s %s"
                         filter_func = filter_default
 
                 # Create a formatting string for the tsv output
                 # format
-                if format == "tsv":
+                if output_format == "tsv":
                         fmt = "%s\t%s\t%s\t%s\t%s\t%s\t%s"
                         filter_func = filter_tsv
 
@@ -3934,7 +4563,7 @@ def publisher_list(api_inst, args):
                         set_value(field_data["publisher"], p.prefix)
                         # Setup the synthetic attrs field if the
                         # format is default.
-                        if format == "default":
+                        if output_format == "default":
                                 pstatus = ""
 
                                 if not p.sticky:
@@ -4078,13 +4707,18 @@ def publisher_list(api_inst, args):
                                 msg(_("              Enabled:"), _("No"))
                         else:
                                 msg(_("              Enabled:"), _("Yes"))
-                        msg(_("     Signature Policy:"), pub.signature_policy.name)
-                        if "signature-required-names" in pub.properties:
-                                names = pub.properties["signature-required-names"]
-                                if names:
-                                        msg(_("  Sig. Required Names:"), names[0])
-                                        for n in names[1:]:
-                                                msg(_("                     :"), n)
+                        pub_items = sorted(pub.properties.iteritems())
+                        property_padding = "                      "
+                        properties_displayed = False
+                        for k, v in pub_items:
+                                if not v:
+                                        continue
+                                if not properties_displayed:
+                                        msg(_("           Properties:"))
+                                        properties_displayed = True
+                                if not isinstance(v, basestring):
+                                        v = ", ".join(sorted(v))
+                                msg(property_padding, k + " =", str(v))
         return retcode
 
 def property_add_value(api_inst, args):
@@ -4366,7 +5000,7 @@ def list_property_linked(op, api_inst, pargs,
 
         api_inst.progresstracker = get_tracker(quiet=omit_headers)
 
-        lin=None
+        lin = None
         if li_name:
                 lin = api_inst.parse_linked_name(li_name)
         props = api_inst.get_linked_props(lin=lin)
@@ -4395,9 +5029,10 @@ def list_property_linked(op, api_inst, pargs,
         return EXIT_OK
 
 def set_property_linked(op, api_inst, pargs,
-    accept, be_activate, be_name, li_ignore, li_md_only, li_name,
-    li_parent_sync, li_pkg_updates, new_be, noexecute, origins, quiet,
-    refresh_catalogs, reject_pats, show_licenses, update_index, verbose):
+    accept, backup_be, backup_be_name, be_activate, be_name, li_ignore,
+    li_md_only, li_name, li_parent_sync, li_pkg_updates, new_be, noexecute,
+    origins, parsable_version, quiet, refresh_catalogs, reject_pats,
+    show_licenses, update_index, verbose):
         """pkg set-property-linked
             [-nvq] [--accept] [--licenses] [--no-index] [--no-refresh]
             [--no-parent-sync] [--no-pkg-updates]
@@ -4406,7 +5041,8 @@ def set_property_linked(op, api_inst, pargs,
         Change the specified linked image properties.  This may result in
         updating the package contents of a child image."""
 
-        api_inst.progresstracker = get_tracker(quiet, verbose)
+        api_inst.progresstracker = get_tracker(
+            parsable_version=parsable_version, quiet=quiet, verbose=verbose)
 
         # make sure we're a child image
         if li_name:
@@ -4418,7 +5054,7 @@ def set_property_linked(op, api_inst, pargs,
         if not xrval:
                 return EXIT_OOPS
 
-        LIXXX
+        return EXIT_OK
 
 def audit_linked(op, api_inst, pargs,
     li_parent_sync, li_target_all, li_target_list, omit_headers, quiet):
@@ -4449,22 +5085,22 @@ def audit_linked(op, api_inst, pargs,
                 msg(fmt % ("NAME", "STATUS"))
 
         if not quiet:
-                for k, (rv, err) in rvdict.items():
+                for k, (rv, err, p_dict) in rvdict.items():
                         if rv == EXIT_OK:
                                 msg(fmt % (k, _("synced")))
                         elif rv == EXIT_DIVERGED:
                                 msg(fmt % (k, _("diverged")))
 
-        rv, err = api_inst.audit_linked_rvdict2rv(rvdict)
+        rv, err, p_dicts = api_inst.audit_linked_rvdict2rv(rvdict)
         if err:
                 error(err, cmd=op)
         return rv
 
 def sync_linked(op, api_inst, pargs,
-    accept, be_activate, be_name, li_ignore, li_parent_sync, new_be,
-    noexecute, origins, quiet, refresh_catalogs, reject_pats,
-    show_licenses, update_index, verbose, li_md_only, li_pkg_updates,
-    li_target_all, li_target_list, stage):
+    accept, backup_be, backup_be_name, be_activate, be_name, li_ignore,
+    li_parent_sync, new_be, noexecute, origins, parsable_version, quiet,
+    refresh_catalogs, reject_pats, show_licenses, update_index, verbose,
+    li_md_only, li_pkg_updates, li_target_all, li_target_list, stage):
 
         """pkg audit-linked [-a|-l <li-name>]
             [-nvq] [--accept] [--licenses] [--no-index] [--no-refresh]
@@ -4473,7 +5109,8 @@ def sync_linked(op, api_inst, pargs,
 
         Sync one or more child images with their parent image."""
 
-        api_inst.progresstracker = get_tracker(quiet, verbose)
+        api_inst.progresstracker = get_tracker(
+            parsable_version=parsable_version, quiet=quiet, verbose=verbose)
 
         xrval, xres = get_fmri_args(api_inst, reject_pats, cmd=op)
         if not xrval:
@@ -4487,9 +5124,10 @@ def sync_linked(op, api_inst, pargs,
                 # sync the current image
                 return __api_op(op, api_inst, _accept=accept,
                     _li_ignore=li_ignore, _noexecute=noexecute,
-                    _origins=origins, _quiet=quiet,
-                    _show_licenses=show_licenses, _stage=stage,
-                    _verbose=verbose, be_activate=be_activate,
+                    _origins=origins, _parsable_version=parsable_version,
+                    _quiet=quiet, _show_licenses=show_licenses, _stage=stage,
+                    _verbose=verbose, backup_be=backup_be,
+                    backup_be_name=backup_be_name, be_activate=be_activate,
                     be_name=be_name, li_md_only=li_md_only,
                     li_parent_sync=li_parent_sync,
                     li_pkg_updates=li_pkg_updates, new_be=new_be,
@@ -4503,20 +5141,29 @@ def sync_linked(op, api_inst, pargs,
             refresh_catalogs=refresh_catalogs, update_index=update_index,
             li_pkg_updates=li_pkg_updates, li_md_only=li_md_only)
 
-        rv, err = api_inst.sync_linked_rvdict2rv(rvdict)
+        rv, err, p_dicts = api_inst.sync_linked_rvdict2rv(rvdict)
         if err:
                 error(err, cmd=op)
+        if parsable_version is not None and rv == EXIT_OK:
+                try:
+                        __display_parsable_plan(api_inst, parsable_version,
+                            p_dicts)
+                except api_errors.ApiException, e:
+                        error(e, cmd=op)
+                        return EXIT_OOPS
         return rv
 
 def attach_linked(op, api_inst, pargs,
     accept, allow_relink, attach_child, attach_parent, be_activate,
-    be_name, force, li_ignore, li_md_only, li_parent_sync, li_pkg_updates,
-    li_props, new_be, noexecute, origins, quiet, refresh_catalogs,
-    reject_pats, show_licenses, update_index, verbose):
+    backup_be, backup_be_name, be_name, force, li_ignore, li_md_only,
+    li_parent_sync, li_pkg_updates, li_props, new_be, noexecute, origins,
+    parsable_version, quiet, refresh_catalogs, reject_pats, show_licenses,
+    update_index, verbose):
         """pkg attach-linked
             [-fnvq] [--accept] [--licenses] [--no-index] [--no-refresh]
             [--no-pkg-updates] [--linked-md-only]
             [--allow-relink]
+            [--parsable-version=<version>]
             [--prop-linked <propname>=<propvalue> ...]
             (-c|-p) <li-name> <dir>
 
@@ -4524,7 +5171,8 @@ def attach_linked(op, api_inst, pargs,
         itself to a parent, or another image being attach as a child with
         this image being the parent."""
 
-        api_inst.progresstracker = get_tracker(quiet, verbose)
+        api_inst.progresstracker = get_tracker(
+            parsable_version=parsable_version, quiet=quiet, verbose=verbose)
 
         for k, v in li_props:
                 if k in [li.PROP_PATH, li.PROP_NAME, li.PROP_MODEL]:
@@ -4549,9 +5197,10 @@ def attach_linked(op, api_inst, pargs,
                 # attach the current image to a parent
                 return __api_op(op, api_inst, _accept=accept,
                     _li_ignore=li_ignore, _noexecute=noexecute,
-                    _origins=origins, _quiet=quiet,
-                    _show_licenses=show_licenses,
+                    _origins=origins, _parsable_version=parsable_version,
+                    _quiet=quiet, _show_licenses=show_licenses,
                     _verbose=verbose, allow_relink=allow_relink,
+                    backup_be=backup_be, backup_be_name=backup_be_name,
                     be_activate=be_activate, be_name=be_name, force=force,
                     li_md_only=li_md_only, li_path=li_path,
                     li_pkg_updates=li_pkg_updates, li_props=li_props,
@@ -4559,24 +5208,33 @@ def attach_linked(op, api_inst, pargs,
                     reject_list=reject_pats, update_index=update_index)
 
         # attach the requested child image
-        (rv, err) = api_inst.attach_linked_child(lin, li_path, li_props,
+        (rv, err, p_dict) = api_inst.attach_linked_child(lin, li_path, li_props,
             accept=accept, allow_relink=allow_relink, force=force,
             li_md_only=li_md_only, li_pkg_updates=li_pkg_updates,
             noexecute=noexecute, refresh_catalogs=refresh_catalogs,
-            show_licenses=show_licenses, update_index=update_index)
+            reject_list=reject_pats, show_licenses=show_licenses,
+            update_index=update_index)
 
         if err:
                 error(err, cmd=op)
+        if parsable_version is not None and rv == EXIT_OK:
+                assert p_dict is not None
+                try:
+                        __display_parsable_plan(api_inst, parsable_version,
+                            [p_dict])
+                except api_errors.ApiException, e:
+                        error(e, cmd=op)
+                        return EXIT_OOPS
         return rv
 
-def detach_linked(op, api_inst, pargs,
-    force, li_target_all, li_target_list, noexecute, quiet, verbose):
+def detach_linked(op, api_inst, pargs, force, li_target_all, li_target_list,
+    noexecute, quiet, verbose):
         """pkg detach-linked
             [-fnvq] [-a|-l <li-name>] [--linked-md-only]
 
         Detach one or more child linked images."""
 
-        api_inst.progresstracker = get_tracker(quiet, verbose)
+        api_inst.progresstracker = get_tracker(quiet=quiet, verbose=verbose)
 
         li_target_list = api_inst.parse_linked_name_list(li_target_list)
 
@@ -4589,7 +5247,7 @@ def detach_linked(op, api_inst, pargs,
         rvdict = api_inst.detach_linked_children(li_target_list, force=force,
             noexecute=noexecute)
 
-        rv, err = api_inst.detach_linked_rvdict2rv(rvdict)
+        rv, err, p_dicts = api_inst.detach_linked_rvdict2rv(rvdict)
         if err:
                 error(err, cmd=op)
         return rv
@@ -4634,16 +5292,18 @@ def image_create(args):
                         except ValueError:
                                 pub_name = None
                                 pub_url = arg
+                        if pub_url:
+                                pub_url = misc.parse_uri(pub_url, cwd=orig_cwd)
                 elif opt == "-c":
                         ssl_cert = arg
                 elif opt == "-f" or opt == "--force":
                         force = True
                 elif opt in ("-g", "--origin"):
-                        add_origins.add(arg)
+                        add_origins.add(misc.parse_uri(arg, cwd=orig_cwd))
                 elif opt == "-k":
                         ssl_key = arg
                 elif opt in ("-m", "--mirror"):
-                        add_mirrors.add(arg)
+                        add_mirrors.add(misc.parse_uri(arg, cwd=orig_cwd))
                 elif opt == "-z" or opt == "--zone":
                         is_zone = True
                         imgtype = IMG_TYPE_ENTIRE
@@ -4715,17 +5375,18 @@ def image_create(args):
         ssl_cert, ssl_key = _get_ssl_cert_key(image_dir, is_zone, ssl_cert,
             ssl_key)
 
+        global _api_inst
         global img
         try:
                 progtrack = get_tracker()
-                api_inst = api.image_create(PKG_CLIENT_NAME, CLIENT_API_VERSION,
+                _api_inst = api.image_create(PKG_CLIENT_NAME, CLIENT_API_VERSION,
                     image_dir, imgtype, is_zone, facets=facets, force=force,
                     mirrors=list(add_mirrors), origins=list(add_origins),
                     prefix=pub_name, progtrack=progtrack,
                     refresh_allowed=refresh_allowed, ssl_cert=ssl_cert,
                     ssl_key=ssl_key, repo_uri=repo_uri, variants=variants,
                     props=set_props)
-                img = api_inst.img
+                img = _api_inst.img
         except api_errors.InvalidDepotResponseException, e:
                 # Ensure messages are displayed after the spinner.
                 logger.error("\n")
@@ -4809,11 +5470,6 @@ def history_list(api_inst, args):
         time_vals = [] # list of timestamps for which we want history events
         columns = ["start", "operation", "client", "outcome"]
 
-        # XXX history should be accessible through pkg.client.api
-        if not os.path.exists(img.history.path):
-                # Nothing to display.
-                return EXIT_OK
-
         opts, pargs = getopt.getopt(args, "Hln:o:t:")
         for opt, arg in opts:
                 if opt == "-H":
@@ -4865,29 +5521,7 @@ def history_list(api_inst, args):
                                 return EXIT_BADOPT
 
                 elif opt == "-t":
-                        time_vals = arg.split(",")
-                        # make entries a set to cope with multiple overlapping
-                        # ranges or time values
-                        entries = set()
-                        for time_val in time_vals:
-                                try:
-                                        # used for the 'now' alias, we calculate
-                                        # this once only
-                                        utc_now = datetime.datetime.utcnow().strftime(
-                                            "%Y%m%dT%H%M%SZ")
-                                        files = __get_history_paths(time_val,
-                                            img.history.path, utc_now)
-                                        if files == EXIT_BADOPT:
-                                                return EXIT_BADOPT
-                                        entries.update(files)
-                                except ValueError:
-                                        logger.error(_("Invalid time format "
-                                        "'%s'.  Please use "
-                                        "%%Y-%%m-%%dT%%H:%%M:%%S or\n"
-                                        "%%Y-%%m-%%dT%%H:%%M:%%S-%%Y-%%m-%%dT%%H:%%M:%%S"
-                                        ) % time_val)
-                                        return EXIT_BADOPT
-                        entries = sorted(entries)
+                        time_vals.extend(arg.split(","))
 
         if omit_headers and long_format:
                 usage(_("-H and -l may not be combined"), cmd="history")
@@ -4917,33 +5551,24 @@ def history_list(api_inst, args):
                 if not omit_headers:
                         msg(history_fmt % tuple(headers))
 
-        if display_limit:
-                n = -display_limit
-                entries = sorted(os.listdir(img.history.path))[n:]
-        elif not time_vals:
-                entries = sorted(os.listdir(img.history.path))
-
-        uuid_be_dic = bootenv.BootEnv.get_uuid_be_dic()
-        for entry in entries:
-                # Load the history entry.
+        def gen_entries():
+                """Error handler for history generation; avoids need to indent
+                and clobber formatting of logic below."""
                 try:
-                        he = history.History(root_dir=img.history.root_dir,
-                            filename=entry)
-                except api_errors.PermissionsException, e:
-                        error(e, cmd="history")
-                        return EXIT_OOPS
-                except history.HistoryLoadException, e:
-                        if e.parse_failure:
-                                # Ignore corrupt entries.
-                                continue
-                        raise
+                        for he in api_inst.gen_history(limit=display_limit,
+                            times=time_vals):
+                                yield he
+                except api_errors.HistoryException, e:
+                        error(str(e), cmd="history")
+                        sys.exit(EXIT_OOPS)
 
+        for he in gen_entries(): 
                 # populate a dictionary containing our output
                 output = {}
                 for col in history_cols:
                         if not history_cols[col][2]:
                                 continue
-                        output[col] = he.__getattribute__(history_cols[col][2])
+                        output[col] = getattr(he, history_cols[col][2], None)
 
                 # format some of the History object attributes ourselves
                 output["start"] = misc.timestamp_to_time(
@@ -4977,29 +5602,28 @@ def history_list(api_inst, args):
                         output["time"] = "%s:%s:%s" % \
                             (add_hrs + hrs, mins, secs)
 
-                output["be"] = he.operation_be
-                be_uuid = he.operation_be_uuid
                 output["command"] = " ".join(he.client_args)
-                output["new_be"] = he.operation_new_be
-                new_be_uuid = he.operation_new_be_uuid
 
-                # lookup be and new_be names from the saved uuid, in case
-                # the boot environment names have changed since we stored the
-                # History object.  Where we weren't able to lookup the current
-                # name, add a '*' to the entry, indicating the boot environment
-                # is no longer present
-                if be_uuid in uuid_be_dic:
-                        output["be"] = uuid_be_dic[be_uuid]
-                elif be_uuid:
-                        output["be"] = "%s*" % output["be"]
+                # Where we weren't able to lookup the current name, add a '*' to
+                # the entry, indicating the boot environment is no longer
+                # present.
+                if he.operation_be and he.operation_current_be:
+                        output["be"] = he.operation_current_be
+                elif he.operation_be_uuid:
+                        output["be"] = "%s*" % he.operation_be
+                else:
+                        output["be"] = he.operation_be
 
-                if new_be_uuid in uuid_be_dic:
-                        output["new_be"] = uuid_be_dic[new_be_uuid]
-                elif new_be_uuid:
-                        output["new_be"] = "%s*" % output["new_be"]
+                if he.operation_new_be and he.operation_current_new_be:
+                        output["new_be"] = he.operation_current_new_be
+                elif he.operation_new_be_uuid:
+                        output["new_be"] = "%s*" % he.operation_new_be
+                else:
+                        output["new_be"] = "%s" % he.operation_new_be
 
-                output["outcome"] = history.result_l10n[he.operation_result[0]]
-                output["reason"] = history.result_l10n[he.operation_result[1]]
+                outcome, reason = he.operation_result_text
+                output["outcome"] = outcome
+                output["reason"] = reason
                 output["snapshot"] = he.operation_snapshot
 
                 # be, snapshot and new_be use values in parenthesis
@@ -5033,36 +5657,6 @@ def history_list(api_inst, args):
                         msg(history_fmt % tuple(items))
         return EXIT_OK
 
-def __get_history_paths(time_val, history_path, utc_now):
-        """Given a local timestamp, either as a discrete value, or a range of
-        values, formatted as '<timestamp>-<timestamp>', and a path to find
-        history xml files, return an array of paths that match that timestamp.
-        utc_now is the current time expressed in UTC"""
-
-        files = []
-        if len(time_val) > 20 or time_val.startswith("now-"):
-                if time_val.startswith("now-"):
-                        start = utc_now
-                        finish = __utc_format(time_val[4:], utc_now)
-                else:
-                        # our ranges are 19 chars of timestamp, a '-', and
-                        # another timestamp
-                        start = __utc_format(time_val[:19], utc_now)
-                        finish = __utc_format(time_val[20:], utc_now)
-                if start > finish:
-                        logger.error(_("Start time must be older than finish "
-                            "time: %s") % time_val)
-                        return EXIT_BADOPT
-                files = __get_history_range(history_path, start, finish)
-        else:
-                # there can be multiple event files per timestamp
-                prefix = __utc_format(time_val, utc_now)
-                files = glob.glob(os.path.join(history_path, "%s*" % prefix))
-        if not files:
-                logger.error(_("No history entries found for %s") % time_val)
-                return EXIT_BADOPT
-        return files
-
 def __unique_columns(columns):
         """Return true if each entry in the provided list of columns only
         appears once."""
@@ -5076,40 +5670,6 @@ def __unique_columns(columns):
         for col in dup_cols:
                 logger.error(_("Duplicate column specified: %s") % col)
         return not dup_cols
-
-def __utc_format(time_str, utc_now):
-        """ Given a local time value string, formatted with "%Y-%m-%dT%H:%M:%S,
-        return a UTC representation of that value, formatted with
-        %Y%m%dT%H%M%SZ.  This raises a ValueError if the time was incorrectly
-        formatted.  If the time_str is "now", we return the value of utc_now"""
-
-        if time_str == "now":
-                return utc_now
-
-        local_dt = datetime.datetime.strptime(time_str, "%Y-%m-%dT%H:%M:%S")
-        secs = time.mktime(local_dt.timetuple())
-        utc_dt = datetime.datetime.utcfromtimestamp(secs)
-        return utc_dt.strftime("%Y%m%dT%H%M%SZ")
-
-def __get_history_range(path, start, finish):
-        """Given an img.history.path and start and finish dates, formatted
-        as UTC date strings as per __utc_format(), return a list of history
-        file names that fall within that date range.  A range of two equal
-        dates is equivalent of just retrieving history for that single
-        date string."""
-
-        entries = []
-        all_entries = sorted(os.listdir(path))
-
-        for entry in all_entries:
-                # our timestamps are always 16 character datestamps
-                basename = os.path.basename(entry)[:16]
-                if basename >= start:
-                        if basename > finish:
-                                # we can stop looking now.
-                                break
-                        entries.append(entry)
-        return entries
 
 def __get_long_history_data(he, hist_info):
         """Return an array of tuples containing long_format history info"""
@@ -5156,14 +5716,8 @@ def __get_long_history_data(he, hist_info):
 
 def history_purge(api_inst, pargs):
         """Purge image history"""
-
-        # history should be accessible through pkg.client.api
-        be_name, be_uuid = bootenv.BootEnv.get_be_name(img.root)
-        ret_code = img.history.purge(
-            be_name=be_name, be_uuid=be_uuid)
-        if ret_code == EXIT_OK:
-                msg(_("History purged."))
-        return ret_code
+        api_inst.purge_history()
+        msg(_("History purged."))
 
 def print_proxy_config():
         """If the user has configured http_proxy or https_proxy in the
@@ -5207,12 +5761,14 @@ def print_version(pargs):
         return EXIT_OK
 
 # To allow exception handler access to the image.
+_api_inst = None
 img = None
 orig_cwd = None
 
 def main_func():
         global_settings.client_name = PKG_CLIENT_NAME
 
+        global _api_inst
         global img
         global orig_cwd
 
@@ -5268,6 +5824,7 @@ def main_func():
             "detach-linked"         : (detach_linked, opts_detach_linked),
             "facet"                 : (facet_list, None),
             "fix"                   : (fix_image, None),
+            "freeze"                : (freeze, None),
             "help"                  : (None, None),
             "history"               : (history_list, None),
             "image-create"          : (None, None),
@@ -5275,6 +5832,7 @@ def main_func():
             "install"               : (install, opts_install, -1),
             "list"                  : (list_inventory, opts_list_inventory, -1),
             "list-linked"           : (list_linked, opts_list_linked),
+            "mediator"              : (list_mediators, opts_list_mediator, -1),
             "property"              : (property_list, None),
             "property-linked"       : (list_property_linked,
                                           opts_list_property_linked, -1),
@@ -5283,19 +5841,22 @@ def main_func():
             "rebuild-index"         : (rebuild_index, None),
             "refresh"               : (publisher_refresh, None),
             "remove-property-value" : (property_remove_value, None),
-            "revert"                : (revert, None),
+            "revert"                : (revert, opts_revert, -1),
             "search"                : (search, None),
             "set-authority"         : (publisher_set, None),
+            "set-mediator"          : (set_mediator, opts_set_mediator, -1),
             "set-property"          : (property_set, None),
             "set-property-linked"   : (set_property_linked,
                                           opts_set_property_linked, -1),
-            "unavoid"               : (unavoid, None),
             "set-publisher"         : (publisher_set, None),
             "sync-linked"           : (sync_linked, opts_sync_linked),
+            "unavoid"               : (unavoid, None),
+            "unfreeze"              : (unfreeze, None),
             "uninstall"             : (uninstall, opts_uninstall, -1),
             "unset-authority"       : (publisher_unset, None),
             "unset-property"        : (property_unset, None),
             "update-format"         : (update_format, None),
+            "unset-mediator"        : (unset_mediator, opts_unset_mediator, -1),
             "unset-publisher"       : (publisher_unset, None),
             "update"                : (update, opts_update, -1),
             "update-format"         : (update_format, None),
@@ -5367,12 +5928,14 @@ def main_func():
         provided_image_dir = True
         pkg_image_used = False
         if "mydir" not in locals():
-                try:
-                        mydir = os.environ["PKG_IMAGE"]
+                mydir, provided_image_dir = api.get_default_image_root(
+                    orig_cwd=orig_cwd)
+                if os.environ.get("PKG_IMAGE"):
+                        # It's assumed that this has been checked by the above
+                        # function call and hasn't been removed from the
+                        # environment.
                         pkg_image_used = True
-                except KeyError:
-                        provided_image_dir = False
-                        mydir = orig_cwd
+
         if not mydir:
                 error(_("Could not find image.  Use the -R option or set "
                     "$PKG_IMAGE to the\nlocation of an image."))
@@ -5383,6 +5946,7 @@ def main_func():
             runid=runid)
         if api_inst is None:
                 return EXIT_OOPS
+        _api_inst = api_inst
         img = api_inst.img
 
         # Find subcommand and execute operation.
@@ -5408,13 +5972,7 @@ def main_func():
 # so that we can more easily detect these in testing of the CLI commands.
 #
 def handle_errors(func, non_wrap_print=True, *args, **kwargs):
-        traceback_str = _("""\n
-This is an internal error in pkg(5) version %(version)s.  Please let the
-developers know about this problem by including the information above (and
-this message) when filing a bug at:
-
-%(bug_uri)s""") % { "version": pkg.VERSION, "bug_uri": misc.BUG_URI_CLI }
-
+        traceback_str = misc.get_traceback_message()
         try:
                 # Out of memory errors can be raised as EnvironmentErrors with
                 # an errno of ENOMEM, so in order to handle those exceptions
@@ -5426,17 +5984,18 @@ this message) when filing a bug at:
                         if isinstance(__e, EnvironmentError) and \
                             __e.errno != errno.ENOMEM:
                                 raise
-                        if img:
-                                img.history.abort(RESULT_FAILED_OUTOFMEMORY)
+                        if _api_inst:
+                                _api_inst.abort(
+                                    result=RESULT_FAILED_OUTOFMEMORY)
                         error("\n" + misc.out_of_memory())
                         __ret = EXIT_OOPS
         except SystemExit, __e:
-                if img:
-                        img.history.abort(RESULT_FAILED_UNKNOWN)
+                if _api_inst:
+                        _api_inst.abort(result=RESULT_FAILED_UNKNOWN)
                 raise __e
         except (PipeError, KeyboardInterrupt):
-                if img:
-                        img.history.abort(RESULT_CANCELED)
+                if _api_inst:
+                        _api_inst.abort(result=RESULT_CANCELED)
                 # We don't want to display any messages here to prevent
                 # possible further broken pipe (EPIPE) errors.
                 __ret = EXIT_OOPS
@@ -5445,23 +6004,23 @@ this message) when filing a bug at:
                       str(__e))
                 __ret = __e.lix_exitrv
         except api_errors.CertificateError, __e:
-                if img:
-                        img.history.abort(RESULT_FAILED_CONFIGURATION)
+                if _api_inst:
+                        _api_inst.abort(result=RESULT_FAILED_CONFIGURATION)
                 error(__e)
                 __ret = EXIT_OOPS
         except api_errors.PublisherError, __e:
-                if img:
-                        img.history.abort(RESULT_FAILED_BAD_REQUEST)
+                if _api_inst:
+                        _api_inst.abort(result=RESULT_FAILED_BAD_REQUEST)
                 error(__e)
                 __ret = EXIT_OOPS
         except api_errors.ImageLockedError, __e:
-                if img:
-                        img.history.abort(RESULT_FAILED_LOCKED)
+                if _api_inst:
+                        _api_inst.abort(result=RESULT_FAILED_LOCKED)
                 error(__e)
                 __ret = EXIT_LOCKED
         except api_errors.TransportError, __e:
-                if img:
-                        img.history.abort(RESULT_FAILED_TRANSPORT)
+                if _api_inst:
+                        _api_inst.abort(result=RESULT_FAILED_TRANSPORT)
                 logger.error(_("\nErrors were encountered while attempting "
                     "to retrieve package or file data for\nthe requested "
                     "operation."))
@@ -5469,15 +6028,15 @@ this message) when filing a bug at:
                 print_proxy_config()
                 __ret = EXIT_OOPS
         except api_errors.InvalidCatalogFile, __e:
-                if img:
-                        img.history.abort(RESULT_FAILED_STORAGE)
+                if _api_inst:
+                        _api_inst.abort(result=RESULT_FAILED_STORAGE)
                 logger.error(_("""
 An error was encountered while attempting to read image state information
 to perform the requested operation.  Details follow:\n\n%s""") % __e)
                 __ret = EXIT_OOPS
         except api_errors.InvalidDepotResponseException, __e:
-                if img:
-                        img.history.abort(RESULT_FAILED_TRANSPORT)
+                if _api_inst:
+                        _api_inst.abort(result=RESULT_FAILED_TRANSPORT)
                 logger.error(_("\nUnable to contact a valid package "
                     "repository. This may be due to a problem with the "
                     "repository, network misconfiguration, or an incorrect "
@@ -5486,37 +6045,37 @@ to perform the requested operation.  Details follow:\n\n%s""") % __e)
                 logger.error(_("\nAdditional details:\n\n%s") % __e)
                 print_proxy_config()
                 __ret = EXIT_OOPS
-        except history.HistoryLoadException, __e:
+        except api_errors.HistoryLoadException, __e:
                 # Since a history related error occurred, discard all
                 # information about the current operation(s) in progress.
-                if img:
-                        img.history.clear()
+                if _api_inst:
+                        _api_inst.clear_history()
                 error(_("An error was encountered while attempting to load "
                     "history information\nabout past client operations."))
                 error(__e)
                 __ret = EXIT_OOPS
-        except history.HistoryStoreException, __e:
+        except api_errors.HistoryStoreException, __e:
                 # Since a history related error occurred, discard all
                 # information about the current operation(s) in progress.
-                if img:
-                        img.history.clear()
+                if _api_inst:
+                        _api_inst.clear_history()
                 error(_("An error was encountered while attempting to store "
                     "information about the\ncurrent operation in client "
                     "history."))
                 error(__e)
                 __ret = EXIT_OOPS
-        except history.HistoryPurgeException, __e:
+        except api_errors.HistoryPurgeException, __e:
                 # Since a history related error occurred, discard all
                 # information about the current operation(s) in progress.
-                if img:
-                        img.history.clear()
+                if _api_inst:
+                        _api_inst.clear_history()
                 error(_("An error was encountered while attempting to purge "
                     "client history."))
                 error(__e)
                 __ret = EXIT_OOPS
         except api_errors.VersionException, __e:
-                if img:
-                        img.history.abort(RESULT_FAILED_UNKNOWN)
+                if _api_inst:
+                        _api_inst.abort(result=RESULT_FAILED_UNKNOWN)
                 error(_("The pkg command appears out of sync with the libraries"
                     " provided\nby pkg:/package/pkg. The client version is "
                     "%(client)s while the library\nAPI version is %(api)s.") %
@@ -5540,8 +6099,8 @@ to perform the requested operation.  Details follow:\n\n%s""") % __e)
         except api_errors.ReadOnlyFileSystemException, __e:
                 __ret = EXIT_OOPS
         except:
-                if img:
-                        img.history.abort(RESULT_FAILED_UNKNOWN)
+                if _api_inst:
+                        _api_inst.abort(result=RESULT_FAILED_UNKNOWN)
                 if non_wrap_print:
                         traceback.print_exc()
                         error(traceback_str)
