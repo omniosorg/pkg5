@@ -907,8 +907,13 @@ class build_py_func(_build_py):
 
                 self.timestamps = {}
 
+                pydates = "pydates"
+
+                if os.path.isdir(os.path.join(pwd, "../.git")):
+                    pydates = "pydates.git"
+
                 p = subprocess.Popen(
-                    [sys.executable, os.path.join(pwd, "pydates")],
+                    os.path.join(pwd, pydates),
                     stdout=subprocess.PIPE)
 
                 for line in p.stdout:

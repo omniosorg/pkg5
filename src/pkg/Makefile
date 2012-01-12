@@ -24,14 +24,15 @@
 PKGVERS_COMPONENT = 0.5.11
 PKGVERS_BUILTON   = 5.11
 BUILDNUM.cmd      = \
-	hg tags | nawk '$$1 ~ /^in[0-9]*$$/ {print substr($$1, 3) + 1; exit}'
+	(hg tags || git tag | grep ^in...$ | sort -rn) | \
+	nawk '$$1 ~ /^in[0-9]*$$/ {print substr($$1, 3) + 1; exit}'
 BUILDNUM          = $(BUILDNUM.cmd:sh)
 UPDATENUM         = 0
 SRUNUM            = 0
 PLATNUM           = 0
 BUILDID           = 0
-NIGHTLYID:sh      = hg parents --template '{rev}'
-CHANGESET.cmd     = hg id -i
+NIGHTLYID:sh      = hg parents --template '{rev}' || git rev-list --all | wc -l
+CHANGESET.cmd     = hg id -i || git log --pretty=format:'%h' -1..
 CHANGESET         = $(CHANGESET.cmd:sh)
 CURBUILD.cmd      = \
 	$(PKG) -R / list -H osnet-incorporation | \
