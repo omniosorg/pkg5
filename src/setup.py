@@ -814,10 +814,11 @@ class build_func(_build):
 
 def get_hg_version():
         try:
-                p = subprocess.Popen(['hg', 'id', '-i'], stdout = subprocess.PIPE)
+                cmd = 'hg id -i 2>/dev/null || git log --pretty=format:\'%h\' -1..'
+                p = subprocess.Popen(cmd, shell=True, stdout = subprocess.PIPE)
                 return p.communicate()[0].strip()
         except OSError:
-                print >> sys.stderr, "ERROR: unable to obtain mercurial version"
+                print >> sys.stderr, "ERROR: unable to obtain mercurial/git version"
                 return "unknown"
 
 def syntax_check(filename):
