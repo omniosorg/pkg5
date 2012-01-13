@@ -65,8 +65,8 @@ MANIFESTS         = $(MANIFESTS.cmd:sh)
 $(PUBLISHALL)MANIFESTS:sh      = \
 	(cd manifests; print *.p5m | sed -e 's/:/\\:/g')
 PKGCMDENV         = \
-	PPATH=$(PKGROOT)/usr/bin:/usr/sbin:/usr/bin \
-		PPYTHONPATH=$(PKGROOT)/usr/lib/python2.6/vendor-packages
+	PATH=$(PKGROOT)/usr/bin:/usr/sbin:/usr/bin \
+		PYTHONPATH=$(PKGROOT)/usr/lib/python2.6/vendor-packages
 PKG               = $(PKGCMDENV) pkg
 PKGDEPEND         = $(PKGCMDENV) pkgdepend
 PKGLINT           = $(PKGCMDENV) pkglint
