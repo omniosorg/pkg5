@@ -34,11 +34,11 @@ SVR4_TEST_NAMES   = SUNWipkg SUNWipkg-gui
 
 # Main SVr4 packaging target
 _svr4: $(SVR4_NAMES:%=$(PKGDEST)/svr4/%/pkgmap)
-	pkgtrans $(PKGDEST)/svr4 pkg5-$$(hg id -i || git log --pretty=format:'%h' -1..).pkg $(SVR4_NAMES)
+	pkgtrans $(PKGDEST)/svr4 pkg5-$$(hg id -i 2>/dev/null || git log --pretty=format:'%h' -1..).pkg $(SVR4_NAMES)
 
 # A cut down target used to only build the SVR4 packages, used for testing
 _svr4_test: $(SVR4_TEST_NAMES:%=$(PKGDEST)/svr4/%/pkgmap)
-	pkgtrans $(PKGDEST)/svr4 pkg5-$$(hg id -i || git log --pretty=format:'%h' -1..).pkg $(SVR4_TEST_NAMES)
+	pkgtrans $(PKGDEST)/svr4 pkg5-$$(hg id -i 2>/dev/null || git log --pretty=format:'%h' -1..).pkg $(SVR4_TEST_NAMES)
 
 $(PKGDEST)/svr4:
 	mkdir -p $@

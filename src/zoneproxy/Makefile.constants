@@ -25,7 +25,7 @@
 INSTALL =	/usr/bin/python2.6 ../../setup.py installfile
 LINT =		lint
 MKDIR =		mkdir -p
-PROTO_AREA:sh =	echo $(hg root || git rev-parse --show-toplevel)/proto/root_$(uname -p)
+PROTO_AREA:sh =	echo $(hg root 2>/dev/null || git rev-parse --show-toplevel)/proto/root_$(uname -p)
 ZONES_LIBDIR =	$(PROTO_AREA)/usr/lib/zones
 ZONES_PROG =	$(PROG:%=$(ZONES_LIBDIR)/%)
 

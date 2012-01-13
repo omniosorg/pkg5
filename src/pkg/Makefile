@@ -24,15 +24,15 @@
 PKGVERS_COMPONENT = 0.5.11
 PKGVERS_BUILTON   = 5.11
 BUILDNUM.cmd      = \
-	(hg tags || git tag | grep ^in...$ | sort -rn) | \
+	(hg tags 2>/dev/null || git tag | grep ^in...$ | sort -rn) | \
 	nawk '$$1 ~ /^in[0-9]*$$/ {print substr($$1, 3) + 1; exit}'
 BUILDNUM          = $(BUILDNUM.cmd:sh)
 UPDATENUM         = 0
 SRUNUM            = 0
 PLATNUM           = 0
 BUILDID           = 0
-NIGHTLYID:sh      = hg parents --template '{rev}' || git rev-list --all | wc -l | sed s/\ //g
-CHANGESET.cmd     = hg id -i || git log --pretty=format:'%h' -1..
+NIGHTLYID:sh      = hg parents --template '{rev}' 2>/dev/null || git rev-list --all | wc -l | sed s/\ //g
+CHANGESET.cmd     = hg id -i 2>/dev/null || git log --pretty=format:'%h' -1..
 CHANGESET         = $(CHANGESET.cmd:sh)
 CURBUILD.cmd      = \
 	$(PKG) -R / list -H osnet-incorporation | \
@@ -65,8 +65,8 @@ MANIFESTS         = $(MANIFESTS.cmd:sh)
 $(PUBLISHALL)MANIFESTS:sh      = \
 	(cd manifests; print *.p5m | sed -e 's/:/\\:/g')
 PKGCMDENV         = \
-	PATH=$(PKGROOT)/usr/bin:/usr/sbin:/usr/bin \
-		PYTHONPATH=$(PKGROOT)/usr/lib/python2.6/vendor-packages
+	PPATH=$(PKGROOT)/usr/bin:/usr/sbin:/usr/bin \
+		PPYTHONPATH=$(PKGROOT)/usr/lib/python2.6/vendor-packages
 PKG               = $(PKGCMDENV) pkg
 PKGDEPEND         = $(PKGCMDENV) pkgdepend
 PKGLINT           = $(PKGCMDENV) pkglint
