@@ -47,7 +47,7 @@ file path=$(PYDIRVP)/pkg/gui/misc_non_gui.py
 file path=$(PYDIRVP)/pkg/gui/parseqs.py
 file path=$(PYDIRVP)/pkg/gui/pmgconf.py
 file path=$(PYDIRVP)/pkg/gui/pmlogging.py
-file path=$(PYDIRVP)/pkg/gui/preferences.py
+file path=$(PYDIRVP)/pkg/gui/preferences.py pkg.depend.bypass-generate=.*
 file path=$(PYDIRVP)/pkg/gui/progress.py
 file path=$(PYDIRVP)/pkg/gui/repository.py
 file path=$(PYDIRVP)/pkg/gui/searcherror.py

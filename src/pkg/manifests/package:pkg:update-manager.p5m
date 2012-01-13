@@ -43,16 +43,16 @@ dir  path=lib/svc
 dir  path=lib/svc/manifest
 dir  path=lib/svc/manifest/application
 dir  path=lib/svc/manifest/application/pkg
-file path=lib/svc/manifest/application/pkg/pkg-update.xml
+file path=lib/svc/manifest/application/pkg/pkg-update.xml pkg.depend.bypass-generate=.*
 dir  path=lib/svc/method
-file path=lib/svc/method/pkg-update
+file path=lib/svc/method/pkg-update pkg.depend.bypass-generate=.*
 dir  path=usr
 dir  path=usr/bin
 file path=usr/bin/pm-updatemanager
 dir  path=usr/lib
 file path=usr/lib/pm-checkforupdates mode=0755
 dir  path=usr/lib/update-manager
-file path=usr/lib/update-manager/update-refresh.sh mode=0755
+file path=usr/lib/update-manager/update-refresh.sh mode=0755 pkg.depend.bypass-generate=.*
 file path=usr/lib/updatemanagernotifier mode=0755
 dir  path=usr/share
 dir  path=usr/share/applications
