@@ -38,7 +38,7 @@ test-verbose := TARGET = test-verbose
 test-generate := TARGET = test-generate
 test-leaks := TARGET = test-leaks
 
-SUBDIRS=zoneproxy tsol
+SUBDIRS=brand zoneproxy tsol
 
 all: $(SUBDIRS)
 	$(PYTHON) setup.py build

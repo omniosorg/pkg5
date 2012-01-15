@@ -221,11 +221,58 @@ fi
 # If this is a labeled brand, install the trusted desktop package.
 # Otherwise, install the small server package
 #
-if (( $brand_labeled == 1 )); then
-    pkglist="$pkglist pkg:///group/feature/trusted-desktop"
-else
-    pkglist="$pkglist pkg:///group/system/solaris-small-server"
-fi
+#if (( $brand_labeled == 1 )); then
+#    pkglist="$pkglist pkg:///group/feature/trusted-desktop"
+#else
+#    pkglist="$pkglist pkg:///group/system/solaris-small-server"
+#fi
+
+st=""
+pkglist="$pkglist pkg:/system/network pkg:/system/extended-system-utilities"
+pkglist="$pkglist pkg:/service/management/sysidtool pkg:/system/management/sysidtool"
+pkglist="$pkglist pkg:/compress/bzip2 pkg:/compress/gzip"
+
+#
+# Image Packaging System tools
+#
+pkglist="$pkglist pkg:/package/pkg"
+
+#
+# Get some diagnostic tools, truss, dtrace, etc.
+#
+pkglist="$pkglist pkg:/developer/linker pkg:/developer/dtrace"
+pkglist="$pkglist pkg:/service/network/network-clients pkg:/network/ftp"
+
+#
+# Get at least one sensible shell, and vi
+#
+pkglist="$pkglist pkg:/shell/bash pkg:/editor/vim"
+
+#
+# Get ssh and sshd.
+#
+pkglist="$pkglist pkg:/network/ssh/ssh-key pkg:/network/ssh"
+pkglist="$pkglist pkg:/service/network/ssh"
+
+#
+# Get some name services.
+#
+pkglist="$pkglist pkg:/system/network/nis pkg:/naming/ldap"
+
+#
+# Get nfs client and autofs; it's a pain not to have them.
+#
+pkglist="$pkglist pkg:/system/file-system/nfs pkg:/system/file-system/autofs"
+
+#
+# Get routing daemons.  They're required for useful exclusive stack zones.
+#
+pkglist="$pkglist pkg:/system/network/routing"
+
+#
+# Get packages for TX zones if appropriate.
+#
+(( $brand_labeled == 1 )) && pkglist="$pkglist pkg:/system/trusted/trusted-nonglobal"
 
 #
 # Add in any extra packages requested by the user.

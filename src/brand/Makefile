@@ -58,6 +58,7 @@ ROOTBINS = \
 	$(ROOTBRANDPKG)/poststate \
 	$(ROOTBRANDPKG)/prestate \
 	$(ROOTBRANDPKG)/support \
+	$(ROOTBRANDPKG)/sysboot \
 	$(ROOTBRANDPKG)/uninstall
 
 ROOTFILES = \

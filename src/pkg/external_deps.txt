@@ -42,3 +42,5 @@
     pkg:/text/tidy
     pkg:/web/server/apache-22
     pkg:/web/wget
+    pkg:/SUNWcs
+    pkg:/system/zones

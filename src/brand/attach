@@ -584,7 +584,7 @@ fi
 
 LC_ALL=C $PKG attach-linked $verbose -f --allow-relink --accept \
     $extra_flags \
-    -c zone:${zone.name} $ZONEROOT || pkg_err_check "$f_update"
+    -c zone:$ZONENAME $ZONEROOT || pkg_err_check "$f_update"
 
 # Make sure the zones proxy is installed so we can talk to the
 # system repository.
