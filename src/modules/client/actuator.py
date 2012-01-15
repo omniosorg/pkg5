@@ -156,19 +156,24 @@ class Actuator(GenericActuator):
 
         def exec_prep(self, image):                
                 if not image.is_liveroot():
-                        # we're doing off-line pkg ops; we need
-                        # to support self-assembly milestone
-                        # so create the necessary marker file
-
-                        if image.type != IMG_USER:
-                                path = os.path.join(image.root,
-                                    ".SELF-ASSEMBLY-REQUIRED")
-                                # create only if it doesn't exist
-                                if not os.path.exists(path):
-                                        os.close(os.open(path,
-                                            os.O_EXCL  |
-                                            os.O_CREAT |
-                                            os.O_WRONLY))
+#
+# XXX don't create the marker file as illumos doesn't support self-assembly
+# milestone
+#
+#                        # we're doing off-line pkg ops; we need
+#                        # to support self-assembly milestone
+#                        # so create the necessary marker file
+#
+#                        if image.type != IMG_USER:
+#                                path = os.path.join(image.root,
+#                                    ".SELF-ASSEMBLY-REQUIRED")
+#                                # create only if it doesn't exist
+#
+#                                if not os.path.exists(path):
+#                                        os.close(os.open(path,
+#                                            os.O_EXCL  |
+#                                            os.O_CREAT |
+#                                            os.O_WRONLY))
                         if not DebugValues.get_value("smf_cmds_dir"):
                                 return
                 self.do_nothing = False
