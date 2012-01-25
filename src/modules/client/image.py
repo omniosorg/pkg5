@@ -113,52 +113,6 @@ class Image(object):
         IMG_CATALOG_KNOWN = "known"
         IMG_CATALOG_INSTALLED = "installed"
 
-        # This is a transitory state used for temporary package sources to
-        # indicate that the package entry should be removed if it does not
-        # also have PKG_STATE_INSTALLED.  This state must not be written
-        # to disk.
-        PKG_STATE_ALT_SOURCE = 99
-
-        # Please note that the values of these PKG_STATE constants should not
-        # be changed as it would invalidate existing catalog data stored in the
-        # image.  This means that if a constant is removed, the values of the
-        # other constants should not change, etc.
-
-        # This state indicates that a package is present in a repository
-        # catalog.
-        PKG_STATE_KNOWN = 0
-
-        # This is a transitory state used to indicate that a package is no
-        # longer present in a repository catalog; it is only used to clear
-        # PKG_STATE_KNOWN.
-        PKG_STATE_UNKNOWN = 1
-
-        # This state indicates that a package is installed.
-        PKG_STATE_INSTALLED = 2
-
-        # This is a transitory state used to indicate that a package is no
-        # longer installed; it is only used to clear PKG_STATE_INSTALLED.
-        PKG_STATE_UNINSTALLED = 3
-        PKG_STATE_UPGRADABLE = 4
-
-        # These states are used to indicate the package's related catalog
-        # version.  This is helpful to consumers of the catalog data so that
-        # they can be aware of what metadata may not immediately available
-        # (require manifest retrieval) based on the catalog version.
-        PKG_STATE_V0 = 6
-        PKG_STATE_V1 = 7
-
-        PKG_STATE_OBSOLETE = 8
-        PKG_STATE_RENAMED = 9
-
-        # These states are used to indicate why a package was rejected and
-        # is not available for packaging operations.
-        PKG_STATE_UNSUPPORTED = 10      # Package contains invalid or
-                                        # unsupported metadata.
-
-        # This state indicates that this package is frozen.
-        PKG_STATE_FROZEN = 11
-
         def __init__(self, root, user_provided_dir=False, progtrack=None,
             should_exist=True, imgtype=None, force=False,
             augment_ta_from_parent_image=True, allow_ondisk_upgrade=None,
@@ -1203,18 +1157,20 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                 new_cat.add_package(f)
 
                                 # Now populate the image catalogs.
-                                states = [self.PKG_STATE_KNOWN,
-                                    self.PKG_STATE_V0]
+                                states = [pkgdefs.PKG_STATE_KNOWN,
+                                    pkgdefs.PKG_STATE_V0]
                                 mdata = { "states": states }
                                 if f.version != newest[f.pkg_name]:
-                                        states.append(self.PKG_STATE_UPGRADABLE)
+                                        states.append(
+                                            pkgdefs.PKG_STATE_UPGRADABLE)
 
                                 inst_fmri = installed.get(f.pkg_name, None)
                                 if inst_fmri and \
                                     inst_fmri.version == f.version and \
                                     pkg.fmri.is_same_publisher(f.publisher,
                                     inst_fmri.publisher):
-                                        states.append(self.PKG_STATE_INSTALLED)
+                                        states.append(
+                                            pkgdefs.PKG_STATE_INSTALLED)
                                         if inst_fmri.preferred_publisher():
                                                 # Strip the PREF_PUB_PFX.
                                                 inst_fmri.set_publisher(
@@ -1244,13 +1200,14 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 for f in installed.values():
                         # Any remaining FMRIs need to be added to all of the
                         # image catalogs.
-                        states = [self.PKG_STATE_INSTALLED, self.PKG_STATE_V0]
+                        states = [pkgdefs.PKG_STATE_INSTALLED,
+                            pkgdefs.PKG_STATE_V0]
                         mdata = { "states": states }
                         # This package may be installed from a publisher that
                         # is no longer known or has been disabled.
                         if f.pkg_name in newest and \
                             f.version != newest[f.pkg_name]:
-                                states.append(self.PKG_STATE_UPGRADABLE)
+                                states.append(pkgdefs.PKG_STATE_UPGRADABLE)
 
                         if f.preferred_publisher():
                                 # Strip the PREF_PUB_PFX.
@@ -1902,7 +1859,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 # image's known catalog.
                 def merge_check(alt_kcat, pfmri, new_entry):
                         states = new_entry["metadata"]["states"]
-                        if self.PKG_STATE_INSTALLED in states:
+                        if pkgdefs.PKG_STATE_INSTALLED in states:
                                 # Not interesting; already installed.
                                 return False, None
                         img_entry = img_kcat.get_entry(pfmri=pfmri)
@@ -2533,18 +2490,18 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         states = set(mdata.get("states", set()))
                         if pfmri in removed:
                                 icat.remove_package(pfmri)
-                                states.discard(self.PKG_STATE_INSTALLED)
+                                states.discard(pkgdefs.PKG_STATE_INSTALLED)
 
                         if pfmri in added:
-                                states.add(self.PKG_STATE_INSTALLED)
-                                if self.PKG_STATE_ALT_SOURCE in states:
+                                states.add(pkgdefs.PKG_STATE_INSTALLED)
+                                if pkgdefs.PKG_STATE_ALT_SOURCE in states:
                                         states.discard(
-                                            self.PKG_STATE_UPGRADABLE)
+                                            pkgdefs.PKG_STATE_UPGRADABLE)
                                         states.discard(
-                                            self.PKG_STATE_ALT_SOURCE)
+                                            pkgdefs.PKG_STATE_ALT_SOURCE)
                                         states.discard(
-                                            self.PKG_STATE_KNOWN)
-                        elif self.PKG_STATE_KNOWN not in states:
+                                            pkgdefs.PKG_STATE_KNOWN)
+                        elif pkgdefs.PKG_STATE_KNOWN not in states:
                                 # This entry is no longer available and has no
                                 # meaningful state information, so should be
                                 # discarded.
@@ -2552,10 +2509,10 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                 progtrack.item_add_progress()
                                 continue
 
-                        if (self.PKG_STATE_INSTALLED in states and
-                            self.PKG_STATE_UNINSTALLED in states) or (
-                            self.PKG_STATE_KNOWN in states and
-                            self.PKG_STATE_UNKNOWN in states):
+                        if (pkgdefs.PKG_STATE_INSTALLED in states and
+                            pkgdefs.PKG_STATE_UNINSTALLED in states) or (
+                            pkgdefs.PKG_STATE_KNOWN in states and
+                            pkgdefs.PKG_STATE_UNKNOWN in states):
                                 raise apx.ImagePkgStateError(pfmri,
                                     states)
 
@@ -2594,7 +2551,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
 
                                 states = entry.get("metadata", {}).get("states",
                                     EmptyI)
-                                if self.PKG_STATE_ALT_SOURCE in states:
+                                if pkgdefs.PKG_STATE_ALT_SOURCE in states:
                                         kcat.remove_package(pfmri)
 
                         # Now add the publishers of packages that were installed
@@ -2735,7 +2692,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 # action data in their manifest.
                 entry = cat.get_entry(f)
                 states = entry["metadata"]["states"]
-                if self.PKG_STATE_V1 not in states:
+                if pkgdefs.PKG_STATE_V1 not in states:
                         return self.get_manifest(f, use_excludes=True)
                 return
 
@@ -2850,7 +2807,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 if entry is None:
                         return False
                 states = entry["metadata"]["states"]
-                return self.PKG_STATE_INSTALLED in states
+                return pkgdefs.PKG_STATE_INSTALLED in states
 
         def list_excludes(self, new_variants=None, new_facets=None):
                 """Generate a list of callables that each return True if an
@@ -2968,7 +2925,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 inst_stems = {}
                 for t, entry in old_icat.tuple_entries():
                         states = entry["metadata"]["states"]
-                        if self.PKG_STATE_INSTALLED not in states:
+                        if pkgdefs.PKG_STATE_INSTALLED not in states:
                                 continue
                         pub, stem, ver = t
                         inst_stems.setdefault(pub, {})
@@ -3031,20 +2988,22 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                 # state information and/or other metadata.
                                 mdata = entry.setdefault("metadata", {})
                                 states = mdata.setdefault("states", [])
-                                states.append(self.PKG_STATE_KNOWN)
+                                states.append(pkgdefs.PKG_STATE_KNOWN)
 
                                 if cat_ver == 0:
-                                        states.append(self.PKG_STATE_V0)
-                                elif self.PKG_STATE_V0 not in states:
+                                        states.append(pkgdefs.PKG_STATE_V0)
+                                elif pkgdefs.PKG_STATE_V0 not in states:
                                         # Assume V1 catalog source.
-                                        states.append(self.PKG_STATE_V1)
+                                        states.append(pkgdefs.PKG_STATE_V1)
 
                                 if installed:
-                                        states.append(self.PKG_STATE_INSTALLED)
+                                        states.append(
+                                            pkgdefs.PKG_STATE_INSTALLED)
 
                                 nver, snver = newest.get(stem, (None, None))
                                 if snver is not None and ver != snver:
-                                        states.append(self.PKG_STATE_UPGRADABLE)
+                                        states.append(
+                                            pkgdefs.PKG_STATE_UPGRADABLE)
 
                                 # Check if the package is frozen.
                                 if stem in frozen_pkgs:
@@ -3056,7 +3015,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                             constraint=
                                             pkg.version.CONSTRAINT_AUTO):
                                                 states.append(
-                                                    self.PKG_STATE_FROZEN)
+                                                    pkgdefs.PKG_STATE_FROZEN)
 
                                 # Determine if package is obsolete or has been
                                 # renamed and mark with appropriate state.
@@ -3091,13 +3050,13 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
 
                                                 if act.attrs["name"] == "pkg.obsolete":
                                                         states.append(
-                                                            self.PKG_STATE_OBSOLETE)
+                                                            pkgdefs.PKG_STATE_OBSOLETE)
                                                 elif act.attrs["name"] == "pkg.renamed":
                                                         if not act.include_this(
                                                             excludes):
                                                                 continue
                                                         states.append(
-                                                            self.PKG_STATE_RENAMED)
+                                                            pkgdefs.PKG_STATE_RENAMED)
 
                                 mdata["states"] = states
 
@@ -3141,16 +3100,16 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                 if base:
                                         mdata = entry["metadata"]
                                         states = set(mdata["states"])
-                                        states.discard(self.PKG_STATE_KNOWN)
+                                        states.discard(pkgdefs.PKG_STATE_KNOWN)
 
                                         nver, snver = newest.get(stem, (None,
                                             None))
                                         if snver is not None and ver == snver:
                                                 states.discard(
-                                                    self.PKG_STATE_UPGRADABLE)
+                                                    pkgdefs.PKG_STATE_UPGRADABLE)
                                         elif snver is not None:
                                                 states.add(
-                                                    self.PKG_STATE_UPGRADABLE)
+                                                    pkgdefs.PKG_STATE_UPGRADABLE)
                                         mdata["states"] = list(states)
 
                                 # Add entries.
@@ -3429,9 +3388,18 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                     "actions.stripped")
                 offsets_path = os.path.join(self.__action_cache_dir,
                     "actions.offsets")
+                conflicting_keys_path = os.path.join(self.__action_cache_dir,
+                    "keys.conflicting")
 
                 excludes = self.list_excludes()
                 heap = []
+
+                # nsd is the "name-space dictionary."  It maps action name
+                # spaces (see action.generic for more information) to
+                # dictionaries which map keys to pairs which contain an action
+                # with that key and the pfmri of the package which delivered the
+                # action.
+                nsd = {}
 
                 from heapq import heappush, heappop
 
@@ -3453,20 +3421,33 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                                 del act.attrs[key]
                                 heappush(heap, (act.name,
                                     act.attrs[act.key_attr], pfmri, act))
+                                nsd.setdefault(act.namespace_group, {})
+                                nsd[act.namespace_group].setdefault(
+                                    act.attrs[act.key_attr], [])
+                                nsd[act.namespace_group][
+                                    act.attrs[act.key_attr]].append((
+                                    act, pfmri))
 
                 # Don't worry if we can't write the temporary files.
                 try:
                         actdict = {}
                         sf, sp = self.temporary_file(close=False)
                         of, op = self.temporary_file(close=False)
+                        bf, bp = self.temporary_file(close=False)
 
                         sf = os.fdopen(sf, "wb")
                         of = os.fdopen(of, "wb")
+                        bf = os.fdopen(bf, "wb")
 
                         # We need to make sure the files are coordinated.
                         timestamp = int(time.time())
                         sf.write("VERSION 1\n%s\n" % timestamp)
                         of.write("VERSION 2\n%s\n" % timestamp)
+                        # The conflicting keys file doesn't need a timestamp
+                        # because it's not coordinated with the stripped or
+                        # offsets files and the result of loading it isn't
+                        # reused by this class.
+                        bf.write("VERSION 1\n")
 
                         last_name, last_key, last_offset = None, None, sf.tell()
                         cnt = 0
@@ -3501,14 +3482,21 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                 actdict[(last_name, last_key)] = \
                                     last_offset, cnt
 
+                        bad_keys = imageplan.ImagePlan._check_actions(nsd)
+                        for k in sorted(bad_keys):
+                                bf.write("%s\n" % k)
+
                         sf.close()
                         of.close()
+                        bf.close()
                         os.chmod(sp, misc.PKG_FILE_MODE)
                         os.chmod(op, misc.PKG_FILE_MODE)
+                        os.chmod(bp, misc.PKG_FILE_MODE)
                 except BaseException, e:
                         try:
                                 os.unlink(sp)
                                 os.unlink(op)
+                                os.unlink(bp)
                         except:
                                 if isinstance(e, KeyboardInterrupt):
                                         raise
@@ -3523,6 +3511,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 try:
                         portable.rename(sp, stripped_path)
                         portable.rename(op, offsets_path)
+                        portable.rename(bp, conflicting_keys_path)
                         return actdict, timestamp
                 except EnvironmentError, e:
                         if e.errno == errno.EACCES or e.errno == errno.EROFS:
@@ -3531,12 +3520,16 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                     self.__action_cache_dir, "actions.stripped")
                                 offsets_path = os.path.join(
                                     self.__action_cache_dir, "actions.offsets")
+                                conflicting_keys_path = os.path.join(
+                                    self.__action_cache_dir, "keys.conflicting")
                                 portable.rename(sp, stripped_path)
                                 portable.rename(op, offsets_path)
+                                portable.rename(bp, conflicting_keys_path)
                                 return actdict, timestamp
                         try:
                                 os.unlink(stripped_path)
                                 os.unlink(offsets_path)
+                                os.unlink(conflicting_keys_path)
                         except:
                                 pass
 
@@ -3607,6 +3600,22 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         return sversion, stimestamp
 
                 return sf
+
+        def _load_conflicting_keys(self):
+                """Load the list of keys which have conflicting actions in the
+                existing image.  If no such list exists, then return None."""
+
+                pth = os.path.join(self.__action_cache_dir, "keys.conflicting")
+                try:
+                        with open(pth, "rb") as fh:
+                                version = fh.readline().rstrip()
+                                if version != "VERSION 1":
+                                        return None
+                                return set(l.rstrip() for l in fh)
+                except EnvironmentError, e:
+                        if e.errno == errno.ENOENT:
+                                return None
+                        raise
 
         def gen_installed_actions_bytype(self, atype, implicit_dirs=False):
                 """Iterates through the installed actions of type 'atype'.  If
@@ -3861,7 +3870,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         for m, st in olist:
                                 if not st["in_catalog"]:
                                         continue
-                                if st["state"] == self.PKG_STATE_INSTALLED:
+                                if st["state"] == pkgdefs.PKG_STATE_INSTALLED:
                                         found_state = True
                                 mnames.add(m.get_pkg_stem())
                                 mlist.append((m, st))
@@ -3875,7 +3884,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         mlist = []
                         mnames = set()
                         for m, st in olist:
-                                if st["state"] == self.PKG_STATE_INSTALLED:
+                                if st["state"] == pkgdefs.PKG_STATE_INSTALLED:
                                         mnames.add(m.get_pkg_stem())
                                         mlist.append((m, st))
                         olist = mlist
