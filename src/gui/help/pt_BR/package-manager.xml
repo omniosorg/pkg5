@@ -1,0 +1,713 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook XML V4.3//EN" "http://www.oasis-open.org/docbook/xml/4.3/docbookx.dtd">
+<book id="pkgmgr" lang="pt_BR"><title>Ajuda online do Gerenciador de pacotes do <trademark class="registered">Oracle</trademark> Solaris 11</title>
+<bookinfo><authorgroup><author><firstname>Oracle</firstname>
+<surname>Corporation</surname>
+</author>
+</authorgroup>
+<releaseinfo>Oracle Solaris 11</releaseinfo>
+<pubdate>Junho de 2011</pubdate>
+<publisher><publishername>Oracle Corporation</publishername>
+<address><street>500 Oracle Parkway</street>
+<city>Redwood City</city>
+<state>CA</state>
+<postcode>94065</postcode>
+<country>U.S.A.</country>
+</address>
+</publisher>
+<copyright><year>2008, 2011</year></copyright>
+<legalnotice><para>Este programa de computador e sua documentação são fornecidos sob um contrato de licença que contém restrições sobre seu uso e divulgação, sendo também protegidos pela legislação de propriedade intelectual. Exceto em situações expressamente permitidas no contrato de licença ou por lei, não é permitido usar, reproduzir, traduzir, divulgar, modificar, licenciar, transmitir, distribuir, expor, executar, publicar ou exibir qualquer parte deste programa de computador e de sua documentação, de qualquer forma ou através de qualquer meio. Não é permitida a engenharia reversa, a desmontagem ou a descompilação deste programa de computador, exceto se exigido por lei para obter interoperabilidade.</para>
+<para>As informações contidas neste documento estão sujeitas a alteração sem aviso prévio. A Oracle Corporation não garante que tais informações estejam isentas de erros. Se você encontrar algum erro, por favor, nos envie uma descrição de tal problema por escrito.</para>
+<para>Se este programa de computador, ou sua documentação, for entregue / distribuído(a) ao Governo dos Estados Unidos ou a qualquer outra parte que licencie os Programas em nome daquele Governo, a seguinte nota será aplicável:</para>
+<para>U.S. GOVERNMENT RIGHTS Programs, software, databases, and related documentation and technical data delivered to U.S. Government customers are "commercial computer software" or "commercial technical data" pursuant to the applicable Federal Acquisition Regulation and agency-specific supplemental regulations. As such, the use, duplication, disclosure, modification, and adaptation shall be subject to the restrictions and license terms set forth in the applicable Government contract, and, to the extent applicable by the terms of the Government contract, the additional rights set forth in FAR 52.227-19, Commercial Computer Software License (December 2007). Oracle America, Inc., 500 Oracle Parkway, Redwood City, CA 94065.</para>
+<para>Este programa de computador foi desenvolvido para uso em diversas aplicações de gerenciamento de informações. Ele não foi desenvolvido nem projetado para uso em aplicações inerentemente perigosas, incluindo aquelas que possam criar risco de lesões físicas. Se utilizar este programa em aplicações perigosas, você será responsável por tomar todas e quaisquer medidas apropriadas em termos de segurança, backup e redundância para garantir o uso seguro de tais programas de computador. A Oracle Corporation e suas afiliadas se isentam de qualquer responsabilidade por quaisquer danos causados pela utilização deste programa de computador em aplicações perigosas.</para>
+<para>Oracle e Java são marcas comerciais registradas da Oracle Corporation e/ou de suas empresas afiliadas. Outros nomes podem ser marcas comerciais de seus respectivos proprietários.</para>
+<para>AMD, Opteron, o logotipo da AMD e o logotipo do AMD Opteron são marcas comerciais ou marcas comerciais registradas da Advanced Micro Devices. Intel e Intel Xeon são marcadas comerciais ou marcas comerciais registradas da Intel Corporation. Todas as marcas comerciais SPARC são usadas sob licença e são marcas comerciais ou marcas comerciais registradas da SPARC International, Inc. UNIX é uma marca comercial registrada licenciada por meio do consórcio X/Open Company Ltd.</para>
+<para>Este programa e sua documentação podem oferecer acesso ou informações relativas a conteúdos, produtos e serviços de terceiros. A Oracle Corporation e suas empresas afiliadas não fornecem quaisquer garantias relacionadas a conteúdos, produtos e serviços de terceiros e estão isentas de quaisquer responsabilidades associadas a eles. A Oracle Corporation e suas empresas afiliadas não são responsáveis por quaisquer tipos de perdas, despesas ou danos incorridos em consequência do acesso ou da utilização de conteúdos, produtos ou serviços de terceiros.</para>
+</legalnotice>
+</bookinfo>
+<chapter id="about"><title>Sobre o Gerenciador de pacotes</title>
+<para>O Gerenciador de pacotes é uma interface gráfica de usuário (GUI) para o Oracle Solaris Image Packaging System (IPS).</para>
+<para>Consulte o <xref linkend="glossary"/> para obter definições dos termos usados neste documento.</para>
+<sect1 id="gikcw"><title>Oracle Solaris Image Packaging System</title>
+<para>O Oracle Solaris Image Packaging System (IPS) é um sistema de distribuição de software que interage com um repositório de pacotes em uma rede. O IPS é uma estrutura que oferece recursos de gerenciamento para o ciclo de vida do software, incluindo instalação, atualização e remoção de software.</para>
+<para>Após instalar o sistema operacional Oracle Solaris, talvez você perceba que algum dos softwares que deseja usar não está disponível. É provável que esse software esteja disponível em um repositório de pacotes IPS. Você pode usar o Gerenciador de pacotes ou o comando <literal>pkg</literal>(1M) para baixar e instalar pacotes de um repositório de pacotes.</para>
+<para>O IPS também permite criar uma cópia de um repositório de pacotes IPS existente, criar seu próprio repositório de pacotes IPS e publicar seus próprios pacotes IPS. Para obter mais informações sobre o IPS, consulte a Biblioteca de Informações do Oracle Solaris 11. Vá para <literal>download.oracle.com</literal>, selecione Documentation Index à esquerda, selecione Systems Software, selecione Oracle Solaris 11 e selecione View Library. Consulte <citetitle>Adding and Updating Oracle Solaris 11 Software Packages</citetitle>.</para>
+</sect1>
+<sect1 id="pm-win"><title>Gerenciador de pacotes</title>
+<para>O Gerenciador de pacotes oferece um subconjunto da funcionalidade disponibilizada pela interface da linha de comando.</para>
+<para>O Gerenciador de pacotes permite a execução das seguintes tarefas:</para>
+<itemizedlist><listitem><para>Localizar, instalar, atualizar e remover os pacotes IPS. Consulte <xref linkend="manage-pkg"/>.</para>
+</listitem>
+<listitem><para>Atualizar o sistema. Consulte <xref linkend="update_all"/>.</para>
+</listitem>
+<listitem><para>Adicionar, modificar e remover editores de pacotes IPS. Consulte <xref linkend="manage-publisher"/>.</para>
+</listitem>
+<listitem><para>Listar, renomear, excluir e gerenciar  ambientes de inicialização. Consulte <xref linkend="manage-be"/>.</para>
+</listitem>
+<listitem><para>Criar um arquivo de instalação do WebInstall (<filename>.p5i</filename>). Consulte <xref linkend="webinstall"/>.</para>
+</listitem>
+</itemizedlist>
+<para>Esta documentação refere-se aos seguintes recursos da janela do Gerenciador de pacotes:</para>
+<itemizedlist><listitem><para>O grande painel no centro da janela é o painel da lista de pacotes. Algumas vezes, ele mostra mensagens informativas, mas em geral contém uma lista de pacotes.</para>
+</listitem>
+<listitem><para>A barra de menus na parte superior da janela fornece a maior parte da funcionalidade do Gerenciador de pacotes.</para>
+</listitem>
+<listitem><para>A barra de ferramentas imediatamente abaixo da barra de menus tem botões à esquerda que fornecem algumas das operações mais utilizadas. Os botões à esquerda do separador têm funcionalidade global: Atualize todos os pacotes com as atualizações disponíveis ou sincronize a lista de pacotes e o status do pacote. Os botões à direita do separador funcionam somente em pacotes selecionados.</para>
+</listitem>
+<listitem><para>O campo de pesquisa à direita da barra de ferramentas ajuda a controlar o conteúdo do painel da lista de pacotes. Consulte <xref linkend="search-pkg"/>.</para>
+</listitem>
+<listitem><para>O menu drop-down <guimenu>Editor</guimenu> abaixo dos botões ajuda a controlar o conteúdo do painel da lista de pacotes e também permite adicionar um novo editor. Consulte <xref linkend="list-pkg"/> “Por editor”.</para>
+</listitem>
+<listitem><para>O menu drop-down <guimenu>Exibir</guimenu> abaixo do campo de pesquisa ajuda a controlar o conteúdo do painel da lista de pacotes. Consulte lista de pacotes “Por status do pacote”.</para>
+</listitem>
+<listitem><para>O painel de categorias abaixo do menu <guimenu>Editor</guimenu> ajuda a controlar o conteúdo do painel da lista de pacotes. Consulte lista de pacotes “Por categoria”.</para>
+</listitem>
+<listitem><para>Abaixo da lista de categorias do software aparece uma lista de pesquisas executadas nesta sessão.</para>
+</listitem>
+<listitem><para>Abaixo do painel da lista de pacotes aparece o painel de detalhes do paxote. Consulte <xref linkend="package-version"/>.</para>
+</listitem>
+</itemizedlist>
+</sect1>
+</chapter>
+<chapter id="manage-pkg"><title>Gerenciamento de pacotes</title>
+<para>Você pode listar pacotesde acordo com vários critérios. É possível instalar, atualizar e remover pacotes.</para>
+<sect1 id="list-pkg"><title>Lista de pacotes</title>
+<para>A lista de pacotes no painel da lista Gerenciador de pacotes é afetado pelas seleções feitas no menu drop-down <guimenu>Editor</guimenu>, no menu drop-down <guimenu>Exibir</guimenu>, no painel de categorias e no campo de pesquisa.</para>
+<para>É possível reordenar a lista de pacotes clicando nos títulos das colunas.</para>
+<para>Você pode usar o botão <guibutton>Sincronizar</guibutton> ou a opção de menu <menuchoice><guimenu>Pacote</guimenu><guimenuitem>Sincronizar</guimenuitem></menuchoice> para reler catálogos do repositório e atualizar a lista de pacotes e o status do pacote. Também é possível tentar fazer uma sincronização sempre que você abre o Gerenciador de pacotes.</para>
+<sect2 id="gkihe"><title>Por editor</title>
+<para>O menu drop-down <guimenu>Editor</guimenu> permite listar pacotes por editor.</para>
+<itemizedlist><listitem><para>A parte superior do menu exibe o nome de cada editor adicionado através da caixa de diálogo Adicionar editor ou através do comando <literal>pkg</literal>. Quando você seleciona um desses editores, o painel da lista de pacotes mostra somente os pacotes disponíveis do editor selecionado. O painel da lista de pacotes mostra somente as colunas Nome, Status e Resumo porque os editores são os mesmos para todos os pacotes.</para>
+</listitem>
+<listitem><para><guimenuitem>Todos os editores</guimenuitem> — Mostra pacotes de todos os editores do painel da lista de pacotes. O painel da lista de pacotes mostra as colunas Nome, Status, Editor e Resumo.</para>
+<para>Exemplo: para listar todos os drivers de dispositivos de mídia com atualizações disponíveis em todos os editores, selecione <guimenuitem>Todos os editores</guimenuitem> no menu <guimenu>Editor</guimenu>, selecione a categoria <menuchoice><guimenu>Drivers</guimenu><guimenuitem>Mídia</guimenuitem></menuchoice> e selecione <guimenuitem>Atualizações</guimenuitem> no menu <guimenu>Exibir</guimenu>.</para>
+</listitem>
+<listitem><para><guimenuitem>Todos os pacotes instalados</guimenuitem> — Mostra todos os pacotes instalados de todos os editores.</para>
+<para>Exemplo: para listar todos os pacotes de fontes atualmente instaladas no editor <literal>solaris</literal>, selecione <guimenuitem>Todos os pacotes instalados</guimenuitem> no menu <guimenu>Editor</guimenu>, selecione a categoria <menuchoice><guimenu>Sistema</guimenu><guimenuitem>Fontes</guimenuitem></menuchoice>, clique no título da coluna Editor para ordenar a lista por Editor e role até as entradas <literal>solaris</literal>.</para>
+</listitem>
+<listitem><para><guimenuitem>Todos os editores (pesquisa)</guimenuitem> — Mostra todas as mensagens informativas do painel da lista de pacotes. A mensagem exibe todos es editores configurados e lembra a você como exibir todos os pacotes desses editores. Consulte <xref linkend="search-pkg"/> para obter mais informações sobre pesquisa com <guimenuitem>Todos os editores (pesquisa)</guimenuitem>.</para>
+</listitem>
+<listitem><para><guimenuitem>Adicionar...</guimenuitem> — Abre a janela Adicionar editor.</para>
+</listitem>
+</itemizedlist>
+</sect2>
+<sect2 id="gkihp"><title>Por status do pacote</title>
+<para>O menu drop-down <guimenu>Exibir</guimenu> permite listar pacotes de acordo com o status do pacote. O status do pacote pode ser instalado, não instalado ou uma variável de atualização pode estar disponível. Os ícones exibidos no menu <guimenu>Exibir</guimenu> correspondem aos ícones exibidos na coluna Status do painel da lista de pacotes.</para>
+<itemizedlist><listitem><para><guimenuitem>Todos os pacotes</guimenuitem> — Mostra todos os pacotes disponíveis do editor selecionadona categoria selecionada ou que correspondem à sequência de pesquisa espedificada.</para>
+<para>Exemplo: Para listar todos os pacotes de serviços Web do editor <literal>solaris</literal> instalados, não instalados ou disponibilizar as atualizações, selecione <literal>solaris</literal> no menu <guimenu>Editor</guimenu>, selecione a categoria <menuchoice><guimenu>Serviços Web</guimenu></menuchoice> e selecione <guimenuitem>Todos os pacotes</guimenuitem> no menu <guimenu>Exibir</guimenu>.</para>
+</listitem>
+<listitem><para><guimenuitem>Pacotes instalados</guimenuitem> — Mostra todos os pacotes instalados do editor selecionado na categoria selecionada ou que correspondem à sequência de pesquisa especificada. Consulte também a opção <menuchoice><guimenu>Editor</guimenu><guimenuitem>Todos os pacotes instalados</guimenuitem></menuchoice>.</para>
+<para>Exemplo: Para listar somente os pacotes do servidor Web instalados no editor <literal>solaris</literal>, selecione <literal>solaris</literal> no menu <guimenu>Editor</guimenu>, selecione a categoria <menuchoice><guimenu>Serviços Web</guimenu></menuchoice> e selecione <guimenuitem>Pacotes instalados</guimenuitem> no menu <guimenu>Exibir</guimenu>.</para>
+</listitem>
+<listitem><para><guimenuitem>Atualizações</guimenuitem> — Mostra todos os pacotes do editor selecionado na categoria selecionada ou que correspondam à sequência de pesquisa especificada que tenham atualizações disponíveis.</para>
+<para>Exemplo: Para listar todos os drivers de dispositivos com atualizações disponíveis de todos os editores, selecione <guimenuitem>Todos os editores</guimenuitem> no menu <guimenu>Editor</guimenu>, selecione a categoria <guimenu>Drivers</guimenu> e selecione <guimenuitem>Atualizações</guimenuitem> no menu <guimenu>Exibir</guimenu>.</para>
+</listitem>
+<listitem><para><guimenuitem>Pacotes não instalados</guimenuitem> — Mostra todos os pacotes do editor selecionado na categoria selecionada ou que correspondam à sequência de pesquisa especificada que não estejam instalados.</para>
+<para>Exemplo: Para listar todos os pacotes de fontes atualmente não instalados no editor <literal>solaris</literal>, selecione <literal>solaris</literal> no menu <guimenu>Editor</guimenu>, selecione a categoria <menuchoice><guimenu>Sistema</guimenu><guimenuitem>Fontes</guimenuitem></menuchoice> e depois <guimenuitem>Pacotes não instalados</guimenuitem> no menu <guimenu>Exibir</guimenu>.</para>
+</listitem>
+<listitem><para><guimenuitem>Pacotes selecionados</guimenuitem> — Lista todos os pacotes atualmente selecionados. Consulte <xref linkend="select-pkg"/>.</para>
+</listitem>
+</itemizedlist>
+</sect2>
+<sect2 id="gkigv"><title>Por categoria</title>
+<para>Você pode verificar os pacotes disponíveis por tipo de software no painel de categorias no lado esquerdo da janela Gerenciador de pacotes. Clique em uma categoria para ver as subcategorias.Os pacotes da categoria ou subcategoria selecionada aparecem na lista de pacotes de acordo com o editor selecionado e o status do pacote, dentro dos critérios de pesquisa especificados.</para>
+<para>Além dos tipos de software nomeados, o painel de categorias permite selecionar <guimenuitem>Todas as categorias</guimenuitem> e <guimenuitem>Pesquisas recentes</guimenuitem>. Consulte <xref linkend="search-pkg"/> “Repetir pesquisa anterior” para obter informações sobre <guimenuitem>Pesquisas recentes</guimenuitem>.</para>
+</sect2>
+</sect1>
+<sect1 id="search-pkg"><title>Pesquisa de pacotes</title>
+<para>Use um dos dois métodos a seguir para procurar pacotes:</para>
+<itemizedlist><listitem><para>Na lista de pacotes, por exemplo, selecione <menuchoice><guimenu>Editar</guimenu><guimenuitem>Ir para lista de pacotes</guimenuitem></menuchoice> e comece a digitar. À medida que você digita, as correspondências são identificadas entre os pacotes listados atualmente no painel da lista de pacotes.</para>
+</listitem>
+<listitem><para>Use o campo Pesquisar na barra de ferramentas.</para>
+</listitem>
+</itemizedlist>
+<sect2 id="gkjbd"><title>Digite uma sequência de pesquisa</title>
+<para>Digite uma sequência no campo Pesquisar e pressione a tecla Enter ou clique na lupa à direita do campo Pesquisar.</para>
+<itemizedlist><listitem><para>Seleção do menu <guimenu>Editor</guimenu> — O Gerenciador de pacotes procura a sequência de pesquisa nas informações sobre cada pacote de um determinado editor ou de todos os editores, de acordo com o que foi selecionado no menu <guimenu>Editor</guimenu>.</para>
+<para>Os resultados da pesquisa são os mesmos, quer você selecione <guimenuitem>Todos os editores</guimenuitem> ou <guimenuitem>Todos os editores (pesquisa)</guimenuitem>. A diferença está no fato de que o uso de <guimenuitem>Todos os editores (pesquisa)</guimenuitem> é mais rápido porque você evita o atraso no carregamento dos dados de todos os editores envolvidos ao selecionar <guimenuitem>Todos os editores</guimenuitem>. Com <guimenuitem>Todos os editores (pesquisa)</guimenuitem>, a pesquisa é executada sem o carregamento dos dados de todos os editores no painel da lista de pacotes.</para>
+</listitem>
+<listitem><para>Seleção do menu <guimenu>Exibir</guimenu> — Os resultados da pesquisa são exibidos no painel da lista de pacotes de acordo com o status do pacote selecionado no menu <guimenu>Exibir</guimenu>. É possível exibir diferentes subconjuntos dos mesmos resultados da pesquisa no painel da lista de pacotes alterando a seleção do menu <guimenu>Exibir</guimenu> sem refazer a pesquisa.</para>
+</listitem>
+</itemizedlist>
+<para>O Gerenciador de pacotes procura informações do pacote, incluindo nome, resumo, descrição, categoria e nomes de arquivos contidos no pacote. Somente correspondências exatas são encontradas se você não usar caracteres curinga.</para>
+<variablelist><varlistentry><term><literal>E</literal></term>
+<listitem><para>Quando os termos de pesquisa estão separados por espaços ou pelo <literal>AND</literal>, o Gerenciador de pacotes procura pacotes que contenham <emphasis role="strong">todos</emphasis> os termos de pesquisa. Esse é o comportamento padrão da pesquisa.</para>
+<para>Exemplo: Se a sequência da pesquisa for <literal>livro de python</literal> ou <literal>python E livro</literal>, os resultados da pesquisa incluirão apenas os pacotes que contiverem <emphasis/><literal>python</literal> <emphasis>e</emphasis> <literal>livro</literal> nas informações do pacote. Por exemplo, o pacote <literal>diveintopython</literal>, um livro sobre programação Python, apareceria nos resultados da pesquisa, mas o pacote <literal>python-26</literal> não.</para>
+</listitem>
+</varlistentry>
+<varlistentry><term>Aspas duplas</term>
+<listitem><para>Coloque o termo de pesquisa entre aspas duplas para localizar esse termo exato.</para>
+<para>Exemplo: <literal>"driver ethernet"</literal> entre aspas duplas corresponde a <literal>Fast Ethernet Driver</literal> mas não a <literal>Driver de Adaptador Ethernet</literal>.</para>
+</listitem>
+</varlistentry>
+<varlistentry><term>Curinga</term>
+<listitem><para>Você pode usar o caractere curinga <literal>*</literal> na sequência de pesquisa. O uso de caracteres curinga pode tornar a pesquisa mais lenta.</para>
+<para>Exemplo: <literal>802.11*</literal> corresponde a <literal>802.11b/g</literal> e <literal>802.11a/b/g</literal>.</para>
+<para>Observe que <literal>802.11*</literal> não corresponde a <literal>IEEE802.11b/g</literal>. Para que coincida com <literal>IEEE802.11b/g</literal>, use uma sequência de pesquisa <literal>*802.11*</literal>.</para>
+</listitem>
+</varlistentry>
+<varlistentry><term><literal>OU</literal></term>
+<listitem><para>Quando os termos de pesquisa estão separados por <literal>OU</literal>, o Gerenciador de pacotes procura pacotes que contenham <emphasis role="strong">qualquer~um</emphasis> dos termos de pesquisa.</para>
+<para>Exemplo: <literal>python OU livro</literal> coincidem em todos os pacotes que contenham <literal>python</literal> nas informações do pacote e em todos os pacotes que contenham <literal>livro</literal> nas informações do pacote.</para>
+</listitem>
+</varlistentry>
+</variablelist>
+<para>Você pode combinar esses modificadores de sequência de pesquisa . É possível usar E, OU, aspas duplas e *ao mesmo tempo em uma sequência de pesquisa.</para>
+</sect2>
+<sect2 id="gkjao"><title>Limpar campo Pesquisar</title>
+<para>Para limpar a sequência de pesquisa e a lista de resultados da pesquisa, use o campo Pesquisar ou o menu Editar.</para>
+<itemizedlist><listitem><para>No campo Pesquisar, clique no ícone <literal>X</literal>.</para>
+</listitem>
+<listitem><para>No menu <guimenu>Editar</guimenu>, selecione a opção <guimenuitem>Limpar pesquisa</guimenuitem>.</para>
+</listitem>
+</itemizedlist>
+</sect2>
+<sect2 id="gkjbe"><title>Cancelar pesquisa</title>
+<para>Durante uma operação de pesquisa, é exibida uma barra ocupada na extremidade direita da barra de status da janela do Gerenciador de pacotes. Na extremidade direita da barra ocupada aparece um ícone <literal>X</literal>. Clique no ícone <literal>X</literal> na barra ocupada para cancelar a pesquisa em andamento.</para>
+</sect2>
+<sect2 id="gkjbb"><title>Reexibir resultados da pesquisa anterior</title>
+<para>Resultados de pesquisas já executadas durante a sessão atual do Gerenciador de pacotes são salvos em <guimenuitem>Pesquisas recentes</guimenuitem> no painel de categorias.</para>
+<para>Selecione <guimenuitem>Pesquisas recentes</guimenuitem> no painel de categorias para exibir uma mensagem informativa no painel da lista de pacotes. O painel da lista de pacotes mostra a lista dos resultados de pesquisas anteriores. Clique no link "resultados" para reexibir esses resultados.</para>
+<para>Selecione a seta à esquerda de <guimenuitem>Pesquisas recentes</guimenuitem> para expandir ou ocultar a lista de resultados de pesquisas anteriores do painel de categorias. Selecione um item na lista de pesquisas recentes para reexibir os resultados dessas pesquisas.</para>
+<para>Uma pesquisa sem pacotes correspondentes não aparece na lista de pesquisas recentes.</para>
+<para>Se você selecionar o botão <guibutton>Sincronizar</guibutton> ou a opção de menu<menuchoice><guimenu>Pacote</guimenu><guimenuitem>Sincronizar</guimenuitem></menuchoice>, todos os resultados de pesquisas recentes serão excluídos.</para>
+</sect2>
+</sect1>
+<sect1 id="package-version"><title>Exibição de mais informações</title>
+<para>Consulte mais informações sobre pacotes no painel de detalhes do pacote ou na caixa de diálogo Informação da versão do pacote.</para>
+<sect2 id="gkiti"><title>Painel de detalhes do pacote</title>
+<para>Para exibir mais informações sobre um pacote, clique no botão esquerdo do mouse para realçar o pacote na lista de pacotes. O painel de detalhes do pacote abaixo da lista de pacotes exibe informações como a versão mais recente disponível do editor, o tamanho do pacote, os arquivos do pacote, dependências e termos da licença.</para>
+<para>Se um pacote foi renomeado após a instalação, o campo Renomeado para na guia Geral exibirá o novo nome do pacote.</para>
+<para>A guia Versões mostra uma lista das versões deste pacote disponíveis para instalação. Selecione uma versão na lista e clique no botão <guibutton>Instalar/Atualizar</guibutton> à direita da lista para instalar a versão. Consulte <xref linkend="install-pkg"/>.</para>
+<para>O painel de detalhes do pacote não é exibido caso o pacote contenha uma mensagem informativa.</para>
+</sect2>
+<sect2 id="gkitc"><title>Caixa de diálogo Informações sobre a versão do pacote</title>
+<para>Clique com o botão direito do mouse em um pacote da lista de pacotes para exibir o menu instantâneo <guimenu>Pacote</guimenu>.</para>
+<para>Selecione a opção de menu <menuchoice><guimenu>Pacote</guimenu><guimenuitem>Informação sobre a versão do pacote</guimenuitem></menuchoice> no menu pop-up ou na barra de menus para exibir uma janela separada mostrando a versão do pacote instalado e a versão mais recente que pode ser instalada ou atualizada, se aplicável.</para>
+</sect2>
+</sect1>
+<sect1 id="select-pkg"><title>Seleção de pacotes</title>
+<para>Os pacotes selecionados podem ser instalados, atualizados ou removidos. Para selecionar um pacote, use o painel da lista de pacotes ou o menu <guimenu>Editar</guimenu>.</para>
+<para>No painel da lista de pacotes, execute um dos procedimentos a seguir para selecionar um pacote. É possível selecionar vários pacotes.</para>
+<itemizedlist><listitem><para>Clique na caixa à esquerda do nome do pacote. Clique na caixa novamente para cancelar a seleção do pacote.</para>
+</listitem>
+<listitem><para>Clique no nome do pacote uma vez para realçar o pacote. Em seguida, clique duas vezes no pacote realçado para selecionar o pacote. Clique duas vezes novamente para cancelar a seleção do pacote.</para>
+</listitem>
+<listitem><para>Clique no ícone da caixa de seleção no título da coluna para selecionar todos os pacotes listados atualmente no painel da lista de pacotes. Clique no ícone da caixa de seleção novamente para cancelar a seleção de todos os pacotes listados atualmente no painel da lista de pacotes.</para>
+</listitem>
+</itemizedlist>
+<para>O menu <guimenu>Editar</guimenu> tem as seguintes opções para seleção de pacotes:</para>
+<itemizedlist><listitem><para><guimenuitem>Selecionar todos</guimenuitem> — Seleciona todos os pacotes listados atualmente no painel da lista de pacotes.</para>
+</listitem>
+<listitem><para><guimenuitem>Selecionar atualizações</guimenuitem> — Seleciona todos os pacotes listados atualmente no painel da lista de pacotes que contenham atualizações disponíveis.</para>
+</listitem>
+<listitem><para><guimenuitem>Cancelar seleção de todos</guimenuitem> — Cancela a seleção de todos os pacotes listados atualmente no painel da lista de pacotes.</para>
+</listitem>
+</itemizedlist>
+<para>Em todos os casos, quando um pacote é selecionado, os pacotes selecionados anteriormente permanecem selecionados.</para>
+<para>O número de pacotes listados atualmente no painel da lista de pacotes e o número desses pacotes selecionados são mostrados do lado esquerdo da barra de status, na parte inferior da janela do Gerenciador de pacotes.</para>
+<para>Selecione a opção <menuchoice><guimenu>Editor</guimenu><guimenuitem>Todos os editores</guimenuitem></menuchoice>, a categoria <guimenuitem>Todas as categorias</guimenuitem> e a opção <menuchoice><guimenu>Exibir</guimenu><guimenuitem>Pacotes selecionados</guimenuitem></menuchoice> para listar todos os pacotes selecionados de todos os editores do painel da lista de pacotes.</para>
+<para>Um pacote pode ser realçado mas não selecionado. Quando um pacote é realçado, são exibidas informações detalhadas sobre o pacote no painel de detalhes do pacote abaixo do painel da lista de pacotes.  Quando um pacote é selecionado, é exibida uma marca de seleção na caixa à esquerda do nome do pacote. Se quiser instalar, atualizar ou excluir um pacote, verifique se aparece uma marca de seleção na caixa de seleção do pacote.</para>
+</sect1>
+<sect1 id="install-pkg"><title>Instalação e atualização de pacotes</title>
+<para>Antes de instalar ou atualizar, verifique as configurações de preferências de Componentes opcionais. Selecione a opção <menuchoice><guimenu>Edit</guimenu><guimenuitem>Preferências</guimenuitem></menuchoice>. Na janela Preferências, selecione a guia Componentes opcionais. Por padrão, Instalar todos os idiomas, Instalar todos os arquivos de desenvolvimento e Instalar toda a documentação estão selecionados. É possível liberar espaço na instalação selecionando um subconjunto de idiomas para instalar ou cancelar a seleção de arquivos de desenvolvimento, por exemplo. Clique no botão OK para salvar as alterações. Essas configurações aplicam-se a todos os pacotes instalados e às futuras instalações e atualizações de pacotes.</para>
+<para>Execute as seguintes etapas para instalar ou atualizar um pacote:</para>
+<orderedlist><listitem><para>Selecione o pacote. Consulte <xref linkend="select-pkg"/>.</para>
+</listitem>
+<listitem><para>Use um dos seguintes métodos para instalar ou atualizar o pacote:</para>
+<itemizedlist><listitem><para>Selecione o botão <guibutton>Instalar/Atualizar</guibutton> na barra de ferramentas.</para>
+</listitem>
+<listitem><para>Selecione a opção <menuchoice><guimenu>Pacote</guimenu><guimenuitem>Instalar/Atualizar</guimenuitem></menuchoice> na barra de menus.</para>
+</listitem>
+<listitem><para>Clique com o botão direito do mouse no nome do pacote para exibir o menu instantâneo <guimenu>Pacote</guimenu>. Em seguida, selecione a opção <guimenuitem>Instalar/Atualizar</guimenuitem>.</para>
+</listitem>
+<listitem><para>Na guia Versões, no painel de detalhes do pacote abaixo do painel da lista de pacotes, selecione uma versão da lista Versão a ser instalada e clique no botão <guibutton>Atualizar/Instalar</guibutton> à direita da lista. Os pacotes da lista Versão a ser instalada estão disponíveis no repositório; talvez não seja possível instalá-los. Uma versão específica pode não ser compatível com outros pacotes instalados. Se a versão que você selecionou não puder ser instalada no sistema, o Gerenciador de pacotes avisará e não instalará o pacote.</para>
+</listitem>
+</itemizedlist>
+<para>Se o pacote já estiver instalado e não houver uma atualização disponível (consulte a coluna Status ou a opção <menuchoice><guimenu>Pacote</guimenu><guimenuitem> Informação sobre a versão do pacote</guimenuitem></menuchoice> option), a opção <guibutton>Instalar/Atualizar</guibutton> ficará esmaecida e não poderá ser selecionada.</para>
+</listitem>
+<listitem><para>A janela Instalar/Atualizar é exibida. Os pacotes ainda não instalados estão listados no painel Detalhes da instalação e os pacotes instalados estão listados no painel Detalhes da atualização para sua revisão. Selecione o botão <guibutton>Continuar</guibutton> para instalar ou atualizar os pacotes listados.</para>
+<para>Em alguns casos, é exibida uma caixa de diálogo da licença e você deve aceitar a licença para instalar o pacote.</para>
+<para>Se ocorrer um erro durante a instalação do pacote, será exibida uma caixa de diálogo de erro. As mensagens explicam por que a instalação ou atualização falhou.</para>
+</listitem>
+</orderedlist>
+</sect1>
+<sect1 id="remove-pkg"><title>Remoção de pacotes</title>
+<para>Realize as seguintes etapas para remover um pacote:</para>
+<orderedlist><listitem><para>Selecione o pacote. Consulte <xref linkend="select-pkg"/>.</para>
+</listitem>
+<listitem><para>Use um dos seguintes métodos para remover o pacote:</para>
+<itemizedlist><listitem><para>Selecione o botão <guibutton>Remover</guibutton> na barra de ferramentas.</para>
+</listitem>
+<listitem><para>Selecione a opção <menuchoice><guimenu>Pacote</guimenu><guimenuitem>Remover</guimenuitem></menuchoice> na barra de menus.</para>
+</listitem>
+<listitem><para>Clique com o botão direito do mouse no nome do pacote para exibir o menu instantâneo <guimenu>Pacote</guimenu>. Em seguida, selecione a opção <guimenuitem>Remover</guimenuitem>.</para>
+</listitem>
+</itemizedlist>
+<para>Se o pacote não estiver instalado, a opção Remover ficará esmaecida e não poderá ser selecionada.</para>
+</listitem>
+<listitem><para>A janela Confirmação de remover é exibida. Os pacotes a serem removidos estão listados no painel Detalhes do remover para sua revisão. Selecione o botão <guibutton>Continuar</guibutton> para remover os pacotes listados.</para>
+<para>Se não for possível remover um pacote porque outros pacotes dependem dele, você poderá selecionar a opção <guibutton>Continuar remoção</guibutton> para tentar remover os pacotes restantes originalmente selecionados para remoção.</para>
+</listitem>
+</orderedlist>
+</sect1>
+</chapter>
+<chapter id="update_all"><title>Atualização do sistema</title>
+<para>Quando determinados pacotes-chave como drivers e outros componentes do kernel são atualizados, o sistema executa as seguintes ações:</para>
+<orderedlist><listitem><para>Cria um clone do ambiente de inicialização atual (BE).</para>
+</listitem>
+<listitem><para>Atualiza os pacotes do clone e não atualiza pacotes do BE atual.</para>
+</listitem>
+<listitem><para>Define o novo BE como a opçlão de inicialização padrão na próxima vez em que o sistema for reinicializado. O BE atual permanece como uma opção de inicialização alternativa.</para>
+</listitem>
+</orderedlist>
+<sect1 id="um_info"><title>Atualização de todos os pacotes</title>
+<para>Quando você seleciona o botão <guibutton>Atualizações</guibutton> ou a opção de menu <menuchoice><guimenu>Pacote</guimenu><guimenuitem>Atualizações</guimenuitem></menuchoice>, o Gerenciador de pacotes atualiza todos os pacotes instalados que tenham atualizações disponíveis.</para>
+<para>Todos os pacotes com atualizações disponíveis do editor atual são atualizados. Se um pacote tiver uma atualização disponível de um editor diferente na lista de editores, ele será atualizado somente se o editor atual estiver configurado como não-sticky. Se o editor atual estiver configurado como sticky, esse pacote não será atualizado.</para>
+<para>A janela Atualizações é exibida e o processo de atualização é iniciado:</para>
+<orderedlist><listitem><para>O sistema sincroniza todos os catálogos.</para>
+</listitem>
+<listitem><para>O sistema avalia todos os pacotes instalados para determinar quais têm atualizações disponíveis.</para>
+<itemizedlist><listitem><para>Se nenhum pacote tiver atualizações disponíveis, será exibida a mensagem “Não há atualizações disponíveis” e o processamento será interrompido.</para>
+</listitem>
+<listitem><para>Se as atualizações de um pacote estiverem disponíveis, os pacotes a serem atualizados serão listados para sua avaliação. Esta é sua última chance de clicar no botão <guibutton>Cancelar</guibutton> para abortar a atualização.</para>
+</listitem>
+</itemizedlist>
+</listitem>
+<listitem><para>Clique no botão <guibutton>Continuar</guibutton> para continuar a atualização.</para>
+<para>O sistema deve criar um novo ambiente de inicialização (BE), conforme descrito no <xref linkend="update_all"/> acima, dependendo dos pacotes que estiverem sendo atualizados.</para>
+<para>Se o sistema determinar que é necessário um novo BE mas não puder criá-lo, será exibida uma mensagem de erro. Se o problema for espaço insuficiente em disco, execute as seguintes etapas:</para>
+<orderedlist><listitem><para>Clique em <guibutton>Fechar</guibutton> para cancelar o processo de atualização.</para>
+</listitem>
+<listitem><para>Siga as instruções em <xref linkend="remove-be"/> para remover um BE não mais necessário.</para>
+</listitem>
+<listitem><para>Selecione <guibutton>Atualizações</guibutton> novamente para reiniciar o processo de atualização.</para>
+</listitem>
+</orderedlist>
+</listitem>
+<listitem><para>O sistema baixa todas as atualizações do pacote.</para>
+</listitem>
+<listitem><para>O sistema instala as atualizações do pacote. Se tiver sido criado um BE clonado, as atualizações serão instaladas no clone. Se não tiver sido criado nenhum clone, as atualizações serão instaladas no BE atual.</para>
+<para>Se ocorrer um erro durante o processo de atualização, o painel <guilabel>Detalhes</guilabel> será expandido e os detalhes do erro serão exibidos. É mostrado um indicador do status do erro ao lado da fase que falhou.</para>
+</listitem>
+<listitem><para>Se o sistema criou um novo BE para a atualização, você poderá editar o nome padrão do BE. Quando terminar, clique no botão <guibutton>Reiniciar agora</guibutton> para reinicializar o sistema imediatamente. Clique no botão <guibutton>Reiniciar mais tarde</guibutton> para reiniciar o sistema mais tarde. É necessário reiniciar para inicializar o novo BE. O novo BE será sua opção de inicialização padrão. O BE atual estará disponível como uma opção de inicialização alternativa.</para>
+</listitem>
+</orderedlist>
+</sect1>
+<sect1 id="using_um"><title>Utilização do Gerenciador de atualizações</title>
+<para>Você pode abrir o Gerenciador de atualizações a partir de uma notificação do sistema ou da barra de menus da área de trabalho. O Gerenciador de atualizações executa o mesmo processo descrito acima em <xref linkend="um_info"/>.</para>
+<sect2 id="gkiso"><title>Notificação de atualizações de software</title>
+<para>O sistema verifica periodicamente se há atualizações disponíveis para qualquer um dos pacotes instalados. Se o sistema detectar atualizações disponíveis, serão exibidos um ícone e um pop-up de notificação de atualizações disponíveis na bandeja de notificação do sistema. Clique no ícone para abrir o Gerenciador de notificações.</para>
+</sect2>
+<sect2 id="gkisz"><title>Menu do sistema da área de trabalho</title>
+<para>Selecione <menuchoice><guimenu>Sistema</guimenu><guisubmenu>Administração</guisubmenu><guimenuitem>Gerenciador de atualizações</guimenuitem></menuchoice> na barra de menus da área de trabalho para abrir o Gerenciador de atualizações.</para>
+</sect2>
+</sect1>
+</chapter>
+<chapter id="manage-publisher"><title>Gerenciamento de editores</title>
+<para>Você pode adicionar, modificar e remover editores de pacotes IPS. Pode alterar a prioridade de um editor, altrar as configurações ativadas e sticky, alterar o alias do editor, adicionar ou remover a origem de um editor, e adicionar ou remover o espelho de um editor. Pode gerenciar chaves, certificados e política de assinatura.</para>
+<para>Observe que os editores do sistema constituem exceção. Eles só podem ser exibidos na janela Gerenciar editores. Os editores do sistema não podem ser removidos nem modificados e você não pode alterar a prioridade. Consulte <xref linkend="glossary"/>. O painel Detalhes indica se o editor selecionado é um editor do sistema.</para>
+<sect1 id="add-publisher"><title>Adição de editores</title>
+<para>Para adicionar um editor de pacotes IPS, use a janela Adicionar editor. Para abrir essa janela, execute uma das seguintes ações:</para>
+<itemizedlist><listitem><para>Selecione a opção <guimenuitem>Adicionar</guimenuitem> no menu drop-down <guimenu>Editor</guimenu>.</para>
+</listitem>
+<listitem><para>Selecione a opção de menu <menuchoice><guimenu>Arquivo</guimenu><guimenuitem>Adicionar editor</guimenuitem></menuchoice>.</para>
+</listitem>
+<listitem><para>Selecione a opção de menu <menuchoice><guimenu>Arquivo</guimenu><guimenuitem>Manage Publishers</guimenuitem></menuchoice>. Na janela Gerenciar editores, selecione o botão <guibutton>Adicionar</guibutton>.</para>
+</listitem>
+</itemizedlist>
+<para>Na janela Adicionar editor, excute as seguintes etapas para adicionar um editor de pacotes IPS:</para>
+<orderedlist><listitem><para>No campo URI, digite o URI do editor. O URI é um local da rede como <literal>http://pkg.oracle.com/solaris/release/</literal> ou <literal>http://localhost:5555</literal>.</para>
+</listitem>
+<listitem><para>No campo Alias, você pode digitar um nome alternativo para o editor.</para>
+</listitem>
+<listitem><para>Clique no botão <guibutton>Adicionar</guibutton>.</para>
+</listitem>
+<listitem><para>É exibida a caixa de diálogo Adicionar editor. Clique em <guibutton>Cancelar</guibutton> para cancelar o processo. Clique em Detalhes para exibir informações verbosas.</para>
+<itemizedlist><listitem><para>Se o novo editor for adicionado com sucesso, será exibida a caixa de diálogo Adicionar editor completo, mostrando o nome, o alias e o URI do novo editor.</para>
+</listitem>
+<listitem><para>Se o novo editor não for adicionado, será exibida a caixa de diálogo Erro de editor, com informações sobre o problema.</para>
+</listitem>
+</itemizedlist>
+</listitem>
+</orderedlist>
+<para>O novo editor é o último editor listado na janela Gerenciar editores e está ativado e sticky.</para>
+<para>Consulte <xref linkend="modify-publisher"/> para obter informações sobre como alterar a prioridade do novo editor, como alterar as configurações ativadas e sticky, como alterar o alias do editor, como adicionar a origem de um editor, como configurar uma e certificado SSL, como adicionar o espelho de um editor e como gerenciar certificados e política de assinatura de um editor.</para>
+</sect1>
+<sect1 id="modify-publisher"><title>Modificação de editores</title>
+<para>Para modificar os atributos de um editor, selecione a opção de menu <menuchoice><guimenu>Arquivo</guimenu><guimenuitem>Gerenciar editores</guimenuitem></menuchoice>. Os editores configurados no momento estão listados na janela Gerenciar editores.</para>
+<para>Na janela Gerenciar editores, você pode alterar a prioridade do editor, ativar/desativar o editor,configurar o editor como sticky ou não-sticky, e remover o editor. Consulte <xref linkend="priority-stickiness"/> e <xref linkend="remove-publisher"/>.</para>
+<para>Clique no botão <guibutton>Modificar</guibutton> para abrir a janela Modificar editor. Na janela Modficar editor, é possível alterar o alias do editor, adicionar ou remover a origem de um editor, definir uma chave e um certificado SSL, e gerenciar certificados e política de assinatura de editores. Consulte <xref linkend="origin-mirror"/> e <xref linkend="pub-security"/>.</para>
+<sect2 id="priority-stickiness"><title>Alteração da prioridade e capacidade de adesão</title>
+<para>Selecione a opção de menu <menuchoice><guimenu>Arquivo</guimenu><guimenuitem>Manage Publishers</guimenuitem></menuchoice> para exibir a janela Gerenciar editores.</para>
+<sect3 id="set-pub-order"><title>Prioridade do editor</title>
+<para>Os editores estão listados em ordem de prioridade na janela Gerenciar editores. O editor do topo da lista é o editor de maior prioridade. O editor no fim da lista é o editor de menor prioridade.</para>
+<itemizedlist><listitem><para>O editor do topo da lista também é conhecido como editor preferencial.</para></listitem>
+<listitem><para>O editor prefrencial não pode ser desativado nem removido.</para></listitem>
+<listitem><para>Quando você procura pacotes e não especifica um editor, os catálogos com editores de maior prioridade são procurados primeiro.</para></listitem>
+<listitem><para>Quando você atualiza pacotes instalados em um editor não-adesivo, as atualizações de catálogos com editores de maior prioridade são procuradas primeiro.</para></listitem>
+</itemizedlist>
+<para>Para alterar a prioridade de um editor, siga estas etapas:</para>
+<orderedlist><listitem><para>Clique para realçar a linha de um editor da lista na janela Gerenciar editores.</para>
+</listitem>
+<listitem><para>Clique nos botões <guibutton>Para cima</guibutton> e <guibutton>Para baixo</guibutton> à direita da lista de editores para aumentar ou diminuir a prioridade do editor selecionado. A lista de editores se move para cima e para baixo para mostrar a nova prioridade.</para>
+<para>Se o editor selecionado for um editor do sistema, os botões <guibutton>Para cima</guibutton> e <guibutton>Para baixo</guibutton> ficarão desativados. Não é possível alterar a prioridade de um editor do sistema e, portanto, não é possível diminuir a prioridade do editor próximo da prioridade maior acima de um editor do sistema, e não é possível aumentar a prioridade de um editor próximo da prioridade menor abaixo de um editor do sistema.</para></listitem>
+<listitem><para>Clique no botão <guibutton>OK</guibutton> na parte inferior da janela Gerenciar editores.</para>
+</listitem>
+</orderedlist>
+</sect3>
+<sect3 id="gjlab"><title>Ativado e adesivo</title>
+<para>Quando você adiciona um editor, os atributos ativados e de adesivo são definidos por padrão. O editor preferencial (consulte <xref linkend="set-pub-order"/> acima) não pode ser desativado. Um editor do sistema não pode ser desativado e a configuração do adesivo de um editor do sistema não pode ser alterada. Todas as demais configurações ativadas e de adesivo podem ser alteradas.</para>
+<para>Se o atributo do adesivo for configurado para um editor, um pacote instalado desse editor não poderá ser atualizado em um editor diferente. Se o atributo do adesivo não for configurado para um editor, esse editor será não-adesivo. Se um editor for não-adesivo, um pacote proveniente desse editor poderá ser atualizado em outro editor. Um editor diferente pode ter uma versão mais recente de um pacote que o editor original do pacote. Se você quiser atualizar para essa nova versão, o editor original precisará ser não-adesivo. Além disso, se um editor de prioridade menor for não-adesivo, as atualizações para pacotes instalados dos editores de prioridade maior serão localizadas antes no editor não-adesivo.</para>
+<para>Os pacotes ou atualizações de um editor desativado não são procurados para instalação. Os catálogos de um editor desativado não são sincronizados. Um editor desativado não é mostrado no menu drop-down <guimenu>Editor</guimenu>.</para>
+<para>Para alterar as configurações Desativado e Adesivo de um editor, siga estas etapas:</para>
+<orderedlist><listitem><para>Selecione a opção de menu <menuchoice><guimenu>Arquivo</guimenu><guimenuitem>Manage Publishers</guimenuitem></menuchoice> para abrir a janela Gerenciar editores.</para>
+</listitem>
+<listitem><para>Clique na caixa Ativado ou na caixa Adesivo para alterar a configuração.</para>
+</listitem>
+<listitem><para>Clique no botão <guibutton>OK</guibutton> na parte inferior da janela Gerenciar editores.</para>
+</listitem>
+</orderedlist>
+</sect3>
+</sect2>
+<sect2 id="origin-mirror"><title>Alteração de aliases, origens e espelhos</title>
+<orderedlist><listitem><para>Selecione a opção de menu <menuchoice><guimenu>Arquivo</guimenu><guimenuitem>Manage Publishers</guimenuitem></menuchoice> para abrir a janela Gerenciar editores.</para>
+</listitem>
+<listitem><para>Selecione o editor que deseja modificar. O painel Detalhes abaixo na janela Gerenciar editores exibe as origens atuais do editor selecionado.</para>
+</listitem>
+<listitem><para>Clique no botão <guibutton>Modificar</guibutton> à direita da lista de editores para abrir a janela Modificar editor.</para>
+<para>Se o editor selecionado for um editor do sistema, o botão <guibutton>Modificar</guibutton> ficará desativado. O painel Detalhes indica que o editor selecionado é um editor do sistema e exibirá uma mensagem informando que esse editor não pode ser modificado nem removido.</para>
+</listitem>
+<listitem><para>Selecione a guia Geral para modificar o alias do editor, adicionar e remover origens, e adicionar e remover espelhos.</para></listitem>
+</orderedlist>
+<sect3 id="modify-publisher-alias"><title>Alias do editor</title>
+<para>O alias do editor é um outro nome do editor. O alias é usado no menu drop-down <guimenu>Editor</guimenu> e no painel da lista de pacotes.</para>
+<para>Para alterar o alias do editor, siga estas etapas:</para>
+<orderedlist><listitem><para>Na guia Geral da janela Modificar editor, digite um novo nome no campo Alias.</para>
+</listitem>
+<listitem><para>Clique no botão <guibutton>OK</guibutton> na parte inferior da janela Modificar editor.</para>
+</listitem>
+<listitem><para>O alias do editor foi alterado na janela Gerenciar editores. Clique no botão <guibutton>OK</guibutton> na parte inferior da janela Gerenciar editores.</para>
+</listitem>
+</orderedlist>
+</sect3>
+<sect3 id="gjkza"><title>Origens do editor</title>
+<para>Origem refere-se ao local do repositório de pacotes IPS ou arquivo que contém metadados de pacotes (mamifestos e catálogos de pacotes) e conteúdos de pacotes (arquivos de pacotes).</para>
+<para>Valor de origem é o URI de um repositório de pacotes IPS.</para>
+<para>Para alterar, adicionar ou remover uma origem do editor, siga estas etapas:</para>
+<orderedlist><listitem><para>Selecione a guia Geral da janela Modificar editor.</para>
+<itemizedlist><listitem><para>Adicione uma origem.</para>
+<orderedlist type="a"><listitem><para>No campo Origem, digite o URI da nova origem que deseja associar ao editor.</para></listitem>
+<listitem><para>Clique no botão <guibutton>Adicionar</guibutton>. O novo URI é adicionado à lista abaixo do campo Origem.</para></listitem>
+</orderedlist>
+</listitem>
+<listitem><para>Remova uma origem.</para>
+<orderedlist type="a"><listitem><para>Na lista abaixo do campo Origem, selecione o URI que deseja excluir.</para></listitem>
+<listitem><para>Clique no botão <guibutton>Remover</guibutton>. O URI selecionado é removido da lista. Se apenas uma origem for definida para o editor, não será possível removê-la.</para></listitem>
+</orderedlist>
+</listitem>
+<listitem><para>Altere uma origem.</para>
+<orderedlist type="a"><listitem><para>Adicione a nova origem.</para></listitem>
+<listitem><para>Exclua a origem que deseja alterar.</para></listitem>
+</orderedlist>
+</listitem>
+</itemizedlist>
+</listitem>
+<listitem><para>Clique no botão <guibutton>OK</guibutton> na parte inferior da janela Modificar editor.</para>
+</listitem>
+<listitem><para>As alterações da origem se refletem no painel Detalhes da janela Gerenciar editores. Clique no botão <guibutton>OK</guibutton> na parte inferior da janela Gerenciar editores.</para>
+</listitem>
+</orderedlist>
+</sect3>
+<sect3 id="gjkyr"><title>Espelhos do editor</title>
+<para>Espelho é um local do repositório de pacotes IPS que contém somente conteúdos de pacotes (arquivos de pacotes). O espelho não contém metadados de pacotes (manifestos e catálogos de pacotes). Espelhos fornecem um subconjunto dos dados das origens. Espelhos podem ser usados somente para download de arquivos de pacotes. Metadados de pacotes são baixados da origem. Clientes IPS acessam a origem para obter um catálogo do editor, mesmo que os clientes baixem o conteúdo do pacote de um espelho.</para>
+<para>Para adicionar, remover ou alterar um espelho do editor, siga estas etapas:</para>
+<orderedlist><listitem><para>Selecione a guia Geral da janela Modificar editor.</para></listitem>
+<listitem><para>Clique em Espelhos para exibir o campo Espelho e a lista de espelhos.</para>
+<itemizedlist><listitem><para>Adicione um espelho.</para>
+<orderedlist type="a"><listitem><para>No campo Espelho, digite o URI do novo espelho que você deseja associar ao editor.</para></listitem>
+<listitem><para>Clique no botão <guibutton>Adicionar</guibutton>. O novo URI é adicionado à lista abaixo do campo Espelho.</para></listitem>
+</orderedlist>
+</listitem>
+<listitem><para>Remova um espelho.</para>
+<orderedlist type="a"><listitem><para>Na lista abaixo do campo Espelho, selecione o URI que deseja excluir.</para></listitem>
+<listitem><para>Clique no botão <guibutton>Remover</guibutton>. O URI selecionado é removido da lista.</para></listitem>
+</orderedlist>
+</listitem>
+<listitem><para>Altere um espelho.</para>
+<orderedlist type="a"><listitem><para>Exclua o espelho que deseja alterar.</para></listitem>
+<listitem><para>Adicione um novo espelho.</para></listitem>
+</orderedlist>
+</listitem>
+</itemizedlist>
+</listitem>
+<listitem><para>Clique no botão <guibutton>OK</guibutton> na parte inferior da janela Modificar editor.</para>
+</listitem>
+<listitem><para>Clique no botão <guibutton>OK</guibutton> na parte inferior da janela Gerenciar editores.</para>
+</listitem>
+</orderedlist>
+</sect3>
+</sect2>
+<sect2 id="security"><title>Gerenciamento da segurança de editores</title>
+<para>Os certificados são usados para verificar se os pacotes foram assinados de maneira apropriada antes da instalação, de acordo com a política de assinatura da imagem ou do editor, o que for mais restritivo.</para>
+<orderedlist><listitem><para>Selecione a opção de menu <menuchoice><guimenu>Arquivo</guimenu><guimenuitem>Manage Publishers</guimenuitem></menuchoice> para abrir a janela Gerenciar editores.</para>
+</listitem>
+<listitem><para>Selecione o editor cuja segurança deseja modificar.</para>
+</listitem>
+<listitem><para>Clique no botão <guibutton>Modificar</guibutton> à direita da lista de editores para abrir a janela Modificar editor. O editor selecionado na janela Gerenciar editores é exibido no título da janela Modificar editor.</para>
+<itemizedlist><listitem><para>Selecione a guia Geral para adicionar a chave e o certificado SSL caso um editor tenha uma origem segura.</para></listitem>
+<listitem><para>Selecione a guia Certificados para gerenciar certificados do editor.</para></listitem>
+<listitem><para>Selecione a guia Política de assinatura para gerenciar a política de assinatura do editor.</para></listitem>
+</itemizedlist>
+</listitem>
+</orderedlist>
+<sect3 id="keys-certs"><title>Adição de chaves e certificados SSL</title>
+<para>Se um editor tiver uma origem segura, adicione a chave  o certificado SSL do editor.</para>
+<orderedlist><listitem><para>Clique na guia Geral da janela Modificar editor.</para></listitem>
+<listitem><para>Clique na chave e no certificado SSL para exibir o campo Chave SSL e o campo Certificado SSL.</para></listitem>
+<listitem><para>Clique no botão <guibutton>Procurar</guibutton> à direita do campo Chave SSL para selecionar o arquivo de chave SSL.</para></listitem>
+<listitem><para>Clique no botão <guibutton>Procurar</guibutton> à direita do campo Certificado SSL parra selecionar o arquivo do certificado SSL.</para> </listitem>
+<listitem><para>Clique no botão <guibutton>OK</guibutton> na parte inferior da janela Modificar editor.</para></listitem>
+<listitem><para>Clique no botão <guibutton>OK</guibutton> na parte inferior da janela Gerenciar editores.</para></listitem>
+</orderedlist>
+</sect3>
+<sect3 id="manage-certs"><title>Gerenciamento de certificados</title>
+<orderedlist><listitem><para>Clique na guia Certificados da janela Modificar editor.</para></listitem>
+<listitem><para>Use os botões abaixo da lista de certificados para adicionar um certificado ou para remover, revogar ou reinstalar o certificado atualmente selecionado na lista.</para>
+<para>Observe que as ações executadas na janela Modificar editor são aplicadas aos certificados do editor somente depois que você clica no botão <guibutton>OK</guibutton> na parte inferior da janela Modificar editor. Se você clicar no botão <guibutton>Cancelar</guibutton>, as alterações não serão aplicadas.</para>
+<itemizedlist><listitem><para><guibutton>Adicionar</guibutton>. Adicione um novo certificado de editor para o editor listado no título da janela Modificar editor. Na janela Adicionar certificado de editor, navegue para selecionar o arquivo de certificado (<tt>.pem</tt>). Clique no botão <guibutton>OK</guibutton> na parte inferior da janela Adicionar certificado de editor. O certificado recém-adicionado é selecionado na lista de certificados da guia Certificados da janela Modificar editor. O painel de detalhes indica que esse certificado está "marcado para ser adicionado". O certificado será adicionado depois que você clicar no botão <guibutton>OK</guibutton> na janela Modificar editor.</para></listitem>
+</itemizedlist>
+</listitem>
+<listitem><para>Na lista de certificados do editor, selecione o certificado que você deseja modificar ou cujos detalhes deseja verificar. Detalhes sobre o certificado selecionado são mostrados abaixo da lista de certificados e linha de botões.Observe que um certificado expirado ainda pode ser aprovado e usado para validar pacotes assinados editados (não necessariamente instalados) antes que o certificado expire.</para>
+<para>Clique nos cabeçalhos da lista de certificados para reordenar a lista. As colunas Organização e Nome são redimensionáveis.</para>
+<itemizedlist><listitem><para><guibutton>Remover</guibutton>. Remova o certificado selecionado atualmente na lista de certificados.</para></listitem>
+<listitem><para><guibutton>Revogar</guibutton>. Se o certificado selecionado atualmente na lista de certificados for Aprovado, clique no botão <guibutton>Revogar</guibutton> para tratar desse certificado como revogado. Na lista de certificados, o Status do certificado muda para Revogado. Essa alteração é aplicada ao certificado depois que você clica no botão <guibutton>OK</guibutton> na janela Modificar editor.</para></listitem>
+<listitem><para><guibutton>Restaurar</guibutton>. Se o certificado selecionado atualmente na lista de certificados for Revogado, clique no botão <guibutton>Restaurar</guibutton> para tratar o certificado como aprovado. O painel de detalhes indica que o certificado está "marcado para ser restaurado". O certificado será restaurado depois qu você clicar no botão <guibutton>OK</guibutton> na janela Modificar editor.</para></listitem>
+</itemizedlist>
+</listitem>
+<listitem><para>Clique no botão <guibutton>OK</guibutton> na parte inferior da janela Modificar editor.</para></listitem>
+<listitem><para>Clique no botão <guibutton>OK</guibutton> na parte inferior da janela Gerenciar editores.</para></listitem>
+</orderedlist>
+</sect3>
+<sect3 id="pub-sig-policy"><title>Gerenciamento da política de assinatura</title>
+<orderedlist><listitem><para>Clique na guia Política de assinatura da janela Modificar editor.</para></listitem>
+<listitem><para>Use os botões da guia Política de assinatura para definir a política de assinatura a ser usada durante a instalação de pacotes do editor listado no título da janela Modificar editor.</para>
+<para>Para definir a política de assinatura global, use a guia Política de assinatura da janela Preferências (consulte <xref linkend="img-sig-policy"/>).</para>
+<itemizedlist><listitem><para>As assinaturas são ignoradas. Ignore as assinaturas de todos os pacotes.</para></listitem>
+<listitem><para>As assinaturas são opcionais, mas devem ser válidas se forem inseridas. Verifique se todos os pacotes com assinaturas estão assinados de maneira válida, mas não é necessário que todos os pacotes instalados sejam assinados.</para></listitem>
+<listitem><para>Uma ou mais assinaturas são necessárias. Todos os pacotes recém-instalados devem ter pelo menos uma assinatura válida.</para></listitem>
+<listitem><para>São necessárias assinaturas e o nome do certificado deve incluir o(s) nome(s) especificado(s) no campo do texto durante a validação das assinaturas de um pacote. Se mais de um nome for especificado, os nomes deverão ser separados por vírgulas.</para></listitem></itemizedlist>
+</listitem>
+<listitem><para>Clique no botão <guibutton>OK</guibutton> na parte inferior da janela Modificar editor.</para></listitem>
+<listitem><para>Clique no botão <guibutton>OK</guibutton> na parte inferior da janela Gerenciar editores.</para></listitem>
+</orderedlist>
+</sect3>
+</sect2>
+</sect1>
+<sect1 id="remove-publisher"><title>Remoção de editores</title>
+<para>Realize as seguintes etapas para remover um editor:</para>
+<orderedlist><listitem><para>Selecione a opção de menu <menuchoice><guimenu>Arquivo</guimenu><guimenuitem>Manage Publishers</guimenuitem></menuchoice> para abrir a janela Gerenciar editores.</para>
+</listitem>
+<listitem><para>Selecione o editor que deseja remover.</para>
+</listitem>
+<listitem><para>Clique no botão <guibutton>Remover</guibutton> à direita da lista de editores.</para>
+<para>Se o editor selecionado for um editor do sistema, o botão <guibutton>Remover</guibutton> ficará desativado. O painel Detalhes indica que o editor selecionado é um editor do sistema e exibe uma mensagem informando que esse editor não pode ser modificado nem removido.</para>
+</listitem>
+<listitem><para>Clique no botão <guibutton>OK</guibutton> na parte inferior da janela Gerenciar editores.</para>
+</listitem>
+</orderedlist>
+</sect1>
+</chapter>
+<chapter id="manage-be"><title>Gerenciamento de ambientes de inicialização</title>
+<para>Um ambiente de inicialização (BE) é uma imagem inicializável. É possível manter vários BEs no sistema Oracle Solaris. Um BE é o BE padrão na inicialização ou reinicialização. Há outros BEs disponíveis como seleções de inicialização alternativas. O BE que você inicializou é o BE ativo.</para>
+<para>Você pode usar o comando <literal>beadm</literal>(1) para criar, renomear, montar, desmontar, ativar ou desativar BEs. Par obter informações detalhadas sobre BEs, consulte <citetitle>Criando e Gerenciando Ambientes Inicializáveis após a Instalação</citetitle>.</para>
+<para>O Gerenciador de pacotes fornece um subconjunto da funcionalidade que o comando <literal>beadm</literal>(1) oferece. Use a opção Gerenciador de pacotes <menuchoice><guimenu>Arquivo</guimenu><guimenuitem>Gerenciar ambientes de inicialização</guimenuitem></menuchoice> para abrir a janela Gerenciar ambientes de inicialização. Essa janela lista os BEs do sistema e permite ativar, renomear e excluir esses BEs conforme descrito a seguir.</para>
+<sect1 id="create-be"><title>Criação de um BE</title>
+<para>Um novo BE é criado automaticamente quando você executa uma das seguintes ações:</para>
+<itemizedlist><listitem><para>Instalar o SO Oracle Solaris.</para>
+</listitem>
+<listitem><para>Instalar ou atualizar pacotes-chave específicos do sistema, como alguns drivers e outros componentes do kernel.</para>
+</listitem>
+<listitem><para>Use o comando <literal>beadm create</literal>.</para>
+</listitem>
+</itemizedlist>
+<para>Frequentemente é criado um novo BE quando você executa o comando <literal>pkg update</literal> ou usa o botão <guibutton>Atualizações</guibutton> para atualizar todos os pacotes com atualizações disponíveis.</para>
+</sect1>
+<sect1 id="activate-be"><title>Ativação de um BE</title>
+<para>Selecione a opção de menu <menuchoice><guimenu>Arquivo</guimenu><guimenuitem>Gerenciar Ambientes de Inicialização</guimenuitem></menuchoice> para abrir a janela Gerenciar Ambientes de Inicialização. Todos os BEs estão listados na janela. O BE inicializado no momento mostra uma marca de seleção à esquerda do no me do BE.</para>
+<para>Para especificar um BE diferente como o BE padrão ativo, siga estas etapas:</para>
+<orderedlist><listitem><para>Selecione o botão <guibutton>Ativo ao reiniciar</guibutton> do BE que você deseja definir como BE padrão ativo depois da próxima reinicialização.</para>
+</listitem>
+<listitem><para>Selecione o botão <guibutton>OK</guibutton> na janela Gerenciar ambientes de inicialização.</para>
+</listitem>
+</orderedlist>
+</sect1>
+<sect1 id="rename-be"><title>Renomeação de um BE</title>
+<para>Selecione a opção de menu <menuchoice><guimenu>Arquivo</guimenu><guimenuitem>Gerenciar ambientes de inicialização</guimenuitem></menuchoice> para abrir a janela Gerenciar ambientes de inicialização. Todos os BEs estão listados na janela.</para>
+<para>Não é possível renomear o BE ativo no momento.</para>
+<para>Não é possível renomear um BE marcado para exclusão.</para>
+<para>Para renomear um BE, siga estas etapas:</para>
+<orderedlist><listitem><para>Clique duas vezes no nome do BE que você deseja renomear. O campo do nome torna-se editável.</para>
+</listitem>
+<listitem><para>Digite o novo nome.</para>
+</listitem>
+<listitem><para>Selecione o botão <guibutton>OK</guibutton> na janela Gerenciar ambientes de inicialização.</para>
+</listitem>
+</orderedlist>
+</sect1>
+<sect1 id="remove-be"><title>Remoção de um BE</title>
+<para>Selecione a opção de menu <menuchoice><guimenu>Arquivo</guimenu><guimenuitem>Gerenciar ambientes de inicialização</guimenuitem></menuchoice> para abrir a janela Gerenciar ambientes de inicialização. Todos os BEs estão listados na janela. A coluna da extrema direita na janela é a coluna Excluir.</para>
+<para>A coluna do meio na janela Gerenciar ambientes de inicialização mostra o tamanho do BE. Convém remover um BE para liberar espaço no dispositivo de armazenamento.</para>
+<para>Não é possível excluir o BE ativo no momento.</para>
+<para>Não é possível excluir um BE renomeado.</para>
+<para>Para excluir um BE, siga estas etapas:</para>
+<orderedlist><listitem><para>Selecione a caixa <guibutton>Excluir</guibutton> para o BE que você deseja excluir.</para>
+</listitem>
+<listitem><para>Selecione o botão <guibutton>OK</guibutton> na janela Gerenciar ambientes de inicialização.</para>
+</listitem>
+</orderedlist>
+</sect1>
+</chapter>
+<chapter id="webinstall"><title>Trabalhando com o WebInstall</title>
+<para>O Gerenciador de pacotes suporta os pacotes de instalação usando o processo de um único clique WebInstall. O processo WebInstall usa um arquivo <filename>.p5i</filename>. O arquivo <filename>.p5i</filename> contém informações para adicionar editores e pacotes que podem ser instalados nesses editores. As informações no arquivo <filename>.p5i</filename> são lidas e usadas pelo processo WebInstall.</para>
+<sect1 id="webinstall-export"><title>Exportação de arquivos com o WebInstall</title>
+<para>Se você quiser que outros usuários possam instalar pacotes que você instalou no sistema, poderá exportar as instruções de instalação para esses arquivos de pacotes usando o processo WebInstall. É criado um arquivo <filename>.p5i</filename> consistindo em instruções de instalação para que esses pacotes e editores sejam instalados.</para>
+<para>Para exportar as instruções de instalação para os pacotes selecionados e seus editores para um arquivo <filename>.p5i</filename>, siga estas etapas:</para>
+<orderedlist><listitem><para>No menu drop-down <guimenu>Editor</guimenu>, selecione o editor do qual deseja incluir os pacotes no arquivo <filename>.p5i</filename>.</para>
+</listitem>
+<listitem><para>No painel da lista de pacotes, selecione o pacote cujas instruções de instalação deseja distribuir.</para>
+</listitem>
+<listitem><para>Clique em <menuchoice><guisubmenu>Arquivo</guisubmenu><guimenuitem>Exportar seleções</guimenuitem></menuchoice> para exibir a janela Exportar confirmação de seleções.</para>
+</listitem>
+<listitem><para>Clique no botão <guibutton>OK</guibutton> para confirmar as seleções. A janela Exportar seleções é exibida.</para>
+</listitem>
+<listitem><para>É fornecido um nome padrão para o arquivo <filename>p5i</filename> com a extensão <filename>.p5i</filename>. Você pode alterar esse nome de arquivo, mas não altere a extensão.</para>
+</listitem>
+<listitem><para>É fornecido um local padrão para o arquivo <filename>p5i</filename>. Você pode alterar o local. Se você usar o botão <guibutton>Procurar</guibutton>, poderá selecionar a opção <filename>Arquivos p5i</filename> no menu drop-down no lado inferior direito da janela Exportar seleções para exibir apenas arquivos <filename>.p5i</filename> na lista.</para>
+</listitem>
+<listitem><para>Clique no botão <guibutton>Salvar</guibutton> para salvar o nome e local do arquivo.</para>
+</listitem>
+</orderedlist>
+</sect1>
+<sect1 id="webinstall-add"><title>Uso do WebInstall para adicionar editores e instalar pacotes</title>
+<para>O processo de WebInstall permite instalar pacotes através de um arquivo <filename>p5i</filename>.</para>
+<orderedlist><listitem><para>Localize o arquivo <filename>.p5i</filename>. Esse arquivo pode estar em sua área de trabalho ou em um site.</para>
+</listitem>
+<listitem><para>Use um dos seguintes métodos para iniciar o Gerenciador de pacotes no modo WebInstall:</para>
+<itemizedlist><listitem><para>Clique em um arquivo <filename>.p5i</filename> na área de trabalho. O aplicativo associado (Instalador da Web do Gerenciador de pacotes) é iniciado.</para>
+</listitem>
+<listitem><para>Inicie o Gerenciador de pacotes a partir da linha de comando juntamente com um caminho para o arquivo <filename>.p5i</filename>. Por exemplo, digite o comando seguinte:</para>
+<screen># <userinput>packagemanager/<replaceable>path_to_p5i_file/file.p5i</replaceable></userinput></screen>
+</listitem>
+<listitem><para>Vá a um endereço URL que contenha um link para o arquivo <filename>.p5i</filename>. O arquivo <filename>.p5i</filename> deve estar localizado em um servidor Web com esse tipo de MIME registrado.</para>
+<para>Se o arquivo <filename>.p5i</filename> estiver localizado em um servidor Web sem esse tipo de MIME registrado, salve o arquivo <filename>.p5i</filename> na área de trabalho e depois clique nele para iniciar o WebInstall.</para>
+</listitem>
+</itemizedlist>
+</listitem>
+<listitem><para>A janela Instalar/Atualizar é exibida. O rótulo bo topo da janela é: “Instalador da Web do Gerenciador de pacotes/O seguinte será adicionado ao seu sistema:” Em seguida, editores e pacotes serão listados. Clique no botão <guibutton>Prosseguir</guibutton> para continuar a instalação.</para>
+<itemizedlist><listitem><para>Se o editor de pacotes ainda não estiver configurado no sistema, será exibida a janela Adicionar editor. O nome e o URI do editor já estão inseridos.</para>
+<para>Se os editores a serem adicionados forem editores seguros, serão necessários uma chave e um certificado SSL. Navegue para localizar a chave e o certificado SSL no sistema.</para>
+<para>A caixa de diálogo Adicionar um editor completo é exibida caso o editor seja adicionado com sucesso. Clique no botão <guibutton>OK</guibutton> para continuar a instalação.</para>
+</listitem>
+<listitem><para>Se o arquivo <filename>.p5i</filename> contiver pacotes de um editor desativado, o WebInstall abrirá a caixa de diálogo Ativar editor. Use essa caixa de diálogo para ativar o editor e instalar os pacotes.</para>
+</listitem>
+</itemizedlist>
+</listitem>
+<listitem><para>A janela Instalar/Atualizar agora tem a mesma aparência de quando você selecionou <guibutton>Instalar/Atualizar</guibutton> no Gerenciador de pacotes.</para>
+</listitem>
+</orderedlist>
+</sect1>
+</chapter>
+<chapter id="gkioy"><title>Solução de problemas</title>
+<para>Erro, aviso  mensagens informativas são salvas em um log para que você possa avaliar tudo ao mesmo tempo.</para>
+<sect1 id="gkiod"><title>Exibição de logs de mensagens</title>
+<para>Selecione a opção de menu <menuchoice><guimenu>Exibir</guimenu><guimenuitem>Logs</guimenuitem></menuchoice> para abrir a janela Logs. Essa janela exibe erro, aviso e mensagens informativas do Gerenciador de pacotes de Gerenciador de atualizações.</para>
+<para>Selecione o botão <guibutton>Clear</guibutton> na parte inferior da janela Logs para excluir todas as mensagens.</para>
+<para>Se houver um erro ou aviso, será exibido um triângulo amarelo do lado esquerdo da barra de status. Clique nesse triângulo para exibir a janela Logs.</para>
+</sect1>
+</chapter>
+<chapter id="pkg-mgr-prefs"><title>Configuração de preferências</title>
+<para>Use a oção de menu <menuchoice><guimenu>Editar</guimenu><guimenuitem>Preferências</guimenuitem></menuchoice> para alterar algumas configurações da interface de usuário do Gerenciador de pacotes.</para>
+<para>A janela Preferências tem três guias:</para>
+<itemizedlist><listitem><para>A guia Geral permite definir preferências de saída e de caixa de diálogo de confirmação.</para></listitem>
+<listitem><para>A guia Componentes opcionais permite definir preferências para instalação de componentes opcionais de pacotes quando você instala ou atualiza um pacote.</para></listitem>
+<listitem><para>A guia Política de assinatura permite definir a política de assinatura para esta imagem.</para></listitem>
+</itemizedlist>
+<sect1 id="gjktu"><title>Preferências de saída</title>
+<para>Selecione a opção <menuchoice><guimenu>Editar</guimenu><guimenuitem>Preferências</guimenuitem></menuchoice> e selcione a guia Geral.</para>
+<para>Se a caixa “Lembrar o estado atual na saída” estiver marcada, o Gerenciador de pacotes salvará as seguintes configurações e as restaurará na próxima vez em que você iniciar o Gerenciador de pacotes:</para>
+<itemizedlist><listitem><para><emphasis role="strong">Separadores verticais e horizontais</emphasis> — Larguras e alturas dos painéis da janela</para>
+</listitem>
+<listitem><para><emphasis role="strong">Tamanho da janela</emphasis> — Tamanho geral da janela do Gerenciador de pacotes</para>
+</listitem>
+<listitem><para><emphasis role="strong">Opção de editor</emphasis> — O editor ou outra opção selecionada no menu drop-down <guimenu>Editor</guimenu> quando o Gerenciador de pacotes é fechado</para>
+</listitem>
+<listitem><para><emphasis role="strong">Categorias</emphasis> — A categoria selecionada e as categorias expandidas e reduzidas de cada editor</para>
+</listitem>
+</itemizedlist>
+</sect1>
+<sect1 id="gjkug"><title>Confirmação das preferência de diálogo</title>
+<para>Selecione a opção <menuchoice><guimenu>Editar</guimenu><guimenuitem>Preferências</guimenuitem></menuchoice> e selcione a guia Geral.</para>
+<para>Quando um pacote é instalado, atualizado ou removido, é exibida uma caixa de diálogo de confirmação que mostra a lista de pacotes e a ação a ser executada. Se você não quiser ver essas caixas de diálogo de confirmação, desmarque essas caixas de seleção na janela Preferências.</para>
+<para>Se você clicar novamente na caixa de seleção “Não mostrar este diálogo de confirmação novamente” em uma caixa de diálogo específica, também cancelará essa preferência para esse diálogo.</para>
+</sect1>
+<sect1 id="img-sig-policy"><title>Preferências de política de assinatura</title>
+<para>Use os botões da guia Política de assinatura para ignorar ou exigir assinaturas ao instalar pacotes nesta imagem. Para definir a política de assinatura para editores específicos, selecione o editor na janela Gerenciar editores, clique no botão <guibutton>Modificar</guibutton> e use a guia Política de assinatura da janela Modificar editor.</para>
+<para>As opções para política de assinatura de imagem são as mesmas da política de assinatura de editor, exceto pelo fato de as configurações se aplicarem a todos os pacotes instalados na imagem, não só a pacotes instalados em um editor específico. Consulte <xref linkend="pub-sig-policy"/>.</para>
+</sect1>
+<sect1 id="languages"><title>Configurações de preferências de idioma de componentes opcionais</title>
+<para>Selecione a opção <menuchoice><guimenu>Editar</guimenu><guimenuitem>Preferências</guimenuitem></menuchoice> e selecione a guia Componentes opcionais.</para>
+<para>Por padrão, Instalar todos os idiomas fica selecionada em opções de idioma. Você pode liberar espaço na instalação selecionando um subconjunto de idiomas para instalação.</para>
+<para>Quando Instalar apenas estes idiomas estiver selecionada, você poderá clicar no ícone da caixa de seleção no cabeçalho da coluna mais à esquerda da lista de idiomas para selecionar todos os idiomas. Clique no cabeçalho da coluna novamente para cancelar a seleção de todos os idiomas. Clique nos cabeçalhos das colunas novamente para cancelar a seleção de todos os idiomas. Clique nos cabeçalhos das colunas Idioma e Território para ordenar a lista</para>
+<para>Clique no botão OK para salvar as alterações. Essas configurações aplicam-se aos pacotes instalados atualmente e às futuras instalações e atualizações de pacotes. A magem está atualizada conforme necessário para nstalar ou remover componentes opcionais de pacotes com base nas novas configurações.</para>
+<para>Se você atualizou anteriormente sua imagem para incluir apenas um subconjunto de idiomas, Instalar apenas estes idiomas será a seleção padrão da janela e a lista de idiomas estará esmaecida se você selecionar a opção Instalar todos os idiomas.</para>
+</sect1>
+<sect1 id="dev-doc"><title>Outras preferências de componentes opcionais</title>
+<para>Selecione a opção <menuchoice><guimenu>Editar</guimenu><guimenuitem>Preferências</guimenuitem></menuchoice> e selecione a guia Componentes opcionais.</para>
+<para>Por padrão, Instalar todos os arquivos de desenvolvimento e Instalar toda a documentação estão selecionadas em Configurações de outros componentes. Você pode liberar espaço na instalação cancelando a seleção dos arquivos de desenvolvimento ou documentação.</para>
+<para>Clique no botão OK para salvar as alterações. Essas configurações aplicam-se aos pacotes instalados atualmente e às futuras instalações e atualizações de pacotes. A magem está atualizada conforme necessário para nstalar ou remover componentes opcionais de pacotes com base nas novas configurações.</para>
+</sect1>
+</chapter>
+<glossary id="glossary"><title>Glossário</title>
+<glossentry><glossterm>alias</glossterm>
+<glossdef><para>Outro nome para um editor.</para>
+</glossdef>
+</glossentry>
+<glossentry><glossterm>ambiente de inicialização (BE)</glossterm>
+<glossdef><para>Uma instância de um ambiente inicializável do Oracle Solaris. É necessário que o sistema de arquivos raiz e todos os outros sistemas de arquivos do ambiente de inicialização que contêm software de sistema sejam conjuntos de dados ZFS.</para>
+<para>O ambiente de inicialização ativo é o que está inicializado no momento. Um sistema pode ter muitos ambientes de inicialização. É possível selecionar o que deseja inicializar ao reinicializar.</para>
+</glossdef>
+</glossentry>
+<glossentry><glossterm>clone</glossterm>
+<glossdef><para>Uma cópia exata.</para>
+<para>Um clone pode ser uma cópia exata de um sistema operacional, um sistema de arquivos ou um volume. Essa cópia é 100% compatível com o original.</para>
+</glossdef>
+</glossentry>
+<glossentry><glossterm>conjunto de dados</glossterm>
+<glossdef><para>Nome genérico das seguintes entidades do ZFS: clones, sistemas de arquivos, instantâneos ou volumes. Cada conjunto de dados é identificado por um único nome no espaço de nome do ZFS.</para>
+</glossdef>
+</glossentry>
+<glossentry><glossterm>imagem</glossterm>
+<glossdef><para>Um conjunto de softwares do sistema operacional em um pacote que pode ser inicializado e instalado.</para>
+<para>Um local do sistema em que os pacotes e os arquivos, diretórios, links e dependências associados podem ser instalados.</para>
+</glossdef>
+</glossentry>
+<glossentry><glossterm>origem</glossterm>
+<glossdef><para>Um servidor de pacotes no qual um editor edita pacotes.</para>
+</glossdef>
+</glossentry>
+<glossentry><glossterm>pacote</glossterm>
+<glossdef><para>Um conjunto de arquivos, diretórios, links, drivers e dependências em um formato definido.</para>
+</glossdef>
+</glossentry>
+<glossentry><glossterm>editor</glossterm>
+<glossdef><para>Pessoa, grupo ou corporação que projeta, cria e edita em um servidor de pacotes. O servidor de pacotes, por sua vez, atende os pacotes do editor (padrão)  para fins de download.</para>
+</glossdef>
+</glossentry>
+<glossentry><glossterm>editor de sistema</glossterm>
+<glossdef><para>Editores de sistema são editores especiais utilizados em imagens e regiões não-globais, em particular, com links para garantir que determinados pacotes permaneçam em sincronia com a região global. A região global comprime pacotes dentro de regiões não-globais por meio da configuração desses editores especiais na região não-global. São especiais porque as regiões não-globais não podem fazer determinadas alterações neles, incluindo remoção, desativação, modificação, nem alerar a prioridade deles.</para>
+</glossdef>
+</glossentry>
+</glossary>
+</book>

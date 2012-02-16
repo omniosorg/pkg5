@@ -1,0 +1,713 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook XML V4.3//EN" "http://www.oasis-open.org/docbook/xml/4.3/docbookx.dtd">
+<book id="pkgmgr" lang="zh_CN"><title><trademark class="registered">Oracle</trademark> Solaris 11 软件包管理器联机帮助</title>
+<bookinfo><authorgroup><author><firstname>Oracle</firstname>
+<surname>Corporation</surname>
+</author>
+</authorgroup>
+<releaseinfo>Oracle Solaris 11</releaseinfo>
+<pubdate>2011 年 6 月</pubdate>
+<publisher><publishername>Oracle Corporation</publishername>
+<address><street>500 Oracle Parkway</street>
+<city>Redwood City</city>
+<state>CA</state>
+<postcode>94065</postcode>
+<country>U.S.A.</country>
+</address>
+</publisher>
+<copyright><year>2008, 2011</year></copyright>
+<legalnotice><para>本软件和相关文档是根据许可证协议提供的，该许可证协议中规定了关于使用和公开本软件和相关文档的各种限制，并受知识产权法的保护。除非在许可证协议中明确许可或适用法律明确授权，否则不得以任何形式、任何方式使用、拷贝、复制、翻译、广播、修改、授权、传播、分发、展示、执行、发布或显示本软件和相关文档的任何部分。除非法律要求实现互操作，否则严禁对本软件进行逆向工程设计、反汇编或反编译。</para>
+<para>此文档所含信息可能随时被修改，恕不另行通知，我们不保证该信息没有错误。如果贵方发现任何问题，请书面通知我们。</para>
+<para>如果将本软件或相关文档交付给美国政府，或者交付给以美国政府名义获得许可证的任何机构，必须符合以下规定：</para>
+<para>U.S. GOVERNMENT RIGHTS Programs, software, databases, and related documentation and technical data delivered to U.S. Government customers are "commercial computer software" or "commercial technical data" pursuant to the applicable Federal Acquisition Regulation and agency-specific supplemental regulations.As such, the use, duplication, disclosure, modification, and adaptation shall be subject to the restrictions and license terms set forth in the applicable Government contract, and, to the extent applicable by the terms of the Government contract, the additional rights set forth in FAR 52.227-19, Commercial Computer Software License (December 2007).Oracle America, Inc., 500 Oracle Parkway, Redwood City, CA 94065.</para>
+<para>本软件或硬件是为了在各种信息管理应用领域内的一般使用而开发的。它不应被应用于任何存在危险或潜在危险的应用领域，也不是为此而开发的，其中包括可能会产生人身伤害的应用领域。如果在危险应用领域内使用本软件或硬件，贵方应负责采取所有适当的防范措施，包括备份、冗余和其它确保安全使用本软件或硬件的措施。对于因在危险应用领域内使用本软件或硬件所造成的一切损失或损害，Oracle Corporation 及其附属公司概不负责。</para>
+<para>Oracle 和 Java 是Oracle 和/或其附属公司的注册商标。其他名称可能是各自所有者的商标。</para>
+<para>AMD、Opteron、AMD 徽标以及 AMD Opteron 徽标是Advanced Micro Devices 的商标或注册商标。Intel 和 Intel Xeon是Intel Corporation 的商标或注册商标。所有SPARC 商标均是 SPARC International, Inc 的商标或注册商标，并应按照许可证的规定使用。UNIX 是通过 X/Open Company, Ltd 授权的注册商标。</para>
+<para>本软件或硬件以及文档可能提供了访问第三方内容、产品和服务的方式或有关这些内容、产品和服务的信息。对于第三方内容、产品和服务，Oracle Corporation 及其附属公司明确表示不承担任何种类的担保，亦不对其承担任何责任。对于因访问或使用第三方内容、产品或服务所造成的任何损失、成本或损害，Oracle Corporation 及其附属公司概不负责。</para>
+</legalnotice>
+</bookinfo>
+<chapter id="about"><title>关于软件包管理器</title>
+<para>软件包管理器是 Oracle Solaris 映像包管理系统 (Image Packaging System, IPS) 的一个图形用户界面 (graphical user interface, GUI)。</para>
+<para>有关本文档中所使用术语的定义，请参见<xref linkend="glossary"/>。</para>
+<sect1 id="gikcw"><title>Oracle Solaris 映像包管理系统</title>
+<para>Oracle Solaris 映像包管理系统 (Image Packaging System, IPS) 是一个软件交付系统，它与网络上的软件包系统信息库进行交互。IPS 是一个提供软件生命周期管理功能（包括软件安装、升级和删除）的框架。</para>
+<para>在安装 Oracle Solaris 操作系统后，您可能会发现您想使用的某个软件没有提供。该软件可能存在于某个 IPS 软件包系统信息库中。您可以使用软件包管理器或 <literal>pkg</literal>(1M) 命令从软件包系统信息库下载并安装软件包。</para>
+<para>通过 IPS，您还可以创建现有 IPS 软件包系统信息库的副本，创建您自己的 IPS 软件包系统信息库，以及发布您自己的 IPS 软件包。有关 IPS 的更多信息，请参见 Oracle Solaris 11 信息库。转到 <literal>download.oracle.com</literal>，在左侧选择 "Documentation Index"（文档索引），选择 "Systems Software"（系统软件），选择 "Oracle Solaris 11"，然后选择 "View Library"（查看库）。请专门参见 <citetitle>Adding and Updating Oracle Solaris 11 Software Packages</citetitle>（添加并更新 Oracle Solaris 11 软件包）。</para>
+</sect1>
+<sect1 id="pm-win"><title>软件包管理器</title>
+<para>软件包管理器提供了 IPS 命令行界面所提供的一部分功能。</para>
+<para>通过软件包管理器，您可以执行以下任务：</para>
+<itemizedlist><listitem><para>查找、安装、更新和删除 IPS 软件包。请参见<xref linkend="manage-pkg"/>。</para>
+</listitem>
+<listitem><para>更新您的系统（更新您系统上的所有软件包）。请参见<xref linkend="update_all"/>。</para>
+</listitem>
+<listitem><para>添加、修改和删除 IPS 软件包发布者。请参见<xref linkend="manage-publisher"/>。</para>
+</listitem>
+<listitem><para>列出、重命名、删除和管理引导环境。请参见<xref linkend="manage-be"/>。</para>
+</listitem>
+<listitem><para>创建 WebInstall 安装文件 (<filename>.p5i</filename>)。请参见 <xref linkend="webinstall"/>。</para>
+</listitem>
+</itemizedlist>
+<para>本文档介绍了软件包管理器窗口的下列功能：</para>
+<itemizedlist><listitem><para>位于窗口中央的大窗格是软件包列表窗格。有时候该窗格显示提示性消息，但通常情况下该窗格包含一个软件包列表。</para>
+</listitem>
+<listitem><para>窗口顶部的菜单栏提供了大部分的软件包管理器功能</para>
+</listitem>
+<listitem><para>在紧挨菜单栏下方的工具栏中，左侧的按钮提供了一些常用的操作。分隔条左侧的按钮具有全局功能：更新具有可用更新的所有软件包或者刷新软件包列表和软件包状态。分隔条右侧的按钮只针对选定的软件包执行操作。</para>
+</listitem>
+<listitem><para>工具栏右侧的“搜索”字段可帮助控制软件包列表窗格的内容。请参见<xref linkend="search-pkg"/>。</para>
+</listitem>
+<listitem><para>按钮下方的<guimenu>发布者</guimenu>下拉式菜单可帮助控制软件包列表窗格的内容，还允许您添加新的发布者。请参见<xref linkend="list-pkg"/>“按发布者”。</para>
+</listitem>
+<listitem><para>“搜索”字段下方的<guimenu>视图</guimenu>下拉式菜单可帮助控制软件包列表窗格的内容。请参见“按软件包状态”列出软件包。</para>
+</listitem>
+<listitem><para><guimenu>发布者</guimenu>菜单下方的类别窗格可帮助控制软件包列表窗格的内容。请参见“按类别”列出软件包。</para>
+</listitem>
+<listitem><para>软件类别列表的下方是您在此次会话中已执行的搜索的列表。</para>
+</listitem>
+<listitem><para>软件包列表窗格下方是软件包详细信息窗格。请参见<xref linkend="package-version"/>。</para>
+</listitem>
+</itemizedlist>
+</sect1>
+</chapter>
+<chapter id="manage-pkg"><title>管理软件包</title>
+<para>您可以根据各种条件列出软件包。您可以安装、更新和删除软件包。</para>
+<sect1 id="list-pkg"><title>列出软件包</title>
+<para>您在<guimenu>发布者</guimenu>下拉式菜单、<guimenu>视图</guimenu>下拉式菜单、类别窗格和“搜索”字段中所做的选择会影响软件包管理器列表窗格中的软件列表。</para>
+<para>您可以通过单击列标题对软件包列表进行重新排序。</para>
+<para>您可以使用<guibutton>刷新</guibutton>按钮或<menuchoice><guimenu>软件包</guimenu><guimenuitem>刷新</guimenuitem></menuchoice>菜单选项来重新读取系统信息库目录并更新软件包列表和软件包状态。在每次打开软件包管理器时也会尝试刷新。</para>
+<sect2 id="gkihe"><title>按发布者</title>
+<para>通过<guimenu>发布者</guimenu>下拉式菜单，您可以按发布者列出软件包。</para>
+<itemizedlist><listitem><para>菜单顶部列出了您使用“添加发布者”对话框或使用 <literal>pkg</literal> 命令已添加的每个发布者的名称。当您选中其中一个发布者时，软件包列表窗格将仅显示来自该选定发布者的软件包。软件包列表窗格将仅显示“名称”、“状态”和“摘要”列，因为每个软件包的发布者都是相同的。</para>
+</listitem>
+<listitem><para><guimenuitem>所有发布者</guimenuitem> - 在软件包列表窗格中显示来自所有发布者的软件包。软件包列表窗格显示“名称”、“状态”、“发布者”和“摘要”列。</para>
+<para>示例：要列出来自所有发布者的有更新可用的所有媒体设备驱动程序，请从<guimenu>发布者</guimenu>菜单中选择<guimenuitem>所有发布者</guimenuitem>，选择<menuchoice><guimenu>驱动程序</guimenu><guimenuitem>媒体</guimenuitem></menuchoice>类别，并从<guimenu>视图</guimenu>菜单中选择<guimenuitem>更新</guimenuitem>。</para>
+</listitem>
+<listitem><para><guimenuitem>所有已安装的软件包</guimenuitem> - 显示来自所有发布者的所有已安装的软件包。</para>
+<para>示例：要列出来自 <literal>solaris</literal> 发布者的当前已安装的字体软件包，请从<guimenu>发布者</guimenu>菜单中选择<guimenuitem>所有已安装的软件包</guimenuitem>，选择<menuchoice><guimenu>系统</guimenu><guimenuitem>字体</guimenuitem></menuchoice>类别，单击“发布者”列标题以按发布者对列表进行排序，然后滚动到 <literal>solaris</literal> 条目。</para>
+</listitem>
+<listitem><para><guimenuitem>所有发布者（搜索）</guimenuitem> - 在软件包列表窗格中显示一条提示性消息而不是软件包列表。该消息列出您已配置的所有发布者并提醒您如何查看来自那些发布者的所有软件包。有关使用<guimenuitem>所有发布者（搜索）</guimenuitem>进行搜索的信息，请参见<xref linkend="search-pkg"/>。</para>
+</listitem>
+<listitem><para><guimenuitem>添加...</guimenuitem> - 打开“添加发布者”窗口。</para>
+</listitem>
+</itemizedlist>
+</sect2>
+<sect2 id="gkihp"><title>按软件包状态</title>
+<para>通过<guimenu>视图</guimenu>下拉式菜单，您可以按软件包状态列出软件包。软件包状态可以是已安装、未安装或有更新可用。<guimenu>视图</guimenu>菜单上显示的图标与软件包列表窗格的“状态”列中显示的图标相匹配。</para>
+<itemizedlist><listitem><para><guimenuitem>所有软件包</guimenuitem> - 显示来自选定发布者的属于选定类别或与指定搜索字符串匹配的所有可用软件包。</para>
+<para>示例：要列出来自 <literal>solaris</literal> 发布者的所有 web 服务软件包（包括已安装的、未安装的和有可用更新的），请从<guimenu>发布者</guimenu>菜单中选择 <literal>solaris</literal>，选择 <menuchoice><guimenu>Web 服务</guimenu></menuchoice>类别，并从<guimenu>视图</guimenu>菜单中选择<guimenuitem>所有软件包</guimenuitem>。</para>
+</listitem>
+<listitem><para><guimenuitem>已安装的软件包</guimenuitem> - 显示来自选定发布者的属于选定类别或与指定搜索字符串匹配的所有已安装的软件包。另请参见<menuchoice><guimenu>发布者</guimenu><guimenuitem>所有已安装的软件包</guimenuitem></menuchoice>选项。</para>
+<para>示例：要仅列出来自 <literal>solaris</literal> 发布者的已安装的 web 服务器软件包，请从<guimenu>发布者</guimenu>菜单中选择 <literal>solaris</literal>，选择 <menuchoice><guimenu>Web 服务</guimenu></menuchoice> 类别，并从<guimenu>视图</guimenu>菜单中选择<guimenuitem>已安装的软件包</guimenuitem>。</para>
+</listitem>
+<listitem><para><guimenuitem>更新</guimenuitem> - 显示来自选定发布者的属于选定类别或与指定搜索字符串匹配且有更新可用的所有软件包。</para>
+<para>示例：要列出来自所有发布者的有更新可用的所有设备驱动程序，请从<guimenu>发布者</guimenu>菜单中选择<guimenuitem>所有发布者</guimenuitem>，选择<guimenu>驱动程序</guimenu>类别，并从<guimenu>视图</guimenu>菜单中选择<guimenuitem>更新</guimenuitem>。</para>
+</listitem>
+<listitem><para><guimenuitem>未安装的软件包</guimenuitem> - 显示来自选定发布者的属于选定类别或与指定搜索字符串匹配的所有未安装的软件包。</para>
+<para>示例：要列出来自 <literal>solaris</literal> 发布者的当前未安装的所有字体软件包，请从<guimenu>发布者</guimenu>菜单中选择 <literal>solaris</literal>，选择<menuchoice><guimenu>系统</guimenu><guimenuitem>字体</guimenuitem></menuchoice>类别，并从<guimenu>视图</guimenu>菜单中选择<guimenuitem>未安装的软件包</guimenuitem>。</para>
+</listitem>
+<listitem><para><guimenuitem>选定的软件包</guimenuitem> - 列出当前选定的所有软件包。请参见<xref linkend="select-pkg"/>。</para>
+</listitem>
+</itemizedlist>
+</sect2>
+<sect2 id="gkigv"><title>按类别</title>
+<para>您可以在软件包管理器窗口左侧的类别窗格中按软件类型浏览可用的软件包。单击某个类别名称可显示子类别。选定的类别或子类别中的软件包将根据选定的发布者和软件包状态以及指定的搜索条件在软件包列表窗格中列出。</para>
+<para>除了指定类型的软件外，类别窗格还允许您选择<guimenuitem>所有类别</guimenuitem>和<guimenuitem>最近的搜索</guimenuitem>。有关<guimenuitem>最近的搜索</guimenuitem>的信息，请参见<xref linkend="search-pkg"/>“重复以前的搜索”。</para>
+</sect2>
+</sect1>
+<sect1 id="search-pkg"><title>搜索软件包</title>
+<para>可使用下列两种方法之一来搜索软件包：</para>
+<itemizedlist><listitem><para>聚焦到软件包列表窗格上（例如，选择<menuchoice><guimenu>编辑</guimenu><guimenuitem>转到软件包列表</guimenuitem></menuchoice>并开始键入）。在键入时，将从软件包列表窗格中当前列出的软件包中识别出匹配项。</para>
+</listitem>
+<listitem><para>使用工具栏中的“搜索”字段。</para>
+</listitem>
+</itemizedlist>
+<sect2 id="gkjbd"><title>输入搜索字符串</title>
+<para>在“搜索”字段中输入一个字符串，然后按 Enter 键或单击“搜索”字段右侧的放大镜图标。</para>
+<itemizedlist><listitem><para><guimenu>发布者</guimenu>菜单选定项 - 软件包管理器根据您在<guimenu>发布者</guimenu>菜单中所做的选择，在来自特定发布者或所有发布者的每个软件包的相关信息中搜索该搜索字符串。</para>
+<para>无论您选择<guimenuitem>所有发布者</guimenuitem>还是选择<guimenuitem>所有发布者（搜索）</guimenuitem>，搜索结果都是一样的。使用<guimenuitem>所有发布者（搜索）</guimenuitem>的不同之处是速度更快，因为这避免了选择<guimenuitem>所有发布者</guimenuitem>时因加载来自所有发布者的数据而发生的延迟。使用<guimenuitem>所有发布者（搜索）</guimenuitem>时，针对所有发布者执行搜索而不在软件包列表窗格中加载来自所有发布者的数据。</para>
+</listitem>
+<listitem><para><guimenu>视图</guimenu>菜单选定项 - 根据在<guimenu>视图</guimenu>菜单上选定的软件包状态，在软件包列表窗格中显示搜索结果。通过更改<guimenu>视图</guimenu>菜单选定项，无需重新搜索，即可在软件包列表窗格中显示同一搜索结果的不同子集。</para>
+</listitem>
+</itemizedlist>
+<para>软件包管理器搜索的软件包信息包括名称、摘要、描述、类别以及软件包中包含的文件的名称。如果您未使用通配符，则只查找完全匹配项。</para>
+<variablelist><varlistentry><term><literal>AND</literal></term>
+<listitem><para>当搜索词条由空格或 <literal>AND</literal> 运算符分隔时，软件包管理器将搜索包含<emphasis role="strong">所有</emphasis>这些搜索词条的软件包。这是缺省搜索行为。</para>
+<para>示例：如果搜索字符串是 <literal>python book</literal> 或 <literal>python AND book</literal>，则搜索结果将仅包括其软件包信息中<emphasis>同时</emphasis>包含 <literal>python</literal> <emphasis>和</emphasis> <literal>book</literal> 的软件包。例如，软件包 <literal>diveintopython</literal> (a book about Python programming) 将出现在搜索结果中，但软件包 <literal>python-26</literal> 将不会出现。</para>
+</listitem>
+</varlistentry>
+<varlistentry><term>双引号</term>
+<listitem><para>将搜索词条括在双引号中指示要与该搜索词条完全匹配。</para>
+<para>示例：括在双引号中的 <literal>"ethernet driver"</literal> 将匹配 <literal>Fast Ethernet Driver</literal> 但不匹配 <literal>Ethernet Adapter Driver</literal>。</para>
+</listitem>
+</varlistentry>
+<varlistentry><term>通配符</term>
+<listitem><para>您可以在搜索字符串中使用 <literal>*</literal> 通配符。使用通配符时搜索速度可能较慢。</para>
+<para>示例：<literal>802.11*</literal> 将匹配 <literal>802.11b/g</literal> 和 <literal>802.11a/b/g</literal>。</para>
+<para>请注意，<literal>802.11*</literal> 不匹配 <literal>IEEE802.11b/g</literal>。要匹配 <literal>IEEE802.11b/g</literal>，请使用搜索字符串 <literal>*802.11*</literal>。</para>
+</listitem>
+</varlistentry>
+<varlistentry><term><literal>OR</literal></term>
+<listitem><para>当搜索词条由 <literal>OR</literal> 运算符分隔时，软件包管理器将搜索包含这些搜索词条中<emphasis role="strong">任一项</emphasis>的软件包。</para>
+<para>示例：<literal>python OR book</literal> 将匹配其软件包信息中包含 <literal>python</literal> 的所有软件包和其软件包信息中包含 <literal>book</literal> 的所有软件包。</para>
+</listitem>
+</varlistentry>
+</variablelist>
+<para>您可以组合使用这些搜索字符串修饰符。您可以在一个搜索字符串中同时使用 AND、OR、双引号和 *。</para>
+</sect2>
+<sect2 id="gkjao"><title>清除“搜索”字段</title>
+<para>要同时清除搜索字符串和搜索结果列表，请使用“搜索”字段或“编辑”菜单。</para>
+<itemizedlist><listitem><para>在“搜索”字段中，单击 <literal>X</literal> 图标。</para>
+</listitem>
+<listitem><para>在<guimenu>编辑</guimenu>菜单上，选择<guimenuitem>清除搜索</guimenuitem>选项。</para>
+</listitem>
+</itemizedlist>
+</sect2>
+<sect2 id="gkjbe"><title>取消搜索</title>
+<para>在执行搜索操作期间，一个繁忙条会显示在软件包管理器窗口底部的状态栏的右端。在繁忙条的右端是一个 <literal>X</literal> 图标。单击繁忙条中的 <literal>X</literal> 图标可取消正在进行的搜索。</para>
+</sect2>
+<sect2 id="gkjbb"><title>重新显示以前的搜索结果</title>
+<para>在当前软件包管理器会话中已执行的搜索的结果保存在类别窗格的<guimenuitem>最近的搜索</guimenuitem>中。</para>
+<para>在类别窗格中选择<guimenuitem>最近的搜索</guimenuitem>标签会在软件包列表窗格中显示一条提示性消息。软件包列表窗格中显示之前的搜索结果列表。单击“结果”链接可重新显示那些结果。</para>
+<para>选择<guimenuitem>最近的搜索</guimenuitem>标签左侧的箭头可在类别窗格中展开或隐藏以前的搜索结果列表。选择最近的搜索列表中的某个项目可重新显示那些搜索结果。</para>
+<para>与任何软件包都不匹配的搜索不会出现在最近的搜索列表中。</para>
+<para>选择<guibutton>刷新</guibutton>按钮或<menuchoice><guimenu>软件包</guimenu><guimenuitem>刷新</guimenuitem></menuchoice>菜单选项可删除所有最近的搜索结果。</para>
+</sect2>
+</sect1>
+<sect1 id="package-version"><title>显示更多信息</title>
+<para>可在软件包详细信息窗格或“软件包版本信息”对话框中查看有关某个软件包的更多信息。</para>
+<sect2 id="gkiti"><title>软件包详细信息窗格</title>
+<para>要显示有关某个软件包的更多信息，请单击鼠标左键以在软件包列表中突出显示该软件包。软件包列表窗格下方的软件包详细信息窗格显示了来自该发布者的最新可用版本、软件包大小、软件包中的文件、依赖关系和许可条款等信息。</para>
+<para>如果某个软件包自安装后已重命名，则“常规”选项卡上的“已重命名为”字段会显示该软件包的新名称。</para>
+<para>“版本”选项卡显示了供您安装的该软件包的所有版本列表。从列表中选择某个版本并单击列表右侧的<guibutton>安装/更新</guibutton>按钮可安装该版本。请参见<xref linkend="install-pkg"/>。</para>
+<para>如果软件包列表窗格包含一条提示性消息，则不会显示软件包详细信息窗格。</para>
+</sect2>
+<sect2 id="gkitc"><title>“软件包版本信息”对话框</title>
+<para>在软件包列表中的某个软件包上单击鼠标右键可弹出<guimenu>软件包</guimenu>菜单。</para>
+<para>从弹出菜单或菜单栏选择<menuchoice><guimenu>软件包</guimenu><guimenuitem>软件包版本信息</guimenuitem></menuchoice>菜单选项可显示一个单独的窗口，其中显示了已安装的软件包版本，以及您可以安装或更新到的最新版本（如果适用）。</para>
+</sect2>
+</sect1>
+<sect1 id="select-pkg"><title>选择软件包</title>
+<para>可以安装、更新或删除所选择的软件包。要选择某个软件包，请使用软件包列表窗格或使用<guimenu>编辑</guimenu>菜单。</para>
+<para>在软件包列表窗格中，可执行下列操作之一来选择某个软件包。您可以选择多个软件包。</para>
+<itemizedlist><listitem><para>单击软件包名称左侧的框。再次单击该框可取消选择软件包。</para>
+</listitem>
+<listitem><para>单击一次软件包名称可突出显示软件包。然后双击突出显示的软件包可选择该软件包。再次双击可取消选择软件包。</para>
+</listitem>
+<listitem><para>单击列标题中的复选框图标可选择当前列出在软件包列表窗格中的所有软件包。再次单击该复选框图标可取消选择当前列出在软件包列表窗格中的所有软件包。</para>
+</listitem>
+</itemizedlist>
+<para><guimenu>编辑</guimenu>菜单具有用于选择软件包的以下选项：</para>
+<itemizedlist><listitem><para><guimenuitem>全选</guimenuitem> - 选择当前列出在软件包列表窗格中的所有软件包。</para>
+</listitem>
+<listitem><para><guimenuitem>选择更新</guimenuitem> - 选择当前列出在软件包列表窗格中有更新可用的所有软件包。</para>
+</listitem>
+<listitem><para><guimenuitem>取消全选</guimenuitem> - 取消选择当前列出在软件包列表窗格中的所有软件包。</para>
+</listitem>
+</itemizedlist>
+<para>在任何情况下，当您选择某个软件包时，以前选定的软件包仍然处于选定状态。</para>
+<para>当前列出在软件包列表窗格中的所有软件包的数目和所选择的那些软件包的数目显示在软件包管理器窗口底部状态栏的左侧。</para>
+<para>选择<menuchoice><guimenu>发布者</guimenu><guimenuitem>所有发布者</guimenuitem></menuchoice>选项、<guimenuitem>所有类别</guimenuitem>类别以及<menuchoice><guimenu>视图</guimenu><guimenuitem>选定的软件包</guimenuitem></menuchoice>选项可在软件包列表窗格中列出来自所有发布者的所有选定的软件包。</para>
+<para>可以突出显示某个软件包但不选择它。当突出显示某个软件包时，有关该软件包的详细信息将显示在软件包列表窗格下方的软件包详细信息窗格中。当选定某个软件包时，在该软件包名称左侧的框中会显示一个复选标记。如果您要安装、更新或删除某个软件包，请确保该软件包的选择框中显示有一个复选标记。</para>
+</sect1>
+<sect1 id="install-pkg"><title>安装和更新软件包</title>
+<para>在安装或更新之前，请检查“可选组件”首选项设置。选择<menuchoice><guimenu>编辑</guimenu><guimenuitem>首选项</guimenuitem></menuchoice>选项。在“首选项”窗口中，选择“可选组件”选项卡。缺省情况下，“安装所有语言”、“安装所有开发文件”和“安装所有文档”处于选定状态。例如，您可以选择只安装某个语言子集或取消选择开发文件来节省安装空间。单击“确定”按钮保存所做的更改。这些设置将应用于所有已安装的软件包以及将来的软件包安装和更新。</para>
+<para>执行以下步骤来安装或更新软件包：</para>
+<orderedlist><listitem><para>选择软件包。请参见<xref linkend="select-pkg"/>。</para>
+</listitem>
+<listitem><para>可使用下列方法之一来安装或更新软件包：</para>
+<itemizedlist><listitem><para>在工具栏中选择<guibutton>安装/更新</guibutton>按钮。</para>
+</listitem>
+<listitem><para>从菜单栏中选择<menuchoice><guimenu>软件包</guimenu><guimenuitem>安装/更新</guimenuitem></menuchoice>选项。</para>
+</listitem>
+<listitem><para>在软件包名称上单击鼠标右键以显示<guimenu>软件包</guimenu>弹出式菜单，然后选择<guimenuitem>安装/更新</guimenuitem>选项。</para>
+</listitem>
+<listitem><para>在软件包列表窗格下方的软件包详细信息窗格中，在“版本”选项卡上，从“要安装的版本”列表中选择一个版本并单击该列表右侧的<guibutton>安装/更新</guibutton>按钮。“要安装的版本”列表中的软件包是系统信息库可提供的；它们有可能不可安装。某个特定的版本有可能与您已安装的其他软件包不兼容。如果您选择的版本不可安装在您的系统上，则软件包管理器会向您发出警告，且不会安装该软件包。</para>
+</listitem>
+</itemizedlist>
+<para>如果软件包已安装且没有更新可用（请参见“状态”列或<menuchoice><guimenu>软件包</guimenu><guimenuitem>软件包版本信息</guimenuitem></menuchoice>选项），则<guibutton>安装/更新</guibutton>选项处于灰显状态且不可选择。</para>
+</listitem>
+<listitem><para>“安装/更新确认”窗口随即显示。尚未安装的软件包列出在“安装详细信息”窗格中且已安装的软件包列出在“更新详细信息”窗格中供您复查。选择<guibutton>继续</guibutton>按钮将安装或更新所列出的软件包。</para>
+<para>在某些情况下会显示一个许可对话框，您必须接受该许可才能安装软件包。</para>
+<para>如果在软件包安装期间发生错误，则会显示一个错误对话框，其中的消息会解释安装或更新为何失败。</para>
+</listitem>
+</orderedlist>
+</sect1>
+<sect1 id="remove-pkg"><title>删除软件包</title>
+<para>执行以下步骤来删除软件包：</para>
+<orderedlist><listitem><para>选择软件包。请参见<xref linkend="select-pkg"/>。</para>
+</listitem>
+<listitem><para>可使用下列方法之一来删除软件包：</para>
+<itemizedlist><listitem><para>在工具栏中选择<guibutton>删除</guibutton>按钮。</para>
+</listitem>
+<listitem><para>从菜单栏中选择<menuchoice><guimenu>软件包</guimenu><guimenuitem>删除</guimenuitem></menuchoice>选项。</para>
+</listitem>
+<listitem><para>在软件包名称上单击鼠标右键以显示<guimenu>软件包</guimenu>弹出式菜单，然后选择<guimenuitem>删除</guimenuitem>选项。</para>
+</listitem>
+</itemizedlist>
+<para>如果软件包未安装，则“删除”选项处于灰显状态且不可选择。</para>
+</listitem>
+<listitem><para>“删除确认”窗口随即显示。要删除的软件包列出在“删除详细信息”窗格中供您复查。选择<guibutton>继续</guibutton>按钮将删除列出的软件包。</para>
+<para>如果某个软件包因其他软件包依赖于它而无法删除，您可以选择<guibutton>继续删除</guibutton>选项来尝试删除您最初选定的要删除的任何其余软件。</para>
+</listitem>
+</orderedlist>
+</sect1>
+</chapter>
+<chapter id="update_all"><title>更新系统</title>
+<para>当更新某些关键的软件包（例如某些驱动程序和其他内核组件）时，系统将执行以下操作：</para>
+<orderedlist><listitem><para>创建当前引导环境 (boot environment, BE) 的克隆。</para>
+</listitem>
+<listitem><para>更新克隆中的软件包，且不更新当前 BE 中的任何软件包。</para>
+</listitem>
+<listitem><para>将新的 BE 设置为下次重新引导系统时的缺省引导选项。当前 BE 保留为一个备用引导选项。</para>
+</listitem>
+</orderedlist>
+<sect1 id="um_info"><title>更新所有软件包</title>
+<para>当您在工具栏中选择<guibutton>更新</guibutton>按钮或者选择<menuchoice><guimenu>软件包</guimenu><guimenuitem>更新</guimenuitem></menuchoice>菜单选项时，软件包管理器将更新有更新可用的所有已安装的软件包。</para>
+<para>凡是可从其当前发布者获得更新的软件包都将被更新。如果某个软件包的可用更新来自发布者列表中的其他发布者，则只有其当前发布者配置为非粘性时，该软件包才会更新。如果其当前发布者配置为粘性，则该软件包不会更新。</para>
+<para>“更新”窗口随即显示，更新过程启动：</para>
+<orderedlist><listitem><para>系统将刷新所有目录。</para>
+</listitem>
+<listitem><para>系统对所有已安装的软件包进行评估以确定哪些软件包有更新可用。</para>
+<itemizedlist><listitem><para>如果没有任何软件包有更新可用，则会显示消息“无更新可用”且处理停止。</para>
+</listitem>
+<listitem><para>如果有软件包更新可用，则会列出要更新的软件包供您复查。这是您通过单击<guibutton>取消</guibutton>按钮中止更新的最后机会。</para>
+</listitem>
+</itemizedlist>
+</listitem>
+<listitem><para>单击<guibutton>继续</guibutton>按钮将继续更新。</para>
+<para>系统可能会创建一个新的引导环境 (boot environment, BE)，如前文中的<xref linkend="update_all"/>所述，具体取决于要更新的是哪些软件包。</para>
+<para>如果系统确定需要一个新 BE 但无法创建新 BE，则会显示一条错误消息。如果问题是磁盘空间不足，请执行以下步骤：</para>
+<orderedlist><listitem><para>单击<guibutton>关闭</guibutton>以取消更新过程。</para>
+</listitem>
+<listitem><para>按照<xref linkend="remove-be"/>中的说明删除不再需要的 BE。</para>
+</listitem>
+<listitem><para>再次选择<guibutton>更新</guibutton>以重新启动更新过程。</para>
+</listitem>
+</orderedlist>
+</listitem>
+<listitem><para>系统下载所有软件包更新。</para>
+</listitem>
+<listitem><para>系统安装软件包更新。如果创建了一个克隆的 BE，则更新将安装在该克隆 BE 中。如果没有创建克隆 BE，则更新将安装在当前的 BE 中。</para>
+<para>如果在更新过程中的任何时候出现错误，“详细信息”面板将会展开，并且将显示错误的详细信息。错误状态指示符将显示在失败的阶段旁边。</para>
+</listitem>
+<listitem><para>如果系统创建了一个用于更新的新 BE，则您可以编辑缺省的 BE 名称。在您对 BE 名称满意后，单击<guibutton>立即重新启动</guibutton>按钮可立即重新引导您的系统。单击<guibutton>稍后重新启动</guibutton>按钮可在稍后的某个时间重新启动您的系统。您必须重新启动才能引导到新 BE。新 BE 将成为您的缺省引导选项。您的当前 BE 可用作备用引导选项。</para>
+</listitem>
+</orderedlist>
+</sect1>
+<sect1 id="using_um"><title>使用更新管理器</title>
+<para>您可以从某个系统通知或者从桌面菜单栏打开更新管理器。更新管理器执行与前文中的<xref linkend="um_info"/>所述过程相同的过程。</para>
+<sect2 id="gkiso"><title>软件更新通知</title>
+<para>系统会定期检查是否有更新可供任何已安装的软件包使用。如果系统检测到有更新可用，则会在系统通知栏中显示一个“有更新可用”通知图标和弹出窗口。单击通知图标可打开更新管理器。</para>
+</sect2>
+<sect2 id="gkisz"><title>桌面系统菜单</title>
+<para>从桌面上的菜单栏选择<menuchoice><guimenu>系统</guimenu><guisubmenu>管理</guisubmenu><guimenuitem>更新管理器</guimenuitem></menuchoice>以打开更新管理器。</para>
+</sect2>
+</sect1>
+</chapter>
+<chapter id="manage-publisher"><title>管理发布者</title>
+<para>您可以添加、修改和删除 IPS 软件包发布者。您可以更改发布者的优先级、更改“已启用”和“粘性”设置、更改发布者别名、添加或删除发布者源，以及添加或删除发布者镜像。您可以管理密钥、证书和签名策略。</para>
+<para>请注意，系统发布者是个例外。在“管理发布者”窗口中，系统发布者仅可供查看。系统发布者无法删除或修改，您无法更改其优先级。请参见<xref linkend="glossary"/>。“详细信息”窗格指示选定的发布者是否为系统发布者。</para>
+<sect1 id="add-publisher"><title>添加发布者</title>
+<para>要添加某个 IPS 软件包发布者，请使用“添加发布者”窗口。要打开“添加发布者”窗口，请执行下列操作之一：</para>
+<itemizedlist><listitem><para>从<guimenu>发布者</guimenu>下拉式菜单中选择<guimenuitem>添加</guimenuitem>选项。</para>
+</listitem>
+<listitem><para>选择<menuchoice><guimenu>文件</guimenu><guimenuitem>添加发布者</guimenuitem></menuchoice>菜单选项。</para>
+</listitem>
+<listitem><para>选择<menuchoice><guimenu>文件</guimenu><guimenuitem>管理发布者</guimenuitem></menuchoice>菜单选项。在“管理发布者”窗口中，选择<guibutton>添加</guibutton>按钮。</para>
+</listitem>
+</itemizedlist>
+<para>在“添加发布者”窗口中，执行以下步骤来添加某个 IPS 软件包发布者：</para>
+<orderedlist><listitem><para>在 URI 字段中，输入发布者的 URI。该 URI 是一个网络位置，例如 <literal>http://pkg.oracle.com/solaris/release/</literal> 或 <literal>http://localhost:5555</literal>。</para>
+</listitem>
+<listitem><para>在“别名”字段中，您可以为该发布者输入另一个名称。</para>
+</listitem>
+<listitem><para>单击<guibutton>添加</guibutton>按钮。</para>
+</listitem>
+<listitem><para>“添加发布者”对话框随即显示。单击<guibutton>取消</guibutton>可取消该过程。单击“详细信息”可查看详细信息。</para>
+<itemizedlist><listitem><para>如果成功添加了新发布者，则会显示“添加发布者完成”对话框，其中会显示新发布者的名称、别名和 URI。</para>
+</listitem>
+<listitem><para>如果没有添加新发布者，则会显示“发布者错误”对话框，其中会显示问题的相关信息。</para>
+</listitem>
+</itemizedlist>
+</listitem>
+</orderedlist>
+<para>新发布者列在“管理发布者”窗口中的最后一位，并且设置为“已启用”和“粘性”。</para>
+<para>有关更改新发布者的优先级、更改“已启用”和“粘性”设置、更改发布者别名、添加发布者源、设置 SSL 密钥和证书、添加发布者镜像、以及管理发布者证书和签名策略方面的信息，请参见<xref linkend="modify-publisher"/>。</para>
+</sect1>
+<sect1 id="modify-publisher"><title>修改发布者</title>
+<para>要修改发布者的属性，请选择<menuchoice><guimenu>文件</guimenu><guimenuitem>管理发布者</guimenuitem></menuchoice>菜单选项。当前已配置的发布者列出在“管理发布者”窗口中。</para>
+<para>在“管理发布者”窗口中，您可以更改发布者的优先级、启用或禁用发布者、将发布者设置为粘性或非粘性，以及删除发布者。请参见<xref linkend="priority-stickiness"/>和<xref linkend="remove-publisher"/>。</para>
+<para>单击<guibutton>修改</guibutton>按钮以打开“修改发布者”窗口。在“修改发布者”窗口中，您可以更改发布者别名、添加或删除发布者源、添加或删除发布者镜像、设置 SSL 密钥和证书，以及管理发布者证书和签名策略。请参见<xref linkend="origin-mirror"/>和<xref linkend="pub-security"/>。</para>
+<sect2 id="priority-stickiness"><title>更改优先级和粘性</title>
+<para>选择<menuchoice><guimenu>文件</guimenu><guimenuitem>管理发布者</guimenuitem></menuchoice>菜单选项以显示“管理发布者”窗口。</para>
+<sect3 id="set-pub-order"><title>发布者优先级</title>
+<para>发布者按优先级顺序列出在“管理发布者”窗口中。列表顶部的发布者是优先级最高的发布者。列表底部的发布者是优先级最低的发布者。</para>
+<itemizedlist><listitem><para>位于列表顶部的发布者也称为首选发布者。</para></listitem>
+<listitem><para>无法禁用或删除首选发布者。</para></listitem>
+<listitem><para>当您搜索软件包并且未指定发布者时，将首先搜索较高优先级发布者的目录。</para></listitem>
+<listitem><para>更新从非粘性发布者安装的软件包时，将首先搜索较高优先级发布者的目录来查找更新。</para></listitem>
+</itemizedlist>
+<para>要更改发布者的优先级，请执行以下步骤：</para>
+<orderedlist><listitem><para>在“管理发布者”窗口的列表中单击，突出显示某个发布者行。</para>
+</listitem>
+<listitem><para>单击发布者列表右侧的<guibutton>向上</guibutton>和<guibutton>向下</guibutton>按钮以提高或降低选定发布者的优先级。选定发布者条目将在列表中上移或下移以反映其新优先级。</para>
+<para>如果选定发布者是一个系统发布者，则<guibutton>向上</guibutton>和<guibutton>向下</guibutton>按钮处于禁用状态。您无法更改系统发布者的优先级。因为您无法更改系统发布者的优先级，所以您无法降低其优先级只比系统发布者高一个级别的发布者的优先级，也无法提高其优先级只比系统发布者低一个级别的发布者的优先级。</para></listitem>
+<listitem><para>单击“管理发布者”窗口底部的<guibutton>确定</guibutton>按钮。</para>
+</listitem>
+</orderedlist>
+</sect3>
+<sect3 id="gjlab"><title>“已启用”和“粘性”</title>
+<para>在您添加发布者时，会缺省设置“已启用”和“粘性”属性。首选发布者（请参见前文中的<xref linkend="set-pub-order"/>）无法禁用。系统发布者无法禁用，且系统发布者的“粘性”设置无法更改。所有其他“已启用”和“粘性”设置可以更改。</para>
+<para>如果为某个发布者设置了“粘性”属性，则无法从其他发布者更新从该发布者安装的软件包。如果没有为某个发布者设置“粘性”属性，则该发布者是非粘性的。如果某个发布者是非粘性的，则可以从其他发布者更新最初来自该发布者的软件包。其他发布者可能有比软件包的原始发布者较新的软件包版本。如果您希望更新到该较新的版本，则原始发布者需要是非粘性的。另外，如果某个较低优先级的发布者是非粘性的，则在为从该非粘性发布者安装的软件包查找更新时，将首先搜索较高优先级的发布者。</para>
+<para>查找更新或要安装的软件包时，不会搜索已禁用的发布者。已禁用的发布者的目录不会刷新。已禁用的发布者不会显示在<guimenu>发布者</guimenu>下拉式菜单中。</para>
+<para>要更改发布者的“已启用”和“粘性”设置，请执行以下步骤：</para>
+<orderedlist><listitem><para>选择<menuchoice><guimenu>文件</guimenu><guimenuitem>管理发布者</guimenuitem></menuchoice>菜单选项以打开“管理发布者”窗口。</para>
+</listitem>
+<listitem><para>单击“已启用”框或“粘性”框以切换其设置。</para>
+</listitem>
+<listitem><para>单击“管理发布者”窗口底部的<guibutton>确定</guibutton>按钮。</para>
+</listitem>
+</orderedlist>
+</sect3>
+</sect2>
+<sect2 id="origin-mirror"><title>更改别名、源和镜像</title>
+<orderedlist><listitem><para>选择<menuchoice><guimenu>文件</guimenu><guimenuitem>管理发布者</guimenuitem></menuchoice>菜单选项以打开“管理发布者”窗口。</para>
+</listitem>
+<listitem><para>选择您要修改的发布者。“管理发布者”窗口中发布者列表下方的“详细信息”窗格显示选定发布者的当前源。</para>
+</listitem>
+<listitem><para>单击发布者列表右侧的<guibutton>修改</guibutton>按钮以打开“修改发布者”窗口。</para>
+<para>如果选定发布者是一个系统发布者，则<guibutton>修改</guibutton>按钮处于禁用状态。“详细信息”窗格将指出选定的发布者是系统发布者并将显示一条消息来指明该发布者无法修改或删除。</para>
+</listitem>
+<listitem><para>选择“常规”选项卡可修改发布者别名、添加和删除源，以及添加和删除镜像。</para></listitem>
+</orderedlist>
+<sect3 id="modify-publisher-alias"><title>发布者别名</title>
+<para>发布者别名是发布者的另一个名称。别名用于<guimenu>发布者</guimenu>下拉式菜单和软件包列表窗格。</para>
+<para>要更改该发布者的别名，请执行以下步骤：</para>
+<orderedlist><listitem><para>在“修改发布者”窗口的“常规”选项卡上，在“别名”字段中输入一个新名称。</para>
+</listitem>
+<listitem><para>单击“修改发布者”窗口底部的<guibutton>确定</guibutton>按钮。</para>
+</listitem>
+<listitem><para>“管理发布者”窗口中的发布者别名已更改。单击“管理发布者”窗口底部的<guibutton>确定</guibutton>按钮。</para>
+</listitem>
+</orderedlist>
+</sect3>
+<sect3 id="gjkza"><title>发布者源</title>
+<para>源是同时包含软件包元数据（软件包清单和目录）和软件包内容（软件包文件）的 IPS 软件包系统信息库或归档所在的位置。</para>
+<para>源的值是 IPS 软件包系统信息库的 URI。</para>
+<para>要为该发布者更改、添加或删除源，请执行以下步骤：</para>
+<orderedlist><listitem><para>选择“修改发布者”窗口的“常规”选项卡。</para>
+<itemizedlist><listitem><para>添加源。</para>
+<orderedlist type="a"><listitem><para>在“源”字段中，输入您要与该发布者关联的新源的 URI。</para></listitem>
+<listitem><para>单击<guibutton>添加</guibutton>按钮。新 URI 将添加到“源”字段下方的列表中。</para></listitem>
+</orderedlist>
+</listitem>
+<listitem><para>删除源。</para>
+<orderedlist type="a"><listitem><para>在“源”字段下方的列表中，选择您要删除的 URI。</para></listitem>
+<listitem><para>单击<guibutton>删除</guibutton>按钮。选定的 URI 将从列表中删除。如果仅为该发布者定义了一个源，则无法删除该源。</para></listitem>
+</orderedlist>
+</listitem>
+<listitem><para>更改源。</para>
+<orderedlist type="a"><listitem><para>添加新的源。</para></listitem>
+<listitem><para>删除您要更改的源。</para></listitem>
+</orderedlist>
+</listitem>
+</itemizedlist>
+</listitem>
+<listitem><para>单击“修改发布者”窗口底部的<guibutton>确定</guibutton>按钮。</para>
+</listitem>
+<listitem><para>源的更改将反映在“管理发布者”窗口中的“详细信息”窗格中。单击“管理发布者”窗口底部的<guibutton>确定</guibutton>按钮。</para>
+</listitem>
+</orderedlist>
+</sect3>
+<sect3 id="gjkyr"><title>发布者镜像</title>
+<para>镜像是仅包含软件包内容（软件包文件）的 IPS 软件包系统信息库所在的位置。镜像不包含软件包元数据（软件包清单和目录）。镜像提供的数据是源所提供数据的一个子集。镜像仅可用于下载软件包文件。软件包元数据从源下载。IPS 客户机访问源来获取发布者的目录，即使该客户机从镜像下载软件包内容时也是如此。</para>
+<para>要为该发布者添加、删除或更改镜像，请执行以下步骤：</para>
+<orderedlist><listitem><para>选择“修改发布者”窗口的“常规”选项卡。</para></listitem>
+<listitem><para>单击“镜像”标签以显示“镜像”字段和镜像列表。</para>
+<itemizedlist><listitem><para>添加镜像。</para>
+<orderedlist type="a"><listitem><para>在“镜像”字段中，输入您要与该发布者关联的新镜像的 URI。</para></listitem>
+<listitem><para>单击<guibutton>添加</guibutton>按钮。新 URI 将添加到“镜像”字段下方的列表中。</para></listitem>
+</orderedlist>
+</listitem>
+<listitem><para>删除镜像。</para>
+<orderedlist type="a"><listitem><para>在“镜像”字段下方的列表中，选择您要删除的 URI。</para></listitem>
+<listitem><para>单击<guibutton>删除</guibutton>按钮。选定的 URI 将从列表中删除。</para></listitem>
+</orderedlist>
+</listitem>
+<listitem><para>更改镜像。</para>
+<orderedlist type="a"><listitem><para>删除您要更改的镜像。</para></listitem>
+<listitem><para>添加一个新镜像。</para></listitem>
+</orderedlist>
+</listitem>
+</itemizedlist>
+</listitem>
+<listitem><para>单击“修改发布者”窗口底部的<guibutton>确定</guibutton>按钮。</para>
+</listitem>
+<listitem><para>单击“管理发布者”窗口底部的<guibutton>确定</guibutton>按钮。</para>
+</listitem>
+</orderedlist>
+</sect3>
+</sect2>
+<sect2 id="security"><title>管理发布者安全性</title>
+<para>证书用于在安装软件包之前验证其是否已正确地签名，验证根据的是映像或发布者的签名策略（取两者中限制性更强者）。</para>
+<orderedlist><listitem><para>选择<menuchoice><guimenu>文件</guimenu><guimenuitem>管理发布者</guimenuitem></menuchoice>菜单选项以打开“管理发布者”窗口。</para>
+</listitem>
+<listitem><para>选择要修改其安全性的发布者。</para>
+</listitem>
+<listitem><para>单击发布者列表右侧的<guibutton>修改</guibutton>按钮以打开“修改发布者”窗口。在“管理发布者”窗口中选定的发布者将在“修改发布者”窗口的标题中列出。</para>
+<itemizedlist><listitem><para>如果发布者具有安全的源，可选择“常规”选项卡来添加 SSL 密钥和 SSL 证书。</para></listitem>
+<listitem><para>选择“证书”选项卡可管理该发布者的证书。</para></listitem>
+<listitem><para>选择“签名策略”选项卡可管理该发布者的签名策略。</para></listitem>
+</itemizedlist>
+</listitem>
+</orderedlist>
+<sect3 id="keys-certs"><title>添加 SSL 密钥和证书</title>
+<para>如果发布者具有安全的源，需要为该发布者添加 SSL 密钥和 SSL 证书。</para>
+<orderedlist><listitem><para>单击“修改发布者”窗口的“常规”选项卡。</para></listitem>
+<listitem><para>单击“SSL 密钥和证书”标签以显示“SSL 密钥”字段和“SSL 证书”字段。</para></listitem>
+<listitem><para>单击“SSL 密钥”字段右侧的<guibutton>浏览</guibutton>按钮来选择 SSL 密钥文件。</para></listitem>
+<listitem><para>单击“SSL 证书”字段右侧的<guibutton>浏览</guibutton>按钮来选择 SSL 证书文件。</para> </listitem>
+<listitem><para>单击“修改发布者”窗口底部的<guibutton>确定</guibutton>按钮。</para></listitem>
+<listitem><para>单击“管理发布者”窗口底部的<guibutton>确定</guibutton>按钮。</para></listitem>
+</orderedlist>
+</sect3>
+<sect3 id="manage-certs"><title>管理证书</title>
+<orderedlist><listitem><para>单击“修改发布者”窗口的“证书”选项卡。</para></listitem>
+<listitem><para>使用证书列表下方的按钮来添加证书或者删除、吊销或恢复当前在列表中选定的证书。</para>
+<para>请注意，您在“修改发布者”窗口中采取的任何操作只有在您单击“修改发布者”窗口底部的<guibutton>确定</guibutton>按钮后才会应用于选定发布者的证书。如果您单击<guibutton>取消</guibutton>按钮，则不会应用任何更改。</para>
+<itemizedlist><listitem><para><guibutton>添加</guibutton>。为“修改发布者”窗口标题中列出的发布者添加新的发布者证书。在“添加发布者证书”窗口中，浏览以选择证书 (<tt>.pem</tt>) 文件。单击“添加发布者证书”窗口底部的<guibutton>确定</guibutton>按钮。新添加的证书在“修改发布者”窗口的“证书”选项卡中的证书列表中处于选定状态。详细信息窗格指示该证书被标为要添加的证书。在您单击“修改发布者”窗口中的<guibutton>确定</guibutton>按钮后，将添加该证书。</para></listitem>
+</itemizedlist>
+</listitem>
+<listitem><para>在该发布者的证书列表中，选择您要进行修改或要检查其详细信息的证书。有关选定证书的详细信息将显示在证书列表和按钮行的下方。请注意，已过期的证书可能仍然处于“已批准”状态且可用来验证在证书过期之前发布的（不需要是已安装的）已签名软件包。</para>
+<para>单击证书列表的标题可以对列表进行重新排序。“组织”和“名称”列的大小可调整。</para>
+<itemizedlist><listitem><para><guibutton>删除</guibutton>。删除当前在证书列表中选定的证书。</para></listitem>
+<listitem><para><guibutton>吊销</guibutton>。如果证书列表中当前选定的证书属于“已批准”，单击<guibutton>吊销</guibutton>按钮可将其设为已吊销。在证书列表中，该证书的“状态”更改为“已吊销”。在您单击“修改发布者”窗口中的<guibutton>确定</guibutton>按钮后，该更改将应用于证书。</para></listitem>
+<listitem><para><guibutton>恢复</guibutton>。如果证书列表中当前选定的证书属于“已吊销”，单击<guibutton>恢复</guibutton>按钮可将其设为已批准。详细信息窗格指示该证书被标为要恢复的证书。在您单击“修改发布者”窗口中的<guibutton>确定</guibutton>按钮后，将恢复该证书。</para></listitem>
+</itemizedlist>
+</listitem>
+<listitem><para>单击“修改发布者”窗口底部的<guibutton>确定</guibutton>按钮。</para></listitem>
+<listitem><para>单击“管理发布者”窗口底部的<guibutton>确定</guibutton>按钮。</para></listitem>
+</orderedlist>
+</sect3>
+<sect3 id="pub-sig-policy"><title>管理签名策略</title>
+<orderedlist><listitem><para>单击“修改发布者”窗口的“签名策略”选项卡。</para></listitem>
+<listitem><para>使用“签名策略”选项卡上的按钮来设置当安装来自“修改发布者”窗口标题中列出的发布者的软件包时要使用的签名策略。</para>
+<para>要设置全局签名策略，请使用“首选项”窗口的“签名策略”选项卡。（请参见<xref linkend="img-sig-policy"/>）。</para>
+<itemizedlist><listitem><para>签名被忽略：对所有软件包都忽略签名。</para></listitem>
+<listitem><para>签名是可选的，但如果提供则必须有效：验证具有签名的所有软件包的签名是否有效，但不要求所有已安装的软件包都具有签名。</para></listitem>
+<listitem><para>需要一个或多个有效签名：要求所有新安装的软件包至少具有一个有效签名。</para></listitem>
+<listitem><para>签名是必需的，并且验证软件包的签名时，证书名称必须包括文本字段中指定的一个或多个名称。如果指定多个名称，则名称之间必须以逗号分隔。</para></listitem></itemizedlist>
+</listitem>
+<listitem><para>单击“修改发布者”窗口底部的<guibutton>确定</guibutton>按钮。</para></listitem>
+<listitem><para>单击“管理发布者”窗口底部的<guibutton>确定</guibutton>按钮。</para></listitem>
+</orderedlist>
+</sect3>
+</sect2>
+</sect1>
+<sect1 id="remove-publisher"><title>删除发布者</title>
+<para>执行以下步骤来删除发布者：</para>
+<orderedlist><listitem><para>选择<menuchoice><guimenu>文件</guimenu><guimenuitem>管理发布者</guimenuitem></menuchoice>菜单选项以打开“管理发布者”窗口。</para>
+</listitem>
+<listitem><para>选择要删除的发布者。</para>
+</listitem>
+<listitem><para>单击发布者列表右侧的<guibutton>删除</guibutton>按钮。</para>
+<para>如果选定发布者是一个系统发布者，则<guibutton>删除</guibutton>按钮处于禁用状态。“详细信息”窗格将指出选定的发布者是系统发布者并将显示一条消息来指明该发布者无法修改或删除。</para>
+</listitem>
+<listitem><para>单击“管理发布者”窗口底部的<guibutton>确定</guibutton>按钮。</para>
+</listitem>
+</orderedlist>
+</sect1>
+</chapter>
+<chapter id="manage-be"><title>管理引导环境</title>
+<para>引导环境 (boot environment, BE) 是可引导的映像。您可以在 Oracle Solaris 系统中维护多个 BE。其中一个 BE 是启动或重新引导时的缺省 BE。其他 BE 用作备用引导选项。所引导的 BE 将成为活动 BE。</para>
+<para>您可以使用 <literal>beadm</literal>(1) 命令来创建、重命名、挂载、卸载、激活或销毁 BE。有关 BE 的完整信息，请参见<citetitle>Creating and Managing Boot Environments After Installation</citetitle>（在安装后创建和管理引导环境）。</para>
+<para>软件包管理器提供了 <literal>beadm</literal>(1) 命令所提供的功能的一个子集。使用软件包管理器<menuchoice><guimenu>文件</guimenu><guimenuitem>管理引导环境</guimenuitem></menuchoice>选项可打开“管理引导环境”窗口。“管理引导环境”窗口列出了该系统上的 BE，您可以在该窗口中激活、重命名和删除这些 BE，方法如下文中所述。</para>
+<sect1 id="create-be"><title>创建 BE</title>
+<para>当您执行下列操作之一时会自动创建一个新的 BE：</para>
+<itemizedlist><listitem><para>安装 Oracle Solaris 操作系统。</para>
+</listitem>
+<listitem><para>安装或更新特定关键系统软件包，例如某些驱动程序和其他内核组件。</para>
+</listitem>
+<listitem><para>使用 <literal>beadm create</literal> 命令。</para>
+</listitem>
+</itemizedlist>
+<para>当您执行 <literal>pkg update</literal> 命令或使用<guibutton>更新</guibutton>按钮来更新有更新可用的所有软件包时通常会创建一个新 BE。</para>
+</sect1>
+<sect1 id="activate-be"><title>激活 BE</title>
+<para>选择<menuchoice><guimenu>文件</guimenu><guimenuitem>管理引导环境</guimenuitem></menuchoice>菜单选项以打开“管理引导环境”窗口。每个 BE 都列在该窗口中。当前所引导的 BE 在其 BE 名称左侧显示有一个复选标记。</para>
+<para>要指定另一个 BE 成为下次重新引导后的缺省活动 BE，请执行以下步骤：</para>
+<orderedlist><listitem><para>对于要使其在下次引导后成为缺省活动 BE 的 BE，选择其对应的<guibutton>重新引导时处于活动状态</guibutton>按钮。</para>
+</listitem>
+<listitem><para>在“管理引导环境”窗口中选择<guibutton>确定</guibutton>按钮。</para>
+</listitem>
+</orderedlist>
+</sect1>
+<sect1 id="rename-be"><title>重命名 BE</title>
+<para>选择<menuchoice><guimenu>文件</guimenu><guimenuitem>管理引导环境</guimenuitem></menuchoice>菜单选项以打开“管理引导环境”窗口。每个 BE 都列在该窗口中。</para>
+<para>您无法重命名当前处于活动状态的 BE。</para>
+<para>无法重命名您标为待删除的 BE。</para>
+<para>要重命名某个 BE，请执行以下步骤：</para>
+<orderedlist><listitem><para>双击您要重命名的 BE 的名称。名称字段将变为可编辑的。</para>
+</listitem>
+<listitem><para>输入新名称。</para>
+</listitem>
+<listitem><para>在“管理引导环境”窗口中选择<guibutton>确定</guibutton>按钮。</para>
+</listitem>
+</orderedlist>
+</sect1>
+<sect1 id="remove-be"><title>删除 BE</title>
+<para>选择<menuchoice><guimenu>文件</guimenu><guimenuitem>管理引导环境</guimenuitem></menuchoice>菜单选项以打开“管理引导环境”窗口。每个 BE 都列在该窗口中。该窗口中最右侧的列是“删除”列。</para>
+<para>“管理引导环境”窗口中的中间列显示了 BE 的大小。您可能想要删除某个 BE 以释放存储设备上的一些空间。</para>
+<para>您无法删除当前处于活动状态的 BE。</para>
+<para>无法删除您已重命名的 BE。</para>
+<para>要删除某个 BE，请执行以下步骤：</para>
+<orderedlist><listitem><para>选择您要删除的 BE 所对应的<guibutton>删除</guibutton>框。</para>
+</listitem>
+<listitem><para>在“管理引导环境”窗口中选择<guibutton>确定</guibutton>按钮。</para>
+</listitem>
+</orderedlist>
+</sect1>
+</chapter>
+<chapter id="webinstall"><title>使用 WebInstall</title>
+<para>软件包管理器支持使用简单的单击 WebInstall 进程来安装软件包。WebInstall 进程使用一个 <filename>.p5i</filename> 文件。<filename>.p5i</filename> 文件包含添加发布者以及添加可从这些发布者安装的软件包所需的信息。<filename>.p5i</filename> 文件中的信息由 WebInstall 进程读取并使用。</para>
+<sect1 id="webinstall-export"><title>使用 WebInstall 导出文件</title>
+<para>如果希望其他用户能够安装已在您的系统上安装的软件包，可以使用 WebInstall 进程导出那些软件包的安装说明。这会创建一个 <filename>.p5i</filename> 文件，其中包含要安装的那些软件包和发布者的安装说明。</para>
+<para>要将您选定的软件包及其发布者的安装说明导出到一个 <filename>.p5i</filename> 文件中，请执行以下步骤：</para>
+<orderedlist><listitem><para>从<guimenu>发布者</guimenu>下拉式菜单中，选择您要将其软件包包括在 <filename>.p5i</filename> 文件中的发布者。</para>
+</listitem>
+<listitem><para>在软件包列表窗格中，选择您要分发其安装说明的软件包。</para>
+</listitem>
+<listitem><para>单击<menuchoice><guisubmenu>文件</guisubmenu><guimenuitem>导出选定项</guimenuitem></menuchoice>，以显示“导出选定项确认”窗口。</para>
+</listitem>
+<listitem><para>单击<guibutton>确定</guibutton>按钮以确认选定项。“导出选定项”窗口随即显示。</para>
+</listitem>
+<listitem><para>系统为 <filename>p5i</filename> 文件提供了一个扩展名为 <filename>.p5i</filename> 的缺省名称。您可以更改该文件名，但不要更改扩展名。</para>
+</listitem>
+<listitem><para>系统提供了 <filename>p5i</filename> 文件的缺省位置。您可以更改该位置。如果您使用<guibutton>浏览</guibutton>按钮，可以从“导出选定项”窗口右下角的下拉式菜单中选择 <filename>p5i 文件</filename>选项以仅在文件列表中显示 <filename>.p5i</filename> 文件。</para>
+</listitem>
+<listitem><para>单击<guibutton>保存</guibutton>按钮以保存文件名和位置。</para>
+</listitem>
+</orderedlist>
+</sect1>
+<sect1 id="webinstall-add"><title>使用 WebInstall 添加发布者和安装软件包</title>
+<para>WebInstall 进程允许您通过 <filename>p5i</filename> 文件安装软件包。</para>
+<orderedlist><listitem><para>找到 <filename>.p5i</filename> 文件。该文件可能位于您的桌面上，也可能位于某个 Web 站点上。</para>
+</listitem>
+<listitem><para>使用下列方法之一在 WebInstall 模式下启动软件包管理器：</para>
+<itemizedlist><listitem><para>单击桌面上的 <filename>.p5i</filename> 文件。关联的应用程序（软件包管理器 Web 安装程序）随即启动。</para>
+</listitem>
+<listitem><para>从命令行启动软件包管理器，并附上 <filename>.p5i</filename> 文件的路径。例如，输入以下命令：</para>
+<screen># <userinput>packagemanager/<replaceable>path_to_p5i_file/file.p5i</replaceable></userinput></screen>
+</listitem>
+<listitem><para>转到指向 <filename>.p5i</filename> 文件的链接所在的 URL 位置。<filename>.p5i</filename> 文件必须位于已注册了该 MIME 类型的一个 Web 服务器上。</para>
+<para>如果 <filename>.p5i</filename> 位于尚未注册该 MIME 类型的 Web 服务器上，请将 <filename>.p5i</filename> 文件保存到桌面，然后单击该文件以启动 WebInstall。</para>
+</listitem>
+</itemizedlist>
+</listitem>
+<listitem><para>“安装/更新”窗口随即显示。该窗口顶部的标签为：“软件包管理器 Web 安装程序/以下项将添加到您的系统中：”，然后列出发布者和软件包。单击<guibutton>继续</guibutton>按钮继续安装。</para>
+<itemizedlist><listitem><para>如果您的系统上尚未配置该软件包发布者，则会显示“添加发布者”窗口，其中已输入了该发布者的名称和 URI。</para>
+<para>如果要添加的发布者是安全发布者，则需要提供 SSL 密钥和证书。请在系统中浏览以找到 SSL 密钥和 SSL 证书。</para>
+<para>如果成功添加了发布者，则会显示“添加发布者完成”对话框。单击<guibutton>确定</guibutton>按钮继续安装。</para>
+</listitem>
+<listitem><para>如果 <filename>.p5i</filename> 文件包含来自被禁用的发布者的软件包，WebInstall 将打开一个“启用发布者”对话框。可使用该对话框启用该发布者以便您可以安装软件包。</para>
+</listitem>
+</itemizedlist>
+</listitem>
+<listitem><para>“安装/更新”窗口现在看起来与您从软件包管理器中选择<guibutton>安装/更新</guibutton>时相同。</para>
+</listitem>
+</orderedlist>
+</sect1>
+</chapter>
+<chapter id="gkioy"><title>故障排除</title>
+<para>错误、警告和提示性消息会保存到日志中以便您可以随时查看。</para>
+<sect1 id="gkiod"><title>查看消息日志</title>
+<para>选择<menuchoice><guimenu>视图</guimenu><guimenuitem>日志</guimenuitem></menuchoice>菜单选项以打开“日志”窗口。“日志”窗口显示来自软件包管理器和更新管理器的错误、警告和提示性消息。</para>
+<para>选择“日志”窗口底部的<guibutton>清除</guibutton>按钮可删除所有消息。</para>
+<para>如果记录了错误或警告，则在状态栏的左侧会显示一个黄色三角形。单击该黄色三角形可显示“日志”窗口。</para>
+</sect1>
+</chapter>
+<chapter id="pkg-mgr-prefs"><title>设置首选项</title>
+<para>使用<menuchoice><guimenu>编辑</guimenu><guimenuitem>首选项</guimenuitem></menuchoice>菜单选项可更改软件包管理器的某些用户界面设置。</para>
+<para>“首选项”窗口有三个选项卡：</para>
+<itemizedlist><listitem><para>“常规”选项卡，用于设置退出首选项和确认对话框首选项。</para></listitem>
+<listitem><para>“可选组件”选项卡，用于设置有关在安装或更新软件包时要安装哪些可选软件包组件的首选项。</para></listitem>
+<listitem><para>“签名策略”选项卡，用于设置该映像的签名策略。</para></listitem>
+</itemizedlist>
+<sect1 id="gjktu"><title>退出首选项</title>
+<para>选择<menuchoice><guimenu>编辑</guimenu><guimenuitem>首选项</guimenuitem></menuchoice>选项，然后选择“常规”选项卡。</para>
+<para>如果选中了“退出时记住当前状态”框，软件包管理器会保存以下设置并在您下次启动软件包管理器时恢复它们：</para>
+<itemizedlist><listitem><para><emphasis role="strong">垂直分隔条和水平分隔条</emphasis> - 窗口中窗格的宽度和高度</para>
+</listitem>
+<listitem><para><emphasis role="strong">窗口大小</emphasis> – 软件包管理器窗口的总体大小</para>
+</listitem>
+<listitem><para><emphasis role="strong">发布者选项</emphasis> - 当软件包管理器关闭时在<guimenu>发布者</guimenu>下拉式菜单中选定的发布者或其他选项</para>
+</listitem>
+<listitem><para><emphasis role="strong">类别</emphasis> - 针对每个发布者的选定类别以及展开和折叠的类别</para>
+</listitem>
+</itemizedlist>
+</sect1>
+<sect1 id="gjkug"><title>确认对话框首选项</title>
+<para>选择<menuchoice><guimenu>编辑</guimenu><guimenuitem>首选项</guimenuitem></menuchoice>选项，然后选择“常规”选项卡。</para>
+<para>当安装、更新或删除软件包时，会显示一个确认对话框，其中显示了软件包列表和要执行的操作。如果您不希望看到这些确认对话框，可以在“首选项”窗口中取消选中这些选项。</para>
+<para>在特定的确认对话框中单击“请不要再次显示此确认对话框”复选框也会为该对话框取消设置该首选项。</para>
+</sect1>
+<sect1 id="img-sig-policy"><title>签名策略首选项</title>
+<para>使用“签名策略”选项卡上的按钮可设置安装该映像中的软件包时忽略或要求签名。要为特定发布者设置签名策略，请在“管理发布者”窗口中选择发布者，单击<guibutton>修改</guibutton>按钮，然后使用“修改发布者”窗口的“签名策略”选项卡。</para>
+<para>为映像签名策略提供的选项与为发布者签名策略提供的选项是相同的，但是这些设置应用于映像中安装的所有软件包，而不是仅应用于从特定发布者安装的软件包。请参见<xref linkend="pub-sig-policy"/>。</para>
+</sect1>
+<sect1 id="languages"><title>可选组件首选项语言选项</title>
+<para>选择<menuchoice><guimenu>编辑</guimenu><guimenuitem>首选项</guimenuitem></menuchoice>选项，然后选择“可选组件”选项卡。</para>
+<para>缺省情况下，任何软件包的“语言”选项下都选中了“安装所有语言”。您可以通过选择仅安装部分语言来节省安装空间。</para>
+<para>当选中“仅安装这些语言”时，您可以单击语言列表的最左侧列标题中的复选框图标来选择所有语言。再次单击该列标题可以取消选择所有语言。单击“语言”和“地区”列标题可对列表进行排序。</para>
+<para>单击“确定”按钮保存所做的更改。这些设置将应用于当前已安装的软件包以及将来的软件包安装和更新。映像将根据需要进行更新，以基于新设置安装或删除可选的软件包组件。</para>
+<para>如果您之前已将您的映像更新为只包括部分语言，则“仅安装这些语言”是该窗口中的缺省选定项；如果您选择了“安装所有语言”选项，则语言列表处于灰显状态。</para>
+</sect1>
+<sect1 id="dev-doc"><title>其他可选组件首选项</title>
+<para>选择<menuchoice><guimenu>编辑</guimenu><guimenuitem>首选项</guimenuitem></menuchoice>选项，然后选择“可选组件”选项卡。</para>
+<para>缺省情况下，在“其他”组件选项下选中了“安装所有开发文件”和“安装所有文档”。您可以通过取消选择开发文件或文档来节省安装空间。</para>
+<para>单击“确定”按钮保存所做的更改。这些设置将应用于当前已安装的软件包以及将来的软件包安装和更新。映像将根据需要进行更新，以基于新设置安装或删除可选的软件包组件。</para>
+</sect1>
+</chapter>
+<glossary id="glossary"><title>词汇表</title>
+<glossentry><glossterm>别名</glossterm>
+<glossdef><para>发布者的另一个名称。</para>
+</glossdef>
+</glossentry>
+<glossentry><glossterm>引导环境 (boot environment, BE)</glossterm>
+<glossdef><para>可引导的 Oracle Solaris 环境的实例。引导环境的根文件系统和所有包含系统软件的其他文件系统必须是 ZFS 数据集。</para>
+<para>活动引导环境是当前所引导的那个引导环境。一个系统可以具有许多引导环境。在重新引导时您可以选择要引导到的引导环境。</para>
+</glossdef>
+</glossentry>
+<glossentry><glossterm>克隆</glossterm>
+<glossdef><para>完全相同的副本。</para>
+<para>克隆可以是某个操作系统、文件系统或卷的完全相同的副本。此副本与其原版 100% 兼容。</para>
+</glossdef>
+</glossentry>
+<glossentry><glossterm>数据集</glossterm>
+<glossdef><para>以下 ZFS 实体的通用名称：克隆、文件系统、快照或卷。每个数据集都由 ZFS 名称空间中的唯一名称标识。</para>
+</glossdef>
+</glossentry>
+<glossentry><glossterm>映像</glossterm>
+<glossdef><para>软件包中可以引导和安装的操作系统软件的集合。</para>
+<para>系统中的一个位置，可以在该位置安装软件包及其关联文件、目录、链接和相关项。</para>
+</glossdef>
+</glossentry>
+<glossentry><glossterm>源</glossterm>
+<glossdef><para>发布者在其上发布软件包的软件包服务器。</para>
+</glossdef>
+</glossentry>
+<glossentry><glossterm>软件包</glossterm>
+<glossdef><para>某种已定义格式的文件、目录、链接、驱动程序和相关项的集合。</para>
+</glossdef>
+</glossentry>
+<glossentry><glossterm>发布者</glossterm>
+<glossdef><para>设计、创建软件包并将其发布到软件包服务器的人、组或公司。然后该软件包服务器能提供来自（缺省）发布者的软件包以供下载使用。</para>
+</glossdef>
+</glossentry>
+<glossentry><glossterm>系统发布者</glossterm>
+<glossdef><para>系统发布者是在链接映像中尤其是在非全局区域中使用的特殊发布者，用以确保特定的软件包与全局区域保持同步。全局区域通过在非全局区域中配置这些特殊的系统发布者来对非全局区域中的软件包进行限制。这类发布者之所以特殊，是因为非全局区域无法对其进行某些更改，包括删除、禁用、修改或者更改其优先级。</para>
+</glossdef>
+</glossentry>
+</glossary>
+</book>

@@ -1,0 +1,713 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook XML V4.3//EN" "http://www.oasis-open.org/docbook/xml/4.3/docbookx.dtd">
+<book id="pkgmgr" lang="de"><title><trademark class="registered">Oracle</trademark> Solaris 11 Package Manager-Onlinehilfe</title>
+<bookinfo><authorgroup><author><firstname>Oracle</firstname>
+<surname>Corporation</surname>
+</author>
+</authorgroup>
+<releaseinfo>Oracle Solaris 11</releaseinfo>
+<pubdate>Juni 2011</pubdate>
+<publisher><publishername>Oracle Corporation</publishername>
+<address><street>500 Oracle Parkway</street>
+<city>Redwood City</city>
+<state>CA</state>
+<postcode>94065</postcode>
+<country>U.S.A.</country>
+</address>
+</publisher>
+<copyright><year>2008, 2011</year></copyright>
+<legalnotice><para>Diese Software und zugehörige Dokumentation werden im Rahmen eines Lizenzvertrages zur Verfügung gestellt, der Einschränkungen hinsichtlich Nutzung und Offenlegung enthält und durch Gesetze zum Schutz geistigen Eigentums geschützt ist. Sofern nicht ausdrücklich in Ihrem Lizenzvertrag vereinbart oder gesetzlich geregelt, darf diese Software weder ganz noch teilweise in irgendeiner Form oder durch irgendein Mittel zu irgendeinem Zweck kopiert, reproduziert, übersetzt, gesendet, verändert, lizenziert, übertragen, verteilt, ausgestellt, ausgeführt, veröffentlicht oder angezeigt werden. Reverse Engineering, Disassemblierung oder Dekompilierung der Software ist verboten, es sei denn, dies ist erforderlich, um die gesetzlich vorgesehene Interoperabilität mit anderer Software zu ermöglichen.</para>
+<para>Die hier angegebenen Informationen können jederzeit und ohne vorherige Ankündigung geändert werden. Wir übernehmen keine Gewähr für deren Richtigkeit. Sollten Sie Fehler oder Unstimmigkeiten finden, bitten wir Sie, uns diese schriftlich mitzuteilen.</para>
+<para>Wird diese Software oder zugehörige Dokumentation an die Regierung der Vereinigten Staaten von Amerika bzw. einen Lizenznehmer im Auftrag der Regierung der Vereinigten Staaten von Amerika geliefert, gilt Folgendes:</para>
+<para>U.S. GOVERNMENT RIGHTS Programs, software, databases, and related documentation and technical data delivered to U.S. Government customers are "commercial computer software" or "commercial technical data" pursuant to the applicable Federal Acquisition Regulation and agency-specific supplemental regulations. As such, the use, duplication, disclosure, modification, and adaptation shall be subject to the restrictions and license terms set forth in the applicable Government contract, and, to the extent applicable by the terms of the Government contract, the additional rights set forth in FAR 52.227-19, Commercial Computer Software License (December 2007). Oracle America, Inc., 500 Oracle Parkway, Redwood City, CA 94065, USA.</para>
+<para>Diese Software oder Hardware ist für die allgemeine Anwendung in verschiedenen Informationsmanagementanwendungen konzipiert. Sie ist nicht für den Einsatz in potenziell gefährlichen Anwendungen bzw. Anwendungen mit einem potenziellen Risiko von Personenschäden geeignet. Falls die Software oder Hardware für solche Zwecke verwendet wird, verpflichtet sich der Lizenznehmer, sämtliche erforderlichen Maßnahmen wie Fail Safe, Backups und Redundancy zu ergreifen, um den sicheren Einsatz dieser Software oder Hardware zu gewährleisten. Oracle Corporation und ihre verbundenen Unternehmen übernehmen keinerlei Haftung für Schäden, die beim Einsatz dieser Software oder Hardware in gefährlichen Anwendungen entstehen.</para>
+<para>Oracle und Java sind eingetragene Marken von Oracle und/oder ihren verbundenen Unternehmen. Andere Namen und Bezeichnungen können Marken ihrer jeweiligen Inhaber sein.</para>
+<para>AMD, Opteron, das AMD-Logo und das AMD-Opteron-Logo sind Marken oder eingetragene Marken von Advanced Micro Devices. Intel und Intel Xeon sind Marken oder eingetragene Marken der Intel Corporation. Alle SPARC-Marken werden in Lizenz verwendet und sind Marken oder eingetragene Marken der SPARC International, Inc. UNIX ist eine durch X/Open Company, Ltd lizenzierte, eingetragene Marke.</para>
+<para>Diese Software oder Hardware und die zugehörige Dokumentation können Zugriffsmöglichkeiten auf Inhalte, Produkte und Serviceleistungen von Dritten enthalten. Oracle Corporation und ihre verbundenen Unternehmen übernehmen keine Verantwortung für Inhalte, Produkte und Serviceleistungen von Dritten und lehnen ausdrücklich jegliche Art von Gewährleistung diesbezüglich ab. Oracle Corporation und ihre verbundenen Unternehmen übernehmen keine Verantwortung für Verluste, Kosten oder Schäden, die aufgrund des Zugriffs oder der Verwendung von Inhalten, Produkten und Serviceleistungen von Dritten entstehen.</para>
+</legalnotice>
+</bookinfo>
+<chapter id="about"><title>Allgemeine Informationen zu Package Manager</title>
+<para>Der Package Manager ist eine grafische Benutzeroberfläche (GUI) für Oracle Solaris Image Packaging System (IPS).</para>
+<para>Im <xref linkend="glossary-"/> finden Sie Definitionen der Begriffe, die in diesem Dokument verwendet werden.</para>
+<sect1 id="gikcw"><title>Oracle Solaris Image Packaging System</title>
+<para>Oracle Solaris Image Packaging System (IPS) ist ein Softwarebereitstellungssystem, das mit einem Paket-Repository in einem Netzwerk interagiert. IPS ist eine Grundstruktur mit Funktionen zur Verwaltung des Softwarelebenszyklus einschließlich Softwareinstallation, Upgrade und Deinstallation.</para>
+<para>Nach der Installation des Oracle Solaris-Betriebssystems werden Sie möglicherweise feststellen, dass manche Software, die Sie verwenden möchten, nicht verfügbar ist. Diese Software ist wahrscheinlich in einem IPS-Paket-Repository enthalten. Verwenden Sie den Package Manager oder den Befehl <literal>pkg</literal>(1M), um Pakete von einem Paket-Repository herunterzuladen und zu installieren.</para>
+<para>Mit IPS können Sie außerdem eine Kopie eines vorhandenen IPS-Paket-Repository erstellen, Ihr eigenes IPS-Paket-Repository erstellen und Ihre eigenen IPS-Pakete veröffentlichen. Weitere Informationen zu IPS finden Sie in der Informationsbibliothek zu Oracle Solaris 11. Rufen Sie <literal>download.oracle.com</literal> auf, wählen Sie links Documentation Index. Wählen Sie dann Systems Software, Oracle Solaris 11 und schließlich View Library. Lesen Sie dazu insbesondere <citetitle>Adding and Updating Oracle Solaris 11 Software Packages</citetitle>.</para>
+</sect1>
+<sect1 id="pm-win"><title>Package Manager</title>
+<para>Der Package Manager bietet einen Teil der Funktion, die über die IPS-Befehlszeilenschnittstelle bereitgestellt wird.</para>
+<para>Mit dem Package Manager können Sie die folgenden Aufgaben ausführen:</para>
+<itemizedlist><listitem><para>Suchen, Installieren, Aktualisieren oder Entfernen von IPS-Paketen: weitere Informationen unter <xref linkend="manage-pkg"/>.</para>
+</listitem>
+<listitem><para>Aktualisieren des Systems (Updates für alle Pakete auf Ihrem System): weitere Informationen unter <xref linkend="update_all"/>.</para>
+</listitem>
+<listitem><para>Hinzufügen, Ändern und Löschen von IPS-Paketherausgebern: weitere Informationen unter <xref linkend="manage-publisher"/>.</para>
+</listitem>
+<listitem><para>Aufführen, Umbennenen, Löschen und Verwalten von Boot-Umgebungen: weitere Informationen unter <xref linkend="manage-be"/>.</para>
+</listitem>
+<listitem><para>Erstellen einer WebInstall-Installationsdatei (<filename>.p5i</filename>): weitere Informationen unter <xref linkend="webinstall"/>.</para>
+</listitem>
+</itemizedlist>
+<para>Diese Dokumentation bezieht sich auf die folgenden Funktionen im Fenster "Package Manager":</para>
+<itemizedlist><listitem><para>Der große Fensterbereich in der Mitte enthält den Paketlistenbereich. In diesem Fensterbereich werden manchmal auch Informationsmeldungen angezeigt. I. d. R. ist in diesem Fensterbereich jedoch eine Liste der Pakete enthalten.</para>
+</listitem>
+<listitem><para>In der Menüleiste im oberen Bereich des Fensters befinden sich die meisten Package Manager-Funktionalitäten.</para>
+</listitem>
+<listitem><para>In der Symbolleiste direkt unter der Menüleiste befinden sich links Schaltflächen zum Ausführen häufiger Operationen. Die Schaltflächen links von der Trennlinie haben globale Funktionen: Aktualisieren aller Pakete, für die Updates verfügbar sind, oder Aktualisieren der Paketliste und des Paketstatus. Die Schaltflächen rechts von der Trennlinie sind nur für ausgewählte Pakete vorgesehen.</para>
+</listitem>
+<listitem><para>Das Suchfeld rechts in der Symbolleiste dient zur Steuerung des Inhalts des Paketlistenbereichs. Weitere Informationen dazu finden Sie unter <xref linkend="search-pkg"/>.</para>
+</listitem>
+<listitem><para>Über das Dropdown-Menü <guimenu>Herausgeber</guimenu> unter den Schaltflächen können Sie den Inhalt des Paketlistenbereichs bestimmen und auch einen neuen Herausgeber hinzufügen. Weitere Informationen dazu finden Sie unter <xref linkend="list-pkg"/> "Nach Herausgeber".</para>
+</listitem>
+<listitem><para>Über das Dropdown-Menü <guimenu>Ansicht</guimenu> unter dem Suchfeld können Sie den Inhalt des Paketlistenbereichs bestimmen. Weitere Informationen dazu finden Sie unter "Aufführen von Paketen" und "Nach Paketstatus".</para>
+</listitem>
+<listitem><para>Im Kategoriebereich unter dem Menü <guimenu>Herausgeber</guimenu> können Sie den Inhalt des Paketlistenbereichs bestimmen. Weitere Informationen dazu finden Sie unter "Aufführen von Paketen" und "Nach Kategorie".</para>
+</listitem>
+<listitem><para>Unterhalb der Liste mit Softwarekategorien befindet sich die Liste der Suchvorgänge, die Sie in dieser Sitzung ausgeführt haben.</para>
+</listitem>
+<listitem><para>Unterhalb des Paketlistenbereichs befindet sich der Fensterbereich mit Paketinformationen. Weitere Informationen dazu finden Sie unter <xref linkend="package-version"/>.</para>
+</listitem>
+</itemizedlist>
+</sect1>
+</chapter>
+<chapter id="manage-pkg"><title>Verwalten von Paketen</title>
+<para>Sie können Pakete nach unterschiedlichen Kriterien aufführen. Sie können Pakete installieren, aktualisieren und entfernen.</para>
+<sect1 id="list-pkg"><title>Aufführen von Paketen</title>
+<para>Die Liste der Pakete im entsprechenden Package Manager-Listenbereich hängt von den der getroffenen Auswahl in den Dropdown-Menüs <guimenu>Herausgeber</guimenu> und <guimenu>Ansicht</guimenu> sowie von der Auswahl im Kategoriebereich und im Suchfeld ab.</para>
+<para>Sie können die Paketliste neu sortieren, indem Sie auf die Spaltenüberschriften klicken.</para>
+<para>Sie können die Schaltfläche <guibutton>Aktualisieren</guibutton> oder die Menüoption <menuchoice><guimenu>Paket</guimenu><guimenuitem>Aktualisieren</guimenuitem></menuchoice> verwenden, um die Repository-Kataloge neu zu lesen und die Liste der Pakete sowie Paketstatus zu aktualisieren. Die Aktualisierung erfolgt auch immer beim Öffnen des Package Manager.</para>
+<sect2 id="gkihe"><title>Nach Herausgeber</title>
+<para>Über das Dropdown-Menü <guimenu>Herausgeber</guimenu> können Sie die Pakete in Abhängigkeit der jeweiligen Herausgeber aufführen.</para>
+<itemizedlist><listitem><para>Im oberen Bereich des Menüs sind die Namen der Herausgeber aufgeführt, die Sie über das Dialogfeld "Herausgeber hinzufügen" oder mithilfe des Befehls <literal>pkg</literal> hinzugefügt haben. Wenn Sie einen dieser Herausgeber auswählen, werden im Paketlistenbereich nur die Pakete aufgeführt, die vom ausgewählten Herausgeber verfügbar sind. Im Paketlistenbereich werden nur die Spalten "Name", "Status" und "Zusammenfassung" angezeigt, weil der Herausgeber bei allen Paketen der gleiche ist.</para>
+</listitem>
+<listitem><para><guimenuitem>Alle Herausgeber</guimenuitem> – Zeigt im Paketlistenbereich alle Herausgeber an. Im Paketlistenbereich werden die Spalten "Name", "Status", "Herausgeber" und "Zusammenfassung" angezeigt.</para>
+<para>Beispiel: Wählen Sie zum Aufführen aller Mediengerätetreiber, für die Updates von allen Herausgebern verfügbar sind, im Menü <guimenu>Herausgeber</guimenu> die Option <guimenuitem>Alle Herausgeber</guimenuitem>. Wählen Sie dann die Kategorie <menuchoice><guimenu>Treiber</guimenu><guimenuitem>Medien</guimenuitem></menuchoice> und im Menü <guimenu>Ansicht</guimenu> die Option <guimenuitem>Updates</guimenuitem>.</para>
+</listitem>
+<listitem><para><guimenuitem>Alle installierten Pakete</guimenuitem> – Zeigt alle Pakete an, die von allen Herausgebern installiert sind.</para>
+<para>Beispiel: Wählen Sie zum Aufführen aller Schriftartenpakete vom Herausgeber <literal>solaris</literal> die Option <guimenuitem>Alle installierten Pakete</guimenuitem> des Menüs <guimenu>Herausgeber</guimenu>. Wählen Sie die Kategorie <menuchoice><guimenu>System</guimenu><guimenuitem>Schriftarten</guimenuitem></menuchoice>, klicken Sie zum Sortieren der Liste nach Herausgeber auf die Spaltenüberschrift "Herausgeber" und scrollen Sie zu den <literal>solaris</literal>-Einträgen.</para>
+</listitem>
+<listitem><para><guimenuitem>Alle Herausgeber (Suche)</guimenuitem> – Zeigt im Paketlistenbereich eine Informationsmeldung anstelle einer Liste der Pakete an. In der Meldung werden alle Herausgeber aufgeführt, die Sie konfiguriert haben. In dieser Meldung wird außerdem beschrieben, wie Sie alle Pakete dieser Herausgeber anzeigen können. Unter <xref linkend="search-pkg"/> finden Sie weitere Informationen zum Suchen mithilfe der Option <guimenuitem>Alle Herausgeber (Suche)</guimenuitem>.</para>
+</listitem>
+<listitem><para><guimenuitem>Hinzufügen...</guimenuitem> – Öffnet das Fenster "Herausgeber hinzufügen".</para>
+</listitem>
+</itemizedlist>
+</sect2>
+<sect2 id="gkihp"><title>Nach Paketstatus</title>
+<para>Über das Dropdown-Menü <guimenu>Ansicht</guimenu> können Sie die Pakete in Abhängigkeit des Paketstatus aufführen. Der Paketstatus zeigt an, ob ein Paket installiert oder nicht installiert ist oder ob ein Update für das Paket verfügbar ist. Die Symbole im Menü <guimenu>Ansicht</guimenu> entsprechen den Symbolen, die in der Spalte "Status" des Paketlistenbereichs angezeigt werden.</para>
+<itemizedlist><listitem><para><guimenuitem>Alle Pakete</guimenuitem> – Zeigt alle von dem ausgewählten Herausgeber verfügbaren Pakete, die in der ausgewählten Kategorie enthalten sind oder mit der angegebenen Suchzeichenfolge übereinstimmen.</para>
+<para>Beispiel: Wählen Sie zum Aufführen aller Web Services-Pakete vom Herausgeber <literal>solaris</literal>, die installiert oder nicht installiert sind oder für die Updates verfügbar sind, im Menü <guimenu>Herausgeber</guimenu> die Option <literal>solaris</literal>. Wählen Sie die Kategorie <menuchoice><guimenu>Web Services</guimenu></menuchoice> und anschließend die Option <guimenuitem>Alle Pakete</guimenuitem>, die sich im Menü <guimenu>Ansicht</guimenu> befindet.</para>
+</listitem>
+<listitem><para><guimenuitem>Installierte Pakete</guimenuitem> – Zeigt alle installierten Pakete des ausgewählten Herausgebers an, die in der ausgewählten Kategorie enthalten sind oder mit der angegebenen Suchzeichenfolge übereinstimmen. Weitere Informationen dazu finden Sie unter <menuchoice><guimenu>Herausgeber</guimenu><guimenuitem>Alle installierten Pakete</guimenuitem></menuchoice>.</para>
+<para>Beispiel: Wählen Sie zum Aufführen nur der Webserverpakete, die vom Herausgeber <literal>solaris</literal> installiert wurden, im Menü <guimenu>Herausgeber</guimenu> die Option <literal>solaris</literal>. Wählen Sie die Kategorie <menuchoice><guimenu>Web Services</guimenu></menuchoice> und dann die Option <guimenuitem>Installierte Pakete</guimenuitem>, die sich im Menü <guimenu>Ansicht</guimenu> befindet.</para>
+</listitem>
+<listitem><para><guimenuitem>Updates</guimenuitem> – Zeigt alle Pakete vom ausgewählten Herausgeber an, die in der ausgewählten Kategorie enthalten sind oder mit der angegebenen Suchzeichenfolge übereinstimmen und für die Updates verfügbar sind.</para>
+<para>Beispiel: Wählen Sie zum Aufführen aller Gerätetreiber, für die Updates von allen Herausgebern verfügbar sind, im Menü <guimenu>Herausgeber</guimenu> die Option <guimenuitem>Alle Herausgeber</guimenuitem>. Wählen Sie die Kategorie <guimenu>Treiber</guimenu> und anschließend im Menü <guimenu>Ansicht</guimenu> die Option <guimenuitem>Updates</guimenuitem>.</para>
+</listitem>
+<listitem><para><guimenuitem>Nicht installierte Pakete</guimenuitem> – Zeigt alle Pakete vom ausgewählten Herausgeber an, die in der ausgewählten Kategorie enthalten sind oder mit der angegebenen Suchzeichenfolge übereinstimmen und nicht installiert sind.</para>
+<para>Beispiel: Wählen Sie zum Aufführen aller zurzeit nicht installierter Schriftartenpakete vom Herausgeber <literal>solaris</literal> im Menü <guimenu>Herausgeber</guimenu> die Option <literal>solaris</literal>. Wählen Sie dann die Kategorie <menuchoice><guimenu>System</guimenu><guimenuitem>Schriftarten</guimenuitem></menuchoice> und anschließend im Menü <guimenu>Ansicht</guimenu> die Option <guimenuitem>Nicht installierte Pakete</guimenuitem>.</para>
+</listitem>
+<listitem><para><guimenuitem>Ausgewählte Pakete</guimenuitem> – Führt alle Pakete auf, die zurzeit ausgewählt sind. Weitere Informationen finden Sie unter <xref linkend="select-pkg"/>.</para>
+</listitem>
+</itemizedlist>
+</sect2>
+<sect2 id="gkigv"><title>Nach Kategorie</title>
+<para>Links im Fenster "Package Manager" können Sie im Kategoriebereich die verfügbaren Pakete nach Softwaretyp durchsuchen. Klicken Sie auf einen Kategorienamen, um die Unterkategorien anzuzeigen. Pakete in der ausgewählten Kategorie oder Unterkategorie werden in Abhängigkeit vom ausgewählten Herausgeber, dem Status der Pakete und den angegebenen Suchkriterien im Paketlistenbereich aufgeführt.</para>
+<para>Im Kategoriebereich können Sie neben den benannten Softwaretypen auch <guimenuitem>Alle Kategorien</guimenuitem> und <guimenuitem>Letzte Suchläufe</guimenuitem> auswählen. Unter <xref linkend="search-pkg"/> "Repeat a Previous Search" finden Sie weitere Informationen zu den <guimenuitem>Letzten Suchläufen</guimenuitem>.</para>
+</sect2>
+</sect1>
+<sect1 id="search-pkg"><title>Suchen von Paketen</title>
+<para>Wenden Sie eine der zwei folgenden Methoden an, um Pakete zu suchen:</para>
+<itemizedlist><listitem><para>Fokussieren Sie den Paketlistenbereich (wählen Sie dazu z. B. <menuchoice><guimenu>Bearbeiten</guimenu><guimenuitem>Zur Paketliste wechseln</guimenuitem></menuchoice>) und geben Sie den Namen ein. Während der Tastatureingabe werden Übereinstimmungen unter den Paketen ermittelt, die zurzeit im Paketlistenbereich aufgeführt sind.</para>
+</listitem>
+<listitem><para>Verwenden Sie das Suchfeld in der Symbolleiste.</para>
+</listitem>
+</itemizedlist>
+<sect2 id="gkjbd"><title>Suchzeichenfolge eingeben</title>
+<para>Geben Sie in das Suchfeld eine Zeichenfolge ein, und drücken Sie die Eingabetaste, oder klicken Sie auf das Lupensymbol rechts neben dem Suchfeld.</para>
+<itemizedlist><listitem><para>Menüauswahl <guimenu>Herausgeber</guimenu> – Der Package Manager durchsucht die Informationen zu jedem Paket von einem bestimmten Herausgeber oder von allen Herausgebern auf eine Suchzeichenfolge und unter Berücksichtigung der ausgewählten Option im Menü <guimenu>Herausgeber</guimenu>.</para>
+<para>Die Suchergebnisse sind beim Auswählen der Option <guimenuitem>Alle Herausgeber</guimenuitem> oder <guimenuitem>Alle Herausgeber (Suche)</guimenuitem> gleich. Wenn Sie die Option <guimenuitem>Alle Herausgeber (Suche)</guimenuitem> wählen, erfolgt der Suchvorgang jedoch schneller, weil dabei die Daten von allen Herausgebern, die mit der Option <guimenuitem>Alle Herausgeber</guimenuitem> übernommen werden, nicht geladen werden. Mit <guimenuitem>Alle Herausgeber (Suche)</guimenuitem> werden alle Herausgeber durchsucht, ohne dass Daten von allen Herausgebern im Paketlistenbereich geladen werden.</para>
+</listitem>
+<listitem><para>Menüauswahl <guimenu>Ansicht</guimenu> – Die Suchergebnisse werden im Paketlistenbereich in Abhängigkeit des Paketstatus angezeigt, den Sie im Menü <guimenu>Ansicht</guimenu> ausgewählt haben. Sie können auch einen anderen Teil der Suchergebnisse im Paketlistenbereich anzeigen, indem Sie eine andere Option im Menü <guimenu>Ansicht</guimenu> auswählen, ohne den Suchvorgang neu auszuführen.</para>
+</listitem>
+</itemizedlist>
+<para>Der Package Manager durchsucht Paketinformationen einschließlich Name, Zusammenfassung, Beschreibung, Kategorie und Namen der Dateien, die im Paket enthalten sind. Wenn Sie keine Platzhalter verwenden, werden nur exakte Übereinstimmungen gefunden.</para>
+<variablelist><varlistentry><term><literal>UND</literal></term>
+<listitem><para>Wenn Suchbegriffe durch Leerzeichen oder <literal>UND</literal> getrennt sind, sucht der Package Manager nach Paketen, die <emphasis role="strong">alle</emphasis> Suchbegriffe enthalten. Das ist die Standard-Sucheinstellung.</para>
+<para>Beispiel: Wenn die Suchzeichenfolge <literal>python book</literal> oder <literal>python UND book</literal> lautet, werden in den Suchergebnissen nur die Pakete angezeigt, die <emphasis>beide Begriffe</emphasis>; <literal>python</literal><emphasis> und </emphasis><literal>book</literal>, in den Paketinformationen enthalten. Das Paket <literal>diveintopython</literal> (ein Handbuch zur Python-Programmierung) würde beispielsweise in den Suchergebnissen angezeigt, das Paket <literal>python-26</literal> nicht.</para>
+</listitem>
+</varlistentry>
+<varlistentry><term>Doppelte Anführungszeichen</term>
+<listitem><para>Setzen Sie den Suchbegriff in doppelte Anführungszeichen, um genau nach diesem Suchbegriff zu suchen.</para>
+<para>Beispiel: Der Suchbegriff <literal>"ethernet driver"</literal> in doppelten Anführungszeichen entspricht <literal>Fast Ethernet Driver</literal> jedoch nicht <literal>Ethernet Adapter Driver</literal>.</para>
+</listitem>
+</varlistentry>
+<varlistentry><term>Platzhalter</term>
+<listitem><para>Sie können in der Suchzeichenfolge <literal>*</literal> als Platzhalter verwenden. Die Suche mit Platzhaltern kann länger dauern.</para>
+<para>Beispiel: <literal>802.11*</literal> entspricht <literal>802.11b/g</literal> und <literal>802.11a/b/g</literal>.</para>
+<para>Beachten Sie, dass <literal>802.11*</literal> nicht <literal>IEEE802.11b/g</literal> entspricht. Verwenden Sie zum Suchen von <literal>IEEE802.11b/g</literal> die Suchzeichenfolge <literal>*802.11*</literal>.</para>
+</listitem>
+</varlistentry>
+<varlistentry><term><literal>ODER</literal></term>
+<listitem><para>Wenn Suchbegriffe durch <literal>ODER</literal> getrennt sind, sucht der Package Manager nach Paketen, die <emphasis role="strong">einen</emphasis> der Suchbegriffe enthalten.</para>
+<para>Beispiel: <literal>python ODER book</literal> entspricht allen Paketen, die <literal>python</literal> oder <literal>book</literal> in den Paketinformationen enthalten.</para>
+</listitem>
+</varlistentry>
+</variablelist>
+<para>Sie können diese Suchzeichenfolgenmodifizierer kombinieren. Verwenden Sie UND, ODER, doppelte Anführungszeichen und * in einer Suchzeichenfolge.</para>
+</sect2>
+<sect2 id="gkjao"><title>Suchfeld löschen</title>
+<para>Verwenden Sie zum Löschen der Suchzeichenfolge und der Suchergebnisse das Suchfeld oder das Menü "Bearbeiten".</para>
+<itemizedlist><listitem><para>Klicken Sie im Suchfeld auf das Symbol <literal>X</literal>.</para>
+</listitem>
+<listitem><para>Wählen Sie im Menü <guimenu>Bearbeiten</guimenu> die Option <guimenuitem>Suche löschen</guimenuitem>.</para>
+</listitem>
+</itemizedlist>
+</sect2>
+<sect2 id="gkjbe"><title>Suche abbrechen</title>
+<para>Während eines Suchvorgangs wird im unteren Bereich des Fensters "Package Manager" auf der rechten Seite der Statusleiste eine Fortschrittsleiste angezeigt. Auf der rechten Seite der Fortschrittsleiste befindet sich ein <literal>X</literal>-Symbol. Klicken Sie auf das <literal>X</literal>-Symbol in der Fortschrittsleiste, um den Suchvorgang abzubrechen.</para>
+</sect2>
+<sect2 id="gkjbb"><title>Vorherige Suchergebnisse erneut anzeigen</title>
+<para>Die Suchergebnisse eines Suchvorgangs, den Sie während der aktuellen Package Manager-Sitzung ausgeführt haben, werden im Kategoriebereich unter <guimenuitem>Letzte Suchläufe</guimenuitem> gespeichert.</para>
+<para>Wählen Sie im Kategoriebereich die Beschriftung <guimenuitem>Letzte Suchläufe</guimenuitem>, um im Paketlistenbereich eine Informationsmeldung anzuzeigen. Im Paketlistenbereich wird eine Liste der vorherigen Suchergebnisse angezeigt. Klicken Sie auf eine "Ergebnisse"-Verknüpfung, um diese Suchergebnisse erneut anzuzeigen.</para>
+<para>Wählen Sie den Pfeil links neben <guimenuitem>Letzte Suchläufe</guimenuitem>, um die Liste der vorherigen Suchergebnisse im Kategoriebereich zu erweitern oder auszublenden. Wählen Sie in der Liste der letzten Suchläufe ein Element aus, um diese Suchergebnisse erneut anzuzeigen.</para>
+<para>Ein Suchlauf, bei dem keine entsprechenden Pakete gefunden wurden, wird nicht in der Liste der letzten Suchläufe gespeichert.</para>
+<para>Wenn Sie die Schaltfläche <guibutton>Aktualisieren</guibutton> oder die Menüoption <menuchoice><guimenu>Paket</guimenu><guimenuitem>Aktualisieren</guimenuitem></menuchoice> wählen, werden alle Suchergebnisse der letzten Suchläufe gelöscht.</para>
+</sect2>
+</sect1>
+<sect1 id="package-version"><title>Anzeigen weiterer Informationen</title>
+<para>Weitere Informationen zu einem Paket finden Sie im Paketinformationsbereich oder im Dialogfeld "Paket-Versionsinformationen".</para>
+<sect2 id="gkiti"><title>Paketinformationsbereich</title>
+<para>Klicken Sie zum Anzeigen weiterer Informationen zu einem Paket mit der linken Maustaste auf ein Paket, um das Paket in der Paketliste zu markieren. Im Paketinformationsbereich unterhalb des Paketlistenbereichs werden Informationen wie die neueste verfügbare Version des Herausgebers, die Größe des Pakets, die Dateien im Paket sowie die Abhängigkeiten und Lizenzbestimmungen angezeigt.</para>
+<para>Wenn ein Paket nach der Installation umbenannt wurde, wird der neue Name des Pakets auf der Registerkarte "Allgemein" im Feld "Umbenannt in" angezeigt.</para>
+<para>Auf der Registerkarte "Versionen" wird eine Liste aller Versionen des Pakets angezeigt, die für Ihre Installation verfügbar sind. Wählen Sie aus der Liste eine Version aus, und klicken Sie rechts neben der Liste auf die Schaltfläche <guibutton>Installation/Update</guibutton>, um die gewünschte Version zu installieren. Weitere Informationen finden Sie unter <xref linkend="install-pkg"/>.</para>
+<para>Der Paketinformationsbereich wird nicht angezeigt, wenn der Paketlistenbereich eine Informationsmeldung enthält.</para>
+</sect2>
+<sect2 id="gkitc"><title>Dialogfeld "Paket-Versionsinformationen"</title>
+<para>Klicken Sie mit der rechten Maustaste auf ein Paket in der Paketliste, um das Menü <guimenu>Paket</guimenu> anzuzeigen.</para>
+<para>Wählen Sie entweder im Popup-Menü oder in der Menüleiste die Menüoption <menuchoice><guimenu>Paket</guimenu><guimenuitem>Paket-Versionsinformationen</guimenuitem></menuchoice>, um ein separates Fenster anzuzeigen, in dem die Version des installierten Pakets sowie die neueste Version, die Sie installieren oder auf die Sie ggf. aktualisieren können, angezeigt werden.</para>
+</sect2>
+</sect1>
+<sect1 id="select-pkg"><title>Auswählen von Paketen</title>
+<para>Ausgewählte Pakete können installiert, aktualisiert oder entfernt werden. Verwenden Sie zum Auswählen eines Pakets den Paketlistenbereich oder das Menü <guimenu>Bearbeiten</guimenu>.</para>
+<para>Führen Sie im Paketlistenbereich eine der folgenden Aktionen aus, um ein Paket auszuwählen. Sie können auch mehrere Pakete auswählen.</para>
+<itemizedlist><listitem><para>Klicken Sie auf das Kontrollkästchen links neben dem Paketnamen. Klicken Sie erneut auf das Kontrollkästchen, um die Auswahl des Pakets aufzuheben.</para>
+</listitem>
+<listitem><para>Klicken Sie einmal auf den Paketnamen, um das Paket zu markieren. Doppelklicken Sie anschließend auf das ausgewählte Paket, um es auszuwählen. Doppelklicken Sie erneut auf das Paket, um die Auswahl dieses Pakets aufzuheben.</para>
+</listitem>
+<listitem><para>Klicken Sie in der Spaltenüberschrift auf das Kontrollkästchensymbol, um alle Pakete auszuwählen, die im Paketlistenbereich derzeit aufgeführt sind. Klicken Sie erneut auf das Kontrollkästchensymbol, um die aktuelle Auswahl aller Pakete aufzuheben, die in diesem Paketlistenbereich aufgeführt sind.</para>
+</listitem>
+</itemizedlist>
+<para>Das Menü <guimenu>Bearbeiten</guimenu> enthält folgende Optionen zum Auswählen von Paketen:</para>
+<itemizedlist><listitem><para><guimenuitem>Alle auswählen</guimenuitem> – Wählt alle Pakete aus, die derzeit im Paketlistenbereich aufgeführt sind.</para>
+</listitem>
+<listitem><para><guimenuitem>Updates auswählen</guimenuitem> – Wählt alle Pakete aus, die im aktuellen Paketlistenbereich aufgeführt sind und für die Updates verfügbar sind.</para>
+</listitem>
+<listitem><para><guimenuitem>Auswahl für alle aufheben</guimenuitem> — Hebt die Auswahl für alle Pakete auf, die derzeit im Paketlistenbereich aufgeführt sind.</para>
+</listitem>
+</itemizedlist>
+<para>Wenn Sie ein Paket auswählen, bleiben die zuvor ausgewählten Pakete stets ausgewählt.</para>
+<para>Die Anzahl der derzeit im Paketlistenbereich aufgeführten Pakete und die Anzahl der Pakete, die ausgewählt sind, werden im unteren Bereich des Fensters "Package Manager" links in der Statusleiste angezeigt.</para>
+<para>Wählen Sie die Option <menuchoice><guimenu>Herausgeber</guimenu><guimenuitem>Alle Herausgeber</guimenuitem></menuchoice>, dann die Kategorie <guimenuitem>Alle Kategorien</guimenuitem> und schließlich die Option <menuchoice><guimenu>Ansicht</guimenu><guimenuitem>Ausgewählte Pakete</guimenuitem></menuchoice>, um alle Pakete von allen Herausgebern im Paketlistenbereich aufzuführen. </para>
+<para>Ein Paket kann markiert aber nicht ausgewählt werden. Wenn ein Paket markiert ist, werden Informationen zu diesem Paket im Paketinformationsbereich unterhalb des Paketlistenbereichs angezeigt. Wenn ein Paket ausgewählt ist, wird ein Häkchen im Kontrollkästchen links neben dem Paketnamen angezeigt. Wenn Sie ein Paket installieren, aktualisieren oder löschen möchten, muss das Kontrollkästchen für dieses Paket ein Häkchen enthalten.</para>
+</sect1>
+<sect1 id="install-pkg"><title>Installieren und Aktualisieren der Paketen</title>
+<para>Überprüfen Sie vor dem Installieren oder Aktualisieren die Einstellungen unter 'Optionale Komponenten'. Wählen Sie die Option <menuchoice><guimenu>Bearbeiten</guimenu><guimenuitem>Einstellungen</guimenuitem></menuchoice>. Wählen Sie im Fenster "Einstellungen" die Registerkarte "Optionale Komponenten". Die Optionen "Alle Sprachen installieren", "Alle Entwicklungsdateien installieren" und "Alle Dokumentationen installieren" sind standardmäßig ausgewählt. Sie können Speicherplatz sparen, wenn Sie z. B. einen Teil der Sprachen auswählen oder die Auswahl der Entwicklungsdateien aufheben. Klicken Sie auf die Schaltfläche "OK", um die Änderungen zu speichern. Diese Einstellungen gelten für alle installierten Pakete und alle künftigen Paketinstallationen und -Updates.</para>
+<para>Führen Sie die folgenden Schritte aus, um ein Paket zu installieren oder zu aktualisieren:</para>
+<orderedlist><listitem><para>Wählen Sie das Paket aus. Weitere Informationen finden Sie unter <xref linkend="select-pkg"/>.</para>
+</listitem>
+<listitem><para>Wenden Sie eine der folgenden Methoden an, um das Paket zu installieren oder zu aktualisieren:</para>
+<itemizedlist><listitem><para>Wählen Sie in der Symbolleiste die Schaltfläche <guibutton>Installation/Update</guibutton>.</para>
+</listitem>
+<listitem><para>Wählen Sie in der Menüleiste die Option <menuchoice><guimenu>Paket</guimenu><guimenuitem>Installation/Update</guimenuitem></menuchoice>.</para>
+</listitem>
+<listitem><para>Klicken Sie mit der rechten Maustaste auf den Namen des Pakets, um das Popup-Menü <guimenu>Paket</guimenu> anzuzeigen. Wählen Sie dann die Option <guimenuitem>Installation/Update</guimenuitem>.</para>
+</listitem>
+<listitem><para>Wählen Sie im Paketinformationsbereich unterhalb des Paketlistenbereichs auf der Registerkarte "Versionen" in der Liste "Zu installierende Version" eine Version aus, und klicken Sie rechts neben der Liste auf die Schaltfläche <guibutton>Installation/Update</guibutton>. Die in der Liste "Zu installierende Version" aufgeführten Versionen sind im Repository verfügbar und sind möglicherweise nicht installierbar. Eine bestimmte Version ist u. U. nicht mit anderen bereits installierten Paketen kompatibel. Wenn die ausgewählte Version nicht auf Ihrem System installiert werden kann, zeigt der Package Manager eine Warnung an und installiert nicht das Paket.</para>
+</listitem>
+</itemizedlist>
+<para>Wenn das Paket bereits installiert ist und kein Update für dieses Paket verfügbar ist (siehe dazu Spalte "Status" oder Option <menuchoice><guimenu>Paket</guimenu><guimenuitem>Paket-Versionsinformationen</guimenuitem></menuchoice>), ist die Option <guibutton>Installation/Update</guibutton> ausgegraut und daher nicht auswählbar.</para>
+</listitem>
+<listitem><para>Das Fenster "Installation/Update - Bestätigung" wird angezeigt. Die noch nicht installierten Pakete werden im Bereich "Installationsdetails" aufgeführt. Bereits installierte Pakete werden im Bereich "Updatedetails" übersichtlich aufgeführt. Wählen Sie die Schaltfläche <guibutton>Fortfahren</guibutton>, um die aufgeführten Pakete zu installieren oder zu aktualisieren.</para>
+<para>In manchen Fällen wird ein Dialogfeld zur Lizenz angezeigt, die Sie akzeptieren müssen, um das Paket zu installieren.</para>
+<para>Wenn während der Paketinstallation ein Fehler auftritt, wird ein Fehlerdialogfeld angezeigt. Der Grund für das Fehlschlagen der Installation bzw. des Updates wird in Meldungen beschrieben.</para>
+</listitem>
+</orderedlist>
+</sect1>
+<sect1 id="remove-pkg"><title>Entfernen von Paketen</title>
+<para>Führen Sie zum Entfernen eines Pakets folgende Schritte aus:</para>
+<orderedlist><listitem><para>Wählen Sie das Paket aus. Weitere Informationen finden Sie unter <xref linkend="select-pkg"/>.</para>
+</listitem>
+<listitem><para>Wenden Sie eine der folgenden Methoden an, um das Paket zu entfernen:</para>
+<itemizedlist><listitem><para>Wählen Sie in der Symbolleiste die Schaltfläche <guibutton>Entfernen</guibutton>.</para>
+</listitem>
+<listitem><para>Wählen Sie in der Menüleiste die Option <menuchoice><guimenu>Paket</guimenu><guimenuitem>Entfernen</guimenuitem></menuchoice>.</para>
+</listitem>
+<listitem><para>Klicken Sie mit der rechten Maustaste auf den Namen des Pakets, um das Popup-Menü <guimenu>Paket</guimenu> anzuzeigen. Wählen Sie dann die Option <guimenuitem>Entfernen</guimenuitem>.</para>
+</listitem>
+</itemizedlist>
+<para>Wenn das Paket nicht installiert ist, ist die Option "Entfernen" ausgegraut und nicht auswählbar.</para>
+</listitem>
+<listitem><para>Das Fenster "Bestätigung für Entfernen" wird angezeigt. Die zu entfernenden Pakete werden im Fensterbereich "Entfernungsdetails" für Sie zum Überprüfen aufgeführt. Wählen Sie die Schaltfläche <guibutton>Fortfahren</guibutton>, um die aufgeführten Pakete zu entfernen.</para>
+<para>Wenn ein Paket nicht entfernt werden kann, weil andere Pakete von diesem abhängig sind, können Sie die Option <guibutton>Entfernen fortsetzen</guibutton>, um zu versuchen, die übrigen Pakete zu entfernen, die Sie ursprünglich zum Entfernen ausgewählt hatten.</para>
+</listitem>
+</orderedlist>
+</sect1>
+</chapter>
+<chapter id="update_all"><title>Aktualisieren des Systems</title>
+<para>Wenn bestimmte Schlüsselpakete (z. B. manche Treiber und andere Kernel-Komponenten) aktualisiert werden, werden auf dem System folgende Aktionen ausgeführt:</para>
+<orderedlist><listitem><para>Erstellt einen Klon der aktuellen Boot-Umgebung (BU).</para>
+</listitem>
+<listitem><para>Aktualisiert die Pakete im Klon. Pakete in der aktuellen BU werden nicht aktualisiert.</para>
+</listitem>
+<listitem><para>Legt die neue BU als Standard-Boot-Option für den nächsten Systemneustart fest. Die aktuelle BU bleibt als alternative Boot-Option bestehen.</para>
+</listitem>
+</orderedlist>
+<sect1 id="um_info"><title>Aktualisieren aller Pakete</title>
+<para>Wenn Sie in der Symbolleiste die Schaltfläche <guibutton>Updates</guibutton> auswählen oder die Menüoption <menuchoice><guimenu>Paket</guimenu><guimenuitem>Updates</guimenuitem></menuchoice> wählen, aktualisiert der Package Manager alle installierten Pakete, für die Updates verfügbar sind.</para>
+<para>Alle Pakete, für die Updates von ihren aktuellen Herausgebern verfügbar sind, werden aktualisiert. Wenn für ein Paket Updates von einem anderen Herausgeber in Ihrer Herausgeberliste verfügbar sind, wird das Paket nur dann aktualisiert, wenn der jeweilige aktuelle Herausgeber nicht als Sticky-Herausgeber konfiguriert ist.</para>
+<para>Das Fenster "Updates" wird angezeigt, und der Updateprozess wird gestartet:</para>
+<orderedlist><listitem><para>Alle Kataloge auf dem System werden aktualisiert.</para>
+</listitem>
+<listitem><para>Auf dem System werden die installierten Pakete ausgewertet, um zu ermitteln, für welche Pakete Updates verfügbar sind.</para>
+<itemizedlist><listitem><para>Wenn für keine Pakete Updates verfügbar sind, wird die Meldung 'Keine Updates verfügbar' angezeigt, und der Vorgang wird beendet.</para>
+</listitem>
+<listitem><para>Wenn Paketupdates verfügbar sind, werden die zu aktualisierenden Pakete für Sie zum Überprüfen aufgeführt. An dieser Stelle können Sie noch auf <guibutton>Abbrechen</guibutton> klicken, um das Update abzubrechen.</para>
+</listitem>
+</itemizedlist>
+</listitem>
+<listitem><para>Klicken Sie auf die Schaltfläche <guibutton>Fortfahren</guibutton>, um das Update fortzusetzen.</para>
+<para>Auf dem System kann je nach Paketen, die aktualisiert werden, eine neue Boot-Umgebung (BU) erstellt werden (siehe dazu <xref linkend="update_all"/> oben).</para>
+<para>Wenn auf dem System festgestellt wird, dass eine neue BU erforderlich ist, diese aber nicht erstellt werden konnte, wird eine Fehlermeldung angezeigt. Wenn die Urasche dafür nicht genug Speicherplatz ist, führen Sie die folgenden Schritte aus:</para>
+<orderedlist><listitem><para>Klicken Sie auf <guibutton>Schließen</guibutton>, um den Updatevorgang abzubrechen.</para>
+</listitem>
+<listitem><para>Befolgen Sie die Anweisungen unter <xref linkend="remove-be"/>, um eine nicht mehr erforderliche BU zu entfernen.</para>
+</listitem>
+<listitem><para>Wählen Sie erneut <guibutton>Updates</guibutton>, um den Updatevorgang neu zu starten.</para>
+</listitem>
+</orderedlist>
+</listitem>
+<listitem><para>Alle Paketupdates werden auf das System heruntergeladen.</para>
+</listitem>
+<listitem><para>Die Paketupdates werden auf dem System installiert. Wenn eine Klon-BU erstellt wurde, werden die Updates im Klon installiert. Wenn kein Klon erstellt wurde, werden die Updates in der aktuellen BU installiert.</para>
+<para>Wenn während des Updatevorgangs ein Fehler auftritt, wird der Bereich "Details" erweitert, um die Fehlerdetails anzuzeigen. Neben der fehlgeschlagenen Phase wird ein Fehlerstatusindikator angezeigt.</para>
+</listitem>
+<listitem><para>Wenn auf dem System eine neue BU für das Update erstellt wurde, können Sie den Standard-BU-Namen bearbeiten. Wenn der gewünschte BU-Name eingegeben ist, klicken Sie auf die Schaltfläche <guibutton>Erneut starten</guibutton>, um das System sofort neu zu starten. Klicken Sie auf die Schaltfläche <guibutton>Später erneut starten</guibutton>, um das System später neu zu booten. Sie müssen einen Neustart ausführen, um die neue BU zu booten. Die neue BU ist die Standard-Boot-Option. Die aktuelle BU bleibt als alternative Boot-Option verfügbar.</para>
+</listitem>
+</orderedlist>
+</sect1>
+<sect1 id="using_um"><title>Verwenden von Update-Manager</title>
+<para>Sie können den Update-Manager über eine Systembenachrichtigung oder über die Desktop-Menüleiste öffnen. Der Update-Manager führt den gleichen Prozess durch (siehe Beschreibung oben unter <xref linkend="um_info"/>).</para>
+<sect2 id="gkiso"><title>Sofware-Updatebenachrichtigung</title>
+<para>Das System überprüft regelmäßig, ob Updates für die installierten Pakete verfügbar sind. Wenn das System verfügbare Updates erkennt, werden das Benachrichtigungssymbol "Updates verfügbar" sowie eine Popup-Meldung im Benachrichtigungsbereich angezeigt. Klicken Sie auf das Benachrichtigungssymbol, um den Update-Manager zu öffnen.</para>
+</sect2>
+<sect2 id="gkisz"><title>Menü "Desktop System"</title>
+<para>Wählen Sie in der Desktop-Menüleiste die Option <menuchoice><guimenu>System</guimenu><guisubmenu>Administration</guisubmenu><guimenuitem>Update-Manager</guimenuitem></menuchoice>, um den Update-Manager zu öffnen.</para>
+</sect2>
+</sect1>
+</chapter>
+<chapter id="manage-publisher"><title>Verwalten von Herausgebern</title>
+<para>Sie können IPS-Paketherausgeber hinzufügen, ändern und entfernen. Sie können die Priorität für einen Herausgeber, den aktivierten Status und Sticky-Einstellungen sowie den Herausgeber-Alias ändern. Außerdem können Sie einen Herausgeberursprung sowie einen Herausgeberspiegel hinzufügen oder entfernen. Sie haben auch die Möglichkeit, Schlüssel, Zertifikate und die Signaturrichtlinie zu verwalten.</para>
+<para>Beachten Sie, dass Systemherausgeber eine Ausnahme bilden. Systemherausgeber können nur im Fenster "Herausgeber verwalten" angezeigt werden. Sie können nicht entfernt oder geändert werden. Die Priorität für Systemherausgeber kann auch nicht geändert werden (siehe dazu <xref linkend="glossary"/>). Im Bereich "Details" wird angezeigt, ob der ausgewählte Herausgeber ein Systemherausgeber ist.</para>
+<sect1 id="add-publisher"><title>Hinzufügen von Herausgebern</title>
+<para>Verwenden Sie zum Hinzufügen eines IPS-Paketherausgebers das Fenster "Herausgeber hinzufügen". Führen Sie zum Öffnen des Fensters "Herausgeber hinzufügen" eine der folgenden Aktionen aus:</para>
+<itemizedlist><listitem><para>Wählen Sie im Dropdown-Menü <guimenu>Herausgeber</guimenu> die Option <guimenuitem>Hinzufügen</guimenuitem>.</para>
+</listitem>
+<listitem><para>Wählen Sie die Menüoption <menuchoice><guimenu>Datei</guimenu><guimenuitem>Herausgeber hinzufügen</guimenuitem></menuchoice>.</para>
+</listitem>
+<listitem><para>Wählen Sie die Menüoption <menuchoice><guimenu>Datei</guimenu><guimenuitem>Herausgeber verwalten</guimenuitem></menuchoice>. Wählen Sie im Fenster "Herausgeber verwalten" die Schaltfläche <guibutton>Hinzufügen</guibutton>.</para>
+</listitem>
+</itemizedlist>
+<para>Führen Sie im Fenster "Herausgeber hinzufügen" die folgenden Schritte aus, um einen IPS-Paketherausgeber hinzuzufügen:</para>
+<orderedlist><listitem><para>Geben Sie in das URI-Feld die URI des Herausgebers ein. Die URI ist eine Netzwerkadresse wie z. B. <literal>http://pkg.oracle.com/solaris/release/</literal> oder <literal>http://localhost:5555</literal>.</para>
+</listitem>
+<listitem><para>In das Feld "Alias" können Sie einen alternativen Namen für diesen Herausgeber eingeben.</para>
+</listitem>
+<listitem><para>Klicken Sie auf die Schaltfläche <guibutton>Hinzufügen</guibutton>.</para>
+</listitem>
+<listitem><para>Das Dialogfeld "Herausgeber wird hinzugefügt" wird angezeigt. Klicken Sie auf <guibutton>Abbrechen</guibutton>, um den Prozess abzubrechen. Klicken Sie auf "Details", um Verbose-Informationen anzuzeigen.</para>
+<itemizedlist><listitem><para>Wenn der neue Herausgeber erfolgreich hinzugefügt werden konnte, wird das Dialogfeld "Hinzufügen des Herausgebers abgeschlossen" mit dem Namen, Alias und der URI des neuen Herausgebers angezeigt.</para>
+</listitem>
+<listitem><para>Wenn der neue Herausgeber nicht hinzugefügt wird, wird das Dialogfeld "Herausgeberfehler" mit Fehlerinformationen angezeigt.</para>
+</listitem>
+</itemizedlist>
+</listitem>
+</orderedlist>
+<para>Der neue Herausgeber wird als letzter Herausgeber im Fenster "Herausgeber verwalten" aufgeführt. Er ist aktiviert und als Sticky-Herausgeber festgelegt.</para>
+<para>Unter <xref linkend="modify-publisher"/> finden Sie Informationen dazu, wie Sie die Priorität für einen neuen Herausgeber, den aktivierten Status und Sticky-Einstellungen, den Herausgeber-Alias ändern können und wie Sie einen Herausgeberursprung hinzufügen können, einen SSL-Schlüssel und ein SSL-Zertifikat festlegen können, einen Herausgeberspiegel hinzufügen können und Herausgeberzertifikate sowie Signaturrichtlinie verwalten können.</para>
+</sect1>
+<sect1 id="modify-publisher"><title>Ändern von Herausgebern</title>
+<para>Wählen Sie zum Ändern der Attribute eines Herausgebers die Menüoption <menuchoice><guimenu>Datei</guimenu><guimenuitem>Herausgeber verwalten</guimenuitem></menuchoice>. Die aktuell konfigurierten Herausgeber werden im Fenster "Herausgeber verwalten" aufgeführt.</para>
+<para>Im Fenster "Herausgeber verwalten" können Sie die Priorität für einen Herausgeber ändern, einen Herausgeber aktivieren oder deaktivieren, einen Herausgeber als Sticky-Herausgeber festlegen oder diese Einstellung zurücksetzen und einen Herausgeber entfernen. Weitere Informationen finden Sie unter <xref linkend="priority-stickiness"/> und <xref linkend="remove-publisher"/>.</para>
+<para>Klicken Sie auf die Schaltfläche <guibutton>Ändern</guibutton>, um das Fenster "Herausgeber ändern" zu öffnen. Im Fenster "Herausgeber ändern" können Sie den Herausgeber-Alias ändern, einen Herausgeberursprung und Herausgeberspiegel hinzufügen oder entfernen, einen SSL-Schlüssel oder ein SSL-Zertifikat festlegen und Herausgeberzertifikate und Signaturrichtlinie verwalten. Weitere Informationen finden Sie unter <xref linkend="origin-mirror"/> und <xref linkend="pub-security"/>.</para>
+<sect2 id="priority-stickiness"><title>Ändern der Priorität und der Stickiness</title>
+<para>Wählen Sie die Menüoption <menuchoice><guimenu>Datei</guimenu><guimenuitem>Herausgeber verwalten</guimenuitem></menuchoice>, um das Fenster Herausgeber verwalten' anzuzeigen.</para>
+<sect3 id="set-pub-order"><title>Herausgeberpriorität</title>
+<para>Herausgeber werden im Fenster "Herausgeber verwalten" entsprechend ihrer Priorität aufgeführt. Der oberste Herausgeber in der Liste ist der Herausgeber mit der höchsten Priorität. Der unterste Herausgeber in der Liste ist der Herausgeber mit der niedrigsten Priorität.</para>
+<itemizedlist><listitem><para>Der oberste Herausgeber in der Liste wird auch als bevorzugter Herausgeber bezeichnet.</para></listitem>
+<listitem><para>Der bevorzugte Herausgeber kann nicht deaktiviert oder entfernt werden.</para></listitem>
+<listitem><para>Wenn Sie Pakete suchen und keinen Herausgeber angeben, werden zuerst die Kataloge der Herausgeber mit höherer Priorität durchsucht.</para></listitem>
+<listitem><para>Wenn Sie ein Paket aktualisieren, das von keinem Sticky-Herausgeber installiert wurde, werden zuerst die Kataloge von Herausgebern mit höherer Priorität nach Updates durchsucht.</para></listitem>
+</itemizedlist>
+<para>Führen Sie zum Ändern der Priorität eines Herausgebers die folgenden Schritte aus:</para>
+<orderedlist><listitem><para>Klicken Sie im Fenster "Herausgeber verwalten" auf eine Herausgeberzeile in der Liste, um diese Zeile zu markieren.</para>
+</listitem>
+<listitem><para>Klicken Sie auf die Schaltflächen <guibutton>Nach oben</guibutton> und <guibutton>Nach unten</guibutton> rechts neben der Herausgeberliste, um die Priorität des ausgewählten Herausgebers zu erhöhen oder zu verringern. Die Anzeige des ausgewählten Herausgebers wird nach oben und nach unten verschoben, um die neue Priorität anzuzeigen.</para>
+<para>Wenn der ausgewählte Herausgeber ein Systemherausgeber ist, sind die Schaltflächen <guibutton>Nach oben</guibutton> und <guibutton>Nach unten</guibutton> deaktiviert. Sie können die Priorität eines Systemherausgebers nicht ändern. Aus diesem Grund können Sie die Priorität eines Herausgebers, der sich auf der nächst höheren Prioritätstufe über dem Systemherausgeber befindet, nicht verringern. Sie können auch die Priorität eines Herausgebers auf einer Prioritätsstufe unterhalb des Systemherausgebers nicht erhöhen.</para></listitem>
+<listitem><para>Klicken Sie im unteren Bereich des Fensters "Herausgeber verwalten" auf die Schaltfläche <guibutton>OK</guibutton>.</para>
+</listitem>
+</orderedlist>
+</sect3>
+<sect3 id="gjlab"><title>Aktiviert und Sticky</title>
+<para>Wenn Sie einen Herausgeber hinzufügen, werden das Sticky-Attribut sowie das Attribut zum Aktivieren standardmäßig festgelegt. Der bevorzugte Herausgeber (siehe <xref linkend="set-pub-order"/> oben) kann nicht deaktiviert werden. Ein Systemherausgeber kann nicht deaktiviert werden, und die Sticky-Einstellung bei einem Systemherausgeber kann nicht geändert werden. Alle anderen aktivierten und Sticky-Einstellungen können geändert werden.</para>
+<para>Wenn das Sticky-Attribut für einen Herausgeber festgelegt ist, kann ein Paket, das von diesem Herausgeber installiert wurde, nicht durch einen anderen Herausgeber aktualisiert werden. Wenn das Sticky-Attribut nicht für einen Herausgeber festgelegt ist, handelt es sich um keinen Sticky-Herausgeber. Wenn es kein Sticky-Herausgeber ist, kann ein Paket, das von diesem Herausgeber stammt, durch einen anderen Herausgeber aktualisiert werden. Ein anderer Herausgeber könnte u. U. eine neuere Version des Pakets haben als der ursprüngliche Herausgeber dieses Pakets. Wenn Sie auf diese neuere Version aktualisieren möchten, darf der ursprüngliche Herausgeber kein Sticky-Herausgeber sein. Wenn ein Herausgeber mit niedrigerer Priorität kein Sticky-Herausgeber ist, werden zuerst die Herausgeber mit höherer Priorität auf Updates für Pakete durchsucht, die von diesem Herausgeber (nicht sticky) installiert wurden.</para>
+<para>Ein deaktivierter Herausgeber wird nicht auf Updates oder Pakete zum Installieren durchsucht. Kataloge eines deaktivierten Herausgebers werden nicht aktualisiert. Der deaktivierte Herausgeber wird nicht im Dropdown-Menü <guimenu>Herausgeber</guimenu> angezeigt.</para>
+<para>Führen Sie zum Ändern der Einstellungen "Aktiviert" und "Sticky" die folgenden Schritte aus:</para>
+<orderedlist><listitem><para>Wählen Sie die Menüoption <menuchoice><guimenu>Datei</guimenu><guimenuitem>Herausgeber verwalten</guimenuitem></menuchoice>, um das Fenster "Herausgeber verwalten" zu öffnen.</para>
+</listitem>
+<listitem><para>Klicken Sie auf die Kontrollkästchen "Aktiviert" oder "Sticky", um diese Einstellungen auszuwählen bzw. die Auswahl aufzuheben.</para>
+</listitem>
+<listitem><para>Klicken Sie im unteren Bereich des Fensters "Herausgeber verwalten" auf die Schaltfläche <guibutton>OK</guibutton>.</para>
+</listitem>
+</orderedlist>
+</sect3>
+</sect2>
+<sect2 id="origin-mirror"><title>Ändern des Alias, der Ursprünge und Spiegel</title>
+<orderedlist><listitem><para>Wählen Sie die Menüoption <menuchoice><guimenu>Datei</guimenu><guimenuitem>Herausgeber verwalten</guimenuitem></menuchoice>, um das Fenster "Herausgeber verwalten" zu öffnen.</para>
+</listitem>
+<listitem><para>Wählen Sie den Herausgeber aus, den Sie ändern möchten. Im Bereich "Details" unter der Herausgeberliste im Fenster "Herausgeber verwalten" werden die aktuellen Ursprünge des ausgewählten Herausgebers angezeigt.</para>
+</listitem>
+<listitem><para>Klicken Sie rechts neben der Herausgeberliste auf die Schaltfläche <guibutton>Ändern</guibutton>, um das Fenster "Herausgeber ändern" zu öffnen.</para>
+<para>Wenn der ausgewählte Herausgeber ein Systemherausgeber ist, ist die Schaltfläche <guibutton>Ändern</guibutton> deaktiviert. Im Bereich "Details" wird angezeigt, dass der ausgewählte Herausgeber ein Systemherausgeber ist. Eine Meldung wird angezeigt, die Sie informiert, dass dieser Herausgeber nicht geändert oder entfernt werden kann.</para>
+</listitem>
+<listitem><para>Wählen Sie die Registerkarte "Allgemein", um den Herausgeber-Alias zu ändern und Ursprünge sowie Spiegel hinzuzufügen und zu entfernen.</para></listitem>
+</orderedlist>
+<sect3 id="modify-publisher-alias"><title>Herausgeber-Alias</title>
+<para>Der Herausgeber-Alias ist ein anderer Name des Herausgebers. Der Aliasname wird im Dropdown-Menü <guimenu>Herausgeber</guimenu> und im Paketlistenbereich verwendet.</para>
+<para>Führen Sie zum Ändern des Alias dieses Herausgebers die folgenden Schritte aus:</para>
+<orderedlist><listitem><para>Geben Sie im Fenster "Herausgeber ändern" auf der Registerkarte "Allgemein" einen neuen Namen in das Feld "Alias" ein.</para>
+</listitem>
+<listitem><para>Klicken Sie im unteren Bereich des Fensters "Herausgeber ändern" auf die Schaltfläche <guibutton>OK</guibutton>.</para>
+</listitem>
+<listitem><para>Im Fenster "Herausgeber verwalten" wird der Herausgeber-Alias geändert. Klicken Sie im unteren Bereich des Fensters "Herausgeber verwalten" auf die Schaltfläche <guibutton>OK</guibutton>.</para>
+</listitem>
+</orderedlist>
+</sect3>
+<sect3 id="gjkza"><title>Herausgeberursprünge</title>
+<para>Ein Ursprung ist der Speicherort eines IPS-Paket-Repository oder -Archivs, in dem beide Paket-Metadatentypen (Paketmanifeste und -kataloge) und der Paketinhalt (Paketdateien) enthalten sind.</para>
+<para>Ein Ursprungswert ist die URI eines IPS-Paket-Repository.</para>
+<para>Führen Sie zum Ändern, Hinzufügen oder Entfernen eines Ursprungs für diesen Herausgeber die folgenden Schritte aus:</para>
+<orderedlist><listitem><para>Wählen Sie im Fenster "Herausgeber ändern" die Registerkarte "Allgemein".</para>
+<itemizedlist><listitem><para>Fügen Sie einen Ursprung hinzu.</para>
+<orderedlist type="a"><listitem><para>Geben Sie in das Feld "Ursprung" die URI des neuen Ursprungs ein, den Sie mit diesem Herausgeber verbinden möchten.</para></listitem>
+<listitem><para>Klicken Sie auf die Schaltfläche <guibutton>Hinzufügen</guibutton>. Die neue URI wird der Liste unterhalb des Felds "Ursprung" hinzugefügt.</para></listitem>
+</orderedlist>
+</listitem>
+<listitem><para>Entfernen Sie einen Ursprung.</para>
+<orderedlist type="a"><listitem><para>Wählen Sie in der Liste unter dem Feld "Ursprung" die URI aus, die Sie löschen möchten.</para></listitem>
+<listitem><para>Klicken Sie auf die Schaltfläche <guibutton>Entfernen</guibutton>. Die ausgewählte URI wird aus der Liste entfernt. Wenn für diesen Herausgeber nur ein Ursprung definiert ist, können Sie diesen Ursprung nicht entfernen.</para></listitem>
+</orderedlist>
+</listitem>
+<listitem><para>Ändern Sie einen Ursprung.</para>
+<orderedlist type="a"><listitem><para>Fügen Sie diesen neuen Ursprung hinzu.</para></listitem>
+<listitem><para>Löschen Sie den Ursprung, den Sie ändern möchten.</para></listitem>
+</orderedlist>
+</listitem>
+</itemizedlist>
+</listitem>
+<listitem><para>Klicken Sie im unteren Bereich des Fensters "Herausgeber ändern" auf die Schaltfläche <guibutton>OK</guibutton>.</para>
+</listitem>
+<listitem><para>Die Ursprungsänderungen werden im Fenster "Herausgeber verwalten" im Bereich "Details" angezeigt. Klicken Sie im unteren Bereich des Fensters "Herausgeber verwalten" auf die Schaltfläche <guibutton>OK</guibutton>.</para>
+</listitem>
+</orderedlist>
+</sect3>
+<sect3 id="gjkyr"><title>Herausgeberspiegel</title>
+<para>Ein Spiegel ist ein Speicherort eines IPS-Paket-Repository, das nur den Paketinhalt (Paketdateien) enthält. Ein Spiegel enthält keine Paketmetadaten (Paketmanifeste und Kataloge). Spiegel stellen eine Teil der Daten bereit, die an einem Ursprung zur Verfügung gestellt werden. Spiegel können nur zum Herunterladen von Paketdateien verwendet werden. Paketmetadaten werden vom Ursprung heruntergeladen. IPS-Clients greifen auf den Ursprung zu, um den Katalog eines Herausgeber zu holen, sogar wenn die Clients den Paketinhalt von einem Spiegel herunterladen.</para>
+<para>Führen Sie zum Hinzufügen, Entfernen oder Ändern eines Spiegels für diesen Herausgeber die folgenden Schritte aus:</para>
+<orderedlist><listitem><para>Wählen Sie im Fenster "Herausgeber ändern" die Registerkarte "Allgemein".</para></listitem>
+<listitem><para>Klicken Sie auf die Beschriftung "Spiegel", um das Feld "Spiegel" und die Liste der Spiegel anzuzeigen.</para>
+<itemizedlist><listitem><para>Fügen Sie einen Spiegel hinzu.</para>
+<orderedlist type="a"><listitem><para>Geben Sie in das Feld "Spiegel" die URI des neuen Spiegels ein, den Sie mit diesem Herausgeber verbinden möchten.</para></listitem>
+<listitem><para>Klicken Sie auf die Schaltfläche <guibutton>Hinzufügen</guibutton>. Die neue URI wird der Liste unterhalb des Felds "Spiegel" hinzugefügt.</para></listitem>
+</orderedlist>
+</listitem>
+<listitem><para>Entfernen Sie einen Spiegel.</para>
+<orderedlist type="a"><listitem><para>Wählen Sie in der Liste unter dem Feld "Spiegel" die URI aus, die Sie löschen möchten.</para></listitem>
+<listitem><para>Klicken Sie auf die Schaltfläche <guibutton>Entfernen</guibutton>. Die ausgewählte URI wird aus der Liste entfernt.</para></listitem>
+</orderedlist>
+</listitem>
+<listitem><para>Ändern Sie einen Spiegel.</para>
+<orderedlist type="a"><listitem><para>Löschen Sie den Spiegel, den Sie ändern möchten.</para></listitem>
+<listitem><para>Fügen Sie einen neuen Spiegel hinzu.</para></listitem>
+</orderedlist>
+</listitem>
+</itemizedlist>
+</listitem>
+<listitem><para>Klicken Sie im unteren Bereich des Fensters "Herausgeber ändern" auf die Schaltfläche <guibutton>OK</guibutton>.</para>
+</listitem>
+<listitem><para>Klicken Sie im unteren Bereich des Fensters "Herausgeber verwalten" auf die Schaltfläche <guibutton>OK</guibutton>.</para>
+</listitem>
+</orderedlist>
+</sect3>
+</sect2>
+<sect2 id="security"><title>Verwalten der Herausgebersicherheit</title>
+<para>Zertifikate dienen zur Gewährleistung, dass Pakete vor ihrer Installation entsprechend der Signaturrichtlinie des Abbilds oder Herausgebers (je nachdem, welche mehr einschränkt) signiert sind.</para>
+<orderedlist><listitem><para>Wählen Sie die Menüoption <menuchoice><guimenu>Datei</guimenu><guimenuitem>Herausgeber verwalten</guimenuitem></menuchoice>, um das Fenster "Herausgeber verwalten" zu öffnen.</para>
+</listitem>
+<listitem><para>Wählen Sie den Herausgeber, dessen Sicherheitseinstellung Sie ändern möchten.</para>
+</listitem>
+<listitem><para>Klicken Sie rechts neben der Herausgeberliste auf die Schaltfläche <guibutton>Ändern</guibutton>, um das Fenster "Herausgeber ändern" zu öffnen. Der Herausgeber, der im Fenster "Herausgeber verwalten" ausgewählt wurde, wird im Titel des Fensters "Herausgeber ändern" aufgeführt.</para>
+<itemizedlist><listitem><para>Wählen Sie die Registerkarte "Allgemein", um den SSL-Schlüssel und das SSL-Zertifikat hinzuzufügen, wenn ein Herausgeber über einen sicheren Ursprung verfügt.</para></listitem>
+<listitem><para>Wählen Sie die Registerkarte "Zertifikate", um die Zertifikate dieses Herausgebers zu verwalten.</para></listitem>
+<listitem><para>Wählen Sie die Registerkarte "Signaturrichtlinie", um die Signaturrichtlinie dieses Herausgebers zu verwalten.</para></listitem>
+</itemizedlist>
+</listitem>
+</orderedlist>
+<sect3 id="keys-certs"><title>Hinzufügen der SSL-Schlüssel und -Zertifikate</title>
+<para>Wenn der Herausgeber einen sicheren Ursprung hat, fügen Sie den SSL-Schlüssel und das SSL-Zertifikat für diesen Herausgeber hinzu.</para>
+<orderedlist><listitem><para>Klicken Sie im Fenster "Herausgeber ändern" auf die Registerkarte "Allgemein".</para></listitem>
+<listitem><para>Klicken Sie auf die Beschriftung "SSL-Schlüssel und -Zertifikat", um die Felder "SSL-Schlüssel" und "SSL-Zertifikat" anzuzeigen.</para></listitem>
+<listitem><para>Klicken Sie rechts neben dem Feld "SSL-Schlüssel" auf die Schaltfläche <guibutton>Durchsuchen</guibutton>, um die SSL-Schlüsseldatei auszuwählen.</para></listitem>
+<listitem><para>Klicken Sie rechts neben dem Feld "SSL-Zertifikat" auf die Schaltfläche <guibutton>Durchsuchen</guibutton>, um die SSL-Zertifikatsdatei auszuwählen.</para> </listitem>
+<listitem><para>Klicken Sie im unteren Bereich des Fensters "Herausgeber ändern" auf die Schaltfläche <guibutton>OK</guibutton>.</para></listitem>
+<listitem><para>Klicken Sie im unteren Bereich des Fensters "Herausgeber verwalten" auf die Schaltfläche <guibutton>OK</guibutton>.</para></listitem>
+</orderedlist>
+</sect3>
+<sect3 id="manage-certs"><title>Verwalten von Zertifikaten</title>
+<orderedlist><listitem><para>Klicken Sie im Fenster "Herausgeber ändern" auf die Registerkarte "Zertifikate".</para></listitem>
+<listitem><para>Verwenden Sie die Schaltfläche unter der Liste der Zertifikate, um ein Zertifikat hinzuzufügen oder um ein in der Liste ausgewähltes Zertifikat zu entfernen, zu widerrufen oder wiederherzustellen.</para>
+<para>Beachten Sie, dass alle Aktionen, die Sie im Fenster "Herausgeber ändern" ausführen, erst dann auf die Zertifikate des ausgewählten Herausgebers angewendet werden, wenn Sie auf die Schaltfläche <guibutton>OK</guibutton> klicken, die sich im unteren Bereich des Fensters "Herausgeber ändern" befindet. Wenn Sie auf die Schaltfläche <guibutton>Abbrechen</guibutton> klicken, werden keine Änderungen angewendet.</para>
+<itemizedlist><listitem><para><guibutton>Hinzufügen</guibutton>: Fügen Sie ein neues Herausgeberzertifikat für den Herausgeber hinzu, der im Titel des Fensters "Herausgeber ändern" aufgeführt ist. Suchen Sie im Fenster "Herausgeberzertifikat hinzufügen" die Zertifikatsdatei (<tt>.pem</tt>), um diese auszuwählen. Klicken Sie im unteren Bereich des Fensters "Herausgeberzertifikat hinzufügen" auf die Schaltfläche <guibutton>OK</guibutton>. Das neu hinzugefügte Zertifikat wird in der Zertifikatsliste der Registerkarte "Zertifikate" des Fensters "Herausgeber ändern" ausgewählt. Im Detailsbereich wird angezeigt, dass dieses Zertifikat zum Hinzufügen markiert ist. Dieses Zertifikat wird hinzugefügt, sobald Sie im Fenster "Herausgeber ändern" auf die Schaltfläche <guibutton>OK</guibutton> klicken.</para></listitem>
+</itemizedlist>
+</listitem>
+<listitem><para>Wählen Sie in der Liste der Zertifikate für diesen Herausgeber das Zertifikat aus, das Sie ändern möchten oder dessen Details Sie überprüfen möchten. Details zum ausgewählten Zertifikat werden unterhalb der Liste der Zertifikate und der Schaltflächenreihe angezeigt. Beachten Sie, dass ein abgelaufenes Zertifikat weiterhin "Genehmigt" und verwendet werden kann, um signierte Pakete zu überprüfen, die vor dem Ablauf des Zertifikats veröffentlicht (ggf. auch installiert) wurden.</para>
+<para>Klicken Sie auf die Überschriften der Liste mit Zertifikaten, um die Liste wiederherzustellen. Die Größe der Spalten "Organisation" und "Name" kann geändert werden.</para>
+<itemizedlist><listitem><para><guibutton>Entfernen</guibutton>: Entfernen Sie das Zertifikat, das zurzeit in der Zertifikatsliste ausgewählt ist.</para></listitem>
+<listitem><para><guibutton>Widerrufen</guibutton>: Wenn das aktuell in der Zertifikatsliste ausgewählte Zertifikat genehmigt ist, klicken Sie auf die Schaltfläche <guibutton>Widerrufen</guibutton>, um das Zertifikat als widerrufen einzustufen. In der Zertifikatsliste ändert sich der Status dieses Zertifikats in "Widerrufen". Diese Änderung wird auf das Zertifikat angewendet, sobald Sie im unteren Bereich des Fensters "Herausgeber ändern" auf die Schaltfläche <guibutton>OK</guibutton> klicken.</para></listitem>
+<listitem><para><guibutton>Wiederherstellen</guibutton>: Wenn das aktuell in der Zertifikatsliste ausgewählte Zertifikat widerrufen ist, klicken Sie auf die Schaltfläche <guibutton>Wiederherstellen</guibutton>, um dieses Zertifikat als genehmigt einzustufen. Im Detailsbereich wird angezeigt, dass dieses Zertifikat zum Wiederherstellen markiert ist. Dieses Zertifikat wird wiederhergestellt, sobald Sie im Fenster 'Herausgeber ändern' auf die Schaltfläche <guibutton>OK</guibutton> klicken.</para></listitem>
+</itemizedlist>
+</listitem>
+<listitem><para>Klicken Sie im unteren Bereich des Fensters "Herausgeber ändern" auf die Schaltfläche <guibutton>OK</guibutton>.</para></listitem>
+<listitem><para>Klicken Sie im unteren Bereich des Fensters "Herausgeber verwalten" auf die Schaltfläche <guibutton>OK</guibutton>.</para></listitem>
+</orderedlist>
+</sect3>
+<sect3 id="pub-sig-policy"><title>Verwalten der Signaturrichtlinie</title>
+<orderedlist><listitem><para>Klicken Sie im Fenster "Herausgeber ändern" auf die Registerkarte "Signaturrichtlinie".</para></listitem>
+<listitem><para>Verwenden Sie die Schaltflächen auf der Registerkarte "Signaturrichtlinie", um die Signaturrichtlinie festzulegen, die beim Installieren von Paketen verwendet werden soll, die vom Herausgeber stammen, der im Titel des Fensters "Herausgeber ändern" aufgeführt ist.</para>
+<para>Öffnen Sie zum Festlegen der globalen Signaturrichtlinie die Registerkarte "Signaturrichtlinie" des Fensters "Einstellungen" (siehe <xref linkend="img-sig-policy"/>).</para>
+<itemizedlist><listitem><para>Signaturen werden ignoriert: Signaturen werden für alle Pakete ignoriert.</para></listitem>
+<listitem><para>Signaturen sind optional, müssen jedoch bei Angabe gültig sein: Überprüfen Sie, ob alle Pakete mit Signaturen eine gültige Signatur haben. Installierte Pakete müssen jedoch nicht signiert sein.</para></listitem>
+<listitem><para>Eine oder mehrere gültige Signaturen erforderlich: Alle neu installierten Pakete müssen mindestens eine gültige Signatur haben.</para></listitem>
+<listitem><para>Signaturen sind erforderlich und der Zertifikatsname muss beim Überprüfen der Signaturen eines Pakets den Namen bzw. die Namen enthalten, die im Textfeld angegeben wurden. Wenn mehr als ein Name angegeben wurden, müssen diese durch ein Komma getrennt sein.</para></listitem></itemizedlist>
+</listitem>
+<listitem><para>Klicken Sie im unteren Bereich des Fensters "Herausgeber ändern" auf die Schaltfläche <guibutton>OK</guibutton>.</para></listitem>
+<listitem><para>Klicken Sie im unteren Bereich des Fensters "Herausgeber verwalten" auf die Schaltfläche <guibutton>OK</guibutton>.</para></listitem>
+</orderedlist>
+</sect3>
+</sect2>
+</sect1>
+<sect1 id="remove-publisher"><title>Entfernen der Herausgeber</title>
+<para>Gehen Sie wie folgt vor, um einen Herausgeber zu entfernen:</para>
+<orderedlist><listitem><para>Wählen Sie die Menüoption <menuchoice><guimenu>Datei</guimenu><guimenuitem>Herausgeber verwalten</guimenuitem></menuchoice>, um das Fenster "Herausgeber verwalten" zu öffnen.</para>
+</listitem>
+<listitem><para>Wählen Sie die Herausgeber aus, die Sie entfernen möchten.</para>
+</listitem>
+<listitem><para>Klicken Sie rechts neben der Herausgeberliste auf die Schaltfläche <guibutton>Entfernen</guibutton>.</para>
+<para>Wenn der ausgewählte Herausgeber ein Systemherausgeber ist, ist die Schaltfläche <guibutton>Entfernen</guibutton> deaktiviert. Im Bereich "Details" wird angezeigt, dass der ausgewählte Herausgeber ein Systemherausgeber ist. Eine Meldung wird angezeigt, die Sie informiert, dass dieser Herausgeber nicht geändert oder entfernt werden kann.</para>
+</listitem>
+<listitem><para>Klicken Sie im unteren Bereich des Fensters "Herausgeber verwalten" auf die Schaltfläche <guibutton>OK</guibutton>.</para>
+</listitem>
+</orderedlist>
+</sect1>
+</chapter>
+<chapter id="manage-be"><title>Verwalten der Boot-Umgebungen</title>
+<para>Eine Boot-Umgebung (BU) ist ein bootfähiges Abbild. Sie können mehrere BUs auf Ihrem Oracle Solaris-System verwalten. Eine BU ist die Standard-BU beim Systemstart oder Neustart. Die anderen BUs sind als alternative Boot-Optionen verfügbar. Die BU, die Sie starten, ist die aktive BU.</para>
+<para>Sie können den Befehl <literal>beadm</literal>(1) verwenden, um BUs zu erstellen, umzubenennen, einzuhängen, auszuhängen, zu aktivieren oder zu entfernen. Ausführliche Informationen zu BUs finden Sie unter <citetitle>Erstellen und Verwalten von Boot-Umgebungen nach der Installation</citetitle>.</para>
+<para>Der Package Manager stellt einen Teil der Funktionen bereit, die der Befehl <literal>beadm</literal>(1) umfasst. Verwenden Sie die Package Manager-Option <menuchoice><guimenu>Datei</guimenu><guimenuitem>Boot-Umgebungen verwalten</guimenuitem></menuchoice>, um das Fenster "Boot-Umgebungen verwalten" zu öffnen. Im Fenster 'Boot-Umgebungen verwalten' werden die BUs auf diesem System aufgeführt. In diesem Fenster können Sie diese BUs, wie nachstehend beschrieben, aktivieren, umbenennen und löschen.</para>
+<sect1 id="create-be"><title>Erstellen einer BU</title>
+<para>Eine neue BU wird automatisch erstellt, wenn Sie eine der folgenden Aktionen ausführen:</para>
+<itemizedlist><listitem><para>Installieren Sie das Betriebssystem Oracle Solaris.</para>
+</listitem>
+<listitem><para>Installieren oder aktualisieren Sie Schlüsselsystempakete wie manche Treiber und andere Kernel-Komponenten.</para>
+</listitem>
+<listitem><para>Verwenden Sie den Befehl <literal>beadm create</literal>.</para>
+</listitem>
+</itemizedlist>
+<para>Eine neue BU wird häufig erstellt, wenn Sie den Befehl <literal>pkg update</literal> ausführen oder auf die Schaltfläche <guibutton>Updates</guibutton> klicken, um alle Pakete zu aktualisieren, für die Updates verfügbar sind.</para>
+</sect1>
+<sect1 id="activate-be"><title>Aktivieren einer BU</title>
+<para>Wählen Sie die Menüoption <menuchoice><guimenu>Datei</guimenu><guimenuitem>Boot-Umgebungen verwalten</guimenuitem></menuchoice>, um das Fenster "Boot-Umgebungen verwalten" zu öffnen. Im Fenster wird jede BU aufgeführt. Die BU, die Sie aktuell booten, ist durch ein Häkchen links neben dem BU-Namen gekennzeichnet.</para>
+<para>Führen Sie zum Festlegen einer anderen BU als aktive Standard-BU beim nächsten Neustart die folgenden Schritte aus:</para>
+<orderedlist><listitem><para>Wählen Sie die Schaltfläche <guibutton>Aktiv bei Neustart</guibutton> für die BU, die beim nächsten Neustart die aktive Standard-BU sein soll.</para>
+</listitem>
+<listitem><para>Wählen Sie im Fenster "Boot-Umgebungen verwalten" die Schaltfläche <guibutton>OK</guibutton>.</para>
+</listitem>
+</orderedlist>
+</sect1>
+<sect1 id="rename-be"><title>Umbenennen einer BU</title>
+<para>Wählen Sie die Menüoption <menuchoice><guimenu>Datei</guimenu><guimenuitem>Boot-Umgebungen verwalten</guimenuitem></menuchoice>, um das Fenster "Boot-Umgebungen verwalten" zu öffnen. Im Fenster wird jede BU aufgeführt.</para>
+<para>Sie können die derzeit aktive BU nicht umbenennen.</para>
+<para>Sie können eine BU, die Sie zum Löschen markiert haben, nicht umbenennen.</para>
+<para>Führen Sie zum Umbenennen einer BU die folgenden Schritte aus:</para>
+<orderedlist><listitem><para>Doppelklicken Sie auf den Namen der BU, die Sie umbenennen möchten. Das Namensfeld kann nun bearbeitet werden.</para>
+</listitem>
+<listitem><para>Geben Sie den neuen Namen ein.</para>
+</listitem>
+<listitem><para>Wählen Sie im Fenster "Boot-Umgebungen verwalten" die Schaltfläche <guibutton>OK</guibutton>.</para>
+</listitem>
+</orderedlist>
+</sect1>
+<sect1 id="remove-be"><title>Entfernen einer BU</title>
+<para>Wählen Sie die Menüoption <menuchoice><guimenu>Datei</guimenu><guimenuitem>Boot-Umgebungen verwalten</guimenuitem></menuchoice>, um das Fenster "Boot-Umgebungen verwalten" zu öffnen. Im Fenster wird jede BU aufgeführt. Die Spalte rechts außen heißt "Löschen".</para>
+<para>In der mittleren Spalte des Fensters "Boot-Umgebungen verwalten" wird die Größe der BU angezeigt. Sie können eine BU entfernen, um mehr Speicherplatz auf Ihrem Speichergerät zu schaffen.</para>
+<para>Sie können die derzeit aktive BU nicht löschen.</para>
+<para>Sie können eine BU, die Sie umbenannt haben, nicht löschen.</para>
+<para>Führen Sie zum Löschen einer BU die folgenden Schritte aus:</para>
+<orderedlist><listitem><para>Markieren Sie das Kontrollkästchen <guibutton>Löschen</guibutton> für die BU, die gelöscht werden soll.</para>
+</listitem>
+<listitem><para>Wählen Sie im Fenster "Boot-Umgebungen verwalten" die Schaltfläche <guibutton>OK</guibutton>.</para>
+</listitem>
+</orderedlist>
+</sect1>
+</chapter>
+<chapter id="webinstall"><title>Arbeiten mit WebInstall</title>
+<para>Der Package Manager unterstützt die Installation von Paketen mithilfe eines einfachen WebInstall-Verfahrens. Beim WebInstall-Verfahren wird die Datei <filename>.p5i</filename> verwendet. Eine <filename>.p5i</filename>-Datei enthält Informationen zum Hinzufügen von Herausgebern und Paketen, die von diesen Herausgebern installiert werden können. Die in der Datei <filename>.p5i</filename> enthaltenen Informationen werden beim WebInstall-Verfahren gelesen und verwendet.</para>
+<sect1 id="webinstall-export"><title>Exportieren von Dateien mithilfe von WebInstall</title>
+<para>Wenn Sie möchten, dass andere Benutzer Pakete installieren können, die Sie auf Ihrem System installiert haben, können Sie die Installationsanweisungen für diese Paketdateien unter Anwendung des WebInstall-Verfahrens exportieren. Dabei wird eine Datei namens <filename>.p5i</filename> erstellt, die die Installationsanweisungen für die zu installierenden Pakete und Herausgeber enthält.</para>
+<para>Führen Sie zum Exportieren der Installationsanweisungen für die ausgewählten Pakete und die jeweiligen Herausgeber in eine <filename>.p5i</filename>-Datei die folgenden Schritte aus:</para>
+<orderedlist><listitem><para>Wählen Sie im Dropdown-Menü <guimenu>Herausgeber</guimenu> den Herausgeber, von dem Pakete in die Datei <filename>.p5i</filename> aufgenommen werden sollen.</para>
+</listitem>
+<listitem><para>Wählen Sie im Paketlistenbereich das Paket aus, für das Sie Installationsanweisungen bereitstellen möchten.</para>
+</listitem>
+<listitem><para>Klicken Sie auf <menuchoice><guisubmenu>Datei</guisubmenu><guimenuitem>Auswahl exportieren</guimenuitem></menuchoice>, um das Fenster "Bestätigung des Exports der Auswahl" anzuzeigen.</para>
+</listitem>
+<listitem><para>Klicken Sie auf die Schaltfläche <guibutton>OK</guibutton>, um die Auswahl zu bestätigen. Das Fenster "Auswahl exportieren" wird angezeigt.</para>
+</listitem>
+<listitem><para>Für die Datei <filename>p5i</filename> wird ein Standardname mit der Erweiterung <filename>.p5i</filename> vorgegeben. Sie können diesen Dateinamen ändern. Ändern Sie jedoch nicht die Erweiterung.</para>
+</listitem>
+<listitem><para>Für die Datei <filename>p5i</filename> wird ein Standardspeicherort vorgegeben. Sie können diesen ändern. Klicken Sie auf die Schaltfläche <guibutton>Durchsuchen</guibutton>, um im Dropdown-Menü im unteren rechten Bereich des Fensters "Auswahl exportieren" die Option <filename>p5i-Dateien</filename> auszuwählen und so nur die <filename>.p5i</filename>-Dateien in der Dateiliste anzuzeigen.</para>
+</listitem>
+<listitem><para>Klicken Sie auf die Schaltfläche <guibutton>Speichern</guibutton>, um den Dateinamen und Speicherort zu speichern.</para>
+</listitem>
+</orderedlist>
+</sect1>
+<sect1 id="webinstall-add"><title>Verwenden von WebInstall zum Hinzufügen von Herausgebern und Installationspaketen</title>
+<para>Mit dem WebInstall-Prozess können Sie Pakete mithilfe einer <filename>p5i</filename>-Datei installieren.</para>
+<orderedlist><listitem><para>Suchen Sie die <filename>.p5i</filename>-Datei. Diese Datei befindet sich u. U. auf Ihrem Desktop oder auf einer Website.</para>
+</listitem>
+<listitem><para>Wenden Sie eine der folgenden Methoden an, um den Package Manager im WebInstall-Modus zu starten:</para>
+<itemizedlist><listitem><para>Klicken Sie auf Ihrem Desktop auf die <filename>.p5i</filename>-Datei. Die zugehörige Anwendung (Package Manager Web Installer) wird gestartet.</para>
+</listitem>
+<listitem><para>Starten Sie den Package Manager über die Befehlszeile, und geben Sie den Pfad zur <filename>.p5i</filename>-Datei an. Geben Sie beispielsweise folgenden Befehl ein:</para>
+<screen># <userinput>packagemanager/<replaceable>path_to_p5i_file/file.p5i</replaceable></userinput></screen>
+</listitem>
+<listitem><para>Rufen Sie eine URL auf, die eine Verknüpfung zu einer <filename>.p5i</filename>-Datei enthält. Die <filename>.p5i</filename>-Datei muss sich auf einem Webserver befinden, auf dem der MIME-Typ registriert ist.</para>
+<para>Wenn sich die <filename>.p5i</filename>-Datei auf einem Webserver befindet, auf dem dieser MIME-Typ nicht registriert ist, speichern Sie die <filename>.p5i</filename>-Datei auf Ihrem Desktop, und klicken Sie auf sie, um WebInstall zu starten.</para>
+</listitem>
+</itemizedlist>
+</listitem>
+<listitem><para>Das Fenster "Installation/Update" wird angezeigt. Die Beschriftung des Fensters lautet "Package Manager Web Installer/Ihrem System wird Folgendes hinzugefügt:". Anschließend werden die Herausgeber und Pakete aufgeführt. Klicken Sie auf die Schaltfläche <guibutton>Fortfahren</guibutton>, um die Installation fortzusetzen.</para>
+<itemizedlist><listitem><para>Wenn der Paketherausgeber noch nicht auf Ihrem System konfiguriert ist, wird das Fenster "Herausgeber hinzufügen" angezeigt. Der Name und die URI des Herausgebers sind bereits eingegeben.</para>
+<para>Wenn es sich bei den hinzuzufügenden Herausgebern um sichere Herausgeber handelt, sind ein SSL-Schlüssel sowie ein SSL-Zertifikat erforderlich. Durchsuchen Sie das System nach dem SSL-Schlüssel und SSL-Zertifikat.</para>
+<para>Das Dialogfeld "Hinzufügen des Herausgebers abgeschlossen" wird angezeigt, wenn der Herausgeber erfolgreich hinzugefügt wurde. Klicken Sie auf die Schaltfläche <guibutton>OK</guibutton>, um die Installation fortzusetzen.</para>
+</listitem>
+<listitem><para>Wenn die Datei <filename>.p5i</filename> Pakete von einem deaktivierten Herausgeber enthält, öffnet WebInstall das Dialogfeld "Herausgeber aktivieren". Aktivieren Sie in diesem Dialogfeld den Herausgeber, um die Pakete installieren zu können.</para>
+</listitem>
+</itemizedlist>
+</listitem>
+<listitem><para>Die Anzeige im Fenster "Installation/Update" stimmt nun mit der Anzeige überein, die zu sehen ist, wenn Sie das Fenster <guibutton>Installation/Update</guibutton> über den Package Manager öffnen.</para>
+</listitem>
+</orderedlist>
+</sect1>
+</chapter>
+<chapter id="gkioy"><title>Fehlerbehebung</title>
+<para>Fehler-, Warn- und Informationsmeldungen werden in einem Protokoll gespeichert, das Sie jederzeit einsehen können.</para>
+<sect1 id="gkiod"><title>Anzeigen von Meldungsprotokollen</title>
+<para>Wählen Sie die Menüoption <menuchoice><guimenu>Ansicht</guimenu><guimenuitem>Protokolle</guimenuitem></menuchoice>, um das Fenster "Protokolle" zu öffnen. Im Fenster "Protokolle" werden Fehler, Warn- und Informationsmeldungen des Package Manager und Update-Managers angezeigt.</para>
+<para>Wählen Sie im unteren Bereich des Fensters "Protokolle" die Schaltfläche <guibutton>Löschen</guibutton>, um alle Meldungen zu löschen.</para>
+<para>Wenn ein Fehler oder eine Warnung protokolliert wird, wird ein gelbes Dreieck links in der Statusleiste angezeigt. Klicken Sie auf das gelbe Dreieck, um das Fenster "Protokolle" anzuzeigen.</para>
+</sect1>
+</chapter>
+<chapter id="pkg-mgr-prefs"><title>Festlegen von Einstellungen</title>
+<para>Wählen Sie die Menüoption <menuchoice><guimenu>Bearbeiten</guimenu><guimenuitem>Einstellungen</guimenuitem></menuchoice>, um einige Package Manager-Benutzerschnittstelleneinstellungen zu ändern.</para>
+<para>Das Fenster "Einstellungen" enthält drei Registerkarten:</para>
+<itemizedlist><listitem><para>Auf Registerkarte "Allgemein" können Sie Einstellungen zum Beenden und Einstellungen des Bestätigungs-Dialogfelds festlegen.</para></listitem>
+<listitem><para>Auf Registerkarte "Optionale Komponenten" können Sie die Einstellungen zum Definieren der optionalen Paketkomponenten festlegen, die installiert werden sollen, wenn Sie ein Paket installieren oder aktualisieren.</para></listitem>
+<listitem><para>Auf Registerkarte "Signaturrichtlinie" können Sie die Signaturrichtlinie für dieses Abbild festlegen.</para></listitem>
+</itemizedlist>
+<sect1 id="gjktu"><title>Beenden der Einstellungen</title>
+<para>Wählen Sie die Menüoption <menuchoice><guimenu>Bearbeiten</guimenu><guimenuitem>Einstellungen</guimenuitem></menuchoice> und öffnen Sie die Registerkarte "Allgemein".</para>
+<para>Wenn das Kontrollkästchen "Aktuellen Status beim Beenden beibehalten" markier ist, speichert der Package Manager die folgenden Einstellungen und stellt sie beim nächsten Starten des Package Manager wieder her:</para>
+<itemizedlist><listitem><para><emphasis role="strong">Vertikale und horizontale Trennlinien</emphasis> – Breiten und Höhen der Bereiche im Fenster</para>
+</listitem>
+<listitem><para><emphasis role="strong">Fenstergröße</emphasis> – Gesamtgröße des Fensters "Package Manager"</para>
+</listitem>
+<listitem><para><emphasis role="strong">Herausgeberoption</emphasis> – Der Herausgeber oder eine andere Option, die im Dropdown-Menü <guimenu>Herausgeber</guimenu> ausgewählt wird, wenn der Package Manager geschlossen wird.</para>
+</listitem>
+<listitem><para><emphasis role="strong">Kategorien</emphasis> – Die ausgewählte Kategorie und die erweiterten und reduzierten Kategorien jedes Herausgebers</para>
+</listitem>
+</itemizedlist>
+</sect1>
+<sect1 id="gjkug"><title>Einstellungen des Bestätigungs-Dialogfelds</title>
+<para>Wählen Sie die Menüoption <menuchoice><guimenu>Bearbeiten</guimenu><guimenuitem>Einstellungen</guimenuitem></menuchoice> und öffnen Sie die Registerkarte "Allgemein".</para>
+<para>Wenn ein Paket installiert, aktualisiert oder entfernt wird, wird ein Bestätigungs-Dialogfeld angezeigt, in dem die Liste der Pakete und die auszuführende Aktion angezeigt werden. Wenn diese Bestätigungs-Dialogfelder nicht angezeigt werden sollen, deaktivieren Sie im Fenster "Einstellungen" diese Optionen.</para>
+<para>Diese Einstellung kann für dieses Dialogfeld auch zurückgesetzt werden, indem Sie in einem bestimmten Bestätigungs-Dialogfeld das Kontrollkästchen "Dieses Bestätigungs-Dialogfeld nicht mehr anzeigen" markieren.</para>
+</sect1>
+<sect1 id="img-sig-policy"><title>Signaturrichtlinieneinstellungen</title>
+<para>Verwenden Sie die Schaltfläche auf der Registerkarte "Signaturrichtlinie", um Signaturen zu ignorieren oder anzufordern, wenn Pakete in diesem Abbild installiert werden. Wählen Sie zum Festlegen der Signaturrichtlinie für bestimmte Herausgeber im Fenster "Herausgeber verwalten" den Herausgeber, klicken Sie auf die Schaltfläche <guibutton>Ändern</guibutton>, und verwenden Sie die Registerkarte "Signaturrichtlinie" des Fensters "Herausgeber ändern".</para>
+<para>Die Auswahl für Abbildsignaturrichtlinien stimmt mit der Auswahl für Herausgebersignaturrichtlinien mit einem Unterschied überein: Die Einstellungen gelten für alle im Abbild installierten Pakete und nicht nur für die von einem bestimmten Herausgeber installierten Pakete. Weitere Informationen dazu finden Sie unter <xref linkend="pub-sig-policy"/>.</para>
+</sect1>
+<sect1 id="languages"><title>Einstellungen der optionalen Komponenten - Sprachauswahl</title>
+<para>Wählen Sie die Menüoption <menuchoice><guimenu>Bearbeiten</guimenu><guimenuitem>Einstellungen</guimenuitem></menuchoice>, und wählen Sie dann die Registerkarte "Optionale Komponenten".</para>
+<para>Die Option "Alle Sprachen installieren" ist standardmäßig in der Sprachauswahl aller Pakete ausgewählt. Sie können bei der Installation Speicherplatz sparen, wenn Sie einen Teil der Sprachen zum Installieren auswählen.</para>
+<para>Wenn "Nur diese Sprachen installieren" ausgewählt ist, können Sie auf das Kontrollkästchensymbol in der Überschrift der äußeren linken Spalte klicken, um alle Sprachen auszuwählen. Klicken Sie erneut auf die Spaltenüberschrift, um die Auswahl aller Sprachen aufzuheben. Klicken Sie auf die Überschriften "Sprache" und "Gebiet", um die Liste zu sortieren.</para>
+<para>Klicken Sie auf die Schaltfläche "OK", um die Änderungen zu speichern. Diese Änderungen gelten für die derzeit installierten Pakete sowie für künftige Paketinstallationen und -updates. Das Abbild wird entsprechend aktualisiert, um die optionalen Paketkomponenten entsprechend den neuen Einstellungen zu installieren bzw. zu entfernen.</para>
+<para>Wenn Sie das Abbild zuvor aktualisiert haben, um nur einen Teil der Sprachen zu installieren, ist die Option "Nur diese Sprachen installieren" standardmäßig in diesem Fenster ausgewählt. Die Sprachenliste ist ausgegraut, wenn Sie die Option "Alle Sprachen installieren" auswählen.</para>
+</sect1>
+<sect1 id="dev-doc"><title>Sonstige Einstellungen der optionalen Komponenten</title>
+<para>Wählen Sie die Menüoption <menuchoice><guimenu>Bearbeiten</guimenu><guimenuitem>Einstellungen</guimenuitem></menuchoice>, und wählen Sie dann die Registerkarte "Optionale Komponenten".</para>
+<para>Unter "Sonstige Komponentenauswahloptionen" sind standardmäßig die Optionen "Alle Entwicklungsdateien installieren" und "Alle Dokumentationen installieren" ausgewählt. Sie können in Ihrer Installation Speicherplatz sparen, indem Sie die Auswahl der Entwicklungsdateien und der Dokumentationen aufheben.</para>
+<para>Klicken Sie auf die Schaltfläche "OK", um die Änderungen zu speichern. Diese Änderungen gelten für die derzeit installierten Pakete sowie für künftige Paketinstallationen und -updates. Das Abbild wird entsprechend aktualisiert, um die optionalen Paketkomponenten entsprechend den neuen Einstellungen zu installieren bzw. zu entfernen.</para>
+</sect1>
+</chapter>
+<glossary id="glossary"><title>Glossar</title>
+<glossentry><glossterm>Aliasname</glossterm>
+<glossdef><para>Ein anderer Name für einen Herausgeber.</para>
+</glossdef>
+</glossentry>
+<glossentry><glossterm>Boot-Umgebung (BU)</glossterm>
+<glossdef><para>Eine Instanz einer bootfähigen Oracle Solaris-Umgebung. Das Root-Dateisystem und alle anderen Dateisysteme der Boot-Umgebung, die Systemsoftware enthalten, müssen ZFS-Datensätze sein.</para>
+<para>Die derzeit gebootete Boot-Umgebung wird als aktive Boot-Umgebung bezeichnet. Ein System kann mehrere Boot-Umgebungen haben. Sie können die BU auswählen, die beim Neustart gebootet werden soll.</para>
+</glossdef>
+</glossentry>
+<glossentry><glossterm>Klon</glossterm>
+<glossdef><para>Eine genaue Kopie.</para>
+<para>Ein Klon kann eine genaue Kopie eines Betriebssystems, eines Dateisystems oder eines Datenträgers sein. Diese Kopie ist zu 100 % mit dem Original kompatibel.</para>
+</glossdef>
+</glossentry>
+<glossentry><glossterm>Datensatz</glossterm>
+<glossdef><para>Ein generischer Name für die folgenden ZFS-Elemente: Klone, Dateisysteme, Schnappschüsse oder Datenträger. Jeder Datensatz wird durch einen eindeutigen Namen im ZFS-Namensraum gekennzeichnet.</para>
+</glossdef>
+</glossentry>
+<glossentry><glossterm>Abbild</glossterm>
+<glossdef><para>Eine Sammlung von Betriebssystemsoftware in einem Paket, das gebootet und installiert werden kann.</para>
+<para>Ein Speicherort auf Ihrem System, an dem Pakete und die dazugehörigen Dateien, Verzeichnisse, Verknüpfungen und Abhängigkeiten installiert werden können.</para>
+</glossdef>
+</glossentry>
+<glossentry><glossterm>Quelle</glossterm>
+<glossdef><para>Ein Paketserver, auf dem ein Herausgeber Pakete veröffentlicht.</para>
+</glossdef>
+</glossentry>
+<glossentry><glossterm>Paket</glossterm>
+<glossdef><para>Eine Sammlung von Dateien, Verzeichnissen, Verknüpfungen, Treibern und Abhängigkeiten in einem definierten Format.</para>
+</glossdef>
+</glossentry>
+<glossentry><glossterm>Herausgeber</glossterm>
+<glossdef><para>Eine Person, Gruppe oder ein Unternehmen, das ein Paket auf einem Paketserver entwirft, erstellt und veröffentlicht. Der Paketserver dient wiederum als Server für Pakete vom (Standard-) Herausgeber (zum Herunterladen).</para>
+</glossdef>
+</glossentry>
+<glossentry><glossterm>Systemherausgeber</glossterm>
+<glossdef><para>Systemherausgeber sind bestimmte Herausgeber, die insbesondere in verknüpften Abbildern und nicht globalen Zonen verwendet werden, um zu gewährleisten, dass bestimmte Pakete der globalen Zone entsprechen. Die globale Zone schränkt Pakete in nicht globalen Zonen ein, indem eben diese Systemherausgeber in der nicht globalen Zone konfiguriert werden. Diese Herausgeber sind besonders, weil die nicht globalen Zonen keine Änderungen an diesen vornehmen können (z. B. Entfernen, Deaktivieren, Bearbeiten oder Ändern ihrer Priorität).</para>
+</glossdef>
+</glossentry>
+</glossary>
+</book>

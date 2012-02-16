@@ -1,0 +1,713 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook XML V4.3//EN" "http://www.oasis-open.org/docbook/xml/4.3/docbookx.dtd">
+<book id="pkgmgr" lang="ko"><title><trademark class="registered">Oracle</trademark> Solaris 11 패키지 관리자 온라인 도움말</title>
+<bookinfo><authorgroup><author><firstname>Oracle</firstname>
+<surname>Corporation</surname>
+</author>
+</authorgroup>
+<releaseinfo>Oracle Solaris 11</releaseinfo>
+<pubdate>2011년 6월</pubdate>
+<publisher><publishername>Oracle Corporation</publishername>
+<address><street>500 Oracle Parkway</street>
+<city>Redwood City</city>
+<state>CA</state>
+<postcode>94065</postcode>
+<country>U.S.A.</country>
+</address>
+</publisher>
+<copyright><year>2008, 2011</year></copyright>
+<legalnotice><para>본 소프트웨어와 관련 문서는 사용 제한 및 기밀 유지 규정을 포함하는 라이센스 계약서에 의거해 제공되며, 지적 재산법에 의해 보호됩니다. 라이센스 계약서 상에 명시적으로 허용되어 있는 경우나 법규에 의해 허용된 경우를 제외하고, 어떠한 부분도 복사, 재생, 번역, 방송, 수정, 라이센스, 전송, 배포, 진열, 실행, 발행, 또는 전시될 수 없습니다. 본 소프트웨어를 리버스 엔지니어링, 디스어셈블리 또는 디컴파일하는 것은 상호 운용에 대한 법규에 의해 명시된 경우를 제외하고는 금지되어 있습니다.</para>
+<para>이 안의 내용은 사전 공지 없이 변경될 수 있으며 오류가 존재하지 않음을 보증하지 않습니다. 만일 오류를 발견하면 서면으로 통지해 주기 바랍니다.</para>
+<para>만일 본 소프트웨어나 관련 문서를 미국 정부나 또는 미국 정부를 대신하여 라이센스한 개인이나 법인에게 배송하는 경우, 다음 공지 사항이 적용됩니다.</para>
+<para>U.S. GOVERNMENT RIGHTS Programs, software, databases, and related documentation and technical data delivered to U.S. Government customers are "commercial computer software" or "commercial technical data" pursuant to the applicable Federal Acquisition Regulation and agency-specific supplemental regulations. As such, the use, duplication, disclosure, modification, and adaptation shall be subject to the restrictions and license terms set forth in the applicable Government contract, and, to the extent applicable by the terms of the Government contract, the additional rights set forth in FAR 52.227-19, Commercial Computer Software License (December 2007). Oracle America, Inc., 500 Oracle Parkway, Redwood City, CA 94065.</para>
+<para>본 소프트웨어 혹은 하드웨어는 다양한 정보 관리 애플리케이션의 일반적인 사용을 목적으로 개발되었습니다. 본 소프트웨어 혹은 하드웨어는 개인적인 상해를 초래할 수 있는 애플리케이션을 포함한 본질적으로 위험한 애플리케이션에서 사용할 목적으로 개발되거나 그 용도로 사용될 수 없습니다. 만일 본 소프트웨어 혹은 하드웨어를 위험한 애플리케이션에서 사용할 경우, 라이센스 사용자는 해당 애플리케이션의 안전한 사용을 위해 모든 적절한 비상-안전, 백업, 대비 및 기타 조치를 반드시 취해야 합니다. Oracle Corporation과 그 자회사는 본 소프트웨어 혹은 하드웨어를 위험한 애플리케이션에서의 사용으로 인해 발생하는 어떠한 손해에 대해서도 책임지지 않습니다.</para>
+<para>Oracle과 Java는 Oracle Corporation 및/또는 그 자회사의 등록 상표입니다. 기타의 명칭들은 각 해당 명칭을 소유한 회사의 상표일 수 있습니다.</para>
+<para>AMD, Opteron, AMD 로고, 및AMD Opteron 로고는 Advanced Micro Devices의 상표 내지는 등록 상표입니다. Intel 및 Intel Xeon Intel Corporation의 등록 상표입니다. SPARC 상표 일체는 라이센스에 의거하여 사용되며SPARC International, Inc.의 상표 내지는 등록 상표입니다. UNIX는 X/Open Company, Ltd.를 통해 라이센스된 등록상표입니다.</para>
+<para>본 소프트웨어 혹은 하드웨어와 관련문서(설명서)는 제 3자로부터 제공되는 컨텐츠, 제품 및 서비스에 접속할 수 있거나 정보를 제공합니다. Oracle Corporation과 그 자회사는 제 3자의 컨텐츠, 제품 및 서비스와 관련하여 어떠한 책임도 지지 않으며 명시적으로 모든 보증에 대해서도 책임을 지지 않습니다. Oracle Corporation과 그 자회사는 제 3자의 컨텐츠, 제품 및 서비스에 접속하거나 사용으로 인해 초래되는 어떠한 손실, 비용 또는 손해에 대해 어떠한 책임도 지지 않습니다.</para>
+</legalnotice>
+</bookinfo>
+<chapter id="about"><title>패키지 관리자 정보</title>
+<para>패키지 관리자는 Oracle Solaris IPS(이미지 패키징 시스템)용 GUI(그래픽 사용자 인터페이스)입니다.</para>
+<para>이 문서에서 사용되는 용어의 정의는 <xref linkend="glossary"/>를 참조하십시오.</para>
+<sect1 id="gikcw"><title>Oracle Solaris 이미지 패키징 시스템</title>
+<para>Oracle Solaris IPS(이미지 패키징 시스템)는 네트워크의 패키지 저장소와 상호 작용하는 소프트웨어 전달 시스템입니다. IPS는 소프트웨어 설치, 업그레이드 및 제거를 비롯하여 소프트웨어 수명 주기 관리 기능을 제공하는 프레임워크입니다.</para>
+<para>Oracle Solaris 운영 체제를 설치한 후 사용하려는 일부 소프트웨어를 사용하지 못할 수 있습니다. 대개는 IPS 패키지 저장소에서 이 소프트웨어를 사용할 수 있습니다. 패키지 관리자 또는 <literal>pkg</literal>(1M) 명령을 사용하여 패키지 저장소에서 패키지를 다운로드하여 설치할 수 있습니다.</para>
+<para>IPS를 통해 기존 IPS 패키지 저장소의 복사본을 만들고, 고유의 IPS 패키지 저장소를 만들고, 고유의 IPS 패키지를 게시할 수도 있습니다. IPS에 대한 자세한 내용은 Oracle Solaris 11 Information Library를 참조하십시오. <literal>download.oracle.com</literal>으로 이동하여 왼쪽에 있는 Documentation Index를 선택하고 Systems Software, Oracle Solaris 11, View Library를 차례로 선택하십시오. 특히 <citetitle>Adding and Updating Oracle Solaris 11 Software Packages</citetitle>를 참조하십시오.</para>
+</sect1>
+<sect1 id="pm-win"><title>패키지 관리자</title>
+<para>패키지 관리자는 IPS 명령줄 인터페이스에서 제공하는 기능 중 일부를 제공합니다.</para>
+<para>패키지 관리자를 사용하면 다음 작업을 수행할 수 있습니다.</para>
+<itemizedlist><listitem><para>IPS 패키지 검색, 설치, 업데이트 및 제거. <xref linkend="manage-pkg"/> 참조</para>
+</listitem>
+<listitem><para>시스템 업데이트(시스템의 모든 패키지를 업데이트). <xref linkend="update_all"/> 참조하</para>
+</listitem>
+<listitem><para>IPS 패키지 게시자 추가, 수정 및 삭제. <xref linkend="manage-publisher"/> 참조</para>
+</listitem>
+<listitem><para>부트 환경 나열, 이름 변경, 삭제 및 관리. <xref linkend="manage-be"/> 참조</para>
+</listitem>
+<listitem><para>WebInstall 설치 파일(<filename>.p5i</filename>) 만들기. <xref linkend="webinstall"/> 참조</para>
+</listitem>
+</itemizedlist>
+<para>이 설명서에서는 패키지 관리자 창의 다음 기능을 다룹니다.</para>
+<itemizedlist><listitem><para>창 가운데에 있는 큰 창은 패키지 목록 창입니다. 이 창에 정보 메시지가 표시되는 경우도 있지만 일반적으로는 패키지 목록이 표시됩니다.</para>
+</listitem>
+<listitem><para>창 위쪽의 메뉴 표시줄은 패키지 관리자의 거의 모든 기능을 제공합니다.</para>
+</listitem>
+<listitem><para>메뉴 표시줄 아래에 있는 도구 모음의 왼쪽에는 자주 사용되는 몇 가지 작업을 제공하는 버튼이 있습니다. 구분선 왼쪽의 버튼은 전역 기능(업데이트를 사용할 수 있는 모든 패키지 업데이트 또는 패키지 목록 및 패키지 상태 새로 고침)을 수행합니다. 구분선 오른쪽의 버튼은 선택된 패키지에 대해서만 작동합니다.</para>
+</listitem>
+<listitem><para>도구 모음 오른쪽의 검색 필드는 패키지 목록 창의 컨텐츠를 제어하는 데 유용합니다. <xref linkend="search-pkg"/> 참조</para>
+</listitem>
+<listitem><para>버튼 아래의 <guimenu>게시자</guimenu> 드롭다운 메뉴는 패키지 목록 창의 컨텐츠를 제어하는 데 유용하며 새 게시자를 추가하는 데도 사용할 수 있습니다. <xref linkend="list-pkg"/> "게시자별" 참조</para>
+</listitem>
+<listitem><para>검색 필드 아래의 <guimenu>보기</guimenu> 드롭다운 메뉴는 패키지 목록 창의 컨텐츠를 제어하는 데 유용합니다. "패키지 상태별" 패키지 나열 참조</para>
+</listitem>
+<listitem><para><guimenu>게시자</guimenu> 메뉴 아래의 범주 창은 패키지 목록 창의 컨텐츠를 제어하는 데 유용합니다. "범주별" 패키지 나열 참조</para>
+</listitem>
+<listitem><para>소프트웨어 범주 목록 아래에는 이 세션에서 수행한 검색 목록이 표시됩니다.</para>
+</listitem>
+<listitem><para>패키지 목록 창 아래에는 패키지 세부 정보 창이 표시됩니다. <xref linkend="package-version"/> 참조</para>
+</listitem>
+</itemizedlist>
+</sect1>
+</chapter>
+<chapter id="manage-pkg"><title>패키지 관리</title>
+<para>다양한 조건에 따라 패키지를 나열할 수 있으며, 패키지를 설치, 업데이트 및 제거할 수 있습니다.</para>
+<sect1 id="list-pkg"><title>패키지 나열</title>
+<para>패키지 관리자 목록 창의 패키지 목록은 <guimenu>게시자</guimenu> 드롭다운 메뉴, <guimenu>보기</guimenu> 드롭다운 메뉴, 범주 창 및 검색 필드에서 선택한 내용에 따라 달라집니다.</para>
+<para>열 제목을 눌러 패키지 목록의 순서를 재지정할 수 있습니다.</para>
+<para><guibutton>새로 고침</guibutton> 버튼 또는 <menuchoice><guimenu>패키지</guimenu><guimenuitem>새로 고침</guimenuitem></menuchoice> 메뉴 옵션을 사용하여 저장소 카탈로그를 다시 읽고 패키지 목록 및 패키지 상태를 업데이트할 수 있습니다. 또한 새로 고침은 패키지 관리자를 열 때마다 시도됩니다.</para>
+<sect2 id="gkihe"><title>게시자별</title>
+<para><guimenu>게시자</guimenu> 드롭다운 메뉴를 통해 게시자에 따라 패키지를 나열할 수 있습니다.</para>
+<itemizedlist><listitem><para>메뉴 위쪽에는 게시자 추가 대화 상자를 사용하거나 <literal>pkg</literal> 명령을 사용하여 추가한 각 게시자의 이름이 나열됩니다. 해당 게시자 중 하나를 선택하면 선택한 해당 게시자로부터 사용 가능한 패키지만 패키지 목록 창에 표시됩니다. 이 경우 모든 패키지에 대한 게시자가 동일하므로 패키지 목록 창에는 이름, 상태 및 요약 열만 표시됩니다.</para>
+</listitem>
+<listitem><para><guimenuitem>모든 게시자</guimenuitem> — 패키지 목록 창에 모든 게시자의 패키지를 표시합니다. 패키지 목록 창에는 이름, 상태, 게시자 및 요약 열이 표시됩니다.</para>
+<para>예: 모든 게시자로부터 업데이트를 사용할 수 있는 매체 장치 드라이버를 모두 나열하려면 <guimenu>게시자</guimenu> 메뉴에서 <guimenuitem>모든 게시자</guimenuitem>를 선택하고 <menuchoice><guimenu>드라이버</guimenu><guimenuitem>매체</guimenuitem></menuchoice> 범주를 선택한 다음 <guimenu>보기</guimenu> 메뉴에서 <guimenuitem>업데이트</guimenuitem>를 선택합니다.</para>
+</listitem>
+<listitem><para><guimenuitem>설치된 모든 패키지</guimenuitem> — 모든 게시자로부터 설치된 패키지를 모두 표시합니다.</para>
+<para>예: 현재 <literal>solaris</literal> 게시자로부터 설치된 글꼴 패키지를 모두 나열하려면 <guimenu>게시자</guimenu> 메뉴에서 <guimenuitem>설치된 모든 패키지</guimenuitem>를 선택하고 <menuchoice><guimenu>시스템</guimenu><guimenuitem>글꼴</guimenuitem></menuchoice> 범주를 선택한 다음 게시자 열 제목을 눌러 목록을 게시자별로 정렬하고 <literal>solaris</literal> 항목이 표시될 때까지 아래로 스크롤합니다.</para>
+</listitem>
+<listitem><para><guimenuitem>모든 게시자(검색)</guimenuitem> — 패키지 목록 창에 패키지 목록 대신 정보 메시지를 표시합니다. 메시지에는 구성한 모든 게시자가 나열되며 해당 게시자의 모든 패키지를 확인할 수 있는 방법이 표시됩니다. <guimenuitem>모든 게시자(검색)</guimenuitem>를 사용하는 검색에 대한 자세한 내용은 <xref linkend="search-pkg"/>을 참조하십시오.</para>
+</listitem>
+<listitem><para><guimenuitem>추가...</guimenuitem> — 게시자 추가 창을 엽니다.</para>
+</listitem>
+</itemizedlist>
+</sect2>
+<sect2 id="gkihp"><title>패키지 상태별</title>
+<para><guimenu>보기</guimenu> 드롭다운 메뉴를 통해 패키지 상태에 따라 패키지를 나열할 수 있습니다. 패키지 상태는 설치됨, 설치되지 않음, 업데이트를 사용할 수 있음일 수 있습니다. <guimenu>보기</guimenu> 메뉴에 표시되는 아이콘은 패키지 목록 창의 상태 열에 표시되는 아이콘과 동일합니다.</para>
+<itemizedlist><listitem><para><guimenuitem>모든 패키지</guimenuitem> — 선택된 범주 내 선택된 게시자로부터 사용 가능한 모든 패키지 또는 지정된 검색 문자열과 일치하는 모든 패키지를 표시합니다.</para>
+<para>예: <literal>solaris</literal> 게시자로부터 설치된 웹 서비스 패키지, 설치되지 않은 웹 서비스 패키지, 업데이트를 사용할 수 있는 웹 서비스 패키지를 모두 나열하려면 <guimenu>게시자</guimenu> 메뉴에서 <literal>solaris</literal>를 선택하고 <menuchoice><guimenu>웹 서비스</guimenu></menuchoice> 범주를 선택한 다음 <guimenu>보기</guimenu> 메뉴에서 <guimenuitem>모든 패키지</guimenuitem>를 선택합니다.</para>
+</listitem>
+<listitem><para><guimenuitem>설치된 패키지</guimenuitem> — 선택된 범주 내 선택된 게시자로부터 설치된 모든 패키지 또는 지정된 검색 문자열과 일치하는 설치된 모든 패키지를 표시합니다. <menuchoice><guimenu>게시자</guimenu><guimenuitem>설치된 모든 패키지</guimenuitem></menuchoice> 옵션을 참조하십시오.</para>
+<para>예: <literal>solaris</literal> 게시자로부터 설치된 웹 서버 패키지만 나열하려면 <guimenu>게시자</guimenu> 메뉴에서 <literal>solaris</literal>를 선택하고 <menuchoice><guimenu>웹 서비스</guimenu></menuchoice> 범주를 선택한 다음 <guimenu>보기</guimenu> 메뉴에서 <guimenuitem>설치된 패키지</guimenuitem>를 선택합니다.</para>
+</listitem>
+<listitem><para><guimenuitem>업데이트</guimenuitem> — 선택된 범주 내 선택된 게시자로부터 업데이트를 사용할 수 있는 모든 패키지 또는 지정된 검색 문자열과 일치하는 업데이트를 사용할 수 있는 모든 패키지를 표시합니다.</para>
+<para>예: 모든 게시자로부터 업데이트를 사용할 수 있는 장치 드라이버를 모두 나열하려면 <guimenu>게시자</guimenu> 메뉴에서 <guimenuitem>모든 게시자</guimenuitem>를 선택하고 <guimenu>드라이버</guimenu> 범주를 선택한 다음 <guimenu>보기</guimenu> 메뉴에서 <guimenuitem>업데이트</guimenuitem>를 선택합니다.</para>
+</listitem>
+<listitem><para><guimenuitem>설치되지 않은 패키지</guimenuitem> — 선택된 범주 내 선택된 게시자로부터 설치되지 않은 모든 패키지 또는 지정된 검색 문자열과 일치하는 설치되지 않은 모든 패키지를 표시합니다.</para>
+<para>예: 현재 <literal>solaris</literal> 게시자로부터 설치되지 않은 글꼴 패키지를 모두 나열하려면 <guimenu>게시자</guimenu> 메뉴에서 <literal>solaris</literal>를 선택하고 <menuchoice><guimenu>시스템</guimenu><guimenuitem>글꼴</guimenuitem></menuchoice> 범주를 선택한 다음 <guimenu>보기</guimenu> 메뉴에서 <guimenuitem>설치되지 않은 패키지</guimenuitem>를 선택합니다.</para>
+</listitem>
+<listitem><para><guimenuitem>선택된 패키지</guimenuitem> — 현재 선택된 모든 패키지를 나열합니다. <xref linkend="select-pkg"/>을 참조하십시오.</para>
+</listitem>
+</itemizedlist>
+</sect2>
+<sect2 id="gkigv"><title>범주별</title>
+<para>패키지 관리자 창 왼쪽에 있는 범주 창에서 소프트웨어 유형별로 사용 가능한 패키지를 찾아볼 수 있습니다. 하위 범주를 표시하려면 범주 이름을 누릅니다. 선택된 게시자 및 패키지 상태와 지정된 검색 조건에 따라 선택된 범주 또는 하위 범주의 패키지가 패키지 목록 창에 나열됩니다.</para>
+<para>범주 창에서는 소프트웨어 유형을 지정할 수도 있지만 <guimenuitem>모든 범주</guimenuitem> 및 <guimenuitem>최근 검색</guimenuitem>을 선택할 수도 있습니다. <guimenuitem>최근 검색</guimenuitem>에 대한 자세한 내용은 <xref linkend="search-pkg"/> "이전 검색 반복"을 참조하십시오.</para>
+</sect2>
+</sect1>
+<sect1 id="search-pkg"><title>패키지 검색</title>
+<para>다음 두 가지 방법 중 하나로 패키지를 검색할 수 있습니다.</para>
+<itemizedlist><listitem><para>패키지 목록 창에서 포커스를 설정합니다. 예를 들어, <menuchoice><guimenu>편집</guimenu><guimenuitem>패키지 목록으로 이동</guimenuitem></menuchoice>을 선택하고 입력을 시작합니다. 입력하는 내용에 따라 현재 패키지 목록 창에 나열된 패키지 중에서 일치 항목이 식별됩니다.</para>
+</listitem>
+<listitem><para>도구 모음의 검색 필드를 사용합니다.</para>
+</listitem>
+</itemizedlist>
+<sect2 id="gkjbd"><title>검색 문자열 입력</title>
+<para>검색 필드에 문자열을 입력한 다음 Enter 키를 누르거나 검색 필드 오른쪽에 있는 돋보기 아이콘을 누릅니다.</para>
+<itemizedlist><listitem><para><guimenu>게시자</guimenu> 메뉴 선택 — <guimenu>게시자</guimenu> 메뉴에서 선택한 내용에 따라 패키지 관리자가 특정 게시자 또는 모든 게시자의 각 패키지에 대한 정보에서 검색 문자열을 검색합니다.</para>
+<para><guimenuitem>모든 게시자</guimenuitem>를 선택하든 <guimenuitem>모든 게시자(검색)</guimenuitem>를 선택하든 검색 결과는 동일합니다. <guimenuitem>모든 게시자(검색)</guimenuitem>를 사용하는 것이 더 빠르다는 것만 다릅니다. <guimenuitem>모든 게시자</guimenuitem>를 선택할 때는 모든 게시자의 데이터가 로드되어 지연이 발생하기 때문입니다. <guimenuitem>모든 게시자(검색)</guimenuitem>를 사용하면 패키지 목록 창에 나열되는 모든 게시자의 데이터를 로드하지 않고 모든 게시자에 대해 검색이 수행됩니다.</para>
+</listitem>
+<listitem><para><guimenu>보기</guimenu> 메뉴 선택 — <guimenu>보기</guimenu> 메뉴에서 선택된 패키지 상태에 따라 검색 결과가 패키지 목록 창에 표시됩니다. 검색을 다시 실행하지 않고 <guimenu>보기</guimenu> 메뉴 선택을 변경하여 패키지 목록 창에 동일한 검색 결과의 다른 일부분을 표시할 수 있습니다.</para>
+</listitem>
+</itemizedlist>
+<para>패키지 관리자는 이름, 요약, 설명, 범주, 패키지 내에 포함된 파일 이름 등의 패키지 정보를 검색합니다. 와일드카드를 사용하지 않을 경우 정확한 일치 항목만 검색됩니다.</para>
+<variablelist><varlistentry><term><literal>AND</literal></term>
+<listitem><para>검색 용어를 공백이나 <literal>AND</literal>로 구분하면 패키지 관리자는 검색 용어를 <emphasis role="strong">모두</emphasis> 포함하는 패키지를 검색합니다. 이 동작이 기본 검색 동작입니다.</para>
+<para>예: 검색 문자열이 <literal>python book</literal> 또는 <literal>python AND book</literal>이면 검색 결과에는 패키지 정보에 <literal>python</literal><emphasis>과</emphasis> <literal>book</literal>이 <emphasis>모두</emphasis> 들어 있는 패키지만 포함됩니다. 예를 들어, Python 프로그래밍에 대한 북인 <literal>diveintopython</literal> 패키지는 검색 결과에 나타나지만 <literal>python-26</literal>은 나타나지 않습니다.</para>
+</listitem>
+</varlistentry>
+<varlistentry><term>큰따옴표</term>
+<listitem><para>해당 검색 용어와 정확히 일치하도록 검색 용어를 큰따옴표로 묶습니다.</para>
+<para>예: 큰따옴표로 묶인 <literal>"ethernet driver"</literal>의 경우 <literal>Fast Ethernet Driver</literal>와는 일치하지만 <literal>Ethernet Adapter Driver</literal>와는 일치하지 않습니다.</para>
+</listitem>
+</varlistentry>
+<varlistentry><term>와일드카드</term>
+<listitem><para>검색 문자열에 <literal>*</literal> 와일드카드를 사용할 수 있습니다. 와일드카드를 사용할 경우 검색 속도가 느려질 수 있습니다.</para>
+<para>예: <literal>802.11*</literal>는 <literal>802.11b/g</literal> 및 <literal>802.11a/b/g</literal>와 일치합니다.</para>
+<para><literal>802.11*</literal>는 <literal>IEEE802.11b/g</literal>와 일치하지 않습니다. <literal>IEEE802.11b/g</literal>와 일치시키려면 검색 문자열로 <literal>*802.11*</literal>를 사용하십시오.</para>
+</listitem>
+</varlistentry>
+<varlistentry><term><literal>OR</literal></term>
+<listitem><para>검색 용어를 <literal>OR</literal>로 구분하면 패키지 관리자는 검색 용어 중 <emphasis role="strong">임의</emphasis>의 하나를 포함하는 패키지를 검색합니다.</para>
+<para>예: <literal>python OR book</literal>은 패키지 정보에 <literal>python</literal>이 들어 있는 모든 패키지와 패키지 정보에 <literal>book</literal>이 들어 있는 모든 패키지와 일치합니다.</para>
+</listitem>
+</varlistentry>
+</variablelist>
+<para>이러한 검색 문자열 수정자를 함께 사용할 수 있습니다. 즉, 하나의 검색 문자열에서 AND와 OR, 큰따옴표, *를 모두 사용할 수 있습니다.</para>
+</sect2>
+<sect2 id="gkjao"><title>검색 필드 지우기</title>
+<para>검색 문자열과 검색 결과 목록을 모두 지우려면 검색 필드 또는 편집 메뉴를 사용합니다.</para>
+<itemizedlist><listitem><para>검색 필드에서 <literal>X</literal> 아이콘을 누릅니다.</para>
+</listitem>
+<listitem><para><guimenu>편집</guimenu> 메뉴에서 <guimenuitem>검색 지우기</guimenuitem> 옵션을 선택합니다.</para>
+</listitem>
+</itemizedlist>
+</sect2>
+<sect2 id="gkjbe"><title>검색 취소</title>
+<para>검색 작업 중에는 패키지 관리자 창 아래쪽에 있는 상태 표시줄의 오른쪽 끝에 사용 중 표시줄이 표시됩니다. 사용 중 표시줄의 오른쪽 끝에는 <literal>X</literal> 아이콘이 표시됩니다. 진행 중인 검색을 취소하려면 사용 중 표시줄의 <literal>X</literal> 아이콘을 누릅니다.</para>
+</sect2>
+<sect2 id="gkjbb"><title>이전 검색 결과 다시 표시</title>
+<para>현재 패키지 관리자 세션 중 이미 수행한 검색의 결과가 범주 창의 <guimenuitem>최근 검색</guimenuitem>에 저장되어 있습니다.</para>
+<para>패키지 목록 창에 정보 메시지를 표시하려면 범주 창에서 <guimenuitem>최근 검색</guimenuitem> 레이블을 선택합니다. 그러면 패키지 목록 창에 이전 검색 결과 목록이 표시됩니다. 해당 결과를 다시 표시하려면 "결과" 링크를 누릅니다.</para>
+<para>범주 창에서 이전 검색 결과 목록을 확장하거나 숨기려면 <guimenuitem>최근 검색</guimenuitem> 레이블 왼쪽에 있는 화살표를 선택합니다. 해당 검색 결과를 다시 표시하려면 최근 검색 목록에서 항목을 선택합니다.</para>
+<para>일치하는 패키지가 없는 검색은 최근 검색 목록에 나타나지 않습니다.</para>
+<para><guibutton>새로 고침</guibutton> 버튼 또는 <menuchoice><guimenu>패키지</guimenu><guimenuitem>새로 고침</guimenuitem></menuchoice> 메뉴 옵션을 선택하면 최근 검색 결과가 모두 삭제됩니다.</para>
+</sect2>
+</sect1>
+<sect1 id="package-version"><title>추가 정보 표시</title>
+<para>패키지 세부 정보 창 또는 패키지 버전 정보 대화 상자에서 패키지에 대한 추가 정보를 확인합니다.</para>
+<sect2 id="gkiti"><title>패키지 세부 정보 창</title>
+<para>패키지에 대한 추가 정보를 표시하려면 패키지 목록의 패키지를 마우스 왼쪽 버튼으로 눌러 강조 표시합니다. 패키지 목록 창 아래의 패키지 세부 정보 창에 해당 게시자로부터 사용 가능한 최신 버전, 패키지 크기, 패키지 파일, 종속성, 라이센스 조건 등의 정보가 표시됩니다.</para>
+<para>패키지가 설치된 후 패키지의 이름이 바뀐 경우 일반 탭의 다음으로 이름 변경 필드에 패키지의 새 이름이 표시됩니다.</para>
+<para>버전 탭에는 설치할 수 있는 패키지 버전 목록이 표시됩니다. 버전을 설치하려면 목록에서 해당 버전을 선택하고 목록 오른쪽에 있는 <guibutton>설치/업데이트</guibutton> 버튼을 누릅니다. <xref linkend="install-pkg"/>를 참조하십시오.</para>
+<para>패키지 목록 창에 정보 메시지가 표시되는 경우 패키지 세부 정보 창이 표시되지 않습니다.</para>
+</sect2>
+<sect2 id="gkitc"><title>패키지 버전 정보 대화 상자</title>
+<para><guimenu>패키지</guimenu> 메뉴를 팝업하려면 패키지 목록의 패키지를 마우스 오른쪽 버튼으로 누릅니다.</para>
+<para>설치된 패키지의 버전과 설치 또는 업그레이드할 수 있는 최신 버전(해당하는 경우)을 보여 주는 별도의 창을 표시하려면 팝업 메뉴 또는 메뉴 표시줄에서 <menuchoice><guimenu>패키지</guimenu><guimenuitem>패키지 버전 정보</guimenuitem></menuchoice> 메뉴 옵션을 선택합니다.</para>
+</sect2>
+</sect1>
+<sect1 id="select-pkg"><title>패키지 선택</title>
+<para>선택된 패키지를 설치, 업데이트 또는 제거할 수 있습니다. 패키지를 선택하려면 패키지 목록 창 또는<guimenu>편집</guimenu> 메뉴를 사용합니다.</para>
+<para>패키지를 선택하려면 패키지 목록 창에서 다음 작업 중 하나를 수행합니다. 패키지를 여러 개 선택할 수 있습니다.</para>
+<itemizedlist><listitem><para>패키지 이름 왼쪽에 있는 상자를 누릅니다. 상자를 다시 누르면 패키지의 선택이 해제됩니다.</para>
+</listitem>
+<listitem><para>패키지 이름을 한 번 눌러 패키지를 강조 표시합니다. 그런 다음 강조 표시된 패키지를 두 번 눌러 패키지를 선택합니다. 패키지를 다시 두 번 누르면 패키지의 선택이 해제됩니다.</para>
+</listitem>
+<listitem><para>열 제목의 확인란 아이콘을 눌러 현재 패키지 목록 창에 나열된 모든 패키지를 선택합니다. 확인란 아이콘을 다시 누르면 현재 패키지 목록 창에 나열된 모든 패키지의 선택이 해제됩니다.</para>
+</listitem>
+</itemizedlist>
+<para><guimenu>편집</guimenu> 메뉴에는 다음과 같은 패키지 선택 옵션이 있습니다.</para>
+<itemizedlist><listitem><para><guimenuitem>모두 선택</guimenuitem> — 현재 패키지 목록 창에 나열된 모든 패키지를 선택합니다.</para>
+</listitem>
+<listitem><para><guimenuitem>업데이트 선택</guimenuitem> — 현재 패키지 목록 창에 나열된 패키지 중 업데이트를 사용할 수 있는 모든 패키지를 선택합니다.</para>
+</listitem>
+<listitem><para><guimenuitem>모두 선택 해제</guimenuitem> — 현재 패키지 목록 창에 나열된 모든 패키지의 선택을 해제합니다.</para>
+</listitem>
+</itemizedlist>
+<para>패키지를 선택할 때는 항상 이전에 선택한 패키지가 선택된 상태로 표시됩니다.</para>
+<para>현재 패키지 목록 창에 나열된 패키지 수와 선택된 패키지 수가 패키지 관리자 창 아래쪽에 있는 상태 표시줄 왼쪽에 표시됩니다.</para>
+<para>패키지 목록 창의 모든 게시자로부터 선택된 패키지를 모두 나열하려면 <menuchoice><guimenu>게시자</guimenu><guimenuitem>모든 게시자</guimenuitem></menuchoice> 옵션을 선택하고 <guimenuitem>모든 범주</guimenuitem> 범주, <menuchoice><guimenu>보기</guimenu><guimenuitem>선택된 패키지</guimenuitem></menuchoice> 옵션을 선택합니다.</para>
+<para>패키지가 강조 표시될 수 있지만 선택되지 않습니다. 패키지가 강조 표시되면 해당 패키지에 대한 세부 정보가 패키지 목록 창 아래의 패키지 세부 정보 창에 표시됩니다. 패키지가 선택되면 패키지 이름 왼쪽의 상자에 확인 표시가 나타납니다. 패키지를 설치, 업데이트 또는 삭제하려면 해당 패키지에 대한 선택 상자에 확인 표시가 나타나는지 확인합니다.</para>
+</sect1>
+<sect1 id="install-pkg"><title>패키지 설치 및 업데이트</title>
+<para>설치 또는 업데이트 전에 선택적 구성 요소 기본 설정을 확인합니다. <menuchoice><guimenu>편집</guimenu><guimenuitem>기본 설정</guimenuitem></menuchoice> 옵션을 선택합니다. 기본 설정 창에서 선택적 구성 요소 탭을 선택합니다. 기본적으로 모든 언어 설치, 모든 개발 파일 설치 및 모든 설명서 설치가 선택되어 있습니다. 설치할 언어 중 일부만 선택하거나 개발 파일의 선택을 해제하는 등으로 설치 공간을 절약할 수 있습니다. 변경 사항을 저장하려면 확인 버튼을 누릅니다. 이러한 설정은 설치된 모든 패키지와 후속 패키지 설치 및 업데이트에 적용됩니다.</para>
+<para>패키지를 설치 또는 업데이트하려면 다음 단계를 수행합니다.</para>
+<orderedlist><listitem><para>패키지를 선택합니다. <xref linkend="select-pkg"/>을 참조하십시오.</para>
+</listitem>
+<listitem><para>다음 방법 중 하나로 패키지를 설치 또는 업데이트합니다.</para>
+<itemizedlist><listitem><para>도구 모음에서 <guibutton>설치/업데이트</guibutton> 버튼을 선택합니다.</para>
+</listitem>
+<listitem><para>메뉴 표시줄에서 <menuchoice><guimenu>패키지</guimenu><guimenuitem>설치/업데이트</guimenuitem></menuchoice> 옵션을 선택합니다.</para>
+</listitem>
+<listitem><para>패키지 이름을 마우스 오른쪽 버튼으로 눌러 팝업 <guimenu>패키지</guimenu> 메뉴를 표시합니다. 그런 다음 <guimenuitem>설치/업데이트</guimenuitem> 옵션을 선택합니다.</para>
+</listitem>
+<listitem><para>패키지 목록 창 아래쪽 패키지 세부 정보 창에 있는 버전 탭의 설치할 버전 목록에서 버전을 선택하고 목록 오른쪽에 있는 <guibutton>설치/업데이트</guibutton> 버튼을 누릅니다. 저장소에서 설치할 버전 목록의 패키지를 사용할 수 있지만 설치하지 못할 수 있습니다. 특정 버전은 설치된 다른 패키지와 호환되지 않을 수 있습니다. 선택한 버전을 시스템에 설치할 수 없을 경우 패키지 관리자가 경고 메시지를 표시하고 패키지를 설치하지 않습니다.</para>
+</listitem>
+</itemizedlist>
+<para>패키지가 이미 설치되어 있으며 사용할 수 있는 업데이트가 없을 경우(상태 열 또는 <menuchoice><guimenu>패키지</guimenu><guimenuitem>패키지 버전 정보</guimenuitem></menuchoice> 옵션 참조) <guibutton>설치/업데이트</guibutton> 옵션이 비활성화되어 해당 옵션을 선택할 수 없습니다.</para>
+</listitem>
+<listitem><para>설치/업데이트 확인 창이 표시됩니다. 검토를 위해 아직 설치되지 않은 패키지는 설치 세부 정보 창에 나열되며 설치된 패키지는 업데이트 세부 정보 창에 나열됩니다. <guibutton>진행</guibutton> 버튼을 선택하여 나열된 패키지를 선택 또는 업데이트합니다.</para>
+<para>라이센스 대화 상자가 표시되는 경우 패키지를 설치하려면 라이센스에 동의해야 합니다.</para>
+<para>패키지를 설치하는 중 오류가 발생하면 오류 대화 상자가 표시됩니다. 메시지에는 설치 또는 업데이트 실패 원인이 설명됩니다.</para>
+</listitem>
+</orderedlist>
+</sect1>
+<sect1 id="remove-pkg"><title>패키지 제거</title>
+<para>다음 단계를 수행하여 패키지를 제거합니다.</para>
+<orderedlist><listitem><para>패키지를 선택합니다. <xref linkend="select-pkg"/>을 참조하십시오.</para>
+</listitem>
+<listitem><para>다음 방법 중 하나로 패키지를 제거합니다.</para>
+<itemizedlist><listitem><para>도구 모음에서 <guibutton>제거</guibutton> 버튼을 선택합니다.</para>
+</listitem>
+<listitem><para>메뉴 표시줄에서 <menuchoice><guimenu>패키지</guimenu><guimenuitem>제거</guimenuitem></menuchoice> 옵션을 선택합니다.</para>
+</listitem>
+<listitem><para>패키지 이름을 마우스 오른쪽 버튼으로 눌러 팝업 <guimenu>패키지</guimenu> 메뉴를 표시합니다. 그런 다음 <guimenuitem>제거</guimenuitem> 옵션을 선택합니다.</para>
+</listitem>
+</itemizedlist>
+<para>패키지가 설치되지 않은 경우 제거 옵션이 비활성화되어 해당 옵션을 선택할 수 없습니다.</para>
+</listitem>
+<listitem><para>제거 확인 창이 표시됩니다. 검토를 위해 제거할 패키지가 제거 세부 정보 창에 나열됩니다. <guibutton>진행</guibutton> 버튼을 선택하여 나열된 패키지를 제거합니다.</para>
+<para>다른 패키지가 종속되어 있어 패키지를 제거할 수 없을 경우 <guibutton>제거 계속</guibutton> 옵션을 선택하여 원래 제거 대상으로 선택한 나머지 패키지를 모두 제거할 수 있습니다.</para>
+</listitem>
+</orderedlist>
+</sect1>
+</chapter>
+<chapter id="update_all"><title>시스템 업데이트</title>
+<para>중요한 특정 패키지(예: 일부 드라이버 및 기타 커널 구성 요소)가 업데이트되면 시스템에서 다음 작업을 수행합니다.</para>
+<orderedlist><listitem><para>현재 BE(부트 환경)의 복제본을 만듭니다.</para>
+</listitem>
+<listitem><para>복제본의 패키지는 업데이트하고 현재 BE의 패키지는 업데이트하지 않습니다.</para>
+</listitem>
+<listitem><para>다음 번에 시스템이 재부트될 때 새 BE가 기본 부트 옵션으로 지정되도록 설정합니다. 현재 BE는 대체 부트 옵션으로 유지됩니다.</para>
+</listitem>
+</orderedlist>
+<sect1 id="um_info"><title>모든 패키지 업데이트</title>
+<para>도구 모음의 <guibutton>업데이트</guibutton> 버튼 또는 <menuchoice><guimenu>패키지</guimenu><guimenuitem>업데이트</guimenuitem></menuchoice> 메뉴 옵션을 선택하면 패키지 관리자가 업데이트를 사용할 수 있는 설치된 모든 패키지를 업데이트합니다.</para>
+<para>현재 게시자로부터 업데이트를 사용할 수 있는 모든 패키지가 업데이트됩니다. 게시자 목록의 다른 게시자로부터 패키지의 업데이트를 사용할 수 있으면, 현재 게시자가 비고정으로 구성된 경우에만 해당 패키지가 업데이트되고, 현재 게시자가 고정으로 구성된 경우 해당 패키지가 업데이트되지 않습니다.</para>
+<para>업데이트 창이 표시되고 업데이트 프로세스가 시작됩니다.</para>
+<orderedlist><listitem><para>시스템이 모든 카탈로그를 새로 고칩니다.</para>
+</listitem>
+<listitem><para>시스템이 설치된 모든 패키지를 평가하여 업데이트를 사용할 수 있는 패키지를 확인합니다.</para>
+<itemizedlist><listitem><para>업데이트를 사용할 수 있는 패키지가 없을 경우 "사용 가능한 업데이트 없음" 메시지가 표시되고 처리가 중지됩니다.</para>
+</listitem>
+<listitem><para>패키지 업데이트를 사용할 수 있을 경우 검토를 위해 업데이트할 패키지가 나열됩니다. 후속 단계부터는 더 이상 <guibutton>취소</guibutton> 버튼을 눌러 업데이트를 중단할 수 없습니다.</para>
+</listitem>
+</itemizedlist>
+</listitem>
+<listitem><para><guibutton>진행</guibutton> 버튼을 눌러 업데이트를 계속합니다.</para>
+<para>위의 <xref linkend="update_all"/>에 설명된 대로 업데이트 중인 패키지에 따라 시스템이 새 BE(부트 환경)를 만들 수 있습니다.</para>
+<para>새 BE가 필요한 것으로 확인되었지만 새 BE를 만들 수 없을 경우 오류 메시지가 표시됩니다. 디스크 공간 부족 문제일 경우 다음 단계를 수행합니다.</para>
+<orderedlist><listitem><para><guibutton>닫기</guibutton>를 눌러 업데이트 프로세스를 취소합니다.</para>
+</listitem>
+<listitem><para><xref linkend="remove-be"/>의 지침에 따라 더 이상 필요하지 않은 BE를 제거합니다.</para>
+</listitem>
+<listitem><para><guibutton>업데이트</guibutton>를 다시 선택하여 업데이트 프로세스를 다시 시작합니다.</para>
+</listitem>
+</orderedlist>
+</listitem>
+<listitem><para>시스템이 모든 패키지 업데이트를 다운로드합니다.</para>
+</listitem>
+<listitem><para>시스템이 패키지 업데이트를 설치합니다. 복제된 BE가 만들어진 경우 업데이트가 복제본에 설치되며, 복제본이 만들어지지 않은 경우 업데이트가 현재 BE에 설치됩니다.</para>
+<para>업데이트 프로세스 중 오류가 발생하면 세부 정보 패널이 확장되고 오류 세부 정보가 표시됩니다. 실패한 단계 옆에 오류 상태 표시기가 나타납니다.</para>
+</listitem>
+<listitem><para>시스템이 업데이트를 위해 새 BE를 만든 경우 기본 BE 이름을 편집할 수 있습니다. 기본 BE 이름을 그대로 사용하려면 <guibutton>지금 재시작</guibutton> 버튼을 눌러 시스템을 즉시 재부트합니다. 시스템을 나중에 다시 시작하려면 <guibutton>다음에 재시작</guibutton> 버튼을 누릅니다. 새 BE로 부트하려면 다시 시작해야 합니다. 새 BE가 기본 부트 옵션으로 설정되고, 현재 BE가 대체 부트 옵션으로 제공됩니다.</para>
+</listitem>
+</orderedlist>
+</sect1>
+<sect1 id="using_um"><title>업데이트 관리자 사용</title>
+<para>시스템 알림 또는 데스크탑 메뉴 표시줄에서 업데이트 관리자를 열 수 있습니다. 업데이트 관리자는 위의 <xref linkend="um_info"/>에 설명된 것과 동일한 프로세스를 실행합니다.</para>
+<sect2 id="gkiso"><title>소프트웨어 업데이트 알림</title>
+<para>시스템은 설치된 패키지에 대한 업데이트를 사용할 수 있는지 여부를 주기적으로 확인합니다. 시스템이 업데이트를 사용할 수 있는 것으로 감지하면 업데이트를 사용할 수 있음 알림 아이콘과 팝업이 시스템 알림 트레이에 표시됩니다. 알림 아이콘을 누르면 업데이트 관리자가 열립니다.</para>
+</sect2>
+<sect2 id="gkisz"><title>데스크탑 시스템 메뉴</title>
+<para>업데이트 관리자를 열려면 데스크탑 메뉴 표시줄에서<menuchoice><guimenu>시스템</guimenu><guisubmenu>관리</guisubmenu><guimenuitem>업데이트 관리자</guimenuitem></menuchoice>를 선택합니다.</para>
+</sect2>
+</sect1>
+</chapter>
+<chapter id="manage-publisher"><title>게시자 관리</title>
+<para>IPS 패키지 게시자를 추가, 수정 및 제거할 수 있습니다. 게시자의 우선 순위를 변경하고, 사용 및 고정 설정을 변경하고, 게시자 별칭을 변경하고, 게시자 원본을 추가 또는 제거하고, 게시자 미러를 추가 또는 제거할 수 있습니다. 키, 인증서 및 서명 정책을 관리할 수도 있습니다.</para>
+<para>시스템 게시자는 예외입니다. 시스템 게시자는 게시자 관리 창에서만 확인할 수 있습니다. 시스템 게시자는 제거 또는 수정할 수 없으며 시스템 게시자의 우선 순위는 변경할 수 없습니다. <xref linkend="glossary"/>를 참조하십시오. 세부 정보 창에 선택된 게시자가 시스템 게시자인지 여부가 표시됩니다.</para>
+<sect1 id="add-publisher"><title>게시자 추가</title>
+<para>IPS 패키지 게시자를 추가하려면 게시자 추가 창을 사용합니다. 게시자 추가 창을 열려면 다음 작업 중 하나를 수행합니다.</para>
+<itemizedlist><listitem><para><guimenu>게시자</guimenu> 드롭다운 메뉴에서 <guimenuitem>추가</guimenuitem> 옵션을 선택합니다.</para>
+</listitem>
+<listitem><para><menuchoice><guimenu>파일</guimenu><guimenuitem>게시자 추가</guimenuitem></menuchoice> 메뉴 옵션을 선택합니다.</para>
+</listitem>
+<listitem><para><menuchoice><guimenu>파일</guimenu><guimenuitem>게시자 관리</guimenuitem></menuchoice> 메뉴 옵션을 선택합니다. 게시자 관리 창에서 <guibutton>추가</guibutton> 버튼을 선택합니다.</para>
+</listitem>
+</itemizedlist>
+<para>게시자 추가 창에서 다음 단계를 수행하여 IPS 패키지 게시자를 추가합니다.</para>
+<orderedlist><listitem><para>URI 필드에 게시자 URI를 입력합니다. URI는 네트워크 위치(예: <literal>http://pkg.oracle.com/solaris/release/</literal> 또는 <literal>http://localhost:5555</literal>)입니다.</para>
+</listitem>
+<listitem><para>별칭 필드에 이 게시자에 대한 대체 이름을 입력할 수 있습니다.</para>
+</listitem>
+<listitem><para><guibutton>추가</guibutton> 버튼을 누릅니다.</para>
+</listitem>
+<listitem><para>게시자 추가 대화 상자가 표시됩니다. 프로세스를 취소하려면 <guibutton>취소</guibutton>를 누르고, 자세한 정보를 표시하려면 세부 정보를 누릅니다.</para>
+<itemizedlist><listitem><para>새 게시자가 성공적으로 추가된 경우 새 게시자 이름, 별칭 및 URI를 나타내는 게시자 추가 완료 대화 상자가 표시됩니다.</para>
+</listitem>
+<listitem><para>새 게시자가 추가되지 않은 경우 문제에 대한 정보를 나타내는 게시자 오류 대화 상자가 표시됩니다.</para>
+</listitem>
+</itemizedlist>
+</listitem>
+</orderedlist>
+<para>새 게시자는 게시자 관리 창에 마지막 게시자로 나열되며 사용으로 설정되고 고정으로 지정됩니다.</para>
+<para>새 게시자의 우선 순위 변경, 사용 및 고정 설정 변경, 게시자 별칭 변경, 게시자 원본 추가, SSL 키 및 인증서 설정, 게시자 미러 추가, 게시자 인증서 및 서명 정책 추가에 대한 자세한 내용은 <xref linkend="modify-publisher"/>을 참조하십시오.</para>
+</sect1>
+<sect1 id="modify-publisher"><title>게시자 수정</title>
+<para>게시자 속성을 수정하려면 <menuchoice><guimenu>파일</guimenu><guimenuitem>게시자 관리</guimenuitem></menuchoice> 메뉴 옵션을 선택합니다. 현재 구성된 게시자가 게시자 관리 창에 나열됩니다.</para>
+<para>게시자 관리 창에서 게시자의 우선 순위를 변경하고, 게시자를 사용 또는 사용 안함으로 설정하고, 게시자를 고정 또는 비고정으로 설정하고, 게시자를 제거할 수 있습니다. <xref linkend="priority-stickiness"/> 및 <xref linkend="remove-publisher"/>를 참조하십시오.</para>
+<para>게시자 수정 창을 열려면 <guibutton>수정</guibutton> 버튼을 누릅니다. 게시자 수정 창에서 게시자 별칭을 변경하고, 게시자 원본을 추가 또는 제거하고, 게시자 미러를 추가 또는 제거하고, SSL 키 및 인증서를 설정하고, 게시자 인증서 및 서명 정책을 관리할 수 있습니다. <xref linkend="origin-mirror"/> 및 <xref linkend="pub-security"/>을 참조하십시오.</para>
+<sect2 id="priority-stickiness"><title>우선 순위 및 고착성 변경</title>
+<para>게시자 관리 창을 표시하려면 <menuchoice><guimenu>파일</guimenu><guimenuitem>게시자 관리</guimenuitem></menuchoice> 메뉴 옵션을 선택합니다.</para>
+<sect3 id="set-pub-order"><title>게시자 우선 순위</title>
+<para>게시자는 게시자 관리 창에 우선 순위대로 나열됩니다. 우선 순위가 가장 높은 게시자가 목록 위쪽에 표시되고, 우선 순위가 가장 낮은 게시지가 목록 아래쪽에 표시됩니다.</para>
+<itemizedlist><listitem><para>목록 위쪽에 있는 게시자를 기본 게시자라고 하기도 합니다.</para></listitem>
+<listitem><para>기본 게시자는 사용 안함으로 설정하거나 제거할 수 없습니다.</para></listitem>
+<listitem><para>패키지를 검색할 때 게시자를 지정하지 않을 경우 우선 순위가 더 높은 게시자의 카탈로그가 먼저 검색됩니다.</para></listitem>
+<listitem><para>비고정 게시자로부터 설치된 패키지를 업데이트하면 우선 순위가 더 높은 게시자의 카탈로그가 업데이트를 위해 먼저 검색됩니다.</para></listitem>
+</itemizedlist>
+<para>게시자의 우선 순위를 변경하려면 다음 단계를 수행합니다.</para>
+<orderedlist><listitem><para>게시자 관리 창의 목록에서 게시자 행을 눌러 강조 표시됩니다.</para>
+</listitem>
+<listitem><para>게시자 목록 오른쪽에 있는 <guibutton>위쪽</guibutton> 및 <guibutton>아래쪽</guibutton> 버튼을 눌러 선택된 게시자의 우선 순위를 높이거나 낮춥니다. 새 우선 순위에 따라 나열되는 선택된 게시자가 목록 위쪽/아래쪽으로 이동됩니다.</para>
+<para>선택된 게시자가 시스템 게시자일 경우 <guibutton>위쪽</guibutton> 및 <guibutton>아래쪽</guibutton> 버튼이 사용 안함으로 설정됩니다. 시스템 게시자의 우선 순위는 변경할 수 없습니다. 시스템 게시자의 우선 순위는 변경할 수 없으므로 시스템 게시자보다 우선 순위가 한 단계 높은 게시자의 우선 순위를 낮출 수 없으며 시스템 게시자보다 우선 순위가 한 단계 낮은 게시자의 우선 순위를 높일 수 없습니다.</para></listitem>
+<listitem><para>게시자 관리 창 아래쪽에 있는 <guibutton>확인</guibutton> 버튼을 누릅니다.</para>
+</listitem>
+</orderedlist>
+</sect3>
+<sect3 id="gjlab"><title>사용 및 고정</title>
+<para>게시자를 추가하면 기본적으로 사용 및 고정 속성이 설정됩니다. 기본 게시자(<xref linkend="set-pub-order"/> 참조)는 사용 안함으로 설정할 수 없습니다. 시스템 게시자도 사용 안함으로 설정할 수 없으며, 시스템 게시자의 고정 설정도 변경할 수 없습니다. 기타 모든 사용 및 고정 설정은 변경할 수 있습니다.</para>
+<para>게시자에 대한 고정 속성을 설정하면 해당 게시자로부터 설치된 패키지를 다른 게시자로부터 업데이트할 수 없습니다. 게시자에 대한 고정 속성을 설정하지 않으면 해당 게시자가 비고정으로 설정됩니다. 게시자가 비고정일 경우 원래 해당 게시자로부터 온 패키지를 다른 게시자로부터 업데이트할 수 있습니다. 다른 게시자가 원래 패키지 게시자보다 최신 패키지 버전을 가지고 있는 경우가 있습니다. 이때 해당 최신 버전으로 업데이트하려면 원래 게시자를 비고정으로 설정해야 합니다. 또한 우선 순위가 더 낮은 게시자가 비고정일 경우 우선 순위가 더 높은 게시자가 비고정 게시자로부터 설치된 패키지의 업데이트를 위해 먼저 검색됩니다.</para>
+<para>사용 안함으로 설정된 게시자는 업데이트 또는 설치할 패키지를 위해 검색되지 않으며, 사용 안함으로 설정된 게시자의 카탈로그는 새로 고쳐지지 않습니다. 사용 안함으로 설정된 게시자는 <guimenu>게시자</guimenu> 드롭다운 메뉴에 표시되지 않습니다.</para>
+<para>게시자에 대한 사용 및 고정 설정을 변경하려면 다음 단계를 수행합니다.</para>
+<orderedlist><listitem><para><menuchoice><guimenu>파일</guimenu><guimenuitem>게시자 관리</guimenuitem></menuchoice> 메뉴 옵션을 선택하여 게시자 관리 창을 엽니다.</para>
+</listitem>
+<listitem><para>사용 상자 또는 고정 상자를 눌러 설정을 토글합니다.</para>
+</listitem>
+<listitem><para>게시자 관리 창 아래쪽에 있는 <guibutton>확인</guibutton> 버튼을 누릅니다.</para>
+</listitem>
+</orderedlist>
+</sect3>
+</sect2>
+<sect2 id="origin-mirror"><title>별칭, 원본 및 미러 변경</title>
+<orderedlist><listitem><para><menuchoice><guimenu>파일</guimenu><guimenuitem>게시자 관리</guimenuitem></menuchoice> 메뉴 옵션을 선택하여 게시자 관리 창을 엽니다.</para>
+</listitem>
+<listitem><para>수정할 게시자를 선택합니다. 게시자 관리 창에서 게시자 목록 아래의 세부 정보 창에 선택된 게시자에 대한 현재 원본이 표시됩니다.</para>
+</listitem>
+<listitem><para>게시자 목록 오른쪽에 있는 <guibutton>수정</guibutton> 버튼을 눌러 게시자 수정 창을 엽니다.</para>
+<para>선택된 게시자가 시스템 게시자일 경우 <guibutton>수정</guibutton> 버튼이 사용 안함으로 설정됩니다. 세부 정보 창에 선택된 게시자가 시스템 게시자인 것으로 나타나며 이 게시자를 수정 또는 제거할 수 없음을 알리는 메시지가 표시됩니다.</para>
+</listitem>
+<listitem><para>일반 탭을 선택하여 게시자 별칭을 수정하고, 원본을 추가 및 제거하고, 미러를 추가 및 제거합니다.</para></listitem>
+</orderedlist>
+<sect3 id="modify-publisher-alias"><title>게시자 별칭</title>
+<para>게시자 별칭은 게시자의 다른 이름입니다. 별칭 이름은 <guimenu>게시자</guimenu> 드롭다운 메뉴와 패키지 목록 창에서 사용됩니다.</para>
+<para>이 게시자의 별칭을 변경하려면 다음 단계를 수행합니다.</para>
+<orderedlist><listitem><para>게시자 수정 창의 일반 탭에서 별칭 필드에 새 이름을 입력합니다.</para>
+</listitem>
+<listitem><para>게시자 수정 창 아래쪽에 있는 <guibutton>확인</guibutton> 버튼을 누릅니다.</para>
+</listitem>
+<listitem><para>게시자 별칭이 게시자 관리 창에서 변경되었습니다. 게시자 관리 창 아래쪽에 있는 <guibutton>확인</guibutton> 버튼을 누릅니다.</para>
+</listitem>
+</orderedlist>
+</sect3>
+<sect3 id="gjkza"><title>게시자 원본</title>
+<para>원본은 패키지 메타 데이터(패키지 매니페스트 및 카탈로그)와 패키지 내용(패키지 파일)을 모두 포함하는 IPS 패키지 저장소 또는 아카이브의 위치입니다.</para>
+<para>원본 값은 IPS 패키지 저장소의 URI입니다.</para>
+<para>이 게시자의 원본을 변경, 추가 또는 제거하려면 다음 단계를 수행합니다.</para>
+<orderedlist><listitem><para>게시자 수정 창의 일반 탭을 선택합니다.</para>
+<itemizedlist><listitem><para>원본을 추가합니다.</para>
+<orderedlist type="a"><listitem><para>원본 필드에 이 게시자와 연결할 새 원본의 URI를 입력합니다.</para></listitem>
+<listitem><para><guibutton>추가</guibutton> 버튼을 누릅니다. 그러면 새 URI가 원본 필드 아래의 목록에 추가됩니다.</para></listitem>
+</orderedlist>
+</listitem>
+<listitem><para>원본을 제거합니다.</para>
+<orderedlist type="a"><listitem><para>원본 필드 아래의 목록에서 삭제할 URI를 선택합니다.</para></listitem>
+<listitem><para><guibutton>제거</guibutton> 버튼을 누릅니다. 그러면 선택된 URI가 목록에서 제거됩니다. 이 게시자에 대한 원본이 하나만 정의된 경우 해당 원본을 제거할 수 없습니다.</para></listitem>
+</orderedlist>
+</listitem>
+<listitem><para>원본을 변경합니다.</para>
+<orderedlist type="a"><listitem><para>새 원본을 추가합니다.</para></listitem>
+<listitem><para>변경할 원본을 삭제합니다.</para></listitem>
+</orderedlist>
+</listitem>
+</itemizedlist>
+</listitem>
+<listitem><para>게시자 수정 창 아래쪽에 있는 <guibutton>확인</guibutton> 버튼을 누릅니다.</para>
+</listitem>
+<listitem><para>원본 변경 사항이 게시자 관리 창의 세부 정보 창에 반영됩니다. 게시자 관리 창 아래쪽에 있는 <guibutton>확인</guibutton> 버튼을 누릅니다.</para>
+</listitem>
+</orderedlist>
+</sect3>
+<sect3 id="gjkyr"><title>게시자 미러</title>
+<para>미러는 패키지 내용(패키지 파일)만 포함하는 IPS 패키지 저장소의 위치입니다. 미러에는 패키지 메타 데이터(패키지 매니페스트 및 카탈로그)가 포함되지 않습니다. 미러는 원본이 제공하는 데이터 중 일부만 제공합니다. 미러는 패키지 파일 다운로드에만 사용할 수 있습니다. 패키지 메타 데이터는 원본에서 다운로드됩니다. IPS 클라이언트는 클라이언트가 미러에서 패키지 내용을 다운로드하는 경우에도 원본에 액세스하여 게시자의 카탈로그를 가져옵니다.</para>
+<para>이 게시자에 대한 미러를 추가, 제거 또는 변경하려면 다음 단계를 수행합니다.</para>
+<orderedlist><listitem><para>게시자 수정 창의 일반 탭을 선택합니다.</para></listitem>
+<listitem><para>미러 레이블을 눌러 미러 필드 및 미러 목록을 표시합니다.</para>
+<itemizedlist><listitem><para>미러를 추가합니다.</para>
+<orderedlist type="a"><listitem><para>미러 필드에 이 게시자와 연결할 새 미러의 URI를 입력합니다.</para></listitem>
+<listitem><para><guibutton>추가</guibutton> 버튼을 누릅니다. 그러면 새 URI가 미러 필드 아래의 목록에 추가됩니다.</para></listitem>
+</orderedlist>
+</listitem>
+<listitem><para>미러를 제거합니다.</para>
+<orderedlist type="a"><listitem><para>미러 필드 아래의 목록에서 삭제할 URI를 선택합니다.</para></listitem>
+<listitem><para><guibutton>제거</guibutton> 버튼을 누릅니다. 그러면 선택된 URI가 목록에서 제거됩니다.</para></listitem>
+</orderedlist>
+</listitem>
+<listitem><para>미러를 변경합니다.</para>
+<orderedlist type="a"><listitem><para>변경할 미러를 삭제합니다.</para></listitem>
+<listitem><para>새 미러를 추가합니다.</para></listitem>
+</orderedlist>
+</listitem>
+</itemizedlist>
+</listitem>
+<listitem><para>게시자 수정 창 아래쪽에 있는 <guibutton>확인</guibutton> 버튼을 누릅니다.</para>
+</listitem>
+<listitem><para>게시자 관리 창 아래쪽에 있는 <guibutton>확인</guibutton> 버튼을 누릅니다.</para>
+</listitem>
+</orderedlist>
+</sect3>
+</sect2>
+<sect2 id="security"><title>게시자 보안 관리</title>
+<para>인증서는 이미지 또는 게시자의 서명 정책 중 더 제한적인 서명 정책에 따라 패키지 설치 전 패키지가 적절히 서명되었는지 확인하는 데 사용됩니다.</para>
+<orderedlist><listitem><para><menuchoice><guimenu>파일</guimenu><guimenuitem>게시자 관리</guimenuitem></menuchoice> 메뉴 옵션을 선택하여 게시자 관리 창을 엽니다.</para>
+</listitem>
+<listitem><para>보안을 수정할 게시자를 선택합니다.</para>
+</listitem>
+<listitem><para>게시자 목록 오른쪽에 있는 <guibutton>수정</guibutton> 버튼을 눌러 게시자 수정 창을 엽니다. 그러면 게시자 관리 창에서 선택된 게시자가 게시자 수정 창 제목에 나열됩니다.</para>
+<itemizedlist><listitem><para>게시자가 보안 원본을 가진 경우 일반 탭을 선택하여 SSL 키 및 SSL 인증서를 추가합니다.</para></listitem>
+<listitem><para>인증서 탭을 선택하여 이 게시자에 대한 인증서를 관리합니다.</para></listitem>
+<listitem><para>서명 정책 탭을 선택하여 이 게시자에 대한 서명 정책을 관리합니다.</para></listitem>
+</itemizedlist>
+</listitem>
+</orderedlist>
+<sect3 id="keys-certs"><title>SSL 키 및 인증서 추가</title>
+<para>게시자가 보안 원본을 가진 경우 게시자에 대한 SSL 키 및 SSL 인증서를 추가합니다.</para>
+<orderedlist><listitem><para>게시자 수정 창의 일반 탭을 누릅니다.</para></listitem>
+<listitem><para>SSL 키 및 인증서 레이블을 눌러 SSL 키 필드 및 SSL 인증서 필드를 표시합니다.</para></listitem>
+<listitem><para>SSL 키 필드 오른쪽에 있는 <guibutton>찾아보기</guibutton> 버튼을 눌러 SSL 키 파일을 선택합니다.</para></listitem>
+<listitem><para>SSL 인증서 필드 오른쪽에 있는 <guibutton>찾아보기</guibutton> 버튼을 눌러 SSL 인증서 파일을 선택합니다.</para> </listitem>
+<listitem><para>게시자 수정 창 아래쪽에 있는 <guibutton>확인</guibutton> 버튼을 누릅니다.</para></listitem>
+<listitem><para>게시자 관리 창 아래쪽에 있는 <guibutton>확인</guibutton> 버튼을 누릅니다.</para></listitem>
+</orderedlist>
+</sect3>
+<sect3 id="manage-certs"><title>인증서 관리</title>
+<orderedlist><listitem><para>게시자 수정 창의 인증서 탭을 누릅니다.</para></listitem>
+<listitem><para>인증서 목록 아래의 버튼을 사용하여 인증서를 추가하거나 현재 목록에서 선택된 인증서를 제거, 해지 또는 복구합니다.</para>
+<para>게시자 수정 창에서 수행하는 작업은 게시자 수정 창 아래쪽에 있는 <guibutton>확인</guibutton> 버튼을 누른 후에만 선택된 게시자의 인증서에 적용됩니다. <guibutton>취소</guibutton> 버튼을 누르면 변경 사항이 적용되지 않습니다.</para>
+<itemizedlist><listitem><para><guibutton>추가</guibutton>. 게시자 수정 창 제목에 나열되는 게시자에 대한 새 게시자 인증서를 추가합니다. 게시자 인증서 추가 창에서 인증서(<tt>.pem</tt>) 파일을 찾아 선택합니다. 게시자 인증서 추가 창 아래쪽에 있는 <guibutton>확인</guibutton> 버튼을 누릅니다. 그러면 새로 추가된 인증서가 게시자 수정 창의 인증서 탭에 있는 인증서 목록에서 선택됩니다. 세부 정보 창에 이 인증서가 "추가 대상으로 표시"된 것으로 나타납니다. 게시자 수정 창에서 <guibutton>확인</guibutton> 버튼을 누르면 이 인증서가 추가됩니다.</para></listitem>
+</itemizedlist>
+</listitem>
+<listitem><para>이 게시자에 대한 인증서 목록에서 수정할 인증서 또는 세부 정보를 확인할 인증서를 선택합니다. 선택된 인증서에 대한 세부 정보가 인증서 목록 및 버튼 행 아래에 표시됩니다. 만료된 인증서가 계속 승인됨 상태일 수 있으며 인증서 만료 전 게시되었던(설치되지 않아도 됨) 서명된 패키지를 검증하는 데 사용될 수 있습니다.</para>
+<para>인증서 목록 제목을 눌러 목록을 다시 정렬합니다. 조직 및 이름 열의 크기를 조정할 수 있습니다.</para>
+<itemizedlist><listitem><para><guibutton>제거</guibutton>. 현재 인증서 목록에서 선택된 인증서를 제거합니다.</para></listitem>
+<listitem><para><guibutton>해지</guibutton>. 현재 인증서 목록에서 선택된 인증서가 승인됨이면 <guibutton>해지</guibutton> 버튼을 눌러 이 인증서를 해지됨 상태로 처리합니다. 인증서 목록에서 이 인증서의 상태가 해지됨으로 변경됩니다. 게시자 수정 창에서 <guibutton>확인</guibutton> 버튼을 누르면 이 변경 사항이 인증서에 적용됩니다.</para></listitem>
+<listitem><para><guibutton>복구</guibutton>. 현재 인증서 목록에서 선택된 인증서가 해지됨이면 <guibutton>복구</guibutton> 버튼을 눌러 이 인증서를 승인됨 상태로 처리합니다. 세부 정보 창에 이 인증서가 "복구 대상으로 표시"된 것으로 나타납니다. 게시자 수정 창에서 <guibutton>확인</guibutton> 버튼을 누르면 이 인증서가 복구됩니다.</para></listitem>
+</itemizedlist>
+</listitem>
+<listitem><para>게시자 수정 창 아래쪽에 있는 <guibutton>확인</guibutton> 버튼을 누릅니다.</para></listitem>
+<listitem><para>게시자 관리 창 아래쪽에 있는 <guibutton>확인</guibutton> 버튼을 누릅니다.</para></listitem>
+</orderedlist>
+</sect3>
+<sect3 id="pub-sig-policy"><title>서명 정책 관리</title>
+<orderedlist><listitem><para>게시자 수정 창의 서명 정책 탭을 누릅니다.</para></listitem>
+<listitem><para>서명 정책 탭의 버튼을 사용하여 게시자 수정 창 제목에 나열되는 게시자의 패키지를 설치할 때 사용할 서명 정책을 설정합니다.</para>
+<para>전역 서명 정책을 설정하려면 기본 설정 창의 서명 정책 탭을 사용합니다(<xref linkend="img-sig-policy"/> 참조).</para>
+<itemizedlist><listitem><para>서명이 무시됨: 모든 패키지에 대한 서명을 무시합니다.</para></listitem>
+<listitem><para>서명이 선택 사항이지만 제공할 경우 유효해야 함: 서명이 있는 모든 패키지가 유효하게 서명되었는지 확인하되 설치된 모든 패키지를 서명할 필요는 없습니다.</para></listitem>
+<listitem><para>하나 이상의 유효한 서명이 필요함: 새로 설치된 모든 패키지의 서명이 하나 이상 유효해야 합니다.</para></listitem>
+<listitem><para>서명이 필요하며 패키지 서명을 검증할 때 텍스트 필드에 지정된 이름이 인증서 이름에 포함되어야 합니다. 지정된 이름이 두 개 이상일 경우 이름은 쉼표로 구분되어야 합니다.</para></listitem></itemizedlist>
+</listitem>
+<listitem><para>게시자 수정 창 아래쪽에 있는 <guibutton>확인</guibutton> 버튼을 누릅니다.</para></listitem>
+<listitem><para>게시자 관리 창 아래쪽에 있는 <guibutton>확인</guibutton> 버튼을 누릅니다.</para></listitem>
+</orderedlist>
+</sect3>
+</sect2>
+</sect1>
+<sect1 id="remove-publisher"><title>게시자 제거</title>
+<para>다음 단계를 수행하여 게시자를 제거합니다.</para>
+<orderedlist><listitem><para><menuchoice><guimenu>파일</guimenu><guimenuitem>게시자 관리</guimenuitem></menuchoice> 메뉴 옵션을 선택하여 게시자 관리 창을 엽니다.</para>
+</listitem>
+<listitem><para>제거할 게시자를 선택합니다.</para>
+</listitem>
+<listitem><para>게시자 목록 오른쪽에 있는 <guibutton>제거</guibutton> 버튼을 누릅니다.</para>
+<para>선택된 게시자가 시스템 게시자일 경우 <guibutton>제거</guibutton> 버튼이 사용 안함으로 설정됩니다. 세부 정보 창에 선택된 게시자가 시스템 게시자인 것으로 나타나며 이 게시자를 수정 또는 제거할 수 없음을 알리는 메시지가 표시됩니다.</para>
+</listitem>
+<listitem><para>게시자 관리 창 아래쪽에 있는 <guibutton>확인</guibutton> 버튼을 누릅니다.</para>
+</listitem>
+</orderedlist>
+</sect1>
+</chapter>
+<chapter id="manage-be"><title>부트 환경 관리</title>
+<para>BE(부트)는 부트 가능 이미지입니다. Oracle Solaris 시스템에서 여러 개의 BE를 유지 관리할 수 있습니다. 하나의 BE가 시작 또는 재부트 시 기본 BE로 사용되며, 다른 BE는 대체 부트 옵션으로 제공됩니다. 부트한 BE가 활성 BE입니다.</para>
+<para><literal>beadm</literal>(1) 명령을 사용하여 BE를 만들거나, 마운트, 마운트 해제, 활성화 또는 삭제하거나 이름을 바꿀 수 있습니다. BE에 대한 자세한 내용은 <citetitle>Creating and Managing Boot Environments After Installation</citetitle>를 참조하십시오.</para>
+<para>패키지 관리자는 <literal>beadm</literal>(1) 명령이 제공하는 기능 중 일부를 제공합니다. 패키지 관리자 <menuchoice><guimenu>파일</guimenu><guimenuitem>부트 환경 관리</guimenuitem></menuchoice> 옵션을 사용하여 부트 환경 관리 창을 열 수 있습니다. 부트 환경 관리 창에는 이 시스템의 BE가 나열되며 이 창에서 아래 설명된 대로 해당 BE를 활성화 및 삭제하고 이름을 바꿀 수 있습니다.</para>
+<sect1 id="create-be"><title>BE 만들기</title>
+<para>다음 작업 중 하나를 수행하면 새 BE가 자동으로 만들어집니다.</para>
+<itemizedlist><listitem><para>Oracle Solaris OS를 설치합니다.</para>
+</listitem>
+<listitem><para>중요한 특정 시스템 패키지(예: 일부 드라이버 및 기타 커널 구성 요소)를 설치 또는 업데이트합니다.</para>
+</listitem>
+<listitem><para><literal>beadm create</literal> 명령을 사용합니다.</para>
+</listitem>
+</itemizedlist>
+<para><literal>pkg update</literal> 명령을 실행하거나 <guibutton>업데이트</guibutton> 버튼을 사용하여 업데이트를 사용할 수 있는 모든 패키지를 업데이트하는 경우 새 BE가 만들어지기도 합니다.</para>
+</sect1>
+<sect1 id="activate-be"><title>BE 활성화</title>
+<para><menuchoice><guimenu>파일</guimenu><guimenuitem>부트 환경 관리</guimenuitem></menuchoice> 메뉴 옵션을 선택하여 부트 환경 관리 창을 엽니다. 각 BE가 창에 나열됩니다. 현재 부트한 BE의 경우 BE 이름 왼쪽에 확인 표시가 나타납니다.</para>
+<para>다음 번 재부트 후 다른 BE가 기본 활성 BE로 사용되도록 지정하려면 다음 단계를 수행합니다.</para>
+<orderedlist><listitem><para>다음 번 재부트 후 기본 활성 BE로 사용할 BE에 대해 <guibutton>재부트 시 활성</guibutton> 버튼을 선택합니다.</para>
+</listitem>
+<listitem><para>부트 환경 관리 창에서 <guibutton>확인</guibutton> 버튼을 선택합니다.</para>
+</listitem>
+</orderedlist>
+</sect1>
+<sect1 id="rename-be"><title>BE 이름 바꾸기</title>
+<para><menuchoice><guimenu>파일</guimenu><guimenuitem>부트 환경 관리</guimenuitem></menuchoice> 메뉴 옵션을 선택하여 부트 환경 관리 창을 엽니다. 각 BE가 창에 나열됩니다.</para>
+<para>현재 활성 BE의 이름을 바꿀 수 없습니다.</para>
+<para>삭제 대상으로 표시한 BE의 이름을 바꿀 수 없습니다.</para>
+<para>BE의 이름을 바꾸려면 다음 단계를 수행합니다.</para>
+<orderedlist><listitem><para>이름을 바꿀 BE의 이름을 두 번 누릅니다. 그러면 이름 필드가 편집 가능 필드로 바뀝니다.</para>
+</listitem>
+<listitem><para>새 이름을 입력합니다.</para>
+</listitem>
+<listitem><para>부트 환경 관리 창에서 <guibutton>확인</guibutton> 버튼을 선택합니다.</para>
+</listitem>
+</orderedlist>
+</sect1>
+<sect1 id="remove-be"><title>BE 제거</title>
+<para><menuchoice><guimenu>파일</guimenu><guimenuitem>부트 환경 관리</guimenuitem></menuchoice> 메뉴 옵션을 선택하여 부트 환경 관리 창을 엽니다. 각 BE가 창에 나열됩니다. 창의 맨 오른쪽 열은 삭제 열입니다.</para>
+<para>부트 환경 관리 창의 가운데 열에는 BE 크기가 표시됩니다. 저장소 장치의 공간을 확보하기 위해 BE를 제거할 수 있습니다.</para>
+<para>현재 활성 BE를 삭제할 수 없습니다.</para>
+<para>이름을 바꾼 BE를 삭제할 수 없습니다.</para>
+<para>BE를 삭제하려면 다음 단계를 수행합니다.</para>
+<orderedlist><listitem><para>삭제할 BE에 대한 <guibutton>삭제</guibutton> 상자를 선택합니다.</para>
+</listitem>
+<listitem><para>부트 환경 관리 창에서 <guibutton>확인</guibutton> 버튼을 선택합니다.</para>
+</listitem>
+</orderedlist>
+</sect1>
+</chapter>
+<chapter id="webinstall"><title>WebInstall 작업</title>
+<para>패키지 관리자는 한 번만 누르는 간단한 WebInstall 프로세스를 사용하여 패키지를 설치할 수 있도록 지원합니다. WebInstall 프로세스에는 <filename>.p5i</filename> 파일이 사용됩니다. <filename>.p5i</filename> 파일에는 게시자를 추가하고 해당 게시자로부터 설치할 수 있는 패키지를 추가하는 데 필요한 정보가 포함되어 있습니다. WebInstall 프로세스가 <filename>.p5i</filename> 파일의 정보를 읽고 사용합니다.</para>
+<sect1 id="webinstall-export"><title>WebInstall을 사용하여 파일 내보내기</title>
+<para>시스템에 설치한 패키지를 다른 사용자가 설치할 수 있도록 하려는 경우 WebInstall 프로세스를 사용하여 해당 패키지 파일에 대한 설치 지침을 내보낼 수 있습니다. 해당 패키지 및 게시자 설치를 위한 설치 지침으로 구성된 <filename>.p5i</filename> 파일이 만들어집니다.</para>
+<para>선택한 패키지 및 패키지 게시자에 대한 설치 지침을 <filename>.p5i</filename> 파일로 내보내려면 다음 단계를 수행합니다.</para>
+<orderedlist><listitem><para><guimenu>게시자</guimenu> 드롭다운 메뉴에서 패키지를 <filename>.p5i</filename> 파일에 포함시킬 게시자를 선택합니다.</para>
+</listitem>
+<listitem><para>패키지 목록 창에서 설치 지침을 배포할 패키지를 선택합니다.</para>
+</listitem>
+<listitem><para><menuchoice><guisubmenu>파일</guisubmenu><guimenuitem>선택 항목 내보내기</guimenuitem></menuchoice>를 눌러 선택 항목 내보내기 확인 창을 표시합니다.</para>
+</listitem>
+<listitem><para><guibutton>확인</guibutton> 버튼을 눌러 선택 항목을 확인합니다. 선택 항목 내보내기 창이 표시됩니다.</para>
+</listitem>
+<listitem><para>확장자가 <filename>.p5i</filename>인 <filename>p5i</filename> 파일의 기본 이름이 제공됩니다. 이 이름은 변경할 수 있지만 확장자는 변경할 수 없습니다.</para>
+</listitem>
+<listitem><para><filename>p5i</filename> 파일의 기본 위치가 제공됩니다. 위치를 변경할 수 있습니다. <guibutton>찾아보기</guibutton> 버튼을 사용할 경우 선택 항목 내보내기 창 오른쪽 아래에 있는 드롭다운 메뉴에서 <filename>p5i 파일</filename> 옵션을 선택하여 파일 목록에 <filename>.p5i</filename> 파일만 표시할 수 있습니다.</para>
+</listitem>
+<listitem><para><guibutton>저장</guibutton> 버튼을 눌러 파일 이름 및 위치를 저장합니다.</para>
+</listitem>
+</orderedlist>
+</sect1>
+<sect1 id="webinstall-add"><title>WebInstall을 사용하여 게시자 추가 및 패키지 설치</title>
+<para>WebInstall 프로세스를 사용하면 <filename>p5i</filename> 파일을 통해 패키지를 설치할 수 있습니다.</para>
+<orderedlist><listitem><para><filename>.p5i</filename> 파일을 찾습니다. 이 파일은 사용자의 데스크탑 또는 웹 사이트에 있을 수 있습니다.</para>
+</listitem>
+<listitem><para>다음 방법 중 하나로 패키지 관리자를 WebInstall 모드로 시작합니다.</para>
+<itemizedlist><listitem><para>데스크탑에서 <filename>.p5i</filename> 파일을 누릅니다. 그러면 연결된 응용 프로그램(패키지 관리자 웹 설치 프로그램)이 시작됩니다.</para>
+</listitem>
+<listitem><para>명령줄에서 <filename>.p5i</filename> 파일에 대한 경로와 함께 패키지 관리자를 시작합니다. 예를 들어, 다음 명령을 입력합니다.</para>
+<screen># <userinput>packagemanager/<replaceable>path_to_p5i_file/file.p5i</replaceable></userinput></screen>
+</listitem>
+<listitem><para><filename>.p5i</filename> 파일에 대한 링크가 있는 URL 위치로 이동합니다. <filename>.p5i</filename> 파일은 이 MIME 유형을 등록한 웹 서버에 있어야 합니다.</para>
+<para><filename>.p5i</filename>가 이 MIME 유형을 등록하지 않은 웹 서버에 있을 경우 <filename>.p5i</filename> 파일을 데스크탑에 저장한 다음 WebInstall을 눌러 시작합니다.</para>
+</listitem>
+</itemizedlist>
+</listitem>
+<listitem><para>설치/업데이트 창이 표시됩니다. 창 위쪽에 "패키지 관리자 웹 설치 프로그램/다음의 내용들이 여러분의 시스템에 추가됩니다."라는 레이블이 표시됩니다. 그런 다음 게시자 및 패키지가 나열됩니다. <guibutton>진행</guibutton> 버튼을 눌러 설치를 계속합니다.</para>
+<itemizedlist><listitem><para>패키지 게시자가 시스템에 구성되지 않은 경우 게시자의 이름 및 URI가 이미 입력된 상태로 게시자 추가 창이 표시됩니다.</para>
+<para>추가할 게시자가 보안 게시자일 경우 SSL 키 및 인증서가 필요합니다. 찾아보기를 눌러 시스템에서 SSL 키 및 SSL 인증서를 찾습니다.</para>
+<para>게시자가 성공적으로 추가된 경우 게시자 추가 완료 대화 상자가 표시됩니다. <guibutton>확인</guibutton> 버튼을 눌러 설치를 계속합니다.</para>
+</listitem>
+<listitem><para><filename>.p5i</filename> 파일에 사용 안함으로 설정된 게시자의 패키지가 있을 경우 WebInstall이 게시자 사용 대화 상자를 엽니다. 이 대화 상자에서 패키지를 설치할 수 있도록 게시자를 사용으로 설정할 수 있습니다.</para>
+</listitem>
+</itemizedlist>
+</listitem>
+<listitem><para>패키지 관리자에서 <guibutton>설치/업데이트</guibutton>를 선택할 때와 동일하게 설치/업데이트 창이 표시됩니다.</para>
+</listitem>
+</orderedlist>
+</sect1>
+</chapter>
+<chapter id="gkioy"><title>문제 해결</title>
+<para>언제든지 검토할 수 있도록 오류, 경고 및 정보 메시지가 로그에 저장됩니다.</para>
+<sect1 id="gkiod"><title>메시지 로그 보기</title>
+<para><menuchoice><guimenu>보기</guimenu><guimenuitem>로그</guimenuitem></menuchoice> 메뉴 옵션을 선택하여 로그 창을 엽니다. 그러면 로그 창에 패키지 관리자 및 업데이트 관리자의 오류, 경고 및 정보 메시지가 표시됩니다.</para>
+<para>로그 창 아래쪽에 있는 <guibutton>지우기</guibutton> 버튼을 선택하면 모든 메시지가 삭제됩니다.</para>
+<para>오류 또는 경고가 기록되면 상태 표시줄 왼쪽에 노란색 삼각형이 표시됩니다. 노란색 삼각형을 누르면 로그 창이 표시됩니다.</para>
+</sect1>
+</chapter>
+<chapter id="pkg-mgr-prefs"><title>기본 설정</title>
+<para><menuchoice><guimenu>편집</guimenu><guimenuitem>기본 설정</guimenuitem></menuchoice> 메뉴 옵션을 사용하여 패키지 관리자 사용자 인터페이스 설정 중 일부를 변경합니다.</para>
+<para>기본 설정] 창의 세 가지 탭은 다음과 같습니다.</para>
+<itemizedlist><listitem><para>일반 탭에서는 종료 기본 설정 및 확인 대화 상자 기본 설정을 구성할 수 있습니다.</para></listitem>
+<listitem><para>선택적 구성 요소 탭에서는 패키지를 설치 또는 업데이트할 때 설치할 선택적 패키지 구성 요소에 대한 기본 설정을 구성할 수 있습니다.</para></listitem>
+<listitem><para>서명 정책 탭에서는 이 이미지에 대한 서명 정책을 설정할 수 있습니다.</para></listitem>
+</itemizedlist>
+<sect1 id="gjktu"><title>종료 기본 설정</title>
+<para><menuchoice><guimenu>편집</guimenu><guimenuitem>기본 설정</guimenuitem></menuchoice> 옵션을 선택하고 일반 탭을 선택합니다.</para>
+<para>"종료 시 현재 상태 저장" 상자가 선택된 경우 패키지 관리자가 다음 설정을 저장하여 다음 번에 패키지 관리자를 시작할 때 복원합니다.</para>
+<itemizedlist><listitem><para><emphasis role="strong">세로 및 가로 구분선</emphasis> — 창에 있는 창의 너비 및 높이</para>
+</listitem>
+<listitem><para><emphasis role="strong">창 크기</emphasis> — 패키지 관리자 창의 전체 크기</para>
+</listitem>
+<listitem><para><emphasis role="strong">게시자 옵션</emphasis> — 패키지 관리자를 닫을 때 <guimenu>게시자</guimenu> 드롭다운 메뉴에서 선택된 게시자 또는 기타 옵션</para>
+</listitem>
+<listitem><para><emphasis role="strong">범주</emphasis> — 각 게시자에 대해 선택된 범주 및 확장/축소된 범주</para>
+</listitem>
+</itemizedlist>
+</sect1>
+<sect1 id="gjkug"><title>확인 대화 상자 기본 설정</title>
+<para><menuchoice><guimenu>편집</guimenu><guimenuitem>기본 설정</guimenuitem></menuchoice> 옵션을 선택하고 일반 탭을 선택합니다.</para>
+<para>패키지가 설치, 업데이트 또는 제거되면 패키지 목록 및 수행할 작업을 나타내는 확인 대화 상자가 표시됩니다. 이러한 확인 대화 상자를 표시하지 않으려면 기본 설정 창에서 해당 선택 항목의 선택을 취소합니다.</para>
+<para>특정 확인 대화 상자에서 "이 확인 대화 상자를 다시 표시하지 않음" 확인란을 누르면 해당 대화 상자에 대해 이 기본 설정이 해제됩니다.</para>
+</sect1>
+<sect1 id="img-sig-policy"><title>서명 정책 기본 설정</title>
+<para>서명 정책 탭의 버튼을 사용하여 이 이미지에 패키지를 설치할 때 서명을 무시하거나 요구합니다. 특정 게시자에 대한 서명 정책을 설정하려면 게시자 관리 창에서 게시자를 선택하고 <guibutton>수정</guibutton> 버튼을 누른 다음 게시자 수정 창의 서명 정책 탭을 사용합니다.</para>
+<para>이미지 서명 정책에 대한 선택 항목은 설정이 특정 게시자로부터 설치된 패키지가 아닌 이미지에 설치된 모든 패키지에 적용된다는 점을 제외하고 게시자 서명 정책에 대한 선택 항목과 동일합니다. <xref linkend="pub-sig-policy"/>을 참조하십시오.</para>
+</sect1>
+<sect1 id="languages"><title>선택적 구성 요소 기본 설정 언어 선택</title>
+<para><menuchoice><guimenu>편집</guimenu><guimenuitem>기본 설정</guimenuitem></menuchoice> 옵션을 선택하고 선택적 구성 요소 탭을 선택합니다.</para>
+<para>기본적으로 패키지에 대한 언어 선택 항목에서 모든 언어 설치가 선택되어 있습니다. 설치할 언어 중 일부만 선택하여 설치 공간을 절약할 수 있습니다.</para>
+<para>다음 언어만 설치가 선택된 경우 언어 목록의 열 제목 맨 왼쪽에 있는 확인란 아이콘을 눌러 모든 언어를 선택할 수 있습니다. 열 제목을 다시 누르면 모든 언어의 선택이 해제됩니다. 목록을 정렬하려면 언어 및 영역 열 제목을 누릅니다.</para>
+<para>확인 버튼을 눌러 변경 사항을 저장합니다. 그러면 현재 설치된 패키지와 후속 패키지 설치 및 업데이트에 해당 설정이 적용됩니다. 새 설정을 기반으로 선택적 패키지 구성 요소를 설치 또는 제거할 때 필요에 따라 이미지가 업데이트됩니다.</para>
+<para>언어 중 일부만 포함되도록 이전에 이미지를 업데이트한 경우 기본적으로 이 창에서 다음 언어만 설치가 선택되며 모든 언어 설치 옵션을 선택할 경우 해당 언어 목록이 비활성화됩니다.</para>
+</sect1>
+<sect1 id="dev-doc"><title>기타 선택적 구성 요소 기본 설정</title>
+<para><menuchoice><guimenu>편집</guimenu><guimenuitem>기본 설정</guimenuitem></menuchoice> 옵션을 선택하고 선택적 구성 요소 탭을 선택합니다.</para>
+<para>기본적으로 기타 구성 요소 선택 항목에서 모든 개발 파일 설치 및 모든 설명서 설치가 선택되어 있습니다. 개발 파일 또는 설명서의 선택을 해제하여 설치 공간을 절약할 수 있습니다.</para>
+<para>확인 버튼을 눌러 변경 사항을 저장합니다. 그러면 현재 설치된 패키지와 후속 패키지 설치 및 업데이트에 해당 설정이 적용됩니다. 새 설정을 기반으로 선택적 패키지 구성 요소를 설치 또는 제거할 때 필요에 따라 이미지가 업데이트됩니다.</para>
+</sect1>
+</chapter>
+<glossary id="glossary"><title>용어</title>
+<glossentry><glossterm>별칭</glossterm>
+<glossdef><para>게시자의 다른 이름입니다.</para>
+</glossdef>
+</glossentry>
+<glossentry><glossterm>BE(부트 환경)</glossterm>
+<glossdef><para>부트 가능 Oracle Solaris 환경의 인스턴스입니다. 시스템 소프트웨어를 포함하는 부트 환경의 루트 파일 시스템 및 기타 모든 파일 시스템이 ZFS 데이터 집합이어야 합니다.</para>
+<para>활성 부트 환경은 현재 부트된 부트 환경입니다. 시스템에는 여러 부트 환경이 있을 수 있으며, 재부트할 때 부트할 환경을 선택할 수 있습니다.</para>
+</glossdef>
+</glossentry>
+<glossentry><glossterm>복제본</glossterm>
+<glossdef><para>정확히 일치하는 복사본입니다.</para>
+<para>복제본은 운영 체제, 파일 시스템 또는 볼륨과 정확히 일치하는 복사본일 수 있습니다. 이 복사본은 원본과 100% 호환됩니다.</para>
+</glossdef>
+</glossentry>
+<glossentry><glossterm>데이터 세트</glossterm>
+<glossdef><para>복제본, 파일 시스템, 스냅샷, 볼륨 등의 ZFS 엔티티에 대한 일반 이름입니다. 각 데이터 세트는 ZFS 이름 공간에서 고유 이름으로 식별됩니다.</para>
+</glossdef>
+</glossentry>
+<glossentry><glossterm>이미지</glossterm>
+<glossdef><para>부트 및 설치 가능한 패키지의 운영 체제 소프트웨어 모음입니다.</para>
+<para>패키지, 패키지와 연결된 파일, 디렉토리, 링크 및 종속성을 설치할 수 있는 시스템의 위치입니다.</para>
+</glossdef>
+</glossentry>
+<glossentry><glossterm>원본</glossterm>
+<glossdef><para>게시자가 패키지를 게시하는 패키지 서버입니다.</para>
+</glossdef>
+</glossentry>
+<glossentry><glossterm>패키지</glossterm>
+<glossdef><para>파일, 디렉토리, 링크, 드라이버 및 종속성의 모음으로서 정의된 형식을 따릅니다.</para>
+</glossdef>
+</glossentry>
+<glossentry><glossterm>게시자</glossterm>
+<glossdef><para>패키지를 설계하고 만들며 패키지 서버에 게시하는 개인, 그룹 또는 회사입니다. 패키지 서버는 (기본) 게시자의 패키지를 다운로드용으로 제공합니다.</para>
+</glossdef>
+</glossentry>
+<glossentry><glossterm>시스템 게시자</glossterm>
+<glossdef><para>시스템 게시자는 특정 패키지가 전역 영역과 동기화된 상태로 유지되도록 하기 위해 링크된 이미지, 특히 비전역 영역에서 사용되는 특수한 게시자입니다. 전역 영역은 비전역 영역에서 특수한 시스템 게시자를 구성하여 비전역 영역에서 패키지를 제약합니다. 비전역 영역은 우선 순위 제거, 사용 안함으로 설정, 수정 또는 변경을 비롯하여 특정 변경 사항을 적용할 수 없으므로 시스템 게시자가 특수하게 사용됩니다.</para>
+</glossdef>
+</glossentry>
+</glossary>
+</book>

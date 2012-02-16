@@ -41,7 +41,10 @@ test-leaks := TARGET = test-leaks
 SUBDIRS=brand zoneproxy tsol
 
 all: $(SUBDIRS)
-	$(PYTHON) setup.py build
+	mkdir -p $$(hg root)/proto/build_i386/lib.solaris-2.11-i86pc-2.6/pkg/64
+	mkdir -p $$(hg root)/proto/build_i386/lib.solaris-2.11-i86pc-2.6/pkg/actions/64
+	ISALIST=i386 $(PYTHON) setup.py build
+	ISALIST=amd64 $(PYTHON) setup.py build
 
 clean: $(SUBDIRS)
 	$(PYTHON) setup.py clean
@@ -56,7 +59,8 @@ clobber: $(SUBDIRS)
 # it's the best way to ensure things stay pylint clean.
 #
 install: $(SUBDIRS)
-	$(PYTHON) setup.py install
+	ISALIST=i386 $(PYTHON) setup.py install
+	ISALIST=amd64 $(PYTHON) setup.py install
 
 lint:
 	$(PYTHON) setup.py lint

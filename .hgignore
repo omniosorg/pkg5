@@ -3,7 +3,6 @@
 \.intltool-merge-cache
 \.ln$
 \.make\.
-\.mo$
 \.o$
 \.pyc$
 \.so$
@@ -29,6 +28,8 @@
 ^src/gui/data/packagemanager-preferences.schemas$
 ^src/gui/data/packagemanager.desktop$
 ^src/gui/help/.*/package-manager.xml$
+^src/brand/fmri_compare$
+^src/brand/support$
 ^src/pkg/Makefile.link
 ^src/pkg/pkgtmp/
 ^src/tests/.coverage$
@@ -37,10 +38,7 @@
 ^src/tests/ro_data/signing_certs/produced/.*/.*\.csr
 ^src/tests/ro_data/signing_certs/produced/.*\.old
 ^src/tests/ro_data/signing_certs/produced/.*\.tmp
-^src/um/data/updatemanager-preferences.schemas$
-^src/um/data/updatemanager.desktop$
 ^src/um/data/updatemanager.png$
-^src/um/data/updatemanagernotifier.desktop$
 ^src/util/distro-import/.*/entire.incorporation$
 ^src/util/distro-import/SUNWfixes/
 ^src/util/distro-import/cluster.import$

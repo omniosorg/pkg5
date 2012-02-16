@@ -1,0 +1,713 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook XML V4.3//EN" "http://www.oasis-open.org/docbook/xml/4.3/docbookx.dtd">
+<book id="pkgmgr" lang="ja"><title><trademark class="registered">Oracle</trademark> Solaris 11 パッケージマネージャーオンラインヘルプ</title>
+<bookinfo><authorgroup><author><firstname>Oracle</firstname>
+<surname>Corporation</surname>
+</author>
+</authorgroup>
+<releaseinfo>Oracle Solaris 11</releaseinfo>
+<pubdate>2011 年 6 月</pubdate>
+<publisher><publishername>Oracle Corporation</publishername>
+<address><street>500 Oracle Parkway</street>
+<city>Redwood City</city>
+<state>CA</state>
+<postcode>94065</postcode>
+<country>U.S.A.</country>
+</address>
+</publisher>
+<copyright><year>2008, 2011</year></copyright>
+<legalnotice><para>このソフトウェアおよび関連ドキュメントの使用と開示は、ライセンス契約の制約条件に従うものとし、知的財産に関する法律により保護されています。ライセンス契約で明示的に許諾されている場合もしくは法律によって認められている場合を除き、形式、手段に関係なく、いかなる部分も使用、複写、複製、翻訳、放送、修正、ライセンス供与、送信、配布、発表、実行、公開または表示することはできません。このソフトウェアのリバース・エンジニアリング、逆アセンブル、逆コンパイルは互換性のために法律によって規定されている場合を除き、禁止されています。</para>
+<para>ここに記載された情報は予告なしに変更される場合があります。また、誤りが無いことの保証はいたしかねます。誤りを見つけた場合は、オラクル社までご連絡ください。</para>
+<para>このソフトウェアまたは関連ドキュメントを、米国政府機関もしくは米国政府機関に代わってこのソフトウェアまたは関連ドキュメントをライセンスされた者に提供する場合は、次の通知が適用されます。</para>
+<para>U.S. GOVERNMENT RIGHTS Programs, software, databases, and related documentation and technical data delivered to U.S. Government customers are “commercial computer software” or “commercial technical data” pursuant to the applicable Federal Acquisition Regulation and agency-specific supplemental regulations. As such, the use, duplication, disclosure, modification, and adaptation shall be subject to the restrictions and license terms set forth in the applicable Government contract, and, to the extent applicable by the terms of the Government contract, the additional rights set forth in FAR 52.227-19, Commercial Computer Software License (December 2007). Oracle America, Inc., 500 Oracle Parkway, Redwood City, CA 94065.</para>
+<para>このソフトウェアもしくはハードウェアは様々な情報管理アプリケーションでの一般的な使用のために開発されたものです。このソフトウェアもしくはハードウェアは、危険が伴うアプリケーション （人的傷害を発生させる可能性があるアプリケーションを含む） への用途を目的として開発されていません。このソフトウェアもしくはハードウェアを危険が伴うアプリケーションで使用する際、安全に使用するために、適切な安全装置、バックアップ、冗長性 （redundancy）、その他の対策を講じることは使用者の責任となります。このソフトウェアもしくはハードウェアを危険が伴うアプリケーションで使用したことに起因して損害が発生しても、オラクル社およびその関連会社は一切の責任を負いかねます。</para>
+<para>Oracle と Java は Oracle Corporation およびその関連企業の登録商標です。その他の名称は、それぞれの所有者の商標または登録商標です。</para>
+<para>AMD、Opteron、AMD ロゴ、AMD Opteron ロゴは、Advanced Micro Devices, Inc. の商標または登録商標です。Intel、Intel Xeon は、Intel Corporation の商標または登録商標です。すべての SPARC の商標はライセンスをもとに使用し、SPARC International, Inc. の商標または登録商標です。UNIX は X/Open Company, Ltd. からライセンスされている登録商標です。</para>
+<para>このソフトウェアまたはハードウェア、そしてドキュメントは、第三者のコンテンツ、製品、サービスへのアクセス、あるいはそれらに関する情報を提供することがあります。オラクル社およびその関連会社は、第三者のコンテンツ、製品、サービスに関して一切の責任を負わず、いかなる保証もいたしません。オラクル社およびその関連会社は、第三者のコンテンツ、製品、サービスへのアクセスまたは使用によって損失、費用、あるいは損害が発生しても一切の責任を負いかねます。</para>
+</legalnotice>
+</bookinfo>
+<chapter id="about"><title>パッケージマネージャーについて</title>
+<para>パッケージマネージャーは、Oracle Solaris Image Packaging System (IPS) のグラフィカルユーザーインタフェース (GUI) です。</para>
+<para>このマニュアルで使用されている用語の定義については、<xref linkend="glossary"/> を参照してください。</para>
+<sect1 id="gikcw"><title>Oracle Solaris Image Packaging System</title>
+<para>Oracle Solaris Image Packaging System (IPS) は、ネットワーク上のパッケージリポジトリと対話するソフトウェア配布システムです。IPS は、ソフトウェアのインストール、アップグレード、削除といったソフトウェアのライフサイクル管理機能を提供するフレームワークです。</para>
+<para>Oracle Solaris オペレーティングシステムのインストールのあと、使用したいソフトウェアのいくつかが使用可能ではない場合があります。このソフトウェアは、IPS パッケージリポジトリに用意されている可能性があります。パッケージマネージャーまたは <literal>pkg</literal>(1M) コマンドを使用して、パッケージリポジトリからパッケージをダウンロードしてインストールすることができます。</para>
+<para>IPS では、既存の IPS パッケージリポジトリのコピーを作成すること、ユーザー独自の IPS パッケージリポジトリを作成すること、およびユーザー独自の IPS パッケージを発行することもできます。IPS の詳細については、Oracle Solaris 11 Information Library を参照してください。<literal>download.oracle.com</literal> にアクセスして、左側の「Documentation Index」を選択し、「Systems Software」、「Oracle Solaris 11」、「View Library」の順に選択します。特に、『<citetitle>Adding and Updating Oracle Solaris 11 Software Packages</citetitle>』を参照してください。</para>
+</sect1>
+<sect1 id="pm-win"><title>パッケージマネージャー</title>
+<para>パッケージマネージャーでは、IPS コマンド行インタフェースで提供されている機能の一部を実行できます。</para>
+<para>パッケージマネージャーを使用すると、次の作業を実行できます。</para>
+<itemizedlist><listitem><para>IPS パッケージの検索、インストール、更新、および削除。<xref linkend="manage-pkg"/>を参照してください。</para>
+</listitem>
+<listitem><para>システムの更新 (システム上にあるすべてのパッケージの更新)。<xref linkend="update_all"/>を参照してください。</para>
+</listitem>
+<listitem><para>IPS パッケージ発行元の追加、変更、および削除。<xref linkend="manage-publisher"/>を参照してください。</para>
+</listitem>
+<listitem><para>ブート環境の一覧表示、名前の変更、削除、および管理。<xref linkend="manage-be"/>を参照してください。</para>
+</listitem>
+<listitem><para>WebInstall インストールファイル (<filename>.p5i</filename>) の作成。<xref linkend="webinstall"/>を参照してください。</para>
+</listitem>
+</itemizedlist>
+<para>このマニュアルでは、パッケージマネージャーウィンドウの次の機能について説明します。</para>
+<itemizedlist><listitem><para>ウィンドウ中央の大きい区画はパッケージリスト区画です。この区画には、情報メッセージが表示されることもありますが、通常はパッケージのリストが表示されます。</para>
+</listitem>
+<listitem><para>ウィンドウ上部のメニューバーには、パッケージマネージャーの機能のほとんどが用意されています。</para>
+</listitem>
+<listitem><para>メニューバーのすぐ下にあるツールバーの左側には、頻繁に使用されるいくつかの操作のボタンがあります。セパレータの左側にあるボタンはグローバルな機能を持ち、使用可能な更新が存在するすべてのパッケージを更新したり、パッケージとパッケージの状態のリストをリフレッシュしたりできます。セパレータの右側にあるボタンは、選択されているパッケージのみを操作します。</para>
+</listitem>
+<listitem><para>ツールバーの右側の「検索」フィールドを利用すると、パッケージリスト区画の内容を制御できます。<xref linkend="search-pkg"/>を参照してください。</para>
+</listitem>
+<listitem><para>ボタンの下にある<guimenu>「発行元」</guimenu>ドロップダウンメニューを使用すると、パッケージリスト区画の内容を制御できるほか、新しい発行元を追加することもできます。<xref linkend="list-pkg"/>の「発行元別」を参照してください。</para>
+</listitem>
+<listitem><para>「検索」フィールドの下にある<guimenu>「表示」</guimenu>ドロップダウンメニューを使用すると、パッケージリスト区画の内容を制御できます。「パッケージの一覧表示」の「パッケージ状態別」を参照してください。</para>
+</listitem>
+<listitem><para><guimenu>「発行元」</guimenu>メニューの下にあるカテゴリ区画を使用すると、パッケージリスト区画の内容を制御できます。「パッケージの一覧表示」の「カテゴリ別」を参照してください。</para>
+</listitem>
+<listitem><para>ソフトウェアカテゴリのリストの下に、このセッションで実行した検索のリストがあります。</para>
+</listitem>
+<listitem><para>パッケージリスト区画の下に、パッケージの詳細区画があります。<xref linkend="package-version"/>を参照してください。</para>
+</listitem>
+</itemizedlist>
+</sect1>
+</chapter>
+<chapter id="manage-pkg"><title>パッケージの管理</title>
+<para>さまざまな条件に従ってパッケージを一覧表示できます。パッケージのインストール、更新、および削除を行うことができます。</para>
+<sect1 id="list-pkg"><title>パッケージの一覧表示</title>
+<para>パッケージマネージャーのリスト区画に表示されるパッケージのリストは、<guimenu>「発行元」</guimenu>ドロップダウンメニュー、<guimenu>「表示」</guimenu>ドロップダウンメニュー、カテゴリ区画、および「検索」フィールドで選択した内容に影響されます。</para>
+<para>列見出しをクリックしてパッケージリストの順序を変更できます。</para>
+<para><guibutton>「リフレッシュ」</guibutton>ボタンまたは<menuchoice><guimenu>「パッケージ」</guimenu><guimenuitem>「リフレッシュ」</guimenuitem></menuchoice>メニューオプションを使用すると、リポジトリカタログを再度読み込み、パッケージとパッケージの状態のリストを更新できます。パッケージマネージャーを開いたときにも毎回リフレッシュが試みられます。</para>
+<sect2 id="gkihe"><title>発行元別</title>
+<para><guimenu>「発行元」</guimenu> ドロップダウンメニューを使用すると、発行元に基づいてパッケージを一覧表示できます。</para>
+<itemizedlist><listitem><para>メニューの上部には、「発行元を追加」ダイアログまたは <literal>pkg</literal> コマンドを使用して追加した各発行元の名前が表示されます。これらの発行元の 1 つを選択すると、その発行元から利用できるパッケージだけがパッケージリスト区画に表示されます。発行元はどのパッケージについても同じなので、パッケージリスト区画には「名前」、「状態」、および「概要」列だけが表示されます。</para>
+</listitem>
+<listitem><para><guimenuitem>「すべての発行元」</guimenuitem> — すべての発行元のパッケージをパッケージリスト区画に表示します。パッケージリスト区画には「名前」、「状態」、「発行元」、および「概要」列が表示されます。</para>
+<para>例: すべての発行元のメディアデバイスドライバで、使用可能な更新が存在するものをすべて表示するには、<guimenu>「発行元」</guimenu>メニューから<guimenuitem>「すべての発行元」</guimenuitem>を選択し、<menuchoice><guimenu>「ドライバ」</guimenu><guimenuitem>「メディア」</guimenuitem></menuchoice>カテゴリを選択し、<guimenu>「表示」</guimenu>メニューから<guimenuitem>「更新」</guimenuitem>を選択します。</para>
+</listitem>
+<listitem><para><guimenuitem>「すべてのインストール済みパッケージ」</guimenuitem> — すべての発行元からインストールしたすべてのパッケージを表示します。</para>
+<para>例: <literal>solaris</literal> 発行元のフォントパッケージで、現在インストールされているものをすべて表示するには、<guimenu>「発行元」</guimenu>メニューから<guimenuitem>「すべてのインストール済みパッケージ」</guimenuitem>を選択し、<menuchoice><guimenu>「システム」</guimenu><guimenuitem>「フォント」</guimenuitem></menuchoice>カテゴリを選択し、「発行元」列見出しをクリックしてリストを発行元別にソートし、<literal>solaris</literal> エントリまで下へスクロールします。</para>
+</listitem>
+<listitem><para><guimenuitem>「すべての発行元 (検索)」</guimenuitem> — パッケージリスト区画にパッケージのリストではなく情報メッセージを表示します。メッセージには、設定済みの発行元の一覧と、それらの発行元からのすべてのパッケージを表示する方法が示されます。<guimenuitem>「すべての発行元 (検索)」</guimenuitem>を使用した検索の詳細については、<xref linkend="search-pkg"/>を参照してください。</para>
+</listitem>
+<listitem><para><guimenuitem>「追加...」</guimenuitem> — 「発行元を追加」ウィンドウを開きます。</para>
+</listitem>
+</itemizedlist>
+</sect2>
+<sect2 id="gkihp"><title>パッケージ状態別</title>
+<para><guimenu>「表示」</guimenu>ドロップダウンメニューを使用すると、パッケージ状態に基づいてパッケージを一覧表示できます。パッケージ状態は、インストール済み、未インストール、更新利用可能のいずれかです。<guimenu>「表示」</guimenu>メニューに表示されるアイコンは、パッケージリスト区画の「状態」列に表示されるアイコンと一致します。</para>
+<itemizedlist><listitem><para><guimenuitem>「すべてのパッケージ」</guimenuitem> — 選択した発行元の選択したカテゴリ内のパッケージまたは指定した検索文字列と一致するパッケージをすべて表示します。</para>
+<para>例: <literal>solaris</literal> 発行元の Web サービスパッケージで、インストール済みのもの、インストールされていないもの、または使用可能な更新が存在するものをすべて表示するには、<guimenu>「発行元」</guimenu>メニューから <literal>solaris</literal> を選択し、<menuchoice><guimenu>「Web サービス」</guimenu></menuchoice>カテゴリを選択し、<guimenu>「表示」</guimenu>メニューから<guimenuitem>「すべてのパッケージ」</guimenuitem>を選択します。</para>
+</listitem>
+<listitem><para><guimenuitem>「インストール済みパッケージ」</guimenuitem> — 選択した発行元の選択したカテゴリ内のパッケージまたは指定した検索文字列と一致するパッケージで、インストール済みのものをすべて表示します。<menuchoice><guimenu>「発行元」</guimenu><guimenuitem>「すべてのインストール済みパッケージ」</guimenuitem></menuchoice>オプションも参照してください。</para>
+<para>例: <literal>solaris</literal> 発行元の Web サービスパッケージで、インストール済みのものだけを一覧表示するには、<guimenu>「発行元」</guimenu>メニューから <literal>solaris</literal> を選択して、<menuchoice><guimenu>「Web サービス」</guimenu></menuchoice>カテゴリを選択し、<guimenu>「表示」</guimenu>メニューから<guimenuitem>「インストール済みパッケージ」</guimenuitem>を選択します。</para>
+</listitem>
+<listitem><para><guimenuitem>「更新」</guimenuitem> — 選択した発行元の選択したカテゴリ内のパッケージまたは指定した検索文字列と一致するパッケージで、使用可能な更新が存在するものをすべて表示します。</para>
+<para>例: すべての発行元のデバイスドライバで、使用可能な更新が存在するものをすべて表示するには、<guimenu>「発行元」</guimenu>メニューから<guimenuitem>「すべての発行元」</guimenuitem>を選択し、<guimenu>「ドライバ」</guimenu>カテゴリを選択し、<guimenu>「表示」</guimenu>メニューから<guimenuitem>「更新」</guimenuitem>を選択します。</para>
+</listitem>
+<listitem><para><guimenuitem>「インストールされていないパッケージ」</guimenuitem> — 選択した発行元の選択したカテゴリ内のパッケージまたは指定した検索文字列と一致するパッケージで、インストールされていないものをすべて表示します。</para>
+<para>例: <literal>solaris</literal> 発行元のフォントパッケージで、現在インストールされていないものをすべて表示するには、<guimenu>「発行元」</guimenu>メニューから <literal>solaris</literal> を選択し、<menuchoice><guimenu>「システム」</guimenu><guimenuitem>「フォント」</guimenuitem></menuchoice>カテゴリを選択し、<guimenu>「表示」</guimenu>メニューから<guimenuitem>「インストールされていないパッケージ」</guimenuitem>を選択します。</para>
+</listitem>
+<listitem><para><guimenuitem>「選択したパッケージ」</guimenuitem> — 現在選択されているすべてのパッケージを表示します。<xref linkend="select-pkg"/>を参照してください。</para>
+</listitem>
+</itemizedlist>
+</sect2>
+<sect2 id="gkigv"><title>カテゴリ別</title>
+<para>パッケージマネージャーウィンドウの左側のカテゴリ区画では、使用可能なパッケージをソフトウェアのタイプ別に参照できます。サブカテゴリを表示するにはカテゴリ名をクリックします。選択した発行元とパッケージ状態、および指定した検索条件に基づいて、選択したカテゴリまたはサブカテゴリのパッケージがパッケージリスト区画に一覧表示されます。</para>
+<para>指定したタイプのソフトウェアに加え、カテゴリ区画では<guimenuitem>「すべてのカテゴリ」</guimenuitem>および<guimenuitem>「最近の検索」</guimenuitem>を選択することもできます。<guimenuitem>「最近の検索」</guimenuitem>の詳細については、<xref linkend="search-pkg"/>の「以前の検索の繰り返し」を参照してください。</para>
+</sect2>
+</sect1>
+<sect1 id="search-pkg"><title>パッケージの検索</title>
+<para>パッケージを検索するには、次の 2 つの方法のいずれかを使用します。</para>
+<itemizedlist><listitem><para>パッケージリスト区画にフォーカスを移動します (たとえば、<menuchoice><guimenu>「編集」</guimenu><guimenuitem>「パッケージリストへ移動」</guimenuitem></menuchoice>を選択し、入力を開始します。入力するにつれて、パッケージリスト区画に現在表示されているパッケージの中で一致するものが特定されます。</para>
+</listitem>
+<listitem><para>ツールバーの「検索」フィールドを使用します。</para>
+</listitem>
+</itemizedlist>
+<sect2 id="gkjbd"><title>検索文字列を入力します。</title>
+<para>「検索」フィールドに文字列を入力したあと、Enter キーを押すか、「検索」フィールドの右にある虫めがねアイコンをクリックします。</para>
+<itemizedlist><listitem><para><guimenu>「発行元」</guimenu>メニューの選択 — パッケージマネージャーは、ユーザーが<guimenu>「発行元」</guimenu>メニューで選択した内容に基づいて、特定の発行元またはすべての発行元の各パッケージに関する情報内で検索文字列を検索します。</para>
+<para><guimenuitem>「すべての発行元」</guimenuitem>または<guimenuitem>「すべての発行元 (検索)」</guimenuitem>のどちらを選択しても検索結果は同じです。相違点は、<guimenuitem>「すべての発行元」</guimenuitem>を選択するとすべての発行元のデータを読み込むため遅延が発生しますが、<guimenuitem>「すべての発行元 (検索)」</guimenuitem>を使用するとそれを回避して高速に検索できることです。<guimenuitem>「すべての発行元 (検索)」</guimenuitem>では、すべての発行元のデータをパッケージリスト区画に読み込むことなく、すべての発行元に対して検索が実行されます。</para>
+</listitem>
+<listitem><para><guimenu>「表示」</guimenu>メニューの選択 — <guimenu>「表示」</guimenu>メニューで選択したパッケージ状態に基づいて、検索結果がパッケージリスト区画に表示されます。<guimenu>「表示」</guimenu>メニューの選択を変更することにより、検索を再度実行することなく、同じ検索結果のさまざまな部分集合をパッケージリスト区画に表示できます。</para>
+</listitem>
+</itemizedlist>
+<para>パッケージマネージャーは、名前、概要、説明、カテゴリ、パッケージ内に含まれるファイルの名前などのパッケージ情報を検索します。ワイルドカードを使用しない場合は、完全に一致するものだけが検索されます。</para>
+<variablelist><varlistentry><term><literal>AND</literal></term>
+<listitem><para>検索語がスペースあるいは <literal>AND</literal> で区切られていると、パッケージマネージャーは<emphasis role="strong">すべて</emphasis>の検索語を含むパッケージを検索します。これはデフォルトの検索動作です。</para>
+<para>例: 検索文字列が <literal>python book</literal> または <literal>python AND book</literal> の場合は、パッケージ情報に <literal>python</literal> <emphasis>と</emphasis> <literal>book</literal> の<emphasis>両方</emphasis>を含むパッケージだけが検索結果に含まれます。たとえば、Python プログラミングに関する本 <literal>diveintopython</literal> は検索結果に含まれますが、パッケージ <literal>python-26</literal> は含まれません。</para>
+</listitem>
+</varlistentry>
+<varlistentry><term>二重引用符</term>
+<listitem><para>検索語と完全に一致するものを検索するには、検索語を二重引用符で囲みます。</para>
+<para>例: 二重引用符で囲まれた <literal>"ethernet driver"</literal> は、<literal>Fast Ethernet Driver</literal> に一致しますが、<literal>Ethernet Adapter Driver</literal> には一致しません。</para>
+</listitem>
+</varlistentry>
+<varlistentry><term>ワイルドカード</term>
+<listitem><para>検索文字列で <literal>*</literal> ワイルドカードを使用できます。ワイルドカードを使用すると遅くなる場合があります。</para>
+<para>例: <literal>802.11*</literal> は <literal>802.11b/g</literal> と <literal>802.11a/b/g</literal> に一致します。</para>
+<para><literal>802.11*</literal> は <literal>IEEE802.11b/g</literal> には一致しません。<literal>IEEE802.11b/g</literal> に一致するようにするには、検索文字列 <literal>*802.11*</literal> を使用してください。</para>
+</listitem>
+</varlistentry>
+<varlistentry><term><literal>OR</literal></term>
+<listitem><para>検索語が <literal>OR</literal> で区切られていると、パッケージマネージャーは検索語の<emphasis role="strong">いずれか</emphasis>を含むパッケージを検索します。</para>
+<para>例: <literal>python OR book</literal> は、パッケージ情報に <literal>python</literal> を含むすべてのパッケージと、パッケージ情報に <literal>book</literal> を含むすべてのパッケージに一致します。</para>
+</listitem>
+</varlistentry>
+</variablelist>
+<para>これらの検索文字列修飾子は組み合わせることができます。AND、OR、二重引用符、および * をすべて 1 つの検索文字列で使用することができます。</para>
+</sect2>
+<sect2 id="gkjao"><title>検索フィールドの消去</title>
+<para>検索文字列と検索結果リストの両方を消去するには、「検索」フィールドまたは「編集」メニューを使用します。</para>
+<itemizedlist><listitem><para>「検索」フィールドで <literal>X</literal> アイコンをクリックします。</para>
+</listitem>
+<listitem><para><guimenu>「編集」</guimenu>メニューで<guimenuitem>「検索を消去」</guimenuitem>オプションを選択します。</para>
+</listitem>
+</itemizedlist>
+</sect2>
+<sect2 id="gkjbe"><title>検索の取り消し</title>
+<para>検索の実行中は、パッケージマネージャーウィンドウ下部のステータスバーの右端にビジーバーが表示されます。ビジーバーの右端に <literal>X</literal> アイコンがあります。実行中の検索を取り消すには、ビジーバーの <literal>X</literal> アイコンをクリックします。</para>
+</sect2>
+<sect2 id="gkjbb"><title>以前の検索結果の再表示</title>
+<para>現在のパッケージマネージャーセッションですでに実行した検索の結果は、カテゴリ区画の<guimenuitem>「最近の検索」</guimenuitem>に保存されています。</para>
+<para>カテゴリ区画で<guimenuitem>「最近の検索」</guimenuitem>ラベルをクリックすると、パッケージリスト区画に情報メッセージが表示されます。パッケージリスト区画には以前の検索結果が表示されます。それらの結果を再表示するには、「結果」リンクをクリックします。</para>
+<para><guimenuitem>「最近の検索」</guimenuitem>ラベルの左にある矢印をクリックすると、カテゴリ区画で以前の検索結果のリストを展開したり非表示にしたりできます。最近の検索のリストで項目を選択すると、それらの検索結果が再表示されます。</para>
+<para>どのパッケージにも一致しなかった検索は最近の検索のリストに表示されません。</para>
+<para><guibutton>「リフレッシュ」</guibutton>ボタンまたは<menuchoice><guimenu>「パッケージ」</guimenu><guimenuitem>「リフレッシュ」</guimenuitem></menuchoice>メニューオプションを選択すると、最近の検索結果がすべて削除されます。</para>
+</sect2>
+</sect1>
+<sect1 id="package-version"><title>詳細情報の表示</title>
+<para>パッケージに関する詳細情報をパッケージの詳細区画または「パッケージのバージョン情報」ダイアログで確認します。</para>
+<sect2 id="gkiti"><title>パッケージの詳細区画</title>
+<para>パッケージに関する詳細情報を表示するには、パッケージリストでそのパッケージをマウスの左ボタンでクリックして強調表示します。パッケージリスト区画の下にあるパッケージの詳細区画に、この発行元から利用できる最新のバージョン、パッケージのサイズ、パッケージ内のファイル、依存関係、ライセンス契約条件といった情報が表示されます。</para>
+<para>パッケージのインストール後に名前が変更されている場合は、パッケージの新しい名前が「一般」タブの「変更後の名前」フィールドに表示されます。</para>
+<para>「バージョン」タブには、インストールに使用できるこのパッケージのバージョンのリストが表示されます。リストからバージョンを選択し、リストの右にある<guibutton>「インストール/更新」</guibutton>ボタンをクリックすると、そのバージョンをインストールできます。<xref linkend="install-pkg"/>を参照してください。</para>
+<para>パッケージリスト区画に情報メッセージが表示されている場合、パッケージの詳細区画は表示されません。</para>
+</sect2>
+<sect2 id="gkitc"><title>パッケージのバージョン情報ダイアログ</title>
+<para>パッケージリストでパッケージをマウスの右ボタンでクリックすると、<guimenu>「パッケージ」</guimenu>メニューがポップアップ表示されます。</para>
+<para>ポップアップメニューまたはメニューバーから<menuchoice><guimenu>「パッケージ」</guimenu><guimenuitem>「パッケージのバージョン情報」</guimenuitem></menuchoice>メニューオプションを選択すると、別のウィンドウが開き、インストールされているパッケージのバージョンと、該当する場合はインストールまたはアップグレードできる最新のバージョンが表示されます。</para>
+</sect2>
+</sect1>
+<sect1 id="select-pkg"><title>パッケージの選択</title>
+<para>選択したパッケージをインストール、更新、または削除することができます。パッケージを選択するには、パッケージリスト区画または<guimenu>「編集」</guimenu>メニューを使用します。</para>
+<para>パッケージリスト区画で、次のいずれかの操作を実行してパッケージを選択します。複数のパッケージを選択することができます。</para>
+<itemizedlist><listitem><para>パッケージ名の左にあるボックスをクリックします。パッケージの選択を解除するには、ボックスを再度クリックします。</para>
+</listitem>
+<listitem><para>パッケージ名を 1 回クリックしてパッケージを強調表示します。次に、強調表示したパッケージをダブルクリックしてそのパッケージを選択します。パッケージの選択を解除するには、再度ダブルクリックします。</para>
+</listitem>
+<listitem><para>列見出し内のチェックボックスアイコンをクリックして、パッケージリスト区画に現在表示されているすべてのパッケージを選択します。パッケージリスト区画に現在表示されているすべてのパッケージの選択を解除するには、チェックボックスアイコンを再度クリックします。</para>
+</listitem>
+</itemizedlist>
+<para><guimenu>「編集」</guimenu>メニューには、パッケージを選択するための次のオプションがあります。</para>
+<itemizedlist><listitem><para><guimenuitem>「すべてを選択」</guimenuitem> — パッケージリスト区画に現在表示されているすべてのパッケージを選択します。</para>
+</listitem>
+<listitem><para><guimenuitem>「更新を選択」</guimenuitem> — パッケージリスト区画に現在表示されているパッケージで、使用可能な更新が存在するものをすべて選択します。</para>
+</listitem>
+<listitem><para><guimenuitem>「すべてを選択解除」</guimenuitem> — パッケージリスト区画に現在表示されているすべてのパッケージの選択を解除します。</para>
+</listitem>
+</itemizedlist>
+<para>どの場合でも、パッケージを 1 つ選択したとき、それまでに選択されていたパッケージは選択されたままになります。</para>
+<para>パッケージリスト区画に現在表示されているパッケージの数および選択されているパッケージの数が、パッケージマネージャーウィンドウ下部のステータスバーの左側に表示されます。</para>
+<para><menuchoice><guimenu>「発行元」</guimenu><guimenuitem>「すべての発行元」</guimenuitem></menuchoice>オプション、<guimenuitem>「すべてのカテゴリ」</guimenuitem>カテゴリ、および<menuchoice><guimenu>「表示」</guimenu><guimenuitem>「選択したパッケージ」</guimenuitem></menuchoice>オプションを選択すると、すべての発行元のパッケージで、選択されているものがすべてパッケージリスト区画に表示されます。</para>
+<para>パッケージは強調表示されていても、選択されていない場合があります。パッケージが強調表示されている場合、パッケージリスト区画の下にあるパッケージの詳細区画に、そのパッケージに関する詳細情報が表示されます。パッケージが選択されている場合、パッケージ名の左にあるボックスにチェックマークが表示されます。パッケージのインストール、更新、または削除を行う場合は、そのパッケージの選択ボックスにチェックマークが表示されていることを確認してください。</para>
+</sect1>
+<sect1 id="install-pkg"><title>パッケージのインストールと更新</title>
+<para>インストールまたは更新の前に、「オプションのコンポーネント」設定を確認します。<menuchoice><guimenu>「編集」</guimenu><guimenuitem>「設定」</guimenuitem></menuchoice>オプションを選択します。「設定」ウィンドウで「オプションのコンポーネント」タブを選択します。デフォルトでは、「すべての言語のインストール」、「すべての開発ファイルのインストール」、および「すべてのドキュメントのインストール」が選択されています。たとえば、一部の言語を選択してインストールしたり、開発ファイルの選択を解除したりすることで、インストールの領域を節約できます。「了解」ボタンをクリックして変更を保存します。これらの設定は、すべてのインストール済みパッケージおよび今後のパッケージのインストールと更新に適用されます。</para>
+<para>パッケージをインストールまたは更新するには、次の手順を実行します。</para>
+<orderedlist><listitem><para>パッケージを選択します。<xref linkend="select-pkg"/>を参照してください。</para>
+</listitem>
+<listitem><para>パッケージをインストールまたは更新するには、次の方法のいずれかを使用します。</para>
+<itemizedlist><listitem><para>ツールバーの<guibutton>「インストール/更新」</guibutton>ボタンをクリックします。</para>
+</listitem>
+<listitem><para>メニューバーから<menuchoice><guimenu>「パッケージ」</guimenu><guimenuitem>「インストール/更新」</guimenuitem></menuchoice>オプションを選択します。</para>
+</listitem>
+<listitem><para>パッケージ名をマウスの右ボタンでクリックして<guimenu>「パッケージ」</guimenu>メニューをポップアップ表示します。次に、<guimenuitem>「インストール/更新」</guimenuitem>オプションを選択します。</para>
+</listitem>
+<listitem><para>パッケージリスト区画の下にあるパッケージの詳細区画の「バージョン」タブで、「インストールするバージョン」リストからバージョンを選択し、リストの右にある<guibutton>「インストール/更新」</guibutton>ボタンをクリックします。「インストールするバージョン」リストのパッケージはリポジトリで使用可能なものですが、インストール可能でない場合もあります。特定のバージョンに、インストール済みのほかのパッケージとの互換性がないこともあります。選択したバージョンがシステムにインストール可能でない場合、パッケージマネージャーで警告が表示され、そのパッケージはインストールされません。</para>
+</listitem>
+</itemizedlist>
+<para>パッケージがすでにインストールされている場合で、使用可能な更新が存在しないときは (「状態」列または<menuchoice><guimenu>「パッケージ」</guimenu><guimenuitem>「パッケージのバージョン情報」</guimenuitem></menuchoice>オプションを参照)、<guibutton>「インストール/更新」</guibutton>オプションはグレー表示され、選択不可になります。</para>
+</listitem>
+<listitem><para>「インストール/更新の確認」ウィンドウが表示されます。まだインストールされていないパッケージは「インストールの詳細」区画に一覧表示され、インストール済みのパッケージは「更新の詳細」区画に一覧表示されます。<guibutton>「続行」</guibutton>ボタンをクリックして、一覧表示されたパッケージをインストールまたは更新します。</para>
+<para>ライセンスダイアログが表示された場合、パッケージをインストールするにはライセンスに同意する必要があります。</para>
+<para>パッケージのインストール中にエラーが発生すると、エラーダイアログが表示されます。インストールまたは更新の失敗理由がエラーメッセージで示されます。</para>
+</listitem>
+</orderedlist>
+</sect1>
+<sect1 id="remove-pkg"><title>パッケージの削除</title>
+<para>パッケージを削除するには、次の手順を実行します。</para>
+<orderedlist><listitem><para>パッケージを選択します。<xref linkend="select-pkg"/>を参照してください。</para>
+</listitem>
+<listitem><para>パッケージを削除するには、次の方法のいずれかを使用します。</para>
+<itemizedlist><listitem><para>ツールバーの<guibutton>「削除」</guibutton>ボタンをクリックします。</para>
+</listitem>
+<listitem><para>メニューバーから<menuchoice><guimenu>「パッケージ」</guimenu><guimenuitem>「削除」</guimenuitem></menuchoice>オプションを選択します。</para>
+</listitem>
+<listitem><para>パッケージ名をマウスの右ボタンでクリックして<guimenu>「パッケージ」</guimenu>メニューをポップアップ表示します。次に、<guimenuitem>「削除」</guimenuitem>オプションを選択します。</para>
+</listitem>
+</itemizedlist>
+<para>パッケージがインストールされていない場合、「削除」オプションはグレー表示され、選択不可になります。</para>
+</listitem>
+<listitem><para>「削除の確認」ウィンドウが表示されます。削除されるパッケージが確認のために「削除の詳細」区画に一覧表示されます。<guibutton>「続行」</guibutton>ボタンをクリックして、一覧表示されたパッケージを削除します。</para>
+<para>あるパッケージにほかのパッケージが依存しているためそのパッケージを削除できない場合、<guibutton>「削除の続行」</guibutton>オプションを選択すると、削除対象として最初に選択した残りのパッケージの削除を試みることができます。</para>
+</listitem>
+</orderedlist>
+</sect1>
+</chapter>
+<chapter id="update_all"><title>システムの更新</title>
+<para>一部のドライバやカーネルコンポーネントなど、特定の主要パッケージが更新されると、システムでは次の処理が実行されます。</para>
+<orderedlist><listitem><para>現在のブート環境 (BE) のクローンを作成します。</para>
+</listitem>
+<listitem><para>現在の BE 内のパッケージは更新せずに、クローン内のパッケージを更新します。</para>
+</listitem>
+<listitem><para>システムの次回リブート時にこの新しい BE がデフォルトでブートされるように設定します。現在の BE は代替ブート環境として残ります。</para>
+</listitem>
+</orderedlist>
+<sect1 id="um_info"><title>すべてのパッケージの更新</title>
+<para>ツールバーの<guibutton>「更新」</guibutton>ボタンまたは<menuchoice><guimenu>「パッケージ」</guimenu><guimenuitem>「更新」</guimenuitem></menuchoice>メニューオプションを選択すると、使用可能な更新が存在するインストール済みパッケージがすべて更新されます。</para>
+<para>それぞれの現在の発行元から更新が提供されているすべてのパッケージが更新されます。パッケージの更新が発行元リスト内の別の発行元から提供されている場合、そのパッケージが更新されるのは、その現在の発行元が非固定的と設定されている場合だけです。その現在の発行元が固定的と設定されている場合、そのパッケージは更新されません。</para>
+<para>「更新」ウィンドウが表示され、更新処理が開始します。</para>
+<orderedlist><listitem><para>すべてのカタログがリフレッシュされます。</para>
+</listitem>
+<listitem><para>すべてのインストール済みパッケージが評価され、使用可能な更新が存在するパッケージが判定されます。</para>
+<itemizedlist><listitem><para>どのパッケージにも使用可能な更新が存在しない場合、「有効な更新はありません」というメッセージが表示され、処理は停止します。</para>
+</listitem>
+<listitem><para>使用可能なパッケージ更新が存在する場合、更新されるパッケージが確認のために一覧表示されます。更新を中止するには<guibutton>「取消し」</guibutton>ボタンをクリックします。これ以降は中止できません。</para>
+</listitem>
+</itemizedlist>
+</listitem>
+<listitem><para>更新を続行するには<guibutton>「続行」</guibutton>ボタンをクリックします。</para>
+<para>前述の<xref linkend="update_all"/>で説明されているとおり、更新されるパッケージによっては、新しいブート環境 (BE) が作成されることがあります。</para>
+<para>新しい BE が必要な場合にそれを作成できなかったときは、エラーメッセージが表示されます。問題がディスク容量不足であれば、次の手順を実行してください。</para>
+<orderedlist><listitem><para><guibutton>「閉じる」</guibutton>をクリックして更新処理を取り消します。</para>
+</listitem>
+<listitem><para><xref linkend="remove-be"/>の手順に従って、不要になった BE を削除します。</para>
+</listitem>
+<listitem><para>もう一度<guibutton>「更新」</guibutton>をクリックして更新処理を再度開始します。</para>
+</listitem>
+</orderedlist>
+</listitem>
+<listitem><para>すべてのパッケージ更新がダウンロードされます。</para>
+</listitem>
+<listitem><para>パッケージ更新がインストールされます。BE のクローンが作成されている場合、更新はクローンにインストールされます。クローンが作成されていない場合、更新は現在の BE にインストールされます。</para>
+<para>更新処理中にいずれかの時点でエラーが発生した場合は、「詳細」パネルが展開され、エラーの詳細が表示されます。失敗した段階の横に、エラー状態インジケータが表示されます。</para>
+</listitem>
+<listitem><para>更新用の新しい BE が作成されている場合は、デフォルトの BE 名を編集することができます。希望の BE 名に変更したあと、システムをただちにリブートする場合は<guibutton>「今すぐ再起動」</guibutton>ボタンをクリックします。システムをあとで再起動する場合は<guibutton>「あとで再起動」</guibutton>ボタンをクリックします。新しい BE からブートするには再起動が必要です。新しい BE がデフォルトのブート環境になります。現在の BE は代替ブート環境として使用可能です。</para>
+</listitem>
+</orderedlist>
+</sect1>
+<sect1 id="using_um"><title>更新マネージャーの使用</title>
+<para>更新マネージャーはシステム通知またはデスクトップメニューバーから開くことができます。更新マネージャーは、前述の<xref linkend="um_info"/>で説明されているものと同じ処理を実行します。</para>
+<sect2 id="gkiso"><title>ソフトウェア更新の通知</title>
+<para>システムは、インストール済みパッケージのいずれかに使用可能な更新が存在するかどうかを定期的に確認します。使用可能な更新が存在することが検出されると、システム通知トレーに「更新が使用可能です」通知アイコンとポップアップが表示されます。この通知アイコンをクリックして更新マネージャーを開きます。</para>
+</sect2>
+<sect2 id="gkisz"><title>デスクトップのシステムメニュー</title>
+<para>デスクトップのメニューバーから<menuchoice><guimenu>「システム」</guimenu><guisubmenu>「システム管理」</guisubmenu><guimenuitem>「更新マネージャー」</guimenuitem></menuchoice>を選択して更新マネージャーを開きます。</para>
+</sect2>
+</sect1>
+</chapter>
+<chapter id="manage-publisher"><title>発行元の管理</title>
+<para>IPS パッケージ発行元の追加、変更、および削除を行うことができます。発行元の優先度の変更、有効設定と固定的設定の変更、発行元の別名の変更、発行元の起点の追加または削除、および発行元のミラーの追加または削除を行うことができます。キー、証明書、および署名ポリシーを管理できます。</para>
+<para>システム発行元は例外です。システム発行元は「発行元の管理」ウィンドウにのみ表示されます。システム発行元は削除したり変更したりできず、優先度を変更することもできません。<xref linkend="glossary"/>を参照してください。選択した発行元がシステム発行元かどうかは、詳細区画に表示されます。</para>
+<sect1 id="add-publisher"><title>発行元の追加</title>
+<para>IPS パッケージ発行元を追加するには、「発行元を追加」ウィンドウを使用します。「発行元を追加」ウィンドウを開くには、次のいずれかの操作を実行します。</para>
+<itemizedlist><listitem><para><guimenu>「発行元」</guimenu>ドロップダウンメニューから<guimenuitem>「追加」</guimenuitem>オプションを選択します。</para>
+</listitem>
+<listitem><para><menuchoice><guimenu>「ファイル」</guimenu><guimenuitem>「発行元を追加」</guimenuitem></menuchoice>メニューオプションを選択します。</para>
+</listitem>
+<listitem><para><menuchoice><guimenu>「ファイル」</guimenu><guimenuitem>「発行元の管理」</guimenuitem></menuchoice>メニューオプションを選択します。「発行元の管理」ウィンドウで、<guibutton>「追加」</guibutton>ボタンをクリックします。</para>
+</listitem>
+</itemizedlist>
+<para>「発行元を追加」ウィンドウで次の手順を実行して、ISP パッケージ発行元を追加します。</para>
+<orderedlist><listitem><para>「URI」フィールドに発行元の URI を入力します。URI は、<literal>http://pkg.oracle.com/solaris/release/</literal> や <literal>http://localhost:5555</literal> といったネットワークの場所です。</para>
+</listitem>
+<listitem><para>「別名」フィールドには、この発行元の代替名を入力できます。</para>
+</listitem>
+<listitem><para><guibutton>「追加」</guibutton>ボタンをクリックします。</para>
+</listitem>
+<listitem><para>「発行元を追加」ダイアログが表示されます。処理を取り消すには、<guibutton>「取消し」</guibutton>をクリックします。詳細情報を表示するには、「詳細」をクリックします。</para>
+<itemizedlist><listitem><para>新しい発行元が正常に追加されると、「発行元を追加しました」ダイアログが表示され、新しい発行元の名前、別名、および URI が表示されます。</para>
+</listitem>
+<listitem><para>新しい発行元が追加されなかった場合、「発行元エラー」ダイアログが表示され、問題に関する情報が表示されます。</para>
+</listitem>
+</itemizedlist>
+</listitem>
+</orderedlist>
+<para>新しい発行元は、「発行元の管理」ウィンドウで発行元リストの最後に表示され、有効および固定的になります。</para>
+<para>新しい発行元の優先度の変更、有効設定と固定的設定の変更、発行元の別名の変更、発行元の起点の追加、SSL キーと証明書の設定、発行元のミラーの追加、および発行元証明書と署名ポリシーの管理については、<xref linkend="modify-publisher"/>を参照してください。</para>
+</sect1>
+<sect1 id="modify-publisher"><title>発行元の変更</title>
+<para>発行元の属性を変更するには、<menuchoice><guimenu>「ファイル」</guimenu><guimenuitem>「発行元の管理」</guimenuitem></menuchoice>メニューオプションを選択します。現在設定されている発行元が「発行元の管理」ウィンドウに一覧表示されます。</para>
+<para>「発行元の管理」ウィンドウでは、発行元の優先度の変更、発行元の有効化または無効化、発行元を固定的または非固定的に設定すること、および発行元の削除を行うことができます。<xref linkend="priority-stickiness"/>および<xref linkend="remove-publisher"/>を参照してください。</para>
+<para><guibutton>「変更」</guibutton>ボタンをクリックして「発行元の変更」ウィンドウを開きます。「発行元の変更」ウィンドウでは、発行元の別名の変更、発行元の起点の追加または削除、発行元のミラーの追加または削除、SSL キーと証明書の設定、および発行元証明書と署名ポリシーの管理を行うことができます。<xref linkend="origin-mirror"/>および<xref linkend="pub-security"/>を参照してください。</para>
+<sect2 id="priority-stickiness"><title>優先度と固定性の変更</title>
+<para><menuchoice><guimenu>「ファイル」</guimenu><guimenuitem>「発行元の管理」</guimenuitem></menuchoice>メニューオプションを選択して「発行元の管理」ウィンドウを表示します。</para>
+<sect3 id="set-pub-order"><title>発行元の優先度</title>
+<para>発行元は優先度の順に「発行元の管理」ウィンドウに表示されます。リストの最上部の発行元は優先度のもっとも高い発行元です。リストの最下部の発行元は優先度のもっとも低い発行元です。</para>
+<itemizedlist><listitem><para>リストの最上部の発行元は優先発行元とも呼ばれます。</para></listitem>
+<listitem><para>優先発行元を無効にしたり削除したりすることはできません。</para></listitem>
+<listitem><para>発行元を指定せずにパッケージを検索する場合、優先度の高い発行元のカタログから順に検索されます。</para></listitem>
+<listitem><para>非固定的発行元のインストール済みパッケージを更新する場合、優先度の高い発行元のカタログから順に更新が検索されます。</para></listitem>
+</itemizedlist>
+<para>発行元の優先度を変更するには、次の手順を実行します。</para>
+<orderedlist><listitem><para>「発行元の管理」ウィンドウのリストで発行元の行をクリックして強調表示します。</para>
+</listitem>
+<listitem><para>発行元リストの右にある<guibutton>「上へ」</guibutton>ボタンと<guibutton>「下へ」</guibutton>ボタンをクリックして、選択した発行元の優先度を高くしたり低くしたりします。選択した発行元がリスト内で上下に移動して新しい優先度を示します。</para>
+<para>選択した発行元がシステム発行元の場合、<guibutton>「上へ」</guibutton>ボタンと<guibutton>「下へ」</guibutton>ボタンは使用不可になります。システム発行元の優先度を変更することはできません。システム発行元の優先度は変更できないため、システム発行元より 1 つだけ優先度の高い発行元の優先度を低くすることや、システム発行元より 1 つだけ優先度の低い発行元の優先度を高くすることはできません。</para></listitem>
+<listitem><para>「発行元の管理」ウィンドウ下部の<guibutton>「了解」</guibutton>ボタンをクリックします。</para>
+</listitem>
+</orderedlist>
+</sect3>
+<sect3 id="gjlab"><title>有効と固定的</title>
+<para>発行元を追加すると、有効属性と固定的属性がデフォルトで設定されます。優先発行元 (前述の<xref linkend="set-pub-order"/>を参照) を無効にすることはできません。システム発行元を無効にすることはできず、システム発行元の固定的設定を変更することはできません。ほかの有効設定と固定的設定はすべて変更可能です。</para>
+<para>発行元に固定的属性が設定されている場合、その発行元からインストールされたパッケージは、別の発行元から更新することはできません。発行元に固定的属性が設定されていない場合、その発行元は非固定的です。非固定的発行元の場合、その発行元から最初にインストールされたパッケージは、別の発行元から更新することができます。パッケージの元の発行元よりも新しいバージョンのパッケージが別の発行元に存在することもあります。そのより新しいパッケージに更新するには、元の発行元が非固定的でなければなりません。また、優先度の低い非固定的発行元の場合、その発行元からインストールされたパッケージの更新は、より優先度の高い発行元から順に検索されます。</para>
+<para>インストールするパッケージまたは更新を検索するとき、無効になっている発行元は検索対象になりません。無効になっている発行元のカタログはリフレッシュされません。無効になっている発行元は<guimenu>「発行元」</guimenu>ドロップダウンメニューに表示されません。</para>
+<para>発行元の「有効」設定または「固定的」設定を変更するには、次の手順を実行します。</para>
+<orderedlist><listitem><para><menuchoice><guimenu>「ファイル」</guimenu><guimenuitem>「発行元の管理」</guimenuitem></menuchoice>メニューオプションを選択して「発行元の管理」ウィンドウを開きます。</para>
+</listitem>
+<listitem><para>「有効」ボックスまたは「固定的」ボックスをクリックして、それぞれの設定を切り替えます。</para>
+</listitem>
+<listitem><para>「発行元の管理」ウィンドウ下部の<guibutton>「了解」</guibutton>ボタンをクリックします。</para>
+</listitem>
+</orderedlist>
+</sect3>
+</sect2>
+<sect2 id="origin-mirror"><title>別名、起点、およびミラーの変更</title>
+<orderedlist><listitem><para><menuchoice><guimenu>「ファイル」</guimenu><guimenuitem>「発行元の管理」</guimenuitem></menuchoice>メニューオプションを選択して「発行元の管理」ウィンドウを開きます。</para>
+</listitem>
+<listitem><para>変更する発行元を選択します。「発行元の管理」ウィンドウの発行元リストの下にある「詳細」区画に、選択した発行元の現在の起点が表示されます。</para>
+</listitem>
+<listitem><para>発行元リストの右にある<guibutton>「変更」</guibutton>ボタンをクリックして「発行元の変更」ウィンドウを開きます。</para>
+<para>選択した発行元がシステム発行元の場合、<guibutton>「変更」</guibutton>ボタンは使用不可になります。「詳細」区画には、選択した発行元がシステム発行元であることが示され、この発行元の変更や削除を行うことはできないというメッセージが表示されます。</para>
+</listitem>
+<listitem><para>発行元の別名の変更、起点の追加または削除、およびミラーの追加または削除を行うには、「一般」タブを選択します。</para></listitem>
+</orderedlist>
+<sect3 id="modify-publisher-alias"><title>発行元の別名</title>
+<para>発行元の別名は、発行元の別の名前です。別名は<guimenu>「発行元」</guimenu>ドロップダウンメニューとパッケージリスト区画で使用されます。</para>
+<para>この発行元の別名を変更するには、次の手順を実行します。</para>
+<orderedlist><listitem><para>「発行元の変更」ウィンドウの「一般」タブで、「別名」フィールドに新しい名前を入力します。</para>
+</listitem>
+<listitem><para>「発行元の変更」ウィンドウ下部の<guibutton>「了解」</guibutton>ボタンをクリックします。</para>
+</listitem>
+<listitem><para>「発行元の管理」ウィンドウで発行元の別名が変更されます。「発行元の管理」ウィンドウ下部の<guibutton>「了解」</guibutton>ボタンをクリックします。</para>
+</listitem>
+</orderedlist>
+</sect3>
+<sect3 id="gjkza"><title>発行元の起点</title>
+<para>起点は、パッケージのメタデータ (パッケージのマニフェストとカタログ) とパッケージの内容 (パッケージファイル) の両方を含む IPS パッケージリポジトリまたはアーカイブの場所です。</para>
+<para>起点の値は、IPS パッケージリポジトリの URI です。</para>
+<para>この発行元の起点を変更、追加、または削除するには、次の手順を実行します。</para>
+<orderedlist><listitem><para>「発行元の変更」ウィンドウの「一般」タブを選択します。</para>
+<itemizedlist><listitem><para>起点を追加します。</para>
+<orderedlist type="a"><listitem><para>この発行元に関連付ける新しい起点の URI を「起点」フィールドに入力します。</para></listitem>
+<listitem><para><guibutton>「追加」</guibutton>ボタンをクリックします。「起点」フィールドの下のリストに、新しい URI が追加されます。</para></listitem>
+</orderedlist>
+</listitem>
+<listitem><para>起点を削除します。</para>
+<orderedlist type="a"><listitem><para>「起点」フィールドの下のリストで、削除する URI を選択します。</para></listitem>
+<listitem><para><guibutton>「削除」</guibutton>ボタンをクリックします。選択した URI がリストから削除されます。この発行元に起点が 1 つだけ定義されている場合、その起点を削除することはできません。</para></listitem>
+</orderedlist>
+</listitem>
+<listitem><para>起点を変更します。</para>
+<orderedlist type="a"><listitem><para>新しい起点を追加します。</para></listitem>
+<listitem><para>変更する起点を削除します。</para></listitem>
+</orderedlist>
+</listitem>
+</itemizedlist>
+</listitem>
+<listitem><para>「発行元の変更」ウィンドウ下部の<guibutton>「了解」</guibutton>ボタンをクリックします。</para>
+</listitem>
+<listitem><para>起点の変更が「発行元の管理」ウィンドウの「詳細」区画に反映されます。「発行元の管理」ウィンドウ下部の<guibutton>「了解」</guibutton>ボタンをクリックします。</para>
+</listitem>
+</orderedlist>
+</sect3>
+<sect3 id="gjkyr"><title>発行元のミラー</title>
+<para>ミラーは、パッケージの内容 (パッケージファイル) だけを含む IPS パッケージリポジトリの場所です。ミラーにパッケージのメタデータ (パッケージのマニフェストとカタログ) は含まれません。ミラーでは、起点で提供されているデータの一部が提供されます。ミラーはパッケージファイルのダウンロードにのみ使用できます。パッケージのメタデータは起点からダウンロードされます。IPS クライアントは、パッケージの内容をミラーからダウンロードする場合でも、発行元のカタログを取得するために起点にアクセスします。</para>
+<para>この発行元のミラーを追加、削除、または変更するには、次の手順を実行します。</para>
+<orderedlist><listitem><para>「発行元の変更」ウィンドウの「一般」タブを選択します。</para></listitem>
+<listitem><para>「ミラー」ラベルをクリックして、「ミラー」フィールドとミラーのリストを表示します。</para>
+<itemizedlist><listitem><para>ミラーを追加します。</para>
+<orderedlist type="a"><listitem><para>この発行元に関連付ける新しいミラーの URI を「ミラー」フィールドに入力します。</para></listitem>
+<listitem><para><guibutton>「追加」</guibutton>ボタンをクリックします。「ミラー」フィールドの下のリストに、新しい URI が追加されます。</para></listitem>
+</orderedlist>
+</listitem>
+<listitem><para>ミラーを削除します。</para>
+<orderedlist type="a"><listitem><para>「ミラー」フィールドの下のリストで、削除する URI を選択します。</para></listitem>
+<listitem><para><guibutton>「削除」</guibutton>ボタンをクリックします。選択した URI がリストから削除されます。</para></listitem>
+</orderedlist>
+</listitem>
+<listitem><para>ミラーを変更します。</para>
+<orderedlist type="a"><listitem><para>変更するミラーを削除します。</para></listitem>
+<listitem><para>新しいミラーを追加します。</para></listitem>
+</orderedlist>
+</listitem>
+</itemizedlist>
+</listitem>
+<listitem><para>「発行元の変更」ウィンドウ下部の<guibutton>「了解」</guibutton>ボタンをクリックします。</para>
+</listitem>
+<listitem><para>「発行元の管理」ウィンドウ下部の<guibutton>「了解」</guibutton>ボタンをクリックします。</para>
+</listitem>
+</orderedlist>
+</sect3>
+</sect2>
+<sect2 id="security"><title>発行元のセキュリティーの管理</title>
+<para>パッケージのインストールの前に、パッケージが適切に署名されているかどうかが証明書を使用して確認されます。この確認は、イメージまたは発行元の署名ポリシーのどちらか制限の厳しい方に基づきます。</para>
+<orderedlist><listitem><para><menuchoice><guimenu>「ファイル」</guimenu><guimenuitem>「発行元の管理」</guimenuitem></menuchoice>メニューオプションを選択して「発行元の管理」ウィンドウを開きます。</para>
+</listitem>
+<listitem><para>セキュリティーを変更する発行元を選択します。</para>
+</listitem>
+<listitem><para>発行元リストの右にある<guibutton>「変更」</guibutton>ボタンをクリックして「発行元の変更」ウィンドウを開きます。「発行元の変更」ウィンドウのタイトルには、「発行元の管理」ウィンドウで選択されていた発行元が表示されます。</para>
+<itemizedlist><listitem><para>発行元にセキュリティー保護された起点がある場合は、「一般」タブを選択して SSL キーと SSL 証明書を追加します。</para></listitem>
+<listitem><para>この発行元の証明書を管理するには、「証明書」タブを選択します。</para></listitem>
+<listitem><para>この発行元の署名ポリシーを管理するには、「署名ポリシー」タブを選択します。</para></listitem>
+</itemizedlist>
+</listitem>
+</orderedlist>
+<sect3 id="keys-certs"><title>SSL キーと証明書の追加</title>
+<para>発行元にセキュリティー保護された起点がある場合は、発行元の SSL キーと SSL 証明書を追加します。</para>
+<orderedlist><listitem><para>「発行元の変更」ウィンドウの「一般」タブをクリックします。</para></listitem>
+<listitem><para>「SSL キーと証明書」ラベルをクリックして、「SSL キー」フィールドと「SSL 証明書」フィールドを表示します。</para></listitem>
+<listitem><para>「SSL キー」フィールドの右にある<guibutton>「参照」</guibutton>ボタンをクリックし、SSL キーファイルを選択します。</para></listitem>
+<listitem><para>「SSL 証明書」フィールドの右にある<guibutton>「参照」</guibutton>ボタンをクリックし、SSL 証明書ファイルを選択します。</para> </listitem>
+<listitem><para>「発行元の変更」ウィンドウ下部の<guibutton>「了解」</guibutton>ボタンをクリックします。</para></listitem>
+<listitem><para>「発行元の管理」ウィンドウ下部の<guibutton>「了解」</guibutton>ボタンをクリックします。</para></listitem>
+</orderedlist>
+</sect3>
+<sect3 id="manage-certs"><title>証明書の管理</title>
+<orderedlist><listitem><para>「発行元の変更」ウィンドウの「証明書」タブをクリックします。</para></listitem>
+<listitem><para>証明書リストの下にあるボタンを使用して、証明書の追加、またはリストで現在選択されている証明書の削除、失効、回復を行います。</para>
+<para>「発行元の変更」ウィンドウで行う操作はすべて、「発行元の変更」ウィンドウ下部の<guibutton>「了解」</guibutton>ボタンをクリックしたあとにはじめて、選択した発行元の証明書に適用されます。<guibutton>「取消し」</guibutton>ボタンをクリックした場合、変更は適用されません。</para>
+<itemizedlist><listitem><para><guibutton>「追加」</guibutton>。「発行元の変更」ウィンドウのタイトルに表示された発行元の新しい発行元証明書を追加します。「発行元証明書の追加」ウィンドウで、証明書 (<tt>.pem</tt>) ファイルを参照して選択します。「発行元証明書の追加」ウィンドウ下部の<guibutton>「了解」</guibutton>ボタンをクリックします。「発行元の変更」ウィンドウの「証明書」タブの証明書リストでは、新しく追加された証明書が選択されます。詳細区画には、この証明書が「追加対象として指定されている」ことが示されます。この証明書は、「発行元の変更」ウィンドウの<guibutton>「了解」</guibutton>ボタンをクリックしたあとで追加されます。</para></listitem>
+</itemizedlist>
+</listitem>
+<listitem><para>この発行元の証明書リストで、変更する証明書または詳細を確認する証明書を選択します。証明書リストと一連のボタンの下に、選択した証明書の詳細が表示されます。有効期限が切れた証明書が、まだ「承認済み」のままで、証明書の有効期限が切れる前に発行された (インストールされている必要はない) 署名付きパッケージの検証に使用されている場合があります。</para>
+<para>証明書リストを再ソートするには、リストの見出しをクリックします。「組織」列と「名前」列のサイズは変更可能です。</para>
+<itemizedlist><listitem><para><guibutton>「削除」</guibutton>。証明書リストで現在選択されている証明書を削除します。</para></listitem>
+<listitem><para><guibutton>「失効」</guibutton>。証明書リストで現在選択されている証明書が「承認済み」の場合、<guibutton>「失効」</guibutton>ボタンをクリックすると、この証明書は失効した証明書として扱われます。証明書リストでは、この証明書の「状態」が「失効済み」に変わります。この変更は、「発行元の変更」ウィンドウの<guibutton>「了解」</guibutton>ボタンをクリックしたあとで証明書に適用されます。</para></listitem>
+<listitem><para><guibutton>「回復」</guibutton>。証明書リストで現在選択されている証明書が「失効済み」の場合、<guibutton>「回復」</guibutton>ボタンをクリックすると、この証明書は承認された証明書として扱われます。詳細区画には、この証明書が「回復対象として指定されている」ことが示されます。この証明書は、「発行元の変更」ウィンドウの<guibutton>「了解」</guibutton>ボタンをクリックしたあとで回復されます。</para></listitem>
+</itemizedlist>
+</listitem>
+<listitem><para>「発行元の変更」ウィンドウ下部の<guibutton>「了解」</guibutton>ボタンをクリックします。</para></listitem>
+<listitem><para>「発行元の管理」ウィンドウ下部の<guibutton>「了解」</guibutton>ボタンをクリックします。</para></listitem>
+</orderedlist>
+</sect3>
+<sect3 id="pub-sig-policy"><title>署名ポリシーの管理</title>
+<orderedlist><listitem><para>「発行元の変更」ウィンドウの「署名ポリシー」タブをクリックします。</para></listitem>
+<listitem><para>「署名ポリシー」タブのボタンを使用して、「発行元の変更」ウィンドウのタイトルに表示された発行元からパッケージをインストールするときに使用する署名ポリシーを設定します。</para>
+<para>グローバルな署名ポリシーを設定するには、「設定」ウィンドウの「署名ポリシー」タブを使用します (<xref linkend="img-sig-policy"/>を参照)。</para>
+<itemizedlist><listitem><para>「署名を無視する」: すべてのパッケージの署名を無視します。</para></listitem>
+<listitem><para>「署名は任意であるが、指定する場合は有効である必要がある」: すべての署名付きパッケージが有効であることを確認しますが、インストールされるすべてのパッケージが署名されている必要はありません。</para></listitem>
+<listitem><para>「1 つ以上の有効な署名が必要」: 新しくインストールされるすべてのパッケージに少なくとも 1 つ有効な署名があることを要求します。</para></listitem>
+<listitem><para>署名は必須であり、パッケージの署名の検証時にテキストフィールドで指定した名前が証明書名に含まれている必要があります。複数の名前を指定する場合は、名前をコンマで区切る必要があります。</para></listitem></itemizedlist>
+</listitem>
+<listitem><para>「発行元の変更」ウィンドウ下部の<guibutton>「了解」</guibutton>ボタンをクリックします。</para></listitem>
+<listitem><para>「発行元の管理」ウィンドウ下部の<guibutton>「了解」</guibutton>ボタンをクリックします。</para></listitem>
+</orderedlist>
+</sect3>
+</sect2>
+</sect1>
+<sect1 id="remove-publisher"><title>発行元の削除</title>
+<para>発行元を削除するには、次の手順を実行します。</para>
+<orderedlist><listitem><para><menuchoice><guimenu>「ファイル」</guimenu><guimenuitem>「発行元の管理」</guimenuitem></menuchoice>メニューオプションを選択して「発行元の管理」ウィンドウを開きます。</para>
+</listitem>
+<listitem><para>削除する発行元を選択します。</para>
+</listitem>
+<listitem><para>発行元リストの右にある<guibutton>「削除」</guibutton>ボタンをクリックします。</para>
+<para>選択した発行元がシステム発行元の場合、<guibutton>「削除」</guibutton>ボタンは使用不可になります。「詳細」区画には、選択した発行元がシステム発行元であることが示され、この発行元の変更や削除を行うことはできないというメッセージが表示されます。</para>
+</listitem>
+<listitem><para>「発行元の管理」ウィンドウ下部の<guibutton>「了解」</guibutton>ボタンをクリックします。</para>
+</listitem>
+</orderedlist>
+</sect1>
+</chapter>
+<chapter id="manage-be"><title>ブート環境の管理</title>
+<para>ブート環境 (BE) はブート可能なイメージです。Oracle Solaris システムに複数の BE を維持することができます。1 つの BE は、起動時またはリブート時のデフォルトの BE です。ほかの BE は代替ブート環境として使用可能です。ブートした BE がアクティブ BE です。</para>
+<para><literal>beadm</literal>(1) コマンドを使用して、BE の作成、名前の変更、マウント、マウント解除、アクティブ化、または破棄を行うことができます。BE の詳細については、『<citetitle>Creating and Managing Boot Environments After Installation</citetitle>』を参照してください。</para>
+<para>パッケージマネージャーでは、<literal>beadm</literal>(1) コマンドで提供されている機能の一部を実行できます。パッケージマネージャーの<menuchoice><guimenu>「ファイル」</guimenu><guimenuitem>「ブート環境の管理」</guimenuitem></menuchoice>オプションを使用して、「ブート環境の管理」ウィンドウを開きます。「ブート環境の管理」ウィンドウでは、このシステムの BE が一覧表示され、これらの BE のアクティブ化、名前の変更、および削除を後述の方法で行うことができます。</para>
+<sect1 id="create-be"><title>BE の作成</title>
+<para>次のいずれかの操作を実行すると、新しい BE が自動的に作成されます。</para>
+<itemizedlist><listitem><para>Oracle Solaris OS をインストールします。</para>
+</listitem>
+<listitem><para>一部のドライバやカーネルコンポーネントなど、特定の主要システムパッケージをインストールまたは更新します。</para>
+</listitem>
+<listitem><para><literal>beadm create</literal> コマンドを使用します。</para>
+</listitem>
+</itemizedlist>
+<para><literal>pkg update</literal> コマンドを実行するか<guibutton>「更新」</guibutton>ボタンを使用して使用可能な更新が存在するすべてのパッケージを更新すると、多くの場合は新しい BE が作成されます。</para>
+</sect1>
+<sect1 id="activate-be"><title>BE のアクティブ化</title>
+<para><menuchoice><guimenu>「ファイル」</guimenu><guimenuitem>「ブート環境の管理」</guimenuitem></menuchoice>メニューオプションを選択して、「ブート環境の管理」ウィンドウを開きます。ウィンドウに BE が一覧表示されます。現在ブートされている BE には、BE 名の左にチェックマークが表示されます。</para>
+<para>次回リブート時にアクティブ化するデフォルトの BE として別の BE を指定するには、次の手順を実行します。</para>
+<orderedlist><listitem><para>次回リブート時にアクティブ化するデフォルトの BE として指定する BE の<guibutton>「リブート時にアクティブ化」</guibutton>ボタンを選択します。</para>
+</listitem>
+<listitem><para>「ブート環境の管理」ウィンドウの<guibutton>「了解」</guibutton>ボタンをクリックします。</para>
+</listitem>
+</orderedlist>
+</sect1>
+<sect1 id="rename-be"><title>BE の名前の変更</title>
+<para><menuchoice><guimenu>「ファイル」</guimenu><guimenuitem>「ブート環境の管理」</guimenuitem></menuchoice>メニューオプションを選択して、「ブート環境の管理」ウィンドウを開きます。ウィンドウに BE が一覧表示されます。</para>
+<para>現在アクティブになっている BE の名前を変更することはできません。</para>
+<para>削除対象として指定されている BE の名前を変更することはできません。</para>
+<para>BE の名前を変更するには、次の手順を実行します。</para>
+<orderedlist><listitem><para>名前を変更する BE の名前をダブルクリックします。名前フィールドが編集可能になります。</para>
+</listitem>
+<listitem><para>新しい名前を入力します。</para>
+</listitem>
+<listitem><para>「ブート環境の管理」ウィンドウの<guibutton>「了解」</guibutton>ボタンをクリックします。</para>
+</listitem>
+</orderedlist>
+</sect1>
+<sect1 id="remove-be"><title>BE の削除</title>
+<para><menuchoice><guimenu>「ファイル」</guimenu><guimenuitem>「ブート環境の管理」</guimenuitem></menuchoice>メニューオプションを選択して、「ブート環境の管理」ウィンドウを開きます。ウィンドウに BE が一覧表示されます。ウィンドウの右端の列が「削除」列です。</para>
+<para>「ブート環境の管理」ウィンドウの中央の列には、BE のサイズが表示されます。BE を削除してストレージデバイスの領域を解放することができます。</para>
+<para>現在アクティブになっている BE を削除することはできません。</para>
+<para>名前を変更した BE を削除することはできません。</para>
+<para>BE を削除するには、次の手順を実行します。</para>
+<orderedlist><listitem><para>削除する BE の<guibutton>「削除」</guibutton>ボックスを選択します。</para>
+</listitem>
+<listitem><para>「ブート環境の管理」ウィンドウの<guibutton>「了解」</guibutton>ボタンをクリックします。</para>
+</listitem>
+</orderedlist>
+</sect1>
+</chapter>
+<chapter id="webinstall"><title>WebInstall の操作</title>
+<para>パッケージマネージャーでは、簡単なワンクリックの WebInstall 処理を使用したパッケージのインストールがサポートされています。WebInstall 処理は <filename>.p5i</filename> ファイルを使用します。<filename>.p5i</filename> ファイルには、発行元を追加するための情報と、これらの発行元からインストール可能なパッケージを追加するための情報が含まれています。<filename>.p5i</filename> ファイルに含まれている情報は WebInstall 処理によって読み込まれ、使用されます。</para>
+<sect1 id="webinstall-export"><title>WebInstall によるファイルのエクスポート</title>
+<para>自分のシステムにインストールしたパッケージをほかのユーザーもインストールできるようにする場合は、これらのパッケージファイルのインストール方法を WebInstall 処理でエクスポートできます。これらのパッケージのインストール方法とインストールする発行元を含む <filename>.p5i</filename> ファイルが作成されます。</para>
+<para>選択したパッケージのインストール方法と発行元を <filename>.p5i</filename> ファイルにエクスポートするには、次の手順を実行します。</para>
+<orderedlist><listitem><para><guimenu>「発行元」</guimenu>ドロップダウンメニューから、<filename>.p5i</filename> ファイルに含めるパッケージを取得する発行元を選択します。</para>
+</listitem>
+<listitem><para>パッケージリスト区画で、インストール方法を配布するパッケージを選択します。</para>
+</listitem>
+<listitem><para><menuchoice><guisubmenu>「ファイル」</guisubmenu><guimenuitem>「選択項目をエクスポート」</guimenuitem></menuchoice>をクリックして「エクスポート選択項目の確認」ウィンドウを表示します。</para>
+</listitem>
+<listitem><para><guibutton>「了解」</guibutton>ボタンをクリックして選択項目を確定します。「選択項目をエクスポート」ウィンドウが表示されます。</para>
+</listitem>
+<listitem><para><filename>p5i</filename> ファイルのデフォルト名が拡張子 <filename>.p5i</filename> を付けて提示されます。このファイル名は変更できますが、拡張子は変更しないでください。</para>
+</listitem>
+<listitem><para><filename>p5i</filename> ファイルのデフォルトの場所が提示されます。この場所は変更できます。<guibutton>「参照」</guibutton>ボタンを使用する場合は、「選択項目をエクスポート」ウィンドウの右下にあるドロップダウンメニューから<filename>「p5i ファイル」</filename>オプションを選択すると、ファイルリストに <filename>.p5i</filename> ファイルだけを表示できます。</para>
+</listitem>
+<listitem><para><guibutton>「保存」</guibutton>ボタンをクリックしてファイルの名前と場所を保存します。</para>
+</listitem>
+</orderedlist>
+</sect1>
+<sect1 id="webinstall-add"><title>WebInstall による発行元の追加とパッケージのインストール</title>
+<para>WebInstall 処理を使用すると、<filename>p5i</filename> ファイルからパッケージをインストールすることができます。</para>
+<orderedlist><listitem><para><filename>.p5i</filename> ファイルを見つけます。このファイルは、デスクトップまたは Web サイト上に存在する場合があります。</para>
+</listitem>
+<listitem><para>次のいずれかの方法で、パッケージマネージャーを WebInstall モードで起動します。</para>
+<itemizedlist><listitem><para>デスクトップ上の <filename>.p5i</filename> ファイルをクリックします。関連付けられたアプリケーション (パッケージマネージャー Web インストーラ) が起動します。</para>
+</listitem>
+<listitem><para><filename>.p5i</filename> ファイルのパスを指定して、コマンド行からパッケージマネージャーを起動します。たとえば、次のコマンドを入力します。</para>
+<screen># <userinput>packagemanager/<replaceable>path_to_p5i_file/file.p5i</replaceable></userinput></screen>
+</listitem>
+<listitem><para><filename>.p5i</filename> ファイルへのリンクを含んでいる URL に移動します。<filename>.p5i</filename> ファイルは、この MIME タイプが登録されている Web サーバー上に存在する必要があります。</para>
+<para><filename>.p5i</filename> が、この MIME タイプが登録されていない Web サーバー上に存在する場合は、<filename>.p5i</filename> ファイルをデスクトップに保存してから、それをクリックして WebInstall を起動します。</para>
+</listitem>
+</itemizedlist>
+</listitem>
+<listitem><para>「インストール/更新」ウィンドウが表示されます。ウィンドウ上部のラベルは「パッケージマネージャー Web インストーラ/次のものがシステムに追加されます:」となります。次に、発行元とパッケージが一覧表示されます。<guibutton>「続行」</guibutton>ボタンをクリックしてインストールを続行します。</para>
+<itemizedlist><listitem><para>パッケージ発行元がまだシステムに設定されていない場合は、「発行元を追加」ウィンドウが表示されます。発行元の名前と URI はすでに入力されています。</para>
+<para>追加した発行元がセキュリティー保護された発行元ならば、SSL キーと証明書が必要です。システム上にある SSL キーと SSL 証明書を参照してください。</para>
+<para>発行元が正常に追加されると、「発行元を追加しました」ダイアログが表示されます。<guibutton>「了解」</guibutton>ボタンをクリックしてインストールを続行します。</para>
+</listitem>
+<listitem><para><filename>.p5i</filename> ファイルが無効な発行元からのパッケージを含んでいる場合、WebInstall は「発行元の有効化」ダイアログを開きます。このダイアログを使用して、パッケージをインストールできるように発行元を有効にします。</para>
+</listitem>
+</itemizedlist>
+</listitem>
+<listitem><para>この時点で「インストール/更新」ウィンドウの表示は、パッケージマネージャー内から<guibutton>「インストール/更新」</guibutton>を選択したときと同じになります。</para>
+</listitem>
+</orderedlist>
+</sect1>
+</chapter>
+<chapter id="gkioy"><title>トラブルシューティング</title>
+<para>エラー、警告、および情報メッセージは、いつでも確認できるようにログに保存されます。</para>
+<sect1 id="gkiod"><title>メッセージログの表示</title>
+<para><menuchoice><guimenu>「表示」</guimenu><guimenuitem>「ログ」</guimenuitem></menuchoice>メニューオプションを選択して「ログ」ウィンドウを開きます。「ログ」ウィンドウには、パッケージマネージャーと更新マネージャーからのエラー、警告、および情報メッセージが表示されます。</para>
+<para>すべてのメッセージを削除するには、「ログ」ウィンドウ下部の<guibutton>「消去」</guibutton>ボタンをクリックします。</para>
+<para>エラーまたは警告がログに記録されると、ステータスバーの左側に黄色の三角形が表示されます。黄色の三角形をクリックすると「ログ」ウィンドウが表示されます。</para>
+</sect1>
+</chapter>
+<chapter id="pkg-mgr-prefs"><title>設定</title>
+<para>パッケージマネージャーのユーザーインタフェースの設定を変更するには、<menuchoice><guimenu>「編集」</guimenu><guimenuitem>「設定」</guimenuitem></menuchoice>メニューオプションを使用します。</para>
+<para>「設定」ウィンドウには次の 3 つのタブがあります。</para>
+<itemizedlist><listitem><para>「一般」タブでは、終了設定と確認ダイアログ設定を指定できます。</para></listitem>
+<listitem><para>「オプションのコンポーネント」タブでは、パッケージのインストール時または更新時にインストールするオプションのパッケージコンポーネントの設定を指定できます。</para></listitem>
+<listitem><para>「署名ポリシー」タブでは、このイメージの署名ポリシーを設定できます。</para></listitem>
+</itemizedlist>
+<sect1 id="gjktu"><title>設定を閉じる</title>
+<para><menuchoice><guimenu>「編集」</guimenu><guimenuitem>「設定」</guimenuitem></menuchoice>オプションを選択し、「一般」タブを選択します。</para>
+<para>「終了時に現在の状態を記憶する」ボックスにチェックマークが付いている場合、パッケージマネージャーは次の設定を保存し、次回起動時にそれらを復元します。</para>
+<itemizedlist><listitem><para><emphasis role="strong">垂直セパレータと水平セパレータ</emphasis> - ウィンドウ内の区画の幅と高さ</para>
+</listitem>
+<listitem><para><emphasis role="strong">ウィンドウサイズ</emphasis> - パッケージマネージャーウィンドウ全体のサイズ</para>
+</listitem>
+<listitem><para><emphasis role="strong">発行元のオプション</emphasis> — パッケージマネージャーの終了時に<guimenu>「発行元」</guimenu>ドロップダウンメニューで選択されている発行元やほかのオプション</para>
+</listitem>
+<listitem><para><emphasis role="strong">カテゴリ</emphasis> — 各発行元の選択されているカテゴリおよび展開されたカテゴリと折りたたまれたカテゴリ</para>
+</listitem>
+</itemizedlist>
+</sect1>
+<sect1 id="gjkug"><title>「確認」ダイアログ設定</title>
+<para><menuchoice><guimenu>「編集」</guimenu><guimenuitem>「設定」</guimenuitem></menuchoice>オプションを選択し、「一般」タブを選択します。</para>
+<para>パッケージをインストール、更新、または削除するとき、確認ダイアログが表示されてパッケージの一覧と実行するアクションを示します。これらの確認ダイアログを表示しないようにするには、「設定」ウィンドウでこれらのチェックボックスの選択を解除します。</para>
+<para>特定の確認ダイアログで「今後、この確認ダイアログを表示しない」チェックボックスをクリックすることによっても、そのダイアログに関するこの設定を解除できます。</para>
+</sect1>
+<sect1 id="img-sig-policy"><title>署名ポリシーの設定</title>
+<para>「署名ポリシー」タブのボタンを使用して、このイメージにパッケージをインストールするときに署名を無視するか要求するかを指定します。特定の発行元の署名ポリシーを設定するには、「発行元の管理」ウィンドウで発行元を選択し、<guibutton>「変更」</guibutton>ボタンをクリックし、「発行元の変更」ウィンドウの「署名ポリシー」タブを使用します。</para>
+<para>イメージの署名ポリシーの選択肢は発行元の署名ポリシーの選択肢と同じですが、特定の発行元からインストールされたパッケージだけではなく、イメージにインストールされているすべてのパッケージに設定が適用される点が異なります。<xref linkend="pub-sig-policy"/>を参照してください。</para>
+</sect1>
+<sect1 id="languages"><title>オプションコンポーネント設定の言語選択</title>
+<para><menuchoice><guimenu>「編集」</guimenu><guimenuitem>「設定」</guimenuitem></menuchoice>オプションを選択し、「オプションのコンポーネント」タブを選択します。</para>
+<para>デフォルトでは、「パッケージの言語選択」には「すべての言語のインストール」が選択されます。一部の言語を選択してインストールすることで、インストールの領域を節約できます。</para>
+<para>「次の言語のみのインストール」が選択されている場合は、言語リストの左端の列見出しにあるチェックボックスアイコンをクリックすると、すべての言語を選択できます。この列見出しを再度クリックすると、すべての言語の選択を解除できます。「言語」列見出しと「地域」列見出しをクリックすると、リストをソートできます。</para>
+<para>「了解」ボタンをクリックして変更を保存します。これらの設定は、現在インストールされているパッケージおよび今後のパッケージのインストールと更新に適用されます。新しい設定に基づいて、オプションのパッケージコンポーネントのインストールや削除が必要に応じて実行され、イメージが更新されます。</para>
+<para>以前にイメージを更新して一部の言語だけを含めてある場合、このウィンドウではデフォルトで「次の言語のみのインストール」が選択され、「すべての言語のインストール」オプションを選択するとその言語リストはグレー表示されます。</para>
+</sect1>
+<sect1 id="dev-doc"><title>ほかのオプションコンポーネント設定</title>
+<para><menuchoice><guimenu>「編集」</guimenu><guimenuitem>「設定」</guimenuitem></menuchoice>オプションを選択し、「オプションのコンポーネント」タブを選択します。</para>
+<para>デフォルトでは、「その他のコンポーネント選択」には「すべての開発ファイルのインストール」と「すべてのドキュメントのインストール」が選択されます。開発ファイルやドキュメントの選択を解除することで、インストールの領域を節約できます。</para>
+<para>「了解」ボタンをクリックして変更を保存します。これらの設定は、現在インストールされているパッケージおよび今後のパッケージのインストールと更新に適用されます。新しい設定に基づいて、オプションのパッケージコンポーネントのインストールや削除が必要に応じて実行され、イメージが更新されます。</para>
+</sect1>
+</chapter>
+<glossary id="glossary"><title>用語集</title>
+<glossentry><glossterm>別名</glossterm>
+<glossdef><para>発行元の別の名前。</para>
+</glossdef>
+</glossentry>
+<glossentry><glossterm>ブート環境 (BE)</glossterm>
+<glossdef><para>ブート可能な Oracle Solaris 環境のインスタンス。ブート環境の、システムソフトウェアを含むルートファイルシステムとその他のすべてのファイルシステムは、ZFS データセットである必要があります。</para>
+<para>アクティブブート環境とは、現在ブートされているブート環境のことです。システムには多数のブート環境を維持することができます。リブート時にどれをブートするかを選択できます。</para>
+</glossdef>
+</glossentry>
+<glossentry><glossterm>クローン</glossterm>
+<glossdef><para>正確なコピー。</para>
+<para>クローンはオペレーティングシステム、ファイルシステム、またはボリュームの正確なコピーを指すことがあります。このコピーは、元の内容と完全に互換性があります。</para>
+</glossdef>
+</glossentry>
+<glossentry><glossterm>データセット</glossterm>
+<glossdef><para>クローン、ファイルシステム、スナップショット、またはボリュームという ZFS エンティティーの総称名。各データセットは、ZFS 名前空間内の一意の名前で識別されます。</para>
+</glossdef>
+</glossentry>
+<glossentry><glossterm>イメージ</glossterm>
+<glossdef><para>ブートとインストールが可能なパッケージ内のオペレーティングシステムソフトウェアのコレクション。</para>
+<para>パッケージとそれに関連付けられたファイル、ディレクトリ、リンク、および依存関係をインストールできるシステム上の場所。</para>
+</glossdef>
+</glossentry>
+<glossentry><glossterm>起点</glossterm>
+<glossdef><para>発行元がパッケージを発行するパッケージサーバー。</para>
+</glossdef>
+</glossentry>
+<glossentry><glossterm>パッケージ</glossterm>
+<glossdef><para>定義された形式での、ファイル、ディレクトリ、リンク、ドライバ、および依存関係のコレクション。</para>
+</glossdef>
+</glossentry>
+<glossentry><glossterm>発行元</glossterm>
+<glossdef><para>パッケージを設計、作成しパッケージサーバーに発行する個人、グループ、または企業。パッケージサーバーは、(デフォルトの) 発行元からのパッケージをダウンロード用に提供します。</para>
+</glossdef>
+</glossentry>
+<glossentry><glossterm>システム発行元</glossterm>
+<glossdef><para>システム発行元は、特定のパッケージを大域ゾーンと同期された状態に保つために、特にリンクされたイメージと非大域ゾーンで使用される特殊な発行元です。大域ゾーンは、これらの特殊なシステム発行元を非大域ゾーンに設定することで、非大域ゾーン内のパッケージを制約します。システム発行元が特殊である理由は、非大域ゾーンはそれらに対して削除、無効化、変更、優先度の変更といった特定の変更を行うことができないことにあります。</para>
+</glossdef>
+</glossentry>
+</glossary>
+</book>
