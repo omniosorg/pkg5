@@ -26,6 +26,10 @@ set name=pkg.summary value="Image Packaging System consolidation incorporation"
 set name=pkg.description \
     value="This incorporation constrains packages from the Image Packaging System consolidation."
 set name=pkg.depend.install-hold value=core-os.ips
+set name=com.oracle.service.bugid \
+    last-fmri=consolidation/ips/ips-incorporation@0.5.11,5.11-0.151.0.1.7:20110526T000209Z \
+    value=7098585 value=7101660 value=7102984 value=7102987 value=7104247 \
+    value=7104266
 set name=info.classification \
     value=org.opensolaris.category.2008:System/Packaging
 
@@ -34,11 +38,18 @@ set name=info.classification \
 # explicitly declared here since no other package incorporates them in
 # build 151a.
 #
+depend type=incorporate fmri=SUNWldtp@1.7.1-0.133 pkg.debug.keepme=true
+depend type=incorporate fmri=SUNWpython-cherrypy@3.1.2-0.133 \
+    pkg.debug.keepme=true
+depend type=incorporate fmri=SUNWpython-mako@0.2.2-0.133 pkg.debug.keepme=true
+depend type=incorporate fmri=SUNWpython-ply@3.1-0.133 pkg.debug.keepme=true
+depend type=incorporate fmri=SUNWpython-pycurl@7.19.0.1-0.133 \
+    pkg.debug.keepme=true
 depend type=incorporate fmri=library/python-2/cherrypy@3.1.2-0.151.0.1 \
     pkg.debug.keepme=true
 depend type=incorporate fmri=library/python-2/coverage@3.2-0.151.0.1 \
     pkg.debug.keepme=true
-depend type=incorporate fmri=library/python-2/m2crypto@0.21.1-1 \
+depend type=incorporate fmri=library/python-2/m2crypto@0.20.0-0.151.0.1 \
     pkg.debug.keepme=true
 depend type=incorporate fmri=library/python-2/mako@0.2.2-0.151.0.1 \
     pkg.debug.keepme=true
@@ -46,7 +57,7 @@ depend type=incorporate fmri=library/python-2/ply@3.1-0.151.0.1 \
     pkg.debug.keepme=true
 depend type=incorporate fmri=library/python-2/pybonjour@1.1.1-0.151.0.1 \
     pkg.debug.keepme=true
-depend type=incorporate fmri=library/python-2/pycurl@7.19.0.1-0.151002 \
+depend type=incorporate fmri=library/python-2/pycurl@7.19.0.1-0.151.0.1 \
     pkg.debug.keepme=true
 depend type=incorporate fmri=system/desktop/ldtp@1.7.1-0.151.0.1 \
     pkg.debug.keepme=true

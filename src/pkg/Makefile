@@ -23,7 +23,7 @@
 
 PKGVERS_COMPONENT = 0.5.11
 PKGVERS_BUILTON   = 5.11
-BUILDNUM          = 151002
+BUILDNUM          = 151
 UPDATENUM         = 0
 SRUNUM            = 0
 PLATNUM           = 0
