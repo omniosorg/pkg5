@@ -69,7 +69,7 @@ BIN = \
 	support \
 	fmri_compare
 
-support := LDLIBS = -lzonecfg
+support := LDLIBS = /usr/lib/libzonecfg.so.1
 
 all := TARGET = all
 
