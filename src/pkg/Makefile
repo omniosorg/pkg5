@@ -44,6 +44,8 @@ PDIR              = pkgtmp
 PWD:sh            = pwd
 PKGDEST           = $(PWD)/../../packages/$(ARCH)
 PKGROOT           = $(PWD)/../../proto/root_$(ARCH)
+PKGREPOTGT        = $(PKGDEST)/repo
+PKGREPOLOC        = file://$(PKGDEST)/repo
 
 PKGPUBLISHER      = pkg5-nightly
 
@@ -125,9 +127,9 @@ $(PDIR):
 repository-metadata: publish-pkgs
 	$(PKGREPO) -s $(PKGDEST)/repo refresh
 
-publish-pkgs: $(PKGDEST)/repo .WAIT $(PUBLIFESTS)
+publish-pkgs: $(PKGREPOTGT) .WAIT $(PUBLIFESTS)
 
-# Initialize the repository
+# Initialize the dummy local repository
 $(PKGDEST)/repo:
 	$(PKGREPO) create $@
 	$(PKGREPO) -s $@ set publisher/prefix=$(PKGPUBLISHER)
@@ -159,8 +161,8 @@ $(PDIR)/.resolved: $(DEPENDED)
 	touch $@
 
 # The main publication rule
-$(PDIR)/%.pub: $(PDIR)/.resolved $(PKGDEST)/repo
-	$(PKGSEND) -s file://$(PKGDEST)/repo publish -d $(PKGROOT) \
+$(PDIR)/%.pub: $(PDIR)/.resolved $(PKGREPOTGT)
+	$(PKGSEND) -s $(PKGREPOLOC) publish -d $(PKGROOT) \
 		-d license_files -T \*.py --fmri-in-manifest --no-index \
 		--no-catalog $(@:%.pub=%.dep.res)
 	touch $@
@@ -202,14 +204,14 @@ lint: repository-metadata $(PDIR)
 	@if [ -n "$(PKGLINT_REF_REPO)" ]; then				\
 		env LC_ALL=C $(PKGLINT) -f $(PDIR)/pkglintrc \
 			-c $(PDIR)/pkglint-cache \
-			-r $(PKGLINT_REF_REPO) -l file://$(PKGDEST)/repo; \
+			-r $(PKGLINT_REF_REPO) -l $(PKGREPOLOC); \
 	fi
 	-@if [ -z "$(PKGLINT_REF_REPO)" ]; then				\
 		cat external_deps_fragment.pkglintrc >> $(PDIR)/pkglintrc; \
 		cat external_deps.txt >> $(PDIR)/pkglintrc;	\
 		( $(PKGLINT) -c $(PDIR)/pkglint-cache			\
 			-f $(PDIR)/pkglintrc				\
-			-l file://$(PKGDEST)/repo > /dev/null ) 2>&1 |	\
+			-l $(PKGREPOLOC) > /dev/null ) 2>&1 |	\
 			sed -e 's/@[0-9TZ.:,-]*//g' |			\
 			env LC_ALL=C sort |				\
 			diff pkglint_whitelist.txt -			\
