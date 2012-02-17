@@ -25,10 +25,6 @@ set name=pkg.fmri value=pkg:/system/trusted/trusted-nonglobal@$(PKGVERS)
 set name=pkg.summary value="Trusted Extensions labeled zone"
 set name=pkg.description \
     value="This package delivers the dependencies needed to install a Trusted Extensions labeled zone"
-set name=com.oracle.service.bugid \
-    last-fmri=system/trusted/trusted-nonglobal@0.5.11,5.11-0.151.0.1:20101105T005729Z \
-    value=7098585 value=7101660 value=7102984 value=7102987 value=7104247 \
-    value=7104266
 set name=info.classification value=org.opensolaris.category.2008:System/Trusted
 depend type=require fmri=pkg:/communication/im/pidgin
 depend type=require fmri=pkg:/desktop/administration/gnome-system-tools

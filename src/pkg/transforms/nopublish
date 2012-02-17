@@ -22,5 +22,5 @@
 #
 
 # Let a package define what the last build is in which it should be published.
-<transform pkg -> default nopublish.after 1000>
+<transform pkg -> default nopublish.after 1000000>
 <transform pkg -> print %(pkg.manifest.filename) %{nopublish.after}>
