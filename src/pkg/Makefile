@@ -46,7 +46,7 @@ PKGDEST           = $(PWD)/../../packages/$(ARCH)
 PKGROOT           = $(PWD)/../../proto/root_$(ARCH)
 PKGREPOTGT        = $(PKGDEST)/repo
 PKGREPOLOC        = file://$(PKGDEST)/repo
-
+PKGSEND_OPTS      = --no-index --no-catalog
 PKGPUBLISHER      = pkg5-nightly
 
 POUND_SIGN:sh     = echo \\043
@@ -163,8 +163,8 @@ $(PDIR)/.resolved: $(DEPENDED)
 # The main publication rule
 $(PDIR)/%.pub: $(PDIR)/.resolved $(PKGREPOTGT)
 	$(PKGSEND) -s $(PKGREPOLOC) publish -d $(PKGROOT) \
-		-d license_files -T \*.py --fmri-in-manifest --no-index \
-		--no-catalog $(@:%.pub=%.dep.res)
+		-d license_files -T \*.py --fmri-in-manifest $(PKGSEND_OPTS) \
+		$(@:%.pub=%.dep.res)
 	touch $@
 
 # Compare the proto area with the package manifests; if they've got different
