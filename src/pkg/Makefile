@@ -23,8 +23,8 @@
 
 PKGVERS_COMPONENT = 0.5.11
 PKGVERS_BUILTON   = 5.11
-BUILDNUM          = 175
-UPDATENUM         = 1
+BUILDNUM          = 151002
+UPDATENUM         = 0
 SRUNUM            = 0
 PLATNUM           = 0
 #BUILDID.cmd       = \
