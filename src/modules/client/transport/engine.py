@@ -786,13 +786,13 @@ class CurlTransportEngine(TransportEngine):
                         # Headers common to all requests
                         for k, v in self.__common_header.iteritems():
                                 headerstr = "%s: %s" % (k, v)
-                                headerlist.append(headerstr)
+                                headerlist.append(headerstr.encode('ascii', 'ignore'))
 
                         # Headers specific to this request
                         if treq.header:
                                 for k, v in treq.header.iteritems():
                                         headerstr = "%s: %s" % (k, v)
-                                        headerlist.append(headerstr)
+                                        headerlist.append(headerstr.encode('ascii', 'ignore'))
 
                         hdl.setopt(pycurl.HTTPHEADER, headerlist)
 
