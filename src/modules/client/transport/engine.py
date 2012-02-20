@@ -797,7 +797,7 @@ class CurlTransportEngine(TransportEngine):
                         hdl.setopt(pycurl.HTTPHEADER, headerlist)
 
                 # Set request url.  Also set attribute on handle.
-                hdl.setopt(pycurl.URL, treq.url)
+                hdl.setopt(pycurl.URL, treq.url.encode('ascii', 'ignore'))
                 hdl.url = treq.url
                 hdl.uuid = treq.uuid
                 hdl.starttime = time.time()
