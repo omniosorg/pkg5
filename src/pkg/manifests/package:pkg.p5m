@@ -18,7 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 set name=pkg.fmri value=pkg:/package/pkg@$(PKGVERS)
@@ -30,7 +30,7 @@ set name=pkg.description \
 set name=pkg.linted.pkglint.manifest003.1 value=true
 set name=com.oracle.service.bugid \
     last-fmri=package/pkg@0.5.11,5.11-0.175.0.1.0.4.2584:20111110T170548Z \
-    value=7147803
+    value=7147803 value=7116135
 set name=info.classification \
     value=org.opensolaris.category.2008:System/Packaging
 set name=variant.arch value=$(ARCH)
