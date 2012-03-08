@@ -560,9 +560,9 @@ class Transport(object):
                 # of origins for a publisher without incurring the significant
                 # overhead of performing file-based search unless the network-
                 # based resource is unavailable.
-                for d, v in self.__gen_repo(pub, retry_count, origin_only=True,
-                    prefer_remote=True, alt_repo=alt_repo, operation="search",
-                    versions=[0, 1]):
+                for d, retries, v in self.__gen_repo(pub, retry_count,
+                    origin_only=True, prefer_remote=True, alt_repo=alt_repo,
+                    operation="search", versions=[0, 1]):
 
                         try:
                                 fobj = d.do_search(data, header,
@@ -659,8 +659,8 @@ class Transport(object):
                 # prior to this operation.
                 self._captive_portal_test(ccancel=ccancel)
 
-                for d in self.__gen_repo(pub, retry_count, origin_only=True,
-                    alt_repo=alt_repo):
+                for d, retries in self.__gen_repo(pub, retry_count,
+                    origin_only=True, alt_repo=alt_repo):
 
                         repostats = self.stats[d.get_url()]
 
@@ -817,13 +817,15 @@ class Transport(object):
                         # os.statvfs is not available on Windows
                         pass
 
-                for d, v in self.__gen_repo(pub, retry_count, origin_only=True,
-                    operation="catalog", versions=[1], ccancel=ccancel,
-                    alt_repo=alt_repo):
+                for d, retries, v in self.__gen_repo(pub, retry_count,
+                    origin_only=True, operation="catalog", versions=[1],
+                    ccancel=ccancel, alt_repo=alt_repo):
 
                         failedreqs = []
                         repostats = self.stats[d.get_url()]
                         gave_up = False
+                        if repostats.content_errors and retries > 1:
+                                header = d.build_refetch_header(header)
 
                         # This returns a list of transient errors
                         # that occurred during the transport operation.
@@ -885,7 +887,7 @@ class Transport(object):
                                 try:
                                         self._verify_catalog(s, download_dir)
                                 except tx.InvalidContentException, e:
-                                        repostats.record_error(content=True)
+                                        repostats.record_error(content=True)                                        
                                         failedreqs.append(e.request)
                                         failures.append(e)
                                         if not flist:
@@ -928,8 +930,9 @@ class Transport(object):
                 if isinstance(pub, publisher.Publisher):
                         header = self.__build_header(uuid=self.__get_uuid(pub))
 
-                for d, v in self.__gen_repo(pub, retry_count, origin_only=True,
-                    operation="publisher", versions=[0], ccancel=ccancel):
+                for d, retries, v in self.__gen_repo(pub, retry_count,
+                    origin_only=True, operation="publisher", versions=[0],
+                    ccancel=ccancel):
                         try:
                                 resp = d.get_publisherinfo(header,
                                     ccancel=ccancel)
@@ -976,7 +979,7 @@ class Transport(object):
                 assert isinstance(self.cfg, ImageTransportCfg)
                 assert isinstance(repo_uri, publisher.RepositoryURI)
 
-                for d, v in self.__gen_repo(repo_uri, retry_count,
+                for d, retries, v in self.__gen_repo(repo_uri, retry_count,
                     origin_only=True, operation="syspub", versions=[0],
                     ccancel=ccancel):
                         try:
@@ -1034,11 +1037,13 @@ class Transport(object):
                 elif fmri:
                         alt_repo = self.cfg.get_pkg_alt_repo(fmri)
 
-                for d, v in self.__gen_repo(pub, retry_count, operation="file",
-                    versions=[0, 1], alt_repo=alt_repo):
+                for d, retries, v in self.__gen_repo(pub, retry_count,
+                    operation="file", versions=[0, 1], alt_repo=alt_repo):
 
                         url = d.get_url()
-
+                        repostats = self.stats[url]
+                        if repostats.content_errors and retries > 1:
+                                header = d.build_refetch_header(header)
                         try:
                                 resp = d.get_datastream(fhash, v, header,
                                     ccancel=ccancel, pub=pub)
@@ -1050,7 +1055,6 @@ class Transport(object):
                                             reason="hash failure:  expected: %s"
                                             "computed: %s" % (fhash, hash_val),
                                             url=url)
-                                        repostats = self.stats[url]
                                         repostats.record_error(content=True)
                                         raise exc
 
@@ -1069,7 +1073,6 @@ class Transport(object):
                                 exc = tx.TransferContentException(url,
                                     "zlib.error:%s" %
                                     (" ".join([str(a) for a in e.args])))
-                                repostats = self.stats[url]
                                 repostats.record_error(content=True)
                                 if exc.retryable:
                                         failures.append(exc)
@@ -1095,9 +1098,14 @@ class Transport(object):
                 if isinstance(pub, publisher.Publisher):
                         header = self.__build_header(uuid=self.__get_uuid(pub))
 
-                for d, v in self.__gen_repo(pub, retry_count, origin_only=True,
-                    operation="status", versions=[0], ccancel=ccancel):
+                for d, retries, v in self.__gen_repo(pub, retry_count,
+                    origin_only=True, operation="status", versions=[0],
+                    ccancel=ccancel):
                         try:
+                                url = d.get_url()
+                                repostats = self.stats[url]
+                                if repostats.content_errors and retries > 1:
+                                        header = d.build_refetch_header(header)
                                 resp = d.get_status(header, ccancel=ccancel)
                                 infostr = resp.read()
 
@@ -1110,10 +1118,9 @@ class Transport(object):
                                 failures.extend(e.failures)
 
                         except (TypeError, ValueError), e:
-                                url = d.get_url()
+                                
                                 exc = tx.TransferContentException(url,
                                     "Invalid stats response: %s" % e)
-                                repostats = self.stats[url]
                                 repostats.record_error(content=True)
                                 if exc.retryable:
                                         failures.append(exc)
@@ -1147,8 +1154,8 @@ class Transport(object):
                 if not alt_repo:
                         alt_repo = self.cfg.get_pkg_alt_repo(fmri)
 
-                for d in self.__gen_repo(pub, retry_count, origin_only=True,
-                    alt_repo=alt_repo):
+                for d, retries in self.__gen_repo(pub, retry_count,
+                    origin_only=True, alt_repo=alt_repo):
 
                         # If a transport exception occurs,
                         # save it if it's retryable, otherwise
@@ -1207,11 +1214,13 @@ class Transport(object):
                 if not alt_repo:
                         alt_repo = self.cfg.get_pkg_alt_repo(fmri)
 
-                for d in self.__gen_repo(pub, retry_count, origin_only=True,
-                    alt_repo=alt_repo):
+                for d, retries in self.__gen_repo(pub, retry_count,
+                    origin_only=True, alt_repo=alt_repo):
 
                         repostats = self.stats[d.get_url()]
                         verified = False
+                        if repostats.content_errors and retries > 1:
+                                header = d.build_refetch_header(header)
                         try:
                                 resp = d.get_manifest(fmri, header,
                                     ccancel=ccancel, pub=pub)
@@ -1236,6 +1245,14 @@ class Transport(object):
                                 # failures that it contains
                                 failures.extend(ex.failures)
                                 mcontent = None
+
+                        except tx.InvalidContentException, e:
+                                # We might be able to retrive uncorrupted
+                                # content. If this was the last retry, then
+                                # we're out of luck.
+                                failures.append(e)
+                                mcontent = None
+                                repostats.record_error(content=True)
 
                         except tx.TransportException, e:
                                 if e.retryable:
@@ -1369,12 +1386,19 @@ class Transport(object):
                 # download_dir is temporary download path.
                 download_dir = self.cfg.incoming_root
 
-                for d in self.__gen_repo(pub, retry_count, origin_only=True,
-                    alt_repo=mxfr.get_alt_repo()):
+                for d, retries in self.__gen_repo(pub, retry_count,
+                    origin_only=True, alt_repo=mxfr.get_alt_repo()):
 
                         failedreqs = []
                         repostats = self.stats[d.get_url()]
                         gave_up = False
+
+                        # Possibly overkill, if any content errors were seen
+                        # we modify the headers of all requests, not just the
+                        # ones that failed before.
+                        if repostats.content_errors and retries > 1:
+                                mfstlist = [(fmri, d.build_refetch_header(h))
+                                    for fmri, h in mfstlist]
 
                         # This returns a list of transient errors
                         # that occurred during the transport operation.
@@ -1613,11 +1637,15 @@ class Transport(object):
                 else:
                         cache = None
 
-                for d, v in self.__gen_repo(pub, retry_count, operation="file",
-                    versions=[0, 1], alt_repo=mfile.get_alt_repo()):
+                for d, retries, v in self.__gen_repo(pub, retry_count,
+                    operation="file", versions=[0, 1],
+                    alt_repo=mfile.get_alt_repo()):
 
                         failedreqs = []
                         repostats = self.stats[d.get_url()]
+                        if repostats.content_errors and retries > 1:
+                                header = d.build_refetch_header(header)
+
                         gave_up = False
 
                         # This returns a list of transient errors
@@ -1677,7 +1705,7 @@ class Transport(object):
                                             dl_path)
                                 except tx.InvalidContentException, e:
                                         mfile.subtract_progress(e.size)
-                                        e.request = s
+                                        e.request = s                                        
                                         repostats.record_error(content=True)
                                         failedreqs.append(s)
                                         failures.append(e)
@@ -1784,8 +1812,13 @@ class Transport(object):
                 # prior to this operation.
                 self._captive_portal_test(ccancel=ccancel)
 
-                for d in self.__gen_repo(pub, retry_count, origin_only=True,
-                    alt_repo=alt_repo):
+                for d, retries in self.__gen_repo(pub, retry_count,
+                    origin_only=True, alt_repo=alt_repo):
+
+                        repostats = self.stats[d.get_url()]
+                        if repostats.content_errors and retries > 1:
+                                header = d.build_refetch_header(header)
+
                         # If a transport exception occurs,
                         # save it if it's retryable, otherwise
                         # raise the error to a higher-level handler.
@@ -1802,16 +1835,20 @@ class Transport(object):
                                 for f in ex.failures:
                                         f.url = d.get_url()
                                         failures.append(f)
+
+                        except tx.InvalidContentException, e:
+                                repostats.record_error(content=True)
+                                failures.append(
+                                    apx.InvalidDepotResponseException(
+                                    d.get_url(), "Unable to parse "
+                                    "repository's versions/0 response"))
+
                         except tx.TransportException, e:
                                 e.url = d.get_url()
                                 if e.retryable:
                                         failures.append(e)
                                 else:
                                         raise
-                        except ValueError:
-                                raise apx.InvalidDepotResponseException(
-                                    d.get_url(), "Unable to parse repository "
-                                    "response")
                 raise failures
 
         @staticmethod
@@ -1822,10 +1859,13 @@ class Transport(object):
                 resp = repo.get_versions(header, ccancel=ccancel)
                 verlines = resp.readlines()
 
-                return dict(
-                    s.split(None, 1)
-                    for s in (l.strip() for l in verlines)
-                )
+                try:
+                        return dict(
+                            s.split(None, 1)
+                            for s in (l.strip() for l in verlines)
+                        )
+                except ValueError, e:
+                        raise tx.InvalidContentException(e)
 
         def __fill_repo_vers(self, repo, vers=None, ccancel=None):
                 """Download versions information for the transport
@@ -1838,10 +1878,11 @@ class Transport(object):
                 if not vers:
                         try:
                                 vers = self.__get_version(repo, ccancel=ccancel)
-                        except ValueError:
+                        except tx.InvalidContentException:
                                 raise tx.PkgProtoError(repo.get_url(),
                                     "versions", 0,
-                                    "VaueError while parsing response")
+                                    "InvalidContentException while parsing "
+                                    "response")
 
                 for key, val in vers.items():
                         # Don't turn this line into a list of versions.
@@ -1876,7 +1917,9 @@ class Transport(object):
                 object.  This is used to lookup a transport.Repo object.
 
                 The 'count' argument determines how many times the routine
-                will iterate through a list of endpoints.
+                will iterate through a list of endpoints.  The number of times
+                we've iterated when calling this method is included in the
+                tuple that is yielded.
 
                 'prefer_remote' is an optional boolean value indicating whether
                 network-based sources are preferred over local sources.  If
@@ -1909,9 +1952,11 @@ class Transport(object):
                 different Repository object, it should pass one in
                 'alt_repo.'
 
-                This function returns a Repo object by default.  If
-                versions and operation are specified, it returns a tuple
-                of (Repo, highest supported version)."""
+                This function returns a tuple containing a Repo object and
+                the number of times we've iterated through the endpoints.  If
+                versions and operation are specified, it returns a tuple of
+                (Repo, iteration, highest supported version).
+                """
 
                 if not self.__engine:
                         self.__setup()
@@ -1956,7 +2001,9 @@ class Transport(object):
                         versions = sorted(versions, reverse=True)
 
                 fail = None
+                iteration = 0
                 for i in xrange(count):
+                        iteration += 1
                         rslist = self.stats.get_repostats(repolist, origins)
                         if prefer_remote:
                                 rslist.sort(cmp=remote_first)
@@ -1994,11 +2041,11 @@ class Transport(object):
                                             versions)
                                         if verid >= 0:
                                                 repo_found = True
-                                                yield repo, verid
+                                                yield repo, iteration, verid
                                 else:
                                         repo_found = True
                                         yield self.__repo_cache.new_repo(rs,
-                                            ruri)
+                                            ruri), iteration
 
                         if not repo_found and fail:
                                 raise fail
@@ -2311,8 +2358,9 @@ class Transport(object):
                 if progtrack and ccancel:
                         progtrack.check_cancelation = ccancel
 
-                for d, v in self.__gen_repo(pub, retry_count, origin_only=True,
-                    single_repository=True, operation="add", versions=[0]):
+                for d, retries, v in self.__gen_repo(pub, retry_count,
+                    origin_only=True, single_repository=True, operation="add",
+                    versions=[0]):
                         try:
                                 d.publish_add(action, header=header,
                                     progtrack=progtrack, trans_id=trans_id)
@@ -2344,8 +2392,9 @@ class Transport(object):
                 if not self.__engine:
                         self.__setup()
 
-                for d, v in self.__gen_repo(pub, retry_count, origin_only=True,
-                    single_repository=True, operation="file", versions=[1]):
+                for d, retries, v in self.__gen_repo(pub, retry_count,
+                    origin_only=True, single_repository=True, operation="file",
+                    versions=[1]):
                         try:
                                 d.publish_add_file(pth, header=header,
                                     trans_id=trans_id)
@@ -2373,8 +2422,9 @@ class Transport(object):
                 retry_count = global_settings.PKG_CLIENT_MAX_TIMEOUT
                 header = self.__build_header(uuid=self.__get_uuid(pub))
 
-                for d, v in self.__gen_repo(pub, retry_count, origin_only=True,
-                    single_repository=True, operation="abandon", versions=[0]):
+                for d, retries, v in self.__gen_repo(pub, retry_count,
+                    origin_only=True, single_repository=True,
+                    operation="abandon", versions=[0]):
                         try:
                                 state, fmri = d.publish_abandon(header=header,
                                     trans_id=trans_id)
@@ -2406,8 +2456,9 @@ class Transport(object):
                 retry_count = global_settings.PKG_CLIENT_MAX_TIMEOUT
                 header = self.__build_header(uuid=self.__get_uuid(pub))
 
-                for d, v in self.__gen_repo(pub, retry_count, origin_only=True,
-                    single_repository=True, operation="close", versions=[0]):
+                for d, retries, v in self.__gen_repo(pub, retry_count,
+                    origin_only=True, single_repository=True, operation="close",
+                    versions=[0]):
                         try:
                                 state, fmri = d.publish_close(header=header,
                                     trans_id=trans_id,
@@ -2437,8 +2488,9 @@ class Transport(object):
                 retry_count = global_settings.PKG_CLIENT_MAX_TIMEOUT
                 header = self.__build_header(uuid=self.__get_uuid(pub))
 
-                for d, v in self.__gen_repo(pub, retry_count, origin_only=True,
-                    single_repository=True, operation="open", versions=[0]):
+                for d, retries, v in self.__gen_repo(pub, retry_count,
+                    origin_only=True, single_repository=True, operation="open",
+                    versions=[0]):
                         try:
                                 trans_id = d.publish_open(header=header,
                                     client_release=client_release,
@@ -2465,8 +2517,9 @@ class Transport(object):
                 retry_count = global_settings.PKG_CLIENT_MAX_TIMEOUT
                 header = self.__build_header(uuid=self.__get_uuid(pub))
 
-                for d, v in self.__gen_repo(pub, retry_count, origin_only=True,
-                    single_repository=True, operation="admin", versions=[0]):
+                for d, retries, v in self.__gen_repo(pub, retry_count,
+                    origin_only=True, single_repository=True, operation="admin",
+                    versions=[0]):
                         try:
                                 d.publish_rebuild(header=header, pub=pub)
                                 return
@@ -2498,8 +2551,9 @@ class Transport(object):
                 if not self.__engine:
                         self.__setup()
 
-                for d, v in self.__gen_repo(pub, retry_count, origin_only=True,
-                    single_repository=True, operation="append", versions=[0]):
+                for d, retries, v in self.__gen_repo(pub, retry_count,
+                    origin_only=True, single_repository=True,
+                    operation="append", versions=[0]):
                         try:
                                 trans_id = d.publish_append(header=header,
                                     client_release=client_release,
@@ -2527,8 +2581,9 @@ class Transport(object):
                 retry_count = global_settings.PKG_CLIENT_MAX_TIMEOUT
                 header = self.__build_header(uuid=self.__get_uuid(pub))
 
-                for d, v in self.__gen_repo(pub, retry_count, origin_only=True,
-                    single_repository=True, operation="admin", versions=[0]):
+                for d, retries, v in self.__gen_repo(pub, retry_count,
+                    origin_only=True, single_repository=True, operation="admin",
+                    versions=[0]):
                         try:
                                 d.publish_rebuild_indexes(header=header,
                                     pub=pub)
@@ -2555,8 +2610,9 @@ class Transport(object):
                 retry_count = global_settings.PKG_CLIENT_MAX_TIMEOUT
                 header = self.__build_header(uuid=self.__get_uuid(pub))
 
-                for d, v in self.__gen_repo(pub, retry_count, origin_only=True,
-                    single_repository=True, operation="admin", versions=[0]):
+                for d, retries, v in self.__gen_repo(pub, retry_count,
+                    origin_only=True, single_repository=True, operation="admin",
+                    versions=[0]):
                         try:
                                 d.publish_rebuild_packages(header=header,
                                     pub=pub)
@@ -2583,8 +2639,9 @@ class Transport(object):
                 retry_count = global_settings.PKG_CLIENT_MAX_TIMEOUT
                 header = self.__build_header(uuid=self.__get_uuid(pub))
 
-                for d, v in self.__gen_repo(pub, retry_count, origin_only=True,
-                    single_repository=True, operation="admin", versions=[0]):
+                for d, retries, v in self.__gen_repo(pub, retry_count,
+                    origin_only=True, single_repository=True, operation="admin",
+                    versions=[0]):
                         try:
                                 d.publish_refresh(header=header, pub=pub)
                                 return
@@ -2614,8 +2671,8 @@ class Transport(object):
                 # purposefully avoided as the underlying repo function
                 # will automatically determine what operation to use
                 # for the single origin returned by __gen_repo.
-                for d in self.__gen_repo(pub, retry_count, origin_only=True,
-                    single_repository=True):
+                for d, retries in self.__gen_repo(pub, retry_count,
+                    origin_only=True, single_repository=True):
                         try:
                                 d.publish_refresh_indexes(header=header,
                                     pub=pub)
@@ -2642,8 +2699,9 @@ class Transport(object):
                 retry_count = global_settings.PKG_CLIENT_MAX_TIMEOUT
                 header = self.__build_header(uuid=self.__get_uuid(pub))
 
-                for d, v in self.__gen_repo(pub, retry_count, origin_only=True,
-                    single_repository=True, operation="admin", versions=[0]):
+                for d, retries, v in self.__gen_repo(pub, retry_count,
+                    origin_only=True, single_repository=True, operation="admin",
+                    versions=[0]):
                         try:
                                 d.publish_refresh_packages(header=header,
                                     pub=pub)
