@@ -501,17 +501,15 @@ if [[ -n $entire_fmri ]]; then
 fi
 
 pkglist="$pkglist
-	pkg:/SUNWcs
-	pkg:/SUNWcsd
-	pkg:/system/network
-	pkg:/system/extended-system-utilities
-	pkg:/service/management/sysidtool
-	pkg:/system/management/sysidtool
-	pkg:/compress/bzip2
-	pkg:/compress/gzip
-	pkg:/compress/zip
-	pkg:/compress/unzip
-	pkg:/package/pkg"
+	pkg:///SUNWcs
+	pkg:///SUNWcsd
+	pkg:///system/network
+	pkg:///system/extended-system-utilities
+	pkg:///compress/bzip2
+	pkg:///compress/gzip
+	pkg:///compress/zip
+	pkg:///compress/unzip
+	pkg:///package/pkg"
 
 #
 # Get some diagnostic tools, truss, dtrace, etc.
@@ -531,11 +529,12 @@ pkglist="$pkglist
 # Get at least one sensible shell, vim, ssh, ssh key utils, sshd.
 #
 pkglist="$pkglist
-	pkg:/shell/bash
-	pkg:/editor/vim
-	pkg:/network/ssh
-	pkg:/network/ssh/ssh-key
-	pkg:/service/network/ssh"
+	pkg:///shell/bash
+	pkg:///shell/zsh
+	pkg:///editor/vim
+	pkg:///network/ssh
+	pkg:///network/ssh/ssh-key
+	pkg:///service/network/ssh"
 
 #
 # Get some name services and DNS.
@@ -615,15 +614,6 @@ if grep "^root::::type=role;" $ZONEROOT/etc/user_attr >/dev/null 2>&1; then
 	print "s/^root::::type=role;/root::::/\nw" |
 	    ed -s $ZONEROOT/etc/user_attr
 fi
-
-#
-# Make sure sysidtools run; we manually poke in the SSH action
-# so that we get an SSH key.  Yes, this is seriously borken.
-# See http://defect.opensolaris.org/bz/show_bug.cgi?id=741
-#
-printf "$m_more_brokenness\n"
-/usr/sbin/sysidconfig -b $ZONEROOT -a /lib/svc/method/sshd
-touch $ZONEROOT/etc/.UNCONFIGURED
 
 #
 # Labeled zones need to be able to modify /etc/gconf files, when gnome
