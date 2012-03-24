@@ -1,6 +1,7 @@
 '\" te
 .\" Copyright (c) 2007, 2011, Oracle and/or its
 .\" affiliates. All rights reserved.
+.\" Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
 .TH pkg 5 "29 Jul 2011" "SunOS 5.11" "Standards, Environments, and Macros"
 .SH NAME
 pkg \- Image Packaging System
@@ -1019,7 +1020,7 @@ As described above, an incorporated package need not be present on the system, b
 Incorporations are used to force parts of the system to upgrade synchronously. For some components, such as the C library and the kernel, this is a basic requirement. For others, such as a simple userland component on which nothing else has a dependency, the synchronous upgrade is used merely to provide a known and tested set of package versions that can be referred to by a particular version of the incorporation.
 .sp
 .LP
-Since an incorporation is simply a package, it can be removed, and all the constraints it delivers are therefore relaxed. However, many of the incorporations delivered by Oracle Solaris are required by the packages they incorporate because that relaxation would not be safe.
+Since an incorporation is simply a package, it can be removed, and all the constraints it delivers are therefore relaxed. However, many of the incorporations delivered by OmniOS are required by the packages they incorporate because that relaxation would not be safe.
 .sp
 .LP
 Attempting an upgrade of a package to a version that is not allowed by an installed incorporation will not attempt to find a newer version of the incorporation in order to satisfy the request, but will instead fail. If the constraint itself must be moved, and the incorporation specifying it cannot be removed, then the incorporation must be upgraded to a version that specifies a desired version of the constraint. Upgrading an incorporation causes all of the incorporated packages that would not satisfy the constraints delivered by the new version to be upgraded as well.

@@ -406,7 +406,7 @@ Display a list of packages in the current image, including state and other infor
 .in +2
 .nf
 NAME (PUBLISHER)            VERSION           IFO
-system/core-os              0.5.11-0.169      i--
+system/core-os              0.5.11-0.151      i--
 x11/wm/fvwm (fvwm.org)      2.6.1-3           i--
 .fi
 .in -2
@@ -548,7 +548,7 @@ Corresponds to the complete contents of the action as represented in the package
 .ad
 .RS 17n
 .rt  
-Corresponds to the full form FMRI of the package containing the action, such as \fBpkg://solaris/web/amp@0.5.11,5.11-0.169:20110705T153434Z\fR.
+Corresponds to the full form FMRI of the package containing the action, such as \fBpkg://jeos.omniti.com/web/amp@0.5.11,5.11-0.151:20110705T153434Z\fR.
 .RE
 
 .sp
@@ -570,7 +570,7 @@ Corresponds to the name of the package containing the action, such as \fBweb/amp
 .ad
 .RS 17n
 .rt  
-Corresponds to the publisher of the package containing the action, such as \fBsolaris\fR.
+Corresponds to the publisher of the package containing the action, such as \fBjeos.omniti.com\fR.
 .RE
 
 .sp
@@ -581,7 +581,7 @@ Corresponds to the publisher of the package containing the action, such as \fBso
 .ad
 .RS 17n
 .rt  
-Corresponds to the short form FMRI of the package containing the action, such as \fBpkg://solaris/web/amp@0.5.11,5.11-0.169\fR
+Corresponds to the short form FMRI of the package containing the action, such as \fBpkg://jeos.omniti.com/web/amp@0.5.11,5.11-0.151\fR
 .RE
 
 The \fBcontents\fR and \fBsearch\fR subcommands are related: Both are used to query the system for the contents of packages. The \fBcontents\fR subcommand displays actions in one or more packages, filtering the output based on the options chosen by the user. The \fBsearch\fR subcommand approaches the query from the other direction, looking for packages that contain a user-supplied token.
@@ -1641,11 +1641,11 @@ Search the package database for the token \fBbge\fR.
 .in +2
 .nf
 $ \fBpkg search bge\fR
-INDEX       ACTION VALUE                      PACKAGE
-driver_name driver bge                        pkg:/driver/network/bge@0.5.11-0.169
-basename    file   kernel/drv/sparcv9/bge     pkg:/driver/network/bge@0.5.11-0.169
-basename    file   kernel/drv/amd64/bge       pkg:/driver/network/bge@0.5.11-0.169
-pkg.fmri    set    solaris/driver/network/bge pkg:/driver/network/bge@0.5.11-0.169
+INDEX       ACTION VALUE                             PACKAGE
+driver_name driver bge                               pkg:/driver/network/bge@0.5.11-0.151
+basename    file   kernel/drv/sparcv9/bge            pkg:/driver/network/bge@0.5.11-0.151
+basename    file   kernel/drv/amd64/bge              pkg:/driver/network/bge@0.5.11-0.151
+pkg.fmri    set    jeos.omnti.com/driver/network/bge pkg:/driver/network/bge@0.5.11-0.151
 .fi
 .in -2
 .sp
@@ -1665,9 +1665,9 @@ Search for installed packages that depend on \fBpackage/pkg\fR.
 .nf
 $ \fBpkg search -l 'depend::package/pkg'\fR
 INDEX       ACTION VALUE                    PACKAGE
-incorporate depend package/pkg@0.5.11-0.169 pkg:/consolidation/ips/ips-incorporation@0.5.11-0.169
-require     depend package/pkg@0.5.11-0.169 pkg:/system/install@0.5.11-0.169
-require     depend package/pkg@0.5.11-0.169 pkg:/package/pkg/system-repository@0.5.11-0.169
+incorporate depend package/pkg@0.5.11-0.151 pkg:/consolidation/ips/ips-incorporation@0.5.11-0.151
+require     depend package/pkg@0.5.11-0.151 pkg:/system/install@0.5.11-0.151
+require     depend package/pkg@0.5.11-0.151 pkg:/package/pkg/system-repository@0.5.11-0.151
 .fi
 .in -2
 .sp
@@ -1683,8 +1683,8 @@ Search for all \fBincorporate\fR dependencies in installed packages.
 .nf
 $ \fBpkg search -l 'depend:incorporate:'\fR
 INDEX       ACTION VALUE                           PACKAGE
-incorporate depend pkg:/BRCMbnx@0.5.11,5.11-0.133  pkg:/consolidation/osnet/osnet-incorporation@0.5.11-0.169
-incorporate depend pkg:/BRCMbnxe@0.5.11,5.11-0.133 pkg:/consolidation/osnet/osnet-incorporation@0.5.11-0.169
+incorporate depend pkg:/BRCMbnx@0.5.11,5.11-0.133  pkg:/consolidation/osnet/osnet-incorporation@0.5.11-0.151
+incorporate depend pkg:/BRCMbnxe@0.5.11,5.11-0.133 pkg:/consolidation/osnet/osnet-incorporation@0.5.11-0.151
 \&...
 .fi
 .in -2

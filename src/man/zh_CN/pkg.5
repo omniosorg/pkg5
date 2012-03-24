@@ -1,5 +1,6 @@
 '\" te
 .\" Copyright (c) 2007, 2011, Oracle and/or its affiliates. All rights reserved.
+.\" Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
 .TH pkg 5 "2011 年 8 月 30 日" "SunOS 5.11" "标准、环境和宏"
 .SH 名称
 pkg \- 映像包管理系统
@@ -1018,7 +1019,7 @@ VERSION 参数的值。缺省值为软件包的 FMRI 中的版本。
 Incorporation 用于强制系统的各部分进行同步升级。对于某些组件（例如 C 库和内核），这是一项基本要求。对于其他组件（例如，不具有任何其他依赖性的简单用户级组件），同步升级仅仅用来提供一组经过测试的已知软件包版本，这些软件包版本可由 incorporation 的特定版本进行引用。
 .sp
 .LP
-因为 incorporation 只是一个软件包，所以可将其删除，它提供的所有约束也将随之解除。但是，Oracle Solaris 提供的许多 incorporation 是合并软件包所必需的，因为解除其约束可能会不安全。
+因为 incorporation 只是一个软件包，所以可将其删除，它提供的所有约束也将随之解除。但是，OmniOS 提供的许多 incorporation 是合并软件包所必需的，因为解除其约束可能会不安全。
 .sp
 .LP
 尝试将软件包升级到已安装的 incorporation 所不允许的版本，将不会尝试查找更高的 incorporation 版本来满足该请求，反而会失败。如果必须移动约束本身，而又无法删除指定它的 incorporation，则必须将 incorporation 升级到指定所需约束版本的版本。升级 incorporation 会导致不能满足新版本提供的约束的所有合并软件包也进行升级。

@@ -19,6 +19,7 @@
 # CDDL HEADER END
 #
 # Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
 #
 
 PKGVERS_COMPONENT = 0.5.11
@@ -32,10 +33,16 @@ PLATNUM           = 0
 #	nawk '$$1 ~ /^s11u$(UPDATENUM)b[0-9]*/ {print substr($$1, 7) + 0; exit}'
 #BUILDID           = $(BUILDID.cmd:sh)
 BUILDID           = 0
-NIGHTLYID:sh      = hg parents --template '{rev}' 2>/dev/null || git rev-list --all | wc -l | sed s/\ //g
-CHANGESET:sh      = hg id -i 2>/dev/null || git log --pretty=format:'%h' -1..
-PKGVERS_BRANCH    = \
-	0.$(BUILDNUM).$(UPDATENUM).$(SRUNUM).$(PLATNUM).$(BUILDID).$(NIGHTLYID)
+#NIGHTLYID:sh      = hg parents --template '{rev}'
+NIGHTLYID         = 1
+#CHANGESET.cmd     = hg id -i
+CHANGESET.cmd     = git show --abbrev-commit | head -1 | awk '{print $2;}'
+CHANGESET         = $(CHANGESET.cmd:sh)
+CURBUILD.cmd      = \
+	$(PKG) -R / list -H osnet-incorporation | \
+		sed -e 's/.*-0\.\([^ .]*\).*/\1/'
+CURBUILD          = $(CURBUILD.cmd:sh)
+PKGVERS_BRANCH    = 0.$(BUILDNUM)
 PKGVERS           = $(PKGVERS_COMPONENT),$(PKGVERS_BUILTON)-$(PKGVERS_BRANCH)
 ARCH              = $(TARGET_ARCH:-%=%)
 REV:sh            = date +%Y.%m.%d.%H.%M.%S

@@ -1,4 +1,5 @@
 # Copyright (C) 2008 Sun Microsystems, Inc
+# Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
 # This file is distributed under the same license as the packagemanager package.
 #
 # Desktop Discuss <desktop-discuss@opensolaris.org>

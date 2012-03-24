@@ -1,6 +1,7 @@
 '\" te
 .\" Copyright (c) 2007, 2011, Oracle and/or its
 .\" affiliates. All rights reserved.
+.\" Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
 .TH pkgrepo 1 "28 Jul 2011" "SunOS 5.11" "User Commands"
 .SH NAME
 pkgrepo \- Image Packaging System repository management utility
@@ -520,9 +521,9 @@ Display a summary of publishers and the number of packages in a repository.
 $ \fBpkgrepo info -s /my/repository\fR
 PUBLISHER   PACKAGES STATUS UPDATED
 example.com 5        online 2011-07-22T18:09:09.769106Z
-$ \fBpkgrepo info -s http://pkg.oracle.com/solaris/release/\fR
-PUBLISHER PACKAGES STATUS UPDATED
-solaris   3941     online 2010-11-12T19:24:25.967246Z
+$ \fBpkgrepo info -s http://pkg.omniti.com/omnios/release/\fR
+PUBLISHER         PACKAGES STATUS UPDATED
+jeos.omniti.com   3941     online 2010-11-12T19:24:25.967246Z
 .fi
 .in -2
 .sp
@@ -565,9 +566,9 @@ $ \fBpkgrepo get -s /my/repository\fR
 SECTION    PROPERTY VALUE
 publisher  prefix   ""
 repository version  4
-$ \fBpkgrepo get -s http://pkg.oracle.com/solaris/release/\fR
+$ \fBpkgrepo get -s http://pkg.omniti.com/omnios/release/\fR
 SECTION    PROPERTY VALUE
-publisher  prefix   solaris
+publisher  prefix   jeos.omniti.com
 repository version  4
 .fi
 .in -2
@@ -578,19 +579,19 @@ repository version  4
 .sp
 .in +2
 .nf
-$ \fBpkgrepo get -s http://pkg.oracle.com/solaris/release/ -p all\fR
-PUBLISHER SECTION    PROPERTY         VALUE
-solaris   publisher  alias
-solaris   publisher  prefix           solaris
-solaris   repository collection-type  core
-solaris   repository description      This\e repository\e serves\e the\e Oracle\e Solaris\e 11\e Package\e repository.
-solaris   repository legal-uris       ()
-solaris   repository mirrors          (http://pkg-cdn1.oracle.com/solaris.release/)
-solaris   repository name             Oracle\e Solaris\e 11\e Package\e Repository
-solaris   repository origins          ()
-solaris   repository refresh-seconds
-solaris   repository registration-uri ""
-solaris   repository related-uris     ()
+$ \fBpkgrepo get -s http://pkg.omniti.com/omnios/release/ -p all\fR
+PUBLISHER         SECTION    PROPERTY         VALUE
+jeos.omniti.com   publisher  alias
+jeos.omniti.com   publisher  prefix           jeos.omniti.com
+jeos.omniti.com   repository collection-type  core
+jeos.omniti.com   repository description      This\e repository\e serves\e the\e OmniOS 11\e Package\e repository.
+jeos.omniti.com   repository legal-uris       ()
+jeos.omniti.com   repository mirrors          (http://opkg.omniti.com/omnios/release/)
+jeos.omniti.com   repository name             OmniOS 11\e Package\e Repository
+jeos.omniti.com   repository origins          ()
+jeos.omniti.com   repository refresh-seconds
+jeos.omniti.com   repository registration-uri ""
+jeos.omniti.com   repository related-uris     ()
 .fi
 .in -2
 .sp

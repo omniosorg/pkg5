@@ -20,6 +20,7 @@
 # CDDL HEADER END
 #
 # Copyright (c) 2008, 2011 Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
 #
 
 MODIFY_DIALOG_WIDTH_DEFAULT = 580
@@ -87,7 +88,7 @@ class Repository(progress.GuiProgressTracker):
                 self.priority_changes = []
                 self.url_err = None
                 self.name_error = None
-                self.publisher_info = _("e.g. http://pkg.oracle.com/solaris/release")
+                self.publisher_info = _("e.g. http://pkg.omniti.com/omnios/release")
                 self.publishers_list = None
                 self.repository_modify_publisher = None
                 self.no_changes = 0

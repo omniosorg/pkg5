@@ -19,6 +19,7 @@
 # CDDL HEADER END
 #
 # Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2012, Computer Consulting Inc. All rights reserved.
 #
 
 # Let a package define what the last build is in which it should be published.

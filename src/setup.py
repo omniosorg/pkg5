@@ -20,6 +20,7 @@
 # CDDL HEADER END
 #
 # Copyright (c) 2008, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
 #
 
 import errno
@@ -123,12 +124,6 @@ sysrepo_cache_dir = 'var/cache/pkg/sysrepo'
 autostart_dir = 'etc/xdg/autostart'
 desktop_dir = 'usr/share/applications'
 gconf_dir = 'etc/gconf/schemas'
-help_dir = 'usr/share/gnome/help/package-manager'
-omf_dir = 'usr/share/omf/package-manager'
-startpage_dir = 'usr/share/package-manager/data/startpagebase'
-um_lib_dir = 'usr/lib/update-manager'
-um_share_dir = 'usr/share/update-manager'
-pm_share_dir = 'usr/share/package-manager'
 locale_dir = 'usr/share/locale'
 
 
@@ -149,19 +144,12 @@ scripts_sunos = {
                 ['publish.py', 'pkgsend'],
                 ['pull.py', 'pkgrecv'],
                 ['sign.py', 'pkgsign'],
-                ['packagemanager.py', 'packagemanager'],
-                ['updatemanager.py', 'pm-updatemanager'],
                 ],
         lib_dir: [
                 ['depot.py', 'pkg.depotd'],
-                ['checkforupdates.py', 'pm-checkforupdates'],
-                ['updatemanagernotifier.py', 'updatemanagernotifier'],
                 ['launch.py', 'pm-launch'],
                 ['sysrepo.py', 'pkg.sysrepo'],
                 ],
-        um_lib_dir: [
-                ['um/update-refresh.sh', 'update-refresh.sh'],
-        ],
         svc_method_dir: [
                 ['svc/svc-pkg-depot', 'svc-pkg-depot'],
                 ['svc/svc-pkg-mdns', 'svc-pkg-mdns'],
@@ -216,7 +204,6 @@ scripts = {
         }
 
 man1_files = [
-        'man/packagemanager.1',
         'man/pkg.1',
         'man/pkgdepend.1',
         'man/pkgdiff.1',
@@ -228,7 +215,6 @@ man1_files = [
         'man/pkgsign.1',
         'man/pkgrecv.1',
         'man/pkgrepo.1',
-        'man/pm-updatemanager.1',
         ]
 man1m_files = [
         'man/pkg.depotd.1m',
@@ -239,7 +225,6 @@ man5_files = [
         ]
 
 man1_ja_files = [
-        'man/ja_JP/packagemanager.1',
         'man/ja_JP/pkg.1',
         'man/ja_JP/pkgdepend.1',
         'man/ja_JP/pkgdiff.1',
@@ -251,7 +236,6 @@ man1_ja_files = [
         'man/ja_JP/pkgsign.1',
         'man/ja_JP/pkgrecv.1',
         'man/ja_JP/pkgrepo.1',
-        'man/ja_JP/pm-updatemanager.1',
         ]
 man1m_ja_files = [
         'man/ja_JP/pkg.depotd.1m',
@@ -262,7 +246,6 @@ man5_ja_files = [
         ]
 
 man1_zh_CN_files = [
-        'man/zh_CN/packagemanager.1',
         'man/zh_CN/pkg.1',
         'man/zh_CN/pkgdepend.1',
         'man/zh_CN/pkgdiff.1',
@@ -274,7 +257,6 @@ man1_zh_CN_files = [
         'man/zh_CN/pkgsign.1',
         'man/zh_CN/pkgrecv.1',
         'man/zh_CN/pkgrepo.1',
-        'man/zh_CN/pm-updatemanager.1',
         ]
 man1m_zh_CN_files = [
         'man/zh_CN/pkg.depotd.1m',
@@ -293,7 +275,6 @@ packages = [
         'pkg.client.transport',
         'pkg.file_layout',
         'pkg.flavor',
-        'pkg.gui',
         'pkg.lint',
         'pkg.portable',
         'pkg.publish',
@@ -345,64 +326,8 @@ sysrepo_log_stubs = [
         ]
 execattrd_files = [
         'util/misc/exec_attr.d/package:pkg',
-        'util/misc/exec_attr.d/package:pkg:package-manager'
 ]
 authattrd_files = ['util/misc/auth_attr.d/package:pkg']
-autostart_files = [
-        'um/data/updatemanagernotifier.desktop',
-]
-desktop_files = [
-        'gui/data/addmoresoftware.desktop',
-        'gui/data/packagemanager.desktop',
-        'um/data/updatemanager.desktop',
-]
-gconf_files = [
-        'gui/data/packagemanager-preferences.schemas',
-        'um/data/updatemanager-preferences.schemas',
-]
-intl_files = [
-        'gui/data/addmoresoftware.desktop.in',
-        'gui/data/packagemanager-info.xml.in',
-        'gui/data/packagemanager-preferences.schemas.in',
-        'gui/data/packagemanager.desktop.in',
-        'um/data/updatemanager-preferences.schemas.in',
-        'um/data/updatemanager.desktop.in',
-        'um/data/updatemanagernotifier.desktop.in',
-]
-help_locales = \
-    'C ar ca cs de es fr hu id it ja ko pl pt_BR ru sv zh_CN zh_HK zh_TW'.split()
-help_files = {
-        'C': ['gui/help/C/package-manager.xml'],
-        'C/figures': [
-            'gui/help/C/figures/%s.png' % n
-            for n in 'pkgmgr-main startpage_new update_all_new webinstall'.split()
-        ]
-}
-help_files.update(
-        (locale, ['gui/help/%s/package-manager.xml' % locale])
-        for locale in help_locales[1:]
-)
-omf_files = [
-        'gui/help/package-manager-%s.omf' % locale
-        for locale in help_locales
-]
-startpage_locales = \
-    'C ar ca cs de es fr hu id it ja ko nl pt_BR ru sv zh_CN zh_HK zh_TW'.split()
-startpage_files = {
-        'C': [
-            'gui/data/startpagebase/C/%s.png' % n
-            for n in [
-                'dialog-information', 'dialog-warning', 'hc_dialog-information',
-                'hc_dialog-warning', 'hc_install', 'hc_opensolaris',
-                'hci_dialog-information', 'hci_dialog-warning', 'hci_install',
-                'hci_opensolaris', 'install', 'opensolaris'
-            ]
-        ] + ['gui/data/startpagebase/C/startpage.html']
-}
-startpage_files.update(
-        (locale, ['gui/data/startpagebase/%s/startpage.html' % locale])
-        for locale in startpage_locales[1:]
-)
 pkg_locales = \
     'ar ca cs de es fr he hu id it ja ko nl pl pt_BR ru sk sv zh_CN zh_HK zh_TW'.split()
 
@@ -692,23 +617,6 @@ class install_data_func(_install_data):
                                                     outfile)
                                         self.copy_file(infile, outfile)
                                         self.outfiles.append(outfile)
-
-                # Don't bother making this generic for the one symlink.
-                src = "HighContrastInverse"
-                dst = os.path.join(self.install_dir, pm_share_dir,
-                    "icons/HighContrastLargePrintInverse")
-                try:
-                        targ = os.readlink(dst)
-                except OSError, e:
-                        if e.errno in (errno.ENOENT, errno.EINVAL):
-                                targ = None
-                        else:
-                                raise
-
-                if src != targ:
-                        log.info("linking %s -> %s" % (src, dst))
-                        rm_f(dst)
-                        os.symlink(src, dst)
 
 def run_cmd(args, swdir, env=None):
                 if env is None:
@@ -1090,15 +998,6 @@ class build_data_func(Command):
         def run(self):
                 # Anything that gets created here should get deleted in
                 # clean_func.run() below.
-                for f in intl_files:
-                        intltool_merge(f, f[:-3])
-
-                for l in help_locales:
-                        path = "gui/help/%s/" % l
-                        xml2po(path + "package-manager.xml.in",
-                            path + "package-manager.xml",
-                            path + "%s.mo" % l)
-
                 for l in pkg_locales:
                         msgfmt("po/%s.po" % l, "po/%s.mo" % l)
 
@@ -1121,16 +1020,8 @@ class clean_func(_clean):
 
                 rm_f("po/.intltool-merge-cache")
 
-                for f in intl_files:
-                        rm_f(f[:-3])
-
                 for l in pkg_locales:
                         rm_f("po/%s.mo" % l)
-
-                for l in help_locales:
-                        path = "gui/help/%s/" % l
-                        rm_f(path + "package-manager.xml")
-                        rm_f(path + "%s.mo" % l)
 
 class clobber_func(Command):
         user_options = []
@@ -1167,7 +1058,6 @@ class test_func(Command):
             ("port=", "z", "lowest port to start a depot on"),
             ("timing", "t", "timing file <file>"),
             ("verbosemode", 'v', "run tests in verbose mode"),
-            ("enableguitests", 'u', "enable IPS GUI tests, disabled by default"),
             ("stoponerr", 'x', "stop when a baseline mismatch occurs"),
             ("debugoutput", 'd', "emit debugging output"),
             ("showonexpectedfail", 'f',
@@ -1302,70 +1192,12 @@ if osname == 'sunos':
                 (sysrepo_dir, sysrepo_files),
                 (sysrepo_logs_dir, sysrepo_log_stubs),
                 (sysrepo_cache_dir, {}),
-                (autostart_dir, autostart_files),
-                (desktop_dir, desktop_files),
-                (gconf_dir, gconf_files),
-                (omf_dir, omf_files),
-                ('usr/share/icons/hicolor/48x48/mimetypes',
-                    ['gui/data/gnome-mime-application-vnd.pkg5.info.png']),
-                ('usr/share/mime/packages', ['gui/data/packagemanager-info.xml']),
-                (pm_share_dir, ['gui/data/packagemanager.ui']),
                 ]
-        data_files += [
-            (os.path.join(startpage_dir, locale), files)
-            for locale, files in startpage_files.iteritems()
-        ]
-        data_files += [
-            (os.path.join(help_dir, locale), files)
-            for locale, files in help_files.iteritems()
-        ]
         data_files += [
             (os.path.join(locale_dir, locale, 'LC_MESSAGES'),
                 [('po/%s.mo' % locale, 'pkg.mo')])
             for locale in pkg_locales
         ]
-        for t in 'HighContrast', 'HighContrastInverse', '':
-                for px in '24', '36', '48':
-                        data_files += [(
-                            '%s/icons/%s/%sx%s/actions' % (um_share_dir, t or 'hicolor', px, px),
-                            ['um/data/icons/%s/%sx%s/updatemanager.png' % (t, px, px)]
-                        )]
-                data_files += [(
-                    '%s/icons/%s/16x16/actions' % (pm_share_dir, t or 'hicolor'),
-                    [
-                        'gui/data/icons/%s/16x16/%s.png' % (t, n)
-                        for n in ('filter_all', 'filter_selected', 'progress_checkmark',
-                            'selection', 'status_checkmark', 'status_installed',
-                            'status_newupdate', 'status_notinstalled')
-                    ]
-                )]
-                data_files += [
-                    ('%s/icons/%s/%sx%s/actions' % (pm_share_dir, t or 'hicolor', px, px),
-                    [
-                        'gui/data/icons/%s/%sx%s/%s.png' % (t, px, px, n)
-                        for n in ('pm-install_update', 'pm-refresh',
-                            'pm-remove', 'pm-update_all')
-                    ])
-                    for px in (24, 48)
-                ]
-                data_files += [(
-                    '%s/icons/%s/48x48/actions' % (pm_share_dir, t or 'hicolor'),
-                    ['gui/data/icons/%s/48x48/packagemanager.png' % t]
-                )]
-                data_files += [
-                    ('usr/share/icons/%s/48x48/apps' % (t or 'hicolor'),
-                        [
-                            'um/data/icons/%s/48x48/updatemanager.png' % t,
-                            'gui/data/icons/%s/48x48/packagemanager.png' % t
-                        ]),
-                ]
-                # These two icons don't fit any patterns.
-                data_files += [
-                    (os.path.join(pm_share_dir, 'icons/hicolor/16x16/actions'), [
-                        'gui/data/icons/16x16/progress_blank.png']),
-                    (os.path.join(pm_share_dir, 'icons/hicolor/24x24/actions'), [
-                        'gui/data/icons/24x24/pm-check.png']),
-                ]
 
 if osname == 'sunos' or osname == "linux":
         # Unix platforms which the elf extension has been ported to

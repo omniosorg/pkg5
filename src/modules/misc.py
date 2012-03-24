@@ -21,6 +21,7 @@
 #
 
 # Copyright (c) 2007, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
 
 import OpenSSL.crypto as osc
 import cStringIO
@@ -80,7 +81,7 @@ def get_release_notes_url():
 
         # TBD: replace with a call to api.info() that can return a "release"
         # attribute of form YYYYMM against the SUNWsolnm package
-        return "http://www.oracle.com/pls/topic/lookup?ctx=E23824&id=SERNS"
+        return "http://omnios.omniti.com/ReleaseNotes"
 
 def time_to_timestamp(t):
         """convert seconds since epoch to %Y%m%dT%H%M%SZ format"""

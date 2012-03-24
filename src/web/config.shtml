@@ -20,6 +20,7 @@
 ## CDDL HEADER END
 ##
 ## Copyright 2008, 2010 Oracle and/or its affiliates. All rights reserved.
+## Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
 ##
 <%!
         import urlparse
@@ -46,7 +47,7 @@
                 scheme, netloc, path, params, query, fragment = \
                     urlparse.urlparse(request.url(), allow_fragments=0)
 
-                match = re.match("(?:.*[.])?(opensolaris.(?:com|org)|sun.com|oracle.com)", netloc)
+                match = re.match("(?:.*[.])?(opensolaris.(?:com|org)|omniti.com|sun.com|oracle.com)", netloc)
                 if match:
                         web_config["theme"] = match.group(1)
                 else:

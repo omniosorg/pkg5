@@ -20,6 +20,7 @@
 #
 #
 # Copyright (c) 2007, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
 #
 msgid ""
 msgstr "Project-Id-Version: PACKAGE VERSION\nReport-Msgid-Bugs-To: \nPOT-Creation-Date: 2012-04-06 12:11+0900\nPO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\nLast-Translator: FULL NAME <EMAIL@ADDRESS>\nLanguage-Team: LANGUAGE <LL@li.org>\nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\nPlural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -2866,9 +2867,9 @@ msgstr "_Updates"
 msgid "_View"
 msgstr "_Ansicht"
 
-#: ../gui/data/packagemanager.ui.h:169 ../modules/gui/repository.py:90
-msgid "e.g. http://pkg.oracle.com/solaris/release"
-msgstr "z. B. http://pkg.oracle.com/solaris/release"
+#: ../gui/data/packagemanager.ui.glade.h:169 ../modules/gui/repository.py:90
+msgid "e.g. http://pkg.omniti.com/omnios/release"
+msgstr "z. B. http://pkg.omniti.com/omnios/release"
 
 #: ../gui/data/packagemanager.ui.h:170
 msgid "label"

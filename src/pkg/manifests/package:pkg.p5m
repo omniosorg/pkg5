@@ -19,6 +19,7 @@
 # CDDL HEADER END
 #
 # Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
 #
 
 set name=pkg.fmri value=pkg:/package/pkg@$(PKGVERS)
@@ -242,6 +243,14 @@ file path=usr/share/lib/pkg/web/_themes/default/en/footer.shtml
 file path=usr/share/lib/pkg/web/_themes/default/en/head_end.shtml
 file path=usr/share/lib/pkg/web/_themes/default/en/header.shtml
 file path=usr/share/lib/pkg/web/_themes/default/feed-icon-14x14.png
+dir  path=usr/share/lib/pkg/web/_themes/omniti.com
+dir  path=usr/share/lib/pkg/web/_themes/omniti.com/en
+file path=usr/share/lib/pkg/web/_themes/omniti.com/en/base.css
+file path=usr/share/lib/pkg/web/_themes/omniti.com/en/body_end.shtml
+file path=usr/share/lib/pkg/web/_themes/omniti.com/en/footer.shtml
+file path=usr/share/lib/pkg/web/_themes/omniti.com/en/head_end.shtml
+file path=usr/share/lib/pkg/web/_themes/omniti.com/en/header.shtml
+file path=usr/share/lib/pkg/web/_themes/omniti.com/feed-icon-14x14.png
 dir  path=usr/share/lib/pkg/web/_themes/opensolaris.com
 dir  path=usr/share/lib/pkg/web/_themes/opensolaris.com/en
 file path=usr/share/lib/pkg/web/_themes/opensolaris.com/en/base.css
