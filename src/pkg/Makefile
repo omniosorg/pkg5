@@ -36,7 +36,7 @@ BUILDID           = 0
 #NIGHTLYID:sh      = hg parents --template '{rev}'
 NIGHTLYID         = 1
 #CHANGESET.cmd     = hg id -i
-CHANGESET.cmd     = git show --abbrev-commit | head -1 | awk '{print $2;}'
+CHANGESET.cmd     = git show --abbrev-commit | head -1 | awk '{print $$2;}'
 CHANGESET         = $(CHANGESET.cmd:sh)
 CURBUILD.cmd      = \
 	$(PKG) -R / list -H osnet-incorporation | \
