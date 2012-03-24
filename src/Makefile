@@ -24,6 +24,7 @@
 #
 
 PYTHON = /usr/bin/python2.6
+CODE_WS = $$(hg root)
 
 all := TARGET = all
 install := TARGET = install
@@ -41,8 +42,8 @@ test-leaks := TARGET = test-leaks
 SUBDIRS=brand zoneproxy tsol
 
 all: $(SUBDIRS)
-	mkdir -p $$(hg root)/proto/build_i386/lib.solaris-2.11-i86pc-2.6/pkg/64
-	mkdir -p $$(hg root)/proto/build_i386/lib.solaris-2.11-i86pc-2.6/pkg/actions/64
+	mkdir -p $(CODE_WS)/proto/build_i386/lib.solaris-2.11-i86pc-2.6/pkg/64
+	mkdir -p $(CODE_WS)/proto/build_i386/lib.solaris-2.11-i86pc-2.6/pkg/actions/64
 	ISALIST=i386 $(PYTHON) setup.py build
 	ISALIST="amd64 i386" $(PYTHON) setup.py build
 
@@ -83,8 +84,8 @@ $(SUBDIRS): FRC
 # Use the bits we just built to create the packages.
 packages: install pylint
 	@cd pkg; pwd; $(MAKE) $(TARGET) check \
-		PATH=$$(hg root 2>/dev/null || git rev-parse --show-toplevel)/proto/root_$$(uname -p)/usr/bin:$$PATH \
-		PYTHONPATH=$$(hg root 2>/dev/null || git rev-parse --show-toplevel)/proto/root_$$(uname -p)/usr/lib/python2.6/vendor-packages
+		PATH=$(CODE_WS)/proto/root_$$(uname -p)/usr/bin:$$PATH \
+		PYTHONPATH=$(CODE_WS)/proto/root_$$(uname -p)/usr/lib/python2.6/vendor-packages
 
 test:
 	$(PYTHON) setup.py test
