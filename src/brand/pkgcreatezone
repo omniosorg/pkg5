@@ -616,6 +616,13 @@ if grep "^root::::type=role;" $ZONEROOT/etc/user_attr >/dev/null 2>&1; then
 	    ed -s $ZONEROOT/etc/user_attr
 fi
 
+# If no password has been set, you'd have to log in with zlogin -S
+# This is obtuse and highly undesireable.  A blank password is much
+# better as it can only be used to zlogin the first time anyway
+# and if someone were to turn on ssh (with PermitRootLogin yes)
+# it would still prevent a remote login
+sed -i -e 's%^root::%root:$5$kr1VgdIt$OUiUAyZCDogH/uaxH71rMeQxvpDEY2yX.x0ZQRnmeb9:%' $ZONEROOT/etc/shadow
+
 #
 # Labeled zones need to be able to modify /etc/gconf files, when gnome
 # packages are installed in the zone.  Set up links in the zone to the
