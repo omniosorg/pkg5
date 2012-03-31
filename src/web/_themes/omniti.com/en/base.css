@@ -1,23 +1,5 @@
 /*
  *
- * CDDL HEADER START
- *
- * The contents of this file are subject to the terms of the
- * Common Development and Distribution License (the "License").
- * You may not use this file except in compliance with the License.
- *
- * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
- * See the License for the specific language governing permissions
- * and limitations under the License.
- *
- * When distributing Covered Code, include this CDDL HEADER in each
- * file and include the License file at usr/src/OPENSOLARIS.LICENSE.
- * If applicable, add the following below this CDDL HEADER, with the
- * fields enclosed by brackets "[]" replaced with your own identifying
- * information: Portions Copyright [yyyy] [name of copyright owner]
- *
- * CDDL HEADER END
  *
  * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
@@ -59,12 +41,13 @@ div.global-nav div.lang-sel {
         margin: 4px 0;
         font-size: 85%;
 }
-div.masthead {
-        background: transparent url(../../pkg-block-logo.png) no-repeat;
-        border-bottom: 4px solid #6699FF;
+div.masthead {  
+        background: transparent url(../logo_ban0.png) no-repeat;	
+        border-bottom: none;	
         clear: both;
         display: block;
-        height: 60px;
+        height: 125px;	
+        margin-top: -15px;	
         padding-bottom: 2px;
 }
 div.masthead div.content {
@@ -79,38 +62,63 @@ div.masthead a#logo {
 div.masthead div.menu {
         height: 100%;
         margin: 0;
-        text-align: right;
+        text-align: left;	
 }
 div.masthead div.menu ul {
         display: inline;
-        margin-right: 0;
+        float: right;
+        margin-left: 180px;
+        margin-top: -75px;
+        height: 40px;
 }
 div.masthead div.menu ul li {
-        border-right: 2px inset #5382A1;
+        height: 40px;
         display: inline;
         list-style: none;
-        height: 100%;
+        height: 40px;
 }
-div.masthead div.menu ul li a {
-        color: #444444;
+div.masthead div.menu ul li a,
+div.masthead div.menu ul li a:visited {
+        color: #999;	
         display: inline-block;
         font-weight: bold;
-        list-style: none;
-        vertical-align: bottom;
+        list-style: none;      
         padding: 0 10px 0 10px;
-        margin-top: 45px;
+        margin-top: 140px; 
+        height: 40px;
+        text-decoration: none;
+        letter-spacing: .05em;
+}
+
+div.masthead div.menu ul li a:hover,
+div.masthead div.menu ul li a:active,
+div.masthead div.menu ul li a:focus
+{
+	color: #ccc;
+	text-decoration: none;
 }
 div.breadcrumbs {
+		color: #666666;
         clear: both;
         display: block;
         font-size: 85%;
-        margin: 10px 30px;
+                margin-left: 190px;	
+}
+div.breadcrumbs a,
+div.breadcrumbs a:hover,
+div.breadcrumbs a:active,
+div.breadcrumbs a:focus {
+	    color: #666666;
+	    text-decoration: none;
 }
 div.page-title {
         clear: both;
         display: block;
+        font-size: 105%;
         font-weight: bold;
-        color: #5382A1;
+        color: #999999;	
+        letter-spacing: .025em;
+        text-transform:capitalize;
 }
 
 /* Body Styles */
@@ -119,10 +127,13 @@ div#bd {
         width: 730px;
 }
 .section-title {
-        border-bottom: 1px solid #6699FF;
+		padding-bottom: 10px; 
 }
 ul.tips li {
         margin-bottom: 10px;
+}
+.yui-t4 .yui-b {
+	width:18em;
 }
 table.stats {
         width: 100%;
@@ -147,9 +158,10 @@ table.stats th.last {
 table.stats td { border: 0; }
 table.stats td.label {
         text-align: right;
-        width: 90%;
 }
-table.stats td.value { text-align: center; }
+table.stats td.value {
+	text-align: left;
+}
 
 /* Footer Styles */
 div#ft {
@@ -161,7 +173,8 @@ div#ft .page-container {
         padding-bottom: 30px;
 }
 div#ft .footer-line {
-        border-top: 1px solid #6699FF;
+	text-align: right;
+        border-top: 1px solid #666666; 
 }
 
 /* Catalog and Search Styles */
@@ -176,7 +189,7 @@ form.search table td {
         border: none;
 }
 form.search a {
-        font-size: 77%; /* 10px */
+        font-size: 77%; 
         vertical-align: top;
 }
 form.search span.tip {
