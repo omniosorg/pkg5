@@ -78,11 +78,11 @@ try:
         version = cherrypy.__version__.split('.')
         if map(int, version) < [3, 1, 0]:
                 raise ImportError
-        elif map(int, version) >= [3, 2, 0]:
+        elif map(int, version) >= [3, 3, 0]:
                 raise ImportError
 except ImportError:
         print >> sys.stderr, """cherrypy 3.1.0 or greater (but less than """ \
-            """3.2.0) is required to use this program."""
+            """3.3.0) is required to use this program."""
         sys.exit(2)
 
 import cherrypy.process.servers
