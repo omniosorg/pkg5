@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 import cStringIO
@@ -204,6 +204,13 @@ class TransportRepo(object):
 
                 raise NotImplementedError
 
+        def build_refetch_header(self, header):
+                """Based on existing header contents, build a header that
+                should be used for a subsequent retry when fetching content
+                from the repository."""
+
+                raise NotImplementedError
+
         @staticmethod
         def _annotate_exceptions(errors, mapping=None):
                 """Walk a list of transport errors, examine the
@@ -287,6 +294,54 @@ class TransportRepo(object):
                         reqlist.append(req)
 
                 return reqlist
+
+	@staticmethod
+	def _analyze_server_error(error_header):
+		""" Decode the X-Ipkg-Error header which is appended by the 
+		module doing entitlement checks on the server side. Let the user
+		know why they can't access the repository. """
+
+		ENTITLEMENT_ERROR = "ENT"
+		LICENSE_ERROR = "LIC"
+		SERVER_ERROR = "SVR"
+
+		entitlement_err_msg = """
+This account is not entitled to access this repository. Ensure that the correct 
+certificate is being used and that the support contract for the product being 
+accessed is still valid. 
+"""
+
+		license_err_msg = """
+The license agreement required to access this repository has not been 
+accepted yet or the license agreement for the product has changed. Please go to
+https://pkg-register.oracle.com and accept the license for the product you are 
+trying to access.
+"""
+
+		server_err_msg = """
+Repository access is currently unavailable due to service issues. Please retry
+later or contact your customer service representative. 
+"""
+
+		msg = ""
+
+		# multiple errors possible (e.g. license and entitlement not ok)
+		error_codes = error_header.split(",")
+
+		for e in error_codes:
+			code = e.strip().upper()
+			
+			if code == ENTITLEMENT_ERROR:
+				 msg += entitlement_err_msg
+			elif code == LICENSE_ERROR:
+				msg += license_err_msg
+			elif code == SERVER_ERROR:
+				msg += server_err_msg
+
+		if msg == "":
+			return None
+
+		return msg
 
 
 class HTTPRepo(TransportRepo):
@@ -456,6 +511,7 @@ class HTTPRepo(TransportRepo):
                         headers["Cache-Control"] = "max-age=0"
                 if redownload:
                         headers["Cache-Control"] = "no-cache"
+                        headers["Pragma"] = "no-cache"
                 if header:
                         headers.update(header)
                 if progtrack:
@@ -654,10 +710,33 @@ class HTTPRepo(TransportRepo):
 
         def get_versions(self, header=None, ccancel=None):
                 """Query the repo for versions information.
-                Returns a fileobject."""
+                Returns a fileobject. If server returns 401 (Unauthorized)
+		check for presence of X-IPkg-Error header and decode."""
 
                 requesturl = self.__get_request_url("versions/0/")
-                return self._fetch_url(requesturl, header, ccancel=ccancel)
+                fobj = self._fetch_url(requesturl, header, ccancel=ccancel, 
+		    failonerror=False)
+
+                try:
+			# Bogus request to trigger 
+			# StreamingFileObj.__fill_buffer(), otherwise the 
+			# TransportProtoError won't be raised here. We can't
+			# use .read() since this will empty the data buffer.
+			fobj.getheader("octopus", None)
+		except tx.TransportProtoError, e:
+			if e.code == httplib.UNAUTHORIZED:
+				exc_type, exc_value, exc_tb = sys.exc_info()
+				try:
+					e.details = self._analyze_server_error(
+                                             fobj.getheader("X-IPkg-Error",
+					     None))
+				except:
+					# If analysis fails, raise original
+                                        # exception.
+                                        raise exc_value, None, exc_tb
+			raise
+
+		return fobj
 
         def has_version_data(self):
                 """Returns true if this repo knows its version information."""
@@ -939,6 +1018,24 @@ class HTTPRepo(TransportRepo):
                 resp.read()
 
                 return True
+
+        def build_refetch_header(self, header):
+                """For HTTP requests that have failed due to corrupt content,
+                if that request didn't specify 'Cache-control: no-cache' in
+                its headers then we can try the request with that additional
+                header, which can help where a web cache is serving corrupt
+                content.
+
+                This method returns True if the headers passed haven't got
+                "Cache-Control: no-cache" set, adding that header.  Otherwise
+                it returns False.
+                """
+
+                if header.get("Cache-Control", "") != "no-cache":
+                        header["Cache-Control"] = "no-cache"
+                        header["Pragma"] = "no-cache"
+                        return header
+                return header
 
 
 class HTTPSRepo(HTTPRepo):
@@ -1652,6 +1749,12 @@ class _FilesystemRepo(TransportRepo):
 
                 return True
 
+        def build_refetch_header(self, header):
+                """Pointless to attempt refetch of corrupt content for
+                this protocol."""
+
+                return header
+
 class _ArchiveRepo(TransportRepo):
         """Private implementation of transport repository logic for repositories
         contained within an archive.
@@ -1916,6 +2019,11 @@ class _ArchiveRepo(TransportRepo):
         def touch_manifest(self, mfst, header=None, ccancel=None, pub=None):
                 """No-op."""
                 return True
+
+        def build_refetch_header(self, header):
+                """Pointless to attempt refetch of corrupt content for
+                  this protocol."""
+                return header
 
 
 class FileRepo(object):

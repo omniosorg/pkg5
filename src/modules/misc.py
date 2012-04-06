@@ -143,8 +143,7 @@ def copytree(src, dst):
                         os.utime(d_path, (s.st_atime, s.st_mtime))
                 elif S_ISCHR(s.st_mode) or S_ISBLK(s.st_mode):
                         if hasattr(os, "mknod"):
-                                os.mknod(d_path, mode=s.st_mode,
-                                    device=s.st_dev)
+                                os.mknod(d_path, s.st_mode, s.st_dev)
                                 os.chown(d_path, s.st_uid, s.st_gid)
                                 os.utime(d_path, (s.st_atime, s.st_mtime))
                 elif S_IFMT(s.st_mode) == 0xd000: # doors
@@ -222,7 +221,11 @@ def user_agent_str(img, client_name):
 
         return useragent
 
-_hostname_re = re.compile("^[a-zA-Z0-9\[](?:[a-zA-Z0-9\-:]*[a-zA-Z0-9:\]]+\.?)*$")
+# Valid hostname can be : HOSTNAME or IPv4 addr or IPV6 addr
+_hostname_re = re.compile(r"""^(?:[a-zA-Z0-9\-]+[a-zA-Z0-9\-\.]*
+                   |(?:\d{1,3}\.){3}\d{3}
+                   |\[([a-fA-F0-9\.]*:){,7}[a-fA-F0-9\.]+\])$""", re.X)
+
 _invalid_host_chars = re.compile(".*[^a-zA-Z0-9\-\.:\[\]]+")
 _valid_proto = ["file", "http", "https"]
 

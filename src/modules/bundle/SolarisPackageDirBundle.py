@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2007, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 import os
@@ -197,11 +197,8 @@ class SolarisPackageDirBundle(pkg.bundle.Bundle):
                         act = hardlink.HardLinkAction(path=mapline.pathname,
                             target=mapline.target)
                 elif mapline.type == "i" and mapline.pathname == "copyright":
-                        # XXX path is set there because the importer relies on
-                        # it; when the importer dies, this can too.
                         act = license.LicenseAction(data,
-                            license="%s.copyright" % self.pkgname,
-                            path=mapline.pathname)
+                            license="%s.copyright" % self.pkgname)
                         if act.hash == "NOHASH" and \
                             isinstance(data, basestring) and \
                             data.startswith(self.filename):
@@ -284,7 +281,7 @@ class SolarisPackageDirBundle(pkg.bundle.Bundle):
                                 name = name.replace("_", "-")
                                 legacy_attrs[name] = pkginfo[key]
 
-                actions.append(LegacyAction(data=None, **legacy_attrs))
+                actions.append(LegacyAction(**legacy_attrs))
 
                 if "DESC" in pkginfo:
                         actions.append(AttributeAction(name="pkg.description",

@@ -36,6 +36,7 @@ import platform
 import shutil
 import simplejson as json
 import stat
+import sys
 import tempfile
 import time
 import urllib
@@ -2161,7 +2162,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         sig_pol = self.signature_policy.combine(
                             pub.signature_policy)
 
-                manf = self.get_manifest(fmri, use_excludes=True)
+                manf = self.get_manifest(fmri, ignore_excludes=True)
                 sigs = list(manf.gen_actions_by_type("signature",
                     self.list_excludes()))
                 if sig_pol and (sigs or sig_pol.name != "ignore"):
@@ -2292,8 +2293,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         logger.info("Repairing: %-50s" % fmri.get_pkg_stem())
                         # Need to get all variants otherwise evaluating the
                         # pkgplan will fail in signature verification.
-                        m = self.get_manifest(fmri, use_excludes=True)
-                        pp = pkgplan.PkgPlan(self, progtrack, lambda: False)
+                        m = self.get_manifest(fmri, ignore_excludes=True)
+                        pp = pkgplan.PkgPlan(self)
                         pp.propose_repair(fmri, m, actions, [])
                         pp.evaluate(self.list_excludes(), self.list_excludes())
                         pps.append(pp)
@@ -2431,15 +2432,21 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                             intent, pub=alt_pub)
                 return ret
 
-        def get_manifest(self, fmri, use_excludes=False, intent=None,
+        def get_manifest(self, fmri, ignore_excludes=False, intent=None,
             alt_pub=None):
                 """return manifest; uses cached version if available.
-                use_excludes controls whether manifest contains actions
-                for all variants"""
+                ignore_excludes controls whether manifest contains actions
+                for all variants
+
+                If 'ignore_excludes' is set to True, then all actions in the
+                manifest are included, regardless of variant or facet tags.  If
+                set to False, then the variants and facets currently set in the
+                image will be applied, potentially filtering out some of the
+                actions."""
 
                 # Normally elide other arch variants, facets
 
-                if use_excludes:
+                if ignore_excludes:
                         excludes = EmptyI
                 else:
                         excludes = [self.cfg.variants.allow_action,
@@ -2693,7 +2700,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 entry = cat.get_entry(f)
                 states = entry["metadata"]["states"]
                 if pkgdefs.PKG_STATE_V1 not in states:
-                        return self.get_manifest(f, use_excludes=True)
+                        return self.get_manifest(f, ignore_excludes=True)
                 return
 
         def __get_catalog(self, name):
@@ -3104,7 +3111,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
 
                                         nver, snver = newest.get(stem, (None,
                                             None))
-                                        if snver is not None and ver == snver:
+                                        if not nver or \
+                                            (snver is not None and ver == snver):
                                                 states.discard(
                                                     pkgdefs.PKG_STATE_UPGRADABLE)
                                         elif snver is not None:
@@ -3117,8 +3125,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                     pub=pub, stem=stem, ver=ver)
                                 nipart.add(metadata=entry, op_time=op_time,
                                     pub=pub, stem=stem, ver=ver)
-                                final_fmris.append(pkg.fmri.PkgFmri(
-                                    "%s@%s" % (stem, ver), publisher=pub))
+                                final_fmris.append(pkg.fmri.PkgFmri(name=stem,
+                                    publisher=pub, version=ver))
 
                 # Save the new catalogs.
                 for cat in kcat, icat:
@@ -3404,7 +3412,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 from heapq import heappush, heappop
 
                 for pfmri in self.gen_installed_pkgs():
-                        m = self.get_manifest(pfmri, use_excludes=True)
+                        m = self.get_manifest(pfmri, ignore_excludes=True)
                         for act in m.gen_actions(excludes):
                                 if not act.globally_identical:
                                         continue
@@ -3428,7 +3436,9 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                     act.attrs[act.key_attr]].append((
                                     act, pfmri))
 
-                # Don't worry if we can't write the temporary files.
+                # If we can't write the temporary files, then there's no point
+                # in producing actdict because it depends on a synchronized
+                # stripped actions file.
                 try:
                         actdict = {}
                         sf, sp = self.temporary_file(close=False)
@@ -3498,21 +3508,18 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                 os.unlink(op)
                                 os.unlink(bp)
                         except:
-                                if isinstance(e, KeyboardInterrupt):
-                                        raise
-                                return actdict, timestamp
-                        if isinstance(e, KeyboardInterrupt):
-                                raise
-                        return
+                                pass
+                        raise
 
                 # Finally, rename the temporary files into their final place.
                 # If we have any problems, do our best to remove them, and we'll
                 # try to recreate them on the read-side.
                 try:
+                        if not os.path.exists(self.__action_cache_dir):
+                                os.makedirs(self.__action_cache_dir)
                         portable.rename(sp, stripped_path)
                         portable.rename(op, offsets_path)
                         portable.rename(bp, conflicting_keys_path)
-                        return actdict, timestamp
                 except EnvironmentError, e:
                         if e.errno == errno.EACCES or e.errno == errno.EROFS:
                                 self.__action_cache_dir = self.temporary_dir()
@@ -3525,13 +3532,16 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                 portable.rename(sp, stripped_path)
                                 portable.rename(op, offsets_path)
                                 portable.rename(bp, conflicting_keys_path)
-                                return actdict, timestamp
-                        try:
-                                os.unlink(stripped_path)
-                                os.unlink(offsets_path)
-                                os.unlink(conflicting_keys_path)
-                        except:
-                                pass
+                        else:
+                                exc_info = sys.exc_info()
+                                try:
+                                        os.unlink(stripped_path)
+                                        os.unlink(offsets_path)
+                                        os.unlink(conflicting_keys_path)
+                                except:
+                                        pass
+                                raise exc_info[0], exc_info[1], exc_info[2]
+                return actdict, timestamp
 
         def _load_actdict(self):
                 """Read the file of offsets created in _create_fast_lookups()
@@ -3545,15 +3555,18 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         if e.errno != errno.ENOENT:
                                 raise
                         actdict, otimestamp = self._create_fast_lookups()
-                        if actdict is not None:
-                                self.__actdict = actdict
-                                self.__actdict_timestamp = otimestamp
-                                return actdict
+                        assert actdict is not None
+                        self.__actdict = actdict
+                        self.__actdict_timestamp = otimestamp
+                        return actdict
 
                 # Make sure the files are paired, and try to create them if not.
                 oversion = of.readline().rstrip()
                 otimestamp = of.readline().rstrip()
 
+                # The original action.offsets file existed and had the same
+                # timestamp as the stored actdict, so that actdict can be
+                # reused.
                 if self.__actdict and otimestamp == self.__actdict_timestamp:
                         return self.__actdict
 
@@ -3566,15 +3579,16 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                     stimestamp != otimestamp:
                         of.close()
                         actdict, otimestamp = self._create_fast_lookups()
-                        if actdict is not None:
-                                self.__actdict = actdict
-                                self.__actdict_timestamp = otimestamp
-                                return actdict
-                        of = file(os.path.join(self.__action_cache_dir,
-                            "actions.offsets"), "rb")
-                        oversion = of.readline().rstrip()
-                        otimestamp = of.readline().rstrip()
+                        assert actdict is not None
+                        self.__actdict = actdict
+                        self.__actdict_timestamp = otimestamp
+                        return actdict
 
+                # At this point, the original actions.offsets file existed, no
+                # actdict was saved in the image, the versions matched what was
+                # expected, and the timestamps of the actions.offsets and
+                # actions.stripped files matched, so the actions.offsets file is
+                # parsed to generate actdict.
                 actdict = {}
 
                 for line in of:
@@ -4303,6 +4317,46 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
 
                         if useimg:
                                 img = newimg
+
+                pfmri = img.get_version_installed(img.strtofmri("package/pkg"))
+                if not pfmri or \
+                    not pkgdefs.PKG_STATE_UPGRADABLE in img.get_pkg_state(pfmri):
+                        # If no version of the package system is installed or a
+                        # newer version isn't available, then the client is
+                        # "up-to-date".
+                        return True
+
+                inc_fmri = img.get_version_installed(img.strtofmri(
+                    "consolidation/ips/ips-incorporation"))
+                if inc_fmri:
+                        # If the ips-incorporation is installed (it should be
+                        # since package/pkg depends on it), then we can
+                        # bypass the solver and plan evaluation if none of the
+                        # newer versions are allowed by the incorporation.
+
+                        # Find the version at which package/pkg is incorporated.
+                        cat = img.get_catalog(img.IMG_CATALOG_KNOWN)
+                        inc_ver = None
+                        for act in cat.get_entry_actions(inc_fmri, [cat.DEPENDENCY],
+                            excludes=img.list_excludes()):
+                                if act.name == "depend" and \
+                                    act.attrs["type"] == "incorporate" and \
+                                    act.attrs["fmri"].startswith("package/pkg"):
+                                        inc_ver = img.strtofmri(
+                                            act.attrs["fmri"]).version
+                                        break
+
+                        if inc_ver:
+                                for ver, fmris in cat.fmris_by_version(
+                                    "package/pkg"):
+                                        if ver != pfmri.version and \
+                                            ver.is_successor(inc_ver,
+                                                pkg.version.CONSTRAINT_AUTO):
+                                                break
+                                else:
+                                        # No version is newer than installed and
+                                        # satisfied incorporation constraint.
+                                        return True
 
                 # XXX call to progress tracker that the package is being
                 # refreshed

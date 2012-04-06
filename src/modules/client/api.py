@@ -470,6 +470,13 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
         def __set_progresstracker(self, value):
                 self._activity_lock.acquire()
                 self.__progresstracker = value
+
+                # tell the progress tracker about this image's name
+                lin = None
+                if self._img.linked.ischild():
+                        lin = self._img.linked.child_name
+                self.__progresstracker.set_linked_name(lin)
+
                 self._activity_lock.release()
 
         progresstracker = property(lambda self: self.__progresstracker,
@@ -1940,12 +1947,18 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 if limit:
                         limit *= -1
                         entries = entries[limit:]
+
+                try:
+                        uuid_be_dic = bootenv.BootEnv.get_uuid_be_dic()
+                except apx.ApiException, e:
+                        uuid_be_dic = {}
+
                 for entry in entries:
                         # Yield each history entry object as it is loaded.
                         try:
                                 yield history.History(
                                     root_dir=self._img.history.root_dir,
-                                    filename=entry)
+                                    filename=entry, uuid_be_dic=uuid_be_dic)
                         except apx.HistoryLoadException, e:
                                 if e.parse_failure:
                                         # Ignore corrupt entries.
@@ -2464,6 +2477,10 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                                 tgt = fmri.PkgFmri(
                                                     a.attrs["fmri"], brelease)
                                                 tver = tgt.version
+                                                # incorporates without a version
+                                                # should be ignored.
+                                                if not tver:
+                                                        continue
                                                 over = inc_vers.get(
                                                     tgt.pkg_name, None)
 
@@ -3525,8 +3542,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                 ranked_stems.setdefault(stem, pub)
 
                         if return_fmris:
-                                pfmri = fmri.PkgFmri("%s@%s" % (stem, ver),
-                                    build_release=brelease, publisher=pub)
+                                pfmri = fmri.PkgFmri(build_release=brelease,
+                                    name=stem, publisher=pub, version=ver)
                                 yield (pfmri, summ, pcats, states, attrs)
                         else:
                                 yield (t, summ, pcats, states, attrs)
@@ -4194,6 +4211,10 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                 tgt = fmri.PkgFmri(
                                     a.attrs["fmri"], brelease)
                                 tver = tgt.version
+                                # incorporates without a version should be
+                                # ignored.
+                                if not tver:
+                                        continue
                                 over = inc_vers.get(
                                     tgt.pkg_name, None)
 
@@ -4268,8 +4289,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                             self.__get_alt_pkg_data(repos)
                         alt_pub = pkg_pub_map.get(pfmri.publisher, {}).get(
                             pfmri.pkg_name, {}).get(str(pfmri.version), None)
-                return self._img.get_manifest(pfmri, use_excludes=all_variants,
-                    alt_pub=alt_pub)
+                return self._img.get_manifest(pfmri,
+                    ignore_excludes=all_variants, alt_pub=alt_pub)
 
         @staticmethod
         def validate_response(res, v):

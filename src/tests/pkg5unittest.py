@@ -73,10 +73,6 @@ from pkg.client.debugvalues import DebugValues
 EmptyI = tuple()
 EmptyDict = dict()
 
-# relative to our proto area
-path_to_pub_util = "../../src/util/publish"
-path_to_distro_import_utils = "../../src/util/distro-import"
-
 #
 # These are initialized by pkg5testenv.setup_environment.
 #
@@ -1210,7 +1206,7 @@ class _Pkg5TestResult(unittest._TextTestResult):
                 For now, we'll record this as a success, but also save the
                 reason why we wanted to skip this test"""
                 self.addSuccess(test)
-                self.skips.append((test, err))
+                self.skips.append((str(test), err))
 
         def addPersistentSetupError(self, test, err):
                 errtype, errval = err[:2]
@@ -2127,11 +2123,13 @@ class CliTestCase(Pkg5TestCase):
 
                 return os.path.join(self.img_path(), relpath)
 
-        def get_img_api_obj(self, cmd_path=None, ii=None):
+        def get_img_api_obj(self, cmd_path=None, ii=None, img_path=None):
                 progresstracker = pkg.client.progress.NullProgressTracker()
                 if not cmd_path:
                         cmd_path = os.path.join(self.img_path(), "pkg")
-                res = pkg.client.api.ImageInterface(self.img_path(ii=ii),
+                if not img_path:
+                        img_path = self.img_path(ii=ii)
+                res = pkg.client.api.ImageInterface(img_path,
                     CLIENT_API_VERSION, progresstracker, lambda x: False,
                     PKG_CLIENT_NAME, cmdpath=cmd_path)
                 return res
@@ -2435,9 +2433,7 @@ class CliTestCase(Pkg5TestCase):
                 return plist
 
         def merge(self, args=EmptyI, exit=0):
-                pub_utils = os.path.join(g_proto_area, path_to_pub_util)
-                prog = os.path.join(pub_utils, "merge.py")
-                cmd = "%s %s" % (prog, " ".join(args))
+                cmd = "%s/usr/bin/pkgmerge %s" % (g_proto_area, " ".join(args))
                 self.cmdline_run(cmd, exit=exit)
 
         def sysrepo(self, args, exit=0, out=False, stderr=False, comment="",
@@ -2762,13 +2758,6 @@ class CliTestCase(Pkg5TestCase):
                         raise RuntimeError("Repository readiness "
                             "timeout exceeded.")
 
-        def importer(self, args=EmptyI, out=False, stderr=False, exit=0):
-                distro_import_utils = os.path.join(g_proto_area,
-                    path_to_distro_import_utils)
-                prog = os.path.join(distro_import_utils, "importer.py")
-                cmd = "%s %s" % (prog, " ".join(args))
-                return self.cmdline_run(cmd, out=out, stderr=stderr, exit=exit)
-
         def _api_attach(self, api_obj, catch_wsie=True, **kwargs):
                 self.debug("attach: %s" % str(kwargs))
                 for pd in api_obj.gen_plan_attach(**kwargs):
@@ -2787,11 +2776,19 @@ class CliTestCase(Pkg5TestCase):
                         continue
                 self._api_finish(api_obj, catch_wsie=catch_wsie)
 
-        def _api_install(self, api_obj, pkg_list, catch_wsie=True, **kwargs):
+        def _api_install(self, api_obj, pkg_list, catch_wsie=True,
+            show_licenses=False, accept_licenses=False, **kwargs):
                 self.debug("install %s" % " ".join(pkg_list))
+
+                if accept_licenses:
+                        kwargs["accept"] = True
+
                 for pd in api_obj.gen_plan_install(pkg_list, **kwargs):
                         continue
-                self._api_finish(api_obj, catch_wsie=catch_wsie)
+
+                self._api_finish(api_obj, catch_wsie=catch_wsie,
+                    show_licenses=show_licenses,
+                    accept_licenses=accept_licenses)
 
         def _api_uninstall(self, api_obj, pkg_list, catch_wsie=True, **kwargs):
                 self.debug("uninstall %s" % " ".join(pkg_list))
@@ -2811,7 +2808,19 @@ class CliTestCase(Pkg5TestCase):
                         continue
                 self._api_finish(api_obj, catch_wsie=catch_wsie)
 
-        def _api_finish(self, api_obj, catch_wsie=True):
+        def _api_finish(self, api_obj, catch_wsie=True,
+            show_licenses=False, accept_licenses=False):
+
+                plan = api_obj.describe()
+                if plan:
+                        # update licenses displayed and/or accepted state
+                        for pfmri, src, dest, accepted, displayed in \
+                            plan.get_licenses():
+                                api_obj.set_plan_license_status(pfmri,
+                                    dest.license,
+                                    displayed=show_licenses,
+                                    accepted=accept_licenses)
+
                 api_obj.prepare()
                 try:
                         api_obj.execute_plan()

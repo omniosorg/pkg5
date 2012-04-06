@@ -25,8 +25,10 @@
 #
 
 from collections import defaultdict, namedtuple
+import contextlib
 import errno
 import itertools
+import mmap
 import operator
 import os
 import simplejson as json
@@ -714,10 +716,11 @@ class ImagePlan(object):
                         # Determine which packages will be affected.
                         for f in self.image.gen_installed_pkgs():
                                 self.__progtrack.evaluate_progress()
-                                m = self.image.get_manifest(f)
+                                m = self.image.get_manifest(f,
+                                    ignore_excludes=True)
                                 mediated = []
                                 for act in m.gen_actions_by_types(("hardlink",
-                                    "link")):
+                                    "link"), excludes=self.__new_excludes):
                                         try:
                                                 mediator = act.attrs["mediator"]
                                         except KeyError:
@@ -726,13 +729,12 @@ class ImagePlan(object):
                                                 mediated.append(act)
 
                                 if mediated:
-                                        pp = pkgplan.PkgPlan(self.image,
-                                            self.__progtrack,
-                                            self.__check_cancel)
+                                        pp = pkgplan.PkgPlan(self.image)
                                         pp.propose_repair(f, m, mediated,
                                             misc.EmptyI)
                                         pp.evaluate(self.__new_excludes,
-                                            self.__new_excludes)
+                                            self.__new_excludes,
+                                            can_exclude=True)
                                         self.pkg_plans.append(pp)
                 else:
                         # Only the source property is being updated for
@@ -905,7 +907,8 @@ class ImagePlan(object):
                         tag_set = set(args)
                         for f in self.image.gen_installed_pkgs():
                                 self.__progtrack.evaluate_progress()
-                                m = self.image.get_manifest(f)
+                                m = self.image.get_manifest(f,
+                                    ignore_excludes=True)
                                 for act in m.gen_actions_by_type("file",
                                     self.__new_excludes):
                                         if "revert-tag" in act.attrs and \
@@ -920,7 +923,8 @@ class ImagePlan(object):
                         overlaypaths = set()
                         for f in self.image.gen_installed_pkgs():
                                 self.__progtrack.evaluate_progress()
-                                m = self.image.get_manifest(f)
+                                m = self.image.get_manifest(f,
+                                    ignore_excludes=True)
                                 for act in m.gen_actions_by_type("file",
                                     self.__new_excludes):
                                         path = act.attrs["path"]
@@ -958,12 +962,12 @@ class ImagePlan(object):
                                 if act.replace_required == True:
                                         needs_change.append(act)
                         if needs_change:
-                                pp = pkgplan.PkgPlan(self.image,
-                                    self.__progtrack, self.__check_cancel)
+                                pp = pkgplan.PkgPlan(self.image)
                                 pp.propose_repair(f, m, needs_change,
                                     misc.EmptyI)
                                 pp.evaluate(self.__new_excludes,
-                                    self.__new_excludes)
+                                    self.__new_excludes,
+                                    can_exclude=True)
                                 self.pkg_plans.append(pp)
 
                 self.__fmri_changes = []
@@ -1103,19 +1107,22 @@ class ImagePlan(object):
 
                 # Don't bother accounting for implicit directories if we're not
                 # looking for them.
-                if implicit_dirs and atype != "dir":
-                        implicit_dirs = False
-
+                if implicit_dirs:
+                        if atype != "dir":
+                                implicit_dirs = False
+                        else:
+                                da = pkg.actions.directory.DirectoryAction
+ 
                 for pfmri in generator():
-                        m = self.image.get_manifest(pfmri)
-                        dirs = set() # Keep track of explicit dirs
+                        m = self.image.get_manifest(pfmri, ignore_excludes=True)
+                        if implicit_dirs:
+                                dirs = set() # Keep track of explicit dirs
                         for act in m.gen_actions_by_type(atype,
                             self.__new_excludes):
                                 if implicit_dirs:
                                         dirs.add(act.attrs["path"])
                                 yield act, pfmri
                         if implicit_dirs:
-                                da = pkg.actions.directory.DirectoryAction
                                 for d in m.get_directories(self.__new_excludes):
                                         if d not in dirs:
                                                 yield da(path=d, implicit="true"), pfmri
@@ -1133,11 +1140,15 @@ class ImagePlan(object):
 
                 # Don't bother accounting for implicit directories if we're not
                 # looking for them.
-                if implicit_dirs and atype != "dir":
-                        implicit_dirs = False
+                if implicit_dirs:
+                        if atype != "dir":
+                                implicit_dirs = False
+                        else:
+                                da = pkg.actions.directory.DirectoryAction
 
                 for pfmri, m in generator():
-                        dirs = set() # Keep track of explicit dirs
+                        if implicit_dirs:
+                                dirs = set() # Keep track of explicit dirs
                         for act in m.gen_actions_by_type(atype,
                             excludes):
                                 if implicit_dirs:
@@ -1145,7 +1156,6 @@ class ImagePlan(object):
                                 yield act, pfmri
 
                         if implicit_dirs:
-                                da = pkg.actions.directory.DirectoryAction
                                 for d in m.get_directories(excludes):
                                         if d not in dirs:
                                                 yield da(path=d,
@@ -1155,15 +1165,19 @@ class ImagePlan(object):
                 """ return set of all directories in target image """
                 # always consider var and the image directory fixed in image...
                 if self.__directories == None:
-                        dirs = set([self.image.imgdir.rstrip("/"),
-                                    "var",
-                                    "var/sadm",
-                                    "var/sadm/install"])
-                        dirs.update((
+                        # It's faster to build a large set and make a small
+                        # update to it than to do the reverse.
+                        dirs = set((
                             os.path.normpath(d[0].attrs["path"])
                             for d in self.gen_new_installed_actions_bytype("dir",
                                 implicit_dirs=True)
                         ))
+                        dirs.update([
+                            self.image.imgdir.rstrip("/"),
+                            "var",
+                            "var/sadm",
+                            "var/sadm/install"
+                        ])
                         self.__directories = dirs
                 return self.__directories
 
@@ -1424,8 +1438,7 @@ class ImagePlan(object):
                 if pp is None:
                         # XXX The lambda: False is temporary until fix is moved
                         # into the API and self.__check_cancel can be used.
-                        pp = pkgplan.PkgPlan(self.image, self.__progtrack,
-                            lambda: False)
+                        pp = pkgplan.PkgPlan(self.image)
                         if inst_action:
                                 install = [inst_action]
                                 remove = []
@@ -1535,10 +1548,10 @@ class ImagePlan(object):
 
                 d = {}
                 for klass in action_classes:
+                        self.__progtrack.evaluate_progress()
                         for a, pfmri in \
                             gen_func(klass.name, implicit_dirs=True,
                             excludes=excludes):
-                                self.__progtrack.evaluate_progress()
                                 d.setdefault(a.attrs[klass.key_attr],
                                     []).append((a, pfmri))
                 return d
@@ -1581,11 +1594,16 @@ class ImagePlan(object):
                         for offset, cnt in offsets:
                                 sf.seek(offset)
                                 pns = None
-                                for i, line in enumerate(sf, start=1):
+                                i = 0
+                                while 1:
+                                        line = sf.readline()
+                                        i += 1
                                         if i > cnt:
                                                 break
-                                        fmristr, actstr = \
-                                            line.rstrip().split(None, 1)
+                                        line = line.rstrip()
+                                        if line == "":
+                                                break
+                                        fmristr, actstr = line.split(None, 1)
                                         if fmristr in gone_fmris:
                                                 continue
                                         act = pkg.actions.fromstr(actstr)
@@ -1651,8 +1669,14 @@ class ImagePlan(object):
                         for offset, cnt in offsets:
                                 sf.seek(offset)
                                 pns = None
-                                for i, line in enumerate(sf, start=1):
+                                i = 0
+                                while 1:
+                                        line = sf.readline()
+                                        i += 1
                                         if i > cnt:
+                                                break
+                                        line = line.rstrip()
+                                        if line == "":
                                                 break
                                         fmristr, actstr = line.rstrip().split(
                                             None, 1)
@@ -1697,7 +1721,7 @@ class ImagePlan(object):
                         oactions = old.get(key, [])
                         # If new actions are being installed, then we need to do
                         # the full conflict checking.
-                        if len(oactions) == 0:
+                        if not oactions:
                                 continue
 
                         unmatched_old_actions = set(range(0, len(oactions)))
@@ -1705,8 +1729,9 @@ class ImagePlan(object):
                         # If the action isn't refcountable and there's more than
                         # one action, that's an error so we let
                         # __check_conflicts handle it.
-                        if not actions[0][0].refcountable and \
-                            actions[0][0].globally_identical and \
+                        entry = actions[0][0]
+                        if not entry.refcountable and \
+                            entry.globally_identical and \
                             len(actions) > 1:
                                 continue
 
@@ -1715,16 +1740,18 @@ class ImagePlan(object):
                         next_key = False
                         for act, pfmri in actions:
                                 matched = False
+                                aname = act.name
+                                aattrs = act.attrs
                                 # Compare this action with each outgoing action.
                                 for i, (oact, opfmri) in enumerate(oactions):
-                                        if act.name != oact.name:
+                                        if aname != oact.name:
                                                 continue
                                         # Check whether all attributes which
                                         # need to be unique are identical for
                                         # these two actions.
+                                        oattrs = oact.attrs
                                         if all((
-                                            act.attrs.get(a, None) ==
-                                                oact.attrs.get(a, None)
+                                            aattrs.get(a) == oattrs.get(a)
                                             for a in act.unique_attrs
                                         )):
                                                 matched = True
@@ -1750,8 +1777,8 @@ class ImagePlan(object):
                                         if act.name != oact.name:
                                                 continue
                                         if all((
-                                            act.attrs.get(a, None) ==
-                                                oact.attrs.get(a, None)
+                                            act.attrs.get(a) ==
+                                                oact.attrs.get(a)
                                             for a in act.unique_attrs
                                         )):
                                                 matched = True
@@ -1808,8 +1835,8 @@ class ImagePlan(object):
 
                         # Multiple non-refcountable actions delivered to
                         # the same name is an error.
-                        if not actions[0][0].refcountable and \
-                            actions[0][0].globally_identical:
+                        entry = actions[0][0]
+                        if not entry.refcountable and entry.globally_identical:
                                 if self.__process_conflicts(key,
                                     self.__check_duplicate_actions,
                                     actions, oactions,
@@ -1820,7 +1847,7 @@ class ImagePlan(object):
                         # Multiple refcountable but globally unique
                         # actions delivered to the same name must be
                         # identical.
-                        elif actions[0][0].globally_identical:
+                        elif entry.globally_identical:
                                 if self.__process_conflicts(key,
                                     self.__check_inconsistent_attrs,
                                     actions, oactions,
@@ -1952,18 +1979,25 @@ class ImagePlan(object):
                         if conflict_clean_image:
                                 self.__fast_check(new, old, ns)
 
-                        # Update 'old' with all actions from the action cache
-                        # which could conflict with the new actions being
-                        # installed, or with actions already installed, but not
-                        # getting removed.
-                        self.__update_old(new, old, offset_dict, action_classes,
-                            sf, gone_fmris, fmri_dict)
+                        with contextlib.closing(mmap.mmap(sf.fileno(), 0,
+                            access=mmap.ACCESS_READ)) as msf:
+                                # Skip file header.
+                                msf.readline()
+                                msf.readline()
 
-                        # Now update 'new' with all actions from the action
-                        # cache which are staying on the system, and could
-                        # conflict with the actions being installed.
-                        self.__update_new(new, old, offset_dict, action_classes,
-                            sf, gone_fmris, fmri_dict)
+                                # Update 'old' with all actions from the action
+                                # cache which could conflict with the new
+                                # actions being installed, or with actions
+                                # already installed, but not getting removed.
+                                self.__update_old(new, old, offset_dict,
+                                    action_classes, msf, gone_fmris, fmri_dict)
+
+                                # Now update 'new' with all actions from the
+                                # action cache which are staying on the system,
+                                # and could conflict with the actions being
+                                # installed.
+                                self.__update_new(new, old, offset_dict,
+                                    action_classes, msf, gone_fmris, fmri_dict)
 
                         self.__check_conflicts(new, old, action_classes, ns,
                             errs)
@@ -2011,11 +2045,12 @@ class ImagePlan(object):
                 self.__cached_actions[(name, key)] = d
                 return self.__cached_actions[(name, key)]
 
-        def __get_manifest(self, pfmri, intent, use_excludes=False):
+        def __get_manifest(self, pfmri, intent, ignore_excludes=False):
                 """Return manifest for pfmri"""
                 if pfmri:
                         return self.image.get_manifest(pfmri,
-                            use_excludes=use_excludes or self.__varcets_change,
+                            ignore_excludes=ignore_excludes or
+                            self.__varcets_change,
                             intent=intent)
                 else:
                         return manifest.NullFactoredManifest
@@ -2216,8 +2251,7 @@ class ImagePlan(object):
                 same_excludes = self.__old_excludes == self.__new_excludes
 
                 for oldfmri, old_in, newfmri, new_in in eval_list:
-                        pp = pkgplan.PkgPlan(self.image, self.__progtrack,
-                            self.__check_cancel)
+                        pp = pkgplan.PkgPlan(self.image)
 
                         if oldfmri == newfmri:
                                 # When creating intent, we always prefer to send
@@ -2225,7 +2259,7 @@ class ImagePlan(object):
                                 # __create_intent), so it's not necessary to
                                 # touch the old manifest in this situation.
                                 m = self.__get_manifest(newfmri, new_in,
-                                    use_excludes=True)
+                                    ignore_excludes=True)
                                 pp.propose(
                                     oldfmri, m,
                                     newfmri, m)
@@ -2236,7 +2270,7 @@ class ImagePlan(object):
                                     self.__get_manifest(oldfmri, old_in),
                                     newfmri,
                                     self.__get_manifest(newfmri, new_in,
-                                    use_excludes=True))
+                                    ignore_excludes=True))
                                 can_exclude = True
 
                         pp.evaluate(self.__old_excludes, self.__new_excludes,
@@ -3011,9 +3045,11 @@ class ImagePlan(object):
                 self.update_actions.extend(l_refresh)
 
                 # sort actions to match needed processing order
-                self.removal_actions.sort(key = lambda obj:obj[1], reverse=True)
-                self.update_actions.sort(key = lambda obj:obj[2])
-                self.install_actions.sort(key = lambda obj:obj[2])
+                remsort = operator.itemgetter(1)
+                addsort = operator.itemgetter(2)
+                self.removal_actions.sort(key=remsort, reverse=True)
+                self.update_actions.sort(key=addsort)
+                self.install_actions.sort(key=addsort)
 
                 # Pre-calculate size of data retrieval for preexecute().
                 npkgs = nfiles = nbytes = 0
@@ -3164,7 +3200,8 @@ class ImagePlan(object):
 
                         try:
                                 for p in self.pkg_plans:
-                                        p.download()
+                                        p.download(self.__progtrack,
+                                            self.__check_cancel)
                         except EnvironmentError, e:
                                 if e.errno == errno.EACCES:
                                         raise api_errors.PermissionsException(
@@ -4186,8 +4223,7 @@ class ImagePlan(object):
                 elif filename == STATE_FILE_ACTIONS:
                         pkg_plans = []
                         for item in data:
-                                pp = pkgplan.PkgPlan(self.image,
-                                    self.__progtrack, self.__check_cancel)
+                                pp = pkgplan.PkgPlan(self.image)
                                 pp.setstate(item)
                                 pkg_plans.append(pp)
                         return pkg_plans

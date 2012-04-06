@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2007, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 """module describing a file packaging object
@@ -29,13 +29,15 @@
 This module contains the FileAction class, which represents a file-type
 packaging object."""
 
-import os
 import errno
-import tempfile
-import stat
 import generic
+import os
+import stat
+import tempfile
+import types
 import zlib
 
+import _common
 import pkg.actions
 import pkg.client.api_errors as api_errors
 import pkg.misc as misc
@@ -59,38 +61,12 @@ class FileAction(generic.Action):
         unique_attrs = "path", "mode", "owner", "group", "preserve"
         globally_identical = True
         namespace_group = "path"
+        ordinality = generic._orderdict[name]
 
         has_payload = True
 
-        def __init__(self, data=None, **attrs):
-                generic.Action.__init__(self, data, **attrs)
-                self.hash = "NOHASH"
-                self.replace_required = False
-
-        def __getstate__(self):
-                """This object doesn't have a default __dict__, instead it
-                stores its contents via __slots__.  Hence, this routine must
-                be provide to translate this object's contents into a
-                dictionary for pickling"""
-
-                pstate = generic.Action.__getstate__(self)
-                state = {}
-                for name in FileAction.__slots__:
-                        if not hasattr(self, name):
-                                continue
-                        state[name] = getattr(self, name)
-                return (state, pstate)
-
-        def __setstate__(self, state):
-                """This object doesn't have a default __dict__, instead it
-                stores its contents via __slots__.  Hence, this routine must
-                be provide to translate a pickled dictionary copy of this
-                object's contents into a real in-memory object."""
-
-                (state, pstate) = state
-                generic.Action.__setstate__(self, pstate)
-                for name in state:
-                        setattr(self, name, state[name])
+        # __init__ is provided as a native function (see end of class
+        # declaration).
 
         # this check is only needed on Windows
         if portable.ostype == "windows":
@@ -534,25 +510,15 @@ class FileAction(generic.Action):
                 # Attempt to remove the file.
                 self.remove_fsobj(pkgplan, path)
 
-        def different(self, other):
+        def different(self, other, cmp_hash=True):
                 # Override the generic different() method to ignore the file
                 # hash for ELF files and compare the ELF hash instead.
                 # XXX This should be modularized and controlled by policy.
 
                 # One of these isn't an ELF file, so call the generic method
-                if "elfhash" not in self.attrs or "elfhash" not in other.attrs:
-                        return generic.Action.different(self, other)
-
-                sset = set(self.attrs.keys())
-                oset = set(other.attrs.keys())
-                if sset.symmetric_difference(oset):
-                        return True
-
-                for a in self.attrs:
-                        if self.attrs[a] != other.attrs[a]:
-                                return True
-
-                return False
+                if "elfhash" in self.attrs and "elfhash" in other.attrs:
+                        cmp_hash = False
+                return generic.Action.different(self, other, cmp_hash=cmp_hash)
 
         def generate_indices(self):
                 """Generates the indices needed by the search dictionary.  See
@@ -625,3 +591,5 @@ class FileAction(generic.Action):
                 if errors:
                         raise pkg.actions.InvalidActionAttributesError(self,
                             errors, fmri=fmri)
+
+FileAction.__init__ = types.MethodType(_common._file_init, None, FileAction)
