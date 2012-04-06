@@ -27,6 +27,7 @@ BUILDNUM.cmd      = \
 	(hg tags 2>/dev/null || git tag | grep ^in...$ | sort -rn) | \
 	nawk '$$1 ~ /^in[0-9]*$$/ {print substr($$1, 3) + 1; exit}'
 BUILDNUM          = $(BUILDNUM.cmd:sh)
+BUILDNUM          = 175
 UPDATENUM         = 0
 SRUNUM            = 0
 PLATNUM           = 0
