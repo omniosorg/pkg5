@@ -46,56 +46,50 @@ ROOTDIRS = \
 	$(ROOTBRAND) \
 	$(ROOTBRANDPKG)
 
-ROOTBINS = \
-	$(ROOTBRANDPKG)/attach \
-	$(ROOTBRANDPKG)/boot \
-	$(ROOTBRANDPKG)/clone \
-	$(ROOTBRANDPKG)/detach \
-	$(ROOTBRANDPKG)/halt \
-	$(ROOTBRANDPKG)/image_install \
-	$(ROOTBRANDPKG)/p2v \
-	$(ROOTBRANDPKG)/pkgcreatezone \
-	$(ROOTBRANDPKG)/poststate \
-	$(ROOTBRANDPKG)/prestate \
-	$(ROOTBRANDPKG)/support \
-	$(ROOTBRANDPKG)/sysboot \
-	$(ROOTBRANDPKG)/uninstall
-
 ROOTFILES = \
-	$(ROOTBRANDPKG)/common.ksh \
-	$(ROOTBRANDPKG)/developerenv.ksh \
-	$(ROOTBRANDPKG)/pkgrm.lst \
-	$(ROOTBRANDPKG)/smf_disable.lst \
 	$(ROOTETCBRAND)/pkgrm.conf \
 	$(ROOTETCBRAND)/smf_disable.conf \
 	$(ROOTETCZONES)/SUNWipkg.xml \
+	$(ROOTBRANDPKG)/attach \
+	$(ROOTBRANDPKG)/clone \
+	$(ROOTBRANDPKG)/common.ksh \
+	$(ROOTBRANDPKG)/detach \
+	$(ROOTBRANDPKG)/fmri_compare \
+	$(ROOTBRANDPKG)/image_install \
+	$(ROOTBRANDPKG)/p2v \
+	$(ROOTBRANDPKG)/pkgcreatezone \
+	$(ROOTBRANDPKG)/pkgrm.lst \
+	$(ROOTBRANDPKG)/poststate \
+	$(ROOTBRANDPKG)/prestate \
+	$(ROOTBRANDPKG)/smf_disable.lst \
+	$(ROOTBRANDPKG)/support \
+	$(ROOTBRANDPKG)/uninstall
 
 BIN = \
 	support \
-
-FILEMODE = 0444
-$(ROOTBINS) := FILEMODE = 755
-$(ROOTETCBRAND)/% := FILEMODE = 644
-
+	fmri_compare
 
 support := LDLIBS = -lzonecfg
 
 all := TARGET = all
 
-
 support: support.c
 	$(LINK.c) -o $@ $@.c $(LDLIBS)
 
-all:
+fmri_compare: fmri_compare.py
+	cp $@.py $@
+	chmod 755 $@
+
+all: fmri_compare
 
 clean:
 	rm -f $(BIN)
 
 clobber: clean
-	rm -f $(ROOTFILES) $(ROOTBINS)
+	rm -f $(ROOTFILES)
 	rm -fr $(ROOTBRAND)
 
-install: $(ROOTFILES) $(ROOTBINS)
+install: $(ROOTFILES)
 
 
 $(ROOT) $(ROOTETC) $(ROOTETCBRAND) $(ROOTETCZONES) $(ROOTUSRLIB) \
@@ -103,10 +97,10 @@ $(ROOT) $(ROOTETC) $(ROOTETCBRAND) $(ROOTETCZONES) $(ROOTUSRLIB) \
 	mkdir -p $@
 
 $(ROOTETCBRAND)/%: $(ROOTETCBRAND) %
-	rm -f $@; $(INSTALL) -f $(ROOTETCBRAND) -m $(FILEMODE) $<
+	rm -f $@; $(INSTALL) -f $(ROOTETCBRAND) -m 0644 $<
 
 $(ROOTETCZONES)/%: $(ROOTETCZONES) %
-	rm -f $@; $(INSTALL) -f $(ROOTETCZONES) -m $(FILEMODE) $<
+	rm -f $@; $(INSTALL) -f $(ROOTETCZONES) -m 0444 $<
 
 $(ROOTBRANDPKG)/%: $(ROOTBRANDPKG) %
-	rm -f $@; $(INSTALL) -f $(ROOTBRANDPKG) -m $(FILEMODE) $<
+	rm -f $@; $(INSTALL) -f $(ROOTBRANDPKG) -m 0444 $<

@@ -1,4 +1,4 @@
-#!/bin/ksh -p
+#!/usr/bin/python2.6
 #
 # CDDL HEADER START
 #
@@ -19,17 +19,41 @@
 #
 # CDDL HEADER END
 #
-
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Use is subject to license terms.
 #
 
-. /usr/lib/brand/ipkg/common.ksh
+import pkg.fmri
+import sys
 
-ZONENAME=$1
-ZONEPATH=$2
+def usage():
+        print >> sys.stderr, "usage: %s <fmri1> <fmri2>" % sys.argv[0]
+        sys.exit(2)
 
-/usr/lib/zones/zoneproxy-adm -R $ZONENAME
-if [[ $? -ne 0 ]]; then
-	exit $ZONE_SUBPROC_NOTCOMPLETE
-fi
+if len(sys.argv) != 3:
+        usage()
+
+try:
+        x = pkg.fmri.PkgFmri(sys.argv[1])
+        y = pkg.fmri.PkgFmri(sys.argv[2])
+except pkg.fmri.FmriError, e:
+        print >> sys.stderr, "error: %s" % str(e)
+        sys.exit(1)
+
+if not x.is_same_pkg(y):
+        print >> sys.stderr, \
+            "error: can only compare two versions of the same package."
+        sys.exit(1)
+
+if x < y:
+        print "<"
+elif x > y:
+        print ">"
+elif x == y:
+        print "="
+else:
+        print >> sys.stderr, "panic"
+        sys.exit(1)
+
+sys.exit(0)
