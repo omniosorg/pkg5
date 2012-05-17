@@ -5638,9 +5638,17 @@ def history_list(api_inst, args):
                 if not output["new_be_uuid"]:
                         output["new_be_uuid"] = _("(None)")
 
+                enc = locale.getlocale(locale.LC_CTYPE)[1]
+                if not enc:
+                        enc = locale.getpreferredencoding()
+
                 if long_format:
                         data = __get_long_history_data(he, output)
                         for field, value in data:
+                                if isinstance(field, unicode):
+                                        field = field.encode(enc)
+                                if isinstance(value, unicode):
+                                        value = value.encode(enc)
                                 msg("%18s: %s" % (field, value))
 
                         # Separate log entries with a blank line.
@@ -5648,7 +5656,10 @@ def history_list(api_inst, args):
                 else:
                         items = []
                         for col in columns:
-                                items.append(output[col])
+                                item = output[col]
+                                if isinstance(item, unicode):
+                                        item = item.encode(enc)
+                                items.append(item)
                         msg(history_fmt % tuple(items))
         return EXIT_OK
 
