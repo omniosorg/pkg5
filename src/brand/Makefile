@@ -64,6 +64,7 @@ ROOTFILES = \
 	$(ROOTBRANDPKG)/prestate \
 	$(ROOTBRANDPKG)/smf_disable.lst \
 	$(ROOTBRANDPKG)/support \
+	$(ROOTBRANDPKG)/system-unconfigure \
 	$(ROOTBRANDPKG)/uninstall
 
 BIN = \

@@ -55,8 +55,8 @@ f_cp_unsafe=$(gettext "Failed to safely copy %s to %s.")
 
 m_brnd_usage=$(gettext "brand-specific usage: ")
 
-v_unconfig=$(gettext "Performing zone sys-unconfig")
-e_unconfig=$(gettext "sys-unconfig failed")
+v_unconfig=$(gettext "Performing zone unconfiguration")
+e_unconfig=$(gettext "Zone unconfiguration failed")
 v_mounting=$(gettext "Mounting the zone")
 e_badmount=$(gettext "Zone mount failed")
 v_unmount=$(gettext "Unmounting zone")
@@ -301,7 +301,7 @@ create_active_ds() {
 }
 
 #
-# Run sys-unconfig on the zone.
+# Remove zone's system configuration
 #
 unconfigure_zone() {
 	vlog "$v_unconfig"
@@ -310,11 +310,21 @@ unconfigure_zone() {
 	ZONE_IS_MOUNTED=1
 	zoneadm -z $ZONENAME mount -f || fatal "$e_badmount"
 
-	zlogin -S $ZONENAME /usr/sbin/sys-unconfig -R /a \
-	    </dev/null >/dev/null 2>&1
-	if (( $? != 0 )); then
-		error "$e_unconfig"
-		failed=1
+	ZONE_BRAND=`zoneadm list -pc | /usr/bin/gawk -v zone=$ZONENAME -F':' '$2 == zone { print $6 }'`
+	if [[ $ZONE_BRAND = "ipkg" ]]; then
+		zlogin -S $ZONENAME /usr/lib/brand/ipkg/system-unconfigure -R /a \
+		    >/dev/null 2>&1
+		if (( $? != 0 )); then
+			error "$e_unconfig"
+			failed=1
+		fi
+	else
+		zlogin -S $ZONENAME /usr/sbin/sys-unconfig -R /a \
+		    </dev/null >/dev/null 2>&1
+		if (( $? != 0 )); then
+			error "$e_unconfig"
+			failed=1
+		fi
 	fi
 
 	vlog "$v_unmount"
