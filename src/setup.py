@@ -335,6 +335,7 @@ transform_files = [
         'util/publish/transforms/smf-manifests'
         ]
 sysrepo_files = [
+        'util/apache2/sysrepo/sysrepo_p5p.py',
         'util/apache2/sysrepo/sysrepo_httpd.conf.mako',
         'util/apache2/sysrepo/sysrepo_publisher_response.mako',
         ]
@@ -507,34 +508,40 @@ class clint_func(Command):
                 return astring.replace(' ', '\\ ')
 
         def run(self):
-                # assumes lint is on the $PATH
+                if "LINT" in os.environ and os.environ["LINT"] != "":
+                        lint = [os.environ["LINT"]]
+                else:
+                        lint = ['lint']
                 if osname == 'sunos' or osname == "linux":
-                        archcmd = ['lint'] + lint_flags + ['-D_FILE_OFFSET_BITS=64'] + \
+                        archcmd = lint + lint_flags + \
+                            ['-D_FILE_OFFSET_BITS=64'] + \
                             ["%s%s" % ("-I", k) for k in include_dirs] + \
                             ['-I' + self.escape(get_python_inc())] + \
                             arch_srcs
-                        elfcmd = ['lint'] + lint_flags + \
+                        elfcmd = lint + lint_flags + \
                             ["%s%s" % ("-I", k) for k in include_dirs] + \
                             ['-I' + self.escape(get_python_inc())] + \
                             ["%s%s" % ("-l", k) for k in elf_libraries] + \
                             elf_srcs
-                        _actionscmd = ['lint'] + lint_flags + \
+                        _actionscmd = lint + lint_flags + \
                             ["%s%s" % ("-I", k) for k in include_dirs] + \
                             ['-I' + self.escape(get_python_inc())] + \
                             _actions_srcs
-                        _actcommcmd = ['lint'] + lint_flags + \
+                        _actcommcmd = lint + lint_flags + \
                             ["%s%s" % ("-I", k) for k in include_dirs] + \
                             ['-I' + self.escape(get_python_inc())] + \
                             _actcomm_srcs
-                        _varcetcmd = ['lint'] + lint_flags + \
+                        _varcetcmd = lint + lint_flags + \
                             ["%s%s" % ("-I", k) for k in include_dirs] + \
                             ['-I' + self.escape(get_python_inc())] + \
                             _varcet_srcs
-                        pspawncmd = ['lint'] + lint_flags + ['-D_FILE_OFFSET_BITS=64'] + \
+                        pspawncmd = lint + lint_flags + \
+                            ['-D_FILE_OFFSET_BITS=64'] + \
                             ["%s%s" % ("-I", k) for k in include_dirs] + \
                             ['-I' + self.escape(get_python_inc())] + \
                             pspawn_srcs
-                        syscallatcmd = ['lint'] + lint_flags + ['-D_FILE_OFFSET_BITS=64'] + \
+                        syscallatcmd = lint + lint_flags + \
+                            ['-D_FILE_OFFSET_BITS=64'] + \
                             ["%s%s" % ("-I", k) for k in include_dirs] + \
                             ['-I' + self.escape(get_python_inc())] + \
                             syscallat_srcs
@@ -888,6 +895,8 @@ class MyUnixCCompiler(UnixCCompiler):
                 output_dir = os.path.join(cwd, os.path.dirname(output_filename))
                 output_filename = os.path.basename(output_filename)
                 nargs = args[:2] + (output_filename,) + args[3:]
+                if not os.path.exists(output_dir):
+                        os.mkdir(output_dir, 0755)
                 os.chdir(output_dir)
 
                 UnixCCompiler.link(self, *nargs, **kwargs)
@@ -909,8 +918,45 @@ class build_ext_func(_build_ext):
 
         def initialize_options(self):
                 _build_ext.initialize_options(self)
+                self.build64 = False
+
                 if osname == 'sunos':
                         self.compiler = 'myunix'
+
+        def build_extension(self, ext):
+                # Build 32-bit
+                log.info("building 32-bit extension")
+                _build_ext.build_extension(self, ext)
+
+                # Set up for 64-bit
+                old_build_temp = self.build_temp
+                d, f = os.path.split(self.build_temp)
+
+                # store our 64-bit extensions elsewhere
+                self.build_temp = d + "/temp64.%s" % \
+                    os.path.basename(self.build_temp).replace("temp.", "")
+                ext.extra_compile_args += ["-m64"]
+                ext.extra_link_args += ["-m64"]
+                self.build64 = True
+
+                # Build 64-bit
+                log.info("building 64-bit extension")
+                _build_ext.build_extension(self, ext)
+
+                # Reset to 32-bit
+                self.build_temp = old_build_temp
+                ext.extra_compile_args.remove("-m64")
+                ext.extra_link_args.remove("-m64")
+                self.build64 = False
+
+        def get_ext_fullpath(self, ext_name):
+                path = _build_ext.get_ext_fullpath(self, ext_name)
+                if not self.build64:
+                        return path
+
+                dpath, fpath = os.path.split(path)
+                return os.path.join(dpath, "64", fpath)
+
 
 class build_py_func(_build_py):
 
@@ -1378,3 +1424,19 @@ setup(cmdclass = cmdclasses,
     ext_package = 'pkg',
     ext_modules = ext_modules,
     )
+
+# We don't support 64-bit yet, but 64-bit _actions.so, _common.so and _varcet.so
+# are needed for a system repository mod_wsgi application, sysrepo_p5p.py.
+# Remove the others.
+remove_libs = ["arch.so",
+    "elf.so",
+    "pspawn.so",
+    "solver.so",
+    "syscallat.so"
+]
+pkg_64_path = os.path.join(root_dir, "usr/lib/python2.6/vendor-packages/pkg/64")
+for lib in remove_libs:
+        rm_path = os.path.join(pkg_64_path, lib)
+        if os.path.exists(rm_path):
+                log.info("Removing unnecessary 64-bit library: %s" % lib)
+                os.unlink(rm_path)

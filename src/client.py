@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2007, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 #
@@ -4526,9 +4526,14 @@ def publisher_list(api_inst, args):
 
         retcode = EXIT_OK
         if len(pargs) == 0:
-                pref_pub = api_inst.get_highest_ranked_publisher()
                 if preferred_only:
-                        pubs = [pref_pub]
+                        pref_pub = api_inst.get_highest_ranked_publisher()
+                        if api_inst.has_publisher(pref_pub):
+                                pubs = [pref_pub]
+                        else:
+                                # Only publisher known is from an installed
+                                # package and is not configured in the image.
+                                pubs = []
                 else:
                         pubs = [
                             p for p in api_inst.get_publishers()
@@ -4595,11 +4600,15 @@ def publisher_list(api_inst, args):
 
                         # Only show the selected repository's information in
                         # summary view.
-                        r = p.repository
+                        if p.repository:
+                                origins = p.repository.origins
+                                mirrors = p.repository.mirrors
+                        else:
+                                origins = mirrors = []
 
                         # Update field_data for each origin and output
                         # a publisher record in our desired format.
-                        for uri in sorted(r.origins):
+                        for uri in sorted(origins):
                                 # XXX get the real origin status
                                 set_value(field_data["type"], _("origin"))
                                 set_value(field_data["status"], _("online"))
@@ -4611,7 +4620,7 @@ def publisher_list(api_inst, args):
                                 msg(fmt % tuple(values))
                         # Update field_data for each mirror and output
                         # a publisher record in our desired format.
-                        for uri in r.mirrors:
+                        for uri in mirrors:
                                 # XXX get the real mirror status
                                 set_value(field_data["type"], _("mirror"))
                                 set_value(field_data["status"], _("online"))
@@ -4622,7 +4631,7 @@ def publisher_list(api_inst, args):
                                 )
                                 msg(fmt % tuple(values))
 
-                        if not r.origins and not r.mirrors:
+                        if not origins and not mirrors:
                                 set_value(field_data["type"], "")
                                 set_value(field_data["status"], "")
                                 set_value(field_data["uri"], "")
@@ -5643,9 +5652,17 @@ def history_list(api_inst, args):
                 if not output["new_be_uuid"]:
                         output["new_be_uuid"] = _("(None)")
 
+                enc = locale.getlocale(locale.LC_CTYPE)[1]
+                if not enc:
+                        enc = locale.getpreferredencoding()
+
                 if long_format:
                         data = __get_long_history_data(he, output)
                         for field, value in data:
+                                if isinstance(field, unicode):
+                                        field = field.encode(enc)
+                                if isinstance(value, unicode):
+                                        value = value.encode(enc)
                                 msg("%18s: %s" % (field, value))
 
                         # Separate log entries with a blank line.
@@ -5653,7 +5670,10 @@ def history_list(api_inst, args):
                 else:
                         items = []
                         for col in columns:
-                                items.append(output[col])
+                                item = output[col]
+                                if isinstance(item, unicode):
+                                        item = item.encode(enc)
+                                items.append(item)
                         msg(history_fmt % tuple(items))
         return EXIT_OK
 
