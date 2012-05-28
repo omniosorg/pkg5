@@ -49,7 +49,7 @@
 # For non-obsolete packages, add a dependency on the consolidation
 # incorporation
 <transform pkg -> default pkg.obsolete false>
-<transform pkg pkg.obsolete=false -> emit depend fmri=consolidation/ips/ips-incorporation type=require>
+#<transform pkg pkg.obsolete=false -> emit depend fmri=consolidation/ips/ips-incorporation type=require>
 
 # This package attribute is just for internal bookkeeping and shouldn't be
 # propagated
