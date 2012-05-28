@@ -27,8 +27,8 @@ set name=pkg.description \
     value="This package should be installed on systems used for development of the pkg(5) project"
 set name=info.classification \
     value="org.opensolaris.category.2008:Development/Distribution Tools"
-depend type=require fmri=pkg:/developer/assembler
-depend type=require fmri=pkg:/developer/base-developer-utilities
+#depend type=require fmri=pkg:/developer/assembler
+#depend type=require fmri=pkg:/developer/base-developer-utilities
 depend type=require fmri=pkg:/developer/build/make
 depend type=require fmri=pkg:/developer/build/onbld
 depend type=require fmri=pkg:/developer/gnome/gettext
@@ -36,7 +36,7 @@ depend type=require fmri=pkg:/developer/gnome/gnome-doc-utils
 depend type=require fmri=pkg:/developer/python/pylint
 depend type=require fmri=pkg:/developer/versioning/mercurial
 depend type=require fmri=pkg:/library/python-2/coverage-26
-depend type=require fmri=pkg:/library/python-2/locale-services
+#depend type=require fmri=pkg:/library/python-2/locale-services
 depend type=require fmri=pkg:/library/python-2/pygobject-26
 depend type=require fmri=pkg:/library/python-2/pygtk2-26
 depend type=require fmri=pkg:/library/python-2/python-gnome-26
@@ -46,8 +46,8 @@ depend type=require fmri=pkg:/package/svr4
 depend type=require fmri=pkg:/runtime/python-26
 depend type=require fmri=pkg:/runtime/python-27
 depend type=require fmri=pkg:/system/header
-depend type=require fmri=pkg:/system/linker
+#depend type=require fmri=pkg:/system/linker
 depend type=require fmri=pkg:/text/locale
 depend type=require fmri=pkg:/text/tidy
 depend type=require fmri=pkg:/web/server/apache-22
-depend type=require fmri=pkg:/web/server/apache-22/module/apache-wsgi-26
+#depend type=require fmri=pkg:/web/server/apache-22/module/apache-wsgi-26
