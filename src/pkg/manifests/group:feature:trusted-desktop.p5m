@@ -30,6 +30,7 @@ set name=pkg.description \
 set name=info.classification \
     value="org.opensolaris.category.2008:Meta Packages/Group Packages"
 set name=variant.arch value=$(ARCH)
+set name=nopublish.after value=174
 dir  path=etc group=sys
 dir  path=etc/security group=sys
 dir  path=etc/security/tsol group=sys

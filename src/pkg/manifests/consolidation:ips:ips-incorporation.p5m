@@ -28,3 +28,4 @@ set name=pkg.description \
 set name=pkg.depend.install-hold value=core-os.ips
 set name=info.classification \
     value=org.opensolaris.category.2008:System/Packaging
+set name=nopublish.after value=174
