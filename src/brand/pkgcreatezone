@@ -188,13 +188,20 @@ if [[ -z $pub_and_origins ]]; then
 	fi
 
 	# Look for a preferred online origin.
-	tpub_and_origins=$(get_publisher_urls preferred origin)
+	# tpub_and_origins=$(get_publisher_urls preferred origin)
+
+	# XXX there is no concept of preferred publisher in newer pkg5
+	tpub_and_origins=$(get_publisher_urls all origin|head -1)
+
 	[[ $? -eq 0 && -n $tpub_and_origins ]] && \
 	    pub_and_origins="$tpub_and_origins"
 
 	# Get preferred mirror information as well if the above succeeded.
 	if [[ -n "$tpub_and_origins" ]]; then
-		tpub_and_mirrors=$(get_publisher_urls preferred mirror)
+		# tpub_and_mirrors=$(get_publisher_urls preferred mirror)
+		# XXX there is no concept of preferred publisher in newer pkg5
+		echo $tpub_and_mirrors|IFS="=" read preferred_publisher pub_urls
+		tpub_and_mirrors=$(get_publisher_urls all mirror|grep ^$preferred_publisher=)
 		[[ $? -eq 0 && -n $tpub_and_mirrors ]] && \
 		    pub_and_mirrors="$tpub_and_mirrors"
 	fi
@@ -218,7 +225,8 @@ if [[ -n $propagate_extra ]]; then
 
 	# If cert and key information are ever allowed at the origin or
 	# mirror level, then this will have to be changed.
-	get_publisher_urls non-preferred origin | \
+	# XXX there is no concept of preferred publisher in newer pkg5
+	get_publisher_urls all origin | awk 'BEGIN { getline } { print }' | \
 	    while IFS="=" read pub pub_urls; do
 		if [[ "$pub_urls" != "None" ]]; then
 			# skip extra publishers that need a key/cert
@@ -237,7 +245,7 @@ if [[ -n $propagate_extra ]]; then
 		fi
 	done
 
-	get_publisher_urls non-preferred mirror | \
+	get_publisher_urls all mirror | grep -v ^$preferred_publisher= | \
 	    while IFS="=" read pub pub_urls; do
 		# skip extra publishers that need a key/cert
 		[[ "`get_pub_secinfo $pub`" != "None None" ]] && \
@@ -493,73 +501,73 @@ if [[ -n $entire_fmri ]]; then
 fi
 
 pkglist="$pkglist
-	pkg:///SUNWcs
-	pkg:///SUNWcsd
-	pkg:///system/network
-	pkg:///system/extended-system-utilities
-	pkg:///service/management/sysidtool
-	pkg:///system/management/sysidtool
-	pkg:///compress/bzip2
-	pkg:///compress/gzip
-	pkg:///compress/zip
-	pkg:///compress/unzip
-	pkg:///package/pkg"
+	pkg:/SUNWcs
+	pkg:/SUNWcsd
+	pkg:/system/network
+	pkg:/system/extended-system-utilities
+	pkg:/service/management/sysidtool
+	pkg:/system/management/sysidtool
+	pkg:/compress/bzip2
+	pkg:/compress/gzip
+	pkg:/compress/zip
+	pkg:/compress/unzip
+	pkg:/package/pkg"
 
 #
 # Get some diagnostic tools, truss, dtrace, etc.
 #
 pkglist="$pkglist
-	pkg:///developer/linker
-	pkg:///developer/dtrace"
+	pkg:/developer/linker
+	pkg:/developer/dtrace"
 
 #
 # Needed for 'whois', 'snoop' I think; also provides rup, rmt, rsh etc.
 #
 pkglist="$pkglist
-	pkg:///service/network/network-clients
-	pkg:///network/ftp"
+	pkg:/service/network/network-clients
+	pkg:/network/ftp"
 
 #
 # Get at least one sensible shell, vim, ssh, ssh key utils, sshd.
 #
 pkglist="$pkglist
-	pkg:///shell/bash
-	pkg:///editor/vim
-	pkg:///network/ssh
-	pkg:///network/ssh/ssh-key
-	pkg:///service/network/ssh"
+	pkg:/shell/bash
+	pkg:/editor/vim
+	pkg:/network/ssh
+	pkg:/network/ssh/ssh-key
+	pkg:/service/network/ssh"
 
 #
 # Get some name services and DNS.
 #
 pkglist="$pkglist
-	pkg:///system/network/nis
-	pkg:///network/dns/bind
-	pkg:///naming/ldap"
+	pkg:/system/network/nis
+	pkg:/network/dns/bind
+	pkg:/naming/ldap"
 
 #
 # Get nfs client and autofs; it's a pain not to have them.
 #
 pkglist="$pkglist
-	pkg:///system/file-system/autofs
-	pkg:///system/file-system/nfs"
+	pkg:/system/file-system/autofs
+	pkg:/system/file-system/nfs"
 
 #
 # Get routing daemons.  They're required for useful exclusive stack zones.
 #
 pkglist="$pkglist
-	pkg:///system/network/routing"
+	pkg:/system/network/routing"
 
 #
 # Get packages for TX zones if appropriate.
 #
-(( $brand_labeled == 1 )) && pkglist="$pkglist pkg:///system/trusted/trusted-nonglobal"
+(( $brand_labeled == 1 )) && pkglist="$pkglist pkg:/system/trusted/trusted-nonglobal"
 
 #
 # Get man(1) but not the man pages
 #
 pkglist="$pkglist
-	pkg:///text/doctools"
+	pkg:/text/doctools"
 
 #
 # Add in any extra packages requested by the user.
