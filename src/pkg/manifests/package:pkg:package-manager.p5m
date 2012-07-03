@@ -18,16 +18,13 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 set name=pkg.fmri value=pkg:/package/pkg/package-manager@$(PKGVERS)
 set name=pkg.summary value="GUI for Image Packaging System"
 set name=pkg.description \
     value="The graphical interface for the Image Packaging System allows you to perform many core packaging tasks in a user-friendly fashion."
-set name=com.oracle.service.bugid \
-    last-fmri=package/pkg/package-manager@0.5.11,5.11-0.175.0.0.0.2.2576:20111020T063613Z \
-    value=7112911
 set name=info.classification \
     value=org.opensolaris.category.2008:System/Packaging
 set name=variant.arch value=$(ARCH)
