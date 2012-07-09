@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2012, Oracle and/or its affiliates. All rights reserved.
 
 import testutils
 if __name__ == "__main__":
@@ -31,7 +31,6 @@ import os
 import pkg.portable as portable
 import time
 import unittest
-
 
 class TestPkgVerify(pkg5unittest.SingleDepotTestCase):
 
@@ -179,6 +178,20 @@ class TestPkgVerify(pkg5unittest.SingleDepotTestCase):
                 self.pkg("install foo")
                 self.pkg("verify _not_valid no/such/package foo", exit=1)
 
+        def test_03_editable(self):
+                """When editable files are changed, verify should treat these specially"""
+                # check that verify is silent on about modified editable files
+                self.image_create(self.rurl)
+                self.pkg("install foo")
+                fd = file(os.path.join(self.get_img_path(), "etc", "preserved"), "w+")
+                fd.write("Bobcats are here")
+                fd.close()
+                self.pkg("verify foo")
+                assert(self.output == "")
+                # find out about it via -v
+                self.pkg("verify -v foo")
+                self.output.index("etc/preserved")
+                self.output.index("editable file has been changed")
 
 if __name__ == "__main__":
         unittest.main()
