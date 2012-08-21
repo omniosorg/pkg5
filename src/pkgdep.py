@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 import getopt
@@ -491,7 +491,8 @@ def pkgdeps_in_place(pkg_deps, manifest_paths, suffix, echo_manifest):
 
 def main_func():
         misc.setlocale(locale.LC_ALL, "", error)
-        gettext.install("pkg", "/usr/share/locale")
+        gettext.install("pkg", "/usr/share/locale",
+            codeset=locale.getpreferredencoding())
 
         try:
                 opts, pargs = getopt.getopt(sys.argv[1:], "R:?",

@@ -58,6 +58,7 @@ pkglint.action005.1.missing-deps =
     pkg:/system/library/dbus
     pkg:/system/library/math
     pkg:/system/linker
+    pkg:/system/locale/extra
     pkg:/system/network
     pkg:/system/zones
     pkg:/system/zones/brand/solaris

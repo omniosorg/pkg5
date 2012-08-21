@@ -21,13 +21,14 @@
 #
 
 #
-# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 import calendar
 import errno
 import getopt
 import gettext
+import locale
 import os
 import shutil
 import sys
@@ -346,7 +347,8 @@ def main_func():
 
         temp_root = misc.config_temp_root()
 
-        gettext.install("pkg", "/usr/share/locale")
+        gettext.install("pkg", "/usr/share/locale",
+            codeset=locale.getpreferredencoding())
 
         global_settings.client_name = "pkgrecv"
         target = os.environ.get("PKG_DEST", None)

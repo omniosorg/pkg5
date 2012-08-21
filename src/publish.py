@@ -21,12 +21,13 @@
 #
 
 #
-# Copyright (c) 2007, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 import fnmatch
 import getopt
 import gettext
+import locale
 import os
 import sys
 import traceback
@@ -694,7 +695,8 @@ def setup_transport_and_pubs(repo_uri, remote=True):
         return xport, targ_pub
 
 def main_func():
-        gettext.install("pkg", "/usr/share/locale")
+        gettext.install("pkg", "/usr/share/locale",
+            codeset=locale.getpreferredencoding())
 
         repo_uri = os.getenv("PKG_REPO", None)
 
