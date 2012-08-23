@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 """This module provides the supported, documented interface for clients to
@@ -4450,7 +4450,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                 o.ssl_key)
                             for o in newr.origins
                         ])
-                        return new_origins - old_origins
+                        return (new_origins - old_origins), \
+                            new_origins.symmetric_difference(old_origins)
 
                 def need_refresh(oldo, newo):
                         if newo.disabled:
@@ -4468,7 +4469,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         if newr._source_object_id != id(oldr):
                                 # Selected repository has changed.
                                 return True
-                        return len(origins_changed(oldr, newr)) != 0
+                        # If any were added or removed, refresh.
+                        return len(origins_changed(oldr, newr)[1]) != 0
 
                 refresh_catalog = False
                 disable = False
@@ -4542,7 +4544,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 repo = pub.repository
 
                 validate = origins_changed(orig_pub[-1].repository,
-                    pub.repository)
+                    pub.repository)[0]
 
                 try:
                         if disable or (not repo.origins and
