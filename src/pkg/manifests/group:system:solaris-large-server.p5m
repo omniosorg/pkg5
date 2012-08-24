@@ -313,7 +313,8 @@ depend type=group fmri=system/kernel/power
 depend type=group fmri=system/kernel/suspend-resume
 depend type=group fmri=system/keyboard/keyboard-utilities
 $(sparc_ONLY)depend type=group fmri=system/ldoms
-$(sparc_ONLY)depend type=group fmri=system/ldoms/ldomsmanager
+$(sparc_ONLY)depend type=group fmri=system/ldoms/ldomsmanager \
+    variant.opensolaris.zone=global
 depend type=group fmri=system/library/iconv/utf-8
 depend type=group fmri=system/library/platform
 depend type=group fmri=system/library/processor
