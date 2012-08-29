@@ -1074,7 +1074,8 @@ class PkgSolver(object):
                         pass
 
                 mver = fmri.version
-                all_fmris = self.__get_catalog_fmris(fmri.pkg_name)
+                # Always use a copy; return value may be cached.
+                all_fmris = self.__get_catalog_fmris(fmri.pkg_name)[:]
                 all_fmris.reverse()
 
                 # frozensets are used so callers don't inadvertently
@@ -1127,6 +1128,8 @@ class PkgSolver(object):
                                 ))
                                 remaining = frozenset(set(all_fmris) - matching)
                         else:
+                                # Always use a copy; return value may be cached.
+                                all_fmris = all_fmris[:]
                                 all_fmris.reverse()
 
                                 # Iteration is performed in descending version
