@@ -70,9 +70,9 @@ default_policies = {
 }
 
 CA_PATH = "ca-path"
-# Default CA_PATH is /etc/openssl/certs
+# Default CA_PATH is /etc/ssl/certs
 default_properties = {
-        CA_PATH: os.path.join(os.path.sep, "etc", "openssl", "certs"),
+        CA_PATH: os.path.join(os.path.sep, "etc", "ssl", "certs"),
         # Path default is intentionally relative for this case.
         "trust-anchor-directory": os.path.join("etc", "certs", "CA"),
 }

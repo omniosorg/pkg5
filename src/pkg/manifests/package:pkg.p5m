@@ -380,7 +380,7 @@ depend type=parent fmri=feature/package/dependency/self \
     variant.opensolaris.zone=nonglobal
 depend type=optional fmri=install/beadm@0.5.11,5.11-0.151002
 depend type=optional fmri=system/zones/brand/ipkg@$(PKGVERS)
-depend type=require fmri=crypto/ca-certificates
+depend type=require fmri=web/ca-bundle
 depend type=require fmri=library/python-2/cherrypy@3.1.2-0.151002
 depend type=require fmri=library/python-2/m2crypto@0.21.1-0.151002
 depend type=require fmri=library/python-2/mako@0.2.2-0.151002
