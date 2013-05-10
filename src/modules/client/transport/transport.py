@@ -643,7 +643,7 @@ class Transport(object):
                         # If transport isn't connected to image, or no
                         # ca-dir is specified, fallback to this one.
                         fb_cadir = os.path.join(os.path.sep, "etc",
-                            "openssl", "certs")
+                            "ssl", "certs")
 
                         try:
                                 cadir = self.cfg.get_property("ca-path")
