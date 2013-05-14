@@ -1256,18 +1256,3 @@ setup(cmdclass = cmdclasses,
     ext_modules = ext_modules,
     )
 
-# We don't support 64-bit yet, but 64-bit _actions.so, _common.so and _varcet.so
-# are needed for a system repository mod_wsgi application, sysrepo_p5p.py.
-# Remove the others.
-remove_libs = ["arch.so",
-    "elf.so",
-    "pspawn.so",
-    "solver.so",
-    "syscallat.so"
-]
-pkg_64_path = os.path.join(root_dir, "usr/lib/python2.6/vendor-packages/pkg/64")
-for lib in remove_libs:
-        rm_path = os.path.join(pkg_64_path, lib)
-        if os.path.exists(rm_path):
-                log.info("Removing unnecessary 64-bit library: %s" % lib)
-                os.unlink(rm_path)

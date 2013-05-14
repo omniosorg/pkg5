@@ -46,7 +46,6 @@ all: $(SUBDIRS)
 	mkdir -p $(CODE_WS)/proto/build_i386/lib.solaris-2.11-i86pc-2.6/pkg/64
 	mkdir -p $(CODE_WS)/proto/build_i386/lib.solaris-2.11-i86pc-2.6/pkg/actions/64
 	ISALIST=i386 $(PYTHON) setup.py build
-	ISALIST="amd64 i386" $(PYTHON) setup.py build
 
 clean: $(SUBDIRS)
 	$(PYTHON) setup.py clean
@@ -62,7 +61,6 @@ clobber: $(SUBDIRS)
 #
 install: $(SUBDIRS)
 	ISALIST=i386 $(PYTHON) setup.py install
-	ISALIST="amd64 i386" $(PYTHON) setup.py install
 
 lint:
 	$(PYTHON) setup.py lint
