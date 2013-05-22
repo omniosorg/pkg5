@@ -1,7 +1,7 @@
 '\" te
-.\" Copyright (c) 2007, 2012, Oracle and/or its
+.\" Copyright (c) 2007, 2013, Oracle and/or its
 .\" affiliates. All rights reserved.
-.TH pkgsend 1 "22 Jun 2012" "SunOS 5.11" "User Commands"
+.TH pkgsend 1 "26 Feb 2013" "SunOS 5.11" "User Commands"
 .SH NAME
 pkgsend \- Image Packaging System publication client
 .SH SYNOPSIS
@@ -18,7 +18,7 @@ pkgsend \- Image Packaging System publication client
 
 .LP
 .nf
-/usr/bin/pkgsend publish [-b \fIbundle\fR ...] [-d \fIsource\fR ...]
+/usr/bin/pkgsend publish [-b \fIbundle\fR]... [-d \fIsource\fR]...
     [-s \fIrepo_uri_or_path\fR] [-T \fIpattern\fR] [--no-catalog]
     [\fImanifest\fR ...]
 .fi
@@ -29,7 +29,7 @@ pkgsend \- Image Packaging System publication client
 \fBpkgsend\fR enables the publication of new packages and new package versions to an image packaging repository using package manifests. To create or manage repositories, see \fBpkgrepo\fR(1). To create package archives from packages in an existing repository, see \fBpkgrecv\fR(1). For more information about package manifests, see \fBpkg\fR(5).
 .sp
 .LP
-After a \fBpkgsend\fR operation, run \fBpkgrepo refresh\fR or \fBpkgrepo rebuild\fR on the repository to build search indexes.
+After a \fBpkgsend publish\fR operation, if your \fIrepo_uri_or_path\fR repository must support \fBpkg search\fR operations, run \fBpkgrepo refresh\fR on the repository to update search indexes.
 .SH OPTIONS
 .sp
 .LP
@@ -147,7 +147,7 @@ The SVR4 \fBDESC\fR parameter is converted to a \fBpkg.description\fR value. The
 .ne 2
 .mk
 .na
-\fB\fBpkgsend publish\fR [\fB-b\fR \fIbundle\fR ...] [\fB-d\fR \fIsource\fR ...] [\fB-s\fR \fIrepo_uri_or_path\fR] [\fB-T\fR \fIpattern\fR] [\fB--no-catalog\fR] [\fImanifest\fR ...]\fR
+\fB\fBpkgsend publish\fR [\fB-b\fR \fIbundle\fR]... [\fB-d\fR \fIsource\fR]... [\fB-s\fR \fIrepo_uri_or_path\fR] [\fB-T\fR \fIpattern\fR] [\fB--no-catalog\fR] [\fImanifest\fR ...]\fR
 .ad
 .sp .6
 .RS 4n
@@ -198,7 +198,7 @@ Publish the package to the repository located at the given URI or file system pa
 Do not add the package to the publisher's catalog. This option is recommended whenever multiple packages are being published at one time as updates to publisher catalogs must be performed serially. Once publication is complete, the \fBrefresh\fR subcommand of \fBpkgrepo\fR can be used to add the new packages to the respective publisher catalogs.
 .RE
 
-For a descriptions of the \fB-T\fR option, see the \fBgenerate\fR subcommand above.
+For a description of the \fB-T\fR option, see the \fBgenerate\fR subcommand above.
 .RE
 
 .SH ENVIRONMENT VARIABLES
@@ -376,7 +376,7 @@ Interface StabilityUncommitted
 \fBpkgdepend\fR(1), \fBpkgrepo\fR(1), \fBpkg.depotd\fR(1M), \fBpkg\fR(5)
 .sp
 .LP
-\fBhttp://hub.opensolaris.org/bin/view/Project+pkg/\fR
+\fBhttps://java.net/projects/ips/pages/Home\fR
 .SH NOTES
 .sp
 .LP

@@ -1,7 +1,7 @@
 '\" te
-.\" Copyright (c) 2009, 2012, Oracle and/or its
+.\" Copyright (c) 2009, 2013, Oracle and/or its
 .\" affiliates. All rights reserved.
-.TH pkg 5 "22 Jun 2012" "SunOS 5.11" "Standards, Environments, and Macros"
+.TH pkg 5 "04 Apr 2013" "SunOS 5.11" "Standards, Environments, and Macros"
 .SH NAME
 pkg \- Image Packaging System
 .SH DESCRIPTION
@@ -46,7 +46,7 @@ The third part of the version, which if present must follow a hyphen (\fB-\fR), 
 The fourth part of the version, which if present must follow a colon (:), is a timestamp. The timestamp represents when the package was published.
 .sp
 .LP
-When performing comparisons between versions, no component of the full version is considered unless the components to its left are the same. Thus, "4.3-1" is greater than "4.2-7" because "4.3" is greater than "4.2", and "4.3-3" is greater than "4.3-1" because "3" is greater than "1".
+When performing comparisons between versions, no component of the full version is considered unless the components to its left are the same. Thus, \fB4.3-1\fR is greater than \fB4.2-7\fR because \fB4.3\fR is greater than \fB4.2\fR, and \fB4.3-3\fR is greater than \fB4.3-1\fR because \fB3\fR is greater than \fB1\fR.
 .sp
 .LP
 Many parts of the system, when appropriate, abridge FMRIs when displaying them, and accept input in shorter forms to reduce the volume of information displayed or required. Typically, the scheme, publisher, build version, and timestamp can be elided. Sometimes all of the versioning information can be omitted.
@@ -69,7 +69,7 @@ Actions have a simple text representation:
 Names of attributes cannot have whitespace, quotation marks, or equals signs (=) in them. All characters after the first equals sign belong to the value. Values can have all of those, though spaces must be enclosed in single or double quotation marks. Single quotation marks do not need to be escaped inside a string that is enclosed in double quotation marks, and double quotation marks do not need to be escaped inside a string that is enclosed in single quotation marks. A quotation mark can be prefixed with a backslash (\e) character to avoid terminating the quoted string. A backslash can be escaped with a backslash.
 .sp
 .LP
-Attributes can be named more than once with multiple values. These are treated as unordered lists.
+Actions can have multiple attributes. Some attributes can be named multiple times with different values for a single action. Multiple attributes with the same name are treated as unordered lists.
 .sp
 .LP
 Actions with many attributes can create long lines in a manifest file. Such lines can be wrapped by terminating each incomplete line with a backslash. Note that this continuation character must occur between attribute/value pairs. Neither attributes nor their values nor the combination can be split.
@@ -78,7 +78,7 @@ Actions with many attributes can create long lines in a manifest file. Such line
 The attributes listed below are not an exhaustive set. In fact, the attributes that can be attached to an action are arbitrary, and the standard sets of attributes are easy to augment to incorporate future developments.
 .sp
 .LP
-Certain action attributes cause additional operations to be executed outside of the packaging context. These attributes are documented in the "Actuators" section below.
+Some attributes cause additional operations to be executed outside of the packaging context. These attributes are documented in the "Actuators" section below.
 .SS "File Actions"
 .sp
 .LP
@@ -132,7 +132,7 @@ The name of the group that owns the file.
 The payload is a positional attribute in that it is not named. It is the first word after the action name. In a published manifest, it is the \fBSHA-1\fR hash of the file contents. If present in a manifest that has yet to be published, it represents the path where the payload can be found. See \fBpkgsend\fR(1). The hash attribute can be used instead of the positional attribute, should the value include an equals sign. Both can be used in the same action. However, the hashes must be identical.
 .sp
 .LP
-Other attributes include:
+The \fBpreserve\fR and \fBoverlay\fR attributes affect whether and how a \fBfile\fR action is installed.
 .sp
 .ne 2
 .mk
@@ -141,15 +141,101 @@ Other attributes include:
 .ad
 .sp .6
 .RS 4n
-This specifies that the file's contents should not be overwritten on upgrade if the contents are determined to have changed since the file was installed or last upgraded. On initial installs, if an existing file is found, the file is salvaged (stored in \fB/var/pkg/lost+found\fR).
+Specifies when and how files are preserved during package operations.
 .sp
-If the value of \fBpreserve\fR is \fBrenameold\fR, then the existing file is renamed with the extension \fB\&.old\fR, and the new file is put in its place.
+When a package is initially installed, if a file delivered by the package has a \fBpreserve\fR attribute defined with any value and the file already exists in the image, the existing file is stored in \fB/var/pkg/lost+found\fR and the packaged file is installed.
 .sp
-If the value of \fBpreserve\fR is \fBrenamenew\fR, then the existing file is left alone, and the new file is installed with the extension \fB\&.new\fR.
+When a package is initially installed, if a file delivered by the package has a \fBpreserve\fR attribute defined and the file does not already exist in the image, whether that file is installed depends on the value of the \fBpreserve\fR attribute:
+.RS +4
+.TP
+.ie t \(bu
+.el o
+If the value of \fBpreserve\fR is \fBlegacy\fR, the packaged file is not installed.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+If the value of \fBpreserve\fR is not \fBlegacy\fR, the packaged file is installed.
+.RE
+When a package is downgraded, if a file delivered by the downgraded version of the package has a \fBpreserve\fR attribute defined with any value and all of the following conditions are true, the file that currently exists in the image is renamed with the extension \fB\&.update\fR, and the file from the downgraded package is installed.
+.RS +4
+.TP
+.ie t \(bu
+.el o
+The file exists in the image.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+The content of the file delivered by the downgraded version of the package is different from the content of the file delivered by the currently installed version of the package.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+The content of the file delivered by the downgraded version of the package is different from the content of the file that exists in the image.
+.RE
+If any of the above conditions is not true, the file is treated the same as if the package is being upgraded, rather than downgraded.
 .sp
-If the value of \fBpreserve\fR is \fBlegacy\fR, then this file is not installed for initial package installs. On upgrades, any existing file is renamed with the extension \fB\&.legacy\fR, and then the new file is put in its place.
+When a package is upgraded, if a \fBfile\fR action delivered by the upgraded version of the package has a \fBpreserve\fR attribute defined with any value and the \fBfile\fR action is the same as the \fBfile\fR action delivered by the currently installed version of the package, the file is not installed, and the file that exists in the image is not modified. Any modifications made since the previous version was installed are preserved.
 .sp
-If the value of \fBpreserve\fR is \fBtrue\fR (or a value not listed above, such as \fBstrawberry\fR), then the existing file is left alone, and the new file is not installed.
+When a package is upgraded, if a \fBfile\fR action delivered by the upgraded version of the package has a \fBpreserve\fR attribute defined and the \fBfile\fR action is new or is different from the \fBfile\fR action delivered by the currently installed version of the package, the upgrade is done in the following way:
+.RS +4
+.TP
+.ie t \(bu
+.el o
+If the file does not exist in the image, the new file is installed.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+If the file delivered by the upgraded version of the package exists in the image, did not exist in the currently installed version of the package, and was not renamed or moved by using the \fBoriginal_name\fR attribute (see below), then the existing file is stored in \fB/var/pkg/lost+found\fR and the file delivered by the upgraded version of the package is installed.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+If the file delivered by the upgraded version of the package exists in the image and has different content from the file delivered by the currently installed version of the package, the upgrade is done according to the value of the \fBpreserve\fR attribute:
+.RS +4
+.TP
+.ie t \(bu
+.el o
+If the file delivered by the upgraded version of the package has a \fBpreserve\fR value of \fBrenameold\fR, the existing file is renamed with the extension \fB\&.old\fR, and the new file is installed with updated permissions and timestamp (if present). See the \fBtimestamp\fR attribute description below.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+If the file delivered by the upgraded version of the package has a \fBpreserve\fR value of \fBrenamenew\fR, the new file is installed with the extension \fB\&.new\fR and the existing file is not modified.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+If the file delivered by the upgraded version of the package has a \fBpreserve\fR value of \fBtrue\fR, the new file is not installed, but the permissions and timestamp (if present) are reset on the existing file.
+.RE
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+If the file delivered by the upgraded version of the package exists in the image, has the same content as the file delivered by the currently installed version of the package, and has a \fBpreserve\fR value of either \fBrenameold\fR or \fBrenamenew\fR, the existing file is replaced by the file delivered by the upgraded version of the package, including replacing permissions and timestamp (if present).
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+If the file delivered by the upgraded version of the package exists in the image, has a \fBpreserve\fR value of \fBlegacy\fR in the upgraded package, and has a different \fBpreserve\fR value in the currently installed version of the package, the existing file is renamed with the extension \fB\&.legacy\fR, and the new file is installed with updated permissions and timestamp (if present).
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+If the file delivered by the upgraded version of the package exists in the image and has a \fBpreserve\fR value of \fBlegacy\fR in both the upgraded package and the currently installed version of the package, the permissions and timestamp (if present) are reset on the existing file.
+.RE
 .RE
 
 .sp
@@ -160,18 +246,39 @@ If the value of \fBpreserve\fR is \fBtrue\fR (or a value not listed above, such 
 .ad
 .sp .6
 .RS 4n
-This specifies whether the action allows other packages to deliver a file at the same location or whether it delivers a file intended to overlay another. This functionality is intended for use with configuration files that do not participate in any self-assembly (for example, \fB/etc/motd\fR) and that can be safely overwritten.
+Specifies whether the action allows other packages to deliver a file at the same location or whether it delivers a file intended to overlay another file. This functionality is intended for use with configuration files that do not participate in any self-assembly (for example, \fB/etc/motd\fR) and that can be safely overwritten.
 .sp
 If \fBoverlay\fR is not specified, multiple packages cannot deliver files to the same location.
 .sp
-If the value of \fBoverlay\fR is \fBallow\fR, one other package is allowed to deliver a file to the same location. This value has no effect unless the \fBpreserve\fR attribute is also set.
+The \fBoverlay\fR attribute can have one of the following values:
 .sp
-If the value of \fBoverlay\fR is \fBtrue\fR, the file delivered by the action overwrites any other action that has specified \fBallow\fR. Changes to the installed file are preserved based on the value of the \fBpreserve\fR attribute of the overlaying file. On removal, the contents of the file are preserved if the action being overlaid is still installed, regardless of whether the \fBpreserve\fR attribute was specified. Only one action can overlay another, and the \fBmode\fR, \fBowner\fR, and \fBgroup\fR attributes must match.
+.ne 2
+.mk
+.na
+\fB\fBallow\fR\fR
+.ad
+.RS 9n
+.rt  
+One other package is allowed to deliver a file to the same location. This value has no effect unless the \fBpreserve\fR attribute is also set.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBtrue\fR\fR
+.ad
+.RS 9n
+.rt  
+The file delivered by the action overwrites any other action that has specified \fBallow\fR.
+.RE
+
+Changes to the installed file are preserved based on the value of the \fBpreserve\fR attribute of the overlaying file. On removal, the contents of the file are preserved if the action being overlaid is still installed, regardless of whether the \fBpreserve\fR attribute was specified. Only one action can overlay another, and the \fBmode\fR, \fBowner\fR, and \fBgroup\fR attributes must match.
 .RE
 
 .sp
 .LP
-Files can also be "tasted," and depending on the flavor, can have additional attributes. For ELF files, the following attributes are recognized:
+The following attributes are recognized for ELF files:
 .sp
 .ne 2
 .mk
@@ -206,6 +313,9 @@ This is the hash of the "interesting" ELF sections in the file. These are the se
 .RE
 
 .sp
+.LP
+The following additional attributes are recognized for \fBfile\fR actions:
+.sp
 .ne 2
 .mk
 .na
@@ -235,19 +345,38 @@ This attribute is used to indicate that this file contains release note text. Th
 .ad
 .sp .6
 .RS 4n
-This attribute is used to tag editable files that should be reverted as a set. Multiple \fBrevert-tag\fR values can be specified. The file reverts to its manifest-defined state when \fBpkg revert\fR is invoked with any of those tags specified. See \fBpkg\fR(1).
+This attribute is used to tag editable files that should be reverted as a set. The value of the \fBrevert-tag\fR attribute is a \fItagname\fR. Multiple \fBrevert-tag\fR attributes can be specified for a single \fBfile\fR action. The file reverts to its manifest-defined state when \fBpkg revert\fR is invoked with any of those tags specified. See the \fBpkg\fR(1) man page for information about the \fBpkg revert\fR command.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBtimestamp\fR\fR
+.ad
+.sp .6
+.RS 4n
+This attribute is used to set the access and modification time on the file. The \fBtimestamp\fR attribute value must be expressed in UTC in ISO-8601 format, omitting the colons and hyphens.
+.sp
+The \fBtimestamp\fR attribute is essential when packaging \fB\&.pyc\fR or \fB\&.pyo\fR files for Python. The related \fB\&.py\fR file for the \fB\&.pyc\fR or \fB\&.pyo\fR files must be marked with the timestamp embedded within those files, as shown in the following example:
+.sp
+.in +2
+.nf
+file path=usr/lib/python2.6/vendor-packages/pkg/__init__.pyc ...
+file path=usr/lib/python2.6/vendor-packages/pkg/__init__.py \e
+     timestamp=20130311T221521Z ...
+.fi
+.in -2
+
 .RE
 
 .SS "Directory Actions"
 .sp
 .LP
-The \fBdir\fR action is like the \fBfile\fR action in that it represents a file system object. The \fBdir\fR action represents a directory instead of an ordinary file. The \fBdir\fR action has the same four standard attributes as the \fBfile\fR action, and \fBpath\fR is the key attribute.
+The \fBdir\fR action is like the \fBfile\fR action in that it represents a file system object. The \fBdir\fR action represents a directory instead of an ordinary file. The \fBdir\fR action has the same \fBpath\fR, \fBmode\fR, \fBowner\fR, and \fBgroup\fR attributes that the \fBfile\fR action has, and \fBpath\fR is the key attribute.
 .sp
 .LP
 Directories are reference counted in IPS. When the last package that either explicitly or implicitly references a directory no longer does so, that directory is removed. If that directory contains unpackaged file system objects, those items are moved into \fB$IMAGE_META/lost+found\fR. See the "Files" section for more information about \fB$IMAGE_META\fR.
-.sp
-.LP
-To move unpackaged contents into a new directory, the following attribute might be useful:
 .sp
 .ne 2
 .mk
@@ -256,7 +385,7 @@ To move unpackaged contents into a new directory, the following attribute might 
 .ad
 .sp .6
 .RS 4n
-This names a directory of salvaged items. A directory with such an attribute inherits on creation the salvaged directory contents if they exist.
+This attribute can be used to move unpackaged contents into a new directory. The value of this attribute is the name of a directory of salvaged items. A directory with a \fBsalvage-from\fR attribute inherits on creation any contents of the directory named in the value of the \fBsalvage-from\fR attribute.
 .RE
 
 .SS "Link Actions"
@@ -665,7 +794,7 @@ The \fBlicense\fR value must be unique within a package. Including the version o
 .ad
 .sp .6
 .RS 4n
-When \fBtrue\fR, this license must be accepted by a user before the related package can be installed or updated. Omission of this attribute is equivalent to \fBfalse\fR. The method of acceptance (interactive or configuration-based, for example) is at the discretion of clients.
+When \fBtrue\fR, this license must be accepted by a user before the related package can be installed or updated. Omission of this attribute is equivalent to \fBfalse\fR. The method of acceptance (interactive or configuration-based, for example) is at the discretion of clients. For package updates, this attribute is ignored if the license action or payload has not changed.
 .RE
 
 .sp
@@ -676,7 +805,7 @@ When \fBtrue\fR, this license must be accepted by a user before the related pack
 .ad
 .sp .6
 .RS 4n
-When \fBtrue\fR, the action's payload must be displayed by clients during packaging operations. Omission of this value is equivalent to \fBfalse\fR. This attribute should not be used for copyright notices, only actual licenses or other material that must be displayed during operations. The method of display is at the discretion of clients.
+When \fBtrue\fR, the action's payload must be displayed by clients during packaging operations. Omission of this value is equivalent to \fBfalse\fR. This attribute should not be used for copyright notices. This attribute should only be used for licenses or other material that must be displayed during operations. The method of display is at the discretion of clients. For package updates, this attribute is ignored if the license action or payload has not changed.
 .RE
 
 .SS "Legacy Actions"
@@ -890,7 +1019,10 @@ The group's unique numerical id. The default value is the first free group under
 .SS "User Actions"
 .sp
 .LP
-The \fBuser\fR action defines a UNIX user as defined in \fB/etc/passwd\fR, \fB/etc/shadow\fR, \fB/etc/group\fR, and \fB/etc/ftpd/ftpusers\fR files. Users defined with this attribute have entries added to the appropriate files.
+The \fBuser\fR action defines a UNIX user as defined in \fB/etc/passwd\fR, \fB/etc/shadow\fR, \fB/etc/group\fR, and \fB/etc/ftpd/ftpusers\fR files. Entries are added to the appropriate files for users defined with this \fBuser\fR action.
+.sp
+.LP
+The \fBuser\fR action is intended to define a user for a daemon or other software to use. Do not use the \fBuser\fR action to define administrative or interactive accounts.
 .sp
 .LP
 The following attributes are recognized:
@@ -957,7 +1089,7 @@ The value of the \fBgcos\fR field in \fB/etc/passwd\fR. Default value is \fBuser
 .ad
 .sp .6
 .RS 4n
-The user's home directory. Default value is /.
+The user's home directory. This directory must be in the system image directories and not under another mount point such as \fB/home\fR. Default value is \fB/\fR.
 .RE
 
 .sp
@@ -1073,10 +1205,10 @@ Set to empty. See \fBshadow\fR(4).
 .SH ACTUATORS
 .sp
 .LP
-In certain contexts, additional operations can be appropriate to execute in preparation for or following the introduction of a particular action. These additional operations are generally needed only on a live system image, and are operating system specific. When multiple actions involved in a package installation or removal have identical actuators, then the operation corresponding to actuator presence is executed once for that installation or removal.
+In certain contexts, additional operations can be appropriate to execute in preparation for or following the introduction of a particular action. These additional operations are operating system specific and are generally needed only on a live system image. A live image is the image mounted at \fB/\fR of the active, running boot environment of the current zone. When multiple actions involved in a package installation or removal have identical actuators, then the operation corresponding to actuator presence is executed once for that installation or removal.
 .sp
 .LP
-Incorrectly specified actuators can result in package installation failure, if the actuator cannot determine a means of making safe installation progress.
+Incorrectly specified actuators can result in package installation failure if the actuator cannot determine a means of making safe installation progress.
 .sp
 .LP
 The following actuators are defined:
@@ -1185,7 +1317,13 @@ An example of a variant tag is \fBvariant.arch=sparc\fR. An example of a facet t
 Facets and variants are special properties of the image and cannot be set on individual packages. To view the current values of the facets and variants set on the image, use the \fBpkg facet\fR and \fBpkg variant\fR commands as shown in the \fBpkg\fR(1) man page. To modify the values of the facets and variants set on the image, use the \fBpkg change-facet\fR and \fBpkg change-variant\fR commands.
 .sp
 .LP
-Facets are treated as booleans by package clients: They can be set only to \fBtrue\fR (enabled) or \fBfalse\fR (disabled) in the image. By default, all facets are considered to be set to \fBtrue\fR in the image. However, the value of the facet tag on the action can be set to \fBall\fR or \fBtrue\fR to control how clients filter faceted actions; all other values have undefined behavior. When the value of a facet tag is \fBall\fR, all facet tags on an action that have a value of \fBall\fR must be \fBtrue\fR in the image, and (if present on the action) at least one facet tag that does not have a value of \fBall\fR must be \fBtrue\fR in the image.  The \fBall\fR value for a facet is useful when more than a single level of filtering is desired.  For example:
+Facets are treated as boolean values by package clients: Facets can be set only to \fBtrue\fR (enabled) or \fBfalse\fR (disabled) in the image. By default, all facets are considered to be set to \fBtrue\fR in the image.
+.sp
+.LP
+The value of a facet tag on an action can be set to \fBall\fR or \fBtrue\fR to control how clients filter faceted actions. All values other than \fBall\fR or \fBtrue\fR have undefined behavior. See below for a description of the conditions that must exist in the image to install an action that has facet tags.
+.sp
+.LP
+The \fBall\fR value for a facet is useful when more than a single level of filtering is required. In the following example, \fBfoo.txt\fR is installed only if the \fBdoc\fR facet and at least one of the \fBlocale\fR facets is \fBtrue\fR in the image. This enables administrators to exclude documentation, but still enable or disable support for specific locales. In addition, \fBapi.txt\fR is only installed if both the \fBdoc\fR and \fBdevel\fR facets are \fBtrue\fR in the image.
 .sp
 .in +2
 .nf
@@ -1194,9 +1332,6 @@ file path=usr/share/doc/foo/api.txt facet.doc=all facet.devel=all
 .fi
 .in -2
 
-.sp
-.LP
-In the above example, foo.txt will only be installed if the 'doc' facet and at least one of the 'locale' facets is \fBtrue\fR in the image.  This allows administrators to exclude documentation, but still enable or disable support for specific locales.  In addition, api.txt will only be installed if both the 'doc' and 'devel' facets are \fBtrue\fR in the image.
 .sp
 .LP
 A facet set on the image can be a full facet such as \fBdoc.man\fR or a pattern such as \fBlocale.*\fR. This is useful when you want to disable a portion of the facet namespace, and only enable individual facets within it. For example, you could disable all locales and then only enable one or two specific locales, as shown in the following example:
@@ -1223,7 +1358,7 @@ file group=sys mode=0644 overlay=allow owner=root \e
 
 file group=sys mode=0644 overlay=allow owner=root \e
   path=etc/motd pkg.csize=68 pkg.size=48 preserve=true \e
-  variant.debug.osnet=false 
+  variant.debug.osnet=false
 .fi
 .in -2
 
@@ -1243,7 +1378,19 @@ Actions with no facet or variant tags are always installed.
 .TP
 .ie t \(bu
 .el o
-Actions with facet tags are installed if all the facet tags on an action that have a value of \fBall\fR are \fBtrue\fR in the image, and (if present on the action) at least one facet tag that does not have a value of \fBall\fR is \fBtrue\fR in the image (\fBtrue\fR is the default for facets not explicitly set).
+Actions with facet tags are installed if the following conditions exist in the image:
+.RS +4
+.TP
+.ie t \(bu
+.el o
+All facet tags on the action that have a value of \fBall\fR are \fBtrue\fR in the image (\fBtrue\fR is the default).
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+If any facet tags on the action have a value of \fBtrue\fR, at least one of those facets is \fBtrue\fR in the image.
+.RE
 .RE
 .RS +4
 .TP
@@ -1373,13 +1520,13 @@ Interface StabilityUncommitted
 \fBpkg\fR(1), \fBpkg\fR(1), \fBpkg\fR(1M), \fBpkg\fR(1M), \fBsvcs\fR(1), \fBsvcadm\fR(1M)
 .sp
 .LP
-\fIAdding and Updating Oracle Solaris 11.1 Software Packages\fR
+\fIAdding and Updating Oracle Solaris 11.2 Software Packages\fR
 .sp
 .LP
-\fICopying and Creating Oracle Solaris 11.1 Package Repositories\fR
+\fICopying and Creating Oracle Solaris 11.2 Package Repositories\fR
 .sp
 .LP
 \fIPackaging and Delivering Software With the Oracle Solaris 11 Image Packaging System\fR
 .sp
 .LP
-\fBhttp://hub.opensolaris.org/bin/view/Project+pkg/\fR
+\fBhttps://java.net/projects/ips/pages/Home\fR
