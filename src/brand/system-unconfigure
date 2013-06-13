@@ -133,7 +133,7 @@ reset_networking() {
   rm -f $ALTROOT/etc/resolv.conf
   rm -f $ALTROOT/etc/inet/netmasks
   rm -f $ALTROOT/etc/inet/static_routes
-  rm -f $ALTROOT/etc/ipadm/ipadm.conf
+  cp /dev/null $ALTROOT/etc/ipadm/ipadm.conf
 }
 
 reset_nsswitch() {
