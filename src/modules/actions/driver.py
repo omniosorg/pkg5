@@ -85,15 +85,16 @@ class DriverAction(generic.Action):
                 else:
                         self.attrs["clone_perms"] = new_cloneperms
 
-        def __usr_sbin_init(self):
+        @staticmethod
+        def __usr_sbin_init():
                 """Initialize paths to device management commands that we will
                 execute when handling package driver actions"""
 
                 usr_sbin = DebugValues.get("driver-cmd-dir", "/usr/sbin") + "/"
-                self.__class__.usr_sbin = usr_sbin
-                self.__class__.add_drv = usr_sbin + "add_drv"
-                self.__class__.rem_drv = usr_sbin + "rem_drv"
-                self.__class__.update_drv = usr_sbin + "update_drv"
+                DriverAction.usr_sbin = usr_sbin
+                DriverAction.add_drv = usr_sbin + "add_drv"
+                DriverAction.rem_drv = usr_sbin + "rem_drv"
+                DriverAction.update_drv = usr_sbin + "update_drv"
 
         def __getstate__(self):
                 """This object doesn't have a default __dict__, instead it
@@ -135,6 +136,17 @@ class DriverAction(generic.Action):
                         print "-" * 60
                         print buf,
                         print "-" * 60
+
+        @staticmethod
+        def remove_aliases(driver_name, aliases, image):
+                if not DriverAction.update_drv:
+                        DriverAction.__usr_sbin_init()
+                rem_base = (DriverAction.update_drv, "-b", image.get_root(), "-d")
+                for i in aliases:
+                        args = rem_base + ("-i", '%s' % i, driver_name)
+                        DriverAction.__call(args, "driver (%(name)s) upgrade (removal "
+                            "of alias '%(alias)s')",
+                            {"name": driver_name, "alias": i})
 
         @classmethod
         def __activate_drivers(cls):
@@ -372,10 +384,8 @@ from %(imgroot)s/etc/driver_aliases." % \
                 add_base = ( self.update_drv, "-b", image.get_root(), "-a" )
                 rem_base = ( self.update_drv, "-b", image.get_root(), "-d" )
 
-                nalias = set(self.attrlist("alias"))
-                oalias = set(orig.attrlist("alias"))
-                add_alias = nalias - oalias
-                rem_alias = oalias - nalias
+                add_alias = set(self.attrlist("alias")) - \
+                    set(orig.attrlist("alias"))
 
                 nclass = set(self.attrlist("class"))
                 oclass = set(orig.attrlist("class"))
@@ -408,11 +418,8 @@ from %(imgroot)s/etc/driver_aliases." % \
                             "of alias '%(alias)s')",
                             {"name": self.attrs["name"], "alias": i})
 
-                for i in rem_alias:
-                        args = rem_base + ("-i", '%s' % i, self.attrs["name"])
-                        self.__call(args, "driver (%(name)s) upgrade (removal "
-                            "of alias '%(alias)s')",
-                            {"name": self.attrs["name"], "alias": i})
+                # Removing aliases has already been taken care of in
+                # imageplan.execute by calling remove_aliases.
 
                 # update_drv doesn't do anything with classes, so we have to
                 # futz with driver_classes by hand.
