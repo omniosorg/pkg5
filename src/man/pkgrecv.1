@@ -1,7 +1,6 @@
 '\" te
-.\" Copyright (c) 2007, 2013, Oracle and/or its
-.\" affiliates. All rights reserved.
-.TH pkgrecv 1 "20 May 2013" "SunOS 5.11" "User Commands"
+.\" Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
+.TH pkgrecv 1 "4 Mar 2013" "SunOS 5.11" "User Commands"
 .SH NAME
 pkgrecv \- Image Packaging System content retrieval utility
 .SH SYNOPSIS
@@ -9,7 +8,8 @@ pkgrecv \- Image Packaging System content retrieval utility
 .nf
 /usr/bin/pkgrecv [-s \fIsrc_uri\fR] [-a] [-d (\fIpath\fR|\fIdest_uri\fR)]
     [-c \fIcache_dir\fR] [-kr] [-m \fImatch\fR] [-n] [--raw]
-    [--key \fIkeyfile\fR --cert \fIcertfile\fR]
+    [--key \fIsrc_key\fR --cert \fIsrc_cert\fR]
+    [--dkey \fIdest_key\fR --dcert \fIdest_cert\fR]
     (\fIfmri\fR|\fIpattern\fR) ...
 .fi
 
@@ -18,16 +18,22 @@ pkgrecv \- Image Packaging System content retrieval utility
 /usr/bin/pkgrecv [-s \fIsrc_uri\fR] --newest
 .fi
 
+.LP
+.nf
+/usr/bin/pkgrecv [-s \fIsrc_uri\fR] [-d \fIpath\fR] [-p \fIpublisher\fR ...] 
+    [--key \fIsrc_key\fR --cert \fIsrc_cert\fR] [-n] --clone
+.fi
+
 .SH DESCRIPTION
 .sp
 .LP
-\fBpkgrecv\fR allows the user to retrieve packages from a \fBpkg\fR(5) repository or package archive. \fBpkgrecv\fR can also optionally republish the retrieved packages to a different package repository or archive them. By default, packages are retrieved in package repository format suitable for use with \fBpkg\fR, \fBpkg.depotd\fR, and package publication tools.
+\fBpkgrecv\fR retrieves all versions of each matching \fIfmri\fR or \fIpattern\fR from the \fIsrc_uri\fR \fBpkg\fR(5) repository or package archive and republishes the retrieved packages to the \fIdest_uri\fR package repository or package archive. By default, packages are retrieved in package repository format suitable for use with \fBpkg\fR, \fBpkg.depotd\fR, and package publication tools.
 .sp
 .LP
 Packages that have not changed are not republished. Therefore, the time to update an existing repository depends on the number of new and changed packages.
 .sp
 .LP
-Use the \fB-m\fR option to specify whether to retrieve all timestamps or all versions of each matching package. By default, only the newest version of each matching package is retrieved.
+Use the \fB-m\fR option to specify whether to retrieve all versions of each matching package, or only the newest version of each matching package.
 .sp
 .LP
 If you do not specify \fB\&'*'\fR to be retrieved, you might want to specify the \fB-r\fR option to be sure to retrieve all the dependencies of the specified packages.
@@ -85,7 +91,7 @@ Specify the path to a directory that will be used to cache downloaded content. I
 .ad
 .sp .6
 .RS 4n
-Specify the file system path or URI where the retrieved packages should be republished. If \fB-a\fR is specified, this destination is a new package archive that cannot already exist. If \fB-a\fR is not specified, this destination must be a package repository that already exists. Use the \fBpkgrepo\fR command to create a new package repository. If \fB-d\fR is not specified, the value of \fBPKG_DEST\fR is used. See "Environment Variables" below.
+Specify the file system path or URI where the retrieved packages should be republished. If \fB-a\fR  is specified, this destination is a new package archive that cannot already exist. If \fB-a\fR  is not specified, this destination must be a package repository that already exists. Use the \fBpkgrepo\fR command to create a new package repository. If \fB-d\fR is not specified, the value of \fBPKG_DEST\fR is used. See "Environment Variables" below.
 .RE
 
 .sp
@@ -107,7 +113,17 @@ Keep the retrieved package content compressed. This option is ignored when repub
 .ad
 .sp .6
 .RS 4n
-Control matching behavior using the following values:
+Control which versions of packages are retrieved if \fIpattern\fR is specified or if \fIfmri\fR is not fully specified. For this description, the following four example packages exist in the source specified by the \fB-s\fR option. In these FMRI, the characters between the \fB@\fR and the \fB:\fR denote the numbered package version, and the characters from the \fB:\fR to the end denote the timestamp portion of the version string.
+.sp
+.in +2
+.nf
+pkg://solaris/package/pkg@0.5.11,5.11-0.175.1.0.0.24.0:20120904T180335Z
+pkg://solaris/package/pkg@0.5.11,5.11-0.175.1.0.0.24.0:20120903T170234Z
+pkg://solaris/package/pkg@0.5.11,5.11-0.175.1.0.0.23.0:20120820T165108Z
+pkg://solaris/package/pkg@0.5.11,5.11-0.175.1.0.0.23.0:20120819T155007Z
+.fi
+.in -2
+
 .sp
 .ne 2
 .mk
@@ -116,7 +132,7 @@ Control matching behavior using the following values:
 .ad
 .sp .6
 .RS 4n
-Includes all matching timestamps, not just the latest (implies \fBall-versions\fR).
+Retrieve all versions of each matching \fIfmri\fR or \fIpattern\fR (implies \fBall-versions\fR). This is the default behavior if the \fB-m\fR option is not specified. In the example above, all four packages are retrieved.
 .RE
 
 .sp
@@ -127,7 +143,33 @@ Includes all matching timestamps, not just the latest (implies \fBall-versions\f
 .ad
 .sp .6
 .RS 4n
-Includes all matching versions, not just the latest.
+Retrieve the latest timestamp for each version of each matching \fIfmri\fR or \fIpattern\fR. In the example above, the following two packages are retrieved:
+.sp
+.in +2
+.nf
+pkg://solaris/package/pkg@0.5.11,5.11-0.175.1.0.0.24.0:20120904T180335Z
+pkg://solaris/package/pkg@0.5.11,5.11-0.175.1.0.0.23.0:20120820T165108Z
+.fi
+.in -2
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBlatest\fR\fR
+.ad
+.sp .6
+.RS 4n
+Retrieve only the newest version of each matching \fIfmri\fR or \fIpattern\fR. In the example above, only the following package is retrieved:
+.sp
+.in +2
+.nf
+pkg://solaris/package/pkg@0.5.11,5.11-0.175.1.0.0.24.0:20120904T180335Z
+.fi
+.in -2
+
 .RE
 
 .RE
@@ -141,6 +183,17 @@ Includes all matching versions, not just the latest.
 .sp .6
 .RS 4n
 Perform a trial run with no changes made.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-p\fR \fIpublisher\fR\fR
+.ad
+.sp .6
+.RS 4n
+Only clone the given publisher. Can be specified multiple times. Only valid with --clone.
 .RE
 
 .sp
@@ -169,22 +222,55 @@ Specify a URI that represents the location of a \fBpkg\fR(5) repository or packa
 .ne 2
 .mk
 .na
-\fB\fB--cert\fR \fIcertfile\fR\fR
+\fB\fB--key\fR \fIsrc_key\fR\fR
 .ad
 .sp .6
 .RS 4n
-Specify a client SSL certificate file to use for package retrieval from an HTTPS repository.
+Specify a client SSL key file to use for package retrieval from the source HTTPS repository.
 .RE
 
 .sp
 .ne 2
 .mk
 .na
-\fB\fB--key\fR \fIkeyfile\fR\fR
+\fB\fB--cert\fR \fIsrc_cert\fR\fR
 .ad
 .sp .6
 .RS 4n
-Specify a client SSL key file to use for package retrieval from an HTTPS repository.
+Specify a client SSL certificate file to use for package retrieval from the source HTTPS repository.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB--dkey\fR \fIdest_key\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specify a client SSL key file to use for package publication to the destination HTTPS repository.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB--dcert\fR \fIdest_cert\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specify a client SSL certificate file to use for package publication to the destination HTTPS repository.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB--clone\fR\fR
+.ad
+.sp .6
+.RS 4n
+Make an exact copy of the source repository. By default, the clone operation will only succeed if publishers in the source repository are also present in the destination. By using \fB-p\fR, the operation can be limited to specific publishers which will be added to the destination repository if not already present. Packages in the destination repository which are not in the source will be removed. Cloning will leave the destination repository altered in case of an error. It is therefore strongly advised to have the destination repository in its own zfs dataset and to take a snapshot before cloning.
 .RE
 
 .sp
@@ -491,7 +577,7 @@ Interface StabilityUncommitted
 \fBpkgrepo\fR(1), \fBpkgsend\fR(1), \fBpkg\fR(5)
 .sp
 .LP
-\fICopying and Creating Oracle Solaris 11.2 Package Repositories\fR
+\fICopying and Creating Oracle Solaris 11.1 Package Repositories\fR
 .sp
 .LP
-\fBhttps://java.net/projects/ips/pages/Home\fR
+\fBhttp://hub.opensolaris.org/bin/view/Project+pkg/\fR

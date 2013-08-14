@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2008, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
 #
 
 import testutils
@@ -40,6 +40,7 @@ import pkg.p5p as p5p
 import pkg.portable as portable
 import pkg.server.repository as repo
 import shutil
+import subprocess
 import tempfile
 import time
 import urllib
@@ -53,13 +54,13 @@ class TestPkgrecvMulti(pkg5unittest.ManyDepotTestCase):
 
         scheme10 = """
             open pkg:/scheme@1.0,5.11-0
-            close 
+            close
         """
 
         tree10 = """
             open tree@1.0,5.11-0
             add depend type=require-any fmri=leaf@1.0 fmri=branch@1.0
-            close 
+            close
         """
 
         leaf10 = """
@@ -75,13 +76,19 @@ class TestPkgrecvMulti(pkg5unittest.ManyDepotTestCase):
         amber10 = """
             open amber@1.0,5.11-0
             add depend fmri=pkg:/tree@1.0 type=require
-            close 
+            close
         """
 
         amber20 = """
             open amber@2.0,5.11-0
             add depend fmri=pkg:/tree@1.0 type=require
-            close 
+            close
+        """
+
+        amber30 = """
+            open amber@3.0,5.11-0
+            add depend fmri=pkg:/tree@1.0 type=require
+            close
         """
 
         bronze10 = """
@@ -112,7 +119,7 @@ class TestPkgrecvMulti(pkg5unittest.ManyDepotTestCase):
             add license tmp/copyright3 license=copyright
             add file tmp/bronzeA2 mode=0444 owner=root group=bin path=/A1/B2/C3/D4/E5/F6/bronzeA2
             add depend fmri=pkg:/amber@2.0 type=require
-            close 
+            close
         """
 
         misc_files = [ "tmp/bronzeA1",  "tmp/bronzeA2", "tmp/bronze1",
@@ -458,6 +465,48 @@ class TestPkgrecvMulti(pkg5unittest.ManyDepotTestCase):
                             "manifest")
                         self.assertTrue(os.path.isfile(mpath))
 
+                # Cleanup for next test.
+                shutil.rmtree(os.path.join(self.tempdir, "bronze"))
+
+                # Retrieve bronze using -m latest, this should only
+                # retrieve bronze20_2.
+                self.pkgrecv(self.durl1, "--raw -m latest -r -k "
+                    "-d %s %s" % (self.tempdir, "bronze"))
+
+                # Verify that only expected packages were retrieved.
+                expected = [
+                    bronze20_2.get_dir_path(),
+                ]
+
+                for d in os.listdir(os.path.join(self.tempdir, "bronze")):
+                        self.assertTrue(os.path.join("bronze", d) in expected)
+
+                        mpath = os.path.join(self.tempdir, "bronze", d,
+                            "manifest")
+                        self.assertTrue(os.path.isfile(mpath))
+
+                # Cleanup for next test.
+                shutil.rmtree(os.path.join(self.tempdir, "bronze"))
+
+                # Retrieve bronze using default setting.
+                # This should retrieve bronze10, bronze20_1, and bronze20_2.
+                self.pkgrecv(self.durl1, "--raw -r -k "
+                    "-d %s %s" % (self.tempdir, "bronze"))
+
+                # Verify that all expected packages were retrieved.
+                expected = [
+                    bronze10.get_dir_path(),
+                    bronze20_1.get_dir_path(),
+                    bronze20_2.get_dir_path(),
+                ]
+
+                for d in expected:
+                        paths = os.listdir(os.path.join(self.tempdir, "bronze"))
+                        self.assertTrue(os.path.basename(d) in paths)
+
+                        mpath = os.path.join(self.tempdir, d, "manifest")
+                        self.assertTrue(os.path.isfile(mpath))
+
         def test_5_recv_env(self):
                 """Verify that pkgrecv environment vars work as expected."""
 
@@ -660,6 +709,9 @@ class TestPkgrecvMulti(pkg5unittest.ManyDepotTestCase):
                 self.pkgrecv(self.durl1, "-r -n -d %s %s" % (rpth, f))
                 self.assertEqualDiff(expected, os.listdir(rpth))
 
+                self.pkgrecv(self.durl1, "--clone -n -p '*' -d %s" % (rpth))
+                self.assertEqualDiff(expected, os.listdir(rpth))
+
                 arc_path = os.path.join(self.test_root, "test.p5p")
                 self.pkgrecv(self.durl1, "-a -n -d %s \*" % arc_path)
                 self.assert_(not os.path.exists(arc_path))
@@ -709,9 +761,10 @@ class TestPkgrecvMulti(pkg5unittest.ManyDepotTestCase):
                         # otherwise pkgrecv will fail because the manifest
                         # doesn't validate.
 
+                        novalidate = "-D manifest_validate=Never "
                         # Check that invalid action attributes don't cause
                         # tracebacks.
-                        self.pkgrecv(self.durl1, "-D manifest_validation=False "
+                        self.pkgrecv(self.durl1, novalidate +
                             "-d %s %s %s" % (duri, arg_string,
                             " ".join(pfmris)), exit=pkgdefs.EXIT_OOPS)
                         for pfmri in pfmris:
@@ -720,7 +773,7 @@ class TestPkgrecvMulti(pkg5unittest.ManyDepotTestCase):
                         if arg_string:
                                 portable.remove(duri)
 
-                        self.pkgrecv(self.rurl1, "-D manifest_validation=False "
+                        self.pkgrecv(self.rurl1, novalidate +
                             "-d %s %s %s" % (duri, arg_string,
                             " ".join(pfmris)), exit=pkgdefs.EXIT_OOPS)
                         for pfmri in pfmris:
@@ -731,7 +784,7 @@ class TestPkgrecvMulti(pkg5unittest.ManyDepotTestCase):
 
                         # Check that other packages are retrieved and the exit
                         # code reflects partial success.
-                        self.pkgrecv(self.durl1, "-D manifest_validation=False "
+                        self.pkgrecv(self.durl1, novalidate +
                             "-d %s %s -m all-timestamps '*'" %
                             (duri, arg_string), exit=pkgdefs.EXIT_PARTIAL)
                         for pfmri in pfmris:
@@ -740,7 +793,7 @@ class TestPkgrecvMulti(pkg5unittest.ManyDepotTestCase):
                             len(self.published) - len(pfmris))
                         __empty_repo(duri, arg_string)
 
-                        self.pkgrecv(self.rurl1, "-D manifest_validation=False "
+                        self.pkgrecv(self.rurl1, novalidate +
                             "-d %s %s -m all-timestamps '*'" %
                             (duri, arg_string), exit=pkgdefs.EXIT_PARTIAL)
                         for pfmri in pfmris:
@@ -784,6 +837,207 @@ class TestPkgrecvMulti(pkg5unittest.ManyDepotTestCase):
 
                 for duri, arg_string, in dest_uris:
                         __test_rec(duri, arg_string, self.published[4:7])
+
+        def test_11_clone(self):
+                """Verify that pkgrecv handles cloning repos as expected."""
+                # Test basic operation of cloning repo which contains one
+                # publisher to repo which contains same publisher
+                self.pkgrecv(self.durl1, "--clone -d %s" % self.dpath2)
+                
+                ret = subprocess.call(["/usr/bin/gdiff", "-Naur", "-x", 
+                    "index", "-x", "trans", self.dpath1, self.dpath2])
+                self.assertTrue(ret==0)
+
+                # Test that packages in dst which are not in src get removed.
+                self.pkgsend_bulk(self.durl2, (self.amber30))
+                self.pkgrecv(self.durl1, "--clone -d %s" % self.dpath2)
+                ret = subprocess.call(["/usr/bin/gdiff", "-Naur", "-x", 
+                    "index", "-x", "trans", self.dpath1, self.dpath2])
+                self.assertTrue(ret==0)
+
+                # Test that clone reports publishers not in the dest repo.
+                amber = self.amber10.replace("open ", "open pkg://test2/")
+                self.pkgsend_bulk(self.durl1, amber)
+                self.pkgrecv(self.durl1, "--clone -d %s" % self.dpath2, exit=1)
+
+                # Test that clone adds new publishers if requested.
+                # Note: adding a publisher will automatically create a pub.p5i
+                # in the repo store. Since that is repo configuration and not
+                # part of the cloning it is ignored.
+                amber = self.amber10.replace("open ", "open pkg://test2/")
+                self.pkgsend_bulk(self.durl1, amber)
+                self.pkgrecv(self.durl1, "--clone -d %s -p test2" % self.dpath2)
+                ret = subprocess.call(["/usr/bin/gdiff", "-Naur", "-x", 
+                    "index", "-x", "trans", "-x", "pub.p5i", self.dpath1,
+                    self.dpath2])
+                self.assertTrue(ret==0)
+
+                # Test that clone removes all packages if source is empty
+                self.pkgrecv(self.durl3, "--clone -d %s" % self.dpath2)
+                self.pkgrepo("-s %s list -H -p test2" % self.dpath2)
+                self.assertEqualDiff("", self.output)
+
+                # Test that clone fails if --raw is specified.
+                self.pkgrecv(self.durl1, "--raw --clone -d %s -p test2" %
+                    self.dpath2, exit=2)
+                
+                # Test that clone fails if -c is specified.
+                self.pkgrecv(self.durl1, "-c /tmp/ --clone -d %s -p test2" %
+                    self.dpath2, exit=2)
+
+                # Test that clone fails if -a is specified.
+                self.pkgrecv(self.durl1, "-a --clone -d %s -p test2" %
+                    self.dpath2, exit=2)
+
+                # Test that clone fails if --newest is specified.
+                self.pkgrecv(self.durl1, "--newest --clone -d %s -p test2" %
+                    self.dpath2, exit=2)
+
+
+class TestPkgrecvHTTPS(pkg5unittest.HTTPSTestClass):
+
+        example_pkg10 = """
+            open example_pkg@1.0,5.11-0
+            add file tmp/example_file mode=0555 owner=root group=bin path=/usr/bin/example_path
+            close"""
+
+        misc_files = ["tmp/example_file", "tmp/empty", "tmp/verboten"]
+
+        def setUp(self):
+                pubs = ["src", "dst"]
+
+                pkg5unittest.HTTPSTestClass.setUp(self, pubs,
+                    start_depots=True)
+                
+                self.srurl = self.dcs[1].get_repo_url()
+                self.make_misc_files(self.misc_files)
+                self.pkgsend_bulk(self.srurl, self.example_pkg10)
+
+                self.surl = self.ac.url + "/%s" % pubs[0]
+                self.durl = self.ac.url + "/%s" % pubs[1]
+
+                #set permissions of tmp/verboten to make it non-readable
+                self.verboten = os.path.join(self.test_root, "tmp/verboten")
+                os.system("chmod 600 %s" % self.verboten) 
+                
+
+        def test_01_basics(self):
+                """Test that transfering a package from an https repo to
+                another https repo works"""
+
+                self.ac.start()
+
+                arg_dict = {
+                    "cert": os.path.join(self.cs_dir, self.get_cli_cert("src")),
+                    "key": os.path.join(self.keys_dir, self.get_cli_key("src")),
+                    "dst": self.durl,
+                    "dcert": os.path.join(self.cs_dir, self.get_cli_cert("dst")),
+                    "dkey": os.path.join(self.keys_dir, self.get_cli_key("dst")),
+                    "pkg": "example_pkg@1.0,5.11-0",
+                    "empty": os.path.join(self.test_root, "tmp/empty"),
+                    "noexist": os.path.join(self.test_root, "octopus"),
+                    "verboten": self.verboten,
+                }
+
+                # We need an image for seed_ta_dir() to work.
+                # TODO: there might be a cleaner way of doing this
+                self.image_create()
+                # Add the trust anchor needed to verify the server's identity.
+                self.seed_ta_dir("ta7")
+
+                # We try to receive a pkg from a secured repo and publish it to
+                # another secured repo where both repos require different
+                # credentials
+                self.pkgrecv(self.surl, "--key %(key)s --cert %(cert)s "
+                    "-d %(dst)s --dkey %(dkey)s --dcert %(dcert)s "
+                    "%(pkg)s" % arg_dict)
+
+                # Now try to use the same credentials for source and dest.
+                # This should fail.
+                self.pkgrecv(self.surl, "--key %(key)s --cert %(cert)s "
+                    "-d %(dst)s --dkey %(key)s --dcert %(cert)s "
+                    "%(pkg)s" % arg_dict, exit=1)
+
+                # Make sure we don't traceback when credential files are invalid
+                # Src certificate option missing
+                self.pkgrecv(self.surl, "--key %(key)s -d %(dst)s "
+                    "--dkey %(dkey)s --dcert %(dcert)s "
+                    "%(pkg)s" % arg_dict, exit=1)
+
+                # Dst certificate option missing
+                self.pkgrecv(self.surl, "--key %(key)s --cert %(cert)s "
+                    "-d %(dst)s --dkey %(dkey)s "
+                    "%(pkg)s" % arg_dict, exit=1)
+
+                # Src key option missing
+                self.pkgrecv(self.surl, "--cert %(cert)s "
+                    "-d %(dst)s --dkey %(dkey)s --dcert %(dcert)s "
+                    "%(pkg)s" % arg_dict, exit=1)
+
+                # Dst key option missing
+                self.pkgrecv(self.surl, "--key %(key)s --cert %(cert)s "
+                    "-d %(dst)s --dcert %(dcert)s "
+                    "%(pkg)s" % arg_dict, exit=1)
+
+                # Src certificate not found
+                self.pkgrecv(self.surl, "--key %(key)s --cert %(noexist)s "
+                    "-d %(dst)s --dkey %(dkey)s --dcert %(dcert)s "
+                    "%(pkg)s" % arg_dict, exit=1)
+
+                # Dst certificate not found
+                self.pkgrecv(self.surl, "--key %(key)s --cert %(cert)s "
+                    "-d %(dst)s --dkey %(dkey)s --dcert %(noexist)s "
+                    "%(pkg)s" % arg_dict, exit=1)
+
+                # Src key not found
+                self.pkgrecv(self.surl, "--key %(noexist)s --cert %(cert)s "
+                    "-d %(dst)s --dkey %(dkey)s --dcert %(dcert)s "
+                    "%(pkg)s" % arg_dict, exit=1)
+
+                # Dst key not found
+                self.pkgrecv(self.surl, "--key %(key)s --cert %(cert)s "
+                    "-d %(dst)s --dkey %(noexist)s --dcert %(dcert)s "
+                    "%(pkg)s" % arg_dict, exit=1)
+
+                # Src certificate is empty file
+                self.pkgrecv(self.surl, "--key %(key)s --cert %(empty)s "
+                    "-d %(dst)s --dkey %(dkey)s --dcert %(dcert)s "
+                    "%(pkg)s" % arg_dict, exit=1)
+
+                # Dst certificate is empty file
+                self.pkgrecv(self.surl, "--key %(key)s --cert %(cert)s "
+                    "-d %(dst)s --dkey %(dkey)s --dcert %(empty)s "
+                    "%(pkg)s" % arg_dict, exit=1)
+
+                # Src key is empty file
+                self.pkgrecv(self.surl, "--key %(empty)s --cert %(cert)s "
+                    "-d %(dst)s --dkey %(dkey)s --dcert %(dcert)s "
+                    "%(pkg)s" % arg_dict, exit=1)
+
+                # Dst key is empty file
+                self.pkgrecv(self.surl, "--key %(key)s --cert %(cert)s "
+                    "-d %(dst)s --dkey %(empty)s --dcert %(dcert)s "
+                    "%(pkg)s" % arg_dict, exit=1)
+                
+                # No permissions to read src certificate 
+                self.pkgrecv(self.surl, "--key %(key)s --cert %(verboten)s "
+                    "-d %(dst)s --dkey %(dkey)s --dcert %(dcert)s "
+                    "%(pkg)s" % arg_dict, su_wrap=True, exit=1)
+
+                # No permissions to read dst certificate 
+                self.pkgrecv(self.surl, "--key %(key)s --cert %(cert)s "
+                    "-d %(dst)s --dkey %(dkey)s --dcert %(verboten)s "
+                    "%(pkg)s" % arg_dict, su_wrap=True, exit=1)
+
+                # No permissions to read src key 
+                self.pkgrecv(self.surl, "--key %(verboten)s --cert %(cert)s "
+                    "-d %(dst)s --dkey %(dkey)s --dcert %(dcert)s "
+                    "%(pkg)s" % arg_dict, su_wrap=True, exit=1)
+
+                # No permissions to read dst key 
+                self.pkgrecv(self.surl, "--key %(key)s --cert %(cert)s "
+                    "-d %(dst)s --dkey %(verboten)s --dcert %(dcert)s "
+                    "%(pkg)s" % arg_dict, su_wrap=True, exit=1)
 
 
 if __name__ == "__main__":

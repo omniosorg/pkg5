@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 SPECIAL_CATEGORIES = ["locale", "plugin"] # We should cut all, but last part of the
@@ -61,12 +61,11 @@ from pkg.gui.misc_non_gui import shutdown_logging as sd_logging
 from pkg.gui.misc_non_gui import get_version as g_version
 from pkg.gui.misc_non_gui import get_os_version_and_build as g_os_version_and_build
 
-from pkg.gui.misc_non_gui import get_log_dir as ge_log_dir
+from pkg.gui.misc_non_gui import get_log_path as ge_log_path
 from pkg.gui.misc_non_gui import get_log_error_ext as ge_log_error_ext
 from pkg.gui.misc_non_gui import get_log_info_ext as ge_log_info_ext
 from pkg.gui.misc_non_gui import get_catalogrefresh_exception_msg as get_msg
 from pkg.gui.misc_non_gui import get_um_name as get_um
-from pkg.gui.misc_non_gui import get_image_path as g_image_path
 from pkg.gui.misc_non_gui import is_frameworkerror as is_frameworke
 
 from pkg.client import global_settings
@@ -187,9 +186,6 @@ def check_sig_required_names_policy(text, req_names, error_dialog_title):
                     gtk.MESSAGE_INFO)
                 return False
         return True
-
-def get_image_path():
-        return g_image_path()
                 
 def get_version():
         return g_version()
@@ -228,8 +224,8 @@ def get_publishers_for_output(api_o):
                 pass
         return publisher_str
 
-def get_log_dir():
-        return ge_log_dir()
+def get_log_path(client_name):
+        return ge_log_path(client_name)
 
 def get_log_error_ext():
         return ge_log_error_ext()
@@ -400,8 +396,10 @@ def get_api_object(img_dir, progtrack, parent_dialog):
         try:
                 api_o = ngao(img_dir, progtrack)
         except api_errors.VersionException, ex:
-                message = _("Version mismatch: expected version %d, got version %d") % \
-                    (ex.expected_version, ex.received_version)
+                message = _("Version mismatch: expected version %(expected)d, "
+                    "got version %(found)d") % \
+                    {"expected": ex.expected_version,
+                    "found": ex.received_version}
         except api_errors.ImageNotFoundException, ex:
                 message = _("%s is not an install image") % ex.user_dir
         except api_errors.ImageLockedError, ex:

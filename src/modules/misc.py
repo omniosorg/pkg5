@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2007, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
 
 """
 Misc utility functions used by the packaging system.
@@ -32,6 +32,7 @@ import calendar
 import collections
 import datetime
 import errno
+import fnmatch
 import getopt
 import hashlib
 import itertools
@@ -41,6 +42,7 @@ import platform
 import re
 import resource
 import shutil
+import signal
 import simplejson as json
 import socket
 import struct
@@ -51,6 +53,8 @@ import traceback
 import urllib
 import urlparse
 import zlib
+
+from collections import defaultdict
 
 from stat import S_IFMT, S_IMODE, S_IRGRP, S_IROTH, S_IRUSR, S_IRWXU, \
     S_ISBLK, S_ISCHR, S_ISDIR, S_ISFIFO, S_ISLNK, S_ISREG, S_ISSOCK, \
@@ -64,6 +68,9 @@ from pkg.client import global_settings
 from pkg.client.debugvalues import DebugValues
 from pkg.client.imagetypes import img_type_names, IMG_NONE
 from pkg.pkggzip import PkgGzipFile
+
+# Default path where the temporary directories will be created.
+DEFAULT_TEMP_PATH = "/var/tmp"
 
 # Minimum number of days to issue warning before a certificate expires
 MIN_WARN_DAYS = datetime.timedelta(days=30)
@@ -446,7 +453,7 @@ def N_(message):
 def bytes_to_str(nbytes, fmt="%(num).2f %(unit)s"):
         """Returns a human-formatted string representing the number of bytes
         in the largest unit possible.
-        
+
         If provided, 'fmt' should be a string which can be formatted
         with a dictionary containing a float 'num' and strings 'unit' and
         'shortunit'.  The default format prints, for example, '3.23 MB' """
@@ -491,8 +498,8 @@ def get_pkg_otw_size(action):
         pkg.csize.  If that value isn't available, it returns pkg.size.
         If pkg.size isn't available, return zero."""
 
-        size = action.attrs.get("pkg.csize", 0)
-        if size == 0:
+        size = action.attrs.get("pkg.csize")
+        if size is None:
                 size = action.attrs.get("pkg.size", 0)
 
         return int(size)
@@ -1048,8 +1055,6 @@ def config_temp_root():
         settings when creating temporary files/directories.  Otherwise,
         return a path that the caller should pass to tempfile instead."""
 
-        default_root = "/var/tmp"
-
         # In Python's tempfile module, the default temp directory
         # includes some paths that are suboptimal for holding large numbers
         # of files.  If the user hasn't set TMPDIR, TEMP, or TMP in the
@@ -1060,7 +1065,21 @@ def config_temp_root():
                 if env_val:
                         return None
 
-        return default_root
+        return DEFAULT_TEMP_PATH
+
+def get_temp_root_path():
+        """Return the directory path where the temporary directories or
+        files should be created. If the environment has set TMPDIR
+        or TEMP or TMP then return the corresponding value else return the
+        default value."""
+
+        temp_env = [ "TMPDIR", "TEMP", "TMP" ]
+        for env in temp_env:
+                env_val = os.getenv(env)
+                if env_val:
+                        return env_val
+
+        return DEFAULT_TEMP_PATH
 
 def parse_uri(uri, cwd=None):
         """Parse the repository location provided and attempt to transform it
@@ -1188,30 +1207,27 @@ def recursive_chown_dir(d, uid, gid):
                 for name in filenames:
                         path = os.path.join(dirpath, name)
                         portable.chown(path, uid, gid)
-def opts_parse(op, api_inst, args, table, pargs_limit, usage_cb):
+
+
+def opts_parse(op, args, opts_table, opts_mapping, usage_cb=None):
         """Generic table-based options parsing function.  Returns a tuple
-        consisting of a dictionary of parsed options and the remaining
-        unparsed options.
+        consisting of a list of parsed options in the form (option, argument)
+        and the remaining unparsed options. The parsed-option list may contain
+        duplicates if an option is passed multiple times.
 
         'op' is the operation being performed.
 
-        'api_inst' is an image api object that is passed to options handling
-        callbacks (passed in via 'table').
-
         'args' is the arguments that should be parsed.
 
-        'table' is a list of options and callbacks.Each entry is either a
-        a tuple or a callback function.
+        'opts_table' is a list of options the operation supports.
+        The format of the list entries should be a tuple containing the
+        option and its default value:
+            (option, default_value)
+        It is valid to have other entries in the list when they are required
+        for additional option processing elsewhere. These are ignore here. If
+        the list entry is a tuple it must conform to the format oulined above.
 
-        tuples in 'table' specify allowable options and have the following
-        format:
-
-                (<short opt>, <long opt>, <key>, <default value>)
-
-        An example of a short opt is "f", which maps to a "-f" option.  An
-        example of a long opt is "foo", which maps to a "--foo" option.  Key
-        is the value of this option in the parsed option dictionary.  The
-        default value not only represents the default value assigned to the
+        The default value not only represents the default value assigned to the
         option, but it also implicitly determines how the option is parsed.  If
         the default value is True or False, the option doesn't take any
         arguments, can only be specified once, and if specified it inverts the
@@ -1224,139 +1240,98 @@ def opts_parse(op, api_inst, args, table, pargs_limit, usage_cb):
         specified multiple times, and if specified its value will be a list
         with all the specified argument values.
 
-        callbacks in 'table' specify callback functions that are invoked after
-        all options have been parsed.  Callback functions must have the
-        following signature:
-                callback(api_inst, opts, opts_new)
+        'opts_mapping' is a dict containing a mapping between the option name
+        and the short and long CLI specifier for that option in the form
+        { option : (short, long), ... }
 
-        The opts parameter is a dictionary containing all the raw, parsed
-        options.  Callbacks should never update the contents of this
-        dictionary.  The opts_new parameter is a dictionary which is initially
-        a copy of the opts dictionary.  This is the dictionary that will be
-        returned to the caller of opts_parse().  If a callback function wants
-        to update the arguments dictionary that will be returned to the
-        caller, they should make all their updates to the opts_new dictionary.
-
-        'pargs_limit' specified how to handle extra arguments not parsed by
-        getops.  A value of -1 indicates that we allow an unlimited number of
-        extra arguments.  A value of 0 or greater indicates the number of
-        allowed additional unparsed options.
+        An example of a short opt is "f", which maps to a "-f" option.  An
+        example of a long opt is "foo", which maps to a "--foo" option.  Option
+        is the value of this option in the parsed option dictionary.
 
         'usage_cb' is a function pointer that should display usage information
         and will be invoked if invalid arguments are detected."""
 
-
-        assert type(table) == list
-
-        # return dictionary
-        rv = dict()
-
-        # option string passed to getopt
+        # list for getopt long options
+        opts_l_list = []
+        # getopt str for short options
         opts_s_str = ""
-        # long options list passed to getopt
-        opts_l_list = list()
 
         # dict to map options returned by getopt to keys
         opts_keys = dict()
 
-        # sanity checking to make sure each option is unique
-        opts_s_set = set()
-        opts_l_set = set()
-        opts_seen = dict()
-
-        # callbacks to invoke after processing options
-        callbacks = []
-
-        # process each option entry
-        for entry in table:
-                # check for a callback
+        for entry in opts_table:
+                # option table contains functions for verification, ignore here
                 if type(entry) != tuple:
-                        callbacks.append(entry)
                         continue
-
-                # decode the table entry
-                # s: a short option, ex: -f
-                # l: a long option, ex: --foo
-                # k: the key value for the options dictionary
-                # v: the default value
-                (s, l, k, v) = entry
-
+                opt, default, = entry
+                assert opt in opts_mapping
+                sopt, lopt = opts_mapping[opt]
                 # make sure an option was specified
-                assert s or l
-                # sanity check the default value
-                assert (v == None) or (v == []) or \
-                    (type(v) == bool) or (type(v) == int)
-                # make sure each key is unique
-                assert k not in rv
-                # initialize the default return dictionary entry.
-                rv[k] = v
-                if l:
-                        # make sure each option is unique
-                        assert set([l]) not in opts_l_set
-                        opts_l_set |= set([l])
-
-                        if type(v) == bool:
-                                v = not v
-                                opts_l_list.append("%s" % l)
-                        elif type(v) == int:
-                                opts_l_list.append("%s" % l)
+                assert sopt or lopt
+                if lopt != "":
+                        if default is None or type(default) == list:
+                                opts_l_list.append("%s=" % lopt)
                         else:
-                                opts_l_list.append("%s=" % l)
-                        opts_keys["--%s" % l] = k
-                if s:
-                        # make sure each option is unique
-                        assert set([s]) not in opts_s_set
-                        opts_s_set |= set([s])
-
-                        if type(v) == bool:
-                                v = not v
-                                opts_s_str += "%s" % s
-                        elif type(v) == int:
-                                opts_s_str += "%s" % s
+                                opts_l_list.append("%s" % lopt)
+                        opts_keys["--%s" % lopt] = opt
+                if sopt != "":
+                        if default is None or type(default) == list:
+                                opts_s_str += "%s:" % sopt
                         else:
-                                opts_s_str += "%s:" % s
-                        opts_keys["-%s" % s] = k
+                                opts_s_str += "%s" % sopt
+                        opts_keys["-%s" % sopt] = opt
 
-        # parse options
+        # Parse options.
         try:
                 opts, pargs = getopt.getopt(args, opts_s_str, opts_l_list)
         except getopt.GetoptError, e:
                 usage_cb(_("illegal option -- %s") % e.opt, cmd=op)
 
-        if (pargs_limit >= 0) and (pargs_limit < len(pargs)):
-                usage_cb(_("illegal argument -- %s") % pargs[pargs_limit],
-                    cmd=op)
+        def get_default(option):
+                """Find the default value for a given option from opts_table."""
+                for x in opts_table:
+                        if type(x) != tuple:
+                                continue
+                        opt, default = x
+                        if option == opt:
+                                return default
 
-        # update options dictionary with the specified options
-        for opt, arg in opts:
-                k = opts_keys[opt]
-                v = rv[k]
+        # Assemble the options dictionary by passing in the right data types and
+        # take care of duplicates.
+        opt_dict = {}
+        for x in opts:
+                cli_opt, arg = x
+                opt = opts_keys[cli_opt]
 
-                # check for duplicate options
-                if k in opts_seen and (type(v) != list and type(v) != int):
-                        if opt == opts_seen[k]:
-                                usage_cb(_("option '%s' repeated") % opt,
-                                    cmd=op)
-                        usage_cb(_("'%s' and '%s' have the same meaning") %
-                            (opts_seen[k], opt), cmd=op)
-                opts_seen[k] = opt
+                # Determine required option type based on the default value.
+                default = get_default(opt)
 
-                # update the return dict value
-                if type(v) == bool:
-                        rv[k] = not rv[k]
-                elif type(v) == list:
-                        rv[k].append(arg)
-                elif type(v) == int:
-                        rv[k] += 1
+                # Handle duplicates for integer and list types.
+                if type(default) == int:
+                        if opt in opt_dict:
+                                opt_dict[opt] += 1
+                        else:
+                                opt_dict[opt] = 1
+                        continue
+                if type(default) == list:
+                        if opt in opt_dict:
+                                opt_dict[opt].append(arg)
+                        else:
+                                opt_dict[opt] = [arg]
+                        continue
+
+                # Boolean and string types can't be repeated.
+                if opt in opt_dict:
+                        raise api_errors.InvalidOptionError(
+                            api_errors.InvalidOptionError.OPT_REPEAT, [opt])
+
+                # For boolean options we have to toggle the default value.
+                if type(default) == bool:
+                        opt_dict[opt] = not default
                 else:
-                        rv[k] = arg
+                        opt_dict[opt] = arg
 
-        # invoke callbacks (cast to set() to eliminate dups)
-        rv_updated = rv.copy()
-        for cb in set(callbacks):
-                cb(op, api_inst, rv, rv_updated)
-
-        return (rv_updated, pargs)
+        return opt_dict, pargs
 
 def api_cmdpath():
         """Returns the path to the executable that is invoking the api client
@@ -2453,3 +2428,52 @@ def decode(s):
                 # this will encode 8 bit strings into unicode
                 s = s.decode("utf-8", "replace")
         return s
+
+def yield_matching(pat_prefix, items, patterns):
+        """Helper function for yielding items that match one of the provided
+        patterns."""
+
+        if patterns:
+                # Normalize patterns and determine whether to glob.
+                npatterns = []
+                for p in patterns:
+                        if pat_prefix:
+                                pat = p.startswith(pat_prefix) and \
+                                    p or (pat_prefix + p)
+                        else:
+                                pat = p
+                        if "*" in p or "?" in p:
+                                pat = re.compile(fnmatch.translate(pat)).match
+                                glob_match = True
+                        else:
+                                glob_match = False
+
+                        npatterns.append((pat, glob_match))
+                patterns = npatterns
+                npatterns = None
+
+        for item in items:
+                for (pat, glob_match) in patterns:
+                        if glob_match:
+                                if pat(item):
+                                        break
+                        elif item == pat:
+                                break
+                else:
+                        if patterns:
+                                continue
+                # No patterns or matched at least one.
+                yield item
+
+
+sigdict = defaultdict(list)
+
+def signame(signal_number):
+        """convert signal number to name(s)"""
+        if not sigdict:
+                for name in dir(signal):
+                        if name.startswith("SIG") and "_" not in name:
+                                sigdict[getattr(signal, name)].append(name)
+
+        return "/".join(sigdict.get(signal_number, ["Unnamed signal: %d" %
+            signal_number]))

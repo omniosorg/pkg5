@@ -1,7 +1,6 @@
 '\" te
-.\" Copyright (c) 2007, 2013, Oracle and/or its
-.\" affiliates. All rights reserved.
-.TH pkg 1 "22 Apr 2013" "SunOS 5.11" "User Commands"
+.\" Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
+.TH pkg 1 "19 Apr 2013" "SunOS 5.11" "User Commands"
 .SH NAME
 pkg \- Image Packaging System retrieval client
 .SH SYNOPSIS
@@ -46,13 +45,13 @@ pkg \- Image Packaging System retrieval client
 
 .LP
 .nf
-/usr/bin/pkg list [-Hafnsuv] [-g \fIpath_or_uri\fR]...
+/usr/bin/pkg list [-Hafnqsuv] [-g \fIpath_or_uri\fR]...
     [--no-refresh] [\fIpkg_fmri_pattern\fR ...]
 .fi
 
 .LP
 .nf
-/usr/bin/pkg info [-lr] [-g \fIpath_or_uri\fR]... [--license]
+/usr/bin/pkg info [-lqr] [-g \fIpath_or_uri\fR]... [--license]
     [\fIpkg_fmri_pattern\fR ...]
 .fi
 
@@ -116,7 +115,7 @@ usr/bin/pkg set-mediator [-nv] [-I \fIimplementation\fR]
 
 .LP
 .nf
-/usr/bin/pkg variant [-H] [variant.\fIvariant_pattern\fR ...]
+/usr/bin/pkg variant [-Haiv] [-F \fIformat\fR] [\fIvariant_pattern\fR ...]
 .fi
 
 .LP
@@ -131,7 +130,7 @@ usr/bin/pkg set-mediator [-nv] [-I \fIimplementation\fR]
 
 .LP
 .nf
-/usr/bin/pkg facet [-H] [\fIfacet_pattern\fR ...]
+/usr/bin/pkg facet [-Haim] [-F \fIformat\fR] [\fIfacet_pattern\fR ...]
 .fi
 
 .LP
@@ -210,7 +209,7 @@ usr/bin/pkg set-mediator [-nv] [-I \fIimplementation\fR]
     [--set-property \fIname_of_property\fR=\fIvalue\fR]
     [--add-property-value \fIname_of_property\fR=\fIvalue_to_add\fR]
     [--remove-property-value \fIname_of_property\fR=\fIvalue_to_remove\fR]
-    [--unset-property \fIname_of_property_to_delete\fR]
+    [--unset-property \fIname_of_property_to_delete\fR] 
     [--proxy \fIproxy_to_use\fR] \fIpublisher\fR
 .fi
 
@@ -650,7 +649,7 @@ In the command output, note any messages that say a new boot environment has bee
 .ne 2
 .mk
 .na
-\fB\fBpkg list\fR [\fB-Hafnsuv\fR] [\fB-g\fR \fIpath_or_uri\fR]... [\fB--no-refresh\fR] [\fIpkg_fmri_pattern\fR ...]\fR
+\fB\fBpkg list\fR [\fB-Hafnqsuv\fR] [\fB-g\fR \fIpath_or_uri\fR]... [\fB--no-refresh\fR] [\fIpkg_fmri_pattern\fR ...]\fR
 .ad
 .sp .6
 .RS 4n
@@ -716,7 +715,7 @@ Omit the headers from the listing.
 .ad
 .sp .6
 .RS 4n
-List installed packages and list the newest version of packages that are not installed but could be installed in this image. Packages can be installed if they are allowed by the installed incorporations and by the image's variants. If one or more patterns are specified, then the newest version matching the specified pattern and allowed by any installed incorporations and the image's variants is listed. Without \fB-a\fR, list only installed packages.
+List installed packages and the newest version of packages that are available for installation. Packages are considered to be available for installation if they are allowed by the installed incorporations and by the image's variants. If one or more patterns are specified, then the newest version matching the specified pattern and allowed by any installed incorporations and the image's variants is listed. Without \fB-a\fR, list only installed packages.
 .RE
 
 .sp
@@ -756,6 +755,17 @@ Display the newest versions of all known packages, regardless of installed state
 .ne 2
 .mk
 .na
+\fB\fB-q\fR\fR
+.ad
+.sp .6
+.RS 4n
+Do not list any packages, but return failure if there are any fatal errors.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
 \fB\fB-s\fR\fR
 .ad
 .sp .6
@@ -771,7 +781,7 @@ Display a one-line short-form giving the package name and summary. This option c
 .ad
 .sp .6
 .RS 4n
-List installed packages that have newer versions available. This option cannot be used with \fB-g\fR.
+List only packages with newer versions available. This option cannot be used with \fB-g\fR.
 .RE
 
 .sp
@@ -844,6 +854,17 @@ Only display information for installed packages. This is the default.
 .ne 2
 .mk
 .na
+\fB\fB-q\fR\fR
+.ad
+.sp .6
+.RS 4n
+Do not display any package information, but return failure if there are any fatal errors.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
 \fB\fB-r\fR\fR
 .ad
 .sp .6
@@ -859,7 +880,7 @@ Match packages based on the newest available versions, retrieving information fo
 .ad
 .sp .6
 .RS 4n
-Display the license texts for the packages. This option can be combined with \fB-l\fR, \fB-q\fR, or \fB-r\fR. Return success if all \fIpkg_fmri_pattern\fR patterns match known packages and have licenses. Return failure if one or more patterns are unmatched or match packages that do not have licenses.
+Display the license texts for the packages. This option can be combined with \fB-l\fR, \fB-q\f, or R\fB-r\fR. When all patterns match a known package and have licenses, the command will return success. If one or more patterns are unmatched or match packages that do not have licenses, the command will return failure.
 .RE
 
 .RE
@@ -1326,7 +1347,7 @@ Omit the headers from the verification output.
 .ad
 .sp .6
 .RS 4n
-Suppress progress messages and all other output during the requested operation.
+Print nothing, but return failure if there are any fatal errors.
 .RE
 
 .sp
@@ -1409,7 +1430,7 @@ Reverting some editable files to their default values can make the system unboot
 .ad
 .sp .6
 .RS 4n
-Revert all files tagged with \fItag-name\fR.
+Revert all files tagged with \fItag-name\fR, and remove any unpackaged files or directories that are under directories with this tag and that match \fIpattern\fR. See the description of the \fBrevert-tag\fR attribute in "File Actions" and "Directory Actions" in the \fBpkg\fR(5) man page for more information about \fItag-name\fR and \fIpattern\fR.
 .RE
 
 .sp
@@ -1555,7 +1576,7 @@ For all other options, see the \fBinstall\fR command above.
 .ne 2
 .mk
 .na
-\fB\fBpkg variant\fR [\fB-H\fR] [variant.\fIvariant_pattern\fR ...]\fR
+\fB\fBpkg variant\fR [\fB-Haiv\fR] [\fB-F\fR \fIformat\fR] [\fIvariant_pattern\fR ...]\fR
 .ad
 .sp .6
 .RS 4n
@@ -1575,11 +1596,55 @@ Display the current values of only the specified variants set in this image.
 .ne 2
 .mk
 .na
+\fB\fB-F\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specify an alternative output format. Currently, only \fBtsv\fR (Tab Separated Values) is valid.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
 \fB\fB-H\fR\fR
 .ad
 .sp .6
 .RS 4n
 Omit the headers from the listing.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-a\fR\fR
+.ad
+.sp .6
+.RS 4n
+Display all variants explicitly set in the image and all variants that are listed in installed packages. This option cannot be combined with \fB-i\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-i\fR\fR
+.ad
+.sp .6
+.RS 4n
+Display all variants that are listed in installed packages. This option cannot be combined with \fB-a\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-v\fR\fR
+.ad
+.sp .6
+.RS 4n
+Display the possible variant values that can be set for installed packages. This option can be combined with \fB-a\fR and \fB-i\fR.
 .RE
 
 .RE
@@ -1603,11 +1668,11 @@ For descriptions of options, see the \fBinstall\fR command above.
 .ne 2
 .mk
 .na
-\fB\fBpkg facet\fR [\fB-H\fR] [\fIfacet_pattern\fR ...]\fR
+\fB\fBpkg facet\fR [\fB-Haim\fR] [\fB-F\fR \fIformat\fR] [\fIfacet_pattern\fR ...]\fR
 .ad
 .sp .6
 .RS 4n
-Display the current values of all facets that have been explicitly set in this image by using the \fBpkg change-facet\fR command. See "Facets and Variants" in the \fBpkg\fR(5) man page for more information about facets.
+Display the current values and source of all facets that have been explicitly set in this image by using the \fBpkg change-facet\fR command or inherited from a parent image. See "Facets and Variants" in the \fBpkg\fR(5) man page for more information about facets.
 .sp
 .ne 2
 .mk
@@ -1623,11 +1688,55 @@ Display the current values of only the specified facets set in this image.
 .ne 2
 .mk
 .na
+\fB\fB-F\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specify an alternative output format. Currently, only \fBtsv\fR (Tab Separated Values) is valid.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
 \fB\fB-H\fR\fR
 .ad
 .sp .6
 .RS 4n
 Omit the headers from the listing.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-a\fR\fR
+.ad
+.sp .6
+.RS 4n
+Display all facets explicitly set in the image and all facets that are listed in installed packages. This option cannot be combined with \fB-i\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-i\fR\fR
+.ad
+.sp .6
+.RS 4n
+Display all facets that are listed in installed packages. This option cannot be combined with \fB-a\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-m\fR\fR
+.ad
+.sp .6
+.RS 4n
+Include masked facets in the output. Include a column indicating which (if any) facets are masked.
 .RE
 
 .RE
@@ -1877,17 +1986,6 @@ Display detailed configuration for only the specified publishers. Additional inf
 .ne 2
 .mk
 .na
-\fB\fB-F\fR\fR
-.ad
-.sp .6
-.RS 4n
-Specify an alternative output format. Currently, only \fBtsv\fR (Tab Separated Values) is valid.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
 \fB\fB-H\fR\fR
 .ad
 .sp .6
@@ -1915,6 +2013,17 @@ Display only the first publisher in the publisher search order.
 .sp .6
 .RS 4n
 Display only enabled publishers.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-F\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specify an alternative output format. Currently, only \fBtsv\fR (Tab Separated Values) is valid.
 .RE
 
 .RE
@@ -1995,7 +2104,7 @@ Alter the publisher search order so that the publisher being added or modified i
 .ad
 .sp .6
 .RS 4n
-For verifying signed packages, add the specified certificate as a CA certificate that is trusted. The hashes of the PEM representation of the user-approved CA certificates are listed in the detailed output of the \fBpkg publisher\fR command.
+Add the specified certificate as a CA certificate that is trusted. The hashes of the PEM representation of the user-approved CA certificates are listed in the detailed output of the \fBpkg publisher\fR command.
 .RE
 
 .sp
@@ -2006,7 +2115,7 @@ For verifying signed packages, add the specified certificate as a CA certificate
 .ad
 .sp .6
 .RS 4n
-For verifying signed packages, treat the certificate with the given hash of its PEM representation as revoked. The hashes of the user-revoked CA certificates are listed in the detailed output of the \fBpkg publisher\fR command.
+Treat the certificate with the given hash of its PEM representation as revoked. The hashes of the user-revoked CA certificates are listed in the detailed output of the \fBpkg publisher\fR command.
 .RE
 
 .sp
@@ -2017,7 +2126,7 @@ For verifying signed packages, treat the certificate with the given hash of its 
 .ad
 .sp .6
 .RS 4n
-For verifying signed packages, remove the certificate with the given hash from the list of approved certificates and the list of revoked certificates.
+Remove the certificate with the given hash from the list of approved certificates and the list of revoked certificates.
 .RE
 
 .sp
@@ -3476,7 +3585,7 @@ Default value: 60
 .ad
 .sp .6
 .RS 4n
-Seconds below the \fBlowspeed\fR limit (1024 bytes/second) during transport operations before the client aborts the operation. A value of 0 means do not abort the operation.
+Seconds below the \fBlowspeed\fR limit (1024 bytes/sec) during transport operations before the client aborts the operation. A value of 0 means do not abort the operation.
 .sp
 Default value: 30
 .RE
@@ -3728,7 +3837,7 @@ Interface StabilityUncommitted
 \fBpkgsend\fR(1), \fBpkg.depotd\fR(1M), \fBglob\fR(3C), \fBpkg\fR(5), \fBbeadm\fR(1M)
 .sp
 .LP
-\fIAdding and Updating Oracle Solaris 11.2 Software Packages\fR
+\fIAdding and Updating Oracle Solaris 11.1 Software Packages\fR
 .sp
 .LP
-\fBhttps://java.net/projects/ips/pages/Home\fR
+\fBhttp://hub.opensolaris.org/bin/view/Project+pkg/\fR

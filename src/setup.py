@@ -37,6 +37,7 @@ import urllib
 import py_compile
 import hashlib
 import time
+import StringIO
 
 from distutils.errors import DistutilsError, DistutilsFileError
 from distutils.core import setup
@@ -104,6 +105,7 @@ py_install_dir = 'usr/lib/python2.6/vendor-packages'
 scripts_dir = 'usr/bin'
 lib_dir = 'usr/lib'
 svc_method_dir = 'lib/svc/method'
+svc_share_dir = 'lib/svc/share'
 
 man1_dir = 'usr/share/man/man1'
 man1m_dir = 'usr/share/man/man1m'
@@ -120,9 +122,14 @@ transform_dir = 'usr/share/pkg/transforms'
 smf_app_dir = 'lib/svc/manifest/application/pkg'
 execattrd_dir = 'etc/security/exec_attr.d'
 authattrd_dir = 'etc/security/auth_attr.d'
+userattrd_dir = 'etc/user_attr.d'
 sysrepo_dir = 'etc/pkg/sysrepo'
 sysrepo_logs_dir = 'var/log/pkg/sysrepo'
 sysrepo_cache_dir = 'var/cache/pkg/sysrepo'
+depot_dir = 'etc/pkg/depot'
+depot_conf_dir = 'etc/pkg/depot/conf.d'
+depot_logs_dir = 'var/log/pkg/depot'
+depot_cache_dir = 'var/cache/pkg/depot'
 autostart_dir = 'etc/xdg/autostart'
 desktop_dir = 'usr/share/applications'
 gconf_dir = 'etc/gconf/schemas'
@@ -133,6 +140,8 @@ um_lib_dir = 'usr/lib/update-manager'
 um_share_dir = 'usr/share/update-manager'
 pm_share_dir = 'usr/share/package-manager'
 locale_dir = 'usr/share/locale'
+mirror_logs_dir = 'var/log/pkg/mirror'
+mirror_cache_dir = 'var/cache/pkg/mirror'
 
 
 # A list of source, destination tuples of modules which should be hardlinked
@@ -149,6 +158,7 @@ scripts_sunos = {
                 ['util/publish/pkglint.py', 'pkglint'],
                 ['util/publish/pkgmerge.py', 'pkgmerge'],
                 ['util/publish/pkgmogrify.py', 'pkgmogrify'],
+                ['util/publish/pkgsurf.py', 'pkgsurf'],
                 ['publish.py', 'pkgsend'],
                 ['pull.py', 'pkgrecv'],
                 ['sign.py', 'pkgsign'],
@@ -161,6 +171,7 @@ scripts_sunos = {
                 ['updatemanagernotifier.py', 'updatemanagernotifier'],
                 ['launch.py', 'pm-launch'],
                 ['sysrepo.py', 'pkg.sysrepo'],
+                ['depot-config.py', "pkg.depot-config"]
                 ],
         um_lib_dir: [
                 ['um/update-refresh.sh', 'update-refresh.sh'],
@@ -168,8 +179,15 @@ scripts_sunos = {
         svc_method_dir: [
                 ['svc/svc-pkg-depot', 'svc-pkg-depot'],
                 ['svc/svc-pkg-mdns', 'svc-pkg-mdns'],
+                ['svc/svc-pkg-mirror', 'svc-pkg-mirror'],
+                ['svc/svc-pkg-repositories-setup',
+                    'svc-pkg-repositories-setup'],
+                ['svc/svc-pkg-server', 'svc-pkg-server'],
                 ['svc/svc-pkg-sysrepo', 'svc-pkg-sysrepo'],
-                ['um/pkg-update', 'pkg-update'],
+                ['svc/svc-pkg-update', 'svc-pkg-update'],
+                ],
+        svc_share_dir: [
+                ['svc/pkg5_include.sh', 'pkg5_include.sh'],
                 ],
         }
 
@@ -229,12 +247,14 @@ man1_files = [
         'man/pkgmogrify.1',
         'man/pkgsend.1',
         'man/pkgsign.1',
+        'man/pkgsurf.1',
         'man/pkgrecv.1',
         'man/pkgrepo.1',
         'man/pm-updatemanager.1',
         ]
 man1m_files = [
         'man/pkg.depotd.1m',
+        'man/pkg.depot-config.1m',
         'man/pkg.sysrepo.1m'
         ]
 man5_files = [
@@ -339,10 +359,13 @@ for entry in os.walk("web"):
                     ]))
 
 smf_app_files = [
+        'svc/pkg-depot.xml',
         'svc/pkg-mdns.xml',
+        'svc/pkg-mirror.xml',
+        'svc/pkg-repositories-setup.xml',
         'svc/pkg-server.xml',
-        'svc/pkg-update.xml',
         'svc/pkg-system-repository.xml',
+        'svc/pkg-update.xml',
         'svc/zoneproxy-client.xml',
         'svc/zoneproxyd.xml'
         ]
@@ -364,12 +387,27 @@ sysrepo_files = [
 sysrepo_log_stubs = [
         'util/apache2/sysrepo/logs/access_log',
         'util/apache2/sysrepo/logs/error_log',
+        'util/apache2/sysrepo/logs/rewrite.log',
         ]
+depot_files = [
+        'util/apache2/depot/depot.conf.mako',
+        'util/apache2/depot/depot_httpd.conf.mako',
+        'util/apache2/depot/depot_index.py',
+        ]
+depot_log_stubs = [
+        'util/apache2/depot/logs/access_log',
+        'util/apache2/depot/logs/error_log',
+        'util/apache2/depot/logs/rewrite.log',
+        ]
+# The apache-based depot includes an shtml file we add to the resource dir
+web_files.append((os.path.join(resource_dir, "web"),
+    ["util/apache2/depot/repos.shtml"]))
 execattrd_files = [
         'util/misc/exec_attr.d/package:pkg',
         'util/misc/exec_attr.d/package:pkg:package-manager'
 ]
 authattrd_files = ['util/misc/auth_attr.d/package:pkg']
+userattrd_files = ['util/misc/user_attr.d/package:pkg']
 autostart_files = [
         'um/data/updatemanagernotifier.desktop',
 ]
@@ -775,7 +813,7 @@ class install_data_func(_install_data):
                         rm_f(dst)
                         os.symlink(src, dst)
 
-def run_cmd(args, swdir, updenv=None, ignerr=False):
+def run_cmd(args, swdir, updenv=None, ignerr=False, savestderr=None):
                 if updenv:
                         # use temp environment modified with the given dict
                         env = os.environ.copy()
@@ -786,6 +824,8 @@ def run_cmd(args, swdir, updenv=None, ignerr=False):
                 if ignerr:
                         # send stderr to devnull
                         stderr = open(os.devnull)
+                elif savestderr:
+                        stderr = savestderr
                 else:
                         # just use stderr of this (parent) process
                         stderr = None
@@ -921,6 +961,50 @@ def intltool_merge(src, dst):
         ]
         print " ".join(args)
         run_cmd(args, os.getcwd(), updenv={"LC_ALL": "C"})
+
+def i18n_check():
+        """Checks for common i18n messaging bugs in the source."""
+
+        src_files = []
+        # A list of the i18n errors we check for in the code
+        common_i18n_errors = [
+            # This checks that messages with multiple parameters are always
+            # written using "%(name)s" format, rather than just "%s"
+            "format string with unnamed arguments cannot be properly localized"
+        ]
+
+        for line in open("po/POTFILES.in", "r").readlines():
+                if line.startswith("["):
+                        continue
+                if line.startswith("#"):
+                        continue
+                src_files.append(line.rstrip())
+
+        args = [
+            "/usr/gnu/bin/xgettext", "--from-code=UTF-8", "-o", "/dev/null"]
+        args += src_files
+
+        xgettext_output_path = tempfile.mkstemp()[1]
+        xgettext_output = open(xgettext_output_path, "w")
+        run_cmd(args, os.getcwd(), updenv={"LC_ALL": "C"},
+            savestderr=xgettext_output)
+
+        found_errs = False
+        i18n_errs = open("po/i18n_errs.txt", "w")
+        for line in open(xgettext_output_path, "r").readlines():
+                for err in common_i18n_errors:
+                        if err in line:
+                                i18n_errs.write(line)
+                                found_errs = True
+        i18n_errs.close()
+        if found_errs:
+                print >> sys.stderr, \
+"The following i18n errors were detected and should be corrected:\n" \
+"(this list is saved in po/i18n_errs.txt)\n"
+                for line in open("po/i18n_errs.txt", "r"):
+                        print >> sys.stderr, line.rstrip()
+                sys.exit(1)
+        os.remove(xgettext_output_path)
 
 def msgfmt(src, dst):
         if not dep_util.newer(src, dst):
@@ -1272,6 +1356,7 @@ class build_data_func(Command):
         def run(self):
                 # Anything that gets created here should get deleted in
                 # clean_func.run() below.
+                i18n_check()
                 for f in intl_files:
                         intltool_merge(f, f[:-3])
 
@@ -1337,6 +1422,7 @@ class clean_func(_clean):
                 rm_f("gui/help/C/pkg_help.pot")
 
                 rm_f("gui/help/package-manager-__LOCALE__.omf")
+                rm_f("po/i18n_errs.txt")
 
 class clobber_func(Command):
         user_options = []
@@ -1519,9 +1605,14 @@ if osname == 'sunos':
                 (smf_app_dir, smf_app_files),
                 (execattrd_dir, execattrd_files),
                 (authattrd_dir, authattrd_files),
+                (userattrd_dir, userattrd_files),
                 (sysrepo_dir, sysrepo_files),
                 (sysrepo_logs_dir, sysrepo_log_stubs),
                 (sysrepo_cache_dir, {}),
+                (depot_dir, depot_files),
+                (depot_conf_dir, {}),
+                (depot_logs_dir, depot_log_stubs),
+                (depot_cache_dir, {}),
                 (autostart_dir, autostart_files),
                 (desktop_dir, desktop_files),
                 (gconf_dir, gconf_files),
@@ -1530,6 +1621,8 @@ if osname == 'sunos':
                     ['gui/data/gnome-mime-application-vnd.pkg5.info.png']),
                 ('usr/share/mime/packages', ['gui/data/packagemanager-info.xml']),
                 (pm_share_dir, ['gui/data/packagemanager.ui']),
+                (mirror_cache_dir, {}),
+                (mirror_logs_dir, {}),
                 ]
         data_files += [
             (os.path.join(startpage_dir, locale), files)

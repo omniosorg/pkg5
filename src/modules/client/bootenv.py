@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2008, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
 
 import errno
 import os
@@ -485,7 +485,8 @@ class BootEnv(object):
                         # image's history.
                         self.img.history.operation_new_be = self.be_name_clone
                         self.img.history.operation_new_be_uuid = self.be_name_clone_uuid
-                        self.img.history.log_operation_end()
+                        self.img.history.log_operation_end(release_notes=
+			    self.img.imageplan.pd.release_notes_name)
 
                         if be.beUnmount(self.be_name_clone) != 0:
                                 logger.error(_("unable to unmount BE "
@@ -587,9 +588,9 @@ beadm activate %(be_name_clone)s
                                 self.img.history.log_operation_error(error=e)
                                 raise e
 
-                        logger.error(_("%s failed to be updated. No changes "
-                            "have been made to %s.") % (self.be_name,
-                            self.be_name))
+                        logger.error(_("%(bename)s failed to be updated. No "
+                            "changes have been made to %(bename)s.") %
+                            {"bename": self.be_name})
 
         def destroy_snapshot(self):
 
@@ -655,10 +656,11 @@ beadm activate %(be_name_clone)s
 
                         self.destroy_snapshot()
 
-                        logger.error(_("The Boot Environment %s failed to be "
-                            "updated. A snapshot was taken before the failed "
-                            "attempt and has been restored so no changes have "
-                            "been made to %s.") % (self.be_name, self.be_name))
+                        logger.error(_("The Boot Environment %(bename)s failed "
+                            "to be updated. A snapshot was taken before the "
+                            "failed attempt and has been restored so no "
+                            "changes have been made to %(bename)s.") %
+                            {"bename": self.be_name})
 
         def activate_install_uninstall(self):
                 """Activate an install/uninstall attempt. Which just means

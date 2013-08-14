@@ -53,7 +53,7 @@ PUBLISHALL        = $(POUND_SIGN)
 # necessary after we stop publishing duplicate packages.
 MANIFESTS.cmd     = \
 	cd manifests; \
-	buildnum=$(BUILDNUM); \
+	buildnum=$(BUILDID); \
 	m=$$($(PKGMOGRIFY) -O /dev/null *.p5m ../transforms/nopublish); \
 	echo "$$m" | while read name build; do \
 		[[ $$build -ge $${buildnum%%.*} ]] && echo $$name; \
@@ -70,6 +70,7 @@ PKGCMDENV         = \
 	    PYTHONPATH=$(PKGROOT)/usr/lib/python2.6/vendor-packages
 PKG               = $(PKGCMDENV) pkg
 PKGDEPEND         = $(PKGCMDENV) pkgdepend
+PKGFMT            = $(PKGCMDENV) pkgfmt
 PKGLINT           = $(PKGCMDENV) pkglint
 PKGMOGRIFY        = $(PKGCMDENV) pkgmogrify
 PKGREPO           = $(PKGCMDENV) pkgrepo
@@ -115,6 +116,9 @@ clean:
 clobber: clean
 	rm -rf $(PKGDEST) Makefile.link
 
+pkgfmt:
+	$(PKGFMT) -c manifests/*.p5m
+
 # Pass SVr4 package production off to its own makefile
 svr4:
 	$(MAKE) -f Makefile.svr4 _svr4
@@ -123,7 +127,7 @@ $(PDIR):
 	mkdir -p $@
 
 # Finalize the repository
-repository-metadata: publish-pkgs
+repository-metadata: pkgfmt publish-pkgs
 	$(PKGREPO) -s $(PKGDEST)/repo refresh
 
 publish-pkgs: $(PKGDEST)/repo .WAIT $(PUBLIFESTS)

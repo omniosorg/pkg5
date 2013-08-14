@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2009, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
 #
 
 import getopt
@@ -47,11 +47,12 @@ def usage(errmsg="", exitcode=2):
 
         print _("""\
 Usage:
-        pkgdiff [-i attribute ...] [-o attribute] [-v variant=value ...]
-            file1 file2""")
+        pkgdiff [-i attribute]... [-o attribute]
+            [-t action_name[,action_name]...]...
+            [-v name=value]... (file1 | -) (file2 | -)""")
         sys.exit(exitcode)
 
-def error(text, exitcode=1):
+def error(text, exitcode=3):
         """Emit an error message prefixed by the command name """
 
         print >> sys.stderr, "pkgdiff: %s" % text
@@ -65,30 +66,36 @@ def main_func():
 
         ignoreattrs = []
         onlyattrs = []
+        onlytypes = []
         varattrs = defaultdict(set)
 
         try:
-                opts, pargs = getopt.getopt(sys.argv[1:], "i:o:v:", ["help"])
+                opts, pargs = getopt.getopt(sys.argv[1:], "i:o:t:v:?", ["help"])
                 for opt, arg in opts:
                         if opt == "-i":
                                 ignoreattrs.append(arg)
-                        if opt == "-o":
+                        elif opt == "-o":
                                 onlyattrs.append(arg)
-                        if opt == "-v":
+                        elif opt == "-t":
+                                onlytypes.extend(arg.split(","))
+                        elif opt == "-v":
                                 args = arg.split("=")
                                 if len(args) != 2:
                                         usage(_("variant option incorrect %s") % arg)
                                 if not args[0].startswith("variant."):
                                         args[0] = "variant." + args[0]
                                 varattrs[args[0]].add(args[1])
-                        if opt in ("--help", "-?"):
+                        elif opt in ("--help", "-?"):
                                 usage(exitcode=0)
 
         except getopt.GetoptError, e:
                 usage(_("illegal global option -- %s") % e.opt)
 
         if len(pargs) != 2:
-                usage(_("two file arguments are required."))
+                usage(_("two manifest arguments are required"))
+
+        if (pargs[0] == "-" and pargs[1] == "-"):
+                usage(_("only one manifest argument can be stdin"))
 
         if ignoreattrs and onlyattrs:
                 usage(_("-i and -o options may not be used at the same time."))
@@ -100,21 +107,47 @@ def main_func():
 
         ignoreattrs = set(ignoreattrs)
         onlyattrs = set(onlyattrs)
+        onlytypes = set(onlytypes)
+
+        utypes = set(
+            t
+            for t in onlytypes
+            if t == "generic" or t not in pkg.actions.types
+        )
+
+        if utypes:
+                usage(_("unknown action types: %s" %
+                    apx.list_to_lang(list(utypes))))
 
         manifest1 = manifest.Manifest()
         manifest2 = manifest.Manifest()
         try:
+                # This assumes that both pargs are not '-'.
                 for p, m in zip(pargs, (manifest1, manifest2)):
-                        m.set_content(pathname=p)
+                        if p == "-":
+                                m.set_content(content=sys.stdin.read())
+                        else:
+                                m.set_content(pathname=p)
         except (pkg.actions.ActionError, apx.InvalidPackageErrors), e:
                 error(_("Action error in file %(p)s: %(e)s") % locals())
         except (EnvironmentError, apx.ApiException), e:
                 error(e)
 
+        #
+        # manifest filtering
+        #
+
+        # filter action type
+        if onlytypes:
+                for m in (manifest1, manifest2):
+                        # Must pass complete list of actions to set_content, not
+                        # a generator, to avoid clobbering manifest contents.
+                        m.set_content(content=list(m.gen_actions_by_types(
+                            onlytypes)))
+
+        # filter variant
         v1 = manifest1.get_all_variants()
         v2 = manifest2.get_all_variants()
-
-        # implement manifest filtering
         for vname in varattrs:
                 for path, v, m in zip(pargs, (v1, v2), (manifest1, manifest2)):
                         if vname not in v:
@@ -133,6 +166,7 @@ def main_func():
                             variant.Variants({vname: filt}).allow_action])
                         ])
                         m[vname] = filt
+
         if varattrs:
                 # need to rebuild these if we're filtering variants
                 v1 = manifest1.get_all_variants()
@@ -144,7 +178,8 @@ def main_func():
         # of the same name have the same values defined.
         for k in set(v1.keys()) & set(v2.keys()):
                 if v1[k] != v2[k]:
-                        error(_("Manifests support different variants %s %s") % (v1, v2))
+                        error(_("Manifests support different variants "
+                            "%(v1)s %(v2)s") % {"v1": v1, "v2": v2})
 
         # Now, get a list of all possible variant values, including None
         # across all variants and both manifests
@@ -181,8 +216,8 @@ def main_func():
                 diffs += a
                 diffs += c
                 diffs += r
-        # License action still causes spurious diffs... check again for now.
 
+        # License action still causes spurious diffs... check again for now.
         real_diffs = [
             (a,b)
             for a, b in diffs
@@ -239,7 +274,7 @@ def main_func():
                         out = k + "=" + v
                 return out
 
-        #figure out when to print diffs
+        # figure out when to print diffs
         def conditional_print(s, a):
                 if onlyattrs:
                         if not set(a.attrs.keys()) & onlyattrs:

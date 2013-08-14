@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2008, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
 #
 
 import testutils
@@ -135,6 +135,11 @@ close
         res_remote_path = set([
             headers,
             "basename   file      bin/example_path          pkg:/example_pkg@1.0-0\n"
+        ])
+
+        res_remote_case_sensitive = set([
+            headers,
+            "pkg.fmri	set	test/example_pkg pkg:/example_pkg@1.0-0\n"
         ])
 
         res_remote_bin = set([
@@ -382,6 +387,8 @@ adm:NP:6445::::::
                 self.pkg("search -a -r example_pkg")
 
                 self._search_op(True, "example_path", self.res_remote_path)
+                self._search_op(True, "':set:pkg.fmri:exAMple_pkg'",
+                    self.res_remote_case_sensitive, case_sensitive=False)
                 self._search_op(True, "'(example_path)'", self.res_remote_path)
                 self._search_op(True, "'<exam*:::>'",
                     self.res_remote_pkg_ret_pkg)
@@ -457,6 +464,9 @@ adm:NP:6445::::::
                 self.pkg("search -a -r 'e* AND <e*>'", exit=1)
                 self.pkg("search -a -r '<e*> OR e*'", exit=1)
                 self.pkg("search -a -r 'e* OR <e*>'", exit=1)
+                self._search_op(True, "pkg:/example_path", self.res_remote_path)
+                self.pkg("search -a -r -I ':set:pkg.fmri:exAMple_pkg'", exit=1)
+                self.assert_(self.errout == "" )
 
         def _run_local_tests(self):
                 outfile = os.path.join(self.test_root, "res")
@@ -530,6 +540,7 @@ adm:NP:6445::::::
                 self.pkg("search -a -l 'e* AND <e*>'", exit=1)
                 self.pkg("search -a -l '<e*> OR e*'", exit=1)
                 self.pkg("search -a -l 'e* OR <e*>'", exit=1)
+                self._search_op(False, "pkg:/example_path", self.res_local_path)
 
         def _run_local_empty_tests(self):
                 self.pkg("search -a -l example_pkg", exit=1)
@@ -950,6 +961,127 @@ adm:NP:6445::::::
                 self.pkg("search -l /bin", exit=1)
                 # Test rebuilding the index with a missing manifest.
                 self.pkg("rebuild-index")
+
+        def test_15807844(self):
+                """ Check that pkg search for temporary sources is successful
+                when there no publishers configured in the image."""
+
+                rurl = self.dc.get_repo_url()
+                self.pkgsend_bulk(rurl, self.example_pkg10)
+                self.image_create()
+                expected = \
+                "INDEX ACTION VALUE PACKAGE\n" \
+                "basename file bin/example_path pkg:/example_pkg@1.0-0\n"
+                self.pkg("search -s %s example_path" % self.rurl)
+                actual = self.reduceSpaces(self.output)
+                expected = self.reduceSpaces(expected)
+                self.assertEqualDiff(expected, actual)
+                self.pkg("search example_path", exit=1)
+
+class TestSearchMultiPublisher(pkg5unittest.ManyDepotTestCase):
+
+        same_pub1 = """
+            open same_pub1@1.1,5.11-0
+            add dir mode=0755 owner=root group=bin path=/bin
+            add file tmp/samepub_file1 mode=0555 owner=root group=bin path=/bin/samepub_file1
+            close """
+
+        same_pub2 = """
+            open same_pub2@1.1,5.11-0
+            add dir mode=0755 owner=root group=bin path=/bin
+            add file tmp/samepub_file2 mode=0555 owner=root group=bin path=/bin/samepub_file2
+            close """
+
+        example_pkg11 = """
+            open pkg://test1/example_pkg@1.2,5.11-0
+            add dir mode=0755 owner=root group=bin path=/bin
+            add file tmp/example_file mode=0555 owner=root group=bin path=/bin/example_path12
+            close """
+        
+        incorp_pkg11 = """
+            open pkg://test1/incorp_pkg@1.2,5.11-0
+            add depend fmri=pkg://test1/example_pkg@1.2,5.11-0 type=incorporate
+            close """
+
+        example_pkg12 = """
+            open pkg://test2/example_pkg@1.2,5.11-0
+            add dir mode=0755 owner=root group=bin path=/bin
+            add file tmp/example_file mode=0555 owner=root group=bin path=/bin/example_path12
+            close """
+        
+        incorp_pkg12 = """
+            open pkg://test2/incorp_pkg@1.3,5.11-0
+            add depend fmri=pkg://test2/example_pkg@1.2,5.11-0 type=incorporate
+            close """
+
+        misc_files = {
+            "tmp/samepub_file1": "magic",
+            "tmp/samepub_file2": "magic",
+            "tmp/example_file": "magic",
+        }
+
+        def setUp(self):
+                pkg5unittest.ManyDepotTestCase.setUp(self,["samepub", "samepub"],
+                    start_depots=True)
+                self.make_misc_files(self.misc_files)
+                self.durl1 = self.dcs[1].get_depot_url()
+                self.durl2 = self.dcs[2].get_depot_url()
+
+        def test_7140657(self):
+                """ Check that pkg search with -s works as intended when there are
+                two repositories with same publisher name configured."""
+
+                self.pkgsend_bulk(self.durl1, self.same_pub1, refresh_index=True)
+                self.pkgsend_bulk(self.durl2, self.same_pub2, refresh_index=True)
+                self.image_create(self.durl1, prefix="samepub")
+                self.pkg("set-publisher -g %s samepub" % self.durl2)
+                self.pkg("search -s %s samepub_file1" % self.durl1)
+
+                result_same_pub = \
+                "INDEX ACTION VALUE PACKAGE\n" \
+                "basename file bin/samepub_file1 pkg:/same_pub1@1.1-0\n"
+
+                actual = self.reduceSpaces(self.output)
+                expected = self.reduceSpaces(result_same_pub)
+                self.assertEqualDiff(expected, actual)
+                self.pkg("search -s %s samepub_file1" % self.durl2, exit=1)
+
+        def test_16190165(self):
+                """ Check that pkg search works fine with structured queries
+                    and the scheme name "pkg://" in the query """
+		
+                self.pkgsend_bulk(self.durl1, self.example_pkg11, refresh_index=True)
+                self.pkgsend_bulk(self.durl2, self.example_pkg12, refresh_index=True)
+                self.pkgsend_bulk(self.durl1, self.incorp_pkg11, refresh_index=True)
+                self.pkgsend_bulk(self.durl2, self.incorp_pkg12, refresh_index=True)
+                self.image_create(self.durl1, prefix="test1")
+                self.pkg("set-publisher -g %s test2" % self.durl2)
+
+                expected_out1 = \
+                "incorporate\tdepend\tpkg://test1/example_pkg@1.2,5.11-0\tpkg:/incorp_pkg@1.2-0\n" \
+                "incorporate\tdepend\tpkg://test2/example_pkg@1.2,5.11-0\tpkg:/incorp_pkg@1.3-0\n"
+
+                self.pkg("search -H :depend:incorporate:example_pkg",
+                     exit=0)
+                actual = self.reduceSpaces(self.output)
+                expected = self.reduceSpaces(expected_out1)
+                self.assertEqualDiff(expected, actual)
+
+        	expected_out2 = \
+		"pkg.fmri\tset\ttest1/example_pkg\tpkg:/example_pkg@1.2-0\n" \
+                "incorporate\tdepend\tpkg://test1/example_pkg@1.2,5.11-0\tpkg:/incorp_pkg@1.2-0\n" \
+                "pkg.fmri\tset\ttest2/example_pkg\tpkg:/example_pkg@1.2-0\n" \
+                "incorporate\tdepend\tpkg://test2/example_pkg@1.2,5.11-0\tpkg:/incorp_pkg@1.3-0\n"
+
+		self.pkg("search -H pkg://test1/example_pkg",exit=0)
+                actual = self.reduceSpaces(self.output)
+                expected = self.reduceSpaces(expected_out2)
+                self.assertEqualDiff(expected, actual)
+
+		self.pkg("search -H pkg:/example_pkg",exit=0)
+                actual = self.reduceSpaces(self.output)
+                expected = self.reduceSpaces(expected_out2)
+                self.assertEqualDiff(expected, actual)
 
 
 if __name__ == "__main__":

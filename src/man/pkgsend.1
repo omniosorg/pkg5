@@ -1,6 +1,5 @@
 '\" te
-.\" Copyright (c) 2007, 2013, Oracle and/or its
-.\" affiliates. All rights reserved.
+.\" Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
 .TH pkgsend 1 "26 Feb 2013" "SunOS 5.11" "User Commands"
 .SH NAME
 pkgsend \- Image Packaging System publication client
@@ -19,8 +18,8 @@ pkgsend \- Image Packaging System publication client
 .LP
 .nf
 /usr/bin/pkgsend publish [-b \fIbundle\fR]... [-d \fIsource\fR]...
-    [-s \fIrepo_uri_or_path\fR] [-T \fIpattern\fR] [--no-catalog]
-    [\fImanifest\fR ...]
+    [-s \fIrepo_uri_or_path\fR] [--key \fIssl_key\fR --cert \fIssl_cert\fR]...
+    [-T \fIpattern\fR] [--no-catalog] [\fImanifest\fR ...]
 .fi
 
 .SH DESCRIPTION
@@ -147,7 +146,7 @@ The SVR4 \fBDESC\fR parameter is converted to a \fBpkg.description\fR value. The
 .ne 2
 .mk
 .na
-\fB\fBpkgsend publish\fR [\fB-b\fR \fIbundle\fR]... [\fB-d\fR \fIsource\fR]... [\fB-s\fR \fIrepo_uri_or_path\fR] [\fB-T\fR \fIpattern\fR] [\fB--no-catalog\fR] [\fImanifest\fR ...]\fR
+\fB\fBpkgsend publish\fR [\fB-b\fR \fIbundle\fR]... [\fB-d\fR \fIsource\fR]... [\fB-s\fR \fIrepo_uri_or_path\fR] [\fB--key\fR \fIssl_key\fR \fB--cert\fR \fIssl_cert\fR]... [\fB-T\fR \fIpattern\fR] [\fB--no-catalog\fR] [\fImanifest\fR ...]\fR
 .ad
 .sp .6
 .RS 4n
@@ -191,6 +190,17 @@ Publish the package to the repository located at the given URI or file system pa
 .ne 2
 .mk
 .na
+\fB\fB--key\fR \fIssl_key\fR \fB--cert\fR \fIssl_cert\fR\fR
+.ad
+.sp .6
+.RS 4n
+Use the \fB--key\fR option to specify a client SSL key file to use for package retrieval from an HTTPS repository. Use the \fB--cert\fR option to specify a client SSL certificate file to use for package retrieval from an HTTPS repository. This option pair can be specified multiple times.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
 \fB\fB--no-catalog\fR\fR
 .ad
 .sp .6
@@ -198,7 +208,7 @@ Publish the package to the repository located at the given URI or file system pa
 Do not add the package to the publisher's catalog. This option is recommended whenever multiple packages are being published at one time as updates to publisher catalogs must be performed serially. Once publication is complete, the \fBrefresh\fR subcommand of \fBpkgrepo\fR can be used to add the new packages to the respective publisher catalogs.
 .RE
 
-For a description of the \fB-T\fR option, see the \fBgenerate\fR subcommand above.
+For a descriptions of the \fB-T\fR option, see the \fBgenerate\fR subcommand above.
 .RE
 
 .SH ENVIRONMENT VARIABLES
@@ -376,7 +386,7 @@ Interface StabilityUncommitted
 \fBpkgdepend\fR(1), \fBpkgrepo\fR(1), \fBpkg.depotd\fR(1M), \fBpkg\fR(5)
 .sp
 .LP
-\fBhttps://java.net/projects/ips/pages/Home\fR
+\fBhttp://hub.opensolaris.org/bin/view/Project+pkg/\fR
 .SH NOTES
 .sp
 .LP

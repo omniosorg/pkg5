@@ -41,27 +41,11 @@ from pkg.client import global_settings
 
 # The current version of the Client API the PM, UM and
 # WebInstall GUIs have been tested against and are known to work with.
-CLIENT_API_VERSION = 73
+CLIENT_API_VERSION = 75
 LOG_DIR = "/var/tmp"
 LOG_ERROR_EXT = "_error.log"
 LOG_INFO_EXT = "_info.log"
 PKG_CLIENT_NAME_UM = "updatemanager"
-IMAGE_DIRECTORY_DEFAULT = "/"   # Image default directory
-IMAGE_DIR_COMMAND = "svcprop -p update/image_dir svc:/application/pkg/update"
-
-
-def get_image_path():
-        try:
-                image_directory = os.environ["PKG_IMAGE"]
-        except KeyError:
-                image_directory = \
-                    os.popen(IMAGE_DIR_COMMAND).readline().rstrip()
-                if len(image_directory) == 0:
-                        image_directory = IMAGE_DIRECTORY_DEFAULT
-        return image_directory
-
-def get_log_dir():
-        return LOG_DIR
 
 def get_log_error_ext():
         return LOG_ERROR_EXT
@@ -87,11 +71,18 @@ def get_os_version_and_build():
                 os_ver += " (" + platform.uname()[3] + ")"
         return os_ver
 
+def get_log_path(client_name):
+        if portable.is_admin():
+                log_path = os.path.join(LOG_DIR, client_name)
+        else:
+                user_name = portable.get_username()
+                log_path = os.path.join(LOG_DIR, client_name + "_" + user_name)
+        return log_path
+
 def setup_logging(client_name):
         normal_setup = True
-        log_path = os.path.join(LOG_DIR, client_name)
         err_str = ""
-
+        log_path = get_log_path(client_name)
         infolog_path = log_path + LOG_INFO_EXT
         try:
                 info_h = logging.handlers.RotatingFileHandler(infolog_path,

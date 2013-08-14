@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2009, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
 #
 
 import cStringIO
@@ -204,6 +204,16 @@ class TransportCfg(object):
                 """
                 raise NotImplementedError
 
+        def get_pkg_sigs(self, fmri, pub):
+                """Returns a dictionary of the signature data found in the
+                catalog for the given package FMRI and Publisher object or None
+                if no catalog is available."""
+
+                # Check provided publisher's catalog for signature data.
+                if pub.catalog:
+                        return dict(pub.catalog.get_entry_signatures(
+                            fmri))
+
         def get_pkg_alt_repo(self, pfmri):
                 """Returns the repository object containing the origins that
                 should be used to retrieve the specified package or None.
@@ -226,9 +236,8 @@ class TransportCfg(object):
         def get_publisher(self, publisher_name):
                 raise NotImplementedError
 
-        def reset_caches(self, shared=False):
-                """Discard any cache information and reconfigure based on
-                current publisher configuration data.
+        def clear_caches(self, shared=False):
+                """Discard any cache information.
 
                 'shared' is an optional boolean value indicating that any
                 shared cache information (caches not specific to any publisher)
@@ -245,6 +254,19 @@ class TransportCfg(object):
                                 # the most current publisher information can be
                                 # used.
                                 del self.__caches[pub]
+
+        def reset_caches(self, shared=False):
+                """Discard any cache information and reconfigure based on
+                current publisher configuration data.
+
+                'shared' is an optional boolean value indicating that any
+                shared cache information (caches not specific to any publisher)
+                should also be discarded.  If True, callers are responsible for
+                ensuring a new set of shared cache information is added again.
+                """
+
+                # Clear the old cache setup.
+                self.clear_caches(shared=shared)
 
                 # Automatically add any publisher repository origins
                 # or mirrors that are filesystem-based as read-only caches.
@@ -342,6 +364,26 @@ class ImageTransportCfg(TransportCfg):
                 should be stored in and loaded from."""
 
                 return self.__img.get_manifest_path(pfmri)
+
+        def get_pkg_sigs(self, fmri, pub):
+                """Returns a dictionary of the signature data found in the
+                catalog for the given package FMRI and Publisher object or None
+                if no catalog is available."""
+
+                # Check publisher for entry first.
+                try:
+                        sigs = TransportCfg.get_pkg_sigs(self, fmri, pub)
+                except apx.UnknownCatalogEntry:
+                        sigs = None
+
+                if sigs is None:
+                        # Either package was unknown or publisher catalog
+                        # contained no signature data.  Fallback to the known
+                        # catalog as temporary sources may be in use.
+                        kcat = self.__img.get_catalog(
+                            self.__img.IMG_CATALOG_KNOWN)
+                        return dict(kcat.get_entry_signatures(fmri))
+                return sigs
 
         def get_pkg_alt_repo(self, pfmri):
                 """Returns the repository object containing the origins that
@@ -602,9 +644,15 @@ class Transport(object):
                 # of origins for a publisher without incurring the significant
                 # overhead of performing file-based search unless the network-
                 # based resource is unavailable.
+                no_result_url = None
                 for d, retries, v in self.__gen_repo(pub, retry_count,
                     origin_only=True, prefer_remote=True, alt_repo=alt_repo,
                     operation="search", versions=[0, 1]):
+
+                        if retries == 1:
+                                no_result_url = None
+                        elif retries > 1 and no_result_url:
+                                continue
 
                         try:
                                 fobj = d.do_search(data, header,
@@ -633,8 +681,8 @@ class Transport(object):
                                         raise apx.UnsupportedSearchError(e.url,
                                             "search/1")
                                 elif e.code == httplib.NO_CONTENT:
-                                        raise apx.NegativeSearchResult(e.url)
-                                elif e.code == (httplib.BAD_REQUEST,
+                                        no_result_url = e.url
+                                elif e.code in (httplib.BAD_REQUEST,
                                     errno.EINVAL):
                                         raise apx.MalformedSearchRequest(e.url)
                                 elif e.retryable:
@@ -648,8 +696,10 @@ class Transport(object):
                                         fobj = None
                                 else:
                                         raise
-
-                raise failures
+                if no_result_url:
+                        raise apx.NegativeSearchResult(no_result_url)
+                else:
+                        raise failures
 
         def get_ca_dir(self):
                 """Return the path to the directory that contains CA
@@ -753,15 +803,15 @@ class Transport(object):
         @staticmethod
         def _verify_catalog(filename, dirname):
                 """A wrapper for catalog.verify() that catches
-                BadCatalogSignatures exceptions and translates them to
-                the appropriate InvalidContentException that the transport
-                uses for content verification."""
+                CatalogErrors and translates them to the appropriate
+                InvalidContentException that the transport uses for content
+                verification."""
 
                 filepath = os.path.join(dirname, filename)
 
                 try:
                         catalog.verify(filepath)
-                except (apx.BadCatalogSignatures, apx.InvalidCatalogFile), e:
+                except apx.CatalogError, e:
                         os.remove(filepath)
                         te = tx.InvalidContentException(filepath,
                             "CatalogPart failed validation: %s" % e)
@@ -991,7 +1041,8 @@ class Transport(object):
 
                         except apx.InvalidP5IFile, e:
                                 repouri_key = d.get_repouri_key()
-                                exc = tx.TransferContentException(url[0],
+                                exc = tx.TransferContentException(
+                                    repouri_key[0],
                                     "api_errors.InvalidP5IFile:%s" %
                                     (" ".join([str(a) for a in e.args])))
                                 repostats = self.stats[repouri_key]
@@ -1113,7 +1164,8 @@ class Transport(object):
                                 failures.extend(e.failures)
 
                         except zlib.error, e:
-                                exc = tx.TransferContentException(repouri_key[0],
+                                exc = tx.TransferContentException(
+                                    repouri_key[0],
                                     "zlib.error:%s" %
                                     (" ".join([str(a) for a in e.args])),
                                     proxy=repouri_key[1])
@@ -1163,7 +1215,8 @@ class Transport(object):
 
                         except (TypeError, ValueError), e:
                                 
-                                exc = tx.TransferContentException(repouri_key[0],
+                                exc = tx.TransferContentException(
+                                    repouri_key[0],
                                     "Invalid stats response: %s" % e,
                                     proxy=repouri_key[1])
                                 repostats.record_error(content=True)
@@ -1570,41 +1623,55 @@ class Transport(object):
                 the manifest content in 'content'.  One of these arguments
                 must be used."""
 
+                # Bail if manifest validation has been turned off for
+                # debugging/testing purposes.
+                if DebugValues.get("manifest_validate") == "Never":
+                        return True
+
+                must_verify = \
+                    DebugValues.get("manifest_validate") == "Always"
+
                 if not isinstance(pub, publisher.Publisher):
                         # Get publisher using information from FMRI.
                         try:
                                 pub = self.cfg.get_publisher(fmri.publisher)
                         except apx.UnknownPublisher:
+                                if must_verify:
+                                        assert False, \
+                                            "Did not validate manifest; " \
+                                            "unknown publisher %s (%s)." % \
+                                            (fmri.publisher, fmri)
                                 return False
 
-                # Handle case where publisher has no Catalog.
-                if not pub.catalog:
-                        return False
-
-                # Use the publisher to get the catalog and its signature info.
                 try:
-                        sigs = dict(pub.catalog.get_entry_signatures(fmri))
+                        sigs = self.cfg.get_pkg_sigs(fmri, pub)
                 except apx.UnknownCatalogEntry:
+                        if must_verify:
+                                assert False, "Did not validate manifest; " \
+                                    "couldn't find sigs."
                         return False
 
                 if sigs and "sha-1" in sigs:
                         chash = sigs["sha-1"]
                 else:
+                        if must_verify:
+                                assert False, \
+                                    "Did not validate manifest; no sha-1 sig."
                         return False
 
                 if mfstpath:
                         mf = file(mfstpath)
                         mcontent = mf.read()
                         mf.close()
-                elif content:
+                elif content is not None:
                         mcontent = content
                 else:
                         raise ValueError("Caller must supply either mfstpath "
                             "or content arguments.")
 
                 newhash = manifest.Manifest.hash_create(mcontent)
-                if chash != newhash and \
-                    DebugValues.get("manifest_validation") != "False":
+
+                if chash != newhash:
                         if mfstpath:
                                 sz = os.stat(mfstpath).st_size
                                 os.remove(mfstpath)
@@ -1614,7 +1681,6 @@ class Transport(object):
                             "manifest hash failure: fmri: %s \n"
                             "expected: %s computed: %s" %
                             (fmri, chash, newhash), size=sz)
-
                 return True
 
         @staticmethod
@@ -2129,6 +2195,7 @@ class Transport(object):
 
                 CHUNK_SMALL = 10
                 CHUNK_LARGE = 100
+                CHUNK_HUGE = 1024
 
                 # Call setup if the transport isn't configured or was shutdown.
                 if not self.__engine:
@@ -2153,6 +2220,8 @@ class Transport(object):
                 repolist = _convert_repouris(repolist)
                 n = len(repolist)
                 m = self.stats.get_num_visited(repolist)
+                if n == 1:
+                        return CHUNK_HUGE
                 if m < n:
                         return CHUNK_SMALL
                 return CHUNK_LARGE
@@ -3036,10 +3105,15 @@ class MultiFileNI(MultiFile):
         are used to identify and verify the content.  Additional parameters
         define what happens when download finishes successfully."""
 
-        def __init__(self, pub, xport, final_dir, decompress=False,
+        def __init__(self, pub, xport, final_dir=None, decompress=False,
             progtrack=None, ccancel=None, alt_repo=None):
                 """Supply the destination publisher in the pub argument.
-                The transport object should be passed in xport."""
+                The transport object should be passed in xport.
+                
+                'final_dir' indicates the directory the retrieved files should
+                be moved to after retrieval. If it is set to None, files will
+                not be moved and remain in the cache directory specified
+                in the 'xport' object."""
 
                 MultiFile.__init__(self, pub, xport, progtrack=progtrack,
                     ccancel=ccancel, alt_repo=alt_repo)
@@ -3057,7 +3131,7 @@ class MultiFileNI(MultiFile):
                     self.get_publisher())
                 hashval = action.hash
 
-                if cpath:
+                if cpath and self._final_dir:
                         self._final_copy(hashval, cpath)
                         if self._progtrack:
                                 filesz = int(misc.get_pkg_otw_size(action))
@@ -3069,7 +3143,7 @@ class MultiFileNI(MultiFile):
                         for c in action.get_chain_certs():
                                 cpath = self._transport._action_cached(action,
                                     self.get_publisher(), in_hash=c)
-                                if cpath:
+                                if cpath and self._final_dir:
                                         self._final_copy(c, cpath)
                                         if self._progtrack:
                                                 self._progtrack.download_add_progress(
@@ -3123,7 +3197,8 @@ class MultiFileNI(MultiFile):
                         self._progtrack.download_add_progress((nactions - 1),
                             nbytes)
 
-                self._final_copy(hashval, current_path)
+                if self._final_dir:
+                        self._final_copy(hashval, current_path)
                 self.del_hash(hashval)
 
         def _final_copy(self, hashval, current_path):

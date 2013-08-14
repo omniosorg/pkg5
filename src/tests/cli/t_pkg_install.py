@@ -659,7 +659,7 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
                                     "'%s'." % bad_mode)
                                 bad_mdata = mdata.replace(src_mode, bad_mode)
                                 self.write_img_manifest(pfmri, bad_mdata)
-                                self.pkg("--debug skip-verify-manifest=True "
+                                self.pkg("--debug manifest_validate=Never "
                                     "install %s" % pfmri.pkg_name, exit=1)
 
                         # Now attempt to corrupt the client's copy of the
@@ -672,7 +672,7 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
                                 bad_mdata = mdata.replace("owner=root",
                                     bad_owner)
                                 self.write_img_manifest(pfmri, bad_mdata)
-                                self.pkg("--debug skip-verify-manifest=True "
+                                self.pkg("--debug manifest_validate=Never "
                                     "install %s" % pfmri.pkg_name, exit=1)
 
                         for bad_group in ("", 'group=""', "group=invalidgroup"):
@@ -682,7 +682,7 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
                                 bad_mdata = mdata.replace("group=bin",
                                     bad_group)
                                 self.write_img_manifest(pfmri, bad_mdata)
-                                self.pkg("--debug skip-verify-manifest=True "
+                                self.pkg("--debug manifest_validate=Never "
                                     "install %s" % pfmri.pkg_name, exit=1)
 
                         # Now attempt to corrupt the client's copy of the
@@ -694,7 +694,7 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
                                     "'%s'." % bad_act)
                                 bad_mdata = mdata + "%s\n" % bad_act
                                 self.write_img_manifest(pfmri, bad_mdata)
-                                self.pkg("--debug skip-verify-manifest=True "
+                                self.pkg("--debug manifest_validate=Never "
                                     "install %s" % pfmri.pkg_name, exit=1)
 
         def test_bug_3770(self):
@@ -777,23 +777,48 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
                 ):
                         self.debug("fname: %s" % name)
                         self.assert_(os.path.exists(os.path.join(self.get_img_path(),
-name)))
+                            name)))
 
                 self.pkg("uninstall -vvv fuzzy")
+
+
+class TestPkgInstallApache(pkg5unittest.ApacheDepotTestCase):
+
+        # Only start/stop the depot once (instead of for every test)
+        persistent_setup = True
+
+        foo11 = """
+            open foo@1.1,5.11-0
+            add dir mode=0755 owner=root group=bin path=/lib
+            add file tmp/libc.so.1 mode=0555 owner=root group=bin path=/lib/libc.so.1 timestamp="20080731T024051Z"
+            close """
+
+        upgrade_np10 = """
+            open upgrade-np@1.0,5.11-0
+            close"""
+
+        misc_files = [ "tmp/libc.so.1" ]
+
+        def setUp(self):
+                pkg5unittest.ApacheDepotTestCase.setUp(self, ["test1", "test2"],
+                    start_depots=True)
+                self.make_misc_files(self.misc_files)
+                self.durl1 = self.dcs[1].get_depot_url()
+                self.durl2 = self.dcs[2].get_depot_url()
+                self.pkgsend_bulk(self.durl1, self.foo11)
+                self.pkgsend_bulk(self.durl2, self.upgrade_np10)
 
         def test_corrupt_web_cache(self):
                 """Make sure the client can detect corrupt content being served
                 to it from a corrupt web cache, modifying its requests to
                 retrieve correct content."""
 
-                # Depot required for this test since we want to corrupt
-                # a downstream cache serving this content
-                self.dc.start()
-                fmris = self.pkgsend_bulk(self.durl, self.foo11)
+                fmris = self.pkgsend_bulk(self.durl1, (self.foo11,
+                    self.upgrade_np10))
                 # we need to record just the version string of foo in order
                 # to properly quote it later.
                 foo_version = fmris[0].split("@")[1]
-                self.image_create(self.durl)
+                self.image_create(self.durl1)
 
                 # we use the system repository as a convenient way to setup
                 # a caching proxy
@@ -809,6 +834,7 @@ name)))
                 self.next_free_port += 1
                 sc = pkg5unittest.SysrepoController(sc_conf,
                     sysrepo_port, sc_runtime_dir, testcase=self)
+                self.register_apache_controller("sysrepo", sc)
                 sc.start()
 
                 sysrepo_url = "http://localhost:%s" % sysrepo_port
@@ -854,10 +880,10 @@ name)))
                     # format pkg(1) uses - two logically identical urls that
                     # differ only by the way they're quoted are treated by
                     # Apache as separate cacheable resources.
-                    "%s/test/manifest/0/foo@%s" % (self.durl, urllib2.quote(
+                    "%s/test1/manifest/0/foo@%s" % (self.durl1, urllib2.quote(
                     foo_version)),
-                    "%s/test/file/1/8535c15c49cbe1e7cb1a0bf8ff87e512abed66f8" %
-                    self.durl,
+                    "%s/test1/file/1/8535c15c49cbe1e7cb1a0bf8ff87e512abed66f8" %
+                    self.durl1,
                 ]
 
                 proxy_handler = urllib2.ProxyHandler({"http": sysrepo_url})
@@ -900,9 +926,9 @@ name)))
                 # ensure that when we actually corrupt the repository
                 # as well as the cache, we do detect the errors properly.
                 corrupt_cache(sc_cache)
-                repodir = self.dc.get_repodir()
+                repodir = self.dcs[1].get_repodir()
 
-                prefix = "publisher/test"
+                prefix = "publisher/test1"
                 self.image_create(props={"use-system-repo": True})
 
                 # When we corrupt the files in the repository, we intentionally
@@ -943,7 +969,7 @@ name)))
                         corrupt_cache(sc_cache)
                         corrupt_path(mfpath, value="spaghetti\n", rename=True)
                         shutil.rmtree(os.path.join(self.img_path(),
-                            "var/pkg/publisher/test/pkg"))
+                            "var/pkg/publisher/test1/pkg"))
                         self.pkg("contents -rm foo@1.1", stderr=True, exit=1)
                         os.rename(mfpath + ".not-corrupt", mfpath)
                 
@@ -971,10 +997,86 @@ name)))
                                 if os.path.exists(not_corrupt):
                                         os.rename(not_corrupt, path)
 
-                        sc.stop()
                         if saved_pkg_sysrepo_env:
                                 os.environ["PKG_SYSREPO_URL"] = \
                                     saved_pkg_sysrepo_env
+
+        def test_granular_proxy(self):
+                """Tests that images can use the set-publisher --proxy argument
+                to selectively proxy requests."""
+
+                # we use the system repository as a convenient way to setup
+                # a caching proxy.   Since the image doesn't have the property
+                # 'use-system-repo=True', the configuration of the sysrepo
+                # will remain static.
+                self.image_create(self.durl1)
+                self.sysrepo("")
+                sc_runtime_dir = os.path.join(self.test_root, "sysrepo_runtime")
+                sc_conf = os.path.join(sc_runtime_dir, "sysrepo_httpd.conf")
+                sc_cache = os.path.join(self.test_root, "sysrepo_cache")
+
+                # ensure pkg5srv can write cache content
+                os.chmod(sc_cache, 0777)
+
+                sysrepo_port = self.next_free_port
+                self.next_free_port += 1
+                sc = pkg5unittest.SysrepoController(sc_conf,
+                    sysrepo_port, sc_runtime_dir, testcase=self)
+                self.register_apache_controller("sysrepo", sc)
+                sc.start()
+                sysrepo_url = "http://localhost:%s" % sysrepo_port
+
+                self.image_create()
+                self.pkg("set-publisher -p %s --proxy %s" % (self.durl1,
+                    sysrepo_url))
+                self.pkg("install foo")
+                self.pkg("uninstall foo")
+
+                sc.stop()
+                # with our proxy offline, and with no other origins
+                # available, we should be unable to install
+                self.pkg("install --no-refresh foo", exit=1)
+                sc.start()
+
+                # we cannot add another origin with the same url
+                self.pkg("set-publisher --no-refresh -g %s test1" %
+                    self.durl1, exit=1)
+                # we cannot add another proxied origin with that url
+                self.pkg("set-publisher --no-refresh -g %s "
+                    "--proxy http://noodles test1" % self.durl1,
+                    exit=1)
+
+                # Now add a second, unproxied publisher, ensuring we
+                # can install packages from there.  Since the proxy
+                # isn't configured to proxy that resource, this tests
+                # that the proxy for self.durl1 isn't being used.
+                self.pkg("set-publisher -g %s test2" % self.durl2)
+                self.pkg("install --no-refresh "
+                    "pkg://test2/upgrade-np@1.0")
+                self.pkg("uninstall pkg://test2/upgrade-np@1.0")
+                self.pkg("set-publisher -G %s test2" % self.durl2)
+
+                # check that runtime proxies are being used - we
+                # set a bogus proxy, then ensure our $http_proxy value
+                # gets used.
+                self.pkg("publisher")
+                self.pkg("set-publisher -G %s test1" % self.durl1)
+                self.pkg("set-publisher --no-refresh -g %s "
+                    "--proxy http://noodles test1" % self.durl1)
+                env = {"http_proxy": sysrepo_url}
+                self.pkg("refresh", env_arg=env)
+                self.pkg("install foo", env_arg=env)
+                self.pkg("uninstall foo", env_arg=env)
+
+                # check that $all_proxy works
+                env = {"all_proxy": sysrepo_url}
+                self.pkg("install foo", env_arg=env)
+                self.pkg("uninstall foo", env_arg=env)
+
+                # now check that no_proxy works
+                env["no_proxy"] = "*"
+                self.pkg("install foo", env_arg=env)
+                self.pkg("refresh --full", env_arg=env)
 
 
 class TestPkgInstallRepoPerTest(pkg5unittest.SingleDepotTestCase):
@@ -2009,17 +2111,37 @@ class TestPkgInstallUpgrade(pkg5unittest.SingleDepotTestCase):
             close
         """
 
+        linkpreserve = """
+            open linkpreserve@1.0
+            add file tmp/preserve1 path=etc/ssh/sshd_config mode=0644 owner=root group=root preserve=true
+            close
+            open linkpreserve@2.0
+            add file tmp/preserve2 path=etc/sunssh/sshd_config mode=0644 owner=root group=root preserve=true original_name=linkpreserve:etc/ssh/sshd_config
+            add link path=etc/ssh/sshd_config target=../sunssh/sshd_config
+            close """
+
         salvage = """
             open salvage@1.0
             add dir path=var mode=755 owner=root group=root
             add dir path=var/mail mode=755 owner=root group=root
             add dir path=var/log mode=755 owner=root group=root
+            add dir path=var/noodles mode=755 owner=root group=root
+            add dir path=var/persistent mode=755 owner=root group=root
             close
             open salvage@2.0
             add dir path=var mode=755 owner=root group=root
             add dir path=var/.migrate-to-shared mode=755 owner=root group=root
             add dir path=var/.migrate-to-shared/mail salvage-from=var/mail mode=755 owner=root group=root
             add dir path=var/.migrate-to-shared/log salvage-from=var/log mode=755 owner=root group=root
+            add dir path=var/spaghetti mode=755 owner=root group=root
+            add dir path=var/persistent mode=755 owner=root group=root salvage-from=var/noodles
+            close
+            open salvage@3.0
+            add dir path=var mode=755 owner=root group=root
+            add dir path=var/.migrate-to-shared mode=755 owner=root group=root
+            add dir path=var/.migrate-to-shared/mail salvage-from=var/mail mode=755 owner=root group=root
+            add dir path=var/.migrate-to-shared/log salvage-from=var/log mode=755 owner=root group=root
+            add dir path=var/persistent mode=755 owner=root group=root salvage-from=var/noodles salvage-from=var/spaghetti
             close
         """
 
@@ -2819,7 +2941,7 @@ adm
                 self.file_contains("newme", "preserve2")
 
         def test_directory_salvage(self):
-                """Make sure directory salvage works as expected"""
+                """Make sure basic directory salvage works as expected"""
                 self.pkgsend_bulk(self.rurl, self.salvage)
                 self.image_create(self.rurl)
                 self.pkg("install salvage@1.0")
@@ -2830,6 +2952,33 @@ adm
                 self.file_exists("var/.migrate-to-shared/mail/foo")
                 self.file_exists("var/.migrate-to-shared/mail/bar")
                 self.file_exists("var/.migrate-to-shared/mail/baz")
+
+        def test_directory_salvage_persistent(self):
+                """Make sure directory salvage works as expected when salvaging
+                content to an existing packaged directory."""
+
+                # we salvage content from two directories,
+                # var/noodles and var/spaghetti each of which disappear over
+                # subsequent updates.
+                self.pkgsend_bulk(self.rurl, self.salvage)
+                self.image_create(self.rurl)
+                self.pkg("install salvage@1.0")
+                self.file_append("var/mail/foo", "foo's mail")
+                self.file_append("var/noodles/noodles.txt", "yum")
+                self.pkg("update salvage@2.0")
+                self.file_exists("var/.migrate-to-shared/mail/foo")
+                self.file_exists("var/persistent/noodles.txt")
+                self.file_append("var/spaghetti/spaghetti.txt", "yum")
+                self.pkg("update")
+                self.file_exists("var/persistent/noodles.txt")
+                self.file_exists("var/persistent/spaghetti.txt")
+
+                # ensure that we can jump from 1.0 to 3.0 directly.
+                self.image_create(self.rurl)
+                self.pkg("install salvage@1.0")
+                self.file_append("var/noodles/noodles.txt", "yum")
+                self.pkg("update  salvage@3.0")
+                self.file_exists("var/persistent/noodles.txt")
 
         def test_special_salvage(self):
                 """Make sure salvaging directories with special files works as
@@ -2876,6 +3025,42 @@ adm
                                         # Only want actions with matching path.
                                         continue
                                 self.validate_fsobj_attrs(a, target=dest)
+
+        def test_link_preserve(self):
+                """Ensure that files transitioning to a link still follow
+                original_name preservation rules."""
+
+                self.pkgsend_bulk(self.rurl, (self.linkpreserve))
+                self.image_create(self.rurl, destroy=True, fs=("var",))
+
+                # Install package with original config file location.
+                self.pkg("install linkpreserve@1.0")
+                cfg_path = os.path.join("etc", "ssh", "sshd_config")
+                abs_path = os.path.join(self.get_img_path(), cfg_path)
+
+                self.file_exists(cfg_path)
+                self.assert_(not os.path.islink(abs_path))
+
+                # Modify the file.
+                self.file_append(cfg_path, "modified")
+
+                # Install new package version, verify file replaced with link
+                # and modified version was moved to new location.
+                new_cfg_path = os.path.join("etc", "sunssh", "sshd_config")
+                self.pkg("update linkpreserve@2.0")
+                self.assert_(os.path.islink(abs_path))
+                self.file_exists(new_cfg_path)
+                self.file_contains(new_cfg_path, "modified")
+
+                # Uninstall, then install original version again.
+                self.pkg("uninstall linkpreserve")
+                self.pkg("install linkpreserve@1.0")
+                self.file_contains(cfg_path, "preserve1")
+
+                # Install new package version and verify that unmodified file is
+                # replaced with new configuration file.
+                self.pkg("update linkpreserve@2.0")
+                self.file_contains(new_cfg_path, "preserve2")
 
 
 class TestPkgInstallActions(pkg5unittest.SingleDepotTestCase):
@@ -5249,91 +5434,6 @@ class TestMultipleDepots(pkg5unittest.ManyDepotTestCase):
                 # Check if install -n returns with exit code 1
                 self.pkg("install -n moo", exit=1)
 
-        def test_20_granular_proxy(self):
-                """Tests that images can use the set-publisher --proxy argument
-                to selectively proxy requests."""
-
-                self.dcs[1].start()
-                self.dcs[2].start()
-                # we use the system repository as a convenient way to setup
-                # a caching proxy.   Since the image doesn't have the property
-                # 'use-system-repo=True', the configuration of the sysrepo
-                # will remain static.
-                self.image_create(self.durl1)
-                self.sysrepo("")
-                sc_runtime_dir = os.path.join(self.test_root, "sysrepo_runtime")
-                sc_conf = os.path.join(sc_runtime_dir, "sysrepo_httpd.conf")
-                sc_cache = os.path.join(self.test_root, "sysrepo_cache")
-
-                # ensure pkg5srv can write cache content
-                os.chmod(sc_cache, 0777)
-
-                sysrepo_port = self.next_free_port
-                self.next_free_port += 1
-                sc = pkg5unittest.SysrepoController(sc_conf,
-                    sysrepo_port, sc_runtime_dir, testcase=self)
-
-                try:
-                        sc.start()
-                        sysrepo_url = "http://localhost:%s" % sysrepo_port
-
-                        self.image_create()
-                        self.pkg("set-publisher -p %s --proxy %s" % (self.durl1,
-                            sysrepo_url))
-                        self.pkg("install foo")
-                        self.pkg("uninstall foo")
-
-                        sc.stop()
-                        # with our proxy offline, and with no other origins
-                        # available, we should be unable to install
-                        self.pkg("install --no-refresh foo", exit=1)
-                        sc.start()
-
-                        # we cannot add another origin with the same url
-                        self.pkg("set-publisher --no-refresh -g %s test1" %
-                            self.durl1, exit=1)
-                        # we cannot add another proxied origin with that url
-                        self.pkg("set-publisher --no-refresh -g %s "
-                            "--proxy http://noodles test1" % self.durl1,
-                            exit=1)
-
-                        # Now add a second, unproxied publisher, ensuring we
-                        # can install packages from there.  Since the proxy
-                        # isn't configured to proxy that resource, this tests
-                        # that the proxy for self.durl1 isn't being used.
-                        self.pkg("set-publisher -g %s test2" % self.durl2)
-                        self.pkg("install --no-refresh "
-                            "pkg://test2/upgrade-np@1.0")
-                        self.pkg("uninstall pkg://test2/upgrade-np@1.0")
-                        self.pkg("set-publisher -G %s test2" % self.durl2)
-
-                        # check that runtime proxies are being used - we
-                        # set a bogus proxy, then ensure our $http_proxy value
-                        # gets used.
-                        self.pkg("publisher")
-                        self.pkg("set-publisher -G %s test1" % self.durl1)
-                        self.pkg("set-publisher --no-refresh -g %s "
-                            "--proxy http://noodles test1" % self.durl1)
-                        env = {"http_proxy": sysrepo_url}
-                        self.pkg("refresh", env_arg=env)
-                        self.pkg("install foo", env_arg=env)
-                        self.pkg("uninstall foo", env_arg=env)
-
-                        # check that $all_proxy works
-                        env = {"all_proxy": sysrepo_url}
-                        self.pkg("install foo", env_arg=env)
-                        self.pkg("uninstall foo", env_arg=env)
-
-                        # now check that no_proxy works
-                        env["no_proxy"] = "*"
-                        self.pkg("install foo", env_arg=env)
-                        self.pkg("refresh --full", env_arg=env)
-
-                finally:
-                        if sc.is_alive():
-                                sc.stop()
-                        self.killalldepots()
-
 
 class TestImageCreateCorruptImage(pkg5unittest.SingleDepotTestCaseCorruptImage):
         """
@@ -6818,6 +6918,10 @@ class TestConflictingActions(pkg5unittest.SingleDepotTestCase):
         actions into the same name in a namespace cannot be installed
         simultaneously."""
 
+        pkg_boring10 = """
+            open boring@1.0,5.11-0
+            close """
+
         pkg_dupfiles = """
             open dupfiles@0,5.11-0
             add file tmp/file1 path=dir/pathname mode=0755 owner=root group=bin
@@ -6886,7 +6990,38 @@ class TestConflictingActions(pkg5unittest.SingleDepotTestCase):
 
         pkg_overlaid = """
             open overlaid@0,5.11-0
+            add dir path=etc mode=0755 owner=root group=root
             add file tmp/file1 path=etc/pam.conf mode=644 owner=root group=sys preserve=true overlay=allow
+            close
+            open overlaid@1,5.11-0
+            add dir path=etc mode=0755 owner=root group=root
+            add file tmp/file1 path=etc/pam.conf mode=644 owner=root group=sys preserve=renamenew overlay=allow
+            close
+            open overlaid@2,5.11-0
+            add dir path=etc mode=0755 owner=root group=root
+            add file tmp/file3 path=etc/pam.conf mode=644 owner=root group=sys preserve=renamenew overlay=allow
+            close
+            open overlaid@3,5.11-0
+            add set name=pkg.renamed value=true
+            add depend type=require fmri=overlaid-renamed@3
+            add depend type=exclude fmri=overlaid-renamed@4
+            close
+            open overlaid-renamed@3,5.11-0
+            add depend type=optional fmri=overlaid@3
+            add dir path=etc mode=0755 owner=root group=root
+            add file tmp/file3 original_name=overlaid:etc/pam.conf path=etc/pam.conf mode=644 owner=root group=sys preserve=renamenew overlay=allow
+            close
+            open overlaid-renamed@4.0,5.11-0
+            add depend type=optional fmri=overlaid@3
+            add dir path=etc mode=0755 owner=root group=root
+            add dir path=etc/pam mode=0755 owner=root group=root
+            add file tmp/file4 original_name=overlaid:etc/pam.conf path=etc/pam/pam.conf mode=644 owner=root group=sys preserve=renamenew
+            close
+            open overlaid-renamed@4.1,5.11-0
+            add depend type=optional fmri=overlaid@3
+            add dir path=etc mode=0755 owner=root group=root
+            add dir path=etc/pam mode=0755 owner=root group=root
+            add file tmp/file4 original_name=overlaid:etc/pam.conf path=etc/pam/pam.conf mode=644 owner=root group=sys preserve=renamenew overlay=allow
             close
         """
 
@@ -6900,6 +7035,30 @@ class TestConflictingActions(pkg5unittest.SingleDepotTestCase):
         pkg_overlayer = """
             open overlayer@0,5.11-0
             add file tmp/file2 path=etc/pam.conf mode=644 owner=root group=sys preserve=true overlay=true
+            close
+        """
+
+        pkg_overlayer_move = """
+            open overlayer-move@0,5.11-0
+            add file tmp/file2 path=etc/pam.conf mode=644 owner=root group=sys preserve=true overlay=true
+            close
+            open overlayer-move@1,5.11-0
+            add file tmp/file3 path=etc/pam/pam.conf mode=644 owner=root group=sys preserve=true overlay=true original_name=overlayer-move:etc/pam.conf
+            close
+        """
+
+        pkg_overlayer_update = """
+            open overlayer-update@0,5.11-0
+            add file tmp/file1 path=etc/pam.conf mode=644 owner=root group=sys overlay=true
+            close
+            open overlayer-update@1,5.11-0
+            add file tmp/file2 path=etc/pam.conf mode=644 owner=root group=sys preserve=true overlay=true
+            close
+            open overlayer-update@2,5.11-0
+            add file tmp/file3 path=etc/pam.conf mode=644 owner=root group=sys preserve=renameold overlay=true
+            close
+            open overlayer-update@3,5.11-0
+            add file tmp/file4 path=etc/pam.conf mode=644 owner=root group=sys preserve=renamenew overlay=true
             close
         """
 
@@ -6927,7 +7086,7 @@ class TestConflictingActions(pkg5unittest.SingleDepotTestCase):
 
         pkg_unpreserved_overlayer = """
             open unpreserved-overlayer@0,5.11-0
-            add file tmp/file2 path=etc/pam.conf mode=644 owner=root group=sys overlay=true
+            add file tmp/unpreserved path=etc/pam.conf mode=644 owner=root group=sys overlay=true
             close
         """
 
@@ -7417,7 +7576,8 @@ adm
             close
         """
 
-        misc_files = ["tmp/file1", "tmp/file2", "tmp/file3"]
+        misc_files = ["tmp/file1", "tmp/file2", "tmp/file3", "tmp/file4",
+            "tmp/unpreserved"]
 
         # Keep the depots around for the duration of the entire class
         persistent_setup = True
@@ -7541,7 +7701,7 @@ adm
                 self.pkg("verify")
 
                 # Re-use the overlay packages for some preserve testing.
-                self.pkg("install overlaid")
+                self.pkg("install overlaid@0")
                 self.pkg("-D broken-conflicting-action-handling=1 install "
                     "invalid-overlayer")
                 # We may have been able to lay down the package, but because the
@@ -7595,6 +7755,11 @@ adm
                 # (preserve does not have to be set).
                 self.image_create(self.rurl)
 
+                # Ensure boring package is installed as conflict checking is
+                # bypassed (and thus, overlay semantics) if all packages are
+                # removed from an image.
+                self.pkg("install boring")
+
                 # Should fail because one action specified overlay=allow,
                 # but not preserve (it isn't editable).
                 self.pkg("install invalid-overlaid")
@@ -7603,7 +7768,7 @@ adm
 
                 # Should fail because one action is overlayable but overlaying
                 # action doesn't declare its intent to overlay.
-                self.pkg("install overlaid")
+                self.pkg("install overlaid@0")
                 self.file_contains("etc/pam.conf", "file1")
                 self.pkg("install invalid-overlayer", exit=1)
 
@@ -7635,7 +7800,7 @@ adm
                 # Verify that the file isn't touched on uninstall of the
                 # overlaying package if package being overlaid is still
                 # installed.
-                self.pkg("uninstall overlayer")
+                self.pkg("uninstall -vvv overlayer")
                 self.file_contains("etc/pam.conf", "zigit")
                 self.file_contains("etc/pam.conf", "file2")
 
@@ -7646,7 +7811,7 @@ adm
 
                 # Verify that installing both packages at the same time results
                 # in only the overlaying file being delivered.
-                self.pkg("install overlaid overlayer")
+                self.pkg("install overlaid@0 overlayer")
                 self.file_contains("etc/pam.conf", "file2")
 
                 # Verify that the file isn't touched on uninstall of the
@@ -7658,7 +7823,7 @@ adm
 
                 # Re-install overlaid package and verify that file content
                 # does not change.
-                self.pkg("install overlaid")
+                self.pkg("install overlaid@0")
                 self.file_contains("etc/pam.conf", "file2")
                 self.file_contains("etc/pam.conf", "zigit")
                 self.pkg("uninstall overlaid overlayer")
@@ -7666,8 +7831,8 @@ adm
                 # Should succeed because one action is overlayable and
                 # overlaying action declares its intent to overlay even
                 # though the overlaying action isn't marked with preserve.
-                self.pkg("install overlaid unpreserved-overlayer")
-                self.file_contains("etc/pam.conf", "file2")
+                self.pkg("install overlaid@0 unpreserved-overlayer")
+                self.file_contains("etc/pam.conf", "unpreserved")
 
                 # Should succeed because overlaid action permits modification
                 # and contents matches overlaying action.
@@ -7684,20 +7849,213 @@ adm
 
                 # Should revert to content delivered by overlaying action.
                 self.pkg("fix unpreserved-overlayer")
-                self.file_contains("etc/pam.conf", "file2")
+                self.file_contains("etc/pam.conf", "unpreserved")
                 self.file_doesnt_contain("etc/pam.conf", "zigit")
 
                 # Should revert to content delivered by overlaying action.
                 self.file_append("etc/pam.conf", "zigit")
                 self.pkg("revert /etc/pam.conf")
-                self.file_contains("etc/pam.conf", "file2")
+                self.file_contains("etc/pam.conf", "unpreserved")
                 self.file_doesnt_contain("etc/pam.conf", "zigit")
                 self.pkg("uninstall unpreserved-overlayer")
 
                 # Should revert to content delivered by overlaid action.
-                self.file_contains("etc/pam.conf", "file2")
+                self.file_contains("etc/pam.conf", "unpreserved")
                 self.pkg("revert /etc/pam.conf")
                 self.file_contains("etc/pam.conf", "file1")
+
+                # Install overlaying package, then update overlaid package and
+                # verify that file content does not change if only preserve
+                # attribute changes.
+                self.pkg("install -vvv unpreserved-overlayer")
+                self.file_contains("etc/pam.conf", "unpreserved")
+                self.pkg("install overlaid@1")
+                self.file_contains("etc/pam.conf", "unpreserved")
+                self.pkg("uninstall -vvv overlaid")
+
+                # Now update overlaid package again, and verify that file
+                # content does not change even though overlaid content has.
+                self.pkg("install -vvv overlaid@2")
+                self.file_contains("etc/pam.conf", "unpreserved")
+
+                # Now update overlaid package again this time as part of a
+                # rename, and verify that file content does not change even
+                # though file has moved between packages.
+                self.pkg("install -vvv overlaid@3")
+                self.file_contains("etc/pam.conf", "unpreserved")
+
+                # Verify that unpreserved overlay is not salvaged when both
+                # overlaid and overlaying package are removed at the same time.
+                # (Preserved files are salvaged if they have been modified on
+                # uninstall.)
+
+                # Ensure directory is empty before testing.
+                api_inst = self.get_img_api_obj()
+                img_inst = api_inst.img
+                sroot = os.path.join(img_inst.imgdir, "lost+found")
+                shutil.rmtree(sroot)
+
+                # Verify etc directory not found after uninstall.
+                self.pkg("uninstall -vvv overlaid-renamed unpreserved-overlayer")
+                salvaged = [
+                    n for n in os.listdir(sroot)
+                    if n.startswith("etc")
+                ]
+                self.assertEqualDiff(salvaged, [])
+
+                # Next, update overlaid package again this time as part of a
+                # file move.  Verify that the configuration file exists at both
+                # the new location and the old location, that the content has
+                # not changed in either, and that the new configuration exists
+                # as expected as ".new".
+                self.pkg("install -vvv overlaid-renamed@3 unpreserved-overlayer")
+                self.pkg("install -vvv overlaid-renamed@4.1")
+                self.file_contains("etc/pam.conf", "unpreserved")
+                self.file_contains("etc/pam/pam.conf", "unpreserved")
+                self.file_contains("etc/pam/pam.conf.new", "file4")
+
+                # Verify etc/pam.conf not salvaged after uninstall as overlay
+                # file has not been changed.
+                self.pkg("uninstall -vvv overlaid-renamed unpreserved-overlayer")
+                salvaged = [
+                    n for n in os.listdir(os.path.join(sroot, "etc"))
+                    if n.startswith("pam.conf")
+                ]
+                self.assertEqualDiff(salvaged, [])
+
+                # Next, repeat the same set of tests performed above for renames
+                # and moves with an overlaying, preserved file.
+                #
+                # Install overlaying package, then update overlaid package and
+                # verify that file content does not change if only preserve
+                # attribute changes.
+                self.pkg("install -vvv overlayer")
+                self.file_contains("etc/pam.conf", "file2")
+                self.file_append("etc/pam.conf", "zigit")
+                self.pkg("install overlaid@1")
+                self.file_contains("etc/pam.conf", "zigit")
+                self.pkg("uninstall -vvv overlaid")
+
+                # Now update overlaid package again, and verify that file
+                # content does not change even though overlaid content has.
+                self.pkg("install -vvv overlaid@2")
+                self.file_contains("etc/pam.conf", "zigit")
+
+                # Now update overlaid package again this time as part of a
+                # rename, and verify that file content does not change even
+                # though file has moved between packages.
+                self.pkg("install -vvv overlaid@3")
+                self.file_contains("etc/pam.conf", "zigit")
+
+                # Verify that preserved overlay is salvaged when both overlaid
+                # and overlaying package are removed at the same time.
+                # (Preserved files are salvaged if they have been modified on
+                # uninstall.)
+
+                # Ensure directory is empty before testing.
+                api_inst = self.get_img_api_obj()
+                img_inst = api_inst.img
+                sroot = os.path.join(img_inst.imgdir, "lost+found")
+                shutil.rmtree(sroot)
+
+                # Verify etc directory found after uninstall.
+                self.pkg("uninstall -vvv overlaid-renamed overlayer")
+                salvaged = [
+                    n for n in os.listdir(sroot)
+                    if n.startswith("etc")
+                ]
+                self.assertEqualDiff(salvaged, ["etc"])
+
+                # Next, update overlaid package again, this time as part of a
+                # file move where the overlay attribute was dropped.  Verify
+                # that the configuration file exists at both the new location
+                # and the old location, that the content has not changed in
+                # either, and that the new configuration exists as expected as
+                # ".new".
+                self.pkg("install -vvv overlaid-renamed@3 overlayer")
+                self.file_append("etc/pam.conf", "zigit")
+                self.pkg("install -vvv overlaid-renamed@4.0")
+                self.file_contains("etc/pam.conf", "zigit")
+                self.file_contains("etc/pam/pam.conf", "zigit")
+                self.file_contains("etc/pam/pam.conf.new", "file4")
+                self.pkg("uninstall -vvv overlaid-renamed overlayer")
+
+                # Next, update overlaid package again, this time as part of a
+                # file move.  Verify that the configuration file exists at both
+                # the new location and the old location, that the content has
+                # not changed in either, and that the new configuration exists
+                # as expected as ".new".
+                self.pkg("install -vvv overlaid-renamed@3 overlayer")
+                self.file_append("etc/pam.conf", "zigit")
+                self.pkg("install -vvv overlaid-renamed@4.1")
+                self.file_contains("etc/pam.conf", "zigit")
+                self.file_contains("etc/pam/pam.conf", "zigit")
+                self.file_contains("etc/pam/pam.conf.new", "file4")
+
+                # Next, downgrade the package and verify that if an overlaid
+                # file moves back to its original location, the content of the
+                # overlay file will not change.
+                self.pkg("update -vvv overlaid-renamed@3")
+                self.file_contains("etc/pam.conf", "zigit")
+
+                # Now upgrade again for remaining tests.
+                self.pkg("install -vvv overlaid-renamed@4.1")
+
+                # Verify etc/pam.conf and etc/pam/pam.conf salvaged after
+                # uninstall as overlay file and overlaid file is different from
+                # packaged.
+                shutil.rmtree(sroot)
+                self.pkg("uninstall -vvv overlaid-renamed overlayer")
+                salvaged = sorted(
+                    n for n in os.listdir(os.path.join(sroot, "etc"))
+                    if n.startswith("pam")
+                )
+                # Should have three entries; one should be 'pam' directory
+                # (presumably containing pam.conf-X...), another a file starting
+                # with 'pam.conf', and finally a 'pam-XXX' directory containing
+                # the 'pam.conf.new-XXX'.
+                self.assertEqualDiff(salvaged[0], "pam")
+                self.assert_(salvaged[1].startswith("pam-"),
+                    msg=str(salvaged))
+                self.assert_(salvaged[2].startswith("pam.conf"),
+                    msg=str(salvaged))
+
+                # Next, install overlaid package and overlaying package, then
+                # upgrade each to a version where the file has changed
+                # locations and verify that the content remains intact.
+                self.pkg("install -vvv overlaid@0 overlayer-move@0")
+                self.file_append("etc/pam.conf", "zigit")
+                self.pkg("install -vvv overlaid@3")
+                self.file_contains("etc/pam.conf", "zigit")
+                self.pkg("install -vvv overlaid-renamed@4.1 overlayer-move@1")
+                self.file_contains("etc/pam/pam.conf", "zigit")
+
+                # Next, downgrade overlaid-renamed and overlaying package to
+                # versions where the file is restored to its original location
+                # and verify that the content is reverted to the original
+                # overlay version since this is a downgrade.
+                self.pkg("update -vvv overlaid-renamed@3 overlayer-move@0")
+                self.file_contains("etc/pam.conf", "file2")
+                self.pkg("uninstall overlaid-renamed overlayer-move")
+
+                # Next, install overlaid package and overlaying package and
+                # verify preserve acts as expected for overlay package as it is
+                # updated.
+                self.pkg("install -vvv overlaid@2 overlayer-update@0")
+                self.file_contains("etc/pam.conf", "file1")
+                # unpreserved -> preserved
+                self.pkg("install -vvv overlayer-update@1")
+                self.file_contains("etc/pam.conf", "file2")
+                self.file_append("etc/pam.conf", "zigit")
+                # preserved -> renameold
+                self.pkg("install -vvv overlayer-update@2")
+                self.file_doesnt_contain("etc/pam.conf", "zigit")
+                self.file_contains("etc/pam.conf.old", "zigit")
+                self.file_append("etc/pam.conf", "zagat")
+                # renameold -> renamenew
+                self.pkg("install -vvv overlayer-update@3")
+                self.file_contains("etc/pam.conf", "zagat")
+                self.file_contains("etc/pam.conf.new", "file4")
 
         def test_different_types(self):
                 """Test the behavior of pkg(1) when multiple actions of
@@ -8114,8 +8472,8 @@ adm
                     "tripledupfilec")
                 self.pkg("-D broken-conflicting-action-handling=1 install "
                     "tripledupfilea")
-                self.pkg("change-variant variant.foo=two")
-                self.pkg("change-variant variant.foo=one", exit=1)
+                self.pkg("change-variant -vvv variant.foo=two")
+                self.pkg("change-variant -vvv variant.foo=one", exit=1)
 
         def dir_exists(self, path, mode=None, owner=None, group=None):
                 dir_path = os.path.join(self.get_img_path(), path)

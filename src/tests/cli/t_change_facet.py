@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2009, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
 
 import testutils
 if __name__ == "__main__":
@@ -122,7 +122,7 @@ class TestPkgChangeFacet(pkg5unittest.SingleDepotTestCase):
 
                 self.pkg_image_create(self.rurl, additional_args=ic_args)
                 self.pkg("facet")
-                self.pkg("facet -H 'facet.locale*' | egrep False")
+                self.pkg("facet -H -F tsv 'facet.locale*' | egrep False")
 
                 # install a package and verify
                 alist = [self.plist[0]]
@@ -145,8 +145,9 @@ class TestPkgChangeFacet(pkg5unittest.SingleDepotTestCase):
                 # are in effect
                 self.pkg("change-facet -n --parsable=0 wombat=false")
                 self.assertEqualParsable(self.output,
-                    affect_packages=alist,
-                    change_facets=[["facet.wombat", False]])
+                    affect_packages=[],
+                    change_facets=[["facet.wombat", False, None, 'local',
+                       False, False]])
 
                 # Again, but this time after removing the publisher cache data
                 # and as an unprivileged user to verify that cached manifest
@@ -157,8 +158,9 @@ class TestPkgChangeFacet(pkg5unittest.SingleDepotTestCase):
                 self.pkg("change-facet --no-refresh -n --parsable=0 "
                     "wombat=false", su_wrap=True)
                 self.assertEqualParsable(self.output,
-                    affect_packages=alist,
-                    change_facets=[["facet.wombat", False]])
+                    affect_packages=[],
+                    change_facets=[["facet.wombat", False, None, 'local',
+                        False, False]])
 
                 # Again, but this time after removing the cache directory
                 # entirely.
@@ -168,15 +170,17 @@ class TestPkgChangeFacet(pkg5unittest.SingleDepotTestCase):
                 self.pkg("change-facet --no-refresh -n --parsable=0 "
                     "wombat=false", su_wrap=True)
                 self.assertEqualParsable(self.output,
-                    affect_packages=alist,
-                    change_facets=[["facet.wombat", False]])
+                    affect_packages=[],
+                    change_facets=[["facet.wombat", False, None, 'local',
+                        False, False]])
 
                 # change to pick up another file w/ two tags and test the
                 # parsable output
                 self.pkg("change-facet --parsable=0 facet.locale.nl_ZA=True")
                 self.assertEqualParsable(self.output,
                     affect_packages=alist,
-                    change_facets=[["facet.locale.nl_ZA", True]])
+                    change_facets=[["facet.locale.nl_ZA", True, None, 'local',
+                        False, False]])
                 self.pkg("verify")
                 self.pkg("facet")
 
@@ -195,9 +199,11 @@ class TestPkgChangeFacet(pkg5unittest.SingleDepotTestCase):
                 self.assertEqualParsable(self.output,
                     affect_packages=alist,
                     change_facets=[
-                        ["facet.locale*", None],
-                        ["facet.locale.fr*", None],
-                        ["facet.locale.fr_CA", None]
+                        ["facet.locale*", None, False, 'local', False, False],
+                        ["facet.locale.fr*", None, True, 'local', False,
+                            False],
+                        ["facet.locale.fr_CA", None, False, 'local', False,
+                            False]
                     ])
                 self.pkg("verify")
 
@@ -225,9 +231,10 @@ class TestPkgChangeFacet(pkg5unittest.SingleDepotTestCase):
                 self.assertEqualParsable(self.output,
                     affect_packages=alist,
                     change_facets=[
-                        ["facet.locale*", None],
-                        ["facet.locale.*", False],
-                        ["facet.locale.fr_CA", True]
+                        ["facet.locale*", None, False, 'local', False, False],
+                        ["facet.locale.*", False, None, 'local', False, False],
+                        ["facet.locale.fr_CA", True, None, 'local', False,
+                            False]
                     ])
                 self.assert_file_is_there("4")
 
@@ -238,9 +245,11 @@ class TestPkgChangeFacet(pkg5unittest.SingleDepotTestCase):
                 self.assertEqualParsable(self.output,
                     affect_packages=alist,
                     change_facets=[
-                        ["facet.locale.*", None],
-                        ["facet.locale.fr_*", False],
-                        ["facet.locale.fr_CA", None]
+                        ["facet.locale.*", None, False, 'local', False, False],
+                        ["facet.locale.fr_*", False, None, 'local', False,
+                            False],
+                        ["facet.locale.fr_CA", None, True, 'local', False,
+                            False]
                     ])
                 self.assert_file_is_there("4")
 
@@ -252,11 +261,11 @@ class TestPkgChangeFacet(pkg5unittest.SingleDepotTestCase):
                 # Test that setting a non-existent facet to True then removing
                 # it works.
                 self.pkg("change-facet -v foo=True")
-                self.pkg("facet -H")
-                self.assertEqual("facet.foo True\n", self.output)
+                self.pkg("facet -H -F tsv")
+                self.assertEqual("facet.foo\tTrue\tlocal\n", self.output)
                 self.pkg("change-facet --parsable=0 foo=None")
                 self.assertEqualParsable(self.output, change_facets=[
-                    ["facet.foo", None]])
+                    ["facet.foo", None, True, 'local', False, False]])
                 self.pkg("facet -H")
                 self.assertEqual("", self.output)
 
@@ -291,12 +300,11 @@ class TestPkgChangeFacet(pkg5unittest.SingleDepotTestCase):
                 # install a random package and make sure we don't accidentally
                 # change facets.
                 self.pkg("install pkg_B@1.0")
-                self.pkg("facet -H")
-                output = self.reduceSpaces(self.output)
+                self.pkg("facet -H -F tsv")
                 expected = (
-                    "facet.locale.fr_FR False\n"
-                    "facet.locale.fr False\n")
-                self.assertEqualDiff(expected, output)
+                    "facet.locale.fr\tFalse\tlocal\n"
+                    "facet.locale.fr_FR\tFalse\tlocal\n")
+                self.assertEqualDiff(expected, self.output)
                 for i in [ 0, 3, 4, 5, 6, 7 ]:
                         self.assert_file_is_there(str(i))
                 for i in [ 1, 2 ]:
@@ -306,12 +314,11 @@ class TestPkgChangeFacet(pkg5unittest.SingleDepotTestCase):
                 # update an image and make sure we don't accidentally change
                 # facets.
                 self.pkg("update")
-                self.pkg("facet -H")
-                output = self.reduceSpaces(self.output)
+                self.pkg("facet -H -F tsv")
                 expected = (
-                    "facet.locale.fr_FR False\n"
-                    "facet.locale.fr False\n")
-                self.assertEqualDiff(expected, output)
+                    "facet.locale.fr\tFalse\tlocal\n"
+                    "facet.locale.fr_FR\tFalse\tlocal\n")
+                self.assertEqualDiff(expected, self.output)
                 for i in [ 0, 3, 4, 5, 6, 7 ]:
                         self.assert_file_is_there(str(i))
                 for i in [ 1, 2 ]:
@@ -333,10 +340,10 @@ class TestPkgChangeFacet(pkg5unittest.SingleDepotTestCase):
 
                 # set a facet on an image with no facets
                 self.pkg("change-facet -v locale.fr=False")
-                self.pkg("facet -H")
+                self.pkg("facet -H -F tsv")
                 output = self.reduceSpaces(self.output)
                 expected = (
-                    "facet.locale.fr False\n")
+                    "facet.locale.fr\tFalse\tlocal\n")
                 self.assertEqualDiff(expected, output)
                 for i in [ 0, 2, 3, 4, 5, 6, 7 ]:
                         self.assert_file_is_there(str(i))
@@ -346,12 +353,11 @@ class TestPkgChangeFacet(pkg5unittest.SingleDepotTestCase):
 
                 # set a facet on an image with existing facets
                 self.pkg("change-facet -v locale.fr_FR=False")
-                self.pkg("facet -H")
-                output = self.reduceSpaces(self.output)
+                self.pkg("facet -H -F tsv")
                 expected = (
-                    "facet.locale.fr_FR False\n"
-                    "facet.locale.fr False\n")
-                self.assertEqualDiff(expected, output)
+                    "facet.locale.fr\tFalse\tlocal\n"
+                    "facet.locale.fr_FR\tFalse\tlocal\n")
+                self.assertEqualDiff(expected, self.output)
                 for i in [ 0, 3, 4, 5, 6, 7 ]:
                         self.assert_file_is_there(str(i))
                 for i in [ 1, 2 ]:
@@ -361,11 +367,11 @@ class TestPkgChangeFacet(pkg5unittest.SingleDepotTestCase):
                 # clear a facet while setting a facet on an image with other
                 # facets that aren't being changed
                 self.pkg("change-facet -v locale.fr=None locale.nl=False")
-                self.pkg("facet -H")
+                self.pkg("facet -H -F tsv")
                 output = self.reduceSpaces(self.output)
                 expected = (
-                    "facet.locale.fr_FR False\n"
-                    "facet.locale.nl False\n")
+                    "facet.locale.fr_FR\tFalse\tlocal\n"
+                    "facet.locale.nl\tFalse\tlocal\n")
                 self.assertEqualDiff(expected, output)
                 for i in [ 0, 1, 3, 4, 6, 7 ]:
                         self.assert_file_is_there(str(i))
@@ -376,10 +382,10 @@ class TestPkgChangeFacet(pkg5unittest.SingleDepotTestCase):
                 # clear a facet on an image with other facets that aren't
                 # being changed
                 self.pkg("change-facet -v locale.nl=None")
-                self.pkg("facet -H")
+                self.pkg("facet -H -F tsv")
                 output = self.reduceSpaces(self.output)
                 expected = (
-                    "facet.locale.fr_FR False\n")
+                    "facet.locale.fr_FR\tFalse\tlocal\n")
                 self.assertEqualDiff(expected, output)
                 for i in [ 0, 1, 3, 4, 5, 6, 7 ]:
                         self.assert_file_is_there(str(i))
@@ -389,7 +395,7 @@ class TestPkgChangeFacet(pkg5unittest.SingleDepotTestCase):
 
                 # clear the only facet on an image
                 self.pkg("change-facet -v locale.fr_FR=None")
-                self.pkg("facet -H")
+                self.pkg("facet -H -F tsv")
                 self.assertEqualDiff("", self.output)
                 for i in range(8):
                         self.assert_file_is_there(str(i))

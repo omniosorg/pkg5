@@ -36,6 +36,7 @@ import simplejson as json
 import stat
 import statvfs
 import threading
+import types
 
 import pkg.actions
 import pkg.client.api_errors as api_errors
@@ -61,7 +62,7 @@ class _JSONWriter(object):
                 self.__single_pass = single_pass
 
                 # Default to a 32K buffer.
-                self.__bufsz = 32 * 1024 
+                self.__bufsz = 32 * 1024
 
                 if sign:
                         if not pathname:
@@ -210,6 +211,9 @@ class CatalogPartBase(object):
                 """Initializes a CatalogPartBase object."""
 
                 self.meta_root = meta_root
+                # Sanity check: part names can't be pathname-ish.
+                if name != os.path.basename(name):
+                        raise UnrecognizedCatalogPart(name)
                 self.name = name
                 self.sign = sign
                 self.signatures = {}
@@ -376,6 +380,8 @@ class CatalogPart(CatalogPartBase):
 
                 self.__data = {}
                 self.ordered = ordered
+                if not name.startswith("catalog."):
+                        raise UnrecognizedCatalogPart(name)
                 CatalogPartBase.__init__(self, name, meta_root=meta_root,
                     sign=sign)
 
@@ -915,14 +921,15 @@ class CatalogPart(CatalogPartBase):
                         if cb is None or cb(t, entry):
                                 yield t, entry
 
-        def validate(self, signatures=None):
+        def validate(self, signatures=None, require_signatures=False):
                 """Verifies whether the signatures for the contents of the
                 CatalogPart match the specified signature data, or if not
                 provided, the current signature data.  Raises the exception
                 named 'BadCatalogSignatures' on failure."""
 
-                if not self.signatures and not signatures:
-                        # Nothing to validate.
+                if not self.signatures and not signatures and \
+                    not require_signatures:
+                        # Nothing to validate, and we're not required to.
                         return
 
                 # Ensure content is loaded before attempting to retrieve
@@ -952,6 +959,8 @@ class CatalogUpdate(CatalogPartBase):
                 """Initializes a CatalogUpdate object."""
 
                 self.__data = {}
+                if not name.startswith("update."):
+                        raise UnrecognizedCatalogPart(name)
                 CatalogPartBase.__init__(self, name, meta_root=meta_root,
                     sign=sign)
 
@@ -1070,14 +1079,15 @@ class CatalogUpdate(CatalogPartBase):
                                         yield get_update(pub, stem, entry)
                 return
 
-        def validate(self, signatures=None):
+        def validate(self, signatures=None, require_signatures=False):
                 """Verifies whether the signatures for the contents of the
                 CatalogUpdate match the specified signature data, or if not
                 provided, the current signature data.  Raises the exception
                 named 'BadCatalogSignatures' on failure."""
 
-                if not self.signatures and not signatures:
-                        # Nothing to validate.
+                if not self.signatures and not signatures and \
+                    not require_signatures:
+                        # Nothing to validate, and we're not required to.
                         return
 
                 # Ensure content is loaded before attempting to retrieve
@@ -1098,6 +1108,19 @@ class CatalogAttrs(CatalogPartBase):
         # Properties.
         __data = None
 
+        # This structure defines defaults (for use in __init__) as well as
+        # the set of required elements for this catalog part.  See also the
+        # logic in load().
+        __DEFAULT_ELEMS = {
+            "created": None,
+            "last-modified": None,
+            "package-count": 0,
+            "package-version-count": 0,
+            "parts": {},
+            "updates": {},
+            "version": 1,
+        }
+
         def __init__(self, meta_root=None, sign=True):
                 """Initializes a CatalogAttrs object."""
 
@@ -1110,15 +1133,9 @@ class CatalogAttrs(CatalogPartBase):
                         # this is actually a new object, so setup some sane
                         # defaults.
                         created = self.__data["last-modified"]
-                        self.__data = {
-                            "created": created,
-                            "last-modified": created,
-                            "package-count": 0,
-                            "package-version-count": 0,
-                            "parts": {},
-                            "updates": {},
-                            "version": 1,
-                        }
+                        self.__data = copy.deepcopy(self.__DEFAULT_ELEMS)
+                        self.__data["created"] = created
+                        self.__data["last-modified"] = created
                 else:
                         # Assume that the attributes of the catalog can be
                         # obtained from a file.
@@ -1200,23 +1217,53 @@ class CatalogAttrs(CatalogPartBase):
                 if self.loaded:
                         # Already loaded, or only in-memory.
                         return
+                location = os.path.join(self.meta_root, self.name)
 
                 struct = CatalogPartBase.load(self)
+                # Check to see that struct is as we expect: it must be a dict
+                # and have all of the elements in self.__DEFAULT_ELEMS.
+                if type(struct) != types.DictType or \
+                    not (set(self.__DEFAULT_ELEMS.keys()) <= \
+                    set(struct.keys())):
+                        raise api_errors.InvalidCatalogFile(location)
+
+                def cat_ts_to_datetime(val):
+                        try:
+                                return basic_ts_to_datetime(val)
+                        except ValueError:
+                                raise api_errors.InvalidCatalogFile(location)
+
                 for key, val in struct.iteritems():
                         if key in ("created", "last-modified"):
                                 # Convert ISO-8601 basic format strings to
                                 # datetime objects.  These dates can be
                                 # 'null' due to v0 catalog transformations.
                                 if val:
-                                        struct[key] = basic_ts_to_datetime(val)
+                                        struct[key] = cat_ts_to_datetime(val)
                                 continue
 
                         if key in ("parts", "updates"):
+                                if type(val) != types.DictType:
+                                        raise api_errors.InvalidCatalogFile(
+                                            location)
+
+                                # 'parts' and 'updates' have a more complex
+                                # structure.  Check that all of the subparts
+                                # look sane.
+                                for subpart in val:
+                                        if subpart != os.path.basename(subpart):
+                                                raise api_errors.\
+                                                    UnrecognizedCatalogPart(
+                                                    "%s {%s: %s}" % (self.name,
+                                                    key, subpart))
+
+                                # Build datetimes from timestamps.
                                 for e in val:
                                         lm = val[e].get("last-modified", None)
                                         if lm:
-                                                lm = basic_ts_to_datetime(lm)
+                                                lm = cat_ts_to_datetime(lm)
                                                 val[e]["last-modified"] = lm
+
                 self.__data = struct
 
         def save(self):
@@ -1232,14 +1279,15 @@ class CatalogAttrs(CatalogPartBase):
 
                 CatalogPartBase.save(self, self.__transform(), single_pass=True)
 
-        def validate(self, signatures=None):
+        def validate(self, signatures=None, require_signatures=False):
                 """Verifies whether the signatures for the contents of the
                 CatalogAttrs match the specified signature data, or if not
                 provided, the current signature data.  Raises the exception
                 named 'BadCatalogSignatures' on failure."""
 
-                if not self.signatures and not signatures:
-                        # Nothing to validate.
+                if not self.signatures and not signatures and \
+                    not require_signatures:
+                        # Nothing to validate, and we're not required to.
                         return
 
                 # Ensure content is loaded before attempting to retrieve
@@ -1847,7 +1895,7 @@ class Catalog(object):
                         # current.
 
                         # single-pass encoding is not used for summary part as
-                        # it increases memory usage substantially (30MB at 
+                        # it increases memory usage substantially (30MB at
                         # current for /dev).  No significant difference is
                         # detectable for other parts though.
                         single_pass = name in (self.__BASE_PART,
@@ -3780,12 +3828,12 @@ class Catalog(object):
                 }
                 base.last_modified = op_time
 
-        def validate(self):
+        def validate(self, require_signatures=False):
                 """Verifies whether the signatures for the contents of the
                 catalog match the current signature data.  Raises the
                 exception named 'BadCatalogSignatures' on failure."""
 
-                self._attrs.validate()
+                self._attrs.validate(require_signatures=require_signatures)
 
                 def get_sigs(mdata):
                         sigs = {}
@@ -3805,7 +3853,8 @@ class Catalog(object):
                         if part is None:
                                 # Part does not exist; no validation needed.
                                 continue
-                        part.validate(signatures=get_sigs(mdata))
+                        part.validate(signatures=get_sigs(mdata),
+                            require_signatures=require_signatures)
 
                 for name, mdata in self._attrs.updates.iteritems():
                         ulog = self.__get_update(name, cache=False,
@@ -3813,7 +3862,8 @@ class Catalog(object):
                         if ulog is None:
                                 # Update does not exist; no validation needed.
                                 continue
-                        ulog.validate(signatures=get_sigs(mdata))
+                        ulog.validate(signatures=get_sigs(mdata),
+                            require_signatures=require_signatures)
 
         batch_mode = property(__get_batch_mode, __set_batch_mode)
         last_modified = property(__get_last_modified, __set_last_modified,
@@ -3847,7 +3897,7 @@ def verify(filename):
         # With the else case above, this should never be None.
         assert catobj
 
-        catobj.validate()
+        catobj.validate(require_signatures=True)
 
 # Methods used by Catalog classes.
 def datetime_to_ts(dt):
@@ -3927,182 +3977,3 @@ def basic_ts_to_datetime(ts):
         except ValueError:
                 usec = 0
         return datetime.datetime(year, month, day, hour, minutes, sec, usec)
-
-def update_ts_to_datetime(ts):
-        """Take timestamp ts in ISO-8601 basic partial format, and convert it
-        to a datetime object."""
-
-        year = int(ts[0:4])
-        month = int(ts[4:6])
-        day = int(ts[6:8])
-        hour = int(ts[9:11])
-        return datetime.datetime(year, month, day, hour)
-
-def extract_matching_fmris(pkgs, patterns=None, matcher=None,
-    constraint=None, counthash=None, reverse=True, versions=None):
-        """Iterate through the given list of PkgFmri objects,
-        looking for packages matching 'pattern' in 'patterns', based on the
-        function in 'matcher' and the versioning constraint described by
-        'constraint'.  If 'matcher' is None, uses fmri subset matching
-        as the default.  If 'patterns' is None, 'versions' may be specified,
-        and looks for packages matching the patterns specified in 'versions'.
-        When using 'versions', the 'constraint' parameter is ignored.
-
-        'versions' should be a list of strings of the format:
-            release,build_release-branch:datetime
-
-        ...with a value of '*' provided for any component to be ignored. '*' or
-        '?' may be used within each component value and will act as wildcard
-        characters ('*' for one or more characters, '?' for a single character).
-
-        'reverse' is an optional boolean value indicating whether results
-        should be in descending name and version order.  If false, results
-        will be in ascending name, descending version order.
-
-        If 'counthash' is a dictionary, instead store the number of matched
-        fmris for each package that matches."""
-
-        if not matcher:
-                matcher = fmri.fmri_match
-
-        if patterns is None:
-                patterns = []
-        elif not isinstance(patterns, list):
-                patterns = [ patterns ]
-
-        if versions is None:
-                versions = []
-        elif not isinstance(versions, list):
-                versions = [ pkg.version.MatchingVersion(versions, None) ]
-        else:
-                for i, ver in enumerate(versions):
-                        versions[i] = pkg.version.MatchingVersion(ver, None)
-
-        # 'pattern' may be a partially or fully decorated fmri; we want
-        # to extract its name and version to match separately against
-        # the catalog.
-        tuples = {}
-
-        if patterns:
-                matched = {
-                    "matcher": set(),
-                    "publisher": set(),
-                    "version": set(),
-                }
-        elif versions:
-                matched = {
-                    "version": set(),
-                }
-
-        for pattern in patterns:
-                if isinstance(pattern, fmri.PkgFmri):
-                        tuples[pattern] = pattern.tuple()
-                else:
-                        assert pattern != None
-                        # XXX "5.11" here needs to be saner
-                        tuples[pattern] = fmri.PkgFmri(fmri=pattern,
-                            build_release="5.11").tuple()
-
-        def by_pattern(p):
-                cat_pub, cat_name = p.tuple()[:2]
-                pat_match = False
-                for pattern in patterns:
-                        pat_pub, pat_name, pat_version = tuples[pattern]
-
-                        if not pat_pub or fmri.is_same_publisher(pat_pub,
-                            cat_pub):
-                                matched["publisher"].add(pattern)
-                        else:
-                                continue
-
-                        if matcher(cat_name, pat_name):
-                                matched["matcher"].add(pattern)
-                        else:
-                                continue
-
-                        if not pat_version or (p.version.is_successor(
-                            pat_version, constraint) or \
-                            p.version == pat_version):
-                                matched["version"].add(pattern)
-                        else:
-                                continue
-
-                        if counthash is not None:
-                                counthash.setdefault(pattern, 0)
-                                counthash[pattern] += 1
-                        pat_match = True
-
-                if pat_match:
-                        return p
-
-        def by_version(p):
-                pat_match = False
-                for ver in versions:
-                        if p.version == ver:
-                                matched["version"].add(ver)
-                                if counthash is not None:
-                                        sver = str(ver)
-                                        if sver in counthash:
-                                                counthash[sver] += 1
-                                        else:
-                                                counthash[sver] = 1
-                                pat_match = True
-                if pat_match:
-                        return p
-
-        ret = []
-        if patterns:
-                unmatched = copy.deepcopy(matched)
-                for pattern in patterns:
-                        for k in unmatched:
-                                unmatched[k].add(pattern)
-
-                for p in pkgs:
-                        res = by_pattern(p)
-                        if res:
-                                ret.append(res)
-        elif versions:
-                unmatched = copy.deepcopy(matched)
-                for ver in versions:
-                        for k in unmatched:
-                                unmatched[k].add(ver)
-
-                for p in pkgs:
-                        res = by_version(p)
-                        if res:
-                                ret.append(res)
-        else:
-                # No patterns and no versions means that no filtering can be
-                # applied.  It seems silly to call this function in that case,
-                # but the caller will get what it asked for...
-                ret = list(pkgs)
-
-        if patterns or versions:
-                match_types = unmatched.keys()
-                for k in match_types:
-                        # The transformation back to list is important as the
-                        # unmatched results will likely be used to raise an
-                        # InventoryException which expects lists.
-                        unmatched[k] = list(unmatched[k] - matched[k])
-                        if not unmatched[k]:
-                                del unmatched[k]
-                                continue
-                if not unmatched:
-                        unmatched = None
-        else:
-                unmatched = None
-
-        if not reverse:
-                def order(a, b):
-                        res = cmp(a.pkg_name, b.pkg_name)
-                        if res != 0:
-                                return res
-                        res = cmp(a.version, b.version) * -1
-                        if res != 0:
-                                return res
-                        return cmp(a.publisher, b.publisher)
-                ret.sort(cmp=order)
-        else:
-                ret.sort(reverse=True)
-
-        return ret, unmatched

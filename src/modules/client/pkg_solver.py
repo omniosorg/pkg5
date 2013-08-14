@@ -21,14 +21,15 @@
 #
 
 #
-# Copyright (c) 2007, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
 #
-
+import os
 import time
 
 import pkg.actions
 import pkg.catalog           as catalog
 import pkg.client.api_errors as api_errors
+
 import pkg.client.image
 import pkg.fmri
 import pkg.misc as misc
@@ -38,6 +39,7 @@ import pkg.version           as version
 from collections import defaultdict
 from itertools import chain
 from pkg.client.debugvalues import DebugValues
+from pkg.client.firmware import Firmware
 from pkg.misc import EmptyI, EmptyDict, N_
 
 SOLVER_INIT    = "Initialized"
@@ -153,6 +155,9 @@ class PkgSolver(object):
                             for f in self.__parent_pkgs
                         ])
 
+		# cache of firmware dependencies
+		self.__firmware = Firmware()
+
         def __str__(self):
 
                 s = "Solver: ["
@@ -205,6 +210,7 @@ class PkgSolver(object):
                 self.__start_time = None
                 self.__dependents = None
                 self.__fmridict = {}
+		self.__firmware = None
 
                 if DebugValues["plan"]:
                         # Remaining data must be kept.
@@ -355,7 +361,9 @@ class PkgSolver(object):
                 if relax_all:
                         relax_pkgs = self.__installed_pkgs
                 else:
-                        relax_pkgs = proposed_pkgs
+                        relax_pkgs = proposed_pkgs | \
+                            self.__relax_parent_self_constrained(excludes,
+                                ignore_inst_parent_deps)
 
                 inc_list, con_lists = self.__get_installed_unbound_inc_list(
                     relax_pkgs, excludes=excludes)
@@ -1629,6 +1637,35 @@ class PkgSolver(object):
                             (dtype, fmri)),
                             matching)
 
+        def __relax_parent_self_constrained(self, excludes, \
+            ignore_inst_parent_deps):
+                """If we're a child image then we need to relax packages
+                that are dependent upon themselves in the parent image.  This
+                is necessary to keep those packages in sync."""
+
+                relax_pkgs = set()
+
+                # check if we're a child image.
+                if self.__parent_pkgs is None:
+                        return relax_pkgs
+
+                # if we're ignoring parent dependencies there is no reason to
+                # relax install-holds in packages constrained by those
+                # dependencies.
+                if ignore_inst_parent_deps:
+                        return relax_pkgs
+
+                for f in self.__installed_fmris:
+                        for da in self.__get_dependency_actions(f, excludes):
+                                if da.attrs["type"] != "parent":
+                                        continue
+                                if pkg.actions.depend.DEPEND_SELF in \
+                                    da.attrlist("fmri"):
+                                        relax_pkgs.add(f.pkg_name)
+                                        break
+
+                return relax_pkgs
+
         def __generate_dependency_errors(self, fmri_list, excludes=EmptyI):
                 """ Returns a list of strings describing why fmris cannot
                 be installed, or returns an empty list if installation
@@ -1711,7 +1748,10 @@ class PkgSolver(object):
                 tag = _("Reason:")
 
                 if fmri in already_seen:
-                        reason = _("%s  %s  [already rejected; see above]") % (indent, tag)
+                        # note to translators: 'indent' will be a series of
+                        # whitespaces.
+                        reason = _("%(indent)s  %(tag)s  [already rejected; "
+                            "see above]") % {"indent": indent, "tag": tag}
                         return fmri_id, [reason]
 
                 already_seen.add(fmri)
@@ -2069,16 +2109,24 @@ class PkgSolver(object):
 
                 if fmri.pkg_name not in self.__parent_dict:
                         # package is not installed in parent
-                        reason = (N_("Package is not installed in "
-                            "parent image: {0}"), (fmri.pkg_name,))
+                        if self.__is_zone():
+                                reason = (N_("Package {0} is not installed in "
+                                    "global zone."), (fmri.pkg_name,))
+                        else:
+                                reason = (N_("Package {0} is not installed in "
+                                    "parent image."), (fmri.pkg_name,))
                         self.__trim(pkg_fmri, reason)
                         return False
 
                 pf = self.__parent_dict[fmri.pkg_name]
                 if fmri.publisher and fmri.publisher != pf.publisher:
                         # package is from a different publisher in the parent
-                        reason = (N_("Package in parent is from a "
-                            "different publisher: {0}"), (pf,))
+                        if self.__is_zone():
+                                reason = (N_("Package in global zone is from "
+                                    "a different publisher: {0}"), (pf,))
+                        else:
+                                reason = (N_("Package in parent is from a "
+                                    "different publisher: {0}"), (pf,))
                         self.__trim(pkg_fmri, reason)
                         return False
 
@@ -2090,11 +2138,19 @@ class PkgSolver(object):
                 # version mismatch
                 if pf.version.is_successor(fmri.version,
                     version.CONSTRAINT_NONE):
-                        reason = (N_("Parent image has a incompatible newer "
-                            "version: {0}"), (pf,))
+                        if self.__is_zone():
+                                reason = (N_("Global zone has a "
+                                    "newer version: {0}"), (pf,))
+                        else:
+                                reason = (N_("Parent image has a "
+                                    "newer version: {0}"), (pf,))
                 else:
-                        reason = (N_("Parent image has an older version of "
-                            "package: {0}"), (pf,))
+                        if self.__is_zone():
+                                reason = (N_("Global zone has an older "
+                                    "version of package: {0}"), (pf,))
+                        else:
+                                reason = (N_("Parent image has an older "
+                                    "version of package: {0}"), (pf,))
 
                 self.__trim(pkg_fmri, reason)
                 return False
@@ -2152,22 +2208,32 @@ class PkgSolver(object):
                         req_fmri = pkg.fmri.PkgFmri(da.attrs["fmri"], "5.11")
 
                         if da.attrs.get("root-image", "").lower() == "true":
-                                if self.__root_fmris is None:
-                                        img = pkg.client.image.Image(
-                                            misc.liveroot(),
-                                            allow_ondisk_upgrade=False,
-                                            user_provided_dir=True,
-                                            should_exist=True)
-                                        self.__root_fmris = dict([
-                                            (f.pkg_name, f)
-                                            for f in img.gen_installed_pkgs()
-                                        ])
+				if req_fmri.pkg_name.startswith("feature/firmware/"):
+					# this is a firmware dependency
+					fw_ok, reason = \
+					    self.__firmware.check_firmware(da,
+					    req_fmri.pkg_name)
+					if not fw_ok:
+						self.__trim(fmri, reason)
+						return False
+					continue
+				else:
+					if self.__root_fmris is None:
+						img = pkg.client.image.Image(
+						    misc.liveroot(),
+						    allow_ondisk_upgrade=False,
+						    user_provided_dir=True,
+						    should_exist=True)
+						self.__root_fmris = dict([
+						    (f.pkg_name, f)
+						    for f in img.gen_installed_pkgs()
+						])
 
-                                installed = self.__root_fmris.get(
-                                    req_fmri.pkg_name, None)
-                                reason = (N_("Installed version in root image "
-                                    "is too old for origin dependency {0}"),
-                                    (req_fmri,))
+					installed = self.__root_fmris.get(
+					    req_fmri.pkg_name, None)
+					reason = (N_("Installed version in root image "
+					    "is too old for origin dependency {0}"),
+					    (req_fmri,))
                         else:
                                 installed = self.__installed_dict.get(
                                     req_fmri.pkg_name, None)
@@ -2200,3 +2266,11 @@ class PkgSolver(object):
                         if f not in self.__trim_dict
                         ]
                 return ret
+
+        def __is_zone(self):
+                """Return True if image is a nonglobal zone"""
+                if 'variant.opensolaris.zone' in self.__variants:
+                        return self.__variants['variant.opensolaris.zone'] == \
+                            'nonglobal'
+                else:
+                        return False

@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2008, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
 #
 
 import testutils
@@ -66,6 +66,7 @@ class TestPkgPublisherBasics(pkg5unittest.SingleDepotTestCase):
                 self.pkg("set-publisher -c", exit=2)
                 self.pkg("set-publisher -O", exit=2)
                 self.pkg("unset-publisher", exit=2)
+                self.pkg("unset-publisher -k", exit=2)
 
         def test_publisher_add_remove(self):
                 """pkg: add and remove a publisher"""
@@ -87,15 +88,6 @@ class TestPkgPublisherBasics(pkg5unittest.SingleDepotTestCase):
                 self.pkg("publisher | grep test2")
                 self.pkg("unset-publisher test1")
                 self.pkg("publisher | grep test1", exit=1)
-
-                # Verify that compatibility commands for publisher work (only
-                # minimal verification is needed since these commands map
-                # directly to the publisher ones).  All of these are deprecated
-                # and will be removed at a future date.
-                self.pkg("authority test2")
-                self.pkg("set-authority --no-refresh -O http://%s2 test1" %
-                    self.bogus_url)
-                self.pkg("unset-authority test1")
 
                 # Now verify that partial success (3) or complete failure (1)
                 # is properly returned if an attempt to remove one or more
@@ -809,13 +801,6 @@ class TestPkgPublisherMany(pkg5unittest.ManyDepotTestCase):
                 self.__update_repo_pub_cfg(self.dcs[6], t6cfg)
                 self.dcs[6].start()
 
-                # Should fail since even though repository publisher prefix
-                # matches test3, the new origin isn't configured for test3,
-                # and as a result isn't a known source for publisher updates.
-                self.pkg("set-publisher -p %s" % durl6, exit=1)
-
-                # So, add the new origin to the publisher.
-                self.pkg("set-publisher -g %s test3" % durl6)
                 self.pkg("set-publisher -p %s" % durl6)
 
                 # Load image configuration to verify publisher was configured
@@ -1134,6 +1119,13 @@ class TestMultiPublisherRepo(pkg5unittest.ManyDepotTestCase):
                 self.assertEqual(lines[0].split()[0], "another-pub")
                 self.assertEqual(lines[1].split()[0], "test1")
                 self.assertEqual(lines[2].split()[0], "test2")
+
+        def test_multiple_p_option(self):
+                """Verify that providing multiple repositories using 
+                -p option fails"""
+                self.image_create()
+                self.pkg("set-publisher -p %s -p %s" % (self.rurl1,
+                    self.rurl2), exit=2)
 
 
 class TestPkgPublisherCACerts(pkg5unittest.ManyDepotTestCase):

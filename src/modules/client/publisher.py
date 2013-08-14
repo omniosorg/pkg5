@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2009, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
 #
 
 #
@@ -1101,8 +1101,8 @@ class Publisher(object):
         # These properties are declared here so that they show up in the pydoc
         # documentation as private, and for clarity in the property declarations
         # found near the end of the class definition.
+        _catalog = None
         __alias = None
-        __catalog = None
         __client_uuid = None
         __disabled = False
         __meta_root = None
@@ -1189,7 +1189,7 @@ class Publisher(object):
                 self.__issuers = {}
 
                 # Must be done last.
-                self.__catalog = catalog
+                self._catalog = catalog
 
         def __cmp__(self, other):
                 if other is None:
@@ -1216,6 +1216,7 @@ class Publisher(object):
                     revoked_ca_certs=self.revoked_ca_certs,
                     approved_ca_certs=self.approved_ca_certs,
                     sys_pub=self.sys_pub)
+                pub._catalog = self._catalog
                 pub._source_object_id = id(self)
                 return pub
 
@@ -1360,8 +1361,8 @@ class Publisher(object):
                 if pathname:
                         pathname = os.path.abspath(pathname)
                 self.__meta_root = pathname
-                if self.__catalog:
-                        self.__catalog.meta_root = self.catalog_root
+                if self._catalog:
+                        self._catalog.meta_root = self.catalog_root
                 if self.__meta_root:
                         self.__origin_root = os.path.join(self.__meta_root,
                             "origins")
@@ -1379,7 +1380,7 @@ class Publisher(object):
                 if not isinstance(value, Repository):
                         raise api_errors.UnknownRepository(value)
                 self.__repository = value
-                self.__catalog = None
+                self._catalog = None
 
         def __set_client_uuid(self, value):
                 self.__client_uuid = value
@@ -1478,11 +1479,11 @@ pkg unset-publisher %s
                 selected repository, or None if available."""
 
                 if not self.meta_root:
-                        if self.__catalog:
-                                return self.__catalog
+                        if self._catalog:
+                                return self._catalog
                         return None
 
-                if not self.__catalog:
+                if not self._catalog:
                         croot = self.catalog_root
                         if not os.path.isdir(croot):
                                 # Current meta_root structure is likely in
@@ -1491,9 +1492,9 @@ pkg unset-publisher %s
                                 # is desired instead.  (This can happen during
                                 # an image format upgrade.)
                                 croot = None
-                        self.__catalog = pkg.catalog.Catalog(
+                        self._catalog = pkg.catalog.Catalog(
                             meta_root=croot)
-                return self.__catalog
+                return self._catalog
 
         @property
         def catalog_root(self):
@@ -1674,7 +1675,7 @@ pkg unset-publisher %s
 
                 # Discard existing catalog.
                 self.catalog.destroy()
-                self.__catalog = None
+                self._catalog = None
 
                 # Ensure all old catalog files are removed.
                 for entry in os.listdir(self.catalog_root):
@@ -1688,11 +1689,13 @@ pkg unset-publisher %s
 
                 # If there's only one origin, then just symlink its catalog
                 # files into place.
+                # Symlinking includes updates for publication tools.
                 opaths = [entry for entry in self.__gen_origin_paths()]
                 if len(opaths) == 1:
                         opath = opaths[0][1]
                         for fname in os.listdir(opath):
-                                if fname.startswith("catalog."):
+                                if fname.startswith("catalog.") or \
+                                    fname.startswith("update."):
                                         src = os.path.join(opath, fname)
                                         dest = os.path.join(self.catalog_root,
                                             fname)
@@ -1847,7 +1850,7 @@ pkg unset-publisher %s
                         # avoids many of the problems that could happen due to
                         # deficiencies in the v0 implementation.
                         v1_cat.destroy()
-                        self.__catalog = None
+                        self._catalog = None
                         v1_cat = pkg.catalog.Catalog(meta_root=v1_root,
                             sign=False)
 
@@ -1946,7 +1949,7 @@ pkg unset-publisher %s
                 return False, True
 
         def __refresh_v1(self, croot, tempdir, full_refresh, immediate,
-            mismatched, repo, progtrack=None):
+            mismatched, repo, progtrack=None, include_updates=False):
                 """The method to refresh the publisher's metadata against
                 a catalog/1 source.  If the more recent catalog/1 version
                 isn't supported, __refresh_v0 is invoked as a fallback.
@@ -1975,7 +1978,7 @@ pkg unset-publisher %s
                         if v1_cat.exists:
                                 # Ensure v1 -> v0 transition works right.
                                 v1_cat.destroy()
-                                self.__catalog = None
+                                self._catalog = None
                         return self.__refresh_v0(croot, full_refresh, immediate,
                             repo)
 
@@ -2003,6 +2006,9 @@ pkg unset-publisher %s
                                 if locale != "C":
                                         continue
                                 flist.append(name)
+                        if include_updates:
+                                for update in attrs.updates:
+                                        flist.append(update)
 
                 if flist:
                         # More catalog files to retrieve.
@@ -2018,8 +2024,8 @@ pkg unset-publisher %s
                                 return self.__refresh_v0(croot, full_refresh,
                                     immediate, repo)
 
-                # Clear __catalog, so we'll read in the new catalog.
-                self.__catalog = None
+                # Clear _catalog, so we'll read in the new catalog.
+                self._catalog = None
                 v1_cat = pkg.catalog.Catalog(meta_root=croot)
 
                 # At this point the client should have a set of the constituent
@@ -2062,7 +2068,7 @@ pkg unset-publisher %s
                 return True, True
 
         def __refresh_origin(self, croot, full_refresh, immediate, mismatched,
-            origin, progtrack=None):
+            origin, progtrack=None, include_updates=False):
                 """Private helper method used to refresh catalog data for each
                 origin.  Returns a tuple of (changed, refreshed) where 'changed'
                 indicates whether new catalog data was found and 'refreshed'
@@ -2092,7 +2098,8 @@ pkg unset-publisher %s
                 try:
                         rval = self.__refresh_v1(croot, tempdir,
                             full_refresh, immediate, mismatched, repo,
-			    progtrack=progtrack)
+			    progtrack=progtrack,
+                            include_updates=include_updates)
 
                         # Perform publisher metadata sanity checks.
                         self.__validate_metadata(croot, repo)
@@ -2103,7 +2110,7 @@ pkg unset-publisher %s
                         shutil.rmtree(tempdir, True)
 
         def __refresh(self, full_refresh, immediate, mismatched=False,
-	    progtrack=None):
+	    progtrack=None, include_updates=False):
                 """The method to handle the overall refresh process.  It
                 determines if a refresh is actually needed, and then calls
                 the first version-specific refresh method in the chain."""
@@ -2139,7 +2146,8 @@ pkg unset-publisher %s
                 for origin, opath in self.__gen_origin_paths():
                         changed, refreshed = self.__refresh_origin(opath,
                             full_refresh, immediate, mismatched, origin,
-			    progtrack=progtrack)
+			    progtrack=progtrack,
+                            include_updates=include_updates)
                         if changed:
                                 any_changed = True
                         if refreshed:
@@ -2156,7 +2164,8 @@ pkg unset-publisher %s
 
                 return any_changed
 
-        def refresh(self, full_refresh=False, immediate=False, progtrack=None):
+        def refresh(self, full_refresh=False, immediate=False, progtrack=None,
+            include_updates=False):
                 """Refreshes the publisher's metadata, returning a boolean
                 value indicating whether any updates to the publisher's
                 metadata occurred.
@@ -2169,11 +2178,16 @@ pkg unset-publisher %s
                 'immediate' is an optional boolean value indicating whether
                 a refresh should occur now.  If False, a publisher's selected
                 repository will be checked for updates only if needs_refresh
-                is True."""
+                is True.
+
+                'include_updates' is an optional boolean value indicating
+                whether all catalog updates should be retrieved additionally to
+                the catalog."""
 
                 try:
                         return self.__refresh(full_refresh, immediate,
-			    progtrack=progtrack)
+			    progtrack=progtrack,
+                            include_updates=include_updates)
                 except (api_errors.BadCatalogUpdateIdentity,
                     api_errors.DuplicateCatalogEntry,
                     api_errors.ObsoleteCatalogUpdate,

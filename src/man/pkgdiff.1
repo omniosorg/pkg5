@@ -1,6 +1,5 @@
 '\" te
-.\" Copyright (c) 2007, 2013, Oracle and/or its
-.\" affiliates. All rights reserved.
+.\" Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
 .TH pkgdiff 1 "26 Feb 2013" "SunOS 5.11" "User Commands"
 .SH NAME
 pkgdiff \- compare package manifests
@@ -8,13 +7,14 @@ pkgdiff \- compare package manifests
 .LP
 .nf
 /usr/bin/pkgdiff [-i \fIattribute\fR]... [-o \fIattribute\fR]
-    [-v \fIname\fR=\fIvalue\fR]... \fIfile1\fR \fIfile2\fR
+    [-t \fIaction_name\fR[,\fIaction_name\fR]...]...
+    [-v \fIname\fR=\fIvalue\fR]...  (\fIfile1\fR | -) (\fIfile2\fR | -)
 .fi
 
 .SH DESCRIPTION
 .sp
 .LP
-\fBpkgdiff\fR compares two package manifests and reports differences. \fBpkgdiff\fR sorts each manifest and action into a consistent order before comparison.
+\fBpkgdiff\fR compares two package manifests and reports differences. One of the manifests can be read from \fBstdin\fR by specifying \fB-\fR in place of the file name. \fBpkgdiff\fR sorts each manifest and action into a consistent order before comparison.
 .sp
 .LP
 Output is in the following form:
@@ -113,6 +113,17 @@ Only report differences in \fIattribute\fR. This option cannot be used with the 
 .ne 2
 .mk
 .na
+\fB\fB-t\fR \fIaction_name\fR[,\fIaction_name\fR]...\fR
+.ad
+.sp .6
+.RS 4n
+Only compare the specified actions. Multiple actions can be specified in a comma-separated list. The value of \fIaction_name\fR is one of the actions listed in "Actions" in the \fBpkg\fR(5) man page. For example, the following values could be specified for \fIaction_name\fR: \fBfile\fR, \fBdir\fR, \fBdriver\fR, \fBdepend\fR, \fBset\fR. This option can be specified multiple times.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
 \fB\fB-v\fR \fIname\fR=\fIvalue\fR\fR
 .ad
 .sp .6
@@ -204,4 +215,4 @@ Interface StabilityUncommitted
 \fBpkg\fR(5)
 .sp
 .LP
-\fBhttps://java.net/projects/ips/pages/Home\fR
+\fBhttp://hub.opensolaris.org/bin/view/Project+pkg/\fR

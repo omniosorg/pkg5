@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2009, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
 #
 
 import cStringIO
@@ -447,7 +447,7 @@ class HTTPRepo(TransportRepo):
                 # Only append the publisher prefix if the publisher of the
                 # request is known, not already part of the URI, if this isn't
                 # an open operation, and if the repository supports version 1
-                # of the publisher opation.  The prefix shouldn't be appended
+                # of the publisher operation.  The prefix shouldn't be appended
                 # for open because the publisher may not yet be known to the
                 # repository, and not in other cases because the repository
                 # doesn't support it.
@@ -1060,11 +1060,10 @@ class HTTPRepo(TransportRepo):
                 its headers then we can try the request with that additional
                 header, which can help where a web cache is serving corrupt
                 content.
-
-                This method returns True if the headers passed haven't got
-                "Cache-Control: no-cache" set, adding that header.  Otherwise
-                it returns False.
                 """
+
+                if header is None:
+                        header = {}
 
                 if header.get("Cache-Control", "") != "no-cache":
                         header["Cache-Control"] = "no-cache"
@@ -1116,12 +1115,14 @@ class HTTPSRepo(HTTPRepo):
                     proxy=self._repouri.proxy)
 
         def _post_url(self, url, data=None, header=None, ccancel=None,
-            data_fobj=None, data_fp=None, failonerror=True):
+            data_fobj=None, data_fp=None, failonerror=True, progclass=None,
+            progtrack=None):
                 return self._engine.send_data(url, data=data, header=header,
                     sslcert=self._repouri.ssl_cert,
                     sslkey=self._repouri.ssl_key, repourl=self._url,
                     ccancel=ccancel, data_fobj=data_fobj,
                     data_fp=data_fp, failonerror=failonerror,
+                    progclass=progclass, progtrack=progtrack,
                     runtime_proxy=self._repouri.runtime_proxy,
                     proxy=self._repouri.proxy)
 

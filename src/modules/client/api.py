@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2008, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
 #
 
 """This module provides the supported, documented interface for clients to
@@ -103,8 +103,8 @@ from pkg.smf import NonzeroExitException
 # things like help(pkg.client.api.PlanDescription)
 from pkg.client.plandesc import PlanDescription # pylint: disable=W0611
 
-CURRENT_API_VERSION = 74
-COMPATIBLE_API_VERSIONS = frozenset([72, 73, CURRENT_API_VERSION])
+CURRENT_API_VERSION = 76
+COMPATIBLE_API_VERSIONS = frozenset([72, 73, 74, 75, CURRENT_API_VERSION])
 CURRENT_P5I_VERSION = 1
 
 # Image type constants.
@@ -253,6 +253,14 @@ class ImageInterface(object):
         needed.  Cancel may only be invoked while a cancelable method is
         running."""
 
+        FACET_ALL = 0
+        FACET_IMAGE = 1
+        FACET_INSTALLED = 2
+
+        FACET_SRC_SYSTEM = pkg.facet.Facets.FACET_SRC_SYSTEM
+        FACET_SRC_LOCAL = pkg.facet.Facets.FACET_SRC_LOCAL
+        FACET_SRC_PARENT = pkg.facet.Facets.FACET_SRC_PARENT
+
         # Constants used to reference specific values that info can return.
         INFO_FOUND = 0
         INFO_MISSING = 1
@@ -267,6 +275,13 @@ class ImageInterface(object):
         MATCH_EXACT = 0
         MATCH_FMRI = 1
         MATCH_GLOB = 2
+
+        VARIANT_ALL = 0
+        VARIANT_ALL_POSSIBLE = 1
+        VARIANT_IMAGE = 2
+        VARIANT_IMAGE_POSSIBLE = 3
+        VARIANT_INSTALLED = 4
+        VARIANT_INSTALLED_POSSIBLE = 5
 
         def __init__(self, img_path, version_id, progresstracker,
             cancel_state_callable, pkg_client_name, exact_match=True,
@@ -817,6 +832,187 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 dependencies on this) """
                 return [a for a in self._img.get_avoid_dict().iteritems()]
 
+        def gen_facets(self, facet_list, patterns=misc.EmptyI):
+                """A generator function that produces tuples of the form:
+
+                    (
+                        name,    - (string) facet name (e.g. facet.doc)
+                        value    - (boolean) current facet value
+                        src      - (string) source for the value
+                        masked   - (boolean) is the facet maksed by another
+                    )
+
+                Results are always sorted by facet name.
+
+                'facet_list' is one of the following constant values indicating
+                which facets should be returned based on how they were set:
+
+                        FACET_ALL
+                                Return all facets set in the image and all
+                                facets listed in installed packages.
+
+                        FACET_IMAGE
+                                Return only the facets set in the image.
+
+                        FACET_INSTALLED
+                                Return only the facets listed in installed
+                                packages.
+
+                'patterns' is an optional list of facet wildcard strings to
+                filter results by."""
+
+                facets = self._img.cfg.facets
+                if facet_list != self.FACET_INSTALLED:
+                        # Include all facets set in image.
+                        fimg = set(facets.keys())
+                else:
+                        # Don't include any set only in image.
+                        fimg = set()
+
+                # Get all facets found in packages and determine state.
+                fpkg = set()
+                excludes = self._img.list_excludes()
+                if facet_list != self.FACET_IMAGE:
+                        for f in self._img.gen_installed_pkgs():
+                                # The manifest must be loaded without
+                                # pre-applying excludes so that gen_facets() can
+                                # choose how to filter the actions.
+                                mfst = self._img.get_manifest(f,
+                                    ignore_excludes=True)
+                                for facet in mfst.gen_facets(excludes=excludes):
+                                        # Use Facets object to determine
+                                        # effective facet state.
+                                        fpkg.add(facet)
+
+                # Generate the results.
+                for name in misc.yield_matching("facet.", sorted(fimg | fpkg),
+                    patterns):
+                        # check if the facet is explicitly set.
+                        if name not in facets:
+                                # The image's Facets dictionary will return
+                                # the effective value for any facets not
+                                # explicitly set in the image (wildcards or
+                                # implicit). _match_src() will tell us how
+                                # that effective value was determined (via a
+                                # local or inherited wildcard facet, or via a
+                                # system default).
+                                src = facets._match_src(name)
+                                yield (name, facets[name], src, False)
+                                continue
+
+                        # This is an explicitly set facet.
+                        for value, src, masked in facets._src_values(name):
+                                yield (name, value, src, masked)
+
+        def gen_variants(self, variant_list, patterns=misc.EmptyI):
+                """A generator function that produces tuples of the form:
+
+                    (
+                        name,    - (string) variant name (e.g. variant.arch)
+                        value    - (string) current variant value,
+                        possible - (list) list of possible variant values based
+                                   on installed packages; empty unless using
+                                   *_POSSIBLE variant_list.
+                    )
+
+                Results are always sorted by variant name.
+
+                'variant_list' is one of the following constant values indicating
+                which variants should be returned based on how they were set:
+
+                        VARIANT_ALL
+                                Return all variants set in the image and all
+                                variants listed in installed packages.
+
+                        VARIANT_ALL_POSSIBLE
+                                Return possible variant values (those found in
+                                any installed package) for all variants set in
+                                the image and all variants listed in installed
+                                packages.
+
+                        VARIANT_IMAGE
+                                Return only the variants set in the image.
+
+                        VARIANT_IMAGE_POSSIBLE
+                                Return possible variant values (those found in
+                                any installed package) for only the variants set
+                                in the image.
+
+                        VARIANT_INSTALLED
+                                Return only the variants listed in installed
+                                packages.
+
+                        VARIANT_INSTALLED_POSSIBLE
+                                Return possible variant values (those found in
+                                any installed package) for only the variants
+                                listed in installed packages.
+
+                'patterns' is an optional list of variant wildcard strings to
+                filter results by."""
+
+                variants = self._img.cfg.variants
+                if variant_list != self.VARIANT_INSTALLED and \
+                    variant_list != self.VARIANT_INSTALLED_POSSIBLE:
+                        # Include all variants set in image.
+                        vimg = set(variants.keys())
+                else:
+                        # Don't include any set only in image.
+                        vimg = set()
+
+                # Get all variants found in packages and determine state.
+                vpkg = {}
+                excludes = self._img.list_excludes()
+                vposs = collections.defaultdict(set)
+                if variant_list != self.VARIANT_IMAGE:
+                        # Only incur the overhead of reading through all
+                        # installed packages if not just listing variants set in
+                        # image or listing possible values for them.
+                        for f in self._img.gen_installed_pkgs():
+                                # The manifest must be loaded without
+                                # pre-applying excludes so that gen_variants()
+                                # can choose how to filter the actions.
+                                mfst = self._img.get_manifest(f,
+                                    ignore_excludes=True)
+                                for variant, vals in mfst.gen_variants(
+                                    excludes=excludes):
+                                        # Unlike facets, Variants class doesn't
+                                        # handle implicitly set values.
+                                        if variant[:14] == "variant.debug.":
+                                                # Debug variants are implicitly
+                                                # false and are not required
+                                                # to be set explicitly in the
+                                                # image.
+                                                vpkg[variant] = variants.get(
+                                                    variant, "false")
+                                        elif variant not in vimg:
+                                                # Although rare, packages with
+                                                # unknown variants (those not
+                                                # set in the image) can be
+                                                # installed as long as content
+                                                # does not conflict.  For those
+                                                # variants, return None.
+                                                vpkg[variant] = \
+                                                    variants.get(variant)
+
+                                        if (variant_list == \
+                                            self.VARIANT_ALL_POSSIBLE or
+                                            variant_list == \
+                                                self.VARIANT_IMAGE_POSSIBLE or
+                                            variant_list == \
+                                                self.VARIANT_INSTALLED_POSSIBLE):
+                                                # Build possible list of variant
+                                                # values.
+                                                vposs[variant].update(set(vals))
+
+                # Generate the results.
+                for name in misc.yield_matching("variant.",
+                    sorted(vimg | set(vpkg.keys())), patterns):
+                        try:
+                                yield (name, vpkg[name], sorted(vposs[name]))
+                        except KeyError:
+                                yield (name, variants[name],
+                                    sorted(vposs[name]))
+
         def freeze_pkgs(self, fmri_strings, dry_run=False, comment=None,
             unfreeze=False):
                 """Freeze/Unfreeze one or more packages."""
@@ -898,7 +1094,11 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         self.__plan_desc = plan_desc
 
                 self._activity_lock.release()
-                raise
+
+                # re-raise the original exception. (we have to explicitly
+                # restate the original exception since we may have cleared the
+                # current exception scope above.)
+                raise exc_type, exc_value, exc_traceback
 
         def solaris_image(self):
                 """Returns True if the current image is a solaris image, or an
@@ -962,6 +1162,125 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
 
                 raise apx.IpkgOutOfDateException()
 
+        def __verify_args(self, args):
+                """Verifies arguments passed into the API.
+                It tests for correct data types of the input args, verifies that
+                passed in FMRIs are valid, checks if repository URIs are valid
+                and does some logical tests for the combination of arguments."""
+
+                arg_types = {
+                    # arg name              type                   nullable
+                    "_noexecute":           (bool,                 False),
+                    "_be_activate":         (bool,                 False),
+                    "_new_be":              (bool,                 True),
+                    "_be_name":             (basestring,           True),
+                    "_backup_be":           (bool,                 True),
+                    "_backup_be_name":      (basestring,           True),
+                    "_pubcheck":            (bool,                 False),
+                    "_refresh_catalogs":    (bool,                 False),
+                    "_repos":               (iter,                 True),
+                    "_update_index":        (bool,                 False),
+                    "_li_ignore":           (iter,                 True),
+                    "_li_parent_sync":      (bool,                 False),
+                    "_li_md_only":          (bool,                 False),
+                    "_ipkg_require_latest": (bool,                 False),
+                    "pkgs_inst":            (iter,                 True),
+                    "pkgs_update":          (iter,                 True),
+                    "pkgs_to_uninstall":    (iter,                 True),
+                    "reject_list":          (iter,                 True),
+                    "mediators":            (iter,                 True),
+                    "variants":             (dict,                 True),
+                    "facets":               (pkg.facet.Facets,     True)
+                }
+
+                # merge kwargs into the main arg dict
+                if "kwargs" in args:
+                        for name, value in args["kwargs"].items():
+                                args[name] = value
+
+                # check arguments for proper type and nullability
+                for a in args:
+                        try:
+                                a_type, nullable = arg_types[a]
+                        except KeyError:
+                                # unknown argument passed, ignore
+                                continue
+
+                        assert nullable or args[a] is not None
+
+                        if args[a] is not None and a_type == iter:
+                                try:
+                                        iter(args[a])
+                                except TypeError:
+                                        raise AssertionError("%s is not an "
+                                            "iterable" % a)
+
+                        else:
+                                assert (args[a] is None or
+                                    isinstance(args[a], a_type)), "%s is " \
+                                    "type %s; expected %s" % (a, type(a),
+                                    a_type)
+
+                # check if passed FMRIs are valid
+                illegals = []
+                for i in ("pkgs_inst", "pkgs_update", "pkgs_to_uninstall",
+                    "reject_list"):
+                        try:
+                                fmris = args[i]
+                        except KeyError:
+                                continue
+                        if fmris is None:
+                                continue
+                        for pat, err, pfmri, matcher in \
+                            self.parse_fmri_patterns(fmris):
+                                if not err:
+                                        continue
+                                else:
+                                        illegals.append(fmris)
+
+                if illegals:
+                        raise apx.PlanCreationException(illegal=illegals)
+
+                # some logical checks
+                errors = []
+                if not args["_new_be"] and args["_be_name"]:
+                        errors.append(apx.InvalidOptionError(
+                            apx.InvalidOptionError.REQUIRED, ["_be_name",
+                            "_new_be"]))
+                if not args["_backup_be"] and args["_backup_be_name"]:
+                        errors.append(apx.InvalidOptionError(
+                            apx.InvalidOptionError.REQUIRED, ["_backup_be_name",
+                            "_backup_be"]))
+                if args["_backup_be"] and args["_new_be"]:
+                        errors.append(apx.InvalidOptionError(
+                            apx.InvalidOptionError.INCOMPAT, ["_backup_be",
+                            "_new_be"]))
+
+                if errors:
+                        raise apx.InvalidOptionErrors(errors)
+
+                # check if repo URIs are valid
+                try:
+                        repos = args["_repos"]
+                except KeyError:
+                        return
+
+                if not repos:
+                        return
+
+                illegals = []
+                for r in repos:
+                        valid = False
+                        if type(r) == publisher.RepositoryURI:
+                                # RepoURI objects pass right away
+                                continue
+
+                        if not misc.valid_pub_url(r):
+                                illegals.append(r)
+
+                if illegals:
+                        raise apx.UnsupportedRepositoryURI(illegals)
+
         def __plan_op(self, _op, _ad_kwargs=None,
             _backup_be=None, _backup_be_name=None, _be_activate=True,
             _be_name=None, _ipkg_require_latest=False, _li_ignore=None,
@@ -1008,6 +1327,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                     _op in [API_OP_ATTACH, API_OP_DETACH, API_OP_SYNC]
                 assert not _li_md_only or _li_parent_sync
 
+                self.__verify_args(locals())
+
                 # make some perf optimizations
                 if _li_md_only:
                         _refresh_catalogs = _update_index = False
@@ -1047,7 +1368,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
 
                         if _li_parent_sync:
                                 # refresh linked image data from parent image.
-                                self._img.linked.syncmd_from_parent(api_op=_op)
+                                self._img.linked.syncmd_from_parent()
 
                         # initialize recursion state
                         self._img.linked.api_recurse_init(
@@ -1557,7 +1878,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
 
         def gen_plan_detach(self, backup_be=None,
             backup_be_name=None, be_activate=True, be_name=None, force=False,
-            li_ignore=None, new_be=False, noexecute=False):
+            li_ignore=None, li_md_only=False, li_pkg_updates=True, new_be=False,
+            noexecute=False):
                 """This is a generator function that yields a PlanDescription
                 object.  If parsable_version is set, it also yields dictionaries
                 containing plan information for child images.
@@ -1582,9 +1904,10 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 return self.__plan_op(op, _ad_kwargs=ad_kwargs,
                     _backup_be=backup_be, _backup_be_name=backup_be_name,
                     _be_activate=be_activate, _be_name=be_name,
-                    _li_ignore=li_ignore, _new_be=new_be,
-                    _noexecute=noexecute, _refresh_catalogs=False,
-                    _update_index=False, li_pkg_updates=False)
+                    _li_ignore=li_ignore, _li_md_only=li_md_only,
+                    _new_be=new_be, _noexecute=noexecute,
+                    _refresh_catalogs=False, _update_index=False,
+                    li_pkg_updates=li_pkg_updates)
 
         def plan_uninstall(self, pkg_list, noexecute=False, update_index=True,
             be_name=None, new_be=False, be_activate=True):
@@ -1597,8 +1920,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
 
         def gen_plan_uninstall(self, pkgs_to_uninstall,
             backup_be=None, backup_be_name=None, be_activate=True,
-            be_name=None, li_ignore=None, new_be=False, noexecute=False,
-            update_index=True):
+            be_name=None, li_ignore=None, li_parent_sync=True, new_be=False,
+            noexecute=False, update_index=True):
                 """This is a generator function that yields a PlanDescription
                 object.  If parsable_version is set, it also yields dictionaries
                 containing plan information for child images.
@@ -1624,7 +1947,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 return self.__plan_op(op,
                     _backup_be=backup_be, _backup_be_name=backup_be_name,
                     _be_activate=be_activate, _be_name=be_name,
-                    _li_ignore=li_ignore, _li_parent_sync=False,
+                    _li_ignore=li_ignore, _li_parent_sync=li_parent_sync,
                     _new_be=new_be, _noexecute=noexecute,
                     _refresh_catalogs=False,
                     _update_index=update_index,
@@ -1825,7 +2148,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                     refresh_catalogs=refresh_catalogs, reject_list=reject_list,
                     show_licenses=show_licenses, update_index=update_index)
 
-        def detach_linked_children(self, li_list, force=False, noexecute=False):
+        def detach_linked_children(self, li_list, force=False,
+            li_md_only=False, li_pkg_updates=True, noexecute=False):
                 """Detach one or more children from the current image. This
                 operation results in the removal of any constraint package
                 from the child images.
@@ -1846,7 +2170,9 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 error."""
 
                 return self._img.linked.detach_children(li_list,
-                    force=force, noexecute=noexecute)
+                    force=force, li_md_only=li_md_only,
+                    li_pkg_updates=li_pkg_updates,
+                    noexecute=noexecute)
 
         def detach_linked_rvdict2rv(self, rvdict):
                 """Convenience function that takes a dictionary returned from
@@ -1913,9 +2239,15 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
 
                 lin = self._img.linked.child_name
                 rvdict = {}
-                ret = self._img.linked.audit_self(
-                    li_parent_sync=li_parent_sync)
-                rvdict[lin] = ret
+
+                if li_parent_sync:
+                        # refresh linked image data from parent image.
+                        rvdict[lin] = self._img.linked.syncmd_from_parent(
+                            catch_exception=True)
+                        if rvdict[lin] is not None:
+                                return rvdict
+
+                rvdict[lin] = self._img.linked.audit_self()
                 return rvdict
 
         def ischild(self):
@@ -2787,6 +3119,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 pkg_pub_map = {}
                 try:
                         progtrack.refresh_start(len(pubs), full_refresh=False)
+                        failed = []
                         pub_cats = []
                         for pub in pubs:
                                 # Assign a temporary meta root to each
@@ -2800,8 +3133,18 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
 
                                 # Retrieve each publisher's catalog.
                                 progtrack.refresh_start_pub(pub)
-                                pub.refresh()
-                                progtrack.refresh_end_pub(pub)
+                                try:
+                                        pub.refresh()
+                                except apx.PermissionsException, e:
+                                        failed.append((pub, e))
+                                        # No point in continuing since no data
+                                        # can be written.
+                                        break
+                                except apx.ApiException, e:
+                                        failed.append((pub, e))
+                                        continue
+                                finally:
+                                        progtrack.refresh_end_pub(pub)
                                 pub_cats.append((
                                     pub.prefix,
                                     repo,
@@ -2809,6 +3152,12 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                 ))
 
                         progtrack.refresh_done()
+
+                        if failed:
+                                total = len(pub_cats) + len(failed)
+                                e = apx.CatalogRefreshException(failed, total,
+                                    len(pub_cats))
+                                raise e
 
                         # Determine upgradability.
                         newest = {}
@@ -3004,8 +3353,9 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                 try:
                                         opub = pub_map[pub.prefix]
                                 except KeyError:
+                                        nrepo = publisher.Repository()
                                         opub = publisher.Publisher(pub.prefix,
-                                            catalog=compkcat)
+                                            catalog=compkcat, repository=nrepo)
                                         pub_map[pub.prefix] = opub
 
                         rid_map = {}
@@ -3024,11 +3374,12 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                                            pkg_repos.get(rid).origins
                                                            for rid in rids
                                                         ])
-                                                        nrepo = publisher.Repository(
-                                                            origins=origins)
                                                         npub = \
                                                             copy.copy(pub_map[pub])
-                                                        npub.repository = nrepo
+                                                        nrepo = npub.repository
+                                                        nrepo.origins = origins
+                                                        assert npub.catalog == \
+                                                            compkcat
                                                         rid_map[rids] = npub
 
                                                 pkg_pub_map[pub][stem][ver] = \
@@ -3039,12 +3390,10 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         for pub in pubs:
                                 npub = pub_map[pub.prefix]
                                 nrepo = npub.repository
-                                if not nrepo:
-                                        nrepo = publisher.Repository()
-                                        npub.repository = nrepo
                                 for o in pub.repository.origins:
                                         if not nrepo.has_origin(o):
                                                 nrepo.add_origin(o)
+                                assert npub.catalog == compkcat
 
                         for compcat in (compicat, compkcat):
                                 compcat.batch_mode = False
@@ -3773,7 +4122,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                         pub = name = version = None
 
                                 links = hardlinks = files = dirs = \
-                                    size = licenses = cat_info = \
+                                    csize = size = licenses = cat_info = \
                                     description = None
 
                                 if PackageInfo.CATEGORIES in info_needed:
@@ -3824,7 +4173,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                                     mfst, alt_pub=alt_pub)
 
                                         if PackageInfo.SIZE in info_needed:
-                                                size = mfst.get_size(
+                                                size, csize = mfst.get_size(
                                                     excludes=excludes)
 
                                         if act_opts & info_needed:
@@ -3845,7 +4194,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                                             mfst.gen_key_attribute_value_by_type(
                                                             "dir", excludes))
                                 elif PackageInfo.SIZE in info_needed:
-                                        size = 0
+                                        size = csize = 0
 
                                 # Trim response set.
                                 if PackageInfo.STATE in info_needed:
@@ -3874,7 +4223,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                     states=states, publisher=pub, version=release,
                                     build_release=build_release, branch=branch,
                                     packaging_date=packaging_date, size=size,
-                                    pfmri=pfmri, licenses=licenses,
+                                    csize=csize, pfmri=pfmri, licenses=licenses,
                                     links=links, hardlinks=hardlinks, files=files,
                                     dirs=dirs, dependencies=dependencies,
                                     description=description, attrs=attrs))
@@ -4208,16 +4557,20 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
 
                 slist = []
                 for entry in servers:
-                        descriptive_name = None
                         if isinstance(entry, dict):
                                 origin = entry["origin"]
                                 try:
                                         pub = self._img.get_publisher(
                                             origin=origin)
+                                        pub_uri = publisher.RepositoryURI(
+                                            origin)
+                                        repo = publisher.Repository(
+                                            origins=[pub_uri])
                                 except apx.UnknownPublisher:
                                         pub = publisher.RepositoryURI(origin)
-                                        descriptive_name = origin
-                                slist.append((pub, None, descriptive_name))
+                                        repo = publisher.Repository(
+                                            origins=[pub])
+                                slist.append((pub, repo, origin))
                                 continue
 
                         # Must be a publisher object.

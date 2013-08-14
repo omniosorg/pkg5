@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2007, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
 #
 
 import M2Crypto as m2
@@ -361,8 +361,9 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 """A list of strings decribing errors encountered while parsing
                 trust anchors."""
 
-                return [_("%s is expected to be a certificate but could not be "
-                    "parsed.  The error encountered was:\n\t%s") % (p, e)
+                return [_("%(path)s is expected to be a certificate but could "
+                    "not be parsed.  The error encountered was:\n\t%(err)s") %
+                    {"path": p, "err": e}
                     for p, e in self.__bad_trust_anchors
                 ]
 
@@ -2125,7 +2126,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
 
                 # Before continuing, validate SSL information.
                 try:
-                        self.check_cert_validity()
+                        self.check_cert_validity(pubs=[pub])
                 except apx.ExpiringCertificate, e:
                         logger.error(str(e))
 
@@ -2373,18 +2374,18 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
 
                 return True
 
-        def __verify_manifest(self, fmri, mfstpath):
+        def __verify_manifest(self, fmri, mfstpath, alt_pub=None):
                 """Verify a manifest.  The caller must supply the FMRI
                 for the package in 'fmri', as well as the path to the
                 manifest file that will be verified."""
 
                 try:
                         return self.transport._verify_manifest(fmri,
-                            mfstpath=mfstpath)
+                            mfstpath=mfstpath, pub=alt_pub)
                 except InvalidContentException:
                         return False
         
-        def has_manifest(self, pfmri):
+        def has_manifest(self, pfmri, alt_pub=None):
                 """Check to see if the manifest for pfmri is present on disk and
                 has the correct hash."""
 
@@ -2392,9 +2393,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 on_disk = os.path.exists(pth)
 
                 if not on_disk or \
-                    DebugValues.get_value("skip-verify-manifest") or \
                     self.is_pkg_installed(pfmri) or \
-                    self.__verify_manifest(fmri=pfmri, mfstpath=pth):
+                    self.__verify_manifest(fmri=pfmri, mfstpath=pth, alt_pub=alt_pub):
                         return on_disk
                 return False
 
@@ -2457,7 +2457,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 object.... grab from server if needed"""
 
                 try:
-                        if not self.has_manifest(fmri):
+                        if not self.has_manifest(fmri, alt_pub=alt_pub):
                                 raise KeyError
                         ret = manifest.FactoredManifest(fmri,
                             self.get_manifest_dir(fmri),
@@ -3027,7 +3027,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 # by usage of the SAT solver.
                 newest = {}
                 for pfx, cat in [(None, old_icat)] + pub_cats:
-                        for f in cat.fmris(last=True, pubs=[pfx]):
+                        for f in cat.fmris(last=True,
+                            pubs=pfx and [pfx] or EmptyI):
                                 nver, snver = newest.get(f.pkg_name, (None,
                                     None))
                                 if f.version > nver:
@@ -3294,13 +3295,6 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 self.history.log_operation_start("refresh-publishers",
                     be_name=be_name, be_uuid=be_uuid)
 
-                # Verify validity of certificates before attempting network
-                # operations.
-                try:
-                        self.check_cert_validity()
-                except apx.ExpiringCertificate, e:
-                        logger.error(str(e))
-
                 pubs_to_refresh = []
 
                 if not pubs:
@@ -3325,6 +3319,13 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         self.history.log_operation_end(
                             result=history.RESULT_NOTHING_TO_DO)
                         return
+
+                # Verify validity of certificates before attempting network
+                # operations.
+                try:
+                        self.check_cert_validity(pubs=pubs_to_refresh)
+                except apx.ExpiringCertificate, e:
+                        logger.error(str(e))
 
                 try:
                         # Ensure Image directory structure is valid.
@@ -3552,17 +3553,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         for act in m.gen_actions(excludes):
                                 if not act.globally_identical:
                                         continue
-                                for key in act.attrs.keys():
-                                        if (act.unique_attrs and
-                                            key not in act.unique_attrs and
-                                            not (act.name == "file" and
-                                                key == "overlay") and
-                                            not ((act.name == "link" or
-                                                  act.name == "hardlink") and
-                                                 key.startswith("mediator"))) or \
-                                            key.startswith("variant.") or \
-                                            key.startswith("facet."):
-                                                del act.attrs[key]
+                                act.strip()
                                 heappush(heap, (act.name,
                                     act.attrs[act.key_attr], pfmri, act))
                                 nsd.setdefault(act.namespace_group, {})

@@ -177,7 +177,7 @@ class ImageInsufficentSpace(ApiException):
                     "needed": bytes_to_str(self.needed),
                     "use": self.use
                     }
-                    
+
 
 class VersionException(ApiException):
         def __init__(self, expected_version, received_version):
@@ -550,10 +550,11 @@ for the current image's architecture, zone type, and/or other variant:""")
                         res += [ s % p for p in self.illegal ]
 
                 if self.badarch:
-                        s = _("'%s' supports the following architectures: %s")
+                        s = _("'%(p)s' supports the following architectures: "
+                            "%(archs)s")
                         a = _("Image architecture is defined as: %s")
-                        res += [ s % (self.badarch[0],
-                            ", ".join(self.badarch[1]))]
+                        res += [ s % {"p": self.badarch[0],
+                            "archs": ", ".join(self.badarch[1])}]
                         res += [ a % (self.badarch[2])]
 
                 s = _("'%(p)s' depends on obsolete package '%(op)s'")
@@ -806,8 +807,8 @@ class InconsistentActionAttributeError(ConflictingActionError):
                                 for pkg in sorted(pkglist):
                                         s += _("        %s\n") % pkg
                         else:
-                                t = _("    %d packages deliver '%s', including:\n")
-                                s += t % (num, action)
+                                t = _("    %(n)d packages deliver '%(a)s', including:\n")
+                                s += t % {"n": num, "a": action}
                                 for pkg in sorted(pkglist)[:5]:
                                         s += _("        %s\n") % pkg
 
@@ -1421,7 +1422,7 @@ class UnsupportedP5SVersion(ApiException):
 
         def __init__(self, v):
                 self.version = v
-        
+
         def __str__(self):
                 return _("%s is not a supported version for creating a "
                     "syspub response.") % self.version
@@ -1453,7 +1454,8 @@ class RetrievalError(ApiException):
         def __str__(self):
                 if self.location:
                         return _("Error encountered while retrieving data from "
-                            "'%s':\n%s") % (self.location, self.data)
+                            "'%(location)s':\n%(data)s") % \
+                            {"location": self.location, "data": self.data}
                 return _("Error encountered while retrieving data from: %s") % \
                     self.data
 
@@ -1911,16 +1913,40 @@ class UnsupportedRepositoryURI(PublisherError):
         """Used to indicate that the specified repository URI uses an
         unsupported scheme."""
 
+        def __init__(self, uris=[]):
+                if isinstance(uris, basestring):
+                        uris = [uris]
+
+                assert isinstance(uris, (list, tuple, set))
+
+                self.uris = uris
+
         def __str__(self):
-                if self.data:
-                        scheme = urlparse.urlsplit(self.data,
+                illegals = []
+
+                for u in self.uris:
+                        assert isinstance(u, basestring)
+                        scheme = urlparse.urlsplit(u,
                             allow_fragments=0)[0]
+                        illegals.append((u, scheme))
+
+                if len(illegals) > 1:
+                        msg = _("The follwing URIs use unsupported "
+                            "schemes.  Supported schemes are "
+                            "file://, http://, and https://.")
+                        for i, s in illegals:
+                                msg += _("\n  %(uri)s (scheme: "
+                                    "%(scheme)s)") % {"uri": i, "scheme": s }
+                        return msg
+                elif len(illegals) == 1:
+                        i, s = illegals[0]
                         return _("The URI '%(uri)s' uses the unsupported "
                             "scheme '%(scheme)s'.  Supported schemes are "
                             "file://, http://, and https://.") % {
-                            "uri": self.data, "scheme": scheme }
+                            "uri": i, "scheme": s }
                 return _("The specified URI uses an unsupported scheme."
-                    "  Supported schemes are: file://, http://, and https://.")
+                    "  Supported schemes are: file://, http://, and "
+                    "https://.")
 
 
 class UnsupportedRepositoryURIAttribute(PublisherError):
@@ -2774,7 +2800,9 @@ class LinkedImageException(ApiException):
                             img_linked
 
                 if lin_malformed is not None:
-                        err = _("Invalid linked image name: '%s'") % \
+                        err = _("Invalid linked image name '%s'. "
+                            "Linked image names have the following format "
+                            "'<linked_image plugin>:<linked_image name>'") % \
                             lin_malformed
 
                 if link_to_self:
@@ -2969,3 +2997,79 @@ class UnknownFreezeFileVersion(ApiException):
                     "found": self.found,
                     "loc": self.loc,
                 }
+
+class InvalidOptionError(ApiException):
+        """Used to indicate an issue with verifying options passed to a certain
+        operation."""
+
+        GENERIC    = "generic"      # generic option violation
+        OPT_REPEAT = "opt_repeat"   # option repetition is not allowed
+        ARG_REPEAT = "arg_repeat"   # argument repetition is not allowed
+        INCOMPAT   = "incompat"     # option 'a' can not be specified with option 'b'
+        REQUIRED   = "required"     # option 'a' requires option 'b'
+        XOR        = "xor"          # either option 'a' or option 'b' must be specified
+
+	def __init__(self, err_type=GENERIC, options=[], msg=None):
+
+                self.err_type = err_type
+                self.options = options
+                self.msg = msg
+
+        def __str__(self):
+
+                # In case the user provided a custom message we just take it and
+                # append the according options.
+                if self.msg is not None:
+                        if self.options:
+                                self.msg += ": "
+                                self.msg += " ".join(self.options)
+                        return self.msg
+
+       		if self.err_type == self.OPT_REPEAT:
+                        assert len(self.options) == 1
+                        return _("Option '%(option)s' may not be repeated.") % {
+                            "option" : self.options[0]}
+                elif self.err_type == self.ARG_REPEAT:
+                        assert len(self.options) == 2
+                        return _("Argument '%(op1)s' for option '%(op2)s' may "
+                            "not be repeated.") % {"op1" : self.options[0],
+                            "op2" : self.options[1]}
+                elif self.err_type == self.INCOMPAT:
+                        assert len(self.options) == 2
+                        return _("The '%(op1)s' and '%(op2)s' option may "
+                            "not be combined.") % {"op1" : self.options[0],
+                            "op2" : self.options[1]}
+                elif self.err_type == self.REQUIRED:
+                        assert len(self.options) == 2
+                        return _("'%(op1)s' may only be used with "
+                            "'%(op2)s'.") % {"op1" : self.options[0],
+                            "op2" : self.options[1]}
+                elif self.err_type == self.XOR:
+                        assert len(self.options) == 2
+                        return _("Either '%(op1)s' or '%(op2)s' must be "
+                            "specified") % {"op1" : self.options[0],
+                            "op2" : self.options[1]}
+                else:
+                        return _("invalid option(s): ") + " ".join(self.options)
+
+class InvalidOptionErrors(ApiException):
+
+        def __init__(self, errors):
+
+                self.errors = []
+
+                assert (isinstance(errors, list) or isinstance(errors, tuple) or
+                    isinstance(errors, set) or
+                    isinstance(errors, InvalidOptionError))
+
+                if isinstance(errors, InvalidOptionError):
+                        self.errors.append(errors)
+                else:
+                        self.errors = errors
+
+        def __str__(self):
+                msgs = []
+                for e in self.errors:
+                        msgs.append(str(e))
+                return "\n".join(msgs)
+

@@ -64,7 +64,7 @@ class PC(object):
                 self.required_names = req_names
                 self.origins = origins
 
-class TestSysrepo(pkg5unittest.ManyDepotTestCase):
+class TestSysrepo(pkg5unittest.ApacheDepotTestCase):
         """Tests pkg interaction with the system repository."""
 
         # Tests in this suite use the read only data directory.
@@ -102,36 +102,8 @@ test3\ttrue\ttrue\ttrue\torigin\tonline\t%(durl3)s/\thttp://localhost:%(port)s
 test4\ttrue\ttrue\ttrue\t\t\t\t
 """
 
-        def killalldepots(self):
-                try:
-                        pkg5unittest.ManyDepotTestCase.killalldepots(self)
-                finally:
-                        if self.sc:
-                                self.debug("stopping sysrepo")
-                                try:
-                                        self.sc.stop()
-                                except Exception, e:
-                                        try:
-                                                self.debug("killing sysrepo")
-                                                self.sc.kill()
-                                        except Exception, e:
-                                                pass
-                        for ac in self.acs.values():
-                                self.debug("stopping https apache proxy")
-                                try:
-                                        ac.stop()
-                                except Exception,e :
-                                        try:
-                                                self.debug(
-                                                    "killing apache instance")
-                                                self.ac.kill()
-                                        except Exception, e:
-                                                pass
-
         def setUp(self):
                 # These need to be set before calling setUp in case setUp fails.
-                self.sc = None
-                self.acs = {}
                 self.smf_cmds = {}
 
                 # These need to set to allow the smf commands to give the right
@@ -186,7 +158,7 @@ test4\ttrue\ttrue\ttrue\t\t\t\t
                 # the property to the value.  The list of PC objects represent
                 # the configuration of each publisher.
                 #
-                # The self.configs dictionary is used to create images who
+                # The self.configs dictionary is used to create images whose
                 # configuration is used by pkg.sysrepo to create the
                 # configuration files needed to set up a system-repository
                 # instance for that image.
@@ -357,8 +329,8 @@ test4\ttrue\ttrue\ttrue\t\t\t\t
                         fh.write(self.https_conf % cd)
 
                 ac = pkg5unittest.ApacheController(conf_path, https_port,
-                    instance_dir, https=True)
-                self.acs[pc.url] = ac
+                    instance_dir, testcase=self, https=True)
+                self.register_apache_controller(pc.url, ac)
                 ac.start()
                 return ac
 
@@ -471,6 +443,9 @@ test4\ttrue\ttrue\ttrue\t\t\t\t
                         self.image_destroy()
 
         def __set_responses(self, name, update_conf=True):
+                """Sets the system-repository to use a named configuration
+                when providing responses."""
+
                 if name not in self.__configured_names:
                         raise RuntimeError("%s hasn't been prepared for this "
                             "test." % name)
@@ -497,8 +472,13 @@ test4\ttrue\ttrue\ttrue\t\t\t\t
                 if uid != new_gid or gid != new_gid:
                         misc.recursive_chown_dir(self.common_config_dir, uid,
                             gid)
-                if update_conf and self.sc:
-                        self.sc.conf = self.apache_confs[name]
+                if update_conf and "sysrepo" in self.acs:
+                        # changing configuration without registering a new
+                        # ApacheController is safe even if the new configuration
+                        # specifies a different port, because the controller
+                        # gets stopped/started by the __set_conf(..)
+                        # method of ApacheController if the process is running.
+                        self.acs["sysrepo"].conf = self.apache_confs[name]
 
         def __check_publisher_info(self, expected, set_debug_value=True,
             su_wrap=False, env_arg=None):
@@ -543,10 +523,11 @@ test4\ttrue\ttrue\ttrue\t\t\t\t
                 self.__prep_configuration("all-access",
                     use_config_cache=use_config_cache)
                 self.__set_responses("all-access")
-                self.sc = pkg5unittest.SysrepoController(
+                sc = pkg5unittest.SysrepoController(
                     self.apache_confs["all-access"], self.sysrepo_port,
                     self.common_config_dir, testcase=self)
-                self.sc.start()
+                self.register_apache_controller("sysrepo", sc)
+                sc.start()
                 api_obj = self.image_create(props={"use-system-repo": True})
                 # Make sure that the publisher catalogs were created.
                 for n in ("test1", "test12", "test3"):
@@ -627,16 +608,17 @@ test4\ttrue\ttrue\ttrue\t\t\t\t
                 self.__prep_configuration(["all-access", "none", "test12-test3",
                     "test3"])
                 self.__set_responses("all-access")
-                self.sc = pkg5unittest.SysrepoController(
+                sc = pkg5unittest.SysrepoController(
                     self.apache_confs["none"], self.sysrepo_port,
                     self.common_config_dir, testcase=self)
+                self.register_apache_controller("sysrepo", sc)
 
-                self.sc.start()
+                sc.start()
                 self.assertRaises(apx.CatalogRefreshException,
                     self.image_create, props={"use-system-repo": True})
-                self.sc.conf = self.apache_confs["all-access"]
+                sc.conf = self.apache_confs["all-access"]
                 api_obj = self.image_create(props={"use-system-repo": True})
-                self.sc.conf = self.apache_confs["none"]
+                sc.conf = self.apache_confs["none"]
 
                 expected =  self.expected_all_access % \
                     {"durl1": self.durl1, "durl2": self.durl2,
@@ -657,7 +639,7 @@ test4\ttrue\ttrue\ttrue\t\t\t\t
                 self.assertRaises(tx.TransportFailures, self._api_install,
                     api_obj, ["bar"], refresh_catalogs=False)
 
-                self.sc.conf = self.apache_confs["test3"]
+                sc.conf = self.apache_confs["test3"]
                 self.pkg("list -a")
                 self.pkg("contents -rm example_pkg", exit=1)
                 self.pkg("contents -rm foo", exit=1)
@@ -669,7 +651,7 @@ test4\ttrue\ttrue\ttrue\t\t\t\t
                 self._api_install(api_obj, ["bar"], refresh_catalogs=False)
 
 
-                self.sc.conf = self.apache_confs["test12-test3"]
+                sc.conf = self.apache_confs["test12-test3"]
                 self.pkg("list -a")
                 self.pkg("contents -rm example_pkg", exit=1)
                 self.pkg("contents -rm foo")
@@ -677,7 +659,7 @@ test4\ttrue\ttrue\ttrue\t\t\t\t
                     api_obj, ["example_pkg"], refresh_catalogs=False)
                 self._api_install(api_obj, ["foo"], refresh_catalogs=False)
 
-                self.sc.conf = self.apache_confs["all-access"]
+                sc.conf = self.apache_confs["all-access"]
                 self.pkg("list -a")
                 self.pkg("contents -rm example_pkg")
                 self._api_install(api_obj, ["example_pkg"])
@@ -721,10 +703,11 @@ test4\ttrue\ttrue\ttrue\t\t\t\t
                 self.__prep_configuration(["test1", "none",
                     "mirror-access-user"])
                 self.__set_responses("test1")
-                self.sc = pkg5unittest.SysrepoController(
+                sc = pkg5unittest.SysrepoController(
                     self.apache_confs["test1"], self.sysrepo_port,
                     self.common_config_dir, testcase=self)
-                self.sc.start()
+                self.register_apache_controller("sysrepo", sc)
+                sc.start()
                 api_obj = self.image_create(props={"use-system-repo": True})
 
                 # Test that most modifications to a system publisher fail.
@@ -770,7 +753,7 @@ test1\ttrue\ttrue\ttrue\tmirror\tonline\t%(rurl1)s/\t-
                 # Change the proxy configuration so that the image can't use it
                 # to communicate with the depot. This forces communication to
                 # go through the user configured origin.
-                self.sc.conf = self.apache_confs["none"]
+                sc.conf = self.apache_confs["none"]
 
                 # Check that the catalog can't be refreshed and that the
                 # communcation with the repository fails.
@@ -801,7 +784,7 @@ test1\ttrue\ttrue\ttrue\tmirror\tonline\t%(rurl1)s/\t-
 
                 # Reenable access to the depot to make sure nothing has been
                 # broken in the image.
-                self.sc.conf = self.apache_confs["test1"]
+                sc.conf = self.apache_confs["test1"]
                 self.pkg("refresh --full")
 
                 # Find the hashes that will be included in the urls of the
@@ -813,7 +796,7 @@ test1\ttrue\ttrue\ttrue\tmirror\tonline\t%(rurl1)s/\t-
 
                 # Check that a user can add and remove mirrors,
                 # but can't remove repo-provided mirrors
-                self.sc.conf = self.apache_confs["mirror-access-user"]
+                sc.conf = self.apache_confs["mirror-access-user"]
                 self.__set_responses("mirror-access-user")
                 self.pkg("set-publisher -m %s test12" % self.rurl2)
                 expected_mirrors = """\
@@ -860,7 +843,6 @@ test3\ttrue\ttrue\ttrue\tmirror\tonline\thttp://localhost:%(port)s/test3/%(hash3
 
                 self.__check_publisher_info(expected)
 
-
         def test_04_changing_syspub_configuration(self):
                 """Test that changes to the syspub/0 response are handled
                 correctly by the client."""
@@ -870,10 +852,11 @@ test3\ttrue\ttrue\ttrue\tmirror\tonline\thttp://localhost:%(port)s/test3/%(hash3
                 self.__prep_configuration(["none", "test1-test12",
                     "test1-test3", "test12"])
                 self.__set_responses("none")
-                self.sc = pkg5unittest.SysrepoController(
+                sc = pkg5unittest.SysrepoController(
                     self.apache_confs["none"], self.sysrepo_port,
                     self.common_config_dir, testcase=self)
-                self.sc.start()
+                self.register_apache_controller("sysrepo", sc)
+                sc.start()
                 api_obj = self.image_create(props={"use-system-repo": True})
 
                 expected = """\
@@ -1032,10 +1015,11 @@ test1\tfalse\tfalse\tfalse\torigin\tonline\t%(durl1)s/\t-
                 # Create an image with no user configured publishers and no
                 # system configured publishers.
                 self.__set_responses("none")
-                self.sc = pkg5unittest.SysrepoController(
+                sc = pkg5unittest.SysrepoController(
                     self.apache_confs["none"], self.sysrepo_port,
                     self.common_config_dir, testcase=self)
-                self.sc.start()
+                self.register_apache_controller("sysrepo", sc)
+                sc.start()
                 api_obj = self.image_create(props={"use-system-repo": True})
                 expected = """\
 PUBLISHER\tSTICKY\tSYSPUB\tENABLED\tTYPE\tSTATUS\tURI\tPROXY
@@ -1045,19 +1029,18 @@ PUBLISHER\tSTICKY\tSYSPUB\tENABLED\tTYPE\tSTATUS\tURI\tPROXY
                 # Have the user configure test1 at the same time that test1 is
                 # made a system publisher.
                 self.__set_responses("test1")
-                # This fails in the same way that doing set-publisher -p for a
-                # repository which provides packages for an already configured
-                # publisher fails.
-                self.pkg("set-publisher -p %s" % self.rurl1, exit=1)
-                # Adding the origin to the publisher which now exists should
-                # work fine.
-                self.pkg("set-publisher -g %s test1" % self.rurl1)
+
+                self.pkg("set-publisher -p %s" % self.rurl1)
                 expected = """\
 PUBLISHER\tSTICKY\tSYSPUB\tENABLED\tTYPE\tSTATUS\tURI\tPROXY
 test1\ttrue\ttrue\ttrue\torigin\tonline\t%(rurl1)s/\t-
 test1\ttrue\ttrue\ttrue\torigin\tonline\t%(durl1)s/\thttp://localhost:%(port)s
 """ % {"rurl1": self.rurl1, "durl1": self.durl1, "port": self.sysrepo_port}
                 self.__check_publisher_info(expected)
+
+                # Adding the origin to the publisher which now exists should
+                # fail.
+                self.pkg("set-publisher -g %s test1" % self.rurl1, exit=1)
 
                 # The user adds an origin to test12 at the same time that test12
                 # first becomes known to the image.
@@ -1112,10 +1095,11 @@ PUBLISHER\tSTICKY\tSYSPUB\tENABLED\tTYPE\tSTATUS\tURI\tPROXY
 
                 self.__prep_configuration(["all-access", "none", "test1"])
                 self.__set_responses("none")
-                self.sc = pkg5unittest.SysrepoController(
+                sc = pkg5unittest.SysrepoController(
                     self.apache_confs["none"], self.sysrepo_port,
                     self.common_config_dir, testcase=self)
-                self.sc.start()
+                self.register_apache_controller("sysrepo", sc)
+                sc.start()
                 api_obj = self.image_create(props={"use-system-repo": True})
 
                 self.pkg("set-publisher -p %s" % self.rurl3)
@@ -1262,11 +1246,12 @@ test1\ttrue\tfalse\ttrue\torigin\tonline\t%s/\t-
                 self.__prep_configuration(["all-access"],
                     port=self.sysrepo_alt_port)
                 self.__set_responses("all-access")
-                self.sc = pkg5unittest.SysrepoController(
+                sc = pkg5unittest.SysrepoController(
                     self.apache_confs["all-access"],
                     self.sysrepo_alt_port, self.common_config_dir,
                     testcase=self)
-                self.sc.start()
+                self.register_apache_controller("sysrepo", sc)
+                sc.start()
                 old_psu = os.environ.get("PKG_SYSREPO_URL", None)
                 os.environ["PKG_SYSREPO_URL"] = "localhost:%s" % \
                     self.sysrepo_alt_port
@@ -1287,10 +1272,11 @@ test1\ttrue\tfalse\ttrue\torigin\tonline\t%s/\t-
                         self.dcs[i].kill(now=True)
                 self.__prep_configuration(["all-access-f", "none"])
                 self.__set_responses("all-access-f")
-                self.sc = pkg5unittest.SysrepoController(
+                sc = pkg5unittest.SysrepoController(
                     self.apache_confs["all-access-f"], self.sysrepo_port,
                     self.common_config_dir, testcase=self)
-                self.sc.start()
+                self.register_apache_controller("sysrepo", sc)
+                sc.start()
                 api_obj = self.image_create(props={"use-system-repo": True})
 
                 # Find the hashes that will be included in the urls of the
@@ -1344,10 +1330,11 @@ test1\ttrue\tfalse\ttrue\torigin\tonline\t%(rurl1)s/\t-
                 self.__prep_configuration(["all-access", "all-access-f",
                     "none"])
                 self.__set_responses("all-access-f")
-                self.sc = pkg5unittest.SysrepoController(
+                sc = pkg5unittest.SysrepoController(
                     self.apache_confs["all-access-f"], self.sysrepo_port,
                     self.common_config_dir, testcase=self)
-                self.sc.start()
+                self.register_apache_controller("sysrepo", sc)
+                sc.start()
                 api_obj = self.image_create(props={"use-system-repo": True})
 
                 # Find the hashes that will be included in the urls of the
@@ -1383,10 +1370,11 @@ test3\ttrue\ttrue\ttrue\torigin\tonline\thttp://localhost:%(port)s/test3/%(hash3
                 self.__prep_configuration(["all-access", "all-access-f",
                     "mirror-access", "mirror-access-f", "none"])
                 self.__set_responses("mirror-access")
-                self.sc = pkg5unittest.SysrepoController(
+                sc = pkg5unittest.SysrepoController(
                     self.apache_confs["mirror-access"], self.sysrepo_port,
                     self.common_config_dir, testcase=self)
-                self.sc.start()
+                self.register_apache_controller("sysrepo", sc)
+                sc.start()
                 api_obj = self.image_create(props={"use-system-repo": True})
 
                 # Find the hashes that will be included in the urls of the
@@ -1485,10 +1473,11 @@ test3\ttrue\ttrue\ttrue\tmirror\tonline\thttp://localhost:%(port)s/test3/%(hash3
                 self.__prep_configuration(["https-access", "none"],
                     use_config_cache=use_config_cache)
                 self.__set_responses("https-access")
-                self.sc = pkg5unittest.SysrepoController(
+                sc = pkg5unittest.SysrepoController(
                     self.apache_confs["https-access"], self.sysrepo_port,
                     self.common_config_dir, testcase=self)
-                self.sc.start()
+                self.register_apache_controller("sysrepo", sc)
+                sc.start()
                 api_obj = self.image_create(props={"use-system-repo": True})
 
                 expected = """\
@@ -1532,10 +1521,11 @@ PUBLISHER\tSTICKY\tSYSPUB\tENABLED\tTYPE\tSTATUS\tURI\tPROXY
                 self.__prep_configuration(["disabled"],
                     use_config_cache=use_config_cache)
                 self.__set_responses("disabled")
-                self.sc = pkg5unittest.SysrepoController(
+                sc = pkg5unittest.SysrepoController(
                     self.apache_confs["disabled"], self.sysrepo_port,
                     self.common_config_dir, testcase=self)
-                self.sc.start()
+                self.register_apache_controller("sysrepo", sc)
+                sc.start()
                 api_obj = self.image_create(props={"use-system-repo": True})
                 expected = """\
 PUBLISHER\tSTICKY\tSYSPUB\tENABLED\tTYPE\tSTATUS\tURI\tPROXY
@@ -1561,10 +1551,11 @@ test3\ttrue\ttrue\ttrue\torigin\tonline\t%(durl3)s/\thttp://localhost:%(port)s
                 self.__prep_configuration(["nourl"],
                     use_config_cache=use_config_cache)
                 self.__set_responses("nourl")
-                self.sc = pkg5unittest.SysrepoController(
+                sc = pkg5unittest.SysrepoController(
                     self.apache_confs["nourl"], self.sysrepo_port,
                     self.common_config_dir, testcase=self)
-                self.sc.start()
+                self.register_apache_controller("sysrepo", sc)
+                sc.start()
                 api_obj = self.image_create(props={"use-system-repo": True})
                 expected_empty = """\
 PUBLISHER\tSTICKY\tSYSPUB\tENABLED\tTYPE\tSTATUS\tURI\tPROXY
@@ -1616,10 +1607,11 @@ empty\ttrue\tfalse\ttrue\t\t\t\t
 
                 self.__prep_configuration(["all-access", "none"])
                 self.__set_responses("all-access")
-                self.sc = pkg5unittest.SysrepoController(
+                sc = pkg5unittest.SysrepoController(
                     self.apache_confs["all-access"], self.sysrepo_port,
                     self.common_config_dir, testcase=self)
-                self.sc.start()
+                self.register_apache_controller("sysrepo", sc)
+                sc.start()
                 api_obj = self.image_create(props={"use-system-repo": True})
 
                 expected =  self.expected_all_access % \
@@ -1643,7 +1635,7 @@ PUBLISHER\tSTICKY\tSYSPUB\tENABLED\tTYPE\tSTATUS\tURI\tPROXY
 
                 # Test that when the sysrepo isn't available, unprivileged users
                 # don't lose functionality.
-                self.sc.stop()
+                sc.stop()
                 # Since the last privileged command was done when no
                 # system-publishers were available, that's what's expected when
                 # the system repository isn't available.
@@ -1656,12 +1648,12 @@ PUBLISHER\tSTICKY\tSYSPUB\tENABLED\tTYPE\tSTATUS\tURI\tPROXY
 
                 # Now do a privileged command command to change what the state
                 # on disk is.
-                self.sc.start()
+                sc.start()
                 expected =  self.expected_all_access % \
                     {"durl1": self.durl1, "durl2": self.durl2,
                     "durl3": self.durl3, "port": self.sysrepo_port}
                 self.__check_publisher_info(expected)
-                self.sc.stop()
+                sc.stop()
 
                 self.__check_publisher_info(expected, su_wrap=True)
                 self.pkg("property", su_wrap=True)
@@ -1674,10 +1666,11 @@ PUBLISHER\tSTICKY\tSYSPUB\tENABLED\tTYPE\tSTATUS\tURI\tPROXY
                 conf_name = "img-sig-ignore"
                 self.__prep_configuration([conf_name])
                 self.__set_responses(conf_name)
-                self.sc = pkg5unittest.SysrepoController(
+                sc = pkg5unittest.SysrepoController(
                     self.apache_confs[conf_name], self.sysrepo_port,
                     self.common_config_dir, testcase=self)
-                self.sc.start()
+                self.register_apache_controller("sysrepo", sc)
+                sc.start()
                 api_obj = self.image_create(props={"use-system-repo": True})
 
                 self.pkg("property -H signature-policy", su_wrap=True)
@@ -1694,10 +1687,11 @@ PUBLISHER\tSTICKY\tSYSPUB\tENABLED\tTYPE\tSTATUS\tURI\tPROXY
                 conf_name = "img-sig-require"
                 self.__prep_configuration([conf_name])
                 self.__set_responses(conf_name)
-                self.sc = pkg5unittest.SysrepoController(
+                sc = pkg5unittest.SysrepoController(
                     self.apache_confs[conf_name], self.sysrepo_port,
                     self.common_config_dir, testcase=self)
-                self.sc.start()
+                self.register_apache_controller("sysrepo", sc)
+                sc.start()
                 api_obj = self.image_create(props={"use-system-repo": True})
 
                 self.pkg("property -H signature-policy")
@@ -1715,10 +1709,11 @@ PUBLISHER\tSTICKY\tSYSPUB\tENABLED\tTYPE\tSTATUS\tURI\tPROXY
                 conf_name = "img-sig-req-names"
                 self.__prep_configuration([conf_name])
                 self.__set_responses(conf_name)
-                self.sc = pkg5unittest.SysrepoController(
+                sc = pkg5unittest.SysrepoController(
                     self.apache_confs[conf_name], self.sysrepo_port,
                     self.common_config_dir, testcase=self)
-                self.sc.start()
+                self.register_apache_controller("sysrepo", sc)
+                sc.start()
 
                 api_obj = self.image_create(props={"use-system-repo": True})
 
@@ -1742,10 +1737,11 @@ PUBLISHER\tSTICKY\tSYSPUB\tENABLED\tTYPE\tSTATUS\tURI\tPROXY
                 conf_name = "pub-sig-ignore"
                 self.__prep_configuration([conf_name])
                 self.__set_responses(conf_name)
-                self.sc = pkg5unittest.SysrepoController(
+                sc = pkg5unittest.SysrepoController(
                     self.apache_confs[conf_name], self.sysrepo_port,
                     self.common_config_dir, testcase=self)
-                self.sc.start()
+                self.register_apache_controller("sysrepo", sc)
+                sc.start()
                 api_obj = self.image_create(props={"use-system-repo": True})
 
                 self.pkg("publisher test1", su_wrap=True)
@@ -1763,10 +1759,11 @@ PUBLISHER\tSTICKY\tSYSPUB\tENABLED\tTYPE\tSTATUS\tURI\tPROXY
                 conf_name = "pub-sig-require"
                 self.__prep_configuration([conf_name])
                 self.__set_responses(conf_name)
-                self.sc = pkg5unittest.SysrepoController(
+                sc = pkg5unittest.SysrepoController(
                     self.apache_confs[conf_name], self.sysrepo_port,
                     self.common_config_dir, testcase=self)
-                self.sc.start()
+                self.register_apache_controller("sysrepo", sc)
+                sc.start()
                 api_obj = self.image_create(props={"use-system-repo": True})
 
                 pubs = api_obj.get_publishers()
@@ -1783,11 +1780,11 @@ PUBLISHER\tSTICKY\tSYSPUB\tENABLED\tTYPE\tSTATUS\tURI\tPROXY
                 conf_name = "pub-sig-reqnames"
                 self.__prep_configuration([conf_name])
                 self.__set_responses(conf_name)
-                self.sc = pkg5unittest.SysrepoController(
+                sc = pkg5unittest.SysrepoController(
                     self.apache_confs[conf_name], self.sysrepo_port,
                     self.common_config_dir, testcase=self)
-                self.sc.start()
-
+                self.register_apache_controller("sysrepo", sc)
+                sc.start()
                 api_obj = self.image_create(props={"use-system-repo": True})
 
                 pubs = api_obj.get_publishers()
@@ -1807,10 +1804,11 @@ PUBLISHER\tSTICKY\tSYSPUB\tENABLED\tTYPE\tSTATUS\tURI\tPROXY
                 conf_name = "pub-sig-mixed"
                 self.__prep_configuration([conf_name])
                 self.__set_responses(conf_name)
-                self.sc = pkg5unittest.SysrepoController(
+                sc = pkg5unittest.SysrepoController(
                     self.apache_confs[conf_name], self.sysrepo_port,
                     self.common_config_dir, testcase=self)
-                self.sc.start()
+                self.register_apache_controller("sysrepo", sc)
+                sc.start()
                 api_obj = self.image_create(props={"use-system-repo": True})
 
                 pubs = api_obj.get_publishers()
@@ -1836,10 +1834,11 @@ PUBLISHER\tSTICKY\tSYSPUB\tENABLED\tTYPE\tSTATUS\tURI\tPROXY
                 conf_name = "img-pub-sig-mixed"
                 self.__prep_configuration([conf_name])
                 self.__set_responses(conf_name)
-                self.sc = pkg5unittest.SysrepoController(
+                sc = pkg5unittest.SysrepoController(
                     self.apache_confs[conf_name], self.sysrepo_port,
                     self.common_config_dir, testcase=self)
-                self.sc.start()
+                self.register_apache_controller("sysrepo", sc)
+                sc.start()
 
                 api_obj = self.image_create(props={"use-system-repo": True})
 
@@ -1877,10 +1876,11 @@ PUBLISHER\tSTICKY\tSYSPUB\tENABLED\tTYPE\tSTATUS\tURI\tPROXY
                 conf_name = "test1-test3"
                 self.__prep_configuration([conf_name])
                 self.__set_responses(conf_name)
-                self.sc = pkg5unittest.SysrepoController(
+                sc = pkg5unittest.SysrepoController(
                     self.apache_confs[conf_name], self.sysrepo_port,
                     self.common_config_dir, testcase=self)
-                self.sc.start()
+                self.register_apache_controller("sysrepo", sc)
+                sc.start()
                 api_obj = self.image_create(props={"use-system-repo": True})
                 self.pkgsend_bulk(self.rurl1, self.foo11)
                 self.pkgsend_bulk(self.rurl3, self.bar11)
@@ -1894,10 +1894,11 @@ PUBLISHER\tSTICKY\tSYSPUB\tENABLED\tTYPE\tSTATUS\tURI\tPROXY
                 conf_name = "test1-test3-f"
                 self.__prep_configuration([conf_name])
                 self.__set_responses(conf_name)
-                self.sc = pkg5unittest.SysrepoController(
+                sc = pkg5unittest.SysrepoController(
                     self.apache_confs[conf_name], self.sysrepo_port,
                     self.common_config_dir, testcase=self)
-                self.sc.start()
+                self.register_apache_controller("sysrepo", sc)
+                sc.start()
                 api_obj = self.image_create(props={"use-system-repo": True})
                 self.pkgsend_bulk(self.rurl1, self.foo11)
                 self.pkgsend_bulk(self.rurl3, self.bar11)
@@ -1928,6 +1929,7 @@ PUBLISHER\tSTICKY\tSYSPUB\tENABLED\tTYPE\tSTATUS\tURI\tPROXY
                 sc = pkg5unittest.SysrepoController(
                     self.apache_confs["test1-test12-test12"], self.sysrepo_port,
                     self.common_config_dir, testcase=self)
+                self.register_apache_controller("sysrepo", sc)
                 sc.start()
 
                 # enable the test1 and test12 publishers
@@ -1953,10 +1955,11 @@ PUBLISHER\tSTICKY\tSYSPUB\tENABLED\tTYPE\tSTATUS\tURI\tPROXY
                 self.__prep_configuration(["test1", "test1-test12",
                     "test1-test12-test12"])
                 self.__set_responses("test1-test12")
-                self.sc = pkg5unittest.SysrepoController(
+                sc = pkg5unittest.SysrepoController(
                     self.apache_confs["test1-test12"], self.sysrepo_port,
                     self.common_config_dir, testcase=self)
-                self.sc.start()
+                self.register_apache_controller("sysrepo", sc)
+                sc.start()
 
                 api_obj = self.image_create(props={"use-system-repo": True})
 
@@ -2084,10 +2087,11 @@ PUBLISHER\tSTICKY\tSYSPUB\tENABLED\tTYPE\tSTATUS\tURI\tPROXY
 
                 self.__prep_configuration(["test1"])
                 self.__set_responses("test1")
-                self.sc = pkg5unittest.SysrepoController(
+                sc = pkg5unittest.SysrepoController(
                     self.apache_confs["test1"], self.sysrepo_port,
                     self.common_config_dir, testcase=self)
-                self.sc.start()
+                self.register_apache_controller("sysrepo", sc)
+                sc.start()
 
                 api_obj = self.image_create(props={"use-system-repo": True})
 
