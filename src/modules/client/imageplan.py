@@ -2111,6 +2111,8 @@ class ImagePlan(object):
                                 if isinstance(note, unicode):
                                         note = note.encode("utf-8")
                                 print >>tmpfile, note
+                        # make file world readable
+                        os.chmod(path, 0644)
                         tmpfile.close()
                         self.pd.release_notes_name = os.path.basename(path)
 
