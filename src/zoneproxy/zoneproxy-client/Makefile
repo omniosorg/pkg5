@@ -29,7 +29,6 @@ include ../Makefile.constants
 
 LDLIBS =	-lsocket
 CPPFLAGS +=	-D_REENTRANT -D_FILE_OFFSET_BITS=64
-CFLAGS += 	-mt
 
 .KEEP_STATE:
 
