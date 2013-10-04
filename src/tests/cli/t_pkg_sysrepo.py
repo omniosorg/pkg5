@@ -1925,10 +1925,10 @@ PUBLISHER\tSTICKY\tSYSPUB\tENABLED\tTYPE\tSTATUS\tURI\tPROXY
                 self.__prep_configuration(["test1-test12-test12",
                     "test12-test12"])
                 self.__set_responses("test1-test12-test12")
-                sc = pkg5unittest.SysrepoController(
+                self.sc = pkg5unittest.SysrepoController(
                     self.apache_confs["test1-test12-test12"], self.sysrepo_port,
                     self.common_config_dir, testcase=self)
-                sc.start()
+                self.sc.start()
 
                 # enable the test1 and test12 publishers
                 self.__set_responses("test1-test12-test12")
