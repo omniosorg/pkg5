@@ -624,18 +624,18 @@ def list_inventory(op, api_inst, pargs,
                         not_installed = []
                         try:
                                 for entry in api_inst.get_pkg_list(
-				    api.ImageInterface.LIST_INSTALLED,
+                                    api.ImageInterface.LIST_INSTALLED,
                                     patterns=e.notfound, raise_unmatched=True):
                                         pub, stem, ver = entry[0]
                                         no_updates.append(stem)
                         except api_errors.InventoryException, exc:
                                 not_installed = exc.notfound
 
-			err_str = ""
+                        err_str = ""
                         if len(not_installed) == 1:
-				err_str = _("No package matching '%s'"
-					  " is installed. ") % \
-					  not_installed[0]
+                                err_str = _("No package matching '%s'"
+                                    " is installed. ") % \
+                                    not_installed[0]
                         elif not_installed:
                                 err_str = _("No packages matching '%s'"
                                     " are installed. ") % \
@@ -649,8 +649,8 @@ def list_inventory(op, api_inst, pargs,
                                 err_str = err_str + _("No updates are available"
                                           " for packages '%s'.") % \
                                             ", ".join(no_updates)
-			if err_str:
-                                error(err_str, cmd=op) 
+                        if err_str:
+                                error(err_str, cmd=op)
 
                 if found and e.notfound:
                         # Only some patterns matched.
@@ -1479,7 +1479,7 @@ def __api_execute_plan(operation, api_inst):
 
                 try:
                         salvaged = api_inst.describe().salvaged
-			newbe = api_inst.describe().new_be
+                        newbe = api_inst.describe().new_be
                         if salvaged and (rval == EXIT_OK or not newbe):
                                 # Only show salvaged file list if populated
                                 # and operation was successful, or if operation
@@ -2708,6 +2708,9 @@ def search(api_inst, args):
         except api_errors.BooleanQueryException, e:
                 error(e)
                 return EXIT_OOPS
+        except api_errors.ParseError, e:
+                error(e)
+                return EXIT_OOPS
 
         good_res = False
         bad_res = False
@@ -2997,7 +3000,7 @@ def info(api_inst, args):
                 # XXX even more info on the publisher would be nice?
                 msg(_("     Publisher:"), pi.publisher)
                 hum_ver = pi.get_attr_values("pkg.human-version")
-                if hum_ver and hum_ver[0] != pi.version:
+                if hum_ver and hum_ver[0] != str(pi.version):
                         msg(_("       Version:"), "%s (%s)" %
                             (pi.version, hum_ver[0]))
                 else:
@@ -3753,9 +3756,9 @@ def publisher_set(api_inst, args):
                                 remove_mirrors.add(misc.parse_uri(arg,
                                     cwd=orig_cwd))
                 elif opt == "-p":
-			if repo_uri:
+                        if repo_uri:
                                 usage(_("The -p option can be specified only "
-				    "once."), cmd=cmd_name) 
+                                    "once."), cmd=cmd_name)
                         repo_uri = misc.parse_uri(arg, cwd=orig_cwd)
                 elif opt in ("-P", "--search-first"):
                         search_first = True
@@ -5288,9 +5291,9 @@ def image_create(args):
 
         for opt, arg in opts:
                 if opt in ("-p", "--publisher"):
-			if pub_url:
+                        if pub_url:
                                 usage(_("The -p option can be specified only "
-				    "once."), cmd=cmd_name)
+                                    "once."), cmd=cmd_name)
                         try:
                                 pub_name, pub_url = arg.split("=", 1)
                         except ValueError:
@@ -5623,11 +5626,8 @@ def history_list(api_inst, args):
                 dt_start = misc.timestamp_to_datetime(he.operation_start_time)
                 dt_end = misc.timestamp_to_datetime(he.operation_end_time)
                 if dt_start > dt_end:
-                        error(_("History operation appeared to end before it "
-                            "started.  Start time: %(start_time)s, "
-                            "End time: %(end_time)s") %
-                            (output["start"], output["finish"]), cmd="history")
-                        return EXIT_OOPS
+                        output["finish"] = _("%s (clock drift detected)") % \
+                            output["finish"]
 
                 output["time"] = dt_end - dt_start
                 # This should never happen.  We can't use timedelta's str()
@@ -6091,6 +6091,10 @@ def main_func():
                         runid = arg
                 elif opt in ("--help", "-?"):
                         show_usage = True
+
+        # The globals in pkg.digest can be influenced by debug flags
+        if DebugValues:
+                reload(pkg.digest)
 
         subcommand = None
         if pargs:

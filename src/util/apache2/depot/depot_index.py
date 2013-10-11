@@ -22,7 +22,6 @@
 # Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
 
 import cherrypy
-import hashlib
 import httplib
 import logging
 import mako
@@ -35,6 +34,7 @@ import traceback
 import urllib
 import Queue
 
+import pkg.digest as digest
 import pkg.p5i
 import pkg.server.api
 import pkg.server.repository as sr
@@ -295,15 +295,20 @@ class WsgiDepot(object):
 
                 for prefix in repo_paths:
                         path = repo_paths[prefix]
-                        repo_hash = hashlib.sha1(path).hexdigest()
+                        repo_hash = digest.DEFAULT_HASH_FUNC(path).hexdigest()
                         index_dir = os.path.sep.join(
                             [self.cache_dir, "indexes", repo_hash])
 
                         # if the index dir exists for this repository, we do not
                         # automatically attempt a refresh.
                         refresh_index = not os.path.exists(index_dir)
-                        repo = sr.Repository(root=path,
-                        read_only=True, writable_root=index_dir)
+                        try:
+                                repo = sr.Repository(root=path,
+                                    read_only=True, writable_root=index_dir)
+                        except sr.RepositoryError, e:
+                                print("Error initializing repository at %s: "
+                                    "%s" % (path, e))
+                                continue
 
                         repositories[prefix] = repo
                         dconf = sd.DepotConfig()
@@ -675,9 +680,9 @@ class Pkg5Dispatch(object):
                             "message": httplib.responses[httplib.NOT_FOUND],
                             "traceback": "",
                             "version": cherrypy.__version__}
-                        print "Path that raised exception was %s" % \
-                            cherrypy.request.path_info
-                        print message
+                        print("Path that raised exception was %s" %
+                            cherrypy.request.path_info)
+                        print(message)
                         return error
                 else:
                         error = cherrypy._cperror._HTTPErrorTemplate % \
