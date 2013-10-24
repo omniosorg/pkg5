@@ -74,7 +74,7 @@ CA_PATH = "ca-path"
 default_properties = {
         CA_PATH: os.path.join(os.path.sep, "etc", "ssl", "certs"),
         # Path default is intentionally relative for this case.
-        "trust-anchor-directory": os.path.join("etc", "ssl", "certs"),
+        "trust-anchor-directory": os.path.join("etc", "ssl", "pkg"),
 }
 
 # Assume the repository metadata should be checked no more than once every
