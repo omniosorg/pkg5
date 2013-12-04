@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2009, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
 #
 
 # Display linear, incremental progress if the # of elements is greater than
@@ -97,10 +97,10 @@ class GuiProgressTracker(progress.ProgressTracker):
                         self.update_details_text(_("Done\n"))
 
                 if isinstance(planitem, progress.GoalTrackerItem):
-                        self.__generic_progress(text, planitem.items,
+                        self.__generic_progress(text, planitem.items - 1,
                             planitem.goalitems)
                 else:
-                        self.__generic_progress(text, 1, 1)
+                        self.__generic_progress(text, 0, 1)
 
                 if outspec.last:
                         self.reset_label_text_after_delay()
@@ -120,7 +120,7 @@ class GuiProgressTracker(progress.ProgressTracker):
 
                 if "manifests" in outspec.changed:
                         self.__generic_progress("Fetching manifests",
-                            self.mfst_fetch.items + 1,
+                            self.mfst_fetch.items,
                             self.mfst_fetch.goalitems)
 
                 if outspec.last:
@@ -176,7 +176,7 @@ class GuiProgressTracker(progress.ProgressTracker):
                         self.__generic_progress(job.name, job.items,
                             job.goalitems)
                 else:
-                        self.__generic_progress(job.name, 1, 1)
+                        self.__generic_progress(job.name, 0, 1)
 
                 if outspec.last:
                         self.update_details_text(_("Done\n"))
@@ -232,7 +232,7 @@ class GuiProgressTracker(progress.ProgressTracker):
                 self.update_details_text(msg, i)
 
         def _li_recurse_progress_output(self, lin):
-                self.__generic_progress("Linked Images", 1, 1)
+                self.__generic_progress("Linked Images", 0, 1)
                 pass
 
         def __generic_progress(self, phase, cur_nitems, goal_nitems):
@@ -241,7 +241,7 @@ class GuiProgressTracker(progress.ProgressTracker):
                 if goal_nitems > MIN_ELEMENTS_BOUNCE:
                         if self.is_progress_bouncing():
                                 self.stop_bouncing_progress()
-                        self.display_phase_info(phase, cur_nitems-1,
+                        self.display_phase_info(phase, cur_nitems,
                             goal_nitems)
                 else:
                         if not self.is_progress_bouncing():
