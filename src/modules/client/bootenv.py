@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
 
 import errno
 import os
@@ -285,32 +285,17 @@ class BootEnv(object):
 
         @staticmethod
         def get_be_list(raise_error=False):
+                # This check enables the test suite to run much more quickly.
+                # It is necessary because pkg5unittest (eventually) imports this
+                # module before the environment is sanitized.
+                if "PKG_NO_LIVE_ROOT" in os.environ:
+                        return BootEnvNull.get_be_list()
                 # Check for the old beList() API since pkg(1) can be
                 # back published and live on a system without the 
                 # latest libbe.
                 rc = 0
 
                 beVals = be.beList()
-                # XXX temporary workaround for ON bug #7043482 (needed for
-                # successful test suite runs on b166-b167).
-                if portable.util.get_canonical_os_name() == "sunos":
-                        for entry in os.listdir("/proc/self/path"):
-                                try:
-                                        int(entry)
-                                except ValueError:
-                                        # Only interested in file descriptors.
-                                        continue
-
-                                fpath = os.path.join("/proc/self/path", entry)
-                                try:
-                                        if os.readlink(fpath) == \
-                                            "/etc/dev/cro_db":
-                                                os.close(int(entry))
-                                except OSError, e:
-                                        if e.errno not in (errno.ENOENT,
-                                            errno.EBADFD):
-                                                raise
-
                 if isinstance(beVals[0], int):
                         rc, beList = beVals
                 else:
@@ -366,6 +351,11 @@ class BootEnv(object):
                         beList = BootEnv.get_be_list()
 
                         for be in beList:
+                                # don't look at active but unbootable BEs.
+                                # (happens in zones when we have ZBEs
+                                # associated with other global zone BEs.)
+                                if be.get("active_unbootable", False):
+                                        continue
                                 if be.get("active_boot"):
                                         return be.get("orig_be_name")
                 except AttributeError:
@@ -495,7 +485,8 @@ class BootEnv(object):
                         # image's history.
                         self.img.history.operation_new_be = self.be_name_clone
                         self.img.history.operation_new_be_uuid = self.be_name_clone_uuid
-                        self.img.history.log_operation_end()
+                        self.img.history.log_operation_end(release_notes=
+			    self.img.imageplan.pd.release_notes_name)
 
                         if be.beUnmount(self.be_name_clone) != 0:
                                 logger.error(_("unable to unmount BE "
@@ -597,9 +588,9 @@ beadm activate %(be_name_clone)s
                                 self.img.history.log_operation_error(error=e)
                                 raise e
 
-                        logger.error(_("%s failed to be updated. No changes "
-                            "have been made to %s.") % (self.be_name,
-                            self.be_name))
+                        logger.error(_("%(bename)s failed to be updated. No "
+                            "changes have been made to %(bename)s.") %
+                            {"bename": self.be_name})
 
         def destroy_snapshot(self):
 
@@ -665,16 +656,18 @@ beadm activate %(be_name_clone)s
 
                         self.destroy_snapshot()
 
-                        logger.error(_("The Boot Environment %s failed to be "
-                            "updated. A snapshot was taken before the failed "
-                            "attempt and has been restored so no changes have "
-                            "been made to %s.") % (self.be_name, self.be_name))
+                        logger.error(_("The Boot Environment %(bename)s failed "
+                            "to be updated. A snapshot was taken before the "
+                            "failed attempt and has been restored so no "
+                            "changes have been made to %(bename)s.") %
+                            {"bename": self.be_name})
 
         def activate_install_uninstall(self):
                 """Activate an install/uninstall attempt. Which just means
                         destroy the snapshot for the live and non-live case."""
 
                 self.destroy_snapshot()
+
 
 class BootEnvNull(object):
 
@@ -722,7 +715,7 @@ class BootEnvNull(object):
 
         @staticmethod
         def get_be_list():
-                pass
+                return []
 
         @staticmethod
         def get_be_name(path):

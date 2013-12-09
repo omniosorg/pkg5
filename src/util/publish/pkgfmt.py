@@ -20,7 +20,7 @@
 # CDDL HEADER END
 
 #
-# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 # Prefixes should be ordered alphabetically with most specific first.
@@ -53,9 +53,11 @@ DRIVER_ALIAS_PREFIXES = (
 
 try:
         import cStringIO
+        import copy
         import errno
         import getopt
         import gettext
+        import locale
         import operator
         import os
         import re
@@ -290,8 +292,21 @@ def write_line(line, fileobj):
         act = line[0]
         out = line[1] + act.name
 
-        if hasattr(act, "hash") and act.hash != "NOHASH":
-                out += " " + act.hash
+        sattrs = act.attrs
+        ahash = None
+        try:
+                ahash = act.hash
+                if ahash and ahash != "NOHASH":
+                        if "=" not in ahash and " " not in ahash and \
+                            '"' not in ahash:
+                                out += " " + ahash
+                        else:
+                                sattrs = copy.copy(act.attrs)
+                                sattrs["hash"] = ahash
+                                ahash = None
+        except AttributeError:
+                # No hash to stash.
+                pass
 
         # high order bits in sorting
         def kvord(a):
@@ -425,11 +440,11 @@ def write_line(line, fileobj):
                 rem_attr_count = 0
 
                 # Total number of remaining attribute values to output.
-                total_count = sum(len(act.attrlist(k)) for k in act.attrs)
+                total_count = sum(len(act.attrlist(k)) for k in sattrs)
                 rem_count = total_count
 
                 # Now build the action output string an attribute at a time.
-                for k, v in sorted(act.attrs.iteritems(), cmp=cmpkv):
+                for k, v in sorted(sattrs.iteritems(), cmp=cmpkv):
                         # Newline breaks are only forced when there is more than
                         # one value for an attribute.
                         if not (isinstance(v, list) or isinstance(v, set)):
@@ -456,8 +471,7 @@ def write_line(line, fileobj):
                                         first_line = False
                                         first_attr_count = \
                                             (total_count - rem_count)
-                                        if hasattr(act, "hash") and \
-                                            act.hash != "NOHASH":
+                                        if ahash and ahash != "NOHASH":
                                                 first_attr_count += 1
                                         rem_attr_count = rem_count
 
@@ -489,7 +503,8 @@ def write_line(line, fileobj):
         print >> fileobj, output
 
 def main_func():
-        gettext.install("pkg", "/usr/share/locale")
+        gettext.install("pkg", "/usr/share/locale",
+            codeset=locale.getpreferredencoding())
         global opt_unwrap
         global opt_check
         global opt_diffs

@@ -5,7 +5,6 @@
 #
 </%doc>
 <%
-      import os.path
       context.write("""
 #
 # This is an automatically generated file for the IPS system publisher, and
@@ -59,9 +58,9 @@ LoadModule mime_module libexec/64/mod_mime.so
 LoadModule dir_module libexec/64/mod_dir.so
 LoadModule alias_module libexec/64/mod_alias.so
 LoadModule rewrite_module libexec/64/mod_rewrite.so
-
 LoadModule env_module libexec/64/mod_env.so
 LoadModule wsgi_module libexec/64/mod_wsgi-2.6.so
+
 # We only alias a specific script, not all files in ${sysrepo_template_dir}
 WSGIScriptAlias /wsgi_p5p ${sysrepo_template_dir}/sysrepo_p5p.py
 WSGIDaemonProcess sysrepo processes=1 threads=21 user=pkg5srv group=pkg5srv display-name=pkg5_sysrepo inactivity-timeout=120
@@ -277,6 +276,21 @@ ProxyRemote http ${http_proxy}
 % if https_proxy != None:
 ProxyRemote https ${https_proxy}
 % endif
+<%doc> #
+       # If we supplied proxies, then these override all per-repository proxies.
+       # </%doc>
+% if http_proxy == None and https_proxy == None:
+        % for uri in reversed(sorted(uri_pub_map.keys())):
+                % for pub, cert_path, key_path, hash, proxy, utype in uri_pub_map[uri]:
+<%
+                        if proxy:
+                                context.write(
+                                    "ProxyRemote %(uri)s %(proxy)s\n" % locals()
+                                    )
+%>
+                % endfor pub
+        % endfor uri
+% endif
 
 <%doc> #
        # We only perform caching if cache_dir is set.  It need to be set to
@@ -307,8 +321,13 @@ MCacheMaxObjectCount 200000
 MCacheMinObjectSize 1
 MCacheMaxObjectSize 45690876
 % endif
-CacheDisable /versions/0
-CacheDisable /syspub/0
+CacheDisable /versions
+CacheDisable /syspub
+<%
+	for p in sorted(set(v[0] for l in uri_pub_map.values() for v in l )):
+	        context.write("CacheDisable /%s/catalog\n" % p)
+%>
+
 </IfModule>
 % endif
 
@@ -343,7 +362,7 @@ SSLProxyProtocol all
 </%doc>
 
 % for uri in reversed(sorted(uri_pub_map.keys())):
-        % for pub, cert_path, key_path, hash in uri_pub_map[uri]:
+        % for pub, cert_path, key_path, hash, proxy, utype in uri_pub_map[uri]:
 <%doc>
                 # for any https publishers, we want to allow proxy clients
                 # access the repos using the key/cert from the sysrepo
@@ -363,12 +382,11 @@ SSLProxyProtocol all
                         # File and p5p-based repositories get our static
                         # versions and publisher responses
                         context.write("RewriteRule ^/%(pub)s/%(hash)s/versions/0 "
-                            "/versions/0/index.html [L,NE]\n" % locals())
+                            "%%{DOCUMENT_ROOT}/versions/0/index.html [L,NE]\n" % locals())
                         context.write("RewriteRule ^/%(pub)s/%(hash)s/publisher/0 "
-                            "/%(pub)s/%(hash)s/publisher/0/index.html [L,NE]\n" % locals())
+                            "%%{DOCUMENT_ROOT}/%(pub)s/%(hash)s/publisher/0/index.html [L,NE]\n" % locals())
                         # A p5p archive repository
-                        if os.path.isfile(uri.replace("file:", "")):
-
+                        if utype == "file":
                                 repo_path = "/%s" % uri.replace("file:", "").lstrip("/")
                                 context.write("# %s %s\n" % (uri, hash))
                                 # We 'passthrough' (PT), letting our
@@ -427,7 +445,7 @@ SSLProxyProtocol all
                             "/%(pub)s/%(hash)s/manifest/0/([^@]+)@([^\ ]+)(\ HTTP/1.1)$ "
                             "/%(pub)s/%(hash)s/publisher/%(pub)s/pkg/$1/$2 [NE,PT,C]\n"
                             % locals())
-                        context.write("RewriteRule ^/%(pub)s/%(hash)s/(.*)$ - [NE,L]"
+                        context.write("RewriteRule ^/%(pub)s/%(hash)s/(.*)$ %%{DOCUMENT_ROOT}/%(pub)s/%(hash)s/$1 [NE,L]"
                             % locals())
 %>
                 % else:
@@ -435,15 +453,15 @@ SSLProxyProtocol all
                             "%(uri)s/$1 [NE,P]" % locals())
 %>
                 % endif
-        % endfor uri
-% endfor pub
+        % endfor pub
+% endfor uri
 
 % for uri in reversed(sorted(uri_pub_map.keys())):
-        % for pub, cert_path, key_path, hash in uri_pub_map[uri]:
+        % for pub, cert_path, key_path, hash, proxy, utype in uri_pub_map[uri]:
                 <%doc>
                 # Create an alias for the file repository under ${pub}
                 </%doc>
-                % if uri.startswith("file:") and os.path.isdir(uri.replace("file:", "")):
+                % if uri.startswith("file:") and utype == "dir":
 <%
                       repo_path = "/%s" % uri.replace("file:", "").lstrip("/")
                       context.write("# a file repository alias to serve %(uri)s content.\n"
@@ -454,17 +472,30 @@ SSLProxyProtocol all
                           "</Directory>\n" % locals())
 %>
                       % if cache_dir != None:
-CacheDisable /${pub}/${hash}/publisher/0
-CacheDisable /${pub}/${hash}/versions/0
+CacheDisable /${pub}/${hash}/catalog
+CacheDisable /${pub}/${hash}/publisher
+CacheDisable /${pub}/${hash}/versions
                       % endif
 Alias /${pub}/${hash} ${repo_path}
                 % endif
-        % endfor uri
-% endfor pub
+        % endfor pub
+% endfor uri
 
-# any non-file-based repositories get our local versions and syspub responses
-RewriteRule ^.*/versions/0/?$ - [L]
-RewriteRule ^.*/syspub/0/?$ - [L]
+<%
+context.write("# Create dummy proxy pass directives so that connection "
+    "pooling happens.\n# The first rule says to ignore all ProxyPass rules, "
+    "which is why this works.\n")
+context.write("ProxyPass / !")
+%>
+% for uri in reversed(sorted(uri_pub_map.keys())):
+        % if uri.startswith("http"):
+<%              context.write("ProxyPass / %s retry=0" % uri) %>
+        % endif
+% endfor uri
+
+# any repositories get our local versions and syspub responses
+RewriteRule ^.*/versions/0/?$ %{DOCUMENT_ROOT}/versions/0/index.html [L]
+RewriteRule ^.*/syspub/0/?$ %{DOCUMENT_ROOT}/syspub/0/index.html [L]
 # allow for 'OPTIONS * HTTP/1.0' requests
 RewriteCond %{REQUEST_METHOD} OPTIONS [NC]
 RewriteRule \* - [L]

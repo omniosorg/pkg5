@@ -1,3 +1,106 @@
+Version 76:
+Compatible with clients using versions 72-75 [1].
+
+    pkg.client.api.ImageInterface has changed as follows:
+
+	* The generator functions 'gen_facets()' has been updated to
+	  give more information about what facets are changing.
+	  Previously a 2 value tuple was returned, now a 4 value tuple
+	  is returned.
+
+	* [1] This is actually an incompatible change to the old
+	  'gen_facets()' behavior, but since gen_facets was only
+	  introduced in the previous version of the client API it's
+	  unlikely that anyone outside of the pkg gate has adopted it's
+	  use.  But since we'd like to avoid an incompatible client API
+	  change we're going to ignore this issue.
+
+	* The parsable package plan output format for facet changes has
+	  been changed.  Previously a tuple with 2 values was returned;
+	  now a tuple with 6 values is returned.
+
+	* Added 'li_parent_sync' parameter to 'gen_plan_uninstall()'.
+
+	* Added 'li_md_only' and 'li_pkg_updates' parameters to
+	  'gen_plan_detach()' and 'detach_linked_children()'
+
+Version 75:
+Compatible with clients using versions 72-74.
+
+    pkg.client.api.ImageInterface has changed as follows:
+
+	* New generator functions 'gen_variants()' and 'gen_facets()' to
+	  retrieve the current list of facets or variants currently
+	  (implicitly or explicitly) set in the image.  See 'pydoc
+	  pkg.client.api' for details.
+
+Version 74:
+Compatible with clients using versions 72-74.
+     The PlanDescription now has interfaces to
+     determine whether or not release notes were generated
+     for this operation, whether or not they must be displayed,
+     and a method of retrieving the release notes line by
+     line.
+
+Version 73:
+Compatible with clients using version 72.
+
+     A per-origin/mirror property has been added, and the transport
+     updated to allow for multiple paths to a given URI.
+
+     pkg.client.publisher.RepositoryURI has changed as follows:
+
+        * proxies attribute has been added, allowing origins
+          and mirrors to be specified with individual HTTP proxies,
+          each represented by a pkg.client.publisher.ProxyURI object.
+          Multiple proxies for the same URI may not be configured
+          at present.
+
+        * proxy attribute is now deprecated, and attempts to set
+          both 'proxies' and 'proxy' in the constructor will result
+          in an error.
+
+    pkg.client.api_errors has changed as follows:
+
+        * UnknownRepositoryOrigin and UnknownRepositoryMirror
+          exceptions have been changed to include a message
+          when a RepositoryURI with a proxy is being used,
+          printing that proxy.
+
+        * The Exceptions DuplicateSyspubOrigin and
+          DuplicateSyspubMirror have been added for cases where we
+          attempt to add a user-origin or user-mirror that is already
+          provided by the system publisher.
+
+        * The Exceptions RemoveSyspubOrigin and RemoveSyspubMirror
+          have been added for cases where we attempt to remove origins
+          or mirrors that are proxied by the system publisher.
+
+Version 72:
+Incompatible with clients using versions 0-71.
+
+    pkg.client.api.ImageInterface has changed as follows:
+
+        * New functions added: img_plandir(), is_active_liveroot_be(),
+            isparent(), linked_publisher_check(), load_plan(), set_alt_repos()
+        * Functions removed: set_stage()
+        * Removed "runid" parameter from: __init__()
+        * Removed "accept" parameter from: gen_plan_*()
+        * Removed "show_licenses" parameter from: gen_plan_*()
+        * Added "pubcheck" parameter to:
+            gen_plan_sync(), gen_plan_update()
+
+    pkg.client.api.PlanDescription has changed as follows:
+        * Removed __init__() parameters: img, backup_be, backup_be_name,
+            new_be, be_activate, be_name
+        * Added __init__() parameters: op
+        * Removed methods: get_parsable_mediators(), get_parsable_varcets(),
+            get_salvaged(), get_services()
+        * Removed properties: is_active_root_be
+        * Added methods: getstate(), setstate(), fromstate()
+        * Added properties: executed, services, mediators, varcets,
+            plan_desc, salvaged, plan_type, update_index
+
 Version 71:
 Compatible with clients using versions 66-70.
 

@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2007, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
 #
 
 
@@ -32,11 +32,14 @@ relationship between the package containing the action and another package.
 """
 
 import generic
+import re
 
 import pkg.actions
 import pkg.client.pkgdefs as pkgdefs
 import pkg.fmri
 import pkg.version
+
+from pkg.client.firmware import Firmware
 
 known_types = (
     "conditional",
@@ -178,9 +181,10 @@ class DependencyAction(generic.Action):
                 if required and pkgdefs.PKG_STATE_OBSOLETE in \
                     image.get_pkg_state(installed_version):
                         errors.append(
-                            _("%s dependency on an obsolete package (%s);"
-                            "this package must be uninstalled manually") %
-                            (ctype, installed_version))
+                            _("%(dep_type)s dependency on an obsolete package "
+                            "(%(obs_pkg)s); this package must be uninstalled "
+                            "manually") %
+                            {"dep_type": ctype, "obs_pkg": installed_version})
                         return errors
                 return errors
 
@@ -199,8 +203,7 @@ class DependencyAction(generic.Action):
 
                 # XXX Exclude and range between min and max not yet handled
                 def __min_version():
-                        return pkg.version.Version("0",
-                            image.attrs["Build-Release"])
+                        return pkg.version.Version("0")
 
                 ctype = self.attrs["type"]
 
@@ -212,7 +215,7 @@ class DependencyAction(generic.Action):
                 # get a list of fmris and do fmri token substitution
                 pfmris = []
                 for i in self.attrlist("fmri"):
-                        f = pkg.fmri.PkgFmri(i, image.attrs["Build-Release"])
+                        f = pkg.fmri.PkgFmri(i)
                         if f.pkg_name == DEPEND_SELF:
                                 f = pfmri
                         pfmris.append(f)
@@ -249,8 +252,7 @@ class DependencyAction(generic.Action):
                         min_fmri = pfmri.copy()
                         min_fmri.version = __min_version()
                 elif ctype == "conditional":
-                        cfmri = pkg.fmri.PkgFmri(self.attrs["predicate"],
-                            image.attrs["Build-Release"])
+                        cfmri = pkg.fmri.PkgFmri(self.attrs["predicate"])
                         installed_cversion = image.get_version_installed(cfmri)
                         if installed_cversion is not None and \
                             installed_cversion.is_successor(cfmri):
@@ -269,12 +271,20 @@ class DependencyAction(generic.Action):
                                         return [], [], []
                                 else:
                                         errors.extend(e)
-
                         if not errors: # none was installed
                                 errors.append(_("Required dependency on one of "
                                     "%s not met") %
                                     ", ".join((str(p) for p in pfmris)))
                         return errors, warnings, info
+                elif ctype == "origin" and pfmri.pkg_name.startswith(
+                    "feature/firmware/"):
+                        ok, reason = Firmware().check_firmware(self, pfmri.pkg_name)
+                        if ok:
+                                return [], [], []
+                        else:
+                                errors.append(reason)
+
+                        # can only check origin firmware dependencies
 
                 # do checking for other dependency types
 
@@ -307,15 +317,15 @@ class DependencyAction(generic.Action):
                 # it creating a dummy timestamp.  So we have to split it apart
                 # manually.
                 #
-                # XXX This code will need to change if we start using fmris
-                # with publishers in dependencies.
-                #
                 if isinstance(pfmris, basestring):
                         pfmris = [pfmris]
                 inds = []
+                pat = re.compile(r"pkg:///|pkg://[^/]*/|pkg:/") 
                 for p in pfmris:
-                        if p.startswith("pkg:/"):
-                                p = p[5:]
+                        # Strip pkg:/ or pkg:/// from the fmri.
+                        # If fmri has pkg:// then strip the prefix
+                        # from 'pkg://' upto the first slash.
+                        p = pat.sub("", p)
                         # Note that this creates a directory hierarchy!
                         inds.append(
                                 ("depend", ctype, p, None)
@@ -465,7 +475,7 @@ class DependencyAction(generic.Action):
                 for attr in ("predicate", "fmri"):
                         for f in self.attrlist(attr):
                                 try:
-                                        pkg.fmri.PkgFmri(f, "5.11")
+                                        pkg.fmri.PkgFmri(f)
                                 except (pkg.version.VersionError,
                                     pkg.fmri.FmriError), e:
                                         if attr == "fmri" and f == "__TBD":

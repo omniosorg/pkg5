@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2007, 2011 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
 #
 
 # pkg.depotd - package repository daemon
@@ -45,7 +45,7 @@ CONTENT_PATH_DEFAULT = "/usr/share/lib/pkg"
 # body is larger than the specified size (in bytes).  The maximum size supported
 # by cherrypy is 2048 * 1024 * 1024 - 1 (just short of 2048MB), but the default
 # here is purposefully conservative.
-MAX_REQUEST_BODY_SIZE = 128 * 1024 * 1024
+MAX_REQUEST_BODY_SIZE = 512 * 1024 * 1024
 # The default host/port(s) to serve data from.
 HOST_DEFAULT = "0.0.0.0"
 PORT_DEFAULT = 80
@@ -89,6 +89,9 @@ import cherrypy.process.servers
 from cherrypy.process.plugins import Daemonizer
 
 from pkg.misc import msg, emsg, setlocale
+from pkg.client.debugvalues import DebugValues
+
+import pkg
 import pkg.client.api_errors as api_errors
 import pkg.config as cfg
 import pkg.portable.util as os_util
@@ -129,8 +132,8 @@ Usage: /usr/lib/pkg.depotd [-a address] [-d inst_root] [-p port] [-s threads]
            [-t socket_timeout] [--cfg] [--content-root]
            [--disable-ops op[/1][,...]] [--debug feature_list]
            [--image-root dir] [--log-access dest] [--log-errors dest]
-           [--mirror] [--nasty] [--proxy-base url] [--readonly]
-           [--ssl-cert-file] [--ssl-dialog] [--ssl-key-file]
+           [--mirror] [--nasty] [--nasty-sleep] [--proxy-base url]
+           [--readonly] [--ssl-cert-file] [--ssl-dialog] [--ssl-key-file]
            [--sort-file-max-size size] [--writable-root dir]
 
         -a address      The IP address on which to listen for connections.  The
@@ -164,7 +167,8 @@ Usage: /usr/lib/pkg.depotd [-a address] [-d inst_root] [-p port] [-s threads]
                         operations, simply 'search'.
         --debug         The name of a debug feature to enable; or a whitespace
                         or comma separated list of features to enable.
-                        Possible values are: headers.
+                        Possible values are: headers, hash=sha1+sha256,
+                        hash=sha256
         --image-root    The path to the image whose file information will be
                         used as a cache for file data.
         --log-access    The destination for any access related information
@@ -184,6 +188,8 @@ Usage: /usr/lib/pkg.depotd [-a address] [-d inst_root] [-p port] [-s threads]
                         clients, and generally be hostile.  The option
                         takes a value (1 to 100) for how nasty the server
                         should be.
+        --nasty-sleep   In nasty mode (see --nasty), how many seconds to
+                        randomly sleep when a random sleep occurs.
         --proxy-base    The url to use as the base for generating internal
                         redirects and content.
         --readonly      Read-only operation; modifying operations disallowed.
@@ -228,17 +234,17 @@ class OptionError(Exception):
 if __name__ == "__main__":
 
         setlocale(locale.LC_ALL, "")
-        gettext.install("pkg", "/usr/share/locale")
+        gettext.install("pkg", "/usr/share/locale",
+            codeset=locale.getpreferredencoding())
 
         add_content = False
         exit_ready = False
         rebuild = False
         reindex = False
         nasty = False
-        nasty_value = 0
 
         # Track initial configuration values.
-        ivalues = { "pkg": {} }
+        ivalues = { "pkg": {}, "nasty": {} }
         if "PKG_REPO" in os.environ:
                 ivalues["pkg"]["inst_root"] = os.environ["PKG_REPO"]
 
@@ -264,10 +270,10 @@ if __name__ == "__main__":
                 long_opts = ["add-content", "cfg=", "cfg-file=",
                     "content-root=", "debug=", "disable-ops=", "exit-ready",
                     "help", "image-root=", "log-access=", "log-errors=",
-                    "llmirror", "mirror", "nasty=", "proxy-base=", "readonly",
-                    "rebuild", "refresh-index", "set-property=",
-                    "ssl-cert-file=", "ssl-dialog=", "ssl-key-file=",
-                    "sort-file-max-size=", "writable-root="]
+                    "llmirror", "mirror", "nasty=", "nasty-sleep=",
+                    "proxy-base=", "readonly", "rebuild", "refresh-index",
+                    "set-property=", "ssl-cert-file=", "ssl-dialog=",
+                    "ssl-key-file=", "sort-file-max-size=", "writable-root="]
 
                 opts, pargs = getopt.getopt(sys.argv[1:], "a:d:np:s:t:?",
                     long_opts)
@@ -312,6 +318,16 @@ if __name__ == "__main__":
                                 else:
                                         features = arg.split()
                                 debug_features.extend(features)
+
+                                # We also allow key=value debug flags, which
+                                # get set in pkg.client.debugvalues
+                                for feature in features:
+                                        try:
+                                                key, val = feature.split("=", 1)
+                                                DebugValues.set_value(key, val)
+                                        except (AttributeError, ValueError):
+                                                pass
+
                         elif opt == "--disable-ops":
                                 if arg is None or arg == "":
                                         raise OptionError, \
@@ -347,18 +363,18 @@ if __name__ == "__main__":
                                 ivalues["pkg"]["ll_mirror"] = True
                                 ivalues["pkg"]["readonly"] = True
                         elif opt == "--nasty":
-                                value_err = None
-                                try:
-                                        nasty_value = int(arg)
-                                except ValueError, e:
-                                        value_err = e
-
-                                if value_err or (nasty_value > 100 or
-                                    nasty_value < 1):
+                                # ValueError is caught by caller.
+                                nasty_value = int(arg)
+                                if (nasty_value > 100 or nasty_value < 1):
                                         raise OptionError, "Invalid value " \
                                             "for nasty option.\n Please " \
                                             "choose a value between 1 and 100."
                                 nasty = True
+                                ivalues["nasty"]["nasty_level"] = nasty_value
+                        elif opt == "--nasty-sleep":
+                                # ValueError is caught by caller.
+                                sleep_value = int(arg)
+                                ivalues["nasty"]["nasty_sleep"] = sleep_value
                         elif opt == "--proxy-base":
                                 # Attempt to decompose the url provided into
                                 # its base parts.  This is done so we can
@@ -482,6 +498,9 @@ if __name__ == "__main__":
                         ivalues["pkg"]["disable_ops"] = disable_ops
                 if addresses:
                         ivalues["pkg"]["address"] = list(addresses)
+
+                if DebugValues:
+                        reload(pkg.digest)
 
                 # Build configuration object.
                 dconf = ds.DepotConfig(target=user_cfg, overrides=ivalues)
@@ -689,7 +708,6 @@ if __name__ == "__main__":
                 else:
                         # Redirect the server to the decrypted key file.
                         ssl_key_file = "/dev/fd/%d" % key_data.fileno()
-                        key_data.close()
 
         # Setup our global configuration.
         gconf = {
@@ -720,6 +738,32 @@ if __name__ == "__main__":
                     "on_start_resource",
                     cherrypy.lib.cptools.log_request_headers)
 
+        log_cfg = {
+            "access": dconf.get_property("pkg", "log_access"),
+            "errors": dconf.get_property("pkg", "log_errors")
+        }
+
+        # If stdin is not a tty and the pkgdepot controller isn't being used,
+        # then assume process will be daemonized and redirect output.
+        if not os.environ.get("PKGDEPOT_CONTROLLER") and \
+            not os.isatty(sys.stdin.fileno()):
+                # Ensure log handlers are setup to use the file descriptors for
+                # stdout and stderr as the Daemonizer (used for test suite and
+                # SMF service) requires this.
+                if log_cfg["access"] == "stdout":
+                        log_cfg["access"] = "/dev/fd/%d" % sys.stdout.fileno()
+                elif log_cfg["access"] == "stderr":
+                        log_cfg["access"] = "/dev/fd/%d" % sys.stderr.fileno()
+                elif log_cfg["access"] == "none":
+                        log_cfg["access"] = "/dev/null"
+
+                if log_cfg["errors"] == "stderr":
+                        log_cfg["errors"] = "/dev/fd/%d" % sys.stderr.fileno()
+                elif log_cfg["errors"] == "stdout":
+                        log_cfg["errors"] = "/dev/fd/%d" % sys.stdout.fileno()
+                elif log_cfg["errors"] == "none":
+                        log_cfg["errors"] = "/dev/null"
+
         log_type_map = {
             "errors": {
                 "param": "log.error_file",
@@ -732,7 +776,7 @@ if __name__ == "__main__":
         }
 
         for log_type in log_type_map:
-                dest = dconf.get_property("pkg", "log_%s" % log_type)
+                dest = log_cfg[log_type]
                 if dest in ("stdout", "stderr", "none"):
                         if dest == "none":
                                 h = logging.StreamHandler(LogSink())
@@ -837,7 +881,6 @@ if __name__ == "__main__":
         # Next, initialize depot.
         if nasty:
                 depot = ds.NastyDepotHTTP(repo, dconf)
-                depot.set_nasty(nasty_value)
         else:
                 depot = ds.DepotHTTP(repo, dconf)
 
@@ -889,7 +932,9 @@ if __name__ == "__main__":
         # then assume process should be daemonized.
         if not os.environ.get("PKGDEPOT_CONTROLLER") and \
             not os.isatty(sys.stdin.fileno()):
-                Daemonizer(cherrypy.engine).subscribe()
+                # Translate the values in log_cfg into paths.
+                Daemonizer(cherrypy.engine, stderr=log_cfg["errors"],
+                    stdout=log_cfg["access"]).subscribe()
 
         try:
                 root = cherrypy.Application(depot)

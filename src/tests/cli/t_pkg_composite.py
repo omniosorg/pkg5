@@ -20,7 +20,8 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+
 
 import testutils
 if __name__ == "__main__":
@@ -114,12 +115,6 @@ class TestPkgCompositePublishers(pkg5unittest.ManyDepotTestCase):
                             os.path.join(self.raw_trust_anchor_dir, name),
                             os.path.join(dest_dir, name))
 
-        def image_create(self, *args, **kwargs):
-                pkg5unittest.ManyDepotTestCase.image_create(self,
-                    *args, **kwargs)
-                self.ta_dir = os.path.join(self.img_path(), "etc/certs/CA")
-                os.makedirs(self.ta_dir)
-
         def __publish_packages(self, rurl):
                 """Private helper function to publish packages needed for
                 testing.
@@ -183,7 +178,7 @@ class TestPkgCompositePublishers(pkg5unittest.ManyDepotTestCase):
 
         def setUp(self):
                 pkg5unittest.ManyDepotTestCase.setUp(self, ["test", "test",
-                    "test", "empty"])
+                    "test", "empty", "void"])
                 self.make_misc_files(self.misc_files)
 
                 # First repository will contain all packages.
@@ -198,6 +193,10 @@ class TestPkgCompositePublishers(pkg5unittest.ManyDepotTestCase):
                 # Fourth will be empty.
                 self.empty_rurl = self.dcs[4].get_repo_url()
                 self.pkgrepo("refresh -s %s" % self.empty_rurl)
+
+                # Fifth will have a publisher named 'void', but no packages.
+                self.void_rurl = self.dcs[5].get_repo_url()
+                self.pkgrepo("refresh -s %s" % self.void_rurl)
 
                 # Setup base test paths.
                 self.path_to_certs = os.path.join(self.ro_data_root,
@@ -265,15 +264,23 @@ class TestPkgCompositePublishers(pkg5unittest.ManyDepotTestCase):
                 # different combinations of archives and repositories.
                 self.pkg("set-publisher -g %s -g %s test" % (self.signed_arc,
                     self.foo_rurl))
-                self.pkg("list -afH ")
+                self.pkg("list -afH")
                 expected = \
                     ("foo (test) 1.0 ---\n"
                     "signed (test) 1.0 ---\n")
                 output = self.reduceSpaces(self.output)
                 self.assertEqualDiff(expected, output)
 
-                self.pkg("set-publisher -G %s -g %s test" % (self.foo_rurl,
-                    self.foo_arc))
+                # Verify removing origins while others remain configured
+                # works as expected.
+                self.pkg("set-publisher -G %s test" % self.foo_rurl)
+                self.pkg("list -afH")
+                expected = "signed (test) 1.0 ---\n"
+                output = self.reduceSpaces(self.output)
+                self.assertEqualDiff(expected, output)
+
+                # Verify simply adding origins works as expected.
+                self.pkg("set-publisher -g %s test" % self.foo_arc)
                 self.pkg("set-publisher -g %s test" % self.incorp_arc)
                 self.pkg("set-publisher -g %s test2" % self.quux_arc)
                 self.pkg("list -afH")
@@ -287,6 +294,8 @@ class TestPkgCompositePublishers(pkg5unittest.ManyDepotTestCase):
                 output = self.reduceSpaces(self.output)
                 self.assertEqualDiff(expected, output)
 
+                # Verify removing and adding origins at the same time works as
+                # expected.
                 self.pkg("set-publisher -G %s -g %s test" % (self.foo_arc,
                     self.foo_rurl))
                 self.pkg("list -afH")
@@ -318,6 +327,10 @@ class TestPkgCompositePublishers(pkg5unittest.ManyDepotTestCase):
                 """Verify that the info operation works as expected when
                 compositing publishers.
                 """
+		# because we compare date strings we must run this in
+		# a consistent locale, which we made 'C'
+
+		os.environ['LC_ALL'] = 'C'
 
                 # Create an image and verify no packages are known.
                 self.image_create(self.empty_rurl, prefix=None)
@@ -357,13 +370,12 @@ class TestPkgCompositePublishers(pkg5unittest.ManyDepotTestCase):
          State: Installed
      Publisher: test
        Version: 1.0
- Build Release: 5.11
         Branch: None
 Packaging Date: %(pkg_date)s
           Size: 41.00 B
           FMRI: %(pkg_fmri)s
 """ % { "pkg_date": self.foo10.version.get_timestamp().strftime("%c"),
-    "pkg_fmri": self.foo10 }
+    "pkg_fmri": self.foo10.get_fmri(include_build=False) }
                 self.assertEqualDiff(expected, self.output)
 
         def test_02_contents(self):
@@ -446,9 +458,7 @@ Packaging Date: %(pkg_date)s
                 self.pkg("uninstall \*")
                 self.pkg("set-publisher -G %s test" % self.signed_arc)
                 self.pkg("list -aH")
-                expected = \
-                    ("foo 1.0 ---\n"
-                    "signed 1.0 ---\n")
+                expected = "foo 1.0 ---\n"
                 output = self.reduceSpaces(self.output)
                 self.assertEqualDiff(expected, output)
 
@@ -544,6 +554,25 @@ Packaging Date: %(pkg_date)s
                 # Elide error output from client to verify that search
                 # results were returned despite error.
                 output = output[:output.find("pkg: ")] + "\n"
+                self.assertEqualDiff(expected, output)
+
+        def test_05_empty(self):
+                """Verify empty repositories and repositories with a publisher,
+                but no packages, can be used with -g."""
+
+                self.image_create(repourl=None, prefix=None)
+
+                # Verify usage alone.
+                for uri in (self.empty_rurl, self.void_rurl):
+                        self.pkg("list -afH -g %s '*'" % uri, exit=1)
+                        self.pkg("contents -H -g %s '*'" % uri, exit=1)
+
+                # Verify usage in combination with non-empty.
+                self.pkg("list -afH -g %s -g %s -g %s '*'" % (self.empty_rurl,
+                    self.void_rurl, self.foo_rurl))
+                expected = \
+                    ("foo (test) 1.0 ---\n")
+                output = self.reduceSpaces(self.output)
                 self.assertEqualDiff(expected, output)
 
 

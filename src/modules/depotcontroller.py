@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
 #
 
 import httplib
@@ -68,14 +68,25 @@ class DepotController(object):
                 self.__state = self.HALTED
                 self.__writable_root = None
                 self.__sort_file_max_size = None
+                self.__ssl_dialog = None
+                self.__ssl_cert_file = None
+                self.__ssl_key_file = None
                 self.__starttime = 0
                 self.__wrapper_start = []
                 self.__wrapper_end = wrapper_end
-                self.__env = { "PKGDEPOT_CONTROLLER": 1 }
+                self.__env = {}
+                self.__nasty = None
+                self.__nasty_sleep = None
                 if wrapper_start:
                         self.__wrapper_start = wrapper_start
                 if env:
                         self.__env = env
+                #
+                # Enable special unit-test depot mode in which it doesn't
+                # do its normal double-fork, providing us good control
+                # over the process.
+                #
+                self.__env["PKGDEPOT_CONTROLLER"] = "1"
                 return
 
         def get_wrapper(self):
@@ -203,7 +214,13 @@ class DepotController(object):
                                 host = "[%s]" % host
                 else:
                         host = "localhost"
-                return "http://%s:%d" % (host, self.__port)
+
+                if self.__ssl_key_file:
+                        scheme = "https"
+                else:
+                        scheme = "http"
+
+                return "%s://%s:%d" % (scheme, host, self.__port)
 
         def set_writable_root(self, wr):
                 self.__writable_root = wr
@@ -228,6 +245,35 @@ class DepotController(object):
 
         def unset_disable_ops(self):
                 self.__disable_ops = None
+
+        def set_nasty(self, nastiness):
+                """Set the nastiness level of the depot.  Also works on
+                running depots."""
+                self.__nasty = nastiness
+                if self.__depot_handle != None:
+                        nastyurl = urlparse.urljoin(self.get_depot_url(),
+                            "nasty/%d" % self.__nasty)
+                        url = urllib2.urlopen(nastyurl)
+                        url.close()
+
+        def get_nasty(self):
+                return self.__nasty
+
+        def set_nasty_sleep(self, sleep):
+                self.__nasty_sleep = sleep
+
+        def get_nasty_sleep(self):
+                return self.__nasty_sleep
+
+        def enable_ssl(self, key_path=None, cert_path=None, dialog=None):
+                self.__ssl_key_file = key_path
+                self.__ssl_cert_file = cert_path
+                self.__ssl_dialog = dialog
+
+        def disable_ssl(self):
+                self.__ssl_key_file = None
+                self.__ssl_cert_file = None
+                self.__ssl_dialog = None
 
         def __network_ping(self):
                 try:
@@ -306,12 +352,22 @@ class DepotController(object):
                         args.append("--exit-ready")
                 if self.__cfg_file:
                         args.append("--cfg-file=%s" % self.__cfg_file)
+                if self.__ssl_cert_file:
+                        args.append("--ssl-cert-file=%s" % self.__ssl_cert_file)
+                if self.__ssl_key_file:
+                        args.append("--ssl-key-file=%s" % self.__ssl_key_file)
+                if self.__ssl_dialog:
+                        args.append("--ssl-dialog=%s" % self.__ssl_dialog)
                 if self.__debug_features:
                         args.append("--debug=%s" % ",".join(
                             self.__debug_features))
                 if self.__disable_ops:
                         args.append("--disable-ops=%s" % ",".join(
                             self.__disable_ops))
+                if self.__nasty:
+                        args.append("--nasty %d" % self.__nasty)
+                if self.__nasty_sleep:
+                        args.append("--nasty-sleep %d" % self.__nasty_sleep)
                 for section in self.__props:
                         for prop, val in self.__props[section].iteritems():
                                 args.append("--set-property=%s.%s='%s'" %
@@ -330,6 +386,9 @@ class DepotController(object):
                 return args
 
         def __initial_start(self):
+                """'env_arg' can be a dictionary of additional os.environ
+                entries to use when starting the depot."""
+
                 if self.__state != self.HALTED:
                         raise DepotStateException("Depot already starting or "
                             "running")
@@ -360,6 +419,7 @@ class DepotController(object):
                 self.__starttime = time.time()
 
         def start(self):
+
                 try:
                         self.__initial_start()
 
@@ -451,11 +511,13 @@ class DepotController(object):
                                 time.sleep(1.0 - lifetime)
 
                 finally:
-                        # By sticking in this finally: block we ensure that even
-                        # if the kill gets ctrl-c'd, we'll at least take a good
-                        # final whack at the depot by killing -9 its process group.
+                        # By sticking in this finally: block we ensure that
+                        # even if the kill gets ctrl-c'd, we'll at least take
+                        # a good final whack at the depot by killing -9 its
+                        # process group.
                         try:
-                                os.kill(-1 * self.__depot_handle.pid, signal.SIGKILL)
+                                os.kill(-1 * self.__depot_handle.pid,
+                                    signal.SIGKILL)
                         except OSError:
                                 pass
                         self.__state = self.HALTED

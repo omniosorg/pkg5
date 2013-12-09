@@ -21,10 +21,10 @@
 #
 
 #
-# Copyright (c) 2008, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
 #
 
-import json
+import simplejson as json
 import multiprocessing
 import os
 import sys
@@ -171,10 +171,12 @@ def find_tests(testdir, testpats, startatpat=False, output=OUTPUT_DOTS,
                                     filename, cname, attrname)
                                 # Remove this function from our class obj if
                                 # it doesn't match the test pattern
-                                if re.search(startatpat, full):
-                                        seen = True
                                 if not seen:
-                                        delattr(classobj, attrname)
+                                        if re.search(startatpat, full):
+                                                seen = True
+                                        else:
+                                                delattr(classobj, attrname)
+                                                continue
                                 found = reduce(lambda x, y: x or y,
                                     [ re.search(pat, full) for pat in pats ],
                                     None)
@@ -212,14 +214,14 @@ def find_tests(testdir, testpats, startatpat=False, output=OUTPUT_DOTS,
         return suite_list
 
 def usage():
-        print >> sys.stderr, "Usage: %s [-cghptv] [-b filename] [-o regexp]" \
-                % sys.argv[0]
-        print >> sys.stderr, "       %s [-chptvx] [-b filename] [-s regexp] "\
+        print >> sys.stderr, "Usage: %s [-ghptv] [-c format] [-b filename] "\
                 "[-o regexp]" % sys.argv[0]
+        print >> sys.stderr, "       %s [-hptvx] [-c format] [-b filename] "\
+                "[-s regexp] [-o regexp]" % sys.argv[0]
         print >> sys.stderr, \
 """   -a <dir>       Archive failed test cases to <dir>/$pid/$testcasename
    -b <filename>  Baseline filename
-   -c             Collect code coverage data
+   -c <format>    Collect code coverage data in xml or html format
    -d             Show debug output, including commands run, and outputs
    -f             Show fail/error information even when test is expected to fail
    -g             Generate result baseline
@@ -230,12 +232,48 @@ def usage():
    -q             Quiet output
    -s <regexp>    Run tests starting at regexp
    -t             Generate timing info file
-   -u             Enable IPS GUI tests, disabled by default
    -v             Verbose output
    -x             Stop after the first baseline mismatch
    -z <port>      Lowest port the test suite should use
 """
         sys.exit(2)
+
+def generate_coverage(cov_format, includes, omits, dest):
+        if cov_format == "html":
+                cov_option = "-d"
+                cov_dest = dest + "_html"
+        elif cov_format == "xml":
+                cov_option = "-o"
+                cov_dest = dest + ".xml"
+        else:
+                raise Exception("Unsupported coverage format")
+
+        cmd = ["coverage", cov_format]
+        if includes and len(includes):
+            cmd.extend(["--include", ",".join(includes)])
+        if omits and len(omits):
+            cmd.extend(["--omit", ",".join(omits)])
+        cmd.extend([cov_option, cov_dest])
+
+        print >> sys.stderr, "Generating coverage report via: ", " ".join(cmd)
+        if subprocess.Popen(cmd).wait() != 0:
+                raise Exception("Failed to generate coverage report!")
+
+        # The coverage data file and report are most likely owned by
+        # root, if a true test run was performed.  Make the files owned
+        # by the owner of the test directory, so they can be easily
+        # removed.
+        try:
+                uid, gid = os.stat(".")[4:6]
+                os.chown(cov_dest, uid, gid)
+                if cov_format == "html":
+                        for f in os.listdir(cov_dest):
+                                os.chown("%s/%s" % (cov_dest, f), uid, gid)
+        except EnvironmentError:
+                pass
+
+
+                
 
 if __name__ == "__main__":
         # Make all warnings be errors.
@@ -249,7 +287,7 @@ if __name__ == "__main__":
                 # If you add options here, you need to also update setup.py's
                 # test_func to include said options.
                 #
-                opts, pargs = getopt.getopt(sys.argv[1:], "a:cdfghj:pqtuvxb:o:s:z:",
+                opts, pargs = getopt.getopt(sys.argv[1:], "a:c:dfghj:pqtuvxb:o:s:z:",
                     ["generate-baseline", "parseable", "port", "timing",
                     "verbose", "baseline-file", "only"])
         except getopt.GetoptError, e:
@@ -266,7 +304,6 @@ if __name__ == "__main__":
         do_coverage = False
         debug_output = False
         show_on_expected_fail = False
-        enable_gui_tests = False
         archive_dir = None
         port = 12001
         quiet = False
@@ -278,6 +315,7 @@ if __name__ == "__main__":
                         output = OUTPUT_PARSEABLE
                 if opt == "-c":
                         do_coverage = True
+                        coverage_format = arg
                 if opt == "-d":
                         pkg5unittest.g_debug_output = True
                 if opt == "-f":
@@ -288,8 +326,6 @@ if __name__ == "__main__":
                         bfile = arg
                 if opt == "-o":
                         onlyval.append(arg)
-                if opt == "-u":
-                        enable_gui_tests = True
                 if opt == "-x":
                         bailonfail = True
                 if opt == "-t":
@@ -306,11 +342,12 @@ if __name__ == "__main__":
                                     "be an integer."
                                 usage()
                 if opt == "-h":
-			usage()
+                        usage()
                 if opt == "-j":
                         jobs = int(arg)
                 if opt == "-q":
                         quiet = True
+
         if (bailonfail or startattest) and generate:
                 usage()
         if quiet and (output != OUTPUT_DOTS):
@@ -327,6 +364,9 @@ if __name__ == "__main__":
                 cov.stop()
                 shutil.rmtree(covdir)
                 cov = None
+        elif not coverage_format in ("xml", "html"):
+                print >> sys.stderr, "-c <format> must be xml or html"
+                usage()
 
         # Allow relative archive dir, but first convert it to abs. paths.
         if archive_dir is not None:
@@ -365,22 +405,6 @@ if __name__ == "__main__":
         suites.append(api_suite)
         if ostype == "posix":
                 suites.append(cli_suite)
-                if enable_gui_tests:
-                        try:
-                                import gui.testutils
-                        except Exception, e:
-                                print "# %s" % e
-                        else:
-                                if not gui.testutils.check_for_gtk():
-                                        print "# GTK not present or $DISPLAY not " \
-                                            "set, GUI tests disabled."
-                                elif not gui.testutils.check_if_a11y_enabled():
-                                        print "# Accessibility not enabled, GUI " \
-                                            "tests disabled."
-                                else:
-                                        gui_suite = find_tests("gui", onlyval,
-                                            startattest, output, time_estimates)
-                                        suites.append(gui_suite)
 
         # This is primarily of interest to developers altering the test suite,
         # so don't enable it for now.  The testsuite suite tends to emit a bunch
@@ -465,30 +489,32 @@ if __name__ == "__main__":
                 subprocess.Popen(["coverage", "combine"], env=newenv).wait()
                 os.rename("%s/pkg5" % covdir, ".coverage")
                 shutil.rmtree(covdir)
-                print >> sys.stderr, "Generating html coverage report"
-                vp = pkg5unittest.g_proto_area + "/usr/lib/python2.6/vendor-packages"
+
                 omits = [
-                    # External modules
-                    "%s/cherrypy" % vp,
-                    "%s/ply" % vp,
-                    "%s/mako" % vp,
-                    "%s/M2Crypto" % vp,
-                    # This removes test-related stuff, as well as compiled
-                    # expressions such as Mako templates and filters.
-                    ""
+                    # These mako templates fail.
+                    "*etc_pkg_*mako", "_depot_conf_mako",
+                    # Complex use of module importer makes this fail.
+                    "*sysrepo_p5p.py"
                 ]
-                subprocess.Popen(["coverage", "html", "--omit", ",".join(omits),
-                    "-d", "htmlcov"]).wait()
+                proto = ["{0}/*".format(pkg5unittest.g_proto_area)]
+
+                try:
+                    generate_coverage(coverage_format,
+                        proto,
+                        omits, "cov_proto")
+                    generate_coverage(coverage_format, None,
+                        proto + omits, "cov_tests")
+                except Exception, e:
+                    print >> sys.stderr, e                        
+                    exitval = 1
+
                 # The coverage data file and report are most likely owned by
                 # root, if a true test run was performed.  Make the files owned
                 # by the owner of the test directory, so they can be easily
                 # removed.
                 try:
                         uid, gid = os.stat(".")[4:6]
-                        os.chown("htmlcov", uid, gid)
                         os.chown(".coverage", uid, gid)
-                        for f in os.listdir("htmlcov"):
-                                os.chown("htmlcov/%s" % f, uid, gid)
                 except EnvironmentError:
                         pass
         sys.exit(exitval)

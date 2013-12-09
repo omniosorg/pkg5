@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
 #
 
 import testutils
@@ -90,6 +90,12 @@ class TestPkgImageCreateBasics(pkg5unittest.ManyDepotTestCase):
                 self.pkg("image-create --set-property foo=bar --set-property "
                     "foo=baz -p test1=%s %s" % (self.rurl1, self.test_root),
                     exit=2)
+                self.pkg("image-create -g %s %s" % (self.rurl1, self.test_root),
+                    exit=2)
+                self.pkg("image-create -m %s %s" % (self.rurl1, self.test_root),
+                    exit=2)
+                self.pkg("image-create -g %s -m %s %s" % (self.rurl1,
+                    self.rurl1, self.test_root), exit=2)
 
         def __add_install_file(self, imgdir, fmri):
                 """Take an image path and fmri. Write a file to disk that
@@ -219,7 +225,7 @@ class TestPkgImageCreateBasics(pkg5unittest.ManyDepotTestCase):
                 information work as expected for image-create."""
 
                 img_path = os.path.join(self.test_root, "test_4_img")
-                for opt in ("-a", "-p", "--publisher"):
+                for opt in ("-p", "--publisher"):
                         self.pkg("image-create %s test1=%s %s" % (opt,
                             self.rurl1, img_path))
                         shutil.rmtree(img_path)
@@ -245,6 +251,17 @@ class TestPkgImageCreateBasics(pkg5unittest.ManyDepotTestCase):
                         self.pkg("-R %s publisher | grep origin.*%s" % (
                             img_path, u))
                 shutil.rmtree(img_path, True)
+
+                # Verify that specifying --no-refresh when use-system-repo
+                # is set to true works.
+                saved_sysrepo_env = os.environ.get("PKG_SYSREPO_URL")
+                os.environ["PKG_SYSREPO_URL"] = "http://localhost:1"
+                self.pkg("image-create --no-refresh --set-property \
+                    use-system-repo=true %s" % img_path)
+                shutil.rmtree(img_path)
+                if saved_sysrepo_env:
+                        os.environ["PKG_SYSREPO_URL"] = saved_sysrepo_env
+
 
                 # Verify that simple paths to file repositories can be used
                 # (not just file:// URIs).
@@ -515,7 +532,8 @@ class TestPkgImageCreateBasics(pkg5unittest.ManyDepotTestCase):
                         newcfg.remove_property("property", p)
                 for p in ("origins", "property.signature-required-names",
                     "intermediate_certs", "approved_ca_certs",
-                    "revoked_ca_certs", "signing_ca_certs"):
+                    "revoked_ca_certs", "signing_ca_certs",
+                    "origin_info", "mirror_info"):
                         newcfg.remove_property("authority_test1", p)
                         newcfg.remove_property("authority_test2", p)
 
@@ -559,8 +577,8 @@ class TestPkgImageCreateBasics(pkg5unittest.ManyDepotTestCase):
 
                 # Verify origin configuration is intact.
                 expected = """\
-test1\ttrue\tfalse\ttrue\torigin\tonline\t%s/
-test2\ttrue\tfalse\tfalse\torigin\tonline\t%s/
+test1\ttrue\tfalse\ttrue\torigin\tonline\t%s/\t-
+test2\ttrue\tfalse\tfalse\torigin\tonline\t%s/\t-
 """ % (self.rurl1, self.rurl2)
                 self.pkg("publisher -HF tsv")
                 output = self.reduceSpaces(self.output)
@@ -569,8 +587,8 @@ test2\ttrue\tfalse\tfalse\torigin\tonline\t%s/
                 # Verify origin information matches expected if configuration
                 # changes are made.
                 expected = """\
-test1\ttrue\tfalse\ttrue\torigin\tonline\t%s/
-test2\ttrue\tfalse\tfalse\torigin\tonline\t%s/
+test1\ttrue\tfalse\ttrue\torigin\tonline\t%s/\t-
+test2\ttrue\tfalse\tfalse\torigin\tonline\t%s/\t-
 """ % (self.rurl2, self.rurl2)
                 self.pkg("set-publisher --no-refresh -O %s test1" % self.rurl2)
                 self.pkg("publisher -HF tsv")
@@ -775,6 +793,9 @@ class TestImageCreateNoDepot(pkg5unittest.CliTestCase):
                     self.pkg, "image-create -p test1=ftp://%s1" %
                     self.bogus_url)
 
+                self.assertRaises(pkg5unittest.UnexpectedExitCodeException, \
+                    self.pkg, "image-create -p test1=ftp://%s1 -p test2=http://%s2:abc" %
+                    (self.bogus_url, self.bogus_url))
 
 if __name__ == "__main__":
         unittest.main()

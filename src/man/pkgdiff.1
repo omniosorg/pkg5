@@ -1,20 +1,20 @@
 '\" te
-.\" Copyright (c) 2007, 2011, Oracle and/or its
-.\" affiliates. All rights reserved.
-.TH pkgdiff 1 "28 Jul 2011" "SunOS 5.11" "User Commands"
+.\" Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
+.TH pkgdiff 1 "26 Feb 2013" "SunOS 5.12" "User Commands"
 .SH NAME
 pkgdiff \- compare package manifests
 .SH SYNOPSIS
 .LP
 .nf
-/usr/bin/pkgdiff [-i \fIattribute\fR ...] [-o \fIattribute\fR]
-    [-v \fIname\fR=\fIvalue\fR ...] \fIfile1\fR \fIfile2\fR
+/usr/bin/pkgdiff [-i \fIattribute\fR]... [-o \fIattribute\fR]
+    [-t \fIaction_name\fR[,\fIaction_name\fR]...]...
+    [-v \fIname\fR=\fIvalue\fR]... (\fIfile1\fR | -) (\fIfile2\fR | -)
 .fi
 
 .SH DESCRIPTION
 .sp
 .LP
-\fBpkgdiff\fR compares two package manifests and reports differences. \fBpkgdiff\fR sorts each manifest and action into a consistent order before comparison.
+\fBpkgdiff\fR compares two package manifests and reports differences. One of the manifests can be read from \fBstdin\fR by specifying \fB-\fR in place of the file name. \fBpkgdiff\fR sorts each manifest and action into a consistent order before comparison.
 .sp
 .LP
 Output is in the following form:
@@ -24,8 +24,8 @@ Output is in the following form:
 .na
 \fB+ \fIcomplete_action\fR\fR
 .ad
-.RS 21n
-.rt  
+.sp .6
+.RS 4n
 This action is in \fIfile2\fR but not in \fIfile1\fR.
 .RE
 
@@ -35,8 +35,8 @@ This action is in \fIfile2\fR but not in \fIfile1\fR.
 .na
 \fB- \fIcomplete_action\fR\fR
 .ad
-.RS 21n
-.rt  
+.sp .6
+.RS 4n
 This action is in \fIfile1\fR but not in \fIfile2\fR.
 .RE
 
@@ -53,8 +53,8 @@ This action is in \fIfile1\fR but not in \fIfile2\fR.
 .na
 \fB- \fIattribute1\fR=\fIvalue1\fR\fR
 .ad
-.RS 23n
-.rt  
+.sp .6
+.RS 4n
 This \fIattribute\fR,\fIvalue\fR is in \fIfile1\fR but not in \fIfile2\fR.
 .RE
 
@@ -64,8 +64,8 @@ This \fIattribute\fR,\fIvalue\fR is in \fIfile1\fR but not in \fIfile2\fR.
 .na
 \fB+ \fIattribute2\fR=\fIvalue2\fR\fR
 .ad
-.RS 23n
-.rt  
+.sp .6
+.RS 4n
 This \fIattribute\fR,\fIvalue\fR is in \fIfile2\fR but not in \fIfile1\fR.
 .RE
 
@@ -80,11 +80,22 @@ The following options are supported:
 .ne 2
 .mk
 .na
+\fB\fB--help\fR\fR
+.ad
+.sp .6
+.RS 4n
+Display a usage message.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
 \fB\fB-i\fR \fIattribute\fR\fR
 .ad
-.RS 17n
-.rt  
-Ignore \fIattribute\fR if present during comparisons. File hash values can be ignored with \fB-i\fR \fIhash\fR. This option cannot be used with the \fB-o\fR option. This option can be repeated.
+.sp .6
+.RS 4n
+Ignore \fIattribute\fR if present during comparisons. File hash values can be ignored with \fB-i\fR \fIhash\fR. This option cannot be used with the \fB-o\fR option. This option can be specified multiple times.
 .RE
 
 .sp
@@ -93,9 +104,20 @@ Ignore \fIattribute\fR if present during comparisons. File hash values can be ig
 .na
 \fB\fB-o\fR \fIattribute\fR\fR
 .ad
-.RS 17n
-.rt  
+.sp .6
+.RS 4n
 Only report differences in \fIattribute\fR. This option cannot be used with the \fB-i\fR option. This option elides any action changes that do not affect \fIattribute\fR on an action.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-t\fR \fIaction_name\fR[,\fIaction_name\fR]...\fR
+.ad
+.sp .6
+.RS 4n
+Only compare the specified actions. Multiple actions can be specified in a comma-separated list. The value of \fIaction_name\fR is one of the actions listed in "Actions" in the \fBpkg\fR(5) man page. For example, the following values could be specified for \fIaction_name\fR: \fBfile\fR, \fBdir\fR, \fBdriver\fR, \fBdepend\fR, \fBset\fR. This option can be specified multiple times.
 .RE
 
 .sp
@@ -104,9 +126,9 @@ Only report differences in \fIattribute\fR. This option cannot be used with the 
 .na
 \fB\fB-v\fR \fIname\fR=\fIvalue\fR\fR
 .ad
-.RS 17n
-.rt  
-Only compute differences for this variant value. For example, only compute differences for \fBarch=sparc\fR. This variant tag is removed for all actions before comparison. Only one value can be specified per variant. This option can be repeated for different variants.
+.sp .6
+.RS 4n
+Only compute differences for this variant value. For example, only compute differences for \fBarch=sparc\fR. This variant tag is removed for all actions before comparison. Only one value can be specified per variant. This option can be specified multiple times for different variants.
 .RE
 
 .SH EXIT STATUS
@@ -139,7 +161,18 @@ Differences were found.
 .ne 2
 .mk
 .na
-\fB\fB>1\fR\fR
+\fB\fB2\fR\fR
+.ad
+.RS 6n
+.rt  
+Invalid command line options were specified.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB3\fR\fR
 .ad
 .RS 6n
 .rt  
@@ -182,4 +215,4 @@ Interface StabilityUncommitted
 \fBpkg\fR(5)
 .sp
 .LP
-\fBhttp://hub.opensolaris.org/bin/view/Project+pkg/\fR
+\fBhttps://java.net/projects/ips/pages/Home\fR

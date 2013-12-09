@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2008, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
 #
 
 import errno
@@ -148,6 +148,9 @@ class ImageNotFoundException(ApiException):
                 self.user_dir = user_dir
                 self.root_dir = root_dir
 
+        def __str__(self):
+                return _("No image rooted at '%s'") % self.user_dir
+
 
 class ImageFormatUpdateNeeded(ApiException):
         """Used to indicate that an image cannot be used until its format is
@@ -177,7 +180,7 @@ class ImageInsufficentSpace(ApiException):
                     "needed": bytes_to_str(self.needed),
                     "use": self.use
                     }
-                    
+
 
 class VersionException(ApiException):
         def __init__(self, expected_version, received_version):
@@ -335,13 +338,21 @@ class ImagePkgStateError(ApiException):
 
 
 class IpkgOutOfDateException(ApiException):
-        pass
+        def __str__(self):
+                return _("pkg(5) out of date")
+
 
 class ImageUpdateOnLiveImageException(ApiException):
-        pass
+        def __str__(self):
+                return _("Requested operation cannot be performed "
+                    "in live image.")
+
 
 class RebootNeededOnLiveImageException(ApiException):
-        pass
+        def __str__(self):
+                return _("Requested operation cannot be performed "
+                    "in live image.")
+
 
 class CanceledException(ApiException):
         pass
@@ -404,6 +415,17 @@ class ReadOnlyFileSystemException(PermissionsException):
                             "read-only filesystem.") % self.path
                 return _("Could not complete the operation: read-only "
                         "filesystem.")
+
+
+class InvalidLockException(ApiException):
+        def __init__(self, path):
+                ApiException.__init__(self)
+                self.path = path
+
+        def __str__(self):
+                return _("Unable to obtain or operate on lock at %s.\n"
+                    "Please try the operation again as a privileged user.") \
+                    % self.path
 
 
 class PackageMatchErrors(ApiException):
@@ -550,10 +572,11 @@ for the current image's architecture, zone type, and/or other variant:""")
                         res += [ s % p for p in self.illegal ]
 
                 if self.badarch:
-                        s = _("'%s' supports the following architectures: %s")
+                        s = _("'%(p)s' supports the following architectures: "
+                            "%(archs)s")
                         a = _("Image architecture is defined as: %s")
-                        res += [ s % (self.badarch[0],
-                            ", ".join(self.badarch[1]))]
+                        res += [ s % {"p": self.badarch[0],
+                            "archs": ", ".join(self.badarch[1])}]
                         res += [ a % (self.badarch[2])]
 
                 s = _("'%(p)s' depends on obsolete package '%(op)s'")
@@ -574,8 +597,8 @@ for the current image's architecture, zone type, and/or other variant:""")
                                         res.append(error)
 
                 if self.multispec:
-                        s = _("The following different patterns specify the "
-                              "same package(s):")
+                        s = _("The following patterns specify different "
+                            "versions of the same package(s):")
                         res += [s]
                         for t in self.multispec:
                                 res += [
@@ -806,8 +829,8 @@ class InconsistentActionAttributeError(ConflictingActionError):
                                 for pkg in sorted(pkglist):
                                         s += _("        %s\n") % pkg
                         else:
-                                t = _("    %d packages deliver '%s', including:\n")
-                                s += t % (num, action)
+                                t = _("    %(n)d packages deliver '%(a)s', including:\n")
+                                s += t % {"n": num, "a": action}
                                 for pkg in sorted(pkglist)[:5]:
                                         s += _("        %s\n") % pkg
 
@@ -1029,7 +1052,8 @@ class InvalidCatalogFile(CatalogError):
         """Used to indicate a Catalog file could not be loaded."""
 
         def __str__(self):
-                return _("Catalog file '%s' is invalid.") % self.data
+                return _("Catalog file '%s' is invalid.\nUse 'pkgrepo rebuild' "
+                    "to create a new package catalog.") % self.data
 
 
 class MismatchedCatalog(CatalogError):
@@ -1230,7 +1254,8 @@ class IndexingException(SearchException):
 
 class CorruptedIndexException(IndexingException):
         """This is used when the index is not in a correct state."""
-        pass
+        def __str__(self):
+                return _("The search index appears corrupted.")
 
 
 class InconsistentIndexException(IndexingException):
@@ -1327,6 +1352,12 @@ class NonLeafPackageException(ApiException):
                 self.fmri = args[0]
                 self.dependents = args[1]
 
+        def __str__(self):
+                s = _("Unable to remove '%s' due to the following packages "
+                    "that depend on it:\n") % self.fmri
+                s += "\n".join(str(f) for f in self.dependents)
+                return s
+
 def _str_autofix(self):
 
         if getattr(self, "_autofix_pkgs", []):
@@ -1421,7 +1452,7 @@ class UnsupportedP5SVersion(ApiException):
 
         def __init__(self, v):
                 self.version = v
-        
+
         def __str__(self):
                 return _("%s is not a supported version for creating a "
                     "syspub response.") % self.version
@@ -1453,7 +1484,8 @@ class RetrievalError(ApiException):
         def __str__(self):
                 if self.location:
                         return _("Error encountered while retrieving data from "
-                            "'%s':\n%s") % (self.location, self.data)
+                            "'%(location)s':\n%(data)s") % \
+                            {"location": self.location, "data": self.data}
                 return _("Error encountered while retrieving data from: %s") % \
                     self.data
 
@@ -1695,6 +1727,15 @@ class DuplicateRepositoryMirror(PublisherError):
                     "publisher.") % self.data
 
 
+class DuplicateSyspubMirror(PublisherError):
+        """Used to indicate that a repository URI is already in use by the
+        system publisher."""
+
+        def __str__(self):
+                return _("Mirror '%s' is already accessible through the "
+                    "system repository.") % self.data
+
+
 class DuplicateRepositoryOrigin(PublisherError):
         """Used to indicate that a repository URI is already in use by another
         repository origin."""
@@ -1702,6 +1743,32 @@ class DuplicateRepositoryOrigin(PublisherError):
         def __str__(self):
                 return _("Origin '%s' already exists for the specified "
                     "publisher.") % self.data
+
+
+class DuplicateSyspubOrigin(PublisherError):
+        """Used to indicate that a repository URI is already in use by the
+        system publisher."""
+
+        def __str__(self):
+                return _("Origin '%s' is already accessible through the "
+                    "system repository.") % self.data
+
+
+class RemoveSyspubOrigin(PublisherError):
+        """Used to indicate that a system publisher origin may not be
+        removed."""
+
+        def __str__(self):
+                return _("Unable to remove origin '%s' since it is provided "
+                    "by the system repository.") % self.data
+
+class RemoveSyspubMirror(PublisherError):
+        """Used to indicate that a system publisher mirror may not be
+        removed."""
+
+        def __str__(self):
+                return _("Unable to remove mirror '%s' since it is provided "
+                    "by the system repository.") % self.data
 
 
 class NoPublisherRepositories(TransportError):
@@ -1876,16 +1943,40 @@ class UnsupportedRepositoryURI(PublisherError):
         """Used to indicate that the specified repository URI uses an
         unsupported scheme."""
 
+        def __init__(self, uris=[]):
+                if isinstance(uris, basestring):
+                        uris = [uris]
+
+                assert isinstance(uris, (list, tuple, set))
+
+                self.uris = uris
+
         def __str__(self):
-                if self.data:
-                        scheme = urlparse.urlsplit(self.data,
+                illegals = []
+
+                for u in self.uris:
+                        assert isinstance(u, basestring)
+                        scheme = urlparse.urlsplit(u,
                             allow_fragments=0)[0]
+                        illegals.append((u, scheme))
+
+                if len(illegals) > 1:
+                        msg = _("The follwing URIs use unsupported "
+                            "schemes.  Supported schemes are "
+                            "file://, http://, and https://.")
+                        for i, s in illegals:
+                                msg += _("\n  %(uri)s (scheme: "
+                                    "%(scheme)s)") % {"uri": i, "scheme": s }
+                        return msg
+                elif len(illegals) == 1:
+                        i, s = illegals[0]
                         return _("The URI '%(uri)s' uses the unsupported "
                             "scheme '%(scheme)s'.  Supported schemes are "
                             "file://, http://, and https://.") % {
-                            "uri": self.data, "scheme": scheme }
+                            "uri": i, "scheme": s }
                 return _("The specified URI uses an unsupported scheme."
-                    "  Supported schemes are: file://, http://, and https://.")
+                    "  Supported schemes are: file://, http://, and "
+                    "https://.")
 
 
 class UnsupportedRepositoryURIAttribute(PublisherError):
@@ -1895,6 +1986,27 @@ class UnsupportedRepositoryURIAttribute(PublisherError):
         def __str__(self):
                 return _("'%(attr)s' is not supported for '%(scheme)s'.") % {
                     "attr": self.data, "scheme": self._args["scheme"] }
+
+
+class UnsupportedProxyURI(PublisherError):
+        """Used to indicate that the specified proxy URI is unsupported."""
+
+        def __str__(self):
+                if self.data:
+                        scheme = urlparse.urlsplit(self.data,
+                            allow_fragments=0)[0]
+                        return _("The proxy URI '%(uri)s' uses the unsupported "
+                            "scheme '%(scheme)s'.  Supported schemes are "
+                            "http://, and https://.") % {
+                            "uri": self.data, "scheme": scheme }
+                return _("The specified proxy URI uses an unsupported scheme."
+                    "  Supported schemes are: http://, and https://.")
+
+class BadProxyURI(PublisherError):
+        """Used to indicate that a proxy URI is not syntactically valid."""
+
+        def __str__(self):
+                return _("'%s' is not a valid URI.") % self.data
 
 
 class UnknownSysrepoConfiguration(ApiException):
@@ -1938,7 +2050,7 @@ class SigningException(ApiException):
                                     "found in %(pfmri)s and has a hash of "
                                     "%(hsh)s") % \
                                     {"pfmri": self.pfmri, "hsh": self.sig.hash}
-                        return _("The package involved is:%s") % self.pfmri
+                        return _("The package involved is %s") % self.pfmri
                 if self.sig:
                         return _("The relevant signature action's value "
                             "attribute is %s") % self.sig.attrs["value"]
@@ -2015,8 +2127,8 @@ class BrokenChain(CertificateException):
                         s = _("The following problems were encountered:\n") + \
                         "\n".join([str(e) for e in self.ext_exs])
                 return _("The certificate which issued this "
-                    "certificate:%(subj)s could not be found. The issuer "
-                    "is:%(issuer)s\n") % {"subj":self.cert.get_subject(),
+                    "certificate: %(subj)s could not be found. The issuer "
+                    "is: %(issuer)s\n") % {"subj":self.cert.get_subject(),
                     "issuer":self.cert.get_issuer()} + s + \
                     CertificateException.__str__(self)
 
@@ -2255,26 +2367,69 @@ class CertificateError(ApiException):
 class ExpiredCertificate(CertificateError):
         """Used to indicate that a certificate has expired."""
 
+        def __init__(self, *args, **kwargs):
+                CertificateError.__init__(self, *args, **kwargs)
+                self.publisher = self._args.get("publisher", None)
+                self.uri = self._args.get("uri", None)
+
         def __str__(self):
-                publisher = self._args.get("publisher", None)
-                uri = self._args.get("uri", None)
-                if publisher:
-                        if uri:
+                if self.publisher:
+                        if self.uri:
                                 return _("Certificate '%(cert)s' for publisher "
                                     "'%(pub)s' needed to access '%(uri)s', "
                                     "has expired.  Please install a valid "
                                     "certificate.") % { "cert": self.data,
-                                    "pub": publisher, "uri": uri }
+                                    "pub": self.publisher, "uri": self.uri }
                         return _("Certificate '%(cert)s' for publisher "
                             "'%(pub)s', has expired.  Please install a valid "
                             "certificate.") % { "cert": self.data,
-                            "pub": publisher }
-                if uri:
+                            "pub": self.publisher }
+                if self.uri:
                         return _("Certificate '%(cert)s', needed to access "
                             "'%(uri)s', has expired.  Please install a valid "
-                            "certificate.") % { "cert": self.data, "uri": uri }
+                            "certificate.") % { "cert": self.data,
+                            "uri": self.uri }
                 return _("Certificate '%s' has expired.  Please install a "
                     "valid certificate.") % self.data
+
+
+class ExpiredCertificates(CertificateError):
+        """Used to collect ExpiredCertficate exceptions."""
+
+        def __init__(self, errors):
+                
+                self.errors = []
+
+                assert (isinstance(errors, (list, tuple,
+                    set, ExpiredCertificate)))
+
+                if isinstance(errors, ExpiredCertificate):
+                        self.errors.append(errors)
+                else:
+                        self.errors = errors
+
+        def __str__(self):
+                pdict = dict()
+                for e in self.errors:
+                        if e.publisher in pdict:
+                                pdict[e.publisher].append(e.uri)
+                        else:
+                                pdict[e.publisher] = [e.uri]
+
+                msg = ""
+                for pub, uris in pdict.items():
+                        msg += "\n%s:" % _("Publisher")
+                        msg += " %s" % pub
+                        for uri in uris:
+                                msg += "\n  %s:\n" % _("Origin URI")
+                                msg += "    %s\n" % uri
+                                msg += "  %s:\n" % _("Certificate")
+                                msg += "    %s\n" % uri.ssl_cert
+                                msg += "  %s:\n" % _("Key")
+                                msg += "    %s\n" % uri.ssl_key
+                return _("One or more client key and certificate files have "
+                    "expired. Please\nupdate the configuration for the "
+                    "publishers or origins listed below:\n %s") % msg
 
 
 class ExpiringCertificate(CertificateError):
@@ -2542,7 +2697,7 @@ class LinkedImageException(ApiException):
             detach_from_parent=None,
             detach_parent_notsup=None,
             img_linked=None,
-            lin_malformed=False,
+            lin_malformed=None,
             link_to_self=False,
             parent_bad_img=None,
             parent_bad_notabs=None,
@@ -2550,7 +2705,8 @@ class LinkedImageException(ApiException):
             parent_not_in_altroot=None,
             pkg_op_failed=None,
             self_linked=None,
-            self_not_child=None):
+            self_not_child=None,
+            unparsable_output=None):
 
                 self.attach_bad_prop = attach_bad_prop
                 self.attach_bad_prop_value = attach_bad_prop_value
@@ -2580,6 +2736,7 @@ class LinkedImageException(ApiException):
                 self.pkg_op_failed = pkg_op_failed
                 self.self_linked = self_linked
                 self.self_not_child = self_not_child
+                self.unparsable_output = unparsable_output
 
                 # first deal with an error bundle
                 if bundle:
@@ -2598,28 +2755,28 @@ class LinkedImageException(ApiException):
 
                 err = None
 
-                if attach_bad_prop:
+                if attach_bad_prop is not None:
                         err = _("Invalid linked image attach property: %s") % \
                             attach_bad_prop
 
-                if attach_bad_prop_value:
+                if attach_bad_prop_value is not None:
                         assert type(attach_bad_prop_value) in [tuple, list]
                         assert len(attach_bad_prop_value) == 2
                         err =  _("Invalid linked image attach property "
                             "value: %s") % "=".join(attach_bad_prop_value)
 
-                if attach_child_notsup:
+                if attach_child_notsup is not None:
                         err = _("Linked image type does not support child "
                             "attach: %s") % attach_child_notsup
 
-                if attach_parent_notsup:
+                if attach_parent_notsup is not None:
                         err = _("Linked image type does not support parent "
                             "attach: %s") % attach_parent_notsup
 
-                if attach_root_as_child:
+                if attach_root_as_child is not None:
                         err = _("Cannot attach root image as child")
 
-                if child_bad_img:
+                if child_bad_img is not None:
                         if exitrv == None:
                                 exitrv = pkgdefs.EXIT_EACCESS
                         if lin:
@@ -2632,17 +2789,17 @@ class LinkedImageException(ApiException):
                                 err = _("Can't initialize child image "
                                     "at path: %s") % child_bad_img
 
-                if child_diverged:
+                if child_diverged is not None:
                         if exitrv == None:
                                 exitrv = pkgdefs.EXIT_DIVERGED
                         err = _("Linked image is diverged: %s") % \
                             child_diverged
 
-                if child_dup:
+                if child_dup is not None:
                         err = _("A linked child image with this name "
                             "already exists: %s") % child_dup
 
-                if child_nested:
+                if child_nested is not None:
                         cpath, ipath = child_nested
                         err = _("Child image '%(cpath)s' is nested "
                             "within another image: '%(ipath)s'") % {
@@ -2650,7 +2807,7 @@ class LinkedImageException(ApiException):
                                 "ipath": ipath,
                             }
 
-                if child_not_in_altroot:
+                if child_not_in_altroot is not None:
                         path, altroot = child_not_in_altroot
                         err = _("Child image '%(path)s' is not located "
                            "within the parent's altroot '%(altroot)s'") % {
@@ -2658,7 +2815,7 @@ class LinkedImageException(ApiException):
                                 "altroot": altroot
                             }
 
-                if child_not_nested:
+                if child_not_nested is not None:
                         cpath, ppath = child_not_nested
                         err = _("Child image '%(cpath)s' is not nested "
                             "within the parent image '%(ppath)s'") % {
@@ -2666,7 +2823,7 @@ class LinkedImageException(ApiException):
                                 "ppath": ppath,
                             }
 
-                if child_path_eaccess:
+                if child_path_eaccess is not None:
                         if exitrv == None:
                                 exitrv = pkgdefs.EXIT_EACCESS
                         if lin:
@@ -2679,15 +2836,15 @@ class LinkedImageException(ApiException):
                                 err = _("Can't access child image "
                                     "at path: %s") % child_path_eaccess
 
-                if child_path_notabs:
+                if child_path_notabs is not None:
                         err = _("Child path not absolute: %s") % \
                             child_path_notabs
 
-                if child_unknown:
+                if child_unknown is not None:
                         err = _("Unknown child linked image: %s") % \
                             child_unknown
 
-                if cmd_failed:
+                if cmd_failed is not None:
                         (rv, cmd, errout) = cmd_failed
                         err = _("The following subprocess returned an "
                             "unexpected exit code of %(rv)d:\n    %(cmd)s") % \
@@ -2697,48 +2854,50 @@ class LinkedImageException(ApiException):
                         err += _("\nAnd generated the following error "
                             "message:\n%(errout)s" % {"errout": errout})
 
-                if detach_child_notsup:
+                if detach_child_notsup is not None:
                         err = _("Linked image type does not support "
                             "child detach: %s") % detach_child_notsup
 
-                if detach_from_parent:
+                if detach_from_parent is not None:
                         if exitrv == None:
                                 exitrv = pkgdefs.EXIT_PARENTOP
                         err =  _("Parent linked to child, can not detach "
                             "child: %s") % detach_from_parent
 
-                if detach_parent_notsup:
+                if detach_parent_notsup is not None:
                         err = _("Linked image type does not support "
                             "parent detach: %s") % detach_parent_notsup
 
-                if img_linked:
+                if img_linked is not None:
                         err = _("Image already a linked child: %s") % \
                             img_linked
 
-                if lin_malformed:
-                        err = _("Invalid linked image name: %s") % \
+                if lin_malformed is not None:
+                        err = _("Invalid linked image name '%s'. "
+                            "Linked image names have the following format "
+                            "'<linked_image plugin>:<linked_image name>'") % \
                             lin_malformed
 
                 if link_to_self:
                         err = _("Can't link image to itself.")
 
-                if parent_bad_img:
+                if parent_bad_img is not None:
                         if exitrv == None:
                                 exitrv = pkgdefs.EXIT_EACCESS
                         err = _("Can't initialize parent image at path: %s") % \
                             parent_bad_img
 
-                if parent_bad_notabs:
+                if parent_bad_notabs is not None:
                         err = _("Parent path not absolute: %s") % \
                             parent_bad_notabs
 
-                if parent_bad_path:
+                if parent_bad_path is not None:
                         if exitrv == None:
                                 exitrv = pkgdefs.EXIT_EACCESS
                         err = _("Can't access parent image at path: %s") % \
                             parent_bad_path
 
-                if parent_not_in_altroot:
+                if parent_not_in_altroot is not None:
                         path, altroot = parent_not_in_altroot
                         err = _("Parent image '%(path)s' is not located "
                             "within the child's altroot '%(altroot)s'") % {
@@ -2746,35 +2905,68 @@ class LinkedImageException(ApiException):
                                 "altroot": altroot
                             }
 
-                if pkg_op_failed:
+                if pkg_op_failed is not None:
                         assert lin
-                        assert len(pkg_op_failed) == 3
-                        op = pkg_op_failed[0]
-                        exitrv = pkg_op_failed[1]
-                        errout = pkg_op_failed[2]
+                        (op, exitrv, errout, e) = pkg_op_failed
+                        assert op is not None
 
-                        err = _("""
+                        if e is None:
+                                err = _("""
 A '%(op)s' operation failed for child '%(lin)s' with an unexpected
-return value of %(exitrv)d and the following error message:
+return value of %(exitrv)d and generated the following output:
 %(errout)s
 
 """
-                        ) % {
-                            "lin": lin,
-                            "op": op,
-                            "exitrv": exitrv,
-                            "errout": errout,
-                        }
+                                ) % {
+                                    "lin": lin,
+                                    "op": op,
+                                    "exitrv": exitrv,
+                                    "errout": errout,
+                                }
+                        else:
+                                err = _("""
+A '%(op)s' operation failed for child '%(lin)s' with an unexpected
+exception:
+%(e)s
 
-                if self_linked:
+The child generated the following output:
+%(errout)s
+
+"""
+                                ) % {
+                                    "lin": lin,
+                                    "op": op,
+                                    "errout": errout,
+                                    "e": e,
+                                }
+
+                if self_linked is not None:
                         err = _("Current image already a linked child: %s") % \
                             self_linked
 
-                if self_not_child:
+                if self_not_child is not None:
                         if exitrv == None:
                                 exitrv = pkgdefs.EXIT_NOPARENT
                         err = _("Current image is not a linked child: %s") % \
                             self_not_child
+
+                if unparsable_output is not None:
+                        (op, errout, e) = unparsable_output
+                        err = _("""
+A '%(op)s' operation for child '%(lin)s' generated non-json output.
+The json parser failed with the following error:
+%(e)s
+
+The child generated the following output:
+%(errout)s
+
+"""
+                                ) % {
+                                    "lin": lin,
+                                    "op": op,
+                                    "e": e,
+                                    "errout": errout,
+                                }
 
                 # set default error return value
                 if exitrv == None:
@@ -2879,14 +3071,78 @@ class UnknownFreezeFileVersion(ApiException):
                     "loc": self.loc,
                 }
 
-class UnparsableJSON(ApiException):
-        """Used when JSON has been asked to parse an unparsable string."""
+class InvalidOptionError(ApiException):
+        """Used to indicate an issue with verifying options passed to a certain
+        operation."""
 
-        def __init__(self, s, e):
-                self.unparsable = s
-                self.json_exception = e
+        GENERIC    = "generic"      # generic option violation
+        OPT_REPEAT = "opt_repeat"   # option repetition is not allowed
+        ARG_REPEAT = "arg_repeat"   # argument repetition is not allowed
+        INCOMPAT   = "incompat"     # option 'a' can not be specified with option 'b'
+        REQUIRED   = "required"     # option 'a' requires option 'b'
+        XOR        = "xor"          # either option 'a' or option 'b' must be specified
+
+        def __init__(self, err_type=GENERIC, options=[], msg=None):
+
+                self.err_type = err_type
+                self.options = options
+                self.msg = msg
 
         def __str__(self):
-                return _("Because of this error:\n%(err)s\nJSON could not "
-                    "parse the following data:\n%(data)s") % \
-                    {"err": str(self.json_exception), "data": self.unparsable}
+
+                # In case the user provided a custom message we just take it and
+                # append the according options.
+                if self.msg is not None:
+                        if self.options:
+                                self.msg += ": "
+                                self.msg += " ".join(self.options)
+                        return self.msg
+
+                if self.err_type == self.OPT_REPEAT:
+                        assert len(self.options) == 1
+                        return _("Option '%(option)s' may not be repeated.") % {
+                            "option" : self.options[0]}
+                elif self.err_type == self.ARG_REPEAT:
+                        assert len(self.options) == 2
+                        return _("Argument '%(op1)s' for option '%(op2)s' may "
+                            "not be repeated.") % {"op1" : self.options[0],
+                            "op2" : self.options[1]}
+                elif self.err_type == self.INCOMPAT:
+                        assert len(self.options) == 2
+                        return _("The '%(op1)s' and '%(op2)s' option may "
+                            "not be combined.") % {"op1" : self.options[0],
+                            "op2" : self.options[1]}
+                elif self.err_type == self.REQUIRED:
+                        assert len(self.options) == 2
+                        return _("'%(op1)s' may only be used with "
+                            "'%(op2)s'.") % {"op1" : self.options[0],
+                            "op2" : self.options[1]}
+                elif self.err_type == self.XOR:
+                        assert len(self.options) == 2
+                        return _("Either '%(op1)s' or '%(op2)s' must be "
+                            "specified") % {"op1" : self.options[0],
+                            "op2" : self.options[1]}
+                else:
+                        return _("invalid option(s): ") + " ".join(self.options)
+
+class InvalidOptionErrors(ApiException):
+
+        def __init__(self, errors):
+
+                self.errors = []
+
+                assert (isinstance(errors, list) or isinstance(errors, tuple) or
+                    isinstance(errors, set) or
+                    isinstance(errors, InvalidOptionError))
+
+                if isinstance(errors, InvalidOptionError):
+                        self.errors.append(errors)
+                else:
+                        self.errors = errors
+
+        def __str__(self):
+                msgs = []
+                for e in self.errors:
+                        msgs.append(str(e))
+                return "\n".join(msgs)
+

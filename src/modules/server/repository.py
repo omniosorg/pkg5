@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2008, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
 
 import cStringIO
 import codecs
@@ -28,12 +28,14 @@ import errno
 import logging
 import os
 import os.path
-import platform
 import shutil
 import stat
 import sys
 import tempfile
 import urllib
+import zlib
+
+import M2Crypto as m2
 
 import pkg.actions as actions
 import pkg.catalog as catalog
@@ -41,6 +43,7 @@ import pkg.client.api_errors as apx
 import pkg.client.progress as progress
 import pkg.client.publisher as publisher
 import pkg.config as cfg
+import pkg.digest as digest
 import pkg.file_layout.file_manager as file_manager
 import pkg.file_layout.layout as layout
 import pkg.fmri as fmri
@@ -56,9 +59,26 @@ import pkg.query_parser as qp
 import pkg.server.catalog as old_catalog
 import pkg.server.query_parser as sqp
 import pkg.server.transaction as trans
+import pkg.pkgsubprocess as subprocess
 import pkg.version
 
 CURRENT_REPO_VERSION = 4
+
+REPO_QUARANTINE_DIR = "pkg5-quarantine"
+
+REPO_VERIFY_BADHASH = 0
+REPO_VERIFY_BADMANIFEST = 1
+REPO_VERIFY_BADGZIP = 2
+REPO_VERIFY_NOFILE = 3
+REPO_VERIFY_PERM = 4
+REPO_VERIFY_MFPERM = 5
+REPO_VERIFY_BADSIG = 6
+REPO_VERIFY_WARN_OPENPERMS = 7
+REPO_VERIFY_UNKNOWN = 99
+
+REPO_FIX_ITEM = 0
+REPO_FIX_FAILED = 1
+
 from pkg.pkggzip import PkgGzipFile
 
 class RepositoryError(Exception):
@@ -237,18 +257,37 @@ class RepositoryUnknownPublisher(RepositoryError):
 
 
 class RepositoryVersionError(RepositoryError):
-        """Raised when the repository specified uses an unsupported format
-        (version).
+        """Raised when the repository specified uses a format greater than the
+        current format (version).
         """
 
-        def __init__(self, location, version):
+        def __init__(self, location, version, current_version):
                 RepositoryError.__init__(self)
                 self.location = location
                 self.version = version
+                self.current_version = current_version
 
         def __str__(self):
                 return("The repository at '%(location)s' is version "
-                    "'%(version)s'; only versions up to are supported.") % \
+                    "'%(version)s'; only versions up to %(current_version)s are"
+                    " supported.") %  self.__dict__
+
+
+class RepositoryInvalidVersionError(RepositoryError):
+        """Raised when the repository specified uses an unsupported format.
+        (version).
+        """
+
+        def __init__(self, location, version, supported):
+                RepositoryError.__init__(self)
+                self.location = location
+                self.version = version
+                self.supported = supported
+
+        def __str__(self):
+                return("The repository at '%(location)s' is version "
+                    "'%(version)s'; only version %(supported)s repositories are"
+                    " supported.") % \
                     self.__dict__
 
 
@@ -261,14 +300,31 @@ class RepositoryUnsupportedOperationError(RepositoryError):
                 return("Operation not supported for this configuration.")
 
 
+class RepositoryQuarantinedPathExistsError(RepositoryError):
+        """Raised when the repository is unable to quarantine a file because
+        a file of that name is already in quarantine.
+        """
+
+        def __str__(self):
+                return _("Quarantined path already exists.")
+
+
+class RepositorySigNoTrustAnchorDirError(RepositoryError):
+        """Raised when the repository trust anchor directory could not be found
+        while performing repository verification."""
+
+        def __str__(self):
+                return _("Unable to find trust anchor directory %s") % self.data
+
 class _RepoStore(object):
         """The _RepoStore object provides an interface for performing operations
         on a set of package data contained within a repository.  This class is
         intended only for use by the Repository class.
         """
 
-        def __init__(self, file_layout=None, file_root=None, log_obj=None,
-            mirror=False, pub=None, read_only=False, root=None,
+        def __init__(self, allow_invalid=False, file_layout=None,
+            file_root=None, log_obj=None, mirror=False, pub=None,
+            read_only=False, root=None,
             sort_file_max_size=indexer.SORT_FILE_MAX_SIZE, writable_root=None):
                 """Prepare the repository for use."""
 
@@ -326,14 +382,23 @@ class _RepoStore(object):
                 # Initialize.
                 self.__lock_rstore(blocking=True)
                 try:
-                        self.__init_state()
+                        self.__init_state(allow_invalid=allow_invalid)
                 finally:
                         self.__unlock_rstore()
 
         def __set_read_only(self, value):
+                old_ro = self.__read_only
                 self.__read_only = value
                 if self.__catalog:
                         self.__catalog.read_only = value
+                if self.cache_store:
+                        self.cache_store.readonly = value
+                if old_ro and not self.__read_only:
+                        self.__lock_rstore(blocking=True)
+                        try:
+                                self.__init_state()
+                        finally:
+                                self.__unlock_rstore()
 
         def __mkdtemp(self):
                 """Create a temp directory under repository directory for
@@ -567,6 +632,10 @@ class _RepoStore(object):
                                 self.__lock.release()
                                 raise apx.ReadOnlyFileSystemException(
                                     e.filename)
+                        if e.errno == errno.EINVAL:
+                                self.__lock.release()
+                                raise apx.InvalidLockException(
+                                    e.filename)
 
                         self.__lock.release()
                         raise
@@ -639,7 +708,7 @@ class _RepoStore(object):
                         # Set batch_mode for catalog to speed up rebuild.
                         self.catalog.batch_mode = True
 
-                        # Pointless to log incremental updates since a new 
+                        # Pointless to log incremental updates since a new
                         # catalog is being built.  This also helps speed up
                         # rebuild.
                         self.catalog.log_updates = incremental
@@ -732,7 +801,7 @@ class _RepoStore(object):
                         self.__index_log("Search Available")
                 self.__search_available = True
 
-        def __init_state(self):
+        def __init_state(self, allow_invalid=False):
                 """Private version; caller responsible for repository
                 locking."""
 
@@ -741,7 +810,7 @@ class _RepoStore(object):
                 self.__catalog = None
 
                 # Determine location and version of catalog data.
-                self.__init_catalog()
+                self.__init_catalog(allow_invalid=allow_invalid)
 
                 # Prepare search for use (ensuring most current data is loaded).
                 self.reset_search()
@@ -761,12 +830,17 @@ class _RepoStore(object):
 
                 self.__check_search()
 
-        def __init_catalog(self):
+        def __init_catalog(self, allow_invalid=False):
                 """Private function to determine version and location of
                 catalog data.  This will also perform any necessary
                 transformations of existing catalog data if the repository
                 is read-only and a writable_root has been provided.
-                """
+
+                'allow_invalid', if True, will assume the catalog is version 1
+                and use an empty, in-memory catalog if the existing, on-disk
+                catalog is invalid (i.e. corrupted).  This assumes that the
+                caller intends to use the repository as part of a rebuild
+                operation."""
 
                 # Reset versions to default.
                 self.catalog_version = -1
@@ -880,8 +954,22 @@ class _RepoStore(object):
                                 self.__set_catalog_root(v1_cat.meta_root)
                         else:
                                 self.catalog_version = 0
-                elif self.catalog.exists:
-                        self.catalog_version = 1
+                else:
+                        try:
+                                if self.catalog.exists:
+                                        self.catalog_version = 1
+                        except apx.CatalogError, e:
+                                if not allow_invalid:
+                                        raise
+
+                                # Catalog is invalid, but consumer wants to
+                                # proceed; assume version 1.  This will allow
+                                # pkgrepo rebuild, etc.
+                                self.__log(str(e))
+                                self.__catalog = catalog.Catalog(
+                                    read_only=self.read_only)
+                                self.catalog_verison = 1
+                                return
 
                 if self.catalog_version >= 1 and not self.publisher:
                         # If there's no information available to determine
@@ -1262,7 +1350,11 @@ class _RepoStore(object):
 
         def file(self, fhash):
                 """Returns the absolute pathname of the file specified by the
-                provided SHA1-hash name."""
+                provided SHA-n hash name. (At present, the repository format
+                always uses the least-preferred hash to content in order to
+                remain backwards compatible with older clients. Actions may be
+                published that have additional hashes set, but those do not
+                influence where the content is stored in the repository.)"""
 
                 if not self.file_root:
                         raise RepositoryUnsupportedOperationError()
@@ -1433,26 +1525,32 @@ class _RepoStore(object):
                 if not self.manifest_root:
                         raise RepositoryUnsupportedOperationError()
                 if not progtrack:
-                        progtrack = progress.QuietProgressTracker()
+                        progtrack = progress.NullProgressTracker()
 
                 def get_hashes(pfmri):
-                        """Given an FMRI, return a set containing all of the
-                        hashes of the files its manifest references."""
+                        """Given an FMRI, return a set of tuples containing all
+                        of the hashes of the files its manifest references.
+                        Each tuple is of the form (hash value, hash function)"""
 
                         m = self._get_manifest(pfmri)
                         hashes = set()
                         for a in m.gen_actions():
-                                if not a.has_payload or not a.hash:
+                                if not a.has_payload:
                                         # Nothing to archive.
                                         continue
 
                                 # Action payload.
-                                hashes.add(a.hash)
+                                hattr, hval, hfunc = \
+                                    digest.get_least_preferred_hash(a)
+                                hashes.add(hval)
 
                                 # Signature actions have additional payloads.
                                 if a.name == "signature":
-                                        hashes.update(a.attrs.get("chain",
-                                            "").split())
+                                        chain_attr, chain_val, chain_func = \
+                                            digest.get_least_preferred_hash(a,
+                                            hash_type=digest.CHAIN)
+                                        for chain in chain_val.split():
+                                                hashes.add(chain)
                         return hashes
 
                 self.__lock_rstore()
@@ -1460,19 +1558,22 @@ class _RepoStore(object):
                 try:
                         # First, dump all search data as it will be invalidated
                         # as soon as the catalog is updated.
-                        progtrack.actions_set_goal(_("Delete search index"), 1)
+                        progtrack.job_start(progtrack.JOB_REPO_DELSEARCH)
+                        progtrack.job_add_progress(progtrack.JOB_REPO_DELSEARCH)
                         self.__purge_search_index()
-                        progtrack.actions_add_progress()
-                        progtrack.actions_done()
+                        progtrack.job_add_progress(progtrack.JOB_REPO_DELSEARCH)
+                        progtrack.job_done(progtrack.JOB_REPO_DELSEARCH)
 
                         # Next, remove all of the packages to be removed
                         # from the catalog (if they are present).  That way
                         # any active clients are less likely to be surprised
                         # when files for packages start disappearing.
-                        progtrack.actions_set_goal(_("Update catalog"), 1)
+                        progtrack.job_start(progtrack.JOB_REPO_UPDATE_CAT)
                         c.batch_mode = True
                         save_catalog = False
                         for pfmri in packages:
+				progtrack.job_add_progress(
+				    progtrack.JOB_REPO_UPDATE_CAT)
                                 try:
                                         c.remove_package(pfmri)
                                 except apx.UnknownCatalogEntry:
@@ -1481,6 +1582,8 @@ class _RepoStore(object):
                                         continue
                                 save_catalog = True
 
+                        progtrack.job_add_progress(
+			    progtrack.JOB_REPO_UPDATE_CAT)
                         c.batch_mode = False
                         if save_catalog:
                                 # Only need to re-write catalog if at least one
@@ -1488,8 +1591,7 @@ class _RepoStore(object):
                                 c.finalize(pfmris=packages)
                                 c.save()
 
-                        progtrack.actions_add_progress()
-                        progtrack.actions_done()
+                        progtrack.job_done(progtrack.JOB_REPO_UPDATE_CAT)
 
                         # Next, build a list of all of the hashes for the files
                         # that can potentially be removed from the repository.
@@ -1497,12 +1599,13 @@ class _RepoStore(object):
                         # any of the packages not actually have a manifest in
                         # the repository.
                         pfiles = set()
-                        progtrack.actions_set_goal(
-                            _("Analyze removed packages"), len(packages))
+                        progtrack.job_start(progtrack.JOB_REPO_ANALYZE_RM,
+			    goal=len(packages))
                         for pfmri in packages:
                                 pfiles.update(get_hashes(pfmri))
-                                progtrack.actions_add_progress()
-                        progtrack.actions_done()
+                                progtrack.job_add_progress(
+				    progtrack.JOB_REPO_ANALYZE_RM)
+                        progtrack.job_done(progtrack.JOB_REPO_ANALYZE_RM)
 
                         # Now for the slow part; iterate over every manifest in
                         # the repository (excluding the ones being removed) and
@@ -1521,8 +1624,9 @@ class _RepoStore(object):
                                         self.manifest_root, s))
                                 )
 
-                                progtrack.actions_set_goal(
-                                    _("Analyze repository packages"), remaining)
+                                progtrack.job_start(
+				    progtrack.JOB_REPO_ANALYZE_REPO,
+				    goal=remaining)
                                 for name in slist:
                                         # Stem must be decoded before use.
                                         try:
@@ -1541,7 +1645,7 @@ class _RepoStore(object):
                                                         # since no files are
                                                         # safe to remove, but
                                                         # update progress.
-                                                        progtrack.actions_add_progress()
+                                                        progtrack.job_add_progress(progtrack.JOB_REPO_ANALYZE_REPO)
                                                         continue
 
                                                 # Version must be decoded before
@@ -1556,46 +1660,49 @@ class _RepoStore(object):
                                                         # of unexpected file in
                                                         # directory; just skip
                                                         # it and drive on.
-                                                        progtrack.actions_add_progress()
+                                                        progtrack.job_add_progress(progtrack.JOB_REPO_ANALYZE_REPO)
                                                         continue
 
                                                 if pfmri in packages:
                                                         # Package is one of
                                                         # those queued for
                                                         # removal.
-                                                        progtrack.actions_add_progress()
+                                                        progtrack.job_add_progress(progtrack.JOB_REPO_ANALYZE_REPO)
                                                         continue
 
                                                 # Any files in use by another
                                                 # package can't be removed.
                                                 pfiles -= get_hashes(pfmri)
-                                                progtrack.actions_add_progress()
-                                progtrack.actions_done()
+						progtrack.job_add_progress(progtrack.JOB_REPO_ANALYZE_REPO)
+                                progtrack.job_done(
+				    progtrack.JOB_REPO_ANALYZE_REPO)
 
                         # Next, remove the manifests of the packages to be
                         # removed.  (This is done before removing the files
                         # so that clients won't have a chance to retrieve a
                         # manifest which has missing files.)
-                        progtrack.actions_set_goal(
-                            _("Remove package manifests"), len(packages))
+                        progtrack.job_start(progtrack.JOB_REPO_RM_MFST,
+			    goal=len(packages))
                         for pfmri in packages:
                                 mpath = self.manifest(pfmri)
                                 portable.remove(mpath)
-                                progtrack.actions_add_progress()
-                        progtrack.actions_done()
+                                progtrack.job_add_progress(
+				    progtrack.JOB_REPO_RM_MFST)
+                        progtrack.job_done(progtrack.JOB_REPO_RM_MFST)
 
                         # Next, remove any package files that are not
                         # referenced by other packages.
-                        progtrack.actions_set_goal(
-                            _("Remove package files"), len(pfiles))
+                        progtrack.job_start(progtrack.JOB_REPO_RM_FILES,
+                            goal=len(pfiles))
                         for h in pfiles:
                                 # File might already be gone (don't care if
                                 # it is).
                                 fpath = self.cache_store.lookup(h)
                                 if fpath is not None:
                                         portable.remove(fpath)
-                                        progtrack.actions_add_progress()
-                        progtrack.actions_done()
+                                        progtrack.job_add_progress(
+					    progtrack.JOB_REPO_RM_FILES)
+                        progtrack.job_done(progtrack.JOB_REPO_RM_FILES)
 
                         # Finally, tidy up repository structure by discarding
                         # unused package data directories for any packages
@@ -1784,6 +1891,638 @@ class _RepoStore(object):
                         if fn and os.path.exists(fn):
                                 os.unlink(fn)
 
+        def __build_verify_error(self, error, path, reason):
+                """Given an integer error code, a path within the repository,
+                and a 'reason' dictionary containing more information about
+                the error, return a tuple of the form:
+
+                (error_code, message, path, reason)
+                """
+
+                # if we're looking at a path to a file hash, and we have a pfmri
+                # we'd like to print the 'path' attribute as well as its
+                # location within the repository.
+                hsh = reason.get("hash")
+                pfmri = reason.get("pkg")
+                if hsh and pfmri:
+                        m = self._get_manifest(pfmri)
+                        # this is not terribly efficient, but the expectation is
+                        # that this will rarely happen.
+                        for ac in m.gen_actions_by_types(
+                            actions.payload_types.keys()):
+                                for hash in digest.DEFAULT_HASH_ATTRS:
+                                        if ac.attrs.get(hash) == hsh:
+                                                fpath = ac.attrs.get("path")
+                                                if fpath:
+                                                        reason["fpath"] = fpath
+                                if ac.hash == hsh:
+                                        fpath = ac.attrs.get("path")
+                                        if fpath:
+                                                reason["fpath"] = fpath
+
+                message = _("Unknown error")
+                if error == REPO_VERIFY_BADHASH:
+                        message = _("Invalid file hash: %s") % reason["hash"]
+                        del reason["hash"]
+                elif error == REPO_VERIFY_BADMANIFEST:
+                        message = _("Corrupt manifest.")
+                        reason["err"] = _("Use pkglint(1) for more details.")
+                elif error == REPO_VERIFY_NOFILE:
+                        message = _("Missing file: %s") % reason["hash"]
+                        del reason["hash"]
+                elif error == REPO_VERIFY_BADGZIP:
+                        message = _("Corrupted gzip file.")
+                elif error in [REPO_VERIFY_PERM, REPO_VERIFY_MFPERM]:
+                        message = _("Verification failure: %s") % reason["err"]
+                        del reason["err"]
+                elif error == REPO_VERIFY_UNKNOWN:
+                        message = _("Bad manifest.")
+                elif error == REPO_VERIFY_BADSIG:
+                        message = _("Bad signature.")
+                elif error == REPO_VERIFY_WARN_OPENPERMS:
+                        # This message constitutes a warning rather than
+                        # an error. No attempt is made by 'pkgrepo fix'
+                        # to rectify this error, as it is potentially
+                        # outside our responsibility to do so.
+                        message = _("Restrictive permissions.")
+                        reason["err"] = \
+                            _("Some repository content for publisher '%s' "
+                            "or paths leading to the repository were not "
+                            "world-readable or were not readable by "
+                            "'pkg5srv:pkg5srv', which can cause access errors "
+                            "if the repository contents are served by the "
+                            "following services:\n"
+                            " svc:/application/pkg/server\n"
+                            " svc:/application/pkg/system-repository.\n"
+                            "Only the first path found with restrictive "
+                            "permissions is shown.") % reason["pub"]
+                        del reason["pub"]
+                else:
+                        raise Exception(
+                            "Unknown repository verify error code: %s" % error)
+
+                return error, path, message, reason
+
+        def __get_hashes(self, path, pfmri):
+                """Given a PkgFmri, return a set containing tuples of all of
+                the hashes of the files its manifest references which should
+                correspond to files in the repository. Each tuple is of the form
+                (file_name, hash_value, hash_func) where hash_func is the
+                function used to compute that hash and file_name is the name
+                of the hash used to store the file in the repository."""
+
+                hashes = set()
+                errors = []
+                try:
+                        m = self._get_manifest(pfmri)
+                        for a in m.gen_actions():
+                                if not a.has_payload:
+                                        continue
+
+                                # We store files using the least preferred hash
+                                # in the repository to remain as backwards-
+                                # compatible as possible.
+                                attr, fname, hfunc = \
+                                    digest.get_least_preferred_hash(a)
+                                attr, hval, hfunc = \
+                                    digest.get_preferred_hash(a)
+                                # Action payload.
+                                hashes.add((fname, hval, hfunc))
+
+                                # Signature actions have additional payloads
+                                if a.name == "signature":
+                                        attr, fname, hfunc = \
+                                            digest.get_least_preferred_hash(a,
+                                            hash_type=digest.CHAIN)
+                                        attr, hval, hfunc = \
+                                            digest.get_preferred_hash(a,
+                                            hash_type=digest.CHAIN)
+
+                                        # Since a chain attribute may contain
+                                        # several hashes, we need to add each
+                                        # fname in the chain and corresponding
+                                        # preferred hash to our set of hashes.
+                                        fnames = fname.split()
+                                        chains = hval.split()
+                                        for fitem, citem in zip(
+                                            fnames, chains):
+                                                hashes.add((fitem, citem,
+                                                    hfunc))
+                except apx.PermissionsException:
+                        errors.append((REPO_VERIFY_MFPERM, path,
+                            {"err": _("Permission denied.")}))
+                return hashes, errors
+
+        def __verify_manifest(self, path, pfmri):
+                """Verify that a manifest can be found for this pfmri"""
+                try:
+                        m = self._get_manifest(pfmri)
+                except apx.InvalidPackageErrors:
+                        return (REPO_VERIFY_BADMANIFEST, path, {})
+                except apx.PermissionsException, e:
+                        return (REPO_VERIFY_PERM, path, {"err": str(e),
+                            "pkg": pfmri})
+
+        def __verify_hash(self, path, pfmri, h, alg=digest.DEFAULT_HASH_FUNC):
+                """Perform hash verification on the given gzip file.
+                'path' is the full path to the file in the repository. 'pfmri'
+                is the package that we're verifying. 'h' is the expected hash
+                of the path. 'alg' is the hash function used to compute the
+                hash."""
+
+                gzf = None
+                try:
+                        gzf = PkgGzipFile(fileobj=open(path, "rb"))
+                        fhash = alg()
+                        fhash.update(gzf.read())
+                        actual = fhash.hexdigest()
+                        if actual != h:
+                                return (REPO_VERIFY_BADHASH, path,
+                                    {"actual": actual, "hash": h,
+                                    "pkg": pfmri})
+                except (ValueError, zlib.error), e:
+                        return (REPO_VERIFY_BADGZIP, path,
+                            {"hash": h, "pkg": pfmri})
+                except IOError, e:
+                        if e.errno in [errno.EACCES, errno.EPERM]:
+                                return (REPO_VERIFY_PERM, path,
+                                    {"err": str(e), "hash": h,
+                                    "pkg": pfmri})
+                        else:
+                                return (REPO_VERIFY_BADGZIP, path,
+                                    {"hash": h, "pkg": pfmri})
+                finally:
+                        if gzf:
+                                gzf.close()
+
+        def __verify_perm(self, path, pfmri, h):
+                """Check that we don't get any permissions errors when
+                trying to stat the given path."""
+                try:
+                        st = os.stat(path)
+                        # if it's a directory, we'll try to list it
+                        if stat.S_ISDIR(st.st_mode):
+                                os.listdir(path)
+                except OSError, e:
+                        if e.errno in [errno.EPERM, errno.EACCES]:
+                                if not pfmri:
+                                        return (REPO_VERIFY_MFPERM, path,
+                                            {"err": str(e)})
+                                return (REPO_VERIFY_PERM, path,
+                                    {"hash": h, "err": str(e), "pkg": pfmri})
+                        else:
+                                return (REPO_VERIFY_NOFILE, path,
+                                    {"hash": h, "err": str(e), "pkg": pfmri})
+
+        def __verify_signature(self, path, pfmri, pub, trust_anchors,
+            sig_required_names, use_crls):
+                """Verify signatures on a given FMRI."""
+                m = self._get_manifest(pfmri)
+                errors = []
+                for sig in m.gen_actions_by_type("signature"):
+                        try:
+                                sig.verify_sig(m.gen_actions(), pub,
+                                    trust_anchors, use_crls,
+                                    required_names=sig_required_names)
+                        except apx.UnverifiedSignature, e:
+                                errors.append((REPO_VERIFY_BADSIG, path,
+                                    {"err": str(e), "pkg": pfmri}))
+                        except apx.CertificateException, e:
+                                errors.append((REPO_VERIFY_BADSIG, path,
+                                    {"err": str(e), "pkg": pfmri}))
+                        except apx.TransportError, e:
+                                errors.append((REPO_VERIFY_BADSIG, path,
+                                   {"err": str(e), "pkg": pfmri}))
+                return errors
+
+        def __verify_permissions(self):
+                """Determine if any of the files or directories in the
+                repository are not readable by either the pkg5srv user or group,
+                or are not world readable.  We return as soon as we find one
+                inaccessible file, returning the name of that file or directory.
+
+                We also walk up the directory path from the repository to '/'
+                checking that the repository would be accessible.
+
+                We only return the first file found because for large
+                repositories with many files affected, we'd be flooding the user
+                with information.
+
+                This check exists as well as verify_perm() since it causes a
+                warning to be emitted if non-world readable files are found,
+                whereas verify_perm() will emit an error.
+                """
+
+                pkg5srv_uid = \
+                    pkg.portable.get_user_by_name("pkg5srv", "/etc", None)
+                pkg5srv_gid = \
+                    pkg.portable.get_group_by_name("pkg5srv", "/etc", None)
+
+                def pkg5srv_readable(st):
+                        """Returns true if the pkg5srv user can read
+                        this file/dir"""
+                        if stat.S_ISDIR(st.st_mode):
+                                if (st.st_uid == pkg5srv_uid and
+                                    st.st_mode & stat.S_IXUSR and
+                                    st.st_mode & stat.S_IRUSR):
+                                        return True
+                                if (st.st_gid == pkg5srv_gid and
+                                    st.st_mode & stat.S_IXGRP and
+                                    st.st_mode & stat.S_IRGRP):
+                                        return True
+                        else:
+                                if (st.st_uid == pkg5srv_uid and
+                                    st.st_mode & stat.S_IRUSR):
+                                        return True
+                                if (st.st_gid == pkg5srv_gid and
+                                    st.st_mode & stat.S_IRGRP):
+                                        return True
+                        return False
+
+                def world_readable(st):
+                        """Returns true if anyone can read this
+                        file/dir."""
+                        if stat.S_ISDIR(st.st_mode):
+                                if (st.st_mode & stat.S_IROTH and
+                                    st.st_mode & stat.S_IXOTH):
+                                        return True
+                        else:
+                                if st.st_mode & stat.S_IROTH:
+                                        return True
+                        return False
+
+                # Scan directories checking file permissions.  First we
+                # walk up the directory path from self.__root
+                components = self.__root.split("/")
+                path = ""
+                for comp in components:
+                        if not comp:
+                                continue
+                        path = "%s/%s" % (path, comp)
+                        st = os.stat(path)
+                        if not (pkg5srv_readable(st) or
+                            world_readable(st)):
+                                return False, path
+
+                for path, dirnames, filenames in os.walk(self.__root):
+                        # we don't care about anything in our quarantine
+                        # directory.
+                        if REPO_QUARANTINE_DIR in path:
+                                continue
+                        st = os.stat(path)
+                        if not (pkg5srv_readable(st) or
+                            world_readable(st)):
+                                return False, path
+                        for fname in filenames:
+                                pth = os.path.join(path, fname)
+                                st = os.stat(pth)
+                                if not (pkg5srv_readable(st) or
+                                    world_readable(st)):
+                                        return False, pth
+                return True, None
+
+        def __gen_verify(self, progtrack, pub, trust_anchors,
+            sig_required_names, use_crls):
+                """A generator that produces verify errors, each a tuple
+                of the form (error_code, path, message, details)"""
+                # We may not have a manifest_root directory if no
+                # packages have ever been published for this publisher.
+                if not os.path.exists(self.manifest_root):
+                        return
+
+                err = self.__verify_perm(self.manifest_root, None, None)
+                if err:
+                        yield self.__build_verify_error(*err)
+                        return
+
+                # Build a list of all of the manifests that must be
+                # verified.
+                mflist = os.listdir(self.manifest_root)
+                goal = len(mflist)
+
+                # If there is more than one version in the manifest dir,
+                # then we add each one to the goal.
+                for name in mflist:
+                        try:
+                                mfdir = os.path.join(self.manifest_root, name)
+                                vers = len(os.listdir(mfdir))
+                                if vers > 1:
+                                        goal += vers - 1
+                        except OSError, e:
+                                # being unable to read the manifest dir is bad,
+                                # but we'll deal with it later
+                                continue
+
+                # Add the repo permissions error check to the number of items
+                # goal.
+                goal +=1
+                progtrack.repo_verify_start(goal)
+
+                # Scan the entire repository for bad file permissions
+                progtrack.repo_verify_start_pkg(None, repository_scan=True)
+                valid_perms, path = self.__verify_permissions()
+                if not valid_perms:
+                        # We intentionally don't use the path as the first
+                        # argument to __build_verify_error(..) as we do not want
+                        # 'pkgrepo fix' to attempt to fix this particular error,
+                        # since it can include paths outside the repository.
+                        yield self.__build_verify_error(
+                            REPO_VERIFY_WARN_OPENPERMS, None,
+                            {"permissionspath": path, "pub": pub.prefix})
+                progtrack.repo_verify_end_pkg(None)
+
+                for name in mflist:
+                        pdir = os.path.join(self.manifest_root, name)
+                        err = self.__verify_perm(pdir, None, None)
+                        if err:
+                                yield self.__build_verify_error(*err)
+                                continue
+
+                        # Stem must be decoded before use.
+                        try:
+                                pname = urllib.unquote(name)
+                        except Exception:
+                                # Assume error is result of an
+                                # unexpected file in the directory. We
+                                # don't know the FMRI here, so use None.
+                                progtrack.repo_verify_start_pkg(None)
+                                progtrack.repo_verify_add_progress(None)
+                                yield self.__build_verify_error(
+                                    REPO_VERIFY_UNKNOWN, pdir, {"err": str(e)})
+                                progtrack.repo_verify_end_pkg(None)
+                                continue
+
+                        for ver in os.listdir(pdir):
+                                path = os.path.join(pdir, ver)
+                                # Version must be decoded before
+                                # use.
+                                pver = urllib.unquote(ver)
+                                try:
+                                        pfmri = fmri.PkgFmri("@".join((pname,
+                                            pver)),
+                                            publisher=self.publisher)
+                                        if not os.path.isfile(path):
+                                                raise Exception(
+                                                    "%s is not a file" % path)
+                                except Exception, e:
+                                        # Assume the error is result of an
+                                        # unexpected file in the directory. We
+                                        # don't know the FMRI here, so use None.
+                                        progtrack.repo_verify_start_pkg(None)
+                                        progtrack.repo_verify_add_progress(None)
+                                        yield self.__build_verify_error(
+                                            REPO_VERIFY_UNKNOWN, path,
+                                            {"err": str(e)})
+                                        progtrack.repo_verify_end_pkg(None)
+                                        continue
+
+                                progtrack.repo_verify_start_pkg(pfmri)
+                                err = self.__verify_manifest(path, pfmri)
+                                if err:
+                                        # with a bad manifest, we can go no
+                                        # further
+                                        yield self.__build_verify_error(*err)
+                                        progtrack.repo_verify_end_pkg(None)
+                                        continue
+
+                                hashes, errors = self.__get_hashes(path, pfmri)
+                                for err in errors:
+                                        yield self.__build_verify_error(*err)
+
+                                # verify manifest signatures
+                                errs = self.__verify_signature(path, pfmri, pub,
+                                    trust_anchors, sig_required_names, use_crls)
+                                for err in errs:
+                                        yield self.__build_verify_error(*err)
+
+                                # verify payload delivered by this pkg
+                                errors = []
+                                for fname, h, alg in hashes:
+                                        try:
+                                                path = self.cache_store.lookup(
+                                                     fname,
+                                                     check_existence=False)
+                                        except apx.PermissionsException, e:
+                                                # if we can't even get the path
+                                                # within the repository, then
+                                                # we'll do the best we can to
+                                                # report the problem.
+                                                errors.append((REPO_VERIFY_PERM,
+                                                    pfmri, {"hash": fname,
+                                                    "err": _("Permission "
+                                                    "denied.", "path", h)}))
+                                                continue
+
+                                        err = self.__verify_perm(path, pfmri, h)
+                                        if err:
+                                                errors.append(err)
+                                                continue
+                                        err = self.__verify_hash(path, pfmri, h,
+                                            alg=alg)
+                                        if err:
+                                                errors.append(err)
+                                for err in errors:
+                                        yield self.__build_verify_error(*err)
+
+                                progtrack.repo_verify_end_pkg(fmri)
+                progtrack.job_done(progtrack.JOB_REPO_VERIFY_REPO)
+
+        def verify(self, pub=None, progtrack=None,
+            trust_anchor_dir=None, sig_required_names=None, use_crls=False):
+                """A generator which verifies the contents of the repository
+                store, checking for several different types of errors.
+                No modifying operations may be performed until complete.
+
+                'progtrack' is an optional ProgressTracker object.
+
+                'trust_anchor_dir' is set in the repository configuration and
+                corresponds to the image property of the same name.
+
+                'sig_required_names' is set in the repository configuration and
+                corresponds to the image property of the same name.
+
+                'use_crls' is set in the repository configuration and
+                corresponds to the image property of the same name.
+
+                The generator yields tuples of the form:
+
+                (error_code, path, message, reason) where
+
+                'error_code'  an integer error, correponding to REPO_VERIFY_*
+                'path'        the path to the broken file in the repository
+                'message'     a human-readable summary of the error
+                'reason'      a dictionary of strings containing more detail
+                              about the nature of the error.
+                """
+
+                if not self.catalog_root or self.catalog_version < 1:
+                        raise RepositoryUnsupportedOperationError()
+                if not self.manifest_root:
+                        raise RepositoryUnsupportedOperationError()
+
+                if not progtrack:
+                        progtrack = progtrack.NullProgressTracker()
+
+                # For signature verification, we need to setup a publisher
+                # meta_root, and build a dictionary of trust-anchors.
+                tmp_metaroot = tempfile.mkdtemp(prefix="pkgrepo-verify.")
+                pub.meta_root = tmp_metaroot
+                trust_anchors = {}
+
+                if not os.path.isdir(trust_anchor_dir):
+                        raise RepositorySigNoTrustAnchorDirError(
+                            trust_anchor_dir)
+
+                for fn in os.listdir(trust_anchor_dir):
+                        pth = os.path.join(trust_anchor_dir, fn)
+                        if os.path.islink(pth):
+                                continue
+                        trusted_ca = m2.X509.load_cert(pth)
+                        # M2Crypto's subject hash doesn't match
+                        # openssl's subject hash so recompute it so all
+                        # hashes are in the same universe.
+                        s = trusted_ca.get_subject().as_hash()
+                        trust_anchors.setdefault(s, [])
+                        trust_anchors[s].append(trusted_ca)
+
+                self.__lock_rstore()
+                try:
+                        for err in self.__gen_verify(progtrack, pub,
+                            trust_anchors, sig_required_names, use_crls):
+                                yield err
+                except (Exception, EnvironmentError), e:
+                        import traceback
+                        traceback.print_exc(e)
+                        raise apx._convert_error(e)
+                finally:
+                        self.__unlock_rstore()
+                        shutil.rmtree(tmp_metaroot)
+
+        def fix(self,  pub=None, progtrack=None, verify_callback=None,
+            trust_anchor_dir=None, sig_required_names=None, use_crls=False):
+                """Verify, then quarantine any packages in the repository that
+                were found to be faulty, according to self.verify(..).
+
+                This method yields tuples of the form:
+
+                (status_code, fmri, message, reason) where
+
+                'status_code'  an int status code, corresponding to REPO_FIX_*
+                'path'         the path that was fixed
+                'message'      a summary of the operation performed
+                'reason'       a dictionary of strings describing the operation
+
+                Note, the 'fmri' value may not be a valid FMRI if the manifest
+                being fixed was corrupt, in which case a path to the corrupted
+                manifest in the repository is used instead.
+
+                If any object referred to by a manifest is quarantined, then
+                the manifest for that package is also quarantined, however other
+                files referenced by the manifest are not moved to quarantine
+                in case they are referenced by other packages.
+                """
+
+                if self.read_only:
+                        raise RepositoryReadOnlyError()
+
+                if not progtrack:
+                        progtrack = progress.NullProgressTracker()
+
+                broken_items = set()
+                for error, path, message, reason in self.verify(pub=pub,
+                    progtrack=progtrack, trust_anchor_dir=trust_anchor_dir,
+                    sig_required_names=sig_required_names, use_crls=use_crls):
+                        if verify_callback:
+                                verify_callback(progtrack, (error, path,
+                                    message, reason))
+                        # we don't attempt to fix this error, since it can
+                        # involve paths outside the repository.
+                        if error == REPO_VERIFY_WARN_OPENPERMS:
+                                continue
+                        fmri = reason.get("pkg")
+                        broken_items.add((path, fmri))
+
+                quarantine_root = None
+
+                def _make_quarantine_root():
+                        """Make a directory where we can quarantine content."""
+                        quarantine_base = os.path.join(self.root,
+                            REPO_QUARANTINE_DIR)
+                        if not os.path.exists(quarantine_base):
+                                os.mkdir(quarantine_base)
+                        qroot = tempfile.mkdtemp(prefix="fix.",
+                            dir=quarantine_base)
+                        return qroot
+
+                # look for broken package content where the bad file doesn't
+                # match the path to the manifest (eg. file content) and add
+                # the manifest path to the list of broken items, so that we
+                # move the manifest to quarantine as well.
+                for path, fmri in broken_items.copy():
+                        if not fmri:
+                                continue
+                        mpath = self.manifest(fmri)
+                        if path == mpath:
+                                continue
+                        broken_items.add((mpath, fmri))
+
+                progtrack.job_start(progtrack.JOB_REPO_FIX_REPO,
+		    goal=len(broken_items))
+
+                # keep a set of all the paths we've applied fixes to
+                fixed_paths = set()
+
+                for path, fmri in broken_items:
+                        progtrack.job_add_progress(progtrack.JOB_REPO_FIX_REPO)
+
+                        # we've already applied a fix to this path
+                        if path in fixed_paths:
+                                continue
+
+                        # we can't do anything about missing files
+                        if not os.path.exists(path):
+                                yield (REPO_FIX_ITEM, path,
+                                    _("Missing file %s must be fixed by "
+                                    "republishing the package.") % path,
+                                    {"pkg": fmri})
+                                continue
+
+                        basename = os.path.basename(path)
+                        dir = os.path.dirname(path)
+                        dir = dir.replace(self.root, "", 1).lstrip("/")
+                        if not quarantine_root:
+                                quarantine_root = _make_quarantine_root()
+                        qdir = os.path.join(quarantine_root, dir)
+                        try:
+                                os.makedirs(qdir)
+                        except OSError, e:
+                                if e.errno != errno.EEXIST:
+                                        raise
+                        dest = os.path.join(qdir, basename)
+                        if os.path.exists(dest):
+                                # this should never happen, since we have a
+                                # unique quarantine root per fix(..) call
+                                raise RepositoryQuarantinedPathExistsError()
+
+                        message = _("Moving %(src)s to %(dest)s") % {
+                            "src": path, "dest": dest}
+                        status = REPO_FIX_ITEM
+                        reason = {"dest": dest, "pkg": fmri}
+                        try:
+                                shutil.move(path, qdir)
+                                fixed_paths.add(path)
+                        except Exception, e:
+                                status = REPO_FIX_FAILED
+                                message = _("Unable to quarantine %(path)s: "
+                                    "%(err)s") % {"path": path, "err": e}
+                        finally:
+                                yield(status, path, message, reason)
+
+                progtrack.job_done(progtrack.JOB_REPO_FIX_REPO)
+
+                if broken_items:
+                        self.rebuild()
+
         def valid_new_fmri(self, pfmri):
                 """Check that the FMRI supplied as an argument would be valid
                 to add to the repository catalog.  This checks to make sure
@@ -1831,9 +2570,9 @@ class Repository(object):
         """A Repository object is a representation of data contained within a
         pkg(5) repository and an interface to manipulate it."""
 
-        def __init__(self, cfgpathname=None, create=False, file_root=None,
-            log_obj=None, mirror=False, properties=misc.EmptyDict,
-            read_only=False, root=None,
+        def __init__(self, allow_invalid=False, cfgpathname=None, create=False,
+            file_root=None, log_obj=None, mirror=False,
+            properties=misc.EmptyDict, read_only=False, root=None,
             sort_file_max_size=indexer.SORT_FILE_MAX_SIZE, writable_root=None):
                 """Prepare the repository for use."""
 
@@ -1873,11 +2612,13 @@ class Repository(object):
 
                 self.__lock_repository()
                 try:
-                        self.__init_state(create=create, properties=properties)
+                        self.__init_state(allow_invalid=allow_invalid,
+                            create=create, properties=properties)
                 finally:
                         self.__unlock_repository()
 
-        def __init_format(self, create=False, properties=misc.EmptyI):
+        def __init_format(self, allow_invalid=False, create=False,
+            properties=misc.EmptyI):
                 """Private helper function to determine repository format and
                 validity.
                 """
@@ -1972,7 +2713,7 @@ class Repository(object):
 
                 if self.version > CURRENT_REPO_VERSION:
                         raise RepositoryVersionError(self.root,
-                            self.version)
+                            self.version, CURRENT_REPO_VERSION)
                 if self.version == 4:
                         if self.root and not self.pub_root:
                                 # Don't create the publisher root at this point,
@@ -1985,9 +2726,9 @@ class Repository(object):
                             not (os.path.exists(self.pub_root) or
                             os.path.exists(os.path.join(
                                 self.root, "pkg5.image")) and
-                            Image(self.root, augment_ta_from_parent_image=False,
-                                allow_ondisk_upgrade=False,
-                                should_exist=True).version >= 3):
+                            int(cfg.FileConfig(os.path.join(
+                                self.root, "pkg5.image")).
+                                    get_property("image", "version")) >= 3):
                                 # If this isn't a repository creation operation,
                                 # and the base configuration file doesn't exist,
                                 # this isn't a valid repository.
@@ -2010,18 +2751,21 @@ class Repository(object):
                         # ...and then one for each publisher if any are known.
                         if self.pub_root and os.path.exists(self.pub_root):
                                 for pub in os.listdir(self.pub_root):
-                                        self.__new_rstore(pub)
+                                        self.__new_rstore(pub,
+                                            allow_invalid=allow_invalid)
 
                         # If a default publisher is set, ensure that a storage
                         # object always exists for it.
                         if def_pub and def_pub not in self.__rstores:
-                                self.__new_rstore(def_pub)
+                                self.__new_rstore(def_pub,
+                                    allow_invalid=allow_invalid)
                 else:
                         # For older repository versions, there is only one
                         # repository store, and it might have an associated
                         # publisher prefix.  (This might be in a mix of V0 and
                         # V1 layouts.)
-                        rstore = _RepoStore(file_root=self.file_root,
+                        rstore = _RepoStore(allow_invalid=allow_invalid,
+                            file_root=self.file_root,
                             log_obj=self.log_obj, pub=def_pub,
                             mirror=self.mirror,
                             read_only=self.read_only,
@@ -2061,14 +2805,16 @@ class Repository(object):
                                         # matter.
                                         continue
 
-        def __init_state(self, create=False, properties=misc.EmptyDict):
+        def __init_state(self, allow_invalid=False, create=False,
+            properties=misc.EmptyDict):
                 """Private helper function to initialize state."""
 
                 # Discard current repository storage state data.
                 self.__rstores = {}
 
                 # Determine format, configuration location, and validity.
-                self.__init_format(create=create, properties=properties)
+                self.__init_format(allow_invalid=allow_invalid, create=create,
+                    properties=properties)
 
                 # Ensure default configuration is written.
                 self.__write_config()
@@ -2154,7 +2900,7 @@ class Repository(object):
                             errno.EROFS):
                                 raise
 
-        def __new_rstore(self, pub):
+        def __new_rstore(self, pub, allow_invalid=False):
                 assert pub
                 if pub in self.__rstores:
                         raise RepositoryDuplicatePublisher(pub)
@@ -2186,7 +2932,8 @@ class Repository(object):
                         # might use a mix of layouts.
                         file_layout = layout.V1Layout()
 
-                rstore = _RepoStore(file_layout=file_layout, file_root=froot,
+                rstore = _RepoStore(allow_invalid=allow_invalid,
+                    file_layout=file_layout, file_root=froot,
                     log_obj=self.log_obj, mirror=self.mirror, pub=pub,
                     read_only=self.read_only, root=root,
                     sort_file_max_size=self.__sort_file_max_size,
@@ -2242,6 +2989,84 @@ class Repository(object):
                                 # traceback are used.
                                 raise exc_value, None, exc_tb
 
+        def remove_publisher(self, pfxs, repo_path, synch=False):
+                """Removes a repository storage area and configuration
+                information for the publisher defined by the provided
+                publisher prefix. pfxs must be an iterable.
+                """
+
+                if self.mirror:
+                        raise RepositoryMirrorError()
+                if self.read_only:
+                        raise RepositoryReadOnlyError()
+                if not self.pub_root or self.version < 4:
+                        raise RepositoryUnsupportedOperationError()
+
+                # create a temp folder, move the publisher folder into it
+                # and then remove the temp folder recursively
+                tmp_paths = []
+                self.__lock_repository()
+                try:
+                        for pfx in pfxs:
+                                repo_tmp_path = self.__mkdtemppub(pfx)
+                                tmp_paths.append(repo_tmp_path)
+                                pub_path = os.path.join(repo_path, "publisher",
+                                    pfx)
+                                if os.path.exists(pub_path) and \
+                                    os.path.exists(repo_tmp_path) :
+                                        portable.rename(pub_path,
+                                        repo_tmp_path)
+                except EnvironmentError, e:
+                        if e.errno == errno.EACCES:
+                                raise apx.PermissionsException(
+                                    e.filename)
+                        if e.errno == errno.EROFS:
+                                raise apx.ReadOnlyFileSystemException(
+                                    e.filename)
+                        raise
+                finally:
+                        self.__unlock_repository()
+
+                nullf = open(os.devnull, "w")
+                args = "/usr/bin/rm -rf " + " ".join(tmp_paths)
+                if not synch:
+                        args = "/usr/bin/nohup " + args
+                subp = subprocess.Popen(args, shell=True,
+                    stdout=nullf, stderr=nullf)
+
+                if synch:
+                        subp.wait()
+
+        def __mkdtemppub(self, pfx):
+                """Create a temp directory under repository directory
+                and corresponding temp pub folder with format
+                rm.pubname.xxxxxx under this folder
+                """
+
+                if not self.root:
+                        return
+
+                if self.writable_root:
+                        root = self.writable_root
+                else:
+                        root = self.root
+
+                tempdir = os.path.normpath(os.path.join(root, "tmp"))
+
+                try:
+                        misc.makedirs(tempdir)
+                        return tempfile.mkdtemp(prefix="rm." + pfx + ".",
+                            dir=tempdir)
+
+                except EnvironmentError, e:
+                        if e.errno == errno.EACCES:
+                                raise apx.PermissionsException(
+                                    e.filename)
+                        if e.errno == errno.EROFS:
+                                raise apx.ReadOnlyFileSystemException(
+                                    e.filename)
+                        raise
+
         def add_package(self, pfmri):
                 """Adds the specified FMRI to the repository's catalog."""
 
@@ -2258,7 +3083,7 @@ class Repository(object):
                                 pfmri = fmri.PkgFmri(pfmri, client_release)
                 except fmri.FmriError, e:
                         raise RepositoryInvalidFMRIError(e)
- 
+
                 if pub and not pfmri.publisher:
                         pfmri.publisher = pub
 
@@ -2504,7 +3329,7 @@ class Repository(object):
                                 pfmri = fmri.PkgFmri(pfmri)
                 except fmri.FmriError, e:
                         raise RepositoryInvalidFMRIError(e)
- 
+
                 if not pub and pfmri.publisher:
                         pub = pfmri.publisher
                 elif pub and not pfmri.publisher:
@@ -2542,7 +3367,7 @@ class Repository(object):
                                 pfmri = fmri.PkgFmri(pfmri, client_release)
                 except fmri.FmriError, e:
                         raise RepositoryInvalidFMRIError(e)
- 
+
                 if pub and not pfmri.publisher:
                         pfmri.publisher = pub
 
@@ -2831,6 +3656,82 @@ class Repository(object):
                 # Update the publisher's configuration.
                 rstore.update_publisher(pub)
 
+        def verify(self, progtrack=None, pub=None):
+                """A generator that verifies that repository content matches
+                expected state for all or specified publishers.
+
+                'progtrack' is an optional ProgressTracker object.
+
+                'pub' is an optional publisher prefix to limit the operation to.
+
+                The generator yields tuples of the form:
+
+                (error_code, path, message, details) where
+
+                'error_code'  an integer error, correponding to REPO_VERIFY_*
+                'path'        the path to the broken file in the repository
+                'message'     a summary of the error
+                'details'     a dictionary of strings containing more detail
+                              about the nature of the error.
+                """
+
+                if self.cfg.get_property("repository", "version") != 4:
+                        raise RepositoryInvalidVersionError(self.root,
+                            self.cfg.get_property("repository", "version"), 4)
+
+                rstore = self.get_pub_rstore(pub.prefix)
+
+                trust_anchor_dir = self.cfg.get_property("repository",
+                    "trust-anchor-directory")
+                sig_required_names = set(self.cfg.get_property("repository",
+                    "signature-required-names"))
+                use_crls = self.cfg.get_property("repository",
+                    "check-certificate-revocation")
+
+                return rstore.verify(progtrack=progtrack, pub=pub,
+                    trust_anchor_dir=trust_anchor_dir,
+                    sig_required_names=sig_required_names, use_crls=use_crls)
+
+        def fix(self, progtrack=None, pub=None, verify_callback=None):
+                """A generator that corrects any problems in the repository.
+
+                'progtrack' is an optional ProgressTracker object.
+
+                'pub' is an optional publisher prefix to limit the operation to.
+
+                During the operation, we emit progress, printing the details
+                using 'verify_callback', a method which requires the following
+                arguments,  progtrack, error_code, message, reason, which
+                correspond exactly to the tuple generated by self.verify(..)
+
+                This method yields tuples of the form:
+
+                (status_code, message, details) where
+
+                'status_code'  an integerstatus code, corresponding to REPO_FIX*
+                'message'      a summary of the operation performed
+                'details'      a dictionary of strings describing the operation
+
+                """
+
+                if self.cfg.get_property("repository", "version") != 4:
+                        raise RepositoryInvalidVersionError(self.root,
+                            self.cfg.get_property("repository", "version"), 4)
+
+                rstore = self.get_pub_rstore(pub.prefix)
+
+                trust_anchor_dir = self.cfg.get_property("repository",
+                    "trust-anchor-directory")
+                sig_required_names = set(self.cfg.get_property("repository",
+                    "signature-required-names"))
+                use_crls = self.cfg.get_property("repository",
+                    "check-certificate-revocation")
+
+                return rstore.fix(progtrack=progtrack, pub=pub,
+                    verify_callback=verify_callback,
+                    trust_anchor_dir=trust_anchor_dir,
+                    sig_required_names=sig_required_names, use_crls=use_crls)
+
         def valid_new_fmri(self, pfmri):
                 """Check that the FMRI supplied as an argument would be valid
                 to add to the repository catalog.  This checks to make sure
@@ -2960,6 +3861,10 @@ class RepositoryConfig(object):
                 ]),
                 cfg.PropertySection("repository", [
                     cfg.PropInt("version"),
+                    cfg.Property("trust-anchor-directory",
+                        default="/etc/certs/CA/"),
+                    cfg.PropList("signature-required-names"),
+                    cfg.PropBool("check-certificate-revocation", default=False)
                 ]),
             ],
         }

@@ -45,6 +45,7 @@ import shutil
 import urllib
 import urlparse
 
+from pkg.client.debugvalues import DebugValues
 
 PKG_CLIENT_NAME = "pkg"
 
@@ -954,6 +955,7 @@ class TestPkgApiInstall(pkg5unittest.SingleDepotTestCase):
 
                                 bad_mdata = mdata.replace(src_mode, bad_mode)
                                 self.write_img_manifest(pfmri, bad_mdata)
+                                DebugValues["manifest_validate"] = "Never"
                                 self.assertRaises(api_errors.InvalidPackageErrors,
                                     self.__do_install, api_obj,
                                     [pfmri.pkg_name])
@@ -1104,7 +1106,7 @@ class TestActionExecutionErrors(pkg5unittest.SingleDepotTestCase):
 
                 self.plist = {}
                 for p in plist:
-                        pfmri = fmri.PkgFmri(p, "5.11")
+                        pfmri = fmri.PkgFmri(p)
                         self.plist.setdefault(pfmri.pkg_name, []).append(pfmri)
 
         @staticmethod
@@ -1120,6 +1122,7 @@ class TestActionExecutionErrors(pkg5unittest.SingleDepotTestCase):
         def __do_verify(api_obj, pfmri):
                 img = api_obj.img
                 progtrack = progress.NullProgressTracker()
+		progtrack.verify_start(1)
                 for act, errors, warnings, pinfo in img.verify(pfmri, progtrack,
                     forever=True):
                         raise AssertionError("Action %s in package %s failed "

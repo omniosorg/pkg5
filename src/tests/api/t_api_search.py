@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
 
 import testutils
 if __name__ == "__main__":
@@ -28,11 +28,8 @@ if __name__ == "__main__":
 import pkg5unittest
 
 import copy
-import difflib
 import os
-import re
 import shutil
-import sys
 import tempfile
 import time
 import unittest
@@ -41,12 +38,10 @@ import urllib2
 import pkg.client.api as api
 import pkg.client.api_errors as api_errors
 import pkg.client.query_parser as query_parser
-import pkg.client.progress as progress
 import pkg.fmri as fmri
 import pkg.indexer as indexer
 import pkg.portable as portable
 import pkg.search_storage as ss
-import pkg.server.repository as srepo
 
 
 class TestApiSearchBasics(pkg5unittest.SingleDepotTestCase):
@@ -426,12 +421,24 @@ close
         ])
 
         res_remote_file = set([
-            ('pkg:/example_pkg@1.0-0',
-             'path',
-             'file a686473102ba73bd7920fc0ab1d97e00a24ed704 chash=f88920ce1f61db185d127ccb32dc8cf401ae7a83 group=bin mode=0555 owner=root path=bin/example_path pkg.csize=30 pkg.size=12'),
-            ('pkg:/example_pkg@1.0-0',
-             'a686473102ba73bd7920fc0ab1d97e00a24ed704',
-             'file a686473102ba73bd7920fc0ab1d97e00a24ed704 chash=f88920ce1f61db185d127ccb32dc8cf401ae7a83 group=bin mode=0555 owner=root path=bin/example_path pkg.csize=30 pkg.size=12')
+            ("pkg:/example_pkg@1.0-0",
+             "path",
+             "file a686473102ba73bd7920fc0ab1d97e00a24ed704 "
+             "chash=f88920ce1f61db185d127ccb32dc8cf401ae7a83 group=bin "
+             "mode=0555 owner=root path=bin/example_path pkg.csize=30 "
+             "pkg.size=12"),
+            ("pkg:/example_pkg@1.0-0",
+             "a686473102ba73bd7920fc0ab1d97e00a24ed704",
+             "file a686473102ba73bd7920fc0ab1d97e00a24ed704 "
+             "chash=f88920ce1f61db185d127ccb32dc8cf401ae7a83 group=bin "
+             "mode=0555 owner=root path=bin/example_path pkg.csize=30 "
+             "pkg.size=12"),
+             ("pkg:/example_pkg@1.0-0",
+             "hash",
+             "file a686473102ba73bd7920fc0ab1d97e00a24ed704 "
+             "chash=f88920ce1f61db185d127ccb32dc8cf401ae7a83 group=bin "
+             "mode=0555 owner=root path=bin/example_path pkg.csize=30 "
+             "pkg.size=12")
         ]) | res_remote_path
 
         res_remote_url = set([
@@ -441,15 +448,30 @@ close
         ])
 
         res_remote_path_extra = set([
-            ('pkg:/example_pkg@1.0-0',
-             'basename',
-             'file a686473102ba73bd7920fc0ab1d97e00a24ed704 chash=f88920ce1f61db185d127ccb32dc8cf401ae7a83 group=bin mode=0555 owner=root path=bin/example_path pkg.csize=30 pkg.size=12'),
-            ('pkg:/example_pkg@1.0-0',
-             'path',
-             'file a686473102ba73bd7920fc0ab1d97e00a24ed704 chash=f88920ce1f61db185d127ccb32dc8cf401ae7a83 group=bin mode=0555 owner=root path=bin/example_path pkg.csize=30 pkg.size=12'),
-            ('pkg:/example_pkg@1.0-0',
-             'a686473102ba73bd7920fc0ab1d97e00a24ed704',
-             'file a686473102ba73bd7920fc0ab1d97e00a24ed704 chash=f88920ce1f61db185d127ccb32dc8cf401ae7a83 group=bin mode=0555 owner=root path=bin/example_path pkg.csize=30 pkg.size=12')
+            ("pkg:/example_pkg@1.0-0",
+             "basename",
+             "file a686473102ba73bd7920fc0ab1d97e00a24ed704 "
+             "chash=f88920ce1f61db185d127ccb32dc8cf401ae7a83 group=bin "
+             "mode=0555 owner=root path=bin/example_path pkg.csize=30 "
+             "pkg.size=12"),
+            ("pkg:/example_pkg@1.0-0",
+             "path",
+             "file a686473102ba73bd7920fc0ab1d97e00a24ed704 "
+             "chash=f88920ce1f61db185d127ccb32dc8cf401ae7a83 group=bin "
+             "mode=0555 owner=root path=bin/example_path pkg.csize=30 "
+             "pkg.size=12"),
+            ("pkg:/example_pkg@1.0-0",
+             "a686473102ba73bd7920fc0ab1d97e00a24ed704",
+             "file a686473102ba73bd7920fc0ab1d97e00a24ed704 "
+             "chash=f88920ce1f61db185d127ccb32dc8cf401ae7a83 group=bin "
+             "mode=0555 owner=root path=bin/example_path pkg.csize=30 "
+             "pkg.size=12"),
+            ("pkg:/example_pkg@1.0-0",
+            "hash",
+            "file a686473102ba73bd7920fc0ab1d97e00a24ed704 "
+            "chash=f88920ce1f61db185d127ccb32dc8cf401ae7a83 group=bin "
+            "mode=0555 owner=root path=bin/example_path pkg.csize=30 "
+            "pkg.size=12")
         ])
 
         res_bad_pkg = set([
@@ -2421,11 +2443,11 @@ class TestApiSearchBasics_nonP(TestApiSearchBasics):
 
         def test_bug_9729_1(self):
                 """Test that installing more than
-                indexer.MAX_ADDED_NUMBER_PACKAGES packages at a time doesn't
+                indexer.MAX_FAST_INDEXED_PKGS packages at a time doesn't
                 cause any type of indexing error."""
                 durl = self.dc.get_depot_url()
                 pkg_list = []
-                for i in range(0, indexer.MAX_ADDED_NUMBER_PACKAGES + 1):
+                for i in range(0, indexer.MAX_FAST_INDEXED_PKGS + 1):
                         self.pkgsend_bulk(durl,
                             "open pkg%s@1.0,5.11-0\nclose\n" % i)
                         pkg_list.append("pkg%s" % i)
@@ -2434,13 +2456,13 @@ class TestApiSearchBasics_nonP(TestApiSearchBasics):
 
         def test_bug_9729_2(self):
                 """Test that installing more than
-                indexer.MAX_ADDED_NUMBER_PACKAGES packages one after another
+                indexer.MAX_FAST_INDEXED_PKGS packages one after another
                 doesn't cause any type of indexing error."""
                 def _remove_extra_info(v):
                         return v.split("-")[0]
                 durl = self.dc.get_depot_url()
                 pkg_list = []
-                for i in range(0, indexer.MAX_ADDED_NUMBER_PACKAGES + 3):
+                for i in range(0, indexer.MAX_FAST_INDEXED_PKGS + 3):
                         self.pkgsend_bulk(durl,
                             "open pkg%s@1.0,5.11-0\nclose\n" % i)
                         pkg_list.append("pkg%s" % i)
@@ -2480,9 +2502,17 @@ class TestApiSearchBasics_nonP(TestApiSearchBasics):
                     _remove_extra_info(v)
                     for v in self._get_lines(fast_remove_loc)
                     )), self.fast_remove_after_first_update)
+                # Check that a local search actually works.
+                test_value = 'pkg:/pkg%s@2.0-0', 'test/pkg%s', \
+                    'set name=pkg.fmri value=pkg://test/pkg%s@2.0,5.11-0:'
+                for n in range(0, 2):
+                        tv = set([tuple(v % n for v in test_value)])
+                        self._search_op(api_obj, remote=False,
+                            token="pkg%s" % n, test_value=tv)
+
                 # Now check that image update also handles fast_add
                 # appropriately when a large number of packages have changed.
-                for i in range(3, indexer.MAX_ADDED_NUMBER_PACKAGES + 3):
+                for i in range(3, indexer.MAX_FAST_INDEXED_PKGS + 3):
                         self.pkgsend_bulk(durl,
                             "open pkg%s@2.0,5.11-0\nclose\n" % i)
                         pkg_list.append("pkg%s" % i)
@@ -2496,6 +2526,11 @@ class TestApiSearchBasics_nonP(TestApiSearchBasics):
                     _remove_extra_info(v)
                     for v in self._get_lines(fast_remove_loc)
                     )), self.fast_remove_after_second_update)
+                # Check that a local search actually works.
+                for n in range(3, indexer.MAX_FAST_INDEXED_PKGS + 3):
+                        tv = set([tuple(v % n for v in test_value)])
+                        self._search_op(api_obj, remote=False,
+                            token="pkg%s" % n, test_value=tv)
 
         def test_bug_13485(self):
                 """Test that indexer.Indexer's check_for_updates function works

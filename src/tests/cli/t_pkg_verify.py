@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
 
 import testutils
 if __name__ == "__main__":
@@ -34,6 +34,8 @@ import unittest
 
 
 class TestPkgVerify(pkg5unittest.SingleDepotTestCase):
+        # Tests in this suite use the read only data directory
+        need_ro_data = True
 
         foo10 = """
             open foo@1.0,5.11-0
@@ -42,6 +44,7 @@ class TestPkgVerify(pkg5unittest.SingleDepotTestCase):
             add dir mode=0755 owner=root group=sys path=/usr
             add dir mode=0755 owner=root group=bin path=/usr/bin
             add file bobcat mode=0644 owner=root group=bin path=/usr/bin/bobcat
+            add file ls path=/usr/bin/ls mode=755 owner=root group=sys
             add file bobcat path=/etc/preserved mode=644 owner=root group=sys preserve=true timestamp="20080731T024051Z"
             add file dricon_maj path=/etc/name_to_major mode=644 owner=root group=sys preserve=true
             add file dricon_da path=/etc/driver_aliases mode=644 owner=root group=sys preserve=true
@@ -66,13 +69,17 @@ class TestPkgVerify(pkg5unittest.SingleDepotTestCase):
         def setUp(self):
                 pkg5unittest.SingleDepotTestCase.setUp(self)
                 self.make_misc_files(self.misc_files)
+                # We want at least one ELF file here to check for ELF action
+                # verification.
+                portable.copyfile("/usr/bin/ls", os.path.join(self.test_root,
+                    "ls"))
                 self.pkgsend_bulk(self.rurl, self.foo10)
 
         def test_00_bad_opts(self):
                 """ test pkg verify with bad options """
 
                 self.image_create(self.rurl)
-                self.pkg("verify -vq", exit=2)
+                self.pkg_verify("-vq", exit=2)
 
         def test_01_basics(self):
                 """Ensure that verify returns failure as expected when packages
@@ -87,49 +94,55 @@ class TestPkgVerify(pkg5unittest.SingleDepotTestCase):
                 self.pkg("set-publisher -P ignored")
 
                 # Should fail since foo is not installed.
-                self.pkg("verify foo", exit=1)
+                self.pkg_verify("foo", exit=1)
+                self.assert_("Unexpected Exception" not in self.output)
 
                 # Now install package.
                 self.pkg("install foo")
 
                 # Should not fail since informational messages are not
                 # fatal.
-                self.pkg("verify foo")
+                self.pkg_verify("foo")
+
+                # Should not output anything when using -q.
+                self.pkg_verify("-q foo")
+                assert(self.output == "")
 
                 # Should not fail if publisher is disabled and package is ok.
                 self.pkg("set-publisher -d test")
-                self.pkg("verify foo")
+                self.pkg_verify("foo")
 
                 # Should not fail if publisher is removed and package is ok.
                 self.pkg("unset-publisher test")
-                self.pkg("verify foo")
+                self.pkg_verify("foo")
 
                 # Should fail with exit code 1 if publisher is removed and
                 # package is not ok.
                 portable.remove(os.path.join(self.get_img_path(), "usr", "bin",
                     "bobcat"))
-                self.pkg("verify foo", exit=1)
+                self.pkg_verify("foo", exit=1)
+                self.assert_("Unexpected Exception" not in self.output)
                 self.pkg("set-publisher -p %s" % self.rurl)
                 self.pkg("fix foo")
 
                 # Informational messages should not be output unless -v
                 # is provided.
                 self.pkg("set-publisher -p %s" % self.rurl)
-                self.pkg("verify foo | grep bobcat", exit=1)
-                self.pkg("verify -v foo | grep bobcat")
+                self.pkg_verify("foo | grep bobcat", exit=1)
+                self.pkg_verify("-v foo | grep bobcat")
 
                 # Verify shouldn't care if timestamp has changed on
                 # preserved files.
                 fpath = os.path.join(self.get_img_path(), "etc", "preserved")
                 ctime = time.time() - 1240
                 os.utime(fpath, (ctime, ctime))
-                self.pkg("verify foo")
+                self.pkg_verify("foo")
 
                 # Verify should fail if file is missing.
                 fpath = os.path.join(self.get_img_path(), "usr", "bin",
                     "bobcat")
                 portable.remove(fpath)
-                self.pkg("verify foo", exit=1)
+                self.pkg_verify("foo", exit=1)
 
                 # Now verify that verify warnings are not fatal (because
                 # package contained bobcat!).
@@ -149,10 +162,10 @@ class TestPkgVerify(pkg5unittest.SingleDepotTestCase):
                         f.write(out)
 
                 # Verify should find the extra alias...
-                self.pkg("verify -v foo | grep 4321")
+                self.pkg_verify("-v foo | grep 4321")
 
                 # ...but it should not be treated as a fatal error.
-                self.pkg("verify foo")
+                self.pkg_verify("foo")
 
         def test_02_installed(self):
                 """When multiple FMRIs are given to pkg verify, if any of them
@@ -160,7 +173,7 @@ class TestPkgVerify(pkg5unittest.SingleDepotTestCase):
 
                 self.image_create(self.rurl)
                 self.pkg("install foo")
-                self.pkg("verify foo nonexistent", exit=1)
+                self.pkg_verify("foo nonexistent", exit=1)
                 self.pkg("uninstall foo")
 
         def test_03_invalid(self):
@@ -169,15 +182,15 @@ class TestPkgVerify(pkg5unittest.SingleDepotTestCase):
                 self.image_create(self.rurl)
 
                 # Verify invalid package causes graceful exit.
-                self.pkg("verify _not_valid", exit=1)
+                self.pkg_verify("_not_valid", exit=1)
 
                 # Verify unmatched input fails gracefully.
-                self.pkg("verify no/such/package", exit=1)
+                self.pkg_verify("no/such/package", exit=1)
 
                 # Verify invalid package name and unmatched input combined with
                 # installed package name results in graceful failure.
                 self.pkg("install foo")
-                self.pkg("verify _not_valid no/such/package foo", exit=1)
+                self.pkg_verify("_not_valid no/such/package foo", exit=1)
 
         def test_03_editable(self):
                 """When editable files are changed, verify should treat these specially"""
@@ -187,12 +200,30 @@ class TestPkgVerify(pkg5unittest.SingleDepotTestCase):
                 fd = file(os.path.join(self.get_img_path(), "etc", "preserved"), "w+")
                 fd.write("Bobcats are here")
                 fd.close()
-                self.pkg("verify foo")
+                self.pkg_verify("foo")
                 assert(self.output == "")
                 # find out about it via -v
-                self.pkg("verify -v foo")
+                self.pkg_verify("-v foo")
                 self.output.index("etc/preserved")
                 self.output.index("editable file has been changed")
+
+        def test_verify_changed_manifest(self):
+                """Test that running package verify won't change the manifest of
+                an installed package even if it has changed in the repository.
+                """
+
+                self.image_create(self.rurl)
+                self.pkg("install foo")
+
+                self.pkg_verify("")
+                self.pkg("set-property signature-policy require-signatures")
+                self.pkg_verify("", exit=1)
+
+                # Specify location as filesystem path.
+                self.pkgsign_simple(self.dc.get_repodir(), "foo")
+
+                self.pkg_verify("", exit=1)
+
 
 if __name__ == "__main__":
         unittest.main()

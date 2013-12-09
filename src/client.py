@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2007, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
 #
 
 #
@@ -55,8 +55,10 @@ try:
         import locale
         import logging
         import os
+        import re
         import socket
         import sys
+        import tempfile
         import textwrap
         import time
         import traceback
@@ -69,8 +71,10 @@ try:
         import pkg.client.progress as progress
         import pkg.client.linkedimage as li
         import pkg.client.publisher as publisher
+        import pkg.client.options as options
         import pkg.fmri as fmri
         import pkg.misc as misc
+        import pkg.pipeutils as pipeutils
         import pkg.version as version
 
         from pkg.client import global_settings
@@ -87,14 +91,17 @@ except KeyboardInterrupt:
         import sys
         sys.exit(1)
 
-CLIENT_API_VERSION = 71
+CLIENT_API_VERSION = 75
 PKG_CLIENT_NAME = "pkg"
 
 JUST_UNKNOWN = 0
 JUST_LEFT = -1
 JUST_RIGHT = 1
 
+SYSREPO_HIDDEN_URI = "<system-repository>"
+
 logger = global_settings.logger
+pkg_timer = pkg.misc.Timer("pkg client")
 
 valid_special_attrs = ["action.hash", "action.key", "action.name", "action.raw"]
 
@@ -147,26 +154,26 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False):
             "version"]
 
         basic_usage["install"] = _(
-            "[-nvq] [-g path_or_uri ...] [--accept]\n"
+            "[-nvq] [-C n] [-g path_or_uri ...] [--accept]\n"
             "            [--licenses] [--no-be-activate] [--no-index] [--no-refresh]\n"
             "            [--no-backup-be | --require-backup-be] [--backup-be-name name]\n"
             "            [--deny-new-be | --require-new-be] [--be-name name]\n"
             "            [--reject pkg_fmri_pattern ... ] pkg_fmri_pattern ...")
         basic_usage["uninstall"] = _(
-            "[-nvq] [--no-be-activate] [--no-index]\n"
+            "[-nvq] [-C n] [--no-be-activate] [--no-index]\n"
             "            [--no-backup-be | --require-backup-be] [--backup-be-name]\n"
             "            [--deny-new-be | --require-new-be] [--be-name name]\n"
             "            pkg_fmri_pattern ...")
         basic_usage["update"] = _(
-            "[-fnvq] [-g path_or_uri ...] [--accept]\n"
+            "[-fnvq] [-C n] [-g path_or_uri ...] [--accept]\n"
             "            [--licenses] [--no-be-activate] [--no-index] [--no-refresh]\n"
             "            [--no-backup-be | --require-backup-be] [--backup-be-name]\n"
             "            [--deny-new-be | --require-new-be] [--be-name name]\n"
             "            [--reject pkg_fmri_pattern ...] [pkg_fmri_pattern ...]")
         basic_usage["list"] = _(
-            "[-Hafnsuv] [-g path_or_uri ...] [--no-refresh]\n"
+            "[-Hafnqsuv] [-g path_or_uri ...] [--no-refresh]\n"
             "            [pkg_fmri_pattern ...]")
-        basic_usage["refresh"] = _("[--full] [publisher ...]")
+        basic_usage["refresh"] = _("[-q] [--full] [publisher ...]")
         basic_usage["version"] = ""
 
         advanced_cmds = [
@@ -213,7 +220,7 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False):
         ]
 
         adv_usage["info"] = \
-            _("[-lr] [-g path_or_uri ...] [--license] [pkg_fmri_pattern ...]")
+            _("[-lqr] [-g path_or_uri ...] [--license] [pkg_fmri_pattern ...]")
         adv_usage["contents"] = _(
             "[-Hmr] [-a attribute=pattern ...] [-g path_or_uri ...]\n"
             "            [-o attribute ...] [-s sort_key] [-t action_type ...]\n"
@@ -237,17 +244,19 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False):
             "            [--facet <facet_spec>=(True|False) ...]\n"
             "            [(-p|--publisher) [<name>=]<repo_uri>] dir")
         adv_usage["change-variant"] = _(
-            "[-nvq] [-g path_or_uri ...]\n"
-            "            [--accept] [--licenses] [--no-be-activate]\n"
+            "[-nvq] [-C n] [-g path_or_uri ...] [--accept]\n"
+            "            [--licenses] [--no-be-activate] [--no-index] [--no-refresh]\n"
             "            [--no-backup-be | --require-backup-be] [--backup-be-name name]\n"
             "            [--deny-new-be | --require-new-be] [--be-name name]\n"
+            "            [--reject pkg_fmri_pattern ... ]\n"
             "            <variant_spec>=<instance> ...")
 
         adv_usage["change-facet"] = _(
-            "[-nvq] [-g path_or_uri ...]\n"
-            "            [--accept] [--licenses] [--no-be-activate]\n"
+            "[-nvq] [-C n] [-g path_or_uri ...] [--accept]\n"
+            "            [--licenses] [--no-be-activate] [--no-index] [--no-refresh]\n"
             "            [--no-backup-be | --require-backup-be] [--backup-be-name name]\n"
             "            [--deny-new-be | --require-new-be] [--be-name name]\n"
+            "            [--reject pkg_fmri_pattern ... ]\n"
             "            <facet_spec>=[True|False|None] ...")
 
         adv_usage["mediator"] = _("[-aH] [-F format] [<mediator> ...]")
@@ -262,8 +271,8 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False):
             "            [--deny-new-be | --require-new-be] [--be-name name]\n"
             "            <mediator> ...")
 
-        adv_usage["variant"] = _("[-H] [<variant_spec>]")
-        adv_usage["facet"] = ("[-H] [<facet_spec>]")
+        adv_usage["variant"] = _("[-Haiv] [-F format] [<variant_pattern> ...]")
+        adv_usage["facet"] = ("[-Haim] [-F format] [<facet_pattern> ...]")
         adv_usage["avoid"] = _("[pkg_fmri_pattern] ...")
         adv_usage["unavoid"] = _("[pkg_fmri_pattern] ...")
         adv_usage["freeze"] = _("[-n] [-c reason] [pkg_fmri_pattern] ...")
@@ -291,28 +300,33 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False):
             "            [--add-property-value name_of_property=value_to_add]\n"
             "            [--remove-property-value name_of_property=value_to_remove]\n"
             "            [--unset-property name_of_property_to_delete]\n"
+            "            [--proxy proxy to use]\n"
             "            [publisher]")
 
         adv_usage["unset-publisher"] = _("publisher ...")
-        adv_usage["publisher"] = _("[-HPn] [publisher ...]")
-        adv_usage["history"] = _("[-Hl] [-t [time|time-time],...] [-n number] [-o column,...]")
+        adv_usage["publisher"] = _("[-HPn] [-F format] [publisher ...]")
+        adv_usage["history"] = _("[-HNl] [-t [time|time-time],...] [-n number] [-o column,...]")
         adv_usage["purge-history"] = ""
         adv_usage["rebuild-index"] = ""
         adv_usage["update-format"] = ""
 
+        priv_usage["remote"] = _(
+            "--ctlfd=file_descriptor --progfd=file_descriptor")
         priv_usage["list-linked"] = _("-H")
         priv_usage["attach-linked"] = _(
-            "[-fnvq] [--accept] [--licenses] [--no-index]\n"
+            "[-fnvq] [-C n] [--accept] [--licenses] [--no-index]\n"
             "            [--no-refresh] [--no-pkg-updates] [--linked-md-only]\n"
             "            [--allow-relink]\n"
             "            [--prop-linked <propname>=<propvalue> ...]\n"
             "            (-c|-p) <li-name> <dir>")
         priv_usage["detach-linked"] = _(
-            "[-fnvq] [-a|-l <li-name>] [--linked-md-only]")
+            "[-fnvq] [-a|-l <li-name>] [--no-pkg-updates] [--linked-md-only]")
         priv_usage["property-linked"] = _("[-H] [-l <li-name>] [propname ...]")
-        priv_usage["audit-linked"] = _("[-a|-l <li-name>]")
+        priv_usage["audit-linked"] = _(
+            "[-H] [-a|-l <li-name>] [--no-parent-sync]")
+        priv_usage["pubcheck-linked"] = ""
         priv_usage["sync-linked"] = _(
-            "[-nvq] [--accept] [--licenses] [--no-index]\n"
+            "[-nvq] [-C n] [--accept] [--licenses] [--no-index]\n"
             "            [--no-refresh] [--no-parent-sync] [--no-pkg-updates]\n"
             "            [--linked-md-only] [-a|-l <name>]")
         priv_usage["set-property-linked"] = _(
@@ -332,10 +346,10 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False):
                                         raise ValueError(
                                             "Unable to find usage str for %s" %
                                             cmd)
-                                usage = cmd_dic[cmd]
-                                if usage is not "":
+                                use_txt = cmd_dic[cmd]
+                                if use_txt is not "":
                                         logger.error(
-                                            "        pkg %(cmd)s %(usage)s" %
+                                            "        pkg %(cmd)s %(use_txt)s" %
                                             locals())
                                 else:
                                         logger.error("        pkg %s" % cmd)
@@ -400,11 +414,12 @@ def get_fmri_args(api_inst, pargs, cmd=None):
 
 def list_inventory(op, api_inst, pargs,
     li_parent_sync, list_all, list_installed_newest, list_newest,
-    list_upgradable, omit_headers, origins, refresh_catalogs, summary,
+    list_upgradable, omit_headers, origins, quiet, refresh_catalogs, summary,
     verbose):
         """List packages."""
 
-        api_inst.progresstracker = get_tracker(quiet=omit_headers)
+        api_inst.progresstracker.set_purpose(
+            api_inst.progresstracker.PURPOSE_LISTING)
 
         variants = False
         pkg_list = api.ImageInterface.LIST_INSTALLED
@@ -481,6 +496,10 @@ def list_inventory(op, api_inst, pargs,
                     raise_unmatched=True, repos=origins, variants=variants)
                 for pt, summ, cats, states, attrs in res:
                         found = True
+
+                        if quiet:
+                                continue
+
                         if not omit_headers:
                                 if verbose:
                                         msg(fmt_str %
@@ -511,9 +530,15 @@ def list_inventory(op, api_inst, pargs,
                         else:
                                 spub = " (" + pub + ")"
 
-                        # Display full FMRI for verbose case.
+                        # Display full FMRI (without build version) for
+                        # verbose case.
+                        # Use class method instead of creating an object for
+                        # performance reasons.
                         if verbose:
-                                pfmri = "pkg://%s/%s@%s" % (pub, stem, ver)
+                                release, build_release, branch, ts = \
+                                    version.Version.split(ver)[0]
+                                pfmri = "pkg://%s/%s@%s-%s:%s" % \
+                                    (pub, stem, release, branch, ts)
                                 msg(fmt_str % (pfmri, status))
                                 continue
 
@@ -531,20 +556,29 @@ def list_inventory(op, api_inst, pargs,
 
                 if not found and not pargs:
                         if pkg_list == api_inst.LIST_INSTALLED:
-                                error(_("no packages installed"))
+                                if not quiet:
+                                        error(_("no packages installed"))
                                 api_inst.log_operation_end(
                                     result=RESULT_NOTHING_TO_DO)
                                 return EXIT_OOPS
                         elif pkg_list == api_inst.LIST_INSTALLED_NEWEST:
-                                error(_("no packages installed or available "
-                                    "for installation"))
+                                if not quiet:
+                                        error(_("no packages installed or available "
+                                            "for installation"))
                                 api_inst.log_operation_end(
                                     result=RESULT_NOTHING_TO_DO)
                                 return EXIT_OOPS
                         elif pkg_list == api_inst.LIST_UPGRADABLE:
-                                error(_("no packages are installed or are "
-                                    "installed and have newer versions "
-                                    "available"))
+                                if not quiet:
+                                        img = api_inst._img
+                                        cat = img.get_catalog(
+                                            img.IMG_CATALOG_INSTALLED)
+                                        if cat.package_count > 0:
+                                                error(_("no packages have "
+                                                    "newer versions available"))
+                                        else:
+                                                error(_("no packages are "
+                                                    "installed"))
                                 api_inst.log_operation_end(
                                     result=RESULT_NOTHING_TO_DO)
                                 return EXIT_OOPS
@@ -560,6 +594,9 @@ def list_inventory(op, api_inst, pargs,
             api_errors.PermissionsException), e:
                 error(e, cmd=op)
                 return EXIT_OOPS
+        except api_errors.CatalogRefreshException, e:
+                display_catalog_failures(e)
+                return EXIT_OOPS
         except api_errors.InventoryException, e:
                 if e.illegal:
                         for i in e.illegal:
@@ -568,12 +605,15 @@ def list_inventory(op, api_inst, pargs,
                             result=RESULT_FAILED_BAD_REQUEST)
                         return EXIT_OOPS
 
-                if found:
+                if found and not quiet:
                         # Ensure a blank line is inserted after list for
                         # partial failure case.
                         logger.error(" ")
 
-                if pkg_list == api.ImageInterface.LIST_ALL or \
+                if quiet:
+                        # Print nothing.
+                        pass
+                elif pkg_list == api.ImageInterface.LIST_ALL or \
                     pkg_list == api.ImageInterface.LIST_NEWEST:
                         error(_("no packages matching '%s' known") % \
                             ", ".join(e.notfound), cmd=op)
@@ -584,12 +624,42 @@ def list_inventory(op, api_inst, pargs,
                             ", ".join(e.notfound), cmd=op)
                         logger.error("Use -af to allow all versions.")
                 elif pkg_list == api.ImageInterface.LIST_UPGRADABLE:
-                        error(_("no packages matching '%s' are installed "
-                            "and have newer versions available") % \
-                            ", ".join(e.notfound), cmd=op)
+			# Creating a list of packages that are uptodate
+			# and that are not installed on the system.
+                        no_updates = []
+                        not_installed = []
+                        try:
+                                for entry in api_inst.get_pkg_list(
+                                    api.ImageInterface.LIST_INSTALLED,
+                                    patterns=e.notfound, raise_unmatched=True):
+                                        pub, stem, ver = entry[0]
+                                        no_updates.append(stem)
+                        except api_errors.InventoryException, exc:
+                                not_installed = exc.notfound
+
+                        err_str = ""
+                        if len(not_installed) == 1:
+                                err_str = _("No package matching '%s'"
+                                    " is installed. ") % \
+                                    not_installed[0]
+                        elif not_installed:
+                                err_str = _("No packages matching '%s'"
+                                    " are installed. ") % \
+                                    ", ".join(not_installed)
+
+                        if len(no_updates) == 1:
+                                err_str = err_str + _("No updates are available"
+                                          " for package '%s'.") % \
+                                            no_updates[0]
+                        elif no_updates:
+                                err_str = err_str + _("No updates are available"
+                                          " for packages '%s'.") % \
+                                            ", ".join(no_updates)
+                        if err_str:
+                                error(err_str, cmd=op)
                 else:
-                        error(_("no packages matching '%s' installed") % \
-                            ", ".join(e.notfound), cmd=op)
+                        error(_("No packages matching '%s' installed") % \
+                            ", ".join(e.notfound), cmd=op) 
 
                 if found and e.notfound:
                         # Only some patterns matched.
@@ -598,25 +668,31 @@ def list_inventory(op, api_inst, pargs,
                 api_inst.log_operation_end(result=RESULT_NOTHING_TO_DO)
                 return EXIT_OOPS
 
-def get_tracker(parsable_version=None, quiet=False, verbose=0):
-        if quiet:
-                progresstracker = progress.QuietProgressTracker(
-                    parsable_version=parsable_version)
+def get_tracker():
+        if global_settings.client_output_parsable_version is not None:
+                progresstracker = progress.NullProgressTracker()
+        elif global_settings.client_output_quiet:
+                progresstracker = progress.QuietProgressTracker()
+        elif global_settings.client_output_progfd:
+                # This logic handles linked images: for linked children
+                # we elide the progress output.
+                output_file = os.fdopen(global_settings.client_output_progfd,
+                    "w")
+                child_tracker = progress.LinkedChildProgressTracker(
+                    output_file=output_file)
+                dot_tracker = progress.DotProgressTracker(
+                    output_file=output_file)
+                progresstracker = progress.MultiProgressTracker(
+                    [child_tracker, dot_tracker])
         else:
                 try:
-                        progresstracker = \
-                            progress.FancyUNIXProgressTracker(
-                                parsable_version=parsable_version, quiet=quiet,
-                                verbose=verbose)
+                        progresstracker = progress.FancyUNIXProgressTracker()
                 except progress.ProgressTrackerException:
-                        progresstracker = progress.CommandLineProgressTracker(
-                            parsable_version=parsable_version, quiet=quiet,
-                            verbose=verbose)
+                        progresstracker = progress.CommandLineProgressTracker()
+
         return progresstracker
 
 def fix_image(api_inst, args):
-        progresstracker = get_tracker(quiet=False)
-
         opts, pargs = getopt.getopt(args, "", ["accept", "licenses"])
 
         accept = show_licenses = False
@@ -631,9 +707,14 @@ def fix_image(api_inst, args):
         try:
                 res = api_inst.get_pkg_list(api.ImageInterface.LIST_INSTALLED,
                     patterns=pargs, raise_unmatched=True, return_fmris=True)
+                # We un-generate this because this is a long operation and
+                # we would like to know how many pkgs we will operate upon.
+                result = list(res)
+                if result:
+                        api_inst.progresstracker.verify_start(len(result))
 
                 repairs = []
-                for entry in res:
+                for entry in result:
                         pfmri = entry[0]
                         found = True
                         entries = []
@@ -644,7 +725,8 @@ def fix_image(api_inst, args):
                         # an overall success/failure result and then the
                         # related messages output for it.
                         for act, errors, warnings, pinfo in img.verify(pfmri,
-                            progresstracker, verbose=True, forever=True):
+                            api_inst.progresstracker, verbose=True,
+                            forever=True):
                                 if not errors:
                                         # Fix will silently skip packages that
                                         # don't have errors, but will display
@@ -673,6 +755,9 @@ def fix_image(api_inst, args):
                                 for x in warnings:
                                         msg("\t\t%s" % x)
                         repairs.append((pfmri, failed))
+                if result:
+                        api_inst.progresstracker.verify_done()
+
         except api_errors.InventoryException, e:
                 if e.illegal:
                         for i in e.illegal:
@@ -693,69 +778,67 @@ def fix_image(api_inst, args):
                 return EXIT_OOPS
 
         # Repair anything we failed to verify
-        if repairs:
-                # Since BootEnv records the snapshot name in the image history,
-                # we need to manage our own history start/end & exception
-                # handling rather then delegating to <Image>.repair()
-                api_inst.log_operation_start("fix")
-                # Create a snapshot in case they want to roll back
-                success = False
-                try:
-                        be = bootenv.BootEnv(img)
-                        if be.exists():
-                                msg(_("Created ZFS snapshot: %s") %
-                                    be.snapshot_name)
-                except RuntimeError:
-                        # Error is printed by the BootEnv call.
-                        be = bootenv.BootEnvNull(img)
-                img.bootenv = be
-                try:
-                        success = img.repair(repairs, progresstracker,
-                            accept=accept, show_licenses=show_licenses,
-                            new_history_op=False)
-                except (api_errors.InvalidPlanError,
-                    api_errors.InvalidPackageErrors,
-                    api_errors.ActionExecutionError,
-                    api_errors.PermissionsException,
-                    api_errors.SigningException,
-                    api_errors.InvalidResourceLocation,
-                    api_errors.ConflictingActionErrors), e:
-                        logger.error(str(e))
-                except api_errors.ImageFormatUpdateNeeded, e:
-                        format_update_error(e)
-                        api_inst.log_operation_end(
-                            result=RESULT_FAILED_CONFIGURATION)
-                        return EXIT_OOPS
-                except api_errors.PlanLicenseErrors, e:
-                        error(_("The following packages require their "
-                            "licenses to be accepted before they can be "
-                            "repaired: "))
-                        logger.error(str(e))
-                        logger.error(_("To indicate that you agree to and "
-                            "accept the terms of the licenses of the packages "
-                            "listed above, use the --accept option.  To "
-                            "display all of the related licenses, use the "
-                            "--licenses option."))
-                        api_inst.log_operation_end(
-                            result=RESULT_FAILED_CONSTRAINED)
-                        return EXIT_LICENSE
-                except api_errors.RebootNeededOnLiveImageException:
-                        error(_("Requested \"fix\" operation would affect "
-                            "files that cannot be modified in live image.\n"
-                            "Please retry this operation on an alternate boot "
-                            "environment."))
-                        api_inst.log_operation_end(
-                            result=RESULT_FAILED_CONSTRAINED)
-                        return EXIT_NOTLIVE
-                except Exception, e:
-                        api_inst.log_operation_end(error=e)
-                        raise
+        if not repairs:
+                msg(_("No repairs for this image."))
+                return EXIT_OK
 
-                if not success:
-                        api_inst.log_operation_end(
-                            result=RESULT_FAILED_UNKNOWN)
-                        return EXIT_OOPS
-                api_inst.log_operation_end(result=RESULT_SUCCEEDED)
+        # Since BootEnv records the snapshot name in the image history, we need
+        # to manage our own history start/end & exception handling rather then
+        # delegating to <Image>.repair()
+        api_inst.log_operation_start("fix")
+        # Create a snapshot in case they want to roll back
+        success = False
+        try:
+                be = bootenv.BootEnv(img)
+                if be.exists():
+                        msg(_("Created ZFS snapshot: %s") % be.snapshot_name)
+        except RuntimeError:
+                # Error is printed by the BootEnv call.
+                be = bootenv.BootEnvNull(img)
+        img.bootenv = be
+        try:
+                success = img.repair(repairs, api_inst.progresstracker,
+                    accept=accept, show_licenses=show_licenses,
+                    new_history_op=False)
+        except (api_errors.InvalidPlanError,
+            api_errors.InvalidPackageErrors,
+            api_errors.ActionExecutionError,
+            api_errors.PermissionsException,
+            api_errors.SigningException,
+            api_errors.InvalidResourceLocation,
+            api_errors.ConflictingActionErrors), e:
+                logger.error(str(e))
+        except api_errors.ImageFormatUpdateNeeded, e:
+                format_update_error(e)
+                api_inst.log_operation_end(result=RESULT_FAILED_CONFIGURATION)
+                return EXIT_OOPS
+        except api_errors.PlanLicenseErrors, e:
+                error(_("The following packages require their "
+                    "licenses to be accepted before they can be repaired: "))
+                logger.error(str(e))
+                logger.error(_("To indicate that you agree to and "
+                    "accept the terms of the licenses of the packages "
+                    "listed above, use the --accept option.  To "
+                    "display all of the related licenses, use the "
+                    "--licenses option."))
+                api_inst.log_operation_end(
+                    result=RESULT_FAILED_CONSTRAINED)
+                return EXIT_LICENSE
+        except api_errors.RebootNeededOnLiveImageException:
+                error(_("Requested \"fix\" operation would affect "
+                    "files that cannot be modified in live image.\n"
+                    "Please retry this operation on an alternate boot "
+                    "environment."))
+                api_inst.log_operation_end(result=RESULT_FAILED_CONSTRAINED)
+                return EXIT_NOTLIVE
+        except Exception, e:
+                api_inst.log_operation_end(error=e)
+                raise
+
+        if not success:
+                api_inst.log_operation_end(result=RESULT_FAILED_UNKNOWN)
+                return EXIT_OOPS
+        api_inst.log_operation_end(result=RESULT_SUCCEEDED)
         return EXIT_OK
 
 def verify_image(api_inst, args):
@@ -776,22 +859,31 @@ def verify_image(api_inst, args):
                 elif opt == "-q":
                         quiet = True
                         display_headers = False
+                        global_settings.client_output_quiet = True
 
         if verbose and quiet:
                 usage(_("-v and -q may not be combined"), cmd="verify")
         if verbose > 2:
                 DebugValues.set_value("plan", "True")
 
+        # Reset the progress tracker here, because we may have
+        # to switch to a different tracker due to the options parse.
+        _api_inst.progresstracker = get_tracker()
+
         # XXX verify should be part of pkg.client.api
         any_errors = False
         processed = False
         notfound = EmptyI
-        progresstracker = get_tracker(quiet=quiet, verbose=verbose)
         try:
                 res = api_inst.get_pkg_list(api.ImageInterface.LIST_INSTALLED,
                     patterns=pargs, raise_unmatched=True, return_fmris=True)
+                # We un-generate this because this is a long operation and
+                # we would like to know how many pkgs we will operate upon.
+                result = list(res)
+                if result:
+                        api_inst.progresstracker.verify_start(len(result))
 
-                for entry in res:
+                for entry in result:
                         pfmri = entry[0]
                         entries = []
                         result = _("OK")
@@ -804,7 +896,8 @@ def verify_image(api_inst, args):
                         # an overall success/failure result and then the
                         # related messages output for it.
                         for act, errors, warnings, pinfo in img.verify(pfmri,
-                            progresstracker, verbose=verbose, forever=forever):
+                            api_inst.progresstracker, verbose=verbose,
+                            forever=forever):
                                 if errors:
                                         failed = True
                                         if quiet:
@@ -888,16 +981,20 @@ def accept_plan_licenses(api_inst):
 display_plan_options = ["basic", "fmris", "variants/facets", "services",
     "actions", "boot-archive"]
 
-def __display_plan(api_inst, verbose):
+def __display_plan(api_inst, verbose, noexecute):
         """Helper function to display plan to the desired degree.
         Verbose can either be a numerical value, or a list of
         items to display"""
 
         if isinstance(verbose, int):
                 disp = ["basic"]
+
+                if verbose == 0 and noexecute:
+                        disp.append("release-notes")
                 if verbose > 0:
                         disp.extend(["fmris", "mediators", "services",
-                            "variants/facets", "boot-archive"])
+                                     "variants/facets", "boot-archive",
+                                     "release-notes"])
                 if verbose > 1:
                         disp.append("actions")
                 if verbose > 2:
@@ -910,8 +1007,10 @@ def __display_plan(api_inst, verbose):
 
         plan = api_inst.describe()
 
-        if api_inst.is_liveroot and not api_inst.is_zone and \
-            not plan.is_active_root_be:
+        if plan.must_display_notes():
+                disp.append("release-notes")
+
+        if api_inst.is_liveroot and not api_inst.is_active_liveroot_be:
                 # Warn the user since this isn't likely what they wanted.
                 if plan.new_be:
                         logger.warning(_("""\
@@ -933,7 +1032,9 @@ made will not be reflected on the next boot.
                 elif src != dest:
                         c.append((src, dest))
                 else:
-                        a.append((src, dest))
+                        # Changing or repairing package content (e.g. fix,
+                        # change-facet, etc.)
+                        a.append((dest, dest))
 
         def bool_str(val):
                 if val:
@@ -951,8 +1052,15 @@ made will not be reflected on the next boot.
                 cond_show(_("Packages to remove:"), "%d", len(r))
                 cond_show(_("Packages to install:"), "%d", len(i))
                 cond_show(_("Packages to update:"), "%d", len(c))
+                if varcets or mediators:
+                        cond_show(_("Packages to change:"), "%d", len(a))
+                else:
+                        cond_show(_("Packages to fix:"), "%d", len(a))
                 cond_show(_("Mediators to change:"), "%d", len(mediators))
                 cond_show(_("Variants/Facets to change:"), "%d", len(varcets))
+                if not plan.new_be:
+                        cond_show(_("Services to change:"), "%d",
+                            len(plan.services))
 
                 if verbose:
                         # Only show space information in verbose mode.
@@ -964,39 +1072,33 @@ made will not be reflected on the next boot.
                                     _("Estimated space to be consumed:"),
                                     misc.bytes_to_str(plan.bytes_added)))
 
-                if varcets or mediators:
-                        cond_show(_("Packages to change:"), "%d", len(a))
-                else:
-                        cond_show(_("Packages to fix:"), "%d", len(a))
+                # only display BE information if we're operating on the
+                # liveroot environment (since otherwise we'll never be
+                # manipulating BEs).
+                if api_inst.is_liveroot:
+                        status.append((_("Create boot environment:"),
+                            bool_str(plan.new_be)))
 
-                status.append((_("Create boot environment:"),
-                    bool_str(plan.new_be)))
+                        if plan.new_be and (verbose or not plan.activate_be):
+                                # Only show activation status if verbose or
+                                # if new BE will not be activated.
+                                status.append((_("Activate boot environment:"),
+                                    bool_str(plan.activate_be)))
 
-                if plan.new_be and (verbose or not plan.activate_be):
-                        # Only show activation status if verbose or if new BE
-                        # will not be activated.
-                        status.append((_("Activate boot environment:"),
-                            bool_str(plan.activate_be)))
-
-                status.append((_("Create backup boot environment:"),
-                    bool_str(plan.backup_be)))
-
-                if not plan.new_be:
-                        cond_show(_("Services to change:"), "%d",
-                            len(plan.get_services()))
+                        status.append((_("Create backup boot environment:"),
+                            bool_str(plan.backup_be)))
 
         if "boot-archive" in disp:
                 status.append((_("Rebuild boot archive:"),
                     bool_str(plan.update_boot_archive)))
 
         # Right-justify all status strings based on length of longest string.
-        rjust_status = max(len(s[0]) for s in status)
-        rjust_value = max(len(s[1]) for s in status)
-        for s in status:
-                logger.info("%s %s" % (s[0].rjust(rjust_status),
-                    s[1].rjust(rjust_value)))
-
         if status:
+                rjust_status = max(len(s[0]) for s in status)
+                rjust_value = max(len(s[1]) for s in status)
+                for s in status:
+                        logger.info("%s %s" % (s[0].rjust(rjust_status),
+                            s[1].rjust(rjust_value)))
                 # Ensure there is a blank line between status information and
                 # remainder.
                 logger.info("")
@@ -1021,7 +1123,7 @@ made will not be reflected on the next boot.
 
         if "fmris" in disp:
                 changed = collections.defaultdict(list)
-                for src, dest in itertools.chain(r, i, c):
+                for src, dest in itertools.chain(r, i, c, a):
                         if src and dest:
                                 if src.publisher != dest.publisher:
                                         pparent = "%s -> %s" % (src.publisher,
@@ -1029,16 +1131,24 @@ made will not be reflected on the next boot.
                                 else:
                                         pparent = dest.publisher
                                 pname = dest.pkg_stem
-                                pver = "%s -> %s" % (src.fmri.version,
-                                    dest.fmri.version)
+                                pver = src.fmri.version.get_version(
+                                    include_build=False)
+                                if src != dest:
+                                        pver += " -> %s" % \
+                                            dest.fmri.version.get_version(
+                                                include_build=False)
                         elif dest:
                                 pparent = dest.publisher
                                 pname = dest.pkg_stem
-                                pver = "None -> %s" % dest.fmri.version
+                                pver = "None -> %s" % \
+                                    dest.fmri.version.get_version(
+                                        include_build=False)
                         else:
                                 pparent = src.publisher
                                 pname = src.pkg_stem
-                                pver = "%s -> None" % src.fmri.version
+                                pver = "%s -> None" % \
+                                    src.fmri.version.get_version(
+                                        include_build=False)
 
                         changed[pparent].append((pname, pver))
 
@@ -1057,14 +1167,9 @@ made will not be reflected on the next boot.
                                 logger.info("    %s" % pver)
                                 last_parent = pparent
 
-                if len(a):
-                        logger.info(_("Affected fmris:"))
-                        for src, dest in a:
-                                logger.info("  %s", src)
-
         if "services" in disp and not plan.new_be:
                 last_action = None
-                for action, smf_fmri in plan.get_services():
+                for action, smf_fmri in plan.services:
                         if last_action is None:
                                 logger.info("Services:")
                         if action != last_action:
@@ -1077,8 +1182,40 @@ made will not be reflected on the next boot.
                 for a in plan.get_actions():
                         logger.info("  %s" % a)
 
-def __display_parsable_plan(api_inst, parsable_version,
-    child_images=None):
+
+        if plan.has_release_notes():
+                if "release-notes" in disp:
+                        logger.info("Release Notes:")
+                        for a in plan.get_release_notes():
+                                logger.info("  %s", a)
+                else:
+                        if not plan.new_be and api_inst.is_liveroot and not DebugValues["GenerateNotesFile"]:
+                                logger.info(_("Release notes can be viewed with 'pkg history -n 1 -N'"))
+                        else:
+                                tmp_path = __write_tmp_release_notes(plan)
+                                if tmp_path:
+                                        logger.info(_("Release notes can be found in %s before rebooting.")
+                                            % tmp_path)
+                                logger.info(_("After rebooting, use 'pkg history -n 1 -N' to view release notes."))
+
+def __write_tmp_release_notes(plan):
+        """try to write release notes out to a file in /tmp and return the name"""
+        if plan.has_release_notes:
+                try:
+                        fd, path = tempfile.mkstemp(suffix=".txt", prefix="release-notes")
+                        # make file world readable
+                        os.chmod(path, 0644)
+                        tmpfile = os.fdopen(fd, "w+b")
+                        for a in plan.get_release_notes():
+                                if isinstance(a, unicode):
+                                        a = a.encode("utf-8")
+                                print >> tmpfile, a
+                        tmpfile.close()
+                        return path
+                except Exception:
+                        pass
+
+def __display_parsable_plan(api_inst, parsable_version, child_images=None):
         """Display the parsable version of the plan."""
 
         assert parsable_version == 0, "parsable_version was %r" % \
@@ -1104,6 +1241,7 @@ def __display_parsable_plan(api_inst, parsable_version,
         licenses = []
         if child_images is None:
                 child_images = []
+        release_notes = []
 
         if plan:
                 for rem, add in plan.get_changes():
@@ -1121,7 +1259,7 @@ def __display_parsable_plan(api_inst, parsable_version,
                                 removed_fmris.append(str(rem))
                         else:
                                 added_fmris.append(str(add))
-                variants_changed, facets_changed = plan.get_parsable_varcets()
+                variants_changed, facets_changed = plan.varcets
                 backup_be_created = plan.backup_be
                 new_be_created = plan.new_be
                 backup_be_name = plan.backup_be_name
@@ -1130,19 +1268,25 @@ def __display_parsable_plan(api_inst, parsable_version,
                 be_activated = plan.activate_be
                 space_available = plan.bytes_avail
                 space_required = plan.bytes_added
-                services_affected = plan.get_services()
-                mediators_changed = plan.get_parsable_mediators()
+                services_affected = plan.services
+                mediators_changed = plan.mediators
+
+                for n in plan.get_release_notes():
+                        release_notes.append(n)
+
                 for dfmri, src_li, dest_li, acc, disp in \
                     plan.get_licenses():
                         src_tup = None
                         if src_li:
+                                li_txt = misc.decode(src_li.get_text())
                                 src_tup = (str(src_li.fmri), src_li.license,
-                                    src_li.get_text(), src_li.must_accept,
+                                    li_txt, src_li.must_accept,
                                     src_li.must_display)
                         dest_tup = None
                         if dest_li:
+                                li_txt = misc.decode(dest_li.get_text())
                                 dest_tup = (str(dest_li.fmri),
-                                    dest_li.license, dest_li.get_text(),
+                                    dest_li.license, li_txt,
                                     dest_li.must_accept, dest_li.must_display)
                         licenses.append(
                             (str(dfmri), src_tup, dest_tup))
@@ -1165,6 +1309,7 @@ def __display_parsable_plan(api_inst, parsable_version,
             "change-variants": sorted(variants_changed),
             "affect-services": sorted(services_affected),
             "change-mediators": sorted(mediators_changed),
+            "release-notes": release_notes,
             "image-name": None,
             "child-images": child_images,
             "version": parsable_version,
@@ -1194,7 +1339,8 @@ def display_plan_licenses(api_inst, show_all=False, show_req=True):
                 lic = dest.license
                 if show_req:
                         logger.info("-" * 60)
-                        logger.info(_("Package: %s") % pfmri)
+                        logger.info(_("Package: %s") % pfmri.get_fmri(
+                            include_build=False))
                         logger.info(_("License: %s\n") % lic)
                         logger.info(dest.get_text())
                         logger.info("\n")
@@ -1222,7 +1368,7 @@ def display_plan(api_inst, child_image_plans, noexecute, op, parsable_version,
                 else:
                         s = _("No updates necessary for this image.")
                 if api_inst.ischild():
-                        s + " (%s)" % api_inst.get_linked_name()
+                        s += " (%s)" % api_inst.get_linked_name()
                 msg(s)
                 return
 
@@ -1230,18 +1376,16 @@ def display_plan(api_inst, child_image_plans, noexecute, op, parsable_version,
                 display_plan_licenses(api_inst, show_all=show_licenses)
 
         if not quiet:
-                __display_plan(api_inst, verbose)
+                __display_plan(api_inst, verbose, noexecute)
         if parsable_version is not None:
                 __display_parsable_plan(api_inst, parsable_version,
                     child_image_plans)
 
-def __api_prepare(operation, api_inst, accept=False):
+def __api_prepare_plan(operation, api_inst):
         # Exceptions which happen here are printed in the above level, with
         # or without some extra decoration done here.
         # XXX would be nice to kick the progress tracker.
         try:
-                if accept:
-                        accept_plan_licenses(api_inst)
                 api_inst.prepare()
         except (api_errors.PermissionsException, api_errors.UnknownErrors), e:
                 # Prepend a newline because otherwise the exception will
@@ -1290,7 +1434,8 @@ def __api_execute_plan(operation, api_inst):
                 api_inst.execute_plan()
                 rval = EXIT_OK
         except RuntimeError, e:
-                error(_("%s failed: %s") % (operation, e))
+                error(_("%(operation)s failed: %(err)s") %
+                    {"operation": operation, "err": e})
                 rval = EXIT_OOPS
         except (api_errors.InvalidPlanError,
             api_errors.ActionExecutionError,
@@ -1300,8 +1445,8 @@ def __api_execute_plan(operation, api_inst):
                 error("\n" + str(e))
                 rval = EXIT_OOPS
         except (api_errors.LinkedImageException), e:
-                error(_("%s failed (linked image exception(s)):\n%s") %
-                      (operation, str(e)))
+                error(_("%(operation)s failed (linked image exception(s)):\n"
+                    "%(err)s") % {"operation": operation, "err": e})
                 rval = e.lix_exitrv
         except api_errors.ImageUpdateOnLiveImageException:
                 error(_("%s cannot be done on live image") % operation)
@@ -1339,7 +1484,8 @@ def __api_execute_plan(operation, api_inst):
                 rval = EXIT_OOPS
         except Exception, e:
                 error(_("An unexpected error happened during "
-                    "%s: %s") % (operation, e))
+                    "%(operation)s: %(err)s") %
+                    {"operation": operation, "err": e})
                 raise
         finally:
                 exc_type = exc_value = exc_tb = None
@@ -1349,8 +1495,13 @@ def __api_execute_plan(operation, api_inst):
                         exc_type, exc_value, exc_tb = sys.exc_info()
 
                 try:
-                        salvaged = api_inst.describe().get_salvaged()
-                        if salvaged:
+                        salvaged = api_inst.describe().salvaged
+                        newbe = api_inst.describe().new_be
+                        if salvaged and (rval == EXIT_OK or not newbe):
+                                # Only show salvaged file list if populated
+                                # and operation was successful, or if operation
+                                # failed and a new BE was not created for
+                                # the operation.
                                 logger.error("")
                                 logger.error(_("The following unexpected or "
                                     "editable files and directories were\n"
@@ -1371,20 +1522,13 @@ def __api_execute_plan(operation, api_inst):
 
         return rval
 
-def __api_alloc(imgdir, exact_match, pkg_image_used, quiet, runid=-1):
-        progresstracker = get_tracker(quiet=quiet)
+def __api_alloc(imgdir, exact_match, pkg_image_used):
 
-        def qv(val):
-                # Escape shell metacharacters; '\' must be escaped first to
-                # prevent escaping escapes.
-                for c in "\\ \t\n'`;&()|^<>?*":
-                        val = val.replace(c, "\\" + c)
-                return val
-
+        progresstracker = get_tracker()
         try:
                 return api.ImageInterface(imgdir, CLIENT_API_VERSION,
                     progresstracker, None, PKG_CLIENT_NAME,
-                    exact_match=exact_match, runid=runid)
+                    exact_match=exact_match)
         except api_errors.ImageNotFoundException, e:
                 if e.user_specified:
                         if pkg_image_used:
@@ -1409,12 +1553,12 @@ def __api_plan_exception(op, noexecute, verbose, api_inst):
                 error(_("No image rooted at '%s'") % e.user_dir, cmd=op)
                 return EXIT_OOPS
         if e_type == api_errors.InventoryException:
-                error("\n" + _("%s failed (inventory exception):\n%s") % (op,
-                    e))
+                error("\n" + _("%(operation)s failed (inventory exception):\n"
+                    "%(err)s") % {"operation": op, "err": e})
                 return EXIT_OOPS
         if isinstance(e, api_errors.LinkedImageException):
-                error(_("%s failed (linked image exception(s)):\n%s") %
-                      (op, str(e)))
+                error(_("%(operation)s failed (linked image exception(s)):\n"
+                    "%(err)s") % {"operation": op, "err": e})
                 return e.lix_exitrv
         if e_type == api_errors.IpkgOutOfDateException:
                 msg(_("""\
@@ -1431,15 +1575,12 @@ Cannot remove '%s' due to the following packages that depend on it:"""
                         logger.error("  %s" % d)
                 return EXIT_OOPS
         if e_type == api_errors.CatalogRefreshException:
-                if display_catalog_failures(e) != 0:
-                        return EXIT_OOPS
-                if noexecute:
-                        return EXIT_OK
+                display_catalog_failures(e)
                 return EXIT_OOPS
         if e_type == api_errors.ConflictingActionErrors:
                 error("\n" + str(e), cmd=op)
                 if verbose:
-                        __display_plan(api_inst, verbose)
+                        __display_plan(api_inst, verbose, noexecute)
                 return EXIT_OOPS
         if e_type in (api_errors.InvalidPlanError,
             api_errors.ReadOnlyFileSystemException,
@@ -1499,30 +1640,20 @@ Cannot remove '%s' due to the following packages that depend on it:"""
         raise
         # NOTREACHED
 
-def __api_op(_op, _api_inst, _accept=False, _li_ignore=None, _noexecute=False,
+def __api_plan(_op, _api_inst, _accept=False, _li_ignore=None, _noexecute=False,
     _origins=None, _parsable_version=None, _quiet=False,
     _review_release_notes=False, _show_licenses=False, _stage=API_STAGE_DEFAULT,
     _verbose=0, **kwargs):
-        """Do something that involves the api.
-
-        Arguments prefixed with '_' are primarily used within this
-        function.  All other arguments must be specified via keyword
-        assignment and will be passed directly on to the api
-        interfaces being invoked."""
-
-        # massage arguments
-        if type(_li_ignore) == list:
-                # parse any linked image names specified on the command line
-                _li_ignore = _api_inst.parse_linked_name_list(_li_ignore)
 
         # All the api interface functions that we inovke have some
         # common arguments.  Set those up now.
         if _op != PKG_OP_REVERT:
-                kwargs["accept"] = _accept
                 kwargs["li_ignore"] = _li_ignore
         kwargs["noexecute"] = _noexecute
-        if _origins != None:
+        if _origins:
                 kwargs["repos"] = _origins
+        if _stage != API_STAGE_DEFAULT:
+                kwargs["pubcheck"] = False
 
         # display plan debugging information
         if _verbose > 2:
@@ -1548,61 +1679,183 @@ def __api_op(_op, _api_inst, _accept=False, _li_ignore=None, _noexecute=False,
         elif _op == PKG_OP_UPDATE:
                 api_plan_func = _api_inst.gen_plan_update
         else:
-                raise RuntimeError("__api_op() invalid op: %s" % _op)
+                raise RuntimeError("__api_plan() invalid op: %s" % _op)
 
-        first_plan = True
-        plan_displayed = False
+        planned_self = False
         child_plans = []
         try:
                 for pd in api_plan_func(**kwargs):
-                        if not first_plan:
-                                #
+                        if planned_self:
                                 # we don't display anything for child images
                                 # since they currently do their own display
-                                # work unless parsable output is requested.
-                                #
+                                # work (unless parsable output is requested).
                                 child_plans.append(pd)
                                 continue
 
                         # the first plan description is always for ourself.
-                        first_plan = False
+                        planned_self = True
+                        pkg_timer.record("planning", logger=logger)
+
+                        # if we're in parsable mode don't display anything
+                        # until after we finish planning for all children
                         if _parsable_version is None:
                                 display_plan(_api_inst, [], _noexecute,
                                     _op, _parsable_version, _quiet,
                                     _show_licenses, _stage, _verbose)
-                                plan_displayed = True
+
+                        # if requested accept licenses for child images.  we
+                        # have to do this before recursing into children.
+                        if _accept:
+                                accept_plan_licenses(_api_inst)
         except:
                 rv = __api_plan_exception(_op, _noexecute, _verbose, _api_inst)
                 if rv != EXIT_OK:
+                        pkg_timer.record("planning", logger=logger)
                         return rv
 
-        if not plan_displayed:
+        if not planned_self:
+                # if we got an exception we didn't do planning for children
+                pkg_timer.record("planning", logger=logger)
+
+        elif _api_inst.isparent(_li_ignore):
+                # if we didn't get an exception and we're a parent image then
+                # we should have done planning for child images.
+                pkg_timer.record("planning children", logger=logger)
+
+        # if we didn't display our own plan (due to an exception), or if we're
+        # in parsable mode, then display our plan now.
+        if not planned_self or _parsable_version is not None:
                 try:
-                        display_plan(_api_inst, child_plans, _noexecute, _op,
-                            _parsable_version, _quiet, _show_licenses, _stage,
-                            _verbose)
+                        display_plan(_api_inst, child_plans, _noexecute,
+                            _op, _parsable_version, _quiet, _show_licenses,
+                            _stage, _verbose)
                 except api_errors.ApiException, e:
                         error(e, cmd=_op)
                         return EXIT_OOPS
 
-        stuff_to_do = not _api_inst.planned_nothingtodo()
-        if not stuff_to_do:
-                return EXIT_NOP
+        # if we didn't accept licenses (due to an exception) then do that now.
+        if not planned_self and _accept:
+                accept_plan_licenses(_api_inst)
 
-        if _noexecute or _stage in [API_STAGE_PUBCHECK, API_STAGE_PLAN]:
-                return EXIT_OK
+        return EXIT_OK
+
+def __api_plan_file(api_inst):
+        """Return the path to the PlanDescription save file."""
+
+        plandir = api_inst.img_plandir
+        return os.path.join(plandir, "plandesc")
+
+def __api_plan_save(api_inst):
+        """Save an image plan to a file."""
+
+        # get a pointer to the plan
+        plan = api_inst.describe()
+
+        # save the PlanDescription to a file
+        path = __api_plan_file(api_inst)
+        oflags = os.O_CREAT | os.O_TRUNC | os.O_WRONLY
+        try:
+                fd = os.open(path, oflags, 0644)
+                with os.fdopen(fd, "wb") as fobj:
+                        plan._save(fobj)
+
+                # cleanup any old style imageplan save files
+                for f in os.listdir(api_inst.img_plandir):
+                        path = os.path.join(api_inst.img_plandir, f)
+                        if re.search("^actions\.[0-9]+\.json$", f):
+                                os.unlink(path)
+                        if re.search("^pkgs\.[0-9]+\.json$", f):
+                                os.unlink(path)
+        except OSError, e:
+                raise api_errors._convert_error(e)
+
+        pkg_timer.record("saving plan", logger=logger)
+
+def __api_plan_load(api_inst, stage, origins):
+        """Loan an image plan from a file."""
+
+        # load an existing plan
+        path = __api_plan_file(api_inst)
+        plan = api.PlanDescription()
+        try:
+                with open(path) as fobj:
+                        plan._load(fobj)
+        except OSError, e:
+                raise api_errors._convert_error(e)
+
+        pkg_timer.record("loading plan", logger=logger)
+
+        api_inst.reset()
+        api_inst.set_alt_repos(origins)
+        api_inst.load_plan(plan, prepared=(stage == API_STAGE_EXECUTE))
+        pkg_timer.record("re-initializing plan", logger=logger)
+
+        if stage == API_STAGE_EXECUTE:
+                __api_plan_delete(api_inst)
+
+def __api_plan_delete(api_inst):
+        """Delete an image plan file."""
+
+        path = __api_plan_file(api_inst)
+        try:
+                os.unlink(path)
+        except OSError, e:
+                raise api_errors._convert_error(e)
+
+def __api_op(_op, _api_inst, _accept=False, _li_ignore=None, _noexecute=False,
+    _origins=None, _parsable_version=None, _quiet=False,
+    _review_release_notes=False, _show_licenses=False,
+    _stage=API_STAGE_DEFAULT, _verbose=0, **kwargs):
+        """Do something that involves the api.
+
+        Arguments prefixed with '_' are primarily used within this
+        function.  All other arguments must be specified via keyword
+        assignment and will be passed directly on to the api
+        interfaces being invoked."""
+
+        if _stage in [API_STAGE_DEFAULT, API_STAGE_PLAN]:
+                # create a new plan
+                rv = __api_plan(_op=_op, _api_inst=_api_inst,
+                    _accept=_accept, _li_ignore=_li_ignore,
+                    _noexecute=_noexecute, _origins=_origins,
+                    _parsable_version=_parsable_version, _quiet=_quiet,
+                    _review_release_notes=_review_release_notes,
+                    _show_licenses=_show_licenses, _stage=_stage,
+                    _verbose=_verbose, **kwargs)
+
+                if rv != EXIT_OK:
+                        return rv
+                if not _noexecute and _stage == API_STAGE_PLAN:
+                        # We always save the plan, even if it is a noop.  We
+                        # do this because we want to be able to verify that we
+                        # can load and execute a noop plan.  (This mimics
+                        # normal api behavior which doesn't prevent an api
+                        # consumer from creating a noop plan and then
+                        # preparing and executing it.)
+                        __api_plan_save(_api_inst)
+                if _api_inst.planned_nothingtodo():
+                        return EXIT_NOP
+                if _noexecute or _stage == API_STAGE_PLAN:
+                        return EXIT_OK
+        else:
+                assert _stage in [API_STAGE_PREPARE, API_STAGE_EXECUTE]
+                __api_plan_load(_api_inst, _stage, _origins)
 
         # Exceptions which happen here are printed in the above level,
         # with or without some extra decoration done here.
-        ret_code = __api_prepare(_op, _api_inst, accept=_accept)
-        if ret_code != EXIT_OK:
-                return ret_code
+        if _stage in [API_STAGE_DEFAULT, API_STAGE_PREPARE]:
+                ret_code = __api_prepare_plan(_op, _api_inst)
+                pkg_timer.record("preparing", logger=logger)
 
-        if _stage == API_STAGE_PREPARE:
-                return EXIT_OK
+                if ret_code != EXIT_OK:
+                        return ret_code
+                if _stage == API_STAGE_PREPARE:
+                        return EXIT_OK
 
         ret_code = __api_execute_plan(_op, _api_inst)
-        if _review_release_notes and ret_code == 0 and \
+        pkg_timer.record("executing", logger=logger)
+
+        if _review_release_notes and ret_code == EXIT_OK and \
             _stage == API_STAGE_DEFAULT and _api_inst.solaris_image():
                 msg("\n" + "-" * 75)
                 msg(_("NOTE: Please review release notes posted at:\n" ))
@@ -1611,533 +1864,89 @@ def __api_op(_op, _api_inst, _accept=False, _li_ignore=None, _noexecute=False,
 
         return ret_code
 
-def opts_err_opt1_req_opt2(opt1, opt2, op):
-        txt = _("%(opt1)s may only be used in combination with %(opt2)s") % \
-            {"opt1": opt1, "opt2": opt2}
-        usage(txt, cmd=op)
+class RemoteDispatch(object):
+        """RPC Server Class which invoked by the PipedRPCServer when a RPC
+        request is recieved."""
 
-def opts_err_incompat(opt1, opt2, op):
-        txt = _("the %(opt1)s and %(opt2)s options may not be combined") % \
-            {"opt1": opt1, "opt2": opt2}
-        usage(txt, cmd=op)
+        def __dispatch(self, op, pwargs):
 
-def opts_err_repeated(opt1, op):
-        txt = _("option '%s' repeated") % (opt1)
-        usage(txt, cmd=op)
+                pkg_timer.record("rpc dispatch wait", logger=logger)
 
-def opts_table_cb_beopts(op, api_inst, opts, opts_new):
+                # if we were called with no arguments then pwargs will be []
+                if pwargs == []:
+                        pwargs = {}
 
-        # synthesize require_new_be and deny_new_be into new_be
-        del opts_new["require_new_be"]
-        del opts_new["deny_new_be"]
-        opts_new["new_be"] = None
+                op_supported = [
+                    PKG_OP_AUDIT_LINKED,
+                    PKG_OP_DETACH,
+                    PKG_OP_PUBCHECK,
+                    PKG_OP_SYNC,
+                    PKG_OP_UPDATE,
+                ]
+                if op not in op_supported:
+                        raise Exception(
+                            'method "%s" is not supported' % op)
 
-        if (opts["be_name"] or opts["require_new_be"]) and opts["deny_new_be"]:
-                opts_err_incompat("--require-new-be", "--deny-new-be", op)
+                # if a stage was specified, get it.
+                stage = pwargs.get("stage", API_STAGE_DEFAULT)
+                assert stage in api_stage_values
 
-        # create a new key called "backup_be" in the options array
-        if opts["require_new_be"] or opts["be_name"]:
-                opts_new["new_be"] = True
-        if opts["deny_new_be"]:
-                opts_new["new_be"] = False
+                # if we're starting a new operation, reset the api.  we do
+                # this just in case our parent updated our linked image
+                # metadata.
+                if stage in [API_STAGE_DEFAULT, API_STAGE_PLAN]:
+                        _api_inst.reset()
 
-        # synthesize require_backup_be and no_backup_be into backup_be
-        del opts_new["require_backup_be"]
-        del opts_new["no_backup_be"]
-        opts_new["backup_be"] = None
+                op_func = cmds[op][0]
+                rv = op_func(op, _api_inst, pargs, **pwargs)
 
-        if (opts["require_backup_be"] or opts["backup_be_name"]) and \
-            opts["no_backup_be"]:
-                opts_err_incompat("--require-backup-be", "--no-backup-be", op)
+                if DebugValues["timings"]:
+                        msg(str(pkg_timer))
+                pkg_timer.reset()
 
-        if (opts["require_backup_be"] or opts["backup_be_name"]) and \
-            (opts["require_new_be"] or opts["be_name"]):
-                opts_err_incompat("--require-backup-be", "--require-new-be", op)
+                return rv
 
-        # create a new key called "backup_be" in the options array
-        if opts["require_backup_be"] or opts["backup_be_name"]:
-                opts_new["backup_be"] = True
-        if opts["no_backup_be"]:
-                opts_new["backup_be"] = False
+        def _dispatch(self, op, pwargs):
+                """Primary RPC dispatch function.
 
-def opts_table_cb_li_ignore(op, api_inst, opts, opts_new):
+                This function must be kept super simple because if we take an
+                exception here then no output will be generated and this
+                package remote process will silently exit with a non-zero
+                return value (and the lack of an exception message makes this
+                failure very difficult to debug).  Hence we wrap the real
+                remote dispatch routine with a call to handle_errors(), which
+                will catch and display any exceptions encountered."""
 
-        # synthesize li_ignore_all and li_ignore_list into li_ignore
-        del opts_new["li_ignore_all"]
-        del opts_new["li_ignore_list"]
-        opts_new["li_ignore"] = None
+                # flush output before and after every operation.
+                misc.flush_output()
+                misc.truncate_file(sys.stdout)
+                misc.truncate_file(sys.stderr)
+                rv = handle_errors(self.__dispatch, True, op, pwargs)
+                misc.flush_output()
+                return rv
 
-        # check if there's nothing to ignore
-        if not opts["li_ignore_all"] and not opts["li_ignore_list"]:
-                return
-
-        if opts["li_ignore_all"]:
-
-                # can't ignore all and specific images
-                if opts["li_ignore_list"]:
-                        opts_err_incompat("-I", "-i", op)
-
-                # can't ignore all and target anything.
-                if "li_target_all" in opts and opts["li_target_all"]:
-                        opts_err_incompat("-I", "-a", op)
-                if "li_target_list" in opts and opts["li_target_list"]:
-                        opts_err_incompat("-I", "-l", op)
-                if "li_name" in opts and opts["li_name"]:
-                        opts_err_incompat("-I", "-l", op)
-
-                opts_new["li_ignore"] = []
-                return
-
-        assert opts["li_ignore_list"]
-
-        # it doesn't make sense to specify images to ignore if the
-        # user is already specifying images to operate on.
-        if "li_target_all" in opts and opts["li_target_all"]:
-                opts_err_incompat("-i", "-a", op)
-        if "li_target_list" in opts and opts["li_target_list"]:
-                opts_err_incompat("-i", "-l", op)
-        if "li_name" in opts and opts["li_name"]:
-                opts_err_incompat("-i", "-l", op)
-
-        li_ignore = []
-        for li_name in opts["li_ignore_list"]:
-                # check for repeats
-                if li_name in li_ignore:
-                        opts_err_repeated("-i %s" % (li_name), op)
-                # add to ignore list
-                li_ignore.append(li_name)
-
-        opts_new["li_ignore"] = li_ignore
-
-def opts_table_cb_li_no_psync(op, api_inst, opts, opts_new):
-        # if a target child linked image was specified, the no-parent-sync
-        # option doesn't make sense since we know that both the parent and
-        # child image are accessible
-
-        if "li_target_all" not in opts:
-                # we don't accept linked image target options
-                assert "li_target_list" not in opts
-                return
-
-        if opts["li_target_all"] and not opts["li_parent_sync"]:
-                opts_err_incompat("-a", "--no-parent-sync", op)
-        if opts["li_target_list"] and not opts["li_parent_sync"]:
-                opts_err_incompat("-l", "--no-parent-sync", op)
-
-def opts_table_cb_li_props(op, api_inst, opts, opts_new):
-        """convert linked image prop list into a dictionary"""
-
-        opts_new["li_props"] = __parse_linked_props(opts["li_props"], op)
-
-def opts_table_cb_li_target(op, api_inst, opts, opts_new):
-        # figure out which option the user specified
-        if opts["li_target_all"] and opts["li_target_list"]:
-                opts_err_incompat("-a", "-l", op)
-        elif opts["li_target_all"]:
-                arg1 = "-a"
-        elif opts["li_target_list"]:
-                arg1 = "-l"
-        else:
-                return
-
-        if "be_activate" in opts and not opts["be_activate"]:
-                opts_err_incompat(arg1, "--no-be-activate", op)
-        if "be_name" in opts and opts["be_name"]:
-                opts_err_incompat(arg1, "--be-name", op)
-        if "deny_new_be" in opts and opts["deny_new_be"]:
-                opts_err_incompat(arg1, "--deny-new-be", op)
-        if "require_new_be" in opts and opts["require_new_be"]:
-                opts_err_incompat(arg1, "--require-new-be", op)
-        if "reject_pats" in opts and opts["reject_pats"]:
-                opts_err_incompat(arg1, "--reject", op)
-        if "origins" in opts and opts["origins"]:
-                opts_err_incompat(arg1, "-g", op)
-
-        # validate linked image name
-        li_target_list = []
-        for li_name in opts["li_target_list"]:
-                # check for repeats
-                if li_name in li_target_list:
-                        opts_err_repeated("-l %s" % (li_name), op)
-                # add to ignore list
-                li_target_list.append(li_name)
-
-        opts_new["li_target_list"] = li_target_list
-
-def opts_table_cb_li_target1(op, api_inst, opts, opts_new):
-        # figure out which option the user specified
-        if opts["li_name"]:
-                arg1 = "-l"
-        else:
-                return
-
-        if "be_activate" in opts and not opts["be_activate"]:
-                opts_err_incompat(arg1, "--no-be-activate", op)
-        if "be_name" in opts and opts["be_name"]:
-                opts_err_incompat(arg1, "--be-name", op)
-        if "deny_new_be" in opts and opts["deny_new_be"]:
-                opts_err_incompat(arg1, "--deny-new-be", op)
-        if "require_new_be" in opts and opts["require_new_be"]:
-                opts_err_incompat(arg1, "--require-new-be", op)
-        if "reject_pats" in opts and opts["reject_pats"]:
-                opts_err_incompat(arg1, "--require", op)
-        if "origins" in opts and opts["origins"]:
-                opts_err_incompat(arg1, "-g", op)
-
-def opts_table_cb_no_headers_vs_quiet(op, api_inst, opts, opts_new):
-        # check if we accept the -q option
-        if "quiet" not in opts:
-                return
-
-        # -q implies -H
-        if opts["quiet"]:
-                opts_new["omit_headers"] = True
-
-def opts_table_cb_nqv(op, api_inst, opts, opts_new):
-        if opts["verbose"] and opts["quiet"]:
-                opts_err_incompat("-v", "-q", op)
-
-def opts_table_cb_parsable(op, api_inst, opts, opts_new):
-        if opts["parsable_version"] and opts.get("verbose", False):
-                opts_err_incompat("--parsable", "-v", op)
-        if opts["parsable_version"]:
-                try:
-                        opts_new["parsable_version"] = int(
-                            opts["parsable_version"])
-                except ValueError:
-                        usage(_("--parsable expects an integer argument."),
-                            cmd=op)
-                opts_new["quiet"] = True
-
-def opts_table_cb_origins(op, api_inst, opts, opts_new):
-        origins = set()
-        for o in opts["origins"]:
-                origins.add(misc.parse_uri(o, cwd=orig_cwd))
-        opts_new["origins"] = origins
-
-def opts_table_cb_stage(op, api_inst, opts, opts_new):
-        if opts["stage"] == None:
-                opts_new["stage"] = API_STAGE_DEFAULT
-                return
-
-        if opts_new["stage"] not in api_stage_values:
-                usage(_("invalid operation stage: '%s'") % opts["stage"],
-                    cmd=op)
-
-def opts_cb_li_attach(op, api_inst, opts, opts_new):
-        if opts["attach_parent"] and opts["attach_child"]:
-                opts_err_incompat("-c", "-p", op)
-
-        if not opts["attach_parent"] and not opts["attach_child"]:
-                usage(_("either -c or -p must be specified"), cmd=op)
-
-        if opts["attach_child"]:
-                # if we're attaching a new child then that doesn't affect
-                # any other children, so ignoring them doesn't make sense.
-                if opts["li_ignore_all"]:
-                        opts_err_incompat("-c", "-I", op)
-                if opts["li_ignore_list"]:
-                        opts_err_incompat("-c", "-i", op)
-
-def opts_table_cb_md_only(op, api_inst, opts, opts_new):
-        # if the user didn't specify linked-md-only we're done
-        if not opts["li_md_only"]:
-                return
-
-        # li_md_only implies no li_pkg_updates
-        if "li_pkg_updates" in opts:
-                opts_new["li_pkg_updates"] = False
+def remote(op, api_inst, pargs, ctlfd):
+        """Execute commands from a remote pipe"""
 
         #
-        # if li_md_only is false that means we're not updating any packages
-        # within the current image so there are a ton of options that no
-        # longer apply to the current operation, and hence are incompatible
-        # with li_md_only.
+        # this is kinda a gross hack.  SocketServer.py uses select.select()
+        # which doesn't support file descriptors larger than FD_SETSIZE.
+        # Since ctlfd may have been allocated in a parent process with many
+        # file descriptors, it may be larger than FD_SETSIZE.  Here in the
+        # child, though, the majority of those have been closed, so os.dup()
+        # should return a lower-numbered descriptor which will work with
+        # select.select().
         #
-        arg1 = "--linked-md-only"
-        if "be_name" in opts and opts["be_name"]:
-                opts_err_incompat(arg1, "--be-name", op)
-        if "deny_new_be" in opts and opts["deny_new_be"]:
-                opts_err_incompat(arg1, "--deny-new-be", op)
-        if "require_new_be" in opts and opts["require_new_be"]:
-                opts_err_incompat(arg1, "--require-new-be", op)
-        if "li_parent_sync" in opts and not opts["li_parent_sync"]:
-                opts_err_incompat(arg1, "--no-parent-sync", op)
-        if "reject_pats" in opts and opts["reject_pats"]:
-                opts_err_incompat(arg1, "--reject", op)
+        ctlfd_new = os.dup(ctlfd)
+        os.close(ctlfd)
+        ctlfd = ctlfd_new
 
-def opts_cb_list(op, api_inst, opts, opts_new):
-        if opts_new["origins"] and not opts_new["list_newest"]:
-                # Use of -g implies -a unless -n is provided.
-                opts_new["list_installed_newest"] = True
+        rpc_server = pipeutils.PipedRPCServer(ctlfd)
+        rpc_server.register_introspection_functions()
+        rpc_server.register_instance(RemoteDispatch())
 
-        if opts_new["list_all"] and not opts_new["list_installed_newest"]:
-                opts_err_opt1_req_opt2("-f", "-a", op)
-
-        if opts_new["list_installed_newest"] and opts_new["list_newest"]:
-                opts_err_incompat("-a", "-n", op)
-
-        if opts_new["list_installed_newest"] and opts_new["list_upgradable"]:
-                opts_err_incompat("-a", "-u", op)
-
-        if opts_new["summary"] and opts_new["verbose"]:
-                opts_err_incompat("-s", "-v", op)
-
-#
-# options common to multiple pkg(1) subcommands.  The format for specifying
-# options is a list which can contain:
-#
-# - Function pointers which define callbacks that are invoked after all
-#   options (aside from extra pargs) have been parsed.  These callbacks can
-#   verify the the contents and combinations of different options.
-#
-# - Tuples formatted as:
-#       (s, l, k, v)
-#   where the values are:
-#       s: a short option, ex: -f
-#       l: a long option, ex: --foo
-#       k: the key value for the options dictionary
-#       v: the default value. valid values are: True/False, None, [], 0
-#
-opts_table_beopts = [
-    opts_table_cb_beopts,
-    ("",  "backup-be-name=",   "backup_be_name",     None),
-    ("",  "be-name=",          "be_name",            None),
-    ("",  "deny-new-be",       "deny_new_be",        False),
-    ("",  "no-backup-be",      "no_backup_be",       False),
-    ("",  "no-be-activate",    "be_activate",        True),
-    ("",  "require-backup-be", "require_backup_be",  False),
-    ("",  "require-new-be",    "require_new_be",     False),
-]
-
-opts_table_force = [
-    ("f", "",                "force",                False),
-]
-
-opts_table_li_ignore = [
-    opts_table_cb_li_ignore,
-    ("I", "",                "li_ignore_all",        False),
-    ("i", "",                "li_ignore_list",       []),
-]
-
-opts_table_li_md_only = [
-    opts_table_cb_md_only,
-    ("",  "linked-md-only",    "li_md_only",         False),
-]
-
-opts_table_li_no_pkg_updates = [
-    ("",  "no-pkg-updates",  "li_pkg_updates",       True),
-]
-
-opts_table_li_no_psync = [
-    opts_table_cb_li_no_psync,
-    ("",  "no-parent-sync",  "li_parent_sync",       True),
-]
-
-opts_table_li_props = [
-    opts_table_cb_li_props,
-    ("", "prop-linked",      "li_props",             []),
-]
-
-opts_table_li_target = [
-    opts_table_cb_li_target,
-    ("a", "",                "li_target_all",        False),
-    ("l", "",                "li_target_list",       []),
-]
-
-opts_table_li_target1 = [
-    opts_table_cb_li_target1,
-    ("l", "",                "li_name",              None),
-]
-
-opts_table_licenses = [
-    ("",  "accept",          "accept",               False),
-    ("",  "licenses",        "show_licenses",        False),
-]
-
-opts_table_no_headers = [
-    opts_table_cb_no_headers_vs_quiet,
-    ("H", "",                "omit_headers",         False),
-]
-
-opts_table_no_index = [
-    ("",  "no-index",        "update_index",         True),
-]
-
-opts_table_no_refresh = [
-    ("",  "no-refresh",      "refresh_catalogs",     True),
-]
-
-opts_table_reject = [
-    ("", "reject=",          "reject_pats",          []),
-]
-
-opts_table_verbose = [
-    ("v", "",                "verbose",              0),
-]
-
-opts_table_quiet = [
-    ("q", "",                "quiet",                False),
-]
-
-opts_table_parsable = [
-    opts_table_cb_parsable,
-    ("", "parsable=",        "parsable_version",     None),
-]
-
-opts_table_nqv = \
-    opts_table_quiet + \
-    opts_table_verbose + \
-    [
-    opts_table_cb_nqv,
-    ("n", "",                "noexecute",            False),
-]
-
-opts_table_origins = [
-    opts_table_cb_origins,
-    ("g", "",                "origins",              []),
-]
-
-opts_table_stage = [
-    opts_table_cb_stage,
-    ("",  "stage",           "stage",                None),
-]
-
-#
-# Options for pkg(1) subcommands.  Built by combining the option tables above,
-# with some optional subcommand unique options defined below.
-#
-opts_install = \
-    opts_table_beopts + \
-    opts_table_li_ignore + \
-    opts_table_li_no_psync + \
-    opts_table_licenses + \
-    opts_table_reject + \
-    opts_table_no_index + \
-    opts_table_no_refresh + \
-    opts_table_nqv + \
-    opts_table_parsable + \
-    opts_table_origins + \
-    []
-
-# "update" cmd inherits all "install" cmd options
-opts_update = \
-    opts_install + \
-    opts_table_force + \
-    opts_table_stage + \
-    []
-
-# "attach-linked" cmd inherits all "install" cmd options
-opts_attach_linked = \
-    opts_install + \
-    opts_table_force + \
-    opts_table_li_md_only + \
-    opts_table_li_no_pkg_updates + \
-    opts_table_li_props + \
-    [
-    opts_cb_li_attach,
-    ("",  "allow-relink",   "allow_relink",         False),
-    ("c", "",               "attach_child",         False),
-    ("p", "",               "attach_parent",        False),
-]
-
-opts_list_mediator = \
-    opts_table_no_headers + \
-    [
-    ("a", "",                "list_available",      False),
-    ("F", "output-format",   "output_format",       None)
-]
-
-opts_revert = \
-    opts_table_beopts + \
-    opts_table_nqv + \
-    opts_table_parsable + \
-    [
-    ("",  "tagged",          "tagged",               False),
-]
-
-opts_set_mediator = \
-    opts_table_beopts + \
-    opts_table_no_index + \
-    opts_table_nqv + \
-    opts_table_parsable + \
-    [
-    ("I", "implementation",  "med_implementation",   None),
-    ("V", "version",         "med_version",          None)
-]
-
-opts_unset_mediator = \
-    opts_table_beopts + \
-    opts_table_no_index + \
-    opts_table_nqv + \
-    opts_table_parsable + \
-    [
-    ("I", "",               "med_implementation",   False),
-    ("V", "",               "med_version",          False)
-]
-
-# "set-property-linked" cmd inherits all "install" cmd options
-opts_set_property_linked = \
-    opts_install + \
-    opts_table_li_md_only + \
-    opts_table_li_no_pkg_updates + \
-    opts_table_li_target1 + \
-    []
-
-# "sync-linked" cmd inherits all "install" cmd options
-opts_sync_linked = \
-    opts_install + \
-    opts_table_li_md_only + \
-    opts_table_li_no_pkg_updates + \
-    opts_table_li_target + \
-    opts_table_stage + \
-    []
-
-opts_uninstall = \
-    opts_table_beopts + \
-    opts_table_li_ignore + \
-    opts_table_no_index + \
-    opts_table_nqv + \
-    opts_table_parsable + \
-    opts_table_stage
-
-opts_audit_linked = \
-    opts_table_li_no_psync + \
-    opts_table_li_target + \
-    opts_table_no_headers + \
-    opts_table_quiet + \
-    []
-
-opts_detach_linked = \
-    opts_table_force + \
-    opts_table_li_target + \
-    opts_table_nqv + \
-    []
-
-opts_list_linked = \
-    opts_table_li_ignore + \
-    opts_table_no_headers + \
-    []
-
-opts_list_property_linked = \
-    opts_table_li_target1 + \
-    opts_table_no_headers + \
-    []
-
-opts_list_inventory = \
-    opts_table_li_no_psync + \
-    opts_table_no_refresh + \
-    opts_table_no_headers + \
-    opts_table_origins + \
-    opts_table_verbose + \
-    [
-    opts_cb_list,
-    ("a", "",               "list_installed_newest", False),
-    ("f", "",               "list_all",              False),
-    ("n", "",               "list_newest",           False),
-    ("s", "",               "summary",               False),
-    ("u", "",               "list_upgradable",       False),
-]
+        pkg_timer.record("rpc startup", logger=logger)
+        rpc_server.serve_forever()
 
 def change_variant(op, api_inst, pargs,
     accept, backup_be, backup_be_name, be_activate, be_name, li_ignore,
@@ -2145,9 +1954,6 @@ def change_variant(op, api_inst, pargs,
     refresh_catalogs, reject_pats, show_licenses, update_index, verbose):
         """Attempt to change a variant associated with an image, updating
         the image contents as necessary."""
-
-        api_inst.progresstracker = get_tracker(
-            parsable_version=parsable_version, quiet=quiet, verbose=verbose)
 
         xrval, xres = get_fmri_args(api_inst, reject_pats, cmd=op)
         if not xrval:
@@ -2170,8 +1976,8 @@ def change_variant(op, api_inst, pargs,
 
                 # make sure the user didn't specify duplicate variants
                 if name in variants:
-                        usage(_("%s: duplicate variant specified: %s") %
-                            (op, name))
+                        usage(_("%(subcmd)s: duplicate variant specified: "
+                            "%(variant)s") % {"subcmd": op, "variant": name})
                 variants[name] = value
 
         return __api_op(op, api_inst, _accept=accept, _li_ignore=li_ignore,
@@ -2190,9 +1996,6 @@ def change_facet(op, api_inst, pargs,
     refresh_catalogs, reject_pats, show_licenses, update_index, verbose):
         """Attempt to change the facets as specified, updating
         image as necessary"""
-
-        api_inst.progresstracker = get_tracker(
-            parsable_version=parsable_version, quiet=quiet, verbose=verbose)
 
         xrval, xres = get_fmri_args(api_inst, reject_pats, cmd=op)
         if not xrval:
@@ -2250,9 +2053,6 @@ def install(op, api_inst, pargs,
         """Attempt to take package specified to INSTALLED state.  The operands
         are interpreted as glob patterns."""
 
-        api_inst.progresstracker = get_tracker(
-            parsable_version=parsable_version, quiet=quiet, verbose=verbose)
-
         if not pargs:
                 usage(_("at least one package name required"), cmd=op)
 
@@ -2276,11 +2076,9 @@ def install(op, api_inst, pargs,
 
 def uninstall(op, api_inst, pargs,
     be_activate, backup_be, backup_be_name, be_name, new_be, li_ignore,
-    update_index, noexecute, parsable_version, quiet, verbose, stage):
+    li_parent_sync, update_index, noexecute, parsable_version, quiet,
+    verbose, stage):
         """Attempt to take package specified to DELETED state."""
-
-        api_inst.progresstracker = get_tracker(
-            parsable_version=parsable_version, quiet=quiet, verbose=verbose)
 
         if not pargs:
                 usage(_("at least one package name required"), cmd=op)
@@ -2296,18 +2094,16 @@ def uninstall(op, api_inst, pargs,
             _noexecute=noexecute, _quiet=quiet, _stage=stage,
             _verbose=verbose, backup_be=backup_be,
             backup_be_name=backup_be_name, be_activate=be_activate,
-            be_name=be_name, new_be=new_be, _parsable_version=parsable_version,
+            be_name=be_name, li_parent_sync=li_parent_sync, new_be=new_be,
+            _parsable_version=parsable_version,
             pkgs_to_uninstall=pargs, update_index=update_index)
 
-def update(op, api_inst, pargs,
-    accept, backup_be, backup_be_name, be_activate, be_name, force, li_ignore,
-    li_parent_sync, new_be, noexecute, origins, parsable_version, quiet,
-    refresh_catalogs, reject_pats, show_licenses, stage, update_index, verbose):
+def update(op, api_inst, pargs, accept, backup_be, backup_be_name, be_activate,
+    be_name, force, li_ignore, li_parent_sync, new_be, noexecute, origins,
+    parsable_version, quiet, refresh_catalogs, reject_pats, show_licenses,
+    stage, update_index, verbose):
         """Attempt to take all installed packages specified to latest
         version."""
-
-        api_inst.progresstracker = get_tracker(
-            parsable_version=parsable_version, quiet=quiet, verbose=verbose)
 
         rval, res = get_fmri_args(api_inst, pargs, cmd=op)
         if not rval:
@@ -2317,9 +2113,7 @@ def update(op, api_inst, pargs,
         if not xrval:
                 return EXIT_OOPS
 
-        api_inst.set_stage(stage)
-
-        if res and "*" not in pargs and "*@*" not in pargs:
+        if res:
                 # If there are specific installed packages to update,
                 # then take only those packages to the latest version
                 # allowed by the patterns specified.  (The versions
@@ -2327,8 +2121,8 @@ def update(op, api_inst, pargs,
                 pkgs_update = pargs
                 review_release_notes = False
         else:
-                # If no packages were specified, or '*' was one of the
-                # patterns provided, attempt to update all installed packages.
+                # If no packages were specified, attempt to update all installed
+                # packages.
                 pkgs_update = None
                 review_release_notes = True
 
@@ -2351,9 +2145,6 @@ def revert(op, api_inst, pargs,
 
         if not pargs:
                 usage(_("at least one file path or tag name required"), cmd=op)
-
-        api_inst.progresstracker = get_tracker(
-            parsable_version=parsable_version, quiet=quiet, verbose=verbose)
 
         return __api_op(op, api_inst, _noexecute=noexecute, _quiet=quiet,
             _verbose=verbose, be_activate=be_activate, be_name=be_name,
@@ -2477,9 +2268,6 @@ def set_mediator(op, api_inst, pargs,
         if verbose > 2:
                 DebugValues.set_value("plan", "True")
 
-        api_inst.progresstracker = get_tracker(
-            parsable_version=parsable_version, quiet=quiet, verbose=verbose)
-
         # Now set version and/or implementation for all matching mediators.
         # The user may specify 'None' as a special value to explicitly
         # request mediations that do not have the related component.
@@ -2519,7 +2307,7 @@ def set_mediator(op, api_inst, pargs,
 
         if not stuff_to_do:
                 if verbose:
-                        __display_plan(api_inst, verbose)
+                        __display_plan(api_inst, verbose, noexecute)
                 if parsable_version is not None:
                         try:
                                 __display_parsable_plan(api_inst,
@@ -2532,7 +2320,7 @@ def set_mediator(op, api_inst, pargs,
                 return EXIT_NOP
 
         if not quiet:
-                __display_plan(api_inst, verbose)
+                __display_plan(api_inst, verbose, noexecute)
         if parsable_version is not None:
                 try:
                         __display_parsable_plan(api_inst, parsable_version)
@@ -2543,7 +2331,7 @@ def set_mediator(op, api_inst, pargs,
         if noexecute:
                 return EXIT_OK
 
-        ret_code = __api_prepare(op, api_inst, accept=False)
+        ret_code = __api_prepare_plan(op, api_inst)
         if ret_code != EXIT_OK:
                 return ret_code
 
@@ -2563,9 +2351,6 @@ def unset_mediator(op, api_inst, pargs,
                     cmd=op)
         if verbose > 2:
                 DebugValues.set_value("plan", "True")
-
-        api_inst.progresstracker = get_tracker(
-            parsable_version=parsable_version, quiet=quiet, verbose=verbose)
 
         # Build dictionary of mediators to unset based on input.
         mediators = collections.defaultdict(dict)
@@ -2597,7 +2382,7 @@ def unset_mediator(op, api_inst, pargs,
 
         if not stuff_to_do:
                 if verbose:
-                        __display_plan(api_inst, verbose)
+                        __display_plan(api_inst, verbose, noexecute)
                 if parsable_version is not None:
                         try:
                                 __display_parsable_plan(api_inst,
@@ -2610,7 +2395,7 @@ def unset_mediator(op, api_inst, pargs,
                 return EXIT_NOP
 
         if not quiet:
-                __display_plan(api_inst, verbose)
+                __display_plan(api_inst, verbose, noexecute)
         if parsable_version is not None:
                 try:
                         __display_parsable_plan(api_inst, parsable_version)
@@ -2621,7 +2406,7 @@ def unset_mediator(op, api_inst, pargs,
         if noexecute:
                 return EXIT_OK
 
-        ret_code = __api_prepare(op, api_inst, accept=False)
+        ret_code = __api_prepare_plan(op, api_inst)
         if ret_code != EXIT_OK:
                 return ret_code
 
@@ -2657,8 +2442,10 @@ def __display_avoids(api_inst):
         for a in api_inst.get_avoid_list():
                 tracking = " ".join(a[1])
                 if tracking:
-                        logger.info(_("    %s (group dependency of '%s')")
-                            % (a[0], tracking))
+                        logger.info(_(
+                            "    %(avoid_pkg)s (group dependency of "
+                            "'%(tracking_pkg)s')")
+                            % {"avoid_pkg": a[0], "tracking_pkg": tracking})
                 else:
                         logger.info("    %s" % a[0])
 
@@ -2750,7 +2537,7 @@ def __display_cur_frozen(api_inst, display_headers):
                     "time": _("DATE"),
                     "comment": _("COMMENT")
                 })
-        
+
         for pfmri, comment, timestamp in lst:
                 vertext = pfmri.version.get_short_version()
                 ts = pfmri.version.get_timestamp()
@@ -2926,10 +2713,19 @@ def search(api_inst, args):
 
         searches = []
 
+        # Strip pkg:/ or pkg:/// from the fmri.
+        # If fmri has pkg:// then strip the prefix
+        # from 'pkg://' upto the first slash.
+
+        qtext = re.sub(r"pkg:///|pkg://[^/]*/|pkg:/", "", " ".join(pargs))
+
         try:
-                query = [api.Query(" ".join(pargs), case_sensitive,
+                query = [api.Query(qtext, case_sensitive,
                     return_actions)]
         except api_errors.BooleanQueryException, e:
+                error(e)
+                return EXIT_OOPS
+        except api_errors.ParseError, e:
                 error(e)
                 return EXIT_OOPS
 
@@ -3079,14 +2875,18 @@ def info(api_inst, args):
         info_local = False
         info_remote = False
         origins = set()
+        quiet = False
 
-        opts, pargs = getopt.getopt(args, "g:lr", ["license"])
+        opts, pargs = getopt.getopt(args, "g:lqr", ["license"])
         for opt, arg in opts:
                 if opt == "-g":
                         origins.add(misc.parse_uri(arg, cwd=orig_cwd))
                         info_remote = True
                 elif opt == "-l":
                         info_local = True
+                elif opt == "-q":
+                        quiet = True
+                        global_settings.client_output_quiet = True
                 elif opt == "-r":
                         info_remote = True
                 elif opt == "--license":
@@ -3103,7 +2903,12 @@ def info(api_inst, args):
 
         err = 0
 
-        api_inst.progresstracker = get_tracker(quiet=True)
+        # Reset the progress tracker here, because we may have to switch to a
+        # different tracker due to the options parse.
+        _api_inst.progresstracker = get_tracker()
+
+        api_inst.progresstracker.set_purpose(
+            api_inst.progresstracker.PURPOSE_LISTING)
 
         info_needed = api.PackageInfo.ALL_OPTIONS
         if not display_license:
@@ -3138,15 +2943,18 @@ def info(api_inst, args):
 
         no_licenses = []
         for i, pi in enumerate(pis):
-                if i > 0:
+                if not quiet and i > 0:
                         msg("")
 
                 if display_license:
                         if not pi.licenses:
                                 no_licenses.append(pi.fmri)
-                        else:
+                        elif not quiet:
                                 for lic in pi.licenses:
                                         msg(lic)
+                        continue
+
+                if quiet:
                         continue
 
                 state = ""
@@ -3209,47 +3017,50 @@ def info(api_inst, args):
                 # XXX even more info on the publisher would be nice?
                 msg(_("     Publisher:"), pi.publisher)
                 hum_ver = pi.get_attr_values("pkg.human-version")
-                if hum_ver and hum_ver[0] != pi.version:
+                if hum_ver and hum_ver[0] != str(pi.version):
                         msg(_("       Version:"), "%s (%s)" %
                             (pi.version, hum_ver[0]))
                 else:
                         msg(_("       Version:"), pi.version)
-                msg(_(" Build Release:"), pi.build_release)
                 msg(_("        Branch:"), pi.branch)
                 msg(_("Packaging Date:"), pi.packaging_date)
                 msg(_("          Size:"), misc.bytes_to_str(pi.size))
-                msg(_("          FMRI:"), pi.fmri)
+                msg(_("          FMRI:"), pi.fmri.get_fmri(include_build=False))
                 # XXX add license/copyright info here?
 
         if notfound:
                 if pis:
                         err = EXIT_PARTIAL
-                        logger.error("")
+                        if not quiet:
+                                logger.error("")
                 else:
                         err = EXIT_OOPS
 
-                if info_local:
-                        logger.error(_("""\
+                if not quiet:
+                        if info_local:
+                                logger.error(_("""\
 pkg: info: no packages matching the following patterns you specified are
 installed on the system.  Try specifying -r to query remotely:"""))
-                elif info_remote:
-                        logger.error(_("""\
+                        elif info_remote:
+                                logger.error(_("""\
 pkg: info: no packages matching the following patterns you specified were
 found in the catalog.  Try relaxing the patterns, refreshing, and/or
 examining the catalogs:"""))
-                logger.error("")
-                for p in notfound:
-                        logger.error("        %s" % p)
+                        logger.error("")
+                        for p in notfound:
+                                logger.error("        %s" % p)
 
         if no_licenses:
                 if len(no_licenses) == len(pis):
                         err = EXIT_OOPS
                 else:
                         err = EXIT_PARTIAL
-                error(_("no license information could be found for the "
-                    "following packages:"))
-                for pfmri in no_licenses:
-                        logger.error("\t%s" % pfmri)
+
+                if not quiet:
+                        error(_("no license information could be found for the "
+                            "following packages:"))
+                        for pfmri in no_licenses:
+                                logger.error("\t%s" % pfmri)
         return err
 
 def calc_widths(lines, attrs, widths=None):
@@ -3275,7 +3086,7 @@ def calc_justs(attrs):
                 return JUST_UNKNOWN
         return [ __chose_just(attr) for attr in attrs ]
 
-def produce_lines(actionlist, attrs, action_types=None, show_all=False,
+def produce_lines(actionlist, attrs, show_all=False,
     remove_consec_dup_lines=False, last_res=None):
         """Produces a list of n tuples (where n is the length of attrs)
         containing the relevant information about the actions.
@@ -3289,16 +3100,13 @@ def produce_lines(actionlist, attrs, action_types=None, show_all=False,
         The "attrs" parameter is a list of the attributes of the action that
         should be displayed.
 
-        The "action_types" parameter may contain a list of the types of actions
-        that should be displayed.
-
         The "show_all" parameter determines whether an action that lacks one
         or more of the desired attributes will be displayed or not.
 
         The "remove_consec_dup_lines" parameter determines whether consecutive
         duplicate lines should be removed from the results.
 
-        The "last_res" paramter is a seed to compare the first result against
+        The "last_res" parameter is a seed to compare the first result against
         for duplicate removal.
         """
 
@@ -3309,8 +3117,6 @@ def produce_lines(actionlist, attrs, action_types=None, show_all=False,
         if last_res:
                 lines.append(last_res)
         for pfmri, action, pub, match, match_type in actionlist:
-                if action_types and action.name not in action_types:
-                        continue
                 line = []
                 for attr in attrs:
                         if action and attr in action.attrs:
@@ -3434,13 +3240,12 @@ def create_output_format(display_headers, widths, justs, line):
         fmt.rstrip("\t")
         return fmt
 
-def display_contents_results(actionlist, attrs, sort_attrs, action_types,
-    display_headers):
+def display_contents_results(actionlist, attrs, sort_attrs, display_headers):
         """Print results of a "list" operation.  Returns False if no output
         was produced."""
 
         justs = calc_justs(attrs)
-        lines = produce_lines(actionlist, attrs, action_types)
+        lines = produce_lines(actionlist, attrs)
         widths = calc_widths(lines, attrs)
 
         if sort_attrs:
@@ -3556,6 +3361,9 @@ def list_contents(api_inst, args):
 
         check_attrs(attrs, subcommand)
 
+        api_inst.progresstracker.set_purpose(
+            api_inst.progresstracker.PURPOSE_LISTING)
+
         api_inst.log_operation_start(subcommand)
         if local:
                 pkg_list = api.ImageInterface.LIST_INSTALLED
@@ -3634,6 +3442,9 @@ def list_contents(api_inst, args):
                 api_inst.log_operation_end(
                     result=RESULT_FAILED_UNKNOWN)
                 return EXIT_OOPS
+        except api_errors.CatalogRefreshException, e:
+                display_catalog_failures(e)
+                return EXIT_OOPS
         except api_errors.InventoryException, e:
                 if e.illegal:
                         for i in e.illegal:
@@ -3649,22 +3460,49 @@ def list_contents(api_inst, args):
                             result=RESULT_NOTHING_TO_DO)
                         return EXIT_OOPS
 
-        actionlist = [
-            (m.fmri, a, None, None, None)
-            for m in manifests
-            for a in m.gen_actions(excludes)
-            if mmatches(a)
-        ]
+        # Build a generator expression based on whether specific action types
+        # were provided.
+        if action_types:
+                # If query is limited to specific action types, use the more
+                # efficient type-based generation mechanism.
+                gen_expr = (
+                    (m.fmri, a, None, None, None)
+                    for m in manifests
+                    for a in m.gen_actions_by_types(action_types,
+                        excludes=excludes)
+                    if mmatches(a)
+                )
+        else:
+                gen_expr = (
+                    (m.fmri, a, None, None, None)
+                    for m in manifests
+                    for a in m.gen_actions(excludes=excludes)
+                    if mmatches(a)
+                )
+
+        # Determine if the query returned any results by "peeking" at the first
+        # value returned from the generator expression.
+        try:
+                found = gen_expr.next()
+        except StopIteration:
+                found = None
+                actionlist = []
+
+        if found:
+                # If any matching entries were found, create a new generator
+                # expression using itertools.chain that includes the first
+                # result.
+                actionlist = itertools.chain([found], gen_expr)
 
         rval = EXIT_OK
-        if attr_match and manifests and not actionlist:
+        if attr_match and manifests and not found:
                 rval = EXIT_OOPS
                 logger.error(_("""\
 pkg: contents: no matching actions found in the listed packages"""))
 
         if manifests and rval == EXIT_OK:
                 displayed_results = display_contents_results(actionlist, attrs,
-                    sort_attrs, action_types, display_headers)
+                    sort_attrs, display_headers)
 
                 if not displayed_results:
                         if output_fields:
@@ -3710,8 +3548,8 @@ def display_catalog_failures(cre, ignore_perms_failure=False):
         total = cre.total
         succeeded = cre.succeeded
 
-        txt = _("pkg: %s/%s catalogs successfully updated:") % (succeeded,
-            total)
+        txt = _("pkg: %(succeeded)s/%(total)s catalogs successfully "
+            "updated:") % {"succeeded": succeeded, "total": total}
         if cre.failed:
                 # This ensures that the text gets printed before the errors.
                 logger.error(txt)
@@ -3771,10 +3609,18 @@ def publisher_refresh(api_inst, args):
 
         # XXX will need to show available content series for each package
         full_refresh = False
-        opts, pargs = getopt.getopt(args, "", ["full"])
+        opts, pargs = getopt.getopt(args, "q", ["full"])
         for opt, arg in opts:
+                if opt == "-q":
+                        global_settings.client_output_quiet = True
                 if opt == "--full":
                         full_refresh = True
+        # Reset the progress tracker here, because we may have
+        # to switch to a different tracker due to the options parse.
+        _api_inst.progresstracker = get_tracker()
+        # suppress phase information since we're doing just one thing.
+        api_inst.progresstracker.set_major_phase(
+            api_inst.progresstracker.PHASE_UTILITY)
         return __refresh(api_inst, pargs, full_refresh=full_refresh)
 
 def _get_ssl_cert_key(root, is_zone, ssl_cert, ssl_key):
@@ -3856,6 +3702,7 @@ def publisher_set(api_inst, args):
             [--add-property-value name of property=value to add]
             [--remove-property-value name of property=value to remove]
             [--unset-property name of property to delete]
+            [--proxy proxy to use]
             [publisher] """
 
         cmd_name = "set-publisher"
@@ -3875,6 +3722,7 @@ def publisher_set(api_inst, args):
         search_after = None
         search_first = False
         repo_uri = None
+        proxy_uri = None
 
         approved_ca_certs = []
         revoked_ca_certs = []
@@ -3890,7 +3738,7 @@ def publisher_set(api_inst, args):
             "non-sticky", "search-after=", "search-before=", "search-first",
             "approve-ca-cert=", "revoke-ca-cert=", "unset-ca-cert=",
             "set-property=", "add-property-value=", "remove-property-value=",
-            "unset-property="])
+            "unset-property=", "proxy="])
 
         for opt, arg in opts:
                 if opt == "-c":
@@ -3924,6 +3772,9 @@ def publisher_set(api_inst, args):
                                 remove_mirrors.add(misc.parse_uri(arg,
                                     cwd=orig_cwd))
                 elif opt == "-p":
+                        if repo_uri:
+                                usage(_("The -p option can be specified only "
+                                    "once."), cmd=cmd_name)
                         repo_uri = misc.parse_uri(arg, cwd=orig_cwd)
                 elif opt in ("-P", "--search-first"):
                         search_first = True
@@ -3974,6 +3825,8 @@ def publisher_set(api_inst, args):
                         remove_prop_values[t[0]].append(t[1])
                 elif opt == "--unset-property":
                         unset_props.add(arg)
+                elif opt == "--proxy":
+                        proxy_uri = arg
 
         name = None
         if len(pargs) == 0 and not repo_uri:
@@ -4001,6 +3854,12 @@ def publisher_set(api_inst, args):
                     "-M, --remove-mirror, --enable, --disable, --no-refresh, "
                     "or --reset-uuid options"), cmd="set-publisher")
 
+        if proxy_uri and not (add_origins or add_mirrors or repo_uri or
+            remove_origins or remove_mirrors):
+                usage(_("the --proxy argument may only be combined with the -g,"
+                    " --add-origin,  -m, --add-mirror, or -p options"),
+                    cmd="set-publisher")
+
         # Get sanitized SSL Cert/Key input values.
         ssl_cert, ssl_key = _get_ssl_cert_key(api_inst.root, api_inst.is_zone,
             ssl_cert, ssl_key)
@@ -4018,7 +3877,8 @@ def publisher_set(api_inst, args):
                     set_props=set_props, add_prop_values=add_prop_values,
                     remove_prop_values=remove_prop_values,
                     unset_props=unset_props, approved_cas=approved_ca_certs,
-                    revoked_cas=revoked_ca_certs, unset_cas=unset_ca_certs)
+                    revoked_cas=revoked_ca_certs, unset_cas=unset_ca_certs,
+                    proxy_uri=proxy_uri)
 
                 rval, rmsg = ret
                 if rmsg:
@@ -4028,8 +3888,12 @@ def publisher_set(api_inst, args):
         pubs = None
         # Automatic configuration via -p case.
         def get_pubs():
+                if proxy_uri:
+                        proxies = [publisher.ProxyURI(proxy_uri)]
+                else:
+                        proxies = []
                 repo = publisher.RepositoryURI(repo_uri,
-                    ssl_cert=ssl_cert, ssl_key=ssl_key)
+                    ssl_cert=ssl_cert, ssl_key=ssl_key, proxies=proxies)
                 return EXIT_OK, api_inst.get_publisherdata(repo=repo)
 
         ret = None
@@ -4093,6 +3957,15 @@ assistance."""))
                                 # matches the URI provided.
                                 add_origins.append(repo_uri)
 
+                        # Any -p origins/mirrors returned from get_pubs() should
+                        # use the proxy we declared, if any.
+                        if proxy_uri and src_repo:
+                                proxies = [publisher.ProxyURI(proxy_uri)]
+                                for repo_uri in src_repo.origins:
+                                        repo_uri.proxies = proxies
+                                for repo_uri in src_repo.mirrors:
+                                        repo_uri.proxies = proxies
+
                         rval, rmsg = _set_pub_error_wrap(_add_update_pub, name,
                             [], api_inst, prefix, pub=src_pub,
                             add_origins=add_origins, ssl_cert=ssl_cert,
@@ -4103,7 +3976,7 @@ assistance."""))
                             set_props=set_props,
                             add_prop_values=add_prop_values,
                             remove_prop_values=remove_prop_values,
-                            unset_props=unset_props)
+                            unset_props=unset_props, proxy_uri=proxy_uri)
                         if rval == EXIT_OK:
                                 added.append(prefix)
 
@@ -4112,29 +3985,18 @@ assistance."""))
                         # ordered correctly.
                         search_first = False
                         search_after = prefix
+                        search_before = None
                 else:
-                        # The update case is special and requires some
-                        # finesse.  In particular, the update should
-                        # only happen if the repo_uri specified is
-                        # already known to the existing publisher.  This
-                        # is just a sanity check to ensure that random
-                        # repositories can't attempt to hijack other
-                        # publishers.
+                        add_origins = []
+                        add_mirrors = []
                         dest_pub = api_inst.get_publisher(prefix=prefix,
                             duplicate=True)
                         dest_repo = dest_pub.repository
-
                         if dest_repo.origins and \
                             not dest_repo.has_origin(repo_uri):
-                                failed.append((prefix, _("""\
-    The specified repository location is not a known source of publisher
-    configuration updates for '%s'.
+                                add_origins = [repo_uri]
 
-    This new repository location must be added as an origin to the publisher
-    to accept configuration updates from this repository.""") % prefix))
-                                continue
-
-                        if not src_repo:
+                        if not src_repo and not add_origins:
                                 # The repository doesn't have to provide origin
                                 # information for publishers.  If it doesn't,
                                 # the origin of every publisher returned is
@@ -4143,10 +4005,7 @@ assistance."""))
                                 # nothing special needs to be done.
                                 if not dest_repo.origins:
                                         add_origins = [repo_uri]
-                                else:
-                                        add_origins = []
-                                add_mirrors = []
-                        else:
+                        elif src_repo:
                                 # Avoid duplicates by adding only those mirrors
                                 # or origins not already known.
                                 add_mirrors = [
@@ -4180,7 +4039,7 @@ assistance."""))
                             set_props=set_props,
                             add_prop_values=add_prop_values,
                             remove_prop_values=remove_prop_values,
-                            unset_props=unset_props)
+                            unset_props=unset_props, proxy_uri=proxy_uri)
 
                         if rval == EXIT_OK:
                                 updated.append(prefix)
@@ -4230,7 +4089,7 @@ def _add_update_pub(api_inst, prefix, pub=None, disable=None, sticky=None,
     reset_uuid=None, refresh_allowed=False,
     set_props=EmptyI, add_prop_values=EmptyI,
     remove_prop_values=EmptyI, unset_props=EmptyI, approved_cas=EmptyI,
-    revoked_cas=EmptyI, unset_cas=EmptyI):
+    revoked_cas=EmptyI, unset_cas=EmptyI, proxy_uri=None):
 
         repo = None
         new_pub = False
@@ -4271,6 +4130,12 @@ def _add_update_pub(api_inst, prefix, pub=None, disable=None, sticky=None,
                 # Set stickiness only if provided
                 pub.sticky = sticky
 
+        if proxy_uri:
+                # we only support a single proxy for now.
+                proxies = [publisher.ProxyURI(proxy_uri)]
+        else:
+                proxies = []
+
         if origin_uri:
                 # For compatibility with old -O behaviour, treat -O as a wipe
                 # of existing origins and add the new one.
@@ -4289,7 +4154,8 @@ def _add_update_pub(api_inst, prefix, pub=None, disable=None, sticky=None,
                                 break
 
                 repo.reset_origins()
-                repo.add_origin(origin_uri)
+                o = publisher.RepositoryURI(origin_uri, proxies=proxies)
+                repo.add_origin(o)
 
                 # XXX once image configuration supports storing this
                 # information at the uri level, ssl info should be set
@@ -4308,7 +4174,8 @@ def _add_update_pub(api_inst, prefix, pub=None, disable=None, sticky=None,
                                 getattr(repo, "remove_%s" % etype)(u)
 
                 for u in add:
-                        getattr(repo, "add_%s" % etype)(u)
+                        uri = publisher.RepositoryURI(u, proxies=proxies)
+                        getattr(repo, "add_%s" % etype)(uri)
 
         # None is checked for here so that a client can unset a ssl_cert or
         # ssl_key by using -k "" or -c "".
@@ -4385,12 +4252,17 @@ def _add_update_pub(api_inst, prefix, pub=None, disable=None, sticky=None,
 def publisher_unset(api_inst, args):
         """pkg unset-publisher publisher ..."""
 
-        if len(args) == 0:
+        opts, pargs = getopt.getopt(args, "")
+        if not pargs:
                 usage(_("at least one publisher must be specified"),
                     cmd="unset-publisher")
 
         errors = []
+        goal = len(args)
+        progtrack = api_inst.progresstracker
+        progtrack.job_start(progtrack.JOB_PKG_CACHE, goal=goal)
         for name in args:
+
                 try:
                         api_inst.remove_publisher(prefix=name, alias=name)
                 except api_errors.ImageFormatUpdateNeeded, e:
@@ -4400,7 +4272,10 @@ def publisher_unset(api_inst, args):
                     api_errors.PublisherError,
                     api_errors.ModifyingSyspubException), e:
                         errors.append((name, e))
+                finally:
+                        progtrack.job_add_progress(progtrack.JOB_PKG_CACHE)
 
+        progtrack.job_done(progtrack.JOB_PKG_CACHE)
         retcode = EXIT_OK
         if errors:
                 if len(errors) == len(args):
@@ -4435,15 +4310,18 @@ def publisher_list(api_inst, args):
             "attrs" : [("default"), "", ""],
             "type" : [("default", "tsv"), _("TYPE"), ""],
             "status" : [("default", "tsv"), _("STATUS"), ""],
-            "uri" : [("default", "tsv"), _("URI"), ""],
+            "repo_loc" : [("default"), _("LOCATION"), ""],
+            "uri": [("tsv"), _("URI"), ""],
             "sticky" : [("tsv"), _("STICKY"), ""],
             "enabled" : [("tsv"), _("ENABLED"), ""],
-            "syspub" : [("tsv"), _("SYSPUB"), ""]
+            "syspub" : [("tsv"), _("SYSPUB"), ""],
+            "proxy"  : [("tsv"), _("PROXY"), ""],
+            "proxied" : [("default"), _("P"), ""]
         }
 
         desired_field_order = (_("PUBLISHER"), "", _("STICKY"),
                                _("SYSPUB"), _("ENABLED"), _("TYPE"),
-                               _("STATUS"), _("URI"))
+                               _("STATUS"), _("P"), _("LOCATION"))
 
         # Custom sort function for preserving field ordering
         def sort_fields(one, two):
@@ -4485,7 +4363,8 @@ def publisher_list(api_inst, args):
                                     "valid": valid_formats }, cmd="publisher")
                                 return EXIT_OOPS
 
-        api_inst.progresstracker = get_tracker(quiet=True)
+        api_inst.progresstracker.set_purpose(
+            api_inst.progresstracker.PURPOSE_LISTING)
 
         cert_cache = {}
         def get_cert_info(ssl_cert):
@@ -4542,14 +4421,17 @@ def publisher_list(api_inst, args):
                 # Create a formatting string for the default output
                 # format
                 if output_format == "default":
-                        fmt = "%-24s %-12s %-8s %-8s %s"
+                        fmt = "%-14s %-12s %-8s %-2s %s %s"
                         filter_func = filter_default
 
                 # Create a formatting string for the tsv output
                 # format
                 if output_format == "tsv":
-                        fmt = "%s\t%s\t%s\t%s\t%s\t%s\t%s"
+                        fmt = "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s"
                         filter_func = filter_tsv
+                        desired_field_order = (_("PUBLISHER"), "", _("STICKY"),
+                               _("SYSPUB"), _("ENABLED"), _("TYPE"),
+                               _("STATUS"), _("URI"), _("PROXY"))
 
                 # Extract our list of headers from the field_data
                 # dictionary Make sure they are extracted in the
@@ -4606,13 +4488,31 @@ def publisher_list(api_inst, args):
                         else:
                                 origins = mirrors = []
 
+                        set_value(field_data["repo_loc"], "")
+                        set_value(field_data["proxied"], "")
                         # Update field_data for each origin and output
                         # a publisher record in our desired format.
                         for uri in sorted(origins):
                                 # XXX get the real origin status
                                 set_value(field_data["type"], _("origin"))
                                 set_value(field_data["status"], _("online"))
-                                set_value(field_data["uri"], str(uri))
+                                set_value(field_data["proxy"], "-")
+                                set_value(field_data["proxied"], "F")
+
+                                set_value(field_data["uri"], uri)
+
+                                if uri.proxies:
+                                        set_value(field_data["proxied"], _("T"))
+                                        set_value(field_data["proxy"],
+                                            ", ".join(
+                                            [proxy.uri
+                                            for proxy in uri.proxies]))
+                                if uri.system:
+                                        set_value(field_data["repo_loc"],
+                                            SYSREPO_HIDDEN_URI)
+                                else:
+                                        set_value(field_data["repo_loc"], uri)
+
                                 values = map(get_value,
                                     sorted(filter(filter_func,
                                     field_data.values()), sort_fields)
@@ -4624,7 +4524,22 @@ def publisher_list(api_inst, args):
                                 # XXX get the real mirror status
                                 set_value(field_data["type"], _("mirror"))
                                 set_value(field_data["status"], _("online"))
-                                set_value(field_data["uri"], str(uri))
+                                set_value(field_data["proxy"], "-")
+                                set_value(field_data["proxied"], _("F"))
+
+                                set_value(field_data["uri"], uri)
+
+                                if uri.proxies:
+                                        set_value(field_data["proxied"], _("T"))
+                                        set_value(field_data["proxy"],
+                                            ", ".join(
+                                            [p.uri for p in uri.proxies]))
+                                if uri.system:
+                                        set_value(field_data["repo_loc"],
+                                            SYSREPO_HIDDEN_URI)
+                                else:
+                                        set_value(field_data["repo_loc"], uri)
+
                                 values = map(get_value,
                                     sorted(filter(filter_func,
                                     field_data.values()), sort_fields)
@@ -4635,6 +4550,7 @@ def publisher_list(api_inst, args):
                                 set_value(field_data["type"], "")
                                 set_value(field_data["status"], "")
                                 set_value(field_data["uri"], "")
+                                set_value(field_data["proxy"], "")
                                 values = map(get_value,
                                     sorted(filter(filter_func,
                                     field_data.values()), sort_fields)
@@ -4668,12 +4584,20 @@ def publisher_list(api_inst, args):
                         retcode = 0
                         for uri in r.origins:
                                 msg(_("           Origin URI:"), uri)
+                                if uri.proxies:
+                                        msg(_("                Proxy:"),
+                                            ", ".join(
+                                            [p.uri for p in uri.proxies]))
                                 rval = display_ssl_info(uri)
                                 if rval == 1:
                                         retcode = EXIT_PARTIAL
 
                         for uri in r.mirrors:
                                 msg(_("           Mirror URI:"), uri)
+                                if uri.proxies:
+                                        msg(_("                Proxy:"),
+                                            ", ".join(
+                                            [p.uri for p in uri.proxies]))
                                 rval = display_ssl_info(uri)
                                 if rval == 1:
                                         retcode = EXIT_PARTIAL
@@ -4877,72 +4801,162 @@ def property_list(api_inst, args):
 
         return EXIT_OK
 
-def variant_list(api_inst, args):
-        """pkg variant [-H] [<variant_spec>]"""
+def list_variant(op, api_inst, pargs, omit_headers, output_format,
+    list_all_items, list_installed, verbose):
+        """pkg variant [-Haiv] [-F format] [<variant_pattern> ...]"""
 
-        omit_headers = False
+        subcommand = "variant"
+        if output_format is None:
+                output_format = "default"
 
-        opts, pargs = getopt.getopt(args, "H")
+        # To work around Python 2.x's scoping limits, a list is used.
+        found = [False]
+        req_variants = set(pargs)
 
-        for opt, arg in opts:
-                if opt == "-H":
-                        omit_headers = True
+        def gen_current():
+                for (name, val, pvals) in api_inst.gen_variants(variant_list,
+                    patterns=req_variants):
+                        if output_format == "default":
+                                name_list = name.split(".")[1:]
+                                name = ".".join(name_list)
+                        found[0] = True
+                        yield {
+                            "variant": name,
+                            "value": val
+                        }
 
-        # XXX image variants should be accessible through pkg.client.api
-        variants = img.get_variants()
+        def gen_possible():
+                for (name, val, pvals) in api_inst.gen_variants(variant_list,
+                    patterns=req_variants):
+                        if output_format == "default":
+                                name_list = name.split(".")[1:]
+                                name = ".".join(name_list)
+                        found[0] = True
+                        for pval in pvals:
+                                yield {
+                                    "variant": name,
+                                    "value": pval
+                                }
 
-        for p in pargs:
-                if p not in variants:
-                        error(_("no such variant: %s") % p, cmd="variant")
-                        return EXIT_OOPS
+        if verbose:
+                gen_listing = gen_possible
+        else:
+                gen_listing = gen_current
 
-        if not pargs:
-                pargs = variants.keys()
+        if list_all_items:
+                if verbose:
+                        variant_list = api_inst.VARIANT_ALL_POSSIBLE
+                else:
+                        variant_list = api_inst.VARIANT_ALL
+        elif list_installed:
+                if verbose:
+                        variant_list = api_inst.VARIANT_INSTALLED_POSSIBLE
+                else:
+                        variant_list = api_inst.VARIANT_INSTALLED
+        else:
+                if verbose:
+                        variant_list = api_inst.VARIANT_IMAGE_POSSIBLE
+                else:
+                        variant_list = api_inst.VARIANT_IMAGE
 
-        width = max(max([len(p) for p in pargs]), 8)
-        fmt = "%%-%ss %%s" % width
-        if not omit_headers:
-                msg(fmt % ("VARIANT", "VALUE"))
+        #    VARIANT VALUE
+        #    <variant> <value>
+        #    <variant_2> <value_2>
+        #    ...
+        field_data = {
+            "variant" : [("default", "json", "tsv"), _("VARIANT"), ""],
+            "value" : [("default", "json", "tsv"), _("VALUE"), ""],
+        }
+        desired_field_order = (_("VARIANT"), _("VALUE"))
 
-        for p in pargs:
-                msg(fmt % (p, variants[p]))
+        # Default output formatting.
+        def_fmt = "%-70s %s"
 
+        # print without trailing newline.
+        sys.stdout.write(misc.get_listing(desired_field_order,
+            field_data, gen_listing(), output_format, def_fmt,
+            omit_headers))
+
+        if not found[0] and req_variants:
+                if output_format == "default":
+                        # Don't pollute other output formats.
+                        error(_("no matching variants found"),
+                            cmd=subcommand)
+                return EXIT_OOPS
+
+        # Successful if no variants exist or if at least one matched.
         return EXIT_OK
 
-def facet_list(api_inst, args):
-        """pkg facet [-H] [<facet_spec>]"""
+def list_facet(op, api_inst, pargs, omit_headers, output_format, list_all_items,
+    list_masked, list_installed):
+        """pkg facet [-Hai] [-F format] [<facet_pattern> ...]"""
 
-        omit_headers = False
+        subcommand = "facet"
+        if output_format is None:
+                output_format = "default"
 
-        opts, pargs = getopt.getopt(args, "H")
+        # To work around Python 2.x's scoping limits, a list is used.
+        found = [False]
+        req_facets = set(pargs)
 
-        for opt, arg in opts:
-                if opt == "-H":
-                        omit_headers = True
+        facet_list = api_inst.FACET_IMAGE
+        if list_all_items:
+                facet_list = api_inst.FACET_ALL
+        elif list_installed:
+                facet_list = api_inst.FACET_INSTALLED
 
-        # XXX image facets should be accessible through pkg.client.api
-        facets = img.get_facets()
+        def gen_listing():
+                for (name, val, src, masked) in \
+                    api_inst.gen_facets(facet_list, patterns=req_facets):
+                        if output_format == "default":
+                                name_list = name.split(".")[1:]
+                                name = ".".join(name_list)
+                        found[0] = True
 
-        for i, p in enumerate(pargs[:]):
-                if not p.startswith("facet."):
-                        pargs[i] = "facet." + p
+                        if not list_masked and masked:
+                                continue
 
-        if not pargs:
-                pargs = facets.keys()
+                        # "value" and "masked" are intentionally not _().
+                        yield {
+                            "facet": name,
+                            "value": val and "True" or "False",
+                            "src": src,
+                            "masked": masked and "True" or "False",
+                        }
 
-        if pargs:
-                width = max(max([len(p) for p in pargs]), 8)
-        else:
-                width = 8
+        #    FACET VALUE
+        #    <facet> <value> <src>
+        #    <facet_2> <value_2> <src2>
+        #    ...
+        field_data = {
+            "facet"  : [("default", "json", "tsv"), _("FACET"), ""],
+            "value"  : [("default", "json", "tsv"), _("VALUE"), ""],
+            "src"    : [("default", "json", "tsv"), _("SRC"), ""],
+        }
+        desired_field_order = (_("FACET"), _("VALUE"), _("SRC"))
+        def_fmt = "%-64s %-5s %s"
 
-        fmt = "%%-%ss %%s" % width
+        if list_masked:
+                # if we're displaying masked facets, we should also mark which
+                # facets are masked in the output.
+                field_data["masked"] = \
+                    [("default", "json", "tsv"), _("MASKED"), ""]
+                desired_field_order += (_("MASKED"),)
+                def_fmt = "%-57s %-5s %-6s %-s"
 
-        if not omit_headers:
-                msg(fmt % ("FACETS", "VALUE"))
+        # print without trailing newline.
+        sys.stdout.write(misc.get_listing(desired_field_order,
+            field_data, gen_listing(), output_format, def_fmt,
+            omit_headers))
 
-        for p in pargs:
-                msg(fmt % (p, facets[p]))
+        if not found[0] and req_facets:
+                if output_format == "default":
+                        # Don't pollute other output formats.
+                        error(_("no matching facets found"),
+                            cmd=subcommand)
+                return EXIT_OOPS
 
+        # Successful if no facets exist or if at least one matched.
         return EXIT_OK
 
 def list_linked(op, api_inst, pargs,
@@ -4951,10 +4965,8 @@ def list_linked(op, api_inst, pargs,
 
         List all the linked images known to the current image."""
 
-        api_inst.progresstracker = get_tracker(quiet=omit_headers)
-
-        if li_ignore and type(li_ignore) == list:
-                li_ignore = api_inst.parse_linked_name_list(li_ignore)
+        api_inst.progresstracker.set_purpose(
+            api_inst.progresstracker.PURPOSE_LISTING)
 
         li_list = api_inst.list_linked(li_ignore)
         if len(li_list) == 0:
@@ -4973,6 +4985,20 @@ def list_linked(op, api_inst, pargs,
                 msg(fmt % tuple(li_header))
         for row in li_list:
                 msg(fmt % tuple(row))
+        return EXIT_OK
+
+def pubcheck_linked(op, api_inst, pargs):
+        """If we're a child image, verify that the parent image
+        publisher configuration is a subset of our publisher configuration.
+        If we have any children, recurse into them and perform a publisher
+        check."""
+
+        try:
+                api_inst.linked_publisher_check()
+        except api_errors.ImageLockedError, e:
+                error(e)
+                return EXIT_LOCKED
+
         return EXIT_OK
 
 def __parse_linked_props(args, op):
@@ -5007,7 +5033,8 @@ def list_property_linked(op, api_inst, pargs,
         List the linked image properties associated with a child or parent
         image."""
 
-        api_inst.progresstracker = get_tracker(quiet=omit_headers)
+        api_inst.progresstracker.set_purpose(
+            api_inst.progresstracker.PURPOSE_LISTING)
 
         lin = None
         if li_name:
@@ -5050,8 +5077,8 @@ def set_property_linked(op, api_inst, pargs,
         Change the specified linked image properties.  This may result in
         updating the package contents of a child image."""
 
-        api_inst.progresstracker = get_tracker(
-            parsable_version=parsable_version, quiet=quiet, verbose=verbose)
+        api_inst.progresstracker.set_purpose(
+            api_inst.progresstracker.PURPOSE_LISTING)
 
         # make sure we're a child image
         if li_name:
@@ -5066,15 +5093,18 @@ def set_property_linked(op, api_inst, pargs,
         return EXIT_OK
 
 def audit_linked(op, api_inst, pargs,
-    li_parent_sync, li_target_all, li_target_list, omit_headers, quiet):
+    li_parent_sync,
+    li_target_all,
+    li_target_list,
+    omit_headers,
+    quiet):
         """pkg audit-linked [-a|-l <li-name>]
 
         Audit one or more child images to see if they are in sync
         with their parent image."""
 
-        api_inst.progresstracker = get_tracker(quiet=omit_headers)
-
-        li_target_list = api_inst.parse_linked_name_list(li_target_list)
+        api_inst.progresstracker.set_purpose(
+            api_inst.progresstracker.PURPOSE_LISTING)
 
         # audit the requested child image(s)
         if not li_target_all and not li_target_list:
@@ -5105,12 +5135,11 @@ def audit_linked(op, api_inst, pargs,
                 error(err, cmd=op)
         return rv
 
-def sync_linked(op, api_inst, pargs,
-    accept, backup_be, backup_be_name, be_activate, be_name, li_ignore,
-    li_parent_sync, new_be, noexecute, origins, parsable_version, quiet,
-    refresh_catalogs, reject_pats, show_licenses, update_index, verbose,
-    li_md_only, li_pkg_updates, li_target_all, li_target_list, stage):
-
+def sync_linked(op, api_inst, pargs, accept, backup_be, backup_be_name,
+    be_activate, be_name, li_ignore, li_md_only, li_parent_sync,
+    li_pkg_updates, li_target_all, li_target_list, new_be, noexecute, origins,
+    parsable_version, quiet, refresh_catalogs, reject_pats, show_licenses,
+    stage, update_index, verbose):
         """pkg audit-linked [-a|-l <li-name>]
             [-nvq] [--accept] [--licenses] [--no-index] [--no-refresh]
             [--no-parent-sync] [--no-pkg-updates]
@@ -5118,16 +5147,9 @@ def sync_linked(op, api_inst, pargs,
 
         Sync one or more child images with their parent image."""
 
-        api_inst.progresstracker = get_tracker(
-            parsable_version=parsable_version, quiet=quiet, verbose=verbose)
-
         xrval, xres = get_fmri_args(api_inst, reject_pats, cmd=op)
         if not xrval:
                 return EXIT_OOPS
-
-        api_inst.set_stage(stage)
-
-        li_target_list = api_inst.parse_linked_name_list(li_target_list)
 
         if not li_target_all and not li_target_list:
                 # sync the current image
@@ -5145,6 +5167,8 @@ def sync_linked(op, api_inst, pargs,
                     update_index=update_index)
 
         # sync the requested child image(s)
+        api_inst.progresstracker.set_major_phase(
+            api_inst.progresstracker.PHASE_UTILITY)
         rvdict = api_inst.sync_linked_children(li_target_list,
             noexecute=noexecute, accept=accept, show_licenses=show_licenses,
             refresh_catalogs=refresh_catalogs, update_index=update_index,
@@ -5180,9 +5204,6 @@ def attach_linked(op, api_inst, pargs,
         itself to a parent, or another image being attach as a child with
         this image being the parent."""
 
-        api_inst.progresstracker = get_tracker(
-            parsable_version=parsable_version, quiet=quiet, verbose=verbose)
-
         for k, v in li_props:
                 if k in [li.PROP_PATH, li.PROP_NAME, li.PROP_MODEL]:
                         usage(_("cannot specify linked image property: '%s'") %
@@ -5217,6 +5238,8 @@ def attach_linked(op, api_inst, pargs,
                     reject_list=reject_pats, update_index=update_index)
 
         # attach the requested child image
+        api_inst.progresstracker.set_major_phase(
+            api_inst.progresstracker.PHASE_UTILITY)
         (rv, err, p_dict) = api_inst.attach_linked_child(lin, li_path, li_props,
             accept=accept, allow_relink=allow_relink, force=force,
             li_md_only=li_md_only, li_pkg_updates=li_pkg_updates,
@@ -5236,24 +5259,23 @@ def attach_linked(op, api_inst, pargs,
                         return EXIT_OOPS
         return rv
 
-def detach_linked(op, api_inst, pargs, force, li_target_all, li_target_list,
-    noexecute, quiet, verbose):
+def detach_linked(op, api_inst, pargs, force, li_md_only, li_pkg_updates,
+    li_target_all, li_target_list, noexecute, quiet, verbose):
         """pkg detach-linked
             [-fnvq] [-a|-l <li-name>] [--linked-md-only]
 
         Detach one or more child linked images."""
 
-        api_inst.progresstracker = get_tracker(quiet=quiet, verbose=verbose)
-
-        li_target_list = api_inst.parse_linked_name_list(li_target_list)
-
         if not li_target_all and not li_target_list:
                 # detach the current image
                 return __api_op(op, api_inst, _noexecute=noexecute,
-                    _quiet=quiet, _verbose=verbose, force=force)
+                    _quiet=quiet, _verbose=verbose, force=force,
+                    li_md_only=li_md_only, li_pkg_updates=li_pkg_updates)
 
-        # detach the requested child image(s)
+        api_inst.progresstracker.set_major_phase(
+            api_inst.progresstracker.PHASE_UTILITY)
         rvdict = api_inst.detach_linked_children(li_target_list, force=force,
+            li_md_only=li_md_only, li_pkg_updates=li_pkg_updates,
             noexecute=noexecute)
 
         rv, err, p_dicts = api_inst.detach_linked_rvdict2rv(rvdict)
@@ -5287,15 +5309,16 @@ def image_create(args):
         set_props = {}
         version = None
 
-        opts, pargs = getopt.getopt(args, "fFPUza:g:m:p:k:c:",
-            ["force", "full", "partial", "user", "zone", "authority=", "facet=",
-                "mirror=", "origin=", "publisher=", "no-refresh", "variant=",
+        opts, pargs = getopt.getopt(args, "fFPUzg:m:p:k:c:",
+            ["force", "full", "partial", "user", "zone", "facet=", "mirror=",
+                "origin=", "publisher=", "no-refresh", "variant=",
                 "set-property="])
 
         for opt, arg in opts:
-                # -a is deprecated and will be removed at a future date.
-                if opt in ("-a", "-p", "--publisher"):
-                        pub_url = None
+                if opt in ("-p", "--publisher"):
+                        if pub_url:
+                                usage(_("The -p option can be specified only "
+                                    "once."), cmd=cmd_name)
                         try:
                                 pub_name, pub_url = arg.split("=", 1)
                         except ValueError:
@@ -5368,9 +5391,13 @@ def image_create(args):
                     cmd=cmd_name)
         image_dir = pargs[0]
 
-        if not pub_name and not refresh_allowed:
+        if pub_url and not pub_name and not refresh_allowed:
                 usage(_("--no-refresh cannot be used with -p unless a "
                     "publisher prefix is provided."), cmd=cmd_name)
+
+        if not pub_url and (add_origins or add_mirrors):
+                usage(_("A publisher must be specified if -g or -m are used."),
+                    cmd=cmd_name)
 
         if not refresh_allowed and pub_url:
                 # Auto-config can't be done if refresh isn't allowed, so treat
@@ -5384,10 +5411,11 @@ def image_create(args):
         ssl_cert, ssl_key = _get_ssl_cert_key(image_dir, is_zone, ssl_cert,
             ssl_key)
 
+        progtrack = get_tracker()
+        progtrack.set_major_phase(progtrack.PHASE_UTILITY)
         global _api_inst
         global img
         try:
-                progtrack = get_tracker()
                 _api_inst = api.image_create(PKG_CLIENT_NAME, CLIENT_API_VERSION,
                     image_dir, imgtype, is_zone, facets=facets, force=force,
                     mirrors=list(add_mirrors), origins=list(add_origins),
@@ -5417,6 +5445,12 @@ def image_create(args):
         except api_errors.ApiException, e:
                 error(str(e), cmd=cmd_name)
                 return EXIT_OOPS
+        finally:
+                # Normally this would get flushed by handle_errors
+                # but that won't happen if the above code throws, because
+                # _api_inst will be None.
+                progtrack.flush()
+
         return EXIT_OK
 
 def rebuild_index(api_inst, pargs):
@@ -5450,7 +5484,7 @@ def history_list(api_inst, args):
         """Display history about the current image.
         """
         # define column name, header, field width and <History> attribute name
-        # we compute 'reason' and 'time' columns ourselves
+        # we compute 'reason', 'time' and 'release_note' columns ourselves
         history_cols = {
             "be": (_("BE"), "%-20s", "operation_be"),
             "be_uuid": (_("BE UUID"), "%-41s", "operation_be_uuid"),
@@ -5464,6 +5498,7 @@ def history_list(api_inst, args):
             "operation": (_("OPERATION"), "%-25s", "operation_name"),
             "outcome": (_("OUTCOME"), "%-12s", "operation_result"),
             "reason": (_("REASON"), "%-10s", None),
+            "release_notes": (_("RELEASE NOTES"), "%-12s", None),
             "snapshot": (_("SNAPSHOT"), "%-20s", "operation_snapshot"),
             "start": (_("START"), "%-25s", "operation_start_time"),
             "time": (_("TIME"), "%-10s", None),
@@ -5475,14 +5510,17 @@ def history_list(api_inst, args):
         omit_headers = False
         long_format = False
         column_format = False
+        show_notes = False
         display_limit = None    # Infinite
         time_vals = [] # list of timestamps for which we want history events
         columns = ["start", "operation", "client", "outcome"]
 
-        opts, pargs = getopt.getopt(args, "Hln:o:t:")
+        opts, pargs = getopt.getopt(args, "HNln:o:t:")
         for opt, arg in opts:
                 if opt == "-H":
                         omit_headers = True
+                elif opt == "-N":
+                        show_notes = True
                 elif opt == "-l":
                         long_format = True
                 elif opt == "-n":
@@ -5541,9 +5579,15 @@ def history_list(api_inst, args):
         if time_vals and display_limit:
                 usage(_("-n and -t may not be combined"), cmd="history")
 
+        if column_format and show_notes:
+                usage(_("-o and -N may not be combined"), cmd="history")
+
+        if long_format and show_notes:
+                usage(_("-l and -N may not be combined"), cmd="history")
+
         history_fmt = None
 
-        if not long_format:
+        if not long_format and not show_notes:
                 headers = []
                 # build our format string
                 for col in columns:
@@ -5571,7 +5615,22 @@ def history_list(api_inst, args):
                         error(str(e), cmd="history")
                         sys.exit(EXIT_OOPS)
 
-        for he in gen_entries(): 
+        if show_notes:
+                for he in gen_entries():
+                        start_time = misc.timestamp_to_time(
+                            he.operation_start_time)
+                        start_time = datetime.datetime.fromtimestamp(
+                            start_time).isoformat()
+                        if he.operation_release_notes:
+                                msg(_("%s: Release notes:") % start_time)
+                                for a in he.notes:
+                                        msg("    %s" % a)
+                        else:
+                                msg(_("%s: Release notes: None") % start_time)
+
+                return EXIT_OK
+
+        for he in gen_entries():
                 # populate a dictionary containing our output
                 output = {}
                 for col in history_cols:
@@ -5592,11 +5651,8 @@ def history_list(api_inst, args):
                 dt_start = misc.timestamp_to_datetime(he.operation_start_time)
                 dt_end = misc.timestamp_to_datetime(he.operation_end_time)
                 if dt_start > dt_end:
-                        error(_("History operation appeared to end before it "
-                            "started.  Start time: %(start_time)s, "
-                            "End time: %(end_time)s") %
-                            (output["start"], output["finish"]), cmd="history")
-                        return EXIT_OOPS
+                        output["finish"] = _("%s (clock drift detected)") % \
+                            output["finish"]
 
                 output["time"] = dt_end - dt_start
                 # This should never happen.  We can't use timedelta's str()
@@ -5629,6 +5685,11 @@ def history_list(api_inst, args):
                         output["new_be"] = "%s*" % he.operation_new_be
                 else:
                         output["new_be"] = "%s" % he.operation_new_be
+
+                if he.operation_release_notes:
+                        output["release_notes"] = _("Yes")
+                else:
+                        output["release_notes"] = _("No")
 
                 outcome, reason = he.operation_result_text
                 output["outcome"] = outcome
@@ -5720,6 +5781,7 @@ def __get_long_history_data(he, hist_info):
         data.append((_("End Time"), hist_info["finish"]))
         data.append((_("Total Time"), hist_info["time"]))
         data.append((_("Command"), hist_info["command"]))
+        data.append((_("Release Notes"), hist_info["release_notes"]))
 
         state = he.operation_start_state
         if state:
@@ -5782,8 +5844,232 @@ def print_version(pargs):
 
 # To allow exception handler access to the image.
 _api_inst = None
+pargs = None
 img = None
 orig_cwd = None
+
+#
+# Mapping of the internal option name to short and long CLI options.
+#
+# {option_name: (short, long)}
+#
+#
+
+opts_mapping = {
+    "backup_be_name" :    ("",  "backup-be-name"),
+    "be_name" :           ("",  "be-name"),
+    "deny_new_be" :       ("",  "deny-new-be"),
+    "no_backup_be" :      ("",  "no-backup-be"),
+    "be_activate" :       ("",  "no-be-activate"),
+    "require_backup_be" : ("",  "require-backup-be"),
+    "require_new_be" :    ("",  "require-new-be"),
+
+    "concurrency" :       ("C", "concurrency"),
+
+    "force" :             ("f", ""),
+
+    "li_ignore_all" :     ("I", ""),
+    "li_ignore_list" :    ("i", ""),
+    "li_md_only" :        ("",  "linked-md-only"),
+
+    "li_pkg_updates" :    ("",  "no-pkg-updates"),
+
+    "li_parent_sync" :    ("",  "no-parent-sync"),
+
+    "li_props" :          ("",  "prop-linked"),
+
+    "li_target_all" :     ("a", ""),
+    "li_target_list" :    ("l", ""),
+
+    "li_name" :           ("l",  ""),
+
+    "accept" :            ("",  "accept"),
+    "show_licenses" :     ("",  "licenses"),
+
+    "omit_headers" :      ("H",  ""),
+
+    "update_index" :      ("",  "no-index"),
+
+    "refresh_catalogs" :  ("",  "no-refresh"),
+
+    "reject_pats" :       ("",  "reject"),
+
+    "verbose" :           ("v",  ""),
+
+    "quiet" :             ("q",  ""),
+
+    "parsable_version" :  ("",  "parsable"),
+
+    "noexecute" :         ("n",  ""),
+
+    "origins" :           ("g",  ""),
+
+    "stage" :             ("",  "stage"),
+
+    "allow_relink" :      ("",  "allow-relink"),
+    "attach_child" :      ("c",  ""),
+    "attach_parent" :     ("p",  ""),
+
+    "list_available" :    ("a",  ""),
+    "list_masked" :       ("m",  ""),
+    "list_all_items" :    ("a",  ""),
+    "output_format" :     ("F",  "output-format"),
+
+    "tagged" :            ("",  "tagged"),
+
+    # These options are used in set-mediator and unset-mediator but
+    # the long options are only valid in set_mediator (as per the previous
+    # implementation). However, the long options are not documented in the
+    # manpage for set-mediator either, so I think we're good.
+    "med_implementation" : ("I",  "implementation"),
+    "med_version" :        ("V",  "version"),
+
+    "list_installed_newest" : ("a",  ""),
+    "list_all" :              ("f",  ""),
+    "list_newest" :           ("n",  ""),
+    "summary" :               ("s",  ""),
+    "list_upgradable" :       ("u",  ""),
+
+    "ctlfd" :                 ("",  "ctlfd"),
+    "progfd" :                ("",  "progfd"),
+
+    "list_installed" :        ("i",  ""),
+}
+
+#
+# cmds dictionary is used to dispatch subcommands.  The format of this
+# dictionary is:
+#
+#       "subcommand-name" : subcommand-cb
+#
+#       subcommand-cb: the callback function invoked for this subcommand
+#
+# placeholders in this lookup table for image-create, help and version
+# which don't have dedicated methods
+#
+cmds = {
+    "add-property-value"    : [property_add_value],
+    "attach-linked"         : [attach_linked, 2],
+    "avoid"                 : [avoid],
+    "audit-linked"          : [audit_linked, 0],
+    "authority"             : [publisher_list],
+    "change-facet"          : [change_facet],
+    "change-variant"        : [change_variant],
+    "contents"              : [list_contents],
+    "detach-linked"         : [detach_linked, 0],
+    "facet"                 : [list_facet],
+    "fix"                   : [fix_image],
+    "freeze"                : [freeze],
+    "help"                  : [None],
+    "history"               : [history_list],
+    "image-create"          : [None],
+    "info"                  : [info],
+    "install"               : [install],
+    "list"                  : [list_inventory],
+    "list-linked"           : [list_linked, 0],
+    "mediator"              : [list_mediators],
+    "property"              : [property_list],
+    "property-linked"       : [list_property_linked],
+    "pubcheck-linked"       : [pubcheck_linked, 0],
+    "publisher"             : [publisher_list],
+    "purge-history"         : [history_purge],
+    "rebuild-index"         : [rebuild_index],
+    "refresh"               : [publisher_refresh],
+    "remote"                : [remote, 0],
+    "remove-property-value" : [property_remove_value],
+    "revert"                : [revert],
+    "search"                : [search],
+    "set-authority"         : [publisher_set],
+    "set-mediator"          : [set_mediator],
+    "set-property"          : [property_set],
+    "set-property-linked"   : [set_property_linked],
+    "set-publisher"         : [publisher_set],
+    "sync-linked"           : [sync_linked, 0],
+    "unavoid"               : [unavoid],
+    "unfreeze"              : [unfreeze],
+    "uninstall"             : [uninstall],
+    "unset-authority"       : [publisher_unset],
+    "unset-property"        : [property_unset],
+    "unset-mediator"        : [unset_mediator],
+    "unset-publisher"       : [publisher_unset],
+    "update"                : [update],
+    "update-format"         : [update_format],
+    "variant"               : [list_variant],
+    "verify"                : [verify_image],
+    "version"               : [None],
+}
+
+# These tables are an addendum to the the pkg_op_opts/opts_* lists in
+# modules/client/options.py. They contain all the options for functions which
+# are not represented in options.py but go through common option processing.
+# This list should get shortened and eventually removed by moving more/all
+# functions out of client.py.
+
+def opts_cb_remote(api_inst, opts, opts_new):
+        options.opts_cb_fd("ctlfd", api_inst, opts, opts_new)
+        options.opts_cb_fd("progfd", api_inst, opts, opts_new)
+
+        # move progfd from opts_new into a global
+        global_settings.client_output_progfd = opts_new["progfd"]
+        del opts_new["progfd"]
+
+opts_remote = [
+    opts_cb_remote,
+    ("ctlfd",                None),
+    ("progfd",               None),
+]
+
+def opts_cb_varcet(api_inst, opts, opts_new):
+        if opts_new["list_all_items"] and opts_new["list_installed"]:
+                raise api_errors.InvalidOptionError(
+                    api_errors.InvalidOptionError.INCOMPAT,
+                    ["list_all_items", "list_installed"])
+
+opts_list_varcet = \
+    options.opts_table_no_headers + \
+    [
+    opts_cb_varcet,
+    ("list_all_items",          False),
+    ("list_installed",          False),
+    ("output_format",           None)
+]
+
+opts_list_facet = \
+    opts_list_varcet + \
+    [
+    ("list_masked",             False),
+]
+
+opts_list_variant = \
+    opts_list_varcet + \
+    [
+    ("verbose",      False)
+]
+
+opts_list_mediator = \
+    options.opts_table_no_headers + \
+    [
+    ("list_available",      False),
+    ("output_format",       None)
+]
+opts_unset_mediator = \
+    options.opts_table_beopts + \
+    options.opts_table_no_index + \
+    options.opts_table_nqv + \
+    options.opts_table_parsable + \
+    [
+    ("med_implementation",   False),
+    ("med_version",          False)
+]
+
+cmd_opts = {
+    "facet"             : opts_list_facet,
+    "mediator"          : opts_list_mediator,
+    "unset-mediator"    : opts_unset_mediator,
+    "remote"            : opts_remote,
+    "variant"           : opts_list_variant,
+}
+
 
 def main_func():
         global_settings.client_name = PKG_CLIENT_NAME
@@ -5791,6 +6077,7 @@ def main_func():
         global _api_inst
         global img
         global orig_cwd
+        global pargs
 
         try:
                 orig_cwd = os.getcwd()
@@ -5808,7 +6095,7 @@ def main_func():
         except getopt.GetoptError, e:
                 usage(_("illegal global option -- %s") % e.opt)
 
-        runid = os.getpid()
+        runid = None
         show_usage = False
         for opt, arg in opts:
                 if opt == "-D" or opt == "--debug":
@@ -5830,60 +6117,9 @@ def main_func():
                 elif opt in ("--help", "-?"):
                         show_usage = True
 
-        # placeholders in this lookup table for image-create, help and version
-        # which don't have dedicated methods
-        cmds = {
-            "add-property-value"    : (property_add_value, None),
-            "attach-linked"         : (attach_linked, opts_attach_linked, 2),
-            "avoid"                 : (avoid, None),
-            "audit-linked"          : (audit_linked, opts_audit_linked),
-            "authority"             : (publisher_list, None),
-            "change-facet"          : (change_facet, opts_install, -1),
-            "change-variant"        : (change_variant, opts_install, -1),
-            "contents"              : (list_contents, None),
-            "detach-linked"         : (detach_linked, opts_detach_linked),
-            "facet"                 : (facet_list, None),
-            "fix"                   : (fix_image, None),
-            "freeze"                : (freeze, None),
-            "help"                  : (None, None),
-            "history"               : (history_list, None),
-            "image-create"          : (None, None),
-            "info"                  : (info, None),
-            "install"               : (install, opts_install, -1),
-            "list"                  : (list_inventory, opts_list_inventory, -1),
-            "list-linked"           : (list_linked, opts_list_linked),
-            "mediator"              : (list_mediators, opts_list_mediator, -1),
-            "property"              : (property_list, None),
-            "property-linked"       : (list_property_linked,
-                                          opts_list_property_linked, -1),
-            "publisher"             : (publisher_list, None),
-            "purge-history"         : (history_purge, None),
-            "rebuild-index"         : (rebuild_index, None),
-            "refresh"               : (publisher_refresh, None),
-            "remove-property-value" : (property_remove_value, None),
-            "revert"                : (revert, opts_revert, -1),
-            "search"                : (search, None),
-            "set-authority"         : (publisher_set, None),
-            "set-mediator"          : (set_mediator, opts_set_mediator, -1),
-            "set-property"          : (property_set, None),
-            "set-property-linked"   : (set_property_linked,
-                                          opts_set_property_linked, -1),
-            "set-publisher"         : (publisher_set, None),
-            "sync-linked"           : (sync_linked, opts_sync_linked),
-            "unavoid"               : (unavoid, None),
-            "unfreeze"              : (unfreeze, None),
-            "uninstall"             : (uninstall, opts_uninstall, -1),
-            "unset-authority"       : (publisher_unset, None),
-            "unset-property"        : (property_unset, None),
-            "update-format"         : (update_format, None),
-            "unset-mediator"        : (unset_mediator, opts_unset_mediator, -1),
-            "unset-publisher"       : (publisher_unset, None),
-            "update"                : (update, opts_update, -1),
-            "update-format"         : (update_format, None),
-            "variant"               : (variant_list, None),
-            "verify"                : (verify_image, None),
-            "version"               : (None, None),
-        }
+        # The globals in pkg.digest can be influenced by debug flags
+        if DebugValues:
+                reload(pkg.digest)
 
         subcommand = None
         if pargs:
@@ -5913,11 +6149,12 @@ def main_func():
                 usage(retcode=0, full=True)
         if not subcommand:
                 usage(_("no subcommand specified"))
-        if runid:
+        if runid is not None:
                 try:
                         runid = int(runid)
                 except:
                         usage(_("runid must be an integer"))
+                global_settings.client_runid = runid
 
         for opt in ["--help", "-?"]:
                 if opt in pargs:
@@ -5940,6 +6177,7 @@ def main_func():
                         usage(_("-R not allowed for %s subcommand") %
                               subcommand, cmd=subcommand)
                 try:
+                        pkg_timer.record("client startup", logger=logger)
                         ret = func(pargs)
                 except getopt.GetoptError, e:
                         usage(_("illegal option -- %s") % e.opt, cmd=subcommand)
@@ -5962,30 +6200,107 @@ def main_func():
                 return EXIT_OOPS
 
         # Get ImageInterface and image object.
-        api_inst = __api_alloc(mydir, provided_image_dir, pkg_image_used, False,
-            runid=runid)
+        api_inst = __api_alloc(mydir, provided_image_dir, pkg_image_used)
         if api_inst is None:
                 return EXIT_OOPS
         _api_inst = api_inst
         img = api_inst.img
 
         # Find subcommand and execute operation.
-        pargs_limit = 0
         func = cmds[subcommand][0]
-        opts_cmd = cmds[subcommand][1]
-        if len(cmds[subcommand]) > 2:
-                pargs_limit = cmds[subcommand][2]
-        try:
-                if opts_cmd == None:
+        pargs_limit = None
+        if len(cmds[subcommand]) > 1:
+                pargs_limit = cmds[subcommand][1]
+
+        pkg_timer.record("client startup", logger=logger)
+
+        # Get the available options for the requested operation to create the
+        # getopt parsing strings.
+        valid_opts = options.get_pkg_opts(subcommand, add_table=cmd_opts)
+        if not valid_opts:
+                # if there are no options for an op, it has its own processing
+                try:
                         return func(api_inst, pargs)
+                except getopt.GetoptError, e:
+                        usage(_("illegal option -- %s") % e.opt,
+                            cmd=subcommand)
 
-                opts, pargs = misc.opts_parse(subcommand, api_inst, pargs,
-                    opts_cmd, pargs_limit, usage)
-                return func(op=subcommand, api_inst=api_inst,
-                    pargs=pargs, **opts)
+        try:
+                # Parse CLI arguments into dictionary containing corresponding
+                # options and values.
+                opt_dict, pargs = misc.opts_parse(subcommand, pargs, valid_opts,
+                    opts_mapping, usage)
 
-        except getopt.GetoptError, e:
-                usage(_("illegal option -- %s") % e.opt, cmd=subcommand)
+                if pargs_limit is not None and len(pargs) > pargs_limit:
+                        usage(_("illegal argument -- %s") % pargs[pargs_limit],
+                            cmd=subcommand)
+
+                opts = options.opts_assemble(subcommand, api_inst, opt_dict,
+                    add_table=cmd_opts, cwd=orig_cwd)
+
+        except api_errors.InvalidOptionError, e:
+
+                # We can't use the string representation of the exception since
+                # it references internal option names. We substitute the CLI
+                # options and create a new exception to make sure the messages
+                # are correct.
+
+                # Convert the internal options to CLI options. We make sure that
+                # when there is a short and a long version for the same option
+                # we print both to avoid confusion.
+                def get_cli_opt(option):
+                        try:
+                                s, l = opts_mapping[option]
+                                if l and not s:
+                                        return "--%s" % l
+                                elif s and not l:
+                                        return "-%s" % s
+                                else:
+                                        return "-%s/--%s" % (s, l)
+                        except KeyError:
+                                # ignore if we can't find a match
+                                # (happens for repeated arguments)
+                                return option
+
+                cli_opts = []
+                opt_def = []
+
+                for o in e.options:
+                        cli_opts.append(get_cli_opt(o))
+
+                        # collect the default value (see comment below)
+                        opt_def.append(options.get_pkg_opts_defaults(subcommand,
+                            o, add_table=cmd_opts))
+
+                # Prepare for headache:
+                # If we have an option 'b' which is set to True by default it
+                # will be toggled to False if the users specifies the according
+                # option on the CLI.
+                # If we now have an option 'a' which requires option 'b' to be
+                # set, we can't say "'a' requires 'b'" because the user can only
+                # specify 'not b'. So the correct message would be:
+                # "'a' is incompatible with 'not b'".
+                # We can get there by just changing the type of the exception
+                # for all cases where the default value of one of the options is
+                # True.
+                if e.err_type == api_errors.InvalidOptionError.REQUIRED:
+                        if len(opt_def) == 2 and (opt_def[0] or opt_def[1]):
+                                e.err_type = \
+                                    api_errors.InvalidOptionError.INCOMPAT
+
+                # This new exception will have the CLI options, so can be passed
+                # directly to usage().
+                new_e = api_errors.InvalidOptionError(err_type=e.err_type,
+                    options=cli_opts, msg=e.msg)
+
+                usage(str(new_e), cmd=subcommand)
+
+        # Reset the progress tracker here, because we may have
+        # to switch to a different tracker due to the options parse.
+        _api_inst.progresstracker = get_tracker()
+
+        return func(op=subcommand, api_inst=api_inst,
+            pargs=pargs, **opts)
 
 #
 # Establish a specific exit status which means: "python barfed an exception"
@@ -6111,7 +6426,8 @@ to perform the requested operation.  Details follow:\n\n%s""") % __e)
                 __ret = handle_errors(_wrapper, non_wrap_print=False)
                 s = ""
                 if __ret == 99:
-                        s += _("\n%s%s") % (__e, traceback_str)
+                        s += _("\n%(err)s%(stacktrace)s") % \
+                        {"err": __e, "stacktrace": traceback_str}
 
                 s += _("\n\nDespite the error while indexing, the operation "
                     "has completed successfuly.")
@@ -6129,13 +6445,18 @@ to perform the requested operation.  Details follow:\n\n%s""") % __e)
 
 if __name__ == "__main__":
         misc.setlocale(locale.LC_ALL, "", error)
-        gettext.install("pkg", "/usr/share/locale")
+        gettext.install("pkg", "/usr/share/locale",
+            codeset=locale.getpreferredencoding())
 
         # Make all warnings be errors.
         import warnings
         warnings.simplefilter('error')
 
         __retval = handle_errors(main_func)
+        if DebugValues["timings"]:
+                def __display_timings():
+                        msg(str(pkg_timer))
+                handle_errors(__display_timings)
         try:
                 logging.shutdown()
         except IOError:

@@ -21,10 +21,9 @@
 # Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
-PKGVERS_COMPONENT = 0.5.11
+PKGVERS_COMPONENT = 5.12
 PKGVERS_BUILTON   = 5.11
-BUILDNUM          = 175
-UPDATENUM         = 1
+UPDATENUM         = 0
 SRUNUM            = 0
 PLATNUM           = 0
 #BUILDID.cmd       = \
@@ -34,8 +33,10 @@ PLATNUM           = 0
 BUILDID           = 0
 NIGHTLYID:sh      = hg parents --template '{rev}' 2>/dev/null || git rev-list --all | wc -l | sed s/\ //g
 CHANGESET:sh      = hg id -i 2>/dev/null || git log --pretty=format:'%h' -1..
-PKGVERS_BRANCH    = \
-	0.$(BUILDNUM).$(UPDATENUM).$(SRUNUM).$(PLATNUM).$(BUILDID).$(NIGHTLYID)
+#PKGVERS_BRANCH    = \
+#	$(PKGVERS_COMPONENT).$(UPDATENUM).$(SRUNUM).$(PLATNUM).$(BUILDID).$(NIGHTLYID)
+# XXX hardcode for now
+PKGVERS_BRANCH    = 0.5.11-0.151.1.8.1
 PKGVERS           = $(PKGVERS_COMPONENT),$(PKGVERS_BUILTON)-$(PKGVERS_BRANCH)
 ARCH              = $(TARGET_ARCH:-%=%)
 REV:sh            = date +%Y.%m.%d.%H.%M.%S
@@ -46,6 +47,7 @@ PKGDEST           = $(PWD)/../../packages/$(ARCH)
 PKGROOT           = $(PWD)/../../proto/root_$(ARCH)
 
 PKGPUBLISHER      = pkg5-nightly
+PKGPUBLISHER_LOCALIZABLE      = pkg5-localizable
 
 POUND_SIGN:sh     = echo \\043
 PUBLISHALL        = $(POUND_SIGN)
@@ -53,7 +55,7 @@ PUBLISHALL        = $(POUND_SIGN)
 # necessary after we stop publishing duplicate packages.
 MANIFESTS.cmd     = \
 	cd manifests; \
-	buildnum=$(BUILDNUM); \
+	buildnum=$(BUILDID); \
 	m=$$($(PKGMOGRIFY) -O /dev/null *.p5m ../transforms/nopublish); \
 	echo "$$m" | while read name build; do \
 		[[ $$build -ge $${buildnum%%.*} ]] && echo $$name; \
@@ -70,6 +72,7 @@ PKGCMDENV         = \
 	    PYTHONPATH=$(PKGROOT)/usr/lib/python2.6/vendor-packages
 PKG               = $(PKGCMDENV) pkg
 PKGDEPEND         = $(PKGCMDENV) pkgdepend
+PKGFMT            = $(PKGCMDENV) pkgfmt
 PKGLINT           = $(PKGCMDENV) pkglint
 PKGMOGRIFY        = $(PKGCMDENV) pkgmogrify
 PKGREPO           = $(PKGCMDENV) pkgrepo
@@ -101,7 +104,8 @@ PKGMOG_DEFVALS    = \
 	REV=$(REV) \
 	PYDIR=usr/lib/python2.6 \
 	PYDIRVP=usr/lib/python2.6/vendor-packages \
-	CHANGESET=$(CHANGESET)
+	CHANGESET=$(CHANGESET) \
+	PKGPUBLISHER_LOCALIZABLE=$(PKGPUBLISHER_LOCALIZABLE)
 PKGMOG_DEFINES    = $(PKGMOG_DEFVALS:%=-D %)
 PKGMOG_DEFINES    += $(ARCH_DEFINES:%=-D %)
 
@@ -114,6 +118,9 @@ clean:
 clobber: clean
 	rm -rf $(PKGDEST) Makefile.link
 
+pkgfmt:
+	$(PKGFMT) -c manifests/*.p5m
+
 # Pass SVr4 package production off to its own makefile
 svr4:
 	$(MAKE) -f Makefile.svr4 _svr4
@@ -122,7 +129,7 @@ $(PDIR):
 	mkdir -p $@
 
 # Finalize the repository
-repository-metadata: publish-pkgs
+repository-metadata: pkgfmt publish-pkgs
 	$(PKGREPO) -s $(PKGDEST)/repo refresh
 
 publish-pkgs: $(PKGDEST)/repo .WAIT $(PUBLIFESTS)
@@ -131,6 +138,7 @@ publish-pkgs: $(PKGDEST)/repo .WAIT $(PUBLIFESTS)
 $(PKGDEST)/repo:
 	$(PKGREPO) create $@
 	$(PKGREPO) -s $@ set publisher/prefix=$(PKGPUBLISHER)
+	$(PKGREPO) -s $@ add-publisher $(PKGPUBLISHER_LOCALIZABLE)
 
 # Special rule for creating the incorporation.  Note that the incorporation
 # looks at all manifests, not just the ones listed in $(MANIFESTS).  This is

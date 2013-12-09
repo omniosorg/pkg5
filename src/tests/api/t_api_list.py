@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2009, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
 #
 
 import testutils
@@ -81,8 +81,8 @@ class TestApiList(pkg5unittest.ManyDepotTestCase):
                 rval = cmp(apub, bpub)
                 if rval != 0:
                         return rval
-                aver = version.Version(aver, "5.11")
-                bver = version.Version(bver, "5.11")
+                aver = version.Version(aver)
+                bver = version.Version(bver)
                 return cmp(aver, bver) * -1
 
         def __get_pkg_variant(self, stem, ver):
@@ -179,15 +179,14 @@ class TestApiList(pkg5unittest.ManyDepotTestCase):
 
         def setUp(self):
                 pkg5unittest.ManyDepotTestCase.setUp(self, ["test1", "test2",
-                    "test3"])
+                    "test3", "test1"])
 
                 pkg_data = ""
                 for p in self.packages:
                         pkg_data += p
                         stem, ver = p.split("@")
 
-                        # XXX version should not require 5.11
-                        sver = version.Version(ver, "5.11")
+                        sver = version.Version(ver)
                         sver = str(sver).split(":", 1)[0]
 
                         summ, desc = self.__get_pkg_summ_desc(stem, sver)
@@ -238,8 +237,8 @@ add set name=pkg.description value="%(desc)s"
 
                         pkg_data += "close\n"
 
-                rurl1 = self.dcs[1].get_repo_url()
-                plist = self.pkgsend_bulk(rurl1, pkg_data)
+                self.rurl1 = self.dcs[1].get_repo_url()
+                plist = self.pkgsend_bulk(self.rurl1, pkg_data)
 
                 # Ensure that the second repo's packages have exactly the same
                 # timestamps as those in the first ... by copying the repo over.
@@ -267,11 +266,16 @@ add set name=pkg.description value="%(desc)s"
                 # The third repository should remain empty and not be
                 # published to.
 
+                # The fourth should be for test1, but have only the oldest
+                # version of the 'apple' package.
+                self.rurl4 = self.dcs[4].get_repo_url()
+                self.pkgrecv(self.rurl1, "-d %s %s" % (self.rurl4, plist[0]))
+
                 # Next, create the image and configure publishers.
-                self.image_create(rurl1, prefix="test1",
+                self.image_create(self.rurl1, prefix="test1",
                     variants={ "variant.mumble": "true" })
-                rurl2 = self.dcs[2].get_repo_url()
-                self.pkg("set-publisher -g " + rurl2 + " test2")
+                self.rurl2 = self.dcs[2].get_repo_url()
+                self.pkg("set-publisher -g " + self.rurl2 + " test2")
 
         def assertPrettyEqual(self, actual, expected):
                 if actual == expected:
@@ -1262,7 +1266,19 @@ add set name=pkg.description value="%(desc)s"
                 ]
                 self.assertPrettyEqual(returned, expected)
 
+                # Verify the results for LIST_UPGRADABLE when publisher
+                # repository no longer has installed package.
+                self.pkg("unset-publisher test2")
+                self.pkg("set-publisher -G '*' -g %s test1" % self.rurl4)
+                api_obj = self.get_img_api_obj()
+
+                returned = self.__get_returned(api_obj.LIST_UPGRADABLE,
+                    api_obj=api_obj)
+                self.assertPrettyEqual(returned, [])
+
                 # Reset image state for following tests.
+                self.pkg("set-publisher -G '*' -g " + self.rurl1 + " test1")
+                self.pkg("set-publisher -p " + self.rurl2)
                 for pd in api_obj.gen_plan_uninstall(["*"]):
                         continue
                 api_obj.prepare()
@@ -1281,8 +1297,7 @@ add set name=pkg.description value="%(desc)s"
                 def get_pkg_cats(p):
                         stem, ver = p.split("@")
 
-                        # XXX version should not require 5.11
-                        sver = version.Version(ver, "5.11")
+                        sver = version.Version(ver)
                         sver = str(sver).split(":", 1)[0]
                         raw_cats = self.__get_pkg_cats(stem, sver)
 

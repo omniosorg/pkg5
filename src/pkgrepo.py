@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
 #
 
 PKG_CLIENT_NAME = "pkgrepo"
@@ -50,10 +50,12 @@ import shlex
 import shutil
 import sys
 import tempfile
+import textwrap
 import traceback
 import warnings
 
 from pkg.client import global_settings
+from pkg.client.debugvalues import DebugValues
 from pkg.misc import msg, PipeError
 import pkg
 import pkg.catalog
@@ -133,20 +135,23 @@ Subcommands:
 
      pkgrepo add-publisher -s repo_uri_or_path publisher ...
 
-     pkgrepo get [-F format] [-p publisher ...] -s repo_uri_or_path
-         [section/property ...]
+     pkgrepo remove-publisher [-n] [--synchronous] -s repo_uri_or_path
+         publisher ...
 
-     pkgrepo info [-F format] [-H] [-p publisher ...]
-         -s repo_uri_or_path
+     pkgrepo get [-F format] [-p publisher ...] -s repo_uri_or_path 
+         [--key ssl_key ... --cert ssl_cert ...] [section/property ...]
 
-     pkgrepo list [-F format] [-H] [-p publisher ...] -s repo_uri_or_path
-         [pkg_fmri_pattern ...]
+     pkgrepo info [-F format] [-H] [-p publisher ...] -s repo_uri_or_path
+         [--key ssl_key ... --cert ssl_cert ...]
 
-     pkgrepo rebuild [-p publisher ...] -s repo_uri_or_path
-         [--no-catalog] [--no-index]
+     pkgrepo list [-F format] [-H] [-p publisher ...] -s repo_uri_or_path 
+         [--key ssl_key ... --cert ssl_cert ...] [pkg_fmri_pattern ...]
 
-     pkgrepo refresh [-p publisher ...] -s repo_uri_or_path
-         [--no-catalog] [--no-index]
+     pkgrepo rebuild [-p publisher ...] -s repo_uri_or_path [--key ssl_key ...
+         --cert ssl_cert ...] [--no-catalog] [--no-index]
+
+     pkgrepo refresh [-p publisher ...] -s repo_uri_or_path [--key ssl_key ...
+         --cert ssl_cert ...] [--no-catalog] [--no-index]
 
      pkgrepo remove [-n] [-p publisher ...] -s repo_uri_or_path
          pkg_fmri_pattern ...
@@ -154,6 +159,10 @@ Subcommands:
      pkgrepo set [-p publisher ...] -s repo_uri_or_path
          section/property[+|-]=[value] ... or
          section/property[+|-]=([value]) ...
+
+     pkgrepo verify [-p publisher ...] -s repo_uri_or_path
+
+     pkgrepo fix [-v] [-p publisher ...] -s repo_uri_or_path
 
      pkgrepo help
      pkgrepo version
@@ -219,7 +228,8 @@ def subcmd_remove(conf, args):
                 # removed and exit.
                 packages = set(f for m in matching.values() for f in m)
                 count = len(packages)
-                plist = "\n".join("\t%s" % p for p in sorted(packages))
+                plist = "\n".join("\t%s" % p.get_fmri(include_build=False) 
+                    for p in sorted(packages))
                 logger.info(_("%(count)d package(s) will be removed:\n"
                     "%(plist)s") % locals())
                 return EXIT_OK
@@ -241,8 +251,11 @@ def subcmd_remove(conf, args):
         return EXIT_OK
 
 
-def get_repo(conf, read_only=True, subcommand=None):
-        """Return the repository object for current program configuration."""
+def get_repo(conf, allow_invalid=False, read_only=True, subcommand=None):
+        """Return the repository object for current program configuration.
+
+        'allow_invalid' specifies whether potentially corrupt repositories are
+        allowed; should only be True if performing a rebuild operation."""
 
         repo_uri = conf["repo_uri"]
         if repo_uri.scheme != "file":
@@ -253,10 +266,12 @@ def get_repo(conf, read_only=True, subcommand=None):
         if not path:
                 # Bad URI?
                 raise sr.RepositoryInvalidError(str(repo_uri))
-        return sr.Repository(read_only=read_only, root=path)
+        return sr.Repository(allow_invalid=allow_invalid, read_only=read_only,
+            root=path)
 
 
-def setup_transport(conf, subcommand=None):
+def setup_transport(conf, subcommand=None, verbose=False, ssl_key=None,
+    ssl_cert=None):
         repo_uri = conf.get("repo_uri", None)
         if not repo_uri:
                 usage(_("No repository location specified."), cmd=subcommand)
@@ -279,7 +294,7 @@ def setup_transport(conf, subcommand=None):
 
         # Configure target publisher.
         src_pub = transport.setup_publisher(str(repo_uri), "target", xport,
-            xport_cfg, remote_prefix=True)
+            xport_cfg, remote_prefix=True, ssl_key=ssl_key, ssl_cert=ssl_cert)
 
         return xport, src_pub, tmp_dir
 
@@ -345,6 +360,84 @@ def subcmd_add_publisher(conf, args):
                 return EXIT_OOPS
         return rval
 
+def subcmd_remove_publisher(conf, args):
+        """Remove publisher(s) from a repository"""
+
+        subcommand = "remove-publisher"
+
+        dry_run = False
+        synch = False
+        opts, pargs = getopt.getopt(args, "ns:", ["synchronous"])
+        for opt, arg in opts:
+                if opt == "-s":
+                        conf["repo_uri"] = parse_uri(arg)
+                elif opt == "-n":
+                        dry_run = True
+                elif opt == "--synchronous":
+                        synch = True
+        repo_uri = conf.get("repo_uri", None)
+        if not repo_uri:
+                usage(_("No repository location specified."), cmd=subcommand)
+        if repo_uri.scheme != "file":
+                usage(_("Network repositories are not currently supported "
+                    "for this operation."), cmd=subcommand)
+
+        if not pargs:
+                usage(_("At least one publisher must be specified"),
+                    cmd=subcommand)
+
+        inv_pfxs = []
+        for pfx in pargs:
+                if not misc.valid_pub_prefix(pfx):
+                        inv_pfxs.append(pfx)
+
+        if inv_pfxs:
+                error(_("Invalid publisher prefix(es):\n %s") %
+                    "\n ".join(inv_pfxs), cmd=subcommand)
+                return EXIT_OOPS
+
+        repo = get_repo(conf, read_only=False, subcommand=subcommand)
+        existing = repo.publishers & set(pargs)
+        noexisting = [pfx for pfx in pargs
+            if pfx not in repo.publishers]
+        # Publishers left if remove succeeds.
+        left = [pfx for pfx in repo.publishers if pfx not in pargs]
+
+        if noexisting:
+                error(_("The following publisher(s) could not be found:\n %s")
+                    % "\n ".join(noexisting), cmd=subcommand)
+                return EXIT_OOPS
+
+        logger.info(_("Removing publisher(s)"))
+        for pfx in existing:
+                rstore = repo.get_pub_rstore(pfx)
+                numpkg = rstore.catalog.package_count
+                logger.info(_("\'%(pfx)s\'\t(%(num)s package(s))") %
+                    {"pfx":pfx, "num":str(numpkg)})
+
+        if dry_run:
+                return EXIT_OK
+
+        defaultpfx = repo.cfg.get_property("publisher", "prefix")
+        repo_path = repo_uri.get_pathname()
+
+        repo.remove_publisher(existing, repo_path, synch)
+        # Change the repository publisher/prefix property, if necessary.
+        if defaultpfx in existing:
+                if len(left) == 1:
+                        _set_repo(conf, subcommand, { "publisher" :  {
+                            "prefix" :  left[0]} }, repo)
+                        msg(_("The default publisher was removed."
+                            " Setting 'publisher/prefix' to '%s',"
+                            " the only publisher left") % left[0])
+                else:
+                        _set_repo(conf, subcommand, { "publisher": {
+                            "prefix" :  ""} }, repo)
+                        msg(_("The default publisher was removed."
+                            " The 'publisher/prefix' property has been"
+                            " unset"))
+
+        return EXIT_OK
 
 def subcmd_create(conf, args):
         """Create a package repository at the given location."""
@@ -393,8 +486,10 @@ def subcmd_get(conf, args):
         omit_headers = False
         out_format = "default"
         pubs = set()
+        key = None
+        cert = None
 
-        opts, pargs = getopt.getopt(args, "F:Hp:s:")
+        opts, pargs = getopt.getopt(args, "F:Hp:s:", ["key=", "cert="])
         for opt, arg in opts:
                 if opt == "-F":
                         out_format = arg
@@ -410,12 +505,17 @@ def subcmd_get(conf, args):
                         pubs.add(arg)
                 elif opt == "-s":
                         conf["repo_uri"] = parse_uri(arg)
+                elif opt == "--key":
+                        key = arg
+                elif opt == "--cert":
+                        cert = arg
 
         # Setup transport so configuration can be retrieved.
         if not conf.get("repo_uri", None):
                 usage(_("A package repository location must be provided "
                     "using -s."), cmd=subcommand)
-        xport, xpub, tmp_dir = setup_transport(conf, subcommand=subcommand)
+        xport, xpub, tmp_dir = setup_transport(conf, subcommand=subcommand,
+            ssl_key=key, ssl_cert=cert)
 
         # Get properties.
         if pubs:
@@ -655,8 +755,10 @@ def subcmd_info(conf, args):
         omit_headers = False
         out_format = "default"
         pubs = set()
+        key = None
+        cert = None
 
-        opts, pargs = getopt.getopt(args, "F:Hp:s:")
+        opts, pargs = getopt.getopt(args, "F:Hp:s:", ["key=", "cert="])
         for opt, arg in opts:
                 if opt == "-F":
                         if arg not in LISTING_FORMATS:
@@ -672,6 +774,10 @@ def subcmd_info(conf, args):
                         pubs.add(arg)
                 elif opt == "-s":
                         conf["repo_uri"] = parse_uri(arg)
+                elif opt == "--key":
+                        key = arg
+                elif opt == "--cert":
+                        cert = arg
 
         if pargs:
                 usage(_("command does not take operands"), cmd=subcommand)
@@ -680,7 +786,8 @@ def subcmd_info(conf, args):
         if not conf.get("repo_uri", None):
                 usage(_("A package repository location must be provided "
                     "using -s."), cmd=subcommand)
-        xport, xpub, tmp_dir = setup_transport(conf, subcommand=subcommand)
+        xport, xpub, tmp_dir = setup_transport(conf, subcommand=subcommand,
+            ssl_key=key, ssl_cert=cert)
 
         # Retrieve repository status information.
         stat_idx = xport.get_status(xpub)
@@ -755,8 +862,10 @@ def subcmd_list(conf, args):
         omit_headers = False
         out_format = "default"
         pubs = set()
+        key = None
+        cert = None
 
-        opts, pargs = getopt.getopt(args, "F:Hp:s:")
+        opts, pargs = getopt.getopt(args, "F:Hp:s:", ["key=", "cert="])
         for opt, arg in opts:
                 if opt == "-F":
                         out_format = arg
@@ -772,12 +881,18 @@ def subcmd_list(conf, args):
                         pubs.add(arg)
                 elif opt == "-s":
                         conf["repo_uri"] = parse_uri(arg)
+                elif opt == "--key":
+                        key = arg
+                elif opt == "--cert":
+                        cert = arg
+
 
         # Setup transport so configuration can be retrieved.
         if not conf.get("repo_uri", None):
                 usage(_("A package repository location must be provided "
                     "using -s."), cmd=subcommand)
-        xport, xpub, tmp_dir = setup_transport(conf, subcommand=subcommand)
+        xport, xpub, tmp_dir = setup_transport(conf, subcommand=subcommand,
+            ssl_key=key, ssl_cert=cert)
 
         rval, found, pub_data = _get_matching_pubs(subcommand, pubs, xport,
             xpub, out_format=out_format, use_transport=True)
@@ -786,22 +901,27 @@ def subcmd_list(conf, args):
 
         temp_root = misc.config_temp_root()
         progtrack = get_tracker()
+        progtrack.set_purpose(progtrack.PURPOSE_LISTING)
+
+        progtrack.refresh_start(pub_cnt=len(pub_data), full_refresh=True,
+            target_catalog=False)
+
         for pub in pub_data:
+                progtrack.refresh_start_pub(pub)
                 meta_root = tempfile.mkdtemp(dir=temp_root)
                 tmpdirs.append(meta_root)
                 pub.meta_root = meta_root
                 pub.transport = xport
 
-                progtrack.catalog_start(pub.prefix)
                 try:
-                        pub.refresh(True, True)
+                        pub.refresh(True, True, progtrack=progtrack)
                 except apx.TransportError:
                         # Assume that a catalog doesn't exist for the target
                         # publisher and drive on.
                         pass
-                finally:
-                        progtrack.catalog_done()
+                progtrack.refresh_end_pub(pub)
 
+        progtrack.refresh_done()
         listed = {}
         matched = set()
         unmatched = set()
@@ -827,17 +947,25 @@ def subcmd_list(conf, args):
                                             states:
                                                 state = "r"
 
+                                if out_format == "default":
+                                    fver = str(f.version.get_version(
+                                        include_build=False))
+                                    ffmri = str(f.get_fmri(include_build=False))
+                                else:
+                                    fver = str(f.version)
+                                    ffmri = str(f)
+
                                 ret = {
                                     "publisher": f.publisher,
                                     "name": f.pkg_name,
-                                    "version": str(f.version),
+                                    "version": fver,
                                     "release": str(f.version.release),
                                     "build-release":
                                         str(f.version.build_release),
                                     "branch": str(f.version.branch),
                                     "timestamp":
                                         str(f.version.timestr),
-                                    "pkg.fmri": str(f),
+                                    "pkg.fmri": ffmri,
                                     "short_state": state,
                                 }
 
@@ -898,40 +1026,38 @@ def subcmd_list(conf, args):
         return EXIT_OK
 
 
-def subcmd_rebuild(conf, args):
-        """Rebuild the repository's catalog and index data (as permitted)."""
+def __rebuild_local(subcommand, conf, pubs, build_catalog, build_index):
+        """In an attempt to allow operations on potentially corrupt
+        repositories, 'local' repositories (filesystem-basd ones) are handled
+        separately."""
 
-        subcommand = "rebuild"
-        build_catalog = True
-        build_index = True
+        repo = get_repo(conf, allow_invalid=build_catalog, read_only=False,
+            subcommand=subcommand)
 
-        opts, pargs = getopt.getopt(args, "p:s:", ["no-catalog", "no-index"])
-        pubs = set()
-        for opt, arg in opts:
-                if opt == "-p":
-                        if not misc.valid_pub_prefix(arg):
-                                error(_("Invalid publisher prefix '%s'") % arg,
-                                    cmd=subcommand)
-                        pubs.add(arg)
-                elif opt == "-s":
-                        conf["repo_uri"] = parse_uri(arg)
-                elif opt == "--no-catalog":
-                        build_catalog = False
-                elif opt == "--no-index":
-                        build_index = False
+        rpubs = set(repo.publishers)
+        if not pubs:
+                found = rpubs
+        else:
+                found = rpubs & pubs
+        notfound = pubs - found
 
-        if pargs:
-                usage(_("command does not take operands"), cmd=subcommand)
+        rval = EXIT_OK
+        if found and notfound:
+                rval = EXIT_PARTIAL
+        elif pubs and not found:
+                error(_("no matching publishers found"), cmd=subcommand)
+                return EXIT_OOPS
 
-        if not build_catalog and not build_index:
-                # Why?  Who knows; but do what was requested--nothing!
-                return EXIT_OK
+        logger.info("Initiating repository rebuild.")
+        for pfx in found:
+                repo.rebuild(build_catalog=build_catalog,
+                    build_index=build_index, pub=pfx)
 
-        # Setup transport so operation can be performed.
-        if not conf.get("repo_uri", None):
-                usage(_("A package repository location must be provided "
-                    "using -s."), cmd=subcommand)
+        return rval
 
+
+def __rebuild_remote(subcommand, conf, pubs, key, cert, build_catalog,
+    build_index):
         def do_rebuild(xport, xpub):
                 if build_catalog and build_index:
                         xport.publish_rebuild(xpub)
@@ -940,7 +1066,8 @@ def subcmd_rebuild(conf, args):
                 elif build_index:
                         xport.publish_rebuild_indexes(xpub)
 
-        xport, xpub, tmp_dir = setup_transport(conf, subcommand=subcommand)
+        xport, xpub, tmp_dir = setup_transport(conf, subcommand=subcommand,
+            ssl_key=key, ssl_cert=cert)
         rval, found, pub_data = _get_matching_pubs(subcommand, pubs, xport,
             xpub)
         if rval == EXIT_OOPS:
@@ -954,14 +1081,66 @@ def subcmd_rebuild(conf, args):
         return rval
 
 
+def subcmd_rebuild(conf, args):
+        """Rebuild the repository's catalog and index data (as permitted)."""
+
+        subcommand = "rebuild"
+        build_catalog = True
+        build_index = True
+        key = None
+        cert = None
+
+        opts, pargs = getopt.getopt(args, "p:s:", ["no-catalog", "no-index",
+            "key=", "cert="])
+        pubs = set()
+        for opt, arg in opts:
+                if opt == "-p":
+                        if not misc.valid_pub_prefix(arg):
+                                error(_("Invalid publisher prefix '%s'") % arg,
+                                    cmd=subcommand)
+                        pubs.add(arg)
+                elif opt == "-s":
+                        conf["repo_uri"] = parse_uri(arg)
+                elif opt == "--no-catalog":
+                        build_catalog = False
+                elif opt == "--no-index":
+                        build_index = False
+                elif opt == "--key":
+                        key = arg
+                elif opt == "--cert":
+                        cert = arg
+
+        if pargs:
+                usage(_("command does not take operands"), cmd=subcommand)
+
+        if not build_catalog and not build_index:
+                # Why?  Who knows; but do what was requested--nothing!
+                return EXIT_OK
+
+        # Setup transport so operation can be performed.
+        if not conf.get("repo_uri", None):
+                usage(_("A package repository location must be provided "
+                    "using -s."), cmd=subcommand)
+
+        if conf["repo_uri"].scheme == "file":
+                return __rebuild_local(subcommand, conf, pubs, build_catalog,
+                    build_index)
+
+        return __rebuild_remote(subcommand, conf, pubs, key, cert,
+            build_catalog, build_index)
+
+
 def subcmd_refresh(conf, args):
         """Refresh the repository's catalog and index data (as permitted)."""
 
         subcommand = "refresh"
         add_content = True
         refresh_index = True
+        key = None
+        cert = None
 
-        opts, pargs = getopt.getopt(args, "p:s:", ["no-catalog", "no-index"])
+        opts, pargs = getopt.getopt(args, "p:s:", ["no-catalog", "no-index",
+            "key=", "cert="])
         pubs = set()
         for opt, arg in opts:
                 if opt == "-p":
@@ -975,6 +1154,10 @@ def subcmd_refresh(conf, args):
                         add_content = False
                 elif opt == "--no-index":
                         refresh_index = False
+                elif opt == "--key":
+                        key = arg
+                elif opt == "--cert":
+                        cert = arg
 
         if pargs:
                 usage(_("command does not take operands"), cmd=subcommand)
@@ -996,7 +1179,8 @@ def subcmd_refresh(conf, args):
                 elif refresh_index:
                         xport.publish_refresh_indexes(xpub)
 
-        xport, xpub, tmp_dir = setup_transport(conf, subcommand=subcommand)
+        xport, xpub, tmp_dir = setup_transport(conf, subcommand=subcommand,
+            ssl_key=key, ssl_cert=cert)
         rval, found, pub_data = _get_matching_pubs(subcommand, pubs, xport,
             xpub)
         if rval == EXIT_OOPS:
@@ -1188,12 +1372,256 @@ def subcmd_version(conf, args):
         return EXIT_OK
 
 
+verify_error_header = None
+verify_warning_header = None
+verify_reason_headers = None
+
+def __load_verify_msgs():
+        """Since our gettext isn't loaded we need to ensure our globals have
+        correct content by calling this method.  These values are used by both
+        fix when in verbose mode, and verify"""
+
+        global verify_error_header
+        global verify_warning_header
+        global verify_reason_headers
+
+        # A map of error detail types to the human-readable description of each
+        # type.  These correspond to keys in the dictionary returned by
+        # sr.Repository.verify(..)
+        verify_reason_headers = {
+            "path": _("Repository path"),
+            "actual": _("Computed hash"),
+            "fpath": _("Path"),
+            "permissionspath": _("Path"),
+            "pkg": _("Package"),
+            "err": _("Detail")
+        }
+
+        verify_error_header = _("ERROR")
+        verify_warning_header = _("WARNING")
+
+
+def __fmt_verify(verify_tuple):
+        """Format a verify_tuple, of the form (error, path, message, reason)
+        returning a formatted error message, and an FMRI indicating what
+        packages within the repository are affected. Note that the returned FMRI
+        may not be valid, in which case a path to the broken manifest in the
+        repository is returned instead."""
+
+        error, path, message, reason = verify_tuple
+
+        formatted_message = "%(error_type)16s: %(message)s\n" % \
+            {"error_type": verify_error_header, "message": message}
+        reason["path"] = path
+
+        if error == sr.REPO_VERIFY_BADMANIFEST:
+                reason_keys = ["path", "err"]
+        elif error in [sr.REPO_VERIFY_PERM, sr.REPO_VERIFY_MFPERM]:
+                reason_keys = ["pkg", "path"]
+        elif error == sr.REPO_VERIFY_BADHASH:
+                reason_keys = ["pkg", "path", "actual", "fpath"]
+        elif error == sr.REPO_VERIFY_UNKNOWN:
+                reason_keys = ["path", "err"]
+        elif error == sr.REPO_VERIFY_BADSIG:
+                reason_keys = ["pkg", "path", "err"]
+        elif error == sr.REPO_VERIFY_WARN_OPENPERMS:
+                formatted_message = \
+                    "%(error_type)16s: %(message)s\n" % \
+                    {"error_type": verify_warning_header, "message": message}
+                reason_keys = ["permissionspath", "err"]
+        else:
+                # A list of the details we provide.  Some error codes
+                # have different details associated with them.
+                reason_keys = ["pkg", "path", "fpath"]
+
+
+        # the detailed error message can be long, so we'll wrap it.  If what we
+        # have fits on a single line, use it, otherwise begin displaying the
+        # message on the next line.
+        if "err" in reason_keys:
+                err_str = ""
+                lines = textwrap.wrap(reason["err"])
+                if len(lines) != 1:
+                        for line in lines:
+                                err_str += "%18s\n" % line
+                        reason["err"] = "\n" + err_str.rstrip()
+                else:
+                        reason["err"] = lines[0]
+
+        for key in reason_keys:
+                # sometimes we don't have the key we want, for example we may
+                # not have a file path from the package if the error is a
+                # missing repository file for a 'license' action (which don't
+                # have 'path' attributes, hence no 'fpath' dictionary entry)
+                if key not in reason:
+                        continue
+                formatted_message += "%(key)16s: %(value)s\n" % \
+                    {"key": verify_reason_headers[key], "value": reason[key]}
+
+        formatted_message += "\n"
+
+        if error == sr.REPO_VERIFY_WARN_OPENPERMS:
+                return formatted_message, None
+        elif "pkg" in reason:
+                return formatted_message, reason["pkg"]
+        return formatted_message, reason["path"]
+
+
+def subcmd_verify(conf, args):
+        """Verify the repository content (file and manifest content only)."""
+
+        subcommand = "verify"
+        __load_verify_msgs()
+
+        opts, pargs = getopt.getopt(args, "p:s:")
+        pubs = set()
+        for opt, arg in opts:
+                if opt == "-s":
+                        conf["repo_uri"] = parse_uri(arg)
+                if opt == "-p":
+                        if not misc.valid_pub_prefix(arg):
+                                error(_("Invalid publisher prefix '%s'") % arg,
+                                    cmd=subcommand)
+                        pubs.add(arg)
+
+        if pargs:
+                usage(_("command does not take operands"), cmd=subcommand)
+
+        repo_uri = conf.get("repo_uri", None)
+        if not repo_uri:
+                usage(_("A package repository location must be provided "
+                    "using -s."), cmd=subcommand)
+
+        if repo_uri.scheme != "file":
+                usage(_("Network repositories are not currently supported "
+                    "for this operation."), cmd=subcommand)
+
+        xport, xpub, tmp_dir = setup_transport(conf, subcommand=subcommand)
+        rval, found, pub_data = _get_matching_pubs(subcommand, pubs, xport,
+            xpub)
+        if rval == EXIT_OOPS:
+                return rval
+
+        logger.info("Initiating repository verification.")
+        bad_fmris = set()
+        for pfx in found:
+                progtrack = get_tracker()
+                repo = sr.Repository(root=repo_uri.get_pathname())
+                xpub.prefix = pfx
+                xpub.transport = xport
+                for verify_tuple in repo.verify(pub=xpub, progtrack=progtrack):
+                        message, bad_fmri = __fmt_verify(verify_tuple)
+                        if bad_fmri:
+                                bad_fmris.add(bad_fmri)
+                        progtrack.repo_verify_yield_error(bad_fmri, message)
+        if bad_fmris:
+                return EXIT_OOPS
+        return EXIT_OK
+
+
+def subcmd_fix(conf, args):
+        """Fix the repository content (file and manifest content only)
+        For index and catalog content corruption, a rebuild should be
+        performed."""
+
+        subcommand = "fix"
+        __load_verify_msgs()
+        verbose = False
+
+        opts, pargs = getopt.getopt(args, "vp:s:")
+        pubs = set()
+        for opt, arg in opts:
+                if opt == "-s":
+                        conf["repo_uri"] = parse_uri(arg)
+                if opt == "-v":
+                        verbose = True
+                if opt == "-p":
+                        if not misc.valid_pub_prefix(arg):
+                                error(_("Invalid publisher prefix '%s'") % arg,
+                                    cmd=subcommand)
+                        pubs.add(arg)
+
+        if pargs:
+                usage(_("command does not take operands"), cmd=subcommand)
+
+        repo_uri = conf.get("repo_uri", None)
+        if not repo_uri:
+                usage(_("A package repository location must be provided "
+                    "using -s."), cmd=subcommand)
+
+        if repo_uri.scheme != "file":
+                usage(_("Network repositories are not currently supported "
+                    "for this operation."), cmd=subcommand)
+
+        xport, xpub, tmp_dir = setup_transport(conf, subcommand=subcommand)
+        rval, found, pub_data = _get_matching_pubs(subcommand, pubs, xport,
+            xpub)
+        if rval == EXIT_OOPS:
+                return rval
+
+        logger.info("Initiating repository fix.")
+        progtrack = get_tracker()
+
+        def verify_cb(tracker, verify_tuple):
+                """A method passed to sr.Repository.fix(..) to emit verify
+                messages if verbose mode is enabled."""
+                if not verbose:
+                        return
+                formatted_message, bad_fmri = __fmt_verify(verify_tuple)
+                tracker.repo_verify_yield_error(bad_fmri, formatted_message)
+
+        repo = sr.Repository(root=repo_uri.get_pathname())
+        broken_fmris = set()
+        failed_fix_paths = set()
+        for pfx in found:
+                xpub.prefix = pfx
+                xpub.transport = xport
+                progtrack = get_tracker()
+                for status_code, path, message, reason in \
+                    repo.fix(pub=xpub, progtrack=progtrack,
+                        verify_callback=verify_cb):
+                        if status_code == sr.REPO_FIX_ITEM:
+                                # When we can't get the FMRI, eg. in the case
+                                # of a corrupt manifest, use the path instead.
+                                fmri = reason["pkg"]
+                                if not fmri:
+                                        fmri = path
+                                broken_fmris.add(fmri)
+                                if verbose:
+                                        progtrack.repo_fix_yield_info(fmri,
+                                            message)
+                        else:
+                                failed_fix_paths.add(path)
+
+        progtrack.flush()
+        logger.info("")
+
+        if broken_fmris:
+                logger.info(_("Use pkgsend(1) or pkgrecv(1) to republish the\n"
+                    "following packages or paths which were quarantined:\n\n\t"
+                    "%s") % \
+                    "\n\t".join([str(f) for f in broken_fmris]))
+        if failed_fix_paths:
+                logger.info(_("\npkgrepo could not repair the following paths "
+                    "in the repository:\n\n\t%s") %
+                    "\n\t".join([p for p in failed_fix_paths]))
+
+        if not (broken_fmris or failed_fix_paths):
+                logger.info(_("No repository fixes required."))
+        else:
+                logger.info(_("Repository repairs completed."))
+
+        if failed_fix_paths:
+                return EXIT_OOPS
+        return EXIT_OK
+
+
 def main_func():
         global_settings.client_name = PKG_CLIENT_NAME
 
         try:
-                opts, pargs = getopt.getopt(sys.argv[1:], "s:?",
-                    ["help"])
+                opts, pargs = getopt.getopt(sys.argv[1:], "s:D:?",
+                    ["help", "debug="])
         except getopt.GetoptError, e:
                 usage(_("illegal global option -- %s") % e.opt)
 
@@ -1204,6 +1632,17 @@ def main_func():
                         conf["repo_uri"] = parse_uri(arg)
                 elif opt in ("--help", "-?"):
                         show_usage = True
+                elif opt == "-D" or opt == "--debug":
+                        try:
+                                key, value = arg.split("=", 1)
+                        except (AttributeError, ValueError):
+                                usage(_("%(opt)s takes argument of form "
+                                   "name=value, not %(arg)s") % {
+                                   "opt":  opt, "arg": arg })
+                        DebugValues.set_value(key, value)
+
+        if DebugValues:
+                reload(pkg.digest)
 
         subcommand = None
         if pargs:
@@ -1285,7 +1724,8 @@ def handle_errors(func, *args, **kwargs):
 
 if __name__ == "__main__":
         misc.setlocale(locale.LC_ALL, "", error)
-        gettext.install("pkg", "/usr/share/locale")
+        gettext.install("pkg", "/usr/share/locale",
+            codeset=locale.getpreferredencoding())
 
         # Make all warnings be errors.
         warnings.simplefilter('error')

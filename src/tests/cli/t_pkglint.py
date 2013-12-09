@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 
 import testutils
 if __name__ == "__main__":
@@ -32,6 +32,8 @@ import os.path
 import shutil
 import unittest
 import tempfile
+import threading
+import subprocess
 
 class TestPkglintBasics(pkg5unittest.CliTestCase):
 
@@ -97,7 +99,7 @@ set name=test value=i386 variant.arch=sparc
 set name=pkg.fmri value=pkg://opensolaris.org/system/lintedmf1@0.5.11,5.11-0.141:20100603T215050Z
 set name=pkg.description value="core kernel software for a specific instruction-set architecture"
 # allow the System/Noodles info.classification value in this manifest
-set name=pkg.linted.opensolaris.manifest003.6 value=True
+set name=pkg.linted.pkglint.manifest008.6 value=True
 set name=info.classification value=org.opensolaris.category.2008:System/Noodles
 set name=pkg.summary value="Core Solaris Kernel"
 # allow a duplicate set action in this case
@@ -231,7 +233,8 @@ pkglint.exclude = pkg.lint.pkglint_action.PkgActionChecker.linted \
 
         def test_2_badopts(self):
                 """Tests that we exit with an error on wrong or missing args"""
-                for opt in ["-x", "--asdf" ]:
+
+                for opt in ["-x", "--asdf", "-c test_bad_opts -l zappo://cats"]:
                         ret, output, err = self.pkglint(opt, exit=2)
 
         def test_3_list(self):
@@ -419,10 +422,10 @@ pkglint.exclude = pkg.lint.pkglint_action.PkgActionChecker.linted \
                 """Tests that we fail gracefully with a broken or missing
                 config file argument """
                 mpath = self.make_manifest(self.missing_dep_manifest)
-                self.pkglint("-f /dev/null %s" % mpath, testrc=False, exit=1)
+                self.pkglint("-f /dev/null %s" % mpath, testrc=False, exit=2)
                 self.pkglint("-f /no/such/pkg5/file %s" % mpath, testrc=False,
-                    exit=1)
-                self.pkglint("-f /etc/shadow %s" % mpath, testrc=False, exit=1)
+                    exit=2)
+                self.pkglint("-f /etc/shadow %s" % mpath, testrc=False, exit=2)
 
         def test_12_pkg_versions(self):
                 """Tests that the CLI deals with pkg.fmri values properly."""
@@ -447,14 +450,14 @@ pkglint.exclude = pkg.lint.pkglint_action.PkgActionChecker.linted \
                 ret, output, err = self.pkglint("-f %s/rcfile1 %s" %
                     (self.test_root,  mpath1), exit=0)
                 self.assert_("INFO " in err, "error output: %s" % err)
-                self.assert_("Linted message: opensolaris.manifest003.6" in err,
+                self.assert_("Linted message: pkglint.manifest008.6" in err,
                     "error output: %s" % err)
 
                 # now we should still fail, but should not emit the linted INFO
                 ret, output, err = self.pkglint("-f %s/rcfile %s" %
                     (self.test_root,  mpath1), testrc=False, exit=0)
                 self.assert_("INFO " not in err, "error output: %s" % err)
-                self.assert_("Linted message: opensolaris.manifest003.6" not in
+                self.assert_("Linted message: pkglint.manifest008.6" not in
                     err, "error output: %s" % err)
 
 
@@ -513,6 +516,7 @@ dir group=sys mode=0755 owner=root path=etc
 
                 self.ref_uri = self.dcs[1].get_depot_url()
                 self.lint_uri = self.dcs[2].get_depot_url()
+                self.lint_repo_path = self.dcs[2].get_repo_url()
                 self.cache_dir = os.path.join(self.test_root, "pkglint-cache")
 
                 paths = self.make_misc_files(self.ref_mf)
@@ -543,11 +547,11 @@ dir group=sys mode=0755 owner=root path=etc
                         if os.path.exists(cache):
                                 shutil.rmtree(cache)
 
-                        self.pkglint("-c %s -l %s" % (cache, uri), exit=1)
+                        self.pkglint("-c %s -l %s" % (cache, uri), exit=2)
                         self.pkglint("-c %s -r %s -l %s" %
-                            (cache, self.lint_uri, uri), exit=1)
+                            (cache, self.lint_uri, uri), exit=2)
                         self.pkglint("-c %s -r %s -l %s" %
-                            (cache, uri, self.ref_uri), exit=1)
+                            (cache, uri, self.ref_uri), exit=2)
 
         def test_2_badcache(self):
                 """Checks we can deal with bad -c options """
@@ -555,7 +559,7 @@ dir group=sys mode=0755 owner=root path=etc
                 opts = ["/dev/null", "/system/contract", "/etc/passwd"]
                 for cache in opts:
                         self.pkglint("-c %s -r %s -l %s" %
-                            (cache, self.ref_uri, self.lint_uri), exit=1)
+                            (cache, self.ref_uri, self.lint_uri), exit=2)
 
                 # now sufficiently corrupt the cache, such that we couldn't
                 # use the provided cache dir
@@ -566,7 +570,7 @@ dir group=sys mode=0755 owner=root path=etc
                         f = file(path, "w")
                         f.close()
                         self.pkglint("-c %s -r %s -l %s" %
-                            (cache, self.ref_uri, self.lint_uri), exit=1)
+                            (cache, self.ref_uri, self.lint_uri), exit=2)
                         shutil.rmtree(cache)
 
         def test_3_badrelease(self):
@@ -574,7 +578,48 @@ dir group=sys mode=0755 owner=root path=etc
 
                 for opt in ["chickens", "0,1234", "0.16b"]:
                         self.pkglint("-c %s -l %s -b %s" %
-                            (self.cache_dir, self.lint_uri, opt), exit=1)
+                            (self.cache_dir, self.lint_uri, opt), exit=2)
+
+        def test_4_fancy_unix_progress_tracking(self):
+                """When stdout is not a tty, pkglint uses a
+                CommandLineProgressTracker. This test runs pkglint with a tty
+                in order to sanity-check the FancyUnixProgressTracker.
+                See also t_progress.TestProgressTrackers.__t_pty_tracker(..)
+                """
+
+                mpath1 = self.make_manifest(self.ref_mf["ref-sample1.mf"])
+                cache = tempfile.mkdtemp("pkglint-cache", "", self.test_root)
+
+                for args in [[mpath1], ["-c", cache, "-l", self.lint_uri]]:
+                        cmdline = ["%s/usr/bin/pkglint" %
+                            pkg5unittest.g_proto_area]
+                        cmdline.extend(args)
+
+                        # ensure the command works first
+                        self.pkglint(" ".join(args))
+                        self.cmdline_run(" ".join(cmdline), exit=0, usepty=True)
+
+                if os.path.exists(cache):
+                        shutil.rmtree(cache)
+
+        def test_5_file_paths(self):
+                """Checks that we can use file paths to repository, with
+                file:// schemes, absolute paths and relative paths."""
+
+                lint_repo_no_scheme = self.lint_repo_path.replace("file://", "")
+                rel_path = lint_repo_no_scheme.replace(self.test_root, "")
+                lint_repo_relative  = os.path.sep.join([self.test_root, "..",
+                    os.path.basename(self.test_root), rel_path])
+
+                cmdlines = [
+                    "-c %s -l %s" % (self.cache_dir, self.lint_repo_path),
+                    "-c %s -l %s" % (self.cache_dir, lint_repo_no_scheme),
+                    "-c %s -l %s" % (self.cache_dir, lint_repo_relative)
+                ]
+
+                for cmd in cmdlines:
+                        self.pkglint(cmd)
+                        shutil.rmtree(self.cache_dir)
 
 if __name__ == "__main__":
         unittest.main()

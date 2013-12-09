@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2009, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
 #
 
 #
@@ -58,6 +58,7 @@ import pkg.catalog
 import pkg.client.api_errors as api_errors
 import pkg.client.sigpolicy as sigpolicy
 import pkg.client.pkgdefs as pkgdefs
+import pkg.digest as digest
 import pkg.misc as misc
 import pkg.portable as portable
 import pkg.server.catalog as old_catalog
@@ -85,6 +86,7 @@ REPO_COLLECTION_TYPES = {
 
 # Supported Protocol Schemes
 SUPPORTED_SCHEMES = set(("file", "http", "https"))
+SUPPORTED_PROXY_SCHEMES = ("http")
 
 # SSL Protocol Schemes
 SSL_SCHEMES = set(("https",))
@@ -119,6 +121,11 @@ CRL_SIGNING_USE = {
 
 POSSIBLE_USES = [CODE_SIGNING_USE, CERT_SIGNING_USE, CRL_SIGNING_USE]
 
+# A special token used in place of the system repository URL which is
+# replaced at runtime by the actual address and port of the
+# system-repository.
+SYSREPO_PROXY = "<sysrepo>"
+
 class RepositoryURI(object):
         """Class representing a repository URI and any transport-related
         information."""
@@ -127,7 +134,7 @@ class RepositoryURI(object):
         # documentation as private, and for clarity in the property declarations
         # found near the end of the class definition.
         __priority = None
-        __proxy = None
+        __proxies = None
         __ssl_cert = None
         __ssl_key = None
         __trailing_slash = None
@@ -138,9 +145,14 @@ class RepositoryURI(object):
         _source_object_id = None
 
         def __init__(self, uri, priority=None, ssl_cert=None, ssl_key=None,
-            trailing_slash=True, proxy=None, system=False):
+            trailing_slash=True, proxy=None, system=False, proxies=None):
+
+
                 # Must set first.
                 self.__trailing_slash = trailing_slash
+                self.__scheme = None
+                self.__netloc = None
+                self.__proxies = []
 
                 # Note that the properties set here are intentionally lacking
                 # the '__' prefix which means assignment will occur using the
@@ -150,31 +162,40 @@ class RepositoryURI(object):
                 self.uri = uri
                 self.ssl_cert = ssl_cert
                 self.ssl_key = ssl_key
-                self.proxy = proxy
+                # The proxy parameter is deprecated and remains for backwards
+                # compatibity, for now.  If we get given both, then we must
+                # complain - this error is for internal use only.
+                if proxy and proxies:
+                        raise api_errors.PublisherError("Both 'proxies' and "
+                            "'proxy' values were used to create a "
+                            "RepositoryURI object.")
+
+                if proxy:
+                        self.proxies = [ProxyURI(proxy)]
+                if proxies:
+                        self.proxies = proxies
                 self.system = system
 
         def __copy__(self):
                 uri = RepositoryURI(self.__uri, priority=self.__priority,
                     ssl_cert=self.__ssl_cert, ssl_key=self.__ssl_key,
-                    trailing_slash=self.__trailing_slash, proxy=self.__proxy,
-                    system=self.system)
+                    trailing_slash=self.__trailing_slash,
+                    proxies=self.__proxies, system=self.system)
                 uri._source_object_id = id(self)
                 return uri
 
         def __eq__(self, other):
                 if isinstance(other, RepositoryURI):
-                        return self.uri == other.uri and \
-                            self.proxy == other.proxy
+                        return self.uri == other.uri
                 if isinstance(other, str):
-                        return self.proxy is None and self.uri == other
+                        return self.uri == other
                 return False
 
         def __ne__(self, other):
                 if isinstance(other, RepositoryURI):
-                        return self.uri != other.uri or \
-                            self.proxy != other.proxy
+                        return self.uri != other.uri
                 if isinstance(other, str):
-                        return self.proxy is not None or self.uri != other
+                        return self.uri != other
                 return True
 
         def __cmp__(self, other):
@@ -182,10 +203,7 @@ class RepositoryURI(object):
                         return 1
                 if not isinstance(other, RepositoryURI):
                         other = RepositoryURI(other)
-                res = cmp(self.uri, other.uri)
-                if res != 0:
-                        return res
-                return cmp(self.proxy, other.proxy)
+                return cmp(self.uri, other.uri)
 
         def __set_priority(self, value):
                 if value is not None:
@@ -195,12 +213,47 @@ class RepositoryURI(object):
                                 raise api_errors.BadRepositoryURIPriority(value)
                 self.__priority = value
 
+        def __get_proxy(self):
+                if not self.__proxies:
+                        return None
+                else:
+                        return self.__proxies[0].uri
+
         def __set_proxy(self, proxy):
                 if not proxy:
                         return
-                self.__proxy = proxy
-                assert not self.__ssl_cert
-                assert not self.__ssl_key
+                if not isinstance(proxy, ProxyURI):
+                        p = ProxyURI(proxy)
+                else:
+                        p = proxy
+
+                self.__proxies = [p]
+
+        def __set_proxies(self, proxies):
+
+                for proxy in proxies:
+                        if not isinstance(proxy, ProxyURI):
+                                raise api_errors.BadRepositoryAttributeValue(
+                                    "proxies", value=proxy)
+
+                if proxies and self.scheme == "file":
+                        raise api_errors.UnsupportedRepositoryURIAttribute(
+                            "proxies", scheme=self.scheme)
+
+                if not (isinstance(proxies, list) or
+                    isinstance(proxies, tuple)):
+                        raise api_errors.BadRepositoryAttributeValue(
+                            "proxies", value=proxies)
+
+                # for now, we only support a single proxy per RepositoryURI
+                if len(proxies) > 1:
+                        raise api_errors.BadRepositoryAttributeValue(
+                            "proxies", value=proxies)
+
+                if proxies:
+                        self.__proxies = proxies
+                else:
+                        self.__proxies = []
 
         def __set_ssl_cert(self, filename):
                 if self.scheme not in SSL_SCHEMES and filename:
@@ -238,39 +291,65 @@ class RepositoryURI(object):
                 if uri is None:
                         raise api_errors.BadRepositoryURI(uri)
 
+                # if we're setting the URI to an existing value, do nothing.
+                if uri == self.__uri:
+                        return
+
+                # This is not ideal, but determining whether we're operating
+                # on a ProxyURI saves us duplicating code in that class,
+                # which we would otherwise need, due to __protected members
+                # here.
+                if isinstance(self, ProxyURI):
+                        is_proxy = True
+                else:
+                        is_proxy = False
+
                 # Decompose URI to verify attributes.
                 scheme, netloc, path, params, query = \
                     urlparse.urlsplit(uri, allow_fragments=0)
 
+                self.__scheme = scheme.lower()
+                self.__netloc = netloc
+
                 # The set of currently supported protocol schemes.
-                if scheme.lower() not in SUPPORTED_SCHEMES:
-                        raise api_errors.UnsupportedRepositoryURI(uri)
+                if is_proxy and self.__scheme not in \
+                    SUPPORTED_PROXY_SCHEMES:
+                        raise api_errors.UnsupportedProxyURI(uri)
+                else:
+                        if self.__scheme not in SUPPORTED_SCHEMES:
+                                raise api_errors.UnsupportedRepositoryURI(uri)
 
                 # XXX valid_pub_url's check isn't quite right and could prevent
                 # usage of IDNs (international domain names).
-                if (scheme.lower().startswith("http") and not netloc) or \
-                    not misc.valid_pub_url(uri):
+                if (self.__scheme.startswith("http") and not netloc) or \
+                    not misc.valid_pub_url(uri, proxy=is_proxy):
                         raise api_errors.BadRepositoryURI(uri)
 
-                if scheme.lower() == "file" and netloc:
+                if self.__scheme == "file" and netloc:
                         raise api_errors.BadRepositoryURI(uri)
 
                 # Normalize URI scheme.
-                uri = uri.replace(scheme, scheme.lower(), 1)
+                uri = uri.replace(scheme, self.__scheme, 1)
 
                 if self.__trailing_slash:
+                        uri = uri.rstrip("/")
                         uri = misc.url_affix_trailing_slash(uri)
 
-                if scheme.lower() not in SSL_SCHEMES:
+                if self.__scheme not in SSL_SCHEMES:
                         self.__ssl_cert = None
                         self.__ssl_key = None
 
                 self.__uri = uri
 
+        def _override_uri(self, uri):
+                """Allow the __uri field of the object to be overridden in
+                special cases."""
+                if uri not in [None, SYSREPO_PROXY]:
+                        raise api_errors.BadRepositoryURI(uri)
+                self.__uri = uri
+
         def __str__(self):
-                if not self.__proxy:
-                        return self.__uri
-                return "proxy://%s" % self.__uri
+                return str(self.__uri)
 
         def change_scheme(self, new_scheme):
                 """Change the scheme of this uri."""
@@ -315,8 +394,13 @@ class RepositoryURI(object):
             "An integer value representing the importance of this repository "
             "URI relative to others.")
 
-        proxy = property(lambda self: self.__proxy, __set_proxy, None, "The "
-            "proxy to use to access this repository.")
+        proxy = property(__get_proxy, __set_proxy, None, "The proxy to use to "
+            "access this repository.")
+
+        proxies = property(lambda self: self.__proxies, __set_proxies, None,
+            "A list of proxies that can be used to access this repository."
+            "At runtime, a $http_proxy environment variable might override this."
+            )
 
         @property
         def scheme(self):
@@ -330,6 +414,210 @@ class RepositoryURI(object):
             "A boolean value indicating whether any URI provided for this "
             "object should have a trailing slash appended when setting the "
             "URI property.")
+
+
+class ProxyURI(RepositoryURI):
+        """A class to represent the URI of a proxy. The 'uri' value can be
+        'None' if 'system' is set to True."""
+
+        def __init__(self, uri, system=False):
+                self.__system = None
+                self.system = system
+                if not system:
+                        self.uri = uri
+
+        def __set_system(self, value):
+                """A property to specify whether we should use the system
+                publisher as the proxy.  Note that this method modifies the
+                'uri' property when set or cleared."""
+                if value not in (True, False):
+                        raise api_errors.BadRepositoryAttributeValue(
+                            "system", value=value)
+                self.__system = value
+                if value:
+                        # Set a special value for the uri, intentionally an
+                        # invalid URI which should get caught by any consumers
+                        # using it by mistake.  This also allows us to reuse
+                        # the __eq__, __cmp__, etc. methods from the parent
+                        # (where there is no public way of setting the URI to
+                        # SYSREPO_PROXY, '<sysrepo>')
+                        self._override_uri(SYSREPO_PROXY)
+                else:
+                        self._override_uri(None)
+
+        def __unsupported(self, value):
+                """A method used to prevent certain properties defined in the
+                parent class from being set on ProxyURI objects."""
+
+                # We don't expect this string to be exposed to users.
+                raise ValueError("This property cannot be set to %s on a "
+                    "ProxyURI object." % value)
+
+        system = property(lambda self: self.__system, __set_system, None,
+            "True, if we should use the system publisher as a proxy.")
+
+        # Ensure we can't set any of the following properties.
+        proxies = property(lambda self: None, __unsupported, None,
+            "proxies is an invalid property for ProxyURI properties")
+
+        ssl_cert = property(lambda self:  None, __unsupported, None,
+            "ssl_cert is an invalid property for ProxyURI properties")
+
+        ssl_key = property(lambda self: None, __unsupported, None,
+            "ssl_key is an invalid property for ProxyURI properties")
+
+        priority = property(lambda self: None, __unsupported, None,
+            "priority is an invalid property for ProxyURI properties")
+
+        trailing_slash = property(lambda self: None, __unsupported, None,
+            "trailing_slash is an invalid property for ProxyURI properties")
+
+
+class TransportRepoURI(RepositoryURI):
+        """A TransportRepoURI allows for multiple representations of a given
+        RepositoryURI, each with different properties.
+
+        One RepositoryURI could be represented by several TransportRepoURIs,
+        used to allow the transport to properly track repo statistics for
+        for each discrete path to a given URI, perhaps using different proxies
+        or trying one of several SSL key/cert pairs."""
+
+        def __init__(self, uri, priority=None, ssl_cert=None, ssl_key=None,
+            trailing_slash=True, proxy=None, system=False):
+                # Must set first.
+                self.__proxy = None
+                self.__runtime_proxy = None
+                self.proxy = proxy
+
+                RepositoryURI.__init__(self, uri, priority=priority,
+                    ssl_cert=ssl_cert, ssl_key=ssl_key,
+                    trailing_slash=trailing_slash, system=system)
+
+        def __eq__(self, other):
+                if isinstance(other, TransportRepoURI):
+                        return self.uri == other.uri and \
+                            self.proxy == other.proxy
+                if isinstance(other, basestring):
+                        return self.uri == other and self.proxy == None
+                return False
+
+        def __ne__(self, other):
+                if isinstance(other, TransportRepoURI):
+                        return self.uri != other.uri or \
+                            self.proxy != other.proxy
+                if isinstance(other, basestring):
+                        return self.uri != other or self.proxy != None
+                return True
+
+        def __cmp__(self, other):
+                if not other:
+                        return 1
+                if isinstance(other, basestring):
+                        other = TransportRepoURI(other)
+                elif not isinstance(other, TransportRepoURI):
+                        return 1
+                res = cmp(self.uri, other.uri)
+                if res == 0:
+                        return cmp(self.proxy, other.proxy)
+                else:
+                        return res
+
+        def key(self):
+                """Returns a value that can be used to identify this RepoURI
+                uniquely for the transport system.  Normally, this would be done
+                using __hash__() however, TransportRepoURI objects are not
+                guaranteed to be immutable.
+
+                The key is a (uri, proxy) tuple, where the proxy is
+                the proxy used to reach that URI.  Note that in the transport
+                system, we may choose to override the proxy value here.
+
+                If this key format changes, a corresponding change should be
+                made in pkg.client.transport.engine.__cleanup_requests(..)"""
+
+                u = self.uri
+                p = self.__proxy
+
+                if self.uri:
+                        u = self.uri.rstrip("/")
+                return (u, p)
+
+        def __set_proxy(self, proxy):
+                assert not self.ssl_cert
+                assert not self.ssl_key
+
+                if proxy and self.scheme == "file":
+                        raise api_errors.UnsupportedRepositoryURIAttribute(
+                            "proxy", scheme=self.scheme)
+                if proxy:
+                        self.__proxy = proxy.rstrip("/")
+                else:
+                        self.__proxy = None
+                # Changing the proxy value causes us to clear any cached
+                # value we have in __runtime_proxy.
+                self.__runtime_proxy = None
+
+        def __get_runtime_proxy(self):
+                """Returns the proxy that should be used at runtime, which may
+                differ from the persisted proxy value.  We check for http_proxy,
+                https_proxy and all_proxy OS environment variables.
+
+                To avoid repeated environment lookups, we cache the results."""
+
+                # we don't permit the proxy used by system publishers to be
+                # overridden by environment variables.
+                if self.system:
+                        return self.proxy
+
+                if not self.__runtime_proxy:
+                        self.__runtime_proxy = misc.get_runtime_proxy(
+                            self.__proxy, self.uri)
+                return self.__runtime_proxy
+
+        def __set_runtime_proxy(self, runtime_proxy):
+                """The runtime proxy value is always computed dynamically,
+                we should not allow a caller to set it."""
+
+                assert False, "Refusing to set a runtime_proxy value."
+
+        @staticmethod
+        def fromrepouri(repouri):
+                """Build a list of TransportRepositoryURI objects using
+                properties from the given RepositoryURI, 'repouri'.
+
+                This is to allow the transport to try different paths to
+                a given RepositoryURI, if more than one is possible."""
+
+                trans_repouris = []
+                # we just use the proxies for now, but in future, we may want
+                # other per-origin/mirror properties
+                if repouri.proxies:
+                        for p in repouri.proxies:
+                                t = TransportRepoURI(repouri.uri,
+                                    priority=repouri.priority,
+                                    ssl_cert=repouri.ssl_cert,
+                                    ssl_key=repouri.ssl_key,
+                                    system=repouri.system,
+                                    trailing_slash=repouri.trailing_slash,
+                                    proxy=p.uri)
+                                trans_repouris.append(t)
+                else:
+                        trans_repouris.append(TransportRepoURI(repouri.uri,
+                            priority=repouri.priority,
+                            ssl_cert=repouri.ssl_cert,
+                            ssl_key=repouri.ssl_key,
+                            system=repouri.system,
+                            trailing_slash=repouri.trailing_slash))
+                return trans_repouris
+
+        proxy = property(lambda self: self.__proxy, __set_proxy, None,
+            "The proxy that is used to access this repository."
+            "At runtime, a $http_proxy environnent variable might override this."
+            )
+
+        runtime_proxy = property(__get_runtime_proxy, __set_runtime_proxy, None,
+            "The proxy to use to access this repository.  This value checks"
+            "OS environment variables, and expands any $user:$password values.")
 
 
 class Repository(object):
@@ -540,6 +828,10 @@ class Repository(object):
 
                 def dup_check(mirror):
                         if self.has_mirror(mirror):
+                                o = self.get_mirror(mirror)
+                                if o.system:
+                                        raise api_errors.DuplicateSyspubMirror(
+                                            mirror)
                                 raise api_errors.DuplicateRepositoryMirror(
                                     mirror)
 
@@ -556,6 +848,10 @@ class Repository(object):
 
                 def dup_check(origin):
                         if self.has_origin(origin):
+                                o = self.get_origin(origin)
+                                if o.system:
+                                        raise api_errors.DuplicateSyspubOrigin(
+                                            origin)
                                 raise api_errors.DuplicateRepositoryOrigin(
                                     origin)
 
@@ -641,6 +937,9 @@ class Repository(object):
                         mirror = misc.url_affix_trailing_slash(mirror)
                 for i, m in enumerate(self.mirrors):
                         if mirror == m.uri:
+                                if m.system:
+                                        api_errors.RemoveSyspubMirror(
+                                            mirror.uri)
                                 # Immediate return as the index into the array
                                 # changes with each removal.
                                 del self.mirrors[i]
@@ -655,7 +954,10 @@ class Repository(object):
                 if not isinstance(origin, RepositoryURI):
                         origin = RepositoryURI(origin)
                 for i, o in enumerate(self.origins):
-                        if origin == o.uri and origin.proxy == o.proxy:
+                        if origin == o.uri:
+                                if o.system:
+                                        raise api_errors.RemoveSyspubOrigin(
+                                            origin.uri)
                                 # Immediate return as the index into the array
                                 # changes with each removal.
                                 del self.origins[i]
@@ -679,7 +981,10 @@ class Repository(object):
             ssl_key=None):
                 """Updates an existing mirror object matching 'mirror'.
 
-                'mirror' can be a RepositoryURI object or a URI string."""
+                'mirror' can be a RepositoryURI object or a URI string.
+
+                This method is deprecated, and may be removed in future API
+                versions."""
 
                 if not isinstance(mirror, RepositoryURI):
                         mirror = RepositoryURI(mirror, priority=priority,
@@ -689,13 +994,17 @@ class Repository(object):
                 target.priority = mirror.priority
                 target.ssl_cert = mirror.ssl_cert
                 target.ssl_key = mirror.ssl_key
+                target.proxies = mirror.proxies
                 self.mirrors.sort(key=URI_SORT_POLICIES[self.__sort_policy])
 
         def update_origin(self, origin, priority=None, ssl_cert=None,
             ssl_key=None):
                 """Updates an existing origin object matching 'origin'.
 
-                'origin' can be a RepositoryURI object or a URI string."""
+                'origin' can be a RepositoryURI object or a URI string.
+
+                This method is deprecated, and may be removed in future API
+                versions."""
 
                 if not isinstance(origin, RepositoryURI):
                         origin = RepositoryURI(origin, priority=priority,
@@ -705,6 +1014,7 @@ class Repository(object):
                 target.priority = origin.priority
                 target.ssl_cert = origin.ssl_cert
                 target.ssl_key = origin.ssl_key
+                target.proxies = origin.proxies
                 self.origins.sort(key=URI_SORT_POLICIES[self.__sort_policy])
 
         def reset_mirrors(self):
@@ -792,8 +1102,8 @@ class Publisher(object):
         # These properties are declared here so that they show up in the pydoc
         # documentation as private, and for clarity in the property declarations
         # found near the end of the class definition.
+        _catalog = None
         __alias = None
-        __catalog = None
         __client_uuid = None
         __disabled = False
         __meta_root = None
@@ -880,7 +1190,7 @@ class Publisher(object):
                 self.__issuers = {}
 
                 # Must be done last.
-                self.__catalog = catalog
+                self._catalog = catalog
 
         def __cmp__(self, other):
                 if other is None:
@@ -907,6 +1217,7 @@ class Publisher(object):
                     revoked_ca_certs=self.revoked_ca_certs,
                     approved_ca_certs=self.approved_ca_certs,
                     sys_pub=self.sys_pub)
+                pub._catalog = self._catalog
                 pub._source_object_id = id(self)
                 return pub
 
@@ -1051,8 +1362,8 @@ class Publisher(object):
                 if pathname:
                         pathname = os.path.abspath(pathname)
                 self.__meta_root = pathname
-                if self.__catalog:
-                        self.__catalog.meta_root = self.catalog_root
+                if self._catalog:
+                        self._catalog.meta_root = self.catalog_root
                 if self.__meta_root:
                         self.__origin_root = os.path.join(self.__meta_root,
                             "origins")
@@ -1070,7 +1381,7 @@ class Publisher(object):
                 if not isinstance(value, Repository):
                         raise api_errors.UnknownRepository(value)
                 self.__repository = value
-                self.__catalog = None
+                self._catalog = None
 
         def __set_client_uuid(self, value):
                 self.__client_uuid = value
@@ -1169,11 +1480,11 @@ pkg unset-publisher %s
                 selected repository, or None if available."""
 
                 if not self.meta_root:
-                        if self.__catalog:
-                                return self.__catalog
+                        if self._catalog:
+                                return self._catalog
                         return None
 
-                if not self.__catalog:
+                if not self._catalog:
                         croot = self.catalog_root
                         if not os.path.isdir(croot):
                                 # Current meta_root structure is likely in
@@ -1182,9 +1493,9 @@ pkg unset-publisher %s
                                 # is desired instead.  (This can happen during
                                 # an image format upgrade.)
                                 croot = None
-                        self.__catalog = pkg.catalog.Catalog(
+                        self._catalog = pkg.catalog.Catalog(
                             meta_root=croot)
-                return self.__catalog
+                return self._catalog
 
         @property
         def catalog_root(self):
@@ -1312,7 +1623,8 @@ pkg unset-publisher %s
                 if not os.path.exists(self.__origin_root):
                         return
                 # A digest of the URI string is used here to attempt to avoid
-                # path length problems.
+                # path length problems. In order for this image to interoperate
+                # with older clients, we must use sha-1 here.
                 return os.path.join(self.__origin_root,
                     hashlib.sha1(origin.uri).hexdigest())
 
@@ -1327,11 +1639,14 @@ pkg unset-publisher %s
                 on catalog from each origin."""
 
                 # First, remove catalogs for any origins that no longer exist.
+                # We must interoperate with older clients, so force the use of
+                # sha-1 here.
                 ohashes = [
                     hashlib.sha1(o.uri).hexdigest()
                     for o in self.repository.origins
                 ]
 
+                removals = False
                 for entry in os.listdir(self.__origin_root):
                         opath = os.path.join(self.__origin_root, entry)
                         try:
@@ -1340,6 +1655,10 @@ pkg unset-publisher %s
                         except Exception:
                                 # Discard anything that isn't an origin.
                                 pass
+
+                        # An origin was removed, so publisher should inform
+                        # image to force image catalog rebuild.
+                        removals = True
 
                         # Not an origin or origin no longer exists; either way,
                         # it shouldn't exist here.
@@ -1351,9 +1670,16 @@ pkg unset-publisher %s
                         except EnvironmentError, e:
                                 raise api_errors._convert_error(e)
 
+                # if the catalog already exists on disk, is empty, and if
+                # no origins are configured, we're done.
+                if self.catalog.exists and \
+                    self.catalog.package_count == 0 and \
+                    len(self.repository.origins) == 0:
+                        return removals
+
                 # Discard existing catalog.
                 self.catalog.destroy()
-                self.__catalog = None
+                self._catalog = None
 
                 # Ensure all old catalog files are removed.
                 for entry in os.listdir(self.catalog_root):
@@ -1367,17 +1693,19 @@ pkg unset-publisher %s
 
                 # If there's only one origin, then just symlink its catalog
                 # files into place.
+                # Symlinking includes updates for publication tools.
                 opaths = [entry for entry in self.__gen_origin_paths()]
                 if len(opaths) == 1:
                         opath = opaths[0][1]
                         for fname in os.listdir(opath):
-                                if fname.startswith("catalog."):
+                                if fname.startswith("catalog.") or \
+                                    fname.startswith("update."):
                                         src = os.path.join(opath, fname)
                                         dest = os.path.join(self.catalog_root,
                                             fname)
                                         os.symlink(misc.relpath(src,
                                             self.catalog_root), dest)
-                        return
+                        return removals
 
                 # If there's more than one origin, then create a new catalog
                 # based on a composite of the catalogs for all origins.
@@ -1492,6 +1820,7 @@ pkg unset-publisher %s
                 ncat.batch_mode = False
                 ncat.finalize()
                 ncat.save()
+                return removals
 
         def __convert_v0_catalog(self, v0_cat, v1_root):
                 """Transforms the contents of the provided version 0 Catalog
@@ -1525,7 +1854,7 @@ pkg unset-publisher %s
                         # avoids many of the problems that could happen due to
                         # deficiencies in the v0 implementation.
                         v1_cat.destroy()
-                        self.__catalog = None
+                        self._catalog = None
                         v1_cat = pkg.catalog.Catalog(meta_root=v1_root,
                             sign=False)
 
@@ -1624,7 +1953,7 @@ pkg unset-publisher %s
                 return False, True
 
         def __refresh_v1(self, croot, tempdir, full_refresh, immediate,
-            mismatched, repo):
+            mismatched, repo, progtrack=None, include_updates=False):
                 """The method to refresh the publisher's metadata against
                 a catalog/1 source.  If the more recent catalog/1 version
                 isn't supported, __refresh_v0 is invoked as a fallback.
@@ -1646,13 +1975,14 @@ pkg unset-publisher %s
                 try:
                         self.transport.get_catalog1(self, ["catalog.attrs"],
                             path=tempdir, redownload=redownload,
-                            revalidate=revalidate, alt_repo=repo)
+                            revalidate=revalidate, alt_repo=repo,
+			    progtrack=progtrack)
                 except api_errors.UnsupportedRepositoryOperation:
                         # No v1 catalogs available.
                         if v1_cat.exists:
                                 # Ensure v1 -> v0 transition works right.
                                 v1_cat.destroy()
-                                self.__catalog = None
+                                self._catalog = None
                         return self.__refresh_v0(croot, full_refresh, immediate,
                             repo)
 
@@ -1680,13 +2010,17 @@ pkg unset-publisher %s
                                 if locale != "C":
                                         continue
                                 flist.append(name)
+                        if include_updates:
+                                for update in attrs.updates:
+                                        flist.append(update)
 
                 if flist:
                         # More catalog files to retrieve.
                         try:
                                 self.transport.get_catalog1(self, flist,
                                     path=tempdir, redownload=redownload,
-                                    revalidate=revalidate, alt_repo=repo)
+                                    revalidate=revalidate, alt_repo=repo,
+				    progtrack=progtrack)
                         except api_errors.UnsupportedRepositoryOperation:
                                 # Couldn't find a v1 catalog after getting one
                                 # before.  This would be a bizzare error, but we
@@ -1694,8 +2028,8 @@ pkg unset-publisher %s
                                 return self.__refresh_v0(croot, full_refresh,
                                     immediate, repo)
 
-                # Clear __catalog, so we'll read in the new catalog.
-                self.__catalog = None
+                # Clear _catalog, so we'll read in the new catalog.
+                self._catalog = None
                 v1_cat = pkg.catalog.Catalog(meta_root=croot)
 
                 # At this point the client should have a set of the constituent
@@ -1738,7 +2072,7 @@ pkg unset-publisher %s
                 return True, True
 
         def __refresh_origin(self, croot, full_refresh, immediate, mismatched,
-            origin):
+            origin, progtrack=None, include_updates=False):
                 """Private helper method used to refresh catalog data for each
                 origin.  Returns a tuple of (changed, refreshed) where 'changed'
                 indicates whether new catalog data was found and 'refreshed'
@@ -1767,7 +2101,9 @@ pkg unset-publisher %s
                 # of success or failure.
                 try:
                         rval = self.__refresh_v1(croot, tempdir,
-                            full_refresh, immediate, mismatched, repo)
+                            full_refresh, immediate, mismatched, repo,
+			    progtrack=progtrack,
+                            include_updates=include_updates)
 
                         # Perform publisher metadata sanity checks.
                         self.__validate_metadata(croot, repo)
@@ -1777,7 +2113,8 @@ pkg unset-publisher %s
                         # Cleanup tempdir.
                         shutil.rmtree(tempdir, True)
 
-        def __refresh(self, full_refresh, immediate, mismatched=False):
+        def __refresh(self, full_refresh, immediate, mismatched=False,
+	    progtrack=None, include_updates=False):
                 """The method to handle the overall refresh process.  It
                 determines if a refresh is actually needed, and then calls
                 the first version-specific refresh method in the chain."""
@@ -1812,7 +2149,9 @@ pkg unset-publisher %s
                 any_refreshed = False
                 for origin, opath in self.__gen_origin_paths():
                         changed, refreshed = self.__refresh_origin(opath,
-                            full_refresh, immediate, mismatched, origin)
+                            full_refresh, immediate, mismatched, origin,
+			    progtrack=progtrack,
+                            include_updates=include_updates)
                         if changed:
                                 any_changed = True
                         if refreshed:
@@ -1824,11 +2163,13 @@ pkg unset-publisher %s
 
                 # Finally, build a new catalog for this publisher based on a
                 # composite of the catalogs from all origins.
-                self.__rebuild_catalog()
+                if self.__rebuild_catalog():
+                        any_changed = True
 
                 return any_changed
 
-        def refresh(self, full_refresh=False, immediate=False):
+        def refresh(self, full_refresh=False, immediate=False, progtrack=None,
+            include_updates=False):
                 """Refreshes the publisher's metadata, returning a boolean
                 value indicating whether any updates to the publisher's
                 metadata occurred.
@@ -1841,10 +2182,16 @@ pkg unset-publisher %s
                 'immediate' is an optional boolean value indicating whether
                 a refresh should occur now.  If False, a publisher's selected
                 repository will be checked for updates only if needs_refresh
-                is True."""
+                is True.
+
+                'include_updates' is an optional boolean value indicating
+                whether all catalog updates should be retrieved additionally to
+                the catalog."""
 
                 try:
-                        return self.__refresh(full_refresh, immediate)
+                        return self.__refresh(full_refresh, immediate,
+			    progtrack=progtrack,
+                            include_updates=include_updates)
                 except (api_errors.BadCatalogUpdateIdentity,
                     api_errors.DuplicateCatalogEntry,
                     api_errors.ObsoleteCatalogUpdate,
@@ -1876,7 +2223,7 @@ pkg unset-publisher %s
                         #   by this version of the client, so a full retrieval
                         #   is required.
                         #
-                        return self.__refresh(True, True)
+                        return self.__refresh(True, True, progtrack=progtrack)
                 except api_errors.MismatchedCatalog:
                         if full_refresh:
                                 # If this was a full refresh, don't bother
@@ -1889,17 +2236,18 @@ pkg unset-publisher %s
                         # information) didn't match the catalog attributes.
                         # This could be the result of a misbehaving or stale
                         # cache.
-                        return self.__refresh(False, True, mismatched=True)
+                        return self.__refresh(False, True, mismatched=True,
+			    progtrack=progtrack)
                 except (api_errors.BadCatalogSignatures,
                     api_errors.InvalidCatalogFile):
                         # Assembly of the catalog failed, but this could be due
                         # to a transient error.  So, retry at least once more.
-                        return self.__refresh(True, True)
+                        return self.__refresh(True, True, progtrack=progtrack)
                 except (api_errors.BadCatalogSignatures,
                     api_errors.InvalidCatalogFile):
                         # Assembly of the catalog failed, but this could be due
                         # to a transient error.  So, retry at least once more.
-                        return self.__refresh(True, True)
+                        return self.__refresh(True, True, progtrack=progtrack)
 
         def remove_meta_root(self):
                 """Removes the publisher's meta_root."""
@@ -1949,8 +2297,8 @@ pkg unset-publisher %s
                 except (api_errors.TransportError,
                     api_errors.UnsupportedRepositoryOperation):
                         # Nothing more can be done (because the target origin
-                        # can't be contacted, or beacuse it doesn't support
-                        # retrievel of publisher configuration data).
+                        # can't be contacted, or because it doesn't support
+                        # retrieval of publisher configuration data).
                         return
 
                 if not pubs:
@@ -2011,6 +2359,8 @@ pkg unset-publisher %s
 
         @staticmethod
         def __hash_cert(c):
+                # In order to interoperate with older images, we must use SHA-1
+                # here.
                 return hashlib.sha1(c.as_pem()).hexdigest()
 
         @staticmethod
@@ -2068,7 +2418,7 @@ pkg unset-publisher %s
                 return pkg_hash
 
         def get_cert_by_hash(self, pkg_hash, verify_hash=False,
-            only_retrieve=False):
+            only_retrieve=False, hash_func=digest.DEFAULT_HASH_FUNC):
                 """Given a pkg5 hash, retrieve the cert that's associated with
                 it.
 
@@ -2091,7 +2441,8 @@ pkg unset-publisher %s
                         with open(pth, "rb") as fh:
                                 s = fh.read()
                 else:
-                        s = self.transport.get_content(self, pkg_hash)
+                        s = self.transport.get_content(self, pkg_hash,
+                            hash_func=hash_func)
                 c = self.__string_to_cert(s, pkg_hash)
                 if not pth_exists:
                         try:
@@ -2103,7 +2454,7 @@ pkg unset-publisher %s
 
                 if verify_hash:
                         h = misc.get_data_digest(cStringIO.StringIO(s),
-                            length=len(s))[0]
+                            length=len(s), hash_func=hash_func)[0]
                         if h != pkg_hash:
                                 raise api_errors.ModifiedCertificateException(c,
                                     pth)

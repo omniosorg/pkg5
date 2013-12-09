@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
 
 import testutils
 if __name__ == "__main__":
@@ -44,6 +44,13 @@ class TestPkgMediated(pkg5unittest.SingleDepotTestCase):
         persistent_setup = True
 
         pkg_sendmail = """
+            open pkg://test/sendmail@0.5
+            add set name=pkg.summary value="Example sendmail package"
+            add file tmp/foosm path=/usr/bin/mailq owner=root group=root mode=0555
+            add file tmp/foosm path=/usr/lib/sendmail owner=root group=root mode=2555
+            add link path=/usr/sbin/newaliases target=../lib/sendmail
+            add link path=/usr/sbin/sendmail target=../lib/sendmail
+            close
             open pkg://test/sendmail@1.0
             add set name=pkg.summary value="Example sendmail package"
             add file tmp/foosm path=/usr/lib/sendmail-mta/sendmail owner=root group=root mode=2555
@@ -61,6 +68,15 @@ class TestPkgMediated(pkg5unittest.SingleDepotTestCase):
             add link path=/usr/lib/sendmail target=../lib/sendmail-mta/sendmail mediator=mta mediator-implementation=sendmail mediator-priority=vendor
             add link path=/usr/sbin/newaliases target=../lib/sendmail-mta/sendmail mediator=mta mediator-implementation=sendmail mediator-priority=vendor
             add link path=/usr/sbin/sendmail target=../lib/sendmail-mta/sendmail mediator=mta mediator-implementation=sendmail mediator-priority=vendor
+            close
+            open pkg://test/sendmail@3.0
+            add set name=pkg.summary value="Example sendmail target change package"
+            add file tmp/foosm path=/usr/lib/sendmail3-mta/sendmail owner=root group=root mode=2555
+            add file tmp/foosm path=/usr/lib/sendmail3-mta/mailq owner=root group=root mode=0555
+            add link path=/usr/bin/mailq target=../lib/sendmail3-mta/mailq3 mediator=mta mediator-implementation=sendmail
+            add link path=/usr/lib/sendmail target=../lib/sendmail3-mta/sendmail mediator=mta mediator-implementation=sendmail
+            add link path=/usr/sbin/newaliases target=../lib/sendmail3-mta/sendmail mediator=mta mediator-implementation=sendmail
+            add link path=/usr/sbin/sendmail target=../lib/sendmail3-mta/sendmail mediator=mta mediator-implementation=sendmail
             close """
 
         pkg_sendmail_links = """
@@ -185,6 +201,27 @@ class TestPkgMediated(pkg5unittest.SingleDepotTestCase):
             add link path=/usr/bin/python target=python2.8-unladen-swallow mediator=python mediator-version=2.8 mediator-implementation=unladen-swallow@2.8
             close """
 
+        pkg_multi_python = """
+            open pkg://test/runtime/multi-impl-python-26@2.6.0
+            add set name=pkg.summary value="Example python package with multiple implementations"
+            add file tmp/foopy path=/usr/bin/python2.6 owner=root group=bin mode=0555
+            add link path=/usr/bin/python target=python2.6 mediator=python mediator-implementation=cpython
+            add file tmp/foopyus path=/usr/bin/python2.6-unladen-swallow owner=root group=bin mode=0555
+            add link path=/usr/bin/python target=python2.6-unladen-swallow mediator=python mediator-implementation=unladen-swallow
+            close
+            open pkg://test/runtime/multi-impl-ver-python@2.7.0
+            add set name=pkg.summary value="Example python implementation package with multiple implementations and versions"
+            add file tmp/foopy path=/usr/bin/python2.6 owner=root group=bin mode=0555
+            add link path=/usr/bin/python target=python2.6 mediator=python mediator-version=2.6
+            add file tmp/foopyus path=/usr/bin/python2.6-unladen-swallow owner=root group=bin mode=0555
+            add file tmp/foopy path=/usr/bin/python2.7 owner=root group=bin mode=0555
+            add link path=/usr/bin/python target=python2.7 mediator=python mediator-version=2.7
+            add link path=/usr/bin/python target=python2.6-unladen-swallow mediator=python mediator-version=2.6 mediator-implementation=unladen-swallow
+            add file tmp/foopyus path=/usr/bin/python2.7-unladen-swallow owner=root group=bin mode=0555
+            add link path=/usr/bin/python target=python2.7-unladen-swallow mediator=python mediator-version=2.7 mediator-implementation=unladen-swallow
+            close
+            """
+
         pkg_vi = """
             open pkg://test/editor/nvi@1.0
             add set name=pkg.summary value="Example nvi vendor priority package"
@@ -205,6 +242,28 @@ class TestPkgMediated(pkg5unittest.SingleDepotTestCase):
             add set name=pkg.summary value="Example vim vi site priority package"
             add file tmp/foovim path=/usr/bin/vim owner=root group=bin mode=0555
             add hardlink path=/usr/bin/vi target=vim mediator=vi mediator-implementation=vim mediator-priority=site facet.vi=true
+            close """
+
+        pkg_multi_ver = """
+            open pkg://test/web/server/apache-22/module/apache-php52@5.2.5
+            add set name=pkg.summary value="Example multiple version mod_php package"
+            add file tmp/fooc path=usr/apache2/2.2/libexec/mod_php5.2.so owner=root group=bin mode=0555
+            add link path=usr/apache2/2.2/libexec/mod_php5.so target=mod_php5.2.so mediator=php mediator-version=5.2
+            add file tmp/food path=usr/apache2/2.2/libexec/mod_php5.2.5.so owner=root group=bin mode=0555
+            add link path=usr/apache2/2.2/libexec/mod_php5.so target=mod_php5.2.5.so mediator=php mediator-version=5.2.5
+            close """
+
+        pkg_variant = """
+            open pkg://test/multi-ver-variant@1.0
+            add set name=pkg.summary value="Example mediated varianted package"
+            add file tmp/fooc path=/usr/bin/foo-1-nd owner=root group=bin mode=0555
+            add file tmp/food path=/usr/bin/foo-1-d owner=root group=bin mode=0555
+            add hardlink path=usr/bin/foo target=foo-1-nd mediator=foo mediator-version=1 variant.debug.osnet=false
+            add hardlink path=usr/bin/foo target=foo-1-d mediator=foo mediator-version=1 variant.debug.osnet=true
+            add file tmp/fooc path=/usr/bin/foo-2-nd owner=root group=bin mode=0555
+            add file tmp/food path=/usr/bin/foo-2-d owner=root group=bin mode=0555
+            add hardlink path=usr/bin/foo target=foo-2-nd mediator=foo mediator-version=2 variant.debug.osnet=false
+            add hardlink path=usr/bin/foo target=foo-2-d mediator=foo mediator-version=2 variant.debug.osnet=true
             close """
 
         misc_files = ["tmp/fooc", "tmp/food", "tmp/foopl", "tmp/foopy",
@@ -340,7 +399,7 @@ mta\tlocal\t1.0\tsystem\t\t
 
                 # Now install some packages to test the ability to list
                 # available mediations.
-                self.pkg("install -vvv \*python\* \*perl\* \*vi\*")
+                self.pkg("install -vvv \*/python\* \*perl\* \*vi\*")
 
                 # Test listing all available mediations.
                 self.__assert_available_mediation_matches("""\
@@ -410,6 +469,17 @@ vi\tsystem\t\tsystem\tsvr4\t
 
                 self.image_create(self.rurl)
 
+                def gen_mta_files():
+                        for fname in ("mailq",):
+                                fpath = os.path.join(self.img_path(), "usr",
+                                    "bin", fname)
+                                yield fpath
+
+                        for fname in ("sendmail",):
+                                fpath = os.path.join(self.img_path(), "usr",
+                                    "lib", fname)
+                                yield fpath
+
                 def gen_mta_links():
                         for lname in ("mailq",):
                                 lpath = os.path.join(self.img_path(), "usr",
@@ -432,11 +502,22 @@ vi\tsystem\t\tsystem\tsvr4\t
                                     "bin", lname)
                                 yield lpath
 
+                def gen_php_links():
+                        for lname in ("mod_php5.so",):
+                                lpath = os.path.join(self.img_path(), "usr",
+                                    "apache2", "2.2", "libexec", lname)
+                                yield lpath
+
                 def gen_python_links():
                         for lname in ("python",):
                                 lpath = os.path.join(self.img_path(), "usr",
                                     "bin", lname)
                                 yield lpath
+
+                def check_files(files):
+                        for fpath in files:
+                                s = os.lstat(fpath)
+                                self.assert_(stat.S_ISREG(s.st_mode))
 
                 def check_target(links, target):
                         for lpath in links:
@@ -462,8 +543,17 @@ vi\tsystem\t\tsystem\tsvr4\t
 
                 # Some installs are done with extra verbosity to ease in
                 # debugging tests when they fail.
+                self.pkg("install -vvv sendmail@0.5")
+                self.pkg("mediator") # If tests fail, this is helpful.
+
+                # Verify that /usr/bin/mailq and /usr/lib/sendmail are files.
+                check_files(gen_mta_files())
+                self.pkg("verify -v")
+
+                # Upgrading to 1.0 should transition the files to links.
                 self.pkg("install -vvv sendmail@1")
                 self.pkg("mediator") # If tests fail, this is helpful.
+                self.pkg("verify -v")
 
                 # Check that installed links point to sendmail and that
                 # verify passes.
@@ -472,6 +562,25 @@ vi\tsystem\t\tsystem\tsvr4\t
                 self.__assert_mediation_matches("""\
 mta\tsystem\t\tsystem\tsendmail\t
 """)
+
+                # Upgrading to 3.0 should change the targets of every link.
+                self.pkg("install -vvv sendmail@3")
+                self.pkg("mediator") # If tests fail, this is helpful.
+                check_target(gen_mta_links(), "sendmail3-mta")
+                self.pkg("verify -v")
+
+                # Downgrading to 0.5 should change sendmail and mailq links back
+                # to a file.
+                self.pkg("update -vvv sendmail@0.5")
+                self.pkg("mediator") # If tests fail, this is helpful.
+                check_files(gen_mta_files())
+                self.pkg("verify -v")
+
+                # Finally, upgrade to 1.0 again for remaining tests.
+                self.pkg("update -vvv sendmail@1.0")
+                self.pkg("mediator") # If tests fail, this is helpful.
+                check_target(gen_mta_links(), "sendmail-mta")
+                self.pkg("verify -v")
 
                 # Install postfix (this should succeed even though sendmail is
                 # already installed) and the links should be updated to point to
@@ -886,6 +995,88 @@ python\tsystem\t2.7\tlocal\tunladen-swallow@\t
                 self.pkg("fix")
                 self.pkg("verify -v")
 
+                # Remove all packages; then verify that installing a single
+                # package that has multiple version mediations works as
+                # expected.
+                self.pkg("unset-mediator -I python")
+                self.pkg("uninstall \*")
+
+                # Install apache-php52; verify that php 5.2.5 is selected.
+                self.pkg("install -vvv apache-php52")
+                self.__assert_mediation_matches("""\
+php\tsystem\t5.2.5\tsystem\t\t
+""")
+                check_target(gen_php_links(), "5.2.5")
+                self.pkg("verify")
+
+                # Test available mediations.
+                self.__assert_available_mediation_matches("""\
+php\tsystem\t5.2.5\tsystem\t\t
+php\tsystem\t5.2\tsystem\t\t
+""")
+
+                # Set mediation version to 5.2 and verify 5.2.5 is NOT selected.
+                self.pkg("set-mediator -vvv -V 5.2 php")
+                self.__assert_mediation_matches("""\
+php\tlocal\t5.2\tsystem\t\t
+""")
+                check_not_target(gen_php_links(), "5.2.5")
+                self.pkg("verify")
+
+                # Remove all packages; then verify that installing a single
+                # package that has multiple mediation implementations works as
+                # expected.
+                self.pkg("uninstall \*")
+                self.pkg("unset-mediator -V php")
+
+                # Install multi-impl-python; verify that unladen swallow is NOT
+                # selected.
+                self.pkg("install -vvv multi-impl-python-26")
+                self.__assert_mediation_matches("""\
+python\tsystem\t\tsystem\tcpython\t
+""")
+                check_not_target(gen_python_links(), "unladen-swallow")
+                self.pkg("verify")
+
+                # Test available mediations.
+                self.__assert_available_mediation_matches("""\
+python\tsystem\t\tsystem\tcpython\t
+python\tsystem\t\tsystem\tunladen-swallow\t
+""")
+
+                # Set mediation implementation to unladen swallow and verify it
+                # was selected.
+                self.pkg("set-mediator -vvv -I unladen-swallow python")
+                self.__assert_mediation_matches("""\
+python\tsystem\t\tlocal\tunladen-swallow\t
+""")
+                check_target(gen_python_links(), "unladen-swallow")
+                self.pkg("verify")
+
+                # Remove all packages; then verify that installing a single
+                # package that has multiple mediation and version
+                # implementations works as expected.
+                self.pkg("uninstall \*")
+                self.pkg("unset-mediator -I python")
+                self.pkg("install -vvv multi-impl-ver-python")
+
+                # Verify that the default implementation of Python 2.7 was
+                # selected even though the package offers Python 2.6 and an
+                # unladen swallow implemenation of each version of Python.
+                self.__assert_mediation_matches("""\
+python\tsystem\t2.7\tsystem\t\t
+""")
+                check_not_target(gen_python_links(), "unladen-swallow")
+                self.pkg("verify")
+
+                # Test available mediations.
+                self.__assert_available_mediation_matches("""\
+python\tsystem\t2.7\tsystem\t\t
+python\tsystem\t2.7\tsystem\tunladen-swallow\t
+python\tsystem\t2.6\tsystem\t\t
+python\tsystem\t2.6\tsystem\tunladen-swallow\t
+""")
+
         def test_02_hardlink_mediation(self):
                 """Verify that package mediation works as expected for install,
                 update, and uninstall with hardlinks.
@@ -987,6 +1178,52 @@ vi\tsite\t\tsite\tvim\t
                 assert_target(vi_path, vim_path)
                 self.__assert_mediation_matches("""\
 vi\tsite\t\tsite\tvim\t
+""")
+
+                # Uninstall all packages; then verify that a single package
+                # containing multiple varianted, mediated hardlinks works as
+                # expected.
+                self.pkg("uninstall \*")
+
+                foo_path = get_link_path("usr", "bin", "foo")
+                foo_1_nd_path = get_link_path("usr", "bin", "foo-1-nd")
+                foo_1_d_path = get_link_path("usr", "bin", "foo-1-d")
+                foo_2_nd_path = get_link_path("usr", "bin", "foo-2-nd")
+                foo_2_d_path = get_link_path("usr", "bin", "foo-2-d")
+
+                # Install multi-ver-variant and verify version 2 non-debug is
+                # selected.
+                self.pkg("install -vvv multi-ver-variant")
+                assert_target(foo_path, foo_2_nd_path)
+                self.__assert_mediation_matches("""\
+foo\tsystem\t2\tsystem\t\t
+""")
+                self.pkg("verify")
+
+                # Set debug variant and verify version 2 debug is selected.
+                self.pkg("change-variant -vvv debug.osnet=true")
+                assert_target(foo_path, foo_2_d_path)
+                self.__assert_mediation_matches("""\
+foo\tsystem\t2\tsystem\t\t
+""")
+                self.pkg("verify")
+
+                # Set mediator version to 1 and verify version 1 debug is
+                # selected.
+                self.pkg("set-mediator -vvv -V 1 foo")
+                assert_target(foo_path, foo_1_d_path)
+                self.__assert_mediation_matches("""\
+foo\tlocal\t1\tsystem\t\t
+""")
+                self.pkg("verify")
+
+                # Reset debug variant and verify version 1 non-debug is
+                # selected.
+                self.pkg("change-variant -vvv debug.osnet=false")
+                self.pkg("verify")
+                assert_target(foo_path, foo_1_nd_path)
+                self.__assert_mediation_matches("""\
+foo\tlocal\t1\tsystem\t\t
 """)
 
 

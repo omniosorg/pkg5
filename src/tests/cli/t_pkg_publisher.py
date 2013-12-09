@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2008, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
 #
 
 import testutils
@@ -29,6 +29,7 @@ if __name__ == "__main__":
         testutils.setup_environment("../../../proto")
 import pkg5unittest
 
+import hashlib
 import os
 import pkg.client.image as image
 import pkg.misc
@@ -66,6 +67,7 @@ class TestPkgPublisherBasics(pkg5unittest.SingleDepotTestCase):
                 self.pkg("set-publisher -c", exit=2)
                 self.pkg("set-publisher -O", exit=2)
                 self.pkg("unset-publisher", exit=2)
+                self.pkg("unset-publisher -k", exit=2)
 
         def test_publisher_add_remove(self):
                 """pkg: add and remove a publisher"""
@@ -87,15 +89,6 @@ class TestPkgPublisherBasics(pkg5unittest.SingleDepotTestCase):
                 self.pkg("publisher | grep test2")
                 self.pkg("unset-publisher test1")
                 self.pkg("publisher | grep test1", exit=1)
-
-                # Verify that compatibility commands for publisher work (only
-                # minimal verification is needed since these commands map
-                # directly to the publisher ones).  All of these are deprecated
-                # and will be removed at a future date.
-                self.pkg("authority test2")
-                self.pkg("set-authority --no-refresh -O http://%s2 test1" %
-                    self.bogus_url)
-                self.pkg("unset-authority test1")
 
                 # Now verify that partial success (3) or complete failure (1)
                 # is properly returned if an attempt to remove one or more
@@ -168,8 +161,12 @@ class TestPkgPublisherBasics(pkg5unittest.SingleDepotTestCase):
                     exit=2)
 
                 # Listing publishers should succeed even if key file is gone.
+                # This test relies on using the same implementation used in
+                # image.py __store_publisher_ssl() which sets the paths to the
+                # SSL keys/certs.
                 img_key_path = os.path.join(self.img_path(), "var", "pkg",
-                    "ssl", pkg.misc.get_data_digest(key_path)[0])
+                    "ssl", pkg.misc.get_data_digest(key_path,
+                    hash_func=hashlib.sha1)[0])
                 os.unlink(img_key_path)
                 self.pkg("publisher test1")
 
@@ -195,7 +192,8 @@ class TestPkgPublisherBasics(pkg5unittest.SingleDepotTestCase):
 
                 # Listing publishers should be possible if cert file is gone.
                 img_cert_path = os.path.join(self.img_path(), "var", "pkg",
-                    "ssl", pkg.misc.get_data_digest(cert_path)[0])
+                    "ssl", pkg.misc.get_data_digest(cert_path,
+                    hash_func=hashlib.sha1)[0])
                 os.unlink(img_cert_path)
                 self.pkg("publisher test1", exit=3)
 
@@ -319,10 +317,15 @@ class TestPkgPublisherBasics(pkg5unittest.SingleDepotTestCase):
                 self.pkg("set-publisher --no-refresh -c %s test1" % cert_path)
                 self.pkg("set-publisher --no-refresh -k %s test1" % key_path)
 
+                # This test relies on using the same implementation used in
+                # image.py __store_publisher_ssl() which sets the paths to the
+                # SSL keys/certs.
                 img_key_path = os.path.join(self.img_path(), "var", "pkg",
-                    "ssl", pkg.misc.get_data_digest(key_path)[0])
+                    "ssl", pkg.misc.get_data_digest(key_path,
+                    hash_func=hashlib.sha1)[0])
                 img_cert_path = os.path.join(self.img_path(), "var", "pkg",
-                    "ssl", pkg.misc.get_data_digest(cert_path)[0])
+                    "ssl", pkg.misc.get_data_digest(cert_path,
+                    hash_func=hashlib.sha1)[0])
 
                 # Make the cert/key unreadable by unprivileged users.
                 os.chmod(img_key_path, 0000)
@@ -349,16 +352,16 @@ class TestPkgPublisherBasics(pkg5unittest.SingleDepotTestCase):
                     self.bogus_url)
 
                 base_string = ("test\ttrue\tfalse\ttrue\torigin\tonline\t"
-                    "%s/\n"
+                    "%s/\t-\n"
                     "test1\ttrue\tfalse\ttrue\torigin\tonline\t"
-                    "https://%s1/\n"
+                    "https://%s1/\t-\n"
                     "test2\ttrue\tfalse\ttrue\torigin\tonline\t"
-                    "http://%s2/\n" % (self.rurl, self.bogus_url,
+                    "http://%s2/\t-\n" % (self.rurl, self.bogus_url,
                     self.bogus_url))
                 # With headers
                 self.pkg("publisher -F tsv")
                 expected = "PUBLISHER\tSTICKY\tSYSPUB\tENABLED" \
-                    "\tTYPE\tSTATUS\tURI\n" + base_string
+                    "\tTYPE\tSTATUS\tURI\tPROXY\n" + base_string
                 output = self.reduceSpaces(self.output)
                 self.assertEqualDiff(expected, output)
 
@@ -455,6 +458,83 @@ class TestPkgPublisherBasics(pkg5unittest.SingleDepotTestCase):
                 self.pkg("install foo")
                 self.pkg("unset-publisher test")
                 self.pkg("publisher -P", exit=0)
+
+        def test_publisher_proxies(self):
+                """Tests that set-publisher can add and remove proxy values
+                per origin."""
+
+                self.image_create(self.rurl)
+                self.pkg("publisher test")
+                self.assert_("Proxy:" not in self.output)
+
+                # check origin and mirror addition/removal when proxies are used
+                for add, remove in [("-g", "-G"), ("-m", "-M")]:
+                        self.image_create(self.rurl)
+                        # we can't proxy file repositories
+                        self.pkg("set-publisher --no-refresh %(add)s %(url)s "
+                            "--proxy http://foo test" %
+                            {"add": add, "url": self.rurl}, exit=1)
+                        self.pkg("publisher test")
+                        self.assert_("Proxy:" not in self.output)
+
+                        # we can set the proxy for http repos
+                        self.pkg("set-publisher --no-refresh %(add)s %(url)s "
+                            "--proxy http://foo test" %
+                            {"add": add, "url": self.durl})
+
+                        self.pkg("publisher test")
+                        self.assert_("Proxy: http://foo" in self.output)
+
+                        # remove the file-based repository and ensure we still
+                        # have a proxied http-based publisher
+                        self.pkg("set-publisher --no-refresh -G %s test" %
+                            self.rurl)
+                        self.pkg("publisher -F tsv")
+                        self.assert_("%s/\thttp://foo" %
+                            self.durl in self.output)
+                        self.assert_(self.rurl not in self.output)
+
+                        # ensure we can't add duplicate proxied or unproxied
+                        # repositories
+                        self.pkg("set-publisher --no-refresh %(add)s %(url)s "
+                            "--proxy http://foo test" %
+                            {"add": add, "url": self.durl}, exit=1)
+                        self.pkg("set-publisher --no-refresh %(add)s %(url)s "
+                            "test" % {"add": add, "url": self.durl}, exit=1)
+
+                        # we should have 1 proxied occurrence of our http url
+                        self.pkg("publisher -F tsv")
+                        self.assert_("%s/\thttp://foo" %
+                            self.durl in self.output)
+                        self.assert_("\t\t%s" % self.durl not in self.output)
+
+                        # when removing a proxied url, then adding the same url
+                        # unproxied, the proxy configuration does get removed
+                        self.pkg("set-publisher --no-refresh %(remove)s %(url)s"
+                            " test" % {"remove": remove, "url": self.durl},
+                            exit=0)
+                        self.pkg("set-publisher --no-refresh %(add)s %(url)s "
+                            "test" % {"add": add, "url": self.durl}, exit=0)
+                        self.pkg("publisher -F tsv")
+                        self.assert_("%s/\thttp://foo" %
+                            self.durl not in self.output)
+                        self.pkg("set-publisher --no-refresh %(remove)s "
+                            "%(url)s test" %
+                            {"remove": remove, "url": self.durl})
+
+                        # when we add multiple urls, and they all get the same
+                        # proxy value, leaving an existing non-proxied url
+                        # as non-proxied.
+                        self.pkg("set-publisher --no-refresh %(add)s http://a "
+                            "test" % {"add": add})
+                        self.pkg("set-publisher --no-refresh %(add)s http://b "
+                            "%(add)s http://c --proxy http://foo test" %
+                            {"add": add})
+                        self.pkg("publisher -F tsv")
+                        self.assert_("http://a/\t-" in self.output)
+                        self.assert_("http://b/\thttp://foo" in self.output)
+                        self.assert_("http://c/\thttp://foo" in self.output)
+
 
 class TestPkgPublisherMany(pkg5unittest.ManyDepotTestCase):
         # Only start/stop the depot once (instead of for every test)
@@ -732,13 +812,6 @@ class TestPkgPublisherMany(pkg5unittest.ManyDepotTestCase):
                 self.__update_repo_pub_cfg(self.dcs[6], t6cfg)
                 self.dcs[6].start()
 
-                # Should fail since even though repository publisher prefix
-                # matches test3, the new origin isn't configured for test3,
-                # and as a result isn't a known source for publisher updates.
-                self.pkg("set-publisher -p %s" % durl6, exit=1)
-
-                # So, add the new origin to the publisher.
-                self.pkg("set-publisher -g %s test3" % durl6)
                 self.pkg("set-publisher -p %s" % durl6)
 
                 # Load image configuration to verify publisher was configured
@@ -775,6 +848,28 @@ class TestPkgPublisherMany(pkg5unittest.ManyDepotTestCase):
                 self.pkg("set-publisher -P -p %s" % durl6)
                 self.assertEqual(get_pubs(), ["test1", "test2", "test3"])
 
+                # Check that --proxy arguments are set on all auto-configured
+                # publishers.  We use $no_proxy='*' in the environment so that
+                # we can persist a dummy --proxy value to the image
+                # configuration, yet still reach the test depot to obtain the
+                # publisher/ response.
+                self.pkg("unset-publisher test3")
+                self.pkg("unset-publisher test2")
+                self.pkg("set-publisher -P --proxy http://myproxy -p %s" %
+                    durl6, env_arg={"no_proxy": "*"})
+                self.assertEqual(get_pubs(), ["test2", "test3", "test1"])
+
+                # Verify that only test2 and test3 have proxies set, since
+                # test1 already existed, it should not use a proxy. The proxy
+                # column is the last one printed on each line.
+                self.pkg("publisher -HF tsv")
+                for l in self.output.splitlines():
+                        if l.startswith("test2") or l.startswith("test3"):
+                                self.assertEqual("http://myproxy",
+                                    l.split()[-1])
+                        else:
+                                self.assertEqual("-", l.split()[-1])
+
         def test_set_mirrors_origins(self):
                 """Test set-publisher functionality for mirrors and origins."""
 
@@ -797,10 +892,15 @@ class TestPkgPublisherMany(pkg5unittest.ManyDepotTestCase):
                     (key_path, cert_path))
                 self.pkg("publisher test1")
 
+                # This test relies on using the same implementation used in
+                # image.py __store_publisher_ssl() which sets the paths to the
+                # SSL keys/certs.
                 img_key_path = os.path.join(self.img_path(), "var", "pkg",
-                    "ssl", pkg.misc.get_data_digest(key_path)[0])
+                    "ssl", pkg.misc.get_data_digest(key_path,
+                    hash_func=hashlib.sha1)[0])
                 img_cert_path = os.path.join(self.img_path(), "var", "pkg",
-                    "ssl", pkg.misc.get_data_digest(cert_path)[0])
+                    "ssl", pkg.misc.get_data_digest(cert_path,
+                    hash_func=hashlib.sha1)[0])
                 self.assert_(img_key_path in self.output)
                 self.assert_(img_cert_path in self.output)
 
@@ -996,6 +1096,52 @@ class TestPkgPublisherMany(pkg5unittest.ManyDepotTestCase):
                 # set publishers to expected configuration
                 self.pkg("set-publisher -P -p %s" % self.durl1)
                 self.pkg("set-publisher -p %s" % self.durl3)
+
+
+class TestMultiPublisherRepo(pkg5unittest.ManyDepotTestCase):
+
+        foo1 = """
+            open foo@1,5.11-0
+            close """
+
+        bar1 = """
+            open bar@1,5.11-0
+            close """
+
+        baz1 = """
+            open pkg://another-pub/baz@1,5.11-0
+            close """
+
+
+        def setUp(self):
+                # This test suite needs actual depots.
+                pkg5unittest.ManyDepotTestCase.setUp(self, ["test1", "test2"])
+
+                self.rurl1 = self.dcs[1].get_repo_url()
+                self.pkgsend_bulk(self.rurl1, self.foo1 + self.baz1)
+
+                self.rurl2 = self.dcs[2].get_repo_url()
+                self.pkgsend_bulk(self.rurl2, self.bar1)
+
+        def test_multi_publisher_search_before(self):
+                """Test that using search before and -p on a multipublisher
+                repository works."""
+
+                self.image_create(self.rurl2)
+                self.pkg("set-publisher --search-before test2 -p %s" %
+                    self.rurl1)
+                self.pkg("publisher -HF tsv")
+                lines = self.output.splitlines()
+                self.assertEqual(lines[0].split()[0], "another-pub")
+                self.assertEqual(lines[1].split()[0], "test1")
+                self.assertEqual(lines[2].split()[0], "test2")
+
+        def test_multiple_p_option(self):
+                """Verify that providing multiple repositories using 
+                -p option fails"""
+                self.image_create()
+                self.pkg("set-publisher -p %s -p %s" % (self.rurl1,
+                    self.rurl2), exit=2)
 
 
 class TestPkgPublisherCACerts(pkg5unittest.ManyDepotTestCase):

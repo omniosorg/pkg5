@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
 #
 
 import os
@@ -44,6 +44,7 @@ from pkg.choose import choose
 from pkg.misc import EmptyI
 
 FILE_OPEN_TIMEOUT_SECS = 1
+MAX_TOKEN_COUNT = 100
 
 class QueryLexer(object):
         """This class defines the lexer used to separate parse queries into
@@ -374,6 +375,19 @@ class QueryException(Exception):
                 return str(self)
 
 
+class QueryLengthExceeded(QueryException):
+
+        def __init__(self, token_cnt):
+                QueryException.__init__(self)
+                self.token_cnt = token_cnt
+
+        def __str__(self):
+                return _("The number of terms in the query is %(len)i, "
+                    "which exceeds the maximum supported "
+                    "value of %(maxt)i terms.") % { "len": self.token_cnt,
+                    "maxt": MAX_TOKEN_COUNT }
+
+
 class DetailedValueError(QueryException):
 
         def __init__(self, name, bad_value, whole_query):
@@ -412,21 +426,13 @@ class ParseError(QueryException):
                 self.pos = string_position
                 self.str = input_string
 
-        def __str__(self, html=False):
-                line_break = "\n"
-                pre_tab = ""
-                end_pre_tab = ""
-                if html:
-                        line_break = "<br/>"
-                        pre_tab = "<pre>"
-                        end_pre_tab = "</pre>"
-                return line_break.join([_("Could not parse query."),
-                    _("Problem occurred with: %s") % self.p,
-                    "%s%s" % (pre_tab, cgi.escape(self.str)),
-                    "%s%s" % (" " * max(self.pos - 1, 0) + "^", end_pre_tab)])
-
-        def html(self):
-                return self.__str__(html=True)
+        def __str__(self):
+                # BUI will interpret a line starting with a \t as pre-formatted
+                # and put it in <pre> tags.
+                return "\n".join([_("Could not parse query."),
+                    _("Problem occurred with: %s\t") % self.p,
+                    "\t%s" % self.str,
+                    "\t%s" % (" " * max(self.pos - 1, 0) + "^")])
 
 
 class Query(object):
@@ -456,6 +462,10 @@ class Query(object):
 
                 The "start_point" parameter is the number of results to skip
                 before returning results to the querier."""
+
+                token_cnt = len(text.split(" "))
+                if token_cnt > MAX_TOKEN_COUNT:
+                         raise QueryLengthExceeded(token_cnt)
 
                 self.text = text
                 self.case_sensitive = case_sensitive
@@ -523,42 +533,27 @@ class Query(object):
                 return pfmri
 
 
-class UnknownFieldTypeException(Exception):
-        def __init__(self, field_kind, field_value):
-                Exception.__init__(self)
-                self.field_kind = field_kind
-                self.field_value = field_value
-
-
 class BooleanQueryException(QueryException):
         """This exception is used when the two children of a boolean query
         don't agree on whether to return actions or packages."""
 
         def __init__(self, ac, pc):
                 """The parameter "ac" is the child which returned actions
-                while "pc" is the child which returned pacakges."""
+                while "pc" is the child which returned packages."""
                 QueryException.__init__(self)
                 self.ac = ac
                 self.pc = pc
 
-        def __str__(self, html=False):
-                line_break = "\n"
-                pre_tab = ""
-                end_pre_tab = ""
-                if html:
-                        line_break = "<br/>"
-                        pre_tab = "<pre>"
-                        end_pre_tab = "</pre>"
+        def __str__(self):
+                # BUI will interpret a line starting with a \t as pre-formatted
+                # and put it in <pre> tags.
                 ac_s = _("This expression produces action results:")
-                ac_q = "%s%s%s" % (pre_tab, self.ac, end_pre_tab)
+                ac_q = "\t%s" % self.ac
                 pc_s = _("This expression produces package results:")
-                pc_q = "%s%s%s" % (pre_tab, self.pc, end_pre_tab)
-                return line_break.join([ac_s, ac_q, pc_s, pc_q,
+                pc_q = "\t%s" % self.pc
+                return "\n".join([ac_s, ac_q, pc_s, pc_q,
                     _("'AND' and 'OR' require those expressions to produce "
                     "the same type of results.")])
-
-        def html(self):
-                return self.__str__(html=True)
 
 
 class BooleanQuery(object):
@@ -1418,6 +1413,12 @@ class TermQuery(object):
                 elif self._data_token_offset.has_entity(term):
                         offsets = set([
                             self._data_token_offset.get_id(term)])
+                else:
+                        # Close the dictionaries since there are
+                        # no more results to yield.
+                        self._close_dicts()
+                        return
+
                 # Restrict results by package name.
                 if not self.pkg_name_wildcard:
                         try:
@@ -1527,11 +1528,6 @@ class TermQuery(object):
                 self._close_dicts()
                 return
 
-        @staticmethod
-        def __get_key(k):
-                p_id, p_str = k
-                return p_str
-        
         def _get_results(self, res):
                 """Takes the results from search_internal ("res") and reads the
                 lines from the manifest files at the provided offsets."""

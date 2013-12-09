@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2008, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
 #
 
 import testutils
@@ -30,6 +30,7 @@ if __name__ == "__main__":
 import pkg5unittest
 
 import copy
+import hashlib
 import os
 import shutil
 import sys
@@ -40,6 +41,7 @@ import pkg.catalog as catalog
 import pkg.client.pkgdefs as pkgdefs
 import pkg.fmri as fmri
 import pkg.indexer as indexer
+import pkg.portable as portable
 
 
 class TestPkgSearchBasics(pkg5unittest.SingleDepotTestCase):
@@ -64,7 +66,7 @@ class TestPkgSearchBasics(pkg5unittest.SingleDepotTestCase):
             add dir mode=0755 owner=root group=bin path=/bin
             add file tmp/example_file mode=0555 owner=root group=bin path=/bin/example_path11
             close """
-        
+
         incorp_pkg10 = """
             open incorp_pkg@1.0,5.11-0
             add depend fmri=example_pkg@1.0,5.11-0 type=incorporate
@@ -134,6 +136,11 @@ close
         res_remote_path = set([
             headers,
             "basename   file      bin/example_path          pkg:/example_pkg@1.0-0\n"
+        ])
+
+        res_remote_case_sensitive = set([
+            headers,
+            "pkg.fmri	set	test/example_pkg pkg:/example_pkg@1.0-0\n"
         ])
 
         res_remote_bin = set([
@@ -289,7 +296,8 @@ adm:NP:6445::::::
 
         res_remote_file = set([
             'path       file      bin/example_path          pkg:/example_pkg@1.0-0\n',
-            'b40981aab75932c5b2f555f50769d878e44913d7 file      bin/example_path          pkg:/example_pkg@1.0-0\n'
+            'b40981aab75932c5b2f555f50769d878e44913d7 file      bin/example_path          pkg:/example_pkg@1.0-0\n',
+            'hash                                     file   bin/example_path pkg:/example_pkg@1.0-0\n'
         ]) | res_remote_path
 
 
@@ -302,7 +310,8 @@ adm:NP:6445::::::
              headers,
              'path       file      bin/example_path          pkg:/example_pkg@1.0-0\n',
              'basename   file      bin/example_path          pkg:/example_pkg@1.0-0\n',
-             'b40981aab75932c5b2f555f50769d878e44913d7 file      bin/example_path          pkg:/example_pkg@1.0-0\n'
+             'b40981aab75932c5b2f555f50769d878e44913d7 file      bin/example_path          pkg:/example_pkg@1.0-0\n',
+             'hash                                     file   bin/example_path pkg:/example_pkg@1.0-0\n'
         ])
 
         o_headers = \
@@ -329,6 +338,14 @@ adm:NP:6445::::::
 
         res_pkg_options_remote = set([pkg_headers, pkg_results])
         res_pkg_options_local = set([pkg_headers, pkg_results_no_pub])
+
+        # Creating a query string in which the number of terms is > 100
+        large_query = "a b c d e f g h i j k l m n o p q r s t u v w x y z" \
+                      "a b c d e f g h i j k l m n o p q r s t u v w x y z" \
+                      "a b c d e f g h i j k l m n o p q r s t u v w x y z" \
+                      "a b c d e f g h i j k l m n o p q r s t u v w x y z" \
+                      "a b c d e f g h i j k l m n o p q r s t u v w x y z" \
+                      "a b c d e f g h i j k l m n o p q r s t u v w x y z"
 
         def setUp(self):
                 # This test needs an actual depot for now.
@@ -381,6 +398,8 @@ adm:NP:6445::::::
                 self.pkg("search -a -r example_pkg")
 
                 self._search_op(True, "example_path", self.res_remote_path)
+                self._search_op(True, "':set:pkg.fmri:exAMple_pkg'",
+                    self.res_remote_case_sensitive, case_sensitive=False)
                 self._search_op(True, "'(example_path)'", self.res_remote_path)
                 self._search_op(True, "'<exam*:::>'",
                     self.res_remote_pkg_ret_pkg)
@@ -456,6 +475,12 @@ adm:NP:6445::::::
                 self.pkg("search -a -r 'e* AND <e*>'", exit=1)
                 self.pkg("search -a -r '<e*> OR e*'", exit=1)
                 self.pkg("search -a -r 'e* OR <e*>'", exit=1)
+                self._search_op(True, "pkg:/example_path", self.res_remote_path)
+                self.pkg("search -a -r -I ':set:pkg.fmri:exAMple_pkg'", exit=1)
+                self.assert_(self.errout == "" )
+
+                self.pkg("search -a -r %s" %self.large_query, exit=1)
+                self.assert_(self.errout != "") 
 
         def _run_local_tests(self):
                 outfile = os.path.join(self.test_root, "res")
@@ -529,6 +554,10 @@ adm:NP:6445::::::
                 self.pkg("search -a -l 'e* AND <e*>'", exit=1)
                 self.pkg("search -a -l '<e*> OR e*'", exit=1)
                 self.pkg("search -a -l 'e* OR <e*>'", exit=1)
+                self._search_op(False, "pkg:/example_path", self.res_local_path)
+
+                self.pkg("search -a -l %s" %self.large_query, exit=1)
+                self.assert_(self.errout != "") 
 
         def _run_local_empty_tests(self):
                 self.pkg("search -a -l example_pkg", exit=1)
@@ -550,9 +579,10 @@ adm:NP:6445::::::
 
         def pkgsend_bulk(self, durl, pkg):
                 # Ensure indexing is performed for every published package.
-                pkg5unittest.SingleDepotTestCase.pkgsend_bulk(self, durl, pkg,
-                    refresh_index=True)
+                plist = pkg5unittest.SingleDepotTestCase.pkgsend_bulk(self,
+                    durl, pkg, refresh_index=True)
                 self.wait_repo(self.dc.get_repodir())
+                return plist
 
         def test_pkg_search_cli(self):
                 """Test search cli options."""
@@ -927,11 +957,206 @@ adm:NP:6445::::::
                 self.pkg("install fat")
                 self.pkg("install empty")
                 self.__run_empty_attrs_searches(remote=False)
-                for i in range(0, indexer.MAX_ADDED_NUMBER_PACKAGES + 1):
+                for i in range(0, indexer.MAX_FAST_INDEXED_PKGS + 1):
                         self.pkgsend_bulk(durl, self.empty_attr_pkg10_templ %
                             {"ver": i})
                 self.pkg("install 'empty*'")
                 self.pkg("search 'empty*'")
+
+        def test_missing_manifest(self):
+                """Check that missing manifests don't cause a traceback when
+                indexing or searching."""
+
+                rurl = self.dc.get_repo_url()
+                plist = self.pkgsend_bulk(rurl, self.example_pkg10)
+                api_obj = self.image_create(rurl)
+                self._api_install(api_obj, ["example_pkg"])
+                client_manifest_file = self.get_img_manifest_path(
+                    fmri.PkgFmri(plist[0]))
+                portable.remove(client_manifest_file)
+                # Test search with a missing manifest.
+                self.pkg("search -l /bin", exit=1)
+                # Test rebuilding the index with a missing manifest.
+                self.pkg("rebuild-index")
+
+        def test_15807844(self):
+                """ Check that pkg search for temporary sources is successful
+                when there no publishers configured in the image."""
+
+                rurl = self.dc.get_repo_url()
+                self.pkgsend_bulk(rurl, self.example_pkg10)
+                self.image_create()
+                expected = \
+                "INDEX ACTION VALUE PACKAGE\n" \
+                "basename file bin/example_path pkg:/example_pkg@1.0-0\n"
+                self.pkg("search -s %s example_path" % self.rurl)
+                actual = self.reduceSpaces(self.output)
+                expected = self.reduceSpaces(expected)
+                self.assertEqualDiff(expected, actual)
+                self.pkg("search example_path", exit=1)
+
+
+class TestSearchMultiPublisher(pkg5unittest.ManyDepotTestCase):
+
+        same_pub1 = """
+            open same_pub1@1.1,5.11-0
+            add dir mode=0755 owner=root group=bin path=/bin
+            add file tmp/samepub_file1 mode=0555 owner=root group=bin path=/bin/samepub_file1
+            close """
+
+        same_pub2 = """
+            open same_pub2@1.1,5.11-0
+            add dir mode=0755 owner=root group=bin path=/bin
+            add file tmp/samepub_file2 mode=0555 owner=root group=bin path=/bin/samepub_file2
+            close """
+
+        example_pkg11 = """
+            open pkg://test1/example_pkg@1.2,5.11-0
+            add dir mode=0755 owner=root group=bin path=/bin
+            add file tmp/example_file mode=0555 owner=root group=bin path=/bin/example_path12
+            close """
+        
+        incorp_pkg11 = """
+            open pkg://test1/incorp_pkg@1.2,5.11-0
+            add depend fmri=pkg://test1/example_pkg@1.2,5.11-0 type=incorporate
+            close """
+
+        example_pkg12 = """
+            open pkg://test2/example_pkg@1.2,5.11-0
+            add dir mode=0755 owner=root group=bin path=/bin
+            add file tmp/example_file mode=0555 owner=root group=bin path=/bin/example_path12
+            close """
+        
+        incorp_pkg12 = """
+            open pkg://test2/incorp_pkg@1.3,5.11-0
+            add depend fmri=pkg://test2/example_pkg@1.2,5.11-0 type=incorporate
+            close """
+
+        misc_files = {
+            "tmp/samepub_file1": "magic",
+            "tmp/samepub_file2": "magic",
+            "tmp/example_file": "magic",
+        }
+
+        def setUp(self):
+                pkg5unittest.ManyDepotTestCase.setUp(self, ["samepub",
+                    "samepub"], start_depots=True)
+                self.make_misc_files(self.misc_files)
+                self.durl1 = self.dcs[1].get_depot_url()
+                self.pkgsend_bulk(self.durl1, self.same_pub1, refresh_index=True)
+                self.durl2 = self.dcs[2].get_depot_url()
+                self.rurl2 = self.dcs[2].get_repo_url()
+                # our 2nd depot gets the package published with multiple hash
+                # attributes, but served from a single-hash-aware depot
+                # (the fact that it's single-hash-aware should make no
+                # difference to the content it serves so long as the index was
+                # generated while we were aware of multiple hashes.
+                self.pkgsend_bulk(self.rurl2, self.same_pub2,
+                    refresh_index=True, debug_hash="sha1+sha256")
+
+        def test_7140657(self):
+                """ Check that pkg search with -s works as intended when there are
+                two repositories with same publisher name configured."""
+
+                self.pkgsend_bulk(self.durl1, self.same_pub1, refresh_index=True)
+                self.pkgsend_bulk(self.durl2, self.same_pub2, refresh_index=True)
+                self.image_create(self.durl1, prefix="samepub")
+                self.pkg("set-publisher -g %s samepub" % self.durl2)
+                self.pkg("search -s %s samepub_file1" % self.durl1)
+
+                result_same_pub = \
+                "INDEX ACTION VALUE PACKAGE\n" \
+                "basename file bin/samepub_file1 pkg:/same_pub1@1.1-0\n"
+
+                actual = self.reduceSpaces(self.output)
+                expected = self.reduceSpaces(result_same_pub)
+                self.assertEqualDiff(expected, actual)
+                self.pkg("search -s %s samepub_file1" % self.durl2, exit=1)
+
+        def test_16190165(self):
+                """ Check that pkg search works fine with structured queries
+                    and the scheme name "pkg://" in the query """
+		
+                self.pkgsend_bulk(self.durl1, self.example_pkg11, refresh_index=True)
+                self.pkgsend_bulk(self.durl2, self.example_pkg12, refresh_index=True)
+                self.pkgsend_bulk(self.durl1, self.incorp_pkg11, refresh_index=True)
+                self.pkgsend_bulk(self.durl2, self.incorp_pkg12, refresh_index=True)
+                self.image_create(self.durl1, prefix="test1")
+                self.pkg("set-publisher -g %s test2" % self.durl2)
+
+                expected_out1 = \
+                "incorporate\tdepend\tpkg://test1/example_pkg@1.2,5.11-0\tpkg:/incorp_pkg@1.2-0\n" \
+                "incorporate\tdepend\tpkg://test2/example_pkg@1.2,5.11-0\tpkg:/incorp_pkg@1.3-0\n"
+
+                self.pkg("search -H :depend:incorporate:example_pkg",
+                     exit=0)
+                actual = self.reduceSpaces(self.output)
+                expected = self.reduceSpaces(expected_out1)
+                self.assertEqualDiff(expected, actual)
+
+        	expected_out2 = \
+		"pkg.fmri\tset\ttest1/example_pkg\tpkg:/example_pkg@1.2-0\n" \
+                "incorporate\tdepend\tpkg://test1/example_pkg@1.2,5.11-0\tpkg:/incorp_pkg@1.2-0\n" \
+                "pkg.fmri\tset\ttest2/example_pkg\tpkg:/example_pkg@1.2-0\n" \
+                "incorporate\tdepend\tpkg://test2/example_pkg@1.2,5.11-0\tpkg:/incorp_pkg@1.3-0\n"
+
+		self.pkg("search -H pkg://test1/example_pkg",exit=0)
+                actual = self.reduceSpaces(self.output)
+                expected = self.reduceSpaces(expected_out2)
+                self.assertEqualDiff(expected, actual)
+
+		self.pkg("search -H pkg:/example_pkg",exit=0)
+                actual = self.reduceSpaces(self.output)
+                expected = self.reduceSpaces(expected_out2)
+                self.assertEqualDiff(expected, actual)
+
+        def test_search_multi_hash(self):
+                """Check that when searching a repository with multiple
+                hashes, all hash attributes are indexed and we can search
+                against all hash attributes.
+
+                This test depends on pkg.digest having DebugValue settings
+                that add sha256 hashes to the set of hashes we append to
+                actions at publication time."""
+
+                self.image_create(self.durl2, prefix="samepub")
+
+                # manually calculate the hashes, in case of bugs in
+                # pkg.misc.get_data_digest
+                sha1_hash = hashlib.sha1("magic").hexdigest()
+                sha2_hash = hashlib.sha256("magic").hexdigest()
+
+                self.pkg("search %s" % sha1_hash)
+                self.pkg("search %s" % sha2_hash)
+
+                # Check that we're matching on the correct index.
+                # For sha1 hashes, our the 'index' returned is actually the
+                # hash itself - that seems unusual, but it's the way the
+                # index was built. We also emit a 2nd search result that shows
+                # 'hash', in order to be consistent with the way we print
+                # the pkg.hash.sha* attribute when dealing with other hashes.
+                self.pkg("search -H -o search.match_type %s" % sha1_hash)
+                self.assertEqualDiff(
+                    self.reduceSpaces(self.output), "%s\nhash\n" % sha1_hash)
+
+                self.pkg("search -H -o search.match_type %s" % sha2_hash)
+                self.assertEqualDiff(
+                    self.reduceSpaces(self.output), "pkg.hash.sha256\n")
+
+                # check that both searches match the same action
+                self.pkg("search -o action.raw %s" % sha1_hash)
+                sha1_action = self.reduceSpaces(self.output)
+
+                self.pkg("search -o action.raw %s" % sha2_hash)
+                sha2_action = self.reduceSpaces(self.output)
+                self.assertEqualDiff(sha1_action, sha2_action)
+
+                # check that the same searches in the non-multihash-aware
+                # repository only return a result for the sha-1 hash
+                # (which checks that we're only setting multiple hashes
+                # on actions when hash=sha1+sha256 is set)
+                self.pkg("search -s %s %s" % (self.durl1, sha1_hash))
+                self.pkg("search -s %s %s" % (self.durl1, sha2_hash), exit=1)
 
 
 if __name__ == "__main__":
