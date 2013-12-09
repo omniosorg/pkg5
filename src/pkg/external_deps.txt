@@ -43,3 +43,4 @@
     pkg:/web/wget
     pkg:/SUNWcs
     pkg:/system/zones
+    pkg:/system/library/gcc-4-runtime

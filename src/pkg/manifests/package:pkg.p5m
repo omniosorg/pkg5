@@ -27,6 +27,9 @@ set name=pkg.description \
     value="The Image Packaging System (IPS), or pkg(5), is the software delivery system used on Oracle Solaris.  This package contains the core command-line components and pkg.depotd server."
 set name=info.classification \
     value=org.opensolaris.category.2008:System/Packaging
+set name=org.opensolaris.smf.fmri \
+    value=svc:/application/pkg/repositories-setup \
+    value=svc:/application/pkg/repositories-setup:default
 set name=variant.arch value=$(ARCH)
 dir  path=$(PYDIR)
 dir  path=$(PYDIRVP)

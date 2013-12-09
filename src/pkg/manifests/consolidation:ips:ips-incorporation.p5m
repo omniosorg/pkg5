@@ -22,6 +22,6 @@
 #
 
 set name=pkg.fmri \
-    value=pkg:/consolidation/ips/ips-incorporation@0.5.11,5.11-0.175.2
+    value=pkg:/consolidation/ips/ips-incorporation@0.5.11,5.11-0.151.1.8.1
 set name=pkg.obsolete value=true
-set name=nopublish.after value=175
+set name=nopublish.after value=151

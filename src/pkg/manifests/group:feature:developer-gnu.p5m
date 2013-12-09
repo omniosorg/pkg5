@@ -44,7 +44,7 @@ depend type=group fmri=developer/build/gnu-make
 depend type=group fmri=developer/build/libtool
 depend type=group fmri=developer/build/make
 depend type=group fmri=developer/debug/gdb
-depend type=group fmri=developer/gcc-45
+depend type=group fmri=developer/gcc-47
 depend type=group fmri=developer/gnu-binutils
 depend type=group fmri=developer/lexer/flex
 depend type=group fmri=developer/macro/gnu-m4
@@ -52,7 +52,7 @@ depend type=group fmri=developer/parser/bison
 depend type=group fmri=developer/versioning/cvs
 depend type=group fmri=developer/versioning/git
 depend type=group fmri=developer/versioning/mercurial
-depend type=group fmri=developer/versioning/sccs
+#depend type=group fmri=developer/versioning/sccs
 depend type=group fmri=developer/versioning/subversion
 depend type=group fmri=system/header
-depend type=group fmri=system/library/gcc-45-runtime
+depend type=group fmri=system/library/gcc-4-runtime

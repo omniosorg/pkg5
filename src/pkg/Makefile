@@ -30,14 +30,14 @@ PLATNUM           = 0
 #	hg tags | \
 #	nawk '$$1 ~ /^s11u$(UPDATENUM)b[0-9]*/ {print substr($$1, 7) + 0; exit}'
 #BUILDID           = $(BUILDID.cmd:sh)
-BUILDID           = 0
+BUILDID           = 151
 NIGHTLYID:sh      = hg parents --template '{rev}' 2>/dev/null || git rev-list --all | wc -l | sed s/\ //g
 CHANGESET:sh      = hg id -i 2>/dev/null || git log --pretty=format:'%h' -1..
-#PKGVERS_BRANCH    = \
-#	$(PKGVERS_COMPONENT).$(UPDATENUM).$(SRUNUM).$(PLATNUM).$(BUILDID).$(NIGHTLYID)
+PKGVERS_BRANCH    = \
+	$(PKGVERS_COMPONENT).$(UPDATENUM).$(SRUNUM).$(PLATNUM).$(BUILDID).$(NIGHTLYID)
+#PKGVERS           = $(PKGVERS_COMPONENT),$(PKGVERS_BUILTON)-$(PKGVERS_BRANCH)
 # XXX hardcode for now
-PKGVERS_BRANCH    = 0.5.11-0.151.1.8.1
-PKGVERS           = $(PKGVERS_COMPONENT),$(PKGVERS_BUILTON)-$(PKGVERS_BRANCH)
+PKGVERS           = 0.5.11-0.151.1.8.1
 ARCH              = $(TARGET_ARCH:-%=%)
 REV:sh            = date +%Y.%m.%d.%H.%M.%S
 
