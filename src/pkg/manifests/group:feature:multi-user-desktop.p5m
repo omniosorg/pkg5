@@ -29,8 +29,8 @@ set name=pkg.description \
     value="Provides an Oracle Solaris multi user desktop environment for use on a server"
 set name=info.classification \
     value="org.opensolaris.category.2008:Meta Packages/Group Packages"
-set name=variant.arch value=$(ARCH)
 set name=nopublish.after value=174
+set name=variant.arch value=$(ARCH)
 depend type=group fmri=audio/audio-utilities
 depend type=group fmri=cde/cde-runtime
 depend type=group fmri=codec/flac
