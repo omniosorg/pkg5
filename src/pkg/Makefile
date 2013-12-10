@@ -21,7 +21,7 @@
 # Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
-PKGVERS_COMPONENT = 5.12
+PKGVERS_COMPONENT = 0.5.11
 PKGVERS_BUILTON   = 5.11
 UPDATENUM         = 0
 SRUNUM            = 0
@@ -37,7 +37,8 @@ PKGVERS_BRANCH    = \
 	$(PKGVERS_COMPONENT).$(UPDATENUM).$(SRUNUM).$(PLATNUM).$(BUILDID).$(NIGHTLYID)
 #PKGVERS           = $(PKGVERS_COMPONENT),$(PKGVERS_BUILTON)-$(PKGVERS_BRANCH)
 # XXX hardcode for now
-PKGVERS           = 0.5.11-0.151.1.8.1
+BUILD_VERSION     = $(PKGVERS_BUILTON)-0.151.1.8.1
+PKGVERS           = $(PKGVERS_COMPONENT),$(BUILD_VERSION)
 ARCH              = $(TARGET_ARCH:-%=%)
 REV:sh            = date +%Y.%m.%d.%H.%M.%S
 
