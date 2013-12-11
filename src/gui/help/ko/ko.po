@@ -1,5 +1,5 @@
 msgid ""
-msgstr "Project-Id-Version: PACKAGE VERSION\nPOT-Creation-Date: 2012-06-24 23:45-0700\nPO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\nLast-Translator: FULL NAME <EMAIL@ADDRESS>\nLanguage-Team: LANGUAGE <LL@li.org>\nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\n"
+msgstr "Project-Id-Version: PACKAGE VERSION\nPOT-Creation-Date: 2013-10-23 17:49-0700\nPO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\nLast-Translator: FULL NAME <EMAIL@ADDRESS>\nLanguage-Team: LANGUAGE <LL@li.org>\nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\n"
 
 #: gui/help/C/package-manager.localizable.xml:3(title)
 msgid "<trademark class=\"registered\">Oracle</trademark> Solaris 11 Package Manager Online Help"
@@ -1473,7 +1473,7 @@ msgstr "<menuchoice><guimenu>편집</guimenu><guimenuitem>기본 설정</guimenu
 
 #: gui/help/C/package-manager.localizable.xml:633(para)
 msgid "The Preferences window has three tabs:"
-msgstr "기본 설정] 창의 세 가지 탭은 다음과 같습니다."
+msgstr "기본 설정 창의 세 가지 탭은 다음과 같습니다."
 
 #: gui/help/C/package-manager.localizable.xml:634(para)
 msgid "The General tab enables you to set exit preferences and confirmation dialog preferences."

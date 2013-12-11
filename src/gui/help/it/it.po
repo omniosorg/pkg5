@@ -1,5 +1,5 @@
 msgid ""
-msgstr "Project-Id-Version: PACKAGE VERSION\nPOT-Creation-Date: 2012-06-24 23:45-0700\nPO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\nLast-Translator: FULL NAME <EMAIL@ADDRESS>\nLanguage-Team: LANGUAGE <LL@li.org>\nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\n"
+msgstr "Project-Id-Version: PACKAGE VERSION\nPOT-Creation-Date: 2013-10-23 17:49-0700\nPO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\nLast-Translator: FULL NAME <EMAIL@ADDRESS>\nLanguage-Team: LANGUAGE <LL@li.org>\nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\n"
 
 #: gui/help/C/package-manager.localizable.xml:3(title)
 msgid "<trademark class=\"registered\">Oracle</trademark> Solaris 11 Package Manager Online Help"
@@ -663,7 +663,7 @@ msgstr "Viene visualizzata la finestra Aggiornamenti e viene avviato il processo
 
 #: gui/help/C/package-manager.localizable.xml:270(para)
 msgid "The system refreshes all catalogs."
-msgstr "Su tutti i cataloghi viene eseguito il refrewsh dal sistema."
+msgstr "Su tutti i cataloghi viene eseguito il refresh dal sistema."
 
 #: gui/help/C/package-manager.localizable.xml:272(para)
 msgid "The system evaluates all installed packages to determine which packages have updates available."
@@ -1445,7 +1445,7 @@ msgstr "Risoluzione dei problemi"
 
 #: gui/help/C/package-manager.localizable.xml:624(para)
 msgid "Error, warning, and informational messages are saved to a log so that you can review them at any time."
-msgstr "Messaggi informativi, di errore e di avviso vengono salvati in un log così da poter essere disponibili in ogni momento."
+msgstr "Messaggi informativi, di errore e di avvertenza vengono salvati in un log così da poter essere disponibili in ogni momento."
 
 #: gui/help/C/package-manager.localizable.xml:625(title)
 msgid "Viewing Message Logs"
@@ -1453,7 +1453,7 @@ msgstr "Visualizzazione dei log messaggi"
 
 #: gui/help/C/package-manager.localizable.xml:626(para)
 msgid "Select the <menuchoice><guimenu>View</guimenu><guimenuitem>Logs</guimenuitem></menuchoice> menu option to open the Logs window. The Logs window displays error, warning, and informational messages from Package Manager and Update Manager."
-msgstr "Selezionare l'opzione menu <menuchoice><guimenu>Visualizza</guimenu><guimenuitem>Log</guimenuitem></menuchoice> per aprire la finestra Log. Nella finestra Log vengono visualizzati messaggi informativi, di avviso e di errore da Package Manager e Update Manager."
+msgstr "Selezionare l'opzione menu <menuchoice><guimenu>Visualizza</guimenu><guimenuitem>Log</guimenuitem></menuchoice> per aprire la finestra Log. Nella finestra Log vengono visualizzati messaggi informativi, di avvertenza e di errore da Package Manager e Update Manager."
 
 #: gui/help/C/package-manager.localizable.xml:627(para)
 msgid "Select the <guibutton>Clear</guibutton> button at the bottom of the Logs window to delete all the messages."
@@ -1461,7 +1461,7 @@ msgstr "Selezionare il pulsante <guibutton>Cancella</guibutton> nella parte infe
 
 #: gui/help/C/package-manager.localizable.xml:628(para)
 msgid "If an error or warning is logged, a yellow triangle is displayed on the left side of the status bar. Click the yellow triangle to display the Logs window."
-msgstr "Se viene registrato un errore o un avviso, viene visualizzato un triangolo giallo a sinistra della barra di stato. Fare clic su di esso per visualizzare la finestra Log."
+msgstr "Se viene registrato un errore o un'avvertenza, viene visualizzato un triangolo giallo a sinistra della barra di stato. Fare clic su di esso per visualizzare la finestra Log."
 
 #: gui/help/C/package-manager.localizable.xml:631(title)
 msgid "Setting Preferences"

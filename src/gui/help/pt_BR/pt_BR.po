@@ -1,5 +1,5 @@
 msgid ""
-msgstr "Project-Id-Version: PACKAGE VERSION\nPOT-Creation-Date: 2012-06-24 23:45-0700\nPO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\nLast-Translator: FULL NAME <EMAIL@ADDRESS>\nLanguage-Team: LANGUAGE <LL@li.org>\nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\n"
+msgstr "Project-Id-Version: PACKAGE VERSION\nPOT-Creation-Date: 2013-10-23 17:49-0700\nPO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\nLast-Translator: FULL NAME <EMAIL@ADDRESS>\nLanguage-Team: LANGUAGE <LL@li.org>\nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\n"
 
 #: gui/help/C/package-manager.localizable.xml:3(title)
 msgid "<trademark class=\"registered\">Oracle</trademark> Solaris 11 Package Manager Online Help"
@@ -1387,7 +1387,7 @@ msgstr "Use um dos seguintes métodos para iniciar o Gerenciador de pacotes no m
 
 #: gui/help/C/package-manager.localizable.xml:599(para)
 msgid "Click on a <filename>.p5i</filename> file on your desktop. The associated application (Package Manager Web Installer) is launched."
-msgstr "Clique em um arquivo <filename>.p5i</filename> na área de trabalho. O aplicativo associado (Instalador da Web do Gerenciador de pacotes) é iniciado."
+msgstr "Clique em um arquivo <filename>.p5i</filename> na área de trabalho. O aplicativo associado (Instalador Web do Gerenciador de pacotes) é iniciado."
 
 #: gui/help/C/package-manager.localizable.xml:601(para)
 msgid "Start Package Manager from the command line along with a path to the <filename>.p5i</filename> file. For example, enter the following command:"
@@ -1417,7 +1417,7 @@ msgstr "Se o arquivo <filename>.p5i</filename> estiver localizado em um servidor
 
 #: gui/help/C/package-manager.localizable.xml:609(para)
 msgid "The Install/Update window is displayed. The label at the top of the window is: “Package Manager Web Installer/The following will be added to your system:” Then the publishers and packages are listed. Click the <guibutton>Proceed</guibutton> button to continue with the installation."
-msgstr "A janela Instalar/Atualizar é exibida. O rótulo bo topo da janela é: “Instalador da Web do Gerenciador de pacotes/O seguinte será adicionado ao seu sistema:” Em seguida, editores e pacotes serão listados. Clique no botão <guibutton>Prosseguir</guibutton> para continuar a instalação."
+msgstr "A janela Instalar/Atualizar é exibida. O rótulo bo topo da janela é: “Instalador Web do Gerenciador de pacotes/O seguinte será adicionado ao seu sistema:” Em seguida, editores e pacotes serão listados. Clique no botão <guibutton>Prosseguir</guibutton> para continuar a instalação."
 
 #: gui/help/C/package-manager.localizable.xml:610(para)
 msgid "If the package publisher is not already configured on your system, the Add Publisher window is displayed. The name and URI of the publisher are already entered."
@@ -1657,7 +1657,7 @@ msgstr "editor de sistema"
 
 #: gui/help/C/package-manager.localizable.xml:710(para)
 msgid "System publishers are special publishers used in linked images and non-global zones in particular, to ensure that certain packages stay in sync with the global zone. The global zone constrains packages within the non-global zones by configuring these special system publishers in the non-global zone. They are special because the non-global zones cannot make certain changes to them including removing, disabling, modifying, or changing their priority."
-msgstr "Editores de sistema são editores especiais utilizados em imagens e regiões não-globais, em particular, com links para garantir que determinados pacotes permaneçam em sincronia com a região global. A região global comprime pacotes dentro de regiões não-globais por meio da configuração desses editores especiais na região não-global. São especiais porque as regiões não-globais não podem fazer determinadas alterações neles, incluindo remoção, desativação, modificação, nem alerar a prioridade deles."
+msgstr "Editores de sistema são editores especiais utilizados em imagens e zonas não globais, em particular, com links para garantir que determinados pacotes permaneçam em sincronia com a zona global. A zona global comprime pacotes dentro de zonas não globais por meio da configuração desses editores especiais na zona não global. São especiais porque as zonas não globais não podem fazer determinadas alterações neles, incluindo remoção, desativação, modificação, nem alterar a prioridade deles."
 
 #. Put one translator per line, in the form of NAME <EMAIL>, YEAR1, YEAR2
 #: gui/help/C/package-manager.localizable.xml:0(None)

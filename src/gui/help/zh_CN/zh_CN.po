@@ -1,5 +1,5 @@
 msgid ""
-msgstr "Project-Id-Version: PACKAGE VERSION\nPOT-Creation-Date: 2012-06-24 23:45-0700\nPO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\nLast-Translator: FULL NAME <EMAIL@ADDRESS>\nLanguage-Team: LANGUAGE <LL@li.org>\nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\n"
+msgstr "Project-Id-Version: PACKAGE VERSION\nPOT-Creation-Date: 2013-10-23 17:49-0700\nPO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\nLast-Translator: FULL NAME <EMAIL@ADDRESS>\nLanguage-Team: LANGUAGE <LL@li.org>\nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\n"
 
 #: gui/help/C/package-manager.localizable.xml:3(title)
 msgid "<trademark class=\"registered\">Oracle</trademark> Solaris 11 Package Manager Online Help"
@@ -147,7 +147,7 @@ msgstr "本文档介绍了软件包管理器窗口的下列功能："
 
 #: gui/help/C/package-manager.localizable.xml:52(para)
 msgid "The large pane in the center of the window is the package list pane. Sometimes this pane shows informational messages, but usually this pane contains a list of packages."
-msgstr "位于窗口中央的大窗格是软件包列表窗格。有时候该窗格显示提示性消息，但通常情况下该窗格包含一个软件包列表。"
+msgstr "位于窗口中央的大窗格是软件包列表窗格。有时候该窗格显示信息性消息，但通常情况下该窗格包含一个软件包列表。"
 
 #: gui/help/C/package-manager.localizable.xml:54(para)
 msgid "The menu bar at the top of the window provides most Package Manager functionality."
@@ -235,7 +235,7 @@ msgstr "示例：要列出来自 <literal>solaris</literal> 发布者的当前�
 
 #: gui/help/C/package-manager.localizable.xml:89(para)
 msgid "<guimenuitem>All Publishers (Search)</guimenuitem> — Shows an informational message in the package list pane instead of a list of packages. The message lists all publishers that you have configured and reminds you how to view all packages from those publishers. See <xref linkend=\"search-pkg\"/> for information about searching with <guimenuitem>All Publishers (Search)</guimenuitem>."
-msgstr "<guimenuitem>所有发布者（搜索）</guimenuitem> - 在软件包列表窗格中显示一条提示性消息而不是软件包列表。该消息列出您已配置的所有发布者并提醒您如何查看来自那些发布者的所有软件包。有关使用<guimenuitem>所有发布者（搜索）</guimenuitem>进行搜索的信息，请参见<xref linkend=\"search-pkg\"/>。"
+msgstr "<guimenuitem>所有发布者（搜索）</guimenuitem> - 在软件包列表窗格中显示一条信息性消息而不是软件包列表。该消息列出您已配置的所有发布者并提醒您如何查看来自那些发布者的所有软件包。有关使用<guimenuitem>所有发布者（搜索）</guimenuitem>进行搜索的信息，请参见<xref linkend=\"search-pkg\"/>。"
 
 #: gui/help/C/package-manager.localizable.xml:91(para)
 msgid "<guimenuitem>Add...</guimenuitem> — Opens the Add Publisher window."
@@ -427,7 +427,7 @@ msgstr "在当前软件包管理器会话中已执行的搜索的结果保存在
 
 #: gui/help/C/package-manager.localizable.xml:172(para)
 msgid "Select the <guimenuitem>Recent Searches</guimenuitem> label in the categories pane to display an informational message in the package list pane. The package list pane shows the list of previous search results. Click a \"results\" link to redisplay those results."
-msgstr "在类别窗格中选择<guimenuitem>最近的搜索</guimenuitem>标签会在软件包列表窗格中显示一条提示性消息。软件包列表窗格中显示之前的搜索结果列表。单击“结果”链接可重新显示那些结果。"
+msgstr "在类别窗格中选择<guimenuitem>最近的搜索</guimenuitem>标签会在软件包列表窗格中显示一条信息性消息。软件包列表窗格中显示之前的搜索结果列表。单击“结果”链接可重新显示那些结果。"
 
 #: gui/help/C/package-manager.localizable.xml:173(para)
 msgid "Select the arrow to the left of the <guimenuitem>Recent Searches</guimenuitem> label to expand or hide the list of previous search results in the categories pane. Select an item in the list of recent searches to redisplay those search results."
@@ -467,7 +467,7 @@ msgstr "“版本”选项卡显示了供您安装的该软件包的所有版本
 
 #: gui/help/C/package-manager.localizable.xml:184(para)
 msgid "The package details pane is not displayed if the package list pane contains an informational message."
-msgstr "如果软件包列表窗格包含一条提示性消息，则不会显示软件包详细信息窗格。"
+msgstr "如果软件包列表窗格包含一条信息性消息，则不会显示软件包详细信息窗格。"
 
 #: gui/help/C/package-manager.localizable.xml:186(title)
 msgid "Package Version Info Dialog"
@@ -1445,7 +1445,7 @@ msgstr "故障排除"
 
 #: gui/help/C/package-manager.localizable.xml:624(para)
 msgid "Error, warning, and informational messages are saved to a log so that you can review them at any time."
-msgstr "错误、警告和提示性消息会保存到日志中以便您可以随时查看。"
+msgstr "错误、警告和信息性消息会保存到日志中以便您可以随时查看。"
 
 #: gui/help/C/package-manager.localizable.xml:625(title)
 msgid "Viewing Message Logs"
@@ -1453,7 +1453,7 @@ msgstr "查看消息日志"
 
 #: gui/help/C/package-manager.localizable.xml:626(para)
 msgid "Select the <menuchoice><guimenu>View</guimenu><guimenuitem>Logs</guimenuitem></menuchoice> menu option to open the Logs window. The Logs window displays error, warning, and informational messages from Package Manager and Update Manager."
-msgstr "选择<menuchoice><guimenu>视图</guimenu><guimenuitem>日志</guimenuitem></menuchoice>菜单选项以打开“日志”窗口。“日志”窗口显示来自软件包管理器和更新管理器的错误、警告和提示性消息。"
+msgstr "选择<menuchoice><guimenu>视图</guimenu><guimenuitem>日志</guimenuitem></menuchoice>菜单选项以打开“日志”窗口。“日志”窗口显示来自软件包管理器和更新管理器的错误、警告和信息性消息。"
 
 #: gui/help/C/package-manager.localizable.xml:627(para)
 msgid "Select the <guibutton>Clear</guibutton> button at the bottom of the Logs window to delete all the messages."

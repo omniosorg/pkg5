@@ -1,5 +1,5 @@
 msgid ""
-msgstr "Project-Id-Version: PACKAGE VERSION\nPOT-Creation-Date: 2012-06-24 23:45-0700\nPO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\nLast-Translator: FULL NAME <EMAIL@ADDRESS>\nLanguage-Team: LANGUAGE <LL@li.org>\nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\n"
+msgstr "Project-Id-Version: PACKAGE VERSION\nPOT-Creation-Date: 2013-10-23 17:49-0700\nPO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\nLast-Translator: FULL NAME <EMAIL@ADDRESS>\nLanguage-Team: LANGUAGE <LL@li.org>\nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\n"
 
 #: gui/help/C/package-manager.localizable.xml:3(title)
 msgid "<trademark class=\"registered\">Oracle</trademark> Solaris 11 Package Manager Online Help"
@@ -51,7 +51,7 @@ msgstr "2008, 2011"
 
 #: gui/help/C/package-manager.localizable.xml:19(para)
 msgid "This software and related documentation are provided under a license agreement containing restrictions on use and disclosure and are protected by intellectual property laws. Except as expressly permitted in your license agreement or allowed by law, you may not use, copy, reproduce, translate, broadcast, modify, license, transmit, distribute, exhibit, perform, publish, or display any part, in any form, or by any means. Reverse engineering, disassembly, or decompilation of this software, unless required by law for interoperability, is prohibited."
-msgstr "本軟體與相關說明文件是依據含有用途及保密限制事項的授權合約所提供，且受智慧財產法的保護。除了授權合約中或法律明文允許的部份外，不得以任何形式或方法使用、複製、重製、翻譯、廣播、修改、授權、傳送、散佈、展示、演出、出版或陳列本軟體的任何部份。除非依法需要取得互通性操作 (interoperability)，否則嚴禁對本軟體進行還原工程 (reverse engineering)、反向組譯 (disassembly) 或解編 (decompilation)。"
+msgstr "本軟體與相關說明文件是依據含有用途及保密限制事項的授權合約所提供，且受智慧財產法的保護。除了授權合約中或法律明文允許的部分外，不得以任何形式或方法使用、複製、重製、翻譯、廣播、修改、授權、傳送、散佈、展示、演出、出版或陳列本軟體的任何部分。除非依法需要取得互通性操作 (interoperability)，否則嚴禁對本軟體進行還原工程 (reverse engineering)、反向組譯 (disassembly) 或解編 (decompilation)。"
 
 #: gui/help/C/package-manager.localizable.xml:20(para)
 msgid "The information contained herein is subject to change without notice and is not warranted to be error-free. If you find any errors, please report them to us in writing."
@@ -715,7 +715,7 @@ msgstr "如果在更新程序中的任何時間發生錯誤，即會展開 [詳�
 
 #: gui/help/C/package-manager.localizable.xml:295(para)
 msgid "If the system created a new BE for the update, you can edit the default BE name. When you are satisfied with the BE name, click the <guibutton>Restart Now</guibutton> button to reboot your system immediately. Click the <guibutton>Restart Later</guibutton> button to restart your system at a later time. You must restart to boot into the new BE. The new BE will be your default boot choice. Your current BE will be available as an alternate boot choice."
-msgstr "如果系統已建立一個用於更新的新 BE，您可以編輯預設的 BE 名稱。當您滿意 BE 名稱時，按一下 [<guibutton>立即重新啟動</guibutton>] 按鈕，立刻重新啟動系統。按一下 [<guibutton>稍後重新啟動</guibutton>] 按鈕，稍後再重新啟動系統。您必須重新啟動系統，以便在啟動後進入新 BE。新 BE 會是您預設的啟動選項。目前的 BE 可做為替代的啟動選項使用。"
+msgstr "如果系統已建立一個用於更新的新 BE，您可以編輯預設的 BE 名稱。當您滿意 BE 名稱時，按一下 [<guibutton>立即重新啟動</guibutton>] 按鈕，立刻重新啟動系統。按一下 [<guibutton>稍後重新啟動</guibutton>] 按鈕，稍後再重新啟動系統。您必須重新啟動系統，以便在啟動後進入新 BE。新 BE 會是您預設的啟動選項。目前的 BE 可作為替代的啟動選項使用。"
 
 #: gui/help/C/package-manager.localizable.xml:299(title)
 msgid "Using Update Manager"
@@ -1255,11 +1255,11 @@ msgstr "選取 <menuchoice>[<guimenu>檔案</guimenu>] [<guimenuitem>管理啟�
 
 #: gui/help/C/package-manager.localizable.xml:540(para)
 msgid "To specify a different BE to be the default active BE after the next reboot, perform the following steps:"
-msgstr "若要指定另一個 BE 做為下次重新開機時的預設使用中 BE，請執行下列步驟："
+msgstr "若要指定另一個 BE 作為下次重新開機時的預設使用中 BE，請執行下列步驟："
 
 #: gui/help/C/package-manager.localizable.xml:541(para)
 msgid "Select the <guibutton>Active on Reboot</guibutton> button for the BE that you want to be the default active BE after the next reboot."
-msgstr "在下次重新開機時要做為預設使用中 BE 的 BE，選取 [<guibutton>在重開機時啟動</guibutton>] 按鈕。"
+msgstr "在下次重新開機時要作為預設使用中 BE 的 BE，選取 [<guibutton>在重開機時啟動</guibutton>] 按鈕。"
 
 #: gui/help/C/package-manager.localizable.xml:543(para) gui/help/C/package-manager.localizable.xml:556(para) gui/help/C/package-manager.localizable.xml:568(para)
 msgid "Select the <guibutton>OK</guibutton> button in the Manage Boot Environments window."
