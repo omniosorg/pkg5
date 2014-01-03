@@ -191,7 +191,7 @@
 	authorizations we need to allow clients to modify values in it.
 	User-created instances should create this pg with the same
 	'value_authorization' property. -->
-        <instance name="default" complete="true" enabled="false">
+        <instance name="default" enabled="false">
                 <property_group name='config' type='application'>
                 <stability value='Evolving' />
                 <propval name='repository' type='astring'
