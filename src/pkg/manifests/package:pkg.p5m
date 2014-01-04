@@ -446,8 +446,7 @@ legacy pkg=SUNWipkg version=0.0.0
 license cr_Oracle license=cr_Oracle
 license lic_gustaebel license=lic_gustaebel
 license lic_minisat license=lic_minisat
-#depend type=group fmri=package/pkg/zones-proxy \
-#    variant.opensolaris.zone=nonglobal
+#depend type=group fmri=package/pkg/zones-proxy #    variant.opensolaris.zone=nonglobal
 # cross zone dependency on linked image metadata
 #depend type=parent fmri=feature/package/dependency/self #    variant.opensolaris.zone=nonglobal
 depend type=require fmri=crypto/ca-certificates
