@@ -1,6 +1,6 @@
 '\" te
 .\" Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
-.TH pkg.depot-config 1M "02 Oct 2013" "SunOS 5.12" "System Administration Commands"
+.TH pkg.depot-config 1M "02 Oct 2013" "SunOS 5.11" "System Administration Commands"
 .SH NAME
 pkg.depot-config \- Image Packaging System HTTP depot configuration generator
 .SH SYNOPSIS
@@ -48,7 +48,7 @@ Each repository is supported by a \fBpkg/server\fR service instance. A repositor
 When you enable a \fBpkg/server\fR instance for which the \fBpkg/standalone\fR property set to \fBfalse\fR and the \fBpkg/readonly\fR property set to \fBtrue\fR, the \fBpkg/depot:default\fR configuration is refreshed, and that repository is served by the \fBpkg/depot:default\fR service. When you disable that same \fBpkg/server\fR instance, the \fBpkg/depot:default\fR service is refreshed, and that repository is no longer served by the \fBpkg/depot:default\fR service.
 .sp
 .LP
-You can configure the depot manually by using the \fBpkg.depot-config\fR command with the \fB-F\fR option. The \fB-F\fR option produces a web server configuration file that can be added to an existing web server. In this case, the depot runs with reduced functionality: \fBpkg\fR(1) search support and the depot browser user interface are not available. All other \fBpkg\fR(1) functionality required to install and update Oracle Solaris 11 systems is available.
+You can configure the depot manually by using the \fBpkg.depot-config\fR command with the \fB-F\fR option. The \fB-F\fR option produces a web server configuration file that can be added to an existing web server. In this case, the depot runs with reduced functionality: \fBpkg\fR(1) search support and the depot browser user interface are not available. All other \fBpkg\fR(1) functionality required to install and update OpenIndiana systems is available.
 .sp
 .LP
 Use one of the following methods to pass repository paths and configuration to the depot server:
@@ -200,7 +200,7 @@ Specify the type of web server that \fBpkg.depot-config\fR should output configu
 .ad
 .sp .6
 .RS 4n
-Produce a partial configuration that enables a web server to serve basic \fBpkg\fR(5) installation operations for clients using an existing web service. For an Apache web server running on the Oracle Solaris OS, the partial configuration file could be placed in \fB/etc/apache2/2.2/conf.d\fR. For other operating systems, consult your OS documentation to determine how to use this partial configuration file. See also the \fB-P\fR option.
+Produce a partial configuration that enables a web server to serve basic \fBpkg\fR(5) installation operations for clients using an existing web service. For an Apache web server running on the OpenIndiana, the partial configuration file could be placed in \fB/etc/apache2/2.2/conf.d\fR. For other operating systems, consult your OS documentation to determine how to use this partial configuration file. See also the \fB-P\fR option.
 .RE
 
 .sp
