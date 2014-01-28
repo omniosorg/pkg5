@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
 
 import cStringIO
 import codecs
@@ -1973,9 +1973,17 @@ class _RepoStore(object):
                                         attr, hval, hfunc = \
                                             digest.get_preferred_hash(a,
                                             hash_type=digest.CHAIN)
-                                        hashes.update([
-                                            (fname, chain, hfunc)
-                                            for chain in hval.split()])
+
+                                        # Since a chain attribute may contain
+                                        # several hashes, we need to add each
+                                        # fname in the chain and corresponding
+                                        # preferred hash to our set of hashes.
+                                        fnames = fname.split()
+                                        chains = hval.split()
+                                        for fitem, citem in zip(
+                                            fnames, chains):
+                                                hashes.add((fitem, citem,
+                                                    hfunc))
                 except apx.PermissionsException:
                         errors.append((REPO_VERIFY_MFPERM, path,
                             {"err": _("Permission denied.")}))
@@ -2058,6 +2066,9 @@ class _RepoStore(object):
                         except apx.CertificateException, e:
                                 errors.append((REPO_VERIFY_BADSIG, path,
                                     {"err": str(e), "pkg": pfmri}))
+                        except apx.TransportError, e:
+                                errors.append((REPO_VERIFY_BADSIG, path,
+                                   {"err": str(e), "pkg": pfmri}))
                 return errors
 
         def __verify_permissions(self):
