@@ -19,10 +19,10 @@
 # CDDL HEADER END
 #
 #
-# Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2014, Oracle and/or its affiliates. All rights reserved.
 #
 msgid ""
-msgstr "Project-Id-Version: PACKAGE VERSION\nReport-Msgid-Bugs-To: \nPOT-Creation-Date: 2013-10-23 17:49-0700\nPO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\nLast-Translator: FULL NAME <EMAIL@ADDRESS>\nLanguage-Team: LANGUAGE <LL@li.org>\nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\nPlural-Forms: nplurals=2; plural=(n != 1);\n"
+msgstr "Project-Id-Version: PACKAGE VERSION\nReport-Msgid-Bugs-To: \nPOT-Creation-Date: 2014-01-01 17:49-0800\nPO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\nLast-Translator: FULL NAME <EMAIL@ADDRESS>\nLanguage-Team: LANGUAGE <LL@li.org>\nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\nPlural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: ../client.py:115
 msgid ""
@@ -348,7 +348,7 @@ msgstr "Keine Updates für Packages '%s' verfügbar."
 msgid "Verifying: %(pkg_name)-50s %(result)7s"
 msgstr "Überprüfung: %(pkg_name)-50s %(result)7s"
 
-#: ../client.py:737 ../client.py:897 ../pkgrepo.py:1266
+#: ../client.py:737 ../client.py:897 ../pkgrepo.py:1347
 msgid "ERROR"
 msgstr "FEHLER"
 
@@ -394,7 +394,7 @@ msgstr "-v and -q dürfen nicht kombiniert werden"
 msgid "OK"
 msgstr "OK"
 
-#: ../client.py:899 ../pkgrepo.py:1267
+#: ../client.py:899 ../pkgrepo.py:1348
 msgid "WARNING"
 msgstr "WARNUNG"
 
@@ -408,7 +408,7 @@ msgid "PACKAGE"
 msgstr "PAKET"
 
 #: ../client.py:912 ../client.py:4296 ../client.py:4308 ../client.py:4418
-#: ../pkgrepo.py:743 ../pkgrepo.py:747
+#: ../pkgrepo.py:824 ../pkgrepo.py:828
 msgid "STATUS"
 msgstr "STATUS"
 
@@ -713,7 +713,7 @@ msgid "VER. SRC."
 msgstr "VER. SRC."
 
 #: ../client.py:2163 ../client.py:2207 ../client.py:2215 ../client.py:2519
-#: ../client.py:5467 ../pkgrepo.py:892 ../pkgrepo.py:901
+#: ../client.py:5467 ../pkgrepo.py:973 ../pkgrepo.py:982
 msgid "VERSION"
 msgstr "VERSION"
 
@@ -770,7 +770,7 @@ msgstr "%(name)s wurde bei %(ver)s eingefroren"
 msgid "%s was unfrozen."
 msgstr "Für %s wurde der Freeze aufgehoben."
 
-#: ../client.py:2518 ../client.py:4951 ../pkgrepo.py:891 ../pkgrepo.py:901
+#: ../client.py:2518 ../client.py:4951 ../pkgrepo.py:972 ../pkgrepo.py:982
 #: ../util/publish/pkglint.py:219 ../util/publish/pkglint.py:221
 msgid "NAME"
 msgstr "NAME"
@@ -1133,9 +1133,9 @@ msgid "Removal failed for '%(pub)s': %(msg)s"
 msgstr "'%(pub)s' konnte nicht entfernt werden: %(msg)s ."
 
 #: ../client.py:4293 ../client.py:4306 ../client.py:4416
-#: ../modules/client/api_errors.py:647 ../pkgrepo.py:557 ../pkgrepo.py:634
-#: ../pkgrepo.py:639 ../pkgrepo.py:741 ../pkgrepo.py:747 ../pkgrepo.py:890
-#: ../pkgrepo.py:901 ../pkgrepo.py:908
+#: ../modules/client/api_errors.py:647 ../pkgrepo.py:638 ../pkgrepo.py:715
+#: ../pkgrepo.py:720 ../pkgrepo.py:822 ../pkgrepo.py:828 ../pkgrepo.py:971
+#: ../pkgrepo.py:982 ../pkgrepo.py:989
 msgid "PUBLISHER"
 msgstr "HERAUSGEBER"
 
@@ -1145,7 +1145,7 @@ msgstr "TYP"
 
 #: ../client.py:4297 ../client.py:4308
 msgid "LOCATION"
-msgstr "Position"
+msgstr "POSITION"
 
 #: ../client.py:4298 ../client.py:4418
 msgid "URI"
@@ -1165,13 +1165,13 @@ msgstr "SYSPUB"
 
 #: ../client.py:4302 ../client.py:4418
 msgid "PROXY"
-msgstr "Proxy"
+msgstr "PROXY"
 
 #: ../client.py:4303 ../client.py:4308 ../modules/misc.py:505
 msgid "P"
 msgstr "P"
 
-#: ../client.py:4344 ../pkgrepo.py:411 ../pkgrepo.py:679 ../pkgrepo.py:787
+#: ../client.py:4344 ../pkgrepo.py:492 ../pkgrepo.py:760 ../pkgrepo.py:868
 #, python-format
 msgid "Unrecognized format %(format)s. Supported formats: %(valid)s"
 msgstr "Nicht erkanntes Format %(format)s. Unterstützte Formate: %(valid)s"
@@ -1309,7 +1309,7 @@ msgid "VARIANT"
 msgstr "VARIANT"
 
 #: ../client.py:4846 ../client.py:4848 ../client.py:4908 ../client.py:4911
-#: ../pkgrepo.py:488 ../pkgrepo.py:490 ../pkgrepo.py:637 ../pkgrepo.py:640
+#: ../pkgrepo.py:569 ../pkgrepo.py:571 ../pkgrepo.py:718 ../pkgrepo.py:721
 msgid "VALUE"
 msgstr "WERT"
 
@@ -1668,26 +1668,26 @@ msgid "version: command does not take operands ('%s')"
 msgstr "version: Befehl akzeptiert keine Operanden ('%s')"
 
 #: ../client.py:6071 ../depot-config.py:569 ../pkgdep.py:110 ../pkgdep.py:222
-#: ../pkgdep.py:551 ../pkgrepo.py:1492 ../publish.py:738 ../sign.py:128
+#: ../pkgdep.py:551 ../pkgrepo.py:1573 ../publish.py:738 ../sign.py:128
 #: ../sysrepo.py:885 ../util/publish/pkgdiff.py:92
 #: ../util/publish/pkgfmt.py:537 ../util/publish/pkgmogrify.py:716
 #, python-format
 msgid "illegal global option -- %s"
 msgstr "unzulässige globale Option -- %s"
 
-#: ../client.py:6084 ../depot-config.py:561 ../pkgrepo.py:1505
+#: ../client.py:6084 ../depot-config.py:561 ../pkgrepo.py:1586
 #: ../publish.py:731 ../pull.py:428 ../sign.py:173
 #, python-format
 msgid "%(opt)s takes argument of form name=value, not %(arg)s"
 msgstr "%(opt)s erfordert ein Argument der Form Name=Wert, nicht %(arg)s."
 
-#: ../client.py:6111 ../client.py:6122 ../pkgdep.py:579 ../pkgrepo.py:1528
+#: ../client.py:6111 ../client.py:6122 ../pkgdep.py:579 ../pkgrepo.py:1609
 #: ../publish.py:787
 #, python-format
 msgid "unknown subcommand '%s'"
 msgstr "unbekannter Unterbefehl '%s'"
 
-#: ../client.py:6126 ../pkgrepo.py:1522
+#: ../client.py:6126 ../pkgrepo.py:1603
 msgid "no subcommand specified"
 msgstr "Es wurde kein Unterbefehl angegeben"
 
@@ -1701,7 +1701,7 @@ msgid "-R not allowed for %s subcommand"
 msgstr "-R für %s Unterbefehl nicht zulässig"
 
 #: ../client.py:6158 ../client.py:6200 ../modules/misc.py:1378
-#: ../pkgrepo.py:1535 ../util/publish/pkgmerge.py:243
+#: ../pkgrepo.py:1616 ../util/publish/pkgmerge.py:243
 #: ../util/publish/pkgsurf.py:682
 #, python-format
 msgid "illegal option -- %s"
@@ -6172,7 +6172,7 @@ msgstr "ÜBERTRAGUNG (MB)"
 
 #: ../modules/client/progress.py:2623
 msgid "SPEED"
-msgstr "Geschwindigkeit"
+msgstr "GESCHWINDIGKEIT"
 
 #: ../modules/client/progress.py:2626
 msgid "Completed"
@@ -9527,177 +9527,177 @@ msgstr "Kein übereinstimmendes Paket in Repository gefunden."
 msgid "Unable to generate statistics."
 msgstr "Statistik kann nicht generiert werden."
 
-#: ../modules/server/repository.py:107
+#: ../modules/server/repository.py:108
 #, python-format
 msgid ""
 "A package repository (or a directory with content) already exists at '%s'."
 msgstr "Ein Paket-Repository (oder ein Verzeichnis mit Inhalt) ist bereits unter '%s' vorhanden."
 
-#: ../modules/server/repository.py:116
+#: ../modules/server/repository.py:117
 #, python-format
 msgid "No file could be found for the specified hash name: '%s'."
 msgstr "Für den angegebenen Hash-Namen konnte keine Datei gefunden werden: '%s'."
 
-#: ../modules/server/repository.py:126
+#: ../modules/server/repository.py:127
 msgid "The specified path does not contain a valid package repository."
 msgstr "Der angegebene Pfad enthält kein gültiges Paket-Repository."
 
-#: ../modules/server/repository.py:128
+#: ../modules/server/repository.py:129
 #, python-format
 msgid "The path '%s' does not contain a valid package repository."
 msgstr "Der Pfad '%s' enthält kein gültiges Paket-Repository."
 
-#: ../modules/server/repository.py:141
+#: ../modules/server/repository.py:142
 #, python-format
 msgid ""
 "This operation requires that a default publisher has been set or that a "
 "publisher be specified in the FMRI '%s'."
 msgstr "Dieser Vorgang erfordert einen festgelegten Standard-Herausgeber oder einen Herausgeber, der in FMRI '%s' festgelegt wurde."
 
-#: ../modules/server/repository.py:150
+#: ../modules/server/repository.py:151
 #, python-format
 msgid "No transaction matching '%s' could be found."
 msgstr "Es konnte keine Transaktion gefunden werden, die '%s' entspricht."
 
 #. Even if the host is none, use this message.
-#: ../modules/server/repository.py:166
+#: ../modules/server/repository.py:167
 #, python-format
 msgid ""
 "The repository cannot be modified as it is currently in use by another "
 "process: pid %(pid)s on %(host)s."
 msgstr "Das Repository kann nicht geändert werden, da es derzeit von einem anderen Vorgang verwendet wird: PID %(pid)s auf %(host)s."
 
-#: ../modules/server/repository.py:170
+#: ../modules/server/repository.py:171
 msgid ""
 "The repository cannot be modified as it is currently in use by another "
 "process."
 msgstr "Das Repository kann nicht geändert werden, da es derzeit von einem anderen Vorgang verwendet wird."
 
-#: ../modules/server/repository.py:178
+#: ../modules/server/repository.py:179
 #, python-format
 msgid "No manifest could be found for the FMRI: '%s'."
 msgstr "Für den FMRI konnte kein Manifest gefunden werden: '%s'."
 
-#: ../modules/server/repository.py:187
+#: ../modules/server/repository.py:188
 msgid ""
 "The requested operation cannot be performed when the repository is used in "
 "mirror mode."
 msgstr "Der angeforderte Vorgang kann nicht durchgeführt werden, wenn das Repository im Spiegelmodus verwendet wird."
 
-#: ../modules/server/repository.py:198
+#: ../modules/server/repository.py:199
 msgid ""
 "The requested operation could not be completed as a default publisher has "
 "not been configured."
 msgstr "Der angeforderte Vorgang konnte nicht abgeschlossen werden, da kein Standard-Herausgeberkonfiguriert wurde."
 
-#: ../modules/server/repository.py:206
+#: ../modules/server/repository.py:207
 #, python-format
 msgid "No such file '%s'."
 msgstr "Datei '%s' nicht vorhanden."
 
-#: ../modules/server/repository.py:214
+#: ../modules/server/repository.py:215
 msgid "The repository is read-only and cannot be modified."
 msgstr "Das Repository ist schreibgeschützt und kann nicht geändert werden."
 
-#: ../modules/server/repository.py:223
+#: ../modules/server/repository.py:224
 msgid "No token was provided to search."
 msgstr "Für die Suche wurde kein Token bereitgestellt."
 
-#: ../modules/server/repository.py:225
+#: ../modules/server/repository.py:226
 #, python-format
 msgid "The specified search token '%s' is invalid."
 msgstr "Das angegebene Such-Token '%s' ist ungültig."
 
-#: ../modules/server/repository.py:233
+#: ../modules/server/repository.py:234
 msgid "Search functionality is temporarily unavailable."
 msgstr "Die Suchfunktion ist vorübergehend nicht verfügbar."
 
-#: ../modules/server/repository.py:242
+#: ../modules/server/repository.py:243
 #, python-format
 msgid "Publisher '%s' already exists."
 msgstr "Herausgeber '%s' ist bereits vorhanden."
 
-#: ../modules/server/repository.py:252
+#: ../modules/server/repository.py:253
 msgid ""
 "No publisher was specified or no default publisher has been configured for "
 "the repository."
 msgstr "Es wurde kein Herausgeber angegeben oder kein Standard-Herausgeber für das Repository konfiguriert."
 
-#: ../modules/server/repository.py:254
+#: ../modules/server/repository.py:255
 #, python-format
 msgid "No publisher matching '%s' could be found."
 msgstr "Es konnte kein Herausgeber gefunden werden, der '%s' entspricht."
 
-#: ../modules/server/repository.py:308
+#: ../modules/server/repository.py:309
 msgid "Quarantined path already exists."
 msgstr "Gesperrter Pfad ist bereits vorhanden."
 
-#: ../modules/server/repository.py:316
+#: ../modules/server/repository.py:317
 #, python-format
 msgid "Unable to find trust anchor directory %s"
 msgstr "Sicherheitsankerverzeichnis %s kann nicht gefunden werden"
 
-#: ../modules/server/repository.py:739
+#: ../modules/server/repository.py:740
 #, python-format
 msgid "Skipping %(name)s; invalid manifest: %(error)s"
 msgstr "%(name)s; wird übersprungen; ungültiges Manifest: %(error)s"
 
 #. Create the transformed catalog.
-#: ../modules/server/repository.py:908
+#: ../modules/server/repository.py:909
 msgid "Transforming repository catalog; this process will take some time."
 msgstr "Repository-Katalog wird umgewandelt; dieser Vorgang kann einige Zeit in Anspruch nehmen."
 
-#: ../modules/server/repository.py:1459
+#: ../modules/server/repository.py:1460
 #, python-format
 msgid ""
 "Index corrupted or out of date. Removing old index directory (%s)  and "
 "rebuilding search indexes."
 msgstr "Index beschädigt oder veraltet. Das alte Indexverzeichnis (%s) wird entfernt, und die Suchindizes werden neu erstellt."
 
-#: ../modules/server/repository.py:1476
+#: ../modules/server/repository.py:1477
 msgid "writable root not writable by current user id or group."
 msgstr "Beschreibbare Root kann von aktueller Benutzer-ID oder Gruppe nicht beschrieben werden."
 
-#: ../modules/server/repository.py:1479
+#: ../modules/server/repository.py:1480
 msgid "unable to write to index directory."
 msgstr "Schreiben in Indexverzeichnis nicht möglich."
 
-#: ../modules/server/repository.py:1898
+#: ../modules/server/repository.py:1899
 msgid "Unknown error"
 msgstr "Unbekannter Fehler"
 
-#: ../modules/server/repository.py:1900
+#: ../modules/server/repository.py:1901
 #, python-format
 msgid "Invalid file hash: %s"
 msgstr "Ungültiger Datei-Hash: %s"
 
-#: ../modules/server/repository.py:1903
+#: ../modules/server/repository.py:1904
 msgid "Corrupt manifest."
 msgstr "Beschädigtes Manifest."
 
-#: ../modules/server/repository.py:1904
+#: ../modules/server/repository.py:1905
 msgid "Use pkglint(1) for more details."
 msgstr "Über pkglint(1) erhalten Sie weitere Details."
 
-#: ../modules/server/repository.py:1906
+#: ../modules/server/repository.py:1907
 #, python-format
 msgid "Missing file: %s"
 msgstr "Fehlende Datei: %s"
 
-#: ../modules/server/repository.py:1909
+#: ../modules/server/repository.py:1910
 msgid "Corrupted gzip file."
 msgstr "Beschädigte GZIP-Datei."
 
-#: ../modules/server/repository.py:1911
+#: ../modules/server/repository.py:1912
 #, python-format
 msgid "Verification failure: %s"
 msgstr "Überprüfungsfehler: %s"
 
-#: ../modules/server/repository.py:1914
+#: ../modules/server/repository.py:1915
 msgid "Bad manifest."
 msgstr "Ungültiges Manifest."
 
-#: ../modules/server/repository.py:1916
+#: ../modules/server/repository.py:1917
 msgid "Bad signature."
 msgstr "Ungültige Signatur."
 
@@ -9705,11 +9705,11 @@ msgstr "Ungültige Signatur."
 #. an error. No attempt is made by 'pkgrepo fix'
 #. to rectify this error, as it is potentially
 #. outside our responsibility to do so.
-#: ../modules/server/repository.py:1922
+#: ../modules/server/repository.py:1923
 msgid "Restrictive permissions."
 msgstr "Restriktive Berechtigungen."
 
-#: ../modules/server/repository.py:1924
+#: ../modules/server/repository.py:1925
 #, python-format
 msgid ""
 "Some repository content for publisher '%s' or paths leading to the "
@@ -9721,21 +9721,21 @@ msgid ""
 "Only the first path found with restrictive permissions is shown."
 msgstr "Einige Repository-Inhalte für Herausgeber '%s' oder Pfade zum Repository waren nicht global lesbar oder konnten nicht von 'pkg5srv:pkg5srv' gelesen werden. Dies kann zu Zugriffsfehlern führen, wenn die Repository-Inhalte von den folgenden Services bearbeitet werden:\n svc:/application/pkg/server\n svc:/application/pkg/system-repository.\nNur der erste gefundene Pfad mit restriktiven Berechtigungen wird angezeigt."
 
-#: ../modules/server/repository.py:1980 ../modules/server/repository.py:2276
+#: ../modules/server/repository.py:1981 ../modules/server/repository.py:2277
 msgid "Permission denied."
 msgstr "Zugriff verweigert."
 
-#: ../modules/server/repository.py:2449
+#: ../modules/server/repository.py:2450
 #, python-format
 msgid "Missing file %s must be fixed by republishing the package."
 msgstr "Die fehlende Datei %s muss durch eine erneute Veröffentlichung des Packages korrigiert werden."
 
-#: ../modules/server/repository.py:2471
+#: ../modules/server/repository.py:2472
 #, python-format
 msgid "Moving %(src)s to %(dest)s"
 msgstr "%(src)s wird/werden in %(dest)s verschoben"
 
-#: ../modules/server/repository.py:2480
+#: ../modules/server/repository.py:2481
 #, python-format
 msgid "Unable to quarantine %(path)s: %(err)s"
 msgstr "%(path)s kann/können nicht unter Quarantäne gestellt werden: %(err)s"
@@ -10185,6 +10185,9 @@ msgid ""
 "\n"
 "     pkgrepo add-publisher -s repo_uri_or_path publisher ...\n"
 "\n"
+"     pkgrepo remove-publisher [-n] [--synchronous] -s repo_uri_or_path\n"
+"         publisher ...\n"
+"\n"
 "     pkgrepo get [-F format] [-p publisher ...] -s repo_uri_or_path \n"
 "         [--key ssl_key ... --cert ssl_cert ...] [section/property ...]\n"
 "\n"
@@ -10219,192 +10222,228 @@ msgid ""
 "Options:\n"
 "        --help or -?\n"
 "            Displays a usage message."
-msgstr "Syntax:\n        pkgrepo [options] command [cmd_options] [operands]\n\nUnterbefehle:\n     pkgrepo create [--version ver] uri_or_path\n\n     pkgrepo add-publisher -s repo_uri_or_path publisher ...\n\n     pkgrepo get [-F format] [-p publisher ...] -s repo_uri_or_path \n         [--key ssl_key ... --cert ssl_cert ...] [section/property ...]\n\n     pkgrepo info [-F format] [-H] [-p publisher ...] -s repo_uri_or_path\n         [--key ssl_key ... --cert ssl_cert ...]\n\n     pkgrepo list [-F format] [-H] [-p publisher ...] -s repo_uri_or_path \n         [--key ssl_key ... --cert ssl_cert ...] [pkg_fmri_pattern ...]\n\n     pkgrepo rebuild [-p publisher ...] -s repo_uri_or_path [--key ssl_key ...\n         --cert ssl_cert ...] [--no-catalog] [--no-index]\n\n     pkgrepo refresh [-p publisher ...] -s repo_uri_or_path [--key ssl_key ...\n         --cert ssl_cert ...] [--no-catalog] [--no-index]\n\n     pkgrepo remove [-n] [-p publisher ...] -s repo_uri_or_path\n         pkg_fmri_pattern ...\n\n     pkgrepo set [-p publisher ...] -s repo_uri_or_path\n         section/property[+|-]=[value] ... or\n         section/property[+|-]=([value]) ...\n\n     pkgrepo verify [-p publisher ...] -s repo_uri_or_path\n\n     pkgrepo fix [-v] [-p publisher ...] -s repo_uri_or_path\n\n     pkgrepo help\n     pkgrepo version\n\nOptionen:\n        --help or -?\n            Zeigt eine Verwendungsmeldung an."
+msgstr "Syntax:\n        pkgrepo [options] command [cmd_options] [operands]\n\nUnterbefehle:\n     pkgrepo create [--version ver] uri_or_path\n\n     pkgrepo add-publisher -s repo_uri_or_path publisher ...\n\n     pkgrepo remove-publisher [-n] [--synchronous] -s repo_uri_or_path\n         publisher ...\n\n     pkgrepo get [-F format] [-p publisher ...] -s repo_uri_or_path \n         [--key ssl_key ... --cert ssl_cert ...] [section/property ...]\n\n     pkgrepo info [-F format] [-H] [-p publisher ...] -s repo_uri_or_path\n         [--key ssl_key ... --cert ssl_cert ...]\n\n     pkgrepo list [-F format] [-H] [-p publisher ...] -s repo_uri_or_path \n         [--key ssl_key ... --cert ssl_cert ...] [pkg_fmri_pattern ...]\n\n     pkgrepo rebuild [-p publisher ...] -s repo_uri_or_path [--key ssl_key ...\n         --cert ssl_cert ...] [--no-catalog] [--no-index]\n\n     pkgrepo refresh [-p publisher ...] -s repo_uri_or_path [--key ssl_key ...\n         --cert ssl_cert ...] [--no-catalog] [--no-index]\n\n     pkgrepo remove [-n] [-p publisher ...] -s repo_uri_or_path\n         pkg_fmri_pattern ...\n\n     pkgrepo set [-p publisher ...] -s repo_uri_or_path\n         section/property[+|-]=[value] ... or\n         section/property[+|-]=([value]) ...\n\n     pkgrepo verify [-p publisher ...] -s repo_uri_or_path\n\n     pkgrepo fix [-v] [-p publisher ...] -s repo_uri_or_path\n\n     pkgrepo help\n     pkgrepo version\n\nOptions:\n        --help or -?\n            Zeigt eine Verwendungsmeldung an."
 
-#: ../pkgrepo.py:204
+#: ../pkgrepo.py:207
 msgid "At least one package pattern must be provided."
 msgstr "Es muss mindestens ein Paketmuster angegeben werden."
 
-#: ../pkgrepo.py:209 ../pkgrepo.py:429 ../pkgrepo.py:701 ../pkgrepo.py:806
-#: ../pkgrepo.py:973 ../pkgrepo.py:1037 ../pkgrepo.py:1123 ../pkgrepo.py:1358
-#: ../pkgrepo.py:1415
+#: ../pkgrepo.py:212 ../pkgrepo.py:510 ../pkgrepo.py:782 ../pkgrepo.py:887
+#: ../pkgrepo.py:1054 ../pkgrepo.py:1118 ../pkgrepo.py:1204 ../pkgrepo.py:1439
+#: ../pkgrepo.py:1496
 msgid "A package repository location must be provided using -s."
 msgstr "Es muss ein Speicherort für das Paket-Repository mithilfe der Option -s angegeben werden."
 
-#: ../pkgrepo.py:229
+#: ../pkgrepo.py:232
 #, python-format
 msgid ""
 "%(count)d package(s) will be removed:\n"
 "%(plist)s"
 msgstr "%(count)d Pakete werden entfernt:\n%(plist)s"
 
-#: ../pkgrepo.py:240
+#: ../pkgrepo.py:243
 #, python-format
 msgid "Removing packages for publisher %s ..."
 msgstr "Pakete für Herausgeber %s werden entfernt..."
 
-#: ../pkgrepo.py:255 ../pkgrepo.py:308 ../pkgrepo.py:386 ../pkgrepo.py:1362
-#: ../pkgrepo.py:1419
+#: ../pkgrepo.py:258 ../pkgrepo.py:311 ../pkgrepo.py:377 ../pkgrepo.py:467
+#: ../pkgrepo.py:1443 ../pkgrepo.py:1500
 msgid "Network repositories are not currently supported for this operation."
 msgstr "Es werden derzeit keine Netzwerk-Repositorys für diesen Vorgang unterstützt."
 
-#: ../pkgrepo.py:269 ../pkgrepo.py:306 ../pkgrepo.py:384
+#: ../pkgrepo.py:272 ../pkgrepo.py:309 ../pkgrepo.py:375 ../pkgrepo.py:465
 msgid "No repository location specified."
 msgstr "Kein Repository-Speicherort angegeben."
 
-#: ../pkgrepo.py:312
+#: ../pkgrepo.py:315 ../pkgrepo.py:381
 msgid "At least one publisher must be specified"
 msgstr "Es muss mindestens ein Herausgeber angegeben werden"
 
-#: ../pkgrepo.py:318 ../pkgrepo.py:950 ../pkgrepo.py:1014 ../pkgrepo.py:1349
-#: ../pkgrepo.py:1406
+#: ../pkgrepo.py:321 ../pkgrepo.py:1031 ../pkgrepo.py:1095 ../pkgrepo.py:1430
+#: ../pkgrepo.py:1487
 #, python-format
 msgid "Invalid publisher prefix '%s'"
 msgstr "Ungültiges Herausgeberpräfix '%s'"
 
 #. Some of the publishers that were requested for addition
 #. were already known.
-#: ../pkgrepo.py:348
+#: ../pkgrepo.py:351
 #, python-format
 msgid "specified publisher(s) already exist: %s"
 msgstr "Angegebene Herausgeber sind bereits vorhanden: %s"
 
-#: ../pkgrepo.py:373
+#: ../pkgrepo.py:390
+#, python-format
+msgid ""
+"Invalid publisher prefix(es):\n"
+" %s"
+msgstr "Ungültige Herausgeberpräfixe:\n%s"
+
+#: ../pkgrepo.py:402
+#, python-format
+msgid ""
+"The following publisher(s) could not be found:\n"
+" %s"
+msgstr "Die folgenden Herausgeber konnten nicht gefunden werden:\n%s"
+
+#: ../pkgrepo.py:406
+msgid "Removing publisher(s)"
+msgstr "Herausgeber werden entfernt"
+
+#: ../pkgrepo.py:410
+#, python-format
+msgid "'%(pfx)s'\t(%(num)s package(s))"
+msgstr "\"%(pfx)s\"\t(%(num)s Paket(e))"
+
+#: ../pkgrepo.py:425
+#, python-format
+msgid ""
+"The default publisher was removed. Setting 'publisher/prefix' to '%s', the "
+"only publisher left"
+msgstr "Der Standardherausgeber wurde entfernt. \"Herausgeber/Präfix\" wird auf \"%s\" gesetzt, dem einzigen verbliebenen Herausgeber"
+
+#: ../pkgrepo.py:431
+msgid ""
+"The default publisher was removed. The 'publisher/prefix' property has been "
+"unset"
+msgstr "Der Standardherausgeber wurde entfernt. Die Festlegung der Eigenschaft \"Herausgeber/Präfix\" wurde aufgehoben"
+
+#: ../pkgrepo.py:454
 msgid "Version must be an integer value."
 msgstr "Version muss ein Integer-Wert sein."
 
-#: ../pkgrepo.py:377
+#: ../pkgrepo.py:458
 msgid "Only one repository location may be specified."
 msgstr "Es darf nur ein Repository-Speicherort angegeben werden."
 
 #. Set minimum widths for section and property name columns by using the
 #. length of the column headers.
-#: ../pkgrepo.py:453 ../pkgrepo.py:486 ../pkgrepo.py:490 ../pkgrepo.py:559
-#: ../pkgrepo.py:635 ../pkgrepo.py:639
+#: ../pkgrepo.py:534 ../pkgrepo.py:567 ../pkgrepo.py:571 ../pkgrepo.py:640
+#: ../pkgrepo.py:716 ../pkgrepo.py:720
 msgid "SECTION"
 msgstr "ABSCHNITT"
 
-#: ../pkgrepo.py:454 ../pkgrepo.py:487 ../pkgrepo.py:490 ../pkgrepo.py:560
-#: ../pkgrepo.py:636 ../pkgrepo.py:639
+#: ../pkgrepo.py:535 ../pkgrepo.py:568 ../pkgrepo.py:571 ../pkgrepo.py:641
+#: ../pkgrepo.py:717 ../pkgrepo.py:720
 msgid "PROPERTY"
 msgstr "EIGENSCHAFT"
 
 #. Don't pollute other output formats.
-#: ../pkgrepo.py:507 ../pkgrepo.py:657
+#: ../pkgrepo.py:588 ../pkgrepo.py:738
 msgid "no matching properties found"
 msgstr "Keine entsprechenden Eigenschaften gefunden"
 
 #. Don't pollute other output formats.
-#: ../pkgrepo.py:539 ../pkgrepo.py:767
+#: ../pkgrepo.py:620 ../pkgrepo.py:848
 msgid "no matching publishers found"
 msgstr "Keine entsprechenden Herausgeber gefunden"
 
-#: ../pkgrepo.py:697 ../pkgrepo.py:965 ../pkgrepo.py:1029 ../pkgrepo.py:1236
-#: ../pkgrepo.py:1354 ../pkgrepo.py:1411 ../publish.py:685
+#: ../pkgrepo.py:778 ../pkgrepo.py:1046 ../pkgrepo.py:1110 ../pkgrepo.py:1317
+#: ../pkgrepo.py:1435 ../pkgrepo.py:1492 ../publish.py:685
 msgid "command does not take operands"
 msgstr "Befehl nimmt keine Operanden an."
 
-#: ../pkgrepo.py:742 ../pkgrepo.py:747
+#: ../pkgrepo.py:823 ../pkgrepo.py:828
 msgid "PACKAGES"
 msgstr "PAKETE"
 
-#: ../pkgrepo.py:744 ../pkgrepo.py:748
+#: ../pkgrepo.py:825 ../pkgrepo.py:829
 msgid "UPDATED"
 msgstr "AKTUALISIERT"
 
-#: ../pkgrepo.py:893 ../pkgrepo.py:902
+#: ../pkgrepo.py:974 ../pkgrepo.py:983
 msgid "RELEASE"
 msgstr "RELEASE"
 
-#: ../pkgrepo.py:894 ../pkgrepo.py:903
+#: ../pkgrepo.py:975 ../pkgrepo.py:984
 msgid "BUILD RELEASE"
 msgstr "BUILD RELEASE"
 
-#: ../pkgrepo.py:895 ../pkgrepo.py:903
+#: ../pkgrepo.py:976 ../pkgrepo.py:984
 msgid "BRANCH"
 msgstr "BRANCH"
 
-#: ../pkgrepo.py:896 ../pkgrepo.py:903
+#: ../pkgrepo.py:977 ../pkgrepo.py:984
 msgid "PACKAGING DATE"
 msgstr "PACKAGING DATE"
 
-#: ../pkgrepo.py:897 ../pkgrepo.py:903
+#: ../pkgrepo.py:978 ../pkgrepo.py:984
 msgid "FMRI"
 msgstr "FMRI"
 
-#: ../pkgrepo.py:902
+#: ../pkgrepo.py:983
 msgid "SUMMARY"
 msgstr "SUMMARY"
 
-#: ../pkgrepo.py:902 ../util/publish/pkglint.py:221
+#: ../pkgrepo.py:983 ../util/publish/pkglint.py:221
 msgid "DESCRIPTION"
 msgstr "BESCHREIBUNG"
 
-#: ../pkgrepo.py:902
+#: ../pkgrepo.py:983
 msgid "CATEGORIES"
 msgstr "CATEGORIES"
 
-#: ../pkgrepo.py:904
+#: ../pkgrepo.py:985
 msgid "STATE"
 msgstr "STATE"
 
-#: ../pkgrepo.py:1117
+#: ../pkgrepo.py:1198
 msgid ""
 "a property name and value must be provided in the form <section/"
 "property>=<value> or <section/property>=([\"<value>\" ...])"
 msgstr "Eigenschaftsname und -wert müssen in der Form <Abschnitt/Eigenschaft>=<Wert> oder <Abschnitt/Eigenschaft>=([\"<Wert>\" ...]) angegeben werden"
 
-#: ../pkgrepo.py:1139
+#: ../pkgrepo.py:1220
 #, python-format
 msgid "unknown property section '%s'"
 msgstr "Unbekannter Eigenschaftsabschnitt '%s'"
 
-#: ../pkgrepo.py:1143
+#: ../pkgrepo.py:1224
 #, python-format
 msgid "'%s' may not be set using this command"
 msgstr "'%s' darf mit diesem Befehl nicht festgelegt werden"
 
-#: ../pkgrepo.py:1148
+#: ../pkgrepo.py:1229
 #, python-format
 msgid "unknown property '%s'"
 msgstr "Unbekannte Eigenschaft '%s'"
 
 #. If there are still no known publishers, this
 #. operation cannot succeed, so fail now.
-#: ../pkgrepo.py:1157
+#: ../pkgrepo.py:1238
 msgid ""
 "One or more publishers must be specified to create and set properties for as "
 "none exist yet."
 msgstr "Es muss mindestens ein Herausgeber angegeben werden, für den Eigenschaften erstellt und festgelegt werden, da noch keiner vorhanden ist."
 
-#: ../pkgrepo.py:1211
+#: ../pkgrepo.py:1292
 #, python-format
 msgid ""
 "Unable to set properties for publisher '%(pfx)s':\n"
 "%(details)s"
 msgstr "Für Herausgeber '%(pfx)s' können keine Eigenschaften festgelegt werden:\n%(details)s"
 
-#: ../pkgrepo.py:1258
+#: ../pkgrepo.py:1339
 msgid "Repository path"
 msgstr "Repository-Pfad"
 
-#: ../pkgrepo.py:1259
+#: ../pkgrepo.py:1340
 msgid "Computed hash"
 msgstr "Berechneter Hash"
 
-#: ../pkgrepo.py:1260 ../pkgrepo.py:1261
+#: ../pkgrepo.py:1341 ../pkgrepo.py:1342
 msgid "Path"
 msgstr "Pfad"
 
-#: ../pkgrepo.py:1262
+#: ../pkgrepo.py:1343
 msgid "Package"
 msgstr "Package"
 
-#: ../pkgrepo.py:1263
+#: ../pkgrepo.py:1344
 msgid "Detail"
 msgstr "Details"
 
-#: ../pkgrepo.py:1466
+#: ../pkgrepo.py:1547
 #, python-format
 msgid ""
 "Use pkgsend(1) or pkgrecv(1) to republish the\n"
@@ -10413,7 +10452,7 @@ msgid ""
 "\t%s"
 msgstr "Verwenden Sie pkgsend(1) oder pkgrecv(1), um die folgenden\nPackages oder Pfade unter Quarantäne erneut zu veröffentlichen:\n\n\t%s"
 
-#: ../pkgrepo.py:1471
+#: ../pkgrepo.py:1552
 #, python-format
 msgid ""
 "\n"
@@ -10422,15 +10461,15 @@ msgid ""
 "\t%s"
 msgstr "\npkgrepo konnte die folgenden Pfade im Repository nicht reparieren:\n\n\t%s"
 
-#: ../pkgrepo.py:1476
+#: ../pkgrepo.py:1557
 msgid "No repository fixes required."
 msgstr "Keine Repository-Korrekturen erforderlich."
 
-#: ../pkgrepo.py:1478
+#: ../pkgrepo.py:1559
 msgid "Repository repairs completed."
 msgstr "Repository-Reparaturen abgeschlossen."
 
-#: ../pkgrepo.py:1571
+#: ../pkgrepo.py:1652
 #, python-format
 msgid ""
 "The pkgrepo command appears out of sync with the libraries provided\n"
