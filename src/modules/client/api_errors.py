@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
 #
 
 import errno
@@ -147,6 +147,9 @@ class ImageNotFoundException(ApiException):
                 self.user_specified = user_specified
                 self.user_dir = user_dir
                 self.root_dir = root_dir
+
+        def __str__(self):
+                return _("No image rooted at '%s'") % self.user_dir
 
 
 class ImageFormatUpdateNeeded(ApiException):
@@ -335,13 +338,21 @@ class ImagePkgStateError(ApiException):
 
 
 class IpkgOutOfDateException(ApiException):
-        pass
+        def __str__(self):
+                return _("pkg(5) out of date")
+
 
 class ImageUpdateOnLiveImageException(ApiException):
-        pass
+        def __str__(self):
+                return _("Requested operation cannot be performed "
+                    "in live image.")
+
 
 class RebootNeededOnLiveImageException(ApiException):
-        pass
+        def __str__(self):
+                return _("Requested operation cannot be performed "
+                    "in live image.")
+
 
 class CanceledException(ApiException):
         pass
@@ -404,6 +415,17 @@ class ReadOnlyFileSystemException(PermissionsException):
                             "read-only filesystem.") % self.path
                 return _("Could not complete the operation: read-only "
                         "filesystem.")
+
+
+class InvalidLockException(ApiException):
+        def __init__(self, path):
+                ApiException.__init__(self)
+                self.path = path
+
+        def __str__(self):
+                return _("Unable to obtain or operate on lock at %s.\n"
+                    "Please try the operation again as a privileged user.") \
+                    % self.path
 
 
 class PackageMatchErrors(ApiException):
@@ -1030,7 +1052,8 @@ class InvalidCatalogFile(CatalogError):
         """Used to indicate a Catalog file could not be loaded."""
 
         def __str__(self):
-                return _("Catalog file '%s' is invalid.") % self.data
+                return _("Catalog file '%s' is invalid.\nUse 'pkgrepo rebuild' "
+                    "to create a new package catalog.") % self.data
 
 
 class MismatchedCatalog(CatalogError):
@@ -1231,7 +1254,8 @@ class IndexingException(SearchException):
 
 class CorruptedIndexException(IndexingException):
         """This is used when the index is not in a correct state."""
-        pass
+        def __str__(self):
+                return _("The search index appears corrupted.")
 
 
 class InconsistentIndexException(IndexingException):
@@ -1327,6 +1351,12 @@ class NonLeafPackageException(ApiException):
 
                 self.fmri = args[0]
                 self.dependents = args[1]
+
+        def __str__(self):
+                s = _("Unable to remove '%s' due to the following packages "
+                    "that depend on it:\n") % self.fmri
+                s += "\n".join(str(f) for f in self.dependents)
+                return s
 
 def _str_autofix(self):
 
@@ -2337,26 +2367,69 @@ class CertificateError(ApiException):
 class ExpiredCertificate(CertificateError):
         """Used to indicate that a certificate has expired."""
 
+        def __init__(self, *args, **kwargs):
+                CertificateError.__init__(self, *args, **kwargs)
+                self.publisher = self._args.get("publisher", None)
+                self.uri = self._args.get("uri", None)
+
         def __str__(self):
-                publisher = self._args.get("publisher", None)
-                uri = self._args.get("uri", None)
-                if publisher:
-                        if uri:
+                if self.publisher:
+                        if self.uri:
                                 return _("Certificate '%(cert)s' for publisher "
                                     "'%(pub)s' needed to access '%(uri)s', "
                                     "has expired.  Please install a valid "
                                     "certificate.") % { "cert": self.data,
-                                    "pub": publisher, "uri": uri }
+                                    "pub": self.publisher, "uri": self.uri }
                         return _("Certificate '%(cert)s' for publisher "
                             "'%(pub)s', has expired.  Please install a valid "
                             "certificate.") % { "cert": self.data,
-                            "pub": publisher }
-                if uri:
+                            "pub": self.publisher }
+                if self.uri:
                         return _("Certificate '%(cert)s', needed to access "
                             "'%(uri)s', has expired.  Please install a valid "
-                            "certificate.") % { "cert": self.data, "uri": uri }
+                            "certificate.") % { "cert": self.data,
+                            "uri": self.uri }
                 return _("Certificate '%s' has expired.  Please install a "
                     "valid certificate.") % self.data
+
+
+class ExpiredCertificates(CertificateError):
+        """Used to collect ExpiredCertficate exceptions."""
+
+        def __init__(self, errors):
+
+                self.errors = []
+
+                assert (isinstance(errors, (list, tuple,
+                    set, ExpiredCertificate)))
+
+                if isinstance(errors, ExpiredCertificate):
+                        self.errors.append(errors)
+                else:
+                        self.errors = errors
+
+        def __str__(self):
+                pdict = dict()
+                for e in self.errors:
+                        if e.publisher in pdict:
+                                pdict[e.publisher].append(e.uri)
+                        else:
+                                pdict[e.publisher] = [e.uri]
+
+                msg = ""
+                for pub, uris in pdict.items():
+                        msg += "\n%s:" % _("Publisher")
+                        msg += " %s" % pub
+                        for uri in uris:
+                                msg += "\n  %s:\n" % _("Origin URI")
+                                msg += "    %s\n" % uri
+                                msg += "  %s:\n" % _("Certificate")
+                                msg += "    %s\n" % uri.ssl_cert
+                                msg += "  %s:\n" % _("Key")
+                                msg += "    %s\n" % uri.ssl_key
+                return _("One or more client key and certificate files have "
+                    "expired. Please\nupdate the configuration for the "
+                    "publishers or origins listed below:\n %s") % msg
 
 
 class ExpiringCertificate(CertificateError):
@@ -2610,25 +2683,28 @@ class LinkedImageException(ApiException):
             attach_child_notsup=None,
             attach_parent_notsup=None,
             attach_root_as_child=None,
+            attach_with_curpath=None,
             child_bad_img=None,
             child_diverged=None,
             child_dup=None,
-            child_nested=None,
             child_not_in_altroot=None,
             child_not_nested=None,
-            child_path_eaccess=None,
+            child_op_failed=None,
             child_path_notabs=None,
             child_unknown=None,
             cmd_failed=None,
+            cmd_output_invalid=None,
             detach_child_notsup=None,
             detach_from_parent=None,
             detach_parent_notsup=None,
             img_linked=None,
+            intermediate_image=None,
             lin_malformed=None,
-            link_to_self=False,
+            link_to_self=None,
             parent_bad_img=None,
             parent_bad_notabs=None,
             parent_bad_path=None,
+            parent_nested=None,
             parent_not_in_altroot=None,
             pkg_op_failed=None,
             self_linked=None,
@@ -2640,25 +2716,28 @@ class LinkedImageException(ApiException):
                 self.attach_child_notsup = attach_child_notsup
                 self.attach_parent_notsup = attach_parent_notsup
                 self.attach_root_as_child = attach_root_as_child
+                self.attach_with_curpath = attach_with_curpath
                 self.child_bad_img = child_bad_img
                 self.child_diverged = child_diverged
                 self.child_dup = child_dup
-                self.child_nested = child_nested
                 self.child_not_in_altroot = child_not_in_altroot
                 self.child_not_nested = child_not_nested
-                self.child_path_eaccess = child_path_eaccess
+                self.child_op_failed = child_op_failed
                 self.child_path_notabs = child_path_notabs
                 self.child_unknown = child_unknown
                 self.cmd_failed = cmd_failed
+                self.cmd_output_invalid = cmd_output_invalid
                 self.detach_child_notsup = detach_child_notsup
                 self.detach_from_parent = detach_from_parent
                 self.detach_parent_notsup = detach_parent_notsup
                 self.img_linked = img_linked
+                self.intermediate_image = intermediate_image
                 self.lin_malformed = lin_malformed
                 self.link_to_self = link_to_self
                 self.parent_bad_img = parent_bad_img
                 self.parent_bad_notabs = parent_bad_notabs
                 self.parent_bad_path = parent_bad_path
+                self.parent_nested = parent_nested
                 self.parent_not_in_altroot = parent_not_in_altroot
                 self.pkg_op_failed = pkg_op_failed
                 self.self_linked = self_linked
@@ -2701,7 +2780,18 @@ class LinkedImageException(ApiException):
                             "attach: %s") % attach_parent_notsup
 
                 if attach_root_as_child is not None:
-                        err = _("Cannot attach root image as child")
+                        err = _("Cannot attach root image as child: %s" %
+                            attach_root_as_child)
+
+                if attach_with_curpath is not None:
+                        path, curpath = attach_with_curpath
+                        err = _("Cannot link images when an image is not at "
+                            "its default location.  The image currently "
+                            "located at:\n  %(curpath)s\n"
+                            "is normally located at:\n  %(path)s\n") % {
+                                "path": path,
+                                "curpath": curpath,
+                            }
 
                 if child_bad_img is not None:
                         if exitrv == None:
@@ -2726,14 +2816,6 @@ class LinkedImageException(ApiException):
                         err = _("A linked child image with this name "
                             "already exists: %s") % child_dup
 
-                if child_nested is not None:
-                        cpath, ipath = child_nested
-                        err = _("Child image '%(cpath)s' is nested "
-                            "within another image: '%(ipath)s'") % {
-                                "cpath": cpath,
-                                "ipath": ipath,
-                            }
-
                 if child_not_in_altroot is not None:
                         path, altroot = child_not_in_altroot
                         err = _("Child image '%(path)s' is not located "
@@ -2750,18 +2832,26 @@ class LinkedImageException(ApiException):
                                 "ppath": ppath,
                             }
 
-                if child_path_eaccess is not None:
+                if child_op_failed is not None:
+                        op, cpath, e = child_op_failed
                         if exitrv == None:
                                 exitrv = pkgdefs.EXIT_EACCESS
                         if lin:
-                                err = _("Can't access child image "
-                                    "(%(lin)s) at path: %(path)s") % {
+                                err = _("Failed '%(op)s' for child image "
+                                    "(%(lin)s) at path: %(path)s: "
+                                    "%(strerror)s") % {
+                                        "op": op,
                                         "lin": lin,
-                                        "path": child_path_eaccess
+                                        "path": cpath,
+                                        "strerror": e,
                                     }
                         else:
-                                err = _("Can't access child image "
-                                    "at path: %s") % child_path_eaccess
+                                err = _("Failed '%(op)s' for child image "
+                                    "at path: %(path)s: %(strerror)s") % {
+                                        "op": op,
+                                        "path": cpath,
+                                        "strerror": e,
+                                    }
 
                 if child_path_notabs is not None:
                         err = _("Child path not absolute: %s") % \
@@ -2781,6 +2871,15 @@ class LinkedImageException(ApiException):
                         err += _("\nAnd generated the following error "
                             "message:\n%(errout)s" % {"errout": errout})
 
+                if cmd_output_invalid is not None:
+                        (cmd, output) = cmd_output_invalid
+                        err = _(
+                            "The following subprocess:\n"
+                            "    %(cmd)s\n"
+                            "Generated the following unexpected output:\n"
+                            "%(output)s\n" %
+                            {"cmd": " ".join(cmd), "output": "\n".join(output)})
+
                 if detach_child_notsup is not None:
                         err = _("Linked image type does not support "
                             "child detach: %s") % detach_child_notsup
@@ -2799,14 +2898,25 @@ class LinkedImageException(ApiException):
                         err = _("Image already a linked child: %s") % \
                             img_linked
 
+                if intermediate_image is not None:
+                        ppath, cpath, ipath = intermediate_image
+                        err = _(
+                            "Intermediate image '%(ipath)s' found between "
+                            "child '%(cpath)s' and "
+                            "parent '%(ppath)s'") % {
+                                "ppath": ppath,
+                                "cpath": cpath,
+                                "ipath": ipath,
+                            }
+
                 if lin_malformed is not None:
                         err = _("Invalid linked image name '%s'. "
                             "Linked image names have the following format "
                             "'<linked_image plugin>:<linked_image name>'") % \
                             lin_malformed
 
-                if link_to_self:
-                        err = _("Can't link image to itself.")
+                if link_to_self is not None:
+                        err = _("Can't link image to itself: %s")
 
                 if parent_bad_img is not None:
                         if exitrv == None:
@@ -2823,6 +2933,14 @@ class LinkedImageException(ApiException):
                                 exitrv = pkgdefs.EXIT_EACCESS
                         err = _("Can't access parent image at path: %s") % \
                             parent_bad_path
+
+                if parent_nested is not None:
+                        ppath, cpath = parent_nested
+                        err = _("A parent image '%(ppath)s' can not be nested "
+                            "within a child image '%(cpath)s'") % {
+                                "ppath": ppath,
+                                "cpath": cpath,
+                            }
 
                 if parent_not_in_altroot is not None:
                         path, altroot = parent_not_in_altroot
@@ -3002,14 +3120,15 @@ class InvalidOptionError(ApiException):
         """Used to indicate an issue with verifying options passed to a certain
         operation."""
 
-        GENERIC    = "generic"      # generic option violation
-        OPT_REPEAT = "opt_repeat"   # option repetition is not allowed
-        ARG_REPEAT = "arg_repeat"   # argument repetition is not allowed
-        INCOMPAT   = "incompat"     # option 'a' can not be specified with option 'b'
-        REQUIRED   = "required"     # option 'a' requires option 'b'
-        XOR        = "xor"          # either option 'a' or option 'b' must be specified
+        GENERIC     = "generic"      # generic option violation
+        OPT_REPEAT  = "opt_repeat"   # option repetition is not allowed
+        ARG_REPEAT  = "arg_repeat"   # argument repetition is not allowed
+        ARG_INVALID = "arg_invalid"  # argument is invalid
+        INCOMPAT    = "incompat"     # option 'a' can not be specified with option 'b'
+        REQUIRED    = "required"     # option 'a' requires option 'b'
+        XOR         = "xor"          # either option 'a' or option 'b' must be specified
 
-	def __init__(self, err_type=GENERIC, options=[], msg=None):
+        def __init__(self, err_type=GENERIC, options=[], msg=None):
 
                 self.err_type = err_type
                 self.options = options
@@ -3025,7 +3144,7 @@ class InvalidOptionError(ApiException):
                                 self.msg += " ".join(self.options)
                         return self.msg
 
-       		if self.err_type == self.OPT_REPEAT:
+                if self.err_type == self.OPT_REPEAT:
                         assert len(self.options) == 1
                         return _("Option '%(option)s' may not be repeated.") % {
                             "option" : self.options[0]}
@@ -3033,6 +3152,11 @@ class InvalidOptionError(ApiException):
                         assert len(self.options) == 2
                         return _("Argument '%(op1)s' for option '%(op2)s' may "
                             "not be repeated.") % {"op1" : self.options[0],
+                            "op2" : self.options[1]}
+                elif self.err_type == self.ARG_INVALID:
+                        assert len(self.options) == 2
+                        return _("Argument '%(op1)s' for option '%(op2)s' is "
+                            "invalid.") % {"op1" : self.options[0],
                             "op2" : self.options[1]}
                 elif self.err_type == self.INCOMPAT:
                         assert len(self.options) == 2

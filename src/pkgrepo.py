@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
 #
 
 PKG_CLIENT_NAME = "pkgrepo"
@@ -33,7 +33,7 @@ EXIT_BADOPT  = 2
 EXIT_PARTIAL = 3
 
 # listing constants
-LISTING_FORMATS = ("json", "json-formatted", "tsv")
+LISTING_FORMATS = ("default", "json", "json-formatted", "tsv")
 
 # globals
 tmpdirs = []
@@ -53,6 +53,7 @@ import tempfile
 import textwrap
 import traceback
 import warnings
+import itertools
 
 from pkg.client import global_settings
 from pkg.client.debugvalues import DebugValues
@@ -147,6 +148,9 @@ Subcommands:
      pkgrepo list [-F format] [-H] [-p publisher ...] -s repo_uri_or_path 
          [--key ssl_key ... --cert ssl_cert ...] [pkg_fmri_pattern ...]
 
+     pkgrepo contents [-m] [-t action_type ...] -s repo_uri_or_path
+         [--key ssl_key ... --cert ssl_cert ...] [pkg_fmri_pattern ...]
+
      pkgrepo rebuild [-p publisher ...] -s repo_uri_or_path [--key ssl_key ...
          --cert ssl_cert ...] [--no-catalog] [--no-index]
 
@@ -172,6 +176,7 @@ Options:
             Displays a usage message."""))
 
         sys.exit(retcode)
+
 
 class OptionError(Exception):
         """Option exception. """
@@ -250,8 +255,11 @@ def subcmd_remove(conf, args):
         return EXIT_OK
 
 
-def get_repo(conf, read_only=True, subcommand=None):
-        """Return the repository object for current program configuration."""
+def get_repo(conf, allow_invalid=False, read_only=True, subcommand=None):
+        """Return the repository object for current program configuration.
+
+        'allow_invalid' specifies whether potentially corrupt repositories are
+        allowed; should only be True if performing a rebuild operation."""
 
         repo_uri = conf["repo_uri"]
         if repo_uri.scheme != "file":
@@ -262,7 +270,8 @@ def get_repo(conf, read_only=True, subcommand=None):
         if not path:
                 # Bad URI?
                 raise sr.RepositoryInvalidError(str(repo_uri))
-        return sr.Repository(read_only=read_only, root=path)
+        return sr.Repository(allow_invalid=allow_invalid, read_only=read_only,
+            root=path)
 
 
 def setup_transport(conf, subcommand=None, verbose=False, ssl_key=None,
@@ -271,6 +280,7 @@ def setup_transport(conf, subcommand=None, verbose=False, ssl_key=None,
         if not repo_uri:
                 usage(_("No repository location specified."), cmd=subcommand)
 
+        global tmpdirs
         temp_root = misc.config_temp_root()
 
         tmp_dir = tempfile.mkdtemp(dir=temp_root)
@@ -286,6 +296,7 @@ def setup_transport(conf, subcommand=None, verbose=False, ssl_key=None,
         xport, xport_cfg = transport.setup_transport()
         xport_cfg.add_cache(cache_dir, readonly=False)
         xport_cfg.incoming_root = incoming_dir
+        xport_cfg.pkg_root = tmp_dir
 
         # Configure target publisher.
         src_pub = transport.setup_publisher(str(repo_uri), "target", xport,
@@ -487,13 +498,11 @@ def subcmd_get(conf, args):
         opts, pargs = getopt.getopt(args, "F:Hp:s:", ["key=", "cert="])
         for opt, arg in opts:
                 if opt == "-F":
+                        if arg not in LISTING_FORMATS:
+                                raise apx.InvalidOptionError(
+                                    apx.InvalidOptionError.ARG_INVALID,
+                                    [arg, opt])
                         out_format = arg
-                        if out_format not in LISTING_FORMATS:
-                                usage(_("Unrecognized format %(format)s."
-                                    " Supported formats: %(valid)s") % \
-                                    { "format": out_format,
-                                    "valid": LISTING_FORMATS }, cmd=subcommand)
-                                return EXIT_OOPS
                 elif opt == "-H":
                         omit_headers = True
                 elif opt == "-p":
@@ -757,11 +766,9 @@ def subcmd_info(conf, args):
         for opt, arg in opts:
                 if opt == "-F":
                         if arg not in LISTING_FORMATS:
-                                usage(_("Unrecognized format %(format)s."
-                                    " Supported formats: %(valid)s") % \
-                                    { "format": arg,
-                                    "valid": LISTING_FORMATS }, cmd=subcommand)
-                                return EXIT_OOPS
+                                raise apx.InvalidOptionError(
+                                    apx.InvalidOptionError.ARG_INVALID,
+                                    [arg, opt])
                         out_format = arg
                 elif opt == "-H":
                         omit_headers = True
@@ -863,13 +870,11 @@ def subcmd_list(conf, args):
         opts, pargs = getopt.getopt(args, "F:Hp:s:", ["key=", "cert="])
         for opt, arg in opts:
                 if opt == "-F":
+                        if arg not in LISTING_FORMATS:
+                                raise apx.InvalidOptionError(
+                                    apx.InvalidOptionError.ARG_INVALID,
+                                    [arg, opt])
                         out_format = arg
-                        if out_format not in LISTING_FORMATS:
-                                usage(_("Unrecognized format %(format)s."
-                                    " Supported formats: %(valid)s") %
-                                    { "format": out_format,
-                                    "valid": LISTING_FORMATS }, cmd=subcommand)
-                                return EXIT_OOPS
                 elif opt == "-H":
                         omit_headers = True
                 elif opt == "-p":
@@ -894,29 +899,7 @@ def subcmd_list(conf, args):
         if rval == EXIT_OOPS:
                 return rval
 
-        temp_root = misc.config_temp_root()
-        progtrack = get_tracker()
-        progtrack.set_purpose(progtrack.PURPOSE_LISTING)
-
-        progtrack.refresh_start(pub_cnt=len(pub_data), full_refresh=True,
-            target_catalog=False)
-
-        for pub in pub_data:
-                progtrack.refresh_start_pub(pub)
-                meta_root = tempfile.mkdtemp(dir=temp_root)
-                tmpdirs.append(meta_root)
-                pub.meta_root = meta_root
-                pub.transport = xport
-
-                try:
-                        pub.refresh(True, True, progtrack=progtrack)
-                except apx.TransportError:
-                        # Assume that a catalog doesn't exist for the target
-                        # publisher and drive on.
-                        pass
-                progtrack.refresh_end_pub(pub)
-
-        progtrack.refresh_done()
+        refresh_pub(pub_data, xport)
         listed = {}
         matched = set()
         unmatched = set()
@@ -1013,6 +996,207 @@ def subcmd_list(conf, args):
         return EXIT_OK
 
 
+def refresh_pub(pub_data, xport):
+        """A helper function to refresh all specified publishers."""
+
+        global tmpdirs
+        temp_root = misc.config_temp_root()
+        progtrack = get_tracker()
+        progtrack.set_purpose(progtrack.PURPOSE_LISTING)
+
+        progtrack.refresh_start(pub_cnt=len(pub_data), full_refresh=True,
+            target_catalog=False)
+
+        for pub in pub_data:
+                progtrack.refresh_start_pub(pub)
+                meta_root = tempfile.mkdtemp(dir=temp_root)
+                tmpdirs.append(meta_root)
+                pub.meta_root = meta_root
+                pub.transport = xport
+
+                try:
+                        pub.refresh(True, True, progtrack=progtrack)
+                except apx.TransportError:
+                        # Assume that a catalog doesn't exist for the target
+                        # publisher and drive on.
+                        pass
+                progtrack.refresh_end_pub(pub)
+
+        progtrack.refresh_done()
+
+
+def subcmd_contents(conf, args):
+        """List package contents."""
+
+	subcommand = "contents"
+	display_raw = False
+	pubs = set()
+	key = None
+	cert = None
+        attrs = []
+        action_types = []
+
+	opts, pargs = getopt.getopt(args, "ms:t:", ["key=", "cert="])
+	for opt, arg in opts:
+		if opt == "-s":
+                        conf["repo_uri"] = parse_uri(arg)
+		elif opt == "-m":
+			display_raw = True
+		elif opt == "-t":
+                        action_types.extend(arg.split(","))
+		elif opt == "--key":
+			key = arg
+		elif opt == "--cert":
+			cert = arg
+
+        # Setup transport so configuration can be retrieved.
+        if not conf.get("repo_uri", None):
+                usage(_("A package repository location must be provided "
+                    "using -s."), cmd=subcommand)
+
+        xport, xpub, tmp_dir = setup_transport(conf, subcommand=subcommand,
+            ssl_key=key, ssl_cert=cert)
+
+        rval, found, pub_data = _get_matching_pubs(subcommand, pubs, xport,
+            xpub, use_transport=True)
+        if rval == EXIT_OOPS:
+                return rval
+
+        # Default output prints out the raw manifest. The -m option is implicit 
+        # for now and supported to make the interface equivalent to pkg contents.
+        if not attrs or display_raw:
+                attrs = ["action.raw"]
+
+        refresh_pub(pub_data, xport)
+        listed = False
+        matched = set()
+        unmatched = set()
+        manifests = []
+
+        for pub in pub_data:
+                cat = pub.catalog
+                for f, states, attr in cat.gen_packages(matched=matched,
+                        patterns=pargs, pubs=[pub.prefix],
+                        unmatched=unmatched, return_fmris=True):
+                        if not listed:
+                                listed = True
+                        manifests.append(xport.get_manifest(f))
+                unmatched.difference_update(matched)
+
+        # Build a generator expression based on whether specific action types
+        # were provided.
+        if action_types:
+                # If query is limited to specific action types, use the more
+                # efficient type-based generation mechanism.
+                gen_expr = (
+                    (m.fmri, a, None, None, None)
+                    for m in manifests
+                    for a in m.gen_actions_by_types(action_types)
+                )
+        else:
+                gen_expr = (
+                    (m.fmri, a, None, None, None)
+                    for m in manifests
+                    for a in m.gen_actions()
+                )
+
+        # Determine if the query returned any results by "peeking" at the first
+        # value returned from the generator expression.
+        try:
+                got = gen_expr.next()
+        except StopIteration:
+                got = None
+                actionlist = []
+
+        if got:
+                actionlist = itertools.chain([got], gen_expr)
+
+        rval = EXIT_OK
+        if action_types and manifests and not got:
+                logger.error(_(gettext.ngettext("""\
+pkgrepo: contents: This package contains no actions with the types specified
+using the -t option""", """\
+pkgrepo: contents: These packages contain no actions with the types specified
+using the -t option.""", len(pargs))))
+                rval = EXIT_OOPS
+
+        if manifests and rval == EXIT_OK:
+                lines = misc.list_actions_by_attrs(actionlist, attrs)
+                for line in lines:
+                        text = ("%s" % tuple(line)).rstrip()
+                        if not text:
+                               continue
+                        msg(text)
+
+        if unmatched:
+                if manifests:
+                        logger.error("")
+                logger.error(_("""\
+pkgrepo: contents: no packages matching the following patterns you specified
+were found in the repository."""))
+                logger.error("")
+                for p in unmatched:
+                        logger.error("        %s" % p)
+                rval = EXIT_OOPS
+
+        return rval
+
+
+def __rebuild_local(subcommand, conf, pubs, build_catalog, build_index):
+        """In an attempt to allow operations on potentially corrupt
+        repositories, 'local' repositories (filesystem-basd ones) are handled
+        separately."""
+
+        repo = get_repo(conf, allow_invalid=build_catalog, read_only=False,
+            subcommand=subcommand)
+
+        rpubs = set(repo.publishers)
+        if not pubs:
+                found = rpubs
+        else:
+                found = rpubs & pubs
+        notfound = pubs - found
+
+        rval = EXIT_OK
+        if found and notfound:
+                rval = EXIT_PARTIAL
+        elif pubs and not found:
+                error(_("no matching publishers found"), cmd=subcommand)
+                return EXIT_OOPS
+
+        logger.info("Initiating repository rebuild.")
+        for pfx in found:
+                repo.rebuild(build_catalog=build_catalog,
+                    build_index=build_index, pub=pfx)
+
+        return rval
+
+
+def __rebuild_remote(subcommand, conf, pubs, key, cert, build_catalog,
+    build_index):
+        def do_rebuild(xport, xpub):
+                if build_catalog and build_index:
+                        xport.publish_rebuild(xpub)
+                elif build_catalog:
+                        xport.publish_rebuild_packages(xpub)
+                elif build_index:
+                        xport.publish_rebuild_indexes(xpub)
+
+        xport, xpub, tmp_dir = setup_transport(conf, subcommand=subcommand,
+            ssl_key=key, ssl_cert=cert)
+        rval, found, pub_data = _get_matching_pubs(subcommand, pubs, xport,
+            xpub)
+        if rval == EXIT_OOPS:
+                return rval
+
+        logger.info("Initiating repository rebuild.")
+        for pfx in found:
+                xpub.prefix = pfx
+                do_rebuild(xport, xpub)
+
+        return rval
+
+
 def subcmd_rebuild(conf, args):
         """Rebuild the repository's catalog and index data (as permitted)."""
 
@@ -1054,27 +1238,12 @@ def subcmd_rebuild(conf, args):
                 usage(_("A package repository location must be provided "
                     "using -s."), cmd=subcommand)
 
-        def do_rebuild(xport, xpub):
-                if build_catalog and build_index:
-                        xport.publish_rebuild(xpub)
-                elif build_catalog:
-                        xport.publish_rebuild_packages(xpub)
-                elif build_index:
-                        xport.publish_rebuild_indexes(xpub)
+        if conf["repo_uri"].scheme == "file":
+                return __rebuild_local(subcommand, conf, pubs, build_catalog,
+                    build_index)
 
-        xport, xpub, tmp_dir = setup_transport(conf, subcommand=subcommand,
-            ssl_key=key, ssl_cert=cert)
-        rval, found, pub_data = _get_matching_pubs(subcommand, pubs, xport,
-            xpub)
-        if rval == EXIT_OOPS:
-                return rval
-
-        logger.info("Initiating repository rebuild.")
-        for pfx in found:
-                xpub.prefix = pfx
-                do_rebuild(xport, xpub)
-
-        return rval
+        return __rebuild_remote(subcommand, conf, pubs, key, cert,
+            build_catalog, build_index)
 
 
 def subcmd_refresh(conf, args):
@@ -1658,6 +1827,10 @@ def handle_errors(func, *args, **kwargs):
                 __ret = EXIT_OOPS
         except apx.BadRepositoryURI, __e:
                 error(str(__e))
+                __ret = EXIT_BADOPT
+        except apx.InvalidOptionError, __e:
+                error("%s Supported formats: %s" %
+                    (str(__e), LISTING_FORMATS))
                 __ret = EXIT_BADOPT
         except (apx.ApiException, sr.RepositoryError), __e:
                 error(str(__e))

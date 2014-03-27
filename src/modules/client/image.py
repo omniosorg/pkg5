@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2014, Oracle and/or its affiliates. All rights reserved.
 #
 
 import M2Crypto as m2
@@ -1773,13 +1773,19 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 if not pubs:
                         pubs = self.gen_publishers()
 
+                errors = []
                 for p in pubs:
                         r = p.repository
                         for uri in r.origins:
                                 if uri.ssl_cert:
-                                        misc.validate_ssl_cert(
-                                            uri.ssl_cert,
-                                            prefix=p.prefix, uri=uri)
+                                        try:
+                                                misc.validate_ssl_cert(
+                                                    uri.ssl_cert,
+                                                    prefix=p.prefix,
+                                                    uri=uri)
+                                        except apx.ExpiredCertificate, e:
+                                                errors.append(e)
+
                                 if uri.ssl_key:
                                         try:
                                                 if not os.path.exists(
@@ -1790,6 +1796,9 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                                             uri=uri)
                                         except EnvironmentError, e:
                                                 raise apx._convert_error(e)
+
+                if errors:
+                        raise apx.ExpiredCertificates(errors)
 
         def has_publisher(self, prefix=None, alias=None):
                 """Returns a boolean value indicating whether a publisher
@@ -2199,7 +2208,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 progresstracker.verify_add_progress(fmri)
                 manf = self.get_manifest(fmri, ignore_excludes=True)
                 sigs = list(manf.gen_actions_by_type("signature",
-                    self.list_excludes()))
+                    excludes=self.list_excludes()))
                 if sig_pol and (sigs or sig_pol.name != "ignore"):
                         # Only perform signature verification logic if there are
                         # signatures or if signature-policy is not 'ignore'.
@@ -2247,7 +2256,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                             med.mediator_impl_matches(med_impl, cfg_med_impl)
 
                 try:
-                        for act in manf.gen_actions(self.list_excludes()):
+                        for act in manf.gen_actions(excludes=self.list_excludes()):
                                 progresstracker.verify_add_progress(fmri)
                                 if (act.name == "link" or
                                     act.name == "hardlink") and \
@@ -2389,7 +2398,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                             mfstpath=mfstpath, pub=alt_pub)
                 except InvalidContentException:
                         return False
-        
+
         def has_manifest(self, pfmri, alt_pub=None):
                 """Check to see if the manifest for pfmri is present on disk and
                 has the correct hash."""
@@ -2648,13 +2657,29 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 # 'Updating package cache'
                 progtrack.job_start(progtrack.JOB_PKG_CACHE, goal=len(removed))
                 for pfmri in removed:
-                        manifest.FactoredManifest.clear_cache(
-                            self.get_manifest_dir(pfmri))
+                        mcdir = self.get_manifest_dir(pfmri)
+                        manifest.FactoredManifest.clear_cache(mcdir)
+
+                        # Remove package cache directory if possible; we don't
+                        # care if it fails.
                         try:
-                                portable.remove(self.get_manifest_path(pfmri))
+                                os.rmdir(os.path.dirname(mcdir))
+                        except:
+                                pass
+
+                        mpath = self.get_manifest_path(pfmri)
+                        try:
+                                portable.remove(mpath)
                         except EnvironmentError, e:
                                 if e.errno != errno.ENOENT:
                                         raise apx._convert_error(e)
+
+                        # Remove package manifest directory if possible; we
+                        # don't care if it fails.
+                        try:
+                                os.rmdir(os.path.dirname(mpath))
+                        except:
+                                pass
                         progtrack.job_add_progress(progtrack.JOB_PKG_CACHE)
                 progtrack.job_done(progtrack.JOB_PKG_CACHE)
 
@@ -3555,7 +3580,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 for pfmri in self.gen_installed_pkgs():
                         progtrack.job_add_progress(progtrack.JOB_FAST_LOOKUP)
                         m = self.get_manifest(pfmri, ignore_excludes=True)
-                        for act in m.gen_actions(excludes):
+                        for act in m.gen_actions(excludes=excludes):
                                 if not act.globally_identical:
                                         continue
                                 act.strip()
@@ -3596,9 +3621,9 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         last_name, last_key, last_offset = None, None, sf.tell()
                         cnt = 0
                         while heap:
-				# This is a tight loop, so try to avoid burning
-				# CPU calling into the progress tracker
-				# excessively.
+                                # This is a tight loop, so try to avoid burning
+                                # CPU calling into the progress tracker
+                                # excessively.
                                 if len(heap) % 100 == 0:
                                         progtrack.job_add_progress(
                                             progtrack.JOB_FAST_LOOKUP)
@@ -3691,6 +3716,22 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 progtrack.job_done(progtrack.JOB_FAST_LOOKUP)
                 return actdict, timestamp
 
+        def _remove_fast_lookups(self):
+                """Remove on-disk database created by _create_fast_lookups.
+                Should be called before updating image state to prevent the
+                client from seeing stale state if _create_fast_lookups is
+                interrupted."""
+
+                for fname in ("actions.stripped", "actions.offsets",
+                    "keys.conflicting"):
+                        try:
+                                portable.remove(os.path.join(
+                                    self.__action_cache_dir, fname))
+                        except EnvironmentError, e:
+                                if e.errno == errno.ENOENT:
+                                        continue
+                                raise apx._convert_error(e)
+
         def _load_actdict(self, progtrack):
                 """Read the file of offsets created in _create_fast_lookups()
                 and return the dictionary mapping action name and key value to
@@ -3748,7 +3789,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         # This is a tight loop, so try to avoid burning
                         # CPU calling into the progress tracker excessively.
                         # Since we are already using the offset, we use that
-			# to damp calls back into the progress tracker.
+                        # to damp calls back into the progress tracker.
                         if off % 500 == 0:
                                 progtrack.plan_add_progress(
                                     progtrack.PLAN_ACTION_CONFLICT)
@@ -3802,7 +3843,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 for pfmri in self.gen_installed_pkgs():
                         m = self.get_manifest(pfmri)
                         dirs = set()
-                        for act in m.gen_actions_by_type(atype, excludes):
+                        for act in m.gen_actions_by_type(atype,
+                            excludes=excludes):
                                 if implicit_dirs:
                                         dirs.add(act.attrs["path"])
                                 yield act, pfmri
@@ -3878,19 +3920,35 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
 
                 shutil.rmtree(self._incoming_cache_dir, True)
 
-        def cleanup_cached_content(self):
+        def cleanup_cached_content(self, progtrack=None):
                 """Delete the directory that stores all of our cached
                 downloaded content.  This may take a while for a large
                 directory hierarchy.  Don't clean up caches if the
                 user overrode the underlying setting using PKG_CACHEDIR or
                 PKG_CACHEROOT. """
 
-                if self.cfg.get_policy(imageconfig.FLUSH_CONTENT_CACHE):
-                        for path, readonly, pub, layout in self.get_cachedirs():
-                                if readonly or (self.__user_cache_dir and
-                                    path.startswith(self.__user_cache_dir)):
-                                        continue
-                                shutil.rmtree(path, True)
+                if not self.cfg.get_policy(imageconfig.FLUSH_CONTENT_CACHE):
+                        return
+
+                cdirs = []
+                for path, readonly, pub, layout in self.get_cachedirs():
+                        if readonly or (self.__user_cache_dir and
+                            path.startswith(self.__user_cache_dir)):
+                                continue
+                        cdirs.append(path)
+
+                if not cdirs:
+                        return
+
+                if not progtrack:
+                        progtrack = progress.NullProgressTracker()
+
+                # 'Updating package cache'
+                progtrack.job_start(progtrack.JOB_PKG_CACHE, goal=len(cdirs))
+                for path in cdirs:
+                        shutil.rmtree(path, True)
+                        progtrack.job_add_progress(progtrack.JOB_PKG_CACHE)
+                progtrack.job_done(progtrack.JOB_PKG_CACHE)
 
         def salvage(self, path, full_path=False):
                 """Called when unexpected file or directory is found during
@@ -4219,6 +4277,18 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 cleanup.
                 """
 
+                if DebugValues.get_value("simulate-plan-hang"):
+                        # If pkg5.hang file is present in image dir, then
+                        # sleep after loading configuration until file is
+                        # gone.  This is used by the test suite for signal
+                        # handling testing, etc.
+                        hang_file = os.path.join(self.imgdir, "pkg5.hang")
+                        with open(hang_file, "w") as f:
+                                f.write(str(os.getpid()))
+
+                        while os.path.exists(hang_file):
+                                time.sleep(1)
+
                 # Allow garbage collection of previous plan.
                 self.imageplan = None
 
@@ -4243,6 +4313,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                         ip.plan_change_varcets(**kwargs)
                                 elif _op == pkgdefs.API_OP_INSTALL:
                                         ip.plan_install(**kwargs)
+                                elif _op ==pkgdefs.API_OP_EXACT_INSTALL:
+                                        ip.plan_exact_install(**kwargs)
                                 elif _op == pkgdefs.API_OP_REVERT:
                                         ip.plan_revert(**kwargs)
                                 elif _op == pkgdefs.API_OP_SET_MEDIATOR:
@@ -4298,6 +4370,14 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         new = set(variants.iteritems())
                         cur = set(self.cfg.variants.iteritems())
                         variants = dict(new - cur)
+                elif facets:
+                        new_facets = self.get_facets()
+                        for f in facets:
+                                if facets[f] is None:
+                                        new_facets.pop(f, None)
+                                else:
+                                        new_facets[f] = facets[f]
+                        facets = new_facets
 
                 self.__make_plan_common(op, progtrack, check_cancel,
                     noexecute, new_variants=variants, new_facets=facets,
@@ -4383,18 +4463,20 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 progtrack.plan_all_done()
 
         def make_uninstall_plan(self, op, progtrack, check_cancel,
-            noexecute, pkgs_to_uninstall):
+            ignore_missing, noexecute, pkgs_to_uninstall):
                 """Create uninstall plan to remove the specified packages."""
 
                 progtrack.plan_all_start()
 
                 self.__make_plan_common(op, progtrack, check_cancel,
-                    noexecute, pkgs_to_uninstall=pkgs_to_uninstall)
+                    noexecute, ignore_missing=ignore_missing,
+                    pkgs_to_uninstall=pkgs_to_uninstall)
 
                 progtrack.plan_all_done()
 
         def make_update_plan(self, op, progtrack, check_cancel,
-            noexecute, pkgs_update=None, reject_list=misc.EmptyI):
+            noexecute, ignore_missing=False, pkgs_update=None,
+            reject_list=misc.EmptyI):
                 """Create a plan to update all packages or the specific ones as
                 far as possible.  This is a helper routine for some common
                 operations in the client.
@@ -4402,8 +4484,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
 
                 progtrack.plan_all_start()
                 self.__make_plan_common(op, progtrack, check_cancel,
-                    noexecute, pkgs_update=pkgs_update,
-                    reject_list=reject_list)
+                    noexecute, ignore_missing=ignore_missing,
+                    pkgs_update=pkgs_update, reject_list=reject_list)
                 progtrack.plan_all_done()
 
         def make_revert_plan(self, op, progtrack, check_cancel,

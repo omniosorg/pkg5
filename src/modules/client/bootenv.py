@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
 
 import errno
 import os
@@ -63,7 +63,7 @@ class BootEnv(object):
         to operate successfully.  It is soft required, meaning if it exists the
         bootenv class will attempt to provide recovery support."""
 
-        def __init__(self, img):
+        def __init__(self, img, progress_tracker=None):
                 self.be_name = None
                 self.dataset = None
                 self.be_name_clone = None
@@ -73,6 +73,8 @@ class BootEnv(object):
                 self.is_live_BE = False
                 self.is_valid = False
                 self.snapshot_name = None
+                self.progress_tracker = progress_tracker
+
                 # record current location of image root so we can remember
                 # original source BE if we clone existing image
                 self.root = self.img.get_root()
@@ -525,6 +527,9 @@ beadm activate %(be_name_clone)s
 
                 self.__store_image_state()
 
+                # Ensure cache is flushed before activating and unmounting BE.
+                self.img.cleanup_cached_content(progtrack=self.progress_tracker)
+
                 relock = False
                 if self.img.locked:
                         # This is necessary since the lock will
@@ -562,12 +567,17 @@ beadm activate %(be_name_clone)s
         def restore_image(self):
                 """Restore a failed update attempt."""
 
+                # flush() is necessary here so that the warnings get printed
+                # on a new line.
+                if self.progress_tracker:
+                        self.progress_tracker.flush()
+
                 self.__reset_image_state(failure=True)
 
                 # Leave the clone around for debugging purposes if we're
                 # operating on the live BE.
                 if self.is_live_BE:
-                        logger.error(_(" The running system has not been "
+                        logger.error(_("The running system has not been "
                             "modified. Modifications were only made to a clone "
                             "of the running system.  This clone is mounted at "
                             "%s should you wish to inspect it.") % \
@@ -610,6 +620,11 @@ beadm activate %(be_name_clone)s
                         Clone the snapshot, mount the BE and
                         notify user of its existence. Rollback
                         if not operating on a live BE"""
+
+                # flush() is necessary here so that the warnings get printed
+                # on a new line.
+                if self.progress_tracker:
+                        self.progress_tracker.flush()
 
                 if self.is_live_BE:
                         # Create a new BE based on the previously taken

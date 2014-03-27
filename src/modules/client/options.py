@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
 
 import os
 
@@ -28,7 +28,7 @@ import pkg.client.pkgdefs as pkgdefs
 import pkg.client.linkedimage as li
 import pkg.misc as misc
 
-from pkg.client.api_errors import InvalidOptionError
+from pkg.client.api_errors import InvalidOptionError, LinkedImageException
 from pkg.client import global_settings
 
 _orig_cwd = None
@@ -45,6 +45,7 @@ BE_NAME               = "be_name"
 CONCURRENCY           = "concurrency"
 DENY_NEW_BE           = "deny_new_be"
 FORCE                 = "force"
+IGNORE_MISSING        = "ignore_missing"
 LI_IGNORE             = "li_ignore"
 LI_IGNORE_ALL         = "li_ignore_all"
 LI_IGNORE_LIST        = "li_ignore_list"
@@ -55,6 +56,11 @@ LI_PKG_UPDATES        = "li_pkg_updates"
 LI_PROPS              = "li_props"
 LI_TARGET_ALL         = "li_target_all"
 LI_TARGET_LIST        = "li_target_list"
+# options for explicit recursion; see description in client.py
+LI_ERECURSE_ALL       = "li_erecurse_all"
+LI_ERECURSE_INCL      = "li_erecurse_list"
+LI_ERECURSE_EXCL      = "li_erecurse_excl"
+LI_ERECURSE           = "li_erecurse"
 LIST_ALL              = "list_all"
 LIST_INSTALLED_NEWEST = "list_installed_newest"
 LIST_NEWEST           = "list_newest"
@@ -78,6 +84,8 @@ SUMMARY               = "summary"
 TAGGED                = "tagged"
 UPDATE_INDEX          = "update_index"
 VERBOSE               = "verbose"
+SYNC_ACT              = "sync_act"
+ACT_TIMEOUT           = "act_timeout"
 
 
 
@@ -297,6 +305,69 @@ def opts_table_cb_li_target1(api_inst, opts, opts_new):
                 raise InvalidOptionError(InvalidOptionError.INCOMPAT,
                     [arg1, ORIGINS])
 
+def opts_table_cb_li_recurse(api_inst, opts, opts_new):
+
+        del opts_new[LI_ERECURSE_INCL]
+        del opts_new[LI_ERECURSE_EXCL]
+        del opts_new[LI_ERECURSE_ALL]
+
+        if opts[LI_ERECURSE_EXCL] and not opts[LI_ERECURSE_ALL]:
+                raise InvalidOptionError(InvalidOptionError.REQUIRED,
+                    [LI_ERECURSE_EXCL, LI_ERECURSE_ALL])
+
+        if opts[LI_ERECURSE_INCL] and not opts[LI_ERECURSE_ALL]:
+                raise InvalidOptionError(InvalidOptionError.REQUIRED,
+                    [LI_ERECURSE_INCL, LI_ERECURSE_ALL])
+
+        if opts[LI_ERECURSE_INCL] and opts[LI_ERECURSE_EXCL]:
+                raise InvalidOptionError(InvalidOptionError.INCOMPAT,
+                    [LI_ERECURSE_INCL, LI_ERECURSE_EXCL])
+
+        if not opts[LI_ERECURSE_ALL]:
+                opts_new[LI_ERECURSE] = None
+                return
+
+        # Go through all children and check if they are in the recurse list.
+        li_child_targets = []
+        li_child_list = set([
+                lin
+                for lin, rel, path in api_inst.list_linked()
+                if rel == "child"
+        ])
+
+        def parse_lin(ulin):
+                lin = None
+                try:
+                        lin = api_inst.parse_linked_name(ulin,
+                            allow_unknown=True)
+                except LinkedImageException, e:
+                        try:
+                                lin = api_inst.parse_linked_name("zone:%s" % ulin,
+                                    allow_unknown=True)
+                        except LinkedImageException, e:
+                                pass
+                if lin is None or lin not in li_child_list:
+                        raise InvalidOptionError(msg=
+                            _("invalid linked image or zone name '%s'.") % ulin)
+
+                return lin
+
+        if opts[LI_ERECURSE_INCL]:
+                # include list specified
+                for ulin in opts[LI_ERECURSE_INCL]:
+                        li_child_targets.append(parse_lin(ulin))
+                opts_new[LI_ERECURSE] = li_child_targets
+        else:
+                # exclude list specified
+                for ulin in opts[LI_ERECURSE_EXCL]:
+                        li_child_list.remove(parse_lin(ulin))
+                opts_new[LI_ERECURSE] = li_child_list
+
+        # If we use image recursion we need to make sure uninstall and update
+        # ignore non-existing packages in the parent image.
+        if opts_new[LI_ERECURSE] and IGNORE_MISSING in opts:
+                opts_new[IGNORE_MISSING] = True
+
 def opts_table_cb_no_headers_vs_quiet(api_inst, opts, opts_new):
         # check if we accept the -q option
         if QUIET not in opts:
@@ -487,15 +558,32 @@ def opts_table_cb_concurrency(api_inst, opts, opts_new):
         # remove concurrency from parameters dict
         del opts_new[CONCURRENCY]
 
+def opts_table_cb_actuators(api_inst, opts, opts_new):
+
+        del opts_new[ACT_TIMEOUT]
+        del opts_new[SYNC_ACT]
+
+        if opts[ACT_TIMEOUT]:
+                # make sure we have an integer
+                opts_cb_int(ACT_TIMEOUT, api_inst, opts, opts_new)
+        elif opts[SYNC_ACT]:
+                # -1 is no timeout
+                opts_new[ACT_TIMEOUT] = -1
+        else:
+                # 0 is no sync actuators are used (timeout=0)
+                opts_new[ACT_TIMEOUT] = 0
+
 #
 # options common to multiple pkg(1) operations.  The format for specifying
 # options is a list which can contain:
 #
 # - Tuples formatted as:
-#       (k, v)
+#       (k, v, [val])
 #   where the values are:
 #       k: the key value for the options dictionary
 #       v: the default value. valid values are: True/False, None, [], 0
+#       val: the valid argument list. It should be a list,
+#       and it is optional.
 #
 
 
@@ -555,6 +643,13 @@ opts_table_li_target1 = [
     (LI_NAME,              None),
 ]
 
+opts_table_li_recurse = [
+    opts_table_cb_li_recurse,
+    (LI_ERECURSE_ALL,       False),
+    (LI_ERECURSE_INCL,      []),
+    (LI_ERECURSE_EXCL,      []),
+]
+
 opts_table_licenses = [
     (ACCEPT,               False),
     (SHOW_LICENSES,        False),
@@ -610,11 +705,22 @@ opts_table_stage = [
     (STAGE,                None),
 ]
 
+opts_table_missing = [
+    (IGNORE_MISSING,       False),
+]
+
+opts_table_actuators = [
+    opts_table_cb_actuators,
+    (SYNC_ACT,             False),
+    (ACT_TIMEOUT,          None)
+]
+
 #
 # Options for pkg(1) subcommands.  Built by combining the option tables above,
 # with some optional subcommand unique options defined below.
 #
-opts_install = \
+
+opts_main = \
     opts_table_beopts + \
     opts_table_concurrency + \
     opts_table_li_ignore + \
@@ -628,16 +734,26 @@ opts_install = \
     opts_table_origins + \
     []
 
-# "update" cmd inherits all "install" cmd options
-opts_update = \
-    opts_install + \
-    opts_table_force + \
+opts_install = \
+    opts_main + \
     opts_table_stage + \
+    opts_table_li_recurse + \
+    opts_table_actuators + \
     []
 
-# "attach-linked" cmd inherits all "install" cmd options
+# "update" cmd inherits all main cmd options
+opts_update = \
+    opts_main + \
+    opts_table_force + \
+    opts_table_li_recurse + \
+    opts_table_stage + \
+    opts_table_actuators + \
+    opts_table_missing + \
+    []
+
+# "attach-linked" cmd inherits all main cmd options
 opts_attach_linked = \
-    opts_install + \
+    opts_main + \
     opts_table_force + \
     opts_table_li_md_only + \
     opts_table_li_no_pkg_updates + \
@@ -667,17 +783,17 @@ opts_set_mediator = \
     (MED_VERSION,          None)
 ]
 
-# "set-property-linked" cmd inherits all "install" cmd options
+# "set-property-linked" cmd inherits all main cmd options
 opts_set_property_linked = \
-    opts_install + \
+    opts_main + \
     opts_table_li_md_only + \
     opts_table_li_no_pkg_updates + \
     opts_table_li_target1 + \
     []
 
-# "sync-linked" cmd inherits all "install" cmd options
+# "sync-linked" cmd inherits all main cmd options
 opts_sync_linked = \
-    opts_install + \
+    opts_main + \
     opts_table_li_md_only + \
     opts_table_li_no_pkg_updates + \
     opts_table_li_target + \
@@ -692,7 +808,11 @@ opts_uninstall = \
     opts_table_no_index + \
     opts_table_nqv + \
     opts_table_parsable + \
-    opts_table_stage
+    opts_table_stage + \
+    opts_table_li_recurse + \
+    opts_table_missing + \
+    opts_table_actuators + \
+    []
 
 opts_audit_linked = \
     opts_table_li_no_psync + \
@@ -742,6 +862,7 @@ pkg_op_opts = {
     pkgdefs.PKG_OP_CHANGE_FACET   : opts_install,
     pkgdefs.PKG_OP_CHANGE_VARIANT : opts_install,
     pkgdefs.PKG_OP_DETACH         : opts_detach_linked,
+    pkgdefs.PKG_OP_EXACT_INSTALL  : opts_main,
     pkgdefs.PKG_OP_INSTALL        : opts_install,
     pkgdefs.PKG_OP_LIST           : opts_list_inventory,
     pkgdefs.PKG_OP_LIST_LINKED    : opts_list_linked,
@@ -779,7 +900,10 @@ def get_pkg_opts_defaults(op, opt, add_table=None):
         for o in popts:
                 if type(o) != tuple:
                         continue
-                opt_name, default = o
+                if len(o) == 2:
+                        opt_name, default = o
+                elif len(o) == 3:
+                        opt_name, default, valid_args = o
                 if opt_name == opt:
                         return default
 
@@ -817,8 +941,12 @@ def opts_assemble(op, api_inst, opts, add_table=None, cwd=None):
                 if type(o) != tuple:
                         callbacks.append(o)
                         continue
-
-                avail_opt, default = o
+                valid_args = []
+                # If no valid argument list specified.
+                if len(o) == 2:
+                        avail_opt, default = o
+                elif len(o) == 3:
+                        avail_opt, default, valid_args = o
                 # for options not given we substitue the default value
                 if avail_opt not in opts:
                         rv[avail_opt] = default
@@ -830,6 +958,22 @@ def opts_assemble(op, api_inst, opts, add_table=None, cwd=None):
                         assert type(opts[avail_opt]) == list, opts[avail_opt]
                 elif type(default) == bool:
                         assert type(opts[avail_opt]) == bool, opts[avail_opt]
+
+                if valid_args:
+                        assert type(default) == list or default is None, \
+                            default
+                        raise_error = False
+                        if type(opts[avail_opt]) == list:
+                                if not set(opts[avail_opt]).issubset(
+                                    set(valid_args)):
+                                        raise_error = True
+                        else:
+                                if opts[avail_opt] not in valid_args:
+                                        raise_error = True
+                        if raise_error:
+                                raise InvalidOptionError(
+                                    InvalidOptionError.ARG_INVALID,
+                                    [opts[avail_opt], avail_opt])
 
                 rv[avail_opt] = opts[avail_opt]
 

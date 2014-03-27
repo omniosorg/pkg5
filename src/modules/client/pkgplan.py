@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2007, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
 #
 
 import copy
@@ -280,7 +280,7 @@ class PkgPlan(object):
                                 sigman = self.__destination_mfst
 
                         sigs = list(sigman.gen_actions_by_type("signature",
-                            new_excludes))
+                            excludes=new_excludes))
                         if sig_pol and (sigs or sig_pol.name != "ignore"):
                                 # Only perform signature verification logic if
                                 # there are signatures or if signature-policy
@@ -334,7 +334,8 @@ class PkgPlan(object):
 
                         for a in absent_dirs:
                                 self.actions.removed.append(
-                                    (directory.DirectoryAction(path=a), None))
+                                    (directory.DirectoryAction(path=a,
+                                    implicit="True"), None))
 
                 # Stash information needed by legacy actions.
                 self.pkg_summary = \

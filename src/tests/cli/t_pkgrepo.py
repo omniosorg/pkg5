@@ -928,6 +928,32 @@ test\t3\tonline\t%sZ
                 self.assertEqualDiff([pfmri],
                     [str(f) for f in repo.get_catalog("test").fmris()])
  
+                # Now verify that 'pkgrepo rebuild' will still work
+                # (filesystem-based repos only) if the catalog is corrupted.
+                cat = repo.get_catalog("test")
+                part = cat.get_part("catalog.attrs")
+                apath = part.pathname
+
+                with open(apath, "r+b") as cfile:
+                        cfile.truncate(4)
+                        cfile.close()
+
+                # Should fail, since catalog is corrupt.
+                self.pkgrepo("refresh -s %s" % repo_path, exit=1)
+
+                # Should fail, because --no-catalog was specified.
+                self.pkgrepo("rebuild -s %s --no-catalog" % repo_path, exit=1)
+
+                # Should succeed.
+                self.pkgrepo("rebuild -s %s --no-index" % repo_path)
+
+                # Should succeed now that catalog is valid.
+                self.pkgrepo("refresh -s %s" % repo_path)
+
+                # Verify expected package is still known.
+                self.assertEqualDiff([pfmri],
+                    [str(f) for f in repo.get_catalog("test").fmris()])
+
         def __test_refresh(self, repo_path, repo_uri):
                 """Private function to verify refresh subcommand behaviour."""
 
@@ -1689,6 +1715,15 @@ test2	zoo		1.0	5.11	0	20110804T203458Z	pkg://test2/zoo@1.0,5.11-0:20110804T20345
                     "test", "file"])
                 fhash = self.fhashes[path]
                 return os.path.sep.join([fpath, fhash[0:2], fhash])
+
+        def __get_manifest_contents(self, fmri_str):
+                """Given an FMRI, return the unsorted manifest contents from our
+                repository as a string."""
+
+                mpath = self.__get_mf_path(fmri_str)
+                mf = pkg.manifest.Manifest()
+                mf.set_content(pathname=mpath)
+                return mf.tostr_unsorted()
 
         def __inject_badhash(self, path, valid_gzip=True):
                 """Corrupt a file in the repository with the given path, where
@@ -2481,6 +2516,73 @@ publisher\tprefix\t""
                 pdir = os.path.join(repo_path, "publisher", "example.com")
                 self.assert_(not os.path.exists(pdir))
 
+        def test_26_contents(self):
+                """Verify that contents subcommand works as expected."""
+
+                repo_path = self.dc.get_repodir()
+                repo_uri = self.dc.get_repo_url()
+
+                # Publish some packages.
+                plist = self.pkgsend_bulk(repo_uri, (self.tree10, self.amber10,
+                    self.amber20))
+
+                # Verify graceful exit if invalid or incomplete set of
+                # options specified.
+                self.pkgrepo("contents", exit=2)
+                self.pkgrepo("contents -s bogus://location list", exit=1)
+
+                # Verify graceful exit for bad repository.
+                self.pkgrepo("contents -s /no/such/repository", exit=1)
+
+                # Verify graceful exit if invalid package name given.
+                self.pkgrepo("contents -s %s ^notvalid" % repo_path, exit=1)
+
+                # Verify graceful exit if no matching package found.
+                self.pkgrepo("contents -s %s nosuchpackage" % repo_path, exit=1)
+
+                # Verify default output when listing all packages for both
+                # file and http cases:
+                for src in (repo_path, repo_uri):
+                        self.pkgrepo("contents -s %s" % src)
+                        for p in plist:
+                                self.assert_(self.__get_manifest_contents(p)
+                                    in self.output)
+
+                # Verify ability to display specific packages but only using
+                # file repository for test efficiency.
+
+                # Verify ability to display specific packages.
+                self.pkgrepo("contents -s %s amber@2.0" % repo_path)
+                self.assertEqualDiff(self.__get_manifest_contents(plist[2]),
+                    self.output)
+
+                # Verify ability to display multiple packages.
+                self.pkgrepo("contents -s %s tree amber@1.0" % repo_path)
+                for i in range(2):
+                        self.assert_(self.__get_manifest_contents(plist[i]) in
+                            self.output)
+
+                # Verify -m option works fine.
+                self.pkgrepo("contents -m -s %s amber@2.0" % repo_path)
+                self.assertEqualDiff(self.__get_manifest_contents(plist[2]),
+                    self.output)
+
+                # Verify -t option works fine.
+                self.pkgrepo("contents -s %s -t set tree" % repo_path)
+                self.assert_("set" in self.output and "file" not in self.output)
+                
+                # Verify graceful exit if no matching action type specified.
+                self.pkgrepo("contents -s %s -t nosuchtype tree" % repo_path,
+                    exit=1)
+
+                # Add packages for a different publisher.
+                self.pkgrepo("set -s %s publisher/prefix=test2" % repo_path)
+                self.pkgsend_bulk(repo_path, (self.truck10, self.zoo10))
+
+                # Verify that patterns matching packages only provided by one
+                # publisher will not result in partial failure.
+                self.pkgrepo("contents -s %s zoo" % repo_path)
+
 
 class TestPkgrepoHTTPS(pkg5unittest.HTTPSTestClass):
 
@@ -2551,6 +2653,10 @@ class TestPkgrepoHTTPS(pkg5unittest.HTTPSTestClass):
 
                 # pkgrepo rebuild
                 self.pkgrepo("-s %(url)s rebuild --key %(key)s --cert %(cert)s"
+                    % arg_dict)
+
+                # pkgrepo contents
+                self.pkgrepo("-s %(url)s contents --key %(key)s --cert %(cert)s"
                     % arg_dict)
 
                 # Try without key and cert (should fail)

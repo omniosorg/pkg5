@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2014, Oracle and/or its affiliates. All rights reserved.
 #
 
 #
@@ -47,7 +47,6 @@ try:
         import collections
         import datetime
         import errno
-        import fnmatch
         import getopt
         import gettext
         import itertools
@@ -75,6 +74,7 @@ try:
         import pkg.fmri as fmri
         import pkg.misc as misc
         import pkg.pipeutils as pipeutils
+        import pkg.portable as portable
         import pkg.version as version
 
         from pkg.client import global_settings
@@ -91,7 +91,7 @@ except KeyboardInterrupt:
         import sys
         sys.exit(1)
 
-CLIENT_API_VERSION = 75
+CLIENT_API_VERSION = 77
 PKG_CLIENT_NAME = "pkg"
 
 JUST_UNKNOWN = 0
@@ -106,6 +106,7 @@ pkg_timer = pkg.misc.Timer("pkg client")
 valid_special_attrs = ["action.hash", "action.key", "action.name", "action.raw"]
 
 valid_special_prefixes = ["action."]
+_api_inst = None
 
 def format_update_error(e):
         # This message is displayed to the user whenever an
@@ -158,17 +159,23 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False):
             "            [--licenses] [--no-be-activate] [--no-index] [--no-refresh]\n"
             "            [--no-backup-be | --require-backup-be] [--backup-be-name name]\n"
             "            [--deny-new-be | --require-new-be] [--be-name name]\n"
+            "            [-r [-z image_name ... | -Z image_name ...]]\n"
+            "            [--sync-actuators | --sync-actuators-timeout timeout]\n"
             "            [--reject pkg_fmri_pattern ... ] pkg_fmri_pattern ...")
         basic_usage["uninstall"] = _(
-            "[-nvq] [-C n] [--no-be-activate] [--no-index]\n"
+            "[-nvq] [-C n] [--ignore-missing] [--no-be-activate] [--no-index]\n"
             "            [--no-backup-be | --require-backup-be] [--backup-be-name]\n"
             "            [--deny-new-be | --require-new-be] [--be-name name]\n"
+            "            [-r [-z image_name ... | -Z image_name ...]]\n"
+            "            [--sync-actuators | --sync-actuators-timeout timeout]\n"
             "            pkg_fmri_pattern ...")
         basic_usage["update"] = _(
-            "[-fnvq] [-C n] [-g path_or_uri ...] [--accept]\n"
+            "[-fnvq] [-C n] [-g path_or_uri ...] [--accept] [--ignore-missing]\n"
             "            [--licenses] [--no-be-activate] [--no-index] [--no-refresh]\n"
             "            [--no-backup-be | --require-backup-be] [--backup-be-name]\n"
             "            [--deny-new-be | --require-new-be] [--be-name name]\n"
+            "            [-r [-z image_name ... | -Z image_name ...]]\n"
+            "            [--sync-actuators | --sync-actuators-timeout timeout]\n"
             "            [--reject pkg_fmri_pattern ...] [pkg_fmri_pattern ...]")
         basic_usage["list"] = _(
             "[-Hafnqsuv] [-g path_or_uri ...] [--no-refresh]\n"
@@ -217,6 +224,7 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False):
             "rebuild-index",
             "update-format",
             "image-create",
+            "exact-install",
         ]
 
         adv_usage["info"] = \
@@ -248,6 +256,8 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False):
             "            [--licenses] [--no-be-activate] [--no-index] [--no-refresh]\n"
             "            [--no-backup-be | --require-backup-be] [--backup-be-name name]\n"
             "            [--deny-new-be | --require-new-be] [--be-name name]\n"
+            "            [-r [-z image_name ... | -Z image_name ...]]\n"
+            "            [--sync-actuators | --sync-actuators-timeout timeout]\n"
             "            [--reject pkg_fmri_pattern ... ]\n"
             "            <variant_spec>=<instance> ...")
 
@@ -256,6 +266,8 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False):
             "            [--licenses] [--no-be-activate] [--no-index] [--no-refresh]\n"
             "            [--no-backup-be | --require-backup-be] [--backup-be-name name]\n"
             "            [--deny-new-be | --require-new-be] [--be-name name]\n"
+            "            [-r [-z image_name ... | -Z image_name ...]]\n"
+            "            [--sync-actuators | --sync-actuators-timeout timeout]\n"
             "            [--reject pkg_fmri_pattern ... ]\n"
             "            <facet_spec>=[True|False|None] ...")
 
@@ -309,6 +321,11 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False):
         adv_usage["purge-history"] = ""
         adv_usage["rebuild-index"] = ""
         adv_usage["update-format"] = ""
+        adv_usage["exact-install"] = _("[-nvq] [-C n] [-g path_or_uri ...] [--accept]\n"
+            "            [--licenses] [--no-be-activate] [--no-index] [--no-refresh]\n"
+            "            [--no-backup-be | --require-backup-be] [--backup-be-name name]\n"
+            "            [--deny-new-be | --require-new-be] [--be-name name]\n"
+            "            [--reject pkg_fmri_pattern ... ] pkg_fmri_pattern ...")
 
         priv_usage["remote"] = _(
             "--ctlfd=file_descriptor --progfd=file_descriptor")
@@ -618,8 +635,8 @@ def list_inventory(op, api_inst, pargs,
                             ", ".join(e.notfound), cmd=op)
                         logger.error("Use -af to allow all versions.")
                 elif pkg_list == api.ImageInterface.LIST_UPGRADABLE:
-			# Creating a list of packages that are uptodate
-			# and that are not installed on the system.
+                        # Creating a list of packages that are uptodate
+                        # and that are not installed on the system.
                         no_updates = []
                         not_installed = []
                         try:
@@ -651,6 +668,9 @@ def list_inventory(op, api_inst, pargs,
                                             ", ".join(no_updates)
                         if err_str:
                                 error(err_str, cmd=op)
+                else:
+                        error(_("No packages matching '%s' installed") % \
+                            ", ".join(e.notfound), cmd=op)
 
                 if found and e.notfound:
                         # Only some patterns matched.
@@ -1344,7 +1364,8 @@ def display_plan(api_inst, child_image_plans, noexecute, op, parsable_version,
                 display_plan_licenses(api_inst, show_req=False)
                 return
 
-        if api_inst.planned_nothingtodo(li_ignore_all=True):
+        if parsable_version is None and \
+            api_inst.planned_nothingtodo(li_ignore_all=True):
                 # nothing todo
                 if op == PKG_OP_UPDATE:
                         s = _("No updates available for this image.")
@@ -1415,7 +1436,11 @@ def __api_execute_plan(operation, api_inst):
         rval = None
         try:
                 api_inst.execute_plan()
-                rval = EXIT_OK
+                pd = api_inst.describe()
+                if pd.actuator_timed_out:
+                        rval = EXIT_ACTUATOR
+                else:
+                        rval = EXIT_OK
         except RuntimeError, e:
                 error(_("%(operation)s failed: %(err)s") %
                     {"operation": operation, "err": e})
@@ -1661,6 +1686,8 @@ def __api_plan(_op, _api_inst, _accept=False, _li_ignore=None, _noexecute=False,
                 api_plan_func = _api_inst.gen_plan_uninstall
         elif _op == PKG_OP_UPDATE:
                 api_plan_func = _api_inst.gen_plan_update
+        elif _op == PKG_OP_EXACT_INSTALL:
+                api_plan_func = _api_inst.gen_plan_exact_install
         else:
                 raise RuntimeError("__api_plan() invalid op: %s" % _op)
 
@@ -1865,6 +1892,10 @@ class RemoteDispatch(object):
                     PKG_OP_PUBCHECK,
                     PKG_OP_SYNC,
                     PKG_OP_UPDATE,
+                    PKG_OP_INSTALL,
+                    PKG_OP_CHANGE_FACET,
+                    PKG_OP_CHANGE_VARIANT,
+                    PKG_OP_UNINSTALL
                 ]
                 if op not in op_supported:
                         raise Exception(
@@ -1880,8 +1911,12 @@ class RemoteDispatch(object):
                 if stage in [API_STAGE_DEFAULT, API_STAGE_PLAN]:
                         _api_inst.reset()
 
+                if "pargs" not in pwargs:
+                       pwargs["pargs"] = []
+
                 op_func = cmds[op][0]
-                rv = op_func(op, _api_inst, pargs, **pwargs)
+
+                rv = op_func(op, _api_inst, **pwargs)
 
                 if DebugValues["timings"]:
                         msg(str(pkg_timer))
@@ -1932,9 +1967,10 @@ def remote(op, api_inst, pargs, ctlfd):
         rpc_server.serve_forever()
 
 def change_variant(op, api_inst, pargs,
-    accept, backup_be, backup_be_name, be_activate, be_name, li_ignore,
-    li_parent_sync, new_be, noexecute, origins, parsable_version, quiet,
-    refresh_catalogs, reject_pats, show_licenses, update_index, verbose):
+    accept, act_timeout, backup_be, backup_be_name, be_activate, be_name,
+    li_ignore, li_parent_sync, li_erecurse, new_be, noexecute, origins,
+    parsable_version, quiet, refresh_catalogs, reject_pats, show_licenses,
+    stage, update_index, verbose):
         """Attempt to change a variant associated with an image, updating
         the image contents as necessary."""
 
@@ -1966,17 +2002,19 @@ def change_variant(op, api_inst, pargs,
         return __api_op(op, api_inst, _accept=accept, _li_ignore=li_ignore,
             _noexecute=noexecute, _origins=origins,
             _parsable_version=parsable_version, _quiet=quiet,
-            _show_licenses=show_licenses, _verbose=verbose,
-            backup_be=backup_be, backup_be_name=backup_be_name,
-            be_activate=be_activate, be_name=be_name,
+            _show_licenses=show_licenses, _stage=stage, _verbose=verbose,
+            act_timeout=act_timeout, backup_be=backup_be,
+            backup_be_name=backup_be_name, be_activate=be_activate,
+            be_name=be_name, li_erecurse=li_erecurse,
             li_parent_sync=li_parent_sync, new_be=new_be,
             refresh_catalogs=refresh_catalogs, reject_list=reject_pats,
             update_index=update_index, variants=variants)
 
 def change_facet(op, api_inst, pargs,
-    accept, backup_be, backup_be_name, be_activate, be_name, li_ignore,
-    li_parent_sync, new_be, noexecute, origins, parsable_version, quiet,
-    refresh_catalogs, reject_pats, show_licenses, update_index, verbose):
+    accept, act_timeout, backup_be, backup_be_name, be_activate, be_name,
+    li_ignore, li_erecurse, li_parent_sync, new_be, noexecute, origins,
+    parsable_version, quiet, refresh_catalogs, reject_pats, show_licenses,
+    stage, update_index, verbose):
         """Attempt to change the facets as specified, updating
         image as necessary"""
 
@@ -1987,8 +2025,7 @@ def change_facet(op, api_inst, pargs,
         if not pargs:
                 usage(_("%s: no facets specified") % op)
 
-        # XXX facets should be accessible through pkg.client.api
-        facets = img.get_facets()
+        facets = {}
         allowed_values = {
             "TRUE" : True,
             "FALSE": False,
@@ -2011,30 +2048,55 @@ def change_facet(op, api_inst, pargs,
                         usage(_("%s: facets must to be of the form "
                             "'facet....=[True|False|None]'.") % op)
 
-                v = allowed_values[value.upper()]
-
-                if v is None:
-                        facets.pop(name, None)
-                else:
-                        facets[name] = v
+                facets[name] = allowed_values[value.upper()]
 
         return __api_op(op, api_inst, _accept=accept, _li_ignore=li_ignore,
             _noexecute=noexecute, _origins=origins,
             _parsable_version=parsable_version, _quiet=quiet,
-            _show_licenses=show_licenses, _verbose=verbose,
-            backup_be=backup_be, backup_be_name=backup_be_name,
-            be_activate=be_activate, be_name=be_name,
-            li_parent_sync=li_parent_sync, new_be=new_be, facets=facets,
+            _show_licenses=show_licenses, _stage=stage, _verbose=verbose,
+            act_timeout=act_timeout, backup_be=backup_be,
+            backup_be_name=backup_be_name, be_activate=be_activate,
+            be_name=be_name, facets=facets, li_erecurse=li_erecurse,
+            li_parent_sync=li_parent_sync, new_be=new_be,
             refresh_catalogs=refresh_catalogs, reject_list=reject_pats,
             update_index=update_index)
 
 def install(op, api_inst, pargs,
+    accept, act_timeout, backup_be, backup_be_name, be_activate, be_name,
+    li_ignore, li_erecurse, li_parent_sync, new_be, noexecute, origins,
+    parsable_version, quiet, refresh_catalogs, reject_pats, show_licenses,
+    stage, update_index, verbose):
+        """Attempt to take package specified to INSTALLED state.  The operands
+        are interpreted as glob patterns."""
+
+        if not pargs:
+                usage(_("at least one package name required"), cmd=op)
+
+        rval, res = get_fmri_args(api_inst, pargs, cmd=op)
+        if not rval:
+                return EXIT_OOPS
+
+        xrval, xres = get_fmri_args(api_inst, reject_pats, cmd=op)
+        if not xrval:
+                return EXIT_OOPS
+
+        return __api_op(op, api_inst, _accept=accept, _li_ignore=li_ignore,
+            _noexecute=noexecute, _origins=origins,
+            _parsable_version=parsable_version, _quiet=quiet,
+            _show_licenses=show_licenses, _stage=stage, _verbose=verbose,
+            act_timeout=act_timeout, backup_be=backup_be,
+            backup_be_name=backup_be_name, be_activate=be_activate,
+            be_name=be_name, li_erecurse=li_erecurse,
+            li_parent_sync=li_parent_sync, new_be=new_be, pkgs_inst=pargs,
+            refresh_catalogs=refresh_catalogs, reject_list=reject_pats,
+            update_index=update_index)
+
+def exact_install(op, api_inst, pargs,
     accept, backup_be, backup_be_name, be_activate, be_name, li_ignore,
     li_parent_sync, new_be, noexecute, origins, parsable_version, quiet,
     refresh_catalogs, reject_pats, show_licenses, update_index, verbose):
-
-        """Attempt to take package specified to INSTALLED state.  The operands
-        are interpreted as glob patterns."""
+        """Attempt to take package specified to INSTALLED state.
+        The operands are interpreted as glob patterns."""
 
         if not pargs:
                 usage(_("at least one package name required"), cmd=op)
@@ -2058,9 +2120,9 @@ def install(op, api_inst, pargs,
             update_index=update_index)
 
 def uninstall(op, api_inst, pargs,
-    be_activate, backup_be, backup_be_name, be_name, new_be, li_ignore,
-    li_parent_sync, update_index, noexecute, parsable_version, quiet,
-    verbose, stage):
+    act_timeout, backup_be, backup_be_name, be_activate, be_name,
+    ignore_missing, li_ignore, li_erecurse, li_parent_sync, new_be, noexecute,
+    parsable_version, quiet, stage, update_index, verbose):
         """Attempt to take package specified to DELETED state."""
 
         if not pargs:
@@ -2074,17 +2136,18 @@ def uninstall(op, api_inst, pargs,
                 return EXIT_OOPS
 
         return __api_op(op, api_inst, _li_ignore=li_ignore,
-            _noexecute=noexecute, _quiet=quiet, _stage=stage,
-            _verbose=verbose, backup_be=backup_be,
+            _noexecute=noexecute, _parsable_version=parsable_version,
+            _quiet=quiet, _stage=stage, _verbose=verbose,
+            act_timeout=act_timeout, backup_be=backup_be,
             backup_be_name=backup_be_name, be_activate=be_activate,
-            be_name=be_name, li_parent_sync=li_parent_sync, new_be=new_be,
-            _parsable_version=parsable_version,
-            pkgs_to_uninstall=pargs, update_index=update_index)
+            be_name=be_name, ignore_missing=ignore_missing,
+            li_erecurse=li_erecurse, li_parent_sync=li_parent_sync,
+            new_be=new_be, pkgs_to_uninstall=pargs, update_index=update_index)
 
-def update(op, api_inst, pargs, accept, backup_be, backup_be_name, be_activate,
-    be_name, force, li_ignore, li_parent_sync, new_be, noexecute, origins,
-    parsable_version, quiet, refresh_catalogs, reject_pats, show_licenses,
-    stage, update_index, verbose):
+def update(op, api_inst, pargs, accept, act_timeout, backup_be, backup_be_name,
+    be_activate, be_name, force, ignore_missing, li_ignore, li_erecurse,
+    li_parent_sync, new_be, noexecute, origins, parsable_version, quiet,
+    refresh_catalogs, reject_pats, show_licenses, stage, update_index, verbose):
         """Attempt to take all installed packages specified to latest
         version."""
 
@@ -2114,11 +2177,13 @@ def update(op, api_inst, pargs, accept, backup_be, backup_be_name, be_activate,
             _parsable_version=parsable_version, _quiet=quiet,
             _review_release_notes=review_release_notes,
             _show_licenses=show_licenses, _stage=stage, _verbose=verbose,
-            backup_be=backup_be, backup_be_name=backup_be_name,
-            be_activate=be_activate, be_name=be_name, force=force,
-            li_parent_sync=li_parent_sync, new_be=new_be,
-            pkgs_update=pkgs_update, refresh_catalogs=refresh_catalogs,
-            reject_list=reject_pats, update_index=update_index)
+            act_timeout=act_timeout, backup_be=backup_be,
+            backup_be_name=backup_be_name, be_activate=be_activate,
+            be_name=be_name, force=force, ignore_missing=ignore_missing,
+            li_erecurse=li_erecurse, li_parent_sync=li_parent_sync,
+            new_be=new_be, pkgs_update=pkgs_update,
+            refresh_catalogs=refresh_catalogs, reject_list=reject_pats,
+            update_index=update_index)
 
 def revert(op, api_inst, pargs,
     backup_be, backup_be_name, be_activate, be_name, new_be, noexecute,
@@ -2584,7 +2649,7 @@ def produce_matching_type(action, match):
 
 def v1_extract_info(tup, return_type, pub):
         """Given a result from search, massages the information into a form
-        useful for produce_lines.
+        useful for pkg.misc.list_actions_by_attrs.
 
         The "return_type" parameter is an enumeration that describes the type
         of the information that will be converted.
@@ -2797,9 +2862,9 @@ def search(api_inst, args):
                                                             max_timeout)
                         except api_errors.ApiException, e:
                                 err = e
-                        lines = produce_lines(unprocessed_res, attrs,
-                            show_all=True, remove_consec_dup_lines=True,
-                            last_res=last_line)
+                        lines = list(misc.list_actions_by_attrs(unprocessed_res,
+                            attrs, show_all=True, remove_consec_dup_lines=True,
+                            last_res=last_line))
                         if not lines:
                                 continue
                         old_widths = widths[:]
@@ -2815,7 +2880,7 @@ def search(api_inst, args):
                                 msg((create_output_format(display_headers,
                                     widths, justs, line) %
                                     tuple(line)).rstrip())
-                        last_line = lines[-1]
+                                last_line = line
                         st = time.time()
                 if err:
                         raise err
@@ -3070,78 +3135,6 @@ def calc_justs(attrs):
                 return JUST_UNKNOWN
         return [ __chose_just(attr) for attr in attrs ]
 
-def produce_lines(actionlist, attrs, show_all=False,
-    remove_consec_dup_lines=False, last_res=None):
-        """Produces a list of n tuples (where n is the length of attrs)
-        containing the relevant information about the actions.
-
-        The "actionlist" parameter is a list of tuples which contain the fmri
-        of the package that's the source of the action, the action, and the
-        publisher the action's package came from. If the actionlist was
-        generated by searching, the last two pieces, "match" and "match_type"
-        contain information about why this action was selected.
-
-        The "attrs" parameter is a list of the attributes of the action that
-        should be displayed.
-
-        The "show_all" parameter determines whether an action that lacks one
-        or more of the desired attributes will be displayed or not.
-
-        The "remove_consec_dup_lines" parameter determines whether consecutive
-        duplicate lines should be removed from the results.
-
-        The "last_res" parameter is a seed to compare the first result against
-        for duplicate removal.
-        """
-
-        # Assert that if last_res is set, we should be removing duplicate
-        # lines.
-        assert(remove_consec_dup_lines or not last_res)
-        lines = []
-        if last_res:
-                lines.append(last_res)
-        for pfmri, action, pub, match, match_type in actionlist:
-                line = []
-                for attr in attrs:
-                        if action and attr in action.attrs:
-                                a = action.attrs[attr]
-                        elif attr == "action.name":
-                                a = action.name
-                        elif attr == "action.key":
-                                a = action.attrs[action.key_attr]
-                        elif attr == "action.raw":
-                                a = action
-                        elif attr in ("hash", "action.hash"):
-                                a = getattr(action, "hash", "")
-                        elif attr == "pkg.name":
-                                a = pfmri.get_name()
-                        elif attr == "pkg.fmri":
-                                a = pfmri
-                        elif attr == "pkg.shortfmri":
-                                a = pfmri.get_short_fmri()
-                        elif attr == "pkg.publisher":
-                                a = pfmri.get_publisher()
-                                if a is None:
-                                        a = pub
-                                        if a is None:
-                                                a = ""
-                        elif attr == "search.match":
-                                a = match
-                        elif attr == "search.match_type":
-                                a = match_type
-                        else:
-                                a = ""
-
-                        line.append(a)
-
-                if (line and [l for l in line if str(l) != ""] or show_all) \
-                    and (not remove_consec_dup_lines or not lines or
-                    lines[-1] != line):
-                        lines.append(line)
-        if last_res:
-                lines.pop(0)
-        return lines
-
 def default_left(v):
         """For a given justification "v", use the default of left justification
         if "v" is JUST_UNKNOWN."""
@@ -3229,7 +3222,7 @@ def display_contents_results(actionlist, attrs, sort_attrs, display_headers):
         was produced."""
 
         justs = calc_justs(attrs)
-        lines = produce_lines(actionlist, attrs)
+        lines = list(misc.list_actions_by_attrs(actionlist, attrs))
         widths = calc_widths(lines, attrs)
 
         if sort_attrs:
@@ -3381,31 +3374,6 @@ def list_contents(api_inst, args):
         else:
                 excludes = api_inst.excludes
 
-        def mmatches(action):
-                """Given an action, return True if any of its attributes' values
-                matches the pattern for the same attribute in the attr_match
-                dictionary, and False otherwise."""
-
-                # If no matches have been specified, all actions match
-                if not attr_match:
-                        return True
-
-                matchset = set(attr_match.keys())
-                attrset = set(action.attrs.keys())
-
-                iset = attrset.intersection(matchset)
-
-                # Iterate over the set of attributes common to the action and
-                # the match specification.  If the values match the pattern in
-                # the specification, then return True (implementing an OR across
-                # multiple possible matches).
-                for attr in iset:
-                        for match in attr_match[attr]:
-                                for attrval in action.attrlist(attr):
-                                        if fnmatch.fnmatch(attrval, match):
-                                                return True
-                return False
-
         # Now get the matching list of packages and display it.
         processed = False
         notfound = EmptyI
@@ -3453,15 +3421,14 @@ def list_contents(api_inst, args):
                     (m.fmri, a, None, None, None)
                     for m in manifests
                     for a in m.gen_actions_by_types(action_types,
-                        excludes=excludes)
-                    if mmatches(a)
+                        attr_match=attr_match, excludes=excludes)
                 )
         else:
                 gen_expr = (
                     (m.fmri, a, None, None, None)
                     for m in manifests
-                    for a in m.gen_actions(excludes=excludes)
-                    if mmatches(a)
+                    for a in m.gen_actions(attr_match=attr_match,
+                        excludes=excludes)
                 )
 
         # Determine if the query returned any results by "peeking" at the first
@@ -4800,6 +4767,9 @@ def list_variant(op, api_inst, pargs, omit_headers, output_format,
         def gen_current():
                 for (name, val, pvals) in api_inst.gen_variants(variant_list,
                     patterns=req_variants):
+                        if output_format == "default":
+                                name_list = name.split(".")[1:]
+                                name = ".".join(name_list)
                         found[0] = True
                         yield {
                             "variant": name,
@@ -4809,6 +4779,9 @@ def list_variant(op, api_inst, pargs, omit_headers, output_format,
         def gen_possible():
                 for (name, val, pvals) in api_inst.gen_variants(variant_list,
                     patterns=req_variants):
+                        if output_format == "default":
+                                name_list = name.split(".")[1:]
+                                name = ".".join(name_list)
                         found[0] = True
                         for pval in pvals:
                                 yield {
@@ -4886,6 +4859,9 @@ def list_facet(op, api_inst, pargs, omit_headers, output_format, list_all_items,
         def gen_listing():
                 for (name, val, src, masked) in \
                     api_inst.gen_facets(facet_list, patterns=req_facets):
+                        if output_format == "default":
+                                name_list = name.split(".")[1:]
+                                name = ".".join(name_list)
                         found[0] = True
 
                         if not list_masked and masked:
@@ -5843,6 +5819,8 @@ opts_mapping = {
 
     "force" :             ("f", ""),
 
+    "ignore_missing" :    ("", "ignore-missing"),
+
     "li_ignore_all" :     ("I", ""),
     "li_ignore_list" :    ("i", ""),
     "li_md_only" :        ("",  "linked-md-only"),
@@ -5856,7 +5834,20 @@ opts_mapping = {
     "li_target_all" :     ("a", ""),
     "li_target_list" :    ("l", ""),
 
-    "li_name" :           ("l",  ""),
+    "li_name" :           ("l", ""),
+
+    # These options are used for explicit recursion into linked children.
+    # li_erecurse_all enables explicit recursion into all children if neither
+    # li_erecurse_list nor li_erecurse_excl is set. If any children are
+    # specified in li_erecurse_list, only recurse into those. If any children
+    # are specified in li_erecurse_excl, recurse into all children except for
+    # those.
+    # Explicit recursion means we run the same operation in the child as we run
+    # in the parent. Children we do not explicitely recurse into are still
+    # getting synced.
+    "li_erecurse_all" :    ("r", "recurse"),
+    "li_erecurse_list" :   ("z", ""),
+    "li_erecurse_excl" :   ("Z", ""),
 
     "accept" :            ("",  "accept"),
     "show_licenses" :     ("",  "licenses"),
@@ -5909,6 +5900,9 @@ opts_mapping = {
     "progfd" :                ("",  "progfd"),
 
     "list_installed" :        ("i",  ""),
+
+    "sync_act" :              ("",  "sync-actuators"),
+    "act_timeout" :           ("",  "sync-actuators-timeout"),
 }
 
 #
@@ -5932,6 +5926,7 @@ cmds = {
     "change-variant"        : [change_variant],
     "contents"              : [list_contents],
     "detach-linked"         : [detach_linked, 0],
+    "exact-install"         : [exact_install],
     "facet"                 : [list_facet],
     "fix"                   : [fix_image],
     "freeze"                : [freeze],
@@ -5974,6 +5969,12 @@ cmds = {
     "version"               : [None],
 }
 
+# Option value dictionary which pre-defines the valid values for
+# some options.
+valid_opt_values = {
+    "output_format":        ["default", "tsv", "json", "json-formatted"]
+}
+
 # These tables are an addendum to the the pkg_op_opts/opts_* lists in
 # modules/client/options.py. They contain all the options for functions which
 # are not represented in options.py but go through common option processing.
@@ -6006,7 +6007,7 @@ opts_list_varcet = \
     opts_cb_varcet,
     ("list_all_items",          False),
     ("list_installed",          False),
-    ("output_format",           None)
+    ("output_format",           None, valid_opt_values["output_format"])
 ]
 
 opts_list_facet = \
@@ -6025,7 +6026,7 @@ opts_list_mediator = \
     options.opts_table_no_headers + \
     [
     ("list_available",      False),
-    ("output_format",       None)
+    ("output_format",       None,  valid_opt_values["output_format"])
 ]
 opts_unset_mediator = \
     options.opts_table_beopts + \
@@ -6234,9 +6235,13 @@ def main_func():
                                         return "-%s/--%s" % (s, l)
                         except KeyError:
                                 # ignore if we can't find a match
-                                # (happens for repeated arguments)
+                                # (happens for repeated arguments or invalid
+                                # arguments)
                                 return option
-
+                        except TypeError:
+                                # ignore if we can't find a match
+                                # (happens for an invalid arguments list)
+                                return option
                 cli_opts = []
                 opt_def = []
 
@@ -6418,6 +6423,24 @@ to perform the requested operation.  Details follow:\n\n%s""") % __e)
                 __ret = 99
         return __ret
 
+
+def handle_sighupterm(signum, frame):
+        """Attempt to gracefully handle SIGHUP and SIGTERM by telling the api
+        to abort and record the cancellation before exiting."""
+
+        try:
+                if _api_inst:
+                        _api_inst.abort(result=RESULT_CANCELED)
+        except:
+                # If history operation fails for some reason, drive on.
+                pass
+
+        # Use os module to immediately exit (bypasses standard exit handling);
+        # this is preferred over raising a KeyboardInterupt as whatever module
+        # we interrupted may not expect that if they disabled SIGINT handling.
+        os._exit(EXIT_OOPS)
+
+
 if __name__ == "__main__":
         misc.setlocale(locale.LC_ALL, "", error)
         gettext.install("pkg", "/usr/share/locale",
@@ -6426,6 +6449,13 @@ if __name__ == "__main__":
         # Make all warnings be errors.
         import warnings
         warnings.simplefilter('error')
+
+        # Attempt to handle SIGHUP/SIGTERM gracefully.
+        import signal
+        if portable.osname != "windows":
+                # SIGHUP not supported on windows; will cause exception.
+                signal.signal(signal.SIGHUP, handle_sighupterm)
+        signal.signal(signal.SIGTERM, handle_sighupterm)
 
         __retval = handle_errors(main_func)
         if DebugValues["timings"]:

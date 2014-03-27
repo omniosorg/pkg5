@@ -21,16 +21,18 @@
 #
 
 #
-# Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
 #
 
 import testutils
 if __name__ == "__main__":
-	testutils.setup_environment("../../../proto")
+        testutils.setup_environment("../../../proto")
 import pkg5unittest
 
 import difflib
+import operator
 import os
+import itertools
 import re
 import shutil
 import tempfile
@@ -485,6 +487,28 @@ class TestPkgLinked1(TestPkgLinked):
                         self._pkg([0], "change-variant", args= \
                             "-i %s -v variant.foo=baz" % lin, rv=rv)
                         # TODO: test change-facet
+
+                rv = EXIT_BADOPT
+
+                for op in ["update", "install", "uninstall"]:
+                        # -z and -Z can't be used together
+                        self._pkg([0], "%s -r "
+                            "-z system:img1 -Z system:img1 foo" % op, rv=rv)
+                        # check handling of valid but not existing child names
+                        self._pkg([0], "%s -r -z system:foo %s" % \
+                            (op, self.p_foo1_name[1]), rv=rv)
+                        self._pkg([0], "%s -r -Z system:foo %s" % \
+                            (op, self.p_foo1_name[1]), rv=rv)
+                        # check handling of valid but not existing zone names
+                        self._pkg([0], "%s -r -z foo %s" % \
+                            (op, self.p_foo1_name[1]), rv=rv)
+                        self._pkg([0], "%s -r -Z foo %s" % \
+                            (op, self.p_foo1_name[1]), rv=rv)
+                        # check handling of invalid child names
+                        self._pkg([0], "%s -r -z :foo:&& %s" % \
+                            (op, self.p_foo1_name[1]), rv=rv)
+                        self._pkg([0], "%s -r -Z :foo:&& %s" % \
+                            (op, self.p_foo1_name[1]), rv=rv)
 
         def test_opts_3_all(self):
                 self._imgs_create(1)
@@ -1382,6 +1406,22 @@ class TestPkgLinked2(TestPkgLinked):
                     child_images=[{
                         "image_name": "system:img1",
                         "change_packages": [
+                            [self.s1_list[2], self.s1_list[0]]],
+                        },{
+                        "image_name": "system:img2",
+                        "change_packages": [
+                            [self.s1_list[2], self.s1_list[0]]],
+                    }])
+
+                # explicit recursion into all children
+                self.__test_linked_sync_via_parent_op(
+                    "update -r", "",
+                    change_packages=[
+                        [self.foo1_list[1], self.foo1_list[0]],
+                        [self.s1_list[1], self.s1_list[0]]],
+                    child_images=[{
+                        "image_name": "system:img1",
+                        "change_packages": [
                             [self.foo1_list[2], self.foo1_list[0]],
                             [self.s1_list[2], self.s1_list[0]]],
                         },{
@@ -1416,6 +1456,23 @@ class TestPkgLinked2(TestPkgLinked):
                             [self.s1_list[2], self.s1_list[1]]],
                     }])
 
+                # explicit recursion into all children
+                self.__test_linked_sync_via_parent_op(
+                    "update -r", self.p_foo1_name[3],
+                    change_packages=[
+                        [self.foo1_list[1], self.foo1_list[3]]],
+                    child_images=[{
+                        "image_name": "system:img1",
+                        "change_packages": [
+                            [self.foo1_list[2], self.foo1_list[3]],
+                            [self.s1_list[2], self.s1_list[1]]],
+                        },{
+                        "image_name": "system:img2",
+                        "change_packages": [
+                            [self.foo1_list[2], self.foo1_list[3]],
+                            [self.s1_list[2], self.s1_list[1]]],
+                    }])
+
         def test_linked_sync_via_install(self):
                 """Verify that if we update child images to be in sync with
                 their constraints when we do an install."""
@@ -1438,6 +1495,24 @@ class TestPkgLinked2(TestPkgLinked):
                         },{
                         "image_name": "system:img2",
                         "change_packages": [
+                            [self.s1_list[2], self.s1_list[1]]],
+                    }])
+
+                # explicit recursion into all children
+                self.__test_linked_sync_via_parent_op(
+                    "install -r ", self.p_foo1_name[0],
+                    change_packages=[
+                        [self.foo1_list[1], self.foo1_list[0]],
+                    ],
+                    child_images=[{
+                        "image_name": "system:img1",
+                        "change_packages": [
+                            [self.foo1_list[2], self.foo1_list[0]],
+                            [self.s1_list[2], self.s1_list[1]]],
+                        },{
+                        "image_name": "system:img2",
+                        "change_packages": [
+                            [self.foo1_list[2], self.foo1_list[0]],
                             [self.s1_list[2], self.s1_list[1]]],
                     }])
 
@@ -1529,6 +1604,22 @@ class TestPkgLinked2(TestPkgLinked):
                         "image_name": "system:img1",
                         "change_packages": [
                             [self.s1_list[2], self.s1_list[1]]],
+                        },{
+                        "image_name": "system:img2",
+                        "change_packages": [
+                            [self.s1_list[2], self.s1_list[1]]],
+                    }])
+
+                # explicit recursion into all children
+                self.__test_linked_sync_via_parent_op(
+                    "uninstall -r", self.foo1_list[1],
+                    remove_packages=[
+                        self.foo1_list[1]],
+                    child_images=[{
+                        "image_name": "system:img1",
+                        "change_packages": [
+                            [self.s1_list[2], self.s1_list[1]]],
+                        "remove_packages": [],
                         },{
                         "image_name": "system:img2",
                         "change_packages": [
@@ -1775,6 +1866,633 @@ class TestPkgLinked3(TestPkgLinked):
 
                 Test when parent has publishers configured."""
                 self.__test_missing_parent_publisher_metadata()
+
+
+class TestPkgLinkedRecurse(TestPkgLinked):
+        """Test explicitly requested recursion"""
+
+        def _recursive_pkg(self, op, args, **kwargs):
+                """Run recursive pkg operation, compare results."""
+
+                def output_cb(output):
+                        self.assertEqualParsable(output, **kwargs)
+                self._pkg([0], "%s -r --parsable=0 %s" % (op, args),
+                    output_cb=output_cb)
+
+        def test_recursive_install(self):
+                """Test recursive pkg install"""
+
+                # create parent (0), push child (1, 2)
+                self._imgs_create(3)
+                self._attach_child(0, [1, 2])
+
+                self._recursive_pkg("install", self.foo1_list[0],
+                    add_packages=[self.foo1_list[0]],
+                    child_images=[{
+                        "image_name": "system:img1",
+                        "add_packages": [self.foo1_list[0]]
+                    },{
+                        "image_name": "system:img2",
+                        "add_packages": [self.foo1_list[0]]
+                    }
+                ])
+
+                # remove pkgs from children, leave parent alone, try again
+                self._pkg([1,2], "uninstall %s" % self.foo1_list[0])
+
+                self._recursive_pkg("install", self.foo1_list[0],
+                    add_packages=[],
+                    child_images=[{
+                        "image_name": "system:img1",
+                        "add_packages": [self.foo1_list[0]]
+                    },{
+                        "image_name": "system:img2",
+                        "add_packages": [self.foo1_list[0]]
+                    }
+                ])
+
+                # remove pkgs from parent, leave children alone, try again
+                self._pkg([0], "uninstall %s" % self.foo1_list[0])
+
+                self._recursive_pkg("install", self.foo1_list[0],
+                    add_packages=[self.foo1_list[0]],
+                    child_images=[{
+                        "image_name": "system:img1",
+                        "add_packages": []
+                    },{
+                        "image_name": "system:img2",
+                        "add_packages": []
+                    }
+                ])
+
+        def test_recursive_uninstall(self):
+                """Test recursive uninstall"""
+
+                # create parent (0), push child (1)
+                self._imgs_create(2)
+                self._attach_child(0, [1])
+
+                # install some packages to remove
+                self._pkg([0, 1], "install %s" % self.foo1_list[0])
+
+                # uninstall package which is present in parent and child
+                self._recursive_pkg("uninstall", self.foo1_list[0],
+                    remove_packages=[self.foo1_list[0]],
+                    child_images=[{
+                        "image_name": "system:img1",
+                        "remove_packages": [self.foo1_list[0]]
+                    }
+                ])
+
+                # install pkg back into child, leave parent alone, try again
+                self._pkg([1], "install %s" % self.foo1_list[0])
+                self._recursive_pkg("uninstall", self.foo1_list[0],
+                    remove_packages=[],
+                    child_images=[{
+                        "image_name": "system:img1",
+                        "remove_packages": [self.foo1_list[0]]
+                    }
+                ])
+
+                # install pkg back into parent, leave child alone, try again
+                self._pkg([0], "install %s" % self.foo1_list[0])
+                self._recursive_pkg("uninstall", self.foo1_list[0],
+                    remove_packages=[self.foo1_list[0]],
+                    child_images=[{
+                        "image_name": "system:img1",
+                        "remove_packages": []
+                    }
+                ])
+
+        def test_recursive_update(self):
+                """Test recursive update"""
+
+                # create parent (0), push child (1)
+                self._imgs_create(2)
+                self._attach_child(0, [1])
+
+                # install some packages to update
+                self._pkg([0, 1], "install %s" % self.foo1_list[0])
+
+                # update package which is present in parent and child
+                self._recursive_pkg("update", self.foo1_list[3],
+                    change_packages=[[self.foo1_list[0], self.foo1_list[3]]],
+                    child_images=[{
+                        "image_name": "system:img1",
+                        "change_packages": [[
+                            self.foo1_list[0],
+                            self.foo1_list[3]
+                        ]]
+                    }
+                ])
+
+                # downgrade child, leave parent alone, try again
+                self._pkg([1], "update %s" % self.foo1_list[0])
+                self._recursive_pkg("update", self.foo1_list[3],
+                    change_packages=[],
+                    child_images=[{
+                        "image_name": "system:img1",
+                        "change_packages": [[
+                            self.foo1_list[0],
+                            self.foo1_list[3]
+                        ]]
+                    }
+                ])
+
+                # downgrade parent, leave child alone, try again
+                self._pkg([0], "update %s" % self.foo1_list[0])
+                self._recursive_pkg("update", self.foo1_list[3],
+                    change_packages=[[self.foo1_list[0], self.foo1_list[3]]],
+                    child_images=[{
+                        "image_name": "system:img1",
+                        "change_packages": []
+                    }
+                ])
+
+        def test_recursive_variant(self):
+                """Test recursive change-variant"""
+
+                # create parent (0), push child (1)
+                self._imgs_create(2)
+                self._attach_child(0, [1])
+
+                # install some packages
+                self._pkg([0, 1], "install %s" % self.foo1_list[0])
+
+                # change variant in parent and child
+                self._recursive_pkg("change-variant", "variant.foo=baz",
+                    change_variants=[["variant.foo", "baz"]],
+                    affect_packages=[self.foo1_list[0]],
+                    child_images=[{
+                        "image_name": "system:img1",
+                        "change_variants": [["variant.foo", "baz"]],
+                        "affect_packages": [self.foo1_list[0]]
+                    }
+                ])
+
+                # revert variant in child, leave parent alone, try again
+                self._pkg([1], "change-variant -v variant.foo=bar")
+                self._recursive_pkg("change-variant", "variant.foo=baz",
+                    change_variants=[],
+                    affect_packages=[],
+                    child_images=[{
+                        "image_name": "system:img1",
+                        "change_variants": [["variant.foo", "baz"]],
+                        "affect_packages": [self.foo1_list[0]]
+                    }
+                ])
+
+                # revert variant in parent, leave child alone, try again
+                self._pkg([0], "change-variant -v variant.foo=bar")
+
+                self._pkg([0], "audit-linked -a")
+                self._recursive_pkg("change-variant", "variant.foo=baz",
+                    change_variants=[["variant.foo", "baz"]],
+                    affect_packages=[self.foo1_list[0]],
+                )
+
+        def test_recursive_facet(self):
+                """Test recursive change-facet"""
+
+                # create parent (0), push child (1)
+                self._imgs_create(2)
+                self._attach_child(0, [1])
+
+                # set facet in parent and child
+                self._recursive_pkg("change-facet", "facet.foo=True",
+                    change_facets=[["facet.foo", True, None, "local", False,
+                        False]],
+                    child_images=[{
+                        "image_name": "system:img1",
+                        "change_facets": [["facet.foo", True, None, "local",
+                            False, False]],
+                    }
+                ])
+
+                # change facet in child, leave parent alone, try again
+                self._pkg([1], "change-facet -v facet.foo=False")
+                self._recursive_pkg("change-facet", "facet.foo=True",
+                    change_facets=[],
+                    child_images=[{
+                        "image_name": "system:img1",
+                        "change_facets": [["facet.foo", True, False, "local",
+                            False, False]],
+                    }
+                ])
+
+                # remove facet in child, leave parent alone, try again
+                self._pkg([1], "change-facet -v facet.foo=None")
+                self._recursive_pkg("change-facet", "facet.foo=True",
+                    change_facets=[],
+                    child_images=[{
+                        "image_name": "system:img1",
+                        "change_facets": [["facet.foo", True, None, "local",
+                            False, False]],
+                    }
+                ])
+
+                # change facet in parent, leave child alone, try again
+                self._pkg([0], "change-facet -v facet.foo=False")
+                self._recursive_pkg("change-facet", "facet.foo=True",
+                    change_facets=[["facet.foo", True, False, "local",
+                        False, False]],
+                )
+
+                # remove facet in parent, leave child alone, try again
+                self._pkg([0], "change-facet -v facet.foo=None")
+                self._recursive_pkg("change-facet", "facet.foo=True",
+                    change_facets=[["facet.foo", True, None, "local",
+                        False, False]],
+                )
+
+                # change facet in parent and child
+                self._recursive_pkg("change-facet", "facet.foo=False",
+                    change_facets=[["facet.foo", False, True, "local",
+                        False, False]],
+                    child_images=[{
+                        "image_name": "system:img1",
+                        "change_facets": [["facet.foo", False, True, "local",
+                            False, False]],
+                    }
+                ])
+
+                # remove facet in parent and child
+                self._recursive_pkg("change-facet", "facet.foo=None",
+                    change_facets=[["facet.foo", None, False, "local",
+                            False, False]],
+                    child_images=[{
+                        "image_name": "system:img1",
+                        "change_facets": [["facet.foo", None, False, "local",
+                            False, False]],
+                    }
+                ])
+
+        def test_image_selection(self):
+                """Test that explicit recursion into only the requested child
+                   images works as expected."""
+
+                # We already tested that all the different operations which
+                # support explicit recursion work in general so we only test
+                # with install to see if the image selection works correctly.
+
+                # create parent (0), push child (1,2,3)
+                self._imgs_create(4)
+                self._attach_child(0, [1,2,3])
+
+                # We are only interested if the correct children are selected
+                # for a certain operation so we make sure that operations on
+                # the parent are always a nop.
+                self._pkg([0], "install %s" % self.foo1_list[0])
+
+                # install into all children
+                self._recursive_pkg("install", self.foo1_list[0],
+                    child_images=[{
+                        "image_name": "system:img1",
+                        "add_packages": [self.foo1_list[0]]
+                    },{
+                        "image_name": "system:img2",
+                        "add_packages": [self.foo1_list[0]]
+                    },{
+                        "image_name": "system:img3",
+                        "add_packages": [self.foo1_list[0]]
+                    }
+                ])
+
+                # install only into img1
+                self._pkg([1,2,3], "uninstall %s" % self.foo1_list[0])
+                self._recursive_pkg("install -z system:img1", self.foo1_list[0],
+                    child_images=[{
+                        "image_name": "system:img1",
+                        "add_packages": [self.foo1_list[0]]
+                    }
+                ])
+
+                # install only into img1 and img3
+                self._pkg([1], "uninstall %s" % self.foo1_list[0])
+                self._recursive_pkg("install -z system:img1 -z system:img3",
+                    self.foo1_list[0],
+                    child_images=[{
+                        "image_name": "system:img1",
+                        "add_packages": [self.foo1_list[0]]
+                    },{
+                        "image_name": "system:img3",
+                        "add_packages": [self.foo1_list[0]]
+                    }
+                ])
+
+                # install into all but img1
+                self._pkg([1,3], "uninstall %s" % self.foo1_list[0])
+                self._recursive_pkg("install -Z system:img1", self.foo1_list[0],
+                    child_images=[{
+                        "image_name": "system:img2",
+                        "add_packages": [self.foo1_list[0]]
+                    },{
+                        "image_name": "system:img3",
+                        "add_packages": [self.foo1_list[0]]
+                    }
+                ])
+
+                # install into all but img1 and img3
+                self._pkg([2,3], "uninstall %s" % self.foo1_list[0])
+                self._recursive_pkg("install -Z system:img1 -Z system:img3",
+                    self.foo1_list[0],
+                    child_images=[{
+                        "image_name": "system:img2",
+                        "add_packages": [self.foo1_list[0]]
+                    }
+                ])
+
+        def test_recursive_sync_install(self):
+                """Test that child images not specified for explicit recursion
+                   are still getting synced when installing."""
+
+                # create parent (0), push child (1,2)
+                self._imgs_create(3)
+                self._attach_child(0, [1, 2])
+
+                # install synced package into each image
+                self._pkg([0, 1, 2], "install -v %s" % self.p_sync1_name[2])
+
+                # install new version of synced pkg in parent and one child
+                # explicitly, second child should get synced too
+                self._recursive_pkg("install -z system:img1",
+                    self.p_sync1_name[1],
+                    change_packages=[[self.s1_list[2], self.s1_list[1]]],
+                    child_images=[{
+                        "image_name": "system:img1",
+                        "change_packages": [[self.s1_list[2], self.s1_list[1]]]
+                    },{
+                        "image_name": "system:img2",
+                        "change_packages": [[self.s1_list[2], self.s1_list[1]]]
+                    }
+                ])
+
+        def test_recursive_sync_update(self):
+                """Test that child images not specified for explicit recursion
+                   are still getting synced when updating."""
+
+                # create parent (0), push child (1,2)
+                self._imgs_create(3)
+                self._attach_child(0, [1, 2])
+
+                # install synced package into each image
+                self._pkg([0, 1, 2], "install -v %s" % self.p_sync1_name[2])
+
+                # install new version of synced pkg in parent and one child
+                # explicitly, second child should get synced too
+                self._recursive_pkg("update -z system:img1", "",
+                    change_packages=[[self.s1_list[2], self.s1_list[0]]],
+                    child_images=[{
+                        "image_name": "system:img1",
+                        "change_packages": [[self.s1_list[2], self.s1_list[0]]]
+                    },{
+                        "image_name": "system:img2",
+                        "change_packages": [[self.s1_list[2], self.s1_list[0]]]
+                    }
+                ])
+
+        def test_recursive_sync_update_pkg(self):
+                """Test that child images not specified for explicit recursion
+                   are still getting synced when updating a particular pkg."""
+
+                # create parent (0), push child (1,2)
+                self._imgs_create(3)
+                self._attach_child(0, [1, 2])
+
+                # install synced package into each image
+                self._pkg([0, 1, 2], "install -v %s" % self.p_sync1_name[2])
+
+                # install new version of synced pkg in parent and one child
+                # explicitly, second child should get synced too
+                self._recursive_pkg("update -z system:img1",
+                    self.p_sync1_name[1],
+                    change_packages=[[self.s1_list[2], self.s1_list[1]]],
+                    child_images=[{
+                        "image_name": "system:img1",
+                        "change_packages": [[self.s1_list[2], self.s1_list[1]]]
+                    },{
+                        "image_name": "system:img2",
+                        "change_packages": [[self.s1_list[2], self.s1_list[1]]]
+                    }
+                ])
+
+        def test_recursive_uninstall_synced_pkg(self):
+                """Test that we can uninstall a synced package from all images
+                   with -r."""
+
+                # create parent (0), push child (1,2)
+                self._imgs_create(3)
+                self._attach_child(0, [1, 2])
+
+                # install synced package into each image
+                self._pkg([0, 1, 2], "install -v %s" % self.p_sync1_name[2])
+
+                # uninstall synced pkg from all images
+                self._recursive_pkg("uninstall", self.p_sync1_name[2],
+                    remove_packages=[self.s1_list[2]],
+                    child_images=[{
+                        "image_name": "system:img1",
+                        "remove_packages": [self.s1_list[2]]
+                    },{
+                        "image_name": "system:img2",
+                        "remove_packages": [self.s1_list[2]]
+                    }
+                ])
+
+        def test_recursive_idr_removal(self):
+                """Test if IDR handling with linked images works as intended."""
+
+                pkgs = (
+                        """
+                            open kernel@1.0,5.11-0.1
+                            add depend type=require fmri=pkg:/incorp
+                            add depend type=parent fmri=%s
+                            close """ % pkg.actions.depend.DEPEND_SELF,
+
+                        """
+                            open kernel@1.0,5.11-0.2
+                            add depend type=require fmri=pkg:/incorp
+                            add depend type=parent fmri=%s
+                            close """ % pkg.actions.depend.DEPEND_SELF,
+
+                        """
+                            open network@1.0,5.11-0.1
+                            add depend type=require fmri=pkg:/incorp
+                            add depend type=parent fmri=%s
+                            close """ % pkg.actions.depend.DEPEND_SELF,
+
+                        """
+                            open network@1.0,5.11-0.2
+                            add depend type=require fmri=pkg:/incorp
+                            add depend type=parent fmri=%s
+                            close """ % pkg.actions.depend.DEPEND_SELF,
+
+                        """
+                            open incorp@1.0,5.11-0.1
+                            add depend type=incorporate fmri=kernel@1.0,5.11-0.1
+                            add depend type=incorporate fmri=network@1.0,5.11-0.1
+                            add depend type=parent fmri=%s
+                            close """ % pkg.actions.depend.DEPEND_SELF,
+
+                         """
+                            open incorp@1.0,5.11-0.2
+                            add depend type=incorporate fmri=kernel@1.0,5.11-0.2
+                            add depend type=incorporate fmri=network@1.0,5.11-0.2
+                            add depend type=parent fmri=%s
+                            close """ % pkg.actions.depend.DEPEND_SELF,
+
+                        """
+                            open kernel@1.0,5.11-0.1.1.0
+                            add depend type=require fmri=pkg:/incorp
+                            add depend type=require fmri=pkg:/idr1
+                            add depend type=parent fmri=%s
+                            close """ % pkg.actions.depend.DEPEND_SELF,
+
+                        """
+                            open kernel@1.0,5.11-0.1.1.1
+                            add depend type=require fmri=pkg:/incorp
+                            add depend type=require fmri=pkg:/idr1
+                            add depend type=parent fmri=%s
+                            close """ % pkg.actions.depend.DEPEND_SELF,
+
+                        """
+                            open kernel@1.0,5.11-0.1.2.0
+                            add depend type=require fmri=pkg:/incorp
+                            add depend type=require fmri=pkg:/idr2
+                            add depend type=parent fmri=%s
+                            close """ % pkg.actions.depend.DEPEND_SELF,
+
+                        """
+                            open network@1.0,5.11-0.1.1.0
+                            add depend type=require fmri=pkg:/incorp
+                            add depend type=require fmri=pkg:/idr1
+                            add depend type=parent fmri=%s
+                            close """ % pkg.actions.depend.DEPEND_SELF,
+
+                        """
+                            open network@1.0,5.11-0.1.1.1
+                            add depend type=require fmri=pkg:/incorp
+                            add depend type=require fmri=pkg:/idr1
+                            add depend type=parent fmri=%s
+                            close """ % pkg.actions.depend.DEPEND_SELF,
+
+                        """
+                            open network@1.0,5.11-0.1.2.0
+                            add depend type=require fmri=pkg:/incorp
+                            add depend type=require fmri=pkg:/idr2
+                            add depend type=parent fmri=%s
+                            close """ % pkg.actions.depend.DEPEND_SELF,
+
+                        """
+                            open idr1@1.0,5.11-0.1.1.0
+                            add depend type=incorporate fmri=kernel@1.0,5.11-0.1.1.0
+                            add depend type=incorporate fmri=network@1.0,5.11-0.1.1.0
+                            add depend type=require fmri=idr1_entitlement
+                            add depend type=parent fmri=%s
+                            close """ % pkg.actions.depend.DEPEND_SELF,
+
+                        """
+                            open idr1@1.0,5.11-0.1.1.1
+                            add depend type=incorporate fmri=kernel@1.0,5.11-0.1.1.1
+                            add depend type=incorporate fmri=network@1.0,5.11-0.1.1.1
+                            add depend type=require fmri=idr1_entitlement
+                            add depend type=parent fmri=%s
+                            close """ % pkg.actions.depend.DEPEND_SELF,
+
+                        """
+                            open idr2@1.0,5.11-0.1.2.0
+                            add depend type=incorporate fmri=kernel@1.0,5.11-0.1.2.0
+                            add depend type=incorporate fmri=network@1.0,5.11-0.1.2.0
+                            add depend type=require fmri=idr2_entitlement
+                            add depend type=parent fmri=%s
+                            close """ % pkg.actions.depend.DEPEND_SELF,
+
+                        """
+                            open idr1_entitlement@1.0,5.11-0
+                            add depend type=exclude fmri=no-idrs
+                            add depend type=parent fmri=%s
+                            close """ % pkg.actions.depend.DEPEND_SELF,
+
+                        """
+                            open idr2_entitlement@1.0,5.11-0
+                            add depend type=exclude fmri=no-idrs
+                            add depend type=parent fmri=%s
+                            close """ % pkg.actions.depend.DEPEND_SELF,
+
+                        # hack to prevent idrs from being installed from repo...
+
+                        """
+                            open no-idrs@1.0,5.11-0
+                            add depend type=parent fmri=%s
+                            close """ % pkg.actions.depend.DEPEND_SELF,
+                )
+
+                # publish additional idr packages
+                self.pkgsend_bulk(self.rurl1, pkgs)
+
+                # create parent (0), push child (1,2)
+                self._imgs_create(3)
+                self._attach_child(0, [1, 2])
+
+                # install kernel pkg; remember version so we can reinstall it
+                # later
+                self._pkg([0, 1, 2], "install -v no-idrs")
+                # install kernel package into all images
+                self._pkg([0, 1 ,2], "install -v kernel@1.0,5.11-0.1")
+                self._pkg([0], "list -Hv kernel@1.0,5.11-0.1 | "
+                    "/usr/bin/awk '{print $1}'")
+                kernel_fmri = self.output.strip()
+                # install network package only in parent and one child
+                self._pkg([0, 1], "install -v network@1.0,5.11-0.1")
+                self._pkg([0], "list -Hv network@1.0,5.11-0.1 | "
+                    "/usr/bin/awk '{print $1}'")
+                network_fmri = self.output.strip()
+                self._pkg([2], "list network", rv=EXIT_OOPS)
+
+                # upgrade to next version w/o encountering idrs, children should
+                # be updated automatically.
+                self._pkg([0], "update -v");
+                self._pkg([0, 1, 2], "list kernel@1.0,5.11-0.2")
+                self._pkg([0, 1], "list network@1.0,5.11-0.2")
+                self._pkg([2], "list network", rv=EXIT_OOPS)
+
+                # try installing idr1; testing wild card support and -z as well
+                self._pkg([0], "uninstall -r no-idrs")
+                self._pkg([0], "install -r "
+                    "--reject 'k*' --reject 'i*' --reject network no-idrs")
+                self._pkg([0], "install -r -v kernel@1.0,5.11-0.1")
+                self._pkg([0], "install -v -r -z system:img1 "
+                    "network@1.0,5.11-0.1")
+
+                self._pkg([0], "install -r -v --reject no-idrs "
+                    "idr1_entitlement")
+                self._pkg([0], "install -r -v idr1@1.0,5.11-0.1.1.0")
+                self._pkg([0], "update -r -v --reject idr2")
+                self._pkg([0, 1, 2], "list idr1@1.0,5.11-0.1.1.1")
+
+                # switch to idr2, which affects same package
+                self._pkg([0], "install -r -v --reject idr1 --reject 'idr1_*' "
+                    "idr2 idr2_entitlement")
+
+                # switch back to base version of kernel and network
+                self._pkg([0], "update -v -r "
+                    "--reject idr2 --reject 'idr2_*' %s %s" % (kernel_fmri,
+                    network_fmri))
+
+                # reinstall idr1, then update to version 2 of base kernel
+                self._pkg([0], "install -r -v "
+                    "idr1@1.0,5.11-0.1.1.0 idr1_entitlement")
+                self._pkg([0, 1, 2], "list kernel@1.0,5.11-0.1.1.0")
+                self._pkg([0, 1], "list network@1.0,5.11-0.1.1.0")
+                self._pkg([2], "list network", rv=EXIT_OOPS)
+
+                # Wildcards are purposefully used here for both patterns to
+                # ensure pattern matching works as expected for update.
+                self._pkg([0], "update -r -v "
+                    "--reject 'idr1*' '*incorp@1.0-0.2'")
+                self._pkg([0, 1, 2], "list kernel@1.0,5.11-0.2")
+                self._pkg([0, 1], "list network@1.0,5.11-0.2")
+                self._pkg([2], "list network", rv=EXIT_OOPS)
 
 
 class TestFacetInheritance(TestPkgLinked):
@@ -3183,7 +3901,6 @@ class TestPkgLinkedScale(pkg5unittest.ManyDepotTestCase):
                 # populate repository
                 self.pkgsend_bulk(self.rurl1, self.p_sync1)
 
-
         def __req_phys_mem(self, phys_mem_req):
                 """Verify that the current machine has a minimal amount of
                 physical memory (in GB).  If it doesn't raise
@@ -3257,6 +3974,943 @@ class TestPkgLinkedScale(pkg5unittest.ManyDepotTestCase):
 
                 # update the parent image and all child images in parallel
                 self.pkg("update -C0 -q")
+
+
+class TestPkgLinkedPaths(pkg5unittest.ManyDepotTestCase):
+        """Class to test linked image path management."""
+
+        #
+        # linked image types
+        #
+        T_NONE = "none"
+        T_PUSH = "push"
+        T_PULL = "pull"
+
+        #
+        # Linked image trees for testing.
+        # All trees have an implicit parent node of type T_NONE.
+        # Trees are defined by a vector with up to four elements:
+        #     child 1: parented to root image
+        #     child 2: parented to root image
+        #     child 3: parented to child 1
+        #     child 4: parented to child 1
+        #
+        t_vec_list = [
+                [ T_PUSH ],
+                [ T_PULL ],
+                [ T_PUSH, T_PULL ],
+
+                [ T_PUSH, T_NONE, T_PUSH ],
+                [ T_PUSH, T_NONE, T_PULL ],
+                [ T_PUSH, T_NONE, T_PUSH, T_PULL ],
+
+                [ T_PULL, T_NONE, T_PUSH ],
+                [ T_PULL, T_NONE, T_PULL ],
+                [ T_PULL, T_NONE, T_PUSH, T_PULL ],
+        ]
+
+        #
+        # Linked image child locations.
+        #
+        L_CNEST = "children are nested"
+        L_CPARALLEL = "children are parallel to parent"
+        L_CBELOW = "children are below parent, but not nested"
+        L_CABOVE = "children are above parent, but not nested"
+        l_list = [ L_CNEST, L_CPARALLEL, L_CBELOW, L_CABOVE ]
+
+        #
+        # Linked image directory location vectors.
+        # Location vectors consist of 5 image locations:
+        #       root image path
+        #       child 1 path
+        #       child 2 path
+        #       child 3 path
+        #       child 4 path
+        #       child 5 path
+        #
+        l_vec_dict = {
+            L_CNEST:     [ "./",     "d/",    "d1/",   "d/d/",     "d/d1/"    ],
+            L_CPARALLEL: [ "d/",     "d1/",   "d2/",   "d3/",      "d4/"      ],
+            L_CBELOW:    [ "d/",     "d1/d/", "d2/d/", "d3/d1/d/", "d3/d2/d/" ],
+            L_CABOVE:    [ "d/d/d/", "d/d1/", "d/d2/", "d1/",      "d2/"      ],
+        }
+
+        path_start = "d1/p/p"
+        path_tests = [
+                # test directory moves down
+                # (tests beadm mount <be> /a; pkg -R /a type behavior)
+                "d1/p/p/a",
+                "d1/p/p/d1/p/p",
+
+                # test directory moves up
+                "d1/p",
+                "d1",
+
+                # test parallel directory moves
+                "d1/p/b",
+                "d2/p/p",
+                "d2/p",     # and up
+                "d2/p/p/a", # and down
+        ]
+
+        p_sync1 = []
+        p_vers = [
+            "@1.2,5.11-145:19700101T000001Z",
+            "@1.2,5.11-145:19700101T000000Z", # old time
+            "@1.1,5.11-145:19700101T000000Z", # old ver
+            "@1.1,5.11-144:19700101T000000Z", # old build
+            "@1.0,5.11-144:19700101T000000Z", # oldest
+        ]
+        p_files = [
+            "tmp/bar",
+            "tmp/baz",
+        ]
+
+        # fake zonename binary used for testing
+        zonename_sh = """
+#!/bin/sh
+echo global
+exit 0""".strip("\n")
+
+        # fake zoneadm binary used for testing
+        zoneadm_sh = """
+#!/bin/sh
+while getopts "R:" OPT ; do
+case $OPT in
+        R )
+                [[ "$OPTARG" != "$PKG_GZR/" ]] && exit 0
+                ;;
+esac
+done
+cat <<-EOF
+0:global:running:$PKG_GZR/::solaris:shared:-:none:
+-:z1:installed:$PKG_GZR/z1::solaris:excl:-::
+-:z2:unavailable:$PKG_GZR/z21::solaris:excl:-::
+-:z3:configured:$PKG_GZR/z3::solaris:excl:-::
+-:z4:incomplete:$PKG_GZR/z4::solaris:excl:-::
+-:kz:installed:$PKG_GZR/system/volatile/zones/kz1/zonepath::solaris-kz:excl:-:solaris-kz:
+-:s10:installed:$PKG_GZR/s10::solaris10:excl:-::
+EOF
+exit 0""".strip("\n")
+
+        # generate packages that do need to be synced
+        p_sync1_name_gen = "sync1"
+        pkgs = [p_sync1_name_gen + ver for ver in p_vers]
+        p_sync1_name = dict(zip(range(len(pkgs)), pkgs))
+        for i in p_sync1_name:
+                p_data = "open %s\n" % p_sync1_name[i]
+                p_data += "add depend type=parent fmri=%s" % \
+                    pkg.actions.depend.DEPEND_SELF
+                p_data += """
+                    close\n"""
+                p_sync1.append(p_data)
+
+        def setUp(self):
+                self.i_count = 3
+                pkg5unittest.ManyDepotTestCase.setUp(self, ["test"],
+                    image_count=self.i_count)
+
+                # create files that go in packages
+                self.make_misc_files(self.p_files)
+
+                # get repo url
+                self.rurl1 = self.dcs[1].get_repo_url()
+
+                # populate repository
+                self.pkgsend_bulk(self.rurl1, self.p_sync1)
+
+                # setup image names and paths
+                self.i_name = []
+                self.i_path = []
+                for i in range(self.i_count):
+                        name = "system:img%d" % i
+                        self.i_name.insert(i, name)
+                        self.i_path.insert(i, self.img_path(i))
+
+        def __mk_bin(self, path, txt):
+                with file(path, "w+") as fobj:
+                        print >> fobj, txt
+                self.cmdline_run("chmod a+x %s" % path, coverage=False)
+
+        def __mk_zone_bins(self, base_path):
+
+                # create a zonename binary
+                bin_zonename = os.path.join(base_path, "zonename")
+                self.__mk_bin(bin_zonename, self.zonename_sh)
+
+                # create a zoneadm binary
+                bin_zoneadm = os.path.join(base_path, "zoneadm")
+                self.__mk_bin(bin_zoneadm, self.zoneadm_sh)
+
+                return (bin_zonename, bin_zoneadm)
+
+        def __attach_params(self, base_path, pdir, cdir):
+                ppath = os.path.join(base_path, pdir)
+                cpath = os.path.join(base_path, cdir)
+                # generate child image name based on the child image dir
+                cname = re.sub('[/]', '_', cdir.rstrip(os.sep))
+                return ppath, cpath, cname
+
+        def __attach_child(self, base_path, pdir, cdir, exit=EXIT_OK):
+                ppath, cpath, cname = \
+                    self.__attach_params(base_path, pdir, cdir)
+                self.pkg("-R %s attach-linked -c system:%s %s" %
+                    (ppath, cname, cpath), exit=exit)
+
+        def __attach_parent(self, base_path, cdir, pdir, exit=EXIT_OK):
+                ppath, cpath, cname = \
+                    self.__attach_params(base_path, pdir, cdir)
+                self.pkg("-R %s attach-linked -p system:%s %s" %
+                    (cpath, cname, ppath), exit=exit)
+
+        def __try_attach(self, base_path, i1, i2):
+                self.__attach_child(base_path, i1, i2, exit=EXIT_OOPS)
+                self.__attach_parent(base_path, i1, i2, exit=EXIT_OOPS)
+
+        def __create_images(self, base_path, img_dirs, repos=None):
+                """Create images (in directory order)"""
+                for d in sorted(img_dirs):
+                        p = os.path.join(base_path, d)
+                        self.cmdline_run("mkdir -p %s" % p, coverage=False)
+                        self.image_create(self.rurl1, destroy=False, img_path=p)
+
+        def __define_limages(self, base_path, types, locs):
+                """Given a vector of linked image types and locations, return
+                a list of linked images.  The format of returned list entries
+                is:
+                        <image dir, image type, parent dir>
+                """
+
+                limages = []
+                index = 0
+                assert len(types) <= len(locs)
+
+                # first image is always a parent
+                limages.append([locs[0], self.T_NONE, None])
+
+                for t in types:
+                        index += 1
+
+                        # determine child and parent paths
+                        cdir = locs[index]
+                        pdir = None
+                        if index in [1, 2]:
+                                pdir = locs[0]
+                        elif index in [3, 4]:
+                                pdir = locs[1]
+                        else:
+                                assert "invalid index: ", index
+                        assert pdir is not None
+
+                        # skip this image
+                        if t == self.T_NONE:
+                                continue
+
+                        # add image to the list
+                        limages.append([cdir, t, pdir])
+
+                return limages
+
+        def __create_limages(self, base_path, limages):
+                """Create images (in directory order)"""
+                img_dirs = [
+                        cdir
+                        for cdir, t, pdir in limages
+                ]
+                self.__create_images(base_path, img_dirs)
+
+        def __attach_limages(self, base_path, limages):
+                """Attach images"""
+                for cdir, t, pdir in limages:
+                        if t == self.T_NONE:
+                                continue
+                        if t == self.T_PUSH:
+                                self.__attach_child(base_path, pdir, cdir)
+                                continue
+                        assert t == self.T_PULL
+                        self.__attach_parent(base_path, cdir, pdir)
+
+        def __audit_limages(self, base_path, limages):
+                """Audit images"""
+
+                parents = set([
+                    pdir
+                    for cdir, t, pdir in limages
+                    if t == self.T_PUSH
+                ])
+                for pdir in parents:
+                        p = os.path.join(base_path, pdir)
+                        self.pkg("-R %s audit-linked -a" % p)
+
+                children = set([
+                    cdir
+                    for cdir, t, pdir in limages
+                    if t != self.T_NONE
+                ])
+                for pdir in parents:
+                        p = os.path.join(base_path, cdir)
+                        self.pkg("-R %s audit-linked" % p)
+
+        def __ccmd(self, args, rv=0):
+                """Run a 'C' (or other non-python) command."""
+                assert type(args) == str
+                # Ensure 'coverage' is turned off-- it won't work.
+                self.cmdline_run("%s" % args, exit=rv, coverage=False)
+
+        def __list_linked_check(self, ipath, lipaths,
+            bin_zonename, bin_zoneadm):
+                """Given an image path (ipath), verify that pkg list-linked
+                displays the expected linked image paths (lipaths).  The
+                caller must specify paths to custom zonename and zoneadm
+                binaries that will output from those commands."""
+
+                outfile1 = os.path.join(ipath, "__list_linked_check")
+
+                self.pkg("--debug zones_supported=1 "
+                    "--debug bin_zonename='%s' "
+                    "--debug bin_zoneadm='%s' "
+                    "-R %s list-linked > %s" %
+                    (bin_zonename, bin_zoneadm, ipath, outfile1))
+                self.__ccmd("cat %s" % outfile1)
+                for lipath in lipaths:
+                        self.__ccmd("egrep '[ 	]%s[ 	]*$' %s" %
+                            (lipath, outfile1))
+
+        def __check_linked_props(self, ipath, liname, props,
+            bin_zonename, bin_zoneadm):
+                """Given an image path (ipath), verify that pkg
+                property-linked displays the expected linked image properties.
+                (props).  The caller must specify paths to custom zonename and
+                zoneadm binaries that will output from those commands."""
+
+                outfile1 = os.path.join(ipath, "__check_linked_props1")
+                outfile2 = os.path.join(ipath, "__check_linked_props2")
+
+                if liname:
+                        liname = "-l " + liname
+                else:
+                        liname = ""
+
+                self.pkg("--debug zones_supported=1 "
+                    "--debug bin_zonename='%s' "
+                    "--debug bin_zoneadm='%s' "
+                    "-R %s property-linked %s -H > %s" %
+                    (bin_zonename, bin_zoneadm,
+                    ipath, liname, outfile1))
+                self.__ccmd("cat %s" % outfile1)
+
+                for p, v in props.iteritems():
+                        if v is None:
+                                # verify property is not present
+                                self.__ccmd(
+                                    "grep \"^%s[ 	]\" %s" %
+                                    (p, outfile1), rv=1)
+                                continue
+
+                        # verify property and value
+                        self.__ccmd("grep \"^%s[ 	]\" %s > %s" %
+                            (p, outfile1, outfile2))
+                        self.__ccmd("cat %s" % outfile2)
+                        # verify property and value
+                        self.__ccmd("grep \"[ 	]%s[ 	]*$\" %s" %
+                            (v, outfile2))
+
+        def test_linked_paths_moves(self):
+                """Create trees of linked images, with different relative path
+                configurations.  Then move each tree to a different locations
+                and see if the images within each tree can still find each
+                other."""
+
+                tmp_path = os.path.join(self.img_path(0), "tmp")
+                base_path = os.path.join(self.img_path(0), "images")
+
+                for t_vec, loc in itertools.product(
+                    self.t_vec_list, self.l_list):
+
+                        l_vec = self.l_vec_dict[loc]
+
+                        pcur = os.path.join(base_path, self.path_start)
+
+                        # create and link image tree
+                        limages = self.__define_limages(pcur, t_vec, l_vec)
+                        self.__create_limages(pcur, limages)
+                        self.__attach_limages(pcur, limages)
+
+                        for pnew in self.path_tests:
+
+                                assert limages
+                                assert pcur != pnew
+
+                                # determine the parent images new location
+                                pnew = os.path.join(base_path, pnew)
+
+                                # move the parent to a temporary location
+                                self.__ccmd("mv %s %s" % (pcur, tmp_path))
+
+                                # cleanup old directory, avoid "rm -rf"
+                                d = pcur
+                                while True:
+                                        d = os.path.dirname(d)
+                                        if len(d) <= len(base_path):
+                                                break
+                                        self.__ccmd("rmdir %s" % d)
+
+                                # move the parent to it's new location
+                                self.__ccmd(
+                                    "mkdir -p %s" % os.path.dirname(pnew))
+                                self.__ccmd("mv %s %s" % (tmp_path, pnew))
+
+                                # verify that the images can find each other
+                                self.__audit_limages(pnew, limages)
+
+                                # save the parent images last location
+                                pcur = pnew
+
+                        # cleanup current image tree
+                        shutil.rmtree(base_path)
+
+
+        def test_linked_paths_no_self_link(self):
+                """You can't link images to themselves."""
+
+                base_path = self.img_path(0)
+                img_dirs = [ "./" ]
+                self.__create_images(base_path, img_dirs)
+                self.__try_attach(base_path, "./", "./")
+
+        def test_linked_paths_no_nested_parent(self):
+                """You can't link images if the parent image is nested within
+                the child."""
+
+                base_path = self.img_path(0)
+                img_dirs = [ "./", "1/" ]
+
+                self.__create_images(base_path, img_dirs)
+
+                self.__attach_child(base_path, "1/", "./", exit=EXIT_OOPS)
+                self.__attach_parent(base_path, "./", "1/", exit=EXIT_OOPS)
+
+        def test_linked_paths_no_liveroot_child(self):
+                """You can't link the liveroot image as a child."""
+
+                base_path = self.img_path(0)
+                img_dirs = [ "./", "1/" ]
+
+                self.__create_images(base_path, img_dirs)
+
+                ppath, cpath, cname = \
+                    self.__attach_params(base_path, "./", "1/")
+
+                self.pkg("--debug simulate_live_root='%s' "
+                    "-R %s attach-linked -c system:%s %s" %
+                    (cpath, ppath, cname, cpath), exit=EXIT_OOPS)
+                self.pkg("--debug simulate_live_root='%s' "
+                    "-R %s attach-linked -p system:%s %s" %
+                    (cpath, cpath, cname, ppath), exit=EXIT_OOPS)
+
+        def test_linked_paths_no_intermediate_imgs(self):
+                """You can't link images if there are intermediate image in
+                between."""
+
+                base_path = self.img_path(0)
+                img_dirs = [ "./", "1/", "1/11/", "2/" ]
+
+                self.__create_images(base_path, img_dirs)
+
+                # can't link "./" and "1/11/" because "1/" is inbetween
+                self.__try_attach(base_path, "./", "1/11/")
+
+                # can't link "1/" and "2/" because "./" is in between
+                self.__try_attach(base_path, "1/", "2/")
+
+        def test_linked_paths_no_attach_in_temporary_location(self):
+                """You can't link images if we're operating on already linked
+                images in temporary locations."""
+
+                base_path = os.path.join(self.img_path(0), "images1")
+                img_dirs = [ "./",
+                    "p/",
+                    "p/1/", "p/2/", "p/3/",
+                    "p/1/11/", "p/2/22/"
+                ]
+
+                self.__create_images(base_path, img_dirs)
+                self.__attach_child(base_path,  "p/", "p/1/")
+                self.__attach_parent(base_path, "p/2/", "p/")
+
+                # move the images
+                pnew = os.path.join(self.img_path(0), "images2")
+                self.__ccmd("mv %s %s" % (base_path, pnew))
+                base_path = pnew
+
+                self.__attach_parent(base_path, "p/",   "./",
+                    exit=EXIT_OOPS)
+                self.__attach_child(base_path,  "p/",   "p/3/",
+                    exit=EXIT_OOPS)
+                self.__attach_child(base_path,  "p/1/", "p/1/11/",
+                    exit=EXIT_OOPS)
+                self.__attach_child(base_path,  "p/2/", "p/2/22/",
+                    exit=EXIT_OOPS)
+
+        def test_linked_paths_staged(self):
+                """Test path handling code with staged operation.  Make sure
+                that we correctly handle images moving around between stages.
+                This simulates normal pkg updates where we plan an update for
+                "/", and then we clone "/", mount it at a  a temporarly
+                location, and then update the clone."""
+
+                tmp_path = os.path.join(self.img_path(0), "tmp")
+                base_path = os.path.join(self.img_path(0), "images")
+
+                t_vec = [ self.T_PUSH, self.T_NONE, self.T_PUSH, self.T_PULL ]
+                l_vec = [ "", "d/", "d1/", "d/d/", "d/d1/"    ]
+                limages = self.__define_limages(base_path, t_vec, l_vec)
+
+                self.__create_limages(base_path, limages)
+                for i in range(len(limages)):
+                        ipath = os.path.join(base_path, limages[i][0])
+                        self.pkg("-R %s install sync1@1.0" % ipath)
+                self.__attach_limages(base_path, limages)
+
+                for i in range(len(limages)):
+
+                        # It only makes sense to try and update T_NONE and
+                        # T_PULL images (T_PUSH images will be updated
+                        # implicitly via recursion).
+                        if limages[i][1] == self.T_PUSH:
+                                continue
+
+                        # plan update
+                        ipath = os.path.join(base_path, limages[i][0])
+                        self.pkg("-R %s update --stage=plan" % ipath)
+
+                        # move images to /a
+                        self.__ccmd("mv %s %s" % (base_path, tmp_path))
+                        new_path = os.path.join(base_path, "a")
+                        self.__ccmd("mkdir -p %s" % os.path.dirname(new_path))
+                        self.__ccmd("mv %s %s" % (tmp_path, new_path))
+
+                        # finish update
+                        ipath = os.path.join(new_path, limages[i][0])
+                        self.pkg("-R %s update --stage=prepare" % ipath)
+                        self.pkg("-R %s update --stage=execute" % ipath)
+
+                        # move images back
+                        # cleanup old directory, avoid "rm -rf"
+                        self.__ccmd("mv %s %s" % (new_path, tmp_path))
+                        d = new_path
+                        while True:
+                                d = os.path.dirname(d)
+                                if len(d) < len(base_path):
+                                        break
+                                self.__ccmd("rmdir %s" % d)
+                        self.__ccmd("mkdir -p %s" % os.path.dirname(base_path))
+                        self.__ccmd("mv %s %s" % (tmp_path, base_path))
+
+        def test_linked_paths_staged_with_zones(self):
+                """Simulate staged packaging operations involving zones."""
+
+                tmp_path = os.path.join(self.img_path(0), "tmp")
+                base_path = os.path.join(self.img_path(0), "images")
+
+                # create a zone binaries
+                bin_zonename, bin_zoneadm = self.__mk_zone_bins(self.test_root)
+
+                # setup image paths
+                img_dirs = [
+                    "", "z1/root"
+                ]
+                gzpath = os.path.join(base_path, img_dirs[0])
+                ngzpath = os.path.join(base_path, img_dirs[1])
+                os.environ["PKG_GZR"] = gzpath.rstrip(os.sep)
+
+                # create images, install packages, and link them
+                self.__create_images(base_path, img_dirs)
+                self.pkg("-R %s install sync1@1.1" % gzpath)
+                self.pkg("-R %s install sync1@1.0" % ngzpath)
+                self.pkg("--debug zones_supported=1 "
+                    "--debug bin_zonename='%s' --debug bin_zoneadm='%s' "
+                    "-R %s attach-linked -v -f -c zone:z1 %s" %
+                    (bin_zonename, "/bin/true", gzpath, ngzpath))
+
+                # plan update
+                self.pkg("--debug zones_supported=1 "
+                    "--debug bin_zonename='%s' --debug bin_zoneadm='%s' "
+                    "-R %s update -vvv --stage=plan" %
+                    (bin_zonename, bin_zoneadm, gzpath))
+
+                # move images to /a
+                self.__ccmd("mv %s %s" % (base_path, tmp_path))
+                base_path = os.path.join(base_path, "a")
+                gzpath = os.path.join(base_path, img_dirs[0])
+                ngzpath = os.path.join(base_path, img_dirs[1])
+                os.environ["PKG_GZR"] = gzpath.rstrip(os.sep)
+                self.__ccmd("mkdir -p %s" % os.path.dirname(base_path))
+                self.__ccmd("mv %s %s" % (tmp_path, gzpath))
+
+                # finish update
+                self.pkg("--debug zones_supported=1 "
+                    "--debug bin_zonename='%s' --debug bin_zoneadm='%s' "
+                    "-R %s update --stage=prepare" %
+                    (bin_zonename, bin_zoneadm, gzpath))
+                self.pkg("--debug zones_supported=1 "
+                    "--debug bin_zonename='%s' --debug bin_zoneadm='%s' "
+                    "-R %s update --stage=execute" %
+                    (bin_zonename, bin_zoneadm, gzpath))
+
+                # verify that all the images got updated
+                self.pkg("-R %s list sync1@1.2" % gzpath)
+                self.pkg("-R %s list sync1@1.2" % ngzpath)
+
+                del os.environ["PKG_GZR"]
+
+        def test_linked_paths_list_and_props(self):
+                """Verify that all linked image paths reported by list-linked
+                and property-linked are correct before and after moving trees
+                of images."""
+
+                tmp_path = os.path.join(self.img_path(0), "tmp")
+                base_path = os.path.join(self.img_path(0), "images")
+
+                # create a zone binaries
+                bin_zonename, bin_zoneadm = self.__mk_zone_bins(self.test_root)
+
+                # setup image paths
+                img_dirs = [
+                    "", "s1/", "s2/", "z1/root/"
+                ]
+                img_paths = [
+                        os.path.join(base_path, d)
+                        for d in img_dirs
+                ]
+                gzpath, s1path, s2path, ngzpath = img_paths
+                os.environ["PKG_GZR"] = gzpath.rstrip(os.sep)
+
+                # create images and link them
+                self.__create_images(base_path, img_dirs)
+                self.__attach_child(base_path, "", img_dirs[1])
+                self.__attach_parent(base_path, img_dirs[2], "")
+                self.pkg("--debug zones_supported=1 "
+                    "--debug bin_zonename='%s' --debug bin_zoneadm='%s' "
+                    "-R %s attach-linked -v -f -c zone:z1 %s" %
+                    (bin_zonename, "/bin/true", gzpath, ngzpath))
+
+                # Make sure that list-linked displays the correct paths.
+                for ipath, lipaths in [
+                        [ gzpath,  [ gzpath, s1path, ngzpath ]],
+                        [ s1path,  [ s1path ]],
+                        [ s2path,  [ gzpath, s2path ]],
+                        [ ngzpath, [ ngzpath ]],
+                    ]:
+                        self.__list_linked_check(ipath, lipaths,
+                            bin_zonename, bin_zoneadm)
+
+                # Make sure that property-linked displays the correct paths.
+                for ipath, liname, props in [
+                        [ gzpath, None, {
+                            "li-current-parent": None,
+                            "li-current-path": gzpath,
+                            "li-parent": None,
+                            "li-path": gzpath,
+                            "li-path-transform": "('/', '/')",
+                            }],
+                        [ gzpath, "system:s1", {
+                            "li-current-parent": None,
+                            "li-current-path": s1path,
+                            "li-parent": None,
+                            "li-path": s1path,
+                            "li-path-transform": "('/', '/')",
+                            }],
+                        [ gzpath, "zone:z1", {
+                            "li-current-parent": None,
+                            "li-current-path": ngzpath,
+                            "li-parent": None,
+                            "li-path": ngzpath,
+                            "li-path-transform": "('/', '/')",
+                            }],
+                        [ s1path, None, {
+                            "li-current-parent": None,
+                            "li-current-path": s1path,
+                            "li-parent": None,
+                            "li-path": s1path,
+                            "li-path-transform": "('/', '/')",
+                            }],
+                        [ s2path, None, {
+                            "li-current-parent": gzpath,
+                            "li-current-path": s2path,
+                            "li-parent": gzpath,
+                            "li-path": s2path,
+                            "li-path-transform": "('/', '/')",
+                            }],
+                        [ ngzpath, None, {
+                            "li-current-parent": None,
+                            "li-current-path": ngzpath,
+                            "li-parent": None,
+                            "li-path": "/",
+                            "li-path-transform": "('/', '%s')" % ngzpath,
+                            }],
+                    ]:
+                        self.__check_linked_props(ipath, liname, props,
+                            bin_zonename, bin_zoneadm)
+
+                # save old paths
+                ogzpath, os1path, os2path, ongzpath = img_paths
+
+                # move images to /a
+                self.__ccmd("mv %s %s" % (base_path, tmp_path))
+                base_path = os.path.join(base_path, "a")
+                self.__ccmd("mkdir -p %s" % os.path.dirname(base_path))
+                self.__ccmd("mv %s %s" % (tmp_path, base_path))
+
+                # update paths
+                img_paths = [
+                        os.path.join(base_path, d)
+                        for d in img_dirs
+                ]
+                gzpath, s1path, s2path, ngzpath = img_paths
+                os.environ["PKG_GZR"] = gzpath.rstrip(os.sep)
+
+                # Make sure that list-linked displays the correct paths.
+                for ipath, lipaths in [
+                        [ gzpath,  [ gzpath, s1path, ngzpath ]],
+                        [ s1path,  [ s1path ]],
+                        [ s2path,  [ gzpath, s2path ]],
+                        [ ngzpath, [ ngzpath ]],
+                    ]:
+                        self.__list_linked_check(ipath, lipaths,
+                            bin_zonename, bin_zoneadm)
+
+                # Make sure that property-linked displays the correct paths.
+                for ipath, liname, props in [
+                        [ gzpath, None, {
+                            "li-current-parent": None,
+                            "li-current-path": gzpath,
+                            "li-parent": None,
+                            "li-path": ogzpath,
+                            "li-path-transform": "('%s', '%s')" %
+                                (ogzpath, gzpath)
+                            }],
+                        [ gzpath, "system:s1", {
+                            "li-current-parent": None,
+                            "li-current-path": s1path,
+                            "li-parent": None,
+                            "li-path": os1path,
+                            "li-path-transform": "('%s', '%s')" %
+                                (ogzpath, gzpath)
+                            }],
+                        [ gzpath, "zone:z1", {
+                            "li-current-parent": None,
+                            "li-current-path": ngzpath,
+                            "li-parent": None,
+                            "li-path": ongzpath,
+                            "li-path-transform": "('%s', '%s')" %
+                                (ogzpath, gzpath)
+                            }],
+                        [ s1path, None, {
+                            "li-current-parent": None,
+                            "li-current-path": s1path,
+                            "li-parent": None,
+                            "li-path": os1path,
+                            "li-path-transform": "('%s', '%s')" %
+                                (ogzpath, gzpath)
+                            }],
+                        [ s2path, None, {
+                            "li-current-parent": gzpath,
+                            "li-current-path": s2path,
+                            "li-parent": ogzpath,
+                            "li-path": os2path,
+                            "li-path-transform": "('%s', '%s')" %
+                                (ogzpath, gzpath)
+                            }],
+                        [ ngzpath, None, {
+                            "li-current-parent": None,
+                            "li-current-path": ngzpath,
+                            "li-parent": None,
+                            "li-path": "/",
+                            "li-path-transform": "('/', '%s')" % ngzpath,
+                            }],
+                    ]:
+                        self.__check_linked_props(ipath, liname, props,
+                            bin_zonename, bin_zoneadm)
+
+        def test_linked_paths_guess_path_transform(self):
+                """If a parent image has no properties, then rather than
+                throwing an exception (that a user has no way to fix), we try
+                to fabricate some properties to run with.  To do this we ask
+                each linked image plugin if it knows what the current path
+                transform is (which would tell us what original root path was).
+                Only the zones plugin implements this functionality, so test
+                it here."""
+
+                base_path = os.path.join(self.img_path(0), "images")
+
+                # create a zone binaries
+                bin_zonename, bin_zoneadm = self.__mk_zone_bins(self.test_root)
+
+                # setup image paths
+                img_dirs = [
+                    "", "z1/root/"
+                ]
+                img_paths = [
+                        os.path.join(base_path, d)
+                        for d in img_dirs
+                ]
+                gzpath, ngzpath = img_paths
+                os.environ["PKG_GZR"] = gzpath.rstrip(os.sep)
+
+                # create images and link them
+                self.__create_images(base_path, img_dirs)
+                self.pkg("--debug zones_supported=1 "
+                    "--debug bin_zonename='%s' --debug bin_zoneadm='%s' "
+                    "-R %s attach-linked -v -f -c zone:z1 %s" %
+                    (bin_zonename, "/bin/true", gzpath, ngzpath))
+
+                # now delete the global zone linked image metadata
+                self.__ccmd("rm %svar/pkg/linked/*" % gzpath)
+
+                # Make sure that list-linked displays the correct paths.
+                for ipath, lipaths in [
+                        [ gzpath,  [ gzpath, ngzpath ]],
+                        [ ngzpath, [ ngzpath ]],
+                    ]:
+                        self.__list_linked_check(ipath, lipaths,
+                            bin_zonename, bin_zoneadm)
+
+                # now verify that the gz thinks it's in an alternate path
+                for ipath, liname, props in [
+                        [ gzpath, None, {
+                            "li-current-parent": None,
+                            "li-current-path": gzpath,
+                            "li-parent": None,
+                            "li-path": "/",
+                            "li-path-transform": "('/', '%s')" % gzpath,
+                            }],
+                        [ gzpath, "zone:z1", {
+                            "li-current-parent": None,
+                            "li-current-path": ngzpath,
+                            "li-parent": None,
+                            "li-path": "/z1/root/",
+                            "li-path-transform": "('/', '%s')" % gzpath,
+                            }],
+                    ]:
+                        self.__check_linked_props(ipath, liname, props,
+                            bin_zonename, bin_zoneadm)
+
+        def test_linked_paths_BE_cloning(self):
+                """Test that image object plan execution and re-initialization
+                works when the image is moving around.  This simulates an
+                update that involves BE cloning."""
+
+                # setup image paths
+                image1 = os.path.join(self.img_path(0), "image1")
+                image2 = os.path.join(self.img_path(0), "image2")
+                img_dirs = [ "", "c/", ]
+
+                # Create images, link them, and install packages.
+                self.__create_images(image1, img_dirs)
+                self.__attach_child(image1,  "", "c/")
+                for d in img_dirs:
+                        p = os.path.join(image1, d)
+                        self.pkg("-R %s install sync1@1.0" % p)
+
+                # Initialize an API object.
+                api_inst = self.get_img_api_obj(
+                    cmd_path=pkg.misc.api_cmdpath(), img_path=image1)
+
+                # Plan and prepare an update for the images.
+                for pd in api_inst.gen_plan_install(["sync1@1.1"]):
+                        continue
+                api_inst.prepare()
+
+                # clone the current images to an alternate location
+                self.__ccmd("mkdir -p %s" % image2)
+                self.__ccmd("cd %s; find . | cpio -pdm %s" % (image1, image2))
+
+                # Update the API object to point to the new location and
+                # execute the udpate.
+                api_inst._img.find_root(image2)
+                api_inst.execute_plan()
+
+                # Update the API object to point back to the old location.
+                api_inst._img.find_root(image1)
+
+        def test_linked_paths_bad_zoneadm_list_output(self):
+                """Test that we emit an error message if we fail to parse
+                zoneadm list -p output."""
+
+                base_path = self.img_path(0).rstrip(os.sep) + os.sep
+                gzpath = os.path.join(base_path, "gzpath/")
+                self.__ccmd("mkdir -p %s" % gzpath)
+
+                # fake zoneadm binary used for testing
+                zoneadm_sh = """
+#!/bin/sh
+cat <<-EOF
+this is invalid zoneadm list -p output.
+EOF
+exit 0""".strip("\n")
+
+                # create a zonename binary
+                bin_zonename = os.path.join(base_path, "zonename")
+                self.__mk_bin(bin_zonename, self.zonename_sh)
+
+                # create a zoneadm binary
+                bin_zoneadm = os.path.join(base_path, "zoneadm")
+                self.__mk_bin(bin_zoneadm, zoneadm_sh)
+
+                self.image_create(self.rurl1, destroy=False, img_path=gzpath)
+
+                self.pkg("--debug zones_supported=1 "
+                    "--debug bin_zonename='%s' "
+                    "--debug bin_zoneadm='%s' "
+                    "-R %s list-linked" %
+                    (bin_zonename, bin_zoneadm, gzpath), exit=EXIT_OOPS)
+
+                self.assert_(self.output == "")
+                self.assert_("this is invalid zoneadm list -p output." in
+                    self.errout)
+
+        def test_linked_paths_zone_paths_with_colon(self):
+                """Test that we can correctly parse zone paths that have a
+                colon in them."""
+
+                base_path = self.img_path(0).rstrip(os.sep) + os.sep
+                gzpath = os.path.join(base_path, "gzpath_with_a_:colon/")
+                self.__ccmd("mkdir -p %s" % gzpath)
+
+                os.environ["PKG_GZR"] = gzpath.rstrip(os.sep)
+
+
+                # fake zoneadm binary used for testing
+                zoneadm_sh = """
+#!/bin/sh
+while getopts "R:" OPT ; do
+case $OPT in
+        R )
+                [[ "$OPTARG" != "$PKG_GZR/" ]] && exit 0
+                ;;
+esac
+done
+PKG_GZR=$(echo "$PKG_GZR" | sed 's-:-\\\:-g')
+cat <<-EOF
+0:global:running:$PKG_GZR::solaris:shared:-:none:
+-:z1:installed:$PKG_GZR/ngzzone_path_with_a\:colon::solaris:excl:-::
+EOF
+exit 0""".strip("\n")
+
+                # create a zonename binary
+                bin_zonename = os.path.join(base_path, "zonename")
+                self.__mk_bin(bin_zonename, self.zonename_sh)
+
+                # create a zoneadm binary
+                bin_zoneadm = os.path.join(base_path, "zoneadm")
+                self.__mk_bin(bin_zoneadm, zoneadm_sh)
+
+                self.image_create(self.rurl1, destroy=False, img_path=gzpath)
+
+                ngzpath = gzpath + "ngzzone_path_with_a:colon/root/"
+                self.__list_linked_check(gzpath, [ngzpath],
+                    bin_zonename, bin_zoneadm)
 
 
 if __name__ == "__main__":

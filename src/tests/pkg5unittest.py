@@ -18,7 +18,7 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
 
 #
 # Define the basic classes that all test cases are inherited from.
@@ -85,6 +85,7 @@ EmptyDict = dict()
 # These are initialized by pkg5testenv.setup_environment.
 #
 g_proto_area = "TOXIC"
+g_proto_readable = False
 # Location of root of test suite.
 g_test_dir = "TOXIC"
 # User's value for TEMPDIR
@@ -132,7 +133,7 @@ from pkg.client.debugvalues import DebugValues
 
 # Version test suite is known to work with.
 PKG_CLIENT_NAME = "pkg"
-CLIENT_API_VERSION = 75
+CLIENT_API_VERSION = 78
 
 ELIDABLE_ERRORS = [ TestSkippedException, depotcontroller.DepotStateException ]
 
@@ -246,7 +247,6 @@ if __name__ == "__main__":
         sys.exit(1)
 """}
 
-
         def __init__(self, methodName='runTest'):
                 super(Pkg5TestCase, self).__init__(methodName)
                 self.__test_root = None
@@ -254,11 +254,17 @@ if __name__ == "__main__":
                 self.__pwd = os.getcwd()
                 self.__didteardown = False
                 self.__base_port = None
+                self.coverage_cmd = ""
+                self.coverage_env = {}
                 self.next_free_port = None
                 self.ident = None
                 self.pkg_cmdpath = "TOXIC"
                 self.debug_output = g_debug_output
                 setup_logging(self)
+                global g_proto_readable
+                if not g_proto_readable:
+                        self.assertProtoReadable()
+                        g_proto_readable = True
 
         @property
         def methodName(self):
@@ -281,6 +287,16 @@ if __name__ == "__main__":
                 self.next_free_port = port
 
         base_port = property(lambda self: self.__base_port, __set_base_port)
+
+        def assertProtoReadable(self):
+                """Ensure proto area is readable by unprivileged user."""
+                try:
+                        self.cmdline_run("dir {0}".format(g_proto_area),
+                            su_wrap=True)
+                except:
+                        raise TestStopException("proto area '{0} is not "
+                            "readable by unprivileged user {1}".format(
+                                g_proto_area, get_su_wrap_user()))
 
         def assertRegexp(self, text, regexp):
                 """Test that a regexp search matches text."""
@@ -395,13 +411,39 @@ if __name__ == "__main__":
         def cmdline_run(self, cmdline, comment="", coverage=True, exit=0,
             handle=False, out=False, prefix="", raise_error=True, su_wrap=None,
             stderr=False, env_arg=None, usepty=False):
+
+                # If caller provides arguments as a string, the shell must
+                # process them.
+                shell = not isinstance(cmdline, list)
+
                 wrapper = ""
                 if coverage:
                         wrapper = self.coverage_cmd
-                su_wrap, su_end = self.get_su_wrapper(su_wrap=su_wrap)
+                su_wrap, su_end = self.get_su_wrapper(su_wrap=su_wrap,
+                    shell=shell)
 
-                cmdline = "%s%s%s %s%s" % (prefix, su_wrap, wrapper,
-                    cmdline, su_end)
+                if isinstance(cmdline, list):
+                        if wrapper:
+                                # Coverage command must be split into arguments.
+                                wrapper = wrapper.split()
+                                while wrapper:
+                                        cmdline.insert(0, wrapper.pop())
+                        if su_wrap:
+                                # This ensures that all parts of the command
+                                # line to be passed to 'su -c' are passed as a
+                                # single argument.
+                                while su_wrap[-1] != "-c":
+                                        cmdline.insert(0, su_wrap.pop())
+                                cmdline = [" ".join(cmdline)]
+                                while su_wrap:
+                                        cmdline.insert(0, su_wrap.pop())
+                        if prefix:
+                                cmdline.insert(0, prefix)
+                else:
+                        # Space needed between su_wrap and wrapper.
+                        cmdline = "%s%s %s %s%s" % (prefix, su_wrap, wrapper,
+                            cmdline, su_end)
+
                 self.debugcmd(cmdline)
 
                 newenv = os.environ.copy()
@@ -413,13 +455,14 @@ if __name__ == "__main__":
                 if not usepty:
                         p = subprocess.Popen(cmdline,
                             env=newenv,
-                            shell=True,
+                            shell=shell,
                             stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE)
 
                         if handle:
                                 # Do nothing more.
                                 return p
+
                         self.output, self.errout = p.communicate()
                         retcode = p.returncode
                 else:
@@ -459,7 +502,10 @@ if __name__ == "__main__":
                     subsequent_indent="\t",
                     break_long_words=False,
                     break_on_hyphens=False)
-                res = wrapper.wrap(cmdline.strip())
+                if isinstance(cmdline, list):
+                        res = wrapper.wrap(" ".join(cmdline).strip())
+                else:
+                        res = wrapper.wrap(cmdline.strip())
                 self.debug(" \\\n".join(res))
 
         def debugfilecreate(self, content, path):
@@ -491,18 +537,49 @@ if __name__ == "__main__":
         def set_debugbuf(self, s):
                 self.__debug_buf = s
 
-        def get_su_wrapper(self, su_wrap=None):
-                if su_wrap:
-                        if su_wrap == True:
-                                su_wrap = get_su_wrap_user()
-                        cov_env = " ".join(
-                            ("%s=%s" % e for e in self.coverage_env.items()))
-                        su_wrap = "su %s -c 'LD_LIBRARY_PATH=%s %s " % \
-                            (su_wrap, os.getenv("LD_LIBRARY_PATH", ""), cov_env)
+        def get_su_wrapper(self, su_wrap=None, shell=True):
+                """If 'shell' is True, the wrapper will be returned as a tuple of
+                strings of the form (su_wrap, su_end).  If 'shell' is False, the
+                wrapper willbe returned as a tuple of (args, ignore) where
+                'args' is a list of the commands and their arguments that should
+                come before the command being executed."""
+
+                if not su_wrap:
+                        return "", ""
+
+                if su_wrap == True:
+                        su_user = get_su_wrap_user()
+                else:
+                        su_user = ""
+
+                cov_env = [
+                    "%s=%s" % e
+                    for e in self.coverage_env.items()
+                ]
+
+                su_wrap = ["su"]
+
+                if su_user:
+                        su_wrap.append(su_user)
+
+                if shell:
+                        su_wrap.append("-c 'env LD_LIBRARY_PATH=%s" %
+                            os.getenv("LD_LIBRARY_PATH", ""))
+                else:
+                        # If this ever changes, cmdline_run must be updated.
+                        su_wrap.append("-c")
+                        su_wrap.append("env")
+                        su_wrap.append("LD_LIBRARY_PATH=%s" %
+                            os.getenv("LD_LIBRARY_PATH", ""))
+
+                su_wrap.extend(cov_env)
+
+                if shell:
+                        su_wrap = " ".join(su_wrap)
                         su_end = "'"
                 else:
-                        su_wrap = ""
                         su_end = ""
+
                 return su_wrap, su_end
 
         def getTeardownFunc(self):
@@ -618,8 +695,6 @@ if __name__ == "__main__":
                 testMethod = getattr(self, self._testMethodName)
                 if getattr(result, "coverage", None) is not None:
                         self.coverage_cmd, self.coverage_env = result.coverage
-                else:
-                        self.coverage_cmd, self.coverage_env = "", {}
                 try:
                         needtodie = False
                         try:
@@ -950,7 +1025,7 @@ if __name__ == "__main__":
                 new_rcfile = file("%s/%s%s" % (test_root, os.path.basename(rcfile),
                     suffix), "w")
 
-                conf = ConfigParser.SafeConfigParser()
+                conf = ConfigParser.RawConfigParser()
                 conf.readfp(open(rcfile))
 
                 for key in config:
@@ -2283,21 +2358,26 @@ class CliTestCase(Pkg5TestCase):
                         with open(os.path.join(self.img_path(), f), "wb") as fh:
                                 fh.close()
 
-        def image_create(self, repourl=None, destroy=True, fs=(), **kwargs):
+        def image_create(self, repourl=None, destroy=True, fs=(),
+            img_path=None, **kwargs):
                 """A convenience wrapper for callers that only need basic image
                 creation functionality.  This wrapper creates a full (as opposed
                 to user) image using the pkg.client.api and returns the related
                 API object."""
 
+                if img_path is None:
+                        img_path = self.img_path()
+
                 if destroy:
-                        self.image_destroy()
-                mkdir_eexist_ok(self.img_path())
+                        self.image_destroy(img_path=img_path)
+
+                mkdir_eexist_ok(img_path)
 
                 self.fs = set()
 
                 force = False
                 for path in fs:
-                        full_path = os.path.join(self.img_path(),
+                        full_path = os.path.join(img_path,
                             path.lstrip(os.path.sep))
                         os.makedirs(full_path)
                         self.cmdline_run("/usr/sbin/mount -F tmpfs swap " +
@@ -2306,10 +2386,10 @@ class CliTestCase(Pkg5TestCase):
                         if path.lstrip(os.path.sep) == "var":
                                 force = True
 
-                self.debug("image_create %s" % self.img_path())
+                self.debug("image_create %s" % img_path)
                 progtrack = pkg.client.progress.NullProgressTracker()
                 api_inst = pkg.client.api.image_create(PKG_CLIENT_NAME,
-                    CLIENT_API_VERSION, self.img_path(),
+                    CLIENT_API_VERSION, img_path,
                     pkg.client.api.IMG_TYPE_ENTIRE, False, repo_uri=repourl,
                     progtrack=progtrack, force=force,
                     **kwargs)
@@ -2357,34 +2437,56 @@ class CliTestCase(Pkg5TestCase):
                 cmdline = "cd %s; find . | cpio -pdm %s" % (src_path, dst_path)
                 retcode = self.cmdline_run(cmdline, coverage=False)
 
-        def image_destroy(self):
-                if os.path.exists(self.img_path()):
-                        self.debug("image_destroy %s" % self.img_path())
+        def image_destroy(self, img_path=None):
+
+                if img_path is None:
+                        img_path = self.img_path()
+
+                if os.path.exists(img_path):
+                        self.debug("image_destroy %s" % img_path)
                         # Make sure we're not in the image.
                         os.chdir(self.test_root)
                         for path in getattr(self, "fs", set()).copy():
                                 self.cmdline_run("/usr/sbin/umount " + path,
 				    coverage=False)
                                 self.fs.remove(path)
-                        shutil.rmtree(self.img_path())
+                        shutil.rmtree(img_path)
 
         def pkg(self, command, exit=0, comment="", prefix="", su_wrap=None,
             out=False, stderr=False, cmd_path=None, use_img_root=True,
-            debug_smf=True, env_arg=None, coverage=True):
-                if debug_smf and "smf_cmds_dir" not in command:
-                        command = "--debug smf_cmds_dir=%s %s" % \
-                            (DebugValues["smf_cmds_dir"], command)
-                command = "-D plandesc_validate=1 %s" % command
-                command = "-D manifest_validate=Always %s" % command
-                if use_img_root and "-R" not in command and \
-                    "image-create" not in command and "version" not in command:
-                        command = "-R %s %s" % (self.get_img_path(), command)
+            debug_smf=True, env_arg=None, coverage=True, handle=False):
+
+                if isinstance(command, list):
+                        cmdstr = " ".join(command)
+                else:
+                        cmdstr = command
+
+                cmdline = []
+
                 if not cmd_path:
                         cmd_path = self.pkg_cmdpath
-                cmdline = "%s %s" % (cmd_path, command)
+
+                cmdline.append(cmd_path)
+
+                if use_img_root and "-R" not in cmdstr and \
+                    "image-create" not in cmdstr and "version" not in cmdstr:
+                        cmdline.extend(("-R", self.get_img_path()))
+
+                cmdline.extend(("-D", "plandesc_validate=1"))
+                cmdline.extend(("-D", "manifest_validate=Always"))
+
+                if debug_smf and "smf_cmds_dir" not in cmdstr:
+                        cmdline.extend(("-D", "smf_cmds_dir=%s" %
+                            DebugValues["smf_cmds_dir"]))
+
+                if not isinstance(command, list):
+                        cmdline = "%s %s" % (" ".join(cmdline), command)
+                else:
+                        cmdline.extend(command)
+
                 return self.cmdline_run(cmdline, exit=exit, comment=comment,
                     prefix=prefix, su_wrap=su_wrap, out=out, stderr=stderr,
-                    env_arg=env_arg, coverage=coverage)
+                    env_arg=env_arg, coverage=coverage, handle=handle)
 
         def pkg_verify(self, command, exit=0, comment="", prefix="",
             su_wrap=None, out=False, stderr=False, cmd_path=None,
@@ -2878,13 +2980,17 @@ class CliTestCase(Pkg5TestCase):
                 responsible for all error handling."""
 
                 mpath = self.get_img_manifest_path(pfmri)
-                mdir = self.get_img_manifest_cache_dir(pfmri)
+                mdir = os.path.dirname(mpath)
+                mcdir = self.get_img_manifest_cache_dir(pfmri)
 
-                # Dump the manifest directory for the package to ensure any
+                # Dump the manifest directories for the package to ensure any
                 # cached information related to it is gone.
                 shutil.rmtree(mdir, True)
+                shutil.rmtree(mcdir, True)
                 self.assert_(not os.path.exists(mdir))
+                self.assert_(not os.path.exists(mcdir))
                 os.makedirs(mdir, mode=0755)
+                os.makedirs(mcdir, mode=0755)
 
                 # Finally, write the new manifest.
                 with open(mpath, "wb") as f:
@@ -3079,7 +3185,7 @@ class CliTestCase(Pkg5TestCase):
                                 continue
                         plan = api_obj.describe()
 
-                        # update licesnse status
+                        # update license status
                         for pfmri, src, dest, accepted, displayed in \
                             plan.get_licenses():
                                 api_obj.set_plan_license_status(pfmri,
@@ -3464,6 +3570,10 @@ class HTTPSTestClass(ApacheDepotTestCase):
         def get_cli_key(self, publisher):
                 ta = self.pub_ta_map[publisher]
                 return "cs1_ta%d_key.pem" % ta
+
+        def get_pub_ta(self, publisher):
+                ta = self.pub_ta_map[publisher]
+                return "ta%d" % ta
 
         def setUp(self, publishers, start_depots=True):
                 # We only have 5 usable CA certs and there are not many usecases

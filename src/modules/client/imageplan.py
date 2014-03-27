@@ -154,8 +154,8 @@ class ImagePlan(object):
                 self.pd = plan
                 self.__update_avail_space()
 
-		# make sure we init this even if we don't call solver
-		self.pd._new_avoid_obs = (self.image.avoid_set_get(),
+                # make sure we init this even if we don't call solver
+                self.pd._new_avoid_obs = (self.image.avoid_set_get(),
                     self.image.obsolete_set_get())
 
                 if self.pd.state == plandesc.UNEVALUATED:
@@ -382,7 +382,7 @@ class ImagePlan(object):
 
         def __plan_install_solver(self, li_pkg_updates=True, li_sync_op=False,
             new_facets=None, new_variants=None, pkgs_inst=None,
-            reject_list=misc.EmptyI, fmri_changes=None):
+            reject_list=misc.EmptyI, fmri_changes=None, exact_install=False):
                 """Use the solver to determine the fmri changes needed to
                 install the specified pkgs, sync the specified image, and/or
                 change facets/variants within the current image."""
@@ -429,7 +429,21 @@ class ImagePlan(object):
                 else:
                         variants = self.image.get_variants()
 
+                installed_dict_tmp = {}
+                # If exact_install is on, clear the installed_dict.
+                if exact_install:
+                        installed_dict_tmp = installed_dict.copy()
+                        installed_dict = {}
+
                 def solver_cb(ignore_inst_parent_deps):
+                        avoid_set = self.image.avoid_set_get()
+                        frozen_list = self.image.get_frozen_list()
+                        # If exact_install is on, ignore avoid_set and
+                        # frozen_list.
+                        if exact_install:
+                                avoid_set = set()
+                                frozen_list = []
+
                         # instantiate solver
                         solver = pkg_solver.PkgSolver(
                             self.image.get_catalog(
@@ -437,21 +451,23 @@ class ImagePlan(object):
                             installed_dict,
                             pub_ranks,
                             variants,
-                            self.image.avoid_set_get(),
+                            avoid_set,
                             self.image.linked.parent_fmris(),
                             self.__progtrack)
 
                         # run solver
                         new_vector, new_avoid_obs = \
                             solver.solve_install(
-                                self.image.get_frozen_list(),
+                                frozen_list,
                                 inst_dict,
                                 new_variants=new_variants,
                                 excludes=self.__new_excludes,
                                 reject_set=reject_set,
                                 relax_all=li_sync_op,
                                 ignore_inst_parent_deps=\
-                                    ignore_inst_parent_deps)
+                                    ignore_inst_parent_deps,
+                                exact_install=exact_install,
+                                installed_dict_tmp=installed_dict_tmp)
 
                         return solver, new_vector, new_avoid_obs
 
@@ -463,6 +479,10 @@ class ImagePlan(object):
                 solver, new_vector, self.pd._new_avoid_obs = \
                     self.__run_solver(solver_cb, \
                         retry_wo_parent_deps=retry_wo_parent_deps)
+
+                # Restore the installed_dict for checking fmri changes.
+                if exact_install:
+                        installed_dict = installed_dict_tmp.copy()
 
                 self.pd._fmri_changes = self.__vector_2_fmri_changes(
                     installed_dict, new_vector,
@@ -491,6 +511,24 @@ class ImagePlan(object):
                     reject_list=reject_list)
                 self.pd.state = plandesc.EVALUATED_PKGS
 
+        def __plan_exact_install(self, li_pkg_updates=True, li_sync_op=False,
+            new_facets=None, new_variants=None, pkgs_inst=None,
+            reject_list=misc.EmptyI):
+                """Determine the fmri changes needed to install exactly the
+                specified pkgs, sync the image, and/or change facets/variants
+                within the current image."""
+
+                self.__plan_op()
+                self.__plan_install_solver(
+                    li_pkg_updates=li_pkg_updates,
+                    li_sync_op=li_sync_op,
+                    new_facets=new_facets,
+                    new_variants=new_variants,
+                    pkgs_inst=pkgs_inst,
+                    reject_list=reject_list,
+                    exact_install=True)
+                self.pd.state = plandesc.EVALUATED_PKGS
+
         def set_be_options(self, backup_be, backup_be_name, new_be,
             be_activate, be_name):
                 self.pd._backup_be = backup_be
@@ -512,6 +550,13 @@ class ImagePlan(object):
                 pkgs"""
 
                 self.__plan_install(pkgs_inst=pkgs_inst,
+                     reject_list=reject_list)
+
+        def plan_exact_install(self, pkgs_inst=None, reject_list=misc.EmptyI):
+                """Determine the fmri changes needed to install exactly the
+                specified pkgs"""
+
+                self.__plan_exact_install(pkgs_inst=pkgs_inst,
                      reject_list=reject_list)
 
         def __get_attr_fmri_changes(self, get_mattrs):
@@ -881,10 +926,12 @@ class ImagePlan(object):
                 self.__plan_install(li_pkg_updates=li_pkg_updates,
                     li_sync_op=True, reject_list=reject_list)
 
-        def plan_uninstall(self, pkgs_to_uninstall):
+        def plan_uninstall(self, pkgs_to_uninstall, ignore_missing=False):
                 self.__plan_op()
                 proposed_dict, self.__match_rm = self.__match_user_fmris(
-                    self.image, pkgs_to_uninstall, self.MATCH_INST_VERSIONS)
+                    self.image, pkgs_to_uninstall, self.MATCH_INST_VERSIONS,
+                    raise_not_installed=not ignore_missing)
+
                 # merge patterns together
                 proposed_removals = set([
                     f
@@ -937,7 +984,7 @@ class ImagePlan(object):
                 self.pd.state = plandesc.EVALUATED_PKGS
 
         def __plan_update_solver(self, pkgs_update=None,
-            reject_list=misc.EmptyI):
+            ignore_missing=False, reject_list=misc.EmptyI):
                 """Use the solver to determine the fmri changes needed to
                 update the specified pkgs or all packages if none were
                 specified."""
@@ -964,6 +1011,7 @@ class ImagePlan(object):
                         update_dict, references = self.__match_user_fmris(
                             self.image, pkgs_update, self.MATCH_INST_STEMS,
                             pub_ranks=pub_ranks, installed_pkgs=installed_dict,
+                            raise_not_installed=not ignore_missing,
                             reject_set=reject_set)
                         self.__match_update = references
 
@@ -1018,12 +1066,14 @@ class ImagePlan(object):
                 if DebugValues["plan"]:
                         self.pd._solver_errors = solver.get_trim_errors()
 
-        def plan_update(self, pkgs_update=None, reject_list=misc.EmptyI):
+        def plan_update(self, pkgs_update=None,
+            ignore_missing=False, reject_list=misc.EmptyI):
                 """Determine the fmri changes needed to update the specified
                 pkgs or all packages if none were specified."""
 
                 self.__plan_op()
                 self.__plan_update_solver(
+                    ignore_missing=ignore_missing,
                     pkgs_update=pkgs_update,
                     reject_list=reject_list)
                 self.pd.state = plandesc.EVALUATED_PKGS
@@ -1069,14 +1119,14 @@ class ImagePlan(object):
                                 m = self.image.get_manifest(f,
                                     ignore_excludes=True)
                                 for act in m.gen_actions_by_type("file",
-                                    self.__new_excludes):
+                                    excludes=self.__new_excludes):
                                         if "revert-tag" in act.attrs and \
                                             (set(act.attrlist("revert-tag")) &
                                              tag_set):
                                                 revert_dict[(f, m)].append(act)
 
                                 for act in m.gen_actions_by_type("dir",
-                                    self.__new_excludes):
+                                    excludes=self.__new_excludes):
                                         if "revert-tag" not in act.attrs:
                                                 continue
                                         for a in act.attrlist("revert-tag"):
@@ -1100,7 +1150,7 @@ class ImagePlan(object):
                                 m = self.image.get_manifest(f,
                                     ignore_excludes=True)
                                 for act in m.gen_actions_by_type("file",
-                                    self.__new_excludes):
+                                    excludes=self.__new_excludes):
                                         path = act.attrs["path"]
                                         if path in revertpaths or \
                                             path in overlaypaths:
@@ -1379,7 +1429,7 @@ class ImagePlan(object):
                         if implicit_dirs:
                                 dirs = set() # Keep track of explicit dirs
                         for act in m.gen_actions_by_type(atype,
-                            self.__new_excludes):
+                            excludes=self.__new_excludes):
                                 if implicit_dirs:
                                         dirs.add(act.attrs["path"])
                                 yield act, pfmri
@@ -1411,7 +1461,7 @@ class ImagePlan(object):
                         if implicit_dirs:
                                 dirs = set() # Keep track of explicit dirs
                         for act in m.gen_actions_by_type(atype,
-                            excludes):
+                            excludes=excludes):
                                 if implicit_dirs:
                                         dirs.add(act.attrs["path"])
                                 yield act, pfmri
@@ -2635,8 +2685,8 @@ class ImagePlan(object):
                                 if isinstance(note, unicode):
                                         note = note.encode("utf-8")
                                 print >> tmpfile, note
-			# make file world readable
-			os.chmod(path, 0644)
+                        # make file world readable
+                        os.chmod(path, 0644)
                         tmpfile.close()
                         self.pd.release_notes_name = os.path.basename(path)
 
@@ -3856,6 +3906,12 @@ class ImagePlan(object):
                 # It's necessary to do this check here because the state of the
                 # image before the current operation is performed is desired.
                 empty_image = self.__is_image_empty()
+
+                if not empty_image:
+                        # Before proceeding, remove fast lookups database so
+                        # that if _create_fast_lookups is interrupted later the
+                        # client isn't left with invalid state.
+                        self.image._remove_fast_lookups()
 
                 self.pd._actuators.exec_prep(self.image)
 

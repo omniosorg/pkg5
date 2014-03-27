@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
 #
 
 """
@@ -37,10 +37,13 @@ EXIT_NOP       =  4 # No changes were made - nothing to do.
 EXIT_NOTLIVE   =  5 # The requested op cannot be performed on a live image.
 EXIT_LICENSE   =  6 # License acceptance required for requested op.
 EXIT_LOCKED    =  7 # Image is currently locked by another process
-EXIT_EACCESS   =  8 # Can't access requested image
-EXIT_DIVERGED  =  9 # Image is not in sync with its constraints
-EXIT_NOPARENT  = 10 # Image is not linked to a parent image
-EXIT_PARENTOP  = 11 # Linked operation must be done from parent
+EXIT_ACTUATOR  =  8 # Actuator timed out
+
+# private pkg exit codes
+EXIT_EACCESS   = 51 # Can't access requested image
+EXIT_DIVERGED  = 52 # Image is not in sync with its constraints
+EXIT_NOPARENT  = 53 # Image is not linked to a parent image
+EXIT_PARENTOP  = 54 # Linked operation must be done from parent
 
 # package operations
 PKG_OP_ATTACH          = "attach-linked"
@@ -48,6 +51,7 @@ PKG_OP_AUDIT_LINKED    = "audit-linked"
 PKG_OP_CHANGE_FACET    = "change-facet"
 PKG_OP_CHANGE_VARIANT  = "change-variant"
 PKG_OP_DETACH          = "detach-linked"
+PKG_OP_EXACT_INSTALL   = "exact-install"
 PKG_OP_INSTALL         = "install"
 PKG_OP_LIST            = "list"
 PKG_OP_LIST_LINKED     = "list-linked"
@@ -65,6 +69,7 @@ pkg_op_values          = frozenset([
     PKG_OP_CHANGE_FACET,
     PKG_OP_CHANGE_VARIANT,
     PKG_OP_DETACH,
+    PKG_OP_EXACT_INSTALL,
     PKG_OP_INSTALL,
     PKG_OP_LIST,
     PKG_OP_LIST_LINKED,
@@ -82,6 +87,7 @@ API_OP_ATTACH         = "attach-linked"
 API_OP_CHANGE_FACET   = "change-facet"
 API_OP_CHANGE_VARIANT = "change-variant"
 API_OP_DETACH         = "detach-linked"
+API_OP_EXACT_INSTALL    = "exact-install"
 API_OP_INSTALL        = "install"
 API_OP_REPAIR         = "repair"
 API_OP_REVERT         = "revert"
@@ -94,6 +100,7 @@ api_op_values         = frozenset([
     API_OP_CHANGE_FACET,
     API_OP_CHANGE_VARIANT,
     API_OP_DETACH,
+    API_OP_EXACT_INSTALL,
     API_OP_INSTALL,
     API_OP_REPAIR,
     API_OP_REVERT,

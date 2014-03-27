@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
 #
 
 """
@@ -125,6 +125,7 @@ class PlanDescription(object):
             "_rm_aliases": { str: set() },
             "added_groups": { str: pkg.fmri.PkgFmri },
             "added_users": { str: pkg.fmri.PkgFmri },
+            "child_op_vectors": [ ( str, [ li.LinkedImageName ], {}, bool ) ],
             "children_ignored": [ li.LinkedImageName ],
             "children_nop": [ li.LinkedImageName ],
             "children_planned": [ li.LinkedImageName ],
@@ -199,9 +200,7 @@ class PlanDescription(object):
                 self._bytes_added = 0  # size of files added
                 self._need_boot_archive = None
                 # child properties
-                self.child_op = None
-                self.child_op_implicit = False
-                self.child_kwargs = {}
+                self.child_op_vectors = []
                 self.children_ignored = None
                 self.children_planned = []
                 self.children_nop = []
@@ -229,6 +228,8 @@ class PlanDescription(object):
                 # stats about the current image
                 self._cbytes_avail = 0  # avail space for downloads
                 self._bytes_avail = 0   # avail space for fs
+
+                self._act_timed_out = False
 
         @staticmethod
         def getstate(obj, je_state=None, reset_volatiles=False):
@@ -329,6 +330,8 @@ class PlanDescription(object):
 
                 # reduce memory consumption
                 self._fmri_changes = []
+                # We have to save the timed_out state.
+                self._act_timed_out = self._actuators.timed_out
                 self._actuators = pkg.client.actuator.Actuator()
                 self.added_groups = {}
                 self.added_users = {}
@@ -666,6 +669,17 @@ class PlanDescription(object):
                         return []
 
                 return self._solver_errors
+
+        def set_actuator_timeout(self, timeout):
+                """Set timeout for synchronous actuators."""
+                assert type(timeout) == int, "Actuator timeout must be an "\
+                    "integer."
+                self._actuators.set_timeout(timeout)
+
+        @property
+        def actuator_timed_out(self):
+                """Indicates that a synchronous actuator timed out."""
+                return self._act_timed_out
 
         @property
         def plan_type(self):
