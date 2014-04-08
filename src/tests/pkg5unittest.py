@@ -2841,9 +2841,9 @@ class CliTestCase(Pkg5TestCase):
                 arguments to point to template, logs, cache and proto areas
                 within our test root."""
 
-                if "-S" not in args and "-d" not in args and fill_missing_args:
+                if "-S" not in args and "-d " not in args and fill_missing_args:
                         args += " -S "
-                if "-c" not in args and fill_missing_args:
+                if "-c " not in args and fill_missing_args:
                         args += " -c %s" % os.path.join(self.test_root,
                             "depot_cache")
                 if "-l" not in args:
@@ -3611,6 +3611,7 @@ class HTTPSTestClass(ApacheDepotTestCase):
                 return "ta%d" % ta
 
         def setUp(self, publishers, start_depots=True):
+
                 # We only have 5 usable CA certs and there are not many usecases
                 # for setting up more than 5 different SSL-secured depots.
                 assert len(publishers) < 6
@@ -4455,7 +4456,7 @@ class SysrepoController(ApacheController):
 
         def __init__(self, conf, port, work_dir, testcase=None, https=False):
                 ApacheController.__init__(self, conf, port, work_dir,
-                    testcase=testcase, https=False)
+                    testcase=testcase, https=https)
                 self.apachectl = "/usr/apache2/2.2/bin/64/httpd.worker"
 
         def _network_ping(self):
@@ -4474,7 +4475,7 @@ class HttpDepotController(ApacheController):
 
         def __init__(self, conf, port, work_dir, testcase=None, https=False):
                 ApacheController.__init__(self, conf, port, work_dir,
-                    testcase=testcase, https=False)
+                    testcase=testcase, https=https)
                 self.apachectl = "/usr/apache2/2.2/bin/64/httpd.worker"
 
         def _network_ping(self):
