@@ -22,7 +22,7 @@
 # Copyright (c) 2007, 2014, Oracle and/or its affiliates. All rights reserved.
 #
 msgid ""
-msgstr "Project-Id-Version: PACKAGE VERSION\nReport-Msgid-Bugs-To: \nPOT-Creation-Date: 2014-01-01 17:49-0800\nPO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\nLast-Translator: FULL NAME <EMAIL@ADDRESS>\nLanguage-Team: LANGUAGE <LL@li.org>\nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\nPlural-Forms: nplurals=2; plural=(n != 1);\n"
+msgstr "Project-Id-Version: PACKAGE VERSION\nReport-Msgid-Bugs-To: \nPOT-Creation-Date: 2014-02-12 17:49-0800\nPO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\nLast-Translator: FULL NAME <EMAIL@ADDRESS>\nLanguage-Team: LANGUAGE <LL@li.org>\nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\nPlural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: ../client.py:115
 msgid ""
@@ -5460,15 +5460,15 @@ msgstr "Herausgeber '%s' ist ein Systemherausgeber. Andere Herausgeber können n
 msgid "%s is a system publisher and cannot be unset."
 msgstr "%s ist ein Systemherausgeber und kann nicht entfernt werden."
 
-#: ../modules/client/imageplan.py:3678
+#: ../modules/client/imageplan.py:3685
 msgid "Download cache"
 msgstr "Cache herunterladen"
 
-#: ../modules/client/imageplan.py:3683 ../modules/client/imageplan.py:3794
+#: ../modules/client/imageplan.py:3690 ../modules/client/imageplan.py:3801
 msgid "Root filesystem"
 msgstr "Root-Dateisystem"
 
-#: ../modules/client/imageplan.py:3953
+#: ../modules/client/imageplan.py:3960
 #, python-format
 msgid ""
 "A link targeting itself or part of a link loop was found at '%s'; a file or "
@@ -9721,21 +9721,21 @@ msgid ""
 "Only the first path found with restrictive permissions is shown."
 msgstr "Einige Repository-Inhalte für Herausgeber '%s' oder Pfade zum Repository waren nicht global lesbar oder konnten nicht von 'pkg5srv:pkg5srv' gelesen werden. Dies kann zu Zugriffsfehlern führen, wenn die Repository-Inhalte von den folgenden Services bearbeitet werden:\n svc:/application/pkg/server\n svc:/application/pkg/system-repository.\nNur der erste gefundene Pfad mit restriktiven Berechtigungen wird angezeigt."
 
-#: ../modules/server/repository.py:1981 ../modules/server/repository.py:2277
+#: ../modules/server/repository.py:1989 ../modules/server/repository.py:2288
 msgid "Permission denied."
 msgstr "Zugriff verweigert."
 
-#: ../modules/server/repository.py:2450
+#: ../modules/server/repository.py:2461
 #, python-format
 msgid "Missing file %s must be fixed by republishing the package."
 msgstr "Die fehlende Datei %s muss durch eine erneute Veröffentlichung des Packages korrigiert werden."
 
-#: ../modules/server/repository.py:2472
+#: ../modules/server/repository.py:2483
 #, python-format
 msgid "Moving %(src)s to %(dest)s"
 msgstr "%(src)s wird/werden in %(dest)s verschoben"
 
-#: ../modules/server/repository.py:2481
+#: ../modules/server/repository.py:2492
 #, python-format
 msgid "Unable to quarantine %(path)s: %(err)s"
 msgstr "%(path)s kann/können nicht unter Quarantäne gestellt werden: %(err)s"
@@ -10277,14 +10277,14 @@ msgstr "Angegebene Herausgeber sind bereits vorhanden: %s"
 msgid ""
 "Invalid publisher prefix(es):\n"
 " %s"
-msgstr "Ungültige Herausgeberpräfixe:\n%s"
+msgstr "Ungültige Herausgeberpräfixe:\n %s"
 
 #: ../pkgrepo.py:402
 #, python-format
 msgid ""
 "The following publisher(s) could not be found:\n"
 " %s"
-msgstr "Die folgenden Herausgeber konnten nicht gefunden werden:\n%s"
+msgstr "Die folgenden Herausgeber konnten nicht gefunden werden:\n %s"
 
 #: ../pkgrepo.py:406
 msgid "Removing publisher(s)"
@@ -10300,13 +10300,13 @@ msgstr "\"%(pfx)s\"\t(%(num)s Paket(e))"
 msgid ""
 "The default publisher was removed. Setting 'publisher/prefix' to '%s', the "
 "only publisher left"
-msgstr "Der Standardherausgeber wurde entfernt. \"Herausgeber/Präfix\" wird auf \"%s\" gesetzt, dem einzigen verbliebenen Herausgeber"
+msgstr "Der Standardherausgeber wurde entfernt. \"publisher/prefix\" wird auf \"%s\" gesetzt, dem einzigen verbliebenen Herausgeber"
 
 #: ../pkgrepo.py:431
 msgid ""
 "The default publisher was removed. The 'publisher/prefix' property has been "
 "unset"
-msgstr "Der Standardherausgeber wurde entfernt. Die Festlegung der Eigenschaft \"Herausgeber/Präfix\" wurde aufgehoben"
+msgstr "Der Standardherausgeber wurde entfernt. Die Festlegung der Eigenschaft \"publisher/prefix\" wurde aufgehoben"
 
 #: ../pkgrepo.py:454
 msgid "Version must be an integer value."

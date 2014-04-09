@@ -22,7 +22,7 @@
 # Copyright (c) 2007, 2014, Oracle and/or its affiliates. All rights reserved.
 #
 msgid ""
-msgstr "Project-Id-Version: PACKAGE VERSION\nReport-Msgid-Bugs-To: \nPOT-Creation-Date: 2014-01-01 17:49-0800\nPO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\nLast-Translator: FULL NAME <EMAIL@ADDRESS>\nLanguage-Team: LANGUAGE <LL@li.org>\nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\nPlural-Forms: nplurals=2; plural=(n != 1);\n"
+msgstr "Project-Id-Version: PACKAGE VERSION\nReport-Msgid-Bugs-To: \nPOT-Creation-Date: 2014-02-12 17:49-0800\nPO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\nLast-Translator: FULL NAME <EMAIL@ADDRESS>\nLanguage-Team: LANGUAGE <LL@li.org>\nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\nPlural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: ../client.py:115
 msgid ""
@@ -5460,15 +5460,15 @@ msgstr "發佈者 '%s' 是系統發佈者，其他發佈者無法移動與其相
 msgid "%s is a system publisher and cannot be unset."
 msgstr "%s 是系統發佈者，無法解除設定。"
 
-#: ../modules/client/imageplan.py:3678
+#: ../modules/client/imageplan.py:3685
 msgid "Download cache"
 msgstr "下載快取"
 
-#: ../modules/client/imageplan.py:3683 ../modules/client/imageplan.py:3794
+#: ../modules/client/imageplan.py:3690 ../modules/client/imageplan.py:3801
 msgid "Root filesystem"
 msgstr "根檔案系統"
 
-#: ../modules/client/imageplan.py:3953
+#: ../modules/client/imageplan.py:3960
 #, python-format
 msgid ""
 "A link targeting itself or part of a link loop was found at '%s'; a file or "
@@ -8113,8 +8113,8 @@ msgid ""
 msgid_plural ""
 "Found <b>%(num)s</b> packages matching <b>%(text)s</b> in All Packages, "
 "however they are not listed in the <b>%(filter)s</b> View."
-msgstr[0] "所有套裝軟體中找到 <b>%(num)s</b> 符合的套裝軟體 <b>%(text)s</b> \n以此過濾檢視 <b>%(filter)s</b> 使部分未列出。"
-msgstr[1] "所有套裝軟體中找到 <b>%(num)s</b> 符合的套裝軟體 <b>%(text)s</b> \n以此過濾檢視 <b>%(filter)s</b> 使部分未列出。"
+msgstr[0] "所有套裝軟體中找到 <b>%(num)s</b> 符合的套裝軟體 <b>%(text)s</b>, 以此過濾檢視 <b>%(filter)s</b> 使部分未列出。"
+msgstr[1] "所有套裝軟體中找到 <b>%(num)s</b> 符合的套裝軟體 <b>%(text)s</b>, 以此過濾檢視 <b>%(filter)s</b> 使部分未列出。"
 
 #: ../modules/gui/startpage.py:716
 #, python-format
@@ -9721,21 +9721,21 @@ msgid ""
 "Only the first path found with restrictive permissions is shown."
 msgstr "發佈者 '%s' 的部分儲存庫內容或是導向該儲存庫的路徑，並非所有人都可讀取，或無法由 'pkg5srv:pkg5srv' 讀取，如果儲存庫內容是由下列服務提供，即可能會造成存取錯誤：\n svc:/application/pkg/server\n svc:/application/pkg/system-repository.\n系統只會顯示找到的第一個具有限制權限的路徑。"
 
-#: ../modules/server/repository.py:1981 ../modules/server/repository.py:2277
+#: ../modules/server/repository.py:1989 ../modules/server/repository.py:2288
 msgid "Permission denied."
 msgstr "權限被拒絕。"
 
-#: ../modules/server/repository.py:2450
+#: ../modules/server/repository.py:2461
 #, python-format
 msgid "Missing file %s must be fixed by republishing the package."
 msgstr "必須重新發佈套裝軟體以修復遺漏的檔案 %s。"
 
-#: ../modules/server/repository.py:2472
+#: ../modules/server/repository.py:2483
 #, python-format
 msgid "Moving %(src)s to %(dest)s"
 msgstr "移動 %(src)s 至 %(dest)s"
 
-#: ../modules/server/repository.py:2481
+#: ../modules/server/repository.py:2492
 #, python-format
 msgid "Unable to quarantine %(path)s: %(err)s"
 msgstr "無法隔離 %(path)s：%(err)s"
@@ -10300,13 +10300,13 @@ msgstr "[%(pfx)s]\t(%(num)s 個套裝軟體)"
 msgid ""
 "The default publisher was removed. Setting 'publisher/prefix' to '%s', the "
 "only publisher left"
-msgstr "已移除預設的發佈者。正在將 [發佈者/前綴] 設定為 [%s]，這是唯一僅有的發佈者"
+msgstr "已移除預設的發佈者。正在將 [publisher/prefix] 設定為 [%s]，這是唯一僅有的發佈者"
 
 #: ../pkgrepo.py:431
 msgid ""
 "The default publisher was removed. The 'publisher/prefix' property has been "
 "unset"
-msgstr "已移除預設的發佈者。已取消設定 [發佈者/前綴] 特性"
+msgstr "已移除預設的發佈者。已取消設定 [publisher/prefix] 特性"
 
 #: ../pkgrepo.py:454
 msgid "Version must be an integer value."

@@ -22,7 +22,7 @@
 # Copyright (c) 2007, 2014, Oracle and/or its affiliates. All rights reserved.
 #
 msgid ""
-msgstr "Project-Id-Version: PACKAGE VERSION\nReport-Msgid-Bugs-To: \nPOT-Creation-Date: 2014-01-01 17:49-0800\nPO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\nLast-Translator: FULL NAME <EMAIL@ADDRESS>\nLanguage-Team: LANGUAGE <LL@li.org>\nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\nPlural-Forms: nplurals=2; plural=(n != 1);\n"
+msgstr "Project-Id-Version: PACKAGE VERSION\nReport-Msgid-Bugs-To: \nPOT-Creation-Date: 2014-02-12 17:49-0800\nPO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\nLast-Translator: FULL NAME <EMAIL@ADDRESS>\nLanguage-Team: LANGUAGE <LL@li.org>\nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\nPlural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: ../client.py:115
 msgid ""
@@ -5460,15 +5460,15 @@ msgstr "Il publisher '%s' è un publisher di sistema e altri publisher relativi 
 msgid "%s is a system publisher and cannot be unset."
 msgstr "%s è un publisher di sistema ed è impossibile annullarne l'impostazione."
 
-#: ../modules/client/imageplan.py:3678
+#: ../modules/client/imageplan.py:3685
 msgid "Download cache"
 msgstr "Scaricare cache"
 
-#: ../modules/client/imageplan.py:3683 ../modules/client/imageplan.py:3794
+#: ../modules/client/imageplan.py:3690 ../modules/client/imageplan.py:3801
 msgid "Root filesystem"
 msgstr "File system root"
 
-#: ../modules/client/imageplan.py:3953
+#: ../modules/client/imageplan.py:3960
 #, python-format
 msgid ""
 "A link targeting itself or part of a link loop was found at '%s'; a file or "
@@ -9721,21 +9721,21 @@ msgid ""
 "Only the first path found with restrictive permissions is shown."
 msgstr "Alcuni contenuti del repository per il publisher '%s' o i percorsi che conducono al repository non sono leggibili da tutti o da 'pkg5srv:pkg5srv', il che può causare errori di accesso se i contenuti del repository vengono gestiti dai seguenti servizi:\n svc:/application/pkg/server\n svc:/application/pkg/system-repository.\nÈ visualizzato solo il primo percorso trovato con autorizzazioni restrittive."
 
-#: ../modules/server/repository.py:1981 ../modules/server/repository.py:2277
+#: ../modules/server/repository.py:1989 ../modules/server/repository.py:2288
 msgid "Permission denied."
 msgstr "Autorizzazione negata."
 
-#: ../modules/server/repository.py:2450
+#: ../modules/server/repository.py:2461
 #, python-format
 msgid "Missing file %s must be fixed by republishing the package."
 msgstr "Il file mancante %s deve essere corretto mediante la nuova pubblicazione del pacchetto."
 
-#: ../modules/server/repository.py:2472
+#: ../modules/server/repository.py:2483
 #, python-format
 msgid "Moving %(src)s to %(dest)s"
 msgstr "Spostamento di %(src)s in %(dest)s"
 
-#: ../modules/server/repository.py:2481
+#: ../modules/server/repository.py:2492
 #, python-format
 msgid "Unable to quarantine %(path)s: %(err)s"
 msgstr "Impossibile mettere in quarantena %(path)s: %(err)s"
