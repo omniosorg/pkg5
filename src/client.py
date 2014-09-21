@@ -1,4 +1,4 @@
-#!/usr/bin/python2.6
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -86,12 +86,12 @@ try:
             RESULT_FAILED_OUTOFMEMORY)
         from pkg.client.debugvalues import DebugValues
         from pkg.client.pkgdefs import *
-        from pkg.misc import EmptyI, msg, PipeError
+        from pkg.misc import EmptyI, msg, emsg, PipeError
 except KeyboardInterrupt:
         import sys
         sys.exit(1)
 
-CLIENT_API_VERSION = 80
+CLIENT_API_VERSION = 81
 PKG_CLIENT_NAME = "pkg"
 
 JUST_UNKNOWN = 0
@@ -225,6 +225,9 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False):
             "update-format",
             "image-create",
             "exact-install",
+            "",
+            "dehydrate",
+            "rehydrate"
         ]
 
         adv_usage["info"] = \
@@ -237,7 +240,11 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False):
             "[-HIaflpr] [-o attribute ...] [-s repo_uri] query")
 
         adv_usage["verify"] = _("[-Hqv] [pkg_fmri_pattern ...]")
-        adv_usage["fix"] = _("[--accept] [--licenses] [pkg_fmri_pattern ...]")
+        adv_usage["fix"] = _(
+            "[-nvq] [--no-be-activate]\n"
+            "            [--no-backup-be | --require-backup-be] [--backup-be-name name]\n"
+            "            [--deny-new-be | --require-new-be] [--be-name name]\n"
+            "            [--accept] [--licenses] [pkg_fmri_pattern ...]")
         adv_usage["revert"] = _(
             "[-nv] [--no-be-activate]\n"
             "            [--no-backup-be | --require-backup-be] [--backup-be-name name]\n"
@@ -326,6 +333,8 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False):
             "            [--no-backup-be | --require-backup-be] [--backup-be-name name]\n"
             "            [--deny-new-be | --require-new-be] [--be-name name]\n"
             "            [--reject pkg_fmri_pattern ... ] pkg_fmri_pattern ...")
+        adv_usage["dehydrate"] = _("[-nvq] [-p publisher ...]")
+        adv_usage["rehydrate"] = _("[-nvq] [-p publisher ...]")
 
         priv_usage["remote"] = _(
             "--ctlfd=file_descriptor --progfd=file_descriptor")
@@ -632,13 +641,13 @@ def list_inventory(op, api_inst, pargs,
                         pass
                 elif pkg_list == api.ImageInterface.LIST_ALL or \
                     pkg_list == api.ImageInterface.LIST_NEWEST:
-                        error(_("no packages matching '%s' known") % \
-                            ", ".join(e.notfound), cmd=op)
+                        error(_("no known packages matching:\n  %s") %
+                            "\n  ".join(e.notfound), cmd=op)
                 elif pkg_list == api.ImageInterface.LIST_INSTALLED_NEWEST:
-                        error(_("no packages matching '%s' allowed by "
-                            "installed incorporations, or image variants that "
-                            "are known or installed") % \
-                            ", ".join(e.notfound), cmd=op)
+                        error(_("no packages matching the following patterns "
+                            "are allowed by installed incorporations, or image "
+                            "variants that are known or installed\n  %s") %
+                            "\n  ".join(e.notfound), cmd=op)
                         logger.error("Use -af to allow all versions.")
                 elif pkg_list == api.ImageInterface.LIST_UPGRADABLE:
                         # Creating a list of packages that are uptodate
@@ -655,28 +664,21 @@ def list_inventory(op, api_inst, pargs,
                                 not_installed = exc.notfound
 
                         err_str = ""
-                        if len(not_installed) == 1:
-                                err_str = _("No package matching '%s'"
-                                    " is installed. ") % \
-                                    not_installed[0]
-                        elif not_installed:
-                                err_str = _("No packages matching '%s'"
-                                    " are installed. ") % \
-                                    ", ".join(not_installed)
+                        if not_installed:
+                                err_str = _("no packages matching the following"
+                                    " patterns are installed:\n  %s") % \
+                                    "\n  ".join(not_installed)
 
-                        if len(no_updates) == 1:
-                                err_str = err_str + _("No updates are available"
-                                          " for package '%s'.") % \
-                                            no_updates[0]
-                        elif no_updates:
-                                err_str = err_str + _("No updates are available"
-                                          " for packages '%s'.") % \
-                                            ", ".join(no_updates)
+                        if no_updates:
+                                err_str = err_str + _("no updates are available"
+                                    " for the following packages:\n  %s") % \
+                                    "\n  ".join(no_updates)
                         if err_str:
                                 error(err_str, cmd=op)
                 else:
-                        error(_("No packages matching '%s' installed") % \
-                            ", ".join(e.notfound), cmd=op)
+                        error(_("no packages matching the following patterns "
+                            "are installed:\n  %s") %
+                            "\n  ".join(e.notfound), cmd=op)
 
                 if found and e.notfound:
                         # Only some patterns matched.
@@ -709,155 +711,6 @@ def get_tracker():
 
         return progresstracker
 
-def fix_image(api_inst, args):
-        opts, pargs = getopt.getopt(args, "", ["accept", "licenses"])
-
-        accept = show_licenses = False
-        for opt, arg in opts:
-                if opt == "--accept":
-                        accept = True
-                elif opt == "--licenses":
-                        show_licenses = True
-
-        # XXX fix should be part of pkg.client.api
-        found = False
-        try:
-                res = api_inst.get_pkg_list(api.ImageInterface.LIST_INSTALLED,
-                    patterns=pargs, raise_unmatched=True, return_fmris=True)
-                # We un-generate this because this is a long operation and
-                # we would like to know how many pkgs we will operate upon.
-                result = list(res)
-                if result:
-                        api_inst.progresstracker.verify_start(len(result))
-
-                repairs = []
-                for entry in result:
-                        pfmri = entry[0]
-                        found = True
-                        entries = []
-
-                        # Since every entry returned by verify might not be
-                        # something needing repair, the relevant information
-                        # for each package must be accumulated first to find
-                        # an overall success/failure result and then the
-                        # related messages output for it.
-                        for act, errors, warnings, pinfo in img.verify(pfmri,
-                            api_inst.progresstracker, verbose=True,
-                            forever=True):
-                                if not errors:
-                                        # Fix will silently skip packages that
-                                        # don't have errors, but will display
-                                        # the additional messages if there
-                                        # is at least one error.
-                                        continue
-
-                                # Informational messages are ignored by fix.
-                                entries.append((act, errors, warnings))
-
-                        if not entries:
-                                # Nothing to fix for this package.
-                                continue
-
-                        msg(_("Verifying: %(pkg_name)-50s %(result)7s") % {
-                            "pkg_name": pfmri.get_pkg_stem(),
-                            "result": _("ERROR") })
-
-                        failed = []
-                        for act, errors, warnings in entries:
-                                if act:
-                                        failed.append(act)
-                                        msg("\t%s" % act.distinguished_name())
-                                for x in errors:
-                                        msg("\t\t%s" % x)
-                                for x in warnings:
-                                        msg("\t\t%s" % x)
-                        repairs.append((pfmri, failed))
-                if result:
-                        api_inst.progresstracker.verify_done()
-
-        except api_errors.InventoryException, e:
-                if e.illegal:
-                        for i in e.illegal:
-                                error(i)
-                        return EXIT_OOPS
-
-                if found:
-                        # Ensure a blank line is inserted after list for
-                        # partial failure case.
-                        logger.error(" ")
-
-                error(_("no packages matching '%s' installed") % \
-                    ", ".join(e.notfound), cmd="fix")
-
-                if found and e.notfound:
-                        # Only some patterns matched.
-                        return EXIT_PARTIAL
-                return EXIT_OOPS
-
-        # Repair anything we failed to verify
-        if not repairs:
-                msg(_("No repairs for this image."))
-                return EXIT_OK
-
-        # Since BootEnv records the snapshot name in the image history, we need
-        # to manage our own history start/end & exception handling rather then
-        # delegating to <Image>.repair()
-        api_inst.log_operation_start("fix")
-        # Create a snapshot in case they want to roll back
-        success = False
-        try:
-                be = bootenv.BootEnv(img)
-                if be.exists():
-                        msg(_("Created ZFS snapshot: %s") % be.snapshot_name)
-        except RuntimeError:
-                # Error is printed by the BootEnv call.
-                be = bootenv.BootEnvNull(img)
-        img.bootenv = be
-        try:
-                success = img.repair(repairs, api_inst.progresstracker,
-                    accept=accept, show_licenses=show_licenses,
-                    new_history_op=False)
-        except (api_errors.InvalidPlanError,
-            api_errors.InvalidPackageErrors,
-            api_errors.ActionExecutionError,
-            api_errors.PermissionsException,
-            api_errors.SigningException,
-            api_errors.InvalidResourceLocation,
-            api_errors.ConflictingActionErrors), e:
-                logger.error(str(e))
-        except api_errors.ImageFormatUpdateNeeded, e:
-                format_update_error(e)
-                api_inst.log_operation_end(result=RESULT_FAILED_CONFIGURATION)
-                return EXIT_OOPS
-        except api_errors.PlanLicenseErrors, e:
-                error(_("The following packages require their "
-                    "licenses to be accepted before they can be repaired: "))
-                logger.error(str(e))
-                logger.error(_("To indicate that you agree to and "
-                    "accept the terms of the licenses of the packages "
-                    "listed above, use the --accept option.  To "
-                    "display all of the related licenses, use the "
-                    "--licenses option."))
-                api_inst.log_operation_end(
-                    result=RESULT_FAILED_CONSTRAINED)
-                return EXIT_LICENSE
-        except api_errors.RebootNeededOnLiveImageException:
-                error(_("Requested \"fix\" operation would affect "
-                    "files that cannot be modified in live image.\n"
-                    "Please retry this operation on an alternate boot "
-                    "environment."))
-                api_inst.log_operation_end(result=RESULT_FAILED_CONSTRAINED)
-                return EXIT_NOTLIVE
-        except Exception, e:
-                api_inst.log_operation_end(error=e)
-                raise
-
-        if not success:
-                api_inst.log_operation_end(result=RESULT_FAILED_UNKNOWN)
-                return EXIT_OOPS
-        api_inst.log_operation_end(result=RESULT_SUCCEEDED)
-        return EXIT_OK
-
 def verify_image(api_inst, args):
         opts, pargs = getopt.getopt(args, "vfqH")
 
@@ -883,6 +736,9 @@ def verify_image(api_inst, args):
         if verbose > 2:
                 DebugValues.set_value("plan", "True")
 
+        # XXX suppress progress tracker output until verify is moved into api.
+        global_settings.client_output_quiet = True
+
         # Reset the progress tracker here, because we may have
         # to switch to a different tracker due to the options parse.
         _api_inst.progresstracker = get_tracker()
@@ -897,8 +753,9 @@ def verify_image(api_inst, args):
                 # We un-generate this because this is a long operation and
                 # we would like to know how many pkgs we will operate upon.
                 result = list(res)
+                pt = api_inst.progresstracker
                 if result:
-                        api_inst.progresstracker.verify_start(len(result))
+                        pt.plan_start(pt.PLAN_PKG_VERIFY, goal=len(result))
 
                 for entry in result:
                         pfmri = entry[0]
@@ -913,8 +770,7 @@ def verify_image(api_inst, args):
                         # an overall success/failure result and then the
                         # related messages output for it.
                         for act, errors, warnings, pinfo in img.verify(pfmri,
-                            api_inst.progresstracker, verbose=verbose,
-                            forever=forever):
+                            pt, verbose=verbose, forever=forever):
                                 if errors:
                                         failed = True
                                         if quiet:
@@ -953,6 +809,7 @@ def verify_image(api_inst, args):
                                         # verbose is True.
                                         for x in pinfo:
                                                 msg("\t\t%s" % x)
+                pt.plan_done(pt.PLAN_PKG_VERIFY)
         except api_errors.InventoryException, e:
                 if e.illegal:
                         for i in e.illegal:
@@ -968,8 +825,9 @@ def verify_image(api_inst, args):
                         # Ensure a blank line is inserted after verify output.
                         logger.error(" ")
 
-                error(_("no packages matching '%s' installed") % \
-                    ", ".join(notfound), cmd="verify")
+                error(_("no packages matching the following patterns are "
+                    "installed:\n  %s") %
+                    "\n  ".join(notfound), cmd="verify")
 
                 if processed:
                         if any_errors:
@@ -998,7 +856,7 @@ def accept_plan_licenses(api_inst):
 display_plan_options = ["basic", "fmris", "variants/facets", "services",
     "actions", "boot-archive"]
 
-def __display_plan(api_inst, verbose, noexecute):
+def __display_plan(api_inst, verbose, noexecute, op=None):
         """Helper function to display plan to the desired degree.
         Verbose can either be a numerical value, or a list of
         items to display"""
@@ -1226,7 +1084,8 @@ made will not be reflected on the next boot.
                         logger.info("    %s" % smf_fmri)
                         last_action = action
 
-        if "editable" in disp:
+        # Displaying editable file list is redundant for pkg fix.
+        if "editable" in disp and op != PKG_OP_FIX:
                 moved, removed, installed, updated = plan.get_editable_changes()
 
                 cfg_change_fmt = "    {0}"
@@ -1494,10 +1353,24 @@ def display_plan(api_inst, child_image_plans, noexecute, op, parsable_version,
                 display_plan_licenses(api_inst, show_all=show_licenses)
 
         if not quiet:
-                __display_plan(api_inst, verbose, noexecute)
+                __display_plan(api_inst, verbose, noexecute, op=op)
         if parsable_version is not None:
                 __display_parsable_plan(api_inst, parsable_version,
                     child_image_plans)
+        else:
+                # Ensure a blank line is inserted before the message output.
+                msg()
+                last_item_id = None
+                for item_id, msg_time, msg_type, msg_text in \
+                    plan.get_item_messages():
+
+                        if last_item_id is None or last_item_id != item_id:
+                                last_item_id = item_id
+                                if not noexecute and op == PKG_OP_FIX:
+                                        msg(_("Repaired: %-50s") % item_id)
+                                else:
+                                        msg(_("Package: %-50s") % item_id)
+                        msg(msg_text)
 
 def __api_prepare_plan(operation, api_inst):
         # Exceptions which happen here are printed in the above level, with
@@ -1690,11 +1563,7 @@ pkg:/package/pkg' as a privileged user and then retry the %(op)s."""
                     ) % locals())
                 return EXIT_OOPS
         if e_type == api_errors.NonLeafPackageException:
-                error(_("""\
-Cannot remove '%s' due to the following packages that depend on it:"""
-                    ) % e.fmri, cmd=op)
-                for d in e.dependents:
-                        logger.error("  %s" % d)
+                error("\n" + str(e), cmd=op)
                 return EXIT_OOPS
         if e_type == api_errors.CatalogRefreshException:
                 display_catalog_failures(e)
@@ -1767,9 +1636,10 @@ def __api_plan(_op, _api_inst, _accept=False, _li_ignore=None, _noexecute=False,
     _review_release_notes=False, _show_licenses=False, _stage=API_STAGE_DEFAULT,
     _verbose=0, **kwargs):
 
-        # All the api interface functions that we inovke have some
+        # All the api interface functions that we invoke have some
         # common arguments.  Set those up now.
-        if _op != PKG_OP_REVERT:
+        if _op not in (PKG_OP_REVERT, PKG_OP_FIX, PKG_OP_DEHYDRATE,
+            PKG_OP_REHYDRATE):
                 kwargs["li_ignore"] = _li_ignore
         kwargs["noexecute"] = _noexecute
         if _origins:
@@ -1788,10 +1658,18 @@ def __api_plan(_op, _api_inst, _accept=False, _li_ignore=None, _noexecute=False,
                 api_plan_func = _api_inst.gen_plan_attach
         elif _op in [PKG_OP_CHANGE_FACET, PKG_OP_CHANGE_VARIANT]:
                 api_plan_func = _api_inst.gen_plan_change_varcets
+        elif _op == PKG_OP_DEHYDRATE:
+                api_plan_func = _api_inst.gen_plan_dehydrate
         elif _op == PKG_OP_DETACH:
                 api_plan_func = _api_inst.gen_plan_detach
+        elif _op == PKG_OP_EXACT_INSTALL:
+                api_plan_func = _api_inst.gen_plan_exact_install
+        elif _op == PKG_OP_FIX:
+                api_plan_func = _api_inst.gen_plan_fix
         elif _op == PKG_OP_INSTALL:
                 api_plan_func = _api_inst.gen_plan_install
+        elif _op == PKG_OP_REHYDRATE:
+                api_plan_func = _api_inst.gen_plan_rehydrate
         elif _op == PKG_OP_REVERT:
                 api_plan_func = _api_inst.gen_plan_revert
         elif _op == PKG_OP_SYNC:
@@ -1800,8 +1678,6 @@ def __api_plan(_op, _api_inst, _accept=False, _li_ignore=None, _noexecute=False,
                 api_plan_func = _api_inst.gen_plan_uninstall
         elif _op == PKG_OP_UPDATE:
                 api_plan_func = _api_inst.gen_plan_update
-        elif _op == PKG_OP_EXACT_INSTALL:
-                api_plan_func = _api_inst.gen_plan_exact_install
         else:
                 raise RuntimeError("__api_plan() invalid op: %s" % _op)
 
@@ -2313,6 +2189,27 @@ def revert(op, api_inst, pargs,
             new_be=new_be, _parsable_version=parsable_version, args=pargs,
             tagged=tagged)
 
+def dehydrate(op, api_inst, pargs, noexecute, publishers, quiet, verbose):
+        """Minimize image size for later redeployment."""
+
+        return __api_op(op, api_inst, _noexecute=noexecute, _quiet=quiet,
+            _verbose=verbose, publishers=publishers)
+
+def rehydrate(op, api_inst, pargs, noexecute, publishers, quiet, verbose):
+        """Restore content removed from a dehydrated image."""
+
+        return __api_op(op, api_inst, _noexecute=noexecute, _quiet=quiet,
+            _verbose=verbose, publishers=publishers)
+
+def fix(op, api_inst, pargs, accept, backup_be, backup_be_name, be_activate,
+    be_name, new_be, noexecute, quiet, show_licenses, verbose):
+        """Fix packaging errors found in the image."""
+
+        return __api_op(op, api_inst, args=pargs, _accept=accept,
+            _noexecute=noexecute, _quiet=quiet, _show_licenses=show_licenses,
+            _verbose=verbose, backup_be=backup_be, backup_be_name=backup_be_name,
+            be_activate=be_activate, be_name=be_name, new_be=new_be)
+
 def list_mediators(op, api_inst, pargs, omit_headers, output_format,
     list_available):
         """Display configured or available mediator version(s) and
@@ -2398,6 +2295,12 @@ def list_mediators(op, api_inst, pargs, omit_headers, output_format,
         def_fmt = "%-" + str(max_mname_len) + "s %-" + str(max_vsrc_len) + \
             "s %-" + str(max_version_len) + "s %-" + str(max_isrc_len) + "s %s"
 
+        if api_inst.get_dehydrated_publishers():
+                msg(_("WARNING: pkg mediators may not be accurately shown "
+                    "when one or more publishers have been dehydrated. The "
+                    "correct mediation will be applied when the publishers "
+                    "are rehydrated."))
+
         if found or (not requested_mediators and output_format == "default"):
                 sys.stdout.write(misc.get_listing(desired_field_order,
                     field_data, gen_listing(), output_format, def_fmt,
@@ -2480,6 +2383,12 @@ def set_mediator(op, api_inst, pargs,
                 else:
                         msg(_("No changes required."))
                 return EXIT_NOP
+
+        if api_inst.get_dehydrated_publishers():
+                msg(_("WARNING: pkg mediators may not be accurately shown "
+                    "when one or more publishers have been dehydrated. The "
+                    "correct mediation will be applied when the publishers "
+                    "are rehydrated."))
 
         if not quiet:
                 __display_plan(api_inst, verbose, noexecute)
@@ -3142,53 +3051,100 @@ def info(api_inst, args):
                 elif lparen:
                         state += ")"
 
-                name_str = _("          Name:")
-                msg(name_str, pi.pkg_stem)
-                msg(_("       Summary:"), pi.summary)
+                # XXX-Consider using Python's 2.7 collections.OrderedDict
+                attr_list = []
+                seen = {}
+
+                def __append_attr_tuples(label, values):
+                        """Given arguments label and values, either extend
+                        the existing tuple value or add new one to
+                        attr_list"""
+
+                        if not isinstance(values, list):
+                                values = [values]
+                        if label in seen:
+                                seen[label].extend(values)
+                        else:
+                                attr_list.append((label, values))
+                                seen[label] = values
+
+                __append_attr_tuples(_("Name"), pi.pkg_stem)
+                __append_attr_tuples(_("Summary"), pi.summary)
                 if pi.description:
-                        desc_label = _("   Description:")
-                        start_loc = len(desc_label) + 1
-                        end_loc = 80
-                        res = textwrap.wrap(pi.description,
-                            width=end_loc - start_loc)
-                        pad = "\n" + " " * start_loc
-                        res = pad.join(res)
-                        msg(desc_label, res)
+                        __append_attr_tuples(_("Description"), pi.description)
                 if pi.category_info_list:
+                        category_info = []
                         verbose = len(pi.category_info_list) > 1
-                        msg(_("      Category:"),
-                            pi.category_info_list[0].__str__(verbose))
+                        category_info.append \
+                            (pi.category_info_list[0].__str__(verbose))
                         if len(pi.category_info_list) > 1:
                                 for ci in pi.category_info_list[1:]:
-                                        msg(" " * len(name_str),
-                                            ci.__str__(verbose))
+                                        category_info.append \
+                                            (ci.__str__(verbose))
+                        __append_attr_tuples(_("Category"), category_info)
 
-                msg(_("         State:"), state)
+                __append_attr_tuples(_("State"), state)
 
                 # Renamed packages have dependencies, but the dependencies
                 # may not apply to this image's variants so won't be
                 # returned.
                 if api.PackageInfo.RENAMED in pi.states:
-                        renamed_to = ""
-                        if pi.dependencies:
-                                renamed_to = pi.dependencies[0]
-                        msg(_("    Renamed to:"), renamed_to)
-                        for dep in pi.dependencies[1:]:
-                                msg(" " * len(name_str), dep)
+                        __append_attr_tuples(_("Renamed to"), pi.dependencies)
 
                 # XXX even more info on the publisher would be nice?
-                msg(_("     Publisher:"), pi.publisher)
+                __append_attr_tuples(_("Publisher"), pi.publisher)
                 hum_ver = pi.get_attr_values("pkg.human-version")
                 if hum_ver and hum_ver[0] != str(pi.version):
-                        msg(_("       Version:"), "%s (%s)" %
+                        __append_attr_tuples(_("Version"), "%s (%s)" %
                             (pi.version, hum_ver[0]))
                 else:
-                        msg(_("       Version:"), pi.version)
-                msg(_("        Branch:"), pi.branch)
-                msg(_("Packaging Date:"), pi.packaging_date)
-                msg(_("          Size:"), misc.bytes_to_str(pi.size))
-                msg(_("          FMRI:"), pi.fmri.get_fmri(include_build=False))
+                        __append_attr_tuples(_("Version"), str(pi.version))
+
+                __append_attr_tuples(_("Branch"), str(pi.branch))
+                __append_attr_tuples(_("Packaging Date"), pi.packaging_date)
+                __append_attr_tuples(_("Size"), misc.bytes_to_str(pi.size))
+                __append_attr_tuples(_("FMRI"), 
+                    pi.fmri.get_fmri(include_build=False))
                 # XXX add license/copyright info here?
+
+                addl_attr_list = {
+                    "info.keyword": _("Additional Keywords"),
+                    "info.upstream": _("Project Contact"),
+                    "info.maintainer": _("Project Maintainer"),
+                    "info.maintainer-url": _("Project Maintainer URL"),
+                    "pkg.detailed-url": _("Project URL"),
+                    "info.upstream-url": _("Project URL"),
+                    "info.repository-changeset": _("Repository Changeset"),
+                    "info.repository-url": _("Source URL"),
+                    "info.source-url": _("Source URL")
+                }
+
+                for item in sorted(pi.attrs, key=addl_attr_list.get):
+                        if item in addl_attr_list:
+                                __append_attr_tuples(addl_attr_list[item],
+                                    pi.get_attr_values(item))
+
+                try:
+                        max_width = max(
+                            len(attr[0])
+                            for attr in attr_list
+                        )
+                except ValueError:
+                        # Only display header if there are other attributes to
+                        # show
+                        continue
+
+                for attr, kval in attr_list:
+                        label = "{0}: ".format(attr.rjust(max_width))
+                        res = "\n".join(item for item in kval)
+                        if res:
+                                wrapper = textwrap.TextWrapper(
+                                    initial_indent=label,
+                                    break_on_hyphens=False,
+                                    break_long_words=False,
+                                    subsequent_indent=(max_width + 2) * " ",
+                                    width=80)
+                                msg(wrapper.fill(res))
 
         if notfound:
                 if pis:
@@ -6005,6 +5961,8 @@ opts_mapping = {
 
     "tagged" :            ("",  "tagged"),
 
+    "publishers" :        ("p", ""),
+
     # These options are used in set-mediator and unset-mediator but
     # the long options are only valid in set_mediator (as per the previous
     # implementation). However, the long options are not documented in the
@@ -6048,9 +6006,10 @@ cmds = {
     "change-variant"        : [change_variant],
     "contents"              : [list_contents],
     "detach-linked"         : [detach_linked, 0],
+    "dehydrate"             : [dehydrate],
     "exact-install"         : [exact_install],
     "facet"                 : [list_facet],
-    "fix"                   : [fix_image],
+    "fix"                   : [fix],
     "freeze"                : [freeze],
     "help"                  : [None],
     "history"               : [history_list],
@@ -6067,6 +6026,7 @@ cmds = {
     "purge-history"         : [history_purge],
     "rebuild-index"         : [rebuild_index],
     "refresh"               : [publisher_refresh],
+    "rehydrate"             : [rehydrate],
     "remote"                : [remote, 0],
     "remove-property-value" : [property_remove_value],
     "revert"                : [revert],

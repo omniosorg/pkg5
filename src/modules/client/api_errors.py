@@ -25,6 +25,7 @@
 #
 
 import errno
+import operator
 import os
 import xml.parsers.expat as expat
 import urlparse
@@ -174,7 +175,7 @@ class ImageInsufficentSpace(ApiException):
 
         def __str__(self):
                 from pkg.misc import bytes_to_str
-                return _("Insufficent disk space available (%(avail)s)"
+                return _("Insufficient disk space available (%(avail)s) "
                     "for estimated need (%(needed)s) for %(use)s") % {
                     "avail":  bytes_to_str(self.avail),
                     "needed": bytes_to_str(self.needed),
@@ -494,6 +495,7 @@ class PlanCreationException(ApiException):
             pkg_updates_required=EmptyI,
             rejected_pats=EmptyI,
             solver_errors=EmptyI,
+            no_repo_pubs=EmptyI,
             unmatched_fmris=EmptyI,
             would_install=EmptyI,
             wrong_publishers=EmptyI,
@@ -520,6 +522,7 @@ class PlanCreationException(ApiException):
                 self.rejected_pats         = rejected_pats
                 self.solver_errors         = solver_errors
                 self.unmatched_fmris       = unmatched_fmris
+                self.no_repo_pubs          = no_repo_pubs
                 self.would_install         = would_install
                 self.wrong_publishers      = wrong_publishers
                 self.wrong_variants        = wrong_variants
@@ -691,6 +694,14 @@ The parent image has the following enabled publishers:"""))
                         res.append(_("""
 The child image has the following enabled publishers:"""))
                         __format_li_pubs(pubs, res)
+
+                if self.no_repo_pubs:
+                        res += [_("The following publishers do not have any "
+                            "configured package repositories and cannot be "
+                            "used in package dehydration or rehydration "
+                            "operations:\n")]
+                        res += ["\t%s" % s for s in sorted(
+                            self.no_repo_pubs)]
 
                 return "\n".join(res)
 
@@ -1123,7 +1134,7 @@ class InventoryException(ApiException):
                 self.notfound.update(matcher)
                 self.notfound.update(publisher)
                 self.notfound.update(version)
-                self.notfound = list(self.notfound)
+                self.notfound = sorted(list(self.notfound))
 
                 assert self.illegal or self.notfound
 
@@ -1353,9 +1364,15 @@ class NonLeafPackageException(ApiException):
                 self.dependents = args[1]
 
         def __str__(self):
-                s = _("Unable to remove '%s' due to the following packages "
-                    "that depend on it:\n") % self.fmri
-                s += "\n".join(str(f) for f in self.dependents)
+                s = _("Unable to remove '{0}' due to the following packages "
+                    "that depend on it:\n").format(self.fmri.get_short_fmri(
+                        anarchy=True, include_scheme=False))
+                skey = operator.attrgetter('pkg_name')
+                s += "\n".join(
+                    "  {0}".format(f.get_short_fmri(anarchy=True,
+                        include_scheme=False))
+                    for f in sorted(self.dependents, key=skey)
+                )
                 return s
 
 def _str_autofix(self):

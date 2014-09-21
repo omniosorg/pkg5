@@ -1,4 +1,4 @@
-#!/usr/bin/python2.6
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -100,7 +100,10 @@ else:
 pkgs_dir = os.path.normpath(os.path.join(pwd, os.pardir, "packages", arch))
 extern_dir = os.path.normpath(os.path.join(pwd, "extern"))
 
-py_install_dir = 'usr/lib/python2.6/vendor-packages'
+# Extract Python minor version.
+py_version = '.'.join(platform.python_version_tuple()[:2])
+assert py_version in ('2.6', '2.7')
+py_install_dir = 'usr/lib/python' + py_version + '/vendor-packages'
 
 scripts_dir = 'usr/bin'
 lib_dir = 'usr/lib'
@@ -303,6 +306,7 @@ pylint_targets = [
         'pkg.client.__init__',
         'pkg.client.api',
         'pkg.client.linkedimage',
+        'pkg.client.pkg_solver',
         'pkg.client.pkgdefs',
         'pkg.client.pkgremote',
         'pkg.client.plandesc',
@@ -667,6 +671,9 @@ class install_func(_install):
                                 else:
                                         file_util.copy_file(src, dest, update=1)
 
+                # Don't install the scripts for python 2.7.
+                if py_version == '2.7':
+                        return
                 for d, files in scripts[osname].iteritems():
                         for (srcname, dstname) in files:
                                 dst_dir = util.change_root(self.root_dir, d)

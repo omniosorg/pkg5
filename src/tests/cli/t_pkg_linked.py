@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# -*- coding: utf-8 -*-
 #
 # CDDL HEADER START
 #
@@ -63,6 +64,7 @@ class TestPkgLinked(pkg5unittest.ManyDepotTestCase):
         p_files = [
             "tmp/bar",
             "tmp/baz",
+            "tmp/copyright",
         ]
 
         # generate packages that don't need to be synced

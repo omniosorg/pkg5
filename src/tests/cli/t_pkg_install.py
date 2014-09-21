@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# -*- coding: utf-8 -*-
 #
 # CDDL HEADER START
 #
@@ -2461,6 +2462,21 @@ class TestPkgInstallUpgrade(_TestHelper, pkg5unittest.SingleDepotTestCase):
             close
         """
 
+        presabandon = """
+            open presabandon@1.0
+            add file tmp/preserve1 path=testme mode=0444 owner=root group=root preserve=true
+            close
+            open presabandon@2.0
+            add file tmp/preserve1 path=testme mode=0644  owner=root group=root preserve=abandon
+            close
+            open presabandon@3.0
+            add file tmp/preserve3 path=testme mode=0444  owner=root group=root preserve=abandon
+            close
+            open presabandon@4.0
+            add file tmp/preserve3 path=testme mode=0644  owner=root group=root preserve=true
+            close
+        """
+
         renpreserve = """
             open orig_pkg@1.0
             add file tmp/preserve1 path=foo1 mode=0644 owner=root group=root preserve=true
@@ -2513,6 +2529,20 @@ class TestPkgInstallUpgrade(_TestHelper, pkg5unittest.SingleDepotTestCase):
         salvage_special = """
             open salvage-special@1.0
             add dir path=salvage mode=755 owner=root group=root
+            close
+        """
+
+        dumdir10 = """
+            open dumdir@1.0
+            add dir path=etc mode=0755 owner=root group=bin
+            add file tmp/amber1 mode=0755 owner=root group=bin path=etc/amber1
+            close
+        """
+
+        dumdir20 = """
+            open dumdir@2.0
+            add dir path=etc mode=0700 owner=root group=bin
+            add file tmp/amber1 mode=0444 owner=root group=bin path=etc/amber1
             close
         """
 
@@ -2896,6 +2926,21 @@ adm
                 self.pkg("install iron@2.0")
                 self.pkg("verify -v")
 
+        def test_upgrade5(self):
+                """Test manually removed directory and files will be restored
+                 during update, if mode are different."""
+
+                self.pkgsend_bulk(self.rurl, (self.dumdir10, self.dumdir20))
+                self.image_create(self.rurl)
+
+                self.pkg("install -vvv dumdir@1.0")
+                self.pkg("verify -v")
+                dirpath = os.path.join(self.test_root, "image0", "etc")
+                shutil.rmtree(dirpath)
+
+                self.pkg("update -vvv dumdir@2.0")
+                self.pkg("verify -v")
+
         def test_upgrade_liveroot(self):
                 """Test to make sure upgrade of package fails if on live root
                 and reboot is needed."""
@@ -2917,8 +2962,8 @@ adm
                     "--deny-new-be liveroot" % self.get_img_path(), exit=5)
                 # "break" liveroot@1
                 self.file_append("etc/liveroot", "this file has been changed")
-                self.pkg("--debug simulate_live_root=%s fix liveroot" %
-                    self.get_img_path(), exit=5)
+                self.pkg("--debug simulate_live_root=%s fix --deny-new-be "
+                    "liveroot" % self.get_img_path(), exit=5)
 
         def test_upgrade_driver_conflicts(self):
                 """Test to make sure driver_aliases conflicts don't cause
@@ -3463,6 +3508,184 @@ adm
                 )
                 self.file_contains("testme.legacy", "preserve1")
                 self.file_contains("newme", "preserve2")
+
+        def test_file_preserve_abandon(self):
+                """Verify that preserve=abandon works as expected."""
+
+                install_cmd = "install"
+                self.pkgsend_bulk(self.rurl, self.presabandon)
+                self.image_create(self.rurl)
+
+                # Ensure directory is empty before testing.
+                api_inst = self.get_img_api_obj()
+                img_inst = api_inst.img
+                sroot = os.path.join(img_inst.imgdir, "lost+found")
+                shutil.rmtree(sroot)
+
+                # Verify that unpackaged files will not be salvaged on initial
+                # install if a package being installed delivers the same file
+                # and that the new file will not be installed.
+                self.file_append("testme", "unpackaged")
+                self.pkg("%s --parsable=0 presabandon@2" % install_cmd)
+                self._assertEditables()
+                self.file_contains("testme", "unpackaged")
+                self.assert_(not os.path.exists(os.path.join(sroot, "testme")))
+                self.file_remove("testme")
+                self.pkg("uninstall presabandon")
+
+                # Verify that an initial install of an action with
+                # preserve=abandon will not install the payload of the action.
+                self.pkg("%s --parsable=0 presabandon@2" % install_cmd)
+                self._assertEditables()
+                self.file_doesnt_exist("testme")
+                self.pkg("uninstall presabandon")
+
+                # If an action delivered by the upgraded version of the package
+                # has a preserve=abandon, the new file will not be installed and
+                # the existing file will not be modified.
+
+                # First with no content change ...
+                self.pkg("%s --parsable=0 presabandon@1" % install_cmd)
+                self._assertEditables(
+                    installed=['testme'],
+                )
+                self.pkg("update --parsable=0 presabandon@2")
+                self._assertEditables()
+                self.file_contains("testme", "preserve1")
+                # The currently installed version of the package has a preserve
+                # value of abandon, so the file will not be removed.
+                self.pkg("uninstall --parsable=0 presabandon")
+                self._assertEditables()
+                self.file_exists("testme")
+
+                # If an action delivered by the downgraded version of the package
+                # has a preserve=abandon, the new file will not be installed and
+                # the existing file will not be modified.
+                self.pkg("%s --parsable=0 presabandon@4" % install_cmd)
+                self._assertEditables(
+                    installed=['testme'],
+                )
+                self.file_contains("testme", "preserve3")
+                self.pkg("verify presabandon")
+                self.pkg("update --parsable=0 presabandon@3")
+                self._assertEditables()
+                self.file_contains("testme", "preserve3")
+                self.pkg("verify presabandon")
+                self.pkg("uninstall --parsable=0 presabandon")
+                self.file_remove("testme")
+
+                # ... and again with content change.
+                self.pkg("%s --parsable=0 presabandon@1" % install_cmd)
+                self.pkg("%s --parsable=0 presabandon@3" % install_cmd)
+                self._assertEditables()
+                self.file_contains("testme", "preserve1")
+                self.pkg("uninstall --parsable=0 presabandon")
+
+                self.pkg("install --parsable=0 presabandon@4")
+                self._assertEditables(
+                    installed=['testme'],
+                )
+                self.file_contains("testme", "preserve3")
+                self.pkg("update --parsable=0 presabandon@2")
+                self._assertEditables()
+                self.file_contains("testme", "preserve3")
+                self.pkg("verify presabandon")
+                self.pkg("uninstall --parsable=0 presabandon")
+                self.file_remove("testme")
+
+                # Modify the file locally and upgrade to a version where the
+                # file has a preserve=abandon attribute and the content changes.
+                self.pkg("%s --parsable=0 presabandon@1" % install_cmd)
+                self.file_append("testme", "junk")
+                self.pkg("%s --parsable=0 presabandon@3" % install_cmd)
+                self._assertEditables()
+                self.file_contains("testme", "preserve1")
+                self.file_contains("testme", "junk")
+                self.file_doesnt_exist("testme.old")
+                self.file_doesnt_exist("testme.new")
+                self.pkg("uninstall --parsable=0 presabandon")
+                self.file_remove("testme")
+
+                # Modify the file locally and downgrade to a version where the
+                # file has a preserve=abandon attribute and the content changes.
+                self.pkg("%s --parsable=0 presabandon@4" % install_cmd)
+                self.file_append("testme", "junk")
+                self.file_contains("testme", "preserve3")
+                self.pkg("update --parsable=0 presabandon@2")
+                self._assertEditables()
+                self.file_contains("testme", "preserve3")
+                self.file_contains("testme", "junk")
+                self.file_doesnt_exist("testme.old")
+                self.file_doesnt_exist("testme.new")
+                self.file_doesnt_exist("testme.update")
+                self.pkg("verify presabandon")
+                self.pkg("uninstall --parsable=0 presabandon")
+                self.file_remove("testme")
+
+                # Modify the file locally and upgrade to a version where the
+                # file has a preserve=abandon attribute and just the mode changes.
+                self.pkg("%s --parsable=0 presabandon@1" % install_cmd)
+                self.file_append("testme", "junk")
+                self.pkg("%s --parsable=0 presabandon@2" % install_cmd)
+                self._assertEditables()
+                self.file_contains("testme", "preserve1")
+                self.file_contains("testme", "junk")
+                self.file_doesnt_exist("testme.old")
+                self.file_doesnt_exist("testme.new")
+                self.pkg("verify presabandon")
+                self.pkg("uninstall --parsable=0 presabandon")
+                self.file_remove("testme")
+
+                # Modify the file locally and downgrade to a version where the
+                # file has a preserve=abandon attribute and just the mode changes.
+                self.pkg("%s --parsable=0 presabandon@4" % install_cmd)
+                self.file_append("testme", "junk")
+                self.pkg("update --parsable=0 presabandon@3")
+                self._assertEditables()
+                self.file_contains("testme", "preserve3")
+                self.file_contains("testme", "junk")
+                self.file_doesnt_exist("testme.old")
+                self.file_doesnt_exist("testme.new")
+                self.file_doesnt_exist("testme.update")
+                self.pkg("verify presabandon")
+                self.pkg("uninstall --parsable=0 presabandon")
+                self.file_remove("testme")
+
+                # Remove the file locally and update the package where the
+                # file has a preserve=abandon attribute; this will not replace
+                # the missing file.
+                self.pkg("%s --parsable=0 presabandon@1" % install_cmd)
+                self.file_remove("testme")
+                self.pkg("%s --parsable=0 presabandon@2" % install_cmd)
+                self._assertEditables()
+                self.file_doesnt_exist("testme")
+                self.pkg("uninstall --parsable=0 presabandon")
+
+                # Remove the file locally and downgrade the package where the
+                # file has a preserve=abandon attribute; this will not replace
+                # the missing file.
+                self.pkg("%s --parsable=0 presabandon@4" % install_cmd)
+                self.file_remove("testme")
+                self.pkg("update --parsable=0 presabandon@3")
+                self._assertEditables()
+
+                # Verify that a package with a missing file that is marked with
+                # the preserve=abandon won't cause uninstall failure.
+                self.file_doesnt_exist("testme")
+                self.pkg("uninstall --parsable=0 presabandon")
+
+                # Verify that if the file for an action marked with
+                # preserve=abandon is removed that the package still
+                # verifies.
+                self.pkg("%s --parsable=0 presabandon@1" % install_cmd)
+                self.pkg("%s --parsable=0 presabandon@2" % install_cmd)
+                self.file_remove("testme")
+                self.pkg("verify -v presabandon")
+
+                # Verify that a file removed for an action marked with
+                # preserve=abandon can be reverted.
+                self.pkg("revert testme")
+                self.file_contains("testme", "preserve1")
 
         def test_directory_salvage(self):
                 """Make sure basic directory salvage works as expected"""
@@ -5409,18 +5632,28 @@ class TestDependencies(pkg5unittest.SingleDepotTestCase):
             close
         """
 
+        exclude_group = """
+            open network/rsync@1.0
+            close
+            open gold-server@1.0
+            add depend type=group fmri=network/rsync
+            close
+            open utility/my-rsync@1.0
+            add depend type=exclude fmri=network/rsync
+            close
+        """
+
         def setUp(self):
                 pkg5unittest.SingleDepotTestCase.setUp(self, image_count=2)
                 self.pkgsend_bulk(self.rurl, (self.pkg10, self.pkg20,
                     self.pkg11, self.pkg21, self.pkg30, self.pkg40, self.pkg50,
                     self.pkg505, self.pkg51, self.pkg60, self.pkg61,
                     self.bug_18653, self.pkg70, self.pkg80, self.pkg81,
-                    self.pkg90, self.pkg91, self.bug_7394_incorp,
-                    self.pkg100, self.pkg101, self.pkg102,
-                    self.pkg110, self.pkg111,
+                    self.pkg90, self.pkg91, self.bug_7394_incorp, self.pkg100,
+                    self.pkg101, self.pkg102, self.pkg110, self.pkg111,
                     self.pkg121, self.pkg122, self.pkg123, self.pkg132,
                     self.pkg142, self.pkg_nosol, self.pkg_renames,
-                    self.pkgSUNWcs075))
+                    self.pkgSUNWcs075, self.exclude_group))
 
                 self.leaf_pkgs = []
                 for t in self.leaf_expansion:
@@ -5456,6 +5689,41 @@ class TestDependencies(pkg5unittest.SingleDepotTestCase):
                 self.pkg("verify  pkg1@1.0")
                 self.pkg("%s pkg3@1.0" % install_cmd)
                 self.pkg("verify  pkg3@1.0 pkg1@1.1")
+
+        def test_exclude_group_install(self):
+                """Verify that a simultaneous exclude and group dependency on
+                the same package is handled gracefully."""
+
+                self.image_create(self.rurl)
+
+                # These should fail (gracefully) because my-rsync packages
+                # excludes network/rsync which is a group dependency of
+                # gold-server package.
+                self.pkg("install network/rsync gold-server my-rsync", exit=1)
+
+                self.pkg("install network/rsync")
+                self.pkg("install gold-server my-rsync", exit=1)
+                self.pkg("uninstall '*'")
+
+                # This should succeed because network/rsync dependency is not
+                # installed.
+                self.pkg("avoid network/rsync")
+                self.pkg("install -nv gold-server my-rsync")
+
+                # This will install network/rsync and remove it from the avoid
+                # list.
+                self.pkg("install network/rsync")
+
+                # This should succeed because network/rsync will be removed and
+                # placed on avoid list as part of operation.
+                self.pkg("install --reject network/rsync gold-server my-rsync")
+
+                # Now remove gold-server and then verify install will fail.
+                self.pkg("uninstall gold-server")
+                self.pkg("unavoid network/rsync")
+                # No solution as there's no installed constraining package and
+                # user didn't provide sufficient input.
+                self.pkg("install gold-server", assert_solution=False, exit=1)
 
         def test_exclude_dependencies_install(self):
                 """ exercise exclude dependencies """
@@ -5742,7 +6010,8 @@ class TestDependencies(pkg5unittest.SingleDepotTestCase):
 
                 # test to see if solver will fail gracefully when no solution is
                 # possible and a require-any dependency is involved
-                self.pkg("install -vvv pkg-nosol-A pkg-nosol-E", exit=1)
+                self.pkg("install -vvv pkg-nosol-A pkg-nosol-E",
+                    assert_solution=False, exit=1)
 
                 # test to see if solver will pick one
                 self.pkg("install pkg8@1.0")  # install pkg
@@ -5790,7 +6059,8 @@ class TestDependencies(pkg5unittest.SingleDepotTestCase):
 
                 # Test to see if solver will fail gracefully when no solution is
                 # possible and a require-any dependency is involved.
-                self.pkg("exact-install -v pkg-nosol-A pkg-nosol-E", exit=1)
+                self.pkg("exact-install -v pkg-nosol-A pkg-nosol-E",
+                    assert_solution=False, exit=1)
 
                 # Test to see if solver will pick one.
                 self.pkg("exact-install pkg8@1.0")
