@@ -21,18 +21,38 @@
 #
 
 #
-# Copyright (c) 2008, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
 #
 
 """This module provides the supported, documented interface for clients to
 interface with the pkg(5) system.
 
-Refer to pkg.api_common for additional core class documentation.
+Refer to pkg.api_common and pkg.plandesc for additional core class
+documentation.
 
 Consumers should catch ApiException when calling any API function, and
 may optionally catch any subclass of ApiException for further, specific
 error handling.
 """
+
+#
+# this file is not completely pylint clean
+#
+# pylint: disable=C0111,C0301,C0321,E0702,R0201,W0102
+# pylint: disable=W0212,W0511,W0612,W0613,W0702
+#
+# C0111 Missing docstring
+# C0301 Line too long
+# C0321 More than one statement on a single line
+# E0702 Raising NoneType while only classes, instances or string are allowed
+# R0201 Method could be a function
+# W0102 Dangerous default value %s as argument
+# W0212 Access to a protected member %s of a client class
+# W0511 XXX
+# W0612 Unused variable '%s'
+# W0613 Unused argument '%s'
+# W0702 No exception type(s) specified
+#
 
 import collections
 import copy
@@ -40,13 +60,13 @@ import datetime
 import errno
 import fnmatch
 import glob
-import operator
 import os
 import shutil
+import simplejson as json
 import sys
 import tempfile
-import time
 import threading
+import time
 import urllib
 
 import pkg.client.api_errors as apx
@@ -54,10 +74,11 @@ import pkg.client.bootenv as bootenv
 import pkg.client.history as history
 import pkg.client.image as image
 import pkg.client.imageconfig as imgcfg
-import pkg.client.imageplan as ip
+import pkg.client.imageplan as imageplan
 import pkg.client.imagetypes as imgtypes
 import pkg.client.indexer as indexer
 import pkg.client.pkgdefs as pkgdefs
+import pkg.client.plandesc as plandesc
 import pkg.client.publisher as publisher
 import pkg.client.query_parser as query_p
 import pkg.fmri as fmri
@@ -74,12 +95,16 @@ from pkg.api_common import (PackageInfo, LicenseInfo, PackageCategory,
     _get_pkg_cat_data)
 from pkg.client import global_settings
 from pkg.client.debugvalues import DebugValues
-
-from pkg.client.pkgdefs import *
+from pkg.client.pkgdefs import * # pylint: disable=W0401
 from pkg.smf import NonzeroExitException
 
-CURRENT_API_VERSION = 71
-COMPATIBLE_API_VERSIONS = frozenset([66, 67, 68, 69, 70, CURRENT_API_VERSION])
+# we import PlanDescription here even though it isn't used so that consumers
+# of the api still have access to the class definition and are able to do
+# things like help(pkg.client.api.PlanDescription)
+from pkg.client.plandesc import PlanDescription # pylint: disable=W0611
+
+CURRENT_API_VERSION = 76
+COMPATIBLE_API_VERSIONS = frozenset([72, 73, 74, 75, CURRENT_API_VERSION])
 CURRENT_P5I_VERSION = 1
 
 # Image type constants.
@@ -201,10 +226,17 @@ class _LockedCancelable(object):
                                                 instance._disable_cancel()
                                         except apx.CanceledException:
                                                 instance._cancel_done()
+                                                # if f() acquired the image
+                                                # lock, drop it
+                                                if instance._img.locked:
+                                                        instance._img.unlock()
                                                 instance._activity_lock.release()
                                                 raise
                                 else:
                                         instance._cancel_cleanup_exception()
+                                # if f() acquired the image lock, drop it
+                                if instance._img.locked:
+                                        instance._img.unlock()
                                 instance._activity_lock.release()
 
                 return wrapper
@@ -221,6 +253,14 @@ class ImageInterface(object):
         needed.  Cancel may only be invoked while a cancelable method is
         running."""
 
+        FACET_ALL = 0
+        FACET_IMAGE = 1
+        FACET_INSTALLED = 2
+
+        FACET_SRC_SYSTEM = pkg.facet.Facets.FACET_SRC_SYSTEM
+        FACET_SRC_LOCAL = pkg.facet.Facets.FACET_SRC_LOCAL
+        FACET_SRC_PARENT = pkg.facet.Facets.FACET_SRC_PARENT
+
         # Constants used to reference specific values that info can return.
         INFO_FOUND = 0
         INFO_MISSING = 1
@@ -236,49 +276,16 @@ class ImageInterface(object):
         MATCH_FMRI = 1
         MATCH_GLOB = 2
 
-        # Private constants used for tracking which type of plan was made.
-        __INSTALL     = "install"
-        __MEDIATORS   = "mediators"
-        __REVERT      = "revert"
-        __SYNC        = "sync"
-        __UNINSTALL   = "uninstall"
-        __UPDATE      = "update"
-        __VARCET      = "varcet"
-        __plan_values = frozenset([
-            __INSTALL,
-            __MEDIATORS,
-            __REVERT,
-            __SYNC,
-            __UNINSTALL,
-            __UPDATE,
-            __VARCET,
-        ])
-
-        __api_op_2_plan = {
-            API_OP_ATTACH:         __SYNC,
-            API_OP_SET_MEDIATOR:   __MEDIATORS,
-            API_OP_CHANGE_FACET:   __VARCET,
-            API_OP_CHANGE_VARIANT: __VARCET,
-            API_OP_DETACH:         __UNINSTALL,
-            API_OP_INSTALL:        __INSTALL,
-            API_OP_REVERT:         __REVERT,
-            API_OP_SYNC:           __SYNC,
-            API_OP_UNINSTALL:      __UNINSTALL,
-            API_OP_UPDATE:         __UPDATE,
-        }
-
-        __stage_2_ip_mode = {
-            API_STAGE_DEFAULT:  ip.IP_MODE_DEFAULT,
-            API_STAGE_PUBCHECK: ip.IP_MODE_SAVE,
-            API_STAGE_PLAN:     ip.IP_MODE_SAVE,
-            API_STAGE_PREPARE:  ip.IP_MODE_LOAD,
-            API_STAGE_EXECUTE:  ip.IP_MODE_LOAD,
-        }
-
+        VARIANT_ALL = 0
+        VARIANT_ALL_POSSIBLE = 1
+        VARIANT_IMAGE = 2
+        VARIANT_IMAGE_POSSIBLE = 3
+        VARIANT_INSTALLED = 4
+        VARIANT_INSTALLED_POSSIBLE = 5
 
         def __init__(self, img_path, version_id, progresstracker,
             cancel_state_callable, pkg_client_name, exact_match=True,
-            cmdpath=None, runid=-1):
+            cmdpath=None):
                 """Constructs an ImageInterface object.
 
                 'img_path' is the absolute path to an existing image or to a
@@ -296,7 +303,7 @@ class ImageInterface(object):
                 changes.
 
                 'pkg_client_name' is a string containing the name of the client,
-                such as "pkg" or "packagemanager".
+                such as "pkg".
 
                 'exact_match' is a boolean indicating whether the API should
                 attempt to find a usable image starting from the specified
@@ -337,10 +344,6 @@ class ImageInterface(object):
                 if global_settings.client_name is None:
                         global_settings.client_name = pkg_client_name
 
-                if runid < 0:
-                        runid = os.getpid()
-                self.__runid = runid
-
                 if cmdpath == None:
                         cmdpath = misc.api_cmdpath()
                 self.cmdpath = cmdpath
@@ -362,8 +365,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         self._img = image.Image(img_path,
                             progtrack=progresstracker,
                             user_provided_dir=exact_match,
-                            cmdpath=self.cmdpath,
-                            runid=runid)
+                            cmdpath=self.cmdpath)
 
                         # Store final image path.
                         self._img_path = self._img.get_root()
@@ -383,7 +385,6 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 self.__progresstracker.set_linked_name(lin)
 
                 self.__cancel_state_callable = cancel_state_callable
-                self.__stage = API_STAGE_DEFAULT
                 self.__plan_type = None
                 self.__api_op = None
                 self.__plan_desc = None
@@ -423,6 +424,11 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 else:
                         self._img.set_alt_pkg_sources(None)
 
+        @_LockedCancelable()
+        def set_alt_repos(self, repos):
+                """Public function to specify alternate package sources."""
+                self.__set_img_alt_sources(repos)
+
         blocking_locks = property(lambda self: self.__blocking_locks,
             __set_blocking_locks, doc="A boolean value indicating whether "
             "the API should wait until the image interface can be locked if "
@@ -459,6 +465,32 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
         def is_zone(self):
                 """A boolean value indicating whether the image is a zone."""
                 return self._img.is_zone()
+
+        @property
+        def is_active_liveroot_be(self):
+                """A boolean indicating whether the image to be modified is
+                the active BE for the system's root image."""
+
+                if not self._img.is_liveroot():
+                        return False
+
+                try:
+                        be_name, be_uuid = bootenv.BootEnv.get_be_name(
+                            self._img.root)
+                        return be_name == \
+                            bootenv.BootEnv.get_activated_be_name()
+                except apx.BEException:
+                        # If boot environment logic isn't supported, return
+                        # False.  This is necessary for user images and for
+                        # the test suite.
+                        return False
+
+        @property
+        def img_plandir(self):
+                """A path to the image planning directory."""
+                plandir = self._img.plandir
+                misc.makedirs(plandir)
+                return plandir
 
         @property
         def last_modified(self):
@@ -542,14 +574,6 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
         def check_be_name(be_name):
                 bootenv.BootEnv.check_be_name(be_name)
                 return True
-
-        def set_stage(self, stage):
-                """Tell the api which stage of execution we're in.  This is
-                used when executing in child images during recursive linked
-                operations."""
-
-                assert stage in api_stage_values
-                self.__stage = stage
 
         def __cert_verify(self, log_op_end=None):
                 """Verify validity of certificates.  Any apx.ExpiringCertificate
@@ -704,6 +728,15 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
         def abort(self, result=RESULT_FAILED_UNKNOWN):
                 """Indicate that execution was unexpectedly aborted and log
                 operation failure if possible."""
+                try:
+                        # This can raise if, for example, we're aborting
+                        # because we have a PipeError and we can no longer
+                        # write.  So supress problems here.
+                        if self.__progresstracker:
+                                self.__progresstracker.flush()
+                except:
+                        pass
+
                 self._img.history.abort(result)
 
         def avoid_pkgs(self, fmri_strings, unavoid=False):
@@ -799,6 +832,187 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 dependencies on this) """
                 return [a for a in self._img.get_avoid_dict().iteritems()]
 
+        def gen_facets(self, facet_list, patterns=misc.EmptyI):
+                """A generator function that produces tuples of the form:
+
+                    (
+                        name,    - (string) facet name (e.g. facet.doc)
+                        value    - (boolean) current facet value
+                        src      - (string) source for the value
+                        masked   - (boolean) is the facet maksed by another
+                    )
+
+                Results are always sorted by facet name.
+
+                'facet_list' is one of the following constant values indicating
+                which facets should be returned based on how they were set:
+
+                        FACET_ALL
+                                Return all facets set in the image and all
+                                facets listed in installed packages.
+
+                        FACET_IMAGE
+                                Return only the facets set in the image.
+
+                        FACET_INSTALLED
+                                Return only the facets listed in installed
+                                packages.
+
+                'patterns' is an optional list of facet wildcard strings to
+                filter results by."""
+
+                facets = self._img.cfg.facets
+                if facet_list != self.FACET_INSTALLED:
+                        # Include all facets set in image.
+                        fimg = set(facets.keys())
+                else:
+                        # Don't include any set only in image.
+                        fimg = set()
+
+                # Get all facets found in packages and determine state.
+                fpkg = set()
+                excludes = self._img.list_excludes()
+                if facet_list != self.FACET_IMAGE:
+                        for f in self._img.gen_installed_pkgs():
+                                # The manifest must be loaded without
+                                # pre-applying excludes so that gen_facets() can
+                                # choose how to filter the actions.
+                                mfst = self._img.get_manifest(f,
+                                    ignore_excludes=True)
+                                for facet in mfst.gen_facets(excludes=excludes):
+                                        # Use Facets object to determine
+                                        # effective facet state.
+                                        fpkg.add(facet)
+
+                # Generate the results.
+                for name in misc.yield_matching("facet.", sorted(fimg | fpkg),
+                    patterns):
+                        # check if the facet is explicitly set.
+                        if name not in facets:
+                                # The image's Facets dictionary will return
+                                # the effective value for any facets not
+                                # explicitly set in the image (wildcards or
+                                # implicit). _match_src() will tell us how
+                                # that effective value was determined (via a
+                                # local or inherited wildcard facet, or via a
+                                # system default).
+                                src = facets._match_src(name)
+                                yield (name, facets[name], src, False)
+                                continue
+
+                        # This is an explicitly set facet.
+                        for value, src, masked in facets._src_values(name):
+                                yield (name, value, src, masked)
+
+        def gen_variants(self, variant_list, patterns=misc.EmptyI):
+                """A generator function that produces tuples of the form:
+
+                    (
+                        name,    - (string) variant name (e.g. variant.arch)
+                        value    - (string) current variant value,
+                        possible - (list) list of possible variant values based
+                                   on installed packages; empty unless using
+                                   *_POSSIBLE variant_list.
+                    )
+
+                Results are always sorted by variant name.
+
+                'variant_list' is one of the following constant values indicating
+                which variants should be returned based on how they were set:
+
+                        VARIANT_ALL
+                                Return all variants set in the image and all
+                                variants listed in installed packages.
+
+                        VARIANT_ALL_POSSIBLE
+                                Return possible variant values (those found in
+                                any installed package) for all variants set in
+                                the image and all variants listed in installed
+                                packages.
+
+                        VARIANT_IMAGE
+                                Return only the variants set in the image.
+
+                        VARIANT_IMAGE_POSSIBLE
+                                Return possible variant values (those found in
+                                any installed package) for only the variants set
+                                in the image.
+
+                        VARIANT_INSTALLED
+                                Return only the variants listed in installed
+                                packages.
+
+                        VARIANT_INSTALLED_POSSIBLE
+                                Return possible variant values (those found in
+                                any installed package) for only the variants
+                                listed in installed packages.
+
+                'patterns' is an optional list of variant wildcard strings to
+                filter results by."""
+
+                variants = self._img.cfg.variants
+                if variant_list != self.VARIANT_INSTALLED and \
+                    variant_list != self.VARIANT_INSTALLED_POSSIBLE:
+                        # Include all variants set in image.
+                        vimg = set(variants.keys())
+                else:
+                        # Don't include any set only in image.
+                        vimg = set()
+
+                # Get all variants found in packages and determine state.
+                vpkg = {}
+                excludes = self._img.list_excludes()
+                vposs = collections.defaultdict(set)
+                if variant_list != self.VARIANT_IMAGE:
+                        # Only incur the overhead of reading through all
+                        # installed packages if not just listing variants set in
+                        # image or listing possible values for them.
+                        for f in self._img.gen_installed_pkgs():
+                                # The manifest must be loaded without
+                                # pre-applying excludes so that gen_variants()
+                                # can choose how to filter the actions.
+                                mfst = self._img.get_manifest(f,
+                                    ignore_excludes=True)
+                                for variant, vals in mfst.gen_variants(
+                                    excludes=excludes):
+                                        # Unlike facets, Variants class doesn't
+                                        # handle implicitly set values.
+                                        if variant[:14] == "variant.debug.":
+                                                # Debug variants are implicitly
+                                                # false and are not required
+                                                # to be set explicitly in the
+                                                # image.
+                                                vpkg[variant] = variants.get(
+                                                    variant, "false")
+                                        elif variant not in vimg:
+                                                # Although rare, packages with
+                                                # unknown variants (those not
+                                                # set in the image) can be
+                                                # installed as long as content
+                                                # does not conflict.  For those
+                                                # variants, return None.
+                                                vpkg[variant] = \
+                                                    variants.get(variant)
+
+                                        if (variant_list == \
+                                            self.VARIANT_ALL_POSSIBLE or
+                                            variant_list == \
+                                                self.VARIANT_IMAGE_POSSIBLE or
+                                            variant_list == \
+                                                self.VARIANT_INSTALLED_POSSIBLE):
+                                                # Build possible list of variant
+                                                # values.
+                                                vposs[variant].update(set(vals))
+
+                # Generate the results.
+                for name in misc.yield_matching("variant.",
+                    sorted(vimg | set(vpkg.keys())), patterns):
+                        try:
+                                yield (name, vpkg[name], sorted(vposs[name]))
+                        except KeyError:
+                                yield (name, variants[name],
+                                    sorted(vposs[name]))
+
         def freeze_pkgs(self, fmri_strings, dry_run=False, comment=None,
             unfreeze=False):
                 """Freeze/Unfreeze one or more packages."""
@@ -869,9 +1083,10 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 # information in the plan.  We have to save it here and restore
                 # it later because __reset_unlock() torches it.
                 if exc_type == apx.ConflictingActionErrors:
-                        plan_desc = PlanDescription(self._img, self.__backup_be,
+                        self._img.imageplan.set_be_options(self.__backup_be,
                             self.__backup_be_name, self.__new_be,
                             self.__be_activate, self.__be_name)
+                        plan_desc = self._img.imageplan.describe()
 
                 self.__reset_unlock()
 
@@ -879,7 +1094,11 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         self.__plan_desc = plan_desc
 
                 self._activity_lock.release()
-                raise
+
+                # re-raise the original exception. (we have to explicitly
+                # restate the original exception since we may have cleared the
+                # current exception scope above.)
+                raise exc_type, exc_value, exc_traceback
 
         def solaris_image(self):
                 """Returns True if the current image is a solaris image, or an
@@ -916,7 +1135,19 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
 
                 if not self.solaris_image():
                         return
+
+                # Get old purpose in order to be able to restore it on return.
+                p = self.__progresstracker.get_purpose()
+
                 try:
+                        #
+                        # Let progress tracker know that subsequent callbacks
+                        # into it will all be in service of update checking.
+                        # Note that even though this might return, the
+                        # finally: will still reset the purpose.
+                        #
+                        self.__progresstracker.set_purpose(
+                            self.__progresstracker.PURPOSE_PKG_UPDATE_CHK)
                         if self._img.ipkg_is_up_to_date(
                             self.__check_cancel, noexecute,
                             refresh_allowed=False,
@@ -926,15 +1157,136 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         # Can't do anything in this
                         # case; so proceed.
                         return
+                finally:
+                        self.__progresstracker.set_purpose(p)
 
                 raise apx.IpkgOutOfDateException()
 
-        def __plan_op(self, _op, _accept=False, _ad_kwargs=None,
+        def __verify_args(self, args):
+                """Verifies arguments passed into the API.
+                It tests for correct data types of the input args, verifies that
+                passed in FMRIs are valid, checks if repository URIs are valid
+                and does some logical tests for the combination of arguments."""
+
+                arg_types = {
+                    # arg name              type                   nullable
+                    "_noexecute":           (bool,                 False),
+                    "_be_activate":         (bool,                 False),
+                    "_new_be":              (bool,                 True),
+                    "_be_name":             (basestring,           True),
+                    "_backup_be":           (bool,                 True),
+                    "_backup_be_name":      (basestring,           True),
+                    "_pubcheck":            (bool,                 False),
+                    "_refresh_catalogs":    (bool,                 False),
+                    "_repos":               (iter,                 True),
+                    "_update_index":        (bool,                 False),
+                    "_li_ignore":           (iter,                 True),
+                    "_li_parent_sync":      (bool,                 False),
+                    "_li_md_only":          (bool,                 False),
+                    "_ipkg_require_latest": (bool,                 False),
+                    "pkgs_inst":            (iter,                 True),
+                    "pkgs_update":          (iter,                 True),
+                    "pkgs_to_uninstall":    (iter,                 True),
+                    "reject_list":          (iter,                 True),
+                    "mediators":            (iter,                 True),
+                    "variants":             (dict,                 True),
+                    "facets":               (pkg.facet.Facets,     True)
+                }
+
+                # merge kwargs into the main arg dict
+                if "kwargs" in args:
+                        for name, value in args["kwargs"].items():
+                                args[name] = value
+
+                # check arguments for proper type and nullability
+                for a in args:
+                        try:
+                                a_type, nullable = arg_types[a]
+                        except KeyError:
+                                # unknown argument passed, ignore
+                                continue
+
+                        assert nullable or args[a] is not None
+
+                        if args[a] is not None and a_type == iter:
+                                try:
+                                        iter(args[a])
+                                except TypeError:
+                                        raise AssertionError("%s is not an "
+                                            "iterable" % a)
+
+                        else:
+                                assert (args[a] is None or
+                                    isinstance(args[a], a_type)), "%s is " \
+                                    "type %s; expected %s" % (a, type(a),
+                                    a_type)
+
+                # check if passed FMRIs are valid
+                illegals = []
+                for i in ("pkgs_inst", "pkgs_update", "pkgs_to_uninstall",
+                    "reject_list"):
+                        try:
+                                fmris = args[i]
+                        except KeyError:
+                                continue
+                        if fmris is None:
+                                continue
+                        for pat, err, pfmri, matcher in \
+                            self.parse_fmri_patterns(fmris):
+                                if not err:
+                                        continue
+                                else:
+                                        illegals.append(fmris)
+
+                if illegals:
+                        raise apx.PlanCreationException(illegal=illegals)
+
+                # some logical checks
+                errors = []
+                if not args["_new_be"] and args["_be_name"]:
+                        errors.append(apx.InvalidOptionError(
+                            apx.InvalidOptionError.REQUIRED, ["_be_name",
+                            "_new_be"]))
+                if not args["_backup_be"] and args["_backup_be_name"]:
+                        errors.append(apx.InvalidOptionError(
+                            apx.InvalidOptionError.REQUIRED, ["_backup_be_name",
+                            "_backup_be"]))
+                if args["_backup_be"] and args["_new_be"]:
+                        errors.append(apx.InvalidOptionError(
+                            apx.InvalidOptionError.INCOMPAT, ["_backup_be",
+                            "_new_be"]))
+
+                if errors:
+                        raise apx.InvalidOptionErrors(errors)
+
+                # check if repo URIs are valid
+                try:
+                        repos = args["_repos"]
+                except KeyError:
+                        return
+
+                if not repos:
+                        return
+
+                illegals = []
+                for r in repos:
+                        valid = False
+                        if type(r) == publisher.RepositoryURI:
+                                # RepoURI objects pass right away
+                                continue
+
+                        if not misc.valid_pub_url(r):
+                                illegals.append(r)
+
+                if illegals:
+                        raise apx.UnsupportedRepositoryURI(illegals)
+
+        def __plan_op(self, _op, _ad_kwargs=None,
             _backup_be=None, _backup_be_name=None, _be_activate=True,
             _be_name=None, _ipkg_require_latest=False, _li_ignore=None,
             _li_md_only=False, _li_parent_sync=True, _new_be=False,
-            _noexecute=False, _refresh_catalogs=True, _repos=None,
-            _update_index=True, **kwargs):
+            _noexecute=False, _pubcheck=True, _refresh_catalogs=True,
+            _repos=None, _update_index=True, **kwargs):
                 """Contructs a plan to change the package or linked image
                 state of an image.
 
@@ -975,29 +1327,26 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                     _op in [API_OP_ATTACH, API_OP_DETACH, API_OP_SYNC]
                 assert not _li_md_only or _li_parent_sync
 
+                self.__verify_args(locals())
+
                 # make some perf optimizations
                 if _li_md_only:
                         _refresh_catalogs = _update_index = False
-                if self.__stage not in [API_STAGE_DEFAULT, API_STAGE_PUBCHECK]:
+                if _op in [API_OP_DETACH, API_OP_SET_MEDIATOR]:
+                        # these operations don't change fmris and don't need
+                        # to recurse, so disable a bunch of linked image
+                        # operations.
                         _li_parent_sync = False
-                if self.__stage not in [API_STAGE_DEFAULT, API_STAGE_PLAN]:
-                        _refresh_catalogs = False
-                        _ipkg_require_latest = False
+                        _pubcheck = False
+                        _li_ignore = [] # ignore all children
 
-                # if we have any children we don't support operations using
-                # temporary repositories.
-                if _repos and self._img.linked.list_related(_li_ignore):
-                        raise apx.PlanCreationException(no_tmp_origins=True)
-
-                # All the image interface functions that we inovke have some
+                # All the image interface functions that we invoke have some
                 # common arguments.  Set those up now.
                 args_common = {}
                 args_common["op"] = _op
                 args_common["progtrack"] = self.__progresstracker
                 args_common["check_cancel"] = self.__check_cancel
                 args_common["noexecute"] = _noexecute
-                args_common["ip_mode"] = self.__stage_2_ip_mode[self.__stage]
-
 
                 # make sure there is no overlap between the common arguments
                 # supplied to all api interfaces and the arguments that the
@@ -1012,35 +1361,22 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                     _backup_be_name, _new_be, _be_name, _be_activate)
 
                 try:
-                        # reset any child recursion state we might have
-                        self._img.linked.reset_recurse()
-
-                        # prepare to recurse into child images
-                        self._img.linked.init_recurse(_op, _li_ignore,
-                            _accept, _refresh_catalogs,
-                            _update_index, kwargs)
-
                         if _op == API_OP_ATTACH:
                                 self._img.linked.attach_parent(**_ad_kwargs)
                         elif _op == API_OP_DETACH:
                                 self._img.linked.detach_parent(**_ad_kwargs)
 
                         if _li_parent_sync:
-                                # try to refresh linked image
-                                # constraints from the parent image.
-                                self._img.linked.syncmd_from_parent(_op)
+                                # refresh linked image data from parent image.
+                                self._img.linked.syncmd_from_parent()
 
-                        if self.__stage in [API_STAGE_DEFAULT,
-                            API_STAGE_PUBCHECK]:
+                        # initialize recursion state
+                        self._img.linked.api_recurse_init(
+                                li_ignore=_li_ignore, repos=_repos)
 
-                                # do a linked image publisher check
-                                self._img.linked.check_pubs(_op)
-                                self._img.linked.do_recurse(API_STAGE_PUBCHECK)
-
-                                if self.__stage == API_STAGE_PUBCHECK:
-                                        # If this was just a publisher check
-                                        # then return immediately.
-                                        return
+                        if _pubcheck:
+                                # check that linked image pubs are in sync
+                                self.__linked_pubcheck(_op)
 
                         if _refresh_catalogs:
                                 self.__refresh_publishers()
@@ -1074,9 +1410,6 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                 raise RuntimeError("Unknown api op: %s" % _op)
 
                         self.__api_op = _op
-                        self.__accept = _accept
-                        if not _noexecute:
-                                self.__plan_type = self.__api_op_2_plan[_op]
 
                         if self._img.imageplan.nothingtodo():
                                 # no package changes mean no index changes
@@ -1084,9 +1417,12 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
 
                         self._disable_cancel()
                         self.__set_be_creation()
-                        self.__plan_desc = PlanDescription(self._img,
+                        self._img.imageplan.set_be_options(
                             self.__backup_be, self.__backup_be_name,
                             self.__new_be, self.__be_activate, self.__be_name)
+                        self.__plan_desc = self._img.imageplan.describe()
+                        if not _noexecute:
+                                self.__plan_type = self.__plan_desc.plan_type
 
                         # Yield to our caller so they can display our plan
                         # before we recurse into child images.  Drop the
@@ -1101,11 +1437,13 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         # either a dictionary representing the parsable output
                         # from the child image operation, or None.  Eventually
                         # these will yield plan descriptions objects instead.
-                        if self.__stage in [API_STAGE_DEFAULT, API_STAGE_PLAN]:
-                                plans = self._img.linked.do_recurse(
-                                    API_STAGE_PLAN, ip=self._img.imageplan)
-                                for rv, p_dict in plans:
-                                        yield p_dict
+                        for p_dict in self._img.linked.api_recurse_plan(
+                            api_kwargs=kwargs,
+                            refresh_catalogs=_refresh_catalogs,
+                            update_index=_update_index,
+                            progtrack=self.__progresstracker):
+                                yield p_dict
+
                         self.__planned_children = True
 
                 except:
@@ -1129,6 +1467,105 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 self._img.imageplan.update_index = _update_index
                 self.__plan_common_finish()
 
+                if DebugValues["plandesc_validate"]:
+                        # save, load, and get a new json copy of the plan,
+                        # then compare that new copy against our current one.
+                        # this regressions tests the plan save/load code.
+                        pd_json1 = self.__plan_desc.getstate(self.__plan_desc,
+                            reset_volatiles=True)
+                        fobj = tempfile.TemporaryFile()
+                        json.dump(pd_json1, fobj, encoding="utf-8")
+                        pd_new = plandesc.PlanDescription(_op)
+                        pd_new._load(fobj)
+                        pd_json2 = pd_new.getstate(pd_new, reset_volatiles=True)
+                        del fobj, pd_new
+                        pkg.misc.json_diff("PlanDescription", \
+                            pd_json1, pd_json2, pd_json1, pd_json2)
+                        del pd_json1, pd_json2
+
+        @_LockedCancelable()
+        def load_plan(self, plan, prepared=False):
+                """Load a previously generated PlanDescription."""
+
+                # Prevent loading a plan if one has been already.
+                if self.__plan_type is not None:
+                        raise apx.PlanExistsException(self.__plan_type)
+
+                # grab image lock.  we don't worry about dropping the image
+                # lock since __activity_lock will drop it for us us after we
+                # return (or if we generate an exception).
+                self._img.lock()
+
+                # load the plan
+                self.__plan_desc = plan
+                self.__plan_type = plan.plan_type
+                self.__planned_children = True
+                self.__prepared = prepared
+
+                # load BE related plan settings
+                self.__new_be = plan.new_be
+                self.__be_activate = plan.activate_be
+                self.__be_name = plan.be_name
+
+                # sanity check: verify the BE name
+                if self.__be_name is not None:
+                        self.check_be_name(self.__be_name)
+                        if not self._img.is_liveroot():
+                                raise apx.BENameGivenOnDeadBE(self.__be_name)
+
+                # sanity check: verify that all the fmris in the plan are in
+                # the known catalog
+                pkg_cat = self._img.get_catalog(self._img.IMG_CATALOG_KNOWN)
+                for pp in plan.pkg_plans:
+                        if pp.destination_fmri:
+                                assert pkg_cat.get_entry(pp.destination_fmri), \
+                                     "fmri part of plan, but currently " \
+                                     "unknown: %s" % pp.destination_fmri
+
+                # allocate an image plan based on the supplied plan
+                self._img.imageplan = imageplan.ImagePlan(self._img, plan._op,
+                    self.__progresstracker, check_cancel=self.__check_cancel,
+                    pd=plan)
+
+                if prepared:
+                        self._img.imageplan.skip_preexecute()
+
+                # create a history entry
+                self.log_operation_start(plan.plan_type)
+
+        def __linked_pubcheck(self, api_op=None):
+                """Private interface to perform publisher check on this image
+                and its children."""
+
+                if api_op in [API_OP_DETACH, API_OP_SET_MEDIATOR]:
+                        # we don't need to do a pubcheck for detach or
+                        # changing mediators
+                        return
+
+                # check the current image
+                self._img.linked.pubcheck()
+
+                # check child images
+                self._img.linked.api_recurse_pubcheck(self.__progresstracker)
+
+        @_LockedCancelable()
+        def linked_publisher_check(self):
+                """If we're a child image, verify that the parent image's
+                publisher configuration is a subset of the child image's
+                publisher configuration.  If we have any children, recurse
+                into them and perform a publisher check."""
+
+                # grab image lock.  we don't worry about dropping the image
+                # lock since __activity_lock will drop it for us us after we
+                # return (or if we generate an exception).
+                self._img.lock(allow_unprivileged=True)
+
+                # get ready to recurse
+                self._img.linked.api_recurse_init()
+
+                # check that linked image pubs are in sync
+                self.__linked_pubcheck()
+
         def planned_nothingtodo(self, li_ignore_all=False):
                 """Once an operation has been planned check if there is
                 something todo.
@@ -1142,11 +1579,6 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 li_ignore_all is true, then we'll report that there's nothing
                 todo."""
 
-                if self.__stage == API_STAGE_PUBCHECK:
-                        # if this was just a publisher check then report
-                        # that there is something todo so we continue with
-                        # the operation.
-                        return False
                 if not self._img.imageplan:
                         # if theres no plan there nothing to do
                         return True
@@ -1185,11 +1617,12 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         continue
                 return (not self.planned_nothingtodo(), self.solaris_image())
 
-        def gen_plan_update(self, pkgs_update=None, accept=False,
-            backup_be=None, backup_be_name=None, be_activate=True,
-            be_name=None, force=False, li_ignore=None, li_parent_sync=True,
-            new_be=True, noexecute=False, refresh_catalogs=True,
+        def gen_plan_update(self, pkgs_update=None, backup_be=None,
+            backup_be_name=None, be_activate=True, be_name=None,
+            force=False, li_ignore=None, li_parent_sync=True, new_be=True,
+            noexecute=False, pubcheck=True, refresh_catalogs=True,
             reject_list=misc.EmptyI, repos=None, update_index=True):
+
                 """This is a generator function that yields a PlanDescription
                 object.  If parsable_version is set, it also yields dictionaries
                 containing plan information for child images.
@@ -1212,21 +1645,28 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 'force' indicates whether update should skip the package
                 system up to date check.
 
+                'pubcheck' indicates that we should skip the child image
+                publisher check before creating a plan for this image.  only
+                pkg.1 should use this parameter, other callers should never
+                specify it.
+
                 For all other parameters, refer to the 'gen_plan_install'
                 function for an explanation of their usage and effects."""
 
-                if pkgs_update or force:
-                        ipkg_require_latest = False
-                else:
-                        ipkg_require_latest = True
+# XXX skip ipkg_require_latest enforcement for now
+#                if pkgs_update or force:
+#                        ipkg_require_latest = False
+#                else:
+#                        ipkg_require_latest = True
+                ipkg_require_latest = False
 
                 op = API_OP_UPDATE
-                return self.__plan_op(op, _accept=accept,
+                return self.__plan_op(op,
                     _backup_be=backup_be, _backup_be_name=backup_be_name,
                     _be_activate=be_activate, _be_name=be_name,
                     _ipkg_require_latest=ipkg_require_latest,
                     _li_ignore=li_ignore, _li_parent_sync=li_parent_sync,
-                    _new_be=new_be, _noexecute=noexecute,
+                    _new_be=new_be, _noexecute=noexecute, _pubcheck=pubcheck,
                     _refresh_catalogs=refresh_catalogs, _repos=repos,
                     _update_index=update_index, pkgs_update=pkgs_update,
                     reject_list=reject_list)
@@ -1244,7 +1684,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         continue
                 return not self.planned_nothingtodo()
 
-        def gen_plan_install(self, pkgs_inst, accept=False, backup_be=None,
+        def gen_plan_install(self, pkgs_inst, backup_be=None,
             backup_be_name=None, be_activate=True, be_name=None, li_ignore=None,
             li_parent_sync=True, new_be=False, noexecute=False,
             refresh_catalogs=True, reject_list=misc.EmptyI, repos=None,
@@ -1272,7 +1712,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 are being installed and tagged with reboot-needed, a backup
                 boot environment will be created.
 
-                'backup_be_name' is a string to use as the name of any backup 
+                'backup_be_name' is a string to use as the name of any backup
                 boot environment created during the operation.
 
                 'be_name' is a string to use as the name of any new boot
@@ -1325,7 +1765,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 assert pkgs_inst and type(pkgs_inst) == list
 
                 op = API_OP_INSTALL
-                return self.__plan_op(op, _accept=accept,
+                return self.__plan_op(op,
                     _backup_be=backup_be, _backup_be_name=backup_be_name,
                     _be_activate=be_activate, _be_name=be_name,
                     _li_ignore=li_ignore, _li_parent_sync=li_parent_sync,
@@ -1334,11 +1774,10 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                     _update_index=update_index, pkgs_inst=pkgs_inst,
                     reject_list=reject_list)
 
-        def gen_plan_sync(self, accept=False, backup_be=None,
-            backup_be_name=None, be_activate=True, be_name=None,
-            li_ignore=None, li_md_only=False, li_parent_sync=True,
-            li_pkg_updates=True, new_be=False, noexecute=False,
-            refresh_catalogs=True,
+        def gen_plan_sync(self, backup_be=None, backup_be_name=None,
+            be_activate=True, be_name=None, li_ignore=None, li_md_only=False,
+            li_parent_sync=True, li_pkg_updates=True, new_be=False,
+            noexecute=False, pubcheck=True, refresh_catalogs=True,
             reject_list=misc.EmptyI, repos=None, update_index=True):
                 """This is a generator function that yields a PlanDescription
                 object.  If parsable_version is set, it also yields dictionaries
@@ -1364,28 +1803,31 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 (other than the constraints package) need updating to bring
                 the image in sync with its parent.
 
-                For all other parameters, refer to the 'gen_plan_install'
-                function for an explanation of their usage and effects."""
+                For all other parameters, refer to 'gen_plan_install' and
+                'gen_plan_update' for an explanation of their usage and
+                effects."""
 
-                # verify that the current image is a linked image by trying to
-                # access its name.
-                self._img.linked.child_name
+                # we should only be invoked on a child image.
+                if not self.ischild():
+                        raise apx.LinkedImageException(
+                            self_not_child=self._img_path)
 
                 op = API_OP_SYNC
-                return self.__plan_op(op, _accept=accept,
+                return self.__plan_op(op,
                     _backup_be=backup_be, _backup_be_name=backup_be_name,
                     _be_activate=be_activate, _be_name=be_name,
                     _li_ignore=li_ignore, _li_md_only=li_md_only,
                     _li_parent_sync=li_parent_sync, _new_be=new_be,
-                    _noexecute=noexecute, _refresh_catalogs=refresh_catalogs,
-                    _repos=repos, _update_index=update_index,
+                    _noexecute=noexecute, _pubcheck=pubcheck,
+                    _refresh_catalogs=refresh_catalogs,
+                    _repos=repos,
+                    _update_index=update_index,
                     li_pkg_updates=li_pkg_updates, reject_list=reject_list)
 
-        def gen_plan_attach(self, lin, li_path, accept=False,
-            allow_relink=False, backup_be=None, backup_be_name=None,
-            be_activate=True, be_name=None, force=False, li_ignore=None,
-            li_md_only=False, li_pkg_updates=True, li_props=None, new_be=False,
-            noexecute=False, refresh_catalogs=True,
+        def gen_plan_attach(self, lin, li_path, allow_relink=False,
+            backup_be=None, backup_be_name=None, be_activate=True, be_name=None,
+            force=False, li_ignore=None, li_md_only=False, li_pkg_updates=True,
+            li_props=None, new_be=False, noexecute=False, refresh_catalogs=True,
             reject_list=misc.EmptyI, repos=None, update_index=True):
                 """This is a generator function that yields a PlanDescription
                 object.  If parsable_version is set, it also yields dictionaries
@@ -1427,7 +1869,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                     "path": li_path,
                     "props": li_props,
                 }
-                return self.__plan_op(op, _accept=accept,
+                return self.__plan_op(op,
                     _backup_be=backup_be, _backup_be_name=backup_be_name,
                     _be_activate=be_activate, _be_name=be_name,
                     _li_ignore=li_ignore, _li_md_only=li_md_only,
@@ -1436,9 +1878,10 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                     _update_index=update_index, _ad_kwargs=ad_kwargs,
                     li_pkg_updates=li_pkg_updates, reject_list=reject_list)
 
-        def gen_plan_detach(self, accept=False, backup_be=None,
+        def gen_plan_detach(self, backup_be=None,
             backup_be_name=None, be_activate=True, be_name=None, force=False,
-            li_ignore=None, new_be=False, noexecute=False):
+            li_ignore=None, li_md_only=False, li_pkg_updates=True, new_be=False,
+            noexecute=False):
                 """This is a generator function that yields a PlanDescription
                 object.  If parsable_version is set, it also yields dictionaries
                 containing plan information for child images.
@@ -1460,12 +1903,13 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 ad_kwargs = {
                     "force": force
                 }
-                return self.__plan_op(op, _accept=accept, _ad_kwargs=ad_kwargs,
+                return self.__plan_op(op, _ad_kwargs=ad_kwargs,
                     _backup_be=backup_be, _backup_be_name=backup_be_name,
                     _be_activate=be_activate, _be_name=be_name,
-                    _li_ignore=li_ignore, _new_be=new_be,
-                    _noexecute=noexecute, _refresh_catalogs=False,
-                    _update_index=False, li_pkg_updates=False)
+                    _li_ignore=li_ignore, _li_md_only=li_md_only,
+                    _new_be=new_be, _noexecute=noexecute,
+                    _refresh_catalogs=False, _update_index=False,
+                    li_pkg_updates=li_pkg_updates)
 
         def plan_uninstall(self, pkg_list, noexecute=False, update_index=True,
             be_name=None, new_be=False, be_activate=True):
@@ -1476,10 +1920,10 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         continue
                 return not self.planned_nothingtodo()
 
-        def gen_plan_uninstall(self, pkgs_to_uninstall, accept=False,
+        def gen_plan_uninstall(self, pkgs_to_uninstall,
             backup_be=None, backup_be_name=None, be_activate=True,
-            be_name=None, li_ignore=None, new_be=False, noexecute=False,
-            update_index=True):
+            be_name=None, li_ignore=None, li_parent_sync=True, new_be=False,
+            noexecute=False, update_index=True):
                 """This is a generator function that yields a PlanDescription
                 object.  If parsable_version is set, it also yields dictionaries
                 containing plan information for child images.
@@ -1502,12 +1946,13 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 assert pkgs_to_uninstall and type(pkgs_to_uninstall) == list
 
                 op = API_OP_UNINSTALL
-                return self.__plan_op(op, _accept=accept,
+                return self.__plan_op(op,
                     _backup_be=backup_be, _backup_be_name=backup_be_name,
                     _be_activate=be_activate, _be_name=be_name,
-                    _li_ignore=li_ignore, _li_parent_sync=False,
+                    _li_ignore=li_ignore, _li_parent_sync=li_parent_sync,
                     _new_be=new_be, _noexecute=noexecute,
-                    _refresh_catalogs=False, _update_index=update_index,
+                    _refresh_catalogs=False,
+                    _update_index=update_index,
                     pkgs_to_uninstall=pkgs_to_uninstall)
 
         def gen_plan_set_mediators(self, mediators, backup_be=None,
@@ -1552,7 +1997,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 function for an explanation of their usage and effects."""
 
                 assert mediators
-                return self.__plan_op(API_OP_SET_MEDIATOR, _accept=True,
+                return self.__plan_op(API_OP_SET_MEDIATOR,
                     _backup_be=backup_be, _backup_be_name=backup_be_name,
                     _be_activate=be_activate, _be_name=be_name,
                     _li_ignore=li_ignore, _li_parent_sync=li_parent_sync,
@@ -1571,10 +2016,10 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 return not self.planned_nothingtodo()
 
         def gen_plan_change_varcets(self, facets=None, variants=None,
-            accept=False, backup_be=None, backup_be_name=None,
-            be_activate=True, be_name=None, li_ignore=None, li_parent_sync=True,
-            new_be=None, noexecute=False, refresh_catalogs=True,
-            reject_list=misc.EmptyI, repos=None, update_index=True):
+            backup_be=None, backup_be_name=None, be_activate=True, be_name=None,
+            li_ignore=None, li_parent_sync=True, new_be=None, noexecute=False,
+            refresh_catalogs=True, reject_list=misc.EmptyI, repos=None,
+            update_index=True):
                 """This is a generator function that yields a PlanDescription
                 object.  If parsable_version is set, it also yields dictionaries
                 containing plan information for child images.
@@ -1605,12 +2050,13 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 else:
                         op = API_OP_CHANGE_FACET
 
-                return self.__plan_op(op, _accept=accept, _backup_be=backup_be,
+                return self.__plan_op(op, _backup_be=backup_be,
                     _backup_be_name=backup_be_name, _be_activate=be_activate,
                     _be_name=be_name, _li_ignore=li_ignore,
                     _li_parent_sync=li_parent_sync, _new_be=new_be,
                     _noexecute=noexecute, _refresh_catalogs=refresh_catalogs,
-                    _repos=repos, _update_index=update_index, variants=variants,
+                    _repos=repos,
+                    _update_index=update_index, variants=variants,
                     facets=facets, reject_list=reject_list)
 
         def plan_revert(self, args, tagged=False, noexecute=True, be_name=None,
@@ -1664,9 +2110,6 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 'li_props' optional linked image properties to apply to the
                 child image.
 
-                'accept' indicates whether we should accept package licenses
-                for any packages being installed during the child image sync.
-
                 'allow_relink' indicates whether we should allow linking of a
                 child image that is already linked (the child may already
                 be a child or a parent image).
@@ -1691,10 +2134,6 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 in solution; installed packages matching these patterns
                 are removed.
 
-                'show_licenses' indicates whether we should display package
-                licenses for any packages being installed during the child
-                image sync.
-
                 'update_index' determines whether client search indexes will
                 be updated in the child after the sync operation completes.
 
@@ -1711,7 +2150,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                     refresh_catalogs=refresh_catalogs, reject_list=reject_list,
                     show_licenses=show_licenses, update_index=update_index)
 
-        def detach_linked_children(self, li_list, force=False, noexecute=False):
+        def detach_linked_children(self, li_list, force=False,
+            li_md_only=False, li_pkg_updates=True, noexecute=False):
                 """Detach one or more children from the current image. This
                 operation results in the removal of any constraint package
                 from the child images.
@@ -1732,8 +2172,9 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 error."""
 
                 return self._img.linked.detach_children(li_list,
-                    force=force, noexecute=noexecute,
-                    progtrack=self.__progresstracker)
+                    force=force, li_md_only=li_md_only,
+                    li_pkg_updates=li_pkg_updates,
+                    noexecute=noexecute)
 
         def detach_linked_rvdict2rv(self, rvdict):
                 """Convenience function that takes a dictionary returned from
@@ -1800,14 +2241,24 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
 
                 lin = self._img.linked.child_name
                 rvdict = {}
-                ret = self._img.linked.audit_self(
-                    li_parent_sync=li_parent_sync)
-                rvdict[lin] = ret
+
+                if li_parent_sync:
+                        # refresh linked image data from parent image.
+                        rvdict[lin] = self._img.linked.syncmd_from_parent(
+                            catch_exception=True)
+                        if rvdict[lin] is not None:
+                                return rvdict
+
+                rvdict[lin] = self._img.linked.audit_self()
                 return rvdict
 
         def ischild(self):
                 """Indicates whether the current image is a child image."""
                 return self._img.linked.ischild()
+
+        def isparent(self, li_ignore=None):
+                """Indicates whether the current image is a parent image."""
+                return self._img.linked.isparent(li_ignore)
 
         @staticmethod
         def __utc_format(time_str, utc_now):
@@ -1867,8 +2318,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
         def __get_history_range(self, start, finish):
                 """Given a start and finish date, formatted as UTC date strings
                 as per __utc_format(), return a list of history filenames that
-                fall within that date range.  A range of two equal dates is 
-                equivalent of just retrieving history for that single date
+                fall within that date range.  A range of two equal dates is
+                the equivalent of just retrieving history for that single date
                 string."""
 
                 entries = []
@@ -2047,8 +2498,6 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
 
                         if self.__prepared:
                                 raise apx.AlreadyPreparedException()
-                        assert self.__plan_type in self.__plan_values, \
-                            "self.__plan_type = %s" % self.__plan_type
 
                         self._enable_cancel()
 
@@ -2098,8 +2547,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                 pass
                         self._activity_lock.release()
 
-                if self.__stage in [API_STAGE_DEFAULT, API_STAGE_PREPARE]:
-                        self._img.linked.do_recurse(API_STAGE_PREPARE)
+                self._img.linked.api_recurse_prepare(self.__progresstracker)
 
         def execute_plan(self):
                 """Executes the plan. This is uncancelable once it begins.
@@ -2123,9 +2571,6 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
 
                         if self.__executed:
                                 raise apx.AlreadyExecutedException()
-
-                        assert self.__plan_type in self.__plan_values, \
-                            "self.__plan_type = %s" % self.__plan_type
 
                         try:
                                 be = bootenv.BootEnv(self._img)
@@ -2243,9 +2688,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                 self.log_operation_end(error=exc_type)
                                 raise
 
-                        if self.__stage in \
-                            [API_STAGE_DEFAULT, API_STAGE_EXECUTE]:
-                                self._img.linked.do_recurse(API_STAGE_EXECUTE)
+                        self._img.linked.api_recurse_execute(
+                            self.__progresstracker)
 
                         self.__finished_execution(be)
                         if raise_later:
@@ -2258,7 +2702,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         self._activity_lock.release()
 
         def __finished_execution(self, be):
-                if self._img.imageplan.state != ip.EXECUTED_OK:
+                if self._img.imageplan.state != plandesc.EXECUTED_OK:
                         if self.__new_be == True:
                                 be.restore_image()
                         else:
@@ -2283,7 +2727,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 # by one of the previous operations, then log it as
                 # ending now.
                 if self._img.history.operation_name:
-                        self.log_operation_end()
+                        self.log_operation_end(release_notes=
+                            self._img.imageplan.pd.release_notes_name)
                 self.__executed = True
 
         def set_plan_license_status(self, pfmri, plicense, accepted=None,
@@ -2314,7 +2759,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         if not self._img.imageplan:
                                 raise apx.PlanMissingException()
 
-                        for pp in self._img.imageplan.pkg_plans:
+                        for pp in self.__plan_desc.pkg_plans:
                                 if pp.destination_fmri == pfmri:
                                         pp.set_license_status(plicense,
                                             accepted=accepted,
@@ -2428,7 +2873,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                             self._img.IMG_CATALOG_KNOWN)
                 return sorted(pkg_cat.categories(excludes=excludes, pubs=pubs))
 
-        def __map_installed_newest(self, brelease, pubs, known_cat=None):
+        def __map_installed_newest(self, pubs, known_cat=None):
                 """Private function.  Maps incorporations and publisher
                 relationships for installed packages and returns them
                 as a tuple of (pub_ranks, inc_stems, inc_vers, inst_stems,
@@ -2475,7 +2920,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                         elif a.attrs["type"] == "incorporate":
                                                 # Record incorporated packages.
                                                 tgt = fmri.PkgFmri(
-                                                    a.attrs["fmri"], brelease)
+                                                    a.attrs["fmri"])
                                                 tver = tgt.version
                                                 # incorporates without a version
                                                 # should be ignored.
@@ -2501,7 +2946,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
 
                         if pkgr:
                                 for f in targets:
-                                        tgt = fmri.PkgFmri(f, brelease)
+                                        tgt = fmri.PkgFmri(f)
                                         ren_stems[tgt.pkg_name] = stem
                                         ren_inst_stems.setdefault(stem,
                                             set())
@@ -2583,7 +3028,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         if pkgr:
                                 pub, stem, ver = t
                                 for f in targets:
-                                        tgt = fmri.PkgFmri(f, brelease)
+                                        tgt = fmri.PkgFmri(f)
                                         ren_stems[tgt.pkg_name] = stem
 
                 # Determine highest ranked publisher for package stems
@@ -2675,7 +3120,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 pkg_repos = {}
                 pkg_pub_map = {}
                 try:
-                        progtrack.refresh_start(len(pubs))
+                        progtrack.refresh_start(len(pubs), full_refresh=False)
+                        failed = []
                         pub_cats = []
                         for pub in pubs:
                                 # Assign a temporary meta root to each
@@ -2688,8 +3134,19 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                 pkg_repos[id(repo)] = repo
 
                                 # Retrieve each publisher's catalog.
-                                progtrack.refresh_progress(pub.prefix)
-                                pub.refresh()
+                                progtrack.refresh_start_pub(pub)
+                                try:
+                                        pub.refresh()
+                                except apx.PermissionsException, e:
+                                        failed.append((pub, e))
+                                        # No point in continuing since no data
+                                        # can be written.
+                                        break
+                                except apx.ApiException, e:
+                                        failed.append((pub, e))
+                                        continue
+                                finally:
+                                        progtrack.refresh_end_pub(pub)
                                 pub_cats.append((
                                     pub.prefix,
                                     repo,
@@ -2697,6 +3154,12 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                 ))
 
                         progtrack.refresh_done()
+
+                        if failed:
+                                total = len(pub_cats) + len(failed)
+                                e = apx.CatalogRefreshException(failed, total,
+                                    len(pub_cats))
+                                raise e
 
                         # Determine upgradability.
                         newest = {}
@@ -2892,8 +3355,9 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                 try:
                                         opub = pub_map[pub.prefix]
                                 except KeyError:
+                                        nrepo = publisher.Repository()
                                         opub = publisher.Publisher(pub.prefix,
-                                            catalog=compkcat)
+                                            catalog=compkcat, repository=nrepo)
                                         pub_map[pub.prefix] = opub
 
                         rid_map = {}
@@ -2912,11 +3376,12 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                                            pkg_repos.get(rid).origins
                                                            for rid in rids
                                                         ])
-                                                        nrepo = publisher.Repository(
-                                                            origins=origins)
                                                         npub = \
                                                             copy.copy(pub_map[pub])
-                                                        npub.repository = nrepo
+                                                        nrepo = npub.repository
+                                                        nrepo.origins = origins
+                                                        assert npub.catalog == \
+                                                            compkcat
                                                         rid_map[rids] = npub
 
                                                 pkg_pub_map[pub][stem][ver] = \
@@ -2927,12 +3392,10 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         for pub in pubs:
                                 npub = pub_map[pub.prefix]
                                 nrepo = npub.repository
-                                if not nrepo:
-                                        nrepo = publisher.Repository()
-                                        npub.repository = nrepo
                                 for o in pub.repository.origins:
                                         if not nrepo.has_origin(o):
                                                 nrepo.add_origin(o)
+                                assert npub.catalog == compkcat
 
                         for compcat in (compicat, compkcat):
                                 compcat.batch_mode = False
@@ -3060,8 +3523,6 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 elif pkg_list == self.LIST_UPGRADABLE:
                         upgradable = True
 
-                brelease = self._img.attrs["Build-Release"]
-
                 # Each pattern in patterns can be a partial or full FMRI, so
                 # extract the individual components for use in filtering.
                 illegals = []
@@ -3114,7 +3575,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 if inst_newest:
                         pub_ranks, inc_stems, inc_vers, inst_stems, ren_stems, \
                             ren_inst_stems = self.__map_installed_newest(
-                            brelease, pubs, known_cat=known_cat)
+                            pubs, known_cat=known_cat)
                 else:
                         pub_ranks = inc_stems = inc_vers = inst_stems = \
                             ren_stems = ren_inst_stems = misc.EmptyDict
@@ -3196,7 +3657,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                         return False
 
                                 # XXX version should not require build release.
-                                ever = pkg.version.Version(ver, brelease)
+                                ever = pkg.version.Version(ver)
 
                                 # If the entry's version is a successor to
                                 # the incorporated version, then this is the
@@ -3339,8 +3800,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                                         # version object more
                                                         # than once for each
                                                         # entry.
-                                                        ever = pkg.version.Version(ver,
-                                                            brelease)
+                                                        ever = pkg.version.Version(ver)
                                                 if not ever.is_successor(pat_ver,
                                                     pkg.version.CONSTRAINT_AUTO):
                                                         if omit_package is None:
@@ -3435,6 +3895,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                                         # Historical summary
                                                         # field.
                                                         summ = atvalue
+                                                        # pylint: disable=W0106
                                                         collect_attrs and \
                                                             attrs["pkg.summary"] \
                                                             [mods]. \
@@ -3542,8 +4003,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                 ranked_stems.setdefault(stem, pub)
 
                         if return_fmris:
-                                pfmri = fmri.PkgFmri(build_release=brelease,
-                                    name=stem, publisher=pub, version=ver)
+                                pfmri = fmri.PkgFmri(name=stem, publisher=pub,
+                                        version=ver)
                                 yield (pfmri, summ, pcats, states, attrs)
                         else:
                                 yield (t, summ, pcats, states, attrs)
@@ -3660,7 +4121,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                         pub = name = version = None
 
                                 links = hardlinks = files = dirs = \
-                                    size = licenses = cat_info = \
+                                    csize = size = licenses = cat_info = \
                                     description = None
 
                                 if PackageInfo.CATEGORIES in info_needed:
@@ -3711,7 +4172,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                                     mfst, alt_pub=alt_pub)
 
                                         if PackageInfo.SIZE in info_needed:
-                                                size = mfst.get_size(
+                                                size, csize = mfst.get_size(
                                                     excludes=excludes)
 
                                         if act_opts & info_needed:
@@ -3732,7 +4193,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                                             mfst.gen_key_attribute_value_by_type(
                                                             "dir", excludes))
                                 elif PackageInfo.SIZE in info_needed:
-                                        size = 0
+                                        size = csize = 0
 
                                 # Trim response set.
                                 if PackageInfo.STATE in info_needed:
@@ -3761,7 +4222,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                     states=states, publisher=pub, version=release,
                                     build_release=build_release, branch=branch,
                                     packaging_date=packaging_date, size=size,
-                                    pfmri=pfmri, licenses=licenses,
+                                    csize=csize, pfmri=pfmri, licenses=licenses,
                                     links=links, hardlinks=hardlinks, files=files,
                                     dirs=dirs, dependencies=dependencies,
                                     description=description, attrs=attrs))
@@ -3858,13 +4319,13 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
 
                 self._img.cleanup_downloads()
                 self._img.transport.shutdown()
+
                 # Recreate the image object using the path the api
                 # object was created with instead of the current path.
                 self._img = image.Image(self._img_path,
                     progtrack=self.__progresstracker,
                     user_provided_dir=True,
-                    cmdpath=self.cmdpath,
-                    runid=self.__runid)
+                    cmdpath=self.cmdpath)
                 self._img.blocking_locks = self.__blocking_locks
 
                 lin = None
@@ -4095,16 +4556,20 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
 
                 slist = []
                 for entry in servers:
-                        descriptive_name = None
                         if isinstance(entry, dict):
                                 origin = entry["origin"]
                                 try:
                                         pub = self._img.get_publisher(
                                             origin=origin)
+                                        pub_uri = publisher.RepositoryURI(
+                                            origin)
+                                        repo = publisher.Repository(
+                                            origins=[pub_uri])
                                 except apx.UnknownPublisher:
                                         pub = publisher.RepositoryURI(origin)
-                                        descriptive_name = origin
-                                slist.append((pub, None, descriptive_name))
+                                        repo = publisher.Repository(
+                                            origins=[pub])
+                                slist.append((pub, repo, origin))
                                 continue
 
                         # Must be a publisher object.
@@ -4193,7 +4658,6 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 # This maps fmris to the version at which they're incorporated.
                 inc_vers = {}
                 inst_stems = {}
-                brelease = self._img.attrs["Build-Release"]
 
                 img_cat = self._img.get_catalog(
                     self._img.IMG_CATALOG_INSTALLED)
@@ -4208,8 +4672,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                     a.attrs["type"] != "incorporate":
                                         continue
                                 # Record incorporated packages.
-                                tgt = fmri.PkgFmri(
-                                    a.attrs["fmri"], brelease)
+                                tgt = fmri.PkgFmri(a.attrs["fmri"])
                                 tver = tgt.version
                                 # incorporates without a version should be
                                 # ignored.
@@ -4468,15 +4931,16 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 def origins_changed(oldr, newr):
                         old_origins = set([
                             (o.uri, o.ssl_cert,
-                                o.ssl_key)
+                                o.ssl_key, tuple(sorted(o.proxies)))
                             for o in oldr.origins
                         ])
                         new_origins = set([
                             (o.uri, o.ssl_cert,
-                                o.ssl_key)
+                                o.ssl_key, tuple(sorted(o.proxies)))
                             for o in newr.origins
                         ])
-                        return new_origins - old_origins
+                        return (new_origins - old_origins), \
+                            new_origins.symmetric_difference(old_origins)
 
                 def need_refresh(oldo, newo):
                         if newo.disabled:
@@ -4494,7 +4958,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         if newr._source_object_id != id(oldr):
                                 # Selected repository has changed.
                                 return True
-                        return len(origins_changed(oldr, newr)) != 0
+                        # If any were added or removed, refresh.
+                        return len(origins_changed(oldr, newr)[1]) != 0
 
                 refresh_catalog = False
                 disable = False
@@ -4568,7 +5033,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 repo = pub.repository
 
                 validate = origins_changed(orig_pub[-1].repository,
-                    pub.repository)
+                    pub.repository)[0]
 
                 try:
                         if disable or (not repo.origins and
@@ -4595,9 +5060,10 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
 
                                 # Validate all new origins against publisher
                                 # configuration.
-                                for uri, ssl_cert, ssl_key in validate:
+                                for uri, ssl_cert, ssl_key, proxies in validate:
                                         repo = publisher.RepositoryURI(uri,
-                                            ssl_cert=ssl_cert, ssl_key=ssl_key)
+                                            ssl_cert=ssl_cert, ssl_key=ssl_key,
+                                            proxies=proxies)
                                         pub.validate_config(repo)
 
                                 self.__refresh(pubs=[pub], immediate=True)
@@ -4633,7 +5099,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 # Successful; so save configuration.
                 self._img.save_config()
 
-        def log_operation_end(self, error=None, result=None):
+        def log_operation_end(self, error=None, result=None, 
+            release_notes=None):
                 """Marks the end of an operation to be recorded in image
                 history.
 
@@ -4643,7 +5110,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 be based on the class of 'error' and 'error' will be recorded
                 for the current operation.  If 'result' and 'error' is not
                 provided, success is assumed."""
-                self._img.history.log_operation_end(error=error, result=result)
+                self._img.history.log_operation_end(error=error, result=result,
+                release_notes=release_notes)
 
         def log_operation_error(self, error):
                 """Adds an error to the list of errors to be recorded in image
@@ -4653,7 +5121,13 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
         def log_operation_start(self, name):
                 """Marks the start of an operation to be recorded in image
                 history."""
-                be_name, be_uuid = bootenv.BootEnv.get_be_name(self._img.root)
+                # If an operation is going to be discarded, then don't take the
+                # performance hit of actually getting the BE info.
+                if name in history.DISCARDED_OPERATIONS:
+                        be_name, be_uuid = None, None
+                else:
+                        be_name, be_uuid = bootenv.BootEnv.get_be_name(
+                            self._img.root)
                 self._img.history.log_operation_start(name,
                     be_name=be_name, be_uuid=be_uuid)
 
@@ -4718,7 +5192,6 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                 wildcards.
                 """
 
-                brelease = self._img.attrs["Build-Release"]
                 for pat in patterns:
                         error = None
                         matcher = None
@@ -4739,10 +5212,9 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                         matcher = self.MATCH_FMRI
 
                                 if matcher == self.MATCH_GLOB:
-                                        npat = fmri.MatchingPkgFmri(pat_stem,
-                                            brelease)
+                                        npat = fmri.MatchingPkgFmri(pat_stem)
                                 else:
-                                        npat = fmri.PkgFmri(pat_stem, brelease)
+                                        npat = fmri.PkgFmri(pat_stem)
 
                                 if not pat_ver:
                                         # Do nothing.
@@ -4750,12 +5222,10 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                 elif "*" in pat_ver or "?" in pat_ver or \
                                     pat_ver == "latest":
                                         npat.version = \
-                                            pkg.version.MatchingVersion(pat_ver,
-                                                brelease)
+                                            pkg.version.MatchingVersion(pat_ver)
                                 else:
                                         npat.version = \
-                                            pkg.version.Version(pat_ver,
-                                                brelease)
+                                            pkg.version.Version(pat_ver)
 
                         except (fmri.FmriError, pkg.version.VersionError), e:
                                 # Whatever the error was, return it.
@@ -4859,229 +5329,11 @@ class Query(query_p.Query):
                         return_type = query_p.Query.RETURN_ACTIONS
                 else:
                         return_type = query_p.Query.RETURN_PACKAGES
-                query_p.Query.__init__(self, text, case_sensitive, return_type,
-                    num_to_return, start_point)
-
-
-class PlanDescription(object):
-        """A class which describes the changes the plan will make."""
-
-        def __init__(self, img, backup_be, backup_be_name, new_be, be_activate,
-            be_name):
-                self.__plan = img.imageplan
-                self._img = img
-                self.__backup_be = backup_be
-                self.__backup_be_name = backup_be_name
-                self.__new_be = new_be
-                self.__be_activate = be_activate
-                self.__be_name = be_name
-
-        def get_services(self):
-                """Returns a list of services affected in this plan."""
-                return self.__plan.services
-
-        def get_mediators(self):
-                """Returns a list of strings contianing mediator changes in this
-                plan"""
-                return self.__plan.mediators_to_strings()
-
-        def get_parsable_mediators(self):
-                """Returns a list of mediator changes in this plan"""
-                return self.__plan.mediators
-        
-        def get_varcets(self):
-                """Returns a formatted list of strings representing the
-                variant/facet changes in this plan"""
-                vs, fs = self.__plan.varcets
-                ret = []
-                ret.extend(["variant %s: %s" % a for a in vs])
-                ret.extend(["  facet %s: %s" % a for a in fs])
-                return ret
-
-        def get_parsable_varcets(self):
-                """Returns a tuple of two lists containing the facet and variant
-                changes in this plan."""
-                return self.__plan.varcets
-
-        def get_changes(self):
-                """A generation function that yields tuples of PackageInfo
-                objects of the form (src_pi, dest_pi).
-
-                If 'src_pi' is None, then 'dest_pi' is the package being
-                installed.
-
-                If 'src_pi' is not None, and 'dest_pi' is None, 'src_pi'
-                is the package being removed.
-
-                If 'src_pi' is not None, and 'dest_pi' is not None,
-                then 'src_pi' is the original version of the package,
-                and 'dest_pi' is the new version of the package it is
-                being upgraded to."""
-
-                for pp in sorted(self.__plan.pkg_plans,
-                    key=operator.attrgetter("origin_fmri", "destination_fmri")):
-                        yield (PackageInfo.build_from_fmri(pp.origin_fmri),
-                            PackageInfo.build_from_fmri(pp.destination_fmri))
-
-        def get_actions(self):
-                """A generator function that returns action changes for all
-                the package plans"""
-                for pp in self.__plan.pkg_plans:
-                        yield str(pp)
-
-        def get_licenses(self, pfmri=None):
-                """A generator function that yields information about the
-                licenses related to the current plan in tuples of the form
-                (dest_fmri, src, dest, accepted, displayed) for the given
-                package FMRI or all packages in the plan.  This is only
-                available for licenses that are being installed or updated.
-
-                'dest_fmri' is the FMRI of the package being installed.
-
-                'src' is a LicenseInfo object if the license of the related
-                package is being updated; otherwise it is None.
-
-                'dest' is the LicenseInfo object for the license that is being
-                installed.
-
-                'accepted' is a boolean value indicating that the license has
-                been marked as accepted for the current plan.
-
-                'displayed' is a boolean value indicating that the license has
-                been marked as displayed for the current plan."""
-
-                for pp in self.__plan.pkg_plans:
-                        dfmri = pp.destination_fmri
-                        if pfmri and dfmri != pfmri:
-                                continue
-
-                        for lid, entry in pp.get_licenses():
-                                src = entry["src"]
-                                src_li = None
-                                if src:
-                                        src_li = LicenseInfo(pp.origin_fmri,
-                                            src, img=self._img)
-
-                                dest = entry["dest"]
-                                dest_li = None
-                                if dest:
-                                        dest_li = LicenseInfo(
-                                            pp.destination_fmri, dest,
-                                            img=self._img)
-
-                                yield (pp.destination_fmri, src_li, dest_li,
-                                    entry["accepted"], entry["displayed"])
-
-                        if pfmri:
-                                break
-
-        def get_salvaged(self):
-                """Returns a list of tuples of items that were salvaged during
-                plan execution.  Each tuple is of the form (original_path,
-                salvage_path).  Where 'original_path' is the path of the item
-                before it was salvaged, and 'salvage_path' is where the item was
-                moved to.  This method only has useful information after plan
-                execution."""
-
-                if self.__plan.state not in (ip.EXECUTED_OK, ip.EXECUTED_ERROR):
-                        # Return an empty list so that the type matches with
-                        # self.__plan.salvaged.
-                        return []
-                return copy.copy(self.__plan.salvaged)
-
-        def get_solver_errors(self):
-                """Returns a list of strings for all FMRIs evaluated by the
-                solver explaining why they were rejected.  (All packages
-                found in solver's trim database.)  Only available if
-                DebugValues["plan"] was set when the plan was created.
-                """
-
-                if not DebugValues["plan"]:
-                        return []
-
-                return self.__plan.get_solver_errors()
-
-        @property
-        def activate_be(self):
-                """A boolean value indicating whether any new boot environment
-                will be set active on next boot."""
-                return self.__be_activate
-
-        @property
-        def backup_be(self):
-                """A boolean value indicating that execution of the plan will
-                result in a backup clone of the current live environment."""
-                return self.__backup_be
-
-        @property
-        def backup_be_name(self):
-                """A value containing either the name of the backup boot
-                environment to create or None."""
-                return self.__backup_be_name
- 
-        @property
-        def be_name(self):
-                """A value containing either the name of the boot environment to
-                create or None."""
-                return self.__be_name
-
-        @property
-        def is_active_root_be(self):
-                """A boolean indicating whether the image to be modified is the
-                active BE for the system's root image."""
-
-                if not self._img.is_liveroot() or self._img.is_zone():
-                        return False
-
                 try:
-                        be_name, be_uuid = bootenv.BootEnv.get_be_name(
-                            self._img.root)
-                        return be_name == \
-                            bootenv.BootEnv.get_activated_be_name()
-                except apx.BEException:
-                        # If boot environment logic isn't supported, return
-                        # False.  This is necessary for user images and for
-                        # the test suite.
-                        return False
-
-        @property
-        def reboot_needed(self):
-                """A boolean value indicating that execution of the plan will
-                require a restart of the system to take effect if the target
-                image is an existing boot environment."""
-                return self.__plan.reboot_needed()
-
-        @property
-        def new_be(self):
-                """A boolean value indicating that execution of the plan will
-                take place in a clone of the current live environment"""
-                return self.__new_be
-
-        @property
-        def update_boot_archive(self):
-                """A boolean value indicating whether or not the boot archive
-                will be rebuilt"""
-                return self.__plan.boot_archive_needed()
-
-        @property
-        def bytes_added(self):
-                """Estimated number of bytes added"""
-                return self.__plan.bytes_added
-
-        @property
-        def cbytes_added(self):
-                """Estimated number of download cache bytes added"""
-                return self.__plan.cbytes_added
-
-        @property
-        def bytes_avail(self):
-                """Estimated number of bytes available in image /"""
-                return self.__plan.bytes_avail
-
-        @property
-        def cbytes_avail(self):
-                """Estimated number of bytes available in download cache"""
-                return self.__plan.cbytes_avail
+                        query_p.Query.__init__(self, text, case_sensitive,
+                            return_type, num_to_return, start_point)
+                except query_p.QueryLengthExceeded, e:
+                        raise apx.ParseError(e)
 
 
 def get_default_image_root(orig_cwd=None):
@@ -5133,7 +5385,7 @@ def image_create(pkg_client_name, version_id, root, imgtype, is_zone,
         """Creates an image at the specified location.
 
         'pkg_client_name' is a string containing the name of the client,
-        such as "pkg" or "packagemanager".
+        such as "pkg".
 
         'version_id' indicates the version of the api the client is
         expecting to use.
@@ -5303,9 +5555,9 @@ def image_create(pkg_client_name, version_id, root, imgtype, is_zone,
 
                         repo = publisher.Repository()
                         for o in origins:
-                                repo.add_origin(o)
+                                repo.add_origin(o) # pylint: disable=E1103
                         for m in mirrors:
-                                repo.add_mirror(m)
+                                repo.add_mirror(m) # pylint: disable=E1103
                         pub = publisher.Publisher(prefix,
                             repository=repo)
                         pubs = [pub]

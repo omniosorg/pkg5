@@ -21,17 +21,16 @@
 #
     
 #
-# Copyright (c) 2010, 2011 Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 import codecs
 import logging
 import sys
 import gettext
+import locale
 import traceback
 from optparse import OptionParser
-
-gettext.install("pkg", "/usr/share/locale")
 
 from pkg.client.api_errors import InvalidPackageErrors
 from pkg import VERSION
@@ -56,6 +55,9 @@ def debug(message):
 
 def main_func():
         """Start pkglint."""
+
+        gettext.install("pkg", "/usr/share/locale",
+            codeset=locale.getpreferredencoding())
 
         global logger
         
@@ -140,7 +142,8 @@ def main_func():
                 manifests = []
                 if len(args) >= 1:
                         manifests = read_manifests(args, lint_logger)
-                        if None in manifests:
+                        if None in manifests or \
+                            lint_logger.produced_lint_msgs():
                                 error(_("Fatal error in manifest - exiting."))
                                 return 1
                 lint_engine.setup(ref_uris=opts.ref_uris,
@@ -155,6 +158,12 @@ def main_func():
                 lint_engine.execute()
                 lint_engine.teardown()
                 lint_logger.close()
+
+        except engine.LintEngineSetupException, err:
+                # errors during setup are likely to be caused by bad
+                # input or configuration, not lint errors in manifests.
+                error(err)
+                return 2
 
         except engine.LintEngineException, err:
                 error(err)
@@ -230,13 +239,15 @@ def read_manifests(names, lint_logger):
                         f = codecs.open(filename, "rb", "utf-8")
                         data = f.read()
                 except UnicodeDecodeError, e:
-                        lint_logger.critical(_("Invalid file %s: "
-                            "manifest not encoded in UTF-8: %s") %
-                            (filename, e), msgid="lint.manifest002")
+                        lint_logger.critical(_("Invalid file %(file)s: "
+                            "manifest not encoded in UTF-8: %(err)s") %
+                            {"file": filename, "err": e},
+                            msgid="lint.manifest002")
                         continue
                 except IOError, e:
                         lint_logger.critical(_("Unable to read manifest file "
-                        "%s: %s") % (filename, e), msgid="lint.manifest001")
+                            "%(file)s: %(err)s") % {"file": filename, "err": e},
+                            msgid="lint.manifest001")
                         continue
                 lines.append(data)
                 linecnt = len(data.splitlines())
@@ -271,8 +282,7 @@ def read_manifests(names, lint_logger):
                 if manifest and "pkg.fmri" in manifest:
                         try:
                                 manifest.fmri = \
-                                    pkg.fmri.PkgFmri(manifest["pkg.fmri"],
-                                        "5.11")
+                                    pkg.fmri.PkgFmri(manifest["pkg.fmri"])
                         except fmri.IllegalFmri, e:
                                 lint_logger.critical(
                                     _("Error in file %(file)s: "

@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
 
 import testutils
 if __name__ == "__main__":
@@ -39,6 +39,7 @@ import urllib2
 
 from pkg import misc
 from pkg.actions import fromstr
+from pkg.digest import DEFAULT_HASH_FUNC
 import pkg.portable as portable
 
 
@@ -547,7 +548,7 @@ file 6a1ae3def902f5612a43f0c0836fe05bc4f237cf chash=be9c91959ec782acb0f081bf4bf1
                 self.pkgsend(url, "import %s" % src_dir1)
                 self.pkgsend(url, "import %s/" % src_dir2)
                 ret, sfmri = self.pkgsend(url, "close")
-                foo_fmri = fmri.PkgFmri(sfmri, "5.11")
+                foo_fmri = fmri.PkgFmri(sfmri)
 
                 # Test with and without trailing slash on generate path.
                 # This cannot be done using pkgsend_bulk, which doesn't
@@ -571,7 +572,7 @@ file 6a1ae3def902f5612a43f0c0836fe05bc4f237cf chash=be9c91959ec782acb0f081bf4bf1
                 self.pkgsend(url, "include -d %s -d %s %s" % (src_dir1,
                     src_dir2, mpath))
                 ret, sfmri = self.pkgsend(url, "close")
-                bar_fmri = fmri.PkgFmri(sfmri, "5.11")
+                bar_fmri = fmri.PkgFmri(sfmri)
 
                 self.image_create(url)
 
@@ -689,10 +690,11 @@ file 6a1ae3def902f5612a43f0c0836fe05bc4f237cf chash=be9c91959ec782acb0f081bf4bf1
                                 f = file(fpath, "wb")
                                 f.write("test" + entry)
                                 f.close()
-                                # compute a digest of the file we just created, which
-                                # we can use when validating later.
+                                # compute a digest of the file we just created,
+                                # which we can use when validating later.
                                 contents_dict[entry][4] = \
-                                    misc.get_data_digest(fpath)[0]
+                                    misc.get_data_digest(fpath,
+                                    hash_func=DEFAULT_HASH_FUNC)[0]
 
                         elif ftype == "d":
                                 try:
@@ -845,9 +847,16 @@ file 6a1ae3def902f5612a43f0c0836fe05bc4f237cf chash=be9c91959ec782acb0f081bf4bf1
                                 continue
 
                         if digest:
-                                pkg5_digest, contents = misc.get_data_digest(name, return_content=True)
+                                # the hash_func used here just needs to
+                                # correspond with the one used when creating
+                                # the svr4 package - it does not consult the
+                                # pkg(5) hash or chash attributes.
+                                pkg5_digest, contents = misc.get_data_digest(
+                                    name, return_content=True,
+                                    hash_func=DEFAULT_HASH_FUNC)
                                 self.assertEqual(digest, pkg5_digest,
-                                    "%s: %s != %s, '%s'" % (name, digest, pkg5_digest, contents))
+                                    "%s: %s != %s, '%s'" % (name, digest,
+                                    pkg5_digest, contents))
 
                         st = os.stat(os.path.join(self.img_path(), name))
                         if mode is not None:
@@ -1218,8 +1227,8 @@ dir path=foo/bar mode=0755 owner=root group=bin
 
                 self.image_create(dhurl)
                 self.pkg("install testmultipledirs")
-                self.pkg("list -vH testmultipledirs@1.0,5.10")
-                self.assert_("testmultipledirs@1.0,5.10" in self.output)
+                self.pkg("list -vH testmultipledirs@1.0")
+                self.assert_("testmultipledirs@1.0" in self.output)
 
                 self.pkg("verify")
                 self.image_destroy()
@@ -1231,6 +1240,87 @@ dir path=foo/bar mode=0755 owner=root group=bin
                 self.pkg("install testmultipledirs")
                 self.pkg("verify")
                 self.image_destroy()
+
+        def test_23_pkgsend_no_version(self):
+                """Verify that FMRI without version cannot be specified."""
+
+                rootdir = self.test_root
+                dir_1 = os.path.join(rootdir, "dir_1")
+                os.mkdir(dir_1)
+                file(os.path.join(dir_1, "A"), "wb").close()
+                mfpath = os.path.join(rootdir, "manifest_test")
+                with open(mfpath, "wb") as mf:
+                        mf.write("""file NOHASH mode=0755 owner=root group=bin path=/A
+                            set name=pkg.fmri value=testnoversion
+                            """)
+
+                dhurl = self.dc.get_depot_url()
+                self.pkgsend("", "-s %s publish -d %s < %s" % (dhurl,
+                    dir_1, mfpath), exit=1)
+
+        def test_24_pkgsend_publish_payloaded_link(self):
+                """Verify that publishing a manifest with a link with a payload
+                doesn't traceback."""
+
+                mfpath = os.path.join(self.test_root, "foo.p5m")
+                with open(mfpath, "wb") as mf:
+                        mf.write("""set name=pkg.fmri value=foo@1
+link payload-pathname path=/usr/bin/foo target=bar""")
+                self.pkgsend("", "-s %s publish %s" %
+                    (self.dc.get_depot_url(), mfpath), exit=1)
+                self.pkgsend("", "-s %s publish %s" %
+                    (self.dc.get_repo_url(), mfpath), exit=1)
+                with open(mfpath, "wb") as mf:
+                        mf.write("""set name=pkg.fmri value=foo@1
+dir path=/usr/bin/foo target=bar hash=payload-pathname""")
+                self.pkgsend("", "-s %s publish %s" %
+                    (self.dc.get_depot_url(), mfpath), exit=1)
+                self.pkgsend("", "-s %s publish %s" %
+                    (self.dc.get_repo_url(), mfpath), exit=1)
+
+        def test_25_pkgsend_publish_nohash_license(self):
+                """Verify that publishing a manifest with hash attribute
+                missing for license action doesn't traceback"""
+
+                durl = self.dc.get_depot_url()
+                # Should fail because hash attribute is missing.
+                self.pkgsend_bulk(durl,
+                    """open foo@1.0
+                    add license license=copyright
+                    close""", exit=1)
+
+        def test_26_pkgsend_multihash(self):
+                """Tests that when publishing packages with mutiple hashes,
+                we only overwrite those hashes if we're in multi-hash mode
+                and only if they match the hash attributes we know how to
+                compute, other attributes are left alone."""
+
+                # we use a file:// URI rather than the repo URI so we don't have
+                # to worry about starting the depot in SHA-2 mode. Other tests
+                # in the test suite ensure SHA-2 publication is working over
+                # HTTP.
+                furi = self.dc.get_repo_url()
+                mfpath = os.path.join(self.test_root, "pkgsend_multihash.mf")
+                payload = self.make_misc_files(["pkgsend_multihash"])[0]
+
+                with open(mfpath, "wb") as mf:
+                        mf.write("""
+set name=pkg.fmri value=pkg:/multihash@1.0
+file %s path=/foo owner=root group=sys mode=0644 pkg.hash.sha256=spaghetti \
+    pkg.hash.rot13=caesar
+""" % payload)
+                self.pkgsend("", "-s %s publish %s" % (furi, mfpath))
+                self.image_create(furi)
+                self.pkg("contents -rm multihash")
+                self.assert_("pkg.hash.sha256=spaghetti" in self.output)
+
+                self.pkgsend("", "-s %s publish %s" % (furi, mfpath),
+                    debug_hash="sha1+sha256")
+                self.pkg("refresh")
+
+                self.pkg("contents -rm multihash")
+                self.assert_("pkg.hash.sha256=spaghetti" not in self.output)
+                self.assert_("pkg.hash.rot13=caesar" in self.output)
 
 
 class TestPkgsendHardlinks(pkg5unittest.CliTestCase):
@@ -1357,6 +1447,102 @@ class TestPkgsendHardlinks(pkg5unittest.CliTestCase):
                 do_test("f1", "f2", "f3")
                 do_test("d1/f1", "d1/f2", "f3")
                 do_test("d1/f1", "d1/f2", "d2/f3")
+
+
+class TestPkgsendHTTPS(pkg5unittest.HTTPSTestClass):
+
+        misc_files = ["tmp/empty", "tmp/verboten"]
+
+        def setUp(self):
+                pub = "test"
+
+                pkg5unittest.HTTPSTestClass.setUp(self, [pub],
+                    start_depots=True)
+
+                self.url = self.ac.url + "/%s" % pub
+                self.make_misc_files(self.misc_files)
+                #set permissions of tmp/verboten to make it non-readable
+                self.verboten = os.path.join(self.test_root, "tmp/verboten")
+                os.system("chmod 600 %s" % self.verboten) 
+
+        def test_01_basics(self):
+                """Test that publishing to an SSL-secured repo works"""
+
+                self.ac.start()
+
+                rootdir = self.test_root
+                dir_1 = os.path.join(rootdir, "dir_1")
+                os.mkdir(dir_1)
+                file(os.path.join(dir_1, "A"), "wb").close()
+                file(os.path.join(dir_1, "B"), "wb").close()
+                mfpath = os.path.join(rootdir, "manifest_test")
+                with open(mfpath, "wb") as mf:
+                        mf.write("""file NOHASH mode=0755 owner=root group=bin path=/A
+                            file NOHASH mode=0755 owner=root group=bin path=/B
+                            set name=pkg.fmri value=httpstest@1.0,5.10
+                            """)
+
+                arg_dict = {
+                    "cert": os.path.join(self.cs_dir, self.get_cli_cert("test")),
+                    "key": os.path.join(self.keys_dir, self.get_cli_key("test")),
+                    "url": self.url,
+                    "dir": dir_1,
+                    "mani": mfpath,
+                    "empty": os.path.join(self.test_root, "tmp/empty"),
+                    "noexist": os.path.join(self.test_root, "octopus"),
+                    "verboten": self.verboten,
+
+                }
+
+                # We need an image for seed_ta_dir() to work.
+                # TODO: there might be a cleaner way of doing this
+                self.image_create()
+                # Add the trust anchor needed to verify the server's identity.
+                self.seed_ta_dir("ta7")
+
+                # Try to publish a simple package to SSL-secured repo  
+                self.pkgsend(self.url, "publish --key %(key)s --cert %(cert)s "
+                    "-d %(dir)s %(mani)s" % arg_dict)
+        
+                # Try to publish a simple package to SSL-secured repo without
+                # prvoviding certs (should fail).  
+                self.pkgsend(self.url, "publish -d %(dir)s %(mani)s" % arg_dict,
+                    exit=1)
+
+                # Make sure we don't traceback when credential files are invalid
+                # Certificate option missing
+                self.pkgsend(self.url, "publish --key %(key)s "
+                    "-d %(dir)s %(mani)s" % arg_dict, exit=1)
+
+                # Key option missing
+                self.pkgsend(self.url, "publish --cert %(cert)s "
+                    "-d %(dir)s %(mani)s" % arg_dict, exit=1)
+
+                # Certificate not found
+                self.pkgsend(self.url, "publish --key %(key)s "
+                    "--cert %(noexist)s -d %(dir)s %(mani)s" % arg_dict, exit=1)
+
+                # Key not found
+                self.pkgsend(self.url, "publish --key %(noexist)s "
+                    "--cert %(cert)s -d %(dir)s %(mani)s" % arg_dict, exit=1)
+
+                # Certificate is empty file
+                self.pkgsend(self.url, "publish --key %(key)s --cert %(empty)s "
+                    "-d %(dir)s %(mani)s" % arg_dict, exit=1)
+
+                # Key is empty file
+                self.pkgsend(self.url, "publish --key %(empty)s "
+                    "--cert %(cert)s -d %(dir)s %(mani)s" % arg_dict, exit=1)
+
+                # No permissions to read certificate 
+                self.pkgsend(self.url, "publish --key %(key)s "
+                    "--cert %(verboten)s -d %(dir)s %(mani)s" % arg_dict,
+                    su_wrap=True, exit=1)
+
+                # No permissions to read key 
+                self.pkgsend(self.url, "publish --key %(verboten)s "
+                    "--cert %(cert)s -d %(dir)s %(mani)s" % arg_dict,
+                    su_wrap=True, exit=1)
 
 
 if __name__ == "__main__":

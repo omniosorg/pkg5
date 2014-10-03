@@ -55,6 +55,7 @@ PKGREPOTGT        = $(PKGDEST)/repo
 PKGREPOLOC        = file://$(PKGDEST)/repo
 PKGSEND_OPTS      = --no-index --no-catalog
 PKGPUBLISHER      = pkg5-nightly
+PKGPUBLISHER_LOCALIZABLE      = pkg5-localizable
 
 POUND_SIGN:sh     = echo \\043
 PUBLISHALL        = $(POUND_SIGN)
@@ -62,7 +63,7 @@ PUBLISHALL        = $(POUND_SIGN)
 # necessary after we stop publishing duplicate packages.
 MANIFESTS.cmd     = \
 	cd manifests; \
-	buildnum=$(BUILDNUM); \
+	buildnum=$(BUILDID); \
 	m=$$($(PKGMOGRIFY) -O /dev/null *.p5m ../transforms/nopublish); \
 	echo "$$m" | while read name build; do \
 		[[ $$build -ge $${buildnum%%.*} ]] && echo $$name; \
@@ -79,6 +80,7 @@ PKGCMDENV         = \
 	    PYTHONPATH=$(PKGROOT)/usr/lib/python2.6/vendor-packages
 PKG               = $(PKGCMDENV) pkg
 PKGDEPEND         = $(PKGCMDENV) pkgdepend
+PKGFMT            = $(PKGCMDENV) pkgfmt
 PKGLINT           = $(PKGCMDENV) pkglint
 PKGMOGRIFY        = $(PKGCMDENV) pkgmogrify
 PKGREPO           = $(PKGCMDENV) pkgrepo
@@ -110,7 +112,8 @@ PKGMOG_DEFVALS    = \
 	REV=$(REV) \
 	PYDIR=usr/lib/python2.6 \
 	PYDIRVP=usr/lib/python2.6/vendor-packages \
-	CHANGESET=$(CHANGESET)
+	CHANGESET=$(CHANGESET) \
+	PKGPUBLISHER_LOCALIZABLE=$(PKGPUBLISHER_LOCALIZABLE)
 PKGMOG_DEFINES    = $(PKGMOG_DEFVALS:%=-D %)
 PKGMOG_DEFINES    += $(ARCH_DEFINES:%=-D %)
 
@@ -123,6 +126,9 @@ clean:
 clobber: clean
 	rm -rf $(PKGDEST) Makefile.link
 
+pkgfmt:
+	$(PKGFMT) -c manifests/*.p5m
+
 # Pass SVr4 package production off to its own makefile
 svr4:
 	$(MAKE) -f Makefile.svr4 _svr4
@@ -131,7 +137,7 @@ $(PDIR):
 	mkdir -p $@
 
 # Finalize the repository
-repository-metadata: publish-pkgs
+repository-metadata: pkgfmt publish-pkgs
 	$(PKGREPO) -s $(PKGDEST)/repo refresh
 
 publish-pkgs: $(PKGREPOTGT) .WAIT $(PUBLIFESTS)
@@ -140,6 +146,7 @@ publish-pkgs: $(PKGREPOTGT) .WAIT $(PUBLIFESTS)
 $(PKGDEST)/repo:
 	$(PKGREPO) create $@
 	$(PKGREPO) -s $@ set publisher/prefix=$(PKGPUBLISHER)
+	$(PKGREPO) -s $@ add-publisher $(PKGPUBLISHER_LOCALIZABLE)
 
 # Special rule for creating the incorporation.  Note that the incorporation
 # looks at all manifests, not just the ones listed in $(MANIFESTS).  This is

@@ -1,13 +1,22 @@
     pkg:/archiver/gnu-tar
     pkg:/crypto/ca-certificates
-    pkg:/developer/build/make
-    pkg:/developer/build/onbld
     pkg:/library/python-2/cherrypy
     pkg:/library/python-2/m2crypto
     pkg:/library/python-2/mako
     pkg:/library/python-2/ply
     pkg:/library/python-2/pybonjour
     pkg:/library/python-2/pycurl
+    pkg:/developer/assembler
+    pkg:/developer/base-developer-utilities
+    pkg:/developer/build/make
+    pkg:/developer/build/onbld
+    pkg:/developer/gnome/gettext
+    pkg:/developer/gnome/gnome-doc-utils
+    pkg:/developer/python/pylint
+    pkg:/developer/versioning/mercurial
+    pkg:/library/python-2/coverage-26
+    pkg:/library/python-2/jsonrpclib-26
+    pkg:/library/python-2/locale-services
     pkg:/library/python-2/pyopenssl-26
     pkg:/library/python-2/simplejson-26
     pkg:/package/svr4
@@ -19,9 +28,14 @@
     pkg:/system/library
     pkg:/system/library/dbus
     pkg:/system/library/gcc-4-runtime
+    pkg:/shell/ksh93
     pkg:/system/library/math
+    pkg:/system/library/security/crypto
     pkg:/system/linker
+    pkg:/system/locale/extra
     pkg:/system/network
+    pkg:/text/gnu-diffutils
+    pkg:/text/gnu-gettext
     pkg:/text/gnu-grep
     pkg:/text/locale
     pkg:/web/wget

@@ -23,11 +23,14 @@
 # Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
+# Copyright (C) 2013 by Jim Klimov - implemented the previously absent
+#    cloning of zones from specified snapshot, and avoidance of sys-unconfig
 
 . /usr/lib/brand/ipkg/common.ksh
 
 m_usage=$(gettext "clone {sourcezone}")
 f_nosource=$(gettext "Error: unable to determine source zone dataset.")
+f_badsource=$(gettext "Error: specified snapshot is invalid for this source zone.")
 
 # Clean up on failure
 trap_exit()
@@ -45,9 +48,29 @@ trap_exit()
 ROOT="rpool/ROOT"
 
 # Other brand clone options are invalid for this brand.
-while getopts "R:z:" opt; do
+while getopts "R:s:Xz:" opt; do
 	case $opt in
 		R)	ZONEPATH="$OPTARG" ;;
+		s)	case "$OPTARG" in
+			*@*) # Full snapshot name was provided, or just "@snap"
+			     # Split this into dataset name (even if empty) and
+			     # snapshot name (also may be empty)
+				SNAPNAME="`echo "$OPTARG" | sed 's/^[^@]*@//'`"
+				REQUESTED_DS="`echo "$OPTARG" | sed 's/\([^@]*\)@.*$/\1/'`"
+				;;
+			*/*) # Only dataset name was passed, so we will make a
+			     # snapshot there automatically and clone off it
+				SNAPNAME=""
+				REQUESTED_DS="$OPTARG"
+				;;
+			*)   # Only snapshot name was passed, so we will clone
+			     # the source zone's active ZBE and this snapshot
+				SNAPNAME="$OPTARG"
+				REQUESTED_DS=""
+				;;
+			esac
+			;;
+		X)	NO_SYSUNCONFIG=yes ;;
 		z)	ZONENAME="$OPTARG" ;;
 		*)	fail_usage "";;
 	esac
@@ -57,18 +80,37 @@ shift $((OPTIND-1))
 if [ $# -ne 1 ]; then
 	fail_usage "";
 fi
-
-sourcezone=$1
-
-# Find the active source zone dataset to clone.
-sourcezonepath=`/usr/sbin/zoneadm -z $sourcezone list -p | awk -F: '{print $4}'`
-if [ -z "$sourcezonepath" ]; then
-	fail_fatal "$f_nosource"
-fi
+sourcezone="$1"
 
 get_current_gzbe
-get_zonepath_ds $sourcezonepath
-get_active_ds $CURRENT_GZBE $ZONEPATH_DS
+
+if [ -z "$REQUESTED_DS" ]; then
+	# Find the active source zone dataset to clone.
+	sourcezonepath=`/usr/sbin/zoneadm -z $sourcezone list -p | awk -F: '{print $4}'`
+	if [ -z "$sourcezonepath" ]; then
+		fail_fatal "$f_nosource"
+	fi
+
+	get_zonepath_ds $sourcezonepath
+	get_active_ds $CURRENT_GZBE $ZONEPATH_DS
+else
+	# Sanity-check the provided dataset (should exist and be an IPS ZBE)
+	REQUESTED_DS="`echo "$REQUESTED_DS" | egrep '^.*/'"$sourcezone"'/ROOT/[^/]+$'`"
+	if [ $? != 0 -o x"$REQUESTED_DS" = x ]; then
+		fail_fatal "$f_badsource"
+	fi
+	zfs list -H -o \
+		org.opensolaris.libbe:parentbe,org.opensolaris.libbe:active \
+		"$REQUESTED_DS" > /dev/null || \
+			fail_fatal "$f_badsource"
+	ACTIVE_DS="$REQUESTED_DS"
+fi
+
+# Another sanity-check: requested snapshot exists for default or requested ZBE
+if [ x"$SNAPNAME" != x ]; then
+	zfs list -H "$ACTIVE_DS@$SNAPNAME" > /dev/null || \
+		fail_fatal "$f_badsource"
+fi
 
 #
 # Now set up the zone's datasets
@@ -95,20 +137,25 @@ fail_zonepath_in_rootds $zpds
 
 /usr/sbin/zfs create -o mountpoint=legacy -o zoned=on $zpds/$zpname/ROOT
 
-# make snapshot
-SNAPNAME=${ZONENAME}_snap
-SNAPNUM=0
-while [ $SNAPNUM -lt 100 ]; do
-	/usr/sbin/zfs snapshot $ACTIVE_DS@$SNAPNAME
-        if [ $? = 0 ]; then
-                break
-	fi
-	SNAPNUM=`expr $SNAPNUM + 1`
-	SNAPNAME="${ZONENAME}_snap$SNAPNUM"
-done
+if [ x"$SNAPNAME" = x ]; then
+	# make snapshot
+	SNAPNAME=${ZONENAME}_snap
+	SNAPNUM=0
+	while [ $SNAPNUM -lt 100 ]; do
+		/usr/sbin/zfs snapshot $ACTIVE_DS@$SNAPNAME
+		if [ $? = 0 ]; then
+			break
+		fi
+		SNAPNUM=`expr $SNAPNUM + 1`
+		SNAPNAME="${ZONENAME}_snap$SNAPNUM"
+	done
 
-if [ $SNAPNUM -ge 100 ]; then
-	fail_fatal "$f_zfs_create"
+	# NOTE: This artificially limits us to 100 clones of a "golden" zone
+	# into a same-named (test?) zone, unless clones are based on some
+	# same snapshot via command-line
+	if [ $SNAPNUM -ge 100 ]; then
+		fail_fatal "$f_zfs_create"
+	fi
 fi
 
 # do clone
@@ -149,7 +196,13 @@ trap trap_exit EXIT
 # ipkg brand zones.  The root won't be mounted for labeled brand zones.
 #
 is_brand_labeled
-(( $? == 0 )) && unconfigure_zone
+(( $? == 0 )) && if [ x"$NO_SYSUNCONFIG" = xyes ]; then
+	vlog "$v_mounting"
+	ZONE_IS_MOUNTED=1
+	zoneadm -z $ZONENAME mount -f || fatal "$e_badmount"
+else
+	unconfigure_zone
+fi
 
 trap - EXIT
 exit $ZONE_SUBPROC_OK

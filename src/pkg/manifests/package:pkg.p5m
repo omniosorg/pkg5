@@ -18,25 +18,26 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
 # Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
 #
 
 set name=pkg.fmri value=pkg:/package/pkg@$(PKGVERS)
 set name=pkg.summary value="Image Packaging System"
 set name=pkg.description \
-    value="The Image Packaging System (IPS), or pkg(5), is the software delivery system used on OpenSolaris systems.  This package contains the core command-line components and depot server."
-
-# XXX needed due to bug 18673
-set name=pkg.linted.pkglint.manifest003.1 value=true
+    value="The Image Packaging System (IPS), or pkg(5), is the software delivery system used on Oracle Solaris.  This package contains the core command-line components and pkg.depotd server."
 set name=info.classification \
     value=org.opensolaris.category.2008:System/Packaging
+set name=org.opensolaris.smf.fmri \
+    value=svc:/application/pkg/repositories-setup \
+    value=svc:/application/pkg/repositories-setup:default
 set name=variant.arch value=$(ARCH)
 dir  path=$(PYDIR)
 dir  path=$(PYDIRVP)
 dir  path=$(PYDIRVP)/pkg
-dir  path=$(PYDIRVP)/pkg/64
 file path=$(PYDIRVP)/pkg-0.1-py2.6.egg-info
+dir  path=$(PYDIRVP)/pkg/64
+file path=$(PYDIRVP)/pkg/64/_varcet.so
 file path=$(PYDIRVP)/pkg/__init__.py
 file path=$(PYDIRVP)/pkg/_varcet.so
 file path=$(PYDIRVP)/pkg/64/_varcet.so
@@ -46,6 +47,14 @@ file path=$(PYDIRVP)/pkg/64/pspawn.so
 file path=$(PYDIRVP)/pkg/64/solver.so
 file path=$(PYDIRVP)/pkg/64/syscallat.so
 dir  path=$(PYDIRVP)/pkg/actions
+#
+# We ship a 64-bit version of _actions.so because it's
+# needed by the sysrepo_p5p which is a mod_wsgi application
+# that runs in a 64-bit apache instance.
+#
+dir  path=$(PYDIRVP)/pkg/actions/64
+file path=$(PYDIRVP)/pkg/actions/64/_actions.so
+file path=$(PYDIRVP)/pkg/actions/64/_common.so
 file path=$(PYDIRVP)/pkg/actions/__init__.py
 file path=$(PYDIRVP)/pkg/actions/_actions.so
 file path=$(PYDIRVP)/pkg/actions/_common.so
@@ -63,12 +72,6 @@ file path=$(PYDIRVP)/pkg/actions/link.py
 file path=$(PYDIRVP)/pkg/actions/signature.py
 file path=$(PYDIRVP)/pkg/actions/unknown.py
 file path=$(PYDIRVP)/pkg/actions/user.py
-# We ship a 64-bit version of _actions.so because it's
-# needed by the sysrepo_p5p which is a mod_wsgi application
-# that runs in a 64-bit apache instance.
-dir  path=$(PYDIRVP)/pkg/actions/64
-file path=$(PYDIRVP)/pkg/actions/64/_actions.so
-file path=$(PYDIRVP)/pkg/actions/64/_common.so
 file path=$(PYDIRVP)/pkg/altroot.py
 file path=$(PYDIRVP)/pkg/api_common.py
 file path=$(PYDIRVP)/pkg/arch.so
@@ -86,10 +89,13 @@ file path=$(PYDIRVP)/pkg/client/__init__.py
 file path=$(PYDIRVP)/pkg/client/actuator.py
 file path=$(PYDIRVP)/pkg/client/api.py
 file path=$(PYDIRVP)/pkg/client/api_errors.py
+#
 # Don't worry about the libbe import; the python code looks for it in case
 # it can't import libbe_py, and is graceful in the face of its absence.
+#
 file path=$(PYDIRVP)/pkg/client/bootenv.py pkg.depend.bypass-generate=.*libbe.*
 file path=$(PYDIRVP)/pkg/client/debugvalues.py
+file path=$(PYDIRVP)/pkg/client/firmware.py
 file path=$(PYDIRVP)/pkg/client/history.py
 file path=$(PYDIRVP)/pkg/client/image.py
 file path=$(PYDIRVP)/pkg/client/imageconfig.py
@@ -101,9 +107,13 @@ file path=$(PYDIRVP)/pkg/client/linkedimage/__init__.py
 file path=$(PYDIRVP)/pkg/client/linkedimage/common.py
 file path=$(PYDIRVP)/pkg/client/linkedimage/system.py
 file path=$(PYDIRVP)/pkg/client/linkedimage/zone.py
+file path=$(PYDIRVP)/pkg/client/options.py
 file path=$(PYDIRVP)/pkg/client/pkg_solver.py
 file path=$(PYDIRVP)/pkg/client/pkgdefs.py
 file path=$(PYDIRVP)/pkg/client/pkgplan.py
+file path=$(PYDIRVP)/pkg/client/pkgremote.py
+file path=$(PYDIRVP)/pkg/client/plandesc.py
+file path=$(PYDIRVP)/pkg/client/printengine.py
 file path=$(PYDIRVP)/pkg/client/progress.py
 file path=$(PYDIRVP)/pkg/client/publisher.py
 file path=$(PYDIRVP)/pkg/client/query_parser.py
@@ -121,6 +131,7 @@ file path=$(PYDIRVP)/pkg/config.py
 file path=$(PYDIRVP)/pkg/cpiofile.py
 file path=$(PYDIRVP)/pkg/dependency.py
 file path=$(PYDIRVP)/pkg/depotcontroller.py
+file path=$(PYDIRVP)/pkg/digest.py
 file path=$(PYDIRVP)/pkg/elf.so
 file path=$(PYDIRVP)/pkg/facet.py
 dir  path=$(PYDIRVP)/pkg/file_layout
@@ -131,7 +142,6 @@ dir  path=$(PYDIRVP)/pkg/flavor
 file path=$(PYDIRVP)/pkg/flavor/__init__.py
 file path=$(PYDIRVP)/pkg/flavor/base.py
 file path=$(PYDIRVP)/pkg/flavor/depthlimitedmf.py
-file path=$(PYDIRVP)/pkg/flavor/depthlimitedmf27.py
 file path=$(PYDIRVP)/pkg/flavor/elf.py
 file path=$(PYDIRVP)/pkg/flavor/hardlink.py
 file path=$(PYDIRVP)/pkg/flavor/python.py
@@ -156,6 +166,7 @@ file path=$(PYDIRVP)/pkg/nrlock.py
 file path=$(PYDIRVP)/pkg/p5i.py
 file path=$(PYDIRVP)/pkg/p5p.py
 file path=$(PYDIRVP)/pkg/p5s.py
+file path=$(PYDIRVP)/pkg/pipeutils.py
 file path=$(PYDIRVP)/pkg/pkggzip.py
 file path=$(PYDIRVP)/pkg/pkgsubprocess.py
 file path=$(PYDIRVP)/pkg/pkgtarfile.py
@@ -204,15 +215,27 @@ dir  path=etc/security/auth_attr.d
 file path=etc/security/auth_attr.d/package:pkg
 dir  path=etc/security/exec_attr.d
 file path=etc/security/exec_attr.d/package:pkg
+dir  path=etc/user_attr.d
+file path=etc/user_attr.d/package:pkg
 dir  path=lib
 dir  path=lib/svc
 dir  path=lib/svc/manifest
 dir  path=lib/svc/manifest/application
-file path=lib/svc/manifest/application/pkg/pkg-mdns.xml pkg.depend.bypass-generate=.*
-file path=lib/svc/manifest/application/pkg/pkg-server.xml pkg.depend.bypass-generate=.*
+file path=lib/svc/manifest/application/pkg/pkg-mdns.xml \
+    pkg.depend.bypass-generate=.*
+file path=lib/svc/manifest/application/pkg/pkg-mirror.xml \
+    pkg.depend.bypass-generate=.*
+file path=lib/svc/manifest/application/pkg/pkg-repositories-setup.xml \
+    pkg.depend.bypass-generate=.*
+file path=lib/svc/manifest/application/pkg/pkg-server.xml \
+    pkg.depend.bypass-generate=.*
 dir  path=lib/svc/method
-file path=lib/svc/method/svc-pkg-depot pkg.depend.bypass-generate=.*
 file path=lib/svc/method/svc-pkg-mdns pkg.depend.bypass-generate=.*
+file path=lib/svc/method/svc-pkg-mirror
+file path=lib/svc/method/svc-pkg-repositories-setup
+file path=lib/svc/method/svc-pkg-server pkg.depend.bypass-generate=.*
+dir  path=lib/svc/share
+file path=lib/svc/share/pkg5_include.sh
 dir  path=usr
 dir  path=usr/bin
 file path=usr/bin/pkg
@@ -226,6 +249,7 @@ file path=usr/bin/pkgrecv
 file path=usr/bin/pkgrepo
 file path=usr/bin/pkgsend
 file path=usr/bin/pkgsign
+file path=usr/bin/pkgsurf
 dir  path=usr/lib
 file path=usr/lib/pkg.depotd mode=0755
 dir  path=usr/share
@@ -307,6 +331,70 @@ file path=usr/share/lib/pkg/web/en/stats.shtml
 file path=usr/share/lib/pkg/web/index.shtml
 file path=usr/share/lib/pkg/web/robots.txt
 file path=usr/share/lib/pkg/web/shared.shtml
+dir  path=usr/share/locale
+dir  path=usr/share/locale/ar
+dir  path=usr/share/locale/ar/LC_MESSAGES
+file path=usr/share/locale/ar/LC_MESSAGES/pkg.mo
+dir  path=usr/share/locale/ca
+dir  path=usr/share/locale/ca/LC_MESSAGES
+file path=usr/share/locale/ca/LC_MESSAGES/pkg.mo
+dir  path=usr/share/locale/cs
+dir  path=usr/share/locale/cs/LC_MESSAGES
+file path=usr/share/locale/cs/LC_MESSAGES/pkg.mo
+dir  path=usr/share/locale/de
+dir  path=usr/share/locale/de/LC_MESSAGES
+file path=usr/share/locale/de/LC_MESSAGES/pkg.mo
+dir  path=usr/share/locale/es
+dir  path=usr/share/locale/es/LC_MESSAGES
+file path=usr/share/locale/es/LC_MESSAGES/pkg.mo
+dir  path=usr/share/locale/fr
+dir  path=usr/share/locale/fr/LC_MESSAGES
+file path=usr/share/locale/fr/LC_MESSAGES/pkg.mo
+dir  path=usr/share/locale/he
+dir  path=usr/share/locale/he/LC_MESSAGES
+file path=usr/share/locale/he/LC_MESSAGES/pkg.mo
+dir  path=usr/share/locale/hu
+dir  path=usr/share/locale/hu/LC_MESSAGES
+file path=usr/share/locale/hu/LC_MESSAGES/pkg.mo
+dir  path=usr/share/locale/id
+dir  path=usr/share/locale/id/LC_MESSAGES
+file path=usr/share/locale/id/LC_MESSAGES/pkg.mo
+dir  path=usr/share/locale/it
+dir  path=usr/share/locale/it/LC_MESSAGES
+file path=usr/share/locale/it/LC_MESSAGES/pkg.mo
+dir  path=usr/share/locale/ja
+dir  path=usr/share/locale/ja/LC_MESSAGES
+file path=usr/share/locale/ja/LC_MESSAGES/pkg.mo
+dir  path=usr/share/locale/ko
+dir  path=usr/share/locale/ko/LC_MESSAGES
+file path=usr/share/locale/ko/LC_MESSAGES/pkg.mo
+dir  path=usr/share/locale/nl
+dir  path=usr/share/locale/nl/LC_MESSAGES
+file path=usr/share/locale/nl/LC_MESSAGES/pkg.mo
+dir  path=usr/share/locale/pl
+dir  path=usr/share/locale/pl/LC_MESSAGES
+file path=usr/share/locale/pl/LC_MESSAGES/pkg.mo
+dir  path=usr/share/locale/pt_BR
+dir  path=usr/share/locale/pt_BR/LC_MESSAGES
+file path=usr/share/locale/pt_BR/LC_MESSAGES/pkg.mo
+dir  path=usr/share/locale/ru
+dir  path=usr/share/locale/ru/LC_MESSAGES
+file path=usr/share/locale/ru/LC_MESSAGES/pkg.mo
+dir  path=usr/share/locale/sk
+dir  path=usr/share/locale/sk/LC_MESSAGES
+file path=usr/share/locale/sk/LC_MESSAGES/pkg.mo
+dir  path=usr/share/locale/sv
+dir  path=usr/share/locale/sv/LC_MESSAGES
+file path=usr/share/locale/sv/LC_MESSAGES/pkg.mo
+dir  path=usr/share/locale/zh_CN
+dir  path=usr/share/locale/zh_CN/LC_MESSAGES
+file path=usr/share/locale/zh_CN/LC_MESSAGES/pkg.mo
+dir  path=usr/share/locale/zh_HK
+dir  path=usr/share/locale/zh_HK/LC_MESSAGES
+file path=usr/share/locale/zh_HK/LC_MESSAGES/pkg.mo
+dir  path=usr/share/locale/zh_TW
+dir  path=usr/share/locale/zh_TW/LC_MESSAGES
+file path=usr/share/locale/zh_TW/LC_MESSAGES/pkg.mo
 dir  path=usr/share/man
 dir  path=usr/share/man/ja_JP.UTF-8
 dir  path=usr/share/man/ja_JP.UTF-8/man1
@@ -337,6 +425,7 @@ file path=usr/share/man/man1/pkgrecv.1
 file path=usr/share/man/man1/pkgrepo.1
 file path=usr/share/man/man1/pkgsend.1
 file path=usr/share/man/man1/pkgsign.1
+file path=usr/share/man/man1/pkgsurf.1
 dir  path=usr/share/man/man1m
 file path=usr/share/man/man1m/pkg.depotd.1m
 dir  path=usr/share/man/man5
@@ -364,8 +453,11 @@ file path=usr/share/pkg/transforms/developer
 file path=usr/share/pkg/transforms/documentation
 file path=usr/share/pkg/transforms/locale
 file path=usr/share/pkg/transforms/smf-manifests
+dir  path=var/cache/pkg/mirror
+dir  path=var/log/pkg/mirror
 group groupname=pkg5srv gid=97
-user username=pkg5srv gcos-field="pkg(5) server UID" group=pkg5srv uid=97
+user username=pkg5srv gcos-field="pkg(5) server UID" group=pkg5srv password=NP \
+    uid=97
 legacy pkg=SUNWipkg version=0.0.0
 license cr_Oracle license=cr_Oracle
 license lic_gustaebel license=lic_gustaebel

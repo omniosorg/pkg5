@@ -21,9 +21,10 @@
 #
 
 #
-# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
+import errno
 import getopt
 import gettext
 import locale
@@ -42,7 +43,7 @@ import pkg.misc as misc
 import pkg.publish.dependencies as dependencies
 from pkg.misc import msg, emsg, PipeError
 
-CLIENT_API_VERSION = 71
+CLIENT_API_VERSION = 75
 PKG_CLIENT_NAME = "pkgdepend"
 
 DEFAULT_SUFFIX = ".res"
@@ -87,8 +88,9 @@ Usage:
 
 Subcommands:
         pkgdepend generate [-IMm] -d dir [-d dir] [-D name=value] [-k path]
-            manifest_path
-        pkgdepend [options] resolve [-dmosv] manifest ...
+            manifest_file
+        pkgdepend resolve [-EmoSv] [-d output_dir]
+            [-e external_package_file]... [-s suffix] manifest_file ...
 
 Options:
         -R dir
@@ -287,6 +289,11 @@ def resolve(args, img_dir):
                                                         system_patterns.append(
                                                             l)
                         except EnvironmentError, e:
+                                if e.errno == errno.ENOENT:
+                                        error("%s: '%s'" %
+                                            (e.args[1], e.filename),
+                                            cmd="resolve")
+                                        return 1
                                 raise api_errors._convert_error(e)
                 if not system_patterns:
                         error(_("External package list files were provided but "
@@ -483,8 +490,13 @@ def pkgdeps_to_dir(pkg_deps, manifest_paths, out_dir, suffix, echo_manifest):
                 try:
                         os.makedirs(out_dir)
                 except EnvironmentError, e:
-                        emsg(_("Out dir %s does not exist and could not be "
-                            "created. Error is: %s") % e)
+                        e_dic = {"dir": out_dir}
+                        if len(e.args) > 0:
+                                e_dic["err"] = e.args[1]
+                        else:
+                                e_dic["err"] = e.args[0]
+                        emsg(_("Out dir %(out_dir)s does not exist and could "
+                            "not be created. Error is: %(err)s") % e_dic)
                         return 1
         if suffix and suffix[0] != ".":
                 suffix = "." + suffix
@@ -529,7 +541,8 @@ def pkgdeps_in_place(pkg_deps, manifest_paths, suffix, echo_manifest):
 
 def main_func():
         misc.setlocale(locale.LC_ALL, "", error)
-        gettext.install("pkg", "/usr/share/locale")
+        gettext.install("pkg", "/usr/share/locale",
+            codeset=locale.getpreferredencoding())
 
         try:
                 opts, pargs = getopt.getopt(sys.argv[1:], "R:?",

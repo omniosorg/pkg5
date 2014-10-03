@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
 #
 
 # Some pkg(5) specific lint manifest checks
@@ -30,6 +30,7 @@ from pkg.lint.engine import lint_fmri_successor
 import pkg.fmri as fmri
 import pkg.lint.base as base
 import os.path
+import ConfigParser
 
 class PkgManifestChecker(base.ManifestChecker):
         """A class to check manifests."""
@@ -43,40 +44,70 @@ class PkgManifestChecker(base.ManifestChecker):
                 self.ref_lastnames = {}
                 self.lint_lastnames = {}
                 self.processed_lastnames = []
+
+                # maps package names to a list of packages which depend on them.
+                self.dependencies = {}
+
                 super(PkgManifestChecker, self).__init__(config)
 
         def startup(self, engine):
 
-                def update_names(pfmri, dic):
-                        name = os.path.basename(pfmri.get_name())
-                        if name in dic:
-                                dic[name].append(pfmri)
-                        else:
-                                dic[name] = [pfmri]
-
-                engine.logger.debug(
-                    _("Seeding reference manifest duplicates dictionaries."))
-                for manifest in engine.gen_manifests(engine.ref_api_inst,
-                    release=engine.release):
+                def seed_names_dict(manifest, dic):
                         if "pkg.renamed" in manifest or \
                             "pkg.obsolete" in manifest:
-                                continue
-                        update_names(manifest.fmri, self.ref_lastnames)
+                                return
+                        name = os.path.basename(manifest.fmri.get_name())
+                        if name in dic:
+                                dic[name].append(manifest.fmri)
+                        else:
+                                dic[name] = [manifest.fmri]
+
+                def seed_depend_dict(mf, dic):
+                        """Updates a dictionary of package names that declare
+                        dependencies, keyed by the depend action fmri name.
+                        We drop versions and consider all dependency types
+                        except 'incorporate'."""
+
+                        name = mf.fmri
+                        for action in mf.gen_actions_by_type("depend"):
+                                if action.attrs.get("type") == "incorporate":
+                                        continue
+                                dep = action.attrs["fmri"]
+                                try:
+                                        if isinstance(dep, basestring):
+                                                f = fmri.PkgFmri(dep)
+                                                dic.setdefault(
+                                                    f.get_name(), []
+                                                    ).append(name)
+                                        elif isinstance(dep, list):
+                                                for d in dep:
+                                                        f = fmri.PkgFmri(d)
+                                                        dic.setdefault(
+                                                            f.get_name(), []
+                                                            ).append(name)
+                                # If we have a bad FMRI, this will be picked up
+                                # by pkglint.action006 and pkglint.action009.
+                                except fmri.FmriError:
+                                        pass
 
                 engine.logger.debug(
-                    _("Seeding lint manifest duplicates dictionaries."))
+                    _("Seeding reference manifest dictionaries."))
+                for manifest in engine.gen_manifests(engine.ref_api_inst,
+                    release=engine.release):
+                        seed_depend_dict(manifest, self.dependencies)
+                        seed_names_dict(manifest, self.ref_lastnames)
+
+                engine.logger.debug(
+                    _("Seeding lint manifest dictionaries."))
                 for manifest in engine.gen_manifests(engine.lint_api_inst,
                     release=engine.release, pattern=engine.pattern):
-                        if "pkg.renamed" in manifest \
-                            or "pkg.obsolete" in manifest:
-                                continue
-                        update_names(manifest.fmri, self.lint_lastnames)
+                        seed_depend_dict(manifest, self.dependencies)
+                        seed_names_dict(manifest, self.lint_lastnames)
 
                 for manifest in engine.lint_manifests:
-                        if "pkg.renamed" in manifest \
-                            or "pkg.obsolete" in manifest:
-                                continue
-                        update_names(manifest.fmri, self.lint_lastnames)
+                        seed_depend_dict(manifest, self.dependencies)
+                        seed_names_dict(manifest, self.lint_lastnames)
+
                 self._merge_names(self.lint_lastnames, self.ref_lastnames,
                     ignore_pubs=engine.ignore_pubs)
 
@@ -84,9 +115,12 @@ class PkgManifestChecker(base.ManifestChecker):
                 """Checks for correct package obsoletion.
                 * error if obsoleted packages contain anything other than
                   set or signature actions
-                * error if pkg.description or pkg.summary are set."""
+                * error if pkg.description or pkg.summary are set.
+                * warn if other packages have non-incorporate dependencies on
+                  this package.
+                """
 
-                if "pkg.obsolete" not in manifest:
+                if manifest.get("pkg.obsolete", "false") != "true":
                         return
 
                 for key in [ "pkg.description", "pkg.summary" ]:
@@ -136,6 +170,28 @@ class PkgManifestChecker(base.ManifestChecker):
                             "set or signature actions") % manifest.fmri,
                             msgid=lint_id)
 
+                # determine whether other packages we know about have
+                # dependencies on this obsolete package.
+                obsolete_depends = set()
+                lint_id = "%s%s.3" % (self.name, pkglint_id)
+
+                depends = set(
+                    self.dependencies.get(manifest.fmri.get_name(), []))
+                if depends:
+                        for depending_package in depends:
+                                p = engine.get_manifest(str(depending_package),
+                                    search_type=engine.LATEST_SUCCESSOR)
+                                if p.get("pkg.obsolete", None) != "true":
+                                        obsolete_depends.add(p.fmri)
+                if obsolete_depends:
+                        # this is only a warning, because at install-time the
+                        # solver may still be able to find a non-obsolete
+                        # version of a package.
+                        engine.warning("obsolete package %(pkg)s is depended "
+                            "upon by the following packages: %(deps)s"
+                            % {"pkg": manifest.fmri, "deps": " ".join(
+                            [str(fmri) for fmri in obsolete_depends])},
+                            msgid=lint_id)
 
         obsoletion.pkglint_desc = _(
             "Obsolete packages should have valid contents.")
@@ -144,7 +200,9 @@ class PkgManifestChecker(base.ManifestChecker):
                 """Checks for correct package renaming.
                 * error if renamed packages contain anything other than set,
                   signature and depend actions.
-                * follows renames, ensuring they're not circular."""
+                * follows renames, ensuring they're not circular, and don't
+                  end up at an obsolete package.
+                """
 
                 if "pkg.renamed" not in manifest:
                         return
@@ -155,7 +213,7 @@ class PkgManifestChecker(base.ManifestChecker):
                 count_depends = 0
 
                 for action in manifest.gen_actions():
-                        if action.name not in [ "set", "depend", "signature"]:
+                        if action.name not in ["set", "depend", "signature"]:
 
                                 if engine.linted(action=action,
                                     manifest=manifest,
@@ -200,6 +258,14 @@ class PkgManifestChecker(base.ManifestChecker):
                                     "%s: possible missing package") %
                                     manifest.fmri, msgid="%s%s.3" %
                                     (self.name, pkglint_id))
+                        else:
+                                if "pkg.obsolete" not in mf:
+                                        return
+                                engine.error(_("package %(pkg)s was renamed "
+                                    "to an obsolete package %(obs)s") %
+                                    {"pkg": manifest.fmri, "obs": mf.fmri},
+                                    msgid="%s%s.5" % (self.name, pkglint_id))
+
                 except base.LintException, err:
                         engine.error(_("package renaming: %s") % str(err),
                             msgid="%s%s.4" % (self.name, pkglint_id) )
@@ -238,6 +304,7 @@ class PkgManifestChecker(base.ManifestChecker):
                                 continue
 
                         if action.name == "file" and \
+                            action.attrs.get("pkg.filetype") == "elf" or \
                             "elfarch" in action.attrs:
                                 has_arch_file = True
 
@@ -292,6 +359,12 @@ class PkgManifestChecker(base.ManifestChecker):
                         return
 
                 fmris = self.ref_lastnames[lastname]
+
+                # we ignored renamed or obsolete packages when building
+                # ref_lastnames, so this package might not be there,
+                # in which case, we can ignore this package too.
+                if manifest.fmri not in fmris:
+                        return
 
                 if len(self.ref_lastnames[lastname]) > 1:
                         plist = sorted((f.get_fmri() for f in fmris))
@@ -420,6 +493,195 @@ class PkgManifestChecker(base.ManifestChecker):
                              ignore_linted=True)
 
         linted.pkglint_desc = _("Show manifests with pkg.linted attributes.")
+
+        def info_classification(self, manifest, engine, pkglint_id="008"):
+                """Checks that the info.classification attribute is valid."""
+
+                if (not "info.classification" in manifest) or \
+                    self.skip_classification_check:
+                        return
+
+                if not self.classification_data or \
+                    not self.classification_data.sections():
+                        engine.error(_("Unable to perform manifest checks "
+                            "for info.classification attribute: %s") %
+                            self.bad_classification_data,
+                            msgid="%s%s.1" % (self.name, pkglint_id))
+                        self.skip_classification_check = True
+                        return
+
+                action = engine.get_attr_action("info.classification", manifest)
+                engine.advise_loggers(action=action, manifest=manifest)
+
+                for item in action.attrlist("value"):
+                        self._check_info_classification_value(engine, item,
+                            manifest.fmri, "%s%s" % (self.name, pkglint_id))
+
+        info_classification.pkglint_desc = _(
+            "info.classification attribute should be valid.")
+
+        def _check_info_classification_value(self, engine, value, fmri, msgid):
+
+                prefix = "org.opensolaris.category.2008:"
+
+                if not prefix in value:
+                        engine.error(_("info.classification attribute "
+                            "does not contain '%(prefix)s' for %(fmri)s") %
+                            locals(), msgid="%s.2" % msgid)
+                        return
+
+                classification = value.replace(prefix, "")
+
+                components = classification.split("/", 1)
+                if len(components) != 2:
+                        engine.error(_("info.classification value %(value)s "
+                            "does not match "
+                            "%(prefix)s<Section>/<Category> for %(fmri)s") %
+                            locals(), msgid="%s.3" % msgid)
+                        return
+
+                # the data file looks like:
+                # [Section]
+                # category = Cat1,Cat2,Cat3
+                #
+                # We expect the info.classification action to look like:
+                # org.opensolaris.category.2008:Section/Cat2
+                #
+                section, category = components
+                valid_value = True
+                ref_categories = []
+                try:
+                        ref_categories = self.classification_data.get(section,
+                            "category").split(",")
+                        if category not in ref_categories:
+                                valid_value = False
+                except ConfigParser.NoSectionError:
+                        sections = self.classification_data.sections()
+                        engine.error(_("info.classification value %(value)s "
+                            "does not contain one of the valid sections "
+                            "%(ref_sections)s for %(fmri)s.") %
+                            {"value": value,
+                            "ref_sections": ", ".join(sorted(sections)),
+                            "fmri": fmri},
+                            msgid="%s.4" % msgid)
+                        return
+                except ConfigParser.NoOptionError:
+                        engine.error(_("Invalid info.classification value for "
+                            "%(fmri)s: data file %(file)s does not have a "
+                            "'category' key for section %(section)s.") %
+                            {"file": self.classification_path,
+                            "section": section,
+                            "fmri": fmri},
+                             msgid="%s.5" % msgid)
+                        return
+
+                if valid_value:
+                        return
+
+                ref_cats = self.classification_data.get(section, "category")
+                engine.error(_("info.classification attribute in %(fmri)s "
+                    "does not contain one of the values defined for the "
+                    "section %(section)s: %(ref_cats)s from %(path)s") %
+                    {"section": section,
+                    "fmri": fmri,
+                    "path": self.classification_path,
+                    "ref_cats": ref_cats },
+                    msgid="%s.6" % msgid)
+
+        def bogus_description(self, manifest, engine, pkglint_id="009"):
+                """Warns when a package has an empty summary or description,
+                or a description which is identical to the summary."""
+
+                desc = manifest.get("pkg.description", None)
+                summ = manifest.get("pkg.summary", None)
+
+                if desc == "":
+                        action = engine.get_attr_action("pkg.description",
+                            manifest)
+                        engine.advise_loggers(action=action, manifest=manifest)
+                        engine.warning(_("Empty pkg.description in %s") %
+                            manifest.fmri,
+                            msgid="%s%s.1" % (self.name, pkglint_id))
+
+                if summ == "":
+                        action = engine.get_attr_action("pkg.summary",
+                            manifest)
+                        engine.advise_loggers(action=action, manifest=manifest)
+                        engine.warning(_("Empty pkg.summary in %s") %
+                            manifest.fmri,
+                            msgid="%s%s.3" % (self.name, pkglint_id))
+
+                if desc == summ and desc:
+                        action = engine.get_attr_action("pkg.summary", manifest)
+                        engine.advise_loggers(action=action, manifest=manifest)
+                        engine.warning(_("pkg.description matches pkg.summary "
+                            "in %s") % manifest.fmri,
+                            msgid="%s%s.2" % (self.name, pkglint_id))
+
+        bogus_description.pkglint_desc = _(
+            "A package's description should not match its summary.")
+
+        def missing_attrs(self, manifest, engine, pkglint_id="010"):
+                """Various checks for missing attributes
+                * error when a package doesn't have a pkg.summary
+                (pkg.fmri should be present too, but that would get caught
+                before we get here)
+                """
+                if "pkg.renamed" in manifest:
+                        return
+
+                if "pkg.obsolete" in manifest:
+                        return
+
+                if "pkg.summary" not in manifest:
+                        engine.error(
+                            _("Missing attribute 'pkg.summary' in %s") %
+                            manifest.fmri,
+                            msgid="%s%s.2" % (self.name, pkglint_id))
+
+        missing_attrs.pkglint_desc = _(
+            "Standard package attributes should be present.")
+
+        def missing_smf_fmri(self, manifest, engine, pkglint_id="011"):
+                """If we deliver files to lib/svc/manifest or
+                var/svc/manifest, we should include an org.opensolaris.smf.fmri
+                attribute in the manifest.  This only reports a warning, because
+                without pkglint content-checking support, we do not know whether
+                the file actually contains any services or instances."""
+
+                smf_manifests = []
+                for action in manifest.gen_actions_by_type("file"):
+
+                        if "path" not in action.attrs:
+                                contine
+
+                        path = action.attrs["path"]
+
+                        if not path.endswith(".xml"):
+                                continue
+
+                        if not (path.startswith("lib/svc/manifest") or
+                            path.startswith("var/svc/manifest")):
+                                continue
+                        smf_manifests.append(path)
+
+                if not smf_manifests:
+                        return
+
+                if "org.opensolaris.smf.fmri" in manifest:
+                        return
+
+                engine.warning(
+                    _("SMF manifests were delivered by %(pkg)s, but no "
+                    "org.opensolaris.smf.fmri attribute was found. "
+                    "Manifests found were: %(manifests)s") %
+                    {"manifests": " ".join(smf_manifests),
+                    "pkg": manifest.fmri},
+                    msgid="%s%s" % (self.name, pkglint_id))
+
+        missing_smf_fmri.pkglint_desc = _(
+            "Packages delivering SMF services should have "
+            "org.opensolaris.smf.fmri attributes.")
 
         def _merge_names(self, src, target, ignore_pubs=True):
                 """Merges the given src list into the target list"""

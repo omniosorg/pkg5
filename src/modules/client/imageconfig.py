@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2007, 2012, Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
 #
 
 import errno
@@ -183,6 +183,9 @@ class ImageConfig(cfg.FileConfig):
                 cfg.PropertySection("facet", properties=[
                     cfg.PropertyTemplate("^facet\..*", prop_type=cfg.PropBool),
                 ]),
+                cfg.PropertySection("inherited_facet", properties=[
+                    cfg.PropertyTemplate("^facet\..*", prop_type=cfg.PropBool),
+                ]),
                 cfg.PropertySection("mediators", properties=[
                     cfg.PropertyTemplate("^[A-Za-z0-9\-]+\.implementation$"),
                     cfg.PropertyTemplate("^[A-Za-z0-9\-]+\.implementation-version$",
@@ -208,9 +211,17 @@ class ImageConfig(cfg.FileConfig):
                     # Publisher transport information.
                     cfg.PropPubURIList("mirrors",
                         value_map=_val_map_none),
+                    # extended information about mirrors
+                    cfg.PropPubURIDictionaryList("mirror_info",
+                        value_map=_val_map_none),
                     cfg.PropPubURI("origin", value_map=_val_map_none),
                     cfg.PropPubURIList("origins",
                         value_map=_val_map_none),
+                    # extended information about origins
+                    cfg.PropPubURIDictionaryList("origin_info",
+                        value_map=_val_map_none),
+                    # when keys/certs can be set per-origin/mirror, these
+                    # should move into origin_info/mirror_info
                     cfg.Property("ssl_cert", value_map=_val_map_none),
                     cfg.Property("ssl_key", value_map=_val_map_none),
                     # Publisher signing information.
@@ -218,7 +229,6 @@ class ImageConfig(cfg.FileConfig):
                         allowed=list(sigpolicy.Policy.policies()) + [DEF_TOKEN],
                         default=DEF_TOKEN),
                     cfg.PropList("property.signature-required-names"),
-                    cfg.PropList("property.proxied-urls"),
                     cfg.PropList("intermediate_certs"),
                     cfg.PropList("approved_ca_certs"),
                     cfg.PropList("revoked_ca_certs"),
@@ -252,7 +262,12 @@ class ImageConfig(cfg.FileConfig):
         }
 
         def __init__(self, cfgpathname, imgroot, overrides=misc.EmptyDict,
-            version=None):
+            version=None, sysrepo_proxy=False):
+                """
+                'write_sysrepo_proxy' is a boolean, set to 'True' if this
+                ImageConfig should write the special publisher.SYSREPO_PROXY
+                token to the backing FileConfig in place of any actual proxies
+                used at runtime."""
                 self.__imgroot = imgroot
                 self.__publishers = {}
                 self.__validate = False
@@ -260,6 +275,7 @@ class ImageConfig(cfg.FileConfig):
                 self.mediators = {}
                 self.variants = variant.Variants()
                 self.linked_children = {}
+                self.write_sysrepo_proxy = sysrepo_proxy
                 cfg.FileConfig.__init__(self, cfgpathname,
                     definitions=self.__defs, overrides=overrides,
                     version=version)
@@ -385,8 +401,11 @@ class ImageConfig(cfg.FileConfig):
                 self.variants.update(idx.get("variant", {}))
                 # facets are encoded so they can contain '/' characters.
                 for k, v in idx.get("facet", {}).iteritems():
-                        self.facets[urllib.unquote(k)] = v
-
+                        # convert facet name from unicode to a string
+                        self.facets[str(urllib.unquote(k))] = v
+                for k, v in idx.get("inherited_facet", {}).iteritems():
+                        # convert facet name from unicode to a string
+                        self.facets._set_inherited(str(urllib.unquote(k)), v)
 
                 # Ensure architecture and zone variants are defined.
                 if "variant.arch" not in self.variants:
@@ -452,6 +471,9 @@ class ImageConfig(cfg.FileConfig):
                 # Load mediator data.
                 for entry, value in idx.get("mediators", {}).iteritems():
                         mname, mtype = entry.rsplit(".", 1)
+                        # convert mediator name+type from unicode to a string
+                        mname = str(mname)
+                        mtype = str(mtype)
                         self.mediators.setdefault(mname, {})[mtype] = value
 
                 # Now re-enable validation and validate the properties.
@@ -521,9 +543,19 @@ class ImageConfig(cfg.FileConfig):
                         self.remove_section("facet")
                 except cfg.UnknownSectionError:
                         pass
-                for f in self.facets:
-                        self.set_property("facet", urllib.quote(f, ""), 
-                            self.facets[f])
+                # save local facets
+                for f in self.facets.local:
+                        self.set_property("facet",
+                            urllib.quote(f, ""), self.facets.local[f])
+
+                try:
+                        self.remove_section("inherited_facet")
+                except cfg.UnknownSectionError:
+                        pass
+                # save inherited facets
+                for f in self.facets.inherited:
+                        self.set_property("inherited_facet",
+                            urllib.quote(f, ""), self.facets.inherited[f])
 
                 try:
                         self.remove_section("mediators")
@@ -586,11 +618,62 @@ class ImageConfig(cfg.FileConfig):
                                         break
                         self.set_property(section, "ssl_cert", p)
 
+                        # Store per-origin/mirror information.  For now, this
+                        # information is limited to the proxy used for each URI.
+                        for repouri_list, prop_name in [
+                            (repo.origins, "origin_info"),
+                            (repo.mirrors, "mirror_info")]:
+                                plist = []
+                                for r in repouri_list:
+                                        if not r.proxies:
+                                                plist.append(
+                                                        {"uri": r.uri,
+                                                        "proxy": ""})
+                                                continue
+                                        for p in r.proxies:
+                                                # sys_cfg proxy values should
+                                                # always be '<sysrepo>' so that
+                                                # if the system-repository port
+                                                # is changed, that gets picked
+                                                # up in the image.  See
+                                                # read_publisher(..) and
+                                                # BlendedConfig.__merge_publishers
+                                                if self.write_sysrepo_proxy:
+                                                        puri = publisher.SYSREPO_PROXY
+                                                elif not p:
+                                                        # we do not want None
+                                                        # stringified to 'None'
+                                                        puri = ""
+                                                else:
+                                                        puri = p.uri
+                                                plist.append(
+                                                    {"uri": r.uri,
+                                                    "proxy": puri})
+
+                                self.set_property(section, prop_name,
+                                    str(plist))
+
                         # Store publisher UUID.
                         self.set_property(section, "uuid", pub.client_uuid)
 
-                        # Write selected repository data.
-                        for prop in ("origins", "mirrors", "collection_type",
+                        # Write repository origins and mirrors, ensuring the
+                        # list contains unique values.  We must check for
+                        # uniqueness manually, rather than using a set()
+                        # to properly preserve the order in which origins and
+                        # mirrors are set.
+                        for prop in ("origins", "mirrors"):
+                                pval = [str(v) for v in
+                                    getattr(repo, prop)]
+                                values = set()
+                                unique_pval = []
+                                for item in pval:
+                                        if item not in values:
+                                                values.add(item)
+                                                unique_pval.append(item)
+
+                                self.set_property(section, prop, unique_pval)
+
+                        for prop in ("collection_type",
                             "description", "legal_uris", "name",
                             "refresh_seconds", "registered", "registration_uri",
                             "related_uris", "sort_policy"):
@@ -601,11 +684,7 @@ class ImageConfig(cfg.FileConfig):
                                         # can be stringified properly.
                                         pval = [str(v) for v in pval]
 
-                                cfg_key = prop
-                                if prop not in ("origins", "mirrors"):
-                                        # All other properties need to be
-                                        # prefixed.
-                                        cfg_key = "repo.%s" % cfg_key
+                                cfg_key = "repo.%s" % prop
                                 if prop == "registration_uri":
                                         # Must be stringified.
                                         pval = str(pval)
@@ -716,15 +795,59 @@ class ImageConfig(cfg.FileConfig):
                 return linked_props
 
         def read_publisher(self, sname, sec_idx):
-                # s is the section of the config file.
+                # sname is the section of the config file.
                 # publisher block has alias, prefix, origin, and mirrors
 
-                # Ensure that the list of origins is unique and complete;
-                # add 'origin' to list of origins if it doesn't exist already.
-                origins = set(sec_idx.get("origins", []))
+                # Add 'origin' to list of origins if it doesn't exist already.
+                origins = sec_idx.get("origins", [])
                 origin = sec_idx.get("origin", None)
-                if origin:
-                        origins.add(origin)
+                if origin and origin not in origins:
+                        origins.append(origin)
+
+                mirrors = sec_idx.get("mirrors", [])
+
+                # [origin|mirror]_info dictionaries map URIs to a list of dicts
+                # containing property values for that URI.  (we allow a single
+                # origin to have several dictionaries with different properties)
+                # As we go, we crosscheck against the lists of known
+                # origins/mirrors.
+                #
+                # For now, the only property tracked on a per-origin/mirror
+                # basis is which proxy (if any) is used to access it. In the
+                # future, we may wish to store additional information per-URI,
+                # eg.
+                # {"proxy": "<uri>", "ssl_key": "<key>", "ssl_cert": "<cert>"}
+                #
+                # Storing multiple dictionaries, means we could store several
+                # proxies or key/value pairs per URI if necessary.  This list
+                # of dictionaries is intentionally flat, so that the underlying
+                # configuration file is easily human-readable.
+                #
+                origin_info = {}
+                mirror_info = {}
+                for repouri_info, prop, orig in [
+                    (origin_info, "origin_info", origins),
+                    (mirror_info, "mirror_info", mirrors)]:
+                        # get the list of dictionaries from the cfg
+                        plist = sec_idx.get(prop, [])
+                        if not plist:
+                                continue
+                        for uri_info in plist:
+                                uri = uri_info["uri"]
+                                proxy = uri_info.get("proxy")
+                                # Convert a "" proxy value to None
+                                if proxy == "":
+                                        proxy = None
+
+                                # if the uri isn't in either 'origins' or
+                                # 'mirrors', then we've likely deleted it
+                                # using an older pkg(5) client format.  We
+                                # must ignore this entry.
+                                if uri not in orig:
+                                        continue
+
+                                repouri_info.setdefault(uri, []).append(
+                                    {"uri": uri, "proxy": proxy})
 
                 props = {}
                 for k, v in sec_idx.iteritems():
@@ -761,18 +884,38 @@ class ImageConfig(cfg.FileConfig):
                 ssl_cert = sec_idx["ssl_cert"]
 
                 r = publisher.Repository(**repo_data)
-                for o in origins:
-                        if not any(o.startswith(scheme + ":")
-                            for scheme in publisher.SSL_SCHEMES):
-                                r.add_origin(o)
-                                continue
-                        r.add_origin(o, ssl_cert=ssl_cert, ssl_key=ssl_key)
-                for m in sec_idx["mirrors"]:
-                        if not any(m.startswith(scheme + ":")
-                            for scheme in publisher.SSL_SCHEMES):
-                                r.add_mirror(m)
-                                continue
-                        r.add_mirror(m, ssl_cert=ssl_cert, ssl_key=ssl_key)
+
+                # Set per-origin/mirror URI properties
+                for (uri_list, info_map, repo_add_func) in [
+                    (origins, origin_info, r.add_origin),
+                    (mirrors, mirror_info, r.add_mirror)]:
+                        for uri in uri_list:
+                                # If we didn't gather property information for
+                                # this origin/mirror, assume a single
+                                # origin/mirror with no proxy.
+                                plist = info_map.get(uri, [{}])
+                                proxies = []
+                                for uri_info in plist:
+                                        proxy = uri_info.get("proxy")
+                                        if proxy:
+                                                if proxy == \
+                                                    publisher.SYSREPO_PROXY:
+                                                        p =  publisher.ProxyURI(
+                                                            None, system=True)
+                                                else:
+                                                        p = publisher.ProxyURI(
+                                                            proxy)
+                                                proxies.append(p)
+
+                                if not any(uri.startswith(scheme + ":") for
+                                    scheme in publisher.SSL_SCHEMES):
+                                        repouri = publisher.RepositoryURI(uri,
+                                            proxies = proxies)
+                                else:
+                                        repouri = publisher.RepositoryURI(uri,
+                                            ssl_cert=ssl_cert, ssl_key=ssl_key,
+                                            proxies=proxies)
+                                repo_add_func(repouri)
 
                 pub = publisher.Publisher(prefix, alias=sec_idx["alias"],
                     client_uuid=sec_idx["uuid"], disabled=sec_idx["disabled"],
@@ -822,6 +965,8 @@ class NullSystemPublisher(object):
         """Dummy system publisher object for use when an image doesn't use a
         system publisher."""
 
+        # property.proxied-urls is here for backwards compatibility, it is no
+        # longer used by pkg(5)
         __supported_props = ("publisher-search-order", "property.proxied-urls",
             SIGNATURE_POLICY, "signature-required-names")
 
@@ -918,7 +1063,7 @@ class BlendedConfig(object):
                 self.__system_override_properties = (SIGNATURE_POLICY,
                     "signature-required-names")
 
-                write_sys_cfg = True
+                self.__write_sys_cfg = True
                 if use_system_pub:
                         # get new syspub data from sysdepot
                         try:
@@ -948,14 +1093,21 @@ class BlendedConfig(object):
                                         except smf.NonzeroExitException, e:
                                                 raise apx.UnknownSysrepoConfiguration()
                                 self.__proxy_url = "http://%s:%s" % (host, port)
-                        sysdepot_uri = publisher.RepositoryURI(self.__proxy_url)
+                        # We use system=True so that we don't try to retrieve
+                        # runtime $http_proxy environment variables in
+                        # pkg.client.publisher.TransportRepoURI.__get_runtime_proxy(..)
+                        # See also how 'system' is handled in
+                        # pkg.client.transport.engine.CurlTransportEngine.__setup_handle(..)
+                        # pkg.client.transport.repo.get_syspub_info(..)
+                        sysdepot_uri = publisher.RepositoryURI(self.__proxy_url,
+                            system=True)
                         assert sysdepot_uri.get_host()
                         try:
                                 pubs, props = transport.get_syspub_data(
                                     sysdepot_uri)
                         except TransportFailures:
                                 self.sys_cfg = old_sysconfig
-                                write_sys_cfg = False
+                                self.__write_sys_cfg = False
                         else:
                                 try:
                                         try:
@@ -989,7 +1141,7 @@ class BlendedConfig(object):
                                                 # the ImageConfig.
                                                 self.sys_cfg = \
                                                     NullSystemPublisher()
-                                                write_sys_cfg = False
+                                                self.__write_sys_cfg = False
                                         else:
                                                 raise
                                 else:
@@ -997,7 +1149,8 @@ class BlendedConfig(object):
                                         # successfully removed, so use that
                                         # location for the new ImageConfig.
                                         self.sys_cfg = \
-                                            ImageConfig(syscfg_path, None)
+                                            ImageConfig(syscfg_path, None,
+                                                sysrepo_proxy=True)
                                 for p in pubs:
                                         assert not p.disabled, "System " \
                                             "publisher %s was unexpectedly " \
@@ -1028,15 +1181,15 @@ class BlendedConfig(object):
                         self.sys_cfg = NullSystemPublisher()
                         self.__system_override_properties = ()
 
-                self.__publishers, self.added_pubs, self.removed_pubs = \
-                    self.__merge_publishers(self.img_cfg, self.sys_cfg,
-                        pkg_counts, old_sysconfig, self.__proxy_url,
-                        write_sys_cfg)
+                self.__publishers, self.added_pubs, self.removed_pubs, \
+                    self.modified_pubs = \
+                        self.__merge_publishers(self.img_cfg, self.sys_cfg,
+                            pkg_counts, old_sysconfig, self.__proxy_url)
 
         @staticmethod
         def __merge_publishers(img_cfg, sys_cfg, pkg_counts, old_sysconfig,
-            proxy_url, write_sys_cfg):
-                """This funcion merges an old publisher configuration from the
+            proxy_url):
+                """This function merges an old publisher configuration from the
                 system repository with the new publisher configuration from the
                 system repository.  It returns a tuple containing a dictionary
                 mapping prefix to publisher, the publisher objects for the newly
@@ -1056,19 +1209,17 @@ class BlendedConfig(object):
                 the previous publisher configuration from the system repository.
 
                 The 'proxy_url' parameter is the url for the system repository.
-
-                The 'write_sys_cfg' parameter indicates whether the new sys_cfg
-                object should attempt to save its configuration to disk.
                 """
 
                 pubs_with_installed_pkgs = set()
-
-                added_pubs = set()
-                removed_pubs = set()
-
                 for prefix, cnt, ver_cnt in pkg_counts:
                         if cnt > 0:
                                 pubs_with_installed_pkgs.add(prefix)
+
+                # keep track of old system publishers which are becoming
+                # disabled image publishers (because they have packages
+                # installed).
+                disabled_pubs = set()
 
                 # Merge in previously existing system publishers which have
                 # installed packages.
@@ -1078,23 +1229,54 @@ class BlendedConfig(object):
                             prefix in img_cfg.publishers or \
                             prefix not in pubs_with_installed_pkgs:
                                 continue
+
+                        # only report this publisher as disabled if it wasn't
+                        # previously reported and saved as disabled.
+                        if not old_sysconfig.publishers[prefix].disabled:
+                                disabled_pubs |= set([prefix])
+
                         sys_cfg.publishers[prefix] = \
                             old_sysconfig.publishers[prefix]
                         sys_cfg.publishers[prefix].disabled = True
 
-                # Write out the new system publisher configuration.
-                if write_sys_cfg:
-                        sys_cfg.write()
-                for p in sys_cfg.publishers.values():
-                        for o in p.repository.origins:
-                                o.system = True
-                                if o.uri in p.properties["proxied-urls"]:
-                                        o.proxy = proxy_url
-                        for o in p.repository.mirrors:
-                                o.system = True
-                                if o.uri in p.properties["proxied-urls"]:
-                                        o.proxy = proxy_url
-                        p.sys_pub = True
+                        # if a syspub publisher is no longer available then
+                        # remove all the origin and mirror information
+                        # associated with that publisher.
+                        sys_cfg.publishers[prefix].repository.origins = []
+                        sys_cfg.publishers[prefix].repository.mirrors = []
+
+                # check if any system publisher have had origin changes.
+                modified_pubs = set()
+                for prefix in set(old_sysconfig.publishers) & \
+                    set(sys_cfg.publishers):
+                        pold = old_sysconfig.publishers[prefix]
+                        pnew = sys_cfg.publishers[prefix]
+                        if map(str, pold.repository.origins) != \
+                            map(str, pnew.repository.origins):
+                                modified_pubs |= set([prefix])
+
+                if proxy_url:
+                        # We must replace the temporary "system" proxy with the
+                        # real URL of the system-repository.
+                        system_proxy = publisher.ProxyURI(None, system=True)
+                        real_system_proxy = publisher.ProxyURI(proxy_url)
+                        for p in sys_cfg.publishers.values():
+                                for o in p.repository.origins:
+                                        o.system = True
+                                        try:
+                                                i = o.proxies.index(system_proxy)
+                                                o.proxies[i] = real_system_proxy
+                                        except ValueError:
+                                                pass
+
+                                for m in p.repository.mirrors:
+                                        m.system = True
+                                        try:
+                                                i = m.proxies.index(system_proxy)
+                                                m.proxies[i] = real_system_proxy
+                                        except ValueError:
+                                                pass
+                                p.sys_pub = True
 
                 # Create a dictionary mapping publisher prefix to publisher
                 # object while merging user configured origins into system
@@ -1106,10 +1288,19 @@ class BlendedConfig(object):
                         assert isinstance(p, publisher.Publisher)
                         if p.prefix in res:
                                 repo = p.repository
+                                srepo = res[p.prefix].repository
+                                # We do not allow duplicate URIs for either
+                                # origins or mirrors, so must check whether the
+                                # system publisher already provides
+                                # a path to each user-configured origin/mirror.
+                                # If so, we do not add the user-configured
+                                # origin or mirror.
                                 for o in repo.origins:
-                                        res[p.prefix].repository.add_origin(o)
+                                        if not srepo.has_origin(o):
+                                                srepo.add_origin(o)
                                 for m in repo.mirrors:
-                                        res[p.prefix].repository.add_mirror(m)
+                                        if not srepo.has_mirror(m):
+                                                srepo.add_mirror(m)
                         else:
                                 res[p.prefix] = p
 
@@ -1121,8 +1312,21 @@ class BlendedConfig(object):
                 added_pubs = new_pubs - old_pubs
                 removed_pubs = old_pubs - new_pubs
 
-                return res, [res[p] for p in added_pubs], \
-                    [old_sysconfig.publishers[p] for p in removed_pubs]
+                added_pubs = [res[p] for p in added_pubs]
+                removed_pubs = [
+                    old_sysconfig.publishers[p]
+                    for p in removed_pubs | disabled_pubs
+                ]
+                modified_pubs = [
+                    old_sysconfig.publishers[p]
+                    for p in modified_pubs
+                ]
+                return (res, added_pubs, removed_pubs, modified_pubs)
+
+        def write_sys_cfg(self):
+                # Write out the new system publisher configuration.
+                if self.__write_sys_cfg:
+                        self.sys_cfg.write()
 
         def write(self):
                 """Update the image configuration to reflect any changes made,
@@ -1139,7 +1343,9 @@ class BlendedConfig(object):
                         repo = p.repository
                         sticky = p.sticky
                         user_origins = [o for o in repo.origins if not o.system]
+                        system_origins = [o for o in repo.origins if o.system]
                         user_mirrors = [o for o in repo.mirrors if not o.system]
+                        system_mirrors = [o for o in repo.mirrors if o.system]
                         old_origins = []
                         old_mirrors = []
 
@@ -1149,6 +1355,16 @@ class BlendedConfig(object):
                                 old_origins = old_pub.repository.origins
                                 old_mirrors = old_pub.repository.mirrors
                                 sticky = old_pub.sticky
+
+                                # Preserve any origins configured in the image,
+                                # but masked by the same origin also provided
+                                # by the system-repository.
+                                user_origins = user_origins + \
+                                    [o for o in old_origins
+                                    if o in system_origins]
+                                user_mirrors = user_mirrors + \
+                                    [o for o in old_mirrors
+                                    if o in system_mirrors]
 
                         # no user changes, so nothing new to write
                         if set(user_origins) == set(old_origins) and \
@@ -1300,8 +1516,10 @@ class BlendedConfig(object):
                 self.sys_cfg.reset()
                 old_sysconfig = ImageConfig(os.path.join(imgdir, "pkg5.syspub"),
                     None)
-                self.__publishers = self.__merge_publishers(self.img_cfg,
-                    self.sys_cfg, self.__pkg_counts, old_sysconfig)
+                self.__publishers, self.added_pubs, self.removed_pubs, \
+                    self.modified_pubs = \
+                        self.__merge_publishers(self.img_cfg,
+                            self.sys_cfg, self.__pkg_counts, old_sysconfig)
 
         def __get_publisher(self, prefix):
                 """Accessor method for publishers dictionary"""

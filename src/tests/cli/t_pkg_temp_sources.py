@@ -20,7 +20,9 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+#
+# Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+#
 
 import testutils
 if __name__ == "__main__":
@@ -83,6 +85,11 @@ class TestPkgTempSources(pkg5unittest.ManyDepotTestCase):
             add license tmp/LICENSE license=sample_license
             close """
 
+        licensed_pkg_2 = """
+            open pkg://test2/licensed@2.0
+            add license tmp/LICENSE2 license=sample_license
+            close """
+
         signed_pkg = """
             open pkg://test/signed@1.0
             add depend type=require fmri=foo@1.0
@@ -105,7 +112,7 @@ class TestPkgTempSources(pkg5unittest.ManyDepotTestCase):
             close """
 
         misc_files = ["tmp/foo", "tmp/libfoo.so.1", "tmp/libfoo_debug.so.1",
-            "tmp/foo.1", "tmp/README", "tmp/LICENSE", "tmp/quux"]
+            "tmp/foo.1", "tmp/README", "tmp/LICENSE", "tmp/LICENSE2", "tmp/quux"]
 
         def __seed_ta_dir(self, certs, dest_dir=None):
                 if isinstance(certs, basestring):
@@ -119,12 +126,6 @@ class TestPkgTempSources(pkg5unittest.ManyDepotTestCase):
                         portable.copyfile(
                             os.path.join(self.raw_trust_anchor_dir, name),
                             os.path.join(dest_dir, name))
-
-        def image_create(self, *args, **kwargs):
-                pkg5unittest.ManyDepotTestCase.image_create(self,
-                    *args, **kwargs)
-                self.ta_dir = os.path.join(self.img_path(), "etc/certs/CA")
-                os.makedirs(self.ta_dir)
 
         def __publish_packages(self, rurl):
                 """Private helper function to publish packages needed for
@@ -259,6 +260,8 @@ class TestPkgTempSources(pkg5unittest.ManyDepotTestCase):
                 # Handle license package specially.
                 self.licensed10 = self.pkgsend_bulk(self.licensed_rurl,
                     self.licensed_pkg)[0]
+                self.licensed20 = self.pkgsend_bulk(self.licensed_rurl,
+                    self.licensed_pkg_2)[0]
 
         def test_00_list(self):
                 """Verify that the list operation works as expected for
@@ -419,6 +422,10 @@ class TestPkgTempSources(pkg5unittest.ManyDepotTestCase):
                 """Verify that the info operation works as expected for
                 temporary origins.
                 """
+		# because we compare date strings we must run this in
+		# a consistent locale, which we made 'C'
+
+		os.environ['LC_ALL'] = 'C'
 
                 # Create an image and verify no packages are known.
                 self.image_create(self.empty_rurl, prefix=None)
@@ -454,12 +461,12 @@ class TestPkgTempSources(pkg5unittest.ManyDepotTestCase):
          State: Not installed
      Publisher: test
        Version: 1.0
- Build Release: 5.11
         Branch: None
 Packaging Date: %(pkg_date)s
           Size: 41.00 B
           FMRI: %(pkg_fmri)s
-""" % { "pkg_date": pd(self.foo10), "pkg_fmri": self.foo10 }
+""" % { "pkg_date": pd(self.foo10), "pkg_fmri": self.foo10.get_fmri(
+    include_build=False) }
                 self.assertEqualDiff(expected, self.output)
 
                 # Again, as prvileged user.
@@ -478,7 +485,6 @@ Packaging Date: %(pkg_date)s
          State: Not installed
      Publisher: test
        Version: 1.0
- Build Release: 5.11
         Branch: None
 Packaging Date: %(foo10_pkg_date)s
           Size: 41.00 B
@@ -489,7 +495,6 @@ Packaging Date: %(foo10_pkg_date)s
          State: Not installed
      Publisher: test
        Version: 2.0
- Build Release: 5.11
         Branch: None
 Packaging Date: %(incorp20_pkg_date)s
           Size: 0.00 B
@@ -500,7 +505,6 @@ Packaging Date: %(incorp20_pkg_date)s
          State: Not installed
      Publisher: test2
        Version: 1.0
- Build Release: 5.11
         Branch: 0.2
 Packaging Date: %(quux10_pkg_date)s
           Size: 8.00 B
@@ -511,15 +515,18 @@ Packaging Date: %(quux10_pkg_date)s
          State: Not installed
      Publisher: test
        Version: 1.0
- Build Release: 5.11
         Branch: None
 Packaging Date: %(signed10_pkg_date)s
           Size: 7.79 kB
           FMRI: %(signed10_pkg_fmri)s
-""" % { "foo10_pkg_date": pd(self.foo10), "foo10_pkg_fmri": self.foo10,
-    "incorp20_pkg_date": pd(self.incorp20), "incorp20_pkg_fmri": self.incorp20,
-    "quux10_pkg_date": pd(self.quux10), "quux10_pkg_fmri": self.quux10,
-    "signed10_pkg_date": pd(self.signed10), "signed10_pkg_fmri": self.signed10
+""" % { "foo10_pkg_date": pd(self.foo10), "foo10_pkg_fmri": \
+        self.foo10.get_fmri(include_build=False),
+    "incorp20_pkg_date": pd(self.incorp20), "incorp20_pkg_fmri": \
+        self.incorp20.get_fmri(include_build=False),
+    "quux10_pkg_date": pd(self.quux10), "quux10_pkg_fmri": \
+        self.quux10.get_fmri(include_build=False),
+    "signed10_pkg_date": pd(self.signed10), "signed10_pkg_fmri": \
+        self.signed10.get_fmri(include_build=False),
     }
                 self.assertEqualDiff(expected, self.output)
 
@@ -556,12 +563,12 @@ Packaging Date: %(signed10_pkg_date)s
          State: Installed
      Publisher: test
        Version: 1.0
- Build Release: 5.11
         Branch: None
 Packaging Date: %(pkg_date)s
           Size: 41.00 B
           FMRI: %(pkg_fmri)s
-""" % { "pkg_date": pd(self.foo10), "pkg_fmri": self.foo10 }
+""" % { "pkg_date": pd(self.foo10), "pkg_fmri": self.foo10.get_fmri(
+    include_build=False) }
                 self.assertEqualDiff(expected, self.output)
 
                 # Verify that when showing package info from archive that
@@ -574,8 +581,12 @@ Packaging Date: %(pkg_date)s
                 self.pkg("info -r \*", exit=1)
 
                 # Verify that --license works as expected with -g.
-                self.pkg("info -g %s --license licensed" % self.licensed_rurl)
+                self.pkg("info -g %s --license licensed@1.0" %
+                    self.licensed_rurl)
                 self.assertEqualDiff("tmp/LICENSE\n", self.output)
+                self.pkg("info -g %s --license licensed" %
+                    self.licensed_rurl)
+                self.assertEqualDiff("tmp/LICENSE2\n", self.output)
 
                 # Cleanup.
                 self.image_destroy()
@@ -733,7 +744,7 @@ link path=usr/local/bin/soft-foo target=usr/bin/foo
                 # and is enabled and sticky (-n omits disabled publishers).
                 self.pkg("publisher -nH")
                 expected = """\
-empty origin online %s/
+empty origin online F %s/
 test 
 """ % self.empty_rurl
                 output = self.reduceSpaces(self.output)
@@ -800,7 +811,7 @@ test
                 # origins.
                 self.pkg("publisher -H")
                 expected = """\
-empty origin online %s/
+empty origin online F %s/
 test 
 test2 
 """ % self.empty_rurl
@@ -877,6 +888,60 @@ test2
                     self.foo_arc)
                 assert os.path.exists(vpath)
                 self.assertEqual(os.stat(vpath).st_size, 21)
+
+        def test_05_staged_execution(self):
+                """Verify that staged execution works with temporary
+                origins."""
+
+                # Create an image and verify no packages are known.
+                self.image_create(self.empty_rurl, prefix=None)
+                self.pkg("list -a", exit=1)
+
+                # Install an older version of a known package.
+                self.pkg("install -g %s quux@0.1" % self.all_arc)
+                self.pkg("list incorp@1.0 quux@0.1")
+
+                # Verify that packages can be updated using temporary origins.
+                self.pkg("update --stage=plan -g %s -g %s" %
+                    (self.incorp_arc, self.quux_arc))
+                self.pkg("update --stage=prepare -g %s -g %s" %
+                    (self.incorp_arc, self.quux_arc))
+                self.pkg("update --stage=execute -g %s -g %s" %
+                    (self.incorp_arc, self.quux_arc))
+                self.pkg("list incorp@2.0 quux@1.0")
+
+        def test_06_appropriate_license_files(self):
+                """Verify that the correct license file is displayed."""
+
+                self.image_create()
+
+                self.pkg("info -g %s --license licensed" % self.licensed_rurl)
+                self.assertEqual("tmp/LICENSE2\n", self.output)
+                self.pkg("info -g %s --license licensed@1.0" %
+                    self.licensed_rurl)
+                self.assertEqual("tmp/LICENSE\n", self.output)
+
+                self.pkg("install -g %s --licenses licensed@1.0" %
+                    self.licensed_rurl)
+                self.assert_("tmp/LICENSE" in self.output, "Expected "
+                    "tmp/LICENSE to be in the output of the install. Output "
+                    "was:\n%s" % self.output)
+                self.pkg("info -g %s --license licensed" % self.licensed_rurl)
+                self.assertEqual("tmp/LICENSE2\n", self.output)
+                self.pkg("info -g %s --license licensed@2.0" %
+                    self.licensed_rurl)
+                self.assertEqual("tmp/LICENSE2\n", self.output)
+
+                self.pkg("update -g %s --licenses licensed@2.0" %
+                    self.licensed_rurl)
+                self.assert_("tmp/LICENSE2" in self.output, "Expected "
+                    "tmp/LICENSE2 to be in the output of the install. Output "
+                    "was:\n%s" % self.output)
+                self.pkg("info -g %s --license licensed" % self.licensed_rurl)
+                self.assertEqual("tmp/LICENSE2\n", self.output)
+                self.pkg("info -g %s --license licensed@1.0" %
+                    self.licensed_rurl)
+                self.assertEqual("tmp/LICENSE\n", self.output)
 
 
 if __name__ == "__main__":

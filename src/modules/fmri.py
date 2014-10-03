@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2007, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
 #
 
 import fnmatch
@@ -164,6 +164,18 @@ class PkgFmri(object):
 
                 self._hash = None
 
+        @staticmethod
+        def getstate(obj, je_state=None):
+                """Returns the serialized state of this object in a format
+                that that can be easily stored using JSON, pickle, etc."""
+                return str(obj)
+
+        @staticmethod
+        def fromstate(state, jd_state=None):
+                """Allocate a new object using previously serialized state
+                obtained via getstate()."""
+                return PkgFmri(state)
+
         def copy(self):
                 return PkgFmri(str(self))
 
@@ -305,7 +317,7 @@ class PkgFmri(object):
                         pkg_str = "pkg://"
                 return "%s%s/%s" % (pkg_str, self.publisher, self.pkg_name)
 
-        def get_short_fmri(self, default_publisher = None):
+        def get_short_fmri(self, default_publisher=None, anarchy=False):
                 """Return a string representation of the FMRI without a specific
                 version."""
                 publisher = self.publisher
@@ -317,13 +329,14 @@ class PkgFmri(object):
                 else:
                         version = "@" + self.version.get_short_version()
 
-                if not publisher or publisher.startswith(PREF_PUB_PFX):
+                if not publisher or publisher.startswith(PREF_PUB_PFX) \
+                    or anarchy:
                         return "pkg:/%s%s" % (self.pkg_name, version)
 
                 return "pkg://%s/%s%s" % (publisher, self.pkg_name, version)
 
         def get_fmri(self, default_publisher=None, anarchy=False,
-            include_scheme=True):
+            include_scheme=True, include_build=True):
                 """Return a string representation of the FMRI.
                 Anarchy returns a string without any publisher."""
                 pkg_str = ""
@@ -339,7 +352,8 @@ class PkgFmri(object):
                                 return "%s%s" % (pkg_str, self.pkg_name)
 
                         return "%s%s@%s" % (pkg_str, self.pkg_name,
-                            self.version)
+                            self.version.get_version(
+                                include_build=include_build))
 
                 if include_scheme:
                         pkg_str = "pkg://"
@@ -347,7 +361,7 @@ class PkgFmri(object):
                         return "%s%s/%s" % (pkg_str, publisher, self.pkg_name)
 
                 return "%s%s/%s@%s" % (pkg_str, publisher, self.pkg_name,
-                                self.version)
+                    self.version.get_version(include_build=include_build))
 
         def hierarchical_names(self):
                 """Generate the different hierarchical names that could be used

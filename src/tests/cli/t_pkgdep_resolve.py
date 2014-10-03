@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2012, Oracle and/or its affiliates. All rights reserved.
 
 import testutils
 if __name__ == "__main__":
@@ -732,6 +732,12 @@ dependency resolution:
                     (ex_path, var_fmri_path, empty_path, m1_path))
                 self.assertEqualDiff(expected_txt, self.output)
 
+                # Check that if -e points at a file that doesn't exist, no
+                # traceback happens.
+                self.pkgdepend_resolve("-e %s -e %s -e %s -E -m %s" %
+                    (ex_path + "foobar", var_fmri_path, empty_path, m1_path),
+                    exit=1)
+
         def test_resolve_permissions(self):
                 """Test that a manifest or constraint file that pkgdepend
                 resolve can't access doesn't cause a traceback."""
@@ -1110,7 +1116,9 @@ dependency resolution:
                                     "\n".join(
                                         [str(d) for d in pkg_deps[col_path]]))
                         d = pkg_deps[one_dep][0]
-                        self.assertEqual(d.attrs["fmri"], exp_pkg)
+                        self.assertEqual(d.attrs["fmri"], exp_pkg,
+                            "Expected dependency %s; found %s." % (exp_pkg,
+                                d.attrs["fmri"]))
 
                 col_path = self.make_manifest(self.collision_manf)
                 col_path_num_var = self.make_manifest(
@@ -1273,7 +1281,7 @@ dependency resolution:
 
                 self.assertEqual(len(pkg_deps[manifests[1]]), 1)
                 for d in pkg_deps[manifests[1]]:
-                        fmri = PkgFmri(d.attrs["fmri"], build_release="5.11")
+                        fmri = PkgFmri(d.attrs["fmri"])
                         if str(fmri).startswith("pkg:/double_provides"):
                                 self.assertEqual(str(fmri.version.branch), "1")
 

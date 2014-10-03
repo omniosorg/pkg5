@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2008, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
 #
 
 import testutils
@@ -179,6 +179,17 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
             open b16189@1.0,5.11-0
             add dir mode=0755 owner=root group=bin path=/bin
             add file tmp/cat mode=0555 owner=root group=bin path=/bin/cat
+            close """
+
+        fuzzy = """
+            open fuzzy@1.0,5.11-0
+            add dir mode=0755 owner=root group=bin path="opt/dir with white\tspace"
+            add file tmp/cat mode=0644 owner=root group=bin path="opt/dir with white\tspace/cat in a hat"
+            close
+            open fuzzy@2.0,5.11-0
+            add dir mode=0755 owner=root group=bin path="opt/dir with white\tspace"
+            add file tmp/cat mode=0644 owner=root group=bin path="opt/dir with white\tspace/cat in a hat"
+            add link path=etc/cat_link target="../opt/dir with white\tspace/cat in a hat"
             close """
 
         misc_files = [ "tmp/libc.so.1", "tmp/cat", "tmp/baz" ]
@@ -648,7 +659,8 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
                                     "'%s'." % bad_mode)
                                 bad_mdata = mdata.replace(src_mode, bad_mode)
                                 self.write_img_manifest(pfmri, bad_mdata)
-                                self.pkg("install %s" % pfmri.pkg_name, exit=1)
+                                self.pkg("--debug manifest_validate=Never "
+                                    "install %s" % pfmri.pkg_name, exit=1)
 
                         # Now attempt to corrupt the client's copy of the
                         # manifest in various ways to check if the client
@@ -660,7 +672,8 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
                                 bad_mdata = mdata.replace("owner=root",
                                     bad_owner)
                                 self.write_img_manifest(pfmri, bad_mdata)
-                                self.pkg("install %s" % pfmri.pkg_name, exit=1)
+                                self.pkg("--debug manifest_validate=Never "
+                                    "install %s" % pfmri.pkg_name, exit=1)
 
                         for bad_group in ("", 'group=""', "group=invalidgroup"):
                                 self.debug("Testing with bad group "
@@ -669,7 +682,8 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
                                 bad_mdata = mdata.replace("group=bin",
                                     bad_group)
                                 self.write_img_manifest(pfmri, bad_mdata)
-                                self.pkg("install %s" % pfmri.pkg_name, exit=1)
+                                self.pkg("--debug manifest_validate=Never "
+                                    "install %s" % pfmri.pkg_name, exit=1)
 
                         # Now attempt to corrupt the client's copy of the
                         # manifest such that actions are malformed.
@@ -680,7 +694,8 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
                                     "'%s'." % bad_act)
                                 bad_mdata = mdata + "%s\n" % bad_act
                                 self.write_img_manifest(pfmri, bad_mdata)
-                                self.pkg("install %s" % pfmri.pkg_name, exit=1)
+                                self.pkg("--debug manifest_validate=Never "
+                                    "install %s" % pfmri.pkg_name, exit=1)
 
         def test_bug_3770(self):
                 """ Try to install a package from a publisher with an
@@ -744,19 +759,66 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
                 afobj.close()
                 self.pkg("install a16189", exit=1)
 
+        def test_install_fuzz(self):
+                """Verify that packages delivering files with whitespace in
+                their paths can be installed, updated, and uninstalled."""
+
+                self.pkgsend_bulk(self.rurl, self.fuzzy)
+                self.image_create(self.rurl)
+
+                self.pkg("install fuzzy@1")
+                self.pkg("verify -v")
+                self.pkg("update -vvv fuzzy@2")
+                self.pkg("verify -v")
+
+                for name in (
+                    "opt/dir with white\tspace/cat in a hat",
+                    "etc/cat_link",
+                ):
+                        self.debug("fname: %s" % name)
+                        self.assert_(os.path.exists(os.path.join(self.get_img_path(),
+                            name)))
+
+                self.pkg("uninstall -vvv fuzzy")
+
+
+class TestPkgInstallApache(pkg5unittest.ApacheDepotTestCase):
+
+        # Only start/stop the depot once (instead of for every test)
+        persistent_setup = True
+
+        foo11 = """
+            open foo@1.1,5.11-0
+            add dir mode=0755 owner=root group=bin path=/lib
+            add file tmp/libc.so.1 mode=0555 owner=root group=bin path=/lib/libc.so.1 timestamp="20080731T024051Z"
+            close """
+
+        upgrade_np10 = """
+            open upgrade-np@1.0,5.11-0
+            close"""
+
+        misc_files = [ "tmp/libc.so.1" ]
+
+        def setUp(self):
+                pkg5unittest.ApacheDepotTestCase.setUp(self, ["test1", "test2"],
+                    start_depots=True)
+                self.make_misc_files(self.misc_files)
+                self.durl1 = self.dcs[1].get_depot_url()
+                self.durl2 = self.dcs[2].get_depot_url()
+                self.pkgsend_bulk(self.durl1, self.foo11)
+                self.pkgsend_bulk(self.durl2, self.upgrade_np10)
+
         def test_corrupt_web_cache(self):
                 """Make sure the client can detect corrupt content being served
                 to it from a corrupt web cache, modifying its requests to
                 retrieve correct content."""
 
-                # Depot required for this test since we want to corrupt
-                # a downstream cache serving this content
-                self.dc.start()
-                fmris = self.pkgsend_bulk(self.durl, self.foo11)
+                fmris = self.pkgsend_bulk(self.durl1, (self.foo11,
+                    self.upgrade_np10))
                 # we need to record just the version string of foo in order
                 # to properly quote it later.
                 foo_version = fmris[0].split("@")[1]
-                self.image_create(self.durl)
+                self.image_create(self.durl1)
 
                 # we use the system repository as a convenient way to setup
                 # a caching proxy
@@ -772,6 +834,7 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
                 self.next_free_port += 1
                 sc = pkg5unittest.SysrepoController(sc_conf,
                     sysrepo_port, sc_runtime_dir, testcase=self)
+                self.register_apache_controller("sysrepo", sc)
                 sc.start()
 
                 sysrepo_url = "http://localhost:%s" % sysrepo_port
@@ -791,7 +854,7 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
                 def corrupt_path(path, value="noodles\n", rename=False):
                         """Given a path, corrupt its contents."""
                         self.assert_(os.path.exists(path))
-                        if rename:                                
+                        if rename:
                                 os.rename(path, path + ".not-corrupt")
                                 open(path, "wb").write(value)
                         else:
@@ -817,12 +880,10 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
                     # format pkg(1) uses - two logically identical urls that
                     # differ only by the way they're quoted are treated by
                     # Apache as separate cacheable resources.
-                    "%s/test/manifest/0/foo@%s" % (self.durl, urllib2.quote(
+                    "%s/test1/manifest/0/foo@%s" % (self.durl1, urllib2.quote(
                     foo_version)),
-                    "%s/test/file/1/8535c15c49cbe1e7cb1a0bf8ff87e512abed66f8" %
-                    self.durl,
-                    "%s/test/catalog/1/catalog.attrs" % self.durl,
-                    "%s/test/catalog/1/catalog.base.C" % self.durl
+                    "%s/test1/file/1/8535c15c49cbe1e7cb1a0bf8ff87e512abed66f8" %
+                    self.durl1,
                 ]
 
                 proxy_handler = urllib2.ProxyHandler({"http": sysrepo_url})
@@ -830,6 +891,7 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
 
                 # validate that our cache is returning corrupt urls.
                 for url in urls:
+                        self.debug("url:%s" % url)
                         # we should get clean content when we don't use the
                         # cache
                         u = urllib2.urlopen(url)
@@ -864,9 +926,9 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
                 # ensure that when we actually corrupt the repository
                 # as well as the cache, we do detect the errors properly.
                 corrupt_cache(sc_cache)
-                repodir = self.dc.get_repodir()
+                repodir = self.dcs[1].get_repodir()
 
-                prefix = "publisher/test"
+                prefix = "publisher/test1"
                 self.image_create(props={"use-system-repo": True})
 
                 # When we corrupt the files in the repository, we intentionally
@@ -907,10 +969,10 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
                         corrupt_cache(sc_cache)
                         corrupt_path(mfpath, value="spaghetti\n", rename=True)
                         shutil.rmtree(os.path.join(self.img_path(),
-                            "var/pkg/publisher/test/pkg"))
+                            "var/pkg/publisher/test1/pkg"))
                         self.pkg("contents -rm foo@1.1", stderr=True, exit=1)
                         os.rename(mfpath + ".not-corrupt", mfpath)
-                
+
                         # we should get two hash errors, one from the cache, one
                         # from the repo - the one from the repo should repeat.
                         self.assert_(
@@ -935,10 +997,165 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
                                 if os.path.exists(not_corrupt):
                                         os.rename(not_corrupt, path)
 
-                        sc.stop()
                         if saved_pkg_sysrepo_env:
                                 os.environ["PKG_SYSREPO_URL"] = \
                                     saved_pkg_sysrepo_env
+
+        def test_granular_proxy(self):
+                """Tests that images can use the set-publisher --proxy argument
+                to selectively proxy requests."""
+
+                # we use the system repository as a convenient way to setup
+                # a caching proxy.   Since the image doesn't have the property
+                # 'use-system-repo=True', the configuration of the sysrepo
+                # will remain static.
+                self.image_create(self.durl1)
+                self.sysrepo("")
+                sc_runtime_dir = os.path.join(self.test_root, "sysrepo_runtime")
+                sc_conf = os.path.join(sc_runtime_dir, "sysrepo_httpd.conf")
+                sc_cache = os.path.join(self.test_root, "sysrepo_cache")
+
+                # ensure pkg5srv can write cache content
+                os.chmod(sc_cache, 0777)
+
+                sysrepo_port = self.next_free_port
+                self.next_free_port += 1
+                sc = pkg5unittest.SysrepoController(sc_conf,
+                    sysrepo_port, sc_runtime_dir, testcase=self)
+                self.register_apache_controller("sysrepo", sc)
+                sc.start()
+                sysrepo_url = "http://localhost:%s" % sysrepo_port
+
+                self.image_create()
+                self.pkg("set-publisher -p %s --proxy %s" % (self.durl1,
+                    sysrepo_url))
+                self.pkg("install foo")
+                self.pkg("uninstall foo")
+
+                sc.stop()
+                # with our proxy offline, and with no other origins
+                # available, we should be unable to install
+                self.pkg("install --no-refresh foo", exit=1)
+                sc.start()
+
+                # we cannot add another origin with the same url
+                self.pkg("set-publisher --no-refresh -g %s test1" %
+                    self.durl1, exit=1)
+                # we cannot add another proxied origin with that url
+                self.pkg("set-publisher --no-refresh -g %s "
+                    "--proxy http://noodles test1" % self.durl1,
+                    exit=1)
+
+                # Now add a second, unproxied publisher, ensuring we
+                # can install packages from there.  Since the proxy
+                # isn't configured to proxy that resource, this tests
+                # that the proxy for self.durl1 isn't being used.
+                self.pkg("set-publisher -g %s test2" % self.durl2)
+                self.pkg("install --no-refresh "
+                    "pkg://test2/upgrade-np@1.0")
+                self.pkg("uninstall pkg://test2/upgrade-np@1.0")
+                self.pkg("set-publisher -G %s test2" % self.durl2)
+
+                # check that runtime proxies are being used - we
+                # set a bogus proxy, then ensure our $http_proxy value
+                # gets used.
+                self.pkg("publisher")
+                self.pkg("set-publisher -G %s test1" % self.durl1)
+                self.pkg("set-publisher --no-refresh -g %s "
+                    "--proxy http://noodles test1" % self.durl1)
+                env = {"http_proxy": sysrepo_url}
+                self.pkg("refresh", env_arg=env)
+                self.pkg("install foo", env_arg=env)
+                self.pkg("uninstall foo", env_arg=env)
+
+                # check that $all_proxy works
+                env = {"all_proxy": sysrepo_url}
+                self.pkg("install foo", env_arg=env)
+                self.pkg("uninstall foo", env_arg=env)
+
+                # now check that no_proxy works
+                env["no_proxy"] = "*"
+                self.pkg("install foo", env_arg=env)
+                self.pkg("refresh --full", env_arg=env)
+
+
+class TestPkgInstallRepoPerTest(pkg5unittest.SingleDepotTestCase):
+        persistent_setup = False
+        # Tests in this suite use the read only data directory.
+        need_ro_data = True
+
+        foo10 = """
+            open foo@1.0,5.11-0
+            close """
+
+        disappear10 = """
+            open disappear@1.0,5.11-0
+            add file tmp/cat mode=0555 owner=root group=bin path=/bin/cat
+            close """
+
+        disappear11 = """
+            open disappear@1.1,5.11-0
+            close """
+
+        misc_files = ["tmp/cat"]
+
+        def setUp(self):
+                pkg5unittest.SingleDepotTestCase.setUp(self)
+                self.make_misc_files(self.misc_files)
+
+        def test_install_changed_manifest(self):
+                """Test that if a manifest that is being installed is cached
+                locally has been changed on the repo is updated, the new
+                manifest is used."""
+
+                plist = self.pkgsend_bulk(self.rurl, self.foo10)
+
+                self.image_create(self.rurl)
+                self.seed_ta_dir("ta3")
+                api_inst = self.get_img_api_obj()
+
+                # Use pkg contents to cache the manifest.
+                self.pkg("contents -r foo")
+
+                # Specify location as filesystem path.
+                self.pkgsign_simple(self.dc.get_repodir(), plist[0])
+
+                # Ensure that the image requires signed manifests.
+                self.pkg("set-property signature-policy require-signatures")
+                api_inst.reset()
+
+                # Install the package
+                self._api_install(api_inst, ["foo"])
+
+        def test_keep_installed_changed_manifest(self):
+                """Test that if a manifest that has been installed is changed on
+                the server is updated, the installed manifest is not changed."""
+
+                pfmri = self.pkgsend_bulk(self.rurl, self.disappear10)[0]
+
+                self.image_create(self.rurl)
+                api_inst = self.get_img_api_obj()
+
+                # Install the package
+                self._api_install(api_inst, ["disappear"])
+
+                self.assert_(os.path.isfile(os.path.join(
+                    self.img_path(), "bin", "cat")))
+                repo = self.dc.get_repo()
+                m_path = repo.manifest(pfmri)
+                with open(m_path, "rb") as fh:
+                        fmri_lines = fh.readlines()
+                with open(m_path, "wb") as fh:
+                        for l in fmri_lines:
+                                if "usr/bin/cat" in l:
+                                        continue
+                                fh.write(l)
+                repo.rebuild()
+
+                pfmri = self.pkgsend_bulk(self.rurl, self.disappear11)[0]
+                self._api_update(api_inst)
+                self.assert_(not os.path.isfile(os.path.join(
+                    self.img_path(), "bin", "cat")))
 
 
 class TestPkgInstallUpdateReject(pkg5unittest.SingleDepotTestCase):
@@ -1267,6 +1484,176 @@ class TestPkgInstallAmbiguousPatterns(pkg5unittest.SingleDepotTestCase):
                 self.pkg("install foo", exit=1)
 
 
+class TestPkgInstallOverlappingPatterns(pkg5unittest.SingleDepotTestCase):
+
+        a_1 = """
+            open a@1.0,5.11-0
+            close """
+
+        pub2_a_1 = """
+            open pkg://pub2/a@1.0,5.11-0
+            close """
+
+        a_11 = """
+            open a@1.1,5.11-0
+            close """
+
+        a_2 = """
+            open a@2.0,5.11-0
+            close """
+
+        pub2_a_2 = """
+            open pkg://pub2/a@2.0,5.11-0
+            close """
+
+        a_3 = """
+            open a@3.0,5.11-0
+            close """
+
+        aa_1 = """
+            open aa@1.0,5.11-0
+            close """
+
+        afoo_1 = """
+            open a/foo@1.0,5.11-0
+            close """
+
+        bfoo_1 = """
+            open b/foo@1.0,5.11-0
+            close """
+
+        fooa_1 = """
+            open foo/a@1.0,5.11-0
+            close """
+
+        foob_1 = """
+            open foo/b@1.0,5.11-0
+            close """
+
+        def test_overlapping_one_package_available(self):
+                self.pkgsend_bulk(self.rurl, self.a_1)
+                api_inst = self.image_create(self.rurl)
+
+                self._api_install(api_inst, ["a@1", "a@1"], noexecute=True)
+                self._api_install(api_inst, ["a@1", "a@1.0"], noexecute=True)
+                self._api_install(api_inst, ["a@1", "pkg://test/a@1"],
+                    noexecute=True)
+                self._api_install(api_inst, ["a*@1", "pkg:/*a@1"],
+                    noexecute=True)
+                self._api_install(api_inst, ["a*@1", "a@1"], noexecute=True)
+                self._api_install(api_inst, ["a@1", "pkg://test/a*@1"],
+                    noexecute=True)
+                # This fails because a*@2 matches no patterns on its own.
+                self.pkg("install -n 'a*@2' 'a@1'", exit=1)
+
+        def test_overlapping_conflicting_versions_no_wildcard_match(self):
+                self.pkgsend_bulk(self.rurl, self.a_1 + self.a_2)
+                api_inst = self.image_create(self.rurl)
+
+                self.pkg("install -n a@1 a@2", exit=1)
+                self.pkg("install -n a@2 pkg://test/a@1", exit=1)
+                self.pkg("install -n 'a*@2' 'pkg:/*a@1'", exit=1)
+
+                # This is allowed because a*@1 matches published packages, even
+                # though the packages it matches aren't installed in the image.
+                self._api_install(api_inst, ["a*@1", "a@2"])
+                self.pkg("list a@2")
+                self._api_uninstall(api_inst, ["a"])
+
+                self._api_install(api_inst, ["a@1", "pkg://test/a*@2"])
+                self.pkg("list a@1")
+                self._api_uninstall(api_inst, ["a"])
+
+                self.pkgsend_bulk(self.rurl, self.a_3)
+                self._api_install(api_inst, ["a*@1", "*a@2", "a@3"])
+                self.pkg("list a@3")
+                self._api_uninstall(api_inst, ["a"])
+
+                self._api_install(api_inst, ["a*@1", "*a@2", "a@latest"])
+                self.pkg("list a@3")
+                self._api_uninstall(api_inst, ["a"])
+
+                self.pkgsend_bulk(self.rurl, self.a_11)
+                self.pkg("install a@1.1 a@1.0", exit=1)
+                self._api_install(api_inst, ["a@1", "a@1.0", "a*@1.1"])
+                self.pkg("list a@1.0")
+                self._api_uninstall(api_inst, ["a"])
+
+                self._api_install(api_inst, ["*", "a@1.0"])
+                self.pkg("list a@1.0")
+                self._api_uninstall(api_inst, ["a"])
+
+        def test_overlapping_multiple_packages(self):
+                self.pkgsend_bulk(self.rurl, self.a_1 + self.a_2 + self.aa_1 +
+                    self.afoo_1 + self.bfoo_1 + self.fooa_1 + self.foob_1)
+                api_inst = self.image_create(self.rurl)
+
+                self.pkg("install '*a@1' 'a*@2'", exit=1)
+
+                self._api_install(api_inst, ["a*@1", "a@2"])
+                self.pkg("list -Hv")
+                self.assertEqual(len(self.output.splitlines()), 3)
+                self.assert_("a@2" in self.output)
+                self._api_uninstall(api_inst, ["a", "aa", "a/foo"])
+
+                self._api_install(api_inst, ["/a@1", "a*@2", "*foo*@1"])
+                self.pkg("list -Hv")
+                self.assertEqual(len(self.output.splitlines()), 5)
+                self.assert_("a@1" in self.output)
+                self._api_uninstall(api_inst,
+                    ["/a", "a/foo", "b/foo", "foo/a", "foo/b"])
+
+        def test_overlapping_multiple_publishers(self):
+                self.pkgsend_bulk(self.rurl, self.a_1 + self.pub2_a_2)
+                api_inst = self.image_create(self.rurl)
+
+                self._api_install(api_inst, ["a*@1", "pkg://pub2/a@2"],
+                    noexecute=True)
+                self._api_install(api_inst, ["a@1", "pkg://pub2/a*@2"],
+                    noexecute=True)
+                self._api_install(api_inst, ["a@1", "pkg://pub2/*@2"],
+                    noexecute=True)
+                self.pkg("install -n 'pkg://test/a*@1' 'pkg://pub2/*a@2'",
+                    exit=1)
+                self.pkg("install -n 'pkg://test/a@1' 'pkg://pub2/a@2'",
+                    exit=1)
+                self.pkg("install -n 'a@1' 'pkg://pub2/a@2'", exit=1)
+
+                self.pkgsend_bulk(self.rurl, self.pub2_a_1)
+                self._api_install(api_inst, ["a@1", "pkg://pub2/a@1"])
+                self.pkg("list -Hv 'pkg://pub2/*'")
+                self.assertEqual(len(self.output.splitlines()), 1)
+                self.assert_("a@1" in self.output)
+                self._api_uninstall(api_inst, ["a"])
+
+                self._api_install(api_inst, ["a@1", "pkg://test/a@1"])
+                self.pkg("list -Hv 'pkg://test/*'")
+                self.assertEqual(len(self.output.splitlines()), 1)
+                self.assert_("a@1" in self.output)
+                self._api_uninstall(api_inst, ["a"])
+
+                self._api_install(api_inst, ["a*@1", "pkg://pub2/*@2"])
+                self.pkg("list -Hv 'pkg://pub2/*'")
+                self.assertEqual(len(self.output.splitlines()), 1)
+                self.assert_("a@2" in self.output)
+                self._api_uninstall(api_inst, ["a"])
+
+                self._api_install(api_inst,
+                    ["pkg://test/a@1", "pkg://pub2/*@2"])
+                self.pkg("list -Hv 'pkg://test/*'")
+                self.assertEqual(len(self.output.splitlines()), 1)
+                self.assert_("a@1" in self.output)
+                self._api_uninstall(api_inst, ["a"])
+
+                # This intentionally doesn't use api_install to check for
+                # special handling of '*' in client.py.
+                self.pkg("install '*' 'pkg://pub2/*@2'")
+                self.pkg("list -Hv 'pkg://pub2/*'")
+                self.assertEqual(len(self.output.splitlines()), 1)
+                self.assert_("a@2" in self.output)
+                self._api_uninstall(api_inst, ["a"])
+
+
 class TestPkgInstallCircularDependencies(pkg5unittest.SingleDepotTestCase):
         # Only start/stop the depot once (instead of for every test)
         persistent_setup = True
@@ -1528,6 +1915,7 @@ class TestPkgInstallUpgrade(pkg5unittest.SingleDepotTestCase):
             add dir mode=0755 owner=root group=bin path=etc
             add file tmp/config1 mode=0644 owner=root group=bin path=etc/foo
             add hardlink path=etc/foo.link target=foo
+            add license tmp/copyright1 license=copyright
             close
         """
         iron20 = """
@@ -1535,6 +1923,7 @@ class TestPkgInstallUpgrade(pkg5unittest.SingleDepotTestCase):
             add dir mode=0755 owner=root group=bin path=etc
             add file tmp/config2 mode=0644 owner=root group=bin path=etc/foo
             add hardlink path=etc/foo.link target=foo
+            add license tmp/copyright2 license=copyright
             close
         """
 
@@ -1724,17 +2113,37 @@ class TestPkgInstallUpgrade(pkg5unittest.SingleDepotTestCase):
             close
         """
 
+        linkpreserve = """
+            open linkpreserve@1.0
+            add file tmp/preserve1 path=etc/ssh/sshd_config mode=0644 owner=root group=root preserve=true
+            close
+            open linkpreserve@2.0
+            add file tmp/preserve2 path=etc/sunssh/sshd_config mode=0644 owner=root group=root preserve=true original_name=linkpreserve:etc/ssh/sshd_config
+            add link path=etc/ssh/sshd_config target=../sunssh/sshd_config
+            close """
+
         salvage = """
             open salvage@1.0
             add dir path=var mode=755 owner=root group=root
             add dir path=var/mail mode=755 owner=root group=root
             add dir path=var/log mode=755 owner=root group=root
+            add dir path=var/noodles mode=755 owner=root group=root
+            add dir path=var/persistent mode=755 owner=root group=root
             close
             open salvage@2.0
             add dir path=var mode=755 owner=root group=root
             add dir path=var/.migrate-to-shared mode=755 owner=root group=root
             add dir path=var/.migrate-to-shared/mail salvage-from=var/mail mode=755 owner=root group=root
             add dir path=var/.migrate-to-shared/log salvage-from=var/log mode=755 owner=root group=root
+            add dir path=var/spaghetti mode=755 owner=root group=root
+            add dir path=var/persistent mode=755 owner=root group=root salvage-from=var/noodles
+            close
+            open salvage@3.0
+            add dir path=var mode=755 owner=root group=root
+            add dir path=var/.migrate-to-shared mode=755 owner=root group=root
+            add dir path=var/.migrate-to-shared/mail salvage-from=var/mail mode=755 owner=root group=root
+            add dir path=var/.migrate-to-shared/log salvage-from=var/log mode=755 owner=root group=root
+            add dir path=var/persistent mode=755 owner=root group=root salvage-from=var/noodles salvage-from=var/spaghetti
             close
         """
 
@@ -1775,7 +2184,7 @@ wigit 1
 foobar 2
 """,
             "tmp/dripol1_dp": """\
-*		read_priv_set=none		write_priv_set=none
+*               read_priv_set=none              write_priv_set=none
 """,
             "tmp/gold-passwd1": """\
 root:x:0:0::/root:/usr/bin/bash
@@ -2534,7 +2943,7 @@ adm
                 self.file_contains("newme", "preserve2")
 
         def test_directory_salvage(self):
-                """Make sure directory salvage works as expected"""
+                """Make sure basic directory salvage works as expected"""
                 self.pkgsend_bulk(self.rurl, self.salvage)
                 self.image_create(self.rurl)
                 self.pkg("install salvage@1.0")
@@ -2545,6 +2954,33 @@ adm
                 self.file_exists("var/.migrate-to-shared/mail/foo")
                 self.file_exists("var/.migrate-to-shared/mail/bar")
                 self.file_exists("var/.migrate-to-shared/mail/baz")
+
+        def test_directory_salvage_persistent(self):
+                """Make sure directory salvage works as expected when salvaging
+                content to an existing packaged directory."""
+
+                # we salvage content from two directories,
+                # var/noodles and var/spaghetti each of which disappear over
+                # subsequent updates.
+                self.pkgsend_bulk(self.rurl, self.salvage)
+                self.image_create(self.rurl)
+                self.pkg("install salvage@1.0")
+                self.file_append("var/mail/foo", "foo's mail")
+                self.file_append("var/noodles/noodles.txt", "yum")
+                self.pkg("update salvage@2.0")
+                self.file_exists("var/.migrate-to-shared/mail/foo")
+                self.file_exists("var/persistent/noodles.txt")
+                self.file_append("var/spaghetti/spaghetti.txt", "yum")
+                self.pkg("update")
+                self.file_exists("var/persistent/noodles.txt")
+                self.file_exists("var/persistent/spaghetti.txt")
+
+                # ensure that we can jump from 1.0 to 3.0 directly.
+                self.image_create(self.rurl)
+                self.pkg("install salvage@1.0")
+                self.file_append("var/noodles/noodles.txt", "yum")
+                self.pkg("update  salvage@3.0")
+                self.file_exists("var/persistent/noodles.txt")
 
         def test_special_salvage(self):
                 """Make sure salvaging directories with special files works as
@@ -2573,7 +3009,7 @@ adm
                 etc. match the src items's matching action as expected."""
 
                 for p in plist:
-                        pfmri = fmri.PkgFmri(p, "5.11")
+                        pfmri = fmri.PkgFmri(p)
                         pfmri.publisher = None
                         sfmri = pfmri.get_short_fmri().replace("pkg:/", "")
 
@@ -2591,6 +3027,89 @@ adm
                                         # Only want actions with matching path.
                                         continue
                                 self.validate_fsobj_attrs(a, target=dest)
+
+        def test_link_preserve(self):
+                """Ensure that files transitioning to a link still follow
+                original_name preservation rules."""
+
+                self.pkgsend_bulk(self.rurl, (self.linkpreserve))
+                self.image_create(self.rurl, destroy=True, fs=("var",))
+
+                # Install package with original config file location.
+                self.pkg("install linkpreserve@1.0")
+                cfg_path = os.path.join("etc", "ssh", "sshd_config")
+                abs_path = os.path.join(self.get_img_path(), cfg_path)
+
+                self.file_exists(cfg_path)
+                self.assert_(not os.path.islink(abs_path))
+
+                # Modify the file.
+                self.file_append(cfg_path, "modified")
+
+                # Install new package version, verify file replaced with link
+                # and modified version was moved to new location.
+                new_cfg_path = os.path.join("etc", "sunssh", "sshd_config")
+                self.pkg("update linkpreserve@2.0")
+                self.assert_(os.path.islink(abs_path))
+                self.file_exists(new_cfg_path)
+                self.file_contains(new_cfg_path, "modified")
+
+                # Uninstall, then install original version again.
+                self.pkg("uninstall linkpreserve")
+                self.pkg("install linkpreserve@1.0")
+                self.file_contains(cfg_path, "preserve1")
+
+                # Install new package version and verify that unmodified file is
+                # replaced with new configuration file.
+                self.pkg("update linkpreserve@2.0")
+                self.file_contains(new_cfg_path, "preserve2")
+
+        def test_many_hashalgs(self):
+                """Test that when upgrading actions where the new action
+                contains more hash attributes than the old action, that the
+                upgrade works."""
+
+                self.pkgsend_bulk(self.rurl, (self.iron10))
+                self.image_create(self.rurl, destroy=True)
+                self.pkg("install iron@1.0")
+                self.pkg("contents -m iron")
+                # We have not enabled SHA2 hash publication yet.
+                self.assert_("pkg.hash.sha256" not in self.output)
+
+                # publish with SHA1 and SHA2 hashes
+                self.pkgsend_bulk(self.rurl, self.iron20,
+                    debug_hash="sha1+sha256")
+
+                # verify that a non-SHA2 aware client can install these bits
+                self.pkg("-D hash=sha1 update")
+                self.image_create(self.rurl, destroy=True)
+
+                # This also tests package retrieval: we always retrieve packages
+                # with the least-preferred hash, but verify with the
+                # most-preferred hash.
+                self.pkg("install iron@2.0")
+                self.pkg("contents -m iron")
+                self.assert_("pkg.hash.sha256" in self.output)
+
+                # publish with only SHA-2 hashes
+                self.pkgsend_bulk(self.rurl, self.iron20, debug_hash="sha256")
+
+                # verify that a non-SHA2 aware client cannot install these bits
+                # since there are no SHA1 hashes present
+                self.pkg("-D hash=sha1 update", exit=1)
+                self.assert_(
+                    "No file could be found for the specified hash name: "
+                    "'NOHASH'" in self.errout)
+
+                # Make sure we've been publishing only with sha256 by removing
+                # those known attributes, then checking for the presence of
+                # the SHA-1 attributes.
+                self.pkg("-D hash=sha256 update")
+                self.pkg("contents -m iron")
+                for attr in ["pkg.hash.sha256", "pkg.chash.sha256"]:
+                        self.output = self.output.replace(attr, "")
+                self.assert_("hash" not in self.output)
+                self.assert_("chash" not in self.output)
 
 
 class TestPkgInstallActions(pkg5unittest.SingleDepotTestCase):
@@ -2678,7 +3197,7 @@ adm:NP:6445::::::
 
         only_legacy10 = """
             open only_legacy@1.0,5.11-0
-            add legacy arch=i386 category=system desc="GNU make - A utility used to build software (gmake) 3.81" hotline="Please contact your local service provider" name="gmake - GNU make" pkg=SUNWgmake vendor="Sun Microsystems, Inc." version=11.11.0,REV=2008.04.29.02.08
+            add legacy category=system desc="GNU make - A utility used to build software (gmake) 3.81" hotline="Please contact your local service provider" name="gmake - GNU make" pkg=SUNWgmake vendor="Sun Microsystems, Inc." version=11.11.0,REV=2008.04.29.02.08
             close """
 
         only_link10 = """
@@ -2698,37 +3217,37 @@ adm:NP:6445::::::
 
         csu1 = """
             open csu1@1.0,5.11-0
-            add legacy arch=i386 category=system desc="core software for a specific instruction-set architecture" hotline="Please contact your local service provider" name="Core Solaris, (Usr)" pkg=SUNWcsu variant.arch=i386 vendor="Oracle Corporation" version=11.11,REV=2009.11.11
+            add legacy category=system desc="core software for a specific instruction-set architecture" hotline="Please contact your local service provider" name="Core Solaris, (Usr)" pkg=SUNWcsu vendor="Oracle Corporation" version=11.11,REV=2009.11.11
             close
         """
 
         csu1_2 = """
             open csu1@2.0,5.11-0
-            add legacy arch=i386 category=system desc="core software for a specific instruction-set architecture" hotline="Please contact your local service provider" name="Core Solaris, (Usr)" pkg=SUNWcsu variant.arch=i386 vendor="Oracle Corporation" version=11.11,REV=2010.11.11
+            add legacy category=system desc="core software for a specific instruction-set architecture" hotline="Please contact your local service provider" name="Core Solaris, (Usr)" pkg=SUNWcsu vendor="Oracle Corporation" version=11.11,REV=2010.11.11
             close
         """
 
         csu2 = """
             open csu2@1.0,5.11-0
-            add legacy arch=i386 category=system desc="core software for a specific instruction-set architecture" hotline="Please contact your local service provider" name="Core Solaris, (Usr)" pkg=SUNWcsu variant.arch=i386 vendor="Oracle Corporation" version=11.11,REV=2009.11.11
+            add legacy category=system desc="core software for a specific instruction-set architecture" hotline="Please contact your local service provider" name="Core Solaris, (Usr)" pkg=SUNWcsu vendor="Oracle Corporation" version=11.11,REV=2009.11.11
             close
         """
 
         csu2_2 = """
             open csu2@2.0,5.11-0
-            add legacy arch=i386 category=system desc="core software for a specific instruction-set architecture" hotline="Please contact your local service provider" name="Core Solaris, (Usr)" pkg=SUNWcsu variant.arch=i386 vendor="Oracle Corporation" version=11.11,REV=2010.11.11
+            add legacy category=system desc="core software for a specific instruction-set architecture" hotline="Please contact your local service provider" name="Core Solaris, (Usr)" pkg=SUNWcsu vendor="Oracle Corporation" version=11.11,REV=2010.11.11
             close
         """
 
         csu3 = """
             open csu3@1.0,5.11-0
-            add legacy arch=i386 category=system desc="core software for a specific instruction-set architecture" hotline="Please contact your local service provider" name="Core Solaris, (Usr)" pkg=SUNWcsu variant.arch=i386 vendor="Oracle Corporation" version=11.11,REV=2009.11.11
+            add legacy category=system desc="core software for a specific instruction-set architecture" hotline="Please contact your local service provider" name="Core Solaris, (Usr)" pkg=SUNWcsu vendor="Oracle Corporation" version=11.11,REV=2009.11.11
             close
         """
 
         csu3_2 = """
             open csu3@2.0,5.11-0
-            add legacy arch=i386 category=system desc="core software for a specific instruction-set architecture" hotline="Please contact your local service provider" name="Core Solaris, (Usr)" pkg=SUNWcsu variant.arch=i386 vendor="Oracle Corporation" version=11.11,REV=2010.11.11
+            add legacy category=system desc="core software for a specific instruction-set architecture" hotline="Please contact your local service provider" name="Core Solaris, (Usr)" pkg=SUNWcsu vendor="Oracle Corporation" version=11.11,REV=2010.11.11
             close
         """
 
@@ -3062,34 +3581,143 @@ adm:NP:6445::::::
                 """Make sure we correctly verify group actions when users have
                 been added."""
 
-                simplegroup = """
+                simplegroups = """
                 open simplegroup@1
-                add group groupname=muppets
+                add group groupname=muppets gid=100
+                close
+                open simplegroup2@1
+                add group groupname=muppets2 gid=101
                 close"""
 
-                self.pkgsend_bulk(self.rurl, (self.basics0, simplegroup))
+                self.pkgsend_bulk(self.rurl, (self.basics0, simplegroups))
                 self.image_create(self.rurl)
 
                 self.pkg("install basics")
                 self.pkg("install simplegroup")
                 self.pkg("verify simplegroup")
 
-                gpath = self.get_img_path() + "/etc/group"
+		# add additional members to group & verify
+                gpath = self.get_img_file_path("etc/group")
                 gdata = file(gpath).readlines()
                 gdata[-1] = gdata[-1].rstrip() + "kermit,misspiggy\n"
                 file(gpath, "w").writelines(gdata)
                 self.pkg("verify simplegroup")
+		self.pkg("uninstall simplegroup")
+
+		# verify that groups appear in gid order.
+		self.pkg("install simplegroup simplegroup2")
+		self.pkg("verify")
+		gdata = file(gpath).readlines()
+		self.assert_(gdata[-1].find("muppets2") == 0)
+		self.pkg("uninstall simple*")
+		self.pkg("install simplegroup2 simplegroup")
+		gdata = file(gpath).readlines()
+		self.assert_(gdata[-1].find("muppets2") == 0)
+
+        def test_preexisting_group(self):
+                """Make sure we correct any errors in pre-existing group actions"""
+                simplegroup = """
+                open simplegroup@1
+                add group groupname=muppets gid=70
+                close
+                open simplegroup@2
+                add dir path=/etc/muppet owner=root group=muppets mode=755
+		add group groupname=muppets gid=70
+                close"""
+
+                self.pkgsend_bulk(self.rurl, (self.basics0, simplegroup))
+                self.image_create(self.rurl)
+
+                self.pkg("install basics")
+                gpath = self.get_img_file_path("etc/group")
+                gdata = file(gpath).readlines()
+                gdata = ["muppets::1010:\n"] + gdata
+                file(gpath, "w").writelines(gdata)
+                self.pkg("verify")
+                self.pkg("install simplegroup@1")
+                self.pkg("verify simplegroup")
+		# check # lines beginning w/ 'muppets' in group file
+                gdata = file(gpath).readlines()
+		self.assert_(
+		    len([a for a in gdata if a.find("muppets") == 0]) == 1)
+
+		# make sure we can add new version of same package
+		self.pkg("update simplegroup")
+		self.pkg("verify simplegroup")
+
+	def test_missing_ownergroup(self):
+		"""test what happens when a owner or group is missing"""
+		missing = """
+                open missing_group@1
+		add dir path=etc/muppet1 owner=root group=muppets mode=755
+                close
+                open missing_owner@1
+		add dir path=etc/muppet2 owner=muppets group=root mode=755
+                close
+                open muppetsuser@1
+                add user username=muppets group=bozomuppets uid=777
+                close
+                open muppetsuser@2
+                add user username=muppets group=muppets uid=777
+                close
+                 open muppetsgroup@1
+                add group groupname=muppets gid=777
+                close
+                """
+
+                self.pkgsend_bulk(self.rurl, (self.basics0, missing))
+                self.image_create(self.rurl)
+		self.pkg("install basics")
+
+		# try installing directory w/ a non-existing group
+		self.pkg("install missing_group@1", exit=1)
+		# try installing directory w/ a non-existing owner
+		self.pkg("install missing_owner@1", exit=1)
+		# try installing user w/ unknown group
+		self.pkg("install muppetsuser@1", exit=1)
+		# install group
+		self.pkg("install muppetsgroup")
+		# install working user & see if it all works.
+		self.pkg("install muppetsuser@2")
+		self.pkg("install missing_group@1")
+		self.pkg("install missing_owner@1")
+	        self.pkg("verify")
+		# edit group file to remove muppets group
+                gpath = self.get_img_file_path("etc/group")
+                gdata = file(gpath).readlines()
+                file(gpath, "w").writelines(gdata[0:-1])
+		# verify that we catch missing group
+		# in both group and user actions
+		self.pkg("verify muppetsgroup", 1)
+		self.pkg("verify muppetsuser", 1)
+		self.pkg("fix muppetsgroup", 0)
+		self.pkg("verify muppetsgroup muppetsuser missing*")
+		self.pkg("uninstall missing*")		
+		# try installing w/ broken group
+                file(gpath, "w").writelines(gdata[0:-1])
+		self.pkg("install missing_group@1", 1)
+		self.pkg("fix muppetsgroup")
+		self.pkg("install missing_group@1")
+		self.pkg("install missing_owner@1")
+		self.pkg("verify muppetsgroup muppetsuser missing*")
 
         def test_userverify(self):
                 """Make sure we correctly verify user actions when the on-disk
                 databases have been modified."""
 
-                simpleuser = """
+                simpleusers = """
                 open simpleuser@1
-                add user username=misspiggy group=root gcos-field="& loves Kermie" login-shell=/bin/sh
+                add user username=misspiggy group=root gcos-field="& loves Kermie" login-shell=/bin/sh uid=5
+                close
+                open simpleuser2@1
+                add user username=kermit group=root gcos-field="& loves mspiggy" login-shell=/bin/sh password=UP uid=6
+                close
+                open simpleuser2@2
+                add user username=kermit group=root gcos-field="& loves mspiggy" login-shell=/bin/sh uid=6
                 close"""
 
-                self.pkgsend_bulk(self.rurl, (self.basics0, simpleuser))
+
+                self.pkgsend_bulk(self.rurl, (self.basics0, simpleusers))
                 self.image_create(self.rurl)
 
                 self.pkg("install basics")
@@ -3189,6 +3817,47 @@ adm:NP:6445::::::
                 self.pkg("fix simpleuser")
                 self.pkg("verify simpleuser")
 
+                # change the password and show an error
+                self.pkg("verify simpleuser")
+                sdata[-1] = "misspiggy:NP:14579::::::"
+                file(spath, "w").writelines(sdata)
+                self.pkg("verify simpleuser", exit=1)
+                finderr("password: 'NP' should be '*LK*'")
+                self.pkg("fix simpleuser")
+                self.pkg("verify simpleuser")
+
+                # verify that passwords set to anything
+		# other than '*LK*" or 'NP' in manifest
+                # do not cause verify errors if changed.
+                self.pkg("install --reject simpleuser simpleuser2@1")
+                self.pkg("verify simpleuser2")
+                pdata = file(ppath).readlines()
+                sdata = file(spath).readlines()
+                sdata[-1] = "kermit:$5$pWPEsjm2$GXjBRTjGeeWmJ81ytw3q1ah7QTaI7yJeRYZeyvB.Rp1:14579::::::"
+                file(spath, "w").writelines(sdata)
+                self.pkg("verify simpleuser2")
+
+                # verify that upgrading package to version that implicitly
+                # uses *LK* default causes password to change and that it
+                # verifies correctly
+                self.pkg("update simpleuser2@2")
+                self.pkg("verify simpleuser2")
+                sdata = file(spath).readlines()
+                sdata[-1].index("*LK*")
+
+		# ascertain that users are added in uid order when
+		# installed at the same time.
+		self.pkg("uninstall simpleuser2")
+		self.pkg("install simpleuser simpleuser2")
+
+		pdata = file(ppath).readlines()
+		pdata[-1].index("kermit")
+
+		self.pkg("uninstall simpleuser simpleuser2")
+		self.pkg("install simpleuser2 simpleuser")
+
+		pdata = file(ppath).readlines()
+		pdata[-1].index("kermit")
 
         def test_minugid(self):
                 """Ensure that an unspecified uid/gid results in the first
@@ -4501,6 +5170,7 @@ class TestMultipleDepots(pkg5unittest.ManyDepotTestCase):
                     "test3", "test2", "test4", "test1", "test3"])
 
                 self.rurl1 = self.dcs[1].get_repo_url()
+                self.durl1 = self.dcs[1].get_depot_url()
                 self.pkgsend_bulk(self.rurl1, (self.foo10, self.moo10,
                     self.quux10, self.optional10, self.upgrade_p10,
                     self.upgrade_np11, self.incorp_p10, self.incorp_p11,
@@ -4508,6 +5178,7 @@ class TestMultipleDepots(pkg5unittest.ManyDepotTestCase):
                     self.corge10))
 
                 self.rurl2 = self.dcs[2].get_repo_url()
+                self.durl2 = self.dcs[2].get_depot_url()
                 self.pkgsend_bulk(self.rurl2, (self.foo10, self.bar10,
                     self.upgrade_p11, self.upgrade_np10, self.corge10))
 
@@ -4948,6 +5619,19 @@ class TestMultipleDepots(pkg5unittest.ManyDepotTestCase):
                 self.pkg("update pkg://test1/upgrade-p@1.0")
                 self.pkg("install upgrade-p")
                 self.pkg("info pkg://test2/upgrade-p@1.1")
+
+        def test_19_refresh_failure(self):
+                """Test that pkg client returns with exit code 1 when only one
+                publisher is specified and it's not reachable (bug 7176158)."""
+
+                # Create private image for this test.
+                self.image_create(self.rurl1, prefix="test1")
+                # Set origin to an invalid repo.
+                self.pkg("set-publisher --no-refresh -O http://test.invalid7 "
+                    "test1")
+
+                # Check if install -n returns with exit code 1
+                self.pkg("install -n moo", exit=1)
 
 
 class TestImageCreateCorruptImage(pkg5unittest.SingleDepotTestCaseCorruptImage):
@@ -6039,6 +6723,9 @@ class TestPkgInstallLicense(pkg5unittest.SingleDepotTestCase):
 
         persistent_depot = True
 
+        # Tests in this suite use the read only data directory.
+        need_ro_data = True
+
         baz10 = """
             open baz@1.0,5.11-0
             add license copyright.baz license=copyright.baz
@@ -6073,12 +6760,47 @@ class TestPkgInstallLicense(pkg5unittest.SingleDepotTestCase):
         misc_files = ["copyright.baz", "copyright.licensed", "libc.so.1",
             "license.licensed", "license.licensed.addendum"]
 
+        # Packages with copyright in non-ascii character
+        nonascii10 = """
+            open nonascii@1.0,5.11-0
+            add license 88591enc.copyright license=copyright
+            close """
+
+        # Packages with copyright in non-ascii character
+        utf8enc10 = """
+            open utf8enc@1.0,5.11-0
+            add license utf8enc.copyright license=copyright
+            close """
+
+        # Packages with copyright in unsupported character set
+        unsupported10 = """
+            open unsupported@1.0,5.11-0
+            add license unsupported.copyright license=copyright
+            close """
+
         def setUp(self):
                 pkg5unittest.SingleDepotTestCase.setUp(self, publisher="bobcat")
                 self.make_misc_files(self.misc_files)
 
+                # Use license with latin1 i.e 88591 encoding
+                n_copyright = os.path.join(self.ro_data_root,
+                    "88591enc.copyright")
+                self.make_misc_files({"88591enc.copyright": n_copyright})
+
+                # Use utf-8 encoding license
+                utf_copyright = os.path.join(self.ro_data_root,
+                    "utf8enc.copyright")
+                self.make_misc_files({"utf8enc.copyright": utf_copyright})
+
+                # Use unsupported license
+                u_copyright = os.path.join(self.ro_data_root,
+                    "unsupported.copyright")
+                self.make_misc_files({"unsupported.copyright": u_copyright})
+
                 self.plist = self.pkgsend_bulk(self.rurl, (self.licensed10,
-                    self.licensed12, self.licensed13, self.baz10))
+                    self.licensed12, self.licensed13, self.baz10,
+                    self.nonascii10, self.utf8enc10, self.unsupported10))
+
 
         def test_01_install_update(self):
                 """Verifies that install and update handle license
@@ -6151,6 +6873,15 @@ class TestPkgInstallLicense(pkg5unittest.SingleDepotTestCase):
                             "license.licensed", True, False]]])
                 self.pkg("info licensed@1.3")
 
+        def test_02_bug_7127117(self):
+                """Verifies that install with --parsable handles licenses
+                with non-ascii & non UTF locale"""
+                self.image_create(self.rurl, prefix="bobcat")
+
+                self.pkg("install --parsable=0 nonascii@1.0")
+                self.pkg("install --parsable=0 utf8enc@1.0")
+                self.pkg("install --parsable=0 unsupported@1.0")
+
 
 class TestActionErrors(pkg5unittest.SingleDepotTestCase):
         """This set of tests is intended to verify that the client will handle
@@ -6209,7 +6940,7 @@ class TestActionErrors(pkg5unittest.SingleDepotTestCase):
 
                 self.plist = {}
                 for p in plist:
-                        pfmri = fmri.PkgFmri(p, "5.11")
+                        pfmri = fmri.PkgFmri(p)
                         self.plist[pfmri.pkg_name] = pfmri
 
         @staticmethod
@@ -6386,6 +7117,10 @@ class TestConflictingActions(pkg5unittest.SingleDepotTestCase):
         actions into the same name in a namespace cannot be installed
         simultaneously."""
 
+        pkg_boring10 = """
+            open boring@1.0,5.11-0
+            close """
+
         pkg_dupfiles = """
             open dupfiles@0,5.11-0
             add file tmp/file1 path=dir/pathname mode=0755 owner=root group=bin
@@ -6454,7 +7189,38 @@ class TestConflictingActions(pkg5unittest.SingleDepotTestCase):
 
         pkg_overlaid = """
             open overlaid@0,5.11-0
+            add dir path=etc mode=0755 owner=root group=root
             add file tmp/file1 path=etc/pam.conf mode=644 owner=root group=sys preserve=true overlay=allow
+            close
+            open overlaid@1,5.11-0
+            add dir path=etc mode=0755 owner=root group=root
+            add file tmp/file1 path=etc/pam.conf mode=644 owner=root group=sys preserve=renamenew overlay=allow
+            close
+            open overlaid@2,5.11-0
+            add dir path=etc mode=0755 owner=root group=root
+            add file tmp/file3 path=etc/pam.conf mode=644 owner=root group=sys preserve=renamenew overlay=allow
+            close
+            open overlaid@3,5.11-0
+            add set name=pkg.renamed value=true
+            add depend type=require fmri=overlaid-renamed@3
+            add depend type=exclude fmri=overlaid-renamed@4
+            close
+            open overlaid-renamed@3,5.11-0
+            add depend type=optional fmri=overlaid@3
+            add dir path=etc mode=0755 owner=root group=root
+            add file tmp/file3 original_name=overlaid:etc/pam.conf path=etc/pam.conf mode=644 owner=root group=sys preserve=renamenew overlay=allow
+            close
+            open overlaid-renamed@4.0,5.11-0
+            add depend type=optional fmri=overlaid@3
+            add dir path=etc mode=0755 owner=root group=root
+            add dir path=etc/pam mode=0755 owner=root group=root
+            add file tmp/file4 original_name=overlaid:etc/pam.conf path=etc/pam/pam.conf mode=644 owner=root group=sys preserve=renamenew
+            close
+            open overlaid-renamed@4.1,5.11-0
+            add depend type=optional fmri=overlaid@3
+            add dir path=etc mode=0755 owner=root group=root
+            add dir path=etc/pam mode=0755 owner=root group=root
+            add file tmp/file4 original_name=overlaid:etc/pam.conf path=etc/pam/pam.conf mode=644 owner=root group=sys preserve=renamenew overlay=allow
             close
         """
 
@@ -6468,6 +7234,30 @@ class TestConflictingActions(pkg5unittest.SingleDepotTestCase):
         pkg_overlayer = """
             open overlayer@0,5.11-0
             add file tmp/file2 path=etc/pam.conf mode=644 owner=root group=sys preserve=true overlay=true
+            close
+        """
+
+        pkg_overlayer_move = """
+            open overlayer-move@0,5.11-0
+            add file tmp/file2 path=etc/pam.conf mode=644 owner=root group=sys preserve=true overlay=true
+            close
+            open overlayer-move@1,5.11-0
+            add file tmp/file3 path=etc/pam/pam.conf mode=644 owner=root group=sys preserve=true overlay=true original_name=overlayer-move:etc/pam.conf
+            close
+        """
+
+        pkg_overlayer_update = """
+            open overlayer-update@0,5.11-0
+            add file tmp/file1 path=etc/pam.conf mode=644 owner=root group=sys overlay=true
+            close
+            open overlayer-update@1,5.11-0
+            add file tmp/file2 path=etc/pam.conf mode=644 owner=root group=sys preserve=true overlay=true
+            close
+            open overlayer-update@2,5.11-0
+            add file tmp/file3 path=etc/pam.conf mode=644 owner=root group=sys preserve=renameold overlay=true
+            close
+            open overlayer-update@3,5.11-0
+            add file tmp/file4 path=etc/pam.conf mode=644 owner=root group=sys preserve=renamenew overlay=true
             close
         """
 
@@ -6495,7 +7285,7 @@ class TestConflictingActions(pkg5unittest.SingleDepotTestCase):
 
         pkg_unpreserved_overlayer = """
             open unpreserved-overlayer@0,5.11-0
-            add file tmp/file2 path=etc/pam.conf mode=644 owner=root group=sys overlay=true
+            add file tmp/unpreserved path=etc/pam.conf mode=644 owner=root group=sys overlay=true
             close
         """
 
@@ -6985,7 +7775,8 @@ adm
             close
         """
 
-        misc_files = ["tmp/file1", "tmp/file2", "tmp/file3"]
+        misc_files = ["tmp/file1", "tmp/file2", "tmp/file3", "tmp/file4",
+            "tmp/unpreserved"]
 
         # Keep the depots around for the duration of the entire class
         persistent_setup = True
@@ -7109,7 +7900,7 @@ adm
                 self.pkg("verify")
 
                 # Re-use the overlay packages for some preserve testing.
-                self.pkg("install overlaid")
+                self.pkg("install overlaid@0")
                 self.pkg("-D broken-conflicting-action-handling=1 install "
                     "invalid-overlayer")
                 # We may have been able to lay down the package, but because the
@@ -7163,6 +7954,11 @@ adm
                 # (preserve does not have to be set).
                 self.image_create(self.rurl)
 
+                # Ensure boring package is installed as conflict checking is
+                # bypassed (and thus, overlay semantics) if all packages are
+                # removed from an image.
+                self.pkg("install boring")
+
                 # Should fail because one action specified overlay=allow,
                 # but not preserve (it isn't editable).
                 self.pkg("install invalid-overlaid")
@@ -7171,7 +7967,7 @@ adm
 
                 # Should fail because one action is overlayable but overlaying
                 # action doesn't declare its intent to overlay.
-                self.pkg("install overlaid")
+                self.pkg("install overlaid@0")
                 self.file_contains("etc/pam.conf", "file1")
                 self.pkg("install invalid-overlayer", exit=1)
 
@@ -7203,7 +7999,7 @@ adm
                 # Verify that the file isn't touched on uninstall of the
                 # overlaying package if package being overlaid is still
                 # installed.
-                self.pkg("uninstall overlayer")
+                self.pkg("uninstall -vvv overlayer")
                 self.file_contains("etc/pam.conf", "zigit")
                 self.file_contains("etc/pam.conf", "file2")
 
@@ -7214,7 +8010,7 @@ adm
 
                 # Verify that installing both packages at the same time results
                 # in only the overlaying file being delivered.
-                self.pkg("install overlaid overlayer")
+                self.pkg("install overlaid@0 overlayer")
                 self.file_contains("etc/pam.conf", "file2")
 
                 # Verify that the file isn't touched on uninstall of the
@@ -7226,7 +8022,7 @@ adm
 
                 # Re-install overlaid package and verify that file content
                 # does not change.
-                self.pkg("install overlaid")
+                self.pkg("install overlaid@0")
                 self.file_contains("etc/pam.conf", "file2")
                 self.file_contains("etc/pam.conf", "zigit")
                 self.pkg("uninstall overlaid overlayer")
@@ -7234,8 +8030,8 @@ adm
                 # Should succeed because one action is overlayable and
                 # overlaying action declares its intent to overlay even
                 # though the overlaying action isn't marked with preserve.
-                self.pkg("install overlaid unpreserved-overlayer")
-                self.file_contains("etc/pam.conf", "file2")
+                self.pkg("install overlaid@0 unpreserved-overlayer")
+                self.file_contains("etc/pam.conf", "unpreserved")
 
                 # Should succeed because overlaid action permits modification
                 # and contents matches overlaying action.
@@ -7252,20 +8048,213 @@ adm
 
                 # Should revert to content delivered by overlaying action.
                 self.pkg("fix unpreserved-overlayer")
-                self.file_contains("etc/pam.conf", "file2")
+                self.file_contains("etc/pam.conf", "unpreserved")
                 self.file_doesnt_contain("etc/pam.conf", "zigit")
 
                 # Should revert to content delivered by overlaying action.
                 self.file_append("etc/pam.conf", "zigit")
                 self.pkg("revert /etc/pam.conf")
-                self.file_contains("etc/pam.conf", "file2")
+                self.file_contains("etc/pam.conf", "unpreserved")
                 self.file_doesnt_contain("etc/pam.conf", "zigit")
                 self.pkg("uninstall unpreserved-overlayer")
 
                 # Should revert to content delivered by overlaid action.
-                self.file_contains("etc/pam.conf", "file2")
+                self.file_contains("etc/pam.conf", "unpreserved")
                 self.pkg("revert /etc/pam.conf")
                 self.file_contains("etc/pam.conf", "file1")
+
+                # Install overlaying package, then update overlaid package and
+                # verify that file content does not change if only preserve
+                # attribute changes.
+                self.pkg("install -vvv unpreserved-overlayer")
+                self.file_contains("etc/pam.conf", "unpreserved")
+                self.pkg("install overlaid@1")
+                self.file_contains("etc/pam.conf", "unpreserved")
+                self.pkg("uninstall -vvv overlaid")
+
+                # Now update overlaid package again, and verify that file
+                # content does not change even though overlaid content has.
+                self.pkg("install -vvv overlaid@2")
+                self.file_contains("etc/pam.conf", "unpreserved")
+
+                # Now update overlaid package again this time as part of a
+                # rename, and verify that file content does not change even
+                # though file has moved between packages.
+                self.pkg("install -vvv overlaid@3")
+                self.file_contains("etc/pam.conf", "unpreserved")
+
+                # Verify that unpreserved overlay is not salvaged when both
+                # overlaid and overlaying package are removed at the same time.
+                # (Preserved files are salvaged if they have been modified on
+                # uninstall.)
+
+                # Ensure directory is empty before testing.
+                api_inst = self.get_img_api_obj()
+                img_inst = api_inst.img
+                sroot = os.path.join(img_inst.imgdir, "lost+found")
+                shutil.rmtree(sroot)
+
+                # Verify etc directory not found after uninstall.
+                self.pkg("uninstall -vvv overlaid-renamed unpreserved-overlayer")
+                salvaged = [
+                    n for n in os.listdir(sroot)
+                    if n.startswith("etc")
+                ]
+                self.assertEqualDiff(salvaged, [])
+
+                # Next, update overlaid package again this time as part of a
+                # file move.  Verify that the configuration file exists at both
+                # the new location and the old location, that the content has
+                # not changed in either, and that the new configuration exists
+                # as expected as ".new".
+                self.pkg("install -vvv overlaid-renamed@3 unpreserved-overlayer")
+                self.pkg("install -vvv overlaid-renamed@4.1")
+                self.file_contains("etc/pam.conf", "unpreserved")
+                self.file_contains("etc/pam/pam.conf", "unpreserved")
+                self.file_contains("etc/pam/pam.conf.new", "file4")
+
+                # Verify etc/pam.conf not salvaged after uninstall as overlay
+                # file has not been changed.
+                self.pkg("uninstall -vvv overlaid-renamed unpreserved-overlayer")
+                salvaged = [
+                    n for n in os.listdir(os.path.join(sroot, "etc"))
+                    if n.startswith("pam.conf")
+                ]
+                self.assertEqualDiff(salvaged, [])
+
+                # Next, repeat the same set of tests performed above for renames
+                # and moves with an overlaying, preserved file.
+                #
+                # Install overlaying package, then update overlaid package and
+                # verify that file content does not change if only preserve
+                # attribute changes.
+                self.pkg("install -vvv overlayer")
+                self.file_contains("etc/pam.conf", "file2")
+                self.file_append("etc/pam.conf", "zigit")
+                self.pkg("install overlaid@1")
+                self.file_contains("etc/pam.conf", "zigit")
+                self.pkg("uninstall -vvv overlaid")
+
+                # Now update overlaid package again, and verify that file
+                # content does not change even though overlaid content has.
+                self.pkg("install -vvv overlaid@2")
+                self.file_contains("etc/pam.conf", "zigit")
+
+                # Now update overlaid package again this time as part of a
+                # rename, and verify that file content does not change even
+                # though file has moved between packages.
+                self.pkg("install -vvv overlaid@3")
+                self.file_contains("etc/pam.conf", "zigit")
+
+                # Verify that preserved overlay is salvaged when both overlaid
+                # and overlaying package are removed at the same time.
+                # (Preserved files are salvaged if they have been modified on
+                # uninstall.)
+
+                # Ensure directory is empty before testing.
+                api_inst = self.get_img_api_obj()
+                img_inst = api_inst.img
+                sroot = os.path.join(img_inst.imgdir, "lost+found")
+                shutil.rmtree(sroot)
+
+                # Verify etc directory found after uninstall.
+                self.pkg("uninstall -vvv overlaid-renamed overlayer")
+                salvaged = [
+                    n for n in os.listdir(sroot)
+                    if n.startswith("etc")
+                ]
+                self.assertEqualDiff(salvaged, ["etc"])
+
+                # Next, update overlaid package again, this time as part of a
+                # file move where the overlay attribute was dropped.  Verify
+                # that the configuration file exists at both the new location
+                # and the old location, that the content has not changed in
+                # either, and that the new configuration exists as expected as
+                # ".new".
+                self.pkg("install -vvv overlaid-renamed@3 overlayer")
+                self.file_append("etc/pam.conf", "zigit")
+                self.pkg("install -vvv overlaid-renamed@4.0")
+                self.file_contains("etc/pam.conf", "zigit")
+                self.file_contains("etc/pam/pam.conf", "zigit")
+                self.file_contains("etc/pam/pam.conf.new", "file4")
+                self.pkg("uninstall -vvv overlaid-renamed overlayer")
+
+                # Next, update overlaid package again, this time as part of a
+                # file move.  Verify that the configuration file exists at both
+                # the new location and the old location, that the content has
+                # not changed in either, and that the new configuration exists
+                # as expected as ".new".
+                self.pkg("install -vvv overlaid-renamed@3 overlayer")
+                self.file_append("etc/pam.conf", "zigit")
+                self.pkg("install -vvv overlaid-renamed@4.1")
+                self.file_contains("etc/pam.conf", "zigit")
+                self.file_contains("etc/pam/pam.conf", "zigit")
+                self.file_contains("etc/pam/pam.conf.new", "file4")
+
+                # Next, downgrade the package and verify that if an overlaid
+                # file moves back to its original location, the content of the
+                # overlay file will not change.
+                self.pkg("update -vvv overlaid-renamed@3")
+                self.file_contains("etc/pam.conf", "zigit")
+
+                # Now upgrade again for remaining tests.
+                self.pkg("install -vvv overlaid-renamed@4.1")
+
+                # Verify etc/pam.conf and etc/pam/pam.conf salvaged after
+                # uninstall as overlay file and overlaid file is different from
+                # packaged.
+                shutil.rmtree(sroot)
+                self.pkg("uninstall -vvv overlaid-renamed overlayer")
+                salvaged = sorted(
+                    n for n in os.listdir(os.path.join(sroot, "etc"))
+                    if n.startswith("pam")
+                )
+                # Should have three entries; one should be 'pam' directory
+                # (presumably containing pam.conf-X...), another a file starting
+                # with 'pam.conf', and finally a 'pam-XXX' directory containing
+                # the 'pam.conf.new-XXX'.
+                self.assertEqualDiff(salvaged[0], "pam")
+                self.assert_(salvaged[1].startswith("pam-"),
+                    msg=str(salvaged))
+                self.assert_(salvaged[2].startswith("pam.conf"),
+                    msg=str(salvaged))
+
+                # Next, install overlaid package and overlaying package, then
+                # upgrade each to a version where the file has changed
+                # locations and verify that the content remains intact.
+                self.pkg("install -vvv overlaid@0 overlayer-move@0")
+                self.file_append("etc/pam.conf", "zigit")
+                self.pkg("install -vvv overlaid@3")
+                self.file_contains("etc/pam.conf", "zigit")
+                self.pkg("install -vvv overlaid-renamed@4.1 overlayer-move@1")
+                self.file_contains("etc/pam/pam.conf", "zigit")
+
+                # Next, downgrade overlaid-renamed and overlaying package to
+                # versions where the file is restored to its original location
+                # and verify that the content is reverted to the original
+                # overlay version since this is a downgrade.
+                self.pkg("update -vvv overlaid-renamed@3 overlayer-move@0")
+                self.file_contains("etc/pam.conf", "file2")
+                self.pkg("uninstall overlaid-renamed overlayer-move")
+
+                # Next, install overlaid package and overlaying package and
+                # verify preserve acts as expected for overlay package as it is
+                # updated.
+                self.pkg("install -vvv overlaid@2 overlayer-update@0")
+                self.file_contains("etc/pam.conf", "file1")
+                # unpreserved -> preserved
+                self.pkg("install -vvv overlayer-update@1")
+                self.file_contains("etc/pam.conf", "file2")
+                self.file_append("etc/pam.conf", "zigit")
+                # preserved -> renameold
+                self.pkg("install -vvv overlayer-update@2")
+                self.file_doesnt_contain("etc/pam.conf", "zigit")
+                self.file_contains("etc/pam.conf.old", "zigit")
+                self.file_append("etc/pam.conf", "zagat")
+                # renameold -> renamenew
+                self.pkg("install -vvv overlayer-update@3")
+                self.file_contains("etc/pam.conf", "zagat")
+                self.file_contains("etc/pam.conf.new", "file4")
 
         def test_different_types(self):
                 """Test the behavior of pkg(1) when multiple actions of
@@ -7682,8 +8671,8 @@ adm
                     "tripledupfilec")
                 self.pkg("-D broken-conflicting-action-handling=1 install "
                     "tripledupfilea")
-                self.pkg("change-variant variant.foo=two")
-                self.pkg("change-variant variant.foo=one", exit=1)
+                self.pkg("change-variant -vvv variant.foo=two")
+                self.pkg("change-variant -vvv variant.foo=one", exit=1)
 
         def dir_exists(self, path, mode=None, owner=None, group=None):
                 dir_path = os.path.join(self.get_img_path(), path)

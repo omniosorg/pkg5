@@ -18,11 +18,10 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 # Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
 #
 #
-#, fuzzy
 msgid ""
 msgstr ""
        "Project-Id-Version: PACKAGE VERSION\n"

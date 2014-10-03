@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2007, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
 #
 
 """module describing a generic packaging object
@@ -43,8 +43,11 @@ import types
 import _common
 import pkg.actions
 import pkg.client.api_errors as apx
+import pkg.digest as digest
 import pkg.portable as portable
 import pkg.variant as variant
+
+from pkg.misc import EmptyDict
 
 # Directories must precede all filesystem object actions; hardlinks must follow
 # all filesystem object actions (except links).  Note that user and group
@@ -117,6 +120,18 @@ class NSG(type):
                                 dict["namespace_group"] = nsg
 
                 return type.__new__(mcs, name, bases, dict)
+
+        @staticmethod
+        def getstate(obj, je_state=None):
+                """Returns the serialized state of this object in a format
+                that that can be easily stored using JSON, pickle, etc."""
+                return str(obj)
+
+        @staticmethod
+        def fromstate(state, jd_state=None):
+                """Allocate a new object using previously serialized state
+                obtained via getstate()."""
+                return pkg.actions.fromstr(state)
 
 
 class Action(object):
@@ -241,7 +256,9 @@ class Action(object):
         def __str__(self):
                 """Serialize the action into manifest form.
 
-                The form is the name, followed by the hash, if it exists,
+                The form is the name, followed by the SHA1 hash, if it exists,
+                (this use of a positional SHA1 hash is deprecated, with
+                pkg.*hash.* attributes being preferred over positional hashes)
                 followed by attributes in the form 'key=value'.  All fields are
                 space-separated; fields with spaces in the values are quoted.
 
@@ -257,7 +274,8 @@ class Action(object):
                 try:
                         h = self.hash
                         if h:
-                                if "=" not in h:
+                                if "=" not in h and " " not in h and \
+                                    '"' not in h:
                                         out += " " + h
                                 else:
                                         sattrs.append("hash")
@@ -412,9 +430,14 @@ class Action(object):
                 if cmp_hash:
                         shash = ohash = None
                         try:
-                                shash = self.hash
-                                ohash = other.hash
-                                if shash != other.hash:
+                                attr, shash, ohash, hfunc = \
+                                    digest.get_common_preferred_hash(
+                                    self, other)
+                                if shash != ohash:
+                                        return True
+                                # If there's no common preferred hash, we have
+                                # to treat these actions as different
+                                if shash is None and ohash is None:
                                         return True
                         except AttributeError:
                                 if shash or ohash:
@@ -462,6 +485,8 @@ class Action(object):
                 desired user output is.
                 """
 
+                # Indexing based on the SHA-1 hash is enough for the generic
+                # case.
                 if hasattr(self, "hash"):
                         return [
                             (self.name, "content", self.hash, self.hash),
@@ -609,6 +634,33 @@ class Action(object):
                     (v, self.attrs[v]) for v in self.get_varcet_keys()[0]
                 )))
 
+        def strip(self, preserve=EmptyDict):
+                """Strip actions of attributes which are unnecessary once
+                those actions have been installed in an image.  Stripped
+                actions are saved in an images stripped action cache and used
+                for conflicting actions checks during image planning
+                operations."""
+
+                for key in self.attrs.keys():
+                        # strip out variant and facet information
+                        if key[:8] == "variant." or key[:6] == "facet.":
+                                del self.attrs[key]
+                                continue
+                        # keep unique attributes
+                        if not self.unique_attrs or key in self.unique_attrs:
+                                continue
+                        # keep file action overlay attributes
+                        if self.name == "file" and key == "overlay":
+                                continue
+                        # keep specified keys
+                        if key in preserve.get(self.name, []):
+                                continue
+                        # keep link/hardlink action mediator attributes
+                        if (self.name == "link" or self.name == "hardlink") \
+                            and key[:8] == "mediator":
+                                continue
+                        del self.attrs[key]
+
         def strip_variants(self):
                 """Remove all variant tags from the attrs dictionary."""
 
@@ -706,10 +758,10 @@ class Action(object):
                                 self.validate(fmri=fmri)
 
                         # Otherwise, the user is unknown; attempt to report why.
-                        ip = pkgplan.image.imageplan
-                        if owner in ip.removed_users:
+                        pd = pkgplan.image.imageplan.pd
+                        if owner in pd.removed_users:
                                 # What package owned the user that was removed?
-                                src_fmri = ip.removed_users[owner]
+                                src_fmri = pd.removed_users[owner]
 
                                 raise pkg.actions.InvalidActionAttributesError(
                                     self, [("owner", _("'%(path)s' cannot be "
@@ -718,7 +770,7 @@ class Action(object):
                                     "path": path, "owner": owner,
                                     "src_fmri": src_fmri })],
                                     fmri=fmri)
-                        elif owner in ip.added_users:
+                        elif owner in pd.added_users:
                                 # This indicates an error on the part of the
                                 # caller; the user should have been added
                                 # before attempting to install the file.
@@ -749,10 +801,10 @@ class Action(object):
 
                         # Otherwise, the group is unknown; attempt to report
                         # why.
-                        ip = pkgplan.image.imageplan
-                        if group in ip.removed_groups:
+                        pd = pkgplan.image.imageplan.pd
+                        if group in pd.removed_groups:
                                 # What package owned the group that was removed?
-                                src_fmri = ip.removed_groups[group]
+                                src_fmri = pd.removed_groups[group]
 
                                 raise pkg.actions.InvalidActionAttributesError(
                                     self, [("group", _("'%(path)s' cannot be "
@@ -761,7 +813,7 @@ class Action(object):
                                     "path": path, "group": group,
                                     "src_fmri": src_fmri })],
                                     fmri=pkgplan.destination_fmri)
-                        elif group in ip.added_groups:
+                        elif group in pd.added_groups:
                                 # This indicates an error on the part of the
                                 # caller; the group should have been added
                                 # before attempting to install the file.
@@ -892,7 +944,7 @@ class Action(object):
                 try:
                         value = self.attrs[name]
                 except KeyError:
-                        return [] 
+                        return []
                 if type(value) is not list:
                         return [value]
                 return value

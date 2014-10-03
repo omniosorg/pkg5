@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
 #
 
 import testutils
@@ -31,10 +31,12 @@ import pkg5unittest
 
 import difflib
 import errno
+import hashlib
 import unittest
 import os
 import pkg.catalog
 import pkg.client.progress
+import pkg.digest as digest
 import pkg.fmri
 import pkg.misc
 import pkg.p5p
@@ -101,28 +103,9 @@ class TestP5P(pkg5unittest.SingleDepotTestCase):
                             os.path.join(self.raw_trust_anchor_dir, name),
                             os.path.join(dest_dir, name))
 
-        def image_create(self, *args, **kwargs):
-                pkg5unittest.SingleDepotTestCase.image_create(self,
-                    *args, **kwargs)
-                self.ta_dir = os.path.join(self.img_path(), "etc/certs/CA")
-                os.makedirs(self.ta_dir)
-
         def setUp(self):
                 pkg5unittest.SingleDepotTestCase.setUp(self)
                 self.make_misc_files(self.misc_files)
-
-                # Setup base test paths.
-                self.path_to_certs = os.path.join(self.ro_data_root,
-                    "signing_certs", "produced")
-                self.keys_dir = os.path.join(self.path_to_certs, "keys")
-                self.cs_dir = os.path.join(self.path_to_certs,
-                    "code_signing_certs")
-                self.chain_certs_dir = os.path.join(self.path_to_certs,
-                    "chain_certs")
-                self.raw_trust_anchor_dir = os.path.join(self.path_to_certs,
-                    "trust_anchors")
-                self.crl_dir = os.path.join(self.path_to_certs, "crl")
-                self.ta_dir = None
 
                 # Publish packages needed for tests.
                 plist = self.pkgsend_bulk(self.rurl, self.pkgs)
@@ -651,18 +634,25 @@ class TestP5P(pkg5unittest.SingleDepotTestCase):
                 arc = pkg.p5p.Archive(arc_path, mode="r",
                     archive_index=archive_index)
 
+                # We always store content using the least_preferred hash, so
+                # determine what that is so that we can verify it using
+                # gunzip_from_stream.
+                hash_func = digest.get_least_preferred_hash(None)[2]
+
                 # Test behaviour when specifying publisher.
                 nullf = open(os.devnull, "wb")
                 for h in hashes["test"]:
                         fobj = arc.get_package_file(h, pub="test")
-                        uchash = pkg.misc.gunzip_from_stream(fobj, nullf)
+                        uchash = pkg.misc.gunzip_from_stream(fobj, nullf,
+                            hash_func=hash_func)
                         self.assertEqual(uchash, h)
                         fobj.close()
 
                 # Test behaviour when not specifying publisher.
                 for h in hashes["test"]:
                         fobj = arc.get_package_file(h)
-                        uchash = pkg.misc.gunzip_from_stream(fobj, nullf)
+                        uchash = pkg.misc.gunzip_from_stream(fobj, nullf,
+                            hash_func=hash_func)
                         self.assertEqual(uchash, h)
                         fobj.close()
 
@@ -742,7 +732,8 @@ class TestP5P(pkg5unittest.SingleDepotTestCase):
                 arc.add_repo_package(self.quux, repo)
                 arc.close()
 
-                # Get list of file hashes.
+                # Get list of file hashes. These will be the "least-preferred"
+                # hash for the actions being stored.
                 hashes = { "all": set() }
                 for rstore in repo.rstores:
                         for dirpath, dirnames, filenames in os.walk(

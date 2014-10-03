@@ -110,8 +110,8 @@ def ar_open(root, path, flags,
 
         # we're going to update root and path so prepare an error
         # message with the existing values now.
-        eremote = _("Path outside alternate root: root=%s, path=%s") % \
-            (root, path)
+        eremote = _("Path outside alternate root: root=%(root)s, "
+            "path=%(path)s") % {"root": root, "path": path}
 
         # make target into a relative path
         if os.path.isabs(path):
@@ -123,9 +123,9 @@ def ar_open(root, path, flags,
         try:
                 root = __fd_to_path(root_fd)
         except OSError, e:
-                # W0511 XXX / FIXME Comments; pylint: disable-msg=W0511
+                # W0511 XXX / FIXME Comments; pylint: disable=W0511
                 # XXX: __fd_to_path() can return ENOENT due to 6964121
-                # pylint: enable-msg=W0511
+                # pylint: enable=W0511
                 if e.errno != errno.ENOENT:
                         os.close(root_fd)
                         raise e
@@ -173,9 +173,9 @@ def ar_open(root, path, flags,
         try:
                 path = __fd_to_path(path_fd)
         except OSError, e:
-                # W0511 XXX / FIXME Comments; pylint: disable-msg=W0511
+                # W0511 XXX / FIXME Comments; pylint: disable=W0511
                 # XXX: __fd_to_path() can return ENOENT due to 6964121
-                # pylint: enable-msg=W0511
+                # pylint: enable=W0511
                 if e.errno != errno.ENOENT:
                         os.close(path_fd)
                         raise e

@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2009, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
 #
 
 import cStringIO
@@ -37,6 +37,7 @@ import urllib
 import pkg
 import pkg.p5i as p5i
 import pkg.client.api_errors as apx
+import pkg.client.publisher as pub
 import pkg.client.transport.exception as tx
 import pkg.config as cfg
 import pkg.p5p
@@ -44,7 +45,7 @@ import pkg.server.repository as svr_repo
 import pkg.server.query_parser as sqp
 
 from email.utils import formatdate
-
+from pkg.misc import N_
 
 class TransportRepo(object):
         """The TransportRepo class handles transport requests.
@@ -122,6 +123,11 @@ class TransportRepo(object):
                 """Return's the Repo's URL."""
 
                 raise NotImplementedError
+
+        def get_repouri_key(self):
+                """Returns the repo's RepositoryURI."""
+
+                return NotImplementedError
 
         def get_versions(self, header=None, ccancel=None):
                 """Query the repo for versions information.
@@ -295,60 +301,67 @@ class TransportRepo(object):
 
                 return reqlist
 
-	@staticmethod
-	def _analyze_server_error(error_header):
-		""" Decode the X-Ipkg-Error header which is appended by the 
-		module doing entitlement checks on the server side. Let the user
-		know why they can't access the repository. """
+        @staticmethod
+        def _analyze_server_error(error_header):
+                """ Decode the X-Ipkg-Error header which is appended by the
+                module doing entitlement checks on the server side. Let the user
+                know why they can't access the repository. """
 
-		ENTITLEMENT_ERROR = "ENT"
-		LICENSE_ERROR = "LIC"
-		SERVER_ERROR = "SVR"
+                ENTITLEMENT_ERROR = "ENT"
+                LICENSE_ERROR = "LIC"
+                SERVER_ERROR = "SVR"
+                MAINTENANCE = "MNT"
 
-		entitlement_err_msg = """
-This account is not entitled to access this repository. Ensure that the correct 
-certificate is being used and that the support contract for the product being 
-accessed is still valid. 
-"""
+                entitlement_err_msg = N_("""
+This account is not entitled to access this repository. Ensure that the correct
+certificate is being used and that the support contract for the product being
+accessed is still valid.
+""")
 
-		license_err_msg = """
-The license agreement required to access this repository has not been 
+                license_err_msg = N_("""
+The license agreement required to access this repository has not been
 accepted yet or the license agreement for the product has changed. Please go to
-https://pkg-register.oracle.com and accept the license for the product you are 
+https://pkg-register.oracle.com and accept the license for the product you are
 trying to access.
-"""
+""")
 
-		server_err_msg = """
+                server_err_msg = N_("""
 Repository access is currently unavailable due to service issues. Please retry
-later or contact your customer service representative. 
-"""
+later or contact your customer service representative.
+""")
 
-		msg = ""
+                maintenance_msg = N_("""
+Repository access rights can currently not be verified due to server
+maintenance. Please retry later.
+""")
+                msg = ""
 
-		# multiple errors possible (e.g. license and entitlement not ok)
-		error_codes = error_header.split(",")
+                # multiple errors possible (e.g. license and entitlement not ok)
+                error_codes = error_header.split(",")
 
-		for e in error_codes:
-			code = e.strip().upper()
-			
-			if code == ENTITLEMENT_ERROR:
-				 msg += entitlement_err_msg
-			elif code == LICENSE_ERROR:
-				msg += license_err_msg
-			elif code == SERVER_ERROR:
-				msg += server_err_msg
+                for e in error_codes:
+                        code = e.strip().upper()
 
-		if msg == "":
-			return None
+                        if code == ENTITLEMENT_ERROR:
+                                 msg += _(entitlement_err_msg)
+                        elif code == LICENSE_ERROR:
+                                msg += _(license_err_msg)
+                        elif code == SERVER_ERROR:
+                                msg += _(server_err_msg)
+                        elif code == MAINTENANCE:
+                                msg += _(maintenance_msg)
 
-		return msg
+                if msg == "":
+                        return None
+
+                return msg
 
 
 class HTTPRepo(TransportRepo):
 
         def __init__(self, repostats, repouri, engine):
                 """Create a http repo.  Repostats is a RepoStats object.
-                Repouri is a RepositoryURI object.  Engine is a transport
+                Repouri is a TransportRepoURI object.  Engine is a transport
                 engine object.
 
                 The convenience function new_repo() can be used to create
@@ -367,19 +380,24 @@ class HTTPRepo(TransportRepo):
                 self._engine.add_url(url, filepath=filepath,
                     progclass=progclass, progtrack=progtrack, repourl=self._url,
                     header=header, compressible=compress,
+                    runtime_proxy=self._repouri.runtime_proxy,
                     proxy=self._repouri.proxy)
 
         def _fetch_url(self, url, header=None, compress=False, ccancel=None,
-            failonerror=True):
+            failonerror=True, system=False):
                 return self._engine.get_url(url, header, repourl=self._url,
                     compressible=compress, ccancel=ccancel,
-                    failonerror=failonerror, proxy=self._repouri.proxy)
+                    failonerror=failonerror,
+                    runtime_proxy=self._repouri.runtime_proxy,
+                    proxy=self._repouri.proxy, system=system)
 
         def _fetch_url_header(self, url, header=None, ccancel=None,
             failonerror=True):
                 return self._engine.get_url_header(url, header,
                     repourl=self._url, ccancel=ccancel,
-                    failonerror=failonerror, proxy=self._repouri.proxy)
+                    failonerror=failonerror,
+                    runtime_proxy=self._repouri.runtime_proxy,
+                    proxy=self._repouri.proxy)
 
         def _post_url(self, url, data=None, header=None, ccancel=None,
             data_fobj=None, data_fp=None, failonerror=True, progclass=None,
@@ -388,7 +406,9 @@ class HTTPRepo(TransportRepo):
                     repourl=self._url, ccancel=ccancel,
                     data_fobj=data_fobj, data_fp=data_fp,
                     failonerror=failonerror, progclass=progclass,
-                    progtrack=progtrack, proxy=self._repouri.proxy)
+                    progtrack=progtrack,
+                    runtime_proxy=self._repouri.runtime_proxy,
+                    proxy=self._repouri.proxy)
 
         def __check_response_body(self, fobj):
                 """Parse the response body found accessible using the provided
@@ -427,7 +447,7 @@ class HTTPRepo(TransportRepo):
                 # Only append the publisher prefix if the publisher of the
                 # request is known, not already part of the URI, if this isn't
                 # an open operation, and if the repository supports version 1
-                # of the publisher opation.  The prefix shouldn't be appended
+                # of the publisher operation.  The prefix shouldn't be appended
                 # for open because the publisher may not yet be known to the
                 # repository, and not in other cases because the repository
                 # doesn't support it.
@@ -515,7 +535,7 @@ class HTTPRepo(TransportRepo):
                 if header:
                         headers.update(header)
                 if progtrack:
-                        progclass = ProgressCallback
+                        progclass = CatalogProgress
 
                 for f in filelist:
                         url = urlparse.urljoin(baseurl, f)
@@ -577,7 +597,15 @@ class HTTPRepo(TransportRepo):
                 """Get configuration from the system depot."""
 
                 requesturl = self.__get_request_url("syspub/0/")
-                return self._fetch_url(requesturl, header, ccancel=ccancel)
+                # We set 'system=True' to cause the transport to override any
+                # $http_proxy environment variables. Syspub origins/mirrors
+                # that are normally proxied through the system-repository will
+                # have a proxy attached to their RepositoryURI, and the
+                # corresponding TransportRepoURI runtime_proxy value will be set
+                # to the same value, so we don't need to pass the 'system'
+                # kwarg in those cases.
+                return self._fetch_url(requesturl, header, ccancel=ccancel,
+                    system=True)
 
         def get_status(self, header=None, ccancel=None):
                 """Get status/0 information from the repository."""
@@ -607,7 +635,7 @@ class HTTPRepo(TransportRepo):
                 progclass = None
 
                 if progtrack:
-                        progclass = ProgressCallback
+                        progclass = ManifestProgress
 
                 for fmri, h in mfstlist:
                         f = fmri.get_url_path()
@@ -709,35 +737,41 @@ class HTTPRepo(TransportRepo):
 
                 return self._url
 
+        def get_repouri_key(self):
+                """Returns the repo's TransportRepoURI key, used to uniquely
+                identify this TransportRepoURI."""
+
+                return self._repouri.key()
+
         def get_versions(self, header=None, ccancel=None):
                 """Query the repo for versions information.
                 Returns a fileobject. If server returns 401 (Unauthorized)
-		check for presence of X-IPkg-Error header and decode."""
+                check for presence of X-IPkg-Error header and decode."""
 
                 requesturl = self.__get_request_url("versions/0/")
-                fobj = self._fetch_url(requesturl, header, ccancel=ccancel, 
-		    failonerror=False)
+                fobj = self._fetch_url(requesturl, header, ccancel=ccancel,
+                    failonerror=False)
 
                 try:
-			# Bogus request to trigger 
-			# StreamingFileObj.__fill_buffer(), otherwise the 
-			# TransportProtoError won't be raised here. We can't
-			# use .read() since this will empty the data buffer.
-			fobj.getheader("octopus", None)
-		except tx.TransportProtoError, e:
-			if e.code == httplib.UNAUTHORIZED:
-				exc_type, exc_value, exc_tb = sys.exc_info()
-				try:
-					e.details = self._analyze_server_error(
+                        # Bogus request to trigger
+                        # StreamingFileObj.__fill_buffer(), otherwise the
+                        # TransportProtoError won't be raised here. We can't
+                        # use .read() since this will empty the data buffer.
+                        fobj.getheader("octopus", None)
+                except tx.TransportProtoError, e:
+                        if e.code == httplib.UNAUTHORIZED:
+                                exc_type, exc_value, exc_tb = sys.exc_info()
+                                try:
+                                        e.details = self._analyze_server_error(
                                              fobj.getheader("X-IPkg-Error",
-					     None))
-				except:
-					# If analysis fails, raise original
+                                             None))
+                                except:
+                                        # If analysis fails, raise original
                                         # exception.
                                         raise exc_value, None, exc_tb
-			raise
+                        raise
 
-		return fobj
+                return fobj
 
         def has_version_data(self):
                 """Returns true if this repo knows its version information."""
@@ -1026,11 +1060,10 @@ class HTTPRepo(TransportRepo):
                 its headers then we can try the request with that additional
                 header, which can help where a web cache is serving corrupt
                 content.
-
-                This method returns True if the headers passed haven't got
-                "Cache-Control: no-cache" set, adding that header.  Otherwise
-                it returns False.
                 """
+
+                if header is None:
+                        header = {}
 
                 if header.get("Cache-Control", "") != "no-cache":
                         header["Cache-Control"] = "no-cache"
@@ -1043,7 +1076,7 @@ class HTTPSRepo(HTTPRepo):
 
         def __init__(self, repostats, repouri, engine):
                 """Create a http repo.  Repostats is a RepoStats object.
-                Repouri is a RepositoryURI object.  Engine is a transport
+                Repouri is a TransportRepoURI object.  Engine is a transport
                 engine object.
 
                 The convenience function new_repo() can be used to create
@@ -1058,7 +1091,9 @@ class HTTPSRepo(HTTPRepo):
                     progclass=progclass, progtrack=progtrack,
                     sslcert=self._repouri.ssl_cert,
                     sslkey=self._repouri.ssl_key, repourl=self._url,
-                    header=header, compressible=compress)
+                    header=header, compressible=compress,
+                    runtime_proxy=self._repouri.runtime_proxy,
+                    proxy=self._repouri.proxy)
 
         def _fetch_url(self, url, header=None, compress=False, ccancel=None,
             failonerror=True):
@@ -1066,22 +1101,30 @@ class HTTPSRepo(HTTPRepo):
                     sslcert=self._repouri.ssl_cert,
                     sslkey=self._repouri.ssl_key, repourl=self._url,
                     compressible=compress, ccancel=ccancel,
-                    failonerror=failonerror)
+                    failonerror=failonerror,
+                    runtime_proxy=self._repouri.runtime_proxy,
+                    proxy=self._repouri.proxy)
 
         def _fetch_url_header(self, url, header=None, ccancel=None,
             failonerror=True):
                 return self._engine.get_url_header(url, header=header,
                     sslcert=self._repouri.ssl_cert,
                     sslkey=self._repouri.ssl_key, repourl=self._url,
-                    ccancel=ccancel, failonerror=failonerror)
+                    ccancel=ccancel, failonerror=failonerror,
+                    runtime_proxy=self._repouri.runtime_proxy,
+                    proxy=self._repouri.proxy)
 
         def _post_url(self, url, data=None, header=None, ccancel=None,
-            data_fobj=None, data_fp=None, failonerror=True):
+            data_fobj=None, data_fp=None, failonerror=True, progclass=None,
+            progtrack=None):
                 return self._engine.send_data(url, data=data, header=header,
                     sslcert=self._repouri.ssl_cert,
                     sslkey=self._repouri.ssl_key, repourl=self._url,
                     ccancel=ccancel, data_fobj=data_fobj,
-                    data_fp=data_fp, failonerror=failonerror)
+                    data_fp=data_fp, failonerror=failonerror,
+                    progclass=progclass, progtrack=progtrack,
+                    runtime_proxy=self._repouri.runtime_proxy,
+                    proxy=self._repouri.proxy)
 
 
 class _FilesystemRepo(TransportRepo):
@@ -1091,7 +1134,7 @@ class _FilesystemRepo(TransportRepo):
 
         def __init__(self, repostats, repouri, engine, frepo=None):
                 """Create a file repo.  Repostats is a RepoStats object.
-                Repouri is a RepositoryURI object.  Engine is a transport
+                Repouri is a TransportRepoURI object.  Engine is a transport
                 engine object.  If the caller wants to pass a Repository
                 object instead of having FileRepo create one, it should
                 pass the object in the frepo argument.
@@ -1382,7 +1425,7 @@ class _FilesystemRepo(TransportRepo):
                 pub_prefix = getattr(pub, "prefix", None)
 
                 if progtrack:
-                        progclass = ProgressCallback
+                        progclass = ManifestProgress
 
                 # Errors that happen before the engine is executed must be
                 # collected and added to the errors raised during engine
@@ -1520,6 +1563,12 @@ class _FilesystemRepo(TransportRepo):
 
                 return self._url
 
+        def get_repouri_key(self):
+                """Returns a key from the TransportRepoURI that can be
+                used in a dictionary"""
+
+                return self._repouri.key()
+
         def get_versions(self, header=None, ccancel=None):
                 """Query the repo for versions information.
                 Returns a file-like object."""
@@ -1643,6 +1692,10 @@ class _FilesystemRepo(TransportRepo):
 
         def publish_append(self, header=None, client_release=None,
             pkg_name=None):
+
+                # Calling any publication operation sets read_only to False.
+                self._frepo.read_only = False
+
                 try:
                         trans_id = self._frepo.append(client_release, pkg_name)
                 except svr_repo.RepositoryError, e:
@@ -1763,7 +1816,7 @@ class _ArchiveRepo(TransportRepo):
 
         def __init__(self, repostats, repouri, engine):
                 """Create a file repo.  Repostats is a RepoStats object.
-                Repouri is a RepositoryURI object.  Engine is a transport
+                Repouri is a TransportRepoURI object.  Engine is a transport
                 engine object.
 
                 The convenience function new_repo() can be used to create
@@ -1830,7 +1883,7 @@ class _ArchiveRepo(TransportRepo):
                                    pub=pub_prefix)
                                 if progtrack:
                                         fs = os.stat(os.path.join(destloc, f))
-                                        progtrack.download_add_progress(1,
+                                        progtrack.refresh_progress(pub,
                                             fs.st_size)
                         except pkg.p5p.UnknownArchiveFiles, e:
                                 ex = tx.TransportProtoError("file",
@@ -1916,8 +1969,8 @@ class _ArchiveRepo(TransportRepo):
                                 if progtrack:
                                         fs = os.stat(os.path.join(dest,
                                             fmri.get_url_path()))
-                                        progtrack.download_add_progress(1,
-                                            fs.st_size)
+                                        progtrack.manifest_fetch_progress(
+                                            completion=True)
                         except pkg.p5p.UnknownPackageManifest, e:
                                 ex = tx.TransportProtoError("file",
                                     errno.ENOENT, reason=str(e),
@@ -1972,6 +2025,11 @@ class _ArchiveRepo(TransportRepo):
                 """Returns the repo's url."""
 
                 return self._url
+
+        def get_repouri_key(self):
+                """Returns the repo's RepositoryURI."""
+
+                return self._repouri.key()
 
         def get_versions(self, header=None, ccancel=None):
                 """Query the repo for versions information.
@@ -2038,7 +2096,7 @@ class FileRepo(object):
 
                 'repostats' is a RepoStats object.
 
-                'repouri' is a RepositoryURI object.
+                'repouri' is a TransportRepoURI object.
                 
                 'engine' is a transport engine object.
 
@@ -2102,6 +2160,74 @@ class ProgressCallback(object):
 
                 return 0
 
+class CatalogProgress(ProgressCallback):
+        """This class bridges the interfaces between a ProgressTracker's
+        refresh code and the progress callback for that's provided by Pycurl."""
+
+        def __init__(self, progtrack):
+                ProgressCallback.__init__(self, progtrack)
+                self.dltotal = 0
+                self.dlcurrent = 0
+                self.completed = False
+
+        def abort(self):
+                """Download failed.  Remove the amount of bytes downloaded
+                by this file from the ProgressTracker."""
+
+                self.progtrack.refresh_progress(None, -self.dlcurrent)
+                self.completed = True
+
+        def commit(self, size):
+                #
+                # This callback is not interesting to us because
+                # catalogs are stored uncompressed-- and size is the
+                # size of the resultant object on disk, not the total
+                # xfer size.
+                #
+                pass
+
+
+        def progress_callback(self, dltot, dlcur, ultot, ulcur):
+                """Called by pycurl/libcurl framework to update
+                progress tracking."""
+
+                if hasattr(self.progtrack, "check_cancelation") and \
+                    self.progtrack.check_cancelation():
+                        return -1
+
+                if self.dltotal != dltot:
+                        self.dltotal = dltot
+
+                new_progress = int(dlcur - self.dlcurrent)
+                if new_progress > 0:
+                        self.dlcurrent += new_progress
+                        self.progtrack.refresh_progress(None, new_progress)
+
+                return 0
+
+class ManifestProgress(ProgressCallback):
+        """This class bridges the interfaces between a ProgressTracker's
+        manifest fetching code and the progress callback for that's provided by
+        Pycurl."""
+
+        def abort(self):
+                """Download failed.  Remove the amount of bytes downloaded
+                by this file from the ProgressTracker."""
+		pass
+
+        def commit(self, size):
+                """Indicate that this download has succeeded."""
+                self.progtrack.manifest_fetch_progress(completion=True)
+
+        def progress_callback(self, dltot, dlcur, ultot, ulcur):
+                """Called by pycurl/libcurl framework to update
+                progress tracking."""
+
+                if hasattr(self.progtrack, "check_cancelation") and \
+                    self.progtrack.check_cancelation():
+                        return -1
+                self.progtrack.manifest_fetch_progress(completion=False)
+                return 0
 
 class FileProgress(ProgressCallback):
         """This class bridges the interfaces between a ProgressTracker
@@ -2180,7 +2306,8 @@ class FileProgress(ProgressCallback):
 class RepoCache(object):
         """An Object that caches repository objects.  Used to make
         sure that repos are re-used instead of re-created for each
-        operation."""
+        operation. The objects are keyed by TransportRepoURI.key()
+        objects."""
 
         # Schemes supported by the cache.
         supported_schemes = {
@@ -2199,8 +2326,8 @@ class RepoCache(object):
                 self.__engine = engine
                 self.__cache = {}
 
-        def __contains__(self, url):
-                return url in self.__cache
+        def __contains__(self, repouri):
+                return repouri.key() in self.__cache
 
         def clear_cache(self):
                 """Flush the contents of the cache."""
@@ -2210,22 +2337,19 @@ class RepoCache(object):
         def new_repo(self, repostats, repouri):
                 """Create a new repo server for the given repouri object."""
 
-                origin_url = repostats.url
-                urltuple = urlparse.urlparse(origin_url)
-                scheme = urltuple[0]
+                scheme = repouri.scheme
 
                 if scheme not in RepoCache.supported_schemes:
                         raise tx.TransportOperationError("Scheme %s not"
                             " supported by transport." % scheme)
 
-                if origin_url in self.__cache:
-                        return self.__cache[origin_url]
+                if repouri.key() in self.__cache:
+                        return self.__cache[repouri.key()]
 
                 repo = RepoCache.supported_schemes[scheme](repostats, repouri,
                     self.__engine)
 
-                self.__cache[origin_url] = repo
-
+                self.__cache[repouri.key()] = repo
                 return repo
 
         def update_repo(self, repostats, repouri, repository):
@@ -2233,33 +2357,32 @@ class RepoCache(object):
                 Repository object.  They should use this method to do so.
                 If the Repo isn't in the cache, it's created and added."""
 
-                origin_url = repostats.url
-                urltuple = urlparse.urlparse(origin_url)
-                scheme = urltuple[0]
+                scheme = repouri.scheme
 
                 if scheme not in RepoCache.update_schemes:
                         return
 
-                if origin_url in self.__cache:
-                        repo = self.__cache[origin_url]
+                if repouri.key() in self.__cache:
+                        repo = self.__cache[repouri.key()]
                         repo._frepo = repository
                         return
 
                 repo = RepoCache.update_schemes[scheme](repostats, repouri,
                     self.__engine, frepo=repository)
 
-                self.__cache[origin_url] = repo
+                self.__cache[repouri.key()] = repo
 
         def remove_repo(self, repo=None, url=None):
                 """Remove a repo from the cache.  Caller must supply
-                either a RepositoryURI object or a URL."""
+                either a TransportRepoURI object or a URL."""
+                self.contents()
 
                 if repo:
-                        origin_url = repo.uri
-                elif url:
-                        origin_url = url
+                        repouri = repo
+                if url:
+                        repouri = TransportRepoURI(url)
                 else:
                         raise ValueError, "Must supply either a repo or a uri."
 
-                if origin_url in self.__cache:
-                        del self.__cache[origin_url]
+                if repouri.key() in self.__cache:
+                        del self.__cache[repouri.key()]

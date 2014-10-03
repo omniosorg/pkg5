@@ -31,8 +31,8 @@ set name=pkg.description \
 set name=info.classification \
     value="org.opensolaris.category.2008:Meta Packages/Group Packages" \
     value="org.opensolaris.category.2008:Web Services/Application and Web Servers"
-set name=variant.arch value=$(ARCH)
 set name=nopublish.after value=174
+set name=variant.arch value=$(ARCH)
 depend type=group fmri=database/mysql-51
 depend type=group fmri=web/php-52
 depend type=group fmri=web/php-52/extension/php-apc

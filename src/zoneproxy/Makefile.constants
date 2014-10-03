@@ -23,6 +23,7 @@
 #
 
 INSTALL =	/usr/bin/python2.6 ../../setup.py installfile
+CC =		gcc
 LINT =		lint
 MKDIR =		mkdir -p
 PROTO_AREA:sh =	echo $(hg root 2>/dev/null || git rev-parse --show-toplevel)/proto/root_$(uname -p)

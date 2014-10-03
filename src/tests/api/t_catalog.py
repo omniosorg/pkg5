@@ -21,7 +21,7 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2012, Oracle and/or its affiliates. All rights reserved.
 
 import testutils
 if __name__ == "__main__":
@@ -31,6 +31,7 @@ import pkg5unittest
 import errno
 import os
 import shutil
+import simplejson
 import stat
 import unittest
 
@@ -388,228 +389,36 @@ class TestCatalog(pkg5unittest.Pkg5TestCase):
                 self.assertEqual(self.npkgs, self.c.package_count)
                 self.assertEqual(self.nversions, self.c.package_version_count)
 
-        def test_02_extract_matching_fmris(self):
+        def test_02_gen_packages(self):
                 """Verify that the filtering logic provided by
-                extract_matching_fmris works as expected."""
+                gen_packages works as expected."""
 
-                cf = fmri.PkgFmri("pkg:/test@1.0,5.10-1:20070101T120000Z")
-                cl = catalog.extract_matching_fmris(self.c.fmris(),
-                    patterns=[cf])[0]
-                self.assertEqual(len(cl), 7)
+                f = "pkg:/test@1.0,5.11-1:20000101T120000Z"
+                cl = list(self.c.gen_packages(patterns=[f]))
+                self.assertEqual(len(cl), 1)
 
-                cf = fmri.PkgFmri("pkg:/test@1.0,5.11-1:20061231T120000Z")
-                cl = catalog.extract_matching_fmris(self.c.fmris(),
-                    patterns=[cf])[0]
-                self.assertEqual(len(cl), 7)
-
-                cf = fmri.PkgFmri("pkg:/test@1.0,5.11-2")
-                cl = catalog.extract_matching_fmris(self.c.fmris(),
-                    patterns=[cf])[0]
+                f = "pkg:/test@1.0"
+                cl = list(self.c.gen_packages(patterns=[f]))
                 self.assertEqual(len(cl), 5)
 
-                cf = fmri.PkgFmri("pkg:/test@1.0,5.11-3")
-                cl = catalog.extract_matching_fmris(self.c.fmris(),
-                    patterns=[cf])[0]
-                self.assertEqual(len(cl), 4)
+                f = "pkg:/test@1.0"
+                cl = list(self.c.gen_packages(patterns=[f], pubs=["foobar"]))
+                self.assertEqual(len(cl), 0)
 
-                # First, verify that passing a single version pattern
-                # works as expected.
+                # zpkg exists in contrib.opensolaris.org (2 fmris) and extra (1)
+                f = "zpkg"
+                cl = list(self.c.gen_packages(patterns=[f]))
+                self.assertEqual(len(cl), 3)
+                cl = list(self.c.gen_packages(patterns=[f], pubs=["extra"]))
+                self.assertEqual(len(cl), 1)
 
-                # Sorts by stem, then version, then publisher.
-                def extract_order(a, b):
-                        res = cmp(a.pkg_name, b.pkg_name)
-                        if res != 0:
-                                return res
-                        res = cmp(a.version, b.version) * -1
-                        if res != 0:
-                                return res
-                        return cmp(a.publisher, b.publisher)
-
-                # This is a dict containing the set of fmris that are expected
-                # to be returned by extract_matching_fmris keyed by version
-                # pattern.
-                versions = {
-                    "*": ["pkg:/apkg@1.0,5.11-1:20000101T120040Z",
-                        "pkg:/test@1.0,5.11-1:20000101T120000Z",
-                        "pkg:/test@1.0,5.11-1:20000101T120010Z",
-                        "pkg:/test@1.0,5.11-1.1:20000101T120020Z",
-                        "pkg:/test@1.0,5.11-1.2:20000101T120030Z",
-                        "pkg:/test@1.0,5.11-2:20000101T120040Z",
-                        "pkg:/test@1.1,5.11-1:20000101T120040Z",
-                        "pkg:/test@3.2.1,5.11-1:20000101T120050Z",
-                        "pkg:/test@3.2.1,5.11-1.2:20000101T120051Z",
-                        "pkg:/test@3.2.1,5.11-1.2.3:20000101T120052Z",
-                        "pkg:/zpkg@1.0,5.11-1:20000101T120014Z",
-                        "pkg:/zpkg@1.0,5.11-1:20000101T120040Z",
-                        "pkg:/zpkg@1.0,5.11-1:20000101T120040Z"],
-                    "1.0": ["pkg:/apkg@1.0,5.11-1:20000101T120040Z",
-                        "pkg:/test@1.0,5.11-1:20000101T120000Z",
-                        "pkg:/test@1.0,5.11-1:20000101T120010Z",
-                        "pkg:/test@1.0,5.11-1.1:20000101T120020Z",
-                        "pkg:/test@1.0,5.11-1.2:20000101T120030Z",
-                        "pkg:/test@1.0,5.11-2:20000101T120040Z",
-                        "pkg:/zpkg@1.0,5.11-1:20000101T120014Z",
-                        "pkg:/zpkg@1.0,5.11-1:20000101T120040Z",
-                        "pkg:/zpkg@1.0,5.11-1:20000101T120040Z"],
-                    "1.1": ["pkg:/test@1.1,5.11-1:20000101T120040Z"],
-                    "*.1": ["pkg:/test@1.1,5.11-1:20000101T120040Z"],
-                    "3.*": ["pkg:/test@3.2.1,5.11-1:20000101T120050Z",
-                        "pkg:/test@3.2.1,5.11-1.2:20000101T120051Z",
-                        "pkg:/test@3.2.1,5.11-1.2.3:20000101T120052Z"],
-                    "3.2.*": ["pkg:/test@3.2.1,5.11-1:20000101T120050Z",
-                        "pkg:/test@3.2.1,5.11-1.2:20000101T120051Z",
-                        "pkg:/test@3.2.1,5.11-1.2.3:20000101T120052Z"],
-                    "3.*.*": ["pkg:/test@3.2.1,5.11-1:20000101T120050Z",
-                        "pkg:/test@3.2.1,5.11-1.2:20000101T120051Z",
-                        "pkg:/test@3.2.1,5.11-1.2.3:20000101T120052Z"],
-                    "*,5.11": ["pkg:/apkg@1.0,5.11-1:20000101T120040Z",
-                        "pkg:/test@1.0,5.11-1:20000101T120000Z",
-                        "pkg:/test@1.0,5.11-1:20000101T120010Z",
-                        "pkg:/test@1.0,5.11-1.1:20000101T120020Z",
-                        "pkg:/test@1.0,5.11-1.2:20000101T120030Z",
-                        "pkg:/test@1.0,5.11-2:20000101T120040Z",
-                        "pkg:/test@1.1,5.11-1:20000101T120040Z",
-                        "pkg:/test@3.2.1,5.11-1:20000101T120050Z",
-                        "pkg:/test@3.2.1,5.11-1.2:20000101T120051Z",
-                        "pkg:/test@3.2.1,5.11-1.2.3:20000101T120052Z",
-                        "pkg:/zpkg@1.0,5.11-1:20000101T120014Z",
-                        "pkg:/zpkg@1.0,5.11-1:20000101T120040Z",
-                        "pkg:/zpkg@1.0,5.11-1:20000101T120040Z"],
-                    "*,*-*": ["pkg:/apkg@1.0,5.11-1:20000101T120040Z",
-                        "pkg:/test@1.0,5.11-1:20000101T120000Z",
-                        "pkg:/test@1.0,5.11-1:20000101T120010Z",
-                        "pkg:/test@1.0,5.11-1.1:20000101T120020Z",
-                        "pkg:/test@1.0,5.11-1.2:20000101T120030Z",
-                        "pkg:/test@1.0,5.11-2:20000101T120040Z",
-                        "pkg:/test@1.1,5.11-1:20000101T120040Z",
-                        "pkg:/test@3.2.1,5.11-1:20000101T120050Z",
-                        "pkg:/test@3.2.1,5.11-1.2:20000101T120051Z",
-                        "pkg:/test@3.2.1,5.11-1.2.3:20000101T120052Z",
-                        "pkg:/zpkg@1.0,5.11-1:20000101T120014Z",
-                        "pkg:/zpkg@1.0,5.11-1:20000101T120040Z",
-                        "pkg:/zpkg@1.0,5.11-1:20000101T120040Z"],
-                    "*,*-*.2": ["pkg:/test@1.0,5.11-1.2:20000101T120030Z",
-                        "pkg:/test@3.2.1,5.11-1.2:20000101T120051Z"],
-                    "*,*-*.*.3": ["pkg:/test@3.2.1,5.11-1.2.3:20000101T120052Z"],
-                    "*,*-1": ["pkg:/apkg@1.0,5.11-1:20000101T120040Z",
-                        "pkg:/test@1.0,5.11-1:20000101T120000Z",
-                        "pkg:/test@1.0,5.11-1:20000101T120010Z",
-                        "pkg:/test@1.1,5.11-1:20000101T120040Z",
-                        "pkg:/test@3.2.1,5.11-1:20000101T120050Z",
-                        "pkg:/zpkg@1.0,5.11-1:20000101T120014Z",
-                        "pkg:/zpkg@1.0,5.11-1:20000101T120040Z",
-                        "pkg:/zpkg@1.0,5.11-1:20000101T120040Z"],
-                    "*,*-1.2": ["pkg:/test@1.0,5.11-1.2:20000101T120030Z",
-                        "pkg:/test@3.2.1,5.11-1.2:20000101T120051Z"],
-                    "*,*-1.2.*": ["pkg:/test@1.0,5.11-1.2:20000101T120030Z",
-                        "pkg:/test@3.2.1,5.11-1.2:20000101T120051Z",
-                        "pkg:/test@3.2.1,5.11-1.2.3:20000101T120052Z"],
-                    "*,*-*:*": ["pkg:/apkg@1.0,5.11-1:20000101T120040Z",
-                        "pkg:/test@1.0,5.11-1:20000101T120000Z",
-                        "pkg:/test@1.0,5.11-1:20000101T120010Z",
-                        "pkg:/test@1.0,5.11-1.1:20000101T120020Z",
-                        "pkg:/test@1.0,5.11-1.2:20000101T120030Z",
-                        "pkg:/test@1.0,5.11-2:20000101T120040Z",
-                        "pkg:/test@1.1,5.11-1:20000101T120040Z",
-                        "pkg:/test@3.2.1,5.11-1:20000101T120050Z",
-                        "pkg:/test@3.2.1,5.11-1.2:20000101T120051Z",
-                        "pkg:/test@3.2.1,5.11-1.2.3:20000101T120052Z",
-                        "pkg:/zpkg@1.0,5.11-1:20000101T120014Z",
-                        "pkg:/zpkg@1.0,5.11-1:20000101T120040Z",
-                        "pkg:/zpkg@1.0,5.11-1:20000101T120040Z"],
-                }
-
-                for pat in versions:
-                        chash = {}
-                        rlist = []
-                        for f in catalog.extract_matching_fmris(self.c.fmris(),
-                            counthash=chash, versions=[pat])[0]:
-                                f.set_publisher(None)
-                                rlist.append(f)
-
-                        # Custom sort the returned and expected to avoid having
-                        # to define test data in extract order.  The primary
-                        # interest here is in what is returned, not the order.
-                        rlist = sorted([
-                            fmri.PkgFmri(f.get_fmri(anarchy=True))
-                            for f in rlist
-                        ])
-                        rlist = [f.get_fmri() for f in rlist]
-
-                        elist = sorted([
-                            fmri.PkgFmri(e)
-                            for e in versions[pat]
-                        ])
-                        elist = [f.get_fmri() for f in elist]
-
-                        # Verify that the list of matches are the same.
-                        self.assertEqual(rlist, elist)
-
-                        # Verify that the same number of matches was returned
-                        # in the counthash.
-                        self.assertEqual(chash[pat], len(versions[pat]))
-
-                # Last, verify that providing multiple versions for a single
-                # call returns the expected results.
-
-                # This is a dict containing the set of fmris that are expected
-                # to be returned by extract_matching_fmris keyed by version
-                # pattern.
-                versions = {
-                    "*,*-1": ["pkg:/apkg@1.0,5.11-1:20000101T120040Z",
-                        "pkg:/test@1.0,5.11-1:20000101T120000Z",
-                        "pkg:/test@1.0,5.11-1:20000101T120010Z",
-                        "pkg:/test@1.1,5.11-1:20000101T120040Z",
-                        "pkg:/test@3.2.1,5.11-1:20000101T120050Z",
-                        "pkg:/zpkg@1.0,5.11-1:20000101T120014Z",
-                        "pkg:/zpkg@1.0,5.11-1:20000101T120040Z",
-                        "pkg:/zpkg@1.0,5.11-1:20000101T120040Z"],
-                    "*,*-*:*": ["pkg:/apkg@1.0,5.11-1:20000101T120040Z",
-                        "pkg:/test@1.0,5.11-1:20000101T120000Z",
-                        "pkg:/test@1.0,5.11-1:20000101T120010Z",
-                        "pkg:/test@1.0,5.11-1.1:20000101T120020Z",
-                        "pkg:/test@1.0,5.11-1.2:20000101T120030Z",
-                        "pkg:/test@1.0,5.11-2:20000101T120040Z",
-                        "pkg:/test@1.1,5.11-1:20000101T120040Z",
-                        "pkg:/test@3.2.1,5.11-1:20000101T120050Z",
-                        "pkg:/test@3.2.1,5.11-1.2:20000101T120051Z",
-                        "pkg:/test@3.2.1,5.11-1.2.3:20000101T120052Z",
-                        "pkg:/zpkg@1.0,5.11-1:20000101T120014Z",
-                        "pkg:/zpkg@1.0,5.11-1:20000101T120040Z",
-                        "pkg:/zpkg@1.0,5.11-1:20000101T120040Z"],
-                }
-
-                elist = [
-                    "pkg:/apkg@1.0,5.11-1:20000101T120040Z",
-                    "pkg:/test@1.0,5.11-1:20000101T120000Z",
-                    "pkg:/test@1.0,5.11-1:20000101T120010Z",
-                    "pkg:/test@1.0,5.11-1.1:20000101T120020Z",
-                    "pkg:/test@1.0,5.11-1.2:20000101T120030Z",
-                    "pkg:/test@1.0,5.11-2:20000101T120040Z",
-                    "pkg:/test@1.1,5.11-1:20000101T120040Z",
-                    "pkg:/test@3.2.1,5.11-1:20000101T120050Z",
-                    "pkg:/test@3.2.1,5.11-1.2:20000101T120051Z",
-                    "pkg:/test@3.2.1,5.11-1.2.3:20000101T120052Z",
-                    "pkg:/zpkg@1.0,5.11-1:20000101T120014Z",
-                    "pkg:/zpkg@1.0,5.11-1:20000101T120040Z",
-                    "pkg:/zpkg@1.0,5.11-1:20000101T120040Z",
-                ]
-
-                rlist = catalog.extract_matching_fmris(self.c.fmris(),
-                    counthash=chash, versions=versions.keys())[0]
-                rlist = sorted([
-                    fmri.PkgFmri(f.get_fmri(anarchy=True))
-                    for f in rlist
-                ])
-                rlist = [f.get_fmri() for f in rlist]
-
-                # Verify that the list of matches are the same.
-                self.assertEqual(rlist, elist)
-
-                for pat in versions:
-                        # Verify that the same number of matches was returned
-                        # in the counthash.
-                        self.assertEqual(chash[pat], len(versions[pat]))
+                patterns = ["pkg:/test@1.0", "willnotmatch"]
+                unmatched = set()
+                matched = set()
+                cl = list(self.c.gen_packages(patterns=patterns,
+                    matched=matched, unmatched=unmatched))
+                self.assertEqual(unmatched, set(["willnotmatch"]))
+                self.assertEqual(matched, set(["pkg:/test@1.0"]))
 
         def test_03_permissions(self):
                 """Verify that new catalogs are created with a mode of 644 and
@@ -780,8 +589,8 @@ class TestCatalog(pkg5unittest.Pkg5TestCase):
                         rval = cmp(apub, bpub)
                         if rval != 0:
                                 return rval
-                        aver = version.Version(aver, "5.11")
-                        bver = version.Version(bver, "5.11")
+                        aver = version.Version(aver)
+                        bver = version.Version(bver)
                         return cmp(aver, bver) * -1
 
                 def tuple_entry_order(a, b):
@@ -793,8 +602,8 @@ class TestCatalog(pkg5unittest.Pkg5TestCase):
                         rval = cmp(apub, bpub)
                         if rval != 0:
                                 return rval
-                        aver = version.Version(aver, "5.11")
-                        bver = version.Version(bver, "5.11")
+                        aver = version.Version(aver)
+                        bver = version.Version(bver)
                         return cmp(aver, bver) * -1
 
                 # test fmris()
@@ -955,6 +764,12 @@ class TestCatalog(pkg5unittest.Pkg5TestCase):
                     for s, v in cat.get_entry_signatures(p3_fmri)
                 )
                 self.assertEqual(sigs, cat_sigs)
+
+                # Check that get_matching_fmris returns the right unmatched
+                # pattern.
+                pdict, references, unmatched = cat.get_matching_fmris(
+                    ["xyzzy", "base"])
+                self.assertEqual(set(["xyzzy"]), unmatched)
 
                 # Next, verify that removal of an FMRI not in the catalog will
                 # raise the expected exception.  Do this by removing an FMRI
@@ -1310,10 +1125,10 @@ class TestEmptyCatalog(pkg5unittest.Pkg5TestCase):
                 self.assertEqual(self.c.package_count, 0)
                 self.assertEqual(self.c.package_version_count, 0)
 
-        def test_02_extract_matching_fmris(self):
-                cf = fmri.PkgFmri("pkg:/test@1.0,5.10-1:20070101T120000Z")
-                cl = catalog.extract_matching_fmris(self.c.fmris(),
-                    patterns=[cf])[0]
+        def test_02_gen_packages(self):
+                cf = fmri.PkgFmri("pkg:/test@1.0,5.11-1:20070101T120000Z")
+                fmris = [str(s) for s in self.c.fmris()]
+                cl = list(self.c.gen_packages(patterns=fmris))
                 self.assertEqual(len(cl), 0)
 
         def test_03_actions(self):
@@ -1322,6 +1137,115 @@ class TestEmptyCatalog(pkg5unittest.Pkg5TestCase):
                     for f, actions in self.c.actions([self.c.DEPENDENCY])
                 ]
                 self.assertEqual(returned, [])
+
+
+class TestCorruptCatalog(pkg5unittest.Pkg5TestCase):
+        """Tests against various forms of corrupted catalogs."""
+
+        def test_corrupt_attrs1(self):
+                """Raise InvalidCatalogFile for a catalog.attrs w/ bogus JSON"""
+                f = open(os.path.join(self.test_root, "catalog.attrs"), "w")
+                f.write('{"valid json": "but not a catalog"}')
+                f.close()
+                self.assertRaises(api_errors.InvalidCatalogFile,
+                    catalog.Catalog, meta_root=self.test_root)
+
+        def test_corrupt_attrs2(self):
+                """Raise InvalidCatalogFile for a catalog.attrs w/ garbage"""
+                f = open(os.path.join(self.test_root, "catalog.attrs"), "w")
+                print >> f, 'garbage'
+                f.close()
+                self.assertRaises(api_errors.InvalidCatalogFile,
+                    catalog.Catalog, meta_root=self.test_root)
+
+        def test_corrupt_attrs3(self):
+                """Raise InvalidCatalogFile for a catalog.attrs missing an
+                element"""
+                # make catalog
+                c = catalog.Catalog(meta_root=self.test_root)
+                c.save()
+
+                # corrupt it
+                fname = os.path.join(self.test_root, "catalog.attrs")
+                f = open(fname, "r")
+                struct = simplejson.load(f)
+                f.close()
+                del struct["parts"]
+                f = open(fname, "w")
+                print >> f, simplejson.dumps(struct)
+                f.close()
+
+                self.assertRaises(api_errors.InvalidCatalogFile,
+                    catalog.Catalog, meta_root=self.test_root)
+
+        def test_corrupt_attrs4(self):
+                """Raise BadCatalogSignatures for a catalog.attrs with
+                corrupted _SIGNATURE"""
+                # make catalog
+                c = catalog.Catalog(meta_root=self.test_root)
+                c.save()
+
+                # corrupt it
+                fname = os.path.join(self.test_root, "catalog.attrs")
+                f = open(fname, "r")
+                struct = simplejson.load(f)
+                f.close()
+                # corrupt signature by one digit
+                sig = int(struct["_SIGNATURE"]["sha-1"], 16)
+                struct["_SIGNATURE"]["sha-1"] = "%x" % (sig + 1)
+                f = open(fname, "w")
+                print >> f, simplejson.dumps(struct)
+                f.close()
+
+                c = catalog.Catalog(meta_root=self.test_root)
+                self.assertRaises(api_errors.BadCatalogSignatures, c.validate,
+                    require_signatures=True)
+                self.assertRaises(api_errors.BadCatalogSignatures, c.validate,
+                    require_signatures=False)
+
+        def test_corrupt_attrs5(self):
+                """Raise BadCatalogSignatures for a catalog.attrs with
+                missing _SIGNATURE"""
+                # make catalog
+                c = catalog.Catalog(meta_root=self.test_root)
+                c.save()
+
+                # corrupt it by removing _SIGNATURE
+                fname = os.path.join(self.test_root, "catalog.attrs")
+                f = open(fname, "r")
+                struct = simplejson.load(f)
+                f.close()
+                del struct["_SIGNATURE"]
+                f = open(fname, "w")
+                print >> f, simplejson.dumps(struct)
+                f.close()
+
+                c = catalog.Catalog(meta_root=self.test_root)
+                # Catalog should validate unless require_signatures=True
+                c.validate()
+                self.assertRaises(api_errors.BadCatalogSignatures, c.validate,
+                    require_signatures=True)
+
+        def test_corrupt_attrs6(self):
+                """Raise UnrecognizedCatalogPart for a catalog.attrs{parts}
+                with bogus subpart."""
+                # make catalog
+                c = catalog.Catalog(meta_root=self.test_root)
+                c.save()
+
+                # corrupt it by adding a bad name to the set of parts.
+                fname = os.path.join(self.test_root, "catalog.attrs")
+                f = open(fname, "r")
+                struct = simplejson.load(f)
+                f.close()
+                struct["parts"]["/badpartname/"] = {}
+                f = open(fname, "w")
+                print >> f, simplejson.dumps(struct)
+                f.close()
+
+                # Catalog constructor should reject busted 'parts'
+                self.assertRaises(api_errors.UnrecognizedCatalogPart,
+                    catalog.Catalog, meta_root=self.test_root)
 
 
 if __name__ == "__main__":

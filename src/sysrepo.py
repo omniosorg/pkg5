@@ -19,13 +19,15 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
+
+#
+# Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+#
 
 import atexit
 import errno
 import getopt
 import gettext
-import hashlib
 import locale
 import logging
 import os
@@ -48,6 +50,7 @@ import pkg.catalog
 import pkg.client.api
 import pkg.client.progress as progress
 import pkg.client.api_errors as apx
+import pkg.digest as digest
 import pkg.misc as misc
 import pkg.portable as portable
 import pkg.p5p as p5p
@@ -56,7 +59,7 @@ logger = global_settings.logger
 orig_cwd = None
 
 PKG_CLIENT_NAME = "pkg.sysrepo"
-CLIENT_API_VERSION = 71
+CLIENT_API_VERSION = 75
 pkg.client.global_settings.client_name = PKG_CLIENT_NAME
 
 # exit codes
@@ -260,14 +263,22 @@ def __validate_pub_info(pub_info, no_uri_pubs, api_inst):
                 if not isinstance(uri_info, list):
                         raise SysrepoException("%s is not a list" % uri_info)
                 for props in uri_info:
-                        if len(props) != 4:
-                                raise SysrepoException("%s does not have 4 "
+                        if len(props) != 6:
+                                raise SysrepoException("%s does not have 6 "
                                     "items" % props)
                         # props [0] and [3] must be strings
                         if not isinstance(props[0], basestring) or \
                             not isinstance(props[3], basestring):
                                 raise SysrepoException("indices 0 and 3 of %s "
                                     "are not basestrings" % props)
+                        # prop[5] must be a string, either "file" or "dir"
+                        # and prop[0] must start with file://
+                        if not isinstance(props[5], basestring) or \
+                            (props[5] not in ["file", "dir"] and
+                            props[0].startswith("file://")):
+                                raise SysrepoException("index 5 of %s is not a "
+                                    "basestring or is not 'file' or 'dir'" %
+                                    props)
         # validate the structure of the no_uri_pubs object
         if not isinstance(no_uri_pubs, list):
                 raise SysrepoException("%s is not a list" % no_uri_pubs)
@@ -297,8 +308,8 @@ def _load_publisher_info(api_inst, image_dir):
         """Loads information about the publishers configured for the
         given ImageInterface from image_dir in a format identical to that
         returned by _get_publisher_info(..)  that is, a dictionary mapping
-        URIs to a list of lists. An exampe entry might be:
-            pub_info[uri] = [[prefix, cert, key, hash of the uri], ... ]
+        URIs to a list of lists. An example entry might be:
+            pub_info[uri] = [[prefix, cert, key, hash of the uri, proxy], ... ]
 
         and a list of publishers which have no origin or mirror URIs.
 
@@ -382,12 +393,24 @@ def _store_publisher_info(uri_pub_map, no_uri_pubs, image_dir):
                 error(_("Unable to store config to %(cache_path)s: %(e)s") %
                     locals())
 
+def _valid_proxy(proxy):
+        """Checks the given proxy string to make sure that it does not contain
+        any authentication details since these are not supported by ProxyRemote.
+        """
+
+        u = urllib2.urlparse.urlparse(proxy)
+        netloc_parts = u.netloc.split("@")
+        # If we don't have any authentication details, return.
+        if len(netloc_parts) == 1:
+                return True
+        return False
+
 def _get_publisher_info(api_inst, http_timeout, image_dir):
         """Returns information about the publishers configured for the given
         ImageInterface.
 
         The first item returned is a map of uris to a list of lists of the form
-        [[prefix, cert, key, hash of the uri], ... ]
+        [[prefix, cert, key, hash of the uri, proxy, uri type], ... ]
 
         The second item returned is a list of publisher prefixes which specify
         no uris.
@@ -404,7 +427,7 @@ def _get_publisher_info(api_inst, http_timeout, image_dir):
         if uri_pub_map:
                 return uri_pub_map, no_uri_pubs
 
-        # build a map of URI to (pub.prefix, cert, key, hash) tuples
+        # map URIs to (pub.prefix, cert, key, hash, proxy, utype) tuples
         uri_pub_map = {}
         no_uri_pubs = []
         timed_out = False
@@ -415,16 +438,44 @@ def _get_publisher_info(api_inst, http_timeout, image_dir):
 
                 prefix = pub.prefix
                 repo = pub.repository
+
+                # Determine the proxies to use per URI
+                proxy_map = {}
+                for uri in repo.mirrors + repo.origins:
+                        key = uri.uri.rstrip("/")
+                        if uri.proxies:
+                                # Apache can only use a single proxy, even
+                                # if many are configured. Use the first we find.
+                                proxy_map[key] = uri.proxies[0].uri
+
+                # Apache's ProxyRemote directive does not allow proxies that
+                # require authentication.
+                for uri in proxy_map:
+                        if not _valid_proxy(proxy_map[uri]):
+                                raise SysrepoException("proxy value %(val)s "
+                                    "for %(uri)s is not supported." %
+                                    {"uri": uri, "val": proxy_map[uri]})
+
                 uri_list, timed_out = _follow_redirects(
                     [repo_uri.uri.rstrip("/")
                     for repo_uri in repo.mirrors + repo.origins],
                     http_timeout)
 
                 for uri in uri_list:
-                        # we only support p5p files and directory-based
-                        # repositories of >= version 4.
+
+                        # We keep a field to store information about the type
+                        # of URI we're looking at, which saves us
+                        # from needing to make os.path.isdir(..) or
+                        # os.path.isfile(..) calls when processing the template.
+                        # This is important when we're rebuilding the
+                        # configuration from cached publisher info and an
+                        # file:// repository is temporarily unreachable.
+                        utype = ""
                         if uri.startswith("file:"):
+                                # we only support p5p files and directory-based
+                                # repositories of >= version 4.
                                 urlresult = urllib2.urlparse.urlparse(uri)
+                                utype = "dir"
                                 if not os.path.exists(urlresult.path):
                                         raise SysrepoException(
                                             _("file repository %s does not "
@@ -438,6 +489,7 @@ def _get_publisher_info(api_inst, http_timeout, image_dir):
                                             "repositories of version 4 or "
                                             "later are supported.") % uri)
                                 if not os.path.isdir(urlresult.path):
+                                        utype = "file"
                                         try:
                                                 p5p.Archive(urlresult.path)
                                         except p5p.InvalidArchive:
@@ -447,13 +499,13 @@ def _get_publisher_info(api_inst, http_timeout, image_dir):
                                                     urlresult.path)
 
                         hash = _uri_hash(uri)
+                        # we don't have per-uri ssl key/cert information yet,
+                        # so we just pull it from one of the RepositoryURIs.
                         cert = repo_uri.ssl_cert
                         key = repo_uri.ssl_key
-                        if uri in uri_pub_map:
-                                uri_pub_map[uri].append([prefix, cert, key,
-                                    hash])
-                        else:
-                                uri_pub_map[uri] = [[prefix, cert, key, hash]]
+                        uri_pub_map.setdefault(uri, []).append(
+                            (prefix, cert, key, hash, proxy_map.get(uri), utype)
+                            )
 
                 if not repo.mirrors + repo.origins:
                         no_uri_pubs.append(prefix)
@@ -481,7 +533,11 @@ def _chown_cache_dir(dir):
 
 def _write_httpd_conf(runtime_dir, log_dir, template_dir, host, port, cache_dir,
     cache_size, uri_pub_map, http_proxy, https_proxy):
-        """Writes the apache configuration for the system repository."""
+        """Writes the apache configuration for the system repository.
+
+        If http_proxy or http_proxy is supplied, it will override any proxy
+        values set in the image we're reading configuration from.
+        """
 
         try:
                 # check our hostname
@@ -539,6 +595,8 @@ def _write_httpd_conf(runtime_dir, log_dir, template_dir, host, port, cache_dir,
                                             _("scheme must be http"))
                                 if not result.netloc:
                                         raise Exception("missing netloc")
+                                if not _valid_proxy(val):
+                                        raise Exception("unsupported proxy")
                         except Exception, e:
                                 raise SysrepoException(
                                     _("invalid %(key)s: %(val)s: %(err)s") %
@@ -591,7 +649,8 @@ def _write_crypto_conf(runtime_dir, uri_pub_map):
                 written_crypto_content = False
 
                 for repo_list in uri_pub_map.values():
-                        for (pub, cert_path, key_path, hash) in repo_list:
+                        for (pub, cert_path, key_path, hash, proxy, utype) in \
+                            repo_list:
                                 if cert_path and key_path:
                                        crypto_file = file(crypto_path, "a")
                                        crypto_file.writelines(file(cert_path))
@@ -620,17 +679,19 @@ def _write_publisher_response(uri_pub_map, htdocs_path, template_dir):
                 # build a version of our uri_pub_map, keyed by publisher
                 pub_uri_map = {}
                 for uri in uri_pub_map:
-                        for (pub, cert, key, hash) in uri_pub_map[uri]:
+                        for (pub, cert, key, hash, proxy, utype) in \
+                            uri_pub_map[uri]:
                                 if pub not in pub_uri_map:
                                         pub_uri_map[pub] = []
-                                pub_uri_map[pub].append((uri, cert, key, hash))
+                                pub_uri_map[pub].append(
+                                    (uri, cert, key, hash, proxy, utype))
 
                 publisher_template_path = os.path.join(template_dir,
                     SYSREPO_PUB_TEMPLATE)
                 publisher_template = Template(filename=publisher_template_path)
 
                 for pub in pub_uri_map:
-                        for (uri, cert_path, key_path, hash) in \
+                        for (uri, cert_path, key_path, hash, proxy, utype) in \
                             pub_uri_map[pub]:
                                 if uri.startswith("file:"):
                                         publisher_text = \
@@ -686,7 +747,7 @@ def _write_sysrepo_response(api_inst, htdocs_path, uri_pub_map, no_uri_pubs):
 
 def _uri_hash(uri):
         """Returns a string hash of the given URI"""
-        return hashlib.sha1(uri).hexdigest()
+        return digest.DEFAULT_HASH_FUNC(uri).hexdigest()
 
 def _chown_runtime_dir(runtime_dir):
         """Change the ownership of all files under runtime_dir to our sysrepo
@@ -880,7 +941,8 @@ def handle_errors(func, *args, **kwargs):
 
 if __name__ == "__main__":
         misc.setlocale(locale.LC_ALL, "", error)
-        gettext.install("pkg", "/usr/share/locale")
+        gettext.install("pkg", "/usr/share/locale",
+            codeset=locale.getpreferredencoding())
 
         # Make all warnings be errors.
         warnings.simplefilter('error')

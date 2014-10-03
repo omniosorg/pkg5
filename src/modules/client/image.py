@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2007, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
 #
 
 import M2Crypto as m2
@@ -31,6 +31,7 @@ import collections
 import copy
 import datetime
 import errno
+import hashlib
 import os
 import platform
 import shutil
@@ -55,6 +56,7 @@ import pkg.client.imageplan             as imageplan
 import pkg.client.linkedimage           as li
 import pkg.client.pkgdefs               as pkgdefs
 import pkg.client.pkgplan               as pkgplan
+import pkg.client.plandesc              as plandesc
 import pkg.client.progress              as progress
 import pkg.client.publisher             as publisher
 import pkg.client.sigpolicy             as sigpolicy
@@ -75,6 +77,7 @@ import pkg.version
 
 from pkg.client.debugvalues import DebugValues
 from pkg.client.imagetypes import IMG_USER, IMG_ENTIRE
+from pkg.client.transport.exception import InvalidContentException
 from pkg.misc import EmptyI, EmptyDict
 
 img_user_prefix = ".org.opensolaris,pkg"
@@ -114,10 +117,12 @@ class Image(object):
         IMG_CATALOG_KNOWN = "known"
         IMG_CATALOG_INSTALLED = "installed"
 
+        __STATE_UPDATING_FILE = "state_updating"
+
         def __init__(self, root, user_provided_dir=False, progtrack=None,
             should_exist=True, imgtype=None, force=False,
             augment_ta_from_parent_image=True, allow_ondisk_upgrade=None,
-            props=misc.EmptyDict, cmdpath=None, runid=-1):
+            props=misc.EmptyDict, cmdpath=None):
 
                 if should_exist:
                         assert(imgtype is None)
@@ -130,10 +135,6 @@ class Image(object):
                 self.__alt_pubs = None
                 self.__alt_known_cat = None
                 self.__alt_pkg_sources_loaded = False
-
-                if (runid < 0):
-                        runid = os.getpid()
-                self.runid = runid
 
                 # Determine identity of client executable if appropriate.
                 if cmdpath == None:
@@ -167,7 +168,6 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 self.__imgdir = None
                 self.__root = root
 
-                self.attrs = { "Build-Release": "5.11" } # XXX real data needed
                 self.blocking_locks = False
                 self.cfg = None
                 self.history = history.History()
@@ -361,8 +361,9 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 """A list of strings decribing errors encountered while parsing
                 trust anchors."""
 
-                return [_("%s is expected to be a certificate but could not be "
-                    "parsed.  The error encountered was:\n\t%s") % (p, e)
+                return [_("%(path)s is expected to be a certificate but could "
+                    "not be parsed.  The error encountered was:\n\t%(err)s") %
+                    {"path": p, "err": e}
                     for p, e in self.__bad_trust_anchors
                 ]
 
@@ -595,8 +596,12 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
 
                         try:
                                 # Destination name is based on digest of file.
+                                # In order for this image to interoperate with
+                                # older and newer clients, we must use sha-1
+                                # here.
                                 dest = os.path.join(ssl_dir,
-                                    misc.get_data_digest(src)[0])
+                                    misc.get_data_digest(src,
+                                        hash_func=hashlib.sha1)[0])
                                 if src != dest:
                                         portable.copyfile(src, dest)
 
@@ -973,21 +978,32 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                             self.imgdir, self.transport,
                             self.cfg.get_policy("use-system-repo"))
 
-                        # Check to see if any system publishers have been
-                        # removed.  If they have, remove their metadata and
-                        # rebuild the catalogs.
-                        changed = False
-                        for p in self.cfg.removed_pubs:
-                                p.meta_root = self._get_publisher_meta_root(
-                                    p.prefix)
-                                try:
-                                        self.remove_publisher_metadata(p,
-                                            rebuild=False)
-                                        changed = True
-                                except apx.PermissionsException:
-                                        pass
-                        if changed:
-                                self.__rebuild_image_catalogs()
+                # Check to see if any system publishers have been changed.
+                # If so they need to be refreshed, so clear last_refreshed.
+                for p in self.cfg.modified_pubs:
+                        p.meta_root = self._get_publisher_meta_root(p.prefix)
+                        p.last_refreshed = None
+
+                # Check to see if any system publishers have been
+                # removed.  If they have, remove their metadata and
+                # rebuild the catalogs.
+                changed = False
+                for p in self.cfg.removed_pubs:
+                        p.meta_root = self._get_publisher_meta_root(p.prefix)
+                        try:
+                                self.remove_publisher_metadata(p, rebuild=False)
+                                changed = True
+                        except apx.PermissionsException:
+                                pass
+                if changed:
+                        self.__rebuild_image_catalogs()
+
+                # we delay writing out any new system repository configuration
+                # until we've updated on on-disk catalog state.  (otherwise we
+                # could lose track of syspub publishers changes and either
+                # return stale catalog information, or not do refreshes when
+                # we need to.)
+                self.cfg.write_sys_cfg()
 
                 self.__load_publisher_ssl()
                 if purge:
@@ -1029,7 +1045,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         return False
 
                 if not progtrack:
-                        progtrack = progress.QuietProgressTracker()
+                        progtrack = progress.NullProgressTracker()
 
                 # Not technically 'caching', but close enough ...
                 progtrack.cache_catalogs_start()
@@ -1507,7 +1523,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                             progtrack=progtrack)
 
                 if refresh_allowed:
-                        self.refresh_publishers(progtrack=progtrack)
+                        self.refresh_publishers(progtrack=progtrack,
+                            full_refresh=True)
                 else:
                         # initialize empty catalogs on disk
                         self.__rebuild_image_catalogs(progtrack=progtrack)
@@ -1638,15 +1655,21 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
         def get_root(self):
                 return self.root
 
-        def get_last_modified(self):
-                """Returns a UTC datetime object representing the time the
-                image's state last changed or None if unknown."""
+        def get_last_modified(self, string=False):
+                """Return the UTC time of the image's last state change or
+                None if unknown.  By default the time is returned via datetime
+                object.  If 'string' is true and a time is available, then the
+                time is returned as a string (instead of as a datetime
+                object)."""
 
                 # Always get last_modified time from known catalog.  It's
                 # retrieved from the catalog itself since that is accurate
                 # down to the micrsecond (as opposed to the filesystem which
                 # has an OS-specific resolution).
-                return self.__get_catalog(self.IMG_CATALOG_KNOWN).last_modified
+                rv = self.__get_catalog(self.IMG_CATALOG_KNOWN).last_modified
+                if rv is None or not string:
+                        return rv
+                return rv.strftime("%Y-%m-%dT%H:%M:%S.%f")
 
         def gen_publishers(self, inc_disabled=False):
                 if not self.cfg:
@@ -1749,13 +1772,19 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 if not pubs:
                         pubs = self.gen_publishers()
 
+                errors = []
                 for p in pubs:
                         r = p.repository
                         for uri in r.origins:
                                 if uri.ssl_cert:
-                                        misc.validate_ssl_cert(
-                                            uri.ssl_cert,
-                                            prefix=p.prefix, uri=uri)
+                                        try:
+                                                misc.validate_ssl_cert(
+                                                    uri.ssl_cert,
+                                                    prefix=p.prefix,
+                                                    uri=uri)
+                                        except apx.ExpiredCertificate, e:
+                                                errors.append(e)
+                                                
                                 if uri.ssl_key:
                                         try:
                                                 if not os.path.exists(
@@ -1766,6 +1795,9 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                                             uri=uri)
                                         except EnvironmentError, e:
                                                 raise apx._convert_error(e)
+
+                if errors:
+                        raise apx.ExpiredCertificates(errors)
 
         def has_publisher(self, prefix=None, alias=None):
                 """Returns a boolean value indicating whether a publisher
@@ -1782,7 +1814,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 image."""
 
                 if not progtrack:
-                        progtrack = progress.QuietProgressTracker()
+                        progtrack = progress.NullProgressTracker()
 
                 with self.locked_op("remove-publisher"):
                         pub = self.get_publisher(prefix=prefix,
@@ -2098,7 +2130,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                 raise apx.DuplicatePublisher(pub)
 
                 if not progtrack:
-                        progtrack = progress.QuietProgressTracker()
+                        progtrack = progress.NullProgressTracker()
 
                 # Must assign this first before performing operations.
                 pub.meta_root = self._get_publisher_meta_root(
@@ -2107,7 +2139,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
 
                 # Before continuing, validate SSL information.
                 try:
-                        self.check_cert_validity()
+                        self.check_cert_validity(pubs=[pub])
                 except apx.ExpiringCertificate, e:
                         logger.error(str(e))
 
@@ -2160,6 +2192,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 'kwargs' is a dict of additional keyword arguments to be passed
                 to each action verification routine."""
 
+                progresstracker.verify_start_pkg(fmri)
                 try:
                         pub = self.get_publisher(prefix=fmri.publisher)
                 except apx.UnknownPublisher:
@@ -2171,6 +2204,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         sig_pol = self.signature_policy.combine(
                             pub.signature_policy)
 
+                progresstracker.verify_add_progress(fmri)
                 manf = self.get_manifest(fmri, ignore_excludes=True)
                 sigs = list(manf.gen_actions_by_type("signature",
                     self.list_excludes()))
@@ -2191,6 +2225,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         except apx.InvalidResourceLocation, e:
                                 yield [], [e], [], []
 
+                progresstracker.verify_add_progress(fmri)
                 def mediation_allowed(act):
                         """Helper function to determine if the mediation
                         delivered by a link is allowed.  If it is, then
@@ -2210,19 +2245,18 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
 
                         med_version = act.attrs.get("mediator-version")
                         if med_version:
-                                # 5.11 doesn't matter here and is never exposed
-                                # to users.
                                 med_version = pkg.version.Version(
-                                    med_version, "5.11")
+                                    med_version)
                         med_impl = act.attrs.get("mediator-implementation")
 
                         return med_version == cfg_med_version and \
                             med.mediator_impl_matches(med_impl, cfg_med_impl)
 
                 try:
-                        for act in manf.gen_actions(
-                            self.list_excludes()):
-                                if (act.name == "link" or act.name == "hardlink") and \
+                        for act in manf.gen_actions(self.list_excludes()):
+                                progresstracker.verify_add_progress(fmri)
+                                if (act.name == "link" or
+                                    act.name == "hardlink") and \
                                     not mediation_allowed(act):
                                         # Link doesn't match configured
                                         # mediation, so shouldn't be verified.
@@ -2230,21 +2264,20 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
 
                                 errors, warnings, info = act.verify(self,
                                     pfmri=fmri, **kwargs)
-                                progresstracker.verify_add_progress(fmri)
                                 actname = act.distinguished_name()
                                 if errors:
                                         progresstracker.verify_yield_error(
-                                            actname, errors)
+                                            fmri, actname, errors)
                                 if warnings:
                                         progresstracker.verify_yield_warning(
-                                            actname, warnings)
+                                            fmri, actname, warnings)
                                 if info:
                                         progresstracker.verify_yield_info(
-                                            actname, info)
+                                            fmri, actname, info)
                                 if errors or warnings or info:
                                         yield act, errors, warnings, info
                 finally:
-                        progresstracker.verify_done()
+                        progresstracker.verify_end_pkg(fmri)
 
         def image_config_update(self, new_variants, new_facets, new_mediators):
                 """update variants in image config"""
@@ -2284,8 +2317,6 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 if self.version < self.CURRENT_VERSION:
                         raise apx.ImageFormatUpdateNeeded(self.root)
 
-                ilm = self.get_last_modified()
-
                 # Allow garbage collection of previous plan.
                 self.imageplan = None
 
@@ -2308,26 +2339,25 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         pp.evaluate(self.list_excludes(), self.list_excludes())
                         pps.append(pp)
 
-                ip = imageplan.ImagePlan(self, progtrack, lambda: False)
-                ip._image_lm = ilm
-                ip._planned_op = ip.PLANNED_FIX
-                self.imageplan = ip
-
-                ip.update_index = False
-                ip.state = imageplan.EVALUATED_PKGS
-                progtrack.evaluate_start()
-
                 # Always start with most current (on-disk) state information.
                 self.__init_catalogs()
 
-                ip.pkg_plans = pps
+                ip = imageplan.ImagePlan(self, pkgdefs.API_OP_REPAIR,
+                    progtrack, lambda: False)
+
+                ip.pd._image_lm = self.get_last_modified(string=True)
+                self.imageplan = ip
+
+                ip.update_index = False
+                ip.pd.state = plandesc.EVALUATED_PKGS
+                ip.pd.pkg_plans = pps
 
                 ip.evaluate()
                 if ip.reboot_needed() and self.is_liveroot():
                         raise apx.RebootNeededOnLiveImageException()
 
                 logger.info("\n")
-                for pp in ip.pkg_plans:
+                for pp in ip.pd.pkg_plans:
                         for lic, entry in pp.get_licenses():
                                 dest = entry["dest"]
                                 lic = dest.attrs["license"]
@@ -2355,8 +2385,29 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
 
                 return True
 
-        def has_manifest(self, pfmri):
-                return os.path.exists(self.get_manifest_path(pfmri))
+        def __verify_manifest(self, fmri, mfstpath, alt_pub=None):
+                """Verify a manifest.  The caller must supply the FMRI
+                for the package in 'fmri', as well as the path to the
+                manifest file that will be verified."""
+
+                try:
+                        return self.transport._verify_manifest(fmri,
+                            mfstpath=mfstpath, pub=alt_pub)
+                except InvalidContentException:
+                        return False
+        
+        def has_manifest(self, pfmri, alt_pub=None):
+                """Check to see if the manifest for pfmri is present on disk and
+                has the correct hash."""
+
+                pth = self.get_manifest_path(pfmri)
+                on_disk = os.path.exists(pth)
+
+                if not on_disk or \
+                    self.is_pkg_installed(pfmri) or \
+                    self.__verify_manifest(fmri=pfmri, mfstpath=pth, alt_pub=alt_pub):
+                        return on_disk
+                return False
 
         def get_license_dir(self, pfmri):
                 """Return path to package license directory."""
@@ -2417,6 +2468,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 object.... grab from server if needed"""
 
                 try:
+                        if not self.has_manifest(fmri, alt_pub=alt_pub):
+                                raise KeyError
                         ret = manifest.FactoredManifest(fmri,
                             self.get_manifest_dir(fmri),
                             excludes=excludes,
@@ -2497,10 +2550,11 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                 removed.add(rem_pkg)
 
                 combo = added.union(removed)
-                progtrack.item_set_goal(_("Package State Update Phase"),
-                    len(combo))
 
+                progtrack.job_start(progtrack.JOB_STATE_DB)
+                # 'Updating package state database'
                 for pfmri in combo:
+                        progtrack.job_add_progress(progtrack.JOB_STATE_DB)
                         entry = kcat.get_entry(pfmri)
                         mdata = entry.get("metadata", {})
                         states = set(mdata.get("states", set()))
@@ -2522,7 +2576,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                 # meaningful state information, so should be
                                 # discarded.
                                 kcat.remove_package(pfmri)
-                                progtrack.item_add_progress()
+                                progtrack.job_add_progress(
+                                    progtrack.JOB_STATE_DB)
                                 continue
 
                         if (pkgdefs.PKG_STATE_INSTALLED in states and
@@ -2545,8 +2600,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                 icat.append(kcat, pfmri=pfmri)
 
                         entry = mdata = states = None
-                        progtrack.item_add_progress()
-                progtrack.item_done()
+                        progtrack.job_add_progress(progtrack.JOB_STATE_DB)
+                progtrack.job_done(progtrack.JOB_STATE_DB)
 
                 # Discard entries for alternate source packages that weren't
                 # installed as part of the operation.
@@ -2595,8 +2650,9 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 # Remove manifests of packages that were removed from the
                 # system.  Some packages may have only had facets or
                 # variants changed, so don't remove those.
-                progtrack.item_set_goal(_("Package Cache Update Phase"),
-                    len(removed))
+
+                # 'Updating package cache'
+                progtrack.job_start(progtrack.JOB_PKG_CACHE, goal=len(removed))
                 for pfmri in removed:
                         manifest.FactoredManifest.clear_cache(
                             self.get_manifest_dir(pfmri))
@@ -2605,15 +2661,16 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         except EnvironmentError, e:
                                 if e.errno != errno.ENOENT:
                                         raise apx._convert_error(e)
-                        progtrack.item_add_progress()
-                progtrack.item_done()
+                        progtrack.job_add_progress(progtrack.JOB_PKG_CACHE)
+                progtrack.job_done(progtrack.JOB_PKG_CACHE)
+
+                progtrack.job_start(progtrack.JOB_IMAGE_STATE)
 
                 # Temporarily redirect the catalogs to a different location,
                 # so that if the save is interrupted, the image won't be left
                 # with invalid state, and then save them.
                 tmp_state_root = self.temporary_dir()
 
-                progtrack.item_set_goal(_("Image State Update Phase"), 2)
                 try:
                         for cat, name in ((kcat, self.IMG_CATALOG_KNOWN),
                             (icat, self.IMG_CATALOG_INSTALLED)):
@@ -2622,27 +2679,43 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                 # Must copy the old catalog data to the new
                                 # destination as only changed files will be
                                 # written.
+                                progtrack.job_add_progress(
+                                    progtrack.JOB_IMAGE_STATE)
                                 misc.copytree(cat.meta_root, cpath)
+                                progtrack.job_add_progress(
+                                    progtrack.JOB_IMAGE_STATE)
                                 cat.meta_root = cpath
                                 cat.finalize(pfmris=added)
+                                progtrack.job_add_progress(
+                                    progtrack.JOB_IMAGE_STATE)
                                 cat.save()
-                                progtrack.item_add_progress()
+                                progtrack.job_add_progress(
+                                    progtrack.JOB_IMAGE_STATE)
 
                         del cat, name
                         self.__init_catalogs()
+                        progtrack.job_add_progress(progtrack.JOB_IMAGE_STATE)
 
                         # copy any other state files from current state
                         # dir into new state dir.
                         for p in os.listdir(self._statedir):
+                                progtrack.job_add_progress(
+                                    progtrack.JOB_IMAGE_STATE)
                                 fp = os.path.join(self._statedir, p)
                                 if os.path.isfile(fp):
-                                        portable.copyfile(fp, os.path.join(tmp_state_root, p))
+                                        portable.copyfile(fp,
+                                            os.path.join(tmp_state_root, p))
 
                         # Next, preserve the old installed state dir, rename the
                         # new one into place, and then remove the old one.
-                        orig_state_root = self.salvage(self._statedir, full_path=True)
+                        orig_state_root = self.salvage(self._statedir,
+                            full_path=True)
                         portable.rename(tmp_state_root, self._statedir)
+
+                        progtrack.job_add_progress(progtrack.JOB_IMAGE_STATE)
                         shutil.rmtree(orig_state_root, True)
+
+                        progtrack.job_add_progress(progtrack.JOB_IMAGE_STATE)
                 except EnvironmentError, e:
                         # shutil.Error can contains a tuple of lists of errors.
                         # Some of the error entries may be a tuple others will
@@ -2664,7 +2737,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         self.__init_catalogs()
                         if os.path.exists(tmp_state_root):
                                 shutil.rmtree(tmp_state_root, True)
-                progtrack.item_done()
+
+                progtrack.job_done(progtrack.JOB_IMAGE_STATE)
 
         def get_catalog(self, name):
                 """Returns the requested image catalog.
@@ -2681,13 +2755,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 if not self.imgdir:
                         raise RuntimeError("self.imgdir must be set")
 
-                cat = None
-                try:
-                        cat = self.__catalogs[name]
-                except KeyError:
-                        pass
-
-
+                cat = self.__catalogs.get(name)
                 if not cat:
                         cat = self.__get_catalog(name)
                         self.__catalogs[name] = cat
@@ -2837,7 +2905,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         var_call = new_vars.allow_action
                 else:
                         var_call = self.cfg.variants.allow_action
-                if new_facets:
+                if new_facets is not None:
                         fac_call = new_facets.allow_action
                 else:
                         fac_call = self.cfg.facets.allow_action
@@ -2852,6 +2920,55 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 """ Return a copy of the current image facets"""
                 return self.cfg.facets.copy()
 
+        def __state_updating_pathname(self):
+                """Return the path to a flag file indicating that the image
+                catalog is being updated."""
+                return os.path.join(self._statedir, self.__STATE_UPDATING_FILE)
+
+        def __start_state_update(self):
+                """Called when we start updating the image catalog.  Normally
+                returns False, but will return True if a previous update was
+                interrupted."""
+
+                # get the path to the image catalog update flag file
+                pathname = self.__state_updating_pathname()
+
+                # if the flag file exists a previous update was interrupted so
+                # return 1
+                if os.path.exists(pathname):
+                        return True
+
+                # create the flag file and return 0
+                file_mode = misc.PKG_FILE_MODE
+                try:
+                        open(pathname, "w")
+                        os.chmod(pathname, file_mode)
+                except EnvironmentError, e:
+                        if e.errno == errno.EACCES:
+                                raise apx.PermissionsException(e.filename)
+                        if e.errno == errno.EROFS:
+                                raise apx.ReadOnlyFileSystemException(
+                                    e.filename)
+                        raise
+                return False
+
+        def __end_state_update(self):
+                """Called when we're done updating the image catalog."""
+
+                # get the path to the image catalog update flag file
+                pathname = self.__state_updating_pathname()
+
+                # delete the flag file.
+                try:
+                        portable.remove(pathname)
+                except EnvironmentError, e:
+                        if e.errno == errno.EACCES:
+                                raise apx.PermissionsException(e.filename)
+                        if e.errno == errno.EROFS:
+                                raise apx.ReadOnlyFileSystemException(
+                                    e.filename)
+                        raise
+
         def __rebuild_image_catalogs(self, progtrack=None):
                 """Rebuilds the image catalogs based on the available publisher
                 catalogs."""
@@ -2860,7 +2977,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         raise apx.ImageFormatUpdateNeeded(self.root)
 
                 if not progtrack:
-                        progtrack = progress.QuietProgressTracker()
+                        progtrack = progress.NullProgressTracker()
 
                 progtrack.cache_catalogs_start()
 
@@ -2894,6 +3011,9 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
 
                 # Copy any regular files placed in the state directory
                 for p in os.listdir(self._statedir):
+                        if p == self.__STATE_UPDATING_FILE:
+                                # don't copy the state updating file
+                                continue
                         fp = os.path.join(self._statedir, p)
                         if os.path.isfile(fp):
                                 portable.copyfile(fp, os.path.join(tmp_state_root, p))
@@ -2918,7 +3038,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 # by usage of the SAT solver.
                 newest = {}
                 for pfx, cat in [(None, old_icat)] + pub_cats:
-                        for f in cat.fmris(last=True, pubs=[pfx]):
+                        for f in cat.fmris(last=True,
+                            pubs=pfx and [pfx] or EmptyI):
                                 nver, snver = newest.get(f.pkg_name, (None,
                                     None))
                                 if f.version > nver:
@@ -3025,8 +3146,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                 if stem in frozen_pkgs:
                                         f_ver = frozen_pkgs[stem].version
                                         if f_ver == ver or \
-                                            pkg.version.Version(ver,
-                                            self.attrs["Build-Release"]
+                                            pkg.version.Version(ver
                                             ).is_successor(f_ver,
                                             constraint=
                                             pkg.version.CONSTRAINT_AUTO):
@@ -3179,18 +3299,11 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         raise apx.ImageFormatUpdateNeeded(self.root)
 
                 if not progtrack:
-                        progtrack = progress.QuietProgressTracker()
+                        progtrack = progress.NullProgressTracker()
 
                 be_name, be_uuid = bootenv.BootEnv.get_be_name(self.root)
                 self.history.log_operation_start("refresh-publishers",
                     be_name=be_name, be_uuid=be_uuid)
-
-                # Verify validity of certificates before attempting network
-                # operations.
-                try:
-                        self.check_cert_validity()
-                except apx.ExpiringCertificate, e:
-                        logger.error(str(e))
 
                 pubs_to_refresh = []
 
@@ -3217,6 +3330,13 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                             result=history.RESULT_NOTHING_TO_DO)
                         return
 
+                # Verify validity of certificates before attempting network
+                # operations.
+                try:
+                        self.check_cert_validity(pubs=pubs_to_refresh)
+                except apx.ExpiringCertificate, e:
+                        logger.error(str(e))
+
                 try:
                         # Ensure Image directory structure is valid.
                         self.mkdirs()
@@ -3224,19 +3344,20 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         self.history.log_operation_end(error=e)
                         raise
 
-                progtrack.refresh_start(len(pubs_to_refresh))
+                progtrack.refresh_start(len(pubs_to_refresh),
+                    full_refresh=full_refresh)
 
                 failed = []
                 total = 0
                 succeeded = set()
-                updated = 0
+                updated = self.__start_state_update()
                 for pub in pubs_to_refresh:
                         total += 1
-                        progtrack.refresh_progress(pub.prefix)
+                        progtrack.refresh_start_pub(pub)
                         try:
                                 if pub.refresh(full_refresh=full_refresh,
-                                    immediate=immediate):
-                                        updated += 1
+                                    immediate=immediate, progtrack=progtrack):
+                                        updated = True
                         except apx.PermissionsException, e:
                                 failed.append((pub, e))
                                 # No point in continuing since no data can
@@ -3245,11 +3366,16 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         except apx.ApiException, e:
                                 failed.append((pub, e))
                                 continue
+                        finally:
+                                progtrack.refresh_end_pub(pub)
                         succeeded.add(pub.prefix)
+
                 progtrack.refresh_done()
 
                 if updated:
                         self.__rebuild_image_catalogs(progtrack=progtrack)
+                else:
+                        self.__end_state_update()
 
                 if failed:
                         e = apx.CatalogRefreshException(failed, total,
@@ -3375,6 +3501,12 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 for f in cat.fmris():
                         yield f
 
+        def count_installed_pkgs(self):
+                """Return the number of installed packages."""
+                cat = self.get_catalog(self.IMG_CATALOG_INSTALLED)
+                assert cat.package_count == cat.package_version_count
+                return cat.package_count
+
         def gen_tracked_stems(self):
                 """Return an iteration through all the tracked pkg stems
                 in the set of currently installed packages.  Return value
@@ -3389,7 +3521,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                         yield (f, self.strtofmri(
                                             a.attrs["fmri"]).pkg_name)
 
-        def _create_fast_lookups(self):
+        def _create_fast_lookups(self, progtrack=None):
                 """Create an on-disk database mapping action name and key
                 attribute value to the action string comprising the unique
                 attributes of the action, for all installed actions.  This is
@@ -3398,6 +3530,9 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 into memory, it is simple to seek into the second file to the
                 given offset and read until you hit an action that doesn't
                 match."""
+
+                if not progtrack:
+                        progtrack = progress.NullProgressTracker()
 
                 self.__actdict = None
                 self.__actdict_timestamp = None
@@ -3420,22 +3555,15 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
 
                 from heapq import heappush, heappop
 
+                progtrack.job_start(progtrack.JOB_FAST_LOOKUP)
+
                 for pfmri in self.gen_installed_pkgs():
+                        progtrack.job_add_progress(progtrack.JOB_FAST_LOOKUP)
                         m = self.get_manifest(pfmri, ignore_excludes=True)
                         for act in m.gen_actions(excludes):
                                 if not act.globally_identical:
                                         continue
-                                for key in act.attrs.keys():
-                                        if (act.unique_attrs and
-                                            key not in act.unique_attrs and
-                                            not (act.name == "file" and
-                                                key == "overlay") and
-                                            not ((act.name == "link" or
-                                                  act.name == "hardlink") and
-                                                 key.startswith("mediator"))) or \
-                                            key.startswith("variant.") or \
-                                            key.startswith("facet."):
-                                                del act.attrs[key]
+                                act.strip()
                                 heappush(heap, (act.name,
                                     act.attrs[act.key_attr], pfmri, act))
                                 nsd.setdefault(act.namespace_group, {})
@@ -3444,6 +3572,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                 nsd[act.namespace_group][
                                     act.attrs[act.key_attr]].append((
                                     act, pfmri))
+
+                progtrack.job_add_progress(progtrack.JOB_FAST_LOOKUP)
 
                 # If we can't write the temporary files, then there's no point
                 # in producing actdict because it depends on a synchronized
@@ -3471,6 +3601,12 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         last_name, last_key, last_offset = None, None, sf.tell()
                         cnt = 0
                         while heap:
+				# This is a tight loop, so try to avoid burning
+				# CPU calling into the progress tracker
+				# excessively.
+                                if len(heap) % 100 == 0:
+                                        progtrack.job_add_progress(
+                                            progtrack.JOB_FAST_LOOKUP)
                                 item = heappop(heap)
                                 fmri, act = item[2:]
                                 key = act.attrs[act.key_attr]
@@ -3501,10 +3637,13 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                 actdict[(last_name, last_key)] = \
                                     last_offset, cnt
 
+                        progtrack.job_add_progress(progtrack.JOB_FAST_LOOKUP)
+
                         bad_keys = imageplan.ImagePlan._check_actions(nsd)
                         for k in sorted(bad_keys):
                                 bf.write("%s\n" % k)
 
+                        progtrack.job_add_progress(progtrack.JOB_FAST_LOOKUP)
                         sf.close()
                         of.close()
                         bf.close()
@@ -3519,6 +3658,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                         except:
                                 pass
                         raise
+
+                progtrack.job_add_progress(progtrack.JOB_FAST_LOOKUP)
 
                 # Finally, rename the temporary files into their final place.
                 # If we have any problems, do our best to remove them, and we'll
@@ -3550,9 +3691,12 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                 except:
                                         pass
                                 raise exc_info[0], exc_info[1], exc_info[2]
+
+                progtrack.job_add_progress(progtrack.JOB_FAST_LOOKUP)
+                progtrack.job_done(progtrack.JOB_FAST_LOOKUP)
                 return actdict, timestamp
 
-        def _load_actdict(self):
+        def _load_actdict(self, progtrack):
                 """Read the file of offsets created in _create_fast_lookups()
                 and return the dictionary mapping action name and key value to
                 offset."""
@@ -3603,7 +3747,16 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 for line in of:
                         actname, offset, cnt, key_attr = \
                             line.rstrip().split(None, 3)
-                        actdict[(actname, key_attr)] = (int(offset), int(cnt))
+                        off = int(offset)
+                        actdict[(actname, key_attr)] = (off, int(cnt))
+
+                        # This is a tight loop, so try to avoid burning
+                        # CPU calling into the progress tracker excessively.
+                        # Since we are already using the offset, we use that
+			# to damp calls back into the progress tracker.
+                        if off % 500 == 0:
+                                progtrack.plan_add_progress(
+                                    progtrack.PLAN_ACTION_CONFLICT)
 
                 of.close()
                 self.__actdict = actdict
@@ -3672,11 +3825,10 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 return cat.publishers()
 
         def strtofmri(self, myfmri):
-                return pkg.fmri.PkgFmri(myfmri, self.attrs["Build-Release"])
+                return pkg.fmri.PkgFmri(myfmri)
 
         def strtomatchingfmri(self, myfmri):
-                return pkg.fmri.MatchingPkgFmri(myfmri,
-                    self.attrs["Build-Release"])
+                return pkg.fmri.MatchingPkgFmri(myfmri)
 
         def get_user_by_name(self, name):
                 uid = self._usersbyname.get(name, None)
@@ -3920,21 +4072,19 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 names; ignore versions."""
 
                 with self.locked_op("avoid"):
-                        ip = imageplan.ImagePlan(self, progtrack, check_cancel,
-                            noexecute=False)
-
+                        ip = imageplan.ImagePlan
                         self._avoid_set_save(self.avoid_set_get() |
-                            set(ip.match_user_stems(pat_list, ip.MATCH_UNINSTALLED)))
+                            set(ip.match_user_stems(self, pat_list,
+                            ip.MATCH_UNINSTALLED)))
 
         def unavoid_pkgs(self, pat_list, progtrack, check_cancel):
                 """Unavoid the specified packages... use pattern matching on
                 names; ignore versions."""
 
                 with self.locked_op("unavoid"):
-
-                        ip = imageplan.ImagePlan(self, progtrack, check_cancel,
-                            noexecute=False)
-                        unavoid_set = set(ip.match_user_stems(pat_list, ip.MATCH_ALL))
+                        ip = imageplan.ImagePlan
+                        unavoid_set = set(ip.match_user_stems(self, pat_list,
+                            ip.MATCH_ALL))
                         current_set = self.avoid_set_get()
                         not_avoided = unavoid_set - current_set
                         if not_avoided:
@@ -3982,14 +4132,13 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 """
 
                 def __make_publisherless_fmri(pat):
-                        p = pkg.fmri.MatchingPkgFmri(pat, "5.11")
+                        p = pkg.fmri.MatchingPkgFmri(pat)
                         p.publisher = None
                         return p
 
                 def __calc_frozen():
-                        ip = imageplan.ImagePlan(self, progtrack, check_cancel,
-                            noexecute=False)
-                        stems_and_pats = ip.freeze_pkgs_match(pat_list)
+                        stems_and_pats = imageplan.ImagePlan.freeze_pkgs_match(
+                            self, pat_list)
                         return dict([(s, __make_publisherless_fmri(p))
                             for s, p in stems_and_pats.iteritems()])
                 if dry_run:
@@ -4023,15 +4172,14 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 frozen."""
 
                 def __calc_unfrozen():
-                        ip = imageplan.ImagePlan(self, progtrack, check_cancel,
-                            noexecute=False)
                         # Get existing dictionary of frozen packages.
                         d = self.__freeze_dict_load()
                         # Match the user's patterns against the frozen packages
                         # and return the stems which matched, and the dictionary
                         # of the currently frozen packages.
-                        return set(ip.match_user_stems(pat_list, ip.MATCH_ALL,
-                            raise_unmatched=False,
+                        ip = imageplan.ImagePlan
+                        return set(ip.match_user_stems(self, pat_list,
+                            ip.MATCH_ALL, raise_unmatched=False,
                             universe=[(None, k) for k in d.keys()])), d
 
                 if dry_run:
@@ -4070,7 +4218,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                             ip.get_plan(full=False)
 
         def __make_plan_common(self, _op, _progtrack, _check_cancel,
-            _ip_mode, _noexecute, _ip_noop=False, **kwargs):
+            _noexecute, _ip_noop=False, **kwargs):
                 """Private helper function to perform base plan creation and
                 cleanup.
                 """
@@ -4078,10 +4226,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 # Allow garbage collection of previous plan.
                 self.imageplan = None
 
-                ip = imageplan.ImagePlan(self, _progtrack, _check_cancel,
-                    noexecute=_noexecute, mode=_ip_mode)
-
-                _progtrack.evaluate_start()
+                ip = imageplan.ImagePlan(self, _op, _progtrack, _check_cancel,
+                    noexecute=_noexecute)
 
                 # Always start with most current (on-disk) state information.
                 self.__init_catalogs()
@@ -4089,7 +4235,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 try:
                         try:
                                 if _ip_noop:
-                                        ip.plan_noop()
+                                        ip.plan_noop(**kwargs)
                                 elif _op in [
                                     pkgdefs.API_OP_ATTACH,
                                     pkgdefs.API_OP_DETACH,
@@ -4128,41 +4274,50 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 finally:
                         self.__cleanup_alt_pkg_certs()
 
-        def make_install_plan(self, op, progtrack, check_cancel, ip_mode,
+        def make_install_plan(self, op, progtrack, check_cancel,
             noexecute, pkgs_inst=None, reject_list=misc.EmptyI):
                 """Take a list of packages, specified in pkgs_inst, and attempt
                 to assemble an appropriate image plan.  This is a helper
                 routine for some common operations in the client.
                 """
 
+                progtrack.plan_all_start()
+
                 self.__make_plan_common(op, progtrack, check_cancel,
-                    ip_mode, noexecute, pkgs_inst=pkgs_inst,
+                    noexecute, pkgs_inst=pkgs_inst,
                     reject_list=reject_list)
 
+                progtrack.plan_all_done()
+
         def make_change_varcets_plan(self, op, progtrack, check_cancel,
-            ip_mode, noexecute, facets=None, reject_list=misc.EmptyI,
+            noexecute, facets=None, reject_list=misc.EmptyI,
             variants=None):
                 """Take a list of variants and/or facets and attempt to
                 assemble an image plan which changes them.  This is a helper
                 routine for some common operations in the client."""
 
+                progtrack.plan_all_start()
                 # compute dict of changing variants
                 if variants:
                         new = set(variants.iteritems())
                         cur = set(self.cfg.variants.iteritems())
                         variants = dict(new - cur)
 
-                self.__make_plan_common(op, progtrack, check_cancel, ip_mode,
+                self.__make_plan_common(op, progtrack, check_cancel,
                     noexecute, new_variants=variants, new_facets=facets,
                     reject_list=reject_list)
 
-        def make_set_mediators_plan(self, op, progtrack, check_cancel, ip_mode,
+                progtrack.plan_all_done()
+
+        def make_set_mediators_plan(self, op, progtrack, check_cancel,
             noexecute, mediators):
                 """Take a dictionary of mediators and attempt to assemble an
                 appropriate image plan to set or revert them based on the
                 provided version and implementation values.  This is a helper
                 routine for some common operations in the client.
                 """
+
+                progtrack.plan_all_start()
 
                 # Compute dict of changing mediators.
                 new_mediators = copy.deepcopy(mediators)
@@ -4191,11 +4346,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                                 valid, error = med.valid_mediator_version(
                                     med_version)
                                 if valid:
-                                        # 5.11 doesn't matter here and is never
-                                        # exposed to users.
                                          new_mediators[m]["version"] = \
-                                            pkg.version.Version(
-                                            med_version, "5.11")
+                                            pkg.version.Version(med_version)
                                 else:
                                         invalid_mediations[m]["version"] = \
                                             (med_version, error)
@@ -4213,52 +4365,68 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                             invalid_mediations=invalid_mediations)
 
                 self.__make_plan_common(op, progtrack, check_cancel,
-                    ip_mode, noexecute, new_mediators=new_mediators)
+                    noexecute, new_mediators=new_mediators)
 
-        def make_sync_plan(self, op, progtrack, check_cancel, ip_mode,
+                progtrack.plan_all_done()
+
+        def make_sync_plan(self, op, progtrack, check_cancel,
             noexecute, li_pkg_updates=True, reject_list=misc.EmptyI):
                 """Attempt to create an appropriate image plan to bring an
                 image in sync with it's linked image constraints.  This is a
                 helper routine for some common operations in the client."""
 
-                self.__make_plan_common(op, progtrack, check_cancel, ip_mode,
+                progtrack.plan_all_start()
+
+                self.__make_plan_common(op, progtrack, check_cancel,
                     noexecute, reject_list=reject_list,
                     li_pkg_updates=li_pkg_updates)
 
-        def make_uninstall_plan(self, op, progtrack, check_cancel, ip_mode,
+                progtrack.plan_all_done()
+
+        def make_uninstall_plan(self, op, progtrack, check_cancel,
             noexecute, pkgs_to_uninstall):
                 """Create uninstall plan to remove the specified packages."""
 
-                self.__make_plan_common(op, progtrack, check_cancel,
-                    ip_mode, noexecute, pkgs_to_uninstall=pkgs_to_uninstall)
+                progtrack.plan_all_start()
 
-        def make_update_plan(self, op, progtrack, check_cancel, ip_mode,
+                self.__make_plan_common(op, progtrack, check_cancel,
+                    noexecute, pkgs_to_uninstall=pkgs_to_uninstall)
+
+                progtrack.plan_all_done()
+
+        def make_update_plan(self, op, progtrack, check_cancel,
             noexecute, pkgs_update=None, reject_list=misc.EmptyI):
                 """Create a plan to update all packages or the specific ones as
                 far as possible.  This is a helper routine for some common
                 operations in the client.
                 """
 
+                progtrack.plan_all_start()
                 self.__make_plan_common(op, progtrack, check_cancel,
-                    ip_mode, noexecute, pkgs_update=pkgs_update,
+                    noexecute, pkgs_update=pkgs_update,
                     reject_list=reject_list)
+                progtrack.plan_all_done()
 
-        def make_revert_plan(self, op, progtrack, check_cancel, ip_mode,
+        def make_revert_plan(self, op, progtrack, check_cancel,
             noexecute, args, tagged):
                 """Revert the specified files, or all files tagged as specified
                 in args to their manifest definitions.
                 """
 
+                progtrack.plan_all_start()
                 self.__make_plan_common(op, progtrack, check_cancel,
-                    ip_mode, noexecute, args=args, tagged=tagged)
+                    noexecute, args=args, tagged=tagged)
+                progtrack.plan_all_done()
 
-        def make_noop_plan(self, op, progtrack, check_cancel, ip_mode,
+        def make_noop_plan(self, op, progtrack, check_cancel,
             noexecute):
                 """Create an image plan that doesn't update the image in any
                 way."""
 
+                progtrack.plan_all_start()
                 self.__make_plan_common(op, progtrack, check_cancel,
-                    ip_mode, noexecute, _ip_noop=True)
+                    noexecute, _ip_noop=True)
+                progtrack.plan_all_done()
 
         def ipkg_is_up_to_date(self, check_cancel, noexecute,
             refresh_allowed=True, progtrack=None):
@@ -4287,7 +4455,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 #
 
                 if not progtrack:
-                        progtrack = progress.QuietProgressTracker()
+                        progtrack = progress.NullProgressTracker()
 
                 img = self
 
@@ -4370,8 +4538,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 # XXX call to progress tracker that the package is being
                 # refreshed
                 img.make_install_plan(pkgdefs.API_OP_INSTALL, progtrack,
-                    check_cancel, pkgdefs.API_STAGE_DEFAULT, noexecute,
-                    pkgs_inst=["pkg:/package/pkg"])
+                    check_cancel, noexecute, pkgs_inst=["pkg:/package/pkg"])
 
                 return img.imageplan.nothingtodo()
 
@@ -4457,8 +4624,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 and the reason it was frozen."""
 
                 return [
-                    (pkg.fmri.MatchingPkgFmri(v[0], build_release="5.11"),
-                        v[1], v[2])
+                    (pkg.fmri.MatchingPkgFmri(v[0]), v[1], v[2])
                     for v in self.__freeze_dict_load().values()
                 ]
 

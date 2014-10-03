@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
 #
 
 import pkg.client.api
@@ -37,20 +37,30 @@ import logging
 import os
 import shutil
 import sys
+import urllib2
 
 PKG_CLIENT_NAME = "pkglint"
-CLIENT_API_VERSION = 71
+CLIENT_API_VERSION = 75
 pkg.client.global_settings.client_name = PKG_CLIENT_NAME
 
 class LintEngineException(Exception):
-        """An exception thrown when something fatal goes wrong with the engine.
-            """
+        """An exception thrown when something fatal goes wrong with the engine,
+        such that linting can no longer continue."""
+
         def __unicode__(self):
                 # To workaround python issues 6108 and 2517, this provides a
                 # a standard wrapper for this class' exceptions so that they
                 # have a chance of being stringified correctly.
                 return str(self)
 
+class LintEngineSetupException(LintEngineException):
+        """An exception thrown when the engine failed to complete its setup."""
+
+        def __unicode__(self):
+                # To workaround python issues 6108 and 2517, this provides a
+                # a standard wrapper for this class' exceptions so that they
+                # have a chance of being stringified correctly.
+                return str(self)
 
 class LintEngineCache():
         """This class provides two caches for the LintEngine.  A cache of the
@@ -77,7 +87,7 @@ class LintEngineCache():
                                 self.branch = DotSequence(
                                     combined.split("-")[1])
                         except pkg.version.IllegalDotSequence:
-                                raise LintEngineException(
+                                raise LintEngineSetupException(
                                     _("Invalid release string: %s") %
                                     self.release)
 
@@ -143,13 +153,14 @@ class LintEngineCache():
                                                 packages[key] = pfmri
 
                 # now get the manifests
-                tracker.index_set_goal(phase, len(packages))
+                tracker.manifest_fetch_start(len(packages))
                 for item in packages:
                         self.latest_cache[api_inst][item] = \
                             api_inst.get_manifest(packages[item])
-                        tracker.index_add_progress()
+                        tracker.manifest_fetch_progress(completion=True)
+                tracker.manifest_fetch_done()
 
-        def gen_latest(self, api_inst, tracker, pattern):
+        def gen_latest(self, api_inst, pattern):
                 """ A generator function to return the latest version of the
                 packages matching the supplied pattern from the publishers set
                 for api_inst"""
@@ -161,10 +172,8 @@ class LintEngineCache():
                                 mf = self.latest_cache[api_inst][item]
                                 if pattern and pkg.fmri.glob_match(
                                     str(mf.fmri), pattern):
-                                        tracker.index_add_progress()
                                         yield mf
                                 elif not pattern:
-                                        tracker.index_add_progress()
                                         yield mf
 
         def get_latest(self, api_inst, pkg_name):
@@ -367,7 +376,7 @@ class LintEngine(object):
                 unique_names = set()
                 for checker in self.checkers:
                         if checker.name in unique_names:
-                                raise LintEngineException(
+                                raise LintEngineSetupException(
                                     _("loading extensions: "
                                     "duplicate checker name %(name)s: "
                                     "%(class)s") %
@@ -380,7 +389,7 @@ class LintEngine(object):
                             checker.excluded_checks:
 
                                 if pkglint_id in unique_methods:
-                                        raise LintEngineException(_(
+                                        raise LintEngineSetupException(_(
                                             "loading extension "
                                             "%(checker)s: duplicate pkglint_id "
                                             "%(pkglint_id)s in %(method)s") %
@@ -397,7 +406,7 @@ class LintEngine(object):
                         conf = pkg.lint.config.PkglintConfig(
                             config_file=config).config
                 except (pkg.lint.config.PkglintConfigException), err:
-                        raise LintEngineException(err)
+                        raise LintEngineSetupException(err)
 
                 excl = []
 
@@ -430,7 +439,7 @@ class LintEngine(object):
                                         self.excluded_checkers.extend(exclude)
 
                                 except base.LintException, err:
-                                        raise LintEngineException(
+                                        raise LintEngineSetupException(
                                             _("Error parsing config value for "
                                             "%(key)s: %(err)s") % locals())
 
@@ -502,12 +511,12 @@ class LintEngine(object):
                     release=release)
 
                 if not cache and not lint_manifests:
-                        raise LintEngineException(
+                        raise LintEngineSetupException(
                             _("Either a cache directory, or some local "
                             "manifest files must be provided."))
 
                 if not cache and (ref_uris or lint_uris):
-                        raise LintEngineException(
+                        raise LintEngineSetupException(
                             _("A cache directory must be provided if using "
                             "reference or lint repositories."))
 
@@ -542,7 +551,7 @@ class LintEngine(object):
                                             self.tracker_phase)
 
                         except LintEngineException, err:
-                                raise LintEngineException(
+                                raise LintEngineSetupException(
                                     _("Unable to create lint image: %s") %
                                     str(err))
                         try:
@@ -562,7 +571,7 @@ class LintEngine(object):
                                 if not self.ref_api_inst and ref_uris:
                                         if not (self.lint_api_inst or \
                                             lint_manifests):
-                                                raise LintEngineException(
+                                                raise LintEngineSetupException(
                                                     "No lint image or manifests"
                                                     " provided.")
                                         self.ref_api_inst = self._create_image(
@@ -577,18 +586,19 @@ class LintEngine(object):
                                             self.tracker_phase)
 
                         except LintEngineException, err:
-                                raise LintEngineException(
+                                raise LintEngineSetupException(
                                     _("Unable to create reference image: %s") %
                                     str(err))
 
                         if not (self.ref_api_inst or self.lint_api_inst):
-                                raise LintEngineException(
+                                raise LintEngineSetupException(
                                     _("Unable to access any pkglint images "
                                    "under %s") % cache)
 
                 for checker in self.checkers:
                         checker.startup(self)
-                self.get_tracker().index_done()
+
+                self.get_tracker().lint_done()
                 self.in_setup = False
 
         def execute(self):
@@ -620,7 +630,7 @@ class LintEngine(object):
                         elif isinstance(checker, base.ActionChecker):
                                 action_checks.append(checker)
                         else:
-                                raise LintEngineException(
+                                raise LintEngineSetupException(
                                     _("%s does not subclass a known "
                                     "Checker subclass intended for use by "
                                     "pkglint extensions") % str(checker))
@@ -636,6 +646,7 @@ class LintEngine(object):
                     pattern=self.pattern, release=self.release):
                         self._check_manifest(manifest, manifest_checks,
                             action_checks)
+                self.tracker.flush()
 
         def gen_manifests(self, api_inst, pattern=None, release=None):
                 """A generator to return package manifests for a given image.
@@ -653,19 +664,21 @@ class LintEngine(object):
 
                 tracker = self.get_tracker()
                 if self.in_setup:
-                        self.tracker_phase = \
-                            self.tracker_phase + 1
-                tracker.index_set_goal(self.tracker_phase,
-                    self.mf_cache.count_latest(api_inst, pattern))
-                for m in self.mf_cache.gen_latest(api_inst,
-                    tracker, pattern):
+                        pt = tracker.LINT_PHASETYPE_SETUP
+                else:
+                        pt = tracker.LINT_PHASETYPE_EXECUTE
+                tracker.lint_next_phase(
+                    self.mf_cache.count_latest(api_inst, pattern), pt)
+
+                for m in self.mf_cache.gen_latest(api_inst, pattern):
+                        tracker.lint_add_progress()
                         yield m
                 return
 
         EXACT = 0
         LATEST_SUCCESSOR = 1
 
-        def get_manifest(self, pkg_name, search_type=EXACT):
+        def get_manifest(self, pkg_name, search_type=EXACT, reference=False):
                 """Returns the first available manifest for a given package
                 name, searching hierarchically in the lint manifests,
                 the lint_repo or the ref_repo for that single package.
@@ -676,6 +689,10 @@ class LintEngine(object):
                 When search_type is LintEngine.LATEST_SUCCESSOR, we return the
                 most recent successor of the provided package, using the
                 lint_fmri_successor() method defined in this module.
+
+                If 'reference' is True, only search for the package using the
+                reference image. If no reference image has been configured, this
+                raises a pkg.lint.base.LintException.
                 """
 
                 if not pkg_name.startswith("pkg:/"):
@@ -691,8 +708,7 @@ class LintEngine(object):
                                         # FMRIs listed as dependencies often
                                         # omit build_release, use a dummy one
                                         # for now
-                                        fmri = pkg.fmri.PkgFmri(pkg_name,
-                                            build_release="5.11")
+                                        fmri = pkg.fmri.PkgFmri(pkg_name)
                                         return fmri
                                 except:
                                         msg = _("unable to construct fmri from "
@@ -777,8 +793,16 @@ class LintEngine(object):
                                 return mf
 
                 # search hierarchically for the given package name in our
-                # local manifests, our lint image, or our reference image
-                # and return a manifest for that package.
+                # local manifests, using our lint image, or using our reference
+                # image and return a manifest for that package.
+                if reference:
+                     if not self.ref_api_inst:
+                             raise base.LintException(
+                                _("No reference repository has been "
+                                "configured"))
+                     return mf_from_image(self.ref_api_inst, pkg_name,
+                        search_type)
+
                 for mf in self.lint_manifests:
                         search_fmri = build_fmri(pkg_name)
                         if search_type == self.LATEST_SUCCESSOR and \
@@ -818,7 +842,7 @@ class LintEngine(object):
                                 # update interval
                                 api_inst.refresh(immediate=True)
                 except Exception, err:
-                        raise LintEngineException(
+                        raise LintEngineSetupException(
                             _("Unable to get image at %(dir)s: %(reason)s") %
                             {"dir": image_dir,
                             "reason": str(err)})
@@ -832,7 +856,7 @@ class LintEngine(object):
                 a single publisher is supported per image."""
 
                 if len(repo_uris) != 1:
-                        raise LintEngineException(
+                        raise LintEngineSetupException(
                             _("pkglint only supports a single publisher "
                             "per image."))
 
@@ -844,6 +868,13 @@ class LintEngine(object):
                 self.tracker.flush()
                 self.logger.debug(_("Creating image at %s") % image_dir)
 
+                # Check to see if a scheme was used, if not, treat it as a
+                # file:// URI, and get the absolute path.  Missing or invalid
+                # repositories will be caught by pkg.client.api.image_create.
+                if not urllib2.urlparse.urlparse(repo_uris[0]).scheme:
+                        repo_uris[0] = "file://%s" % \
+                            urllib2.quote(os.path.abspath(repo_uris[0]))
+
                 try:
                         api_inst = pkg.client.api.image_create(
                             PKG_CLIENT_NAME, CLIENT_API_VERSION, image_dir,
@@ -852,7 +883,7 @@ class LintEngine(object):
                             progtrack=tracker, refresh_allowed=refresh_allowed,
                             repo_uri=repo_uris[0])
                 except (ApiException, OSError, IOError), err:
-                        raise LintEngineException(err)
+                        raise LintEngineSetupException(err)
                 return api_inst
 
         def _check_manifest(self, manifest, manifest_checks, action_checks):
@@ -960,13 +991,13 @@ class LintEngine(object):
                 """Creates a ProgressTracker if we don't already have one,
                 otherwise resetting our current tracker and returning it"""
 
-                if self.tracker and self.in_setup:
-                        return self.tracker
-                if self.tracker:
-                        self.tracker.reset()
+		if self.tracker:
+			if not self.in_setup:
+				self.tracker.reset()
+                        self.tracker.set_major_phase(self.tracker.PHASE_UTILITY)
                         return self.tracker
                 if not self.use_tracker:
-                        self.tracker = progress.QuietProgressTracker()
+                        self.tracker = progress.NullProgressTracker()
                 else:
                         try:
                                 self.tracker = \
@@ -974,10 +1005,11 @@ class LintEngine(object):
                         except progress.ProgressTrackerException:
                                 self.tracker = \
                                     progress.CommandLineProgressTracker()
+                self.tracker.set_major_phase(self.tracker.PHASE_UTILITY)
                 return self.tracker
 
         def follow_renames(self, pkg_name, target=None, old_mfs=[],
-            warn_on_obsolete=False):
+            warn_on_obsolete=False, legacy=False):
                 """Given a package name, and an optional target pfmri that we
                 expect to be ultimately renamed to, follow package renames from
                 pkg_name, looking for the package we expect to be at the end of
@@ -986,7 +1018,25 @@ class LintEngine(object):
                 If there was a break in the renaming chain, we return None.
                 old_mfs, if passed, should be a list of manifests that were
                 sources of this rename.
+
+                If legacy is True, as well as checking that the target
+                name was reached, we also look for the leaf-name of the target.
+                This lets legacy action checking function properly, allowing,
+                say pkg:/SUNWbip or pkg:/compatibility/package/SUNWbip to
+                satisfy the rename check.
                 """
+
+                # When doing legacy action checks, the leaf of the target pkg
+                # matching the pkg_name is enough so long as that package is
+                # not marked as 'pkg.renamed'
+                if legacy and target:
+                        leaf_name = target.get_name().split("/")[-1]
+                        if leaf_name == pkg_name:
+                                leaf_mf = self.get_manifest(target.get_name(),
+                                    search_type=self.LATEST_SUCCESSOR)
+                                if leaf_mf and leaf_mf.get("pkg.renamed",
+                                    "false") == "false":
+                                        return leaf_mf
 
                 mf = self.get_manifest(pkg_name,
                     search_type=self.LATEST_SUCCESSOR)
@@ -1025,7 +1075,8 @@ class LintEngine(object):
                                         follow = follow.split("@")[0]
                                 mf = self.follow_renames(follow,
                                     target=target, old_mfs=old_mfs,
-                                    warn_on_obsolete=warn_on_obsolete)
+                                    warn_on_obsolete=warn_on_obsolete,
+                                    legacy=legacy)
 
                                 # we can stop looking if we've found a package
                                 # of which our target is a successor

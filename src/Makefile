@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright (c) 2007, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
 # Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
 #
 
@@ -38,7 +38,15 @@ pylint := TARGET = pylint
 test := TARGET = test
 test-verbose := TARGET = test-verbose
 test-generate := TARGET = test-generate
-test-leaks := TARGET = test-leaks
+
+#
+# clear PYTHONPATH when invoking /usr/bin/pkg (we don't want to load any
+# pkg python modules from this workspace since they may be out of sync
+# with the pkg modules in the root filesystem).
+#
+PYLINT_VER_CMD = PYTHONPATH= /usr/bin/pkg info pkg:/developer/python/pylint | \
+	/usr/bin/grep Version | \
+	/usr/bin/awk -F: '{print $$2}' | /usr/bin/sed -e 's/ //g'
 
 SUBDIRS=brand zoneproxy tsol
 
@@ -70,8 +78,8 @@ clint:
 	$(PYTHON) setup.py clint
 	@cd zoneproxy; pwd; make lint
 
-pylint:
-	$(PYTHON) setup.py pylint
+pylint: install
+	PYLINT_VER=$(PYLINT_VER_CMD:sh) $(PYTHON) setup.py pylint
 
 #
 # This rule propagates the current make target through all of the
@@ -94,8 +102,5 @@ test-verbose:
 
 test-generate:
 	$(PYTHON) setup.py test -g
-
-test-leaks:
-	@cd tests; pwd; /bin/ksh memleaks.ksh
 
 FRC:

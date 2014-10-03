@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
 
 import testutils
 if __name__ == "__main__":
@@ -33,6 +33,7 @@ import shutil
 import unittest
 import tempfile
 
+import pkg.lint.base as base
 import pkg.lint.engine as engine
 import pkg.lint.log as log
 import pkg.fmri as fmri
@@ -163,6 +164,7 @@ set name=pkg.description value="Description of pkglint test package"
 set name=description value="Pkglint test package"
 set name=info.classification value=org.opensolaris.category.2008:System/Packaging
 set name=pkg.summary value="Pkglint test package"
+set name=org.opensolaris.smf.fmri value=svc:/application/x11/xfs:default
 dir group=bin mode=0755 owner=root path=usr/lib/X11
 dir group=bin mode=0755 alt=foo owner=root path=usr/lib/X11/fs
 file nohash group=bin mode=0755 owner=root path=usr/sbin/fsadmin pkg.csize=953 pkg.size=1572 variant.other=carrots
@@ -300,6 +302,7 @@ set name=pkg.description value="Description of pkglint test package"
 set name=description value="Pkglint test package"
 set name=info.classification value=org.opensolaris.category.2008:System/Packaging
 set name=pkg.summary value="Pkglint test package"
+set name=org.opensolaris.smf.fmri value=svc:/application/x11/xfs:default
 dir group=bin mode=0755 owner=root path=usr/lib/X11
 dir group=bin mode=0755 alt=foo owner=root path=usr/lib/X11/fs
 file nohash group=bin mode=0755 owner=root path=usr/sbin/fsadmin pkg.csize=953 pkg.size=1572
@@ -398,6 +401,7 @@ set name=pkg.description value="Description of pkglint test package"
 set name=description value="Pkglint test package"
 set name=info.classification value=org.opensolaris.category.2008:System/Packaging
 set name=pkg.summary value="Pkglint test package"
+set name=org.opensolaris.smf.fmri value=svc:/application/x11/xfs:default
 dir group=bin mode=0755 owner=root path=usr/lib/X11
 dir group=bin mode=0755 alt=foo owner=root path=usr/lib/X11/fs
 dir group=bin mode=0755 owner=root path=usr/sbin/fsadmin variant.other=carrots
@@ -421,6 +425,7 @@ set name=pkg.description value="Description of pkglint test package"
 set name=description value="Pkglint test package"
 set name=info.classification value=org.opensolaris.category.2008:System/Packaging
 set name=pkg.summary value="Pkglint test package"
+set name=org.opensolaris.smf.fmri value=svc:/application/x11/xfs:default
 dir group=bin mode=0755 owner=root path=usr/lib/X11
 dir group=bin mode=0755 alt=foo owner=root path=usr/lib/X11/fs
 link group=bin mode=0755 alt=foo owner=foor path=usr/lib/X11/fs target=bar
@@ -549,7 +554,7 @@ set name=pkg.summary value="Pkglint test package"
 set name=variant.arch value=i386 value=sparc
 """
 
-expected_failures["silly_description.mf"] = ["opensolaris.manifest004.2"]
+expected_failures["silly_description.mf"] = ["pkglint.manifest009.2"]
 broken_manifests["silly_description.mf"] = \
 """
 #
@@ -564,7 +569,37 @@ set name=pkg.summary value="Pkglint test package"
 set name=variant.arch value=i386 value=sparc
 """
 
-expected_failures["info_class_many_values.mf"] = ["opensolaris.manifest003.6"]
+expected_failures["empty_description.mf"] = ["pkglint.manifest009.1"]
+broken_manifests["empty_description.mf"] = \
+"""
+#
+# we deliver package where the description is empty
+#
+set name=pkg.fmri value=pkg://opensolaris.org/pkglint/test@1.1.0,5.11-0.149:20100917T003411Z
+set name=org.opensolaris.consolidation value=osnet
+set name=variant.opensolaris.zone value=global value=nonglobal
+set name=pkg.description value=""
+set name=info.classification value=org.opensolaris.category.2008:System/Packaging
+set name=pkg.summary value="Pkglint test package"
+set name=variant.arch value=i386 value=sparc
+"""
+
+expected_failures["empty_summary.mf"] = ["pkglint.manifest009.3"]
+broken_manifests["empty_summary.mf"] = \
+"""
+#
+# we deliver package where the summary is empty
+#
+set name=pkg.fmri value=pkg://opensolaris.org/pkglint/test@1.1.0,5.11-0.149:20100917T003411Z
+set name=org.opensolaris.consolidation value=osnet
+set name=variant.opensolaris.zone value=global value=nonglobal
+set name=pkg.description value="Pkglint test package"
+set name=info.classification value=org.opensolaris.category.2008:System/Packaging
+set name=pkg.summary value=""
+set name=variant.arch value=i386 value=sparc
+"""
+
+expected_failures["info_class_many_values.mf"] = ["pkglint.manifest008.6"]
 broken_manifests["info_class_many_values.mf"] = \
 """
 #
@@ -581,7 +616,7 @@ set name=pkg.summary value="Pkglint test package"
 set name=variant.arch value=i386 value=sparc
 """
 
-expected_failures["info_class_wrong_prefix.mf"] = ["opensolaris.manifest003.2"]
+expected_failures["info_class_wrong_prefix.mf"] = ["pkglint.manifest008.2"]
 broken_manifests["info_class_wrong_prefix.mf"] = \
 """
 #
@@ -597,7 +632,7 @@ set name=pkg.summary value="Pkglint test package"
 set name=variant.arch value=i386 value=sparc
 """
 
-expected_failures["info_class_no_category.mf"] = ["opensolaris.manifest003.3"]
+expected_failures["info_class_no_category.mf"] = ["pkglint.manifest008.3"]
 broken_manifests["info_class_no_category.mf"] = \
 """
 #
@@ -614,7 +649,7 @@ set name=pkg.summary value="Pkglint test package"
 set name=variant.arch value=i386 value=sparc
 """
 
-expected_failures["info_class_wrong_category.mf"] = ["opensolaris.manifest003.4"]
+expected_failures["info_class_wrong_category.mf"] = ["pkglint.manifest008.4"]
 broken_manifests["info_class_wrong_category.mf"] = \
 """
 #
@@ -669,10 +704,10 @@ depend fmri=foo/bar@@134 type=require
 depend fmri=foo/bar fmri="" type=require-any
 """
 
-expected_failures["invalid_usernames.mf"] = ["opensolaris.action001.2",
-    "opensolaris.action001.3", "opensolaris.action001.2",
-    "opensolaris.action001.3", "opensolaris.action001.1",
-    "opensolaris.action001.3"]
+expected_failures["invalid_usernames.mf"] = ["pkglint.action010.2",
+    "pkglint.action010.3", "pkglint.action010.2",
+    "pkglint.action010.3", "pkglint.action010.1",
+    "pkglint.action010.3"]
 broken_manifests["invalid_usernames.mf"] = \
 """
 #
@@ -801,7 +836,7 @@ set name=variant.other value=carrots
 # set name=variant.arch value=i386 value=sparc
 set name=pkg.description value="Description of pkglint test package"
 set name=description value="Pkglint test package"
-set name=info.classification value=org.opensolaris.category.2008:System/Noodles pkg.linted.opensolaris.manifest003.6=True
+set name=info.classification value=org.opensolaris.category.2008:System/Noodles pkg.linted.pkglint.manifest008.6=True
 set name=pkg.summary value="Pkglint test package"
 set name=pkg.linted value=True
 dir group=bin mode=0755 owner=root path=usr/lib/X11
@@ -830,7 +865,7 @@ set name=pkg.linted.pkglint.action001 value=True
 set name=pkg.description value="Description of pkglint test package"
 set name=description value="Pkglint test package"
 # this is linted due to our our action attribute
-set name=info.classification value=org.opensolaris.category.2008:System/Noodles pkg.linted.opensolaris.manifest003.6=True
+set name=info.classification value=org.opensolaris.category.2008:System/Noodles pkg.linted.pkglint.manifest008.6=True
 # an underscore the key "foo_name"
 set name=pkg.summary value="Pkglint test package" foo_name=bar
 # this action is ok, underscores in attribute values are fine
@@ -856,7 +891,7 @@ set name=variant.other value=carrots under_score=oh_yes
 set name=pkg.linted.pkglint.action001.2 value=True
 set name=pkg.description value="Description of pkglint test package"
 set name=description value="Pkglint test package"
-set name=info.classification value=org.opensolaris.category.2008:System/Noodles pkg.linted.opensolaris.manifest003.6=True
+set name=info.classification value=org.opensolaris.category.2008:System/Noodles pkg.linted.pkglint.manifest008.6=True
 set name=pkg.summary value="Pkglint test package" foo_name=bar
 set name=foo_bar value=baz
 dir group=bin mode=0755 owner=root path=usr/lib/X11 bar=has_underscore
@@ -870,7 +905,7 @@ broken_manifests["linted-missing-summary.mf"] = \
 #
 set name=pkg.fmri value=pkg://opensolaris.org/pkglint/TIMFtest@1.1.0,5.11-0.141:20100604T143737Z
 set name=org.opensolaris.consolidation value=osnet
-set name=pkg.linted.opensolaris.manifest001.2 value=True
+set name=pkg.linted.pkglint.manifest010.2 value=True
 set name=variant.opensolaris.zone value=global value=nonglobal
 set name=variant.arch value=i386 value=sparc
 set name=pkg.description value="Description of pkglint test package"
@@ -888,7 +923,7 @@ set name=variant.opensolaris.zone value=global value=nonglobal
 set name=variant.arch value=i386 value=sparc
 set name=pkg.description value="Description of pkglint test package"
 set name=info.classification value=org.opensolaris.category.2008:System/Packaging
-set name=pkg.summary value="Description of pkglint test package" pkg.linted.opensolaris.manifest004.2=True
+set name=pkg.summary value="Description of pkglint test package" pkg.linted.pkglint.manifest009.2=True
 """
 
 expected_failures["linted-dup-path-types.mf"] = ["pkglint.dupaction001.1",
@@ -902,7 +937,7 @@ set name=pkg.fmri value=pkg://opensolaris.org/pkglint/TIMFtest@1.1.0,5.11-0.141:
 set name=org.opensolaris.consolidation value=osnet
 set name=variant.opensolaris.zone value=global value=nonglobal
 set name=variant.arch value=i386 value=sparc
-set name=pkg.linted.opensolaris.manifest001.2 value=True
+set name=pkg.linted.pkglint.manifest010.2 value=True
 set name=pkg.summary value="Summary of pkglint test package"
 set name=info.classification value=org.opensolaris.category.2008:System/Packaging
 file path=usr/bin/ls owner=root group=staff mode=755 pkg.linted.pkglint.dupaction008=True
@@ -921,7 +956,7 @@ set name=pkg.fmri value=pkg://opensolaris.org/pkglint/TIMFtest@1.1.0,5.11-0.141:
 set name=org.opensolaris.consolidation value=osnet
 set name=variant.opensolaris.zone value=global value=nonglobal
 set name=variant.arch value=i386 value=sparc
-set name=pkg.linted.opensolaris.manifest001.2 value=True
+set name=pkg.linted.pkglint.manifest010.2 value=True
 set name=pkg.summary value="Summary of pkglint test package"
 set name=info.classification value=org.opensolaris.category.2008:System/Packaging
 file path=usr/bin/ls owner=root group=staff mode=755 pkg.linted.pkglint.dupaction001.1=True
@@ -981,6 +1016,7 @@ set name=info.classification value=org.opensolaris.category.2008:System/Packagin
 set name=pkg.summary value="Pkglint test package"
 set name=variant.arch value=i386 value=sparc
 set name=variant.other value="carrots" value="turnips"
+set name=org.opensolaris.smf.fmri value=svc:/application/x11/xfs:default
 dir group=bin mode=0755 owner=root path=usr/lib/X11
 dir group=bin mode=0755 alt=foo owner=root path=usr/lib/X11/fs
 file nohash group=bin mode=0755 owner=root path=usr/sbin/fsadmin pkg.csize=953 pkg.size=1572 variant.other=carrots
@@ -1008,6 +1044,7 @@ set name=info.classification value=org.opensolaris.category.2008:System/Packagin
 set name=pkg.summary value="Pkglint test package"
 set name=variant.arch value=i386 value=sparc
 set name=variant.bar value=other value=foo
+set name=org.opensolaris.smf.fmri value=svc:/application/x11/xfs:default
 link path=usr/lib/foo target=usr/sparc-sun-solaris2.11/lib/foo variant.arch=sparc
 link path=usr/lib/foo target=usr/i386-pc-solaris2.11/lib/foo variant.arch=i386
 dir group=bin mode=0755 owner=root path=usr/lib/X11
@@ -1495,6 +1532,42 @@ file NOHASH group=staff mode=0644 overlay=allow owner=timf path=foo preserve=tru
 file NOHASH group=staff mode=0644 overlay=allow owner=timf path=foo preserve=true variant.arch=i386
 """
 
+expected_failures["parent_is_not_dir.mf"] = ["pkglint.dupaction011"]
+broken_manifests["parent_is_not_dir.mf"] = \
+"""
+# This manifest delivers /usr/bin as a symlink to /bin, but tries to install
+# a file through that symlink.
+#
+set name=pkg.fmri value=foo
+set name=pkg.summary value="Image Packaging System"
+set name=info.classification value=org.opensolaris.category.2008:System/Packaging
+set name=pkg.description value="overlay checks"
+set name=variant.arch value=i386 value=sparc
+set name=org.opensolaris.consolidation value=pkg
+dir path=/bin owner=root group=sys mode=0755
+link target=../bin path=usr/bin group=sys owner=root
+file /etc/motd group=sys mode=0644 owner=root path=usr/bin/foo
+"""
+
+expected_failures["parent_is_not_dir_variants.mf"] = []
+broken_manifests["parent_is_not_dir_variants.mf"] = \
+"""
+# This manifest delivers /usr/bin as a symlink to /bin, but tries to install
+# a file through that symlink.  However, since the symlink and the file are
+# delivered under different variants, this is acceptable
+#
+set name=pkg.fmri value=foo
+set name=pkg.summary value="Image Packaging System"
+set name=info.classification value=org.opensolaris.category.2008:System/Packaging
+set name=pkg.description value="overlay checks"
+set name=variant.arch value=i386 value=sparc
+set name=variant.bar value=other value=new value=baz
+set name=org.opensolaris.consolidation value=pkg
+dir path=/bin owner=root group=sys mode=0755
+link target=../bin path=usr/bin group=sys owner=root variant.bar=other
+file /etc/motd group=sys mode=0644 owner=root path=usr/bin/foo variant.bar=new
+"""
+
 expected_failures["renamed-more-actions.mf"] = ["pkglint.manifest002.1",
     "pkglint.manifest002.3"]
 broken_manifests["renamed-more-actions.mf"] = \
@@ -1575,6 +1648,58 @@ depend fmri=consolidation/sfw/sfw-incorporation type=require
 signature algorithm=sha256 value=75b662e14a4ea8f0fa0507d40133b0347a36bc1f63112487f4738073edf4455d version=0
 """
 
+expected_failures["renamed-self.mf"] = ["pkglint.manifest002.4"]
+broken_manifests["renamed-self.mf"] = """
+#
+# We try to rename to ourself.
+#
+set name=pkg.fmri value=pkg://opensolaris.org/renamed-ancestor-new@0.5.11,5.11-0.141
+set name=pkg.description value="additional reference actions for pkglint"
+set name=info.classification value=org.opensolaris.category.2008:System/Core
+set name=pkg.summary value="Core Solaris Kernel"
+set name=org.opensolaris.consolidation value=osnet
+set name=variant.arch value=i386 value=sparc
+set name=pkg.renamed value=true
+depend fmri=renamed-ancestor-new type=require
+"""
+
+expected_failures["smf-manifest.mf"] = []
+broken_manifests["smf-manifest.mf"] = """
+#
+# We deliver SMF manifests, with correct org.opensolaris.smf.fmri tags
+#
+set name=pkg.fmri value=pkg://opensolaris.org/smf-package@0.5.11,5.11-0.141
+set name=pkg.description value="additional reference actions for pkglint"
+set name=org.opensolaris.smf.fmri value=svc:/foo/bar value=svc:/foo/bar:default \
+    value=svc:/application/foo/bar value=svc:/application/foo/bar:instance
+set name=info.classification value=org.opensolaris.category.2008:System/Core
+set name=pkg.summary value="Core Solaris Kernel"
+set name=org.opensolaris.consolidation value=osnet
+set name=variant.arch value=i386 value=sparc
+file path=lib/svc/manifest/file.xml owner=root group=sys mode=644
+file path=var/svc/manifest/application/file.xml owner=root group=sys mode=644
+"""
+
+expected_failures["smf-manifest_broken.mf"] = ["pkglint.manifest011"]
+broken_manifests["smf-manifest_broken.mf"] = """
+#
+# We deliver SMF manifests, but don't declare an org.opensolaris.smf.fmri tag
+# We should get one warning, rather than one per-SMF-manifest
+#
+set name=pkg.fmri value=pkg://opensolaris.org/smf-package@0.5.11,5.11-0.141
+set name=pkg.description value="additional reference actions for pkglint"
+set name=info.classification value=org.opensolaris.category.2008:System/Core
+set name=pkg.summary value="Core Solaris Kernel"
+set name=org.opensolaris.consolidation value=osnet
+set name=variant.arch value=i386 value=sparc
+file path=lib/svc/manifest/file.xml owner=root group=sys mode=644
+file path=var/svc/manifest/application/file.xml owner=root group=sys mode=644
+# these files are a red herrings - they deliver to the manifest dirs, but do not
+# have ".xml" file extensions
+file path=lib/svc/manifest/README owner=root group=sys mode=644
+file path=var/svc/manifest/sample.db owner=root group=sys mode=644
+"""
+
 expected_failures["underscores.mf"] = ["pkglint.action001.1",
     "pkglint.action001.3", "pkglint.action001.2"]
 broken_manifests["underscores.mf"] = \
@@ -1608,6 +1733,7 @@ set name=pkg.description value="Description of pkglint test package"
 set name=description value="Pkglint test package"
 set name=info.classification value=org.opensolaris.category.2008:System/Packaging
 set name=pkg.summary value="Pkglint test package"
+set name=org.opensolaris.smf.fmri value=svc:/application/x11/xfs:default
 dir group=bin mode=0755 owner=root path=usr/lib/X11
 dir group=bin mode=0755 alt=foo owner=root path=usr/lib/X11/fs
 file nohash group=sys mode=0444 owner=root path=var/svc/manifest/application/x11/xfs.xml pkg.csize=1649 pkg.size=3534 restart_fmri=svc:/system/manifest-import:default variant.noodles=singapore
@@ -1628,6 +1754,7 @@ set name=pkg.description value="Description of pkglint test package"
 set name=description value="Pkglint test package"
 set name=info.classification value=org.opensolaris.category.2008:System/Packaging
 set name=pkg.summary value="Pkglint test package"
+set name=org.opensolaris.smf.fmri value=svc:/application/x11/xfs:default
 dir group=bin mode=0755 owner=root path=usr/lib/X11
 dir group=bin mode=0755 alt=foo owner=root path=usr/lib/X11/fs
 file nohash group=sys mode=0444 owner=root path=var/svc/manifest/application/x11/xfs.xml pkg.csize=1649 pkg.size=3534 restart_fmri=svc:/system/manifest-import:default variant.opensolaris.zone=foo
@@ -1648,6 +1775,7 @@ set name=pkg.description value="Description of pkglint test package"
 set name=description value="Pkglint test package"
 set name=info.classification value=org.opensolaris.category.2008:System/Packaging
 set name=pkg.summary value="Pkglint test package"
+set name=org.opensolaris.smf.fmri value=svc:/application/x11/xfs:default
 dir group=bin mode=0755 owner=root path=usr/lib/X11
 dir group=bin mode=0755 alt=foo owner=root path=usr/lib/X11/fs
 file nohash group=sys mode=0444 owner=root path=var/svc/manifest/application/x11/xfs.xml pkg.csize=1649 pkg.size=3534 restart_fmri=svc:/system/manifest-import:default variant.opensolaris.zone=global
@@ -1669,6 +1797,7 @@ set name=pkg.description value="Description of pkglint test package"
 set name=description value="Pkglint test package"
 set name=info.classification value=org.opensolaris.category.2008:System/Packaging
 set name=pkg.summary value="Pkglint test package"
+set name=org.opensolaris.smf.fmri value=svc:/application/x11/xfs:default
 dir group=bin mode=0755 owner=root path=usr/lib/X11
 dir group=bin mode=0755 alt=foo owner=root path=usr/lib/X11/fs
 file nohash group=sys mode=0444 owner=root path=var/svc/manifest/application/x11/xfs.xml pkg.csize=1649 pkg.size=3534 restart_fmri=svc:/system/manifest-import:default variant.opensolaris.zone=foo
@@ -1705,6 +1834,7 @@ set name=description value="Pkglint test package"
 set name=info.classification value=org.opensolaris.category.2008:System/Packaging
 set name=pkg.summary value="Pkglint test package"
 set name=variant.arch value=i386 value=sparc
+set name=org.opensolaris.smf.fmri value=svc:/application/x11/xfs:default
 dir group=bin mode=0424 owner=root path=usr/lib/X11
 dir group=bin mode=0755 alt=foo owner=root path=usr/lib/X11/fs
 file nohash group=bin mode=0755 owner=root path=usr/sbin/fsadmin pkg.csize=1234 pkg.size=1234
@@ -1929,6 +2059,41 @@ file path=usr/perl5/5.6/bin/perl owner=root group=sys mode=0755
 file path=usr/perl5/5.12/bin/perl owner=root group=sys mode=0755
 """
 
+expected_failures["noversion-incorp.mf" ] = ["pkglint.action011"]
+broken_manifests["noversion-incorp.mf" ] = \
+"""
+#
+# We deliver an 'incorporate' dependency without specifying the version.
+#
+set name=pkg.fmri value=pkg://opensolaris.org/pkglint/test@1.0,1.0
+set name=org.opensolaris.consolidation value=osnet
+set name=variant.opensolaris.zone value=global value=nonglobal
+set name=pkg.description value="A pkglint test"
+set name=pkg.summary value="Yet another test"
+set name=variant.arch value=i386 value=sparc
+set name=info.classification value=org.opensolaris.category.2008:System/Packaging
+depend type=incorporate fmri=pkg:/some/package
+"""
+
+expected_failures["facetvalue-invalid.mf" ] = ["pkglint.action012"]
+broken_manifests["facetvalue-invalid.mf" ] = \
+"""
+#
+# Intentionally set facet into a value other than 'true', 'false' or 'all'
+#
+set name=pkg.fmri value=pkg://opensolaris.org/pkglint/test@1.0,1.0
+set name=org.opensolaris.consolidation value=osnet
+set name=variant.opensolaris.zone value=global value=nonglobal
+set name=pkg.description value="A pkglint test"
+set name=pkg.summary value="Yet another test"
+set name=variant.arch value=i386 value=sparc
+set name=info.classification value=org.opensolaris.category.2008:System/Packaging
+link path=usr/bin/perl target=usr/perl5/5.6/bin/perl mediator=perl mediator-version=5.6
+link path=usr/bin/perl target=usr/perl5/5.12/bin/perl mediator=perl mediator-version=5.12
+file path=usr/perl5/5.6/bin/perl facet.doc.man=other owner=root group=sys mode=0755
+file path=usr/perl5/5.12/bin/perl owner=root group=sys mode=0755
+"""
+
 class TestLogFormatter(log.LogFormatter):
         """Records log messages to a buffer"""
         def __init__(self):
@@ -2054,14 +2219,17 @@ class TestLintEngine(pkg5unittest.Pkg5TestCase):
                         lint_engine.setup(lint_manifests=manifests)
                         lint_engine.execute()
                         self.assert_(
-                            lint_logger.ids == ["opensolaris.manifest003.1"],
+                            lint_logger.ids == ["pkglint.manifest008.1"],
                             "Unexpected errors encountered: %s" %
                             lint_logger.messages)
                         lint_logger.close()
 
+
 class TestLintEngineDepot(pkg5unittest.ManyDepotTestCase):
         """Tests that exercise reference vs. lint repository checks
         and test linting of multiple packages at once."""
+
+        persistent_setup = True
 
         ref_mf = {}
 
@@ -2241,6 +2409,45 @@ set name=org.opensolaris.consolidation value=osnet
 set name=variant.arch value=i386 value=sparc
 set name=pkg.renamed value=true
 depend fmri=legacy-uses-renamed-ancestor type=require
+"""
+
+        ref_mf["compat-renamed-ancestor-old.mf"] = """
+#
+# A package with a legacy action that points to a package name that has the
+# leaf name that matches the 'pkg' attribute of the legacy action that it
+# delivers. A real-world example of this is the legacy action in
+#   pkg://solaris/compatibility/packages/SUNWbip
+# and the related packages:
+#   pkg://solaris/network/ftp
+#   pkg://solaris/network/ping
+#   pkg://solaris/SUNWbip
+
+set name=pkg.fmri value=pkg://opensolaris.org/compatibility/renamed-ancestor-old@0.5.11,5.11-0.141
+set name=pkg.description value="additional reference actions for pkglint"
+set name=info.classification value=org.opensolaris.category.2008:System/Core
+set name=pkg.summary value="Core Solaris Kernel"
+set name=org.opensolaris.consolidation value=osnet
+set name=variant.arch value=i386 value=sparc
+# (normally a compatibility package would contain dependencies on the
+#  packages that now deliver content previously delivered by the SVR4 pkg
+#  'renamed-ancestor-old'.  They're not necessary for this test.)
+legacy pkg="renamed-ancestor-old" desc="core kernel software for a specific instruction-set architecture" arch=i386 category=system hotline="Please contact your local service provider" name="Core Solaris Kernel (Root)" vendor="Sun Microsystems, Inc." version=11.11,REV=2009.11.11
+"""
+
+        ref_mf["depend-possibly-obsolete.mf"] = """
+#
+# We declare a dependency on a package that we intend to make obsolete
+# in the lint repository, though this package itself is perfectly valid.
+#
+set name=pkg.fmri value=pkg://opensolaris.org/dep/tobeobsolete@0.5.11,5.11-0.141
+set name=pkg.description value="additional reference actions for pkglint"
+set name=info.classification value=org.opensolaris.category.2008:System/Core
+set name=pkg.summary value="Core Solaris Kernel"
+set name=org.opensolaris.consolidation value=osnet
+set name=variant.arch value=i386 value=sparc
+# we mark this linted because we know this package does not exist in the
+# reference repository
+depend fmri=system/obsolete-this type=require
 """
 
         # A set of manifests to be linted. Note that these are all self
@@ -2427,6 +2634,33 @@ set name=pkg.renamed value=true
 depend fmri=renamed-ancestor-new type=require
 """
 
+        expected_failures["renamed-obsolete.mf"] = ["pkglint.manifest002.5"]
+        lint_mf["renamed-obsolete.mf"] = """
+#
+# We try to rename ourselves to an obsolete package.
+#
+set name=pkg.fmri value=pkg://opensolaris.org/an-old-name@0.5.11,5.11-0.141
+set name=pkg.description value="additional reference actions for pkglint"
+set name=info.classification value=org.opensolaris.category.2008:System/Core
+set name=pkg.summary value="Core Solaris Kernel"
+set name=org.opensolaris.consolidation value=osnet
+set name=variant.arch value=i386 value=sparc
+set name=pkg.renamed value=true
+depend fmri=system/obsolete type=require
+"""
+
+        expected_failures["obsolete-this.mf"] = ["pkglint.manifest001.3"]
+        lint_mf["obsolete-this.mf"] = """
+#
+# Make this package obsolete.  Since it has a dependency in the ref_repository,
+# we should get a warning, but only when linting against that repo.
+#
+set name=pkg.fmri value=pkg://opensolaris.org/system/obsolete-this@0.5.11,5.11-0.141
+set name=pkg.obsolete value=true variant.arch=i386
+set name=variant.opensolaris.zone value=global value=nonglobal variant.arch=i386
+set name=variant.arch value=i386
+"""
+
         lint_move_mf = {}
         lint_move_mf["move-sample1.mf"] = """
 #
@@ -2504,10 +2738,16 @@ dir group=sys mode=0755 owner=root path=etc
                     lint_uris=[self.ref_uri])
                 lint_engine.execute()
 
-                self.assert_(len(lint_logger.messages) == 0,
+                lint_msgs = []
+                # prune out the missing dependency warnings
+                for msg in lint_logger.messages:
+                        if "pkglint.action005.1" not in msg:
+                                lint_msgs.append(msg)
+
+                self.assert_(len(lint_msgs) == 0,
                     "Unexpected lint errors messages reported against "
                     "reference repo: %s" %
-                    "\n".join(lint_logger.messages))
+                    "\n".join(lint_msgs))
                 lint_logger.close()
 
                 lint_engine.teardown()
@@ -2708,8 +2948,12 @@ dir group=sys mode=0755 owner=root path=etc
                     "legacy-uses-renamed-ancestor.mf")
                 renamed_new = os.path.join(self.test_root,
                     "broken-renamed-ancestor-new.mf")
+                renamed_old = os.path.join(self.test_root,
+                    "renamed-ancestor-old.mf")
                 renamed_self_depend = os.path.join(self.test_root,
                     "self-depend-renamed-ancestor-new.mf")
+                compat_legacy = os.path.join(self.test_root,
+                    "compat-renamed-ancestor-old.mf")
 
                 # look for a rename that didn't ultimately resolve to the
                 # package that contained the legacy action
@@ -2758,7 +3002,6 @@ dir group=sys mode=0755 owner=root path=etc
 
                 lint_msgs = []
                 for msg in lint_logger.messages:
-                        # if "pkglint.action005.1" not in msg:
                         lint_msgs.append(msg)
 
                 self.assert_(len(lint_msgs) == 2, "Unexpected lint messages "
@@ -2774,6 +3017,52 @@ dir group=sys mode=0755 owner=root path=etc
                 self.assert_(seen_2_3 and seen_3_4,
                     "Missing expected broken renaming self-dependent errors "
                     "with legacy pkgs. Got %s" % lint_msgs)
+
+                # make sure we can deal with compatibility packages.  We include
+                # the 'renamed_old' package as well as the 'compat_legacy'
+                # to ensure that pkglint is satisfied by the compatability
+                # package, rather that trying to follow renames from the
+                # 'renamed_old' package. (otherwise, if a package pointed to by
+                # the legacy 'pkg' attribute doesn't exist, pkglint wouldn't
+                # complain)
+                lint_logger = TestLogFormatter()
+                manifests = read_manifests([renamed_old, compat_legacy],
+                    lint_logger)
+
+                lint_engine = engine.LintEngine(lint_logger, use_tracker=False,
+                    config_file=rcfile)
+                lint_engine.setup(cache=self.cache_dir,
+                    ref_uris=[self.ref_uri], lint_manifests=manifests)
+                lint_engine.execute()
+                lint_engine.teardown(clear_cache=True)
+
+                lint_msgs = []
+                for msg in lint_logger.messages:
+                        lint_msgs.append(msg)
+
+                self.debug(lint_msgs)
+                self.assert_(len(lint_msgs) == 0, "Unexpected lint messages "
+                    "produced when linting a compatibility legacy package")
+
+                # the 'legacy' package includes a legacy action which should
+                # also be satisfied by the compat_legacy being installed.
+                lint_logger = TestLogFormatter()
+                manifests = read_manifests([legacy, compat_legacy],
+                    lint_logger)
+
+                lint_engine = engine.LintEngine(lint_logger, use_tracker=False,
+                    config_file=rcfile)
+                lint_engine.setup(cache=self.cache_dir,
+                    ref_uris=[self.ref_uri], lint_manifests=manifests)
+                lint_engine.execute()
+                lint_engine.teardown(clear_cache=True)
+
+                lint_msgs = []
+                for msg in lint_logger.messages:
+                        lint_msgs.append(msg)
+
+                self.assert_(len(lint_msgs) == 0, "Unexpected lint messages "
+                    "produced when linting a compatibility legacy package")
 
         def test_relative_path(self):
                 """The engine can start with a relative path to its cache."""
@@ -2852,6 +3141,127 @@ dir group=sys mode=0755 owner=root path=etc
                 self.assert_(lint_logger.ids[0] == "pkglint.dupaction001.1",
                     "Expected pkglint.dupaction001.1, got %s" %
                     lint_logger.ids[0])
+
+
+class TestVolatileLintEngineDepot(pkg5unittest.ManyDepotTestCase):
+        """Tests that exercise reference vs. lint repository checks and tests
+        linting of multiple packages at once, similar to TestLintEngineDepot,
+        but with less overhead during setUp (this test class is not marked
+        as persistent_setup = True, so test methods are responsible for their
+        own setup)"""
+
+        # used by test_get_manifest(..)
+        get_manifest_data = {}
+# The following two manifests check that given a package in the lint repository,
+# that we can access the latest version of that package from the reference
+# repository using LintEngine.get_manifest(.., reference=True)
+        get_manifest_data["get-manifest-ref.mf"] = """
+set name=pkg.fmri value=pkg://opensolaris.org/check/parent@0.5.11,5.11-0.100:20100603T215050Z
+set name=variant.arch value=i386 value=sparc
+set name=pkg.summary value="additional content"
+set name=pkg.description value="core kernel software for a specific instruction-set architecture"
+set name=org.opensolaris.consolidation value=osnet
+set name=info.classification value=org.opensolaris.category.2008:System/Core
+"""
+        get_manifest_data["get-manifest-oldref.mf"] = """
+set name=pkg.fmri value=pkg://opensolaris.org/check/parent@0.5.11,5.11-0.99:20100603T215050Z
+set name=variant.arch value=i386 value=sparc
+set name=pkg.summary value="additional content"
+set name=pkg.description value="core kernel software for a specific instruction-set architecture"
+set name=org.opensolaris.consolidation value=osnet
+set name=info.classification value=org.opensolaris.category.2008:System/Core
+"""
+        get_manifest_data["get-manifest-lint.mf"] = """
+#
+# This is the manifest that should appear in the lint repository.
+#
+set name=variant.arch value=i386 value=sparc
+set name=pkg.summary value="additional content"
+set name=pkg.fmri value=pkg://opensolaris.org/check/parent@0.5.11,5.11-0.145:20100603T215050Z
+set name=pkg.description value="core kernel software for a specific instruction-set architecture"
+set name=org.opensolaris.consolidation value=osnet
+set name=info.classification value=org.opensolaris.category.2008:System/Core
+"""
+
+        def setUp(self):
+                pkg5unittest.ManyDepotTestCase.setUp(self,
+                    ["opensolaris.org", "opensolaris.org"],
+                    start_depots=True)
+
+                self.ref_uri = self.dcs[1].get_depot_url()
+                self.lint_uri = self.dcs[2].get_depot_url()
+                self.cache_dir = tempfile.mkdtemp("pkglint-cache", "",
+                    self.test_root)
+
+        def test_get_manifest(self):
+                """Check that <LintEngine>.get_manifest works ensuring
+                it returns appropriate manifests for the lint and reference
+                repositories."""
+
+                paths = self.make_misc_files(self.get_manifest_data)
+                rcfile = os.path.join(self.test_root, "pkglintrc")
+                lint_mf = os.path.join(self.test_root, "get-manifest-lint.mf")
+                old_ref_mf = os.path.join(self.test_root,
+                    "get-manifest-oldref.mf")
+                ref_mf = os.path.join(self.test_root, "get-manifest-ref.mf")
+                ret, ref_fmri =  self.pkgsend(self.ref_uri, "publish %s" %
+                    ref_mf)
+                ret, oldref_fmri =  self.pkgsend(self.ref_uri, "publish %s" %
+                    old_ref_mf)
+                ret, lint_fmri =  self.pkgsend(self.lint_uri, "publish %s" %
+                    lint_mf)
+
+                lint_logger = TestLogFormatter()
+                lint_engine = engine.LintEngine(lint_logger, use_tracker=False,
+                    config_file=rcfile)
+                manifests = read_manifests([lint_mf], lint_logger)
+                lint_engine.setup(cache=self.cache_dir,
+                    ref_uris=[self.ref_uri], lint_uris=[self.lint_uri])
+
+                # try retrieving a few names that should match our lint manifest
+                for name in ["check/parent", "pkg:/check/parent",
+                    "pkg://opensolaris.org/check/parent@0.5.10"]:
+                        mf = lint_engine.get_manifest(
+                            name, search_type=lint_engine.LATEST_SUCCESSOR)
+                        self.assert_(str(mf.fmri) == lint_fmri)
+
+                # try retrieving a few names that should match our parent
+                # manifest when using LATEST_SUCCESSOR mode
+                for name in ["check/parent", "pkg:/check/parent",
+                    "pkg://opensolaris.org/check/parent@0.5.10"]:
+                        mf = lint_engine.get_manifest(
+                            name, search_type=lint_engine.LATEST_SUCCESSOR,
+                            reference=True)
+                        self.assert_(str(mf.fmri) == ref_fmri)
+
+                # try retrieving a few names that should not match when using
+                # EXACT mode.
+                for name in ["check/parent@1.0",
+                    "pkg://opensolaris.org/check/parent@0.5.10"]:
+                        mf = lint_engine.get_manifest(
+                            name, search_type=lint_engine.EXACT)
+                        self.assert_(mf == None)
+
+                # try retrieving a specific version of the manifest from the
+                # reference repository.
+                mf = lint_engine.get_manifest(
+                    "pkg://opensolaris.org/check/parent@0.5.11,5.11-0.99",
+                    search_type=lint_engine.EXACT, reference=True)
+                self.assert_(str(mf.fmri) == oldref_fmri)
+
+                # test that we raise an exception when no reference repo is
+                # configured, but that searches for a non-existent package from
+                # the lint manifests do still return None.
+                shutil.rmtree(os.path.join(self.cache_dir, "ref_image"))
+                lint_engine = engine.LintEngine(lint_logger, use_tracker=False,
+                    config_file=rcfile)
+                lint_engine.setup(cache=self.cache_dir,
+                    lint_manifests=manifests)
+                mf = lint_engine.get_manifest("example/package")
+                self.assert_(mf == None)
+                self.assertRaises(base.LintException, lint_engine.get_manifest,
+                    "example/package", reference=True)
+
 
 class TestLintEngineInternals(pkg5unittest.Pkg5TestCase):
 

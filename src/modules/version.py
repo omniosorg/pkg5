@@ -246,14 +246,11 @@ class Version(object):
         referring to the UTC time associated with the version.  The release and
         branch DotSequences are interpreted normally, where v1 < v2 implies that
         v2 is a later release or branch.  The build_release DotSequence records
-        the system on which the package binaries were constructed.
-        Interpretation of the build_release by the client is that, in the case
-        b1 < b2, a b1 package can be run on either b1 or b2 systems,while a b2
-        package can only be run on a b2 system."""
+        the system on which the package binaries were constructed."""
 
         __slots__ = ["release", "branch", "build_release", "timestr"]
 
-        def __init__(self, version_string, build_string):
+        def __init__(self, version_string, build_string=None):
                 # XXX If illegally formatted, raise exception.
 
                 if not version_string:
@@ -311,10 +308,7 @@ class Version(object):
                                 self.build_release = DotSequence(build)
                         else:
                                 if build_string is None:
-                                        raise IllegalVersion("No build version "
-                                            "provided in Version constructor: "
-                                            "(%s, %s)" % (version_string,
-                                            build_string))
+                                        build_string = "5.11"
                                 self.build_release = DotSequence(build_string)
 
                 except IllegalDotSequence, e:
@@ -348,11 +342,17 @@ class Version(object):
                 else:
                         self.timestr = None
 
-        def compatible_with_build(self, target):
-                """target is a DotSequence for the target system."""
-                if self.build_release < target:
-                        return True
-                return False
+        @staticmethod
+        def getstate(obj, je_state=None):
+                """Returns the serialized state of this object in a format
+                that that can be easily stored using JSON, pickle, etc."""
+                return str(obj)
+
+        @staticmethod
+        def fromstate(state, jd_state=None):
+                """Allocate a new object using previously serialized state
+                obtained via getstate()."""
+                return Version(state, None)
 
         def __str__(self):
                 outstr = str(self.release) + "," + str(self.build_release)
@@ -364,6 +364,17 @@ class Version(object):
 
         def __repr__(self):
                 return "<pkg.fmri.Version '%s' at %#x>" % (self, id(self))
+
+        def get_version(self, include_build=True):
+                if include_build:
+                        outstr = str(self.release) + "," + str(self.build_release)
+                else:
+                        outstr = str(self.release)
+                if self.branch:
+                        outstr += "-" + str(self.branch)
+                if self.timestr:
+                        outstr += ":" + self.timestr
+                return outstr
 
         def get_short_version(self):
                 branch_str = ""
@@ -452,10 +463,6 @@ class Version(object):
                 if self > other:
                         return 1
 
-                if self.build_release < other.build_release:
-                        return -1
-                if self.build_release > other.build_release:
-                        return 1
                 return 0
 
         def __hash__(self):
@@ -612,7 +619,7 @@ class MatchingVersion(Version):
 
         __slots__ = ["match_latest", "__original"]
 
-        def __init__(self, version_string, build_string):
+        def __init__(self, version_string, build_string=None):
                 if version_string is None or not len(version_string):
                         raise IllegalVersion, "Version cannot be empty"
 

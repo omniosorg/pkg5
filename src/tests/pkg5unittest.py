@@ -18,12 +18,13 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2008, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
 
 #
 # Define the basic classes that all test cases are inherited from.
 # The currently defined test case classes are:
 #
+# ApacheDepotTestCase
 # CliTestCase
 # ManyDepotTestCase
 # Pkg5TestCase
@@ -39,7 +40,6 @@ import errno
 import gettext
 import hashlib
 import httplib
-import json
 import logging
 import multiprocessing
 import os
@@ -52,23 +52,31 @@ import subprocess
 import sys
 import tempfile
 import time
+import traceback
 import unittest
 import urllib2
 import urlparse
+import operator
 import platform
+import pty
 import pwd
 import re
 import ssl
 import StringIO
 import textwrap
+import threading
+import traceback
+import types
 
 import pkg.client.api_errors as apx
+import pkg.misc as misc
 import pkg.client.publisher as publisher
 import pkg.portable as portable
 import pkg.server.repository as sr
 import M2Crypto as m2
 
 from pkg.client.debugvalues import DebugValues
+from socket import error as socketerror
 
 EmptyI = tuple()
 EmptyDict = dict()
@@ -77,6 +85,8 @@ EmptyDict = dict()
 # These are initialized by pkg5testenv.setup_environment.
 #
 g_proto_area = "TOXIC"
+# Location of root of test suite.
+g_test_dir = "TOXIC"
 # User's value for TEMPDIR
 g_tempdir = "/tmp"
 
@@ -122,7 +132,7 @@ from pkg.client.debugvalues import DebugValues
 
 # Version test suite is known to work with.
 PKG_CLIENT_NAME = "pkg"
-CLIENT_API_VERSION = 71
+CLIENT_API_VERSION = 75
 
 ELIDABLE_ERRORS = [ TestSkippedException, depotcontroller.DepotStateException ]
 
@@ -272,6 +282,34 @@ if __name__ == "__main__":
 
         base_port = property(lambda self: self.__base_port, __set_base_port)
 
+        def assertRegexp(self, text, regexp):
+                """Test that a regexp search matches text."""
+
+                if re.search(regexp, text):
+                        return
+                raise self.failureException, \
+                    "\"%s\" does not match \"%s\"" % (regexp, text)
+
+        def assertRaisesRegexp(self, excClass, regexp,
+            callableObj, *args, **kwargs):
+                """Perform the same logic as assertRaises, but then verify
+                that the stringified version of the exception contains the
+                regexp pattern.
+
+                Introduced in in python 2.7"""
+
+                try:
+                        callableObj(*args, **kwargs)
+
+                except excClass, e:
+                        if re.search(regexp, str(e)):
+                                return
+                        raise self.failureException, \
+                            "\"%s\" does not match \"%s\"" % (regexp, str(e))
+
+                raise self.failureException, \
+                    "%s not raised" % excClass
+
         def assertRaisesStringify(self, excClass, callableObj, *args, **kwargs):
                 """Perform the same logic as assertRaises, but then verify that
                 the exception raised can be stringified."""
@@ -299,9 +337,64 @@ if __name__ == "__main__":
         def persistent_setup_copy(self, orig):
                 pass
 
+        @staticmethod
+        def ptyPopen(args, executable=None, env=None, shell=False):
+                """Less featureful but inspired by subprocess.Popen.
+                Runs subprocess in a pty"""
+                #
+                # Note: In theory the right answer here is to subclass Popen,
+                # but we found that in practice we'd have to reimplement most
+                # of that class, because its handling of file descriptors is
+                # too brittle in its _execute_child() code.
+                #
+                def __drain(masterf, outlist):
+                        # Use a list as a way to pass by reference
+                        while True:
+                                termdata = masterf.read(1024)
+                                if len(termdata) == 0:
+                                        break
+                                else:
+                                        outlist.append(termdata)
+
+                # This is the arg handling protocol from Popen
+                if isinstance(args, types.StringTypes):
+                        args = [args]
+                else:
+                        args = list(args)
+
+                if shell:
+                        args = ["/bin/sh", "-c"] + args
+                        if executable:
+                                args[0] = executable
+
+                if executable is None:
+                        executable = args[0]
+
+                pid,fd = pty.fork()
+                if pid == 0:
+                        try:
+                                # Child
+                                if env is None:
+                                        os.execvp(executable, args)
+                                else:
+                                        os.execvpe(executable, args, env)
+                        except:
+                                traceback.print_exc()
+                                os._exit(99)
+                else:
+                        masterf = os.fdopen(fd)
+                        outlist = []
+                        t = threading.Thread(target=__drain,
+                            args=(masterf, outlist))
+                        t.start()
+                        waitedpid, retcode = os.waitpid(pid, 0)
+                        retcode = retcode >> 8
+                        t.join()
+                return retcode, "".join(outlist)
+
         def cmdline_run(self, cmdline, comment="", coverage=True, exit=0,
             handle=False, out=False, prefix="", raise_error=True, su_wrap=None,
-            stderr=False, env_arg=None):
+            stderr=False, env_arg=None, usepty=False):
                 wrapper = ""
                 if coverage:
                         wrapper = self.coverage_cmd
@@ -317,20 +410,24 @@ if __name__ == "__main__":
                 if env_arg:
                         newenv.update(env_arg)
 
-                p = subprocess.Popen(cmdline,
-                    env=newenv,
-                    shell=True,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE)
+                if not usepty:
+                        p = subprocess.Popen(cmdline,
+                            env=newenv,
+                            shell=True,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE)
 
-                if handle:
-                        # Do nothing more.
-                        return p
-                self.output, self.errout = p.communicate()
-                retcode = p.returncode
-                self.debugresult(retcode, exit, self.output)
-                if self.errout != "":
-                        self.debug(self.errout)
+                        if handle:
+                                # Do nothing more.
+                                return p
+                        self.output, self.errout = p.communicate()
+                        retcode = p.returncode
+                else:
+                        retcode, self.output = self.ptyPopen(cmdline,
+                            env=newenv, shell=True)
+                        self.errout = ""
+
+                self.debugresult(retcode, exit, self.output + self.errout)
 
                 if raise_error and retcode == 99:
                         raise TracebackException(cmdline, self.output +
@@ -373,6 +470,8 @@ if __name__ == "__main__":
                         ins = " [+%d lines...]" % (len(lines) - 1)
                 else:
                         ins = ""
+                if isinstance(lines[0], unicode):
+                        lines[0] = lines[0].encode("utf-8")
                 self.debugcmd(
                     "echo '%s%s' > %s" % (lines[0], ins, path))
 
@@ -432,6 +531,11 @@ if __name__ == "__main__":
                         self.keys_dir = os.path.join(self.path_to_certs, "keys")
                         self.cs_dir = os.path.join(self.path_to_certs,
                             "code_signing_certs")
+                        self.chain_certs_dir = os.path.join(self.path_to_certs,
+                            "chain_certs")
+                        self.raw_trust_anchor_dir = os.path.join(
+                            self.path_to_certs, "trust_anchors")
+                        self.crl_dir = os.path.join(self.path_to_certs, "crl")
 
                 #
                 # TMPDIR affects the behavior of mkdtemp and mkstemp.
@@ -443,13 +547,17 @@ if __name__ == "__main__":
                 tempfile.tempdir = self.__test_root
                 setup_logging(self)
 
+                # Create a pkglintrc file that points to our info.classification
+                # data, and doesn't exclude any shipped plugins.
                 self.configure_rcfile( "%s/usr/share/lib/pkg/pkglintrc" %
                     g_proto_area,
                     {"info_classification_path":
                     "%s/usr/share/lib/pkg/opensolaris.org.sections" %
-                    g_proto_area}, self.test_root, section="pkglint")
+                    g_proto_area,
+                    "pkglint.exclude": ""}, self.test_root, section="pkglint")
 
-                self.template_dir = "%s/etc/pkg/sysrepo" % g_proto_area
+                self.sysrepo_template_dir = "%s/etc/pkg/sysrepo" % g_proto_area
+                self.depot_template_dir = "%s/etc/pkg/depot" % g_proto_area
                 self.make_misc_files(self.smf_cmds, prefix="smf_cmds",
                     mode=0755)
                 DebugValues["smf_cmds_dir"] = \
@@ -697,7 +805,9 @@ if __name__ == "__main__":
                         assert(not prefix.startswith(os.pathsep))
                         prefix = os.path.join(self.test_root, prefix)
 
-                for f, content in files.items():
+                # Ensure output paths are returned in consistent order.
+                for f in sorted(files):
+                        content = files[f]
                         assert not f.startswith("/"), \
                             ("%s: misc file paths must be relative!" % f)
                         path = os.path.join(prefix, f)
@@ -778,7 +888,7 @@ if __name__ == "__main__":
             change_facets=EmptyI, change_packages=EmptyI,
             change_mediators=EmptyI, change_variants=EmptyI,
             child_images=EmptyI, create_backup_be=False, create_new_be=False,
-            image_name=None, licenses=EmptyI, remove_packages=EmptyI,
+            image_name=None, licenses=EmptyI, remove_packages=EmptyI, release_notes=EmptyI,
             version=0):
                 """Check that the parsable output in 'output' is what is
                 expected."""
@@ -1008,8 +1118,10 @@ class _Pkg5TestResult(unittest._TextTestResult):
                         self.stream.write("# Archiving to %s\n" % archive_path)
 
                 if os.path.exists(test.test_root):
-                        shutil.copytree(test.test_root, archive_path,
-                            symlinks=True)
+                        try:
+                                misc.copytree(test.test_root, archive_path)
+                        except socketerror, e:
+                                pass
                 else:
                         # If the test has failed without creating its directory,
                         # make it manually, so that we have a place to write out
@@ -1590,8 +1702,8 @@ class Pkg5TestRunner(unittest.TextTestRunner):
 
         @staticmethod
         def __terminate_processes(jobs):
-                """Terminate all processes in this process's task group.  This
-                assumes that test suite is running in its own task group which
+                """Terminate all processes in this process's task.  This
+                assumes that test suite is running in its own task which
                 run.py should ensure."""
 
                 signal.signal(signal.SIGTERM, signal.SIG_IGN)
@@ -1604,18 +1716,39 @@ class Pkg5TestRunner(unittest.TextTestRunner):
                 # images and not told us about them, so we catch EBUSY, unmount,
                 # and keep trying.
                 finished = False
-                while not finished:
+                retry = 0
+
+                while not finished and retry < 10:
                         try:
                                 shutil.rmtree(os.path.join(g_tempdir,
                                     "ips.test.%s" % os.getpid()))
                         except OSError, e:
-                                if e.errno != errno.EBUSY:
+                                if e.errno == errno.ENOENT:
+                                        #
+                                        # seems to sporadically happen if we
+                                        # race with e.g. something shutting
+                                        # down which has a pid file; retry.
+                                        #
+                                        retry += 1
+                                        continue
+                                elif e.errno == errno.EBUSY:
+                                        ret = subprocess.call(
+                                            ["/usr/sbin/umount",
+                                            e.filename])
+                                        # if the umount failed, bump retry so
+                                        # we won't be stuck doing this forever.
+                                        if ret != 0:
+                                                retry += 1
+                                        continue
+                                else:
                                         raise
-                                subprocess.call(["/usr/sbin/umount", e.filename])
                         else:
                                 finished = True
 
-                print >> sys.stderr, "Directories successfully removed."
+                if not finished:
+                        print >> sys.stderr, "Not all directories removed!"
+                else:
+                        print >> sys.stderr, "Directories successfully removed."
                 sys.exit(1)
 
         def run(self, suite_list, jobs, port, time_estimates, quiet,
@@ -1997,14 +2130,18 @@ class Pkg5TestSuite(unittest.TestSuite):
                 return res
 
 
-def get_su_wrap_user():
+def get_su_wrap_user(uid_gid=False):
         for u in ["noaccess", "nobody"]:
                 try:
-                        pwd.getpwnam(u)
+                        pw = pwd.getpwnam(u)
+                        if uid_gid:
+                                return operator.attrgetter(
+                                    'pw_uid', 'pw_gid')(pw)
                         return u
                 except (KeyError, NameError):
                         pass
         raise RuntimeError("Unable to determine user for su.")
+
 
 class DepotTracebackException(Pkg5CommonException):
         def __init__(self, logfile, output):
@@ -2072,6 +2209,8 @@ class PkgSendOpenException(Pkg5CommonException):
 class CliTestCase(Pkg5TestCase):
         bail_on_fail = False
 
+        image_files = []
+
         def setUp(self, image_count=1):
                 Pkg5TestCase.setUp(self)
 
@@ -2134,6 +2273,16 @@ class CliTestCase(Pkg5TestCase):
                     PKG_CLIENT_NAME, cmdpath=cmd_path)
                 return res
 
+        def __setup_signing_files(self):
+                if not getattr(self, "need_ro_data", False):
+                        return
+                # Set up the trust anchor directory
+                self.ta_dir = os.path.join(self.img_path(), "etc/certs/CA")
+                os.makedirs(self.ta_dir)
+                for f in self.image_files:
+                        with open(os.path.join(self.img_path(), f), "wb") as fh:
+                                fh.close()
+
         def image_create(self, repourl=None, destroy=True, fs=(), **kwargs):
                 """A convenience wrapper for callers that only need basic image
                 creation functionality.  This wrapper creates a full (as opposed
@@ -2152,7 +2301,7 @@ class CliTestCase(Pkg5TestCase):
                             path.lstrip(os.path.sep))
                         os.makedirs(full_path)
                         self.cmdline_run("/usr/sbin/mount -F tmpfs swap " +
-                            full_path)
+                            full_path, coverage=False)
                         self.fs.add(full_path)
                         if path.lstrip(os.path.sep) == "var":
                                 force = True
@@ -2164,10 +2313,11 @@ class CliTestCase(Pkg5TestCase):
                     pkg.client.api.IMG_TYPE_ENTIRE, False, repo_uri=repourl,
                     progtrack=progtrack, force=force,
                     **kwargs)
+                self.__setup_signing_files()
                 return api_inst
 
         def pkg_image_create(self, repourl=None, prefix=None,
-            additional_args="", exit=0):
+            additional_args="", exit=0, env_arg=None):
                 """Executes pkg(1) client to create a full (as opposed to user)
                 image; returns exit code of client or raises an exception if
                 exit code doesn't match 'exit' or equals 99."""
@@ -2177,27 +2327,35 @@ class CliTestCase(Pkg5TestCase):
 
                 self.image_destroy()
                 os.mkdir(self.img_path())
-                self.debug("pkg_image_create %s" % self.img_path())
                 cmdline = "%s image-create -F " % self.pkg_cmdpath
                 if repourl:
                         cmdline = "%s -p %s=%s " % (cmdline, prefix, repourl)
                 cmdline += additional_args
                 cmdline = "%s %s" % (cmdline, self.img_path())
-                self.debugcmd(cmdline)
 
-                p = subprocess.Popen(cmdline, shell=True,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT)
-                output = p.stdout.read()
-                retcode = p.wait()
-                self.debugresult(retcode, 0, output)
+                retcode = self.cmdline_run(cmdline, exit=exit, env_arg=env_arg)
 
-                if retcode == 99:
-                        raise TracebackException(cmdline, output)
-                if retcode != exit:
-                        raise UnexpectedExitCodeException(cmdline, 0,
-                            retcode, output)
+                self.__setup_signing_files()
                 return retcode
+
+        def image_clone(self, dst):
+
+                # the currently selected image is the source
+                src = self.img_index()
+                src_path = self.img_path()
+
+                # create an empty destination image
+                self.set_image(dst)
+                self.image_destroy()
+                os.mkdir(self.img_path())
+                dst_path = self.img_path()
+
+                # reactivate the source image
+                self.set_image(src)
+
+                # populate the destination image
+                cmdline = "cd %s; find . | cpio -pdm %s" % (src_path, dst_path)
+                retcode = self.cmdline_run(cmdline, coverage=False)
 
         def image_destroy(self):
                 if os.path.exists(self.img_path()):
@@ -2205,16 +2363,19 @@ class CliTestCase(Pkg5TestCase):
                         # Make sure we're not in the image.
                         os.chdir(self.test_root)
                         for path in getattr(self, "fs", set()).copy():
-                                self.cmdline_run("/usr/sbin/umount " + path)
+                                self.cmdline_run("/usr/sbin/umount " + path,
+				    coverage=False)
                                 self.fs.remove(path)
                         shutil.rmtree(self.img_path())
 
         def pkg(self, command, exit=0, comment="", prefix="", su_wrap=None,
             out=False, stderr=False, cmd_path=None, use_img_root=True,
-            debug_smf=True, env_arg=None):
+            debug_smf=True, env_arg=None, coverage=True):
                 if debug_smf and "smf_cmds_dir" not in command:
                         command = "--debug smf_cmds_dir=%s %s" % \
                             (DebugValues["smf_cmds_dir"], command)
+                command = "-D plandesc_validate=1 %s" % command
+                command = "-D manifest_validate=Always %s" % command
                 if use_img_root and "-R" not in command and \
                     "image-create" not in command and "version" not in command:
                         command = "-R %s %s" % (self.get_img_path(), command)
@@ -2223,28 +2384,55 @@ class CliTestCase(Pkg5TestCase):
                 cmdline = "%s %s" % (cmd_path, command)
                 return self.cmdline_run(cmdline, exit=exit, comment=comment,
                     prefix=prefix, su_wrap=su_wrap, out=out, stderr=stderr,
-                    env_arg=env_arg)
+                    env_arg=env_arg, coverage=coverage)
 
-        def pkgdepend_resolve(self, args, exit=0, comment="", su_wrap=False):
+        def pkg_verify(self, command, exit=0, comment="", prefix="",
+            su_wrap=None, out=False, stderr=False, cmd_path=None,
+            use_img_root=True, debug_smf=True, env_arg=None, coverage=True):
+                """Wraps self.pkg(..) and checks that the 'verify' command run
+                does not contain the string 'Unexpected Exception', indicating
+                something has gone wrong during package verification."""
+
+                cmd = "verify %s" % command
+                res = self.pkg(command=cmd, exit=exit, comment=comment,
+                    prefix=prefix, su_wrap=su_wrap, out=out, stderr=stderr,
+                    cmd_path=cmd_path, use_img_root=use_img_root,
+                    debug_smf=debug_smf, env_arg=env_arg, coverage=coverage)
+                if "Unexpected Exception" in self.output:
+                        raise TracebackException(cmd, self.output,
+                            "Unexpected errors encountered while verifying.")
+                return res
+
+        def pkgdepend_resolve(self, args, exit=0, comment="", su_wrap=False,
+            env_arg=None):
                 ops = ""
                 if "-R" not in args:
                         ops = "-R %s" % self.get_img_path()
                 cmdline = "%s/usr/bin/pkgdepend %s resolve %s" % (
                     g_proto_area, ops, args)
                 return self.cmdline_run(cmdline, comment=comment, exit=exit,
-                    su_wrap=su_wrap)
+                    su_wrap=su_wrap, env_arg=env_arg)
 
-        def pkgdepend_generate(self, args, exit=0, comment="", su_wrap=False):
+        def pkgdepend_generate(self, args, exit=0, comment="", su_wrap=False,
+            env_arg=None):
                 cmdline = "%s/usr/bin/pkgdepend generate %s" % (g_proto_area,
                     args)
                 return self.cmdline_run(cmdline, comment=comment, exit=exit,
-                    su_wrap=su_wrap)
+                    su_wrap=su_wrap, env_arg=env_arg)
 
-        def pkgfmt(self, args, exit=0, su_wrap=False):
+        def pkgdiff(self, command, comment="", exit=0, su_wrap=False,
+            env_arg=None, stderr=False, out=False):
+                cmdline = "%s/usr/bin/pkgdiff %s" % (g_proto_area, command)
+                return self.cmdline_run(cmdline, comment=comment, exit=exit,
+                    su_wrap=su_wrap, env_arg=env_arg, out=out, stderr=stderr)
+
+        def pkgfmt(self, args, exit=0, su_wrap=False, env_arg=None):
                 cmd="%s/usr/bin/pkgfmt %s" % (g_proto_area, args)
-                self.cmdline_run(cmd, exit=exit, su_wrap=su_wrap)
+                self.cmdline_run(cmd, exit=exit, su_wrap=su_wrap,
+                    env_arg=env_arg)
 
-        def pkglint(self, args, exit=0, comment="", testrc=True):
+        def pkglint(self, args, exit=0, comment="", testrc=True,
+            env_arg=None):
                 if testrc:
                         rcpath = "%s/pkglintrc" % self.test_root
                         cmdline = "%s/usr/bin/pkglint -f %s %s" % \
@@ -2252,10 +2440,10 @@ class CliTestCase(Pkg5TestCase):
                 else:
                         cmdline = "%s/usr/bin/pkglint %s" % (g_proto_area, args)
                 return self.cmdline_run(cmdline, exit=exit, out=True,
-                    comment=comment, stderr=True)
+                    comment=comment, stderr=True, env_arg=env_arg)
 
         def pkgrecv(self, server_url=None, command=None, exit=0, out=False,
-            comment=""):
+            comment="", env_arg=None, su_wrap=False):
                 args = []
                 if server_url:
                         args.append("-s %s" % server_url)
@@ -2265,38 +2453,78 @@ class CliTestCase(Pkg5TestCase):
 
                 cmdline = "%s/usr/bin/pkgrecv %s" % (g_proto_area,
                     " ".join(args))
-                return self.cmdline_run(cmdline, comment=comment, exit=exit,
-                    out=out)
 
-        def pkgmerge(self, args, comment="", exit=0, su_wrap=False):
+                return self.cmdline_run(cmdline, comment=comment, exit=exit,
+                    out=out, su_wrap=su_wrap, env_arg=env_arg)
+
+        def pkgmerge(self, args, comment="", exit=0, su_wrap=False,
+            env_arg=None):
                 cmdline = "%s/usr/bin/pkgmerge %s" % (g_proto_area, args)
                 return self.cmdline_run(cmdline, comment=comment, exit=exit,
-                    su_wrap=su_wrap)
+                    su_wrap=su_wrap, env_arg=env_arg)
 
-        def pkgrepo(self, command, comment="", exit=0, su_wrap=False):
-                cmdline = "%s/usr/bin/pkgrepo %s" % (g_proto_area, command)
+        def pkgrepo(self, command, comment="", exit=0, su_wrap=False,
+            env_arg=None, stderr=False, out=False, debug_hash=None):
+                if debug_hash:
+                        debug_arg = "-D hash=%s " % debug_hash
+                else:
+                        debug_arg = ""
+
+                cmdline = "%s/usr/bin/pkgrepo %s%s" % (g_proto_area, debug_arg,
+                    command)
                 return self.cmdline_run(cmdline, comment=comment, exit=exit,
-                    su_wrap=su_wrap)
+                    su_wrap=su_wrap, env_arg=env_arg, out=out, stderr=stderr)
 
-        def pkgsign(self, depot_url, command, exit=0, comment=""):
+        def pkgsurf(self, command, comment="", exit=0, su_wrap=False,
+            env_arg=None, stderr=False, out=False):
+                cmdline = "%s/usr/bin/pkgsurf %s" % (g_proto_area, command)
+                return self.cmdline_run(cmdline, comment=comment, exit=exit,
+                    su_wrap=su_wrap, env_arg=env_arg, out=out, stderr=stderr)
+
+        def pkgsign(self, depot_url, command, exit=0, comment="",
+            env_arg=None, debug_hash=None):
                 args = []
                 if depot_url:
                         args.append("-s %s" % depot_url)
+
+                if debug_hash:
+                        args.append("-D hash=%s" % debug_hash)
 
                 if command:
                         args.append(command)
 
                 cmdline = "%s/usr/bin/pkgsign %s" % (g_proto_area,
                     " ".join(args))
-                return self.cmdline_run(cmdline, comment=comment, exit=exit)
+                return self.cmdline_run(cmdline, comment=comment, exit=exit,
+                    env_arg=env_arg)
+
+        def pkgsign_simple(self, depot_url, pkg_name, exit=0, env_arg=None,
+            debug_hash=None):
+                chain_cert_path = os.path.join(self.chain_certs_dir,
+                    "ch1_ta3_cert.pem")
+                sign_args = "-k %(key)s -c %(cert)s -i %(ch1)s %(name)s" % {
+                    "name": pkg_name,
+                    "key": os.path.join(self.keys_dir, "cs1_ch1_ta3_key.pem"),
+                    "cert": os.path.join(self.cs_dir, "cs1_ch1_ta3_cert.pem"),
+                    "ch1": chain_cert_path,
+                }
+                return self.pkgsign(depot_url, sign_args, exit=exit,
+                    env_arg=env_arg, debug_hash=debug_hash)
 
         def pkgsend(self, depot_url="", command="", exit=0, comment="",
-            allow_timestamp=False):
+            allow_timestamp=False, env_arg=None, su_wrap=False,
+            debug_hash=None):
                 args = []
                 if allow_timestamp:
                         args.append("-D allow-timestamp")
                 if depot_url:
                         args.append("-s " + depot_url)
+
+                # debug_hash lets us choose the type of hash attributes that
+                # should be added to this package on publication. Valid values
+                # are: sha1, sha1+sha256, sha256
+                if debug_hash:
+                        args.append("-D hash=%s" % debug_hash)
 
                 if command:
                         args.append(command)
@@ -2306,7 +2534,8 @@ class CliTestCase(Pkg5TestCase):
                     " ".join(args))
 
                 retcode, out = self.cmdline_run(cmdline, comment=comment,
-                    exit=exit, out=True, prefix=prefix, raise_error=False)
+                    exit=exit, out=True, prefix=prefix, raise_error=False,
+                    env_arg=env_arg, su_wrap=su_wrap)
                 errout = self.errout
 
                 cmdop = command.split(' ')[0]
@@ -2341,7 +2570,8 @@ class CliTestCase(Pkg5TestCase):
                 return retcode, published
 
         def pkgsend_bulk(self, depot_url, commands, exit=0, comment="",
-            no_catalog=False, refresh_index=False):
+            no_catalog=False, refresh_index=False, su_wrap=False,
+            debug_hash=None):
                 """ Send a series of packaging commands; useful  for quickly
                     doing a bulk-load of stuff into the repo.  All commands are
                     expected to work; if not, the transaction is abandoned.  If
@@ -2389,6 +2619,10 @@ class CliTestCase(Pkg5TestCase):
                                         for l in accumulate:
                                                 os.write(fd, "%s\n" % l)
                                         os.close(fd)
+                                        if su_wrap:
+                                                os.chown(f_path,
+                                                    *get_su_wrap_user(
+                                                    uid_gid=True))
                                         try:
                                                 cmd = "publish %s -d %s %s" % (
                                                     extra_opts, self.test_root,
@@ -2403,7 +2637,9 @@ class CliTestCase(Pkg5TestCase):
                                                 # package behaviour.
                                                 retcode, published = \
                                                     self.pkgsend(depot_url, cmd,
-                                                    allow_timestamp=True)
+                                                    allow_timestamp=True,
+                                                    su_wrap=su_wrap,
+                                                    debug_hash=debug_hash)
                                                 if retcode == 0 and published:
                                                         plist.append(published)
                                         except:
@@ -2421,7 +2657,8 @@ class CliTestCase(Pkg5TestCase):
 
                         if exit == 0 and refresh_index:
                                 self.pkgrepo("-s %s refresh --no-catalog" %
-                                    depot_url)
+                                    depot_url, su_wrap=su_wrap,
+                                    debug_hash=debug_hash)
                 except UnexpectedExitCodeException, e:
                         if e.exitcode != exit:
                                 raise
@@ -2438,7 +2675,7 @@ class CliTestCase(Pkg5TestCase):
                 self.cmdline_run(cmd, exit=exit)
 
         def sysrepo(self, args, exit=0, out=False, stderr=False, comment="",
-            fill_missing_args=True):
+            env_arg=None, fill_missing_args=True):
                 ops = ""
                 if "-R" not in args:
                         args += " -R %s" % self.get_img_path()
@@ -2454,13 +2691,59 @@ class CliTestCase(Pkg5TestCase):
                         args += " -r %s" % os.path.join(self.test_root,
                             "sysrepo_runtime")
                 if "-t" not in args:
-                        args += " -t %s" % self.template_dir
+                        args += " -t %s" % self.sysrepo_template_dir
 
-                cmdline = "%s/usr/lib/pkg.sysrepo %s" % (
-                    g_proto_area, args)
-                e = {"PKG5_TEST_ENV": "1"}
+                cmdline = "%s/usr/lib/pkg.sysrepo %s" % (g_proto_area, args)
+                if env_arg is None:
+                        env_arg = {}
+                env_arg["PKG5_TEST_ENV"] = "1"
                 return self.cmdline_run(cmdline, comment=comment, exit=exit,
-                    out=out, stderr=stderr, env_arg=e)
+                    out=out, stderr=stderr, env_arg=env_arg)
+
+        def snooze(self, sleeptime=10800, show_stack=True):
+                """A convenient method to cause test execution to pause for
+                up to 'sleeptime' seconds, which can be helpful during testcase
+                development.  sleeptime defaults to 3 hours."""
+                self.debug("YAWN ... going to sleep now\n")
+                if show_stack:
+                        self.debug("\n\n\n")
+                        self.debug("".join(traceback.format_stack()))
+                time.sleep(sleeptime)
+
+        def depotconfig(self, args, exit=0, out=False, stderr=False, comment="",
+            env_arg=None, fill_missing_args=True, debug_smf=True):
+                """Run pkg.depot-config, with command line arguments in args.
+                If fill_missing_args is set, we use default settings for several
+                arguments to point to template, logs, cache and proto areas
+                within our test root."""
+
+                if "-S" not in args and "-d" not in args and fill_missing_args:
+                        args += " -S "
+                if "-c" not in args and fill_missing_args:
+                        args += " -c %s" % os.path.join(self.test_root,
+                            "depot_cache")
+                if "-l" not in args:
+                        args += " -l %s" % os.path.join(self.test_root,
+                            "depot_logs")
+                if "-p" not in args and "-F" not in args and fill_missing_args:
+                        args += " -p %s" % self.depot_port
+                if "-r" not in args:
+                        args += " -r %s" % os.path.join(self.test_root,
+                            "depot_runtime")
+                if "-T" not in args:
+                        args += " -T %s" % self.depot_template_dir
+
+                if debug_smf and "smf_cmds_dir" not in args:
+                        args += " --debug smf_cmds_dir=%s" % \
+                            DebugValues["smf_cmds_dir"]
+
+                cmdline = "%s/usr/lib/pkg.depot-config %s" % (g_proto_area,
+                    args)
+                if env_arg is None:
+                        env_arg = {}
+                env_arg["PKG5_TEST_PROTO"] = g_proto_area
+                return self.cmdline_run(cmdline, comment=comment, exit=exit,
+                    out=out, stderr=stderr, env_arg=env_arg)
 
         def copy_repository(self, src, dest, pub_map):
                 """Copies the packages from the src repository to a new
@@ -2645,13 +2928,13 @@ class CliTestCase(Pkg5TestCase):
                     proprietary attributes which would otherwise make tidy fail.
                 """
                 if drop_prop_attrs:
-			tfname = fname + ".tmp"
-			os.rename(fname, tfname)
-			moptions = options + " --drop-proprietary-attributes y"
+                        tfname = fname + ".tmp"
+                        os.rename(fname, tfname)
+                        moptions = options + " --drop-proprietary-attributes y"
                         cmdline = "tidy %s %s > %s" % (moptions, tfname, fname)
                         self.cmdline_run(cmdline, comment=comment,
                             coverage=False, exit=exit, raise_error=False)
-			os.unlink(tfname)
+                        os.unlink(tfname)
 
                 cmdline = "tidy %s %s" % (options, fname)
                 return self.cmdline_run(cmdline, comment=comment,
@@ -2718,7 +3001,13 @@ class CliTestCase(Pkg5TestCase):
                 if start:
                         # If the caller requested the depot be started, then let
                         # the depot process create the repository.
-                        dc.start()
+                        self.debug("prep_depot: starting depot")
+                        try:
+                                dc.start()
+                        except Exception, e:
+                                self.debug("prep_depot: failed to start "
+                                    "depot!: %s" % e)
+                                raise
                         self.debug("depot on port %s started" % port)
                 else:
                         # Otherwise, create the repository with the assumption
@@ -2778,18 +3067,30 @@ class CliTestCase(Pkg5TestCase):
                 self._api_finish(api_obj, catch_wsie=catch_wsie)
 
         def _api_install(self, api_obj, pkg_list, catch_wsie=True,
-            show_licenses=False, accept_licenses=False, **kwargs):
+            show_licenses=False, accept_licenses=False, noexecute=False,
+            **kwargs):
                 self.debug("install %s" % " ".join(pkg_list))
 
-                if accept_licenses:
-                        kwargs["accept"] = True
+                plan = None
+                for pd in api_obj.gen_plan_install(pkg_list,
+                    noexecute=noexecute, **kwargs):
 
-                for pd in api_obj.gen_plan_install(pkg_list, **kwargs):
-                        continue
+                        if plan is not None:
+                                continue
+                        plan = api_obj.describe()
 
-                self._api_finish(api_obj, catch_wsie=catch_wsie,
-                    show_licenses=show_licenses,
-                    accept_licenses=accept_licenses)
+                        # update licesnse status
+                        for pfmri, src, dest, accepted, displayed in \
+                            plan.get_licenses():
+                                api_obj.set_plan_license_status(pfmri,
+                                    dest.license,
+                                    displayed=show_licenses,
+                                    accepted=accept_licenses)
+
+                if noexecute:
+                        return
+
+                self._api_finish(api_obj, catch_wsie=catch_wsie)
 
         def _api_uninstall(self, api_obj, pkg_list, catch_wsie=True, **kwargs):
                 self.debug("uninstall %s" % " ".join(pkg_list))
@@ -2797,10 +3098,14 @@ class CliTestCase(Pkg5TestCase):
                         continue
                 self._api_finish(api_obj, catch_wsie=catch_wsie)
 
-        def _api_update(self, api_obj, catch_wsie=True, **kwargs):
+        def _api_update(self, api_obj, catch_wsie=True, noexecute=False,
+            **kwargs):
                 self.debug("planning update")
-                for pd in api_obj.gen_plan_update(**kwargs):
+                for pd in api_obj.gen_plan_update(noexecute=noexecute,
+                    **kwargs):
                         continue
+                if noexecute:
+                        return
                 self._api_finish(api_obj, catch_wsie=catch_wsie)
 
         def _api_change_varcets(self, api_obj, catch_wsie=True, **kwargs):
@@ -2809,18 +3114,7 @@ class CliTestCase(Pkg5TestCase):
                         continue
                 self._api_finish(api_obj, catch_wsie=catch_wsie)
 
-        def _api_finish(self, api_obj, catch_wsie=True,
-            show_licenses=False, accept_licenses=False):
-
-                plan = api_obj.describe()
-                if plan:
-                        # update licenses displayed and/or accepted state
-                        for pfmri, src, dest, accepted, displayed in \
-                            plan.get_licenses():
-                                api_obj.set_plan_license_status(pfmri,
-                                    dest.license,
-                                    displayed=show_licenses,
-                                    accepted=accept_licenses)
+        def _api_finish(self, api_obj, catch_wsie=True):
 
                 api_obj.prepare()
                 try:
@@ -2910,6 +3204,19 @@ class CliTestCase(Pkg5TestCase):
                 file_path = os.path.join(self.get_img_path(), path)
                 with open(file_path, "a+") as f:
                         f.write("\n%s\n" % string)
+
+        def seed_ta_dir(self, certs, dest_dir=None):
+                if isinstance(certs, basestring):
+                        certs = [certs]
+                if not dest_dir:
+                        dest_dir = self.ta_dir
+                self.assert_(dest_dir)
+                self.assert_(self.raw_trust_anchor_dir)
+                for c in certs:
+                        name = "%s_cert.pem" % c
+                        portable.copyfile(
+                            os.path.join(self.raw_trust_anchor_dir, name),
+                            os.path.join(dest_dir, name))
 
 
 class ManyDepotTestCase(CliTestCase):
@@ -3028,6 +3335,514 @@ class ManyDepotTestCase(CliTestCase):
                 CliTestCase.run(self, result)
 
 
+class ApacheDepotTestCase(ManyDepotTestCase):
+        """A TestCase that uses one or more Apache instances in the course of
+        its work, along with potentially one or more DepotControllers.
+        """
+
+        def __init__(self, methodName="runTest"):
+                super(ManyDepotTestCase, self).__init__(methodName)
+                self.dcs = {}
+                self.acs = {}
+
+        def register_apache_controller(self, name, ac):
+                """Registers an ApacheController with this TestCase.
+                We include this method here to make it easier to kill any
+                instances of Apache that were left floating around at the end
+                of the test.
+
+                We enforce the use of this method in
+                <ApacheController>.start() by refusing to start instances until
+                they are registered, which makes the test suite as a whole more
+                resilient, when setting up and tearing down test classes."""
+
+                if name in self.acs:
+                        # registering an Apache controller that is already
+                        # registered causes us to kill the existing controller
+                        # first.
+                        try:
+                                self.acs[name].stop()
+                        except Exception, e:
+                                try:
+                                        self.acs[name].kill()
+                                except Exception, e:
+                                        pass
+                self.acs[name] = ac
+
+        def __get_ac(self):
+                """If we only use a single ApacheController, self.ac will
+                return that controller, otherwise we return None."""
+                if self.acs and len(self.acs) == 1:
+                        return self.acs[self.acs.keys()[0]]
+                else:
+                        return None
+
+        def killalldepots(self):
+                try:
+                        ManyDepotTestCase.killalldepots(self)
+                finally:
+                        for name, ac in self.acs.items():
+                                self.debug("stopping apache controller %s" %
+                                    name)
+                                try:
+                                        ac.stop()
+                                except Exception, e :
+                                        try:
+                                                self.debug("killing apache "
+                                                    "instance %s" % name)
+                                                ac.kill()
+                                        except Exception, e:
+                                                self.debug("Unable to kill "
+                                                    "apache instance %s. This "
+                                                    "could cause subsequent "
+                                                    "tests to fail." % name)
+
+        # ac is a readonly property which returns a registered ApacheController
+        # provided there is exactly one registered, for convenience of writing
+        # test cases.
+        ac = property(fget=__get_ac)
+
+class HTTPSTestClass(ApacheDepotTestCase):
+        # Tests in this suite use the read only data directory.
+        need_ro_data = True
+
+        def pkg(self, command, *args, **kwargs):
+                # The value for ssl_ca_file is pulled from DebugValues because
+                # ssl_ca_file needs to be set there so the api object calls work
+                # as desired.
+                command = "--debug ssl_ca_file=%s %s" % \
+                    (DebugValues["ssl_ca_file"], command)
+                return ApacheDepotTestCase.pkg(self, command,
+                    *args, **kwargs)
+
+        def pkgrecv(self, command, *args, **kwargs):
+                # The value for ssl_ca_file is pulled from DebugValues because
+                # ssl_ca_file needs to be set there so the api object calls work
+                # as desired.
+                command = "%s --debug ssl_ca_file=%s" % \
+                    (command, DebugValues["ssl_ca_file"])
+                return ApacheDepotTestCase.pkgrecv(self, command,
+                    *args, **kwargs)
+
+        def pkgsend(self, command, *args, **kwargs):
+                # The value for ssl_ca_file is pulled from DebugValues because
+                # ssl_ca_file needs to be set there so the api object calls work
+                # as desired.
+                command = "%s --debug ssl_ca_file=%s" % \
+                    (command, DebugValues["ssl_ca_file"])
+                return ApacheDepotTestCase.pkgsend(self, command,
+                    *args, **kwargs)
+
+        def pkgrepo(self, command, *args, **kwargs):
+                # The value for ssl_ca_file is pulled from DebugValues because
+                # ssl_ca_file needs to be set there so the api object calls work
+                # as desired.
+                command = "--debug ssl_ca_file=%s %s" % \
+                    (DebugValues["ssl_ca_file"], command)
+                return ApacheDepotTestCase.pkgrepo(self, command,
+                    *args, **kwargs)
+
+        def seed_ta_dir(self, certs, dest_dir=None):
+                if isinstance(certs, basestring):
+                        certs = [certs]
+                if not dest_dir:
+                        dest_dir = self.ta_dir
+                self.assert_(dest_dir)
+                self.assert_(self.raw_trust_anchor_dir)
+                for c in certs:
+                        name = "%s_cert.pem" % c
+                        portable.copyfile(
+                            os.path.join(self.raw_trust_anchor_dir, name),
+                            os.path.join(dest_dir, name))
+                        DebugValues["ssl_ca_file"] = os.path.join(dest_dir,
+                            name)
+
+        def get_cli_cert(self, publisher):
+                ta = self.pub_ta_map[publisher]
+                return "cs1_ta%d_cert.pem" % ta
+
+        def get_cli_key(self, publisher):
+                ta = self.pub_ta_map[publisher]
+                return "cs1_ta%d_key.pem" % ta
+
+        def setUp(self, publishers, start_depots=True):
+                # We only have 5 usable CA certs and there are not many usecases
+                # for setting up more than 5 different SSL-secured depots.
+                assert len(publishers) < 6
+
+                # Maintains a mapping of which TA is used for which publisher
+                self.pub_ta_map = {}
+
+                ApacheDepotTestCase.setUp(self, publishers,
+                    start_depots=True)
+                self.testdata_dir = os.path.join(self.test_root, "testdata")
+
+                # Set up the directories that apache needs.
+                self.apache_dir = os.path.join(self.test_root, "apache")
+                os.makedirs(self.apache_dir)
+                self.apache_log_dir = os.path.join(self.apache_dir,
+                    "apache_logs")
+                os.makedirs(self.apache_log_dir)
+                self.apache_content_dir = os.path.join(self.apache_dir,
+                    "apache_content")
+                self.pidfile = os.path.join(self.apache_dir, "httpd.pid")
+                self.common_config_dir = os.path.join(self.test_root,
+                    "apache-serve")
+
+                # Choose ports for apache to run on.
+                self.https_port = self.next_free_port
+                self.next_free_port += 1
+                self.proxy_port = self.next_free_port
+                self.next_free_port += 1
+                self.bad_proxy_port = self.next_free_port
+                self.next_free_port += 1
+
+                # Set up the paths to the certificates that will be needed.
+                self.path_to_certs = os.path.join(self.ro_data_root,
+                    "signing_certs", "produced")
+                self.keys_dir = os.path.join(self.path_to_certs, "keys")
+                self.cs_dir = os.path.join(self.path_to_certs,
+                    "code_signing_certs")
+                self.chain_certs_dir = os.path.join(self.path_to_certs,
+                    "chain_certs")
+                self.pub_cas_dir = os.path.join(self.path_to_certs,
+                    "publisher_cas")
+                self.inter_certs_dir = os.path.join(self.path_to_certs,
+                    "inter_certs")
+                self.raw_trust_anchor_dir = os.path.join(self.path_to_certs,
+                    "trust_anchors")
+                self.crl_dir = os.path.join(self.path_to_certs, "crl")
+
+                location_tags = ""
+                # Usable CA certs are ta6 to ta11 with the exception of ta7.
+                # We already checked that not more than 5 publishers have been
+                # requested.
+                count = 6
+                for dc in self.dcs:
+                        # Create a <Location> tag for each publisher. The server
+                        # path is set to the publisher name.
+                        if count == 7:
+                                # TA7 needs password to unlock cert, don't use
+                                count += 1
+                        dc_pub = self.dcs[dc].get_property("publisher",
+                            "prefix")
+                        self.pub_ta_map[dc_pub] = count
+                        loc_dict = {
+                            "server-path":dc_pub,
+                            "server-ca-taname":"ta%d" % count,
+                            "ssl-special":"%{SSL_CLIENT_I_DN_OU}",
+                            "proxied-server":self.dcs[dc].get_depot_url(),
+                        }
+
+                        location_tags += loc_tag % (loc_dict)
+                        count += 1
+
+                conf_dict = {
+                    "common_log_format": "%h %l %u %t \\\"%r\\\" %>s %b",
+                    "https_port": self.https_port,
+                    "proxy_port": self.proxy_port,
+                    "bad_proxy_port": self.bad_proxy_port,
+                    "log_locs": self.apache_log_dir,
+                    "pidfile": self.pidfile,
+                    "port": self.https_port,
+                    "serve_root": self.apache_content_dir,
+                    "server-ssl-cert":os.path.join(self.cs_dir,
+                        "cs1_ta7_cert.pem"),
+                    "server-ssl-key":os.path.join(self.keys_dir,
+                        "cs1_ta7_key.pem"),
+                    "server-ca-cert":os.path.join(self.path_to_certs, "combined_cas.pem"),
+                    "location-tags":location_tags,
+                }
+
+                self.https_conf_path = os.path.join(self.test_root,
+                    "https.conf")
+                with open(self.https_conf_path, "wb") as fh:
+                        fh.write(self.https_conf % conf_dict)
+                
+                ac = ApacheController(self.https_conf_path,
+                    self.https_port, self.common_config_dir, https=True,
+                    testcase=self)
+                self.register_apache_controller("default", ac)
+
+        https_conf = """\
+# Configuration and logfile names: If the filenames you specify for many
+# of the server's control files begin with "/" (or "drive:/" for Win32), the
+# server will use that explicit path.  If the filenames do *not* begin
+# with "/", the value of ServerRoot is prepended -- so "/var/apache2/2.2/logs/foo_log"
+# with ServerRoot set to "/usr/apache2/2.2" will be interpreted by the
+# server as "/usr/apache2/2.2//var/apache2/2.2/logs/foo_log".
+
+#
+# ServerRoot: The top of the directory tree under which the server's
+# configuration, error, and log files are kept.
+#
+# Do not add a slash at the end of the directory path.  If you point
+# ServerRoot at a non-local disk, be sure to point the LockFile directive
+# at a local disk.  If you wish to share the same ServerRoot for multiple
+# httpd daemons, you will need to change at least LockFile and PidFile.
+#
+ServerRoot "/usr/apache2/2.2"
+
+PidFile "%(pidfile)s"
+
+#
+# Listen: Allows you to bind Apache to specific IP addresses and/or
+# ports, instead of the default. See also the <VirtualHost>
+# directive.
+#
+# Change this to Listen on specific IP addresses as shown below to 
+# prevent Apache from glomming onto all bound IP addresses.
+#
+Listen 0.0.0.0:%(https_port)s
+
+# We also make ourselves a general-purpose proxy. This is not needed for the
+# SSL reverse-proxying to the pkg.depotd, but allows us to test that pkg(1)
+# can communicate to HTTPS origins using a proxy.
+Listen 0.0.0.0:%(proxy_port)s
+Listen 0.0.0.0:%(bad_proxy_port)s
+
+#
+# Dynamic Shared Object (DSO) Support
+#
+# To be able to use the functionality of a module which was built as a DSO you
+# have to place corresponding `LoadModule' lines within the appropriate 
+# (32-bit or 64-bit module) /etc/apache2/2.2/conf.d/modules-*.load file so that
+# the directives contained in it are actually available _before_ they are used.
+#
+<IfDefine 64bit>
+Include /etc/apache2/2.2/conf.d/modules-64.load
+</IfDefine>
+<IfDefine !64bit>
+Include /etc/apache2/2.2/conf.d/modules-32.load
+</IfDefine>
+
+<IfModule !mpm_netware_module>
+#
+# If you wish httpd to run as a different user or group, you must run
+# httpd as root initially and it will switch.  
+#
+# User/Group: The name (or #number) of the user/group to run httpd as.
+# It is usually good practice to create a dedicated user and group for
+# running httpd, as with most system services.
+#
+User webservd
+Group webservd
+
+</IfModule>
+
+# 'Main' server configuration
+#
+# The directives in this section set up the values used by the 'main'
+# server, which responds to any requests that aren't handled by a
+# <VirtualHost> definition.  These values also provide defaults for
+# any <VirtualHost> containers you may define later in the file.
+#
+# All of these directives may appear inside <VirtualHost> containers,
+# in which case these default settings will be overridden for the
+# virtual host being defined.
+#
+
+#
+# ServerName gives the name and port that the server uses to identify itself.
+# This can often be determined automatically, but we recommend you specify
+# it explicitly to prevent problems during startup.
+#
+# If your host doesn't have a registered DNS name, enter its IP address here.
+#
+ServerName 127.0.0.1
+
+#
+# DocumentRoot: The directory out of which you will serve your
+# documents. By default, all requests are taken from this directory, but
+# symbolic links and aliases may be used to point to other locations.
+#
+DocumentRoot "/"
+
+#
+# Each directory to which Apache has access can be configured with respect
+# to which services and features are allowed and/or disabled in that
+# directory (and its subdirectories). 
+#
+# First, we configure the "default" to be a very restrictive set of 
+# features.  
+#
+<Directory />
+    Options None
+    AllowOverride None
+    Order deny,allow
+    Deny from all
+</Directory>
+
+#
+# Note that from this point forward you must specifically allow
+# particular features to be enabled - so if something's not working as
+# you might expect, make sure that you have specifically enabled it
+# below.
+#
+
+#
+# This should be changed to whatever you set DocumentRoot to.
+#
+
+#
+# DirectoryIndex: sets the file that Apache will serve if a directory
+# is requested.
+#
+<IfModule dir_module>
+    DirectoryIndex index.html
+</IfModule>
+
+#
+# The following lines prevent .htaccess and .htpasswd files from being 
+# viewed by Web clients. 
+#
+<FilesMatch "^\.ht">
+    Order allow,deny
+    Deny from all
+    Satisfy All
+</FilesMatch>
+
+#
+# ErrorLog: The location of the error log file.
+# If you do not specify an ErrorLog directive within a <VirtualHost>
+# container, error messages relating to that virtual host will be
+# logged here.  If you *do* define an error logfile for a <VirtualHost>
+# container, that host's errors will be logged there and not here.
+#
+ErrorLog "%(log_locs)s/error_log"
+
+#
+# LogLevel: Control the number of messages logged to the error_log.
+# Possible values include: debug, info, notice, warn, error, crit,
+# alert, emerg.
+#
+LogLevel debug
+
+
+
+<IfModule log_config_module>
+    #
+    # The following directives define some format nicknames for use with
+    # a CustomLog directive (see below).
+    #
+    LogFormat "%(common_log_format)s" common
+    LogFormat "PROXY %(common_log_format)s" proxylog
+
+    #
+    # The location and format of the access logfile (Common Logfile Format).
+    # If you do not define any access logfiles within a <VirtualHost>
+    # container, they will be logged here.  Contrariwise, if you *do*
+    # define per-<VirtualHost> access logfiles, transactions will be
+    # logged therein and *not* in this file.
+    #
+    CustomLog "%(log_locs)s/access_log" common
+</IfModule>
+
+#
+# DefaultType: the default MIME type the server will use for a document
+# if it cannot otherwise determine one, such as from filename extensions.
+# If your server contains mostly text or HTML documents, "text/plain" is
+# a good value.  If most of your content is binary, such as applications
+# or images, you may want to use "application/octet-stream" instead to
+# keep browsers from trying to display binary files as though they are
+# text.
+#
+DefaultType text/plain
+
+<IfModule mime_module>
+    #
+    # TypesConfig points to the file containing the list of mappings from
+    # filename extension to MIME-type.
+    #
+    TypesConfig /etc/apache2/2.2/mime.types
+
+    #
+    # AddType allows you to add to or override the MIME configuration
+    # file specified in TypesConfig for specific file types.
+    #
+    AddType application/x-compress .Z
+    AddType application/x-gzip .gz .tgz
+
+    # Add a new mime.type for .p5i file extension so that clicking on
+    # this file type on a web page launches PackageManager in a Webinstall mode.
+    AddType application/vnd.pkg5.info .p5i
+</IfModule>
+
+#
+# Note: The following must must be present to support
+#       starting without SSL on platforms with no /dev/random equivalent
+#       but a statically compiled-in mod_ssl.
+#
+<IfModule ssl_module>
+SSLRandomSeed startup builtin
+SSLRandomSeed connect builtin
+</IfModule>
+
+<VirtualHost 0.0.0.0:%(https_port)s>
+        AllowEncodedSlashes On
+        ProxyRequests Off
+        MaxKeepAliveRequests 10000
+
+        SSLEngine On
+
+        # Cert paths
+        SSLCertificateFile %(server-ssl-cert)s
+        SSLCertificateKeyFile %(server-ssl-key)s
+
+        # Combined product CA certs for client verification
+        SSLCACertificateFile %(server-ca-cert)s
+
+	SSLVerifyClient require
+
+        %(location-tags)s
+
+</VirtualHost>
+
+#
+# We configure this Apache instance as a general-purpose HTTP proxy, accepting
+# requests from localhost, and allowing CONNECTs to our HTTPS port
+#
+<VirtualHost 0.0.0.0:%(proxy_port)s>
+        <Proxy *>
+                Order Deny,Allow
+                Deny from all
+                Allow from 127.0.0.1
+        </Proxy>
+        AllowCONNECT %(https_port)s
+        ProxyRequests on
+        CustomLog "%(log_locs)s/proxy_access_log" proxylog
+</VirtualHost>
+
+<VirtualHost 0.0.0.0:%(bad_proxy_port)s>
+        <Proxy *>
+                Order Deny,Allow
+                Deny from all
+                Allow from 127.0.0.1
+        </Proxy>
+#  We purposely prevent this proxy from being able to connect to our SSL
+#  port, making sure that when we point pkg(1) to this bad proxy, operations
+#  will fail - the following line is commented out:
+#        AllowCONNECT %(https_port)s
+        ProxyRequests on
+        CustomLog "%(log_locs)s/badproxy_access_log" proxylog
+
+</VirtualHost>
+"""
+
+loc_tag = """
+        <Location /%(server-path)s>
+                SSLVerifyDepth 1
+
+	        # The client's certificate must pass verification, and must have
+	        # a CN which matches this repository.
+                SSLRequire ( %(ssl-special)s =~ m/%(server-ca-taname)s/ )
+
+                # set max to number of threads in depot
+                ProxyPass %(proxied-server)s nocanon max=500
+        </Location>
+"""
+
+
 class SingleDepotTestCase(ManyDepotTestCase):
 
         def setUp(self, debug_features=EmptyI, publisher="test",
@@ -3053,6 +3868,7 @@ class SingleDepotTestCase(ManyDepotTestCase):
         # dc is a readonly property which is an alias for self.dcs[1],
         # for convenience of writing test cases.
         dc = property(fget=__get_dc)
+
 
 class SingleDepotTestCaseCorruptImage(SingleDepotTestCase):
         """ A class which allows manipulation of the image directory that
@@ -3108,30 +3924,17 @@ class SingleDepotTestCaseCorruptImage(SingleDepotTestCase):
 
                 for s in subdirs:
                         if s == "var/pkg":
-                                cmdline = "pkg image-create -F -p %s=%s %s" % \
+                                cmdline = "image-create -F -p %s=%s %s" % \
                                     (prefix, repourl, self.img_path())
                         elif s == ".org.opensolaris,pkg":
-                                cmdline = "pkg image-create -U -p %s=%s %s" % \
+                                cmdline = "image-create -U -p %s=%s %s" % \
                                     (prefix, repourl, self.img_path())
                         else:
                                 raise RuntimeError("Got unknown subdir option:"
                                     "%s\n" % s)
 
-                        self.debugcmd(cmdline)
-
-                        # Run the command to actually create a good image
-                        p = subprocess.Popen(cmdline, shell=True,
-                                             stdout=subprocess.PIPE,
-                                             stderr=subprocess.STDOUT)
-                        output = p.stdout.read()
-                        retcode = p.wait()
-                        self.debugresult(retcode, 0, output)
-
-                        if retcode == 99:
-                                raise TracebackException(cmdline, output)
-                        if retcode != 0:
-                                raise UnexpectedExitCodeException(cmdline, 0,
-                                    retcode, output)
+                        cmdline = self.pkg_cmdpath + " " + cmdline
+                        self.cmdline_run(cmdline, exit=0)
 
                         tmpDir = os.path.join(self.img_path(), s)
 
@@ -3208,8 +4011,10 @@ def env_sanitize(pkg_cmdpath, dv_keep=None):
         # run from within the test suite.
         os.environ["PKG_NO_RUNPY_CMDPATH"] = "1"
 
-        # always print out recursive linked image commands
-        os.environ["PKG_DISP_LINKED_CMDS"] = "1"
+        # verify PlanDescription serialization and that the PlanDescription
+        # isn't modified while we're preparing to for execution.
+        DebugValues["plandesc_validate"] = 1
+        os.environ["PKG_PLANDESC_VALIDATE"] = "1"
 
         # Pretend that we're being run from the fakeroot image.
         assert pkg_cmdpath != "TOXIC"
@@ -3286,7 +4091,7 @@ def eval_assert_raises(ex_type, eval_ex_func, func, *args):
         else:
                 raise RuntimeError("Function did not raise exception.")
 
-class SysrepoStateException(Exception):
+class ApacheStateException(Exception):
         pass
 
 class ApacheController(object):
@@ -3296,19 +4101,21 @@ class ApacheController(object):
                 The 'conf' parameter is a path to a httpd.conf file.  The 'port'
                 parameter is a port to run on.  The 'work_dir' is a temporary
                 directory to store runtime state.  The 'testcase' parameter is
-                the Pkg5TestCase to use when writing output.  The 'https'
+                the ApacheDepotTestCase to use when writing output.  The 'https'
                 parameter is a boolean indicating whether this instance expects
                 to be contacted via https or not.
                 """
 
-                self.apachectl = "/usr/apache2/2.2/bin/httpd"
+                self.apachectl = "/usr/apache2/2.2/bin/httpd.worker"
                 if not os.path.exists(work_dir):
                         os.makedirs(work_dir)
-                self.__conf_path = os.path.join(work_dir, "sysrepo.conf")
+                self.__conf_path = os.path.join(work_dir, "httpd.conf")
                 self.__port = port
                 self.__repo_hdl = None
                 self.__starttime = 0
-                self.__state = None
+                self.__state = "stopped"
+                if not testcase:
+                        raise RuntimeError("No testcase parameter specified")
                 self.__tc = testcase
                 prefix = "http"
                 if https:
@@ -3348,21 +4155,36 @@ class ApacheController(object):
                         self.__tc.debugresult(result, expected, msg)
 
         def start(self):
+                if self not in self.__tc.acs.values():
+                        # An attempt to start an ApacheController that has not
+                        # been registered can result in it not getting cleaned
+                        # up properly when the test completes, which can cause
+                        # other tests to fail. We don't allow that to happen.
+                        raise RuntimeError(
+                            "This ApacheController has not been registered with"
+                            " the ApacheDepotTestCase %s using "
+                            "set_apache_controller(name, ac)" % self.__tc)
+
                 if self._network_ping():
-                        raise SysrepoStateException("A depot (or some " +
+                        raise ApacheStateException("A depot (or some " +
                             "other network process) seems to be " +
                             "running on port %d already!" % self.__port)
                 cmdline = ["/usr/bin/setpgrp", self.apachectl, "-f",
                     self.__conf_path, "-k", "start", "-DFOREGROUND"]
                 try:
                         self.__starttime = time.time()
+                        # change the state so that we try to do work in
+                        # self.stop() in the face of a False result from
+                        # is_alive()
+                        self.__state = "starting"
                         self.debug(" ".join(cmdline))
                         self.__repo_hdl = subprocess.Popen(cmdline, shell=False,
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE)
                         if self.__repo_hdl is None:
-                                raise SysrepoStateException("Could not start "
-                                    "sysrepo")
+                                self.__state = "stopped"
+                                raise ApacheStateException("Could not start "
+                                    "apache")
                         begintime = time.time()
 
                         check_interval = 0.20
@@ -3370,7 +4192,8 @@ class ApacheController(object):
                         while (time.time() - begintime) <= 40.0:
                                 rc = self.__repo_hdl.poll()
                                 if rc is not None:
-                                        raise SysrepoStateException("Sysrepo "
+                                        self.__state = "stopped"
+                                        raise ApacheStateException("Apache "
                                             "exited unexpectedly while "
                                             "starting (exit code %d)" % rc)
 
@@ -3381,7 +4204,7 @@ class ApacheController(object):
 
                         if contact == False:
                                 self.stop()
-                                raise SysrepoStateException("Sysrepo did not "
+                                raise ApacheStateException("Apache did not "
                                     "respond to repeated attempts to make "
                                     "contact")
                         self.__state = "started"
@@ -3487,8 +4310,8 @@ class SysrepoController(ApacheController):
 
         def __init__(self, conf, port, work_dir, testcase=None, https=False):
                 ApacheController.__init__(self, conf, port, work_dir,
-                    testcase=None, https=False)
-                self.apachectl = "/usr/apache2/2.2/bin/64/httpd"
+                    testcase=testcase, https=False)
+                self.apachectl = "/usr/apache2/2.2/bin/64/httpd.worker"
 
         def _network_ping(self):
                 try:
@@ -3500,3 +4323,26 @@ class SysrepoController(ApacheController):
                 except urllib2.URLError:
                         return False
                 return True
+
+
+class HttpDepotController(ApacheController):
+
+        def __init__(self, conf, port, work_dir, testcase=None, https=False):
+                ApacheController.__init__(self, conf, port, work_dir,
+                    testcase=testcase, https=False)
+                self.apachectl = "/usr/apache2/2.2/bin/64/httpd.worker"
+
+        def _network_ping(self):
+                try:
+                        # Ping the versions URL, rather than the default /
+                        # so that we don't initialize the BUI code yet.
+                        urllib2.urlopen(urlparse.urljoin(self.url,
+                            "versions/0"))
+                except urllib2.HTTPError, e:
+                        if e.code == httplib.FORBIDDEN:
+                                return True
+                        return False
+                except urllib2.URLError:
+                        return False
+                return True
+

@@ -20,7 +20,7 @@
 # CDDL HEADER END
 
 #
-# Copyright (c) 2008, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
 #
 
 import cherrypy
@@ -107,7 +107,7 @@ class CatalogInterface(_Interface):
                         return iter(())
                 return c.fmris(ordered=ordered)
 
-        def gen_allowed_packages(self, pfmris, build_release="5.11",
+        def gen_allowed_packages(self, pfmris, build_release=None,
             excludes=misc.EmptyI):
                 """A generator function that produces a list of tuples of the
                 form (fmri, states) in the catalog incorporated by the named
@@ -177,7 +177,7 @@ class CatalogInterface(_Interface):
                 )
 
         def __get_allowed_packages(self, cat, pfmri, allowed,
-            build_release="5.11", excludes=misc.EmptyI, pubs=misc.EmptyI):
+            build_release=None, excludes=misc.EmptyI, pubs=misc.EmptyI):
                 cat_info = frozenset([cat.DEPENDENCY])
 
                 for a in cat.get_entry_actions(pfmri, cat_info,
@@ -188,8 +188,12 @@ class CatalogInterface(_Interface):
                                 continue
 
                         ifmri = pkg.fmri.PkgFmri(a.attrs["fmri"],
-                            build_release="5.11")
+                            build_release=build_release)
                         iver = ifmri.version
+                        # Versionless incorporations don't make sense so don't
+                        # recurse any further.
+                        if not iver:
+                                continue
                         recurse = False
                         for ver, flist in cat.fmris_by_version(ifmri.pkg_name,
                             pubs=pubs):
@@ -323,8 +327,8 @@ class CatalogInterface(_Interface):
                         states = None
 
                         links = hardlinks = files = dirs = dependencies = None
-                        summary = size = licenses = cat_info = description = \
-                            None
+                        summary = csize = size = licenses = cat_info = \
+                            description = None
 
                         if cat_opts & info_needed:
                                 summary, description, cat_info, dependencies = \
@@ -355,7 +359,8 @@ class CatalogInterface(_Interface):
                                         licenses = self.__licenses(mfst)
 
                                 if PackageInfo.SIZE in info_needed:
-                                        size = mfst.get_size(excludes=excludes)
+                                        size, csize = mfst.get_size(
+                                            excludes=excludes)
 
                                 if act_opts & info_needed:
                                         if PackageInfo.LINKS in info_needed:
@@ -380,9 +385,10 @@ class CatalogInterface(_Interface):
                             publisher=pub, version=release,
                             build_release=build_release, branch=branch,
                             packaging_date=packaging_date, size=size,
-                            pfmri=f, licenses=licenses, links=links,
-                            hardlinks=hardlinks, files=files, dirs=dirs,
-                            dependencies=dependencies, description=description))
+                            csize=csize, pfmri=f, licenses=licenses,
+                            links=links, hardlinks=hardlinks, files=files,
+                            dirs=dirs, dependencies=dependencies,
+                            description=description))
                 return {
                     self.INFO_FOUND: pis,
                     self.INFO_MISSING: notfound,
@@ -569,7 +575,7 @@ class CatalogInterface(_Interface):
                         s = StringIO.StringIO()
                         lpath = self._depot.repo.file(lic.hash, pub=self._pub)
                         lfile = file(lpath, "rb")
-                        misc.gunzip_from_stream(lfile, s)
+                        misc.gunzip_from_stream(lfile, s, ignore_hash=True)
                         text = s.getvalue()
                         s.close()
                         license_lst.append(LicenseInfo(mfst.fmri, lic,

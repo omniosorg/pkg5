@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2008, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
 # Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
 #
 
@@ -38,9 +38,10 @@ import urllib
 import py_compile
 import hashlib
 import time
+import StringIO
 
 from distutils.errors import DistutilsError, DistutilsFileError
-from distutils.core import setup, Extension
+from distutils.core import setup
 from distutils.cmd import Command
 from distutils.command.install import install as _install
 from distutils.command.install_data import install_data as _install_data
@@ -81,6 +82,9 @@ elif osname == 'aix':
 
 pwd = os.path.normpath(sys.path[0])
 
+# the version of pylint that we must have in order to run the pylint checks.
+req_pylint_version = "0.25.2"
+
 #
 # Unbuffer stdout and stderr.  This helps to ensure that subprocess output
 # is properly interleaved with output from this program.
@@ -102,6 +106,7 @@ py_install_dir = 'usr/lib/python2.6/vendor-packages'
 scripts_dir = 'usr/bin'
 lib_dir = 'usr/lib'
 svc_method_dir = 'lib/svc/method'
+svc_share_dir = 'lib/svc/share'
 
 man1_dir = 'usr/share/man/man1'
 man1m_dir = 'usr/share/man/man1m'
@@ -118,13 +123,20 @@ transform_dir = 'usr/share/pkg/transforms'
 smf_app_dir = 'lib/svc/manifest/application/pkg'
 execattrd_dir = 'etc/security/exec_attr.d'
 authattrd_dir = 'etc/security/auth_attr.d'
+userattrd_dir = 'etc/user_attr.d'
 sysrepo_dir = 'etc/pkg/sysrepo'
 sysrepo_logs_dir = 'var/log/pkg/sysrepo'
 sysrepo_cache_dir = 'var/cache/pkg/sysrepo'
 autostart_dir = 'etc/xdg/autostart'
 desktop_dir = 'usr/share/applications'
 gconf_dir = 'etc/gconf/schemas'
+depot_dir = 'etc/pkg/depot'
+depot_conf_dir = 'etc/pkg/depot/conf.d'
+depot_logs_dir = 'var/log/pkg/depot'
+depot_cache_dir = 'var/cache/pkg/depot'
 locale_dir = 'usr/share/locale'
+mirror_logs_dir = 'var/log/pkg/mirror'
+mirror_cache_dir = 'var/cache/pkg/mirror'
 
 
 # A list of source, destination tuples of modules which should be hardlinked
@@ -141,6 +153,7 @@ scripts_sunos = {
                 ['util/publish/pkglint.py', 'pkglint'],
                 ['util/publish/pkgmerge.py', 'pkgmerge'],
                 ['util/publish/pkgmogrify.py', 'pkgmogrify'],
+                ['util/publish/pkgsurf.py', 'pkgsurf'],
                 ['publish.py', 'pkgsend'],
                 ['pull.py', 'pkgrecv'],
                 ['sign.py', 'pkgsign'],
@@ -149,12 +162,19 @@ scripts_sunos = {
                 ['depot.py', 'pkg.depotd'],
                 ['launch.py', 'pm-launch'],
                 ['sysrepo.py', 'pkg.sysrepo'],
+                ['depot-config.py', "pkg.depot-config"]
                 ],
         svc_method_dir: [
                 ['svc/svc-pkg-depot', 'svc-pkg-depot'],
                 ['svc/svc-pkg-mdns', 'svc-pkg-mdns'],
+                ['svc/svc-pkg-mirror', 'svc-pkg-mirror'],
+                ['svc/svc-pkg-repositories-setup',
+                    'svc-pkg-repositories-setup'],
+                ['svc/svc-pkg-server', 'svc-pkg-server'],
                 ['svc/svc-pkg-sysrepo', 'svc-pkg-sysrepo'],
-                ['um/pkg-update', 'pkg-update'],
+                ],
+        svc_share_dir: [
+                ['svc/pkg5_include.sh', 'pkg5_include.sh'],
                 ],
         }
 
@@ -213,11 +233,13 @@ man1_files = [
         'man/pkgmogrify.1',
         'man/pkgsend.1',
         'man/pkgsign.1',
+        'man/pkgsurf.1',
         'man/pkgrecv.1',
         'man/pkgrepo.1',
         ]
 man1m_files = [
         'man/pkg.depotd.1m',
+        'man/pkg.depot-config.1m',
         'man/pkg.sysrepo.1m'
         ]
 man5_files = [
@@ -283,8 +305,16 @@ packages = [
 
 pylint_targets = [
         'pkg.altroot',
+        'pkg.client.__init__',
+        'pkg.client.api',
         'pkg.client.linkedimage',
         'pkg.client.pkgdefs',
+        'pkg.client.pkgremote',
+        'pkg.client.plandesc',
+        'pkg.client.printengine',
+        'pkg.client.progress',
+        'pkg.misc',
+        'pkg.pipeutils',
         ]
 
 web_files = []
@@ -296,11 +326,23 @@ for entry in os.walk("web"):
             os.path.join(web_dir, f) for f in files
             if f != "Makefile"
             ]))
+        # install same set of files in "en/" in "__LOCALE__/ as well" 
+        # for localizable file package (regarding themes, install
+        # theme "oracle.com" only)
+        if os.path.basename(web_dir) == "en" and \
+            os.path.dirname(web_dir) in ("web", "web/_themes/oracle.com"):
+                web_files.append((os.path.join(resource_dir,
+                    os.path.dirname(web_dir), "__LOCALE__"), [
+                        os.path.join(web_dir, f) for f in files
+                        if f != "Makefile"
+                    ]))
 
 smf_app_files = [
+        'svc/pkg-depot.xml',
         'svc/pkg-mdns.xml',
+        'svc/pkg-mirror.xml',
+        'svc/pkg-repositories-setup.xml',
         'svc/pkg-server.xml',
-        'svc/pkg-update.xml',
         'svc/pkg-system-repository.xml',
         'svc/zoneproxy-client.xml',
         'svc/zoneproxyd.xml'
@@ -323,11 +365,26 @@ sysrepo_files = [
 sysrepo_log_stubs = [
         'util/apache2/sysrepo/logs/access_log',
         'util/apache2/sysrepo/logs/error_log',
+        'util/apache2/sysrepo/logs/rewrite.log',
         ]
+depot_files = [
+        'util/apache2/depot/depot.conf.mako',
+        'util/apache2/depot/depot_httpd.conf.mako',
+        'util/apache2/depot/depot_index.py',
+        ]
+depot_log_stubs = [
+        'util/apache2/depot/logs/access_log',
+        'util/apache2/depot/logs/error_log',
+        'util/apache2/depot/logs/rewrite.log',
+        ]
+# The apache-based depot includes an shtml file we add to the resource dir
+web_files.append((os.path.join(resource_dir, "web"),
+    ["util/apache2/depot/repos.shtml"]))
 execattrd_files = [
         'util/misc/exec_attr.d/package:pkg',
 ]
 authattrd_files = ['util/misc/auth_attr.d/package:pkg']
+userattrd_files = ['util/misc/user_attr.d/package:pkg']
 pkg_locales = \
     'ar ca cs de es fr he hu id it ja ko nl pl pt_BR ru sk sv zh_CN zh_HK zh_TW'.split()
 
@@ -379,6 +436,48 @@ class pylint_func(Command):
                 return astring.replace(' ', '\\ ')
 
         def run(self, quiet=False):
+
+                def supported_pylint_ver(version):
+                        """Compare the installed version against the version
+                        we require to build with, returning False if the version
+                        is too old. It's tempting to use pkg.version.Version
+                        here, but since that's a build artifact, we'll do it
+                        the long way."""
+                        inst_pylint_ver = version.split(".")
+                        req_pylint_ver = req_pylint_version.split(".")
+
+                        # if the lists are of different lengths, we just
+                        # compare with the precision we have.
+                        vers_comp = zip(inst_pylint_ver, req_pylint_ver)
+                        for inst, req in vers_comp:
+                                try:
+                                        if int(inst) < int(req):
+                                                return False
+                                except ValueError:
+                                        # if we somehow get non-numeric version
+                                        # components, we ignore them.
+                                        continue
+                        return True
+
+                # it's fine to default to the required version - the build will
+                # break if the installed version is incompatible and $PYLINT_VER
+                # didn't get set, somehow.
+                pylint_ver_str = os.environ.get("PYLINT_VER",
+                    req_pylint_version)
+                if pylint_ver_str == "":
+                        pylint_ver_str = req_pylint_version
+
+                if os.environ.get("PKG_SKIP_PYLINT"):
+                        log.warn("WARNING: skipping pylint checks: "
+                            "$PKG_SKIP_PYLINT was set")
+                        return
+                elif not pylint_ver_str or \
+                    not supported_pylint_ver(pylint_ver_str):
+                        log.warn("WARNING: skipping pylint checks: the "
+                            "installed version %s is older than version %s" %
+                            (pylint_ver_str, req_pylint_version))
+                        return
+
                 proto = os.path.join(root_dir, py_install_dir)
                 sys.path.insert(0, proto)
 
@@ -618,16 +717,34 @@ class install_data_func(_install_data):
                                         self.copy_file(infile, outfile)
                                         self.outfiles.append(outfile)
 
-def run_cmd(args, swdir, env=None):
-                if env is None:
+def run_cmd(args, swdir, updenv=None, ignerr=False, savestderr=None):
+                if updenv:
+                        # use temp environment modified with the given dict
+                        env = os.environ.copy()
+                        env.update(updenv)
+                else:
+                        # just use environment of this (parent) process as is
                         env = os.environ
-                ret = subprocess.Popen(args, cwd=swdir, env=env).wait()
+                if ignerr:
+                        # send stderr to devnull
+                        stderr = open(os.devnull)
+                elif savestderr:
+                        stderr = savestderr
+                else:
+                        # just use stderr of this (parent) process
+                        stderr = None
+                ret = subprocess.Popen(args, cwd=swdir, env=env,
+                    stderr=stderr).wait()
                 if ret != 0:
+                        if stderr:
+                            stderr.close()
                         print >> sys.stderr, \
                             "install failed and returned %d." % ret
                         print >> sys.stderr, \
                             "Command was: %s" % " ".join(args)
                         sys.exit(1)
+                if stderr:
+                        stderr.close()
 
 def _copy_file_contents(src, dst, buffer_size=16*1024):
         """A clone of distutils.file_util._copy_file_contents() that strips the
@@ -674,6 +791,70 @@ def _copy_file_contents(src, dst, buffer_size=16*1024):
 # Make file_util use our version of _copy_file_contents
 file_util._copy_file_contents = _copy_file_contents
 
+def intltool_update_maintain():
+        """Check if scope of localization looks up-to-date or possibly not,
+        by comparing file set described in po/POTFILES.{in,skip} and
+        actual source files (e.g. .py) detected.
+        """
+        rm_f("po/missing")
+        rm_f("po/notexist")
+
+        args = [
+            "/usr/bin/intltool-update", "--maintain"
+        ]
+        print " ".join(args)
+        podir = os.path.join(os.getcwd(), "po")
+        run_cmd(args, podir, updenv={"LC_ALL": "C"}, ignerr=True)
+
+        if os.path.exists("po/missing"):
+            print >> sys.stderr, \
+                "New file(s) with translatable strings detected:"
+            missing = open("po/missing", "r")
+            print >> sys.stderr, "--------"
+            for fn in missing:
+                print >> sys.stderr, "%s" % fn.strip()
+            print >> sys.stderr, "--------"
+            missing.close()
+            print >> sys.stderr, \
+"""Please evaluate whether any of the above file(s) needs localization. 
+If so, please add its name to po/POTFILES.in.  If not (e.g., it's not 
+delivered), please add its name to po/POTFILES.skip. 
+Please be sure to maintain alphabetical ordering in both files."""
+            sys.exit(1)
+
+        if os.path.exists("po/notexist"):
+            print >> sys.stderr, \
+"""The following files are listed in po/POTFILES.in, but no longer exist 
+in the workspace:"""
+            notexist = open("po/notexist", "r")
+            print >> sys.stderr, "--------"
+            for fn in notexist:
+                print >> sys.stderr, "%s" % fn.strip()
+            print >> sys.stderr, "--------"
+            notexist.close()
+            print >> sys.stderr, \
+                "Please remove the file names from po/POTFILES.in"
+            sys.exit(1)
+
+def intltool_update_pot():
+        """Generate pkg.pot by extracting localizable strings from source
+        files (e.g. .py)
+        """
+        rm_f("po/pkg.pot")
+
+        args = [
+            "/usr/bin/intltool-update", "--pot"
+        ]
+        print " ".join(args)
+        podir = os.path.join(os.getcwd(), "po")
+        run_cmd(args, podir,
+            updenv={"LC_ALL": "C", "XGETTEXT": "/usr/gnu/bin/xgettext"})
+
+        if not os.path.exists("po/pkg.pot"):
+            print >> sys.stderr, \
+                "Failed in generating pkg.pot."
+            sys.exit(1)
+
 def intltool_merge(src, dst):
         if not dep_util.newer(src, dst):
                 return
@@ -683,7 +864,51 @@ def intltool_merge(src, dst):
             "-c", "po/.intltool-merge-cache", "po", src, dst
         ]
         print " ".join(args)
-        run_cmd(args, os.getcwd(), os.environ.copy().update({"LC_ALL": "C"}))
+        run_cmd(args, os.getcwd(), updenv={"LC_ALL": "C"})
+
+def i18n_check():
+        """Checks for common i18n messaging bugs in the source."""
+
+        src_files = []
+        # A list of the i18n errors we check for in the code
+        common_i18n_errors = [
+            # This checks that messages with multiple parameters are always
+            # written using "%(name)s" format, rather than just "%s"
+            "format string with unnamed arguments cannot be properly localized"
+        ]
+
+        for line in open("po/POTFILES.in", "r").readlines():
+                if line.startswith("["):
+                        continue
+                if line.startswith("#"):
+                        continue
+                src_files.append(line.rstrip())
+
+        args = [
+            "/usr/gnu/bin/xgettext", "--from-code=UTF-8", "-o", "/dev/null"]
+        args += src_files
+
+        xgettext_output_path = tempfile.mkstemp()[1]
+        xgettext_output = open(xgettext_output_path, "w")
+        run_cmd(args, os.getcwd(), updenv={"LC_ALL": "C"},
+            savestderr=xgettext_output)
+
+        found_errs = False
+        i18n_errs = open("po/i18n_errs.txt", "w")
+        for line in open(xgettext_output_path, "r").readlines():
+                for err in common_i18n_errors:
+                        if err in line:
+                                i18n_errs.write(line)
+                                found_errs = True
+        i18n_errs.close()
+        if found_errs:
+                print >> sys.stderr, \
+"The following i18n errors were detected and should be corrected:\n" \
+"(this list is saved in po/i18n_errs.txt)\n"
+                for line in open("po/i18n_errs.txt", "r"):
+                        print >> sys.stderr, line.rstrip()
+                sys.exit(1)
+        os.remove(xgettext_output_path)
 
 def msgfmt(src, dst):
         if not dep_util.newer(src, dst):
@@ -693,7 +918,50 @@ def msgfmt(src, dst):
         print " ".join(args)
         run_cmd(args, os.getcwd())
 
-def xml2po(src, dst, mofile):
+def localizablexml(src, dst):
+        """create XML help for localization, where French part of legalnotice
+        is stripped off
+        """
+        if not dep_util.newer(src, dst):
+                return
+
+        fsrc = open(src, "r")
+        fdst = open(dst, "w")
+
+        # indicates currently in French part of legalnotice
+        in_fr = False
+
+        for l in fsrc:
+            if in_fr: # in French part
+                if l.startswith('</legalnotice>'):
+                    # reached end of legalnotice
+                    print >> fdst, l,
+                    in_fr = False
+            elif l.startswith('<para lang="fr"/>') or \
+                    l.startswith('<para lang="fr"></para>'):
+                in_fr = True
+            else:
+                # not in French part
+                print >> fdst, l,
+        
+        fsrc.close()
+        fdst.close()
+
+def xml2po_gen(src, dst):
+        """Input is English XML file. Output is pkg_help.pot, message
+        source for next translation update.
+        """
+        if not dep_util.newer(src, dst):
+                return
+
+        args = ["/usr/bin/xml2po", "-o", dst, src]
+        print " ".join(args)
+        run_cmd(args, os.getcwd())
+
+def xml2po_merge(src, dst, mofile):
+        """Input is English XML file and <lang>.po file (which contains
+        translations). Output is translated XML file.
+        """
         msgfmt(mofile[:-3] + ".po", mofile)
 
         monewer = dep_util.newer(mofile, dst)
@@ -832,8 +1100,9 @@ class build_ext_func(_build_ext):
 
         def build_extension(self, ext):
                 # Build 32-bit
-                log.info("building 32-bit extension")
                 _build_ext.build_extension(self, ext)
+                if not ext.build_64:
+                        return
 
                 # Set up for 64-bit
                 old_build_temp = self.build_temp
@@ -847,7 +1116,6 @@ class build_ext_func(_build_ext):
                 self.build64 = True
 
                 # Build 64-bit
-                log.info("building 64-bit extension")
                 _build_ext.build_extension(self, ext)
 
                 # Reset to 32-bit
@@ -997,8 +1265,14 @@ class build_data_func(Command):
         def run(self):
                 # Anything that gets created here should get deleted in
                 # clean_func.run() below.
+                i18n_check()
+
                 for l in pkg_locales:
                         msgfmt("po/%s.po" % l, "po/%s.mo" % l)
+
+                # generate pkg.pot for next translation
+                intltool_update_maintain()
+                intltool_update_pot()
 
 def rm_f(filepath):
         """Remove a file without caring whether it exists."""
@@ -1021,6 +1295,10 @@ class clean_func(_clean):
 
                 for l in pkg_locales:
                         rm_f("po/%s.mo" % l)
+
+                rm_f("po/pkg.pot")
+
+                rm_f("po/i18n_errs.txt")
 
 class clobber_func(Command):
         user_options = []
@@ -1105,6 +1383,14 @@ class dist_func(_bdist):
                 _bdist.initialize_options(self)
                 self.dist_dir = dist_dir
 
+class Extension(distutils.core.Extension):
+        # This class wraps the distutils Extension class, allowing us to set
+        # build_64 in the object constructor instead of being forced to add it
+        # after the object has been created.
+        def __init__(self, name, sources, build_64=False, **kwargs):
+                distutils.core.Extension.__init__(self, name, sources, **kwargs)
+                self.build_64 = build_64
+
 # These are set to real values based on the platform, down below
 compile_args = None
 if osname in ("sunos", "linux", "darwin"):
@@ -1113,27 +1399,33 @@ if osname == "sunos":
         link_args = []
 else:
         link_args = []
+# We don't support 64-bit yet, but 64-bit _actions.so, _common.so, and
+# _varcet.so are needed for a system repository mod_wsgi application,
+# sysrepo_p5p.py.
 ext_modules = [
         Extension(
                 'actions._actions',
                 _actions_srcs,
                 include_dirs = include_dirs,
                 extra_compile_args = compile_args,
-                extra_link_args = link_args
+                extra_link_args = link_args,
+                build_64 = True
                 ),
         Extension(
                 'actions._common',
                 _actcomm_srcs,
                 include_dirs = include_dirs,
                 extra_compile_args = compile_args,
-                extra_link_args = link_args
+                extra_link_args = link_args,
+                build_64 = True
                 ),
         Extension(
                 '_varcet',
                 _varcet_srcs,
                 include_dirs = include_dirs,
                 extra_compile_args = compile_args,
-                extra_link_args = link_args
+                extra_link_args = link_args,
+                build_64 = True
                 ),
         Extension(
                 'solver',
@@ -1188,14 +1480,27 @@ if osname == 'sunos':
                 (smf_app_dir, smf_app_files),
                 (execattrd_dir, execattrd_files),
                 (authattrd_dir, authattrd_files),
+                (userattrd_dir, userattrd_files),
                 (sysrepo_dir, sysrepo_files),
                 (sysrepo_logs_dir, sysrepo_log_stubs),
                 (sysrepo_cache_dir, {}),
+                (depot_dir, depot_files),
+                (depot_conf_dir, {}),
+                (depot_logs_dir, depot_log_stubs),
+                (depot_cache_dir, {}),
+                (mirror_cache_dir, {}),
+                (mirror_logs_dir, {}),
                 ]
+        # install localizable .xml and its .pot file to put into localizable file package
         data_files += [
             (os.path.join(locale_dir, locale, 'LC_MESSAGES'),
                 [('po/%s.mo' % locale, 'pkg.mo')])
             for locale in pkg_locales
+        ]
+        # install English .pot file to put into localizable file package
+        data_files += [
+            (os.path.join(locale_dir, '__LOCALE__', 'LC_MESSAGES'),
+                [('po/pkg.pot', 'pkg.pot')])
         ]
 
 if osname == 'sunos' or osname == "linux":
@@ -1209,7 +1514,7 @@ if osname == 'sunos' or osname == "linux":
                         include_dirs = include_dirs,
                         libraries = elf_libraries,
                         extra_compile_args = compile_args,
-                        extra_link_args = link_args
+                        extra_link_args = link_args,
                         ),
                 ]
 
@@ -1255,4 +1560,3 @@ setup(cmdclass = cmdclasses,
     ext_package = 'pkg',
     ext_modules = ext_modules,
     )
-

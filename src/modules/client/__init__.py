@@ -21,10 +21,11 @@
 #
 
 #
-# Copyright (c) 2007, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
 #
 
-import copy
+# Missing docstring; pylint: disable=C0111
+
 import logging
 import os
 import sys
@@ -57,6 +58,43 @@ class GlobalSettings(object):
                 self.__info_log_handler = None
                 self.__error_log_handler = None
                 self.__verbose = False
+
+                #
+                # These properties allow the client to describe how it
+                # has been asked to behave with respect to output.  This
+                # allows subprocess invocations (e.g. for linked images) to
+                # discover from the global settings how they are expected
+                # to behave.
+                #
+                self.client_output_verbose = 0
+                self.client_output_quiet = False
+                self.client_output_parsable_version = None
+
+                # runid, used by the pkg.1 client and the linked image
+                # subsystem when when generating temporary files.
+                self.client_runid = os.getpid()
+
+                # file descriptor used by ProgressTracker classes when running
+                # "pkg remote" to indicate progress back to the parent/client
+                # process.
+                self.client_output_progfd = None
+
+                # concurrency value used for linked image recursion
+                self.client_concurrency_set = False
+                self.client_concurrency_default = 1
+                self.client_concurrency = self.client_concurrency_default
+                try:
+                        self.client_concurrency = int(os.environ.get(
+                            "PKG_CONCURRENCY",
+                            self.client_concurrency_default))
+                        if "PKG_CONCURRENCY" in os.environ:
+                                self.client_concurrency_set = True
+                        # remove PKG_CONCURRENCY from the environment so child
+                        # processes don't inherit it.
+                        os.environ.pop("PKG_CONCURRENCY", None)
+                except ValueError:
+                        pass
+
                 self.client_name = None
                 self.client_args = sys.argv[:]
                 # Default maximum number of redirects received before
@@ -162,6 +200,7 @@ class GlobalSettings(object):
 
         @property
         def logger(self):
+		# Method could be a function; pylint: disable=R0201
                 return logging.getLogger("pkg")
 
         def reset_logging(self):
