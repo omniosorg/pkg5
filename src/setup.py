@@ -160,7 +160,6 @@ scripts_sunos = {
                 ],
         lib_dir: [
                 ['depot.py', 'pkg.depotd'],
-                ['launch.py', 'pm-launch'],
                 ['sysrepo.py', 'pkg.sysrepo'],
                 ['depot-config.py', "pkg.depot-config"]
                 ],
@@ -1271,8 +1270,13 @@ class build_data_func(Command):
                         msgfmt("po/%s.po" % l, "po/%s.mo" % l)
 
                 # generate pkg.pot for next translation
-                intltool_update_maintain()
-                intltool_update_pot()
+		# XXX KEBE SAYS remove these for now, and fake it...
+                #intltool_update_maintain()
+                #intltool_update_pot()
+		args = [ "/usr/bin/touch", "pkg.pot" ]
+		print " ".join(args)
+		podir = os.path.join(os.getcwd(), "po")
+		run_cmd(args, podir);
 
 def rm_f(filepath):
         """Remove a file without caring whether it exists."""
