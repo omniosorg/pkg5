@@ -27,7 +27,7 @@ for file in $FILES_TRACKED; do
             echo `stat -c %Y $file` $file
             ;;
         *)
-            echo `git log --pretty=format:'%at.0' -1.. $file` $file
+            echo `git log --pretty=format:'%at.0' -1 $file` $file
             ;;
     esac
 done
@@ -43,6 +43,6 @@ if [ ! -z $FILES_MODIFIED ]; then
     done
     echo $LATEST_TIMESTAMP.0 .
 else
-    echo `git log --pretty=format:'%at.0' -1..` .
+    echo `git log --pretty=format:'%at.0' -1` .
 fi
 
