@@ -634,6 +634,7 @@ proxy_func(struct proxy_pair *pair, port_event_t *ev)
 		return;
 	}
 
+	/* NOTE: "rc" MUST be initialized by any case here. */
 	switch (pair->pp_state) {
 	case PROXY_STATE_WAIT_CONNECT:
 		rc = check_connect(pair);
@@ -646,6 +647,11 @@ proxy_func(struct proxy_pair *pair, port_event_t *ev)
 		break;
 	case PROXY_STATE_WAIT_DATA:
 		rc = send_recv_data(pair);
+		break;
+	default:
+		/* FALLTHRU */
+		/* INIT, CLOSING, FREED, and END may need cases... */
+		rc = 0;
 		break;
 	}
 
@@ -1133,7 +1139,7 @@ zpd_fattach_zone(zoneid_t zid, int door, boolean_t detach_only)
 {
 	char *path = ZP_DOOR_PATH;
 	int pid, stat, tmpl_fd;
-	ctid_t ct;
+	ctid_t ct = -1;
 
 	escalate_privs();
 
@@ -1955,6 +1961,7 @@ main(int argc, char **argv)
 	g_config_smf = (proxystr == NULL) ? B_TRUE : B_FALSE;
 
 	if (!g_config_smf) {
+
 		proxy_host = strtok(proxystr, ":");
 		if (proxy_host == NULL) {
 			(void) fprintf(stderr,
@@ -1967,7 +1974,8 @@ main(int argc, char **argv)
 			    "host must be of format hostname:port\n");
 			usage();
 		}
-	}
+	} else
+		proxy_host = proxy_port = NULL;
 
 	g_quit = B_FALSE;
 	(void) signal(SIGPIPE, SIG_IGN);
