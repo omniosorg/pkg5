@@ -1437,7 +1437,8 @@ ext_modules = [
                 include_dirs = include_dirs + ["."],
                 extra_compile_args = compile_args,
                 extra_link_args = link_args + solver_link_args,
-                define_macros = [('_FILE_OFFSET_BITS', '64')]
+                define_macros = [('_FILE_OFFSET_BITS', '64')],
+                build_64 = True
                 ),
         ]
 elf_libraries = None
@@ -1519,6 +1520,7 @@ if osname == 'sunos' or osname == "linux":
                         libraries = elf_libraries,
                         extra_compile_args = compile_args,
                         extra_link_args = link_args,
+			build_64 = True
                         ),
                 ]
 
@@ -1533,7 +1535,8 @@ if osname == 'sunos' or osname == "linux":
                             include_dirs = include_dirs,
                             extra_compile_args = compile_args,
                             extra_link_args = link_args,
-                            define_macros = [('_FILE_OFFSET_BITS', '64')]
+                            define_macros = [('_FILE_OFFSET_BITS', '64')],
+			    build_64 = True
                             ),
                     Extension(
                             'pspawn',
@@ -1541,7 +1544,8 @@ if osname == 'sunos' or osname == "linux":
                             include_dirs = include_dirs,
                             extra_compile_args = compile_args,
                             extra_link_args = link_args,
-                            define_macros = [('_FILE_OFFSET_BITS', '64')]
+                            define_macros = [('_FILE_OFFSET_BITS', '64')],
+			    build_64 = True
                             ),
                     Extension(
                             'syscallat',
@@ -1549,7 +1553,8 @@ if osname == 'sunos' or osname == "linux":
                             include_dirs = include_dirs,
                             extra_compile_args = compile_args,
                             extra_link_args = link_args,
-                            define_macros = [('_FILE_OFFSET_BITS', '64')]
+                            define_macros = [('_FILE_OFFSET_BITS', '64')],
+			    build_64 = True
                             ),
                     ]
         else:
