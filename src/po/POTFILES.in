@@ -44,6 +44,7 @@ modules/flavor/python.py
 modules/flavor/script.py
 modules/flavor/smf_manifest.py
 modules/fmri.py
+modules/gui/repository.py
 modules/indexer.py
 modules/lint/base.py
 modules/lint/config.py
