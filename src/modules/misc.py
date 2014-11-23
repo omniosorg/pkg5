@@ -21,7 +21,7 @@
 #
 
 # Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
-# Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
+# Copyright 2014, OmniTI Computer Consulting, Inc. All rights reserved.
 
 """
 Misc utility functions used by the packaging system.
@@ -712,7 +712,7 @@ class ProcFS(object):
             "char[]":      (1,  "s"),
             "int":         (1,  "i"),
             "long":        (1,  "l"),
-            "uintptr_t":   (1,  "I"),
+            "uintptr_t":   (1,  "L"), # actually sizeof (void *), so use ulong.
             "ushort_t":    (1,  "H"),
 
             # other simple types (repeat count should always be 1)
@@ -730,7 +730,8 @@ class ProcFS(object):
             "id_t":        (1,  "i"), # id_t -> int
 
             # structures must be represented as character arrays
-            "timestruc_t": (8,  "s"), # sizeof (timestruc_t) = 8
+            #"timestruc_t": (8,  "s"), # sizeof (timestruc_t) = 8
+	    "timestruc_t": (16,  "s"), # 64-bit sizeof (timestruc_t) = 16
         }
 
         _timestruct_desc = [
@@ -760,6 +761,7 @@ class ProcFS(object):
             ("dev_t",       1,  "pr_ttydev"),
             ("ushort_t",    1,  "pr_pctcpu"),
             ("ushort_t",    1,  "pr_pctmem"),
+	    ("char[]",	    4,  "pr_filler2"),	# structure padding for 64-bit.
             ("timestruc_t", 1,  "pr_start"),
             ("timestruc_t", 1,  "pr_time"),
             ("timestruc_t", 1,  "pr_ctime"),
@@ -840,7 +842,11 @@ class ProcFS(object):
                 # cases (there's a small chance the file will decode, but
                 # incorrectly), failure will raise an exception, and we'll
                 # fail safe.
-                psinfo_size = 232
+
+		# XXXOMNIOS We run in 64-bit mode.  psinfo_size is 288.
+                # psinfo_size = 232
+                psinfo_size = 288
+
                 try:
                         psinfo_data = file("/proc/self/psinfo").read(
                             psinfo_size)
