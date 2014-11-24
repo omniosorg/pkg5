@@ -86,7 +86,7 @@ class Actuator(object):
                 self.suspend_fmris = None
                 self.tmp_suspend_fmris = None
                 self.do_nothing = True
-                self.cmd_path = ""
+                #self.cmd_path = ""
 
         @staticmethod
         def getstate(obj, je_state=None):
