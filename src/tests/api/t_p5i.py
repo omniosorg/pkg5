@@ -49,40 +49,41 @@ class TestP5I(pkg5unittest.Pkg5TestCase):
         """Class to test the functionality of the pkg.p5i module."""
 
         #
-        # Whitespace at the ends of some lines in the below is
-        # significant.
+        # Whitespace (or lack thereof) at the ends of some lines in the below is
+        # significant. It's also a function of which simplejson version you're
+	# running/using.
         #
         p5i_bobcat = """{
   "packages": [
-    "pkg:/bar@1.0,5.11-0", 
+    "pkg:/bar@1.0,5.11-0",
     "baz"
-  ], 
+  ],
   "publishers": [
     {
-      "alias": "cat", 
-      "name": "bobcat", 
+      "alias": "cat",
+      "name": "bobcat",
       "packages": [
         "pkg:/foo@1.0,5.11-0"
-      ], 
+      ],
       "repositories": [
         {
-          "collection_type": "core", 
-          "description": "xkcd.net/325", 
+          "collection_type": "core",
+          "description": "xkcd.net/325",
           "legal_uris": [
             "http://xkcd.com/license.html"
-          ], 
-          "mirrors": [], 
-          "name": "source", 
+          ],
+          "mirrors": [],
+          "name": "source",
           "origins": [
             "http://localhost:12001/"
-          ], 
-          "refresh_seconds": 43200, 
-          "registration_uri": "", 
+          ],
+          "refresh_seconds": 43200,
+          "registration_uri": "",
           "related_uris": []
         }
       ]
     }
-  ], 
+  ],
   "version": 1
 }
 """
