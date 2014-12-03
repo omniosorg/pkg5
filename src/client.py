@@ -659,7 +659,7 @@ def list_inventory(op, api_inst, pargs,
                                 error(err_str, cmd=op)
                 else:
                         error(_("No packages matching '%s' installed") % \
-                            ", ".join(e.notfound), cmd=op) 
+                            ", ".join(e.notfound), cmd=op)
 
                 if found and e.notfound:
                         # Only some patterns matched.
@@ -1917,11 +1917,19 @@ class RemoteDispatch(object):
                 remote dispatch routine with a call to handle_errors(), which
                 will catch and display any exceptions encountered."""
 
+                # Hack around yet more jsonrpc encoding weirdness.  We can't
+                # pass unicode strings as keyword arguments, so we have to
+                # ascii-ify everything.
+                newargs = {}
+                if isinstance(pwargs, dict):
+                        for key, value in pwargs.iteritems():
+                                newargs[str(key)] = value
+
                 # flush output before and after every operation.
                 misc.flush_output()
                 misc.truncate_file(sys.stdout)
                 misc.truncate_file(sys.stderr)
-                rv = handle_errors(self.__dispatch, True, op, pwargs)
+                rv = handle_errors(self.__dispatch, True, op, newargs)
                 misc.flush_output()
                 return rv
 
