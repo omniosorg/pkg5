@@ -25,7 +25,7 @@
 #
 
 PYTHON = /usr/bin/python2.6
-CODE_WS = $$(hg root)
+CODE_WS = $$(hg root 2>/dev/null || git rev-parse --show-toplevel)
 
 all := TARGET = all
 install := TARGET = install
