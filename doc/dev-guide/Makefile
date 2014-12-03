@@ -93,7 +93,7 @@ WGET=/usr/bin/wget
 CREATEPDF=$(TOOLSPATH)/rst2pdf-0.16-py2.6.egg/rst2pdf/createpdf.py
 DOCBOOKPY=$(TOOLSPATH)/docutils-0.8.1-py2.6.egg/docutils/writers/docbook.py
 
-VERSION_CMD=id -i || git log --pretty=format:'%h' -1..
+VERSION_CMD=hg id -i || git log --pretty=format:'%h' -1..
 VERSION=$(VERSION_CMD:sh)
 DATE_CMD=date +%F:%R:%S-%Z
 DATE=$(DATE_CMD:sh)
