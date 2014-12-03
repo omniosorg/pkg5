@@ -337,7 +337,7 @@ class TestProgressTrackers(pkg5unittest.Pkg5TestCase):
                 def __drain(masterf):
                         while True:
                                 termdata = masterf.read(1024)
-                                if len(termdata) == 0:
+				if len(termdata) < 1024:
                                         break
 
                 #

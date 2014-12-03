@@ -351,7 +351,9 @@ if __name__ == "__main__":
                         # Use a list as a way to pass by reference
                         while True:
                                 termdata = masterf.read(1024)
-                                if len(termdata) == 0:
+                                if len(termdata) < 1024:
+					if len(termdata) > 0:
+						outlist.append(termdata)
                                         break
                                 else:
                                         outlist.append(termdata)
