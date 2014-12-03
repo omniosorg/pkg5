@@ -219,16 +219,18 @@ class TestP5I(pkg5unittest.Pkg5TestCase):
                 as expected."""
 
                 # First, test the no repository case.
+		# NOTE:	Spaces, or lack thereof, at the end of a line, are
+		#	important.
                 expected = """{
-  "packages": [], 
+  "packages": [],
   "publishers": [
     {
-      "alias": "cat", 
-      "name": "bobcat", 
-      "packages": [], 
+      "alias": "cat",
+      "name": "bobcat",
+      "packages": [],
       "repositories": []
     }
-  ], 
+  ],
   "version": 1
 }
 """
@@ -250,30 +252,32 @@ class TestP5I(pkg5unittest.Pkg5TestCase):
 
                 # Next, test the partial repository configuration case.  No
                 # origin is provided, but everything else is.
+		# NOTE:	Spaces, or lack thereof, at the end of a line, are
+		#	important.
                 expected = """{
-  "packages": [], 
+  "packages": [],
   "publishers": [
     {
-      "alias": "cat", 
-      "name": "bobcat", 
-      "packages": [], 
+      "alias": "cat",
+      "name": "bobcat",
+      "packages": [],
       "repositories": [
         {
-          "collection_type": "core", 
-          "description": "xkcd.net/325", 
+          "collection_type": "core",
+          "description": "xkcd.net/325",
           "legal_uris": [
             "http://xkcd.com/license.html"
-          ], 
-          "mirrors": [], 
-          "name": "source", 
-          "origins": [], 
-          "refresh_seconds": 43200, 
-          "registration_uri": "", 
+          ],
+          "mirrors": [],
+          "name": "source",
+          "origins": [],
+          "refresh_seconds": 43200,
+          "registration_uri": "",
           "related_uris": []
         }
       ]
     }
-  ], 
+  ],
   "version": 1
 }
 """
