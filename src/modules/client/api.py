@@ -1653,12 +1653,10 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 For all other parameters, refer to the 'gen_plan_install'
                 function for an explanation of their usage and effects."""
 
-# XXX skip ipkg_require_latest enforcement for now
-#                if pkgs_update or force:
-#                        ipkg_require_latest = False
-#                else:
-#                        ipkg_require_latest = True
-                ipkg_require_latest = False
+                if pkgs_update or force:
+                        ipkg_require_latest = False
+                else:
+                        ipkg_require_latest = True
 
                 op = API_OP_UPDATE
                 return self.__plan_op(op,
@@ -5099,7 +5097,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 # Successful; so save configuration.
                 self._img.save_config()
 
-        def log_operation_end(self, error=None, result=None, 
+        def log_operation_end(self, error=None, result=None,
             release_notes=None):
                 """Marks the end of an operation to be recorded in image
                 history.

@@ -33,7 +33,7 @@ ZONES_PROG =	$(PROG:%=$(ZONES_LIBDIR)/%)
 LINTFLAGS =
 CPPFLAGS =	-D_REENTRANT -I../zoneproxyd 
 CFLAGS =	-Wall -O3
-LDFLAGS =	-Bdirect
+LDFLAGS =	-Wl,-B,direct -Wl,-z,fatal-warnings -Wl,-z,guidance
 LDLIBS =
 
 CLEANFILES =	$(PROG) $(OBJS)
