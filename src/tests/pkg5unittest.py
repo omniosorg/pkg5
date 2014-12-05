@@ -2279,7 +2279,7 @@ class CliTestCase(Pkg5TestCase):
                 if not getattr(self, "need_ro_data", False):
                         return
                 # Set up the trust anchor directory
-                self.ta_dir = os.path.join(self.img_path(), "etc/certs/CA")
+                self.ta_dir = os.path.join(self.img_path(), "etc/ssl/pkg")
                 os.makedirs(self.ta_dir)
                 for f in self.image_files:
                         with open(os.path.join(self.img_path(), f), "wb") as fh:
