@@ -3861,8 +3861,9 @@ class RepositoryConfig(object):
                 ]),
                 cfg.PropertySection("repository", [
                     cfg.PropInt("version"),
+		    # NOTE: OmniOS uses a different trust anchor directory.
                     cfg.Property("trust-anchor-directory",
-                        default="/etc/certs/CA/"),
+                        default="/etc/ssl/pkg/"),
                     cfg.PropList("signature-required-names"),
                     cfg.PropBool("check-certificate-revocation", default=False)
                 ]),
