@@ -356,7 +356,7 @@ class BootEnv(object):
                                 # associated with other global zone BEs.)
                                 if be.get("active_unbootable", False):
                                         continue
-                                if be.get("active_boot"):
+                                if be.get("active_boot") and be.get("global_active", True):
                                         return be.get("orig_be_name")
                 except AttributeError:
                         raise api_errors.BENamingNotSupported(be_name)
