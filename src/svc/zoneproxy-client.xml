@@ -36,7 +36,11 @@
 	name='application/pkg/zones-proxy-client'
 	type='service'
 	version='1'>
-	<create_default_instance enabled="true"/>
+	<!--
+	Disable this by default for now. The server in the global zone requires
+	apache in /usr, which doesn't play nice with OmniOS's philosophy.
+	-->
+	<create_default_instance enabled="false"/>
 	<single_instance/>
 
 	 <dependency
