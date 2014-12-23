@@ -50,6 +50,7 @@ ROOTDIRS = \
 ROOTFILES = \
 	$(ROOTETCBRAND)/pkgrm.conf \
 	$(ROOTETCBRAND)/smf_disable.conf \
+	$(ROOTETCZONES)/OMNIlipkg.xml \
 	$(ROOTETCZONES)/SUNWipkg.xml \
 	$(ROOTBRANDPKG)/attach \
 	$(ROOTBRANDPKG)/clone \

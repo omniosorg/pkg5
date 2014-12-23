@@ -311,7 +311,7 @@ unconfigure_zone() {
 	zoneadm -z $ZONENAME mount -f || fatal "$e_badmount"
 
 	ZONE_BRAND=`zoneadm list -pc | /usr/bin/gawk -v zone=$ZONENAME -F':' '$2 == zone { print $6 }'`
-	if [[ $ZONE_BRAND = "ipkg" ]]; then
+	if [[ $ZONE_BRAND = "ipkg" || $ZONE_BRAND = "lipkg" ]]; then
 		zlogin -S $ZONENAME /usr/lib/brand/ipkg/system-unconfigure -R /a \
 		    >/dev/null 2>&1
 		if (( $? != 0 )); then
