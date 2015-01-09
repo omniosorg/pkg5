@@ -161,6 +161,7 @@ gather_zone_publisher_details() {
 	typeset mirror=
 	typeset origin=
 	typeset opublisher=
+	typeset first_preferred="true"
 
 	#
 	# Store publisher, origin and security details. It is assumed
@@ -199,6 +200,12 @@ gather_zone_publisher_details() {
 			get_publisher_attrs ${publisher.name} origin | \
 			    IFS=" " read publisher.sticky publisher.preferred \
 			    publisher.enabled
+			# get_publisher_attrs doesn't actually set "preferred"
+			# anymore, as there is no "preferred" apart from the
+			# first one in the list.
+			publisher.preferred=$first_preferred
+			# From here on out, reset 'first_preferred' to false.
+			first_preferred="false"
 			if [[ -n "$origin" ]]; then
 				get_pub_secinfo ${publisher.name} | \
 				    read publisher.keyfile publisher.certfile
@@ -257,11 +264,10 @@ get_preferred_publisher() {
 	for key in ${!publishers[*]}; do
 		eval publisher="${publishers[$key]}"
 
-		# XXX Assume first publisher is the preferred one.
-		#if [[ ${publisher.preferred}  ==  "true" ]]; then
+		if [[ ${publisher.preferred}  ==  "true" ]]; then
 			print ${key}
 			return 0
-		#fi
+		fi
 
 	done
 	return 1
