@@ -22,7 +22,7 @@
 
 #
 # Copyright (c) 2007, 2011, Oracle and/or its affiliates. All rights reserved.
-# Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
+# Copyright (c) 2015, OmniTI Computer Consulting, Inc. All rights reserved.
 #
 
 #
@@ -399,6 +399,13 @@ LC_ALL=C $PKG image-create -f --no-refresh --zone --full \
 # Retrieve publisher attributes and update our new publisher
 attrs=$(get_publisher_attr_args $publisher "origin")
 
+# Get the signature policy from the global zone.  This code assumes
+# specific output ( "signature-policy = <policy>"  or empty-string).
+sigpol=$($PKG publisher $publisher | grep signature-policy | sed 's/ = /=/')
+if [ "$sigpol" != "" ]; then
+	sigpol="--set-property $sigpol"
+fi
+
 # Change the value of PKG_IMAGE so that future PKG operation will work
 # on the newly created zone rather than the global zone
 
@@ -408,7 +415,7 @@ export PKG_IMAGE
 # --no-refresh is used here so that update operations can be
 # coalesced.
 # Update our new publisher
-LC_ALL=C $PKG set-publisher --no-refresh $attrs $publisher \
+LC_ALL=C $PKG set-publisher --no-refresh $sigpol $attrs $publisher \
     || fail_incomplete "$f_img"
 
 # add extra publishers
