@@ -22,6 +22,7 @@
 
 #
 # Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright 2015, OmniTI Computer Consulting, Inc. All rights reserved.
 #
 
 . /usr/lib/brand/ipkg/common.ksh
@@ -196,6 +197,13 @@ gather_zone_publisher_details() {
 			typeset publisher.name=$name
 			typeset publisher.keyfile=""
 			typeset publisher.certfile=""
+			typeset publisher.sigpol=""
+
+			# Get the signature policy.  This code assumes
+			# specific output ( "signature-policy = <policy>"
+			# or empty-string).
+			publisher.sigpol=$($PKG publisher ${publisher.name} | \
+			    grep signature-policy | sed 's/ //g')
 
 			get_publisher_attrs ${publisher.name} origin | \
 			    IFS=" " read publisher.sticky publisher.preferred \
@@ -301,6 +309,10 @@ print_publisher_pkg_defn() {
 	typeset mirror=
 
 	eval publisher="${publishers[$pname]}"
+
+	if [[ "${publisher.sigpol}" != "" ]]; then
+		args="$args --set-property ${publisher.sigpol}"
+	fi
 
 	if [[ ${publisher.preferred} == "true" ]]; then
 		args="$args -P"
