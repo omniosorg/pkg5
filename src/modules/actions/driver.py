@@ -135,6 +135,9 @@ class DriverAction(generic.Action):
         def remove_aliases(driver_name, aliases, image):
                 if not DriverAction.update_drv:
                         DriverAction.__usr_sbin_init()
+		# This should not happen in non-global zones.
+                if image.is_zone():
+                        return
                 rem_base = (DriverAction.update_drv, "-b", image.get_root(), "-d")
                 for i in aliases:
                         args = rem_base + ("-i", '{0}'.format(i), driver_name)
