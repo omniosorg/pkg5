@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 """
@@ -154,14 +154,14 @@ class LinkedImageZonePlugin(li.LinkedImagePlugin):
                 # check if we're running in the gz
                 try:
                         self.__in_gz_cached = (_zonename() == ZONE_GLOBAL)
-                except OSError, e:
+                except OSError as e:
                         # W0212 Access to a protected member
                         # pylint: disable=W0212
                         if ignore_errors:
                                 # default to being in the global zone
                                 return True
                         raise apx._convert_error(e)
-                except apx.LinkedImageException, e:
+                except apx.LinkedImageException as e:
                         if ignore_errors:
                                 # default to being in the global zone
                                 return True
@@ -244,14 +244,14 @@ class LinkedImageZonePlugin(li.LinkedImagePlugin):
                 try:
                         zdict = _list_zones(self.__img.root,
                             self.__linked.get_path_transform())
-                except OSError, e:
+                except OSError as e:
                         # W0212 Access to a protected member
                         # pylint: disable=W0212
                         if ignore_errors:
                                 # don't cache the result
                                 return []
                         raise apx._convert_error(e)
-                except apx.LinkedImageException, e:
+                except apx.LinkedImageException as e:
                         if ignore_errors:
                                 # don't cache the result
                                 return []
@@ -262,7 +262,8 @@ class LinkedImageZonePlugin(li.LinkedImagePlugin):
                 # state is unused
                 # pylint: disable=W0612
                 for zone, (path, state) in zdict.iteritems():
-                        lin = li.LinkedImageName("%s:%s" % (self.__pname, zone))
+                        lin = li.LinkedImageName("{0}:{1}".format(self.__pname,
+                            zone))
                         zlist.append([lin, path])
 
                 self.__zoneadm_list_cache = zlist
@@ -494,8 +495,8 @@ def _list_zones(root, path_transform):
                 # append "/root" to zonepath
                 z_rootpath = os.path.join(z_path, "root")
                 assert z_rootpath.startswith(root), \
-                    "zone path '%s' doesn't begin with '%s" % \
-                    (z_rootpath, root)
+                    "zone path '{0}' doesn't begin with '{1}".format(
+                    z_rootpath, root)
 
                 # If there is a current path transform in effect then revert
                 # the path reported by zoneadm to the original zone path.

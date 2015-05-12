@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2007, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 import errno
@@ -63,7 +63,7 @@ def makedirs(pathname):
 
         try:
                 os.makedirs(pathname, PKG_DIR_MODE)
-        except EnvironmentError, e:
+        except EnvironmentError as e:
                 if e.filename == pathname and (e.errno == errno.EEXIST or
                     os.path.exists(e.filename)):
                         return
@@ -400,8 +400,9 @@ class Indexer(object):
 
                 if self.old_out_token is not None and \
                     self.old_out_token >= token:
-                        raise RuntimeError("In writing dict line, token:%s, "
-                            "old_out_token:%s" % (token, self.old_out_token))
+                        raise RuntimeError("In writing dict line, token:{0}, "
+                            "old_out_token:{1}".format(token,
+                            self.old_out_token))
                 self.old_out_token = token
 
                 cur_location_int = file_handle.tell()
@@ -539,9 +540,9 @@ class Indexer(object):
                         assert res is not None
                         if old_min_token is not None and \
                             old_min_token >= min_token:
-                                raise RuntimeError("Got min token:%s greater "
-                                    "than old_min_token:%s" %
-                                    (min_token, old_min_token))
+                                raise RuntimeError("Got min token:{0} greater "
+                                    "than old_min_token:{1}".format(
+                                    min_token, old_min_token))
                         old_min_token = min_token
                         if min_token != "":
                                 yield min_token, res
@@ -784,7 +785,7 @@ class Indexer(object):
                                 self.empty_index = False
                         else:
                                 raise RuntimeError(
-                                    "Got unknown input_type: %s", input_type)
+                                    "Got unknown input_type: {0}", input_type)
 
                         # Write out the helper dictionaries
                         self._write_assistant_dicts(tmp_index_dir)
@@ -873,7 +874,7 @@ class Indexer(object):
                 try:
                         shutil.rmtree(self._index_dir + ".old")
                         makedirs(self._index_dir)
-                except OSError, e:
+                except OSError as e:
                         if e.errno == errno.EACCES:
                                 raise search_errors.ProblematicPermissionsIndexException(
                                     self._index_dir)
@@ -924,7 +925,7 @@ class Indexer(object):
                 data = ss.IndexStoreSet("full_fmri_list")
                 try:
                         data.open(index_root)
-                except IOError, e:
+                except IOError as e:
                         if not os.path.exists(os.path.join(
                                 index_root, data.get_file_name())):
                                 return fmri_set
@@ -999,7 +1000,7 @@ class Indexer(object):
                 try:
                         # Attempt to obtain a file lock.
                         self.__lockfile.lock(blocking=blocking)
-                except EnvironmentError, e:
+                except EnvironmentError as e:
                         if e.errno == errno.ENOENT:
                                 # If a lock was requested, and the only
                                 # reason for failure was because the

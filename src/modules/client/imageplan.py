@@ -21,9 +21,10 @@
 #
 
 #
-# Copyright (c) 2007, 2014, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
+from __future__ import print_function
 from collections import defaultdict, namedtuple
 import contextlib
 import errno
@@ -38,6 +39,8 @@ import tempfile
 import time
 import traceback
 import weakref
+
+from functools import reduce
 
 from pkg.client import global_settings
 logger = global_settings.logger
@@ -63,7 +66,8 @@ import pkg.version
 from pkg.client.debugvalues import DebugValues
 from pkg.client.plandesc import _ActionPlan
 from pkg.mediator import mediator_impl_matches
-from pkg.client.pkgdefs import PKG_OP_DEHYDRATE, PKG_OP_REHYDRATE
+from pkg.client.pkgdefs import (PKG_OP_DEHYDRATE, PKG_OP_REHYDRATE, MSG_ERROR,
+    MSG_WARNING, MSG_INFO)
 
 class ImagePlan(object):
         """ImagePlan object contains the plan for changing the image...
@@ -115,6 +119,8 @@ class ImagePlan(object):
                 self.__match_rm = {} # dict of fmri -> pattern
                 self.__match_update = {} # dict of fmri -> pattern
 
+                self.__pkg_actuators = set()
+
                 self.pd = None
                 if pd is None:
                         pd = plandesc.PlanDescription(op)
@@ -127,7 +133,7 @@ class ImagePlan(object):
                         s = "UNEVALUATED:\n"
                         return s
 
-                s = "%s\n" % self.pd._solver_summary
+                s = "{0}\n".format(self.pd._solver_summary)
 
                 if self.pd.state < plandesc.EVALUATED_PKGS:
                         return s
@@ -135,18 +141,18 @@ class ImagePlan(object):
                 s += "Package version changes:\n"
 
                 for oldfmri, newfmri in self.pd._fmri_changes:
-                        s += "%s -> %s\n" % (oldfmri, newfmri)
+                        s += "{0} -> {1}\n".format(oldfmri, newfmri)
 
                 if self.pd._actuators:
-                        s = s + "\nActuators:\n%s\n" % self.pd._actuators
+                        s = s + "\nActuators:\n{0}\n".format(self.pd._actuators)
 
                 if self.__old_excludes != self.__new_excludes:
-                        s = s + "\nVariants/Facet changes:\n %s -> %s\n" % \
-                            (self.__old_excludes, self.__new_excludes)
+                        s = s + "\nVariants/Facet changes:\n {0} -> {1}\n".format(
+                            self.__old_excludes, self.__new_excludes)
 
                 if self.pd._mediators_change:
-                        s = s + "\nMediator changes:\n %s" % \
-                            "\n".join(self.pd.get_mediators())
+                        s = s + "\nMediator changes:\n {0}".format(
+                            "\n".join(self.pd.get_mediators()))
 
                 return s
 
@@ -185,7 +191,7 @@ class ImagePlan(object):
         def skip_preexecute(self):
                 assert self.pd.state in \
                     [plandesc.PREEXECUTED_OK, plandesc.EVALUATED_OK], \
-                    "%s not in [%s, %s]" % (self.pd.state,
+                    "{0} not in [{1}, {2}]".format(self.pd.state,
                     plandesc.PREEXECUTED_OK, plandesc.EVALUATED_OK)
 
                 if self.pd.state == plandesc.PREEXECUTED_OK:
@@ -400,7 +406,7 @@ class ImagePlan(object):
 
                 try:
                         return solver_cb(ignore_inst_parent_deps)
-                except api_errors.PlanCreationException, e:
+                except api_errors.PlanCreationException as e:
                         # if we're currently in sync don't retry the
                         # operation
                         if self.image.linked.insync(latest_md=False):
@@ -423,6 +429,127 @@ class ImagePlan(object):
                         # out of sync.
                         ignore_inst_parent_deps = True
                         return solver_cb(ignore_inst_parent_deps)
+
+        def __add_actuator(self, trigger_fmri, trigger_op, exec_op, values,
+            solver_inst, installed_dict):
+                """Add a single actuator to the solver 'solver_inst' and update
+                the plan. 'trigger_fmri' is pkg which triggered the operation
+                and is only used in the plan. 'trigger_op' is the name of the
+                operation which triggered the change, 'exec_op' is the name of
+                the operation which should be performed.
+                'values' contains the fmris of the pkgs which should get
+                changed."""
+
+                if not isinstance(values, list):
+                        values = [values]
+
+                pub_ranks = self.image.get_publisher_ranks()
+
+                matched_vals, unmatched = self.__match_user_fmris(
+                    self.image, values, self.MATCH_INST_STEMS, pub_ranks=pub_ranks,
+                    installed_pkgs=installed_dict, raise_not_installed=False)
+
+                triggered_fmris = set()
+                for m in matched_vals.values():
+                        triggered_fmris |= set(m)
+
+                # When matching on the requested FMRI remove the versions which
+                # might be already in the image because we don't want them in
+                # the proposed list for the solver. Otherwise we might trim on
+                # the installed version which prevents us from downgrading.
+                for t in triggered_fmris.copy():
+                        if t in installed_dict.values():
+                                triggered_fmris.remove(t)
+                        else:
+                                self.__pkg_actuators.add((trigger_fmri,
+                                    t.pkg_name, trigger_op, exec_op))
+
+                solver_inst.add_triggered_op(trigger_op, exec_op,
+                    triggered_fmris)
+
+
+        def __decode_pkg_actuator_attrs(self, action, op):
+                """Read and decode pkg actuator data from action 'action'."""
+
+                # we ignore any non-supported operations
+                supported_exec_ops = [pkgdefs.PKG_OP_UPDATE,
+                    pkgdefs.PKG_OP_UNINSTALL]
+
+                if not action.attrs["name"].startswith("pkg.additional-"):
+                        return
+
+                # e.g.: set name=pkg.additional-update-on-uninstall value=...
+                try:
+                        trigger_op = action.attrs["name"].split("-")[3]
+                        exec_op = action.attrs["name"].split("-")[1]
+                except KeyError:
+                        # Ignore invalid pkg actuators.
+                        return
+
+                if trigger_op != op or exec_op not in supported_exec_ops:
+                        # Ignore unsupported pkg actuators.
+                        return
+
+                for f in action.attrlist("value"):
+                        # Ignore values which are not valid FMRIs, we don't
+                        # support globbing here.
+                        try:
+                                pkg.fmri.PkgFmri(f)
+                        except pkg.fmri.IllegalFmri:
+                                continue
+                        yield (exec_op, f)
+
+        def __set_pkg_actuators(self, fmris, op, solver_inst):
+                """Check the manifests for the pkgs specified by 'fmris' and add
+                them to the solver instance specified by 'solver_inst'. 'op'
+                defines the trigger operation which called this function."""
+
+                trigger_entries = {}
+
+                ignore = DebugValues["ignore-pkg-actuators"]
+                if ignore and ignore.lower() == "true":
+                        return
+
+                # build installed dict
+                installed_dict = ImagePlan.__fmris2dict(
+                    self.image.gen_installed_pkgs())
+                pub_ranks = self.image.get_publisher_ranks()
+
+                # Match only on installed stems. This makes sure no new pkgs
+                # will get installed when an update is specified.
+                matched_vals, unmatched = self.__match_user_fmris(
+                    self.image, fmris, self.MATCH_INST_VERSIONS,
+                    pub_ranks=pub_ranks, installed_pkgs=installed_dict,
+                    raise_not_installed=False)
+
+                pfmris = set()
+                for m in matched_vals:
+                        pfmris |= set(matched_vals[m])
+
+                for f in pfmris:
+                        if not isinstance(f, pkg.fmri.PkgFmri):
+                                f = pkg.fmri.PkgFmri(f)
+                        for a in self.image.get_catalog(
+                            self.image.IMG_CATALOG_INSTALLED).get_entry_actions(
+                            f, [pkg.catalog.Catalog.SUMMARY]):
+                                for exec_op, efmri in \
+                                    self.__decode_pkg_actuator_attrs(a, op):
+                                        self.__add_actuator(f, op,
+                                            exec_op, efmri, solver_inst,
+                                            installed_dict)
+
+        def __add_pkg_actuators_to_pd(self, user_pkgs):
+                """ Add pkg actuators to PlanDescription. Skip any changes which
+                would have been triggered by an actuator but were also requested
+                explicitly by the user to avoid confusion. """
+
+                for (tf, p, t, e) in self.__pkg_actuators:
+                        for (before, after) in self.pd._fmri_changes:
+                                if (before and before.pkg_name == p or
+                                    after and after.pkg_name == p) and \
+                                    p not in user_pkgs:
+                                        self.pd.add_pkg_actuator(tf.pkg_name, e,
+                                            p)
 
         def __plan_install_solver(self, li_pkg_updates=True, li_sync_op=False,
             new_facets=None, new_variants=None, pkgs_inst=None,
@@ -499,6 +626,10 @@ class ImagePlan(object):
                             self.image.linked.parent_fmris(),
                             self.__progtrack)
 
+                        if reject_set:
+                                self.__set_pkg_actuators(reject_set,
+                                    pkgdefs.PKG_OP_UNINSTALL, solver)
+
                         # run solver
                         new_vector, new_avoid_obs = \
                             solver.solve_install(
@@ -533,6 +664,8 @@ class ImagePlan(object):
                     li_pkg_updates=li_pkg_updates,
                     new_variants=new_variants, new_facets=new_facets,
                     fmri_changes=fmri_changes)
+
+                self.__add_pkg_actuators_to_pd(reject_set)
 
                 self.pd._solver_summary = str(solver)
                 if DebugValues["plan"]:
@@ -917,14 +1050,14 @@ class ImagePlan(object):
                                                 # Any mediators being set this
                                                 # way are forced to be marked as
                                                 # being set by local administrator.
-                                                self.pd._new_mediators[m]["%s-source" % k] = \
+                                                self.pd._new_mediators[m]["{0}-source".format(k)] = \
                                                     "local"
                                                 continue
 
                                         # Explicit reset requested.
                                         del self.pd._new_mediators[m][k]
                                         self.pd._new_mediators[m].pop(
-                                            "%s-source" % k, None)
+                                            "{0}-source".format(k), None)
                                         if k == "implementation":
                                                 self.pd._new_mediators[m].pop(
                                                     "implementation-version",
@@ -941,13 +1074,13 @@ class ImagePlan(object):
                                 # This is necessary since callers are only
                                 # required to specify the components they want
                                 # to change.
-                                med_source = cfg_mediators[m].get("%s-source" % k)
+                                med_source = cfg_mediators[m].get("{0}-source".format(k))
                                 if med_source != "local":
                                         continue
 
                                 self.pd._new_mediators[m][k] = \
                                     cfg_mediators[m].get(k)
-                                self.pd._new_mediators[m]["%s-source" % k] = "local"
+                                self.pd._new_mediators[m]["{0}-source".format(k)] = "local"
 
                                 if k == "implementation" and \
                                     "implementation-version" in cfg_mediators[m]:
@@ -1079,6 +1212,10 @@ class ImagePlan(object):
                             self.image.linked.parent_fmris(),
                             self.__progtrack)
 
+                        # check for triggered ops
+                        self.__set_pkg_actuators(pkgs_to_uninstall,
+                            pkgdefs.PKG_OP_UNINSTALL, solver)
+
                         # run solver
                         new_vector, new_avoid_obs = \
                             solver.solve_uninstall(
@@ -1097,6 +1234,9 @@ class ImagePlan(object):
                 self.pd._fmri_changes = self.__vector_2_fmri_changes(
                     installed_dict, new_vector,
                     new_facets=new_facets)
+
+                self.__add_pkg_actuators_to_pd(
+                    [x.pkg_name for x in proposed_removals])
 
                 self.pd._solver_summary = str(solver)
                 if DebugValues["plan"]:
@@ -1148,6 +1288,10 @@ class ImagePlan(object):
                             self.image.linked.parent_fmris(),
                             self.__progtrack)
 
+                        if reject_set:
+                                self.__set_pkg_actuators(reject_set,
+                                    pkgdefs.PKG_OP_UNINSTALL, solver)
+
                         # run solver
                         if pkgs_update:
                                 new_vector, new_avoid_obs = \
@@ -1182,6 +1326,8 @@ class ImagePlan(object):
                 self.pd._fmri_changes = self.__vector_2_fmri_changes(
                     installed_dict, new_vector,
                     new_facets=new_facets)
+
+                self.__add_pkg_actuators_to_pd(reject_set)
 
                 self.pd._solver_summary = str(solver)
                 if DebugValues["plan"]:
@@ -1429,27 +1575,35 @@ class ImagePlan(object):
 
                 pt = self.__progtrack
                 pt.plan_all_start()
-                pt.plan_start(pt.PLAN_PKGPLAN)
 
                 if args:
                         proposed_dict, self.__match_rm = self.__match_user_fmris(
                             self.image, args, self.MATCH_INST_VERSIONS)
 
                         # merge patterns together
-                        result = set([
+                        proposed_fixes = sorted(set([
                             f
                             for each in proposed_dict.values()
                             for f in each
-                        ])
+                        ]))
                 else:
-                        result = [ f for f in self.image.gen_installed_pkgs() ]
+                        proposed_fixes = [
+                            f
+                            for f in self.image.gen_installed_pkgs(ordered=True)
+                        ]
 
-                if result:
-                        pt.plan_start(pt.PLAN_PKG_VERIFY, goal=len(result))
+                if proposed_fixes:
+                        pt.plan_start(pt.PLAN_PKG_VERIFY, goal=len(proposed_fixes))
                 repairs = []
 
-                for pfmri in result:
+                for pfmri in proposed_fixes:
                         entries = []
+                        needs_fix = []
+                        result = _("OK")
+                        failed = False
+                        msg_type = MSG_INFO
+                        ffmri = str(pfmri)
+                        timestamp = time.time()
 
                         # Since every entry returned by verify might not be
                         # something needing repair, the relevant information
@@ -1458,43 +1612,62 @@ class ImagePlan(object):
                         # related messages output for it.
                         for act, errors, warnings, pinfo in self.image.verify(
                             pfmri, pt, verbose=True, forever=True):
-                                    if not errors:
-                                            # Fix will silently skip packages that
-                                            # don't have errors, but will display
-                                            # the additional messages if there
-                                            # is at least one error.
-                                            continue
+                                # determine the package's status and message
+                                # type
+                                if errors:
+                                        failed = True
+                                        result = _("ERROR")
+                                        msg_type = MSG_ERROR
+                                        # Some errors are based on policy (e.g.
+                                        # signature policy) and not a specific
+                                        # action, so act may be None.
+                                        needs_fix.append(act)
+                                elif not failed and warnings:
+                                        result = _("WARNING")
+                                        msg_type = MSG_WARNING
 
-                                    entries.append((act, errors, warnings,
-                                        pinfo))
+                                entries.append((act, errors, warnings, pinfo))
 
-                        if not entries:
-                                # Nothing to fix for this package.
+                        self.pd.add_item_message(ffmri, timestamp,
+                            msg_type, _("{pkg_name:70} {result:>7}").format(
+                            pkg_name=pfmri.get_pkg_stem(),
+                            result=result))
+
+                        for act, errors, warnings, info in entries:
+                                    if act:
+                                            # determine the action's message type
+                                            if errors:
+                                                    msg_type = MSG_ERROR
+                                            elif warnings:
+                                                    msg_type = MSG_WARNING
+                                            else:
+                                                    msg_type = MSG_INFO
+
+                                            self.pd.add_item_message(ffmri,
+                                                timestamp, msg_type,
+                                                "\t{0}".format(
+                                                act.distinguished_name()))
+
+                                    for x in errors:
+                                            self.pd.add_item_message(ffmri,
+                                                timestamp, MSG_ERROR,
+                                                "\t\tERROR: {0}".format(x))
+                                    for x in warnings:
+                                            self.pd.add_item_message(ffmri,
+                                                timestamp, MSG_WARNING,
+                                                "\t\tWARNING: {0}".format(x))
+                                    for x in info:
+                                            self.pd.add_item_message(ffmri,
+                                                timestamp, MSG_INFO,
+                                                "\t\t{0}".format(x))
+
+                        if not needs_fix:
                                 continue
 
-                        failed = []
-                        ffmri = str(pfmri)
-                        timestamp = time.time()
-                        for act, errors, warnings, info in entries:
-                                if act:
-                                        failed.append(act)
-                                        self.pd.add_item_message(ffmri,
-                                            timestamp, pkgdefs.MSG_ERROR,
-                                            "\t%s" % act.distinguished_name())
-                                for x in errors:
-                                        self.pd.add_item_message(ffmri,
-                                            timestamp, pkgdefs.MSG_ERROR,
-                                            "\t\t%s" % x)
-                                for x in warnings:
-                                        self.pd.add_item_message(ffmri,
-                                            timestamp, pkgdefs.MSG_WARNING,
-                                            "\t\t%s" % x)
-                                for x in info:
-                                        self.pd.add_item_message(ffmri,
-                                            timestamp, pkgdefs.MSG_INFO,
-                                            "\t\t%s" % x)
-                        repairs.append((pfmri, failed))
-                if result:
+                        # Eliminate policy-based entries with no repair action.
+                        needs_fix = [x for x in needs_fix if x is not None]
+                        repairs.append((pfmri, needs_fix))
+                if proposed_fixes:
                         pt.plan_done(pt.PLAN_PKG_VERIFY)
 
                 # Repair anything we failed to verify
@@ -1566,7 +1739,7 @@ class ImagePlan(object):
 
                 output = ""
                 for t in self.pd._fmri_changes:
-                        output += "%s -> %s\n" % t
+                        output += "{0} -> {1}\n".format(*t)
                 return output
 
         def gen_new_installed_pkgs(self):
@@ -2092,7 +2265,7 @@ class ImagePlan(object):
                                         continue
 
                                 orig_name = attrs.get("original_name",
-                                    "%s:%s" % (ap.p.origin_fmri.get_name(),
+                                    "{0}:{1}".format(ap.p.origin_fmri.get_name(),
                                         attrs["path"]))
                                 if orig_name in moved:
                                         # File has moved locations; removal will
@@ -2126,9 +2299,9 @@ class ImagePlan(object):
                 elif msg == "error":
                         errs.append(errclass(actions))
                 else:
-                        assert False, "%s() returned something other than " \
-                            "'nothing', 'overlay', 'error', or 'fixup': '%s'" % \
-                            (func.__name__, msg)
+                        assert False, "{0}() returned something other than " \
+                            "'nothing', 'overlay', 'error', or 'fixup': '{1}'".format(
+                            func.__name__, msg)
 
                 return True
 
@@ -2712,10 +2885,10 @@ class ImagePlan(object):
                     "reference": reference
                 }
 
-                s = "(%s)" % ";".join([
-                    "%s=%s" % (key, info[key]) for key in info
+                s = "({0})".format(";".join([
+                    "{0}={1}".format(key, info[key]) for key in info
                     if info[key] is not None
-                ])
+                ]))
 
                 if new_fmri:
                         return None, s    # only report new on upgrade
@@ -2740,7 +2913,7 @@ class ImagePlan(object):
                 elif phase == "update":
                         d = self.pd._actuators.update
 
-                if callable(value):
+                if hasattr(value, "__call__"):
                         d[name] = value
                 else:
                         d.setdefault(name, []).append(value)
@@ -2862,8 +3035,14 @@ class ImagePlan(object):
                         #
                         # First, check for on-disk content changes.
                         opath = orig.get_installed_path(self.image.get_root())
-                        pres_type = dest._check_preserve(orig, ap.p,
-                            orig_path=opath)
+                        try:
+                                pres_type = dest._check_preserve(orig, ap.p,
+                                    orig_path=opath)
+                        except EnvironmentError as e:
+                                if e.errno == errno.EACCES:
+                                        continue
+                                else:
+                                        raise
 
                         final_path = dest.get_installed_path(
                             self.image.get_root())
@@ -2993,7 +3172,7 @@ class ImagePlan(object):
                                         # download cache is stored.
                                         pd._cbytes_added += \
                                             os.stat(mpath).st_size * 3
-                                except EnvironmentError, e:
+                                except EnvironmentError as e:
                                         raise api_errors._convert_error(e)
                         pd._cbytes_added += cpbytes
                         pd._bytes_added += pbytes
@@ -3137,9 +3316,9 @@ class ImagePlan(object):
                         for note in self.pd.release_notes[1]:
                                 if isinstance(note, unicode):
                                         note = note.encode("utf-8")
-                                print >> tmpfile, note
+                                print(note, file=tmpfile)
                         # make file world readable
-                        os.chmod(path, 0644)
+                        os.chmod(path, 0o644)
                         tmpfile.close()
                         self.pd.release_notes_name = os.path.basename(path)
 
@@ -3815,7 +3994,8 @@ class ImagePlan(object):
                                     hashify(attrs[ap.src.key_attr]))] = re
                                 if ap.src.name == "file":
                                         fname = attrs.get("original_name",
-                                            "%s:%s" % (ap.p.origin_fmri.get_name(),
+                                            "{0}:{1}".format(
+                                            ap.p.origin_fmri.get_name(),
                                             attrs["path"]))
                                         cons_named[fname] = re
                                         fname = None
@@ -4098,8 +4278,8 @@ class ImagePlan(object):
                             self.pd._new_variants or
                             (self.pd._new_facets is not None) or
                             self.pd._mediators_change)
-                assert 0, "Shouldn't call nothingtodo() for state = %d" % \
-                    self.pd.state
+                assert 0, "Shouldn't call nothingtodo() for state = {0:d}".format(
+                    self.pd.state)
 
         def preexecute(self):
                 """Invoke the evaluated image plan
@@ -4152,7 +4332,7 @@ class ImagePlan(object):
                                         try:
                                                 ind.check_index_has_exactly_fmris(
                                                         self.image.gen_installed_pkg_names())
-                                        except se.IncorrectIndexFileHash, e:
+                                        except se.IncorrectIndexFileHash as e:
                                                 self.__preexecuted_indexing_error = \
                                                     api_errors.WrapSuccessfulIndexingException(
                                                         e,
@@ -4163,7 +4343,7 @@ class ImagePlan(object):
                                                         self.image.\
                                                             gen_installed_pkgs()
                                                         )
-                        except se.IndexingException, e:
+                        except se.IndexingException as e:
                                 # If there's a problem indexing, we want to
                                 # attempt to finish the installation anyway. If
                                 # there's a problem updating the index on the
@@ -4221,10 +4401,10 @@ class ImagePlan(object):
                         for p in self.pd.pkg_plans:
                                 try:
                                         p.preexecute()
-                                except api_errors.PkgLicenseErrors, e:
+                                except api_errors.PkgLicenseErrors as e:
                                         # Accumulate all license errors.
                                         lic_errors.append(e)
-                                except EnvironmentError, e:
+                                except EnvironmentError as e:
                                         if e.errno == errno.EACCES:
                                                 raise api_errors.PermissionsException(
                                                     e.filename)
@@ -4240,7 +4420,7 @@ class ImagePlan(object):
                                 for p in self.pd.pkg_plans:
                                         p.download(self.__progtrack,
                                             self.__check_cancel)
-                        except EnvironmentError, e:
+                        except EnvironmentError as e:
                                 if e.errno == errno.EACCES:
                                         raise api_errors.PermissionsException(
                                             e.filename)
@@ -4249,7 +4429,7 @@ class ImagePlan(object):
                                             e.filename)
                                 raise
                         except (api_errors.InvalidDepotResponseException,
-                            api_errors.TransportError), e:
+                            api_errors.TransportError) as e:
                                 if p and p._autofix_pkgs:
                                         e._autofix_pkgs = p._autofix_pkgs
                                 raise
@@ -4288,7 +4468,7 @@ class ImagePlan(object):
                 try:
                         for p in self.pd.pkg_plans:
                                 p.cacheload()
-                except EnvironmentError, e:
+                except EnvironmentError as e:
                         if e.errno == errno.EACCES:
                                 raise api_errors.PermissionsException(
                                     e.filename)
@@ -4476,7 +4656,7 @@ class ImagePlan(object):
                                         self.image.cfg.set_property("property",
                                             "dehydrated", self.operations_pubs)
                                         self.image.save_config()
-                        except EnvironmentError, e:
+                        except EnvironmentError as e:
                                 if e.errno == errno.EACCES or \
                                     e.errno == errno.EPERM:
                                         raise api_errors.PermissionsException(
@@ -4489,9 +4669,10 @@ class ImagePlan(object):
                                         raise api_errors.ActionExecutionError(
                                             act, _("A link targeting itself or "
                                             "part of a link loop was found at "
-                                            "'%s'; a file or directory was "
+                                            "'{0}'; a file or directory was "
                                             "expected.  Please remove the link "
-                                            "and try again.") % e.filename)
+                                            "and try again.").format(
+                                            e.filename))
                                 raise
                 except pkg.actions.ActionError:
                         exc_type, exc_value, exc_tb = sys.exc_info()
@@ -4561,7 +4742,7 @@ class ImagePlan(object):
                                 raise api_errors.WrapIndexingException(e,
                                     traceback.format_exc(),
                                     traceback.format_stack())
-                        except Exception, e:
+                        except Exception as e:
                                 # It's important to delete and rebuild
                                 # from scratch rather than using the
                                 # existing indexer because otherwise the
@@ -4581,7 +4762,7 @@ class ImagePlan(object):
                                             excludes=self.__new_excludes)
                                         ind.rebuild_index_from_scratch(
                                             self.image.gen_installed_pkgs())
-                                except Exception, e:
+                                except Exception as e:
                                         raise api_errors.WrapIndexingException(
                                             e, traceback.format_exc(),
                                             traceback.format_stack())
@@ -4702,7 +4883,7 @@ class ImagePlan(object):
                                 matchers.append(matcher)
                                 pubs.append(fmri.publisher)
                                 fmris.append(fmri)
-                        except pkg.fmri.FmriError, e:
+                        except pkg.fmri.FmriError as e:
                                 illegals.append(e)
                 patterns = npatterns
                 del npatterns, seen
@@ -4922,7 +5103,7 @@ class ImagePlan(object):
                                 fmris.append(fmri)
 
                         except (pkg.fmri.FmriError,
-                            pkg.version.VersionError), e:
+                            pkg.version.VersionError) as e:
                                 illegals.append(e)
                 patterns = npatterns
                 del npatterns, seen

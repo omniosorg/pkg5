@@ -20,8 +20,9 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
 
+from __future__ import print_function
 import testutils
 if __name__ == "__main__":
         testutils.setup_environment("../../../proto")
@@ -49,8 +50,8 @@ import sys
 if __name__ == "__main__":
         try:
                 opts, pargs = getopt.getopt(sys.argv[1:], "cp:")
-        except getopt.GetoptError, e:
-                usage(_("illegal global option -- %s") % e.opt)
+        except getopt.GetoptError as e:
+                usage(_("illegal global option -- {0}").format(e.opt))
 
         found_c = False
         prop = None
@@ -71,9 +72,9 @@ if __name__ == "__main__":
                 prop = prop_dict.get(prop, None)
                 if not found_c or not prop:
                         sys.exit(1)
-                print prop
+                print(prop)
                 sys.exit(0)
-        print s
+        print(s)
         sys.exit(0)
 """,
                 "usr/sbin/svcadm" : \

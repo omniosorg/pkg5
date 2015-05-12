@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 import pkg.smf as smf
@@ -180,7 +180,7 @@ class Actuator(object):
                 def check_val(dfmri):
                         # For actuators which are a single, global function that
                         # needs to get executed, simply print true.
-                        if callable(dfmri) or isinstance(dfmri, list):
+                        if hasattr(dfmri, "__call__") or isinstance(dfmri, list):
                                 return [ "true" ]
                         else:
                                 return dfmri
@@ -211,7 +211,7 @@ class Actuator(object):
                     if smf not in ["true", "false"]]
 
         def __str__(self):
-                return "\n".join("  %16s: %s" % (fmri, smf)
+            return "\n".join("  {0:>16}: {1:}".format(fmri, smf)
                     for fmri, smf in self.get_list())
 
         def reboot_advised(self):
@@ -235,7 +235,7 @@ class Actuator(object):
 
                 try:
                         func(*args, **kwargs)
-                except smf.NonzeroExitException, nze:
+                except smf.NonzeroExitException as nze:
                         if nze.return_code == smf.EXIT_TIMEOUT:
                                 self.act_timed_out = True
                         elif " ".join(nze.output).startswith("zlogin:"):
@@ -339,15 +339,15 @@ class Actuator(object):
                 # handle callables first
 
                 for act in self.removal.itervalues():
-                        if callable(act):
+                        if hasattr(act, "__call__"):
                                 act()
 
                 for act in self.install.itervalues():
-                        if callable(act):
+                        if hasattr(act, "__call__"):
                                 act()
 
                 for act in self.update.itervalues():
-                        if callable(act):
+                        if hasattr(act, "__call__"):
                                 act()
 
 

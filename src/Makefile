@@ -20,11 +20,12 @@
 #
 
 #
-# Copyright (c) 2007, 2014, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 PYTHON26 = /usr/bin/python2.6
 PYTHON27 = /usr/bin/python2.7
+PYTHON34 = /usr/bin/python3.4
 
 all := TARGET = all
 install := TARGET = install
@@ -54,11 +55,11 @@ all: $(SUBDIRS)
 	$(PYTHON27) setup.py build
 
 clean: $(SUBDIRS)
-	$(PYTHON26) setup.py clean
+	$(PYTHON27) setup.py clean
 	@cd pkg; pwd; make clean
 
 clobber: $(SUBDIRS)
-	$(PYTHON26) setup.py clobber
+	$(PYTHON27) setup.py clobber
 	@cd pkg; pwd; make clobber
 
 #
@@ -70,11 +71,11 @@ install: $(SUBDIRS)
 	$(PYTHON27) setup.py install
 
 lint:
-	$(PYTHON26) setup.py lint
+	$(PYTHON27) setup.py lint
 	@cd zoneproxy; pwd; make lint
 
 clint:
-	$(PYTHON26) setup.py clint
+	$(PYTHON27) setup.py clint
 	@cd zoneproxy; pwd; make lint
 
 pylint: install
@@ -92,15 +93,15 @@ $(SUBDIRS): FRC
 packages: install pylint
 	@cd pkg; pwd; $(MAKE) $(TARGET) check \
 		PATH=$$(hg root 2>/dev/null || git rev-parse --show-toplevel)/proto/root_$$(uname -p)/usr/bin:$$PATH \
-		PYTHONPATH=$$(hg root 2>/dev/null || git rev-parse --show-toplevel)/proto/root_$$(uname -p)/usr/lib/python2.6/vendor-packages
+		PYTHONPATH=$$(hg root 2>/dev/null || git rev-parse --show-toplevel)/proto/root_$$(uname -p)/usr/lib/python2.7/vendor-packages
 
 test:
-	$(PYTHON26) setup.py test
+	$(PYTHON27) setup.py test
 
 test-verbose:
-	$(PYTHON26) setup.py test -v
+	$(PYTHON27) setup.py test -v
 
 test-generate:
-	$(PYTHON26) setup.py test -g
+	$(PYTHON27) setup.py test -g
 
 FRC:

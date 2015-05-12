@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 import random
@@ -91,8 +91,9 @@ class MirrorDetector(object):
                 try:
                         sd_hdl = pybonjour.DNSServiceBrowse(
                             regtype=self.__service, callBack=browse_cb)
-                except pybonjour.BonjourError, e:
-                        errstr = "mDNS Service Browse Failed: %s\n" % e[0][1]
+                except pybonjour.BonjourError as e:
+                        errstr = "mDNS Service Browse Failed: {0}\n".format(
+                            e.args[0][1])
                         raise tx.mDNSException(errstr)
 
                 try:
@@ -104,11 +105,12 @@ class MirrorDetector(object):
                                         tval = 0
                                 else:
                                         timedout = True
-                except select.error, e:
-                        errstr = "Select failed: %s\n" % e[1]
+                except select.error as e:
+                        errstr = "Select failed: {0}\n".format(e.args[1])
                         raise tx.mDNSException(errstr)
-                except pybonjour.BonjourError, e:
-                        errstr = "mDNS Process Result failed: %s\n" % e[0][1]
+                except pybonjour.BonjourError as e:
+                        errstr = "mDNS Process Result failed: {0}\n".format(
+                            e.args[0][1])
                         raise tx.mDNSException(errstr)
                 finally:
                         sd_hdl.close()
@@ -137,8 +139,9 @@ class MirrorDetector(object):
                 try:
                         sd_hdl =  pybonjour.DNSServiceResolve(0, if_idx,
                             service_name, regtype, reply_domain, resolve_cb)
-                except pybonjour.BonjourError, e:
-                        errstr = "mDNS Service Resolve Failed: %s\n" % e[0][1]
+                except pybonjour.BonjourError as e:
+                        errstr = "mDNS Service Resolve Failed: {0}\n".format(
+                            e.args[0][1])
                         raise tx.mDNSException(errstr)
 
                 try:
@@ -150,11 +153,12 @@ class MirrorDetector(object):
                                         tval = 0
                                 else:
                                         timedout = True
-                except select.error, e:
-                        errstr = "Select failed; %s\n" % e[1]
+                except select.error as e:
+                        errstr = "Select failed; {0}\n".format(e.args[1])
                         raise tx.mDNSException(errstr)
-                except pybonjour.BonjourError, e:
-                        errstr = "mDNS Process Result Failed: %s\n" % e[0][1]
+                except pybonjour.BonjourError as e:
+                        errstr = "mDNS Process Result Failed: {0}\n".format(
+                            e.args[0][1])
                         raise tx.mDNSException(errstr)
                 finally:
                         sd_hdl.close()

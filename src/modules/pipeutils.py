@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 """
@@ -36,7 +36,6 @@ The following classes are implemented to allow HTTP client operations over a
 pipe:
         PipedHTTPResponse
         PipedHTTPConnection
-        PipedHTTP
 
 The following classes are implemented to allow RPC servers operations
 over a pipe:
@@ -65,15 +64,17 @@ A RPC server can be implemented as follows:
 A RPC client can be implemented as follows:
 
         client_rpc = PipedServerProxy(client_pipe_fd)
-        print client_rpc.add(1, 2)
+        print(client_rpc.add(1, 2))
         del client_rpc
 """
 
+from __future__ import print_function
 import SocketServer
 import errno
 import fcntl
 import httplib
 import os
+import platform
 import socket
 import stat
 import struct
@@ -145,17 +146,19 @@ class PipeFile(object):
                         return
 
                 if msg is not None:
-                        msg = ": %s" % msg
+                        msg = ": {0}".format(msg)
                 else:
                         msg = ""
 
                 if self.debug_label is not None:
-                        label = "%s: %s" % (os.getpid(), self.debug_label)
+                        label = "{0}: {1}".format(os.getpid(),
+                            self.debug_label)
                 else:
-                        label = "%s" % os.getpid()
+                        label = "{0}".format(os.getpid())
 
-                print >> sys.stderr, "%s: %s.%s(%d)%s" % \
-                    (label, op, type(self).__name__, self.__pipefd, msg)
+                print("{0}: {1}.{2}({3:d}){4}".format(
+                    label, op, type(self).__name__, self.__pipefd, msg),
+                    file=sys.stderr)
 
         def debug_dumpfd(self, op, fd):
                 """If debugging is enabled dump the contents of fd."""
@@ -164,11 +167,11 @@ class PipeFile(object):
 
                 si = os.fstat(fd)
                 if not stat.S_ISREG(si.st_mode):
-                        msg = "fd=%d" % fd
+                        msg = "fd={0:d}".format(fd)
                 else:
                         os.lseek(fd, os.SEEK_SET, 0)
                         msg = "".join(os.fdopen(os.dup(fd)).readlines())
-                        msg = "msg=%s" % (msg)
+                        msg = "msg={0}".format(msg)
                         os.lseek(fd, os.SEEK_SET, 0)
 
                 self.debug_msg(op, msg)
@@ -177,13 +180,13 @@ class PipeFile(object):
                 """Required to support select.select()."""
                 return self.__pipefd
 
-        def readline(self):
+        def readline(self, *args):
                 """Read one entire line from the pipe.
                 Can block waiting for input."""
 
                 if self.__readfh is not None:
                         # read from the fd that we received over the pipe
-                        data = self.__readfh.readline()
+                        data = self.__readfh.readline(*args)
                         if data != "":
                                 return data
                         # the fd we received over the pipe is empty
@@ -195,7 +198,7 @@ class PipeFile(object):
                         return ""
                 self.__readfh = os.fdopen(fd)
                 # return data from the received fd
-                return self.readline()
+                return self.readline(*args)
 
         def read(self, size=-1):
                 """Read at most size bytes from the pipe.
@@ -244,8 +247,8 @@ class PipeFile(object):
                 if self.closed:
                         self.debug_msg("sendfd", "failed (closed)")
                         raise IOError(
-                            "sendfd() called for closed %s" %
-                            type(self).__name__)
+                            "sendfd() called for closed {0}".format(
+                            type(self).__name__))
 
                 self.debug_dumpfd("sendfd", fd)
                 try:
@@ -260,15 +263,15 @@ class PipeFile(object):
                 if self.closed:
                         self.debug_msg("recvfd", "failed (closed)")
                         raise IOError(
-                            "sendfd() called for closed %s" %
-                            type(self).__name__)
+                            "sendfd() called for closed {0}".format(
+                            type(self).__name__))
 
                 try:
                         fcntl_args = struct.pack('i', -1)
                         fcntl_rv = fcntl.ioctl(self.__pipefd,
                             fcntl.I_RECVFD, fcntl_args)
                         fd = struct.unpack('i', fcntl_rv)[0]
-                except IOError, e:
+                except IOError as e:
                         if e.errno == errno.ENXIO:
                                 # other end of the connection was closed
                                 return -1
@@ -300,7 +303,7 @@ class PipeSocket(PipeFile):
                 # Unused argument; pylint: disable=W0613
 
                 dup_fd = os.dup(self.fileno())
-                self.debug_msg("makefile", "dup fd=%d" % dup_fd)
+                self.debug_msg("makefile", "dup fd={0:d}".format(dup_fd))
                 return PipeFile(dup_fd, self.debug_label, debug=self.debug)
 
         def recv(self, bufsize, flags=0):
@@ -325,6 +328,10 @@ class PipeSocket(PipeFile):
                 """Nothing to do here.  Move along."""
                 # Unused argument; pylint: disable=W0613
                 return
+
+        def setsockopt(self, *args):
+                """set socket opt."""
+                pass
 
 
 class PipedHTTPResponse(httplib.HTTPResponse):
@@ -404,6 +411,7 @@ class _PipedTransport(rpc.Transport):
                 self.__http_enc = http_enc
                 rpc.Transport.__init__(self)
                 self.verbose = False
+                self._extra_headers = None
 
         def __del__(self):
                 # make sure the destructor gets called for our connection
@@ -419,8 +427,8 @@ class _PipedTransport(rpc.Transport):
                 """Create a new PipedHTTP connection to the server.  This
                 involves creating a new pipe, and sending one end of the pipe
                 to the server, and then wrapping the local end of the pipe
-                with a PipedHTTP object.  This object can then be subsequently
-                used to issue http requests."""
+                with a PipedHTTPConnection object.  This object can then be
+                subsequently used to issue http requests."""
                 # Redefining name from outer scope; pylint: disable=W0621
 
                 assert self.__pipe_file is not None
@@ -429,10 +437,15 @@ class _PipedTransport(rpc.Transport):
                 self.__pipe_file.sendfd(server_pipefd)
                 os.close(server_pipefd)
 
+                py_version = '.'.join(
+                    platform.python_version_tuple()[:2])
                 if self.__http_enc:
                         # we're using http encapsulation so return a
-                        # PipedHTTP connection object
-                        return PipedHTTP(client_pipefd)
+                        # PipedHTTPConnection object
+                        if py_version >= '2.7':
+                                return PipedHTTPConnection(client_pipefd)
+                        else:
+                                return PipedHTTP(client_pipefd)
 
                 # we're not using http encapsulation so return a
                 # PipeSocket object
@@ -527,14 +540,14 @@ class _PipedRequestHandler(_PipedHTTPRequestHandler):
                 except:
                         # The server had an unexpected exception.
                         # dump the error to stderr
-                        print >> sys.stderr, traceback.format_exc()
+                        print(traceback.format_exc(), file=sys.stderr)
 
                         # Return the error to the caller.
                         err_lines = traceback.format_exc().splitlines()
-                        trace_string = '%s | %s' % \
-                            (err_lines[-3], err_lines[-1])
+                        trace_string = '{0} | {1}'.format(
+                            err_lines[-3], err_lines[-1])
                         fault = rpclib.Fault(-32603,
-                            'Server error: %s' % trace_string)
+                            'Server error: {0}'.format(trace_string))
                         response = fault.response()
 
                         # tell the server to exit

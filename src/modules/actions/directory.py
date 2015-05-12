@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2007, 2014, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 """module describing a directory packaging object
@@ -71,13 +71,13 @@ class DirectoryAction(generic.Action):
         def directory_references(self):
                 return [os.path.normpath(self.attrs["path"])]
 
-        def __create_directory(self, pkgplan, path, mode):
+        def __create_directory(self, pkgplan, path, mode, **kwargs):
                 """Create a directory."""
 
                 try:
                         self.makedirs(path, mode=mode,
-                            fmri=pkgplan.destination_fmri)
-                except OSError, e:
+                            fmri=pkgplan.destination_fmri, **kwargs)
+                except OSError as e:
                         if e.filename != path:
                                 # makedirs failed for some component
                                 # of the path.
@@ -103,12 +103,12 @@ class DirectoryAction(generic.Action):
                                 # that won't restore the files that
                                 # are supposed to be contained within.
                                 err_txt = _("Unable to create "
-                                    "directory %s; it has been "
+                                    "directory {0}; it has been "
                                     "replaced with a link.  To "
                                     "continue, please remove the "
                                     "link or restore the directory "
                                     "to its original location and "
-                                    "try again.") % path
+                                    "try again.").format(path)
                                 raise apx.ActionExecutionError(
                                     self, details=err_txt, error=e,
                                     fmri=pkgplan.destination_fmri)
@@ -175,7 +175,7 @@ class DirectoryAction(generic.Action):
                 elif mode != omode:
                         try:
                                 os.chmod(path, mode)
-                        except Exception, e:
+                        except Exception as e:
                                 if e.errno != errno.EPERM and e.errno != \
                                     errno.ENOSYS:
                                         # Assume chmod failed due to a
@@ -198,10 +198,13 @@ class DirectoryAction(generic.Action):
                 if not orig or oowner != owner or ogroup != group:
                         try:
                                 portable.chown(path, owner, group)
-                        except OSError, e:
+                        except OSError as e:
                                 if e.errno != errno.EPERM and \
                                     e.errno != errno.ENOSYS:
-                                        raise
+                                        # Assume chown failed due to a
+                                        # recoverable error.
+                                        self.__create_directory(pkgplan, path,
+                                            mode, uid=owner, gid=group)
 
         def verify(self, img, **args):
                 """Returns a tuple of lists of the form (errors, warnings,
@@ -216,7 +219,7 @@ class DirectoryAction(generic.Action):
                 path = self.get_installed_path(pkgplan.image.get_root())
                 try:
                         os.rmdir(path)
-                except OSError, e:
+                except OSError as e:
                         if e.errno == errno.ENOENT:
                                 pass
                         elif e.errno in (errno.EEXIST, errno.ENOTEMPTY):
@@ -231,12 +234,13 @@ class DirectoryAction(generic.Action):
                         elif e.errno == errno.EBUSY and os.path.ismount(path):
                                 # User has replaced directory with mountpoint,
                                 # or a package has been poorly implemented.
-				if not self.attrs.get("implicit"):
-                                        err_txt = _("Unable to remove %s; it is "
+                                if not self.attrs.get("implicit"):
+                                        err_txt = _("Unable to remove {0}; it is "
                                             "in use as a mountpoint. To "
                                             "continue, please unmount the "
                                             "filesystem at the target "
-                                            "location and try again.") % path
+                                            "location and try again.").format(
+                                            path)
                                         raise apx.ActionExecutionError(self,
                                             details=err_txt, error=e,
                                             fmri=pkgplan.origin_fmri) 
@@ -244,11 +248,11 @@ class DirectoryAction(generic.Action):
                                 # os.path.ismount() is broken for lofs
                                 # filesystems, so give a more generic
                                 # error.
-				if not self.attrs.get("implicit"):
-                                        err_txt = _("Unable to remove %s; it "
+                                if not self.attrs.get("implicit"):
+                                        err_txt = _("Unable to remove {0}; it "
                                             "is in use by the system, another "
-                                            "process, or as a mountpoint.") \
-                                            % path
+                                            "process, or as a "
+                                            "mountpoint.").format(path)
                                         raise apx.ActionExecutionError(self,
                                             details=err_txt, error=e,
                                             fmri=pkgplan.origin_fmri)

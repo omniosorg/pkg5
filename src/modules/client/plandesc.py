@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 """
@@ -130,6 +130,7 @@ class PlanDescription(object):
                 "updated": [[str]],
             },
             "_item_msgs": collections.defaultdict(list),
+            "_pkg_actuators": { str: { str: [ str ] } },
             "added_groups": { str: pkg.fmri.PkgFmri },
             "added_users": { str: pkg.fmri.PkgFmri },
             "child_op_vectors": [ ( str, [ li.LinkedImageName ], {}, bool ) ],
@@ -245,6 +246,9 @@ class PlanDescription(object):
 
                 self._act_timed_out = False
 
+                # Pkg actuators
+                self._pkg_actuators = {}
+
         @staticmethod
         def getstate(obj, je_state=None, reset_volatiles=False):
                 """Returns the serialized state of this object in a format
@@ -316,7 +320,7 @@ class PlanDescription(object):
                         fobj.truncate()
                         json.dump(state, fobj, encoding="utf-8")
                         fobj.flush()
-                except OSError, e:
+                except OSError as e:
                         # Access to protected member; pylint: disable=W0212
                         raise apx._convert_error(e)
 
@@ -330,8 +334,9 @@ class PlanDescription(object):
 
                 try:
                         fobj.seek(0)
-                        state = json.load(fobj, encoding="utf-8")
-                except OSError, e:
+                        state = json.load(fobj, encoding="utf-8",
+                            object_hook=pkg.misc.json_hook)
+                except OSError as e:
                         # Access to protected member; pylint: disable=W0212
                         raise apx._convert_error(e)
 
@@ -398,7 +403,7 @@ class PlanDescription(object):
                                         mimpl_ver = \
                                             mimpl_ver.get_short_version()
                                 if mimpl and mimpl_ver:
-                                        mimpl += "(@%s)" % mimpl_ver
+                                        mimpl += "(@{0})".format(mimpl_ver)
                                 mimpl_source = mediators[m].get(
                                     "implementation-source")
 
@@ -443,29 +448,31 @@ class PlanDescription(object):
                             (new_ver, new_ver_source)) = ver
                         ((orig_impl, orig_impl_source),
                             (new_impl, new_impl_source)) = impl
-                        out = "mediator %s:\n" % m
+                        out = "mediator {0}:\n".format(m)
                         if orig_ver and new_ver:
-                                out += "           version: %s (%s default) " \
-                                    "-> %s (%s default)\n" % (orig_ver,
+                                out += "           version: {0} ({1} default)" \
+                                    " -> {2} ({3} default)\n".format(orig_ver,
                                     orig_ver_source, new_ver, new_ver_source)
                         elif orig_ver:
-                                out += "           version: %s (%s default) " \
-                                    "-> None\n" % (orig_ver, orig_ver_source)
+                                out += "           version: {0} ({1} default)" \
+                                    " -> None\n".format(orig_ver,
+                                    orig_ver_source)
                         elif new_ver:
                                 out += "           version: None -> " \
-                                    "%s (%s default)\n" % (new_ver,
+                                    "{0} ({1} default)\n".format(new_ver,
                                     new_ver_source)
 
                         if orig_impl and new_impl:
-                                out += "    implementation: %s (%s default) " \
-                                    "-> %s (%s default)\n" % (orig_impl,
+                                out += "    implementation: {0} ({1} default)" \
+                                    " -> {2} ({3} default)\n".format(orig_impl,
                                     orig_impl_source, new_impl, new_impl_source)
                         elif orig_impl:
-                                out += "    implementation: %s (%s default) " \
-                                    "-> None\n" % (orig_impl, orig_impl_source)
+                                out += "    implementation: {0} ({1} default)" \
+                                    " -> None\n".format(orig_impl,
+                                    orig_impl_source)
                         elif new_impl:
                                 out += "    implementation: None -> " \
-                                    "%s (%s default)\n" % (new_impl,
+                                    "{0} ({1} default)\n".format(new_impl,
                                     new_impl_source)
                         ret.append(out)
                 return ret
@@ -558,15 +565,15 @@ class PlanDescription(object):
                 variant/facet changes in this plan"""
                 vs, fs = self.varcets
                 rv = [
-                    "variant %s: %s" % (name[8:], val)
+                    "variant {0}: {1}".format(name[8:], val)
                     for (name, val) in vs
                 ]
                 masked_str = _(" (masked)")
                 for name, v_new, v_old, src, m_old, m_new in fs:
                         m_old = m_old and masked_str or ""
                         m_new = m_new and masked_str or ""
-                        msg = "  facet %s (%s): %s%s -> %s%s" % \
-                            (name[6:], src, v_old, m_old, v_new, m_new)
+                        msg = "  facet {0} ({1}): {2}{3} -> {4}{5}".format(
+                            name[6:], src, v_old, m_old, v_new, m_new)
                         rv.append(msg)
                 return rv
 
@@ -622,7 +629,7 @@ class PlanDescription(object):
                     self.update_actions,
                     self.install_actions):
                 # pylint: enable=W0612
-                        yield "%s -> %s" % (o_act, d_act)
+                        yield "{0} -> {1}".format(o_act, d_act)
 
         def has_release_notes(self):
                 """True if there are release notes for this plan"""
@@ -692,7 +699,7 @@ class PlanDescription(object):
                 """
 
                 assert self.state >= EVALUATED_PKGS, \
-                        "%s >= %s" % (self.state, EVALUATED_PKGS)
+                        "{0} >= {1}".format(self.state, EVALUATED_PKGS)
 
                 # in case this operation doesn't use solver
                 if self._solver_errors is None:
@@ -709,17 +716,62 @@ class PlanDescription(object):
                 """Add new messages to an item."""
                 self._item_msgs[item_id].extend(messages)
 
-        def get_item_messages(self):
-                """Return all item messages."""
-                for item_id, msgs in self._item_msgs.iteritems():
-                        for msg_time, msg_type, msg_text in msgs:
-                                yield item_id, msg_time, msg_type, msg_text
+        def gen_item_messages(self, ordered=False):
+                """Return all item messages.
+
+                'ordered' is an optional boolean value that indicates that
+                item messages will be sorted by msg_time. If False, item messages
+                will be in an arbitrary order."""
+
+                if ordered:
+                        # Sort all the item messages by msg_time
+                        ordered_list = sorted(self._item_msgs.iteritems(),
+                            key=lambda k_v: k_v[1][0][0])
+                        for item in ordered_list:
+                                item_id = item[0]
+                                for msg_time, msg_type, msg_text in \
+                                    self._item_msgs[item_id]:
+                                        yield item_id, msg_time, msg_type, \
+                                            msg_text
+                else:
+                        for item_id in self._item_msgs:
+                                for msg_time, msg_type, msg_text in \
+                                    self._item_msgs[item_id]:
+                                        yield item_id, msg_time, msg_type, \
+                                            msg_text
 
         def set_actuator_timeout(self, timeout):
                 """Set timeout for synchronous actuators."""
                 assert type(timeout) == int, "Actuator timeout must be an "\
                     "integer."
                 self._actuators.set_timeout(timeout)
+
+        def add_pkg_actuator(self, trigger_pkg, exec_op, cpkg):
+                """Add a pkg actuator to the plan. The internal dictionary looks
+                like this:
+                        {  trigger_pkg: {
+                                          exec_op : [ changed pkg, ... ],
+                                          ...
+                                        },
+                          ...
+                        }
+                """
+
+                if trigger_pkg in self._pkg_actuators:
+                        if exec_op in self._pkg_actuators[trigger_pkg]:
+                                self._pkg_actuators[trigger_pkg][
+                                    exec_op].append(cpkg)
+                                self._pkg_actuators[trigger_pkg][exec_op].sort()
+                        else:
+                                self._pkg_actuators[trigger_pkg][exec_op] = \
+                                    [cpkg]
+                else:
+                        self._pkg_actuators[trigger_pkg] = {exec_op: [cpkg]}
+
+        def gen_pkg_actuators(self):
+                """Pkg actuators which got triggered by operation."""
+                for trigger_pkg in sorted(self._pkg_actuators):
+                        yield (trigger_pkg, self._pkg_actuators[trigger_pkg])
 
         @property
         def actuator_timed_out(self):

@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 import os
@@ -59,7 +59,7 @@ class Popen(subprocess.Popen):
                     errread, errwrite, to_close=None):
                         """Execute program using posix spawn"""
 
-                        if isinstance(args, types.StringTypes):
+                        if isinstance(args, (str, bytes)):
                                 args = [args]
 
                         if shell:
@@ -115,7 +115,7 @@ class Popen(subprocess.Popen):
                                 os.chdir(cwd)
 
                         if preexec_fn:
-                                apply(preexec_fn)
+                                preexec_fn()
 
                         # Close all other fds, if asked for - after
                         # preexec_fn(), which may open FDs.
@@ -141,7 +141,7 @@ class Popen(subprocess.Popen):
                                                 sfa.add_close(i)
                                                 closed_fds.append(i)
                                         except OSError:
-                                                pass 
+                                                pass
                                 closefrom = max([3, max(closed_fds) + 1])
                                 sfa.add_close_childfds(closefrom)
 
@@ -156,7 +156,7 @@ class Popen(subprocess.Popen):
                                 # the "env" argument.  Allow that here by doing
                                 # the explicit conversion to a list.
                                 env = [
-                                    "%s=%s" % (k, v)
+                                    "{0}={1}".format(k, v)
                                     for k, v in env.iteritems()
                                 ]
 
@@ -180,7 +180,7 @@ class Popen(subprocess.Popen):
                         if errwrite and errread:
                                 _close_in_parent(errwrite)
 
-                if py_version == '2.6':
+                if  py_version == '2.6':
                         def _execute_child(self, args, executable, preexec_fn,
                             close_fds, cwd, env, universal_newlines, startupinfo,
                             creationflags, shell, p2cread, p2cwrite, c2pread,

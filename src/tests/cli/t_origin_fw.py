@@ -19,8 +19,9 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
 
+from __future__ import print_function
 import testutils
 if __name__ == "__main__":
         testutils.setup_environment("../../../proto")
@@ -56,7 +57,7 @@ def main():
             return 0
         if arg.startswith("dump_core="):
             os.abort()
-    print "attribute minimum-version not specified in dependency"
+    print("attribute minimum-version not specified in dependency")
     return 241
 
 if __name__ == "__main__":
@@ -80,12 +81,12 @@ if __name__ == "__main__":
                     ("1.3", "wizard")
                     ):
                     self.pkg_list+= ["""
-                    open A@%s,5.11-0
-                    add depend type=origin root-image=true fmri=pkg:/feature/firmware/testdriver minimum-version=%s 
+                    open A@{0},5.11-0
+                    add depend type=origin root-image=true fmri=pkg:/feature/firmware/testdriver minimum-version={1}
                     close 
-                    open B@%s,5.11-0
-                    add depend type=origin root-image=true fmri=pkg:/feature/firmware/testdriver minimum-version=%s 
-                    close """ % (t + t) ]
+                    open B@{2},5.11-0
+                    add depend type=origin root-image=true fmri=pkg:/feature/firmware/testdriver minimum-version={3} 
+                    close """.format(*(t + t)) ]
 
 		self.pkg_list += ["""
                     open A@1.4,5.11-0

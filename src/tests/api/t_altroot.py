@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
 
 import testutils
 if __name__ == "__main__":
@@ -126,9 +126,9 @@ class TestAltroot(pkg5unittest.CliTestCase):
                 args = ", ".join([str(a) for a in args])
                 self.fail(
                     "altroot call didn't return OSError EREMOTE exception\n"
-                    "call: %s(%s)\n"
-                    "exception: %s\n" %
-                    (func.__name__, args, e_str))
+                    "call: {0}({1})\n"
+                    "exception: {2}\n".format(
+                    func.__name__, args, e_str))
 
         def test_ar_err_eremote(self):
                 """Verify that all altroot accessor functions return EREMOTE
@@ -146,7 +146,7 @@ class TestAltroot(pkg5unittest.CliTestCase):
                     (ar.ar_rename, (r, self.p_d_f1, self.p_d_f1_redir)),
                     (ar.ar_rename, (r, self.p_d_f1_redir, self.p_d_f2_redir)),
 
-                    (ar.ar_mkdir, (r, self.p_d_none_redir, 0777)),
+                    (ar.ar_mkdir, (r, self.p_d_none_redir, 0o777)),
 
                     (ar.ar_stat, (r, self.p_f1_redir)),
                     (ar.ar_stat, (r, self.p_d_f1_redir)),
@@ -174,9 +174,9 @@ class TestAltroot(pkg5unittest.CliTestCase):
                 args = ", ".join([str(a) for a in args])
                 self.fail(
                     "altroot call didn't return None\n"
-                    "call: %s(%s)\n"
-                    "rv: %s\n" %
-                    (func.__name__, args, str(rv)))
+                    "call: {0}({1})\n"
+                    "rv: {0}\n".format(
+                    func.__name__, args, str(rv)))
 
         def test_ar_err_img_prefix(self):
                 """Verify that ar_img_prefix() returns None if we have a

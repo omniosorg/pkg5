@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 import cStringIO
@@ -241,7 +241,8 @@ class TransportRepo(object):
                         # instead of trying to deduce the request's name.
                         if e.url not in mapping:
                                 raise tx.TransportOperationError(
-                                    "No mapping found for URL %s" % e.url)
+                                    "No mapping found for URL {0}".format(
+                                    e.url))
 
                         e.request = mapping[e.url]
 
@@ -274,7 +275,7 @@ class TransportRepo(object):
                                 if c.nodeType == c.TEXT_NODE:
                                         value = c.nodeValue
                                         if value is not None:
-                                                msg += ("\n%s" % value)
+                                                msg += ("\n{0}".format(value))
 
                 return msg
 
@@ -296,7 +297,7 @@ class TransportRepo(object):
 
                         if u not in mapping:
                                 raise tx.TransportOperationError(
-                                    "No mapping found for URL %s" % u)
+                                    "No mapping found for URL {0}".format(u))
 
                         req = mapping[u]
                         reqlist.append(req)
@@ -374,7 +375,7 @@ class HTTPRepo(TransportRepo):
                 self._verdata = None
 
         def __str__(self):
-                return "HTTPRepo url: %s repouri: %s" % (self._url,
+                return "HTTPRepo url: {0} repouri: {1}".format(self._url,
                     self._repouri)
 
         def _add_file_url(self, url, filepath=None, progclass=None,
@@ -419,7 +420,7 @@ class HTTPRepo(TransportRepo):
                 try:
                         fobj.free_buffer = False
                         fobj.read()
-                except tx.TransportProtoError, e:
+                except tx.TransportProtoError as e:
                         if e.code == httplib.BAD_REQUEST:
                                 exc_type, exc_value, exc_tb = sys.exc_info()
                                 try:
@@ -455,7 +456,7 @@ class HTTPRepo(TransportRepo):
                 # doesn't support it.
                 pub_prefix = getattr(pub, "prefix", None)
                 if pub_prefix and not methodstr.startswith("open/") and \
-                    not base.endswith("/%s/" % pub_prefix) and \
+                    not base.endswith("/{0}/".format(pub_prefix)) and \
                     self.supports_version("publisher", [1]) > -1:
                         # Append the publisher prefix to the repository URL.
                         base = urlparse.urljoin(base, pub_prefix) + "/"
@@ -550,7 +551,7 @@ class HTTPRepo(TransportRepo):
                 try:
                         while self._engine.pending:
                                 self._engine.run()
-                except tx.ExcessiveTransientFailure, e:
+                except tx.ExcessiveTransientFailure as e:
                         # Attach a list of failed and successful
                         # requests to this exception.
                         errors, success = self._engine.check_status(urllist,
@@ -585,7 +586,8 @@ class HTTPRepo(TransportRepo):
                 # The only versions this operation is compatible with.
                 assert version == 0 or version == 1
 
-                baseurl = self.__get_request_url("file/%s/" % version, pub=pub)
+                baseurl = self.__get_request_url("file/{0}/".format(version),
+                    pub=pub)
                 requesturl = urlparse.urljoin(baseurl, fhash)
                 return self._fetch_url(requesturl, header, ccancel=ccancel)
 
@@ -654,7 +656,7 @@ class HTTPRepo(TransportRepo):
                 try:
                         while self._engine.pending:
                                 self._engine.run()
-                except tx.ExcessiveTransientFailure, e:
+                except tx.ExcessiveTransientFailure as e:
                         # Attach a list of failed and successful
                         # requests to this exception.
                         errors, success = self._engine.check_status(urllist,
@@ -689,7 +691,8 @@ class HTTPRepo(TransportRepo):
                 it contains a ProgressTracker object for the
                 downloads."""
 
-                baseurl = self.__get_request_url("file/%s/" % version, pub=pub)
+                baseurl = self.__get_request_url("file/{0}/".format(version),
+                    pub=pub)
                 urllist = []
                 progclass = None
 
@@ -707,7 +710,7 @@ class HTTPRepo(TransportRepo):
                 try:
                         while self._engine.pending:
                                 self._engine.run()
-                except tx.ExcessiveTransientFailure, e:
+                except tx.ExcessiveTransientFailure as e:
                         # Attach a list of failed and successful
                         # requests to this exception.
                         errors, success = self._engine.check_status(urllist,
@@ -760,7 +763,7 @@ class HTTPRepo(TransportRepo):
                         # TransportProtoError won't be raised here. We can't
                         # use .read() since this will empty the data buffer.
                         fobj.getheader("octopus", None)
-                except tx.TransportProtoError, e:
+                except tx.TransportProtoError as e:
                         if e.code == httplib.UNAUTHORIZED:
                                 exc_type, exc_value, exc_tb = sys.exc_info()
                                 try:
@@ -796,7 +799,7 @@ class HTTPRepo(TransportRepo):
                         progclass = FileProgress
 
                 baseurl = self.__get_request_url("add/0/")
-                request_str = "%s/%s" % (trans_id, action.name)
+                request_str = "{0}/{1}".format(trans_id, action.name)
                 requesturl = urlparse.urljoin(baseurl, request_str)
 
                 if action.data:
@@ -805,7 +808,8 @@ class HTTPRepo(TransportRepo):
                         data = ""
 
                 headers = dict(
-                    ("X-IPkg-SetAttr%s" % i, "%s=%s" % (k, attrs[k]))
+                    ("X-IPkg-SetAttr{0}".format(i), "{0}={1}".format(k,
+                    attrs[k]))
                     for i, k in enumerate(attrs)
                 )
 
@@ -828,7 +832,7 @@ class HTTPRepo(TransportRepo):
                 requesturl = urlparse.urljoin(baseurl, trans_id)
 
                 headers = dict(
-                    ("X-IPkg-SetAttr%s" % i, "%s=%s" % (k, attrs[k]))
+                    ("X-IPkg-SetAttr{0}".format(i), "{0}={1}".format(k, attrs[k]))
                     for i, k in enumerate(attrs)
                 )
 
@@ -854,7 +858,7 @@ class HTTPRepo(TransportRepo):
                         fobj.read()
                         state = fobj.getheader("State", None)
                         pkgfmri = fobj.getheader("Package-FMRI", None)
-                except tx.TransportProtoError, e:
+                except tx.TransportProtoError as e:
                         if e.code == httplib.BAD_REQUEST:
                                 exc_type, exc_value, exc_tb = sys.exc_info()
                                 try:
@@ -894,7 +898,7 @@ class HTTPRepo(TransportRepo):
                         fobj.read()
                         state = fobj.getheader("State", None)
                         pkgfmri = fobj.getheader("Package-FMRI", None)
-                except tx.TransportProtoError, e:
+                except tx.TransportProtoError as e:
                         if e.code == httplib.BAD_REQUEST:
                                 exc_type, exc_value, exc_tb = sys.exc_info()
                                 try:
@@ -938,7 +942,7 @@ class HTTPRepo(TransportRepo):
                         fobj.free_buffer = False
                         fobj.read()
                         trans_id = fobj.getheader("Transaction-ID", None)
-                except tx.TransportProtoError, e:
+                except tx.TransportProtoError as e:
                         if e.code == httplib.BAD_REQUEST:
                                 exc_type, exc_value, exc_tb = sys.exc_info()
                                 try:
@@ -1162,19 +1166,19 @@ class _FilesystemRepo(TransportRepo):
                         path = urllib.url2pathname(path)
                         self._frepo = svr_repo.Repository(read_only=True,
                             root=path)
-                except cfg.ConfigError, e:
+                except cfg.ConfigError as e:
                         reason = _("The configuration file for the repository "
-                            "is invalid or incomplete:\n%s") % e
+                            "is invalid or incomplete:\n{0}").format(e)
                         ex = tx.TransportProtoError("file", errno.EINVAL,
                             reason=reason, repourl=self._url)
                         self.__record_proto_error(ex)
                         raise ex
-                except svr_repo.RepositoryInvalidError, e:
+                except svr_repo.RepositoryInvalidError as e:
                         ex = tx.TransportProtoError("file", errno.EINVAL,
                             reason=str(e), repourl=self._url)
                         self.__record_proto_error(ex)
                         raise ex
-                except Exception, e:
+                except Exception as e:
                         ex = tx.TransportProtoError("file", errno.EPROTO,
                             reason=str(e), repourl=self._url)
                         self.__record_proto_error(ex)
@@ -1230,12 +1234,12 @@ class _FilesystemRepo(TransportRepo):
                             repourl=self._url)
                         self.__record_proto_error(ex)
                         raise ex
-                except sqp.QueryException, e:
+                except sqp.QueryException as e:
                         ex = tx.TransportProtoError("file", errno.EINVAL,
                             reason=str(e), repourl=self._url)
                         self.__record_proto_error(ex)
                         raise ex
-                except Exception, e:
+                except Exception as e:
                         ex = tx.TransportProtoError("file", errno.EPROTO,
                             reason=str(e), repourl=self._url)
                         self.__record_proto_error(ex)
@@ -1265,15 +1269,15 @@ class _FilesystemRepo(TransportRepo):
                                         if return_type == \
                                             sqp.Query.RETURN_ACTIONS:
                                                 fmri_str, fv, line = vals
-                                                yield "%s %s %s %s %s\n" % \
-                                                    (i, return_type, fmri_str,
+                                                yield "{0} {1} {2} {3} {4}\n".format(
+                                                    i, return_type, fmri_str,
                                                     urllib.quote(fv),
                                                     line.rstrip())
                                         elif return_type == \
                                             sqp.Query.RETURN_PACKAGES:
                                                 fmri_str = vals
-                                                yield "%s %s %s\n" % \
-                                                    (i, return_type, fmri_str)
+                                                yield "{0} {1} {2}\n".format(
+                                                    i, return_type, fmri_str)
                 return output()
 
         def get_catalog1(self, filelist, destloc, header=None, ts=None,
@@ -1301,7 +1305,7 @@ class _FilesystemRepo(TransportRepo):
                                 url = urlparse.urlunparse(("file", None,
                                     urllib.pathname2url(self._frepo.catalog_1(f,
                                     pub=pub_prefix)), None, None, None))
-                        except svr_repo.RepositoryError, e:
+                        except svr_repo.RepositoryError as e:
                                 ex = tx.TransportProtoError("file",
                                     errno.EPROTO, reason=str(e),
                                     repourl=self._url, request=f)
@@ -1316,7 +1320,7 @@ class _FilesystemRepo(TransportRepo):
                 try:
                         while self._engine.pending:
                                 self._engine.run()
-                except tx.ExcessiveTransientFailure, e:
+                except tx.ExcessiveTransientFailure as e:
                         # Attach a list of failed and successful
                         # requests to this exception.
                         errors, success = self._engine.check_status(urllist,
@@ -1352,12 +1356,12 @@ class _FilesystemRepo(TransportRepo):
                         requesturl = urlparse.urlunparse(("file", None,
                             urllib.pathname2url(self._frepo.file(fhash,
                             pub=pub_prefix)), None, None, None))
-                except svr_repo.RepositoryFileNotFoundError, e:
+                except svr_repo.RepositoryFileNotFoundError as e:
                         ex = tx.TransportProtoError("file", errno.ENOENT,
                             reason=str(e), repourl=self._url, request=fhash)
                         self.__record_proto_error(ex)
                         raise ex
-                except svr_repo.RepositoryError, e:
+                except svr_repo.RepositoryError as e:
                         ex = tx.TransportProtoError("file", errno.EPROTO,
                             reason=str(e), repourl=self._url, request=fhash)
                         self.__record_proto_error(ex)
@@ -1371,9 +1375,9 @@ class _FilesystemRepo(TransportRepo):
                         pubs = self._frepo.get_publishers()
                         buf = cStringIO.StringIO()
                         p5i.write(buf, pubs)
-                except Exception, e:
+                except Exception as e:
                         reason = "Unable to retrieve publisher configuration " \
-                            "data:\n%s" % e
+                            "data:\n{0}".format(e)
                         ex = tx.TransportProtoError("file", errno.EPROTO,
                             reason=reason, repourl=self._url)
                         self.__record_proto_error(ex)
@@ -1390,8 +1394,8 @@ class _FilesystemRepo(TransportRepo):
                         json.dump(rstatus, buf, ensure_ascii=False, indent=2,
                             sort_keys=True)
                         buf.write("\n")
-                except Exception, e:
-                        reason = "Unable to retrieve status data:\n%s" % e
+                except Exception as e:
+                        reason = "Unable to retrieve status data:\n{0}".format(e)
                         ex = tx.TransportProtoError("file", errno.EPROTO,
                             reason=reason, repourl=self._url)
                         self.__record_proto_error(ex)
@@ -1408,7 +1412,7 @@ class _FilesystemRepo(TransportRepo):
                         requesturl = urlparse.urlunparse(("file", None,
                             urllib.pathname2url(self._frepo.manifest(fmri,
                             pub=pub_prefix)), None, None, None))
-                except svr_repo.RepositoryError, e:
+                except svr_repo.RepositoryError as e:
                         ex = tx.TransportProtoError("file", errno.EPROTO,
                             reason=str(e), repourl=self._url, request=str(fmri))
                         self.__record_proto_error(ex)
@@ -1438,7 +1442,7 @@ class _FilesystemRepo(TransportRepo):
                                 url = urlparse.urlunparse(("file", None,
                                     urllib.pathname2url(self._frepo.manifest(
                                     fmri, pub=pub_prefix)), None, None, None))
-                        except svr_repo.RepositoryError, e:
+                        except svr_repo.RepositoryError as e:
                                 ex = tx.TransportProtoError("file",
                                     errno.EPROTO, reason=str(e),
                                     repourl=self._url, request=str(fmri))
@@ -1455,7 +1459,7 @@ class _FilesystemRepo(TransportRepo):
                 try:
                         while self._engine.pending:
                                 self._engine.run()
-                except tx.ExcessiveTransientFailure, e:
+                except tx.ExcessiveTransientFailure as e:
                         # Attach a list of failed and successful
                         # requests to this exception.
                         errors, success = self._engine.check_status(urllist,
@@ -1508,14 +1512,14 @@ class _FilesystemRepo(TransportRepo):
                                 url = urlparse.urlunparse(("file", None,
                                     urllib.pathname2url(self._frepo.file(f,
                                     pub=pub_prefix)), None, None, None))
-                        except svr_repo.RepositoryFileNotFoundError, e:
+                        except svr_repo.RepositoryFileNotFoundError as e:
                                 ex = tx.TransportProtoError("file",
                                     errno.ENOENT, reason=str(e),
                                     repourl=self._url, request=f)
                                 self.__record_proto_error(ex)
                                 pre_exec_errors.append(ex)
                                 continue
-                        except svr_repo.RepositoryError, e:
+                        except svr_repo.RepositoryError as e:
                                 ex = tx.TransportProtoError("file",
                                     errno.EPROTO, reason=str(e),
                                     repourl=self._url, request=f)
@@ -1531,7 +1535,7 @@ class _FilesystemRepo(TransportRepo):
                 try:
                         while self._engine.pending:
                                 self._engine.run()
-                except tx.ExcessiveTransientFailure, e:
+                except tx.ExcessiveTransientFailure as e:
                         # Attach a list of failed and successful
                         # requests to this exception.
                         errors, success = self._engine.check_status(urllist,
@@ -1592,9 +1596,9 @@ class _FilesystemRepo(TransportRepo):
                     "versions": ["0"],
                 }
 
-                buf.write("pkg-server %s\n" % pkg.VERSION)
+                buf.write("pkg-server {0}\n".format(pkg.VERSION))
                 buf.write("\n".join(
-                    "%s %s" % (op, " ".join(vers))
+                    "{0} {1}".format(op, " ".join(vers))
                     for op, vers in vops.iteritems()
                 ) + "\n")
                 buf.seek(0)
@@ -1624,7 +1628,7 @@ class _FilesystemRepo(TransportRepo):
 
                 try:
                         self._frepo.add(trans_id, action)
-                except svr_repo.RepositoryError, e:
+                except svr_repo.RepositoryError as e:
                         if progtrack:
                                 progtrack.abort()
                         raise tx.TransportOperationError(str(e))
@@ -1639,7 +1643,7 @@ class _FilesystemRepo(TransportRepo):
 
                 try:
                         self._frepo.add_file(trans_id, pth)
-                except svr_repo.RepositoryError, e:
+                except svr_repo.RepositoryError as e:
                         raise tx.TransportOperationError(str(e))
 
         def publish_abandon(self, header=None, trans_id=None):
@@ -1653,7 +1657,7 @@ class _FilesystemRepo(TransportRepo):
 
                 try:
                         pkg_state = self._frepo.abandon(trans_id)
-                except svr_repo.RepositoryError, e:
+                except svr_repo.RepositoryError as e:
                         raise tx.TransportOperationError(str(e))
 
                 return None, pkg_state
@@ -1671,7 +1675,7 @@ class _FilesystemRepo(TransportRepo):
                 try:
                         pkg_fmri, pkg_state = self._frepo.close(trans_id,
                             add_to_catalog=add_to_catalog)
-                except svr_repo.RepositoryError, e:
+                except svr_repo.RepositoryError as e:
                         raise tx.TransportOperationError(str(e))
 
                 return pkg_fmri, pkg_state
@@ -1687,7 +1691,7 @@ class _FilesystemRepo(TransportRepo):
 
                 try:
                         trans_id = self._frepo.open(client_release, pkg_name)
-                except svr_repo.RepositoryError, e:
+                except svr_repo.RepositoryError as e:
                         raise tx.TransportOperationError(str(e))
 
                 return trans_id
@@ -1700,7 +1704,7 @@ class _FilesystemRepo(TransportRepo):
 
                 try:
                         trans_id = self._frepo.append(client_release, pkg_name)
-                except svr_repo.RepositoryError, e:
+                except svr_repo.RepositoryError as e:
                         raise tx.TransportOperationError(str(e))
 
                 return trans_id
@@ -1716,7 +1720,7 @@ class _FilesystemRepo(TransportRepo):
                 try:
                         self._frepo.rebuild(pub=pub_prefix,
                             build_catalog=True, build_index=True)
-                except svr_repo.RepositoryError, e:
+                except svr_repo.RepositoryError as e:
                         raise tx.TransportOperationError(str(e))
 
         def publish_rebuild_indexes(self, header=None, pub=None):
@@ -1729,7 +1733,7 @@ class _FilesystemRepo(TransportRepo):
                 try:
                         self._frepo.rebuild(pub=pub_prefix,
                             build_catalog=False, build_index=True)
-                except svr_repo.RepositoryError, e:
+                except svr_repo.RepositoryError as e:
                         raise tx.TransportOperationError(str(e))
 
         def publish_rebuild_packages(self, header=None, pub=None):
@@ -1742,7 +1746,7 @@ class _FilesystemRepo(TransportRepo):
                 try:
                         self._frepo.rebuild(pub=pub_prefix,
                             build_catalog=True, build_index=False)
-                except svr_repo.RepositoryError, e:
+                except svr_repo.RepositoryError as e:
                         raise tx.TransportOperationError(str(e))
 
         def publish_refresh(self, header=None, pub=None):
@@ -1756,7 +1760,7 @@ class _FilesystemRepo(TransportRepo):
                 try:
                         self._frepo.add_content(pub=pub_prefix,
                             refresh_index=True)
-                except svr_repo.RepositoryError, e:
+                except svr_repo.RepositoryError as e:
                         raise tx.TransportOperationError(str(e))
 
         def publish_refresh_indexes(self, header=None, pub=None):
@@ -1767,7 +1771,7 @@ class _FilesystemRepo(TransportRepo):
 
                 try:
                         self._frepo.refresh_index()
-                except svr_repo.RepositoryError, e:
+                except svr_repo.RepositoryError as e:
                         raise tx.TransportOperationError(str(e))
 
         def publish_refresh_packages(self, header=None, pub=None):
@@ -1780,7 +1784,7 @@ class _FilesystemRepo(TransportRepo):
                 try:
                         self._frepo.add_content(pub=pub_prefix,
                             refresh_index=False)
-                except svr_repo.RepositoryError, e:
+                except svr_repo.RepositoryError as e:
                         raise tx.TransportOperationError(str(e))
 
         def supports_version(self, op, verlist):
@@ -1839,12 +1843,12 @@ class _ArchiveRepo(TransportRepo):
                         # a file.
                         path = urllib.url2pathname(path.rstrip(os.path.sep))
                         self._arc = pkg.p5p.Archive(path, mode="r")
-                except pkg.p5p.InvalidArchive, e:
+                except pkg.p5p.InvalidArchive as e:
                         ex = tx.TransportProtoError("file", errno.EINVAL,
                             reason=str(e), repourl=self._url)
                         self.__record_proto_error(ex)
                         raise ex
-                except Exception, e:
+                except Exception as e:
                         ex = tx.TransportProtoError("file", errno.EPROTO,
                             reason=str(e), repourl=self._url)
                         self.__record_proto_error(ex)
@@ -1907,8 +1911,8 @@ class _ArchiveRepo(TransportRepo):
                         json.dump(arcdata, buf, ensure_ascii=False, indent=2,
                             sort_keys=True)
                         buf.write("\n")
-                except Exception, e:
-                        reason = "Unable to retrieve status data:\n%s" % e
+                except Exception as e:
+                        reason = "Unable to retrieve status data:\n{0}".format(e)
                         ex = tx.TransportProtoError("file", errno.EPROTO,
                             reason=reason, repourl=self._url)
                         self.__record_proto_error(ex)
@@ -1938,14 +1942,14 @@ class _ArchiveRepo(TransportRepo):
                                         fs = os.stat(os.path.join(destloc, f))
                                         progtrack.refresh_progress(pub,
                                             fs.st_size)
-                        except pkg.p5p.UnknownArchiveFiles, e:
+                        except pkg.p5p.UnknownArchiveFiles as e:
                                 ex = tx.TransportProtoError("file",
                                     errno.ENOENT, reason=str(e),
                                     repourl=self._url, request=f)
                                 self.__record_proto_error(ex)
                                 errors.append(ex)
                                 continue
-                        except Exception, e:
+                        except Exception as e:
                                 ex = tx.TransportProtoError("file",
                                     errno.EPROTO, reason=str(e),
                                     repourl=self._url, request=f)
@@ -1963,12 +1967,12 @@ class _ArchiveRepo(TransportRepo):
                 try:
                         return self._arc.get_package_file(fhash,
                             pub=pub_prefix)
-                except pkg.p5p.UnknownArchiveFiles, e:
+                except pkg.p5p.UnknownArchiveFiles as e:
                         ex = tx.TransportProtoError("file", errno.ENOENT,
                             reason=str(e), repourl=self._url, request=fhash)
                         self.__record_proto_error(ex)
                         raise ex
-                except Exception, e:
+                except Exception as e:
                         ex = tx.TransportProtoError("file", errno.EPROTO,
                             reason=str(e), repourl=self._url, request=fhash)
                         self.__record_proto_error(ex)
@@ -1981,9 +1985,9 @@ class _ArchiveRepo(TransportRepo):
                         pubs = self._arc.get_publishers()
                         buf = cStringIO.StringIO()
                         p5i.write(buf, pubs)
-                except Exception, e:
+                except Exception as e:
                         reason = "Unable to retrieve publisher configuration " \
-                            "data:\n%s" % e
+                            "data:\n{0}".format(e)
                         ex = tx.TransportProtoError("file", errno.EPROTO,
                             reason=reason, repourl=self._url)
                         self.__record_proto_error(ex)
@@ -1997,12 +2001,12 @@ class _ArchiveRepo(TransportRepo):
 
                 try:
                         return self._arc.get_package_manifest(fmri, raw=True)
-                except pkg.p5p.UnknownPackageManifest, e:
+                except pkg.p5p.UnknownPackageManifest as e:
                         ex = tx.TransportProtoError("file", errno.ENOENT,
                             reason=str(e), repourl=self._url, request=fmri)
                         self.__record_proto_error(ex)
                         raise ex
-                except Exception, e:
+                except Exception as e:
                         ex = tx.TransportProtoError("file", errno.EPROTO,
                             reason=str(e), repourl=self._url, request=fmri)
                         self.__record_proto_error(ex)
@@ -2024,14 +2028,14 @@ class _ArchiveRepo(TransportRepo):
                                             fmri.get_url_path()))
                                         progtrack.manifest_fetch_progress(
                                             completion=True)
-                        except pkg.p5p.UnknownPackageManifest, e:
+                        except pkg.p5p.UnknownPackageManifest as e:
                                 ex = tx.TransportProtoError("file",
                                     errno.ENOENT, reason=str(e),
                                     repourl=self._url, request=fmri)
                                 self.__record_proto_error(ex)
                                 errors.append(ex)
                                 continue
-                        except Exception, e:
+                        except Exception as e:
                                 ex = tx.TransportProtoError("file",
                                     errno.EPROTO, reason=str(e),
                                     repourl=self._url, request=fmri)
@@ -2058,14 +2062,14 @@ class _ArchiveRepo(TransportRepo):
                                         fs = os.stat(os.path.join(dest, f))
                                         progtrack.download_add_progress(1,
                                             fs.st_size)
-                        except pkg.p5p.UnknownArchiveFiles, e:
+                        except pkg.p5p.UnknownArchiveFiles as e:
                                 ex = tx.TransportProtoError("file",
                                     errno.ENOENT, reason=str(e),
                                     repourl=self._url, request=f)
                                 self.__record_proto_error(ex)
                                 errors.append(ex)
                                 continue
-                        except Exception, e:
+                        except Exception as e:
                                 ex = tx.TransportProtoError("file",
                                     errno.EPROTO, reason=str(e),
                                     repourl=self._url, request=f)
@@ -2098,9 +2102,9 @@ class _ArchiveRepo(TransportRepo):
                     "status": ["0"]
                 }
 
-                buf.write("pkg-server %s\n" % pkg.VERSION)
+                buf.write("pkg-server {0}\n".format(pkg.VERSION))
                 buf.write("\n".join(
-                    "%s %s" % (op, " ".join(vers))
+                    "{0} {1}".format(op, " ".join(vers))
                     for op, vers in vops.iteritems()
                 ) + "\n")
                 buf.seek(0)
@@ -2165,7 +2169,7 @@ class FileRepo(object):
                             urlparse.urlparse(repouri.uri, "file",
                             allow_fragments=0)
                         path = urllib.url2pathname(path)
-                except Exception, e:
+                except Exception as e:
                         ex = tx.TransportProtoError("file", errno.EPROTO,
                             reason=str(e), repourl=repostats.url)
                         repostats.record_tx()
@@ -2394,8 +2398,8 @@ class RepoCache(object):
                 scheme = repouri.scheme
 
                 if scheme not in RepoCache.supported_schemes:
-                        raise tx.TransportOperationError("Scheme %s not"
-                            " supported by transport." % scheme)
+                        raise tx.TransportOperationError("Scheme {0} not"
+                            " supported by transport.".format(scheme))
 
                 if repouri.key() in self.__cache:
                         return self.__cache[repouri.key()]
@@ -2436,7 +2440,7 @@ class RepoCache(object):
                 if url:
                         repouri = TransportRepoURI(url)
                 else:
-                        raise ValueError, "Must supply either a repo or a uri."
+                        raise ValueError("Must supply either a repo or a uri.")
 
                 if repouri.key() in self.__cache:
                         del self.__cache[repouri.key()]

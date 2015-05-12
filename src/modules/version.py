@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2007, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 import calendar
@@ -72,9 +72,9 @@ class DotSequence(list):
                 # chars, this will throw.
                 x = int(elem)
                 if elem[0] == "-":
-                        raise ValueError, "Negative number"
+                        raise ValueError("Negative number")
                 if x > 0 and elem[0] == "0":
-                        raise ValueError, "Zero padded number"
+                        raise ValueError("Zero padded number")
                 return x
 
         def __new__(cls, dotstring):
@@ -254,7 +254,7 @@ class Version(object):
                 # XXX If illegally formatted, raise exception.
 
                 if not version_string:
-                        raise IllegalVersion, "Version cannot be empty"
+                        raise IllegalVersion("Version cannot be empty")
 
                 #
                 # Locate and extract the time, branch, and build strings,
@@ -289,8 +289,7 @@ class Version(object):
                         build = None
 
                 if buildidx == 0:
-                        raise IllegalVersion, \
-                            "Versions must have a release value"
+                        raise IllegalVersion("Versions must have a release value")
 
                 #
                 # Error checking and conversion from strings to objects
@@ -311,8 +310,8 @@ class Version(object):
                                         build_string = "5.11"
                                 self.build_release = DotSequence(build_string)
 
-                except IllegalDotSequence, e:
-                        raise IllegalVersion("Bad Version: %s" % e)
+                except IllegalDotSequence as e:
+                        raise IllegalVersion("Bad Version: {0}".format(e))
 
                 #
                 # In 99% of the cases in which we use date and time, it's solely
@@ -323,20 +322,18 @@ class Version(object):
                 if timestr is not None:
                         if len(timestr) != 16 or timestr[8] != "T" \
                             or timestr[15] != "Z":
-                                raise IllegalVersion, \
-                                    "Time must be ISO8601 format."
+                                raise IllegalVersion("Time must be ISO8601 format.")
                         try:
                                 dateint = int(timestr[0:8])
                                 timeint = int(timestr[9:15])
-                                datetime.datetime(dateint / 10000,
-                                    (dateint / 100) % 100,
+                                datetime.datetime(dateint // 10000,
+                                    (dateint // 100) % 100,
                                     dateint % 100,
-                                    timeint / 10000,
-                                    (timeint / 100) % 100,
+                                    timeint // 10000,
+                                    (timeint // 100) % 100,
                                     timeint % 100)
                         except ValueError:
-                                raise IllegalVersion, \
-                                    "Time must be ISO8601 format."
+                                raise IllegalVersion("Time must be ISO8601 format.")
 
                         self.timestr = timestr
                 else:
@@ -363,7 +360,8 @@ class Version(object):
                 return outstr
 
         def __repr__(self):
-                return "<pkg.fmri.Version '%s' at %#x>" % (self, id(self))
+                return "<pkg.fmri.Version '{0}' at {1:#x}>".format(self,
+                    id(self))
 
         def get_version(self, include_build=True):
                 if include_build:
@@ -379,8 +377,8 @@ class Version(object):
         def get_short_version(self):
                 branch_str = ""
                 if self.branch is not None:
-                        branch_str = "-%s" % self.branch
-                return "%s%s" % (self.release, branch_str)
+                        branch_str = "-{0}".format(self.branch)
+                return "{0}{1}".format(self.release, branch_str)
 
         def set_timestamp(self, timestamp=datetime.datetime.utcnow()):
                 assert type(timestamp) == datetime.datetime
@@ -567,7 +565,7 @@ class Version(object):
                 if constraint == CONSTRAINT_BRANCH_MINOR:
                         return other.branch.is_same_minor(self.branch)
 
-                raise ValueError, "constraint has unknown value"
+                raise ValueError("constraint has unknown value")
 
         @classmethod
         def split(self, ver):
@@ -621,7 +619,7 @@ class MatchingVersion(Version):
 
         def __init__(self, version_string, build_string=None):
                 if version_string is None or not len(version_string):
-                        raise IllegalVersion, "Version cannot be empty"
+                        raise IllegalVersion("Version cannot be empty")
 
                 if version_string == "latest":
                         # Treat special "latest" syntax as equivalent to '*' for
@@ -657,8 +655,8 @@ class MatchingVersion(Version):
                                                 val = MatchingDotSequence(val)
                                         setattr(self, attr, val)
                                         break
-                except IllegalDotSequence, e:
-                        raise IllegalVersion("Bad Version: %s" % e)
+                except IllegalDotSequence as e:
+                        raise IllegalVersion("Bad Version: {0}".format(e))
 
                 outstr = str(release)
                 if build_release is not None:

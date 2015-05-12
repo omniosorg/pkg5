@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
 
 import testutils
 if __name__ == "__main__":
@@ -55,6 +55,7 @@ class TestPkgVerify(pkg5unittest.SingleDepotTestCase):
             add file dricon_mp path=/etc/minor_perm mode=644 owner=root group=sys preserve=true
             add file dricon_dp path=/etc/security/device_policy mode=644 owner=root group=sys preserve=true
             add file dricon_ep path=/etc/security/extra_privs mode=644 owner=root group=sys preserve=true
+            add file permission mode=0600 owner=root group=bin path=/etc/permission preserve=true
             add driver name=zigit alias=pci8086,1234
             close
             """
@@ -72,7 +73,8 @@ class TestPkgVerify(pkg5unittest.SingleDepotTestCase):
            "dricon_cls": """\n""",
            "dricon_mp": """\n""",
            "dricon_dp": """\n""",
-           "dricon_ep": """\n"""
+           "dricon_ep": """\n""",
+           "permission": ""
         }
 
         def setUp(self):
@@ -112,6 +114,10 @@ class TestPkgVerify(pkg5unittest.SingleDepotTestCase):
                 # Should not fail since informational messages are not
                 # fatal.
                 self.pkg_verify("foo")
+                # Unprivileged users don't cause a traceback.
+                retcode, output = self.pkg_verify("foo", su_wrap=True, out=True,
+                    exit=1)
+                self.assert_("Traceback" not in output)
 
                 # Should not output anything when using -q.
                 self.pkg_verify("-q foo")
@@ -131,12 +137,22 @@ class TestPkgVerify(pkg5unittest.SingleDepotTestCase):
                     "bobcat"))
                 self.pkg_verify("foo", exit=1)
                 self.assert_("Unexpected Exception" not in self.output)
-                self.pkg("set-publisher -p %s" % self.rurl)
+                self.assert_("PACKAGE" in self.output and "STATUS" in self.output)
+
+                # Test that "-H" works as expected. 
+                self.pkg_verify("foo -H", exit=1)
+                self.assert_("PACKAGE" not in self.output and
+                    "STATUS" not in self.output)
+
+                # Should not output anything when using -q.
+                self.pkg_verify("-q foo", exit=1)
+                assert(self.output == "")
+                self.pkg("set-publisher -p {0}".format(self.rurl))
                 self.pkg("fix foo")
 
                 # Informational messages should not be output unless -v
                 # is provided.
-                self.pkg("set-publisher -p %s" % self.rurl)
+                self.pkg("set-publisher -p {0}".format(self.rurl))
                 self.pkg_verify("foo | grep bobcat", exit=1)
                 self.pkg_verify("-v foo | grep bobcat")
 
@@ -210,7 +226,7 @@ class TestPkgVerify(pkg5unittest.SingleDepotTestCase):
                 fd.write("Bobcats are here")
                 fd.close()
                 self.pkg_verify("foo")
-                assert(self.output == "")
+                assert("editable file has been changed" not in self.output)
                 # find out about it via -v
                 self.pkg_verify("-v foo")
                 self.output.index("etc/preserved")
@@ -260,13 +276,13 @@ class TestPkgVerify(pkg5unittest.SingleDepotTestCase):
                 # only thing missing are the sysattrs.
                 portable.remove(fpath)
                 portable.copyfile(os.path.join(self.test_root, "bobcat"), fpath)
-                os.chmod(fpath, 0555)
+                os.chmod(fpath, 0o555)
                 os.chown(fpath, -1, 2)
                 self.pkg("verify", exit=1)
                 for sattr in ('H','S'):
-                        expected = "System attribute '%s' not set" % sattr
+                        expected = "System attribute '{0}' not set".format(sattr)
                         self.assertTrue(expected in self.output,
-                            "Missing in verify output:  %s" % expected)
+                            "Missing in verify output:  {0}".format(expected))
 
                 shutil.rmtree(self.img_path())
                 self.set_img_path(old_img_path)

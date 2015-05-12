@@ -20,8 +20,10 @@
 # CDDL HEADER END
 
 #
-# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
 #
+
+from __future__ import print_function
 
 try:
         import calendar
@@ -47,6 +49,7 @@ try:
         import pkg.misc as misc
         import pkg.publish.transaction as trans
 
+        from functools import reduce
         from pkg.misc import PipeError, emsg, msg
 except KeyboardInterrupt:
         import sys
@@ -98,7 +101,7 @@ def usage(errmsg="", exitcode=2):
         error message.  Causes program to exit."""
 
         if errmsg:
-                emsg("pkgmerge: %s" % errmsg)
+                emsg("pkgmerge: {0}".format(errmsg))
 
         msg(_("""\
 Usage:
@@ -143,7 +146,7 @@ Environment:
 def error(text, exitcode=1):
         """Emit an error message prefixed by the command name """
 
-        emsg("pkgmerge: %s" % text)
+        emsg("pkgmerge: {0}".format(text))
 
         if exitcode != None:
                 sys.exit(exitcode)
@@ -225,7 +228,7 @@ def main_func():
                                                     "variant=value,repo_uri")
 
                                         if not vname.startswith("variant."):
-                                                vname = "variant.%s" % vname
+                                                vname = "variant.{0}".format(vname)
                                         src_vars[vname] = vval
 
                                 variant_list.append(src_vars)
@@ -237,8 +240,8 @@ def main_func():
 
                         if opt in ("--help", "-?"):
                                 usage(exitcode=0)
-        except getopt.GetoptError, e:
-                usage(_("illegal option -- %s") % e.opt)
+        except getopt.GetoptError as e:
+                usage(_("illegal option -- {0}").format(e.opt))
 
         if not source_list:
                 usage(_("At least one variant name, value, and package source "
@@ -265,8 +268,8 @@ def main_func():
                 if missing:
                         missing = ", ".join(missing)
                         source = source_list[i]
-                        usage(_("Source %(source)s missing values for "
-                            "variants: %(missing)s") % locals())
+                        usage(_("Source {source} missing values for "
+                            "variants: {missing}").format(**locals()))
 
         # Require that each unique variant combination has a source.
         for combo in itertools.product(*vcombos.values()):
@@ -283,11 +286,11 @@ def main_func():
 
                 if not found:
                         combo = " ".join(
-                            "%s=%s" % (vname, vval)
+                            "{0}={1}".format(vname, vval)
                             for vname, vval in combo
                         )
                         usage(_("No source was specified for variant "
-                            "combination %(combo)s.") % locals())
+                            "combination {combo}.").format(**locals()))
 
         # initialize transport
         # we use a single endpoint for now, since the transport code
@@ -379,9 +382,9 @@ def main_func():
                         errors.add(
                             _("The following pattern(s) did not match any "
                             "packages in any of the specified repositories for "
-                            "publisher %(pub_name)s:"
-                            "\n%(patterns)s") % {"patterns": "\n".join(in_none),
-                            "pub_name": pub.prefix})
+                            "publisher {pub_name}:"
+                            "\n{patterns}").format(patterns="\n".join(in_none),
+                            pub_name=pub.prefi))
                         continue
 
                 # generate set of all package names to be processed, and dict
@@ -406,9 +409,9 @@ def main_func():
                                 errors.add(
                                     _("fmris matching the following patterns do"
                                     " not have matching versions across all "
-                                    "repositories for publisher %(pubs)s: "
-                                    "%(patterns)s") % {"pub": pub.prefix,
-                                    "patterns": processdict[entry]})
+                                    "repositories for publisher {pubs}: "
+                                    "{patterns}").format(pub=pub.prefix,
+                                    patterns=processdict[entry]))
                                 continue
 
                 # we're ready to merge
@@ -428,7 +431,7 @@ def main_func():
                             processdict, source_list, variant_list, variants,
                             tracker, xport, dest_repo, dest_xport, pkg_tmpdir,
                             dry_run=dry_run)
-                except (trans.TransactionError, PkgmergeException), e:
+                except (trans.TransactionError, PkgmergeException) as e:
                         errors.add(str(e))
                         tracker.reset()
                         continue
@@ -445,7 +448,7 @@ def main_func():
         # by now. Remaining entries suggest -p options that were not merged.
         if use_pub_list and pub_list:
                 errors.add(_("the following publishers were not found in "
-                    "source repositories: %s") % " ".join(pub_list))
+                    "source repositories: {0}").format(" ".join(pub_list)))
 
         # If we have encountered errors for some publishers, print them now
         # and exit.
@@ -483,8 +486,8 @@ def republish_packages(pub, target_pub, processdict, source_list, variant_list,
 
         def get_basename(pfmri):
                 open_time = pfmri.get_timestamp()
-                return "%d_%s" % \
-                    (calendar.timegm(open_time.utctimetuple()),
+                return "{0:d}_{0}".format(
+                    calendar.timegm(open_time.utctimetuple()),
                     urllib.quote(str(pfmri), ""))
 
         for entry in processdict:
@@ -754,12 +757,12 @@ def __merge_fmris(new_fmri, manifest_list, fmri_list, variant_list, variant):
                         if a.name == "set" and a.attrs["name"] == variant:
                                 if vval not in a.attrlist("value"):
                                         raise PkgmergeException(
-                                            _("package %(pkg)s is tagged as "
-                                            "not supporting %(var_name)s "
-                                            "%(var_value)s") % {
-                                            "pkg": fmri_list[j],
-                                            "var_name": variant,
-                                            "var_value": vval })
+                                            _("package {pkg} is tagged as "
+                                            "not supporting {var_name} "
+                                            "{var_value}").format(
+                                            pkg=fmri_list[j],
+                                            var_name=variant,
+                                            var_value=vval))
                                 del m.actions[i - deleted_count]
                                 deleted_count += 1
                         # checking if we're supposed to blend this action
@@ -780,14 +783,14 @@ def __merge_fmris(new_fmri, manifest_list, fmri_list, variant_list, variant):
         # list of actions that are the same in each manifest.
         try:
                 action_lists = list(manifest.Manifest.comm(manifest_list))
-        except manifest.ManifestError, e:
+        except manifest.ManifestError as e:
                 raise PkgmergeException(
-                    "Duplicate action(s) in package \"%s\": \n%s" %
-                    (new_fmri.pkg_name, e))
+                    "Duplicate action(s) in package \"{0}\": \n{1}".format(
+                    new_fmri.pkg_name, e))
 
         # Declare new package FMRI.
         action_lists[-1].insert(0,
-            actions.fromstr("set name=pkg.fmri value=%s" % new_fmri))
+            actions.fromstr("set name=pkg.fmri value={0}".format(new_fmri)))
 
         for a_list, v in zip(action_lists[:-1], variant_list):
                 for a in a_list:
@@ -811,9 +814,9 @@ def __merge_fmris(new_fmri, manifest_list, fmri_list, variant_list, variant):
         ]
 
         # add set action to document which variants are supported
-        allactions.append(actions.fromstr("set name=%s %s" % (variant,
+        allactions.append(actions.fromstr("set name={0} {1}".format(variant,
             " ".join([
-                "value=%s" % a
+                "value={0}".format(a)
                 for a in actual_variant_list
             ])
         )))
@@ -903,7 +906,7 @@ def match_user_fmris(patterns, cat):
                         versions.append(fmri.version)
                         fmris.append(fmri)
                 except (pkg.fmri.FmriError,
-                    pkg.version.VersionError), e:
+                    pkg.version.VersionError) as e:
                         raise PkgmergeException(str(e))
 
         # Create a dictionary of patterns, with each value being a
@@ -983,14 +986,14 @@ if __name__ == "__main__":
         try:
                 __ret = main_func()
         except (pkg.actions.ActionError, trans.TransactionError,
-            RuntimeError, pkg.fmri.FmriError, apx.ApiException), __e:
-                print >> sys.stderr, "pkgmerge: %s" % __e
+            RuntimeError, pkg.fmri.FmriError, apx.ApiException) as __e:
+                print("pkgmerge: {0}".format(__e), file=sys.stderr)
                 __ret = 1
         except (PipeError, KeyboardInterrupt):
                 __ret = 1
-        except SystemExit, __e:
+        except SystemExit as __e:
                 raise __e
-        except Exception, __e:
+        except Exception as __e:
                 traceback.print_exc()
                 error(misc.get_traceback_message(), exitcode=None)
                 __ret = 99

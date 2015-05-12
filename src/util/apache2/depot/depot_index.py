@@ -19,8 +19,9 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
 
+from __future__ import print_function
 import atexit
 import cherrypy
 import httplib
@@ -79,7 +80,7 @@ class DepotException(Exception):
                 self.http_status = httplib.INTERNAL_SERVER_ERROR
 
         def __str__(self):
-                return "%s: %s" % (self.message, self.request)
+                return "{0}: {1}".format(self.message, self.request)
 
 
 class AdminOpsDisabledException(DepotException):
@@ -93,7 +94,7 @@ class AdminOpsDisabledException(DepotException):
         def __str__(self):
                 return "admin/0 operations are disabled. " \
                     "See the config/allow_refresh SMF property. " \
-                    "Request was: %s" % self.request
+                    "Request was: {0}".format(self.request)
 
 
 class AdminOpNotSupportedException(DepotException):
@@ -106,10 +107,10 @@ class AdminOpNotSupportedException(DepotException):
                 self.http_status = httplib.NOT_IMPLEMENTED
 
         def __str__(self):
-                return "admin/0 operations of type %(type)s are not " \
+                return "admin/0 operations of type {type} are not " \
                     "supported by this repository. " \
-                    "Request was: %(request)s" % {"request": self.request,
-                    "type": self.cmd}
+                    "Request was: {request}".format(request=self.request,
+                    type=self.cmd)
 
 
 class IndexOpDisabledException(DepotException):
@@ -125,7 +126,7 @@ class IndexOpDisabledException(DepotException):
                     "allowed on this repository because it is read-only and " \
                     "the svc:/application/pkg/server instance does not have " \
                     "a config/writable_root SMF property set. " \
-                    "Request was: %s" % self.request
+                    "Request was: {0}".format(self.request)
 
 
 class BackgroundTask(object):
@@ -177,9 +178,9 @@ class BackgroundTask(object):
                                         self.__q.task_done()
                                         if self.__q.unfinished_tasks == 0:
                                                 self.__keep_busy = False
-                        except Exception, e:
+                        except Exception as e:
                                 print("Failure encountered executing "
-                                    "background task %r." % self)
+                                    "background task {0!r}.".format(self))
 
         def run_keep_busy(self):
                 """Run our keep_busy thread, periodically sending a HTTP
@@ -190,10 +191,10 @@ class BackgroundTask(object):
                         if self.__keep_busy:
                                 try:
                                         urllib.urlopen(self.__busy_url).close()
-                                except Exception, e:
+                                except Exception as e:
                                         print("Failure encountered retrieving "
-                                            "busy url %s: %s" %
-                                            (self.__busy_url, e))
+                                            "busy url {0}: {1}".format(
+                                            self.__busy_url, e))
 
         def start(self):
                 """Start the background task thread. Since we configure
@@ -234,8 +235,8 @@ class DepotBUI(object):
                             ignore_errors=True)
 
                 # we hardcode these for the depot.
-                self.content_root = "%s/usr/share/lib/pkg" % pkg5_test_proto
-                self.web_root = "%s/usr/share/lib/pkg/web/" % pkg5_test_proto
+                self.content_root = "{0}/usr/share/lib/pkg".format(pkg5_test_proto)
+                self.web_root = "{0}/usr/share/lib/pkg/web/".format(pkg5_test_proto)
 
                 # ensure we have the right values in our cfg, needed when
                 # creating DepotHTTP objects.
@@ -307,7 +308,7 @@ class WsgiDepot(object):
                                             request.wsgi_environ[key]
                                         writable_root = \
                                             request.wsgi_environ.get(
-                                            "PKG5_WRITABLE_ROOT_%s" % prefix)
+                                            "PKG5_WRITABLE_ROOT_{0}".format(prefix))
                                         repo_paths[prefix] = \
                                             (request.wsgi_environ[key],
                                             writable_root)
@@ -330,7 +331,7 @@ class WsgiDepot(object):
                 # system with many repositories and many publishers that rarely
                 # get 'pkgrepo refresh' requests.
                 self.bgtask = BackgroundTask(len(repo_paths),
-                    busy_url="%s/depot/depot-keepalive" % request.base)
+                    busy_url="{0}/depot/depot-keepalive".format(request.base))
                 self.bgtask.start()
 
                 for prefix in repo_paths:
@@ -338,8 +339,8 @@ class WsgiDepot(object):
                         try:
                                 repo = sr.Repository(root=path, read_only=True,
                                     writable_root=writable_root)
-                        except sr.RepositoryError, e:
-                                print "Unable to load repository: %s" % e
+                        except sr.RepositoryError as e:
+                                print("Unable to load repository: {0}".format(e))
                                 continue
 
                         repositories[prefix] = repo
@@ -377,11 +378,9 @@ class WsgiDepot(object):
                 # use the first object we come across.
                 depot = depot_buis[depot_buis.keys()[0]]
                 accept_lang = self.get_accept_lang(cherrypy.request, depot)
-                cherrypy.request.path_info = "/%s" % accept_lang
+                cherrypy.request.path_info = "/{0}".format(accept_lang)
                 tlookup = mako.lookup.TemplateLookup(
-                    directories=[depot.web_root,
-                    "%(web_root)s/%(lang)s/" % {"web_root": depot.web_root,
-                    "lang": accept_lang}])
+                    directories=[depot.web_root])
                 pub = None
                 base = pkg.server.api.BaseInterface(cherrypy.request, depot,
                     pub)
@@ -393,20 +392,20 @@ class WsgiDepot(object):
                 for repo_prefix in repositories.keys():
                         repo = repositories[repo_prefix]
                         depot = depot_buis[repo_prefix]
-                        repo_url = "%s/%s" % (cherrypy.request.base,
+                        repo_url = "{0}/{1}".format(cherrypy.request.base,
                             repo_prefix)
-                        bui_link = "%s/%s/index.shtml" % \
-                            (repo_prefix, accept_lang)
+                        bui_link = "{0}/{1}/index.shtml".format(
+                            repo_prefix, accept_lang)
                         repo_list.append((repo_url, bui_link))
                         repo_pubs[repo_url] = \
-			                [(pub, "%s/%s/%s" %
-                            (cherrypy.request.base, repo_prefix,
+                            [(pub, "{0}/{1}/{2}".format(
+                            cherrypy.request.base, repo_prefix,
                             pub)) for pub in repo.publishers]
                 repo_list.sort()
                 template = tlookup.get_template("repos.shtml")
                 return template.render_unicode(g_vars={"base": base,
-                    "pub": None, "http_depot": "true",
-		            "repo_list": repo_list, "repo_pubs": repo_pubs
+                    "pub": None, "http_depot": "true", "lang": accept_lang,
+                    "repo_list": repo_list, "repo_pubs": repo_pubs
                     })
 
         def default(self, *tokens, **params):
@@ -455,8 +454,8 @@ class WsgiDepot(object):
                     request_pub_func=request_pub_func)
 
                 # trim the repo_prefix
-                cherrypy.request.path_info = re.sub("^/%s" % repo_prefix, "",
-                    cherrypy.request.path_info)
+                cherrypy.request.path_info = re.sub("^/{0}".format(repo_prefix),
+                    "", cherrypy.request.path_info)
 
                 accept_lang = self.get_accept_lang(cherrypy.request,
                     depot_bui)
@@ -476,12 +475,12 @@ class WsgiDepot(object):
                 if path in dirs:
                         if not pub:
                                 raise cherrypy.HTTPRedirect(
-                                    "/%s/%s/index.shtml" %
-                                    (repo_prefix, accept_lang))
+                                    "/{0}/{1}/index.shtml".format(
+                                    repo_prefix, accept_lang))
                         else:
                                 raise cherrypy.HTTPRedirect(
-                                    "/%s/%s/%s/index.shtml" %
-                                    (repo_prefix, pub, accept_lang))
+                                    "/{0}/{1}/{2}/index.shtml".format(
+                                    repo_prefix, pub, accept_lang))
 
                 resp = face.respond(depot_bui, cherrypy.request,
                     cherrypy.response, pub, http_depot=repo_prefix)
@@ -508,8 +507,8 @@ class WsgiDepot(object):
                 pkg_name = pkg_name.replace("%40", "@", 1)
 
                 # build a URI that we can redirect to
-                redir = "%s/%s" % (pub_mf, pkg_name)
-                redir = "/%s" % redir.lstrip("/")
+                redir = "{0}/{1}".format(pub_mf, pkg_name)
+                redir = "/{0}".format(redir.lstrip("/"))
                 raise cherrypy.HTTPRedirect(redir)
 
         def __build_depot_http(self):
@@ -646,7 +645,7 @@ class WsgiDepot(object):
                         try:
                                 self.bgtask.put(repo.refresh_index,
                                     pub=pub_prefix)
-                        except Queue.Full, e:
+                        except Queue.Full as e:
                                 retries = 10
                                 success = False
                                 while retries > 0 and not success:
@@ -656,15 +655,15 @@ class WsgiDepot(object):
                                                     repo.refresh_index,
                                                     pub=pub_prefix)
                                                 success = True
-                                        except Exception, ex:
+                                        except Exception as ex:
                                                 pass
                                 if not success:
                                         raise cherrypy.HTTPError(
                                             status=httplib.SERVICE_UNAVAILABLE,
                                             message="Unable to refresh the "
-                                            "index for %s after repeated "
-                                            "retries. Try again later." %
-                                            request.path_info)
+                                            "index for {0} after repeated "
+                                            "retries. Try again later.".format(
+                                            request.path_info))
                 finally:
                         repository_lock.release()
                 return ""
@@ -722,8 +721,8 @@ class Pkg5Dispatch(object):
                             "message": httplib.responses[httplib.NOT_FOUND],
                             "traceback": "",
                             "version": cherrypy.__version__}
-                        print("Path that raised exception was %s" %
-                            cherrypy.request.path_info)
+                        print("Path that raised exception was {0}".format(
+                            cherrypy.request.path_info))
                         print(message)
                         return error
                 else:
@@ -776,7 +775,7 @@ class Pkg5Dispatch(object):
                         else:
                                 cherrypy.response.body = self.app.default(*toks,
                                     **params)
-                except Exception, e:
+                except Exception as e:
                         if isinstance(e, cherrypy.HTTPRedirect):
                                 raise
                         elif isinstance(e, cherrypy.HTTPError):

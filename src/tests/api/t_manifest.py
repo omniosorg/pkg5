@@ -21,7 +21,7 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
 
 import unittest
 import tempfile
@@ -180,7 +180,7 @@ file fff555ff9 mode=0555 owner=sch group=staff path=/usr/bin/i386/sort isa=i386
                         new_contents += str(d[1]) + "\n"
 
                 mtmp = manifest.Manifest()
-                #print new_contents
+                #print(new_contents)
                 mtmp.set_content(new_contents)
 
                 diffs = self.m2.combined_difference(mtmp)
@@ -192,7 +192,7 @@ file fff555ff9 mode=0555 owner=sch group=staff path=/usr/bin/i386/sort isa=i386
                 self.m1.set_content(self.m4_contents)
                 self.m2.set_content(self.m5_contents)
 
-                #print self.m2.display_differences(self.m1)
+                #print(self.m2.display_differences(self.m1))
 
                 diffs = self.m2.combined_difference(self.m1)
                 self.assertEqual(len(diffs), 1)
@@ -211,10 +211,10 @@ file fff555ff9 mode=0555 owner=sch group=staff path=/usr/bin/i386/sort isa=i386
                 # added
                 #
                 for d in diffs:
-                        if type(d[0]) == types.NoneType:
+                        if type(d[0]) == type(None):
                                 self.assertEqual(type(d[1]),
                                     pkg.actions.file.FileAction)
-                        if type(d[1]) == types.NoneType:
+                        if type(d[1]) == type(None):
                                 self.assertEqual(type(d[0]),
                                     pkg.actions.directory.DirectoryAction)
 
@@ -282,15 +282,15 @@ file fff555ff9 mode=0555 owner=sch group=staff path=/usr/bin/i386/sort isa=i386
                 #
                 self.assertEqual(len(diffs), 9)
                 for d in diffs:
-                        self.assertEqual(type(d[1]), types.NoneType)
+                        self.assertEqual(type(d[1]), type(None))
 
                 #
                 # Expect to see None -> something differences
                 #
                 self.assertEqual(len(diffs2), 9)
                 for d in diffs2:
-                        self.assertEqual(type(d[0]), types.NoneType)
-                        self.assertNotEqual(type(d[1]), types.NoneType)
+                        self.assertEqual(type(d[0]), type(None))
+                        self.assertNotEqual(type(d[1]), type(None))
 
         def test_diffs10(self):
                 """ ASSERT: changes in target are detected """
@@ -337,7 +337,7 @@ dir mode=0755 owner=bin group=sys path=usr
                         self.assertEqual(kv, ('dir', 'usr'))
                         for a in actions:
                                 acount += 1
-                                #print " %s %s" % (kv, a)
+                                #print(" {0} {1}".format(kv, a))
                 self.assertEqual(acount, 3)
 
         def test_errors(self):
@@ -479,9 +479,9 @@ dir owner=root path="opt/dir with whitespaces	in value" group=bin mode=0755 vari
                 with open(cfile_path, "wb") as f:
                         for a in m1.gen_actions_by_type("dir"):
                                 f.write(
-                                    "dir path=%s %s\n" % (a.attrs["path"],
+                                    "dir path={0} {1}\n".format(a.attrs["path"],
                                         " ".join(
-                                            "%s=%s" % (attr, a.attrs[attr])
+                                            "{0}={1}".format(attr, a.attrs[attr])
                                             for attr in itertools.chain(
                                                 *a.get_varcet_keys())
                                         )

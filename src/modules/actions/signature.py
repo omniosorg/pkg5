@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 import os
@@ -108,10 +108,12 @@ class SignatureAction(generic.Action):
                 for pth in chain_certs:
                         if not os.path.exists(pth):
                                 raise pkg.actions.ActionDataError(
-                                    _("No such file: '%s'.") % pth, path=pth)
+                                    _("No such file: '{0}'.").format(pth),
+                                    path=pth)
                         elif os.path.isdir(pth):
                                 raise pkg.actions.ActionDataError(
-                                    _("'%s' is not a file.") % pth, path=pth)
+                                    _("'{0}' is not a file.").format(pth),
+                                    path=pth)
                         file_opener = self.make_opener(pth)
                         self.chain_cert_openers.append(file_opener)
                         self.attrs.setdefault("chain.sizes", [])
@@ -120,7 +122,7 @@ class SignatureAction(generic.Action):
                         try:
                                 fs = os.stat(pth)
                                 chain_sizes.append(str(fs.st_size))
-                        except EnvironmentError, e:
+                        except EnvironmentError as e:
                                 raise pkg.actions.ActionDataError(e, path=pth)
                         # misc.get_data_digest takes care of closing the file
                         # that's opened below.
@@ -150,6 +152,13 @@ class SignatureAction(generic.Action):
                         for attr in chashes:
                                 chain_chshes[attr].append(
                                     chashes[attr].hexdigest())
+
+                # Remove any unused hash attributes.
+                for cattrs in (chain_hshes, chain_chshes):
+                        for attr in list(cattrs.keys()):
+                                if not cattrs[attr]:
+                                        cattrs.pop(attr, None)
+
                 if chain_hshes:
                         # These attributes are stored as a single value with
                         # spaces in it rather than multiple values to ensure
@@ -220,7 +229,7 @@ class SignatureAction(generic.Action):
                 # The signature action can't sign the value of the value
                 # attribute, but it can sign that attribute's name.
                 tmp_a.attrs["value"] = ""
-                if callable(self.data):
+                if hasattr(self.data, "__call__"):
                         size = int(self.attrs.get("pkg.size", 0))
                         tmp_dir = tempfile.mkdtemp()
                         with self.data() as fh:
@@ -368,7 +377,7 @@ class SignatureAction(generic.Action):
 
                 for s in valid_sig_algs:
                         for h in valid_hash_algs:
-                                t = "%s-%s" % (s, h)
+                                t = "{0}-{1}".format(s, h)
                                 if val == t:
                                         return s, h
                 for h in valid_hash_algs:
@@ -412,7 +421,7 @@ class SignatureAction(generic.Action):
                         dgst = m2.EVP.MessageDigest(self.hash_alg)
                         res = dgst.update(self.actions_to_str(acts, ver))
                         assert res == 1, \
-                            "Res was expected to be 1, but was %s" % res
+                            "Res was expected to be 1, but was {0}".format(res)
                         computed_hash = dgst.final()
                         # The attrs value is stored in hex so that it's easy
                         # to read.
@@ -420,7 +429,7 @@ class SignatureAction(generic.Action):
                             computed_hash:
                                 raise apx.UnverifiedSignature(self,
                                     _("The signature value did not match the "
-                                    "expected value. action: %s") % self)
+                                    "expected value. action: {0}").format(self))
                         return True
                 # Verify a signature that's not just a hash.
                 if self.sig_alg is None:
@@ -443,7 +452,7 @@ class SignatureAction(generic.Action):
                         pub.verify_chain(cert, trust_anchors, 0, use_crls,
                             required_names=required_names,
                             usages=CODE_SIGNING_USE)
-                except apx.SigningException, e:
+                except apx.SigningException as e:
                         e.act = self
                         raise
                 # Check that the certificate verifies against this signature.
@@ -455,7 +464,7 @@ class SignatureAction(generic.Action):
                 if not res:
                         raise apx.UnverifiedSignature(self,
                             _("The signature value did not match the expected "
-                            "value. Res: %s") % res)
+                            "value. Res: {0}").format(res))
                 return True
 
         def set_signature(self, acts, key_path=None, chain_paths=misc.EmptyI,
@@ -490,7 +499,7 @@ class SignatureAction(generic.Action):
                         res = dgst.update(self.actions_to_str(acts,
                             generic.Action.sig_version))
                         assert res == 1, \
-                            "Res was expected to be 1, it was %s" % res
+                            "Res was expected to be 1, it was {0}".format(res)
                         self.attrs["value"] = \
                             misc.binary_to_hex(dgst.final())
                 else:
@@ -502,9 +511,9 @@ class SignatureAction(generic.Action):
                         try:
                                 priv_key = m2.RSA.load_key(key_path)
                         except m2.RSA.RSAError:
-                                raise apx.BadFileFormat(_("%s was expected to "
+                                raise apx.BadFileFormat(_("{0} was expected to "
                                     "be a RSA key but could not be read "
-                                    "correctly.") % key_path)
+                                    "correctly.").format(key_path))
                         signer = m2.EVP.PKey(md=self.hash_alg)
                         signer.assign_rsa(priv_key, 1)
                         del priv_key

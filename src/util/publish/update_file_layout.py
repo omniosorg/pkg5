@@ -19,8 +19,8 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+#
+# Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 """This program converts a directory structure from the V0layout to the
@@ -46,7 +46,7 @@ def error(text, cmd=None):
         """Emit an error message prefixed by the command name """
 
         if cmd:
-                text = "%s: %s" % (cmd, text)
+                text = "{0}: {1}".format(cmd, text)
                 pkg_cmd = "pkg.migrate "
         else:
                 pkg_cmd = "pkg.migrate: "
@@ -83,7 +83,7 @@ def main_func():
                         # non-preferred layout to the preferred layout during a
                         # lookup.
                         fm.lookup(f)
-        except file_manager.UnrecognizedFilePaths, e:
+        except file_manager.UnrecognizedFilePaths as e:
                 emsg(e)
                 return 1
         return 0
@@ -102,7 +102,7 @@ if __name__ == "__main__":
                 # one handle the other instances.
                 try:
                         __ret = main_func()
-                except (MemoryError, EnvironmentError), __e:
+                except (MemoryError, EnvironmentError) as __e:
                         if isinstance(__e, EnvironmentError) and \
                             __e.errno != errno.ENOMEM:
                                 raise
@@ -110,7 +110,7 @@ if __name__ == "__main__":
                                 __img.history.abort(RESULT_FAILED_OUTOFMEMORY)
                         error("\n" + misc.out_of_memory())
                         __ret = 1
-        except SystemExit, __e:
+        except SystemExit as __e:
                 raise
         except (PipeError, KeyboardInterrupt):
                 if __img:

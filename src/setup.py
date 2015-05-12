@@ -19,9 +19,10 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
+from __future__ import print_function
 import errno
 import fnmatch
 import os
@@ -174,6 +175,9 @@ scripts_sunos = {
         svc_share_dir: [
                 ['svc/pkg5_include.sh', 'pkg5_include.sh'],
                 ],
+        rad_dir: [
+                ["rad-invoke.py", "rad-invoke"],
+                ],
         }
 
 scripts_windows = {
@@ -208,6 +212,9 @@ scripts_other_unix = {
         lib_dir: [
                 ['depot.py', 'depot.py'],
                 ['scripts/pkg.depotd.sh', 'pkg.depotd'],
+                ],
+        rad_dir: [
+                ["rad-invoke.py", "rad-invoke"],
                 ],
         }
 
@@ -325,7 +332,7 @@ for entry in os.walk("web"):
             os.path.join(web_dir, f) for f in files
             if f != "Makefile"
             ]))
-        # install same set of files in "en/" in "__LOCALE__/ as well" 
+        # install same set of files in "en/" in "__LOCALE__/ as well"
         # for localizable file package (regarding themes, install
         # theme "oracle.com" only)
         if os.path.basename(web_dir) == "en" and \
@@ -370,12 +377,15 @@ depot_files = [
         'util/apache2/depot/depot.conf.mako',
         'util/apache2/depot/depot_httpd.conf.mako',
         'util/apache2/depot/depot_index.py',
+        'util/apache2/depot/depot_httpd_ssl_protocol.conf',
         ]
 depot_log_stubs = [
         'util/apache2/depot/logs/access_log',
         'util/apache2/depot/logs/error_log',
         'util/apache2/depot/logs/rewrite.log',
         ]
+ignored_deps_files = []
+
 # The apache-based depot includes an shtml file we add to the resource dir
 web_files.append((os.path.join(resource_dir, "web"),
     ["util/apache2/depot/repos.shtml"]))
@@ -479,8 +489,8 @@ class pylint_func(Command):
                 elif not pylint_ver_str or \
                     not supported_pylint_ver(pylint_ver_str):
                         log.warn("WARNING: skipping pylint checks: the "
-                            "installed version %s is older than version %s" %
-                            (pylint_ver_str, req_pylint_version))
+                            "installed version {0} is older than version {1}".format(
+                            pylint_ver_str, req_pylint_version))
                         return
 
                 proto = os.path.join(root_dir, py_install_dir)
@@ -544,47 +554,47 @@ class clint_func(Command):
                 if osname == 'sunos' or osname == "linux":
                         archcmd = lint + lint_flags + \
                             ['-D_FILE_OFFSET_BITS=64'] + \
-                            ["%s%s" % ("-I", k) for k in include_dirs] + \
+                            ["{0}{1}".format("-I", k) for k in include_dirs] + \
                             ['-I' + self.escape(get_python_inc())] + \
                             arch_srcs
                         elfcmd = lint + lint_flags + \
-                            ["%s%s" % ("-I", k) for k in include_dirs] + \
+                            ["{0}{1}".format("-I", k) for k in include_dirs] + \
                             ['-I' + self.escape(get_python_inc())] + \
-                            ["%s%s" % ("-l", k) for k in elf_libraries] + \
+                            ["{0}{1}".format("-l", k) for k in elf_libraries] + \
                             elf_srcs
                         _actionscmd = lint + lint_flags + \
-                            ["%s%s" % ("-I", k) for k in include_dirs] + \
+                            ["{0}{1}".format("-I", k) for k in include_dirs] + \
                             ['-I' + self.escape(get_python_inc())] + \
                             _actions_srcs
                         _actcommcmd = lint + lint_flags + \
-                            ["%s%s" % ("-I", k) for k in include_dirs] + \
+                            ["{0}{1}".format("-I", k) for k in include_dirs] + \
                             ['-I' + self.escape(get_python_inc())] + \
                             _actcomm_srcs
                         _varcetcmd = lint + lint_flags + \
-                            ["%s%s" % ("-I", k) for k in include_dirs] + \
+                            ["{0}{1}".format("-I", k) for k in include_dirs] + \
                             ['-I' + self.escape(get_python_inc())] + \
                             _varcet_srcs
                         pspawncmd = lint + lint_flags + \
                             ['-D_FILE_OFFSET_BITS=64'] + \
-                            ["%s%s" % ("-I", k) for k in include_dirs] + \
+                            ["{0}{1}".format("-I", k) for k in include_dirs] + \
                             ['-I' + self.escape(get_python_inc())] + \
                             pspawn_srcs
                         syscallatcmd = lint + lint_flags + \
                             ['-D_FILE_OFFSET_BITS=64'] + \
-                            ["%s%s" % ("-I", k) for k in include_dirs] + \
+                            ["{0}{1}".format("-I", k) for k in include_dirs] + \
                             ['-I' + self.escape(get_python_inc())] + \
                             syscallat_srcs
                         sysattrcmd = lint + lint_flags + \
                             ['-D_FILE_OFFSET_BITS=64'] + \
-                            ["%s%s" % ("-I", k) for k in include_dirs] + \
+                            ["{0}{1}".format("-I", k) for k in include_dirs] + \
                             ['-I' + self.escape(get_python_inc())] + \
-                            ["%s%s" % ("-l", k) for k in sysattr_libraries] + \
+                            ["{0}{1}".format("-l", k) for k in sysattr_libraries] + \
                             sysattr_srcs
                         sha512_tcmd = lint + lint_flags + \
                             ['-D_FILE_OFFSET_BITS=64'] + \
-                            ["%s%s" % ("-I", k) for k in include_dirs] + \
+                            ["{0}{1}".format("-I", k) for k in include_dirs] + \
                             ['-I' + self.escape(get_python_inc())] + \
-                            ["%s%s" % ("-l", k) for k in sha512_t_libraries] + \
+                            ["{0}{1}".format("-l", k) for k in sha512_t_libraries] + \
                             sha512_t_srcs
 
                         print(" ".join(archcmd))
@@ -671,8 +681,8 @@ class install_func(_install):
                                 else:
                                         file_util.copy_file(src, dest, update=1)
 
-                # Don't install the scripts for python 2.7.
-                if py_version == '2.7':
+                # Don't install the scripts for python 2.6.
+                if py_version == '2.6':
                         return
                 for d, files in scripts[osname].iteritems():
                         for (srcname, dstname) in files:
@@ -762,10 +772,11 @@ def run_cmd(args, swdir, updenv=None, ignerr=False, savestderr=None):
                 if ret != 0:
                         if stderr:
                             stderr.close()
-                        print >> sys.stderr, \
-                            "install failed and returned %d." % ret
-                        print >> sys.stderr, \
-                            "Command was: %s" % " ".join(args)
+                        print("install failed and returned {0:d}.".format(ret),
+                            file=sys.stderr)
+                        print("Command was: {0}".format(" ".join(args)),
+                            file=sys.stderr)
+
                         sys.exit(1)
                 if stderr:
                         stderr.close()
@@ -784,10 +795,10 @@ def _copy_file_contents(src, dst, buffer_size=16*1024):
         with file(src, "r") as sfp:
                 try:
                         os.unlink(dst)
-                except EnvironmentError, e:
+                except EnvironmentError as e:
                         if e.errno != errno.ENOENT:
                                 raise DistutilsFileError("could not delete "
-                                    "'%s': %s" % (dst, e))
+                                    "'{0}': {1}".format(dst, e))
 
                 with file(dst, "w") as dfp:
                         while True:
@@ -826,38 +837,39 @@ def intltool_update_maintain():
         args = [
             "/usr/bin/intltool-update", "--maintain"
         ]
-        print " ".join(args)
+        print(" ".join(args))
         podir = os.path.join(os.getcwd(), "po")
         run_cmd(args, podir, updenv={"LC_ALL": "C"}, ignerr=True)
 
         if os.path.exists("po/missing"):
-            print >> sys.stderr, \
-                "New file(s) with translatable strings detected:"
+            print("New file(s) with translatable strings detected:",
+                file=sys.stderr)
             missing = open("po/missing", "r")
-            print >> sys.stderr, "--------"
+            print("--------", file=sys.stderr)
             for fn in missing:
-                print >> sys.stderr, "%s" % fn.strip()
-            print >> sys.stderr, "--------"
+                print("{0}".format(fn.strip()), file=sys.stderr)
+            print("--------", file=sys.stderr)
             missing.close()
-            print >> sys.stderr, \
-"""Please evaluate whether any of the above file(s) needs localization. 
-If so, please add its name to po/POTFILES.in.  If not (e.g., it's not 
-delivered), please add its name to po/POTFILES.skip. 
-Please be sure to maintain alphabetical ordering in both files."""
+            print("""\
+Please evaluate whether any of the above file(s) needs localization.
+If so, please add its name to po/POTFILES.in.  If not (e.g., it's not
+delivered), please add its name to po/POTFILES.skip.
+Please be sure to maintain alphabetical ordering in both files.""", file=sys.stderr)
             sys.exit(1)
 
         if os.path.exists("po/notexist"):
-            print >> sys.stderr, \
-"""The following files are listed in po/POTFILES.in, but no longer exist 
-in the workspace:"""
+            print("""\
+The following files are listed in po/POTFILES.in, but no longer exist
+in the workspace:""", file=sys.stderr)
             notexist = open("po/notexist", "r")
-            print >> sys.stderr, "--------"
+            print("--------", file=sys.stderr)
             for fn in notexist:
-                print >> sys.stderr, "%s" % fn.strip()
-            print >> sys.stderr, "--------"
+                print("{0}".format(fn.strip()), file=sys.stderr)
+            print("--------", file=sys.stderr)
+
             notexist.close()
-            print >> sys.stderr, \
-                "Please remove the file names from po/POTFILES.in"
+            print("Please remove the file names from po/POTFILES.in",
+                file=sys.stderr)
             sys.exit(1)
 
 def intltool_update_pot():
@@ -869,14 +881,13 @@ def intltool_update_pot():
         args = [
             "/usr/bin/intltool-update", "--pot"
         ]
-        print " ".join(args)
+        print(" ".join(args))
         podir = os.path.join(os.getcwd(), "po")
         run_cmd(args, podir,
             updenv={"LC_ALL": "C", "XGETTEXT": "/usr/gnu/bin/xgettext"})
 
         if not os.path.exists("po/pkg.pot"):
-            print >> sys.stderr, \
-                "Failed in generating pkg.pot."
+            print("Failed in generating pkg.pot.", file=sys.stderr)
             sys.exit(1)
 
 def intltool_merge(src, dst):
@@ -887,7 +898,7 @@ def intltool_merge(src, dst):
             "/usr/bin/intltool-merge", "-d", "-u",
             "-c", "po/.intltool-merge-cache", "po", src, dst
         ]
-        print " ".join(args)
+        print(" ".join(args))
         run_cmd(args, os.getcwd(), updenv={"LC_ALL": "C"})
 
 def i18n_check():
@@ -897,7 +908,7 @@ def i18n_check():
         # A list of the i18n errors we check for in the code
         common_i18n_errors = [
             # This checks that messages with multiple parameters are always
-            # written using "%(name)s" format, rather than just "%s"
+            # written using "{name}" format, rather than just "{0}"
             "format string with unnamed arguments cannot be properly localized"
         ]
 
@@ -926,11 +937,12 @@ def i18n_check():
                                 found_errs = True
         i18n_errs.close()
         if found_errs:
-                print >> sys.stderr, \
-"The following i18n errors were detected and should be corrected:\n" \
-"(this list is saved in po/i18n_errs.txt)\n"
+                print("""\
+The following i18n errors were detected and should be corrected:
+(this list is saved in po/i18n_errs.txt)
+""", file=sys.stderr)
                 for line in open("po/i18n_errs.txt", "r"):
-                        print >> sys.stderr, line.rstrip()
+                        print(line.rstrip(), file=sys.stderr)
                 sys.exit(1)
         os.remove(xgettext_output_path)
 
@@ -939,7 +951,7 @@ def msgfmt(src, dst):
                 return
 
         args = ["/usr/bin/msgfmt", "-o", dst, src]
-        print " ".join(args)
+        print(" ".join(args))
         run_cmd(args, os.getcwd())
 
 def localizablexml(src, dst):
@@ -959,15 +971,15 @@ def localizablexml(src, dst):
             if in_fr: # in French part
                 if l.startswith('</legalnotice>'):
                     # reached end of legalnotice
-                    print >> fdst, l,
+                    print(l, file=fdst)
                     in_fr = False
             elif l.startswith('<para lang="fr"/>') or \
                     l.startswith('<para lang="fr"></para>'):
                 in_fr = True
             else:
                 # not in French part
-                print >> fdst, l,
-        
+                print(l, file=fdst)
+
         fsrc.close()
         fdst.close()
 
@@ -1014,12 +1026,12 @@ class installfile(Command):
 
         def finalize_options(self):
                 if self.mode is None:
-                        self.mode = 0644
+                        self.mode = 0o644
                 elif isinstance(self.mode, basestring):
                         try:
                                 self.mode = int(self.mode, 8)
                         except ValueError:
-                                self.mode = 0644
+                                self.mode = 0o644
 
         def run(self):
                 dest_file = os.path.join(self.dest, os.path.basename(self.file))
@@ -1043,7 +1055,8 @@ def get_hg_version():
                 p = subprocess.Popen(cmd, shell=True, stdout = subprocess.PIPE)
                 return p.communicate()[0].strip()
         except OSError:
-                print >> sys.stderr, "ERROR: unable to obtain mercurial/git version"
+                print("ERROR: unable to obtain mercurial/git version",
+                    file=sys.stderr)
                 return "unknown"
 
 def syntax_check(filename):
@@ -1053,7 +1066,7 @@ def syntax_check(filename):
             distutils.utils module) is broken, and doesn't stop on error. """
         try:
                 py_compile.compile(filename, os.devnull, doraise=True)
-        except py_compile.PyCompileError, e:
+        except py_compile.PyCompileError as e:
                 res = ""
                 for err in e.exc_value:
                         if isinstance(err, basestring):
@@ -1062,8 +1075,8 @@ def syntax_check(filename):
 
                         # Assume it's a tuple of (filename, lineno, col, code)
                         fname, line, col, code = err
-                        res += "line %d, column %s, in %s:\n%s" % (line,
-                            col or "unknown", fname, code)
+                        res += "line {0:d}, column {1}, in {2}:\n{3}".format(
+                            line, col or "unknown", fname, code)
 
                 raise DistutilsError(res)
 
@@ -1096,7 +1109,7 @@ class MyUnixCCompiler(UnixCCompiler):
                 output_filename = os.path.basename(output_filename)
                 nargs = args[:2] + (output_filename,) + args[3:]
                 if not os.path.exists(output_dir):
-                        os.mkdir(output_dir, 0755)
+                        os.mkdir(output_dir, 0o755)
                 os.chdir(output_dir)
 
                 UnixCCompiler.link(self, *nargs, **kwargs)
@@ -1134,8 +1147,8 @@ class build_ext_func(_build_ext):
                 d, f = os.path.split(self.build_temp)
 
                 # store our 64-bit extensions elsewhere
-                self.build_temp = d + "/temp64.%s" % \
-                    os.path.basename(self.build_temp).replace("temp.", "")
+                self.build_temp = d + "/temp64.{0}".format(
+                    os.path.basename(self.build_temp).replace("temp.", ""))
                 ext.extra_compile_args += ["-m64"]
                 ext.extra_link_args += ["-m64"]
                 self.build64 = True
@@ -1187,8 +1200,8 @@ class build_py_func(_build_py):
                         self.timestamps[path] = stamp
 
                 if p.wait() != 0:
-                        print >> sys.stderr, "ERROR: unable to gather .py " \
-                            "timestamps"
+                        print("ERROR: unable to gather .py timestamps",
+                            file=sys.stderr)
                         sys.exit(1)
 
                 return ret
@@ -1209,7 +1222,7 @@ class build_py_func(_build_py):
                         except IOError:
                                 ov = None
                         v = get_hg_version()
-                        vstr = 'VERSION = "%s"' % v
+                        vstr = 'VERSION = "{0}"'.format(v)
                         # If the versions haven't changed, there's no need to
                         # recompile.
                         if v == ov:
@@ -1220,7 +1233,7 @@ class build_py_func(_build_py):
                         tmpfd, tmp_file = tempfile.mkstemp()
                         os.write(tmpfd, mcontent)
                         os.close(tmpfd)
-                        print "doing version substitution: ", v
+                        print("doing version substitution: ", v)
                         rv = _build_py.build_module(self, module, tmp_file, package)
                         os.unlink(tmp_file)
                         return rv
@@ -1240,7 +1253,7 @@ class build_py_func(_build_py):
 
                 try:
                         dst_mtime = os.stat(outfile).st_mtime
-                except OSError, e:
+                except OSError as e:
                         if e.errno != errno.ENOENT:
                                 raise
                         dst_mtime = time.time()
@@ -1275,6 +1288,45 @@ class build_py_func(_build_py):
 
                 return dst, copied
 
+def manpage_input_dir(path):
+        """Convert a manpage output path to the directory where its source lives."""
+
+        patharr = path.split("/")
+        if len(patharr) == 4:
+                loc = ""
+        elif len(patharr) == 5:
+                loc = patharr[-3].split(".")[0]
+        else:
+                raise RuntimeError("bad manpage path")
+        return os.path.join(patharr[0], loc).rstrip("/")
+
+def xml2roff(files):
+        """Convert XML manpages to ROFF for delivery.
+
+        The input should be a list of the output file paths.  The corresponding
+        inputs will be generated from this.  We do it in this way so that we can
+        share the paths with the install code.
+
+        All paths should have a common manpath root.  In particular, pages
+        belonging to different localizations should be run through this function
+        separately.
+        """
+
+        input_dir = manpage_input_dir(files[0])
+        do_files = [
+            os.path.join(input_dir, os.path.basename(f))
+            for f in files
+            if dep_util.newer(os.path.join(input_dir, os.path.basename(f)), f)
+        ]
+        if do_files:
+                # Get the output dir by removing the filename and the manX
+                # directory
+                output_dir = os.path.join(*files[0].split("/")[:-2])
+                args = ["/ec/share/xml/xsolbook/python/xml2roff.py", "-o", output_dir]
+                args += do_files
+                print(" ".join(args))
+                run_cmd(args, os.getcwd())
+
 class build_data_func(Command):
         description = "build data files whose source isn't in deliverable form"
         user_options = []
@@ -1293,18 +1345,22 @@ class build_data_func(Command):
                 i18n_check()
 
                 for l in pkg_locales:
-                        msgfmt("po/%s.po" % l, "po/%s.mo" % l)
+                        msgfmt("po/{0}.po".format(l), "po/{0}.mo".format(l))
 
                 # generate pkg.pot for next translation
                 intltool_update_maintain()
                 intltool_update_pot()
+
+                #xml2roff(man1_files + man1m_files + man5_files)
+                #xml2roff(man1_ja_files + man1m_ja_files + man5_ja_files)
+                #xml2roff(man1_zh_CN_files + man1m_zh_CN_files + man5_zh_CN_files)
 
 def rm_f(filepath):
         """Remove a file without caring whether it exists."""
 
         try:
                 os.unlink(filepath)
-        except OSError, e:
+        except OSError as e:
                 if e.errno != errno.ENOENT:
                         raise
 
@@ -1319,11 +1375,13 @@ class clean_func(_clean):
                 rm_f("po/.intltool-merge-cache")
 
                 for l in pkg_locales:
-                        rm_f("po/%s.mo" % l)
+                        rm_f("po/{0}.mo".format(l))
 
                 rm_f("po/pkg.pot")
 
                 rm_f("po/i18n_errs.txt")
+
+                #shutil.rmtree(MANPAGE_OUTPUT_ROOT, True)
 
 class clobber_func(Command):
         user_options = []
@@ -1426,9 +1484,7 @@ if osname == "sunos":
         link_args = []
 else:
         link_args = []
-# We don't support 64-bit yet, but 64-bit _actions.so, _common.so, and
-# _varcet.so are needed for a system repository mod_wsgi application,
-# sysrepo_p5p.py.
+
 ext_modules = [
         Extension(
                 'actions._actions',
@@ -1460,7 +1516,8 @@ ext_modules = [
                 include_dirs = include_dirs + ["."],
                 extra_compile_args = compile_args,
                 extra_link_args = link_args + solver_link_args,
-                define_macros = [('_FILE_OFFSET_BITS', '64')]
+                define_macros = [('_FILE_OFFSET_BITS', '64')],
+                build_64 = True
                 ),
         ]
 elf_libraries = None
@@ -1503,6 +1560,10 @@ data_files += [
 data_files += [
         (transform_dir, transform_files)
         ]
+# add ignored deps
+data_files += [
+        (ignored_deps_dir, ignored_deps_files)
+        ]
 if osname == 'sunos':
         # Solaris-specific extensions are added here
         data_files += [
@@ -1523,7 +1584,7 @@ if osname == 'sunos':
         # install localizable .xml and its .pot file to put into localizable file package
         data_files += [
             (os.path.join(locale_dir, locale, 'LC_MESSAGES'),
-                [('po/%s.mo' % locale, 'pkg.mo')])
+                [('po/{0}.mo'.format(locale), 'pkg.mo')])
             for locale in pkg_locales
         ]
         # install English .pot file to put into localizable file package
@@ -1544,6 +1605,7 @@ if osname == 'sunos' or osname == "linux":
                         libraries = elf_libraries,
                         extra_compile_args = compile_args,
                         extra_link_args = link_args,
+                        build_64 = True
                         ),
                 ]
 
@@ -1560,7 +1622,8 @@ if osname == 'sunos' or osname == "linux":
                             include_dirs = include_dirs,
                             extra_compile_args = compile_args,
                             extra_link_args = link_args,
-                            define_macros = [('_FILE_OFFSET_BITS', '64')]
+                            define_macros = [('_FILE_OFFSET_BITS', '64')],
+                            build_64 = True
                             ),
                     Extension(
                             'pspawn',
@@ -1568,7 +1631,8 @@ if osname == 'sunos' or osname == "linux":
                             include_dirs = include_dirs,
                             extra_compile_args = compile_args,
                             extra_link_args = link_args,
-                            define_macros = [('_FILE_OFFSET_BITS', '64')]
+                            define_macros = [('_FILE_OFFSET_BITS', '64')],
+                            build_64 = True
                             ),
                     Extension(
                             'syscallat',
@@ -1576,7 +1640,8 @@ if osname == 'sunos' or osname == "linux":
                             include_dirs = include_dirs,
                             extra_compile_args = compile_args,
                             extra_link_args = link_args,
-                            define_macros = [('_FILE_OFFSET_BITS', '64')]
+                            define_macros = [('_FILE_OFFSET_BITS', '64')],
+                            build_64 = True
                             ),
                     Extension(
                             'sysattr',

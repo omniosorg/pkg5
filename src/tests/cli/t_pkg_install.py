@@ -22,7 +22,7 @@
 #
 
 #
-# Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 import testutils
@@ -38,6 +38,7 @@ import shutil
 import socket
 import subprocess
 import stat
+import struct
 import tempfile
 import time
 import unittest
@@ -248,7 +249,7 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
             open fbar@1.1,5.11-0
             add depend type=require fmri=pkg:/ffoo@1.0
             add dir mode=0755 owner=root group=bin path=/bin
-            add file tmp/cat mode=0555 owner=root group=bin path=/bin/cat
+            add file tmp/cat mode=0555 owner=root group=bin path=/bin/cät
             close """
 
         secret1 = """
@@ -294,11 +295,11 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
                 self.pkg("-s status", exit=2)
                 self.pkg("-R status", exit=2)
 
-                self.pkg("%s -@ foo" % install_cmd, exit=2)
-                self.pkg("%s -vq foo" % install_cmd, exit=2)
-                self.pkg("%s" % install_cmd, exit=2)
-                self.pkg("%s foo@x.y" % install_cmd, exit=1)
-                self.pkg("%s pkg:/foo@bar.baz" % install_cmd, exit=1)
+                self.pkg("{0} -@ foo".format(install_cmd), exit=2)
+                self.pkg("{0} -vq foo".format(install_cmd), exit=2)
+                self.pkg("{0}".format(install_cmd), exit=2)
+                self.pkg("{0} foo@x.y".format(install_cmd), exit=1)
+                self.pkg("{0} pkg:/foo@bar.baz".format(install_cmd), exit=1)
 
         def test_basics_1_install(self):
                 """ Send empty package foo@1.0, install and uninstall """
@@ -361,7 +362,7 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
                 self.image_create(self.durl)
 
                 self.pkg("list -a")
-                self.pkg("%s foo" % install_cmd)
+                self.pkg("{0} foo".format(install_cmd))
 
                 # Verify that content cache is empty after successful install
                 # or exact-install.
@@ -424,11 +425,11 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
                                 cache_dirs.extend(os.listdir(path))
                 self.assertEqual(cache_dirs, [])
 
-                self.pkg("%s foo@1.0" % installed_cmd)
+                self.pkg("{0} foo@1.0".format(installed_cmd))
                 self.pkg("list foo@1.0")
                 self.pkg("list foo@1.1", exit=1)
 
-                self.pkg("%s foo@1.1" % installed_cmd)
+                self.pkg("{0} foo@1.1".format(installed_cmd))
 
                 # Verify that content cache is not empty after successful
                 # install or exact_install (since
@@ -480,7 +481,7 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
                 self.assertEqual(cache_dirs, [])
 
                 self.pkg("list -a")
-                self.pkg("%s bar@1.0" % installed_cmd)
+                self.pkg("{0} bar@1.0".format(installed_cmd))
 
                 # Verify that content cache is not empty after successful
                 # install or exact-install (since
@@ -546,7 +547,7 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
                 self.pkgsend_bulk(t1dir, (self.bar10,
                     self.foo10, self.foo11, self.foo12, self.boring10,
                     self.boring11))
-                self.image_create("file:%s" % t1dir)
+                self.image_create("file:{0}".format(t1dir))
 
                 # Create a repository for a different publisher for at
                 # least one of the packages so that we can verify that
@@ -560,7 +561,7 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
                     "prefix": "pub2" } })
                 self.pkgsend_bulk(t2dir, self.bar11)
 
-                self.pkg("set-publisher -p %s" % t2dir)
+                self.pkg("set-publisher -p {0}".format(t2dir))
                 self.pkg("install '*@latest'")
 
                 # 1.0 of bar should be installed here since pub2 is a
@@ -592,7 +593,7 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
                 self.pkgsend_bulk(t1dir, (self.bar10,
                     self.foo10, self.foo11, self.foo12, self.boring10,
                     self.boring11))
-                self.image_create("file:%s" % t1dir)
+                self.image_create("file:{0}".format(t1dir))
 
                 # Create a repository for a different publisher for at
                 # least one of the packages so that we can verify that
@@ -606,7 +607,7 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
                     "prefix": "pub2" } })
                 self.pkgsend_bulk(t2dir, self.bar11)
 
-                self.pkg("set-publisher -p %s" % t2dir)
+                self.pkg("set-publisher -p {0}".format(t2dir))
                 self.pkg("exact-install '*@latest'")
 
                 # 1.0 of bar should be installed here since pub2 is a
@@ -743,7 +744,7 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
                     self.bar10))
                 self.image_create(self.rurl)
 
-                self.pkg("%s bar@1.0" % install_cmd)
+                self.pkg("{0} bar@1.0".format(install_cmd))
 
                 self.pkgsend_bulk(self.rurl, (self.foo12, self.bar11))
                 self.pkg("refresh")
@@ -865,8 +866,8 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
 
                 # first case should fail since multiple patterns
                 # match the same pacakge
-                self.pkg("%s 'ba*' 'b*'" % install_cmd, exit=1)
-                self.pkg("%s 'ba*'" % install_cmd, exit=0)
+                self.pkg("{0} 'ba*' 'b*'".format(install_cmd), exit=1)
+                self.pkg("{0} 'ba*'".format(install_cmd), exit=0)
                 self.pkg("list foo", exit=0)
                 self.pkg("list bar", exit=0)
                 self.pkg("list baz", exit=0)
@@ -874,7 +875,7 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
 
                 # However, multiple forms of the same pattern should simply be
                 # coalesced and allowed.
-                self.pkg("%s pkg:/foo /foo ///foo pkg:///foo" % install_cmd)
+                self.pkg("{0} pkg:/foo /foo ///foo pkg:///foo".format(install_cmd))
                 self.pkg("list")
                 self.pkg("verify pkg:/foo /foo ///foo pkg:///foo")
                 self.pkg("uninstall pkg:/foo /foo ///foo "
@@ -895,7 +896,7 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
                 self.image_create(self.rurl)
 
                 # This should succeed and cause the manifest to be cached.
-                self.pkg("%s %s" % (install_cmd, " ".join(plist)))
+                self.pkg("{0} {1}".format(install_cmd, " ".join(plist)))
 
                 # While the manifest is cached, get a copy of its contents.
                 for p in plist:
@@ -907,7 +908,7 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
                                 src_mode = "mode=644"
 
                         # Now remove the package so corrupt case can be tested.
-                        self.pkg("uninstall %s" % pfmri.pkg_name)
+                        self.pkg("uninstall {0}".format(pfmri.pkg_name))
 
                         # Now attempt to corrupt the client's copy of the
                         # manifest in various ways to check if the client
@@ -915,11 +916,11 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
                         # file and directory actions.
                         for bad_mode in ("", 'mode=""', "mode=???"):
                                 self.debug("Testing with bad mode "
-                                    "'%s'." % bad_mode)
+                                    "'{0}'.".format(bad_mode))
                                 bad_mdata = mdata.replace(src_mode, bad_mode)
                                 self.write_img_manifest(pfmri, bad_mdata)
                                 self.pkg("--debug manifest_validate=Never "
-                                    "%s %s" % (install_cmd, pfmri.pkg_name),
+                                    "{0} {1}".format(install_cmd, pfmri.pkg_name),
                                     exit=1)
 
                         # Now attempt to corrupt the client's copy of the
@@ -927,24 +928,24 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
                         # handles missing or invalid owners and groups.
                         for bad_owner in ("", 'owner=""', "owner=invaliduser"):
                                 self.debug("Testing with bad owner "
-                                    "'%s'." % bad_owner)
+                                    "'{0}'.".format(bad_owner))
 
                                 bad_mdata = mdata.replace("owner=root",
                                     bad_owner)
                                 self.write_img_manifest(pfmri, bad_mdata)
                                 self.pkg("--debug manifest_validate=Never "
-                                    "%s %s" % (install_cmd, pfmri.pkg_name),
+                                    "{0} {1}".format(install_cmd, pfmri.pkg_name),
                                     exit=1)
 
                         for bad_group in ("", 'group=""', "group=invalidgroup"):
                                 self.debug("Testing with bad group "
-                                    "'%s'." % bad_group)
+                                    "'{0}'.".format(bad_group))
 
                                 bad_mdata = mdata.replace("group=bin",
                                     bad_group)
                                 self.write_img_manifest(pfmri, bad_mdata)
                                 self.pkg("--debug manifest_validate=Never "
-                                    "%s %s" % (install_cmd, pfmri.pkg_name),
+                                    "{0} {1}".format(install_cmd, pfmri.pkg_name),
                                     exit=1)
 
                         # Now attempt to corrupt the client's copy of the
@@ -953,11 +954,11 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
                             'set name=description value="" \" my desc \" ""',
                             "set name=com.sun.service.escalations value="):
                                 self.debug("Testing with bad action "
-                                    "'%s'." % bad_act)
-                                bad_mdata = mdata + "%s\n" % bad_act
+                                    "'{0}'.".format(bad_act))
+                                bad_mdata = mdata + "{0}\n".format(bad_act)
                                 self.write_img_manifest(pfmri, bad_mdata)
                                 self.pkg("--debug manifest_validate=Never "
-                                    "%s %s" % (install_cmd, pfmri.pkg_name),
+                                    "{0} {1}".format(install_cmd, pfmri.pkg_name),
                                     exit=1)
 
         def test_bug_3770(self):
@@ -968,7 +969,7 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
                 self.image_create(self.rurl)
 
                 # Depot hasn't been started, so client can't connect.
-                self.pkg("set-publisher --no-refresh -O %s test" % self.durl)
+                self.pkg("set-publisher --no-refresh -O {0} test".format(self.durl))
                 self.pkg("install foo@1.1", exit=1)
 
         def test_bug_9929(self):
@@ -986,7 +987,7 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
 
                 # Stop depot, so client can't connect.
                 self.dc.stop()
-                self.pkg("set-publisher --no-refresh -O %s test" % self.durl)
+                self.pkg("set-publisher --no-refresh -O {0} test".format(self.durl))
                 self.pkg("uninstall foo")
 
         def test_bug_16189(self):
@@ -1039,7 +1040,7 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
                     "opt/dir with white\tspace/cat in a hat",
                     "etc/cat_link",
                 ):
-                        self.debug("fname: %s" % name)
+                        self.debug("fname: {0}".format(name))
                         self.assert_(os.path.exists(os.path.join(self.get_img_path(),
                             name)))
 
@@ -1072,7 +1073,7 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
                 p = subprocess.Popen(["/usr/bin/ls", "-/", "c", fpath],
                     stdout=subprocess.PIPE)
                 out, err = p.communicate()
-                # sensitive attr is not in 11 FCS, so no closing } 
+                # sensitive attr is not in 11 FCS, so no closing }
                 expected = "{AH-S---m----"
                 self.assertTrue(expected in out, out)
 
@@ -1138,7 +1139,7 @@ class TestPkgInstallApache(pkg5unittest.ApacheDepotTestCase):
                 sc_cache = os.path.join(self.test_root, "sysrepo_cache")
 
                 # ensure pkg5srv can write cache content
-                os.chmod(sc_cache, 0777)
+                os.chmod(sc_cache, 0o777)
 
                 sysrepo_port = self.next_free_port
                 self.next_free_port += 1
@@ -1147,7 +1148,7 @@ class TestPkgInstallApache(pkg5unittest.ApacheDepotTestCase):
                 self.register_apache_controller("sysrepo", sc)
                 sc.start()
 
-                sysrepo_url = "http://localhost:%s" % sysrepo_port
+                sysrepo_url = "http://localhost:{0}".format(sysrepo_port)
 
                 saved_pkg_sysrepo_env = os.environ.get("PKG_SYSREPO_URL")
                 os.environ["PKG_SYSREPO_URL"] = sysrepo_url
@@ -1190,10 +1191,10 @@ class TestPkgInstallApache(pkg5unittest.ApacheDepotTestCase):
                     # format pkg(1) uses - two logically identical urls that
                     # differ only by the way they're quoted are treated by
                     # Apache as separate cacheable resources.
-                    "%s/test1/manifest/0/foo@%s" % (self.durl1, urllib2.quote(
+                    "{0}/test1/manifest/0/foo@{1}".format(self.durl1, urllib2.quote(
                     foo_version)),
-                    "%s/test1/file/1/8535c15c49cbe1e7cb1a0bf8ff87e512abed66f8" %
-                    self.durl1,
+                    "{0}/test1/file/1/8535c15c49cbe1e7cb1a0bf8ff87e512abed66f8".format(
+                    self.durl1),
                 ]
 
                 proxy_handler = urllib2.ProxyHandler({"http": sysrepo_url})
@@ -1201,7 +1202,7 @@ class TestPkgInstallApache(pkg5unittest.ApacheDepotTestCase):
 
                 # validate that our cache is returning corrupt urls.
                 for url in urls:
-                        self.debug("url:%s" % url)
+                        self.debug("url:{0}".format(url))
                         # we should get clean content when we don't use the
                         # cache
                         u = urllib2.urlopen(url)
@@ -1215,7 +1216,7 @@ class TestPkgInstallApache(pkg5unittest.ApacheDepotTestCase):
                         content = u.readlines()
 
                         self.assert_(content == ["noodles\n"],
-                            "Expected noodles, got %s for %s" % (content, url))
+                            "Expected noodles, got {0} for {1}".format(content, url))
 
                 # the following should work, as pkg should retry requests
                 # where it has detected corrupt contents with a
@@ -1247,12 +1248,12 @@ class TestPkgInstallApache(pkg5unittest.ApacheDepotTestCase):
                 # transport subsystem.
 
                 filepath = os.path.join(repodir,
-                    "%s/file/85/8535c15c49cbe1e7cb1a0bf8ff87e512abed66f8" %
-                    prefix)
-                mfpath = os.path.join(repodir, "%s/pkg/foo/%s" % (prefix,
+                    "{0}/file/85/8535c15c49cbe1e7cb1a0bf8ff87e512abed66f8".format(
+                    prefix))
+                mfpath = os.path.join(repodir, "{0}/pkg/foo/{1}".format(prefix,
                     urllib2.quote(foo_version)))
-                catpath = os.path.join(repodir, "%s/catalog/catalog.base.C" %
-                    prefix)
+                catpath = os.path.join(repodir, "{0}/catalog/catalog.base.C".format(
+                    prefix))
 
                 try:
                         # first corrupt the file
@@ -1326,7 +1327,7 @@ class TestPkgInstallApache(pkg5unittest.ApacheDepotTestCase):
                 sc_cache = os.path.join(self.test_root, "sysrepo_cache")
 
                 # ensure pkg5srv can write cache content
-                os.chmod(sc_cache, 0777)
+                os.chmod(sc_cache, 0o777)
 
                 sysrepo_port = self.next_free_port
                 self.next_free_port += 1
@@ -1334,10 +1335,10 @@ class TestPkgInstallApache(pkg5unittest.ApacheDepotTestCase):
                     sysrepo_port, sc_runtime_dir, testcase=self)
                 self.register_apache_controller("sysrepo", sc)
                 sc.start()
-                sysrepo_url = "http://localhost:%s" % sysrepo_port
+                sysrepo_url = "http://localhost:{0}".format(sysrepo_port)
 
                 self.image_create()
-                self.pkg("set-publisher -p %s --proxy %s" % (self.durl1,
+                self.pkg("set-publisher -p {0} --proxy {1}".format(self.durl1,
                     sysrepo_url))
                 self.pkg("install foo")
                 self.pkg("uninstall foo")
@@ -1349,30 +1350,30 @@ class TestPkgInstallApache(pkg5unittest.ApacheDepotTestCase):
                 sc.start()
 
                 # we cannot add another origin with the same url
-                self.pkg("set-publisher --no-refresh -g %s test1" %
-                    self.durl1, exit=1)
+                self.pkg("set-publisher --no-refresh -g {0} test1".format(
+                    self.durl1), exit=1)
                 # we cannot add another proxied origin with that url
-                self.pkg("set-publisher --no-refresh -g %s "
-                    "--proxy http://noodles test1" % self.durl1,
+                self.pkg("set-publisher --no-refresh -g {0} "
+                    "--proxy http://noodles test1".format(self.durl1),
                     exit=1)
 
                 # Now add a second, unproxied publisher, ensuring we
                 # can install packages from there.  Since the proxy
                 # isn't configured to proxy that resource, this tests
                 # that the proxy for self.durl1 isn't being used.
-                self.pkg("set-publisher -g %s test2" % self.durl2)
+                self.pkg("set-publisher -g {0} test2".format(self.durl2))
                 self.pkg("install --no-refresh "
                     "pkg://test2/upgrade-np@1.0")
                 self.pkg("uninstall pkg://test2/upgrade-np@1.0")
-                self.pkg("set-publisher -G %s test2" % self.durl2)
+                self.pkg("set-publisher -G {0} test2".format(self.durl2))
 
                 # check that runtime proxies are being used - we
                 # set a bogus proxy, then ensure our $http_proxy value
                 # gets used.
                 self.pkg("publisher")
-                self.pkg("set-publisher -G %s test1" % self.durl1)
-                self.pkg("set-publisher --no-refresh -g %s "
-                    "--proxy http://noodles test1" % self.durl1)
+                self.pkg("set-publisher -G {0} test1".format(self.durl1))
+                self.pkg("set-publisher --no-refresh -g {0} "
+                    "--proxy http://noodles test1".format(self.durl1))
                 env = {"http_proxy": sysrepo_url}
                 self.pkg("refresh", env_arg=env)
                 self.pkg("install foo", env_arg=env)
@@ -1468,6 +1469,119 @@ class TestPkgInstallRepoPerTest(pkg5unittest.SingleDepotTestCase):
                     self.img_path(), "bin", "cat")))
 
 
+class TestPkgActuators(pkg5unittest.SingleDepotTestCase):
+        """Test package actuators"""
+        persistent_setup = True
+
+        pkgs = (
+                """
+                    open A@0.5,5.11-0
+                    close """,
+                """
+                    open A@1.0,5.11-0
+                    close """,
+                """
+                    open A@2.0,5.11-0
+                    close """,
+                """
+                    open B@1.0,5.11-0
+                    close """,
+                """
+                    open B@2.0,5.11-0
+                    close """,
+                """
+                    open trigger@1.0,5.11-0
+                    add set name=pkg.additional-update-on-uninstall value=A@2
+                    close """,
+                """
+                    open trigger@2.0,5.11-0
+                    add set pkg.additional-update-on-uninstall=A@1
+                    close """,
+                """
+                    open trigger@3.0,5.11-0
+                    add set name=pkg.additional-uninstall-on-uninstall value=A
+                    close """,
+                """
+                    open trigger@4.0,5.11-0
+                    add set pkg.additional-uninstall-on-uninstall=A
+                    close """,
+                """
+                    open trigger@5.0,5.11-0
+                    add set name=pkg.additional-uninstall-on-uninstall value=A@2 value=B@2
+                    close """,
+                """
+                    open evil@1.0,5.11-0
+                    add set name=pkg.additional-update-on-uninstall value=evil@2
+                    close """,
+                """
+                    open evil@2.0,5.11-0
+                    close """,
+                )
+
+        def setUp(self):
+                pkg5unittest.SingleDepotTestCase.setUp(self)
+                self.pkgsend_bulk(self.rurl, self.pkgs)
+
+        def test_basics(self):
+                """Test that pkg actuators work as expected."""
+                # prepare image
+                self.image_create(self.rurl)
+                self.pkg("install A@1")
+                self.pkg("install -v trigger@1")
+                self.pkg("list A@1 trigger@1")
+
+                # update on uninstall
+                self.pkg("uninstall -v trigger")
+                self.pkg("list A@2")
+
+                self.pkg("install -v trigger@2")
+                self.pkg("uninstall -v trigger")
+                self.pkg("list A@1")
+
+                # uninstall on uninstall
+                self.pkg("install -v trigger@3")
+                self.pkg("uninstall -v trigger")
+                self.pkg("list A", exit=1)
+
+                self.pkg("install -v trigger@4 A@1")
+                self.pkg("uninstall -v trigger")
+                self.pkg("list A", exit=1)
+
+                # multiple values
+                self.pkg("install -v trigger@5 A@1 B@1")
+                self.pkg("uninstall -v trigger")
+                self.pkg("list A B", exit=1)
+
+                # test that uninstall actuators also work when pkg is rejected
+                self.pkg("install -v A@1 trigger@1")
+                self.pkg("list A@1")
+                # install with reject
+                self.pkg("install --reject trigger B@1")
+                self.pkg("list A@2")
+                # update with reject
+                self.pkg("install -v trigger@2")
+                self.pkg("update -v --reject trigger B@2")
+                self.pkg("list A@1")
+
+                # self-referencing (evil) pkgs
+                self.pkg("install -v evil@1")
+                # solver will complain about passing same pkg to reject and
+                # proposed dict
+                self.pkg("uninstall -v evil@1", exit=1)
+                # try workaround
+                self.cmdline_run("pkg -R {0} -D ignore-pkg-actuators=true "
+                    "uninstall -v evil@1".format(self.get_img_path()))
+                self.pkg("list evil", exit=1)
+
+                # Test overlapping user and actuator pkg requests.
+                # Since actuators are treated like user requests, the solver
+                # will pick the latest one.
+                self.pkg("install -v A@1 trigger@1")
+                # update with reject
+                self.pkg("update --parsable=0 --reject trigger A@0.5")
+                self.pkg("list A@2")
+
+
 class TestPkgInstallUpdateReject(pkg5unittest.SingleDepotTestCase):
         """Test --reject option to pkg update/install"""
         persistent_setup = True
@@ -1494,6 +1608,11 @@ class TestPkgInstallUpdateReject(pkg5unittest.SingleDepotTestCase):
 
                 """
                     open kernel@1.0,5.11-0.1
+                    add depend type=require fmri=pkg:/incorp
+                    close """,
+
+                """
+                    open kernelX@1.0,5.11-0.1
                     add depend type=require fmri=pkg:/incorp
                     close """,
 
@@ -1532,6 +1651,12 @@ class TestPkgInstallUpdateReject(pkg5unittest.SingleDepotTestCase):
                     close """,
 
                 """
+                    open kernelX@1.0,5.11-0.1.1.0
+                    add depend type=require fmri=pkg:/incorp
+                    add depend type=require fmri=pkg:/idrX
+                    close """,
+
+                """
                     open idr1@1.0,5.11-0.1.1.0
                     add depend type=incorporate fmri=kernel@1.0,5.11-0.1.1.0
                     add depend type=require fmri=idr1_entitlement
@@ -1547,6 +1672,13 @@ class TestPkgInstallUpdateReject(pkg5unittest.SingleDepotTestCase):
                     open idr2@1.0,5.11-0.1.2.0
                     add depend type=incorporate fmri=kernel@1.0,5.11-0.1.2.0
                     add depend type=require fmri=idr2_entitlement
+                    close """,
+
+                """
+                    open idrX@1.0,5.11-0.1.1.0
+                    add set name=pkg.additional-update-on-uninstall value=kernelX@1.0,5.11-0.1
+                    add depend type=incorporate fmri=kernelX@1.0,5.11-0.1.1.0
+                    add depend type=require fmri=idr1_entitlement
                     close """,
 
                 """
@@ -1684,7 +1816,7 @@ class TestPkgInstallUpdateReject(pkg5unittest.SingleDepotTestCase):
                 self.pkg("install -v --reject idr1 --reject 'idr1_*' idr2 idr2_entitlement")
 
                 # switch back to base version of kernel
-                self.pkg("update -v --reject idr2 --reject 'idr2_*' %s" % kernel_fmri)
+                self.pkg("update -v --reject idr2 --reject 'idr2_*' {0}".format(kernel_fmri))
 
                 # reinstall idr1, then update to version 2 of base kernel
                 self.pkg("install -v idr1@1.0,5.11-0.1.1.0 idr1_entitlement")
@@ -1693,6 +1825,31 @@ class TestPkgInstallUpdateReject(pkg5unittest.SingleDepotTestCase):
                 # ensure pattern matching works as expected for update.
                 self.pkg("update -v --reject 'idr1*' '*incorp@1.0-0.2'")
                 self.pkg("list  kernel@1.0,5.11-0.2")
+
+        def test_idr_removal(self):
+                """IDR removal with pkg actuators."""
+                self.image_create(self.rurl)
+                self.pkg("install no-idrs")
+                self.pkg("install -v kernelX@1.0,5.11-0.1")
+                self.pkg("list kernelX@1.0,5.11-0.1")
+
+                # try installing idr
+                self.pkg("install -v --reject no-idrs idr1_entitlement")
+                self.pkg("install -v idrX@1.0,5.11-0.1.1.0")
+                # check if IDR pkgs got installed
+                self.pkg("list idrX@1.0,5.11-0.1.1.0")
+                self.pkg("list kernelX@1.0,5.11-0.1.1.0")
+
+                # uninstall IDR
+                self.pkg("uninstall -v idrX@1.0,5.11-0.1.1.0")
+                self.pkg("list kernelX@1.0,5.11-0.1")
+
+                # try with reject
+                self.pkg("install -v idrX@1.0,5.11-0.1.1.0")
+                self.pkg("list idrX@1.0,5.11-0.1.1.0")
+                self.pkg("list kernelX@1.0,5.11-0.1.1.0")
+                self.pkg("install --reject idrX B")
+                self.pkg("list kernelX@1.0,5.11-0.1")
 
         def test_update(self):
                 self.image_create(self.rurl)
@@ -1802,13 +1959,13 @@ class TestPkgInstallAmbiguousPatterns(pkg5unittest.SingleDepotTestCase):
                 self.pkgsend_bulk(self.rurl, (self.depender10, self.foo10))
 
                 self.image_create(self.rurl)
-                self.pkg("%s depender" % install_cmd)
+                self.pkg("{0} depender".format(install_cmd))
 
                 self.pkgsend_bulk(self.rurl, (self.foo11, self.anotherfoo11,
                     self.depender11))
                 self.pkg("refresh")
 
-                self.pkg("%s depender" % install_cmd)
+                self.pkg("{0} depender".format(install_cmd))
 
                 # Make sure that we didn't get other/foo from the dependency.
                 self.pkg("list another/foo", exit=1)
@@ -1825,18 +1982,18 @@ class TestPkgInstallAmbiguousPatterns(pkg5unittest.SingleDepotTestCase):
                 self.image_create(self.rurl)
 
                 # Right now, this is not exact, but still unambiguous
-                self.pkg("%s foo" % install_cmd)
+                self.pkg("{0} foo".format(install_cmd))
 
                 # Create ambiguity
                 self.pkgsend_bulk(self.rurl, self.foo11)
                 self.pkg("refresh")
 
                 # This is unambiguous, should succeed
-                self.pkg("%s pkg:/foo" % install_cmd)
+                self.pkg("{0} pkg:/foo".format(install_cmd))
 
                 # This is now ambiguous, should fail
-                self.pkg("%s foo" % install_cmd, exit=1)
-                self.pkgrepo("remove -s %s pkg:/foo@1.1" % self.rurl )
+                self.pkg("{0} foo".format(install_cmd), exit=1)
+                self.pkgrepo("remove -s {0} pkg:/foo@1.1".format(self.rurl ))
 
 
 class TestPkgInstallOverlappingPatterns(pkg5unittest.SingleDepotTestCase):
@@ -2064,7 +2221,7 @@ class TestPkgInstallCircularDependencies(pkg5unittest.SingleDepotTestCase):
                     self.pkg30))
 
                 self.image_create(self.rurl)
-                self.pkg("%s pkg1" % install_cmd)
+                self.pkg("{0} pkg1".format(install_cmd))
                 self.pkg("list")
                 self.pkg("verify -v")
 
@@ -2082,7 +2239,7 @@ class TestPkgInstallCircularDependencies(pkg5unittest.SingleDepotTestCase):
                     self.pkg31))
 
                 self.image_create(self.rurl)
-                self.pkg("%s pkg1" % install_cmd)
+                self.pkg("{0} pkg1".format(install_cmd))
                 self.pkg("list")
                 self.pkg("verify -v")
 
@@ -2140,7 +2297,7 @@ class TestPkgInstallUpgrade(_TestHelper, pkg5unittest.SingleDepotTestCase):
             add hardlink path=/lib/libc.hardlink target=/lib/libc.so.1
             add file tmp/amber1 mode=0444 owner=root group=bin path=/etc/amber1
             add file tmp/amber2 mode=0444 owner=root group=bin path=/etc/amber2
-            add license tmp/copyright1 license=copyright
+            add license tmp/copyright1 license=copyright_ä
             close
         """
 
@@ -2546,6 +2703,13 @@ class TestPkgInstallUpgrade(_TestHelper, pkg5unittest.SingleDepotTestCase):
             close
         """
 
+        dumdir30 = """
+            open dumdir@3.0
+            add dir path=etc mode=0700 owner=bin group=bin
+            add file tmp/amber1 mode=0400 owner=root group=bin path=etc/amber1
+            close
+        """
+
         misc_files1 = [
             "tmp/amber1", "tmp/amber2", "tmp/bronzeA1",  "tmp/bronzeA2",
             "tmp/bronze1", "tmp/bronze2",
@@ -2658,8 +2822,8 @@ adm
                 # try to install version 1
                 self.pkg("install bronze@1.0", exit=1)
                 # install earliest version bronze@2.0
-                self.pkg("install %s" % first_bronze)
-                self.pkg("list -v %s" % first_bronze)
+                self.pkg("install {0}".format(first_bronze))
+                self.pkg("list -v {0}".format(first_bronze))
                 self.pkg("install bronze@2.0")
 
         def test_upgrade1(self):
@@ -2776,7 +2940,7 @@ adm
                 self.image_create(self.rurl)
 
                 # test 1: move an editable file between packages
-                self.pkg("%s --parsable=0 gold@1.0 silver@1.0" % install_cmd)
+                self.pkg("{0} --parsable=0 gold@1.0 silver@1.0".format(install_cmd))
                 self._assertEditables(
                     installed=[
                         'etc/ftpd/ftpusers',
@@ -2796,8 +2960,8 @@ adm
                 self.file_contains(file_path, test_str)
 
                 # update packages
-                self.pkg("%s -nvv gold@3.0 silver@2.0" % install_cmd)
-                self.pkg("%s --parsable=0 gold@3.0 silver@2.0" % install_cmd)
+                self.pkg("{0} -nvv gold@3.0 silver@2.0".format(install_cmd))
+                self.pkg("{0} --parsable=0 gold@3.0 silver@2.0".format(install_cmd))
                 self._assertEditables()
                 self.pkg("verify -v")
 
@@ -2816,7 +2980,7 @@ adm
 
 
                 # test 2: change an editable file's path within a package
-                self.pkg("%s --parsable=0 gold@1.0" % install_cmd)
+                self.pkg("{0} --parsable=0 gold@1.0".format(install_cmd))
                 self.pkg("verify -v")
 
                 # modify config file
@@ -2824,7 +2988,7 @@ adm
                 file_path = "etc/passwd"
                 self.file_append(file_path, test_str)
 
-                self.pkg("%s --parsable=0 gold@2.0" % install_cmd)
+                self.pkg("{0} --parsable=0 gold@2.0".format(install_cmd))
                 self._assertEditables(
                     moved=[['etc/passwd', 'etc/config2']],
                     removed=[
@@ -2847,7 +3011,7 @@ adm
 
 
                 # test 3: move an editable file between packages and change its path
-                self.pkg("%s --parsable=0 gold@1.0 silver@1.0" % install_cmd)
+                self.pkg("{0} --parsable=0 gold@1.0 silver@1.0".format(install_cmd))
                 self.pkg("verify -v")
 
                 # modify config file
@@ -2857,7 +3021,7 @@ adm
 
                 self.file_contains(file_path, test_str)
 
-                self.pkg("%s --parsable=0 gold@3.0 silver@3.0" % install_cmd)
+                self.pkg("{0} --parsable=0 gold@3.0 silver@3.0".format(install_cmd))
                 self._assertEditables(
                     moved=[['etc/passwd', 'etc/config2']],
                     removed=[
@@ -2877,7 +3041,7 @@ adm
 
                 # test 4: move /etc/passwd between packages and ensure that we
                 # can still uninstall a user at the same time.
-                self.pkg("%s --parsable=0 gold@1.0 silver@1.0" % install_cmd)
+                self.pkg("{0} --parsable=0 gold@1.0 silver@1.0".format(install_cmd))
                 self.pkg("verify -v")
 
                 # add a user
@@ -2900,8 +3064,8 @@ adm
                 silly_inode = os.stat(silly_path).st_ino
 
                 # update packages
-                self.pkg("%s --parsable=0 gold@3.0 silver@2.0 golduser@2.0 "
-                    "silveruser" % install_cmd)
+                self.pkg("{0} --parsable=0 gold@3.0 silver@2.0 golduser@2.0 "
+                    "silveruser".format(install_cmd))
                 self._assertEditables()
 
                 # make sure Kermie is still installed and still has our local
@@ -2930,7 +3094,8 @@ adm
                 """Test manually removed directory and files will be restored
                  during update, if mode are different."""
 
-                self.pkgsend_bulk(self.rurl, (self.dumdir10, self.dumdir20))
+                self.pkgsend_bulk(self.rurl, (self.dumdir10, self.dumdir20,
+                    self.dumdir30))
                 self.image_create(self.rurl)
 
                 self.pkg("install -vvv dumdir@1.0")
@@ -2939,6 +3104,10 @@ adm
                 shutil.rmtree(dirpath)
 
                 self.pkg("update -vvv dumdir@2.0")
+                self.pkg("verify -v")
+                shutil.rmtree(dirpath)
+
+                self.pkg("update -vvv dumdir@3.0")
                 self.pkg("verify -v")
 
         def test_upgrade_liveroot(self):
@@ -2952,18 +3121,18 @@ adm
                 self.pkgsend_bulk(self.rurl, (self.liveroot10, self.liveroot20))
                 self.image_create(self.rurl)
 
-                self.pkg("--debug simulate_live_root=%s %s liveroot@1.0" %
-                    (self.get_img_path(), install_cmd))
+                self.pkg("--debug simulate_live_root={0} {1} liveroot@1.0".format(
+                    self.get_img_path(), install_cmd))
                 self.pkg("verify -v")
-                self.pkg("--debug simulate_live_root=%s %s --deny-new-be "
-                    "liveroot@2.0" % (self.get_img_path(),  install_cmd),
+                self.pkg("--debug simulate_live_root={0} {1} --deny-new-be "
+                    "liveroot@2.0".format(self.get_img_path(),  install_cmd),
                     exit=5)
-                self.pkg("--debug simulate_live_root=%s uninstall "
-                    "--deny-new-be liveroot" % self.get_img_path(), exit=5)
+                self.pkg("--debug simulate_live_root={0} uninstall "
+                    "--deny-new-be liveroot".format(self.get_img_path()), exit=5)
                 # "break" liveroot@1
                 self.file_append("etc/liveroot", "this file has been changed")
-                self.pkg("--debug simulate_live_root=%s fix --deny-new-be "
-                    "liveroot" % self.get_img_path(), exit=5)
+                self.pkg("--debug simulate_live_root={0} fix --deny-new-be "
+                    "liveroot".format(self.get_img_path()), exit=5)
 
         def test_upgrade_driver_conflicts(self):
                 """Test to make sure driver_aliases conflicts don't cause
@@ -2979,9 +3148,9 @@ adm
                 self.image_create(self.rurl)
 
                 self.pkg("list -afv")
-                self.pkg("%s dricon@1" % install_cmd)
+                self.pkg("{0} dricon@1".format(install_cmd))
                 # This one should comment out the wigit entry in driver_aliases
-                self.pkg("%s dricon@2" % install_cmd)
+                self.pkg("{0} dricon@2".format(install_cmd))
                 da_contents = file(os.path.join(self.get_img_path(),
                     "etc/driver_aliases")).readlines()
                 self.assert_("# pkg(5): wigit \"pci8086,1234\"\n" in da_contents)
@@ -2989,7 +3158,7 @@ adm
                 self.assert_("wigit \"pci8086,4321\"\n" in da_contents)
                 self.assert_("zigit \"pci8086,1234\"\n" in da_contents)
                 # This one should fail
-                self.pkg("%s dricon@3" % install_cmd, exit=1)
+                self.pkg("{0} dricon@3".format(install_cmd), exit=1)
 
         def test_driver_policy_removal(self):
                 """Test for bug #9568 - that removing a policy for a
@@ -3008,7 +3177,7 @@ adm
                 self.pkg("list -afv")
 
                 # Should install the frigit driver with a policy.
-                self.pkg("%s dripol@1" % install_cmd)
+                self.pkg("{0} dripol@1".format(install_cmd))
 
                 # Check that there is a policy entry for this
                 # device in /etc/security/device_policy
@@ -3017,7 +3186,7 @@ adm
                 self.assert_("frigit:*\tread_priv_set=net_rawaccess\twrite_priv_set=net_rawaccess\n" in dp_contents)
 
                 # Should reinstall the frigit driver without a policy.
-                self.pkg("%s dripol@2" % install_cmd)
+                self.pkg("{0} dripol@2".format(install_cmd))
 
                 # Check that there is no longer a policy entry for this
                 # device in /etc/security/device_policy
@@ -3036,11 +3205,11 @@ adm
 
                 # If there are no local modifications, no preservation should be
                 # done.  First with no content change ...
-                self.pkg("%s --parsable=0 preserve@1" % install_cmd)
+                self.pkg("{0} --parsable=0 preserve@1".format(install_cmd))
                 self._assertEditables(
                     installed=['testme'],
                 )
-                self.pkg("%s --parsable=0 preserve@2" % install_cmd)
+                self.pkg("{0} --parsable=0 preserve@2".format(install_cmd))
                 self._assertEditables(
                     updated=['testme'],
                 )
@@ -3079,10 +3248,10 @@ adm
 
                 # Modify the file locally and update to a version where the
                 # content changes.
-                self.pkg("%s --parsable=0 preserve@1" % install_cmd)
+                self.pkg("{0} --parsable=0 preserve@1".format(install_cmd))
                 self.file_append("testme", "junk")
                 self.file_contains("testme", "preserve1")
-                self.pkg("%s --parsable=0 preserve@3" % install_cmd)
+                self.pkg("{0} --parsable=0 preserve@3".format(install_cmd))
                 self._assertEditables()
                 self.file_contains("testme", "preserve1")
                 self.file_contains("testme", "junk")
@@ -3093,7 +3262,7 @@ adm
 
                 # Modify the file locally and downgrade to a version where
                 # the content changes.
-                self.pkg("%s --parsable=0 preserve@3" % install_cmd)
+                self.pkg("{0} --parsable=0 preserve@3".format(install_cmd))
                 self.file_append("testme", "junk")
                 self.file_contains("testme", "preserve3")
                 self.pkg("update --parsable=0 preserve@1")
@@ -3112,10 +3281,10 @@ adm
 
                 # Modify the file locally and update to a version where just the
                 # mode changes.
-                self.pkg("%s --parsable=0 preserve@1" % install_cmd)
+                self.pkg("{0} --parsable=0 preserve@1".format(install_cmd))
                 self.file_append("testme", "junk")
 
-                self.pkg("%s --parsable=0 preserve@2" % install_cmd)
+                self.pkg("{0} --parsable=0 preserve@2".format(install_cmd))
                 self._assertEditables(
                     updated=['testme'],
                 )
@@ -3134,7 +3303,7 @@ adm
                 self.file_doesnt_exist("testme.new")
                 self.file_doesnt_exist("testme.update")
 
-                self.pkg("%s --parsable=0 preserve@2" % install_cmd)
+                self.pkg("{0} --parsable=0 preserve@2".format(install_cmd))
                 self._assertEditables(
                     updated=['testme'],
                 )
@@ -3144,7 +3313,7 @@ adm
                 # Remove the file locally and update the package; this should
                 # simply replace the missing file.
                 self.file_remove("testme")
-                self.pkg("%s --parsable=0 preserve@3" % install_cmd)
+                self.pkg("{0} --parsable=0 preserve@3".format(install_cmd))
                 self._assertEditables(
                     installed=['testme'],
                 )
@@ -3163,8 +3332,8 @@ adm
                 self.pkg("uninstall preserve@2")
 
                 # Verify preserved files will have their mode changed on update.
-                self.pkg("%s --parsable=0 preserve@1" % install_cmd)
-                self.pkg("%s --parsable=0 preserve@2" % install_cmd)
+                self.pkg("{0} --parsable=0 preserve@1".format(install_cmd))
+                self.pkg("{0} --parsable=0 preserve@2".format(install_cmd))
                 self.pkg("verify preserve")
 
                 # Verify that a package with a missing file that is marked with
@@ -3175,7 +3344,7 @@ adm
 
                 # Verify preserve works across package rename with and without
                 # original_name use and even when the original file is missing.
-                self.pkg("%s --parsable=0 orig_pkg@1.0" % install_cmd)
+                self.pkg("{0} --parsable=0 orig_pkg@1.0".format(install_cmd))
                 foo1_path = os.path.join(self.get_img_path(), "foo1")
                 self.assert_(os.path.isfile(foo1_path))
                 bronze1_path = os.path.join(self.get_img_path(), "bronze1")
@@ -3200,7 +3369,7 @@ adm
                 # preserved files.  They should remain empty even though one is
                 # changing names and the other is simply being preserved across
                 # a package rename.
-                self.pkg("%s --parsable=0 orig_pkg@1.0" % install_cmd)
+                self.pkg("{0} --parsable=0 orig_pkg@1.0".format(install_cmd))
                 open(foo1_path, "wb").close()
                 open(bronze1_path, "wb").close()
                 self.pkg("update --parsable=0 orig_pkg")
@@ -3220,7 +3389,7 @@ adm
                 # Update across the rename boundary, then verify that a change
                 # in file name will cause re-delivery of preserved files, but
                 # unchanged, preserved files will not be re-delivered.
-                self.pkg("%s --parsable=0 orig_pkg@1.0" % install_cmd)
+                self.pkg("{0} --parsable=0 orig_pkg@1.0".format(install_cmd))
                 os.unlink(foo1_path)
                 os.unlink(bronze1_path)
                 self.pkg("update --parsable=0 orig_pkg")
@@ -3240,7 +3409,7 @@ adm
 
                 # Verify that unmodified, preserved files will not be salvaged
                 # on uninstall.
-                self.pkg("%s --parsable=0 preserve@1.0" % install_cmd)
+                self.pkg("{0} --parsable=0 preserve@1.0".format(install_cmd))
                 self.file_contains("testme", "preserve1")
                 self.pkg("uninstall --parsable=0 preserve")
                 salvaged = [
@@ -3251,7 +3420,7 @@ adm
 
                 # Verify that modified, preserved files will be salvaged
                 # on uninstall.
-                self.pkg("%s --parsable=0 preserve@1.0" % install_cmd)
+                self.pkg("{0} --parsable=0 preserve@1.0".format(install_cmd))
                 self.file_contains("testme", "preserve1")
                 self.file_append("testme", "junk")
                 self.pkg("uninstall --parsable=0 preserve")
@@ -3267,8 +3436,8 @@ adm
 
                 # If there are no local modifications, no preservation should be
                 # done.  First with no content change ...
-                self.pkg("%s renold@1" % install_cmd)
-                self.pkg("%s renold@2" % install_cmd)
+                self.pkg("{0} renold@1".format(install_cmd))
+                self.pkg("{0} renold@2".format(install_cmd))
                 self.file_contains("testme", "renold1")
                 self.file_doesnt_exist("testme.old")
                 self.file_doesnt_exist("testme.new")
@@ -3276,8 +3445,8 @@ adm
                 self.pkg("uninstall renold")
 
                 # ... and again with content change.
-                self.pkg("%s renold@1" % install_cmd)
-                self.pkg("%s renold@3" % install_cmd)
+                self.pkg("{0} renold@1".format(install_cmd))
+                self.pkg("{0} renold@3".format(install_cmd))
                 self.file_contains("testme", "renold3")
                 self.file_doesnt_exist("testme.old")
                 self.file_doesnt_exist("testme.new")
@@ -3286,9 +3455,9 @@ adm
 
                 # Modify the file locally and update to a version where the
                 # content changes.
-                self.pkg("%s renold@1" % install_cmd)
+                self.pkg("{0} renold@1".format(install_cmd))
                 self.file_append("testme", "junk")
-                self.pkg("%s --parsable=0 renold@3" % install_cmd)
+                self.pkg("{0} --parsable=0 renold@3".format(install_cmd))
                 self._assertEditables(
                     moved=[['testme', 'testme.old']],
                     installed=['testme'],
@@ -3303,9 +3472,9 @@ adm
 
                 # Modify the file locally and update to a version where just the
                 # mode changes.
-                self.pkg("%s renold@1" % install_cmd)
+                self.pkg("{0} renold@1".format(install_cmd))
                 self.file_append("testme", "junk")
-                self.pkg("%s --parsable=0 renold@2" % install_cmd)
+                self.pkg("{0} --parsable=0 renold@2".format(install_cmd))
                 self._assertEditables(
                     moved=[['testme', 'testme.old']],
                     installed=['testme'],
@@ -3319,9 +3488,9 @@ adm
 
                 # Remove the file locally and update the package; this should
                 # simply replace the missing file.
-                self.pkg("%s renold@1" % install_cmd)
+                self.pkg("{0} renold@1".format(install_cmd))
                 self.file_remove("testme")
-                self.pkg("%s --parsable=0 renold@2" % install_cmd)
+                self.pkg("{0} --parsable=0 renold@2".format(install_cmd))
                 self._assertEditables(
                     installed=['testme'],
                 )
@@ -3338,8 +3507,8 @@ adm
 
                 # If there are no local modifications, no preservation should be
                 # done.  First with no content change ...
-                self.pkg("%s rennew@1" % install_cmd)
-                self.pkg("%s --parsable=0 rennew@2" % install_cmd)
+                self.pkg("{0} rennew@1".format(install_cmd))
+                self.pkg("{0} --parsable=0 rennew@2".format(install_cmd))
                 self._assertEditables(
                     updated=['testme'],
                 )
@@ -3350,8 +3519,8 @@ adm
                 self.pkg("uninstall rennew")
 
                 # ... and again with content change
-                self.pkg("%s rennew@1" % install_cmd)
-                self.pkg("%s --parsable=0 rennew@3" % install_cmd)
+                self.pkg("{0} rennew@1".format(install_cmd))
+                self.pkg("{0} --parsable=0 rennew@3".format(install_cmd))
                 self._assertEditables(
                     updated=['testme'],
                 )
@@ -3363,9 +3532,9 @@ adm
 
                 # Modify the file locally and update to a version where the
                 # content changes.
-                self.pkg("%s rennew@1" % install_cmd)
+                self.pkg("{0} rennew@1".format(install_cmd))
                 self.file_append("testme", "junk")
-                self.pkg("%s --parsable=0 rennew@3" % install_cmd)
+                self.pkg("{0} --parsable=0 rennew@3".format(install_cmd))
                 self._assertEditables(
                     installed=['testme.new'],
                 )
@@ -3380,9 +3549,9 @@ adm
 
                 # Modify the file locally and update to a version where just the
                 # mode changes.
-                self.pkg("%s rennew@1" % install_cmd)
+                self.pkg("{0} rennew@1".format(install_cmd))
                 self.file_append("testme", "junk")
-                self.pkg("%s --parsable=0 rennew@2" % install_cmd)
+                self.pkg("{0} --parsable=0 rennew@2".format(install_cmd))
                 self._assertEditables(
                     installed=['testme.new'],
                 )
@@ -3395,16 +3564,16 @@ adm
                 self.pkg("verify rennew", exit=1)
 
                 # Ensure that after fixing mode, verify passes.
-                self.file_chmod("testme", 0640)
+                self.file_chmod("testme", 0o640)
                 self.pkg("verify rennew")
                 self.pkg("uninstall rennew")
                 self.file_remove("testme.new")
 
                 # Remove the file locally and update the package; this should
                 # simply replace the missing file.
-                self.pkg("%s rennew@1" % install_cmd)
+                self.pkg("{0} rennew@1".format(install_cmd))
                 self.file_remove("testme")
-                self.pkg("%s --parsable=0 rennew@2" % install_cmd)
+                self.pkg("{0} --parsable=0 rennew@2".format(install_cmd))
                 self._assertEditables(
                     installed=['testme'],
                 )
@@ -3431,7 +3600,7 @@ adm
                 # install if a package being installed delivers the same file
                 # and that the new file will be installed.
                 self.file_append("testme", "unpackaged")
-                self.pkg("%s --parsable=0 preslegacy@1.0" % install_cmd)
+                self.pkg("{0} --parsable=0 preslegacy@1.0".format(install_cmd))
                 self._assertEditables(
                     installed=['testme'],
                 )
@@ -3474,7 +3643,7 @@ adm
                 # Verify that an initial install of an action with
                 # preserve=legacy will not install the payload of the action.
                 self.pkg("uninstall preslegacy")
-                self.pkg("%s --parsable=0 preslegacy@3.0" % install_cmd)
+                self.pkg("{0} --parsable=0 preslegacy@3.0".format(install_cmd))
                 self._assertEditables()
                 self.file_doesnt_exist("testme")
 
@@ -3482,7 +3651,7 @@ adm
                 # a transition to preserve=legacy from some other state that
                 # the new action is still delivered and the operation succeeds.
                 self.pkg("uninstall preslegacy")
-                self.pkg("%s --parsable=0 preslegacy@1.0" % install_cmd)
+                self.pkg("{0} --parsable=0 preslegacy@1.0".format(install_cmd))
                 self._assertEditables(
                     installed=['testme'],
                 )
@@ -3496,7 +3665,7 @@ adm
                 # Verify that a preserved file can be moved from one package to
                 # another and transition to preserve=legacy at the same time.
                 self.pkg("uninstall preslegacy")
-                self.pkg("%s --parsable=0 orig_preslegacy@1.0" % install_cmd)
+                self.pkg("{0} --parsable=0 orig_preslegacy@1.0".format(install_cmd))
                 self._assertEditables(
                     installed=['testme'],
                 )
@@ -3526,7 +3695,7 @@ adm
                 # install if a package being installed delivers the same file
                 # and that the new file will not be installed.
                 self.file_append("testme", "unpackaged")
-                self.pkg("%s --parsable=0 presabandon@2" % install_cmd)
+                self.pkg("{0} --parsable=0 presabandon@2".format(install_cmd))
                 self._assertEditables()
                 self.file_contains("testme", "unpackaged")
                 self.assert_(not os.path.exists(os.path.join(sroot, "testme")))
@@ -3535,7 +3704,7 @@ adm
 
                 # Verify that an initial install of an action with
                 # preserve=abandon will not install the payload of the action.
-                self.pkg("%s --parsable=0 presabandon@2" % install_cmd)
+                self.pkg("{0} --parsable=0 presabandon@2".format(install_cmd))
                 self._assertEditables()
                 self.file_doesnt_exist("testme")
                 self.pkg("uninstall presabandon")
@@ -3545,7 +3714,7 @@ adm
                 # the existing file will not be modified.
 
                 # First with no content change ...
-                self.pkg("%s --parsable=0 presabandon@1" % install_cmd)
+                self.pkg("{0} --parsable=0 presabandon@1".format(install_cmd))
                 self._assertEditables(
                     installed=['testme'],
                 )
@@ -3561,7 +3730,7 @@ adm
                 # If an action delivered by the downgraded version of the package
                 # has a preserve=abandon, the new file will not be installed and
                 # the existing file will not be modified.
-                self.pkg("%s --parsable=0 presabandon@4" % install_cmd)
+                self.pkg("{0} --parsable=0 presabandon@4".format(install_cmd))
                 self._assertEditables(
                     installed=['testme'],
                 )
@@ -3575,8 +3744,8 @@ adm
                 self.file_remove("testme")
 
                 # ... and again with content change.
-                self.pkg("%s --parsable=0 presabandon@1" % install_cmd)
-                self.pkg("%s --parsable=0 presabandon@3" % install_cmd)
+                self.pkg("{0} --parsable=0 presabandon@1".format(install_cmd))
+                self.pkg("{0} --parsable=0 presabandon@3".format(install_cmd))
                 self._assertEditables()
                 self.file_contains("testme", "preserve1")
                 self.pkg("uninstall --parsable=0 presabandon")
@@ -3595,9 +3764,9 @@ adm
 
                 # Modify the file locally and upgrade to a version where the
                 # file has a preserve=abandon attribute and the content changes.
-                self.pkg("%s --parsable=0 presabandon@1" % install_cmd)
+                self.pkg("{0} --parsable=0 presabandon@1".format(install_cmd))
                 self.file_append("testme", "junk")
-                self.pkg("%s --parsable=0 presabandon@3" % install_cmd)
+                self.pkg("{0} --parsable=0 presabandon@3".format(install_cmd))
                 self._assertEditables()
                 self.file_contains("testme", "preserve1")
                 self.file_contains("testme", "junk")
@@ -3608,7 +3777,7 @@ adm
 
                 # Modify the file locally and downgrade to a version where the
                 # file has a preserve=abandon attribute and the content changes.
-                self.pkg("%s --parsable=0 presabandon@4" % install_cmd)
+                self.pkg("{0} --parsable=0 presabandon@4".format(install_cmd))
                 self.file_append("testme", "junk")
                 self.file_contains("testme", "preserve3")
                 self.pkg("update --parsable=0 presabandon@2")
@@ -3624,9 +3793,9 @@ adm
 
                 # Modify the file locally and upgrade to a version where the
                 # file has a preserve=abandon attribute and just the mode changes.
-                self.pkg("%s --parsable=0 presabandon@1" % install_cmd)
+                self.pkg("{0} --parsable=0 presabandon@1".format(install_cmd))
                 self.file_append("testme", "junk")
-                self.pkg("%s --parsable=0 presabandon@2" % install_cmd)
+                self.pkg("{0} --parsable=0 presabandon@2".format(install_cmd))
                 self._assertEditables()
                 self.file_contains("testme", "preserve1")
                 self.file_contains("testme", "junk")
@@ -3638,7 +3807,7 @@ adm
 
                 # Modify the file locally and downgrade to a version where the
                 # file has a preserve=abandon attribute and just the mode changes.
-                self.pkg("%s --parsable=0 presabandon@4" % install_cmd)
+                self.pkg("{0} --parsable=0 presabandon@4".format(install_cmd))
                 self.file_append("testme", "junk")
                 self.pkg("update --parsable=0 presabandon@3")
                 self._assertEditables()
@@ -3654,9 +3823,9 @@ adm
                 # Remove the file locally and update the package where the
                 # file has a preserve=abandon attribute; this will not replace
                 # the missing file.
-                self.pkg("%s --parsable=0 presabandon@1" % install_cmd)
+                self.pkg("{0} --parsable=0 presabandon@1".format(install_cmd))
                 self.file_remove("testme")
-                self.pkg("%s --parsable=0 presabandon@2" % install_cmd)
+                self.pkg("{0} --parsable=0 presabandon@2".format(install_cmd))
                 self._assertEditables()
                 self.file_doesnt_exist("testme")
                 self.pkg("uninstall --parsable=0 presabandon")
@@ -3664,7 +3833,7 @@ adm
                 # Remove the file locally and downgrade the package where the
                 # file has a preserve=abandon attribute; this will not replace
                 # the missing file.
-                self.pkg("%s --parsable=0 presabandon@4" % install_cmd)
+                self.pkg("{0} --parsable=0 presabandon@4".format(install_cmd))
                 self.file_remove("testme")
                 self.pkg("update --parsable=0 presabandon@3")
                 self._assertEditables()
@@ -3677,8 +3846,8 @@ adm
                 # Verify that if the file for an action marked with
                 # preserve=abandon is removed that the package still
                 # verifies.
-                self.pkg("%s --parsable=0 presabandon@1" % install_cmd)
-                self.pkg("%s --parsable=0 presabandon@2" % install_cmd)
+                self.pkg("{0} --parsable=0 presabandon@1".format(install_cmd))
+                self.pkg("{0} --parsable=0 presabandon@2".format(install_cmd))
                 self.file_remove("testme")
                 self.pkg("verify -v presabandon")
 
@@ -3743,7 +3912,10 @@ adm
                 sock.close()
                 # We also test block and character special files, but only if
                 # os.mknod() is available, which it isn't always.
-                if hasattr(os, "mknod"):
+                # Since mknod only supports 32-bit integer currently, we have
+                # to check if we are running in 32-bit.
+                run_bit = struct.calcsize("P") * 8
+                if hasattr(os, "mknod") and run_bit == 32:
                         st = os.stat("/dev/null")
                         os.mknod(os.path.join(self.img_path(), "salvage",
                             "node"), st.st_mode, st.st_dev)
@@ -3834,11 +4006,11 @@ adm
                 self.pkg("install iron@1.0")
                 self.pkg("contents -m iron")
                 # We have not enabled SHA2 hash publication yet.
-                self.assert_(("pkg.hash.%s" % hash_alg) not in self.output)
+                self.assert_(("pkg.hash.{0}".format(hash_alg) not in self.output))
 
                 # publish with SHA1 and SHA2 hashes
                 self.pkgsend_bulk(self.rurl, self.iron20,
-                    debug_hash="sha1+%s" % hash_alg)
+                    debug_hash="sha1+{0}".format(hash_alg))
 
                 # verify that a non-SHA2 aware client can install these bits
                 self.pkg("-D hash=sha1 update")
@@ -3849,11 +4021,11 @@ adm
                 # most-preferred hash.
                 self.pkg("install iron@2.0")
                 self.pkg("contents -m iron")
-                self.assert_("pkg.hash.%s" % hash_alg in self.output)
+                self.assert_("pkg.hash.{0}".format(hash_alg in self.output))
 
                 # publish with only SHA-2 hashes
                 self.pkgsend_bulk(self.rurl, self.iron20,
-                    debug_hash="%s" % hash_alg)
+                    debug_hash="{0}".format(hash_alg))
 
                 # verify that a non-SHA2 aware client cannot install these bits
                 # since there are no SHA1 hashes present
@@ -3865,10 +4037,10 @@ adm
                 # Make sure we've been publishing only with SHA2 by removing
                 # those known attributes, then checking for the presence of
                 # the SHA-1 attributes.
-                self.pkg("-D hash=%s update" % hash_alg)
+                self.pkg("-D hash={0} update".format(hash_alg))
                 self.pkg("contents -m iron")
-                for attr in ["pkg.hash.%s" % hash_alg,
-                    "pkg.chash.%s" % hash_alg]:
+                for attr in ["pkg.hash.{0}".format(hash_alg),
+                    "pkg.chash.{0}".format(hash_alg)]:
                         self.output = self.output.replace(attr, "")
                 self.assert_("hash" not in self.output)
                 self.assert_("chash" not in self.output)
@@ -3879,9 +4051,9 @@ adm
 
                 elfpkg_1 = """
                     open elftest@1.0
-                    add file %s mode=0755 owner=root group=bin path=/bin/true
+                    add file {0} mode=0755 owner=root group=bin path=/bin/true
                     close """
-                elfpkg = elfpkg_1 % os.path.join("ro_data", "elftest.so.1")
+                elfpkg = elfpkg_1.format(os.path.join("ro_data", "elftest.so.1"))
                 elf1 = self.pkgsend_bulk(self.rurl, (elfpkg,))[0]
 
                 repo_dir = self.dcs[1].get_repodir()
@@ -3901,16 +4073,16 @@ adm
                 # assert that the current pkg gate has the correct hash ranking
                 self.assertTrue(len(digest.RANKED_CONTENT_HASH_ATTRS) > 0)
                 self.assertEqual(digest.RANKED_CONTENT_HASH_ATTRS[0], "elfhash")
-                
+
                 # test that pkgrecv, pkgrepo verify, pkg install and pkg verify
                 # do not complain about unknown hash
-                self.pkgrecv("%s -a -d %s '*'" % (repo_dir,
+                self.pkgrecv("{0} -a -d {1} '*'".format(repo_dir,
                     os.path.join(self.test_root, "x.p5p")))
-                self.pkgrepo("verify -s %s" % repo_dir)
+                self.pkgrepo("verify -s {0}".format(repo_dir))
                 self.image_create(self.rurl, destroy=True)
-                self.pkg("install -v %s" % elf1)
+                self.pkg("install -v {0}".format(elf1))
                 # Note that we pass verification if any of the hashes match, but
-                # we require by default that the content hash matches. 
+                # we require by default that the content hash matches.
                 self.pkg("verify")
 
 
@@ -4597,7 +4769,7 @@ adm:NP:6445::::::
                 sdata = file(spath).readlines()
 
                 def finderr(err):
-                        self.assert_("\t\t" + err in self.output)
+                        self.assert_("\t\tERROR: " + err in self.output)
 
                 # change a provided, empty-default field to something else
                 pdata[-1] = "misspiggy:x:5:0:& loves Kermie:/:/bin/zsh"
@@ -4769,11 +4941,11 @@ adm:NP:6445::::::
                     self.silver10, self.silver20, self.grouptest))
                 self.image_create(self.rurl)
                 self.pkg("install basics@1.0")
-                self.pkg("%s basics1@1.0" % install_cmd)
-                self.pkg("%s silver@1.0" % install_cmd)
+                self.pkg("{0} basics1@1.0".format(install_cmd))
+                self.pkg("{0} silver@1.0".format(install_cmd))
                 self.pkg("list silver@1.0")
                 self.pkg("verify -v")
-                self.pkg("%s silver@2.0" % install_cmd)
+                self.pkg("{0} silver@2.0".format(install_cmd))
                 self.pkg("verify -v")
 
         def test_upgrade_garbage_passwd(self):
@@ -4801,9 +4973,9 @@ adm:NP:6445::::::
                                 pwd_file.seek(0)
                                 pwd_file.writelines(lines)
                         if install_cmd == "install":
-                                self.pkg("%s singleuser" % install_cmd)
+                                self.pkg("{0} singleuser".format(install_cmd))
                         else:
-                                self.pkg("%s basics singleuser" % install_cmd)
+                                self.pkg("{0} basics singleuser".format(install_cmd))
                         with file(pwd_path) as pwd_file:
                                 lines = pwd_file.readlines()
                                 self.assert_(garbage in lines)
@@ -4842,39 +5014,39 @@ adm:NP:6445::::::
                 failure."""
 
                 for char in self.pkg_name_valid_chars["never"]:
-                        invalid_name = "invalid%spkg@1.0,5.11-0" % char
-                        self.pkgsend(self.rurl, "open '%s'" % invalid_name,
+                        invalid_name = "invalid{0}pkg@1.0,5.11-0".format(char)
+                        self.pkgsend(self.rurl, "open '{0}'".format(invalid_name),
                             exit=1)
 
                 for char in self.pkg_name_valid_chars["after-first"]:
-                        invalid_name = "%sinvalidpkg@1.0,5.11-0" % char
+                        invalid_name = "{0}invalidpkg@1.0,5.11-0".format(char)
                         if char == "-":
-                                cmd = "open -- '%s'" % invalid_name
+                                cmd = "open -- '{0}'".format(invalid_name)
                         else:
-                                cmd = "open '%s'" % invalid_name
+                                cmd = "open '{0}'".format(invalid_name)
                         self.pkgsend(self.rurl, cmd, exit=1)
 
-                        invalid_name = "invalid/%spkg@1.0,5.11-0" % char
-                        cmd = "open '%s'" % invalid_name
+                        invalid_name = "invalid/{0}pkg@1.0,5.11-0".format(char)
+                        cmd = "open '{0}'".format(invalid_name)
                         self.pkgsend(self.rurl, cmd, exit=1)
 
         def test_valid_open(self):
                 """Send a series of valid packages; expect success."""
 
                 for char in self.pkg_name_valid_chars["always"]:
-                        valid_name = "%svalid%s/%spkg%s@1.0,5.11-0" % (char,
+                        valid_name = "{0}valid{1}/{2}pkg{3}@1.0,5.11-0".format(char,
                             char, char, char)
-                        self.pkgsend(self.rurl, "open '%s'" % valid_name)
+                        self.pkgsend(self.rurl, "open '{0}'".format(valid_name))
                         self.pkgsend(self.rurl, "close -A")
 
                 for char in self.pkg_name_valid_chars["after-first"]:
-                        valid_name = "v%salid%spkg@1.0,5.11-0" % (char, char)
-                        self.pkgsend(self.rurl, "open '%s'" % valid_name)
+                        valid_name = "v{0}alid{1}pkg@1.0,5.11-0".format(char, char)
+                        self.pkgsend(self.rurl, "open '{0}'".format(valid_name))
                         self.pkgsend(self.rurl, "close -A")
 
                 for char in self.pkg_name_valid_chars["at-end"]:
-                        valid_name = "validpkg%s@1.0,5.11-0" % char
-                        self.pkgsend(self.rurl, "open '%s'" % valid_name)
+                        valid_name = "validpkg{0}@1.0,5.11-0".format(char)
+                        self.pkgsend(self.rurl, "open '{0}'".format(valid_name))
                         self.pkgsend(self.rurl, "close -A")
 
         def test_devlink(self):
@@ -4921,7 +5093,7 @@ adm:NP:6445::::::
                 self.assert_(dllines[0].find("\t") > 0)
 
                 # Upgrade
-                self.pkg("%s devlinktest@2.0" % install_cmd)
+                self.pkg("{0} devlinktest@2.0".format(install_cmd))
                 self.pkg("verify -v")
 
                 dllines = readfile()
@@ -4947,7 +5119,7 @@ adm:NP:6445::::::
                 writefile(dllines)
 
                 # Upgrade
-                self.pkg("%s devlinktest@2.0" % install_cmd)
+                self.pkg("{0} devlinktest@2.0".format(install_cmd))
 
                 # Verify that we spewed a message on upgrade
                 self.assert_(self.output.find("not found") != -1)
@@ -4994,16 +5166,16 @@ adm:NP:6445::::::
 
                 # Make sure we didn't get a second zerg line
                 dllines = readfile()
-                self.failUnless(len(dllines) == 3, msg=dllines)
+                self.assertTrue(len(dllines) == 3, msg=dllines)
                 assertContents(dllines, ["zerg", "borg", "warg"])
 
                 # Now for the same test on upgrade
                 dllines.append("type=ddi_pseudo;name=zorg\t\D\n")
                 writefile(dllines)
 
-                self.pkg("%s devlinktest@2.0" % install_cmd)
+                self.pkg("{0} devlinktest@2.0".format(install_cmd))
                 dllines = readfile()
-                self.failUnless(len(dllines) == 4, msg=dllines)
+                self.assertTrue(len(dllines) == 4, msg=dllines)
                 assertContents(dllines, ["zerg2", "zorg", "borg", "zork"])
 
         def test_driver_aliases_upgrade(self):
@@ -5023,7 +5195,7 @@ adm:NP:6445::::::
                     self.devalias20])
 
                 self.image_create(self.rurl)
-                self.pkg("%s devicebase devalias@1" % install_cmd)
+                self.pkg("{0} devicebase devalias@1".format(install_cmd))
                 self.pkg("update devalias")
                 self.pkg("verify devalias")
 
@@ -5049,7 +5221,7 @@ adm:NP:6445::::::
                     self.devaliasmove10, self.devaliasmove20])
 
                 self.image_create(self.rurl)
-                self.pkg("%s devicebase devaliasmove@1" % install_cmd)
+                self.pkg("{0} devicebase devaliasmove@1".format(install_cmd))
                 self.pkg("update devaliasmove")
                 self.assert_("pci8086,5555" not in self.output)
 
@@ -5155,12 +5327,12 @@ adm:NP:6445::::::
                 for plist in plists:
                         for pname in plist:
                                 os.utime(fname, (0, 0))
-                                self.pkg("install %s" % pname)
+                                self.pkg("install {0}".format(pname))
                                 self.pkg("verify")
 
                         for pname in reversed(plist):
                                 os.utime(fname, (0, 0))
-                                self.pkg("uninstall %s" % pname)
+                                self.pkg("uninstall {0}".format(pname))
                                 self.pkg("verify")
 
         def test_bad_hardlinks(self):
@@ -5176,12 +5348,12 @@ adm:NP:6445::::::
 
                 # A package which tries to install a hard link to a target that
                 # doesn't exist shouldn't stack trace, but exit sanely.
-                self.pkg("%s badhardlink1" % install_cmd, exit=1)
+                self.pkg("{0} badhardlink1".format(install_cmd), exit=1)
 
                 # A package which tries to install a hard link to a target
                 # specified as an absolute path should install that link
                 # relative to the image root.
-                self.pkg("%s badhardlink2" % install_cmd)
+                self.pkg("{0} badhardlink2".format(install_cmd))
                 ino1 = os.stat(os.path.join(self.get_img_path(), "foo")).st_ino
                 ino2 = os.stat(os.path.join(self.get_img_path(), "etc/motd")).st_ino
                 self.assert_(ino1 == ino2)
@@ -5387,8 +5559,8 @@ class TestDependencies(pkg5unittest.SingleDepotTestCase):
         pkg121 = """
             open pkg12@1.1,5.11-0
         """
-        pkg121 += "add depend type=parent fmri=%s" % \
-            pkg.actions.depend.DEPEND_SELF
+        pkg121 += "add depend type=parent fmri={0}".format(
+            pkg.actions.depend.DEPEND_SELF)
         pkg121 += """
             close
         """
@@ -5396,8 +5568,8 @@ class TestDependencies(pkg5unittest.SingleDepotTestCase):
         pkg122 = """
             open pkg12@1.2,5.11-0
         """
-        pkg122 += "add depend type=parent fmri=%s" % \
-            pkg.actions.depend.DEPEND_SELF
+        pkg122 += "add depend type=parent fmri={0}".format(
+            pkg.actions.depend.DEPEND_SELF)
         pkg122 += """
             close
         """
@@ -5405,8 +5577,8 @@ class TestDependencies(pkg5unittest.SingleDepotTestCase):
         pkg123 = """
             open pkg12@1.3,5.11-0
         """
-        pkg123 += "add depend type=parent fmri=%s" % \
-            pkg.actions.depend.DEPEND_SELF
+        pkg123 += "add depend type=parent fmri={0}".format(
+            pkg.actions.depend.DEPEND_SELF)
         pkg123 += """
             close
         """
@@ -5468,8 +5640,8 @@ class TestDependencies(pkg5unittest.SingleDepotTestCase):
         """
 
         leaf_template = """
-            open pkg%s%s@%s,5.11-0
-            add depend type=require fmri=pkg:/%s_incorp%s
+            open pkg{0}{1}@{2},5.11-0
+            add depend type=require fmri=pkg:/{3}_incorp{4}
             close
         """
         install_hold = "add set name=pkg.depend.install-hold value=test"
@@ -5658,7 +5830,7 @@ class TestDependencies(pkg5unittest.SingleDepotTestCase):
                 self.leaf_pkgs = []
                 for t in self.leaf_expansion:
                         self.leaf_pkgs.extend(self.pkgsend_bulk(self.rurl,
-                            self.leaf_template % t))
+                            self.leaf_template.format(*t)))
 
                 self.incorp_pkgs = []
                 for i in self.incorps:
@@ -5674,7 +5846,7 @@ class TestDependencies(pkg5unittest.SingleDepotTestCase):
 
         def rename_matching(self, install_cmd):
                 self.image_create(self.rurl)
-                self.pkg("%s trusted" % install_cmd)
+                self.pkg("{0} trusted".format(install_cmd))
                 self.pkg("info system/trusted")
 
         def test_require_dependencies(self):
@@ -5687,7 +5859,7 @@ class TestDependencies(pkg5unittest.SingleDepotTestCase):
                 self.image_create(self.rurl)
                 self.pkg("install pkg1@1.0")
                 self.pkg("verify  pkg1@1.0")
-                self.pkg("%s pkg3@1.0" % install_cmd)
+                self.pkg("{0} pkg3@1.0".format(install_cmd))
                 self.pkg("verify  pkg3@1.0 pkg1@1.1")
 
         def test_exclude_group_install(self):
@@ -6101,10 +6273,10 @@ class TestDependencies(pkg5unittest.SingleDepotTestCase):
                 self.image_create(self.rurl)
                 self.set_image(0)
                 # check install or exact-install behavior
-                self.pkg("%s pkg10@1.0" % install_cmd)
-                self.pkg("%s pkg10" % install_cmd)
+                self.pkg("{0} pkg10@1.0".format(install_cmd))
+                self.pkg("{0} pkg10".format(install_cmd))
                 self.pkg("list pkg10@1.1")
-                self.pkg("%s pkg10" % install_cmd)
+                self.pkg("{0} pkg10".format(install_cmd))
                 self.pkg("list pkg10@1.2")
                 self.pkg("uninstall '*'")
                 # check image-update behavior
@@ -6116,24 +6288,24 @@ class TestDependencies(pkg5unittest.SingleDepotTestCase):
                 self.pkg("uninstall '*'")
                 # check that dependencies are ignored if
                 # dependency not present
-                self.pkg("%s pkg10@1.2" % install_cmd)
+                self.pkg("{0} pkg10@1.2".format(install_cmd))
                 self.pkg("uninstall '*'")
                 # make sure attempts to force install don't work
-                self.pkg("%s pkg10@1.0" % install_cmd)
-                self.pkg("%s pkg10@1.2" % install_cmd, exit=1)
-                self.pkg("%s pkg10@1.1" % install_cmd)
-                self.pkg("%s pkg10@1.2" % install_cmd)
+                self.pkg("{0} pkg10@1.0".format(install_cmd))
+                self.pkg("{0} pkg10@1.2".format(install_cmd), exit=1)
+                self.pkg("{0} pkg10@1.1".format(install_cmd))
+                self.pkg("{0} pkg10@1.2".format(install_cmd))
                 self.pkg("uninstall '*'")
                 # check origin root-image=true dependencies
                 # relies on SUNWcs in root image; make image 1 the root image
                 self.set_image(1)
-                self.pkg("%s SUNWcs@0.5.11-0.75" % install_cmd)
+                self.pkg("{0} SUNWcs@0.5.11-0.75".format(install_cmd))
                 self.set_image(0)
                 live_root = self.img_path(1)
-                self.pkg("-D simulate_live_root=%s %s pkg11@1.0" % \
-                    (live_root, install_cmd))
-                self.pkg("-D simulate_live_root=%s %s pkg11@1.1" %
-                    (live_root, install_cmd), exit=1)
+                self.pkg("-D simulate_live_root={0} {1} pkg11@1.0".format(
+                    live_root, install_cmd))
+                self.pkg("-D simulate_live_root={0} {1} pkg11@1.1".format(
+                    live_root, install_cmd), exit=1)
                 self.pkg("uninstall '*'")
 
         def test_parent_dependencies(self):
@@ -6147,13 +6319,13 @@ class TestDependencies(pkg5unittest.SingleDepotTestCase):
                 self.image_create(self.rurl)
 
                 # attach c2p 1 -> 0.
-                self.pkg("attach-linked -p system:img1 %s" % self.img_path(0))
+                self.pkg("attach-linked -p system:img1 {0}".format(self.img_path(0)))
 
                 # try to install or exact-instal packages that have unmet
                 # parent dependencies.
-                self.pkg("%s pkg12@1.2" % install_cmd, exit=EXIT_OOPS)
-                self.pkg("%s pkg13@1.2" % install_cmd, exit=EXIT_OOPS)
-                self.pkg("%s pkg14@1.2" % install_cmd, exit=EXIT_OOPS)
+                self.pkg("{0} pkg12@1.2".format(install_cmd), exit=EXIT_OOPS)
+                self.pkg("{0} pkg13@1.2".format(install_cmd), exit=EXIT_OOPS)
+                self.pkg("{0} pkg14@1.2".format(install_cmd), exit=EXIT_OOPS)
 
                 # install or exact-install packages in parent.
                 self.set_image(0)
@@ -6162,20 +6334,20 @@ class TestDependencies(pkg5unittest.SingleDepotTestCase):
 
                 # try to install or exact-install packages that have unmet
                 # parent dependencies.
-                self.pkg("%s pkg12@1.2" % install_cmd, exit=EXIT_OOPS)
-                self.pkg("%s pkg13@1.2" % install_cmd, exit=EXIT_OOPS)
-                self.pkg("%s pkg14@1.2" % install_cmd, exit=EXIT_OOPS)
+                self.pkg("{0} pkg12@1.2".format(install_cmd), exit=EXIT_OOPS)
+                self.pkg("{0} pkg13@1.2".format(install_cmd), exit=EXIT_OOPS)
+                self.pkg("{0} pkg14@1.2".format(install_cmd), exit=EXIT_OOPS)
 
                 # install or exact-install packages in parent.
                 self.set_image(0)
-                self.pkg("%s pkg12@1.3" % install_cmd)
+                self.pkg("{0} pkg12@1.3".format(install_cmd))
                 self.set_image(1)
 
                 # try to install or exact-install packages that have unmet
                 # parent dependencies.
-                self.pkg("%s pkg12@1.2" % install_cmd, exit=EXIT_OOPS)
-                self.pkg("%s pkg13@1.2" % install_cmd, exit=EXIT_OOPS)
-                self.pkg("%s pkg14@1.2" % install_cmd, exit=EXIT_OOPS)
+                self.pkg("{0} pkg12@1.2".format(install_cmd), exit=EXIT_OOPS)
+                self.pkg("{0} pkg13@1.2".format(install_cmd), exit=EXIT_OOPS)
+                self.pkg("{0} pkg14@1.2".format(install_cmd), exit=EXIT_OOPS)
 
                 # install packages in parent
                 self.set_image(0)
@@ -6183,13 +6355,13 @@ class TestDependencies(pkg5unittest.SingleDepotTestCase):
                 self.set_image(1)
 
                 # try to install or exact-install packages that have unmet parent dependencies.
-                self.pkg("%s pkg14@1.2" % install_cmd, exit=EXIT_OOPS)
+                self.pkg("{0} pkg14@1.2".format(install_cmd), exit=EXIT_OOPS)
 
                 # try to install or exact-install packages that have satisfied parent deps.
-                self.pkg("%s pkg12@1.2" % install_cmd)
+                self.pkg("{0} pkg12@1.2".format(install_cmd))
                 self.pkg("verify")
                 self.pkg("uninstall pkg12@1.2")
-                self.pkg("%s pkg13@1.2" % install_cmd)
+                self.pkg("{0} pkg13@1.2".format(install_cmd))
                 self.pkg("verify")
                 self.pkg("uninstall pkg13@1.2")
 
@@ -6203,7 +6375,7 @@ class TestDependencies(pkg5unittest.SingleDepotTestCase):
 
                 # try to install or exact-install packages that have satisfied.
                 # parent deps.
-                self.pkg("%s pkg14@1.2" % install_cmd)
+                self.pkg("{0} pkg14@1.2".format(install_cmd))
                 self.pkg("verify")
                 self.pkg("uninstall pkg14@1.2")
 
@@ -6438,7 +6610,7 @@ class TestMultipleDepots(pkg5unittest.ManyDepotTestCase):
                 self.pkg("uninstall moo")
 
                 # Reset the test2 publisher.
-                self.pkg("set-publisher -O %s test2" % self.rurl2)
+                self.pkg("set-publisher -O {0} test2".format(self.rurl2))
 
                 # Install v1.0 of upgrade-np from test2 to prepare for
                 # update.
@@ -6450,7 +6622,7 @@ class TestMultipleDepots(pkg5unittest.ManyDepotTestCase):
 
                 # Set test2 so that upgrade-np has a new version available
                 # even though test1's repository is not accessible.
-                self.pkg("set-publisher -O %s test2" % self.rurl4)
+                self.pkg("set-publisher -O {0} test2".format(self.rurl4))
 
                 # Verify update does not work since test1 is unreachable
                 # even though upgrade-np@1.1 is available from test2.
@@ -6463,8 +6635,8 @@ class TestMultipleDepots(pkg5unittest.ManyDepotTestCase):
 
                 # Now reset everything for the next test.
                 self.pkg("uninstall upgrade-np")
-                self.pkg("set-publisher --no-refresh -O %s test1" % self.rurl1)
-                self.pkg("set-publisher -O %s test2" % self.rurl2)
+                self.pkg("set-publisher --no-refresh -O {0} test1".format(self.rurl1))
+                self.pkg("set-publisher -O {0} test2".format(self.rurl2))
 
         def test_09_uninstall_from_wrong_publisher(self):
                 """Install a package from a publisher and try to remove it
@@ -6498,7 +6670,7 @@ class TestMultipleDepots(pkg5unittest.ManyDepotTestCase):
                 # a repository with an empty catalog.  After that, attempt to
                 # install the package again, which should succeed even though
                 # the fmri is no longer in the publisher's catalog.
-                self.pkg("set-publisher -O %s test1" % self.rurl6)
+                self.pkg("set-publisher -O {0} test1".format(self.rurl6))
                 self.pkg("install quux@1.0", exit=4)
                 self.pkg("info quux@1.0")
                 self.pkg("unset-publisher test1")
@@ -6508,14 +6680,14 @@ class TestMultipleDepots(pkg5unittest.ManyDepotTestCase):
                 # but using an empty repository.  After that, attempt to install
                 # the package again, which should succeed since at least one
                 # publisher has the package in its catalog.
-                self.pkg("set-publisher -O %s test3" % self.rurl7)
-                self.pkg("set-publisher -O %s test1" % self.rurl6)
+                self.pkg("set-publisher -O {0} test3".format(self.rurl7))
+                self.pkg("set-publisher -O {0} test1".format(self.rurl6))
                 self.pkg("info -r pkg://test3/quux@1.0")
                 self.pkg("install quux@1.0", exit=4)
                 self.pkg("unset-publisher test1")
                 self.pkg("unset-publisher test3")
 
-                self.pkg("set-publisher -O %s test1" % self.rurl1)
+                self.pkg("set-publisher -O {0} test1".format(self.rurl1))
                 self.pkg("info -r pkg://test1/quux@1.0")
                 self.pkg("unset-publisher test1")
 
@@ -6525,13 +6697,13 @@ class TestMultipleDepots(pkg5unittest.ManyDepotTestCase):
                 # code since the removed publisher's package is already the
                 # newest version available.
                 #
-                self.pkg("set-publisher -O %s test3" % self.rurl7)
+                self.pkg("set-publisher -O {0} test3".format(self.rurl7))
                 self.pkg("install quux@1.0", exit=4)
                 self.pkg("unset-publisher test3")
 
                 # Change the image metadata back to where it was, in preparation
                 # for subsequent tests.
-                self.pkg("set-publisher -O %s -P test1" % self.rurl1)
+                self.pkg("set-publisher -O {0} -P test1".format(self.rurl1))
 
                 # Remove the installed packages.
                 self.pkg("uninstall quux")
@@ -6563,7 +6735,7 @@ class TestMultipleDepots(pkg5unittest.ManyDepotTestCase):
                 # a repository with an empty catalog.  After that, attempt to
                 # uninstall the package again, which should succeed even though
                 # the fmri is no longer in the publisher's catalog.
-                self.pkg("set-publisher -O %s test1" % self.rurl6)
+                self.pkg("set-publisher -O {0} test1".format(self.rurl6))
                 self.pkg("uninstall -nv foo")
                 self.pkg("unset-publisher test1")
 
@@ -6574,8 +6746,8 @@ class TestMultipleDepots(pkg5unittest.ManyDepotTestCase):
                 # even though the package's installed publisher is known, but
                 # doesn't have the package's fmri in its catalog, but the
                 # package's fmri is in a different publisher's catalog.
-                self.pkg("set-publisher -O %s test3" % self.rurl7)
-                self.pkg("set-publisher -O %s test1" % self.rurl6)
+                self.pkg("set-publisher -O {0} test3".format(self.rurl7))
+                self.pkg("set-publisher -O {0} test1".format(self.rurl6))
                 self.pkg("uninstall -nv foo")
                 self.pkg("unset-publisher test1")
                 self.pkg("unset-publisher test3")
@@ -6584,7 +6756,7 @@ class TestMultipleDepots(pkg5unittest.ManyDepotTestCase):
                 # as the installed publisher.  After that, attempt to uninstall
                 # the package again, which should succeed even though the fmri
                 # is only in a different publisher's catalog.
-                self.pkg("set-publisher -O %s test3" % self.rurl7)
+                self.pkg("set-publisher -O {0} test3".format(self.rurl7))
                 self.pkg("uninstall -nv foo")
                 self.pkg("unset-publisher test3")
 
@@ -6593,13 +6765,13 @@ class TestMultipleDepots(pkg5unittest.ManyDepotTestCase):
 
                 # Change the image metadata back to where it was, in preparation
                 # for subsequent tests.
-                self.pkg("set-publisher -O %s -P test1" % self.rurl1)
+                self.pkg("set-publisher -O {0} -P test1".format(self.rurl1))
 
         def test_13_non_preferred_multimatch(self):
                 """Verify that when multiple non-preferred publishers offer the
                 same package that the expected install behaviour occurs."""
 
-                self.pkg("set-publisher -P -O %s test3" % self.rurl3)
+                self.pkg("set-publisher -P -O {0} test3".format(self.rurl3))
 
                 # make sure we look here first; tests rely on that
                 self.pkg("set-publisher --search-before=test2 test1")
@@ -6702,7 +6874,7 @@ class TestMultipleDepots(pkg5unittest.ManyDepotTestCase):
                 """Verify that packages installed from a publisher that has
                 been removed can still satisfy dependencies."""
 
-                self.pkg("set-publisher -O %s test4" % self.rurl5)
+                self.pkg("set-publisher -O {0} test4".format(self.rurl5))
                 self.pkg("install pkg://test4/corge")
                 self.pkg("set-publisher --disable test2")
                 self.pkg("set-publisher --disable test4")
@@ -6784,7 +6956,7 @@ class TestImageCreateCorruptImage(pkg5unittest.SingleDepotTestCaseCorruptImage):
 
         misc_files = [ "tmp/libc.so.1" ]
 
-        PREFIX = "unset PKG_IMAGE; cd %s;"
+        PREFIX = "unset PKG_IMAGE; cd {0};"
 
         def setUp(self):
                 pkg5unittest.SingleDepotTestCaseCorruptImage.setUp(self)
@@ -6792,7 +6964,7 @@ class TestImageCreateCorruptImage(pkg5unittest.SingleDepotTestCaseCorruptImage):
 
         def pkg(self, command, exit=0, comment="", use_img_root=True):
                 pkg5unittest.SingleDepotTestCaseCorruptImage.pkg(self, command,
-                    exit=exit, comment=comment, prefix=self.PREFIX % self.dir,
+                    exit=exit, comment=comment, prefix=self.PREFIX.format(self.dir),
                     use_img_root=use_img_root)
 
         # For each test:
@@ -6838,8 +7010,8 @@ class TestImageCreateCorruptImage(pkg5unittest.SingleDepotTestCaseCorruptImage):
                 self.dir = self.corrupt_image_create(self.rurl,
                     set(["cfg_cache_absent"]), ["var/pkg"])
 
-                self.pkg("-D simulate_live_root=%s install foo@1.1" %
-                    self.backup_img_path(), use_img_root=False)
+                self.pkg("-D simulate_live_root={0} install foo@1.1".format(
+                    self.backup_img_path()), use_img_root=False)
 
         def test_var_pkg_missing_index(self):
                 """ Creates bad_dir with only the index dir missing. """
@@ -6940,8 +7112,8 @@ class TestImageCreateCorruptImage(pkg5unittest.SingleDepotTestCaseCorruptImage):
                 self.dir = self.corrupt_image_create(self.rurl,
                     set(["cfg_cache_absent"]), [".org.opensolaris,pkg"])
 
-                self.pkg("-D simulate_live_root=%s install foo@1.1" %
-                    self.backup_img_path(), use_img_root=False)
+                self.pkg("-D simulate_live_root={0} install foo@1.1".format(
+                    self.backup_img_path()), use_img_root=False)
 
         def test_ospkg_missing_index(self):
                 """ Creates a corrupted image at bad_dir by creating
@@ -7111,7 +7283,7 @@ class TestPkgInstallObsolete(pkg5unittest.SingleDepotTestCase):
                 self.pkg("list foo@1", exit=1) # should not be installed
                 self.pkg("install qux") #update
                 self.pkg("list foo@1")
-                self.pkgrepo("remove -s %s fred@2" % self.rurl)
+                self.pkgrepo("remove -s {0} fred@2".format(self.rurl))
 
         def test_basic_exact_install(self):
                 foo1 = """
@@ -7219,7 +7391,7 @@ class TestPkgInstallObsolete(pkg5unittest.SingleDepotTestCase):
                 self.pkg("refresh")
                 self.pkg("exact-install foo@2 fred")
                 self.pkg("uninstall '*'") #clean up for next test
-                self.pkgrepo("remove -s %s fred@2" % self.rurl)
+                self.pkgrepo("remove -s {0} fred@2".format(self.rurl))
 
         def test_basic_7a(self):
                 """Upgrade a package to a version with a dependency on a renamed
@@ -7517,7 +7689,7 @@ class TestPkgInstallObsolete(pkg5unittest.SingleDepotTestCase):
                 self.pkgsend_bulk(self.rurl, (t11p1, t11p2))
                 self.image_create(self.rurl)
 
-                self.pkg("%s netbeans" % install_cmd)
+                self.pkg("{0} netbeans".format(install_cmd))
                 self.pkg("list pkg:/developer/netbeans")
                 self.pkg("list pkg:/netbeans", exit=1)
 
@@ -7550,7 +7722,7 @@ class TestPkgInstallObsolete(pkg5unittest.SingleDepotTestCase):
                 self.pkgsend_bulk(self.rurl, (t11p1, t11p2, t11p3))
                 self.image_create(self.rurl)
 
-                self.pkg("%s netbonze" % install_cmd, exit=1)
+                self.pkg("{0} netbonze".format(install_cmd), exit=1)
 
         def test_basic_11b(self):
                 """Install or exact-install a package using an ambiguous name
@@ -7587,7 +7759,7 @@ class TestPkgInstallObsolete(pkg5unittest.SingleDepotTestCase):
                 self.pkgsend_bulk(self.rurl, (t11p1, t11p2, t11p3, t11p4))
                 self.image_create(self.rurl)
 
-                self.pkg("%s netbooze" % install_cmd)
+                self.pkg("{0} netbooze".format(install_cmd))
                 self.pkg("list pkg:/developer/netbooze")
                 self.pkg("list pkg:/netbooze", exit=1)
 
@@ -7721,21 +7893,21 @@ class TestPkgInstallObsolete(pkg5unittest.SingleDepotTestCase):
 
                 self.pkg("install chained_A@1 chained_X chained_Z")
                 for p in ["chained_A@1", "chained_X@1"]:
-                        self.pkg("list %s" % p)
+                        self.pkg("list {0}".format(p))
                 self.pkg("update")
 
                 for p in ["chained_A@2", "chained_X@1", "chained_B@2",
                     "chained_C@2", "chained_Z"]:
-                        self.pkg("list %s" % p)
+                        self.pkg("list {0}".format(p))
 
                 self.pkg("uninstall chained_X")
 
                 for p in ["chained_C@2", "chained_Z"]:
-                        self.pkg("list %s" % p)
+                        self.pkg("list {0}".format(p))
 
                 # make sure renamed pkgs no longer needed are uninstalled
                 for p in ["chained_A@2", "chained_B@2"]:
-                        self.pkg("list %s" % p, exit=1)
+                        self.pkg("list {0}".format(p), exit=1)
 
         def test_unobsoleted(self):
                 """Ensure that the existence of an obsolete package version
@@ -7795,22 +7967,22 @@ class TestPkgInstallObsolete(pkg5unittest.SingleDepotTestCase):
 
                 # Testing reintroA@1 -> reintroA@3 with install or
                 # exact-install.
-                self.pkg("%s reintroA@1" % install_cmd)
-                self.pkg("%s reintroA@3" % install_cmd)
+                self.pkg("{0} reintroA@1".format(install_cmd))
+                self.pkg("{0} reintroA@3".format(install_cmd))
                 self.pkg("list reintroA@3")
                 self.pkg("uninstall reintroA")
 
                 # Testing empty image -> reintroA@3 with install or
                 # exact-install.
-                self.pkg("%s reintroA@3" % install_cmd)
+                self.pkg("{0} reintroA@3".format(install_cmd))
                 self.pkg("list reintroA@3")
                 self.pkg("uninstall reintroA")
 
                 # Testing reintroA@1 -> reintroA@2 -> reintroA@3 with install
                 # or exact-install.
-                self.pkg("%s reintroA@1" % install_cmd)
-                self.pkg("%s reintroA@2" % install_cmd)
-                self.pkg("%s reintroA@3" % install_cmd)
+                self.pkg("{0} reintroA@1".format(install_cmd))
+                self.pkg("{0} reintroA@2".format(install_cmd))
+                self.pkg("{0} reintroA@3".format(install_cmd))
                 self.pkg("list reintroA@3")
                 self.pkg("uninstall reintroA")
 
@@ -7827,24 +7999,24 @@ class TestPkgInstallObsolete(pkg5unittest.SingleDepotTestCase):
 
                 # Testing reintroB@1 -> reintroB@3 with install or
                 # exact-install
-                self.pkg("%s reintroB@1" % install_cmd)
-                self.pkg("%s reintroB@3" % install_cmd)
+                self.pkg("{0} reintroB@1".format(install_cmd))
+                self.pkg("{0} reintroB@3".format(install_cmd))
                 self.pkg("list reintroB@3")
                 self.pkg("list reintroA@3")
                 self.pkg("uninstall reintroB reintroA")
 
                 # Testing empty image -> reintroB@3 with install or
                 # exact-install
-                self.pkg("%s reintroB@3" % install_cmd)
+                self.pkg("{0} reintroB@3".format(install_cmd))
                 self.pkg("list reintroB@3")
                 self.pkg("list reintroA@3")
                 self.pkg("uninstall reintroB reintroA")
 
                 # Testing reintroB@1 -> reintroB@2 -> reintroB@3 with install
                 # or exact-install
-                self.pkg("%s reintroB@1" % install_cmd)
-                self.pkg("%s reintroB@2" % install_cmd)
-                self.pkg("%s reintroB@3" % install_cmd)
+                self.pkg("{0} reintroB@1".format(install_cmd))
+                self.pkg("{0} reintroB@2".format(install_cmd))
+                self.pkg("{0} reintroB@3".format(install_cmd))
                 self.pkg("list reintroB@3")
                 self.pkg("list reintroA@3")
                 self.pkg("uninstall reintroB reintroA")
@@ -8018,7 +8190,7 @@ class TestPkgInstallMultiObsolete(pkg5unittest.ManyDepotTestCase):
                 self.pkg("set-publisher -O " + self.rurl2 + " test2")
                 self.pkg("list -a")
 
-                self.pkg("%s stem" % install_cmd, exit=4) # noting to do since it's obs
+                self.pkg("{0} stem".format(install_cmd), exit=4) # noting to do since it's obs
                 # We should choose the obsolete package, which means nothing
                 # gets installed.
                 self.pkg("list", exit=1)
@@ -8047,7 +8219,7 @@ class TestPkgInstallMultiObsolete(pkg5unittest.ManyDepotTestCase):
                 self.image_create(self.rurl1, prefix="test1")
                 self.pkg("set-publisher -O " + self.rurl2 + " test2")
 
-                self.pkg("%s stem" % install_cmd, exit=1)
+                self.pkg("{0} stem".format(install_cmd), exit=1)
 
 
 class TestPkgInstallMultiIncorp(pkg5unittest.ManyDepotTestCase):
@@ -8112,7 +8284,7 @@ class TestPkgInstallMultiIncorp(pkg5unittest.ManyDepotTestCase):
                 self.pkg("install userland-incorporation")
 
                 # Next, add the second publisher.
-                self.pkg("set-publisher -p %s" % self.rurl2)
+                self.pkg("set-publisher -p {0}".format(self.rurl2))
 
                 # Next, verify that first publisher's incorporated package can
                 # be installed since it satisfies incorporate dependencies even
@@ -8369,7 +8541,7 @@ class TestActionErrors(pkg5unittest.SingleDepotTestCase):
                 # Directory replaced with a link (fails for install).
                 self.__write_empty_file(dest_dir + ".src")
                 os.symlink(dest_dir + ".src", dest_dir)
-                self.pkg("install %s" % dest_dir_name, exit=1)
+                self.pkg("install {0}".format(dest_dir_name), exit=1)
 
         def test_01_file(self):
                 """Verify that file install works as expected when its parent
@@ -9198,23 +9370,23 @@ adm
 
                 for i in xrange(20):
                         s = """
-                                open massivedupdir%d@0,5.11-0
-                                add dir path=usr owner=root group=%%s mode=%%s zig=%%s
+                                open massivedupdir{0:d}@0,5.11-0
+                                add dir path=usr owner=root group={{0}} mode={{1}} zig={{2}}
                                 close
-                        """ % i
+                        """.format(i)
 
                         if i == 14:
-                                s = s % ("root", "0750", "zag")
+                                s = s.format("root", "0750", "zag")
                         elif i in (1, 9):
-                                s = s % ("sys", "0750", "zag")
+                                s = s.format("sys", "0750", "zag")
                         elif i in (3, 8, 12, 17):
-                                s = s % ("root", "0755", "zag")
+                                s = s.format("root", "0755", "zag")
                         else:
-                                s = s % ("sys", "0755", "zig")
+                                s = s.format("sys", "0755", "zig")
 
                         pkgs.append(s)
 
-                self.pkgsend_bulk(self.rurl, pkgs)
+                self.plist = self.pkgsend_bulk(self.rurl, pkgs)
 
         def test_multiple_files_install(self):
                 """Test the behavior of pkg(1) when multiple file actions
@@ -9270,22 +9442,27 @@ adm
                 self.pkg("uninstall '*'")
                 self.pkg("-D broken-conflicting-action-handling=1 install "
                     "dupfilesp1 dupfilesp2@0 dupfilesp3")
-                # XXX The checks here rely on verify failing due to hashes being
-                # wrong; they should probably report a duplicate action instead.
+                # Verify should report a duplicate action error on dupfilesp1,
+                # dupfilesp2 and dupfilesp3 and shouldn't report it was failing
+                # due to hashes being wrong.
                 self.pkg("verify", exit=1)
                 out1, err1 = self.output, self.errout
+                for i, l in enumerate(self.plist):
+                    if l.startswith("pkg://test/dupfilesp1"):
+                        index = i
+                expected = "\n  {0}\n  {1}\n  {2}".format(
+                    self.plist[index], self.plist[index + 1], self.plist[index + 3])
+                self.assert_(expected in err1, err1)
+                self.assert_("Hash" not in out1)
                 self.pkg("uninstall dupfilesp3")
-                # Because we removed dupfilesp3, the error output in this verify
-                # won't exactly match that from the previous one, but the one
-                # remaining failing package should give the same output since we
-                # didn't modify the FS, so search for the current output in the
-                # old.
+                # Removing dupfilesp3, verify should still report a duplicate
+                # action error on dupfilesp1 and dupfilesp2.
                 self.pkg("verify", exit=1)
-                out2 = self.output
-                # Strip the first (header) line; this error might not have been
-                # first in the previous output.
-                out2 = out2[out2.index("\n") + 1:]
-                self.assert_(out2 in out1)
+                out2, err2 = self.output, self.errout
+                expected = "\n  {0}\n  {1}".format(
+                    self.plist[index], self.plist[index + 1])
+                self.assert_(expected in err2)
+                self.assert_("Hash" not in out2)
 
                 # Removing all but one of the offending actions should get us
                 # back to sanity.
@@ -9812,13 +9989,13 @@ adm
                 self.pkg("uninstall implicitdirs7")
                 # XXX We don't currently fix up anything beneath a directory
                 # that was restored, so we have to do it by hand.
-                os.mkdir("%s/usr/bin" % self.img_path())
-                shutil.copy("%s/tmp/file1" % self.test_root,
-                    "%s/usr/bin/something" % self.img_path())
+                os.mkdir("{0}/usr/bin".format(self.img_path()))
+                shutil.copy("{0}/tmp/file1".format(self.test_root),
+                    "{0}/usr/bin/something".format(self.img_path()))
                 owner = portable.get_user_by_name("root", self.img_path(), True)
                 group = portable.get_group_by_name("bin", self.img_path(), True)
-                os.chown("%s/usr/bin/something" % self.img_path(), owner, group)
-                os.chmod("%s/usr/bin/something" % self.img_path(), 0755)
+                os.chown("{0}/usr/bin/something".format(self.img_path()), owner, group)
+                os.chmod("{0}/usr/bin/something".format(self.img_path()), 0o755)
                 self.pkg("verify")
 
                 # Removing one of more than two offending actions can't do much
@@ -9835,7 +10012,7 @@ adm
                     stat.S_IFLNK: "symbolic link",
                     stat.S_IFSOCK: "socket",
                 }
-                thepath = "%s/dir/pathname" % self.img_path()
+                thepath = "{0}/dir/pathname".format(self.img_path())
                 fmt = stat.S_IFMT(os.lstat(thepath).st_mode)
                 # XXX The checks here rely on verify failing due to action types
                 # not matching what's on the system; they should probably report
@@ -10037,7 +10214,7 @@ adm
                 self.pkg("uninstall '*'")
                 self.pkg("-D broken-conflicting-action-handling=1 install "
                     "duppath-nonidenticallinksp1 duppath-nonidenticallinksp2@0")
-                link = os.readlink("%s/dir/pathname" % self.img_path())
+                link = os.readlink("{0}/dir/pathname".format(self.img_path()))
                 if link == "dir/something":
                         self.pkg("uninstall duppath-nonidenticallinksp2")
                 else:
@@ -10049,7 +10226,7 @@ adm
                 self.pkg("uninstall '*'")
                 self.pkg("-D broken-conflicting-action-handling=1 install "
                     "duppath-nonidenticallinksp1 duppath-nonidenticallinksp2@0")
-                link = os.readlink("%s/dir/pathname" % self.img_path())
+                link = os.readlink("{0}/dir/pathname".format(self.img_path()))
                 if link == "dir/something":
                         self.pkg("uninstall duppath-nonidenticallinksp1")
                 else:
@@ -10061,8 +10238,8 @@ adm
                 self.pkg("uninstall '*'")
                 self.pkg("install dupdirp1 dupdirp2@1 dupdirp3 dupdirp4", exit=1)
 
-                pkgs = " ".join("massivedupdir%d" % x for x in xrange(20))
-                self.pkg("install %s" % pkgs, exit=1)
+                pkgs = " ".join("massivedupdir{0:d}".format(x) for x in xrange(20))
+                self.pkg("install {0}".format(pkgs), exit=1)
 
                 # Trigger bug 17943: we install packages with conflicts in two
                 # directories (p9, p10).  We also install a package (p11) which
@@ -10089,28 +10266,28 @@ adm
                 # Two packages delivering the same directory, one under the
                 # current architecture, the other not tagged with an arch
                 # variant.
-                self.pkg("%s dupfilesv1 dupfilesv2" % install_cmd)
+                self.pkg("{0} dupfilesv1 dupfilesv2".format(install_cmd))
                 self.dir_exists("dir/pathname")
 
                 # Two packages delivering the same directory with different
                 # attributes -- one under the current architecture, the other
                 # tagged with another arch variant.
                 self.pkg("uninstall '*'")
-                self.pkg("%s dupfilesv1 dupfilesv3" % install_cmd)
+                self.pkg("{0} dupfilesv1 dupfilesv3".format(install_cmd))
                 if platform.processor() == "sparc":
-                        self.dir_exists("dir/pathname", mode=0777)
+                        self.dir_exists("dir/pathname", mode=0o777)
                 else:
-                        self.dir_exists("dir/pathname", mode=0755)
+                        self.dir_exists("dir/pathname", mode=0o755)
 
                 # Two packages delivering a file at the same path where one is
                 # tagged only for non-global zones should install successfully
                 # together in a global zone.
                 self.pkg("uninstall '*'")
-                self.pkg("%s dupfilesv5 dupfilesv6" % install_cmd)
+                self.pkg("{0} dupfilesv5 dupfilesv6".format(install_cmd))
                 path = os.path.join(self.get_img_path(), "dir/pathname")
                 try:
                         f = open(path)
-                except OSError, e:
+                except OSError as e:
                         if e.errno == errno.ENOENT:
                                 self.assert_(False, "File dir/pathname does not exist")
                         else:
@@ -10121,19 +10298,19 @@ adm
                 # Two packages delivering the same directory, one with the
                 # devel facet false, the other true.
                 self.pkg("uninstall '*'")
-                self.pkg("%s dupfilesf1 dupfilesf2" % install_cmd)
+                self.pkg("{0} dupfilesf1 dupfilesf2".format(install_cmd))
                 self.dir_exists("dir/pathname")
 
                 # Two packages delivering the same directory, one with the
                 # devel facet true, the other without.
                 self.pkg("uninstall '*'")
-                self.pkg("%s dupfilesf1 dupfilesf3" % install_cmd)
+                self.pkg("{0} dupfilesf1 dupfilesf3".format(install_cmd))
                 self.dir_exists("dir/pathname")
 
                 # Two packages delivering the same directory, one with the
                 # devel facet false, the other without.
                 self.pkg("uninstall '*'")
-                self.pkg("%s dupfilesf2 dupfilesf3" % install_cmd)
+                self.pkg("{0} dupfilesf2 dupfilesf3".format(install_cmd))
                 self.dir_exists("dir/pathname")
 
         def test_conflicting_uninstall_publisher(self):
@@ -10152,8 +10329,8 @@ adm
                 # If packages with conflicting actions are found during
                 # uninstall, and the publisher of the package has been
                 # removed, uninstall should still succeed.
-                self.pkg("-D broken-conflicting-action-handling=1 %s "
-                    "dupdirp1 dupdirp2@1" % install_cmd)
+                self.pkg("-D broken-conflicting-action-handling=1 {0} "
+                    "dupdirp1 dupdirp2@1".format(install_cmd))
                 self.pkg("unset-publisher test")
                 self.pkg("uninstall dupdirp2")
                 self.pkg("verify")
@@ -10196,9 +10373,9 @@ adm
                 dir_path = os.path.join(self.get_img_path(), path)
                 try:
                         st = os.stat(dir_path)
-                except OSError, e:
+                except OSError as e:
                         if e.errno == errno.ENOENT:
-                                self.assert_(False, "Directory %s does not exist" % path)
+                                self.assert_(False, "Directory {0} does not exist".format(path))
                         else:
                                 raise
                 if mode is not None:
@@ -10278,7 +10455,7 @@ adm
                 self.pkg("uninstall dupuserp3")
                 self.pkg("verify", exit=1)
                 out2 = self.output
-                out2 = out2[out2.index("\n") + 1:]
+                out2 = out2[out2.index("STATUS\n") + 7:]
                 self.assert_(out2 in out1)
 
                 # Removing all but one of the offending actions should get us
@@ -10308,9 +10485,9 @@ adm
         def multiple_drivers_helper(self, install_cmd):
                 self.image_create(self.rurl)
 
-                self.pkg("%s driverdb" % install_cmd)
+                self.pkg("{0} driverdb".format(install_cmd))
 
-                self.pkg("%s dupdriver" % install_cmd, exit=1)
+                self.pkg("{0} dupdriver".format(install_cmd), exit=1)
 
         def test_multiple_depend(self):
                 """Test to make sure we can have multiple depend actions on
@@ -10323,18 +10500,18 @@ adm
                 self.image_create(self.rurl)
 
                 # Two identical unversioned require dependencies
-                self.pkg("%s dupdepend1" % install_cmd)
+                self.pkg("{0} dupdepend1".format(install_cmd))
 
                 # Two dependencies of different types on an identical
                 # unversioned fmri
-                self.pkg("%s dupdepend2" % install_cmd)
+                self.pkg("{0} dupdepend2".format(install_cmd))
 
                 # Two identical versioned require dependencies
-                self.pkg("%s dupdepend3" % install_cmd)
+                self.pkg("{0} dupdepend3".format(install_cmd))
 
                 # Two dependencies of different types on an identical versioned
                 # fmri
-                self.pkg("%s dupdepend4" % install_cmd)
+                self.pkg("{0} dupdepend4".format(install_cmd))
 
         def test_varianted_types(self):
                 """Test that actions which would otherwise conflict but are
@@ -10346,8 +10523,278 @@ adm
         def varianted_types_helper(self, install_cmd):
                 self.pkg_image_create(repourl=self.rurl,
                     additional_args="--variant foo=one")
-                self.pkg("%s vpath" % install_cmd)
+                self.pkg("{0} vpath".format(install_cmd))
 
+
+class TestPkgInstallExplicitInstall(pkg5unittest.SingleDepotTestCase):
+        """Test pkg.depend.explicit-install action behaviors."""
+        persistent_setup = True
+
+        pkgs = (
+                """
+                    open group@1.0,5.11-0
+                    add depend type=group fmri=pkg:/A
+                    close """,
+                """
+                    open incorp@1.0,5.11-0
+                    add depend type=incorporate fmri=pkg:/A@1.0,5.11-0.1
+                    close """,
+                """
+                    open A@1.0,5.11-0.1
+                    close """,
+                """
+                    open A@1.0,5.11-0.1.1.0
+                    add depend type=require fmri=pkg:/idr@1.0,5.11-0.1.1.0
+                    close """,
+                """
+                    open idr@1.0,5.11-0.1.1.0
+                    add set name=pkg.depend.explicit-install value=true
+                    add depend type=incorporate fmri=pkg:/A@1.0,5.11-0.1.1.0
+                    close """,
+        )
+
+        pkgs2 = (
+                 """
+                    open A@1.0,5.11-0.1.1.1
+                    add depend type=require fmri=pkg:/idr@1.0,5.11-0.1.1.1
+                    close """,
+                """
+                    open idr@1.0,5.11-0.1.1.1
+                    add set name=pkg.depend.explicit-install value=false
+                    add depend type=incorporate fmri=pkg:/A@1.0,5.11-0.1.1.1
+                    close """,
+        )
+
+        pkgs3 = (
+                """
+                    open A@1.0,5.11-0.1.1.2
+                    add depend type=require fmri=pkg:/idr@1.0,5.11-0.1.1.2
+                    close """,
+                """
+                    open idr@1.0,5.11-0.1.1.2
+                    add depend type=incorporate fmri=pkg:/A@1.0,5.11-0.1.1.2
+                    close """,
+        )
+
+        pkgs4 = (
+                """
+                    open C1@1.0
+                    add depend type=require-any fmri=pkg:/C2@1.0 fmri=pkg:/C2@2.0
+                    close """,
+                """
+                    open C2@1.0
+                    add depend type=require fmri=pkg:/C3@1.0,5.11-0.1
+                    close """,
+                """
+                    open C2@2.0
+                    add set name=pkg.depend.explicit-install value=true
+                    add depend type=require fmri=pkg:/C3@1.0,5.11-0.1
+                    close """,
+                """
+                    open C3@1.0,5.11-0.1
+                    close """,
+        )
+
+        pkgs5 = (
+                """
+                    open Hiera1@1.0
+                    add depend type=require fmri=pkg:/Hiera2@1.0
+                    close """,
+                """
+                    open Hiera2@1.0
+                    add depend type=require fmri=pkg:/Hiera3@1.0
+                    close """,
+                """
+                    open Hiera3@1.0
+                    add set name=pkg.depend.explicit-install value=true
+                    close """,
+        )
+
+        def setUp(self):
+                pkg5unittest.SingleDepotTestCase.setUp(self)
+                self.pkgsend_bulk(self.rurl, self.pkgs)
+
+        def test_01_install(self):
+                self.image_create(self.rurl, prefix="")
+                # Test install works as expected.
+                # This will fail because idr@1.0-0.1.1.0 has
+                # pkg.depend.explicit-install set to true.
+                self.pkg("install -v group incorp A@1.0-0.1.1.0", exit=1)
+                self.pkg("install -v group incorp")
+                self.pkg("verify")
+                self.pkg("list -H")
+                expected = \
+                    "A    1.0-0.1    i--\n" \
+                    "group    1.0-0    i--\n" \
+                    "incorp    1.0-0    i--\n"
+                output = self.reduceSpaces(self.output)
+                expected = self.reduceSpaces(expected)
+                self.assertEqualDiff(expected, output)
+                self.pkg("uninstall -v group incorp A")
+                self.pkg("list -H", exit=1)
+
+                # Test exact-install works as expected.
+                # This will fail because idr@1.0-0.1.1.0 has
+                # pkg.depend.explicit-install set to true.
+                self.pkg("exact-install -v group incorp A@1.0-0.1.1.0", exit=1)
+                self.pkg("exact-install -v group incorp")
+                self.pkg("verify")
+                self.pkg("list -H")
+                output = self.reduceSpaces(self.output)
+                self.assertEqualDiff(expected, output)
+
+                # Test exact-install idr.
+                self.pkg("exact-install -v idr")
+                self.pkg("list -H")
+                expected = \
+                    "idr    1.0-0.1.1.0    i--\n"
+                output = self.reduceSpaces(self.output)
+                expected = self.reduceSpaces(expected)
+                self.assertEqualDiff(expected, output)
+
+                self.pkg("install -v group")
+                self.pkg("verify")
+                self.pkg("list -H")
+                expected = \
+                    "A    1.0-0.1.1.0    i--\n" \
+                    "group    1.0-0    i--\n" \
+                    "idr    1.0-0.1.1.0    i--\n"
+                output = self.reduceSpaces(self.output)
+                expected = self.reduceSpaces(expected)
+                self.assertEqualDiff(expected, output)
+
+                self.pkg("uninstall -v group idr A")
+                self.pkg("list -H", exit=1)
+
+                self.pkg("install -v idr")
+                self.pkg("list -H")
+                expected = \
+                    "idr    1.0-0.1.1.0    i--\n"
+                output = self.reduceSpaces(self.output)
+                expected = self.reduceSpaces(expected)
+                self.assertEqualDiff(expected, output)
+
+                self.pkg("install -v group")
+                self.pkg("verify")
+                self.pkg("list -H")
+                expected = \
+                    "A    1.0-0.1.1.0    i--\n" \
+                    "group    1.0-0    i--\n" \
+                    "idr    1.0-0.1.1.0    i--\n"
+                output = self.reduceSpaces(self.output)
+                expected = self.reduceSpaces(expected)
+                self.assertEqualDiff(expected, output)
+                self.pkg("uninstall '*'")
+                self.pkg("list -H", exit=1)
+
+                self.pkgsend_bulk(self.rurl, self.pkgs2)
+                self.pkg("install -v group incorp")
+                self.pkg("verify")
+                self.pkg("list -H")
+                expected = \
+                    "A    1.0-0.1.1.1    i--\n" \
+                    "group    1.0-0    i--\n" \
+                    "idr    1.0-0.1.1.1    i--\n" \
+                    "incorp    1.0-0    i--\n"
+                output = self.reduceSpaces(self.output)
+                expected = self.reduceSpaces(expected)
+                self.assertEqualDiff(expected, output)
+
+                self.pkgsend_bulk(self.rurl, self.pkgs3)
+                # test updating all packages.
+                self.pkg("update")
+                self.pkg("verify")
+                self.pkg("list -H")
+                expected = \
+                    "A    1.0-0.1.1.2    i--\n" \
+                    "group    1.0-0    i--\n" \
+                    "idr    1.0-0.1.1.2    i--\n" \
+                    "incorp    1.0-0    i--\n"
+                output = self.reduceSpaces(self.output)
+                expected = self.reduceSpaces(expected)
+                self.assertEqualDiff(expected, output)
+                self.pkg("uninstall '*'")
+
+                self.pkgsend_bulk(self.rurl, self.pkgs4)
+                # test require-any with pkg.depend.explicit-install tag.
+                self.pkg("install C1")
+                self.pkg("verify")
+                self.pkg("list -H")
+                expected = \
+                    "C1    1.0    i--\n" \
+                    "C2    1.0    i--\n" \
+                    "C3    1.0-0.1    i--\n"
+                output = self.reduceSpaces(self.output)
+                expected = self.reduceSpaces(expected)
+                self.assertEqualDiff(expected, output)
+                self.pkg("uninstall '*'")
+
+                self.pkg("install C1 C2")
+                self.pkg("verify")
+                self.pkg("list -H")
+                expected = \
+                    "C1    1.0    i--\n" \
+                    "C2    2.0    i--\n" \
+                    "C3    1.0-0.1    i--\n"
+                output = self.reduceSpaces(self.output)
+                expected = self.reduceSpaces(expected)
+                self.assertEqualDiff(expected, output)
+
+                # Test hierarchic dependencies.
+                self.pkgsend_bulk(self.rurl, self.pkgs5)
+                self.pkg("install -v Hiera1@1.0", exit=1)
+
+        def test_02_updateReject(self):
+                self.image_create(self.rurl, prefix="")
+                self.pkgsend_bulk(self.rurl, self.pkgs2)
+                self.pkgsend_bulk(self.rurl, self.pkgs3)
+                self.pkg("install -v --reject idr group incorp")
+                self.pkg("verify")
+                self.pkg("list -H")
+                expected = \
+                    "A    1.0-0.1    i--\n" \
+                    "group    1.0-0    i--\n" \
+                    "incorp    1.0-0    i--\n"
+                output = self.reduceSpaces(self.output)
+                expected = self.reduceSpaces(expected)
+                self.assertEqualDiff(expected, output)
+
+                self.pkg("exact-install -v --reject idr group")
+                self.pkg("verify")
+                self.pkg("list -H")
+                expected = \
+                    "A    1.0-0.1    i--\n" \
+                    "group    1.0-0    i--\n"
+                output = self.reduceSpaces(self.output)
+                expected = self.reduceSpaces(expected)
+                self.assertEqualDiff(expected, output)
+
+                # This will fail, because idr@1.0-0.1.1.0 is filtered.
+                self.pkg("update -v --reject group A@1.0-0.1.1.0", exit=1)
+                # Explicitly install idr@1.0-0.1.1.0.
+                self.pkg("install idr@1.0-0.1.1.0")
+                # Update again.
+                self.pkg("update -v --reject group A@1.0-0.1.1.0")
+                self.pkg("verify")
+                self.pkg("list -H")
+                expected = \
+                    "A    1.0-0.1.1.0    i--\n" \
+                    "idr    1.0-0.1.1.0    i--\n"
+                output = self.reduceSpaces(self.output)
+                expected = self.reduceSpaces(expected)
+                self.assertEqualDiff(expected, output)
+
+                # This will fail.
+                self.pkg("update -v --reject idr", exit=1)
+                self.pkg("update")
+                self.pkg("verify")
+                self.pkg("list -H")
+                expected = \
+                    "A    1.0-0.1.1.2    i--\n" \
+                    "idr    1.0-0.1.1.2    i--\n"
+                output = self.reduceSpaces(self.output)
+                expected = self.reduceSpaces(expected)
+                self.assertEqualDiff(expected, output)
 
 if __name__ == "__main__":
         unittest.main()

@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 import errno
@@ -140,7 +140,7 @@ class LockFile(object):
                 # Attempt to lock the file.
                 try:
                         fcntl.lockf(lf, lock_type)
-                except IOError, e:
+                except IOError as e:
                         if e.errno not in (errno.EAGAIN, errno.EACCES):
                                 self._lock.release()
                                 raise
@@ -212,7 +212,7 @@ class FileLocked(Exception):
         def __str__(self):
                 errstr = "Unable to lock file"
                 if self.data:
-                        errstr += ": %s" % self.data
+                        errstr += ": {0}".format(self.data)
                 return errstr
 
 

@@ -20,9 +20,11 @@
 # CDDL HEADER END
 #
 
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+#
+# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+#
 
+from __future__ import print_function
 import cPickle as pickle
 import datetime
 import time
@@ -51,32 +53,32 @@ def report_by_date(data, title, summary_file = None):
                 total += data[i]
 
                 if chart_data == "":
-                        chart_data = "%d" % data[i]
+                        chart_data = "{0:d}".format(data[i])
                 else:
-                        chart_data += ",%d" % data[i]
+                        chart_data += ",{0:d}".format(data[i])
                 if data[i] > chart_max:
                         chart_max = data[i]
 
         msg = """\
 <p>
-Period: %s - %s (%d days)<br />
-""" % (start_day, end_day, days)
+Period: {0} - {1} ({2:d} days)<br />
+""".format(start_day, end_day, days)
 
         ndays = days
         sz = (chart_hz / ndays)
 
-        url = "cht=lc&chs=%dx%d&chg=%d,%d&chds=%d,%d&chxt=y,x&chxl=0:|0|%d|1:|%s|%s&chd=t:%s" % (ndays * sz, chart_vt, 7 * sz, 250 * (chart_vt / chart_max), chart_min, chart_max, chart_max, start_day, end_day, chart_data)
+        url = "cht=lc&chs={0:d}x{1:d}&chg={2:d},{3:d}&chds={4:d},{5:d}&chxt=y,x&chxl=0:|0|{6:d}|1:|{7}|{8}&chd=t:{9}".format(ndays * sz, chart_vt, 7 * sz, 250 * (chart_vt / chart_max), chart_min, chart_max, chart_max, start_day, end_day, chart_data)
 
-        fname = retrieve_chart("http://chart.apis.google.com/chart?%s" % url,
-            "%s-date" % title)
+        fname = retrieve_chart("http://chart.apis.google.com/chart?{0}".format(url),
+            "{0}-date".format(title))
 
         msg += """\
-<!-- %s -->
-<img src=\"%s\" alt=\"%s\" /><br />""" % (url, fname, "Active catalog IPs over %d day window" % ndays)
+<!-- {0} -->
+<img src=\"{1}\" alt=\"{2}\" /><br />""".format(url, fname, "Active catalog IPs over {0:d} day window".format(ndays))
 
-        print msg
+        print(msg)
         if summary_file:
-                print >>summary_file, msg
+                print(msg, file=summary_file)
 
 merge_entries_by_date = {}
 
@@ -142,6 +144,6 @@ for d in dates[1:]:
         data[d] = len(ip_counts.keys())
         
 report_section_begin("Active IP addresses")
-print "<h3>Distinct IP addresses, by date</h3>"
+print("<h3>Distinct IP addresses, by date</h3>")
 report_by_date(data, "distinct-cat-1d")
 report_section_end()

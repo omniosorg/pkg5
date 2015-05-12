@@ -20,8 +20,9 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
 
+from __future__ import print_function
 import os
 import sys
 import platform
@@ -63,8 +64,8 @@ def setup_environment(path_to_proto, debug=False, system_test=False):
         elif osname == 'aix':
                 proc = osname
         else:
-                print "Unable to determine appropriate proto area location."
-                print "This is a porting problem."
+                print("Unable to determine appropriate proto area location.")
+                print("This is a porting problem.")
                 sys.exit(1)
 
         # Figure out from where we're invoking the command
@@ -77,16 +78,16 @@ def setup_environment(path_to_proto, debug=False, system_test=False):
                 if system_test:
                         pkg_path = "/"
                 else:
-                        pkg_path = "%s/%s/root_%s" % \
-                            (cmddir, path_to_proto, proc)
+                        pkg_path = "{0}/{1}/root_{2}".format(
+                            cmddir, path_to_proto, proc)
 
-        proto_area = "%s/%s/root_%s" % (cmddir, path_to_proto, proc)
+        proto_area = "{0}/{1}/root_{2}".format(cmddir, path_to_proto, proc)
 
         # Clean up relative ../../, etc. out of path to proto
         pkg_path = os.path.realpath(pkg_path)
         proto_area = os.path.realpath(proto_area)
 
-        pkgs = os.path.join(pkg_path, "usr/lib/python2.6/vendor-packages")
+        pkgs = os.path.join(pkg_path, "usr/lib/python2.7/vendor-packages")
         bins = os.path.join(pkg_path, "usr/bin")
         sys.path.insert(1, pkgs)
 

@@ -20,9 +20,11 @@
 # CDDL HEADER END
 #
 
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+#
+# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+#
 
+from __future__ import print_function
 import cPickle as pickle
 import GeoIP
 import datetime
@@ -107,85 +109,86 @@ def ip_to_country(ips):
         return cs
 
 def retrieve_chart(url, fileprefix):
-        f = open("%s.png" % fileprefix, "w")
+        f = open("{0}.png".format(fileprefix), "w")
         try:
                 u = urllib2.urlopen(url)
                 f.write(u.read())
         except:
-                print >>sys.stderr, "an_catalog: couldn't retrieve chart '%s'" % url
+                print("an_catalog: couldn't retrieve chart '{0}'".format(url),
+                    file=sys.stderr)
 
         f.close()
 
         return f.name
 
 def prefix_raw_open(fileprefix, reportname):
-        f = open("%s-%s.dat" % (fileprefix, reportname), "w")
+        f = open("{0}-{1}.dat".format(fileprefix, reportname), "w")
 
         return f
 
 def prefix_summary_open(fileprefix):
-        f = open("%s-summary.html" % (fileprefix), "w")
+        f = open("{0}-summary.html".format(fileprefix), "w")
 
         return f
 
 def report_begin(cap_title):
-        print """\
+        print("""\
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<title>pkg.depotd Logs: %s</title>
+<title>pkg.depotd Logs: {0}</title>
 </head>
-<body>""" % cap_title
+<body>""".format(cap_title)
 
 def report_end():
-        print """\
+        print("""\
 </body>
-</html>"""
+</html>""")
 
 	
 def report_section_begin(cap_title, summary_file = None):
         msg = """\
 <br clear="all" />
 <div class="section">
-<h2>%s</h2>""" % cap_title
+<h2>{0}</h2>""".format(cap_title)
 
-        print msg
+        print(msg)
         if summary_file:
-                print >>summary_file, msg
+                print(msg, file=summary_file)
 
 def report_section_end(summary_file = None):
         msg = """</div> <!--end class=section-->"""
-        print msg
+        print(msg)
         if summary_file:
-                print >>summary_file, msg
+                print(msg, file=summary_file)
 
 
 def report_cols_begin(summary_file = None):
         msg = """<div class="colwrapper">"""
-        print msg
+        print(msg)
         if summary_file:
-                print >>summary_file, msg
+                print(msg, file=summary_file)
 
 def report_cols_end(summary_file = None):
         msg = """<br clear="all" /></div>"""
-        print msg
+        print(msg)
         if summary_file:
-                print >>summary_file, msg
+                print(msg, file=summary_file)
 
 def report_col_begin(col, summary_file = None):
-        msg = """<div class="%scolumn">""" % col
+        msg = """<div class="{0}column">""".format(col)
 
-        print msg
+        print(msg)
         if summary_file:
-                print >>summary_file, msg
+                print(msg, file=summary_file)
 
 def report_col_end(col, summary_file = None):
-        msg = """</div> <!-- end class=%scolumn -->""" % col
+        msg = """</div> <!-- end class={0}column -->""".format(col)
 
-        print msg
+        print(msg)
         if summary_file:
-                print >>summary_file, msg
+                pprint(msg, file=summary_file)
 
 
 
@@ -208,38 +211,38 @@ def report_by_date(data, title, summary_file = None):
                 days += 1
                 total += data[i]
 
-                print >>rf, i, data[i]
+                print(i, data[i], file=rf) 
                 if chart_data == "":
-                        chart_data = "%d" % data[i]
+                        chart_data = "{0:d}".format(data[i])
                 else:
-                        chart_data += ",%d" % data[i]
+                        chart_data += ",{0:d}".format(data[i])
                 if data[i] > chart_max:
                         chart_max = data[i]
 
         msg = """\
 <p>
-Total %s requests: <b>%d</b><br />
-Period: %s - %s (%d days)<br />
-Average %s requests per day: %.1f</p>""" % (title, total, start_day, end_day,
+Total {0} requests: <b>{1:d}</b><br />
+Period: {2} - {3} ({4:d} days)<br />
+Average {5} requests per day: {6:.1f}</p>""".format(title, total, start_day, end_day,
             days, title, float(total / days))
 
         ndays = int(str(days))
         sz = (chart_hz / ndays)
 
-        url = "cht=lc&chs=%dx%d&chg=%d,%d&chds=%d,%d&chxt=y,x&chxl=0:|0|%d|1:|%s|%s&chd=t:%s" % (ndays * sz, chart_vt, 7 * sz, 250 * (chart_vt / chart_max), chart_min, chart_max, chart_max, start_day, end_day, chart_data)
+        url = "cht=lc&chs={0:d}x{1:d}&chg={2:d},{3:d}&chds={4:d},{5:d}&chxt=y,x&chxl=0:|0|{6:d}|1:|{7}|{8}&chd=t:{9}".format(ndays * sz, chart_vt, 7 * sz, 250 * (chart_vt / chart_max, chart_min, chart_max, chart_max, start_day, end_day, chart_data))
 
-        fname = retrieve_chart("http://chart.apis.google.com/chart?%s" % url,
-            "%s-date" % title)
+        fname = retrieve_chart("http://chart.apis.google.com/chart?{0}".format(url),
+            "{0}-date".format(title))
 
         msg += """\
-<!-- %s -->
-<img src=\"%s\" alt=\"%s\" /><br />""" % (url, fname, title)
+<!-- {0} -->
+<img src=\"{1}\" alt=\"{2}\" /><br />""".format(url, fname, title)
 
         rf.close()
         
-        print msg
+        print(msg)
         if summary_file:
-                print >>summary_file, msg
+                print(msg, file=summary_file)
 
 def report_by_ip(data, title, summary_file = None):
         total = 0
@@ -247,17 +250,17 @@ def report_by_ip(data, title, summary_file = None):
 
         for i, n in (sorted(data.items(), key=lambda(k,v): (v,k))):
                 total += n
-                print >>rf, n, i
-                #print n, host_cache_lookup(i)
+                print(n, i, file=rf)
+                #print(n, host_cache_lookup(i))
 
-        print "<p>Distinct IP addresses: <b>%d</b></p>" % len(data.keys())
-        print "<p>Total %s retrievals: <b>%d</b></p>" % (title, total)
+        print("<p>Distinct IP addresses: <b>{0:d}</b></p>".format(len(data.keys())))
+        print("<p>Total {0} retrievals: <b>{1:d}</b></p>".format(title, total))
 
         rf.close()
 
         if summary_file:
-                print >>summary_file, "<p>Distinct IP addresses: <b>%d</b></p>" % len(data.keys())
-                print >>summary_file, "<p>Total %s retrievals: <b>%d</b></p>" % (title, total)
+                print("<p>Distinct IP addresses: <b>{0:d}</b></p>".format(len(data.keys())), file=summary_file)
+                print("<p>Total {0} retrievals: <b>{1:d}</b></p>".format(title, total), file=summary_file)
 
 def report_by_country(data, title, summary_file = None):
         total = 0
@@ -274,19 +277,19 @@ def report_by_country(data, title, summary_file = None):
         rf = prefix_raw_open(title, "country")
         for i, n in (sorted(data.items(), key=lambda(k,v): (v,k))):
                 total += n
-                print >>rf, n, i
+                print(n, i, file=rf)
                 if i == None:
                         continue
 
                 if chart_ccs == "":
-                        chart_ccs = "%s" % i
+                        chart_ccs = "{0}".format(i)
                 else:
-                        chart_ccs += "%s" % i
+                        chart_ccs += "{0}".format(i)
 
                 if chart_data == "":
-                        chart_data += "%d" % (math.log(n) / chart_max * 100)
+                        chart_data += "{0:d}".format(math.log(n) / chart_max * 100)
                 else:
-                        chart_data += ",%d" % (math.log(n) / chart_max * 100)
+                        chart_data += ",{0:d}".format(math.log(n) / chart_max * 100)
 
         rf.close()
 
@@ -298,15 +301,15 @@ def report_by_country(data, title, summary_file = None):
         msg = """\
 <h3>Requests by country</h3>
 <script type="text/javascript">
-        var tabView_%s = new YAHOO.widget.TabView('%s-country');
+        var tabView_{0} = new YAHOO.widget.TabView('{1}-country');
 </script>
-<div id="%s-country" class="yui-navset">
+<div id="{2}-country" class="yui-navset">
   <ul class="yui-nav">
-""" % (title, title, title)
+""".format(title, title, title)
 
         sel = "class=\"selected\""
         for r in map_regions:
-                msg += """<li %s><a href="#%s-%s"><em>%s</em></a></li>""" % (sel, title, r, r)
+                msg += """<li {0}><a href="#{1}-{2}"><em>{3}</em></a></li>""".format(sel, title, r, r)
                 sel = ""
 
         msg += """\
@@ -314,11 +317,11 @@ def report_by_country(data, title, summary_file = None):
   <div class="yui-content">"""
 
         for r in map_regions:
-                url = "chs=440x220&cht=t&chtm=%s&chld=%s&chd=t:%s&chco=ffffff,b0d2ff,013476" % (r, chart_ccs, chart_data)
-                print "<!-- %s -->" % url
-                fname = retrieve_chart("http://chart.apis.google.com/chart?%s" % url,
-                    "%s-%s-map" % (title, r))
-                msg += """<div id="%s-%s"><img src="%s" alt="%s" /></div>""" % (title, r, fname, title)
+                url = "chs=440x220&cht=t&chtm={0}&chld={1}&chd=t:{2}&chco=ffffff,b0d2ff,013476".format(r, chart_ccs, chart_data)
+                print("<!-- {0} -->".format(url))
+                fname = retrieve_chart("http://chart.apis.google.com/chart?{0}".format(url),
+                    "{0}-{1}-map".format(title, r))
+                msg += """<div id="{0}-{1}"><img src="{2}" alt="{3}" /></div>""".format(title, r, fname, title)
 
         msg += """\
   </div>
@@ -326,14 +329,14 @@ def report_by_country(data, title, summary_file = None):
 <small>Color intensity linear in log of requests.</small>"""
        
 
-        print msg
+        print(msg)
         if summary_file:
-                print >>summary_file, msg
+                print(msg, file=summary_file)
 
 def report_by_raw_agent(data, title, summary_file = None):
         rf = prefix_raw_open(title, "country")
         for i, n in (sorted(data.items(), key=lambda(k,v): (v,k))):
-                print >>rf, i, n
+                print(i, n, file=rf)
 
         rf.close()
 

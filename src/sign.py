@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 import getopt
@@ -33,6 +33,7 @@ import shutil
 import sys
 import tempfile
 import traceback
+from imp import reload
 
 import pkg
 import pkg.actions as actions
@@ -62,10 +63,10 @@ def error(text, cmd=None):
         """Emit an error message prefixed by the command name """
 
         if cmd:
-                text = "%s: %s" % (cmd, text)
+                text = "{0}: {1}".format(cmd, text)
 
         else:
-                text = "%s: %s" % (PKG_CLIENT_NAME, text)
+                text = "{0}: {1}".format(PKG_CLIENT_NAME, text)
 
 
         # If the message starts with whitespace, assume that it should come
@@ -107,9 +108,10 @@ def fetch_catalog(src_pub, xport, temp_root):
 def __make_tmp_cert(d, pth):
         try:
                 cert = m2.X509.load_cert(pth)
-        except m2.X509.X509Error, e:
-                raise api_errors.BadFileFormat(_("The file %s was expected to "
-                    "be a PEM certificate but it could not be read.") % pth)
+        except m2.X509.X509Error as e:
+                raise api_errors.BadFileFormat(_("The file {0} was expected to "
+                    "be a PEM certificate but it could not be read.").format(
+                    pth))
         fd, fp = tempfile.mkstemp(dir=d)
         with os.fdopen(fd, "wb") as fh:
                 fh.write(cert.as_pem())
@@ -124,8 +126,8 @@ def main_func():
         try:
                 opts, pargs = getopt.getopt(sys.argv[1:], "a:c:i:k:ns:D:",
                     ["help", "no-index", "no-catalog"])
-        except getopt.GetoptError, e:
-                usage(_("illegal global option -- %s") % e.opt)
+        except getopt.GetoptError as e:
+                usage(_("illegal global option -- {0}").format(e.opt))
 
         show_usage = False
         sig_alg = "rsa-sha256"
@@ -144,19 +146,19 @@ def main_func():
                 elif opt == "-c":
                         cert_path = os.path.abspath(arg)
                         if not os.path.isfile(cert_path):
-                                usage(_("%s was expected to be a certificate "
-                                    "but isn't a file.") % cert_path)
+                                usage(_("{0} was expected to be a certificate "
+                                    "but isn't a file.").format(cert_path))
                 elif opt == "-i":
                         p = os.path.abspath(arg)
                         if not os.path.isfile(p):
-                                usage(_("%s was expected to be a certificate "
-                                    "but isn't a file.") % p)
+                                usage(_("{0} was expected to be a certificate "
+                                    "but isn't a file.").format(p))
                         chain_certs.append(p)
                 elif opt == "-k":
                         key_path = os.path.abspath(arg)
                         if not os.path.isfile(key_path):
-                                usage(_("%s was expected to be a key file "
-                                    "but isn't a file.") % key_path)
+                                usage(_("{0} was expected to be a key file "
+                                    "but isn't a file.").format(key_path))
                 elif opt == "-n":
                         dry_run = True
                 elif opt == "-s":
@@ -170,10 +172,9 @@ def main_func():
                                 key, value = arg.split("=", 1)
                                 DebugValues.set_value(key, value)
                         except (AttributeError, ValueError):
-                                error(_("%(opt)s takes argument of form "
-                                            "name=value, not %(arg)s") % {
-                                            "opt":  opt, "arg": arg })
-
+                                error(_("{opt} takes argument of form "
+                                    "name=value, not {arg}").format(
+                                    opt=opt, arg=arg))
         if show_usage:
                 usage(retcode=EXIT_OK)
 
@@ -201,16 +202,16 @@ def main_func():
 
         s, h = actions.signature.SignatureAction.decompose_sig_alg(sig_alg)
         if h is None:
-                usage(_("%s is not a recognized signature algorithm.") %
-                    sig_alg)
+                usage(_("{0} is not a recognized signature algorithm.").format(
+                    sig_alg))
         if s and not key_path:
-                usage(_("Using %s as the signature algorithm requires that a "
+                usage(_("Using {0} as the signature algorithm requires that a "
                     "key and certificate pair be presented using the -k and -c "
-                    "options.") % sig_alg)
+                    "options.").format(sig_alg))
         if not s and key_path:
-                usage(_("The %s hash algorithm does not use a key or "
+                usage(_("The {0} hash algorithm does not use a key or "
                     "certificate.  Do not use the -k or -c options with this "
-                    "algorithm.") % sig_alg)
+                    "algorithm.").format(sig_alg))
 
         if DebugValues:
                 reload(digest)
@@ -252,7 +253,7 @@ def main_func():
                 for pat in pats:
                         try:
                                 p_obj = fmri.MatchingPkgFmri(pat)
-                        except fmri.IllegalMatchingFmri, e:
+                        except fmri.IllegalMatchingFmri as e:
                                 errors.append(e)
                                 continue
                         pub_prefix = p_obj.get_publisher()
@@ -325,7 +326,7 @@ def main_func():
                                         try:
                                                 if a.identical(a2, hsh):
                                                         cnt += 1
-                                        except api_errors.AlmostIdentical, e:
+                                        except api_errors.AlmostIdentical as e:
                                                 e.pkg = pfmri
                                                 errors.append(e)
                                                 almost_identical = True
@@ -335,7 +336,7 @@ def main_func():
                                         continue
                                 elif cnt > 2:
                                         raise api_errors.DuplicateSignaturesAlreadyExist(pfmri)
-                                assert cnt == 1, "Cnt was:%s" % cnt
+                                assert cnt == 1, "Cnt was:{0}".format(cnt)
 
                                 if not dry_run:
                                         # Append the finished signature action
@@ -354,11 +355,11 @@ def main_func():
                                                 if t.trans_id:
                                                         t.close(abandon=True)
                                                 raise
-                                msg(_("Signed %s") % pfmri.get_fmri(
-                                    include_build=False))
+                                msg(_("Signed {0}").format(pfmri.get_fmri(
+                                    include_build=False)))
                                 successful_publish = True
                         except (api_errors.ApiException, fmri.FmriError,
-                            trans.TransactionError), e:
+                            trans.TransactionError) as e:
                                 errors.append(e)
                 if errors:
                         error("\n".join([str(e) for e in errors]))
@@ -367,7 +368,7 @@ def main_func():
                         else:
                                 return EXIT_OOPS
                 return EXIT_OK
-        except api_errors.ApiException, e:
+        except api_errors.ApiException as e:
                 error(e)
                 return EXIT_OOPS
         finally:
@@ -384,7 +385,7 @@ if __name__ == "__main__":
                 # We don't want to display any messages here to prevent
                 # possible further broken pipe (EPIPE) errors.
                 __ret = EXIT_OOPS
-        except SystemExit, _e:
+        except SystemExit as _e:
                 raise _e
         except:
                 traceback.print_exc()
