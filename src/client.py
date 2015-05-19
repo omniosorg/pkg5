@@ -1601,7 +1601,8 @@ pkg:/package/pkg' as a privileged user and then retry the {op}."""
         if e_type == api_errors.CatalogRefreshException:
                 display_catalog_failures(e)
                 return EXIT_OOPS
-        if e_type == api_errors.ConflictingActionErrors:
+        if e_type == api_errors.ConflictingActionErrors or \
+            e_type == api_errors.ImageBoundaryErrors:
                 if verbose:
                         __display_plan(api_inst, verbose, noexecute)
                 error("\n" + str(e), cmd=op)
