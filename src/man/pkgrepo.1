@@ -1,7 +1,8 @@
 '\" te
-.\" Copyright (c) 2007, 2014, Oracle and/or its affiliates. All rights reserved.
+.\" Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
 .\" Copyright (c) 2015, OmniTI Computer Consulting, Inc. All rights reserved.
-.TH pkgrepo 1 "27 Mar 2014" "SunOS 5.11" "User Commands"
+.\" Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
+.TH pkgrepo 1 "27 Jul 2018" "SunOS 5.11" "User Commands"
 .SH NAME
 pkgrepo \- Image Packaging System repository management utility
 .SH SYNOPSIS
@@ -91,6 +92,15 @@ pkgrepo \- Image Packaging System repository management utility
 .nf
 /usr/bin/pkgrepo fix [-v] [-p \fIpublisher\fR]...
     -s \fIrepo_uri_or_path\fR
+.fi
+
+.LP
+.nf
+/usr/bin/pkgrepo diff [-vq] [--strict] [--parsable] [-p \fIpublisher\fR]...
+    -s \fIfirst_repo_uri_or_path\fR
+    [--key \fIssl_key\fR --cert \fIssl_cert\fR]...
+    -s \fIsecond_repo_uri_or_path\fR
+    [--key \fIssl_key\fR --cert \fIssl_cert\fR]...
 .fi
 
 .LP
@@ -935,6 +945,90 @@ Operate on the repository located at the given URI or file system path.
 .ne 2
 .mk
 .na
+\fBpkgrepo diff\fR [\fB-vq\fR] [\fB--strict\fR] [\fB--parsable\fR] [\fB-p\fR publisher]... \fB-s\fR first_repo_uri_or_path... [\fB--key\fR ssl_key \fB-cert\fR ssl_cert]... \fB-s\fR second_repo_uri_or_path... [\fB--key\fR ssl_key \fB-cert\fR ssl_cert]...
+.ad
+.sp .6
+.RS 4n
+Compare two repositories and show the differences.
+.sp
+A \fB-\fR symbol in the beginning of an output line indicates the item was
+found only in the first repository, while a \fB+\fR symbol indicates the item
+was found only in the second repository. No symbol at the start of a line
+means that it is a common item.
+
+.sp
+.ne 2
+.mk
+.na
+\fB-v\fR
+.ad
+.sp .6
+.RS 4n
+Include output detailing the comparison including per-fmri output.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB--strict\fR
+.ad
+.sp .6
+.RS 4n
+Compare catalog last modified time stamp. This is useful to determine whether
+one repository is an exact clone of another.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB--parsable\fR
+.ad
+.sp .6
+.RS 4n
+Generate parsable output in JSON format.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB-p\fR \fIpublisher\fR
+.ad
+.sp .6
+.RS 4n
+Perform the operation only for the specified publisher. If no publisher is specified, or if the special value \fBall\fR is specified, the operation is performed for all publishers. This option can be specified multiple times.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB-s\fR \fIrepo_uri_or_path\fR
+.ad
+.sp .6
+.RS 4n
+Operate on the repository located at the given URI or file system path.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB--key\fR \fIssl_key\fR \fB--cert\fR \fIssl_cert\fR
+.ad
+.sp .6
+.RS 4n
+Use the \fB--key\fR option to specify a client SSL key file to use for package retrieval from an HTTPS repository. Use the \fB--cert\fR option to specify a client SSL certificate file to use for package retrieval from an HTTPS repository. This option pair can be specified multiple times.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
 \fB\fBpkgrepo help\fR\fR
 .ad
 .sp .6
@@ -1097,7 +1191,7 @@ The following exit values are returned:
 .ad
 .RS 6n
 .rt  
-Command succeeded.
+Command succeeded (or no differences encountered for pkgrepo diff).
 .RE
 
 .sp
@@ -1131,6 +1225,17 @@ Invalid command line options were specified.
 .RS 6n
 .rt  
 Multiple operations were requested, but only some of them succeeded.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB5\fR\fR
+.ad
+.RS 6n
+.rt  
+Differences found for pkgrepo diff.
 .RE
 
 .sp
