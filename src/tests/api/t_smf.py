@@ -374,7 +374,7 @@ stop/type astring method""",
                 smf.restart("svc:/system/test_restart_svc:default",
                     sync_timeout=10)
                 self.file_contains(svcadm_output,
-                    "svcadm restart -s -T 10 svc:/system/test_restart_svc:default")
+                    "svcadm restart -s svc:/system/test_restart_svc:default")
                 os.unlink(svcadm_output)
 
                 smf.refresh("svc:/system/test_refresh_svc:default")
@@ -397,7 +397,7 @@ stop/type astring method""",
                 smf.refresh("svc:/system/test_refresh_svc:default",
                     sync_timeout=10)
                 self.file_contains(svcadm_output,
-                    "svcadm refresh -s -T 10 svc:/system/test_refresh_svc:default")
+                    "svcadm refresh -s svc:/system/test_refresh_svc:default")
                 os.unlink(svcadm_output)
 
                 smf.mark("maintenance", "svc:/system/test_mark_svc:default")
@@ -447,7 +447,7 @@ stop/type astring method""",
                 smf.enable("svc:/system/test_enable_svc:default",
                     sync_timeout=10)
                 self.file_contains(svcadm_output,
-                    "svcadm enable -s -T 10 svc:/system/test_enable_svc:default")
+                    "svcadm enable -s svc:/system/test_enable_svc:default")
                 os.unlink(svcadm_output)
 
                 os.environ["PKG_SVCPROP_OUTPUT"] = "svcprop_enabled"

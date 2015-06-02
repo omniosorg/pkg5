@@ -99,7 +99,7 @@ pkg \- Image Packaging System retrieval client
 
 .LP
 .nf
-usr/bin/pkg set-mediator [-nv] [-I \fIimplementation\fR]
+/usr/bin/pkg set-mediator [-nv] [-I \fIimplementation\fR]
     [-V \fIversion\fR] [--no-be-activate]
     [--no-backup-be | --require-backup-be]
     [--backup-be-name \fIname\fR]
@@ -591,7 +591,7 @@ Run SMF actuators synchronously. pkg(1) command will not return until all SMF ac
 .ad
 .sp .6
 .RS 4n
-Run SMF actuators synchronously. If the actuators do not finish within the given \fItimeout\fR in seconds, pkg(1) will continue operation and exit with return code 8.
+Run SMF actuators synchronously. If the actuators do not finish within the given \fItimeout\fR in seconds, pkg(1) will continue operation and exit with return code 8. In OpenIndiana timeout is ignored and this option is equivalent to \fB--sync-actuators\fR.
 .RE
 
 .sp

@@ -428,7 +428,7 @@ stop/type astring method
                 self.pkg("install --sync-actuators --sync-actuators-timeout 20 basics@1.1")
                 self.pkg("verify")
                 self.file_contains(svcadm_output,
-                    "svcadm restart -s -T 20 svc:/system/test_restart_svc:default")
+                    "svcadm restart -s svc:/system/test_restart_svc:default")
                 os.unlink(svcadm_output)
 
                 # synchronous suspend 
@@ -448,7 +448,7 @@ stop/type astring method
                 self.file_contains(svcadm_output,
                     "svcadm disable -s -t svc:/system/test_suspend_svc:default")
                 self.file_contains(svcadm_output,
-                    "svcadm enable -s -T 10 svc:/system/test_suspend_svc:default")
+                    "svcadm enable -s svc:/system/test_suspend_svc:default")
                 os.unlink(svcadm_output)
 
                 # make it look like our test service is enabled

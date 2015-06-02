@@ -183,8 +183,8 @@ def enable(fmris, temporary=False, sync_timeout=0):
         args = [svcadm_path, "enable"]
         if sync_timeout:
                 args.append("-s")
-                if sync_timeout != -1:
-                        args.append("-T %d" % sync_timeout)
+#                if sync_timeout != -1:
+#                        args.append("-T %d" % sync_timeout)
         if temporary:
                 args.append("-t")
         __call(tuple(args) + fmris)
@@ -195,8 +195,8 @@ def disable(fmris, temporary=False, sync_timeout=0):
         if isinstance(fmris, basestring):
                 fmris = (fmris,)
         args = [svcadm_path, "disable", "-s"]
-        if sync_timeout > 0:
-                args.append("-T %d" % sync_timeout)
+#        if sync_timeout > 0:
+#                args.append("-T %d" % sync_timeout)
         if temporary:
                 args.append("-t")
         __call(tuple(args) + fmris)
@@ -217,8 +217,8 @@ def refresh(fmris, sync_timeout=0):
         args = [svcadm_path, "refresh"]
         if sync_timeout:
                 args.append("-s")
-                if sync_timeout != -1:
-                        args.append("-T %d" % sync_timeout)
+#                if sync_timeout != -1:
+#                        args.append("-T %d" % sync_timeout)
         __call(tuple(args) + fmris)
 
 def restart(fmris, sync_timeout=0):
@@ -229,6 +229,6 @@ def restart(fmris, sync_timeout=0):
         args = [svcadm_path, "restart"]
         if sync_timeout:
                 args.append("-s")
-                if sync_timeout != -1:
-                        args.append("-T %d" % sync_timeout)
+#                if sync_timeout != -1:
+#                        args.append("-T %d" % sync_timeout)
         __call(tuple(args) + fmris)
