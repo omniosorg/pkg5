@@ -1612,7 +1612,7 @@ def __fmt_verify(verify_tuple):
 def __collect_default_ignore_dep_files(ignored_dep_files):
         """Helpler function to collect default ignored-dependency files."""
 
-        root_ignored = "/ec/share/pkg/ignored_deps"
+        root_ignored = "/usr/share/pkg/ignored_deps"
         altroot = DebugValues.get_value("ignored_deps")
         if altroot:
                 root_ignored = altroot

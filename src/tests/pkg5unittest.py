@@ -102,7 +102,7 @@ if "DEBUG" in os.environ:
 #
 # XXX?
 #
-gettext.install("pkg", "/ec/share/locale")
+gettext.install("pkg", "/usr/share/locale")
 
 OUTPUT_DOTS = 0         # Dots ...
 OUTPUT_VERBOSE = 1      # Verbose
@@ -3813,7 +3813,7 @@ class HTTPSTestClass(ApacheDepotTestCase):
 # server will use that explicit path.  If the filenames do *not* begin
 # with "/", the value of ServerRoot is prepended -- so "/var/apache2/2.2/logs/foo_log"
 # with ServerRoot set to "/usr/apache2/2.2" will be interpreted by the
-# server as "/ec/apache2/2.2//var/apache2/2.2/logs/foo_log".
+# server as "/usr/apache2/2.2//var/apache2/2.2/logs/foo_log".
 
 #
 # ServerRoot: The top of the directory tree under which the server's
@@ -3824,7 +3824,7 @@ class HTTPSTestClass(ApacheDepotTestCase):
 # at a local disk.  If you wish to share the same ServerRoot for multiple
 # httpd daemons, you will need to change at least LockFile and PidFile.
 #
-ServerRoot "/ec/apache2/2.2"
+ServerRoot "/usr/apache2/2.2"
 
 PidFile "{pidfile}"
 
@@ -4349,7 +4349,7 @@ class ApacheController(object):
                 to be contacted via https or not.
                 """
 
-                self.apachectl = "/ec/apache2/2.2/bin/httpd.worker"
+                self.apachectl = "/usr/apache2/2.2/bin/httpd.worker"
                 if not os.path.exists(work_dir):
                         os.makedirs(work_dir)
                 self.__conf_path = os.path.join(work_dir, "httpd.conf")
@@ -4554,7 +4554,7 @@ class SysrepoController(ApacheController):
         def __init__(self, conf, port, work_dir, testcase=None, https=False):
                 ApacheController.__init__(self, conf, port, work_dir,
                     testcase=testcase, https=https)
-                self.apachectl = "/ec/apache2/2.2/bin/64/httpd.worker"
+                self.apachectl = "/usr/apache2/2.2/bin/httpd.worker"
 
         def _network_ping(self):
                 try:
@@ -4573,7 +4573,7 @@ class HttpDepotController(ApacheController):
         def __init__(self, conf, port, work_dir, testcase=None, https=False):
                 ApacheController.__init__(self, conf, port, work_dir,
                     testcase=testcase, https=https)
-                self.apachectl = "/ec/apache2/2.2/bin/64/httpd.worker"
+                self.apachectl = "/usr/apache2/2.2/bin/httpd.worker"
 
         def _network_ping(self):
                 try:

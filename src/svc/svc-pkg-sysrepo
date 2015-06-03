@@ -25,9 +25,9 @@
 
 . /lib/svc/share/smf_include.sh
 
-APACHE_HOME=/ec/apache2/2.2
-APACHE_ETC_ROOT=/ec/etc/pkg/sysrepo
-APACHE_BIN=${APACHE_HOME}/bin/64
+APACHE_HOME=/usr/apache2/2.2
+APACHE_ETC_ROOT=/etc/pkg/sysrepo
+APACHE_BIN=${APACHE_HOME}/bin
 
 #
 # Calling $APACHE_BIN/apachectl would source $APACHE_BIN/envvars, which
@@ -79,7 +79,7 @@ run_sysrepo() {
 		SYSREPO_HTTPS_PROXY="-W ${https_proxy}"
 	fi
 
-        /ec/lib/pkg.sysrepo \
+        /usr/lib/pkg.sysrepo \
                -R / \
                -c ${SYSREPO_CACHE_DIR} \
                -h ${SYSREPO_HOST} \
@@ -105,7 +105,7 @@ run_htcacheclean() {
                # nice about scheduling and removing empty directories if
                # necessary.
 	       interval=$((60 * 24 * 14))
-               /ec/apache2/2.2/bin/htcacheclean \
+               /usr/apache2/2.2/bin/htcacheclean \
                        -d${interval} -i -l ${SYSREPO_CACHE_MAX}M -n \
                        -p ${SYSREPO_CACHE_DIR} \
                        -P ${SYSREPO_CACHE_DIR}/../sysrepo_htcacheclean.pid \

@@ -121,6 +121,8 @@ man1_zh_CN_dir = 'usr/share/man/zh_CN.UTF-8/man1'
 man1m_zh_CN_dir = 'usr/share/man/zh_CN.UTF-8/man1m'
 man5_zh_CN_dir = 'usr/share/man/zh_CN.UTF-8/man5'
 
+ignored_deps_dir = 'usr/share/pkg/ignored_deps'
+rad_dir = 'usr/share/lib/pkg'
 resource_dir = 'usr/share/lib/pkg'
 transform_dir = 'usr/share/pkg/transforms'
 smf_app_dir = 'lib/svc/manifest/application/pkg'
@@ -991,7 +993,7 @@ def xml2po_gen(src, dst):
                 return
 
         args = ["/usr/bin/xml2po", "-o", dst, src]
-        print " ".join(args)
+        print(" ".join(args))
         run_cmd(args, os.getcwd())
 
 def xml2po_merge(src, dst, mofile):
@@ -1007,7 +1009,7 @@ def xml2po_merge(src, dst, mofile):
                 return
 
         args = ["/usr/bin/xml2po", "-t", mofile, "-o", dst, src]
-        print " ".join(args)
+        print(" ".join(args))
         run_cmd(args, os.getcwd())
 
 class installfile(Command):
@@ -1322,7 +1324,7 @@ def xml2roff(files):
                 # Get the output dir by removing the filename and the manX
                 # directory
                 output_dir = os.path.join(*files[0].split("/")[:-2])
-                args = ["/ec/share/xml/xsolbook/python/xml2roff.py", "-o", output_dir]
+                args = ["/usr/share/xml/xsolbook/python/xml2roff.py", "-o", output_dir]
                 args += do_files
                 print(" ".join(args))
                 run_cmd(args, os.getcwd())

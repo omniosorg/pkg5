@@ -119,7 +119,7 @@ def main_func():
 
 if __name__ == "__main__":
         misc.setlocale(locale.LC_ALL, "")
-        gettext.install("pkg", "/ec/share/locale",
+        gettext.install("pkg", "/usr/share/locale",
             codeset=locale.getpreferredencoding())
         __init_log()
         ret_json = main_func()

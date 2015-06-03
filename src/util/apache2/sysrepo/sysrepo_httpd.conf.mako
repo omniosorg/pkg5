@@ -24,7 +24,7 @@
 # at a local disk.  If you wish to share the same ServerRoot for multiple
 # httpd daemons, you will need to change at least LockFile and PidFile.
 #
-ServerRoot "/ec/apache2/2.2"
+ServerRoot "/usr/apache2/2.2"
 PidFile "${sysrepo_runtime_dir}/../sysrepo_httpd.pid"
 #
 # Listen: Allows you to bind Apache to specific IP addresses and/or
