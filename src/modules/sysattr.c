@@ -37,10 +37,11 @@
 static bool
 is_supported(int attr)
 {
+	int i;
 	int ignore[] = {F_OWNERSID, F_GROUPSID, F_AV_SCANSTAMP,
 	    F_OPAQUE, F_CRTIME, F_FSID, F_GEN, F_REPARSE};
 
-	for (int i = 0; i < (sizeof (ignore) / sizeof (int)); i++)
+	for (i = 0; i < (sizeof (ignore) / sizeof (int)); i++)
 		if (ignore[i] == attr)
 			return (false);
 	return (true);
@@ -55,13 +56,14 @@ clear_list(PyObject *list)
 {
 	PyObject *p;
 	Py_ssize_t size;
+	Py_ssize_t i;
 
 	if ((size = PyList_Size(list)) == 0) {
 		Py_CLEAR(list);
 		return;
 	}
 
-	for (Py_ssize_t i = 0; i < size; i++) {
+	for (i = 0; i < size; i++) {
 		p = PyList_GetItem(list, i);
 		Py_CLEAR(p);
 	}
@@ -90,11 +92,12 @@ static PyObject *
 py_get_attr_dict(PyObject *self, PyObject *args)
 {
 	PyObject *sys_attrs;
+	int i;
 
 	if ((sys_attrs = PyDict_New()) == NULL)
 		return (NULL);
 
-	for (int i = 0; i < F_ATTR_ALL; i++) {
+	for (i = 0; i < F_ATTR_ALL; i++) {
 		if (!is_supported(i))
 			continue;
 
