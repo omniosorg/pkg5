@@ -44,7 +44,7 @@ dir  path=lib/svc/manifest/application/pkg
 file path=lib/svc/manifest/application/pkg/pkg-depot.xml
 file path=lib/svc/method/svc-pkg-depot
 dir  path=usr
-file path=usr/lib/pkg.depot-config mode=0755
+file path=usr/lib/pkg.depot-config mode=0755 pkg.depend.bypass-generate=.*
 dir  path=usr/share/lib/pkg/web
 file path=usr/share/lib/pkg/web/repos.shtml
 dir  path=usr/share/man/man1m
