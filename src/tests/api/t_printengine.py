@@ -47,7 +47,7 @@ class TestPrintEngine(pkg5unittest.Pkg5TestCase):
                                 termdata = masterf.read(1024)
                                 if len(termdata) < 1024:
 					if len(termdata) > 0:
-						print >> sio, termdata
+						print (termdata, file=sio)
                                         break
                                 print(termdata, file=sio)
 

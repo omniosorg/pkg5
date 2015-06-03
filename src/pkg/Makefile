@@ -71,13 +71,13 @@ $(PUBLISHALL)MANIFESTS      = $(ALL_MANIFESTS)
 PKGCMDENV         = \
 	PATH=$(PKGROOT)/usr/bin:/usr/sbin:/usr/bin \
 	    PYTHONPATH=$(PKGROOT)/usr/lib/python2.7/vendor-packages
-PKG               = $(PKGCMDENV) pkg
-PKGDEPEND         = $(PKGCMDENV) pkgdepend
-PKGFMT            = $(PKGCMDENV) pkgfmt
-PKGLINT           = $(PKGCMDENV) pkglint
-PKGMOGRIFY        = $(PKGCMDENV) pkgmogrify
-PKGREPO           = $(PKGCMDENV) pkgrepo
-PKGSEND           = $(PKGCMDENV) pkgsend
+PKG               = /usr/bin/env $(PKGCMDENV) /usr/bin/python2.7 $(PKGROOT)/usr/bin/pkg
+PKGDEPEND         = /usr/bin/env $(PKGCMDENV) /usr/bin/python2.7 $(PKGROOT)/usr/bin/pkgdepend
+PKGFMT            = /usr/bin/env $(PKGCMDENV) /usr/bin/python2.7 $(PKGROOT)/usr/bin/pkgfmt
+PKGLINT           = /usr/bin/env $(PKGCMDENV) /usr/bin/python2.7 $(PKGROOT)/usr/bin/pkglint
+PKGMOGRIFY        = /usr/bin/env $(PKGCMDENV) /usr/bin/python2.7 $(PKGROOT)/usr/bin/pkgmogrify
+PKGREPO           = /usr/bin/env $(PKGCMDENV) /usr/bin/python2.7 $(PKGROOT)/usr/bin/pkgrepo
+PKGSEND           = /usr/bin/env $(PKGCMDENV) /usr/bin/python2.7 $(PKGROOT)/usr/bin/pkgsend
 MOGRIFESTS        = $(MANIFESTS:%.p5m=$(PDIR)/%.mog)
 ALL_MOGRIFESTS    = $(ALL_MANIFESTS:%.p5m=$(PDIR)/%.mog)
 PUBLIFESTS        = $(MANIFESTS:%.p5m=$(PDIR)/%.pub)
@@ -104,7 +104,7 @@ PKGMOG_DEFVALS    = \
 	PKGVERS=$(PKGVERS) \
 	REV=$(REV) \
 	PYDIR=usr/lib/python2.7 \
-	PYDIRVP=usr/lib/python2.7/vendor-packages \
+	PYDIRVP=usr/lib/python2.6/vendor-packages \
 	CHANGESET=$(CHANGESET) \
 	PKGPUBLISHER_LOCALIZABLE=$(PKGPUBLISHER_LOCALIZABLE)
 PKGMOG_DEFINES    = $(PKGMOG_DEFVALS:%=-D %)

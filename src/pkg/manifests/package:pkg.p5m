@@ -21,6 +21,7 @@
 # Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
+<transform file path=$(PYDIRVP)/.* -> default pkg.depend.bypass-generate .* >
 set name=pkg.fmri value=pkg:/package/pkg@$(PKGVERS)
 set name=pkg.summary value="Image Packaging System"
 set name=pkg.description \
@@ -34,7 +35,7 @@ set name=variant.arch value=$(ARCH)
 dir  path=$(PYDIR)
 dir  path=$(PYDIRVP)
 dir  path=$(PYDIRVP)/pkg
-file path=$(PYDIRVP)/pkg-0.1-py2.7.egg-info
+file path=$(PYDIRVP)/pkg-0.1-py2.6.egg-info
 dir  path=$(PYDIRVP)/pkg/64
 file path=$(PYDIRVP)/pkg/64/_varcet.so
 file path=$(PYDIRVP)/pkg/64/arch.so
@@ -93,7 +94,7 @@ file path=$(PYDIRVP)/pkg/client/api_errors.py
 # Don't worry about the libbe import; the python code looks for it in case
 # it can't import libbe_py, and is graceful in the face of its absence.
 #
-file path=$(PYDIRVP)/pkg/client/bootenv.py pkg.depend.bypass-generate=.*libbe.*
+file path=$(PYDIRVP)/pkg/client/bootenv.py pkg.depend.bypass-generate=.*
 file path=$(PYDIRVP)/pkg/client/client_api.py
 file path=$(PYDIRVP)/pkg/client/debugvalues.py
 file path=$(PYDIRVP)/pkg/client/firmware.py
@@ -176,13 +177,11 @@ dir  path=$(PYDIRVP)/pkg/portable
 file path=$(PYDIRVP)/pkg/portable/__init__.py
 file path=$(PYDIRVP)/pkg/portable/os_aix.py
 # Python on Solaris doesn't deliver the macostools module.
-file path=$(PYDIRVP)/pkg/portable/os_darwin.py \
-    pkg.depend.bypass-generate=.*macostools.*
+file path=$(PYDIRVP)/pkg/portable/os_darwin.py pkg.depend.bypass-generate=.*
 file path=$(PYDIRVP)/pkg/portable/os_sunos.py
 file path=$(PYDIRVP)/pkg/portable/os_unix.py
 # Python on Solaris doesn't deliver the win32api module.
-file path=$(PYDIRVP)/pkg/portable/os_windows.py \
-    pkg.depend.bypass-generate=.*win32api.*
+file path=$(PYDIRVP)/pkg/portable/os_windows.py pkg.depend.bypass-generate=.*
 file path=$(PYDIRVP)/pkg/portable/util.py
 file path=$(PYDIRVP)/pkg/pspawn.so
 dir  path=$(PYDIRVP)/pkg/publish
@@ -242,20 +241,20 @@ dir  path=lib/svc/share
 file path=lib/svc/share/pkg5_include.sh
 dir  path=usr
 dir  path=usr/bin
-file path=usr/bin/pkg
-file path=usr/bin/pkgdepend
-file path=usr/bin/pkgdiff
-file path=usr/bin/pkgfmt
-file path=usr/bin/pkglint
-file path=usr/bin/pkgmerge
-file path=usr/bin/pkgmogrify
-file path=usr/bin/pkgrecv
-file path=usr/bin/pkgrepo
-file path=usr/bin/pkgsend
-file path=usr/bin/pkgsign
-file path=usr/bin/pkgsurf
+file path=usr/bin/pkg pkg.depend.bypass-generate=.*
+file path=usr/bin/pkgdepend pkg.depend.bypass-generate=.*
+file path=usr/bin/pkgdiff pkg.depend.bypass-generate=.*
+file path=usr/bin/pkgfmt pkg.depend.bypass-generate=.*
+file path=usr/bin/pkglint pkg.depend.bypass-generate=.*
+file path=usr/bin/pkgmerge pkg.depend.bypass-generate=.*
+file path=usr/bin/pkgmogrify pkg.depend.bypass-generate=.*
+file path=usr/bin/pkgrecv pkg.depend.bypass-generate=.*
+file path=usr/bin/pkgrepo pkg.depend.bypass-generate=.*
+file path=usr/bin/pkgsend pkg.depend.bypass-generate=.*
+file path=usr/bin/pkgsign pkg.depend.bypass-generate=.*
+file path=usr/bin/pkgsurf pkg.depend.bypass-generate=.*
 dir  path=usr/lib
-file path=usr/lib/pkg.depotd mode=0755
+file path=usr/lib/pkg.depotd mode=0755 pkg.depend.bypass-generate=.*
 dir  path=usr/share
 dir  path=usr/share/lib
 dir  path=usr/share/lib/pkg
@@ -466,3 +465,5 @@ license cr_Oracle license=cr_Oracle
 # cross zone dependency on linked image metadata
 #depend type=parent fmri=feature/package/dependency/self #    variant.opensolaris.zone=nonglobal
 depend type=require fmri=crypto/ca-certificates
+depend type=require fmri=library/python-2/jsonschema
+depend type=require fmri=library/python-2/libbe

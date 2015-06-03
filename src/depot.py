@@ -131,7 +131,7 @@ def usage(text=None, retcode=2, full=False):
                     "information."))
                 sys.exit(retcode)
 
-        print """\
+        print("""\
 Usage: /usr/lib/pkg.depotd [-a address] [-d inst_root] [-p port] [-s threads]
            [-t socket_timeout] [--cfg] [--content-root]
            [--disable-ops op[/1][,...]] [--debug feature_list]
