@@ -128,9 +128,9 @@ py_get_attr_dict(PyObject *self, PyObject *args)
  * if any of the library calls fail.
  *
  * Input examples:
- *   verbose attributes example: ['hidden', 'archive', 'sensitive', ... ]
+ *   verbose attributes example: ['hidden', 'archive', 'immutable', ... ]
  *
- *   compact attributes example: 'HAT'
+ *   compact attributes example: 'HAi'
  *
  */
 

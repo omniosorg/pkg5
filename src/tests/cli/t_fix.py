@@ -109,8 +109,8 @@ class TestFix(pkg5unittest.SingleDepotTestCase):
 
         sysattr = """
             open sysattr@1.0-0
-            add file amber1 mode=0555 owner=root group=bin sysattr=sensitive preserve=true path=amber1 timestamp=20100731T014051Z
-            add file amber2 mode=0555 owner=root group=bin sysattr=sensitive path=amber2 timestamp=20100731T014051Z
+            add file amber1 mode=0555 owner=root group=bin sysattr=nodump preserve=true path=amber1 timestamp=20100731T014051Z
+            add file amber2 mode=0555 owner=root group=bin sysattr=nodump path=amber2 timestamp=20100731T014051Z
             close"""
 
         misc_files = [ "copyright.licensed", "license.licensed", "libc.so.1",
