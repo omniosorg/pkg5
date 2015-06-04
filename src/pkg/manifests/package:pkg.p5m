@@ -465,5 +465,14 @@ license cr_Oracle license=cr_Oracle
 # cross zone dependency on linked image metadata
 #depend type=parent fmri=feature/package/dependency/self #    variant.opensolaris.zone=nonglobal
 depend type=require fmri=crypto/ca-certificates
+depend type=require fmri=library/python-2/cherrypy
+depend type=require fmri=library/python-2/jsonrpclib
 depend type=require fmri=library/python-2/jsonschema
 depend type=require fmri=library/python-2/libbe
+depend type=require fmri=library/python-2/m2crypto
+depend type=require fmri=library/python-2/mako
+depend type=require fmri=library/python-2/ply
+depend type=require fmri=library/python-2/pybonjour
+depend type=require fmri=library/python-2/pycurl
+depend type=require fmri=library/python-2/pyopenssl
+depend type=require fmri=library/python-2/simplejson@3.6.5
