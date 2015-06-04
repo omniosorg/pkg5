@@ -1073,7 +1073,7 @@ file NOHASH group=bin mode=0555 owner=root path=c/bin/perl variant.foo=c
         def make_elf(self, run_paths=[], output_path="elf_test", bit64=False,
             deferred_libs=misc.EmptyI, filter_files=misc.EmptyI,
             lazy_libs=misc.EmptyI, mapfile=None, no_link=False, obj_files=None,
-            optional_filters=misc.EmptyI, program_text=None, shared_lib=False):
+            optional_filters=misc.EmptyI, program_text=None, shared_lib=False, pic=False):
                 assert obj_files is None or program_text is None
                 if obj_files is None and program_text is None:
                         program_text = "int main(){}\n"
@@ -1087,16 +1087,21 @@ file NOHASH group=bin mode=0555 owner=root path=c/bin/perl variant.foo=c
                 if shared_lib:
                         # Always link to libc; the compiler may not.
                         opts.append("-lc")
-                        opts.append("-G")
+                        opts.append("-shared")
+                        # Never link to libgcc_s.so
+                        opts.append("-nodefaultlibs")
+		if pic or shared_lib:
+			opts.append("-fPIC")
+			opts.append("-DPIC")
                 if no_link:
                         opts.append("-c")
                 if mapfile:
-                        opts.append("-M{0}".format(mapfile))
-                opts.extend(["-F{0}".format(f) for f in filter_files])
-                opts.extend(["-f{0}".format(f) for f in optional_filters])
-                opts.extend(["-z deferred"] +  list(deferred_libs) +
-                    ["-z nodeferred"])
-                opts.extend(["-z lazyload {0}".format(f) for f in lazy_libs])
+                        opts.append("-Wl,-M{0}".format(mapfile))
+                opts.extend(["-Wl,-F{0}".format(f) for f in filter_files])
+                opts.extend(["-Wl,-f{0}".format(f) for f in optional_filters])
+                opts.extend(["-Wl,-z -Wl,deferred"] +  list(deferred_libs) +
+                    ["-Wl,-z -Wl,nodeferred"])
+                opts.extend(["-Wl,-z -Wl,lazyload {0}".format(f) for f in lazy_libs])
                 self.c_compile(program_text, opts, out_file,
                     obj_files=obj_files)
 
@@ -1239,7 +1244,7 @@ SYMBOL_SCOPE {
                     shared_lib=True)
                 # Test that FILTER dependencies are treated as needed.
                 self.make_elf(output_path=foo_path, no_link=True,
-                    program_text=foo_c)
+                    program_text=foo_c, pic=True)
                 self.make_elf(output_path=so_path, run_paths=[base_dir],
                     filter_files=[bar_path], shared_lib=True,
                     obj_files=[foo_path])
@@ -1256,7 +1261,7 @@ SYMBOL_SCOPE {
                 # Test that SUNW_FILTER dependencies are treated as needed.
                 self.make_file(mapfile_1_path, mapfile_1)
                 self.make_elf(output_path=foo_path, no_link=True,
-                    program_text=foo_c)
+                    program_text=foo_c, pic=True)
                 self.make_elf(output_path=so_path, run_paths=[base_dir],
                     mapfile=mapfile_1_path, obj_files=[foo_path],
                     shared_lib=True)
@@ -1272,7 +1277,7 @@ SYMBOL_SCOPE {
 
                 # Test that AUXILIARY dependencies are ignored.
                 self.make_elf(output_path=foo_path, no_link=True,
-                    program_text=foo_c)
+                    program_text=foo_c, pic=True)
                 self.make_elf(output_path=so_path, run_paths=[base_dir],
                     optional_filters=["xxx.so"], obj_files=[foo_path],
                     shared_lib=True)
@@ -1289,7 +1294,7 @@ SYMBOL_SCOPE {
                 # Test that SUNW_AUXILIARY dependencies are ignored.
                 self.make_file(mapfile_2_path, mapfile_2)
                 self.make_elf(output_path=foo_path, no_link=True,
-                    program_text=foo_c)
+                    program_text=foo_c, pic=True)
                 self.make_elf(output_path=so_path, run_paths=[base_dir],
                     mapfile=mapfile_2_path, obj_files=[foo_path],
                     shared_lib=True)
@@ -1306,7 +1311,7 @@ SYMBOL_SCOPE {
                 # Test that a NEEDED dependency with a LAZY DEFERRED POSFLAG_1
                 # before it is ignored.
                 self.make_elf(output_path=foo_path, no_link=True,
-                    program_text=foo_c)
+                    program_text=foo_c, pic=True)
                 self.make_elf(output_path=so_path, run_paths=[base_dir],
                     deferred_libs=[bar_path], shared_lib=True,
                     obj_files=[foo_path])
@@ -1322,7 +1327,7 @@ SYMBOL_SCOPE {
 
                 # Test that a lazy loaded dependency is still required.
                 self.make_elf(output_path=foo_path, no_link=True,
-                    program_text=foo_c)
+                    program_text=foo_c, pic=True)
                 self.make_elf(output_path=so_path, run_paths=[base_dir],
                     lazy_libs=[bar_path], shared_lib=True,
                     obj_files=[foo_path])

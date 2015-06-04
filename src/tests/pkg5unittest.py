@@ -787,7 +787,7 @@ if __name__ == "__main__":
 
                 #
                 # We use a series of likely compilers.  At present we support
-                # this testing with SunStudio.
+                # this testing with GCC.
                 #
                 assert obj_files is not None or prog_text is not None
                 assert obj_files is None or prog_text is None
@@ -808,7 +808,7 @@ if __name__ == "__main__":
 
                 found = False
                 outpath = os.path.join(self.test_root, outputfile)
-                compilers = ["/usr/bin/cc", "cc", "$CC"]
+                compilers = ["$CC", "/usr/bin/gcc", "gcc"]
                 for compiler in compilers:
                         cmd = [compiler, "-o", outpath]
                         cmd.extend(opts)
@@ -845,7 +845,7 @@ if __name__ == "__main__":
                         pass
                 if not found:
                         raise TestSkippedException(
-                            "No suitable Sun Studio compiler found. "
+                            "No suitable GCC compiler found. "
                             "Tried: {0}.  Try setting $CC to a valid"
                             "compiler.".format(compilers))
 
