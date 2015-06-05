@@ -2858,7 +2858,7 @@ adm
                 # create image and install version 1
                 self.image_create(self.rurl)
                 self.pkg("install incorp@1.0")
-                self.file_exists(".SELF-ASSEMBLY-REQUIRED")
+                # self.file_exists(".SELF-ASSEMBLY-REQUIRED")
                 self.pkg("install bronze")
 
                 self.pkg("list amber@1.0 bronze@1.0")
@@ -2872,9 +2872,9 @@ adm
                 self.pkg("update bronze@latest amber@latest", exit=1)
 
                 # Now update to get new versions of amber and bronze
-                self.file_remove(".SELF-ASSEMBLY-REQUIRED")
+                # self.file_remove(".SELF-ASSEMBLY-REQUIRED")
                 self.pkg("update")
-                self.file_exists(".SELF-ASSEMBLY-REQUIRED")
+                # self.file_exists(".SELF-ASSEMBLY-REQUIRED")
 
                 # Try to verify that it worked.
                 self.pkg("list amber@2.0 bronze@2.0")
@@ -2888,7 +2888,7 @@ adm
 
                 # Make sure all directories are gone save /var in test image.
                 self.assertEqual(set(os.listdir(self.get_img_path())),
-                    set([".SELF-ASSEMBLY-REQUIRED", "var"]))
+                    set(["var"]))
 
         def test_upgrade2(self):
                 """ test incorporations:
