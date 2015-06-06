@@ -19,8 +19,8 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+#
+# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 from logilab import astng
 
@@ -140,13 +140,13 @@ class MultiPlatformAPIChecker(BaseChecker):
         """triggered when an import statement is seen"""
         basename = node.modname
         for name, alias in node.names:
-            fullname = '%s.%s' % (basename, name)
+            fullname = '{0}.{1}'.format(basename, name)
             self._check_verboten_import(node, fullname)
             if fullname.find('.') > -1:
                 try:
                     fullname = get_module_part(fullname,
                                                context_file=node.root().file)
-                except ImportError, ex:
+                except ImportError as ex:
                     # this is checked elsewhere in pylint (F0401)
                     continue
             if alias == None:

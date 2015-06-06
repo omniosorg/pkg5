@@ -2,7 +2,7 @@
 # Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009 Python
 # Software Foundation; All Rights Reserved
 #
-# Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
 
 
 """A standalone version of ModuleFinder which limits the depth of exploration
@@ -27,6 +27,8 @@ if __name__ != "__main__":
 import modulefinder
 import os
 import sys
+if sys.version_info[0] == 3:
+        from importlib.machinery import EXTENSION_SUFFIXES
 
 # A string used as a component of the pkg.depend.runpath value as a special
 # token to determine where to insert the runpath that pkgdepend generates itself
@@ -52,17 +54,24 @@ class ModuleInfo(object):
 
                 self.name = name
                 self.builtin = builtin
-                self.suffixes = [".py", ".pyc", ".pyo", "/__init__.py", ".so",
-                    "module.so"]
+                self.patterns = [ "{0}.py", "{0}.pyc", "{0}.pyo", "{0}/__init__.py" ]
+                if sys.version_info[0] == 2:
+                        self.patterns += [
+                            "{0}.so", "{0}module.so", "64/{0}.so", "64/{0}module.so"
+                        ]
+                else:
+                        self.patterns += \
+                            ["{{0}}{0}".format(s) for s in EXTENSION_SUFFIXES] + \
+                            ["64/{{0}}{0}".format(s) for s in EXTENSION_SUFFIXES]
                 self.dirs = sorted(dirs)
 
         def make_package(self):
                 """Declare that this module is a package."""
 
                 if self.dirs:
-                        self.suffixes = ["/__init__.py"]
+                        self.patterns = ["{0}/__init__.py"]
                 else:
-                        self.suffixes = []
+                        self.patterns = []
 
         def get_package_dirs(self):
                 """Get the directories where this package might be defined."""
@@ -73,11 +82,11 @@ class ModuleInfo(object):
                 """Return all the file names under which this module might be
                 found."""
 
-                return ["%s%s" % (self.name, suf) for suf in self.suffixes]
+                return [ pat.format(self.name) for pat in self.patterns ]
 
         def __str__(self):
-                return "name:%s suffixes:%s dirs:%s" % (self.name,
-                    " ".join(self.suffixes), len(self.dirs))
+                return "name:{0} suffixes:{1} dirs:{2}".format(self.name,
+                    " ".join(self.patterns), len(self.dirs))
 
 
 if __name__ == "__main__":
@@ -351,7 +360,7 @@ class DepthLimitedModuleFinder(modulefinder.ModuleFinder):
                         i = tail.find('.')
                         if i < 0: i = len(tail)
                         head, tail = tail[:i], tail[i+1:]
-                        new_name = "%s.%s" % (name, head)
+                        new_name = "{0}.{1}".format(name, head)
                         r = self.import_module(head, new_name, cur_parent)
                         res.append(r)
                         name = new_name
@@ -379,10 +388,10 @@ if __name__ == "__main__":
                     (tuple(m.get_file_names()), tuple(m.dirs))
                     for m in loaded_modules
                 ]):
-                        sys.stdout.write("DEP %s\n" % (res,))
+                        sys.stdout.write("DEP {0}\n".format(res))
                 missing, maybe =  mf.any_missing_maybe()
-                sys.stdout.writelines(("ERR %s\n" % name for name in missing))
+                sys.stdout.writelines(("ERR {0}\n".format(name) for name in missing))
         except ValueError as e:
-                sys.stdout.write("ERR %s\n" % e)
+                sys.stdout.write("ERR {0}\n".format(e))
         except MultipleDefaultRunPaths as e:
-                sys.stdout.write("%s\n" % e)
+                sys.stdout.write("{0}\n".format(e))

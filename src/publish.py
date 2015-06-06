@@ -1,4 +1,4 @@
-#!/usr/bin/python2.6
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,9 +21,10 @@
 #
 
 #
-# Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
+from __future__ import print_function
 import fnmatch
 import getopt
 import gettext
@@ -33,6 +34,7 @@ import sys
 import traceback
 import warnings
 import errno
+from imp import reload
 
 import pkg.actions
 import pkg.bundle
@@ -62,7 +64,7 @@ def error(text, cmd=None):
         ws = text[:len(text) - len(text_nows)]
 
         if cmd:
-                text_nows = "%s: %s" % (cmd, text_nows)
+                text_nows = "{0}: {1}".format(cmd, text_nows)
                 pkg_cmd = "pkgsend "
         else:
                 pkg_cmd = "pkgsend: "
@@ -78,12 +80,12 @@ def usage(usage_error=None, cmd=None, retcode=2):
         if usage_error:
                 error(usage_error, cmd=cmd)
 
-        print _("""\
+        print(_("""\
 Usage:
         pkgsend [options] command [cmd_options] [operands]
 
 Packager subcommands:
-        pkgsend generate [-T pattern] [--target file] source ...
+        pkgsend generate [-T pattern] [-u] [--target file] source ...
         pkgsend publish [-b bundle ...] [-d source ...] [-s repo_uri_or_path]
             [-T pattern] [--key ssl_key ... --cert ssl_cert ...]
             [--no-catalog] [manifest ...]
@@ -92,7 +94,7 @@ Options:
         --help or -?    display usage message
 
 Environment:
-        PKG_REPO        The path or URI of the destination repository.""")
+        PKG_REPO        The path or URI of the destination repository."""))
         sys.exit(retcode)
 
 class SolarisBundleVisitor(object):
@@ -127,14 +129,14 @@ class SolarisBundleVisitor(object):
                                     svr4_class not in self.known_classes:
                                         self.errors.add(
                                             _("ERROR: class action script "
-                                            "used in %(pkg)s: %(path)s belongs "
-                                            "to \"%(class)s\" class") %
-                                            {"pkg": bundle.pkgname,
-                                             "path": path, "class": svr4_class})
+                                            "used in {pkg}: {path} belongs "
+                                            "to \"{classname}\" class").format(
+                                            pkg=bundle.pkgname,
+                                            path=path, classname=svr4_class))
                 for script in bundle.scripts:
                         self.errors.add(
-                            _("ERROR: script present in %(pkg)s: %(script)s") %
-                            {"pkg": bundle.pkgname, "script": script})
+                            _("ERROR: script present in {pkg}: {script}").format(
+                            pkg=bundle.pkgname, script=script))
 
                 self.visited = True
 
@@ -161,13 +163,13 @@ def trans_create_repository(repo_uri, args):
         try:
                 trans.Transaction(repo_uri, create_repo=True,
                     repo_props=repo_props, xport=xport, pub=pub)
-        except trans.TransactionRepositoryConfigError, e:
+        except trans.TransactionRepositoryConfigError as e:
                 error(e, cmd="create-repository")
                 emsg(_("Invalid repository configuration values were "
                     "specified using --set-property or required values are "
                     "missing.  Please provide the correct and/or required "
                     "values using the --set-property option."))
-        except trans.TransactionError, e:
+        except trans.TransactionError as e:
                 error(e, cmd="create-repository")
                 return 1
         return 0
@@ -196,7 +198,7 @@ def trans_open(repo_uri, args):
 
         t = trans.Transaction(repo_uri, pkg_name=pargs[0], xport=xport, pub=pub)
         if eval_form:
-                msg("export PKG_TRANS_ID=%s" % t.open())
+                msg("export PKG_TRANS_ID={0}".format(t.open()))
         else:
                 msg(t.open())
 
@@ -226,7 +228,7 @@ def trans_append(repo_uri, args):
 
         t = trans.Transaction(repo_uri, pkg_name=pargs[0], xport=xport, pub=pub)
         if eval_form:
-                msg("export PKG_TRANS_ID=%s" % t.append())
+                msg("export PKG_TRANS_ID={0}".format(t.append()))
         else:
                 msg(t.append())
 
@@ -281,7 +283,8 @@ def trans_add(repo_uri, args):
         action, lp = pkg.actions.internalizelist(args[0], args[1:])
 
         if action.name in nopub_actions:
-                error(_("invalid action for publication: %s") % action, cmd="add")
+                error(_("invalid action for publication: {0}").format(action),
+                    cmd="add")
                 return 1
 
         xport, pub = setup_transport_and_pubs(repo_uri)
@@ -332,7 +335,7 @@ def trans_publish(repo_uri, fargs):
         else:
                 try:
                         filelist = [(f, file(f)) for f in pargs]
-                except IOError, e:
+                except IOError as e:
                         error(e, cmd="publish")
                         return 1
 
@@ -343,7 +346,7 @@ def trans_publish(repo_uri, fargs):
         for filename, f in filelist:
                 try:
                         data = f.read()
-                except IOError, e:
+                except IOError as e:
                         error(e, cmd="publish")
                         return 1
                 lines += data
@@ -354,7 +357,7 @@ def trans_publish(repo_uri, fargs):
         m = pkg.manifest.Manifest()
         try:
                 m.set_content(content=lines)
-        except apx.InvalidPackageErrors, err:
+        except apx.InvalidPackageErrors as err:
                 e = err.errors[0]
                 lineno = e.lineno
                 for i, tup in enumerate(linecnts):
@@ -366,8 +369,8 @@ def trans_publish(repo_uri, fargs):
                         filename = "???"
                         lineno = "???"
 
-                error(_("File %(filename)s line %(lineno)s: %(err)s") %
-                    {"filename": filename, "lineno": lineno, "err": e},
+                error(_("File {filename} line {lineno}: {err}").format(
+                    filename=filename, lineno=lineno, err=e),
                     cmd="publish")
                 return 1
 
@@ -375,8 +378,8 @@ def trans_publish(repo_uri, fargs):
                 pfmri = pkg.fmri.PkgFmri(m["pkg.fmri"])
                 if not pfmri.version:
                         # Cannot have a FMRI without version
-                        error(_("The pkg.fmri attribute '%s' in the package "
-                            "manifest must include a version.") % pfmri,
+                        error(_("The pkg.fmri attribute '{0}' in the package "
+                            "manifest must include a version.").format(pfmri),
                             cmd="publish")
                         return 1
                 if not DebugValues["allow-timestamp"]:
@@ -405,14 +408,15 @@ def trans_publish(repo_uri, fargs):
                 )
 
         bundles = [
-            pkg.bundle.make_bundle(bundle, target_files)
+            pkg.bundle.make_bundle(bundle, targetpaths=target_files)
             for bundle in bundles
         ]
 
         for a in m.gen_actions():
                 # don't publish these actions
                 if a.name == "signature":
-                        msg(_("WARNING: Omitting signature action '%s'" % a))
+                        msg(_("WARNING: Omitting signature action '{0}'".format(
+                            a)))
                         continue
                 if a.name == "set" and a.attrs["name"] in ["pkg.fmri", "fmri"]:
                         continue
@@ -423,8 +427,8 @@ def trans_publish(repo_uri, fargs):
                         path = pkg.actions.set_action_data(a.hash, a,
                             basedirs=basedirs, bundles=bundles)[0]
                 elif a.name in nopub_actions:
-                        error(_("invalid action for publication: %s") % action,
-                            cmd="publish")
+                        error(_("invalid action for publication: {0}").format(
+                            action), cmd="publish")
                         t.close(abandon=True)
                         return 1
                 if a.name == "file":
@@ -483,7 +487,7 @@ def trans_include(repo_uri, fargs, transaction=None):
         else:
                 try:
                         filelist = [(f, file(f)) for f in pargs]
-                except IOError, e:
+                except IOError as e:
                         error(e, cmd="include")
                         return 1
 
@@ -494,7 +498,7 @@ def trans_include(repo_uri, fargs, transaction=None):
         for filename, f in filelist:
                 try:
                         data = f.read()
-                except IOError, e:
+                except IOError as e:
                         error(e, cmd="include")
                         return 1
                 lines.append(data)
@@ -505,7 +509,7 @@ def trans_include(repo_uri, fargs, transaction=None):
         m = pkg.manifest.Manifest()
         try:
                 m.set_content(content="\n".join(lines))
-        except apx.InvalidPackageErrors, err:
+        except apx.InvalidPackageErrors as err:
                 e = err.errors[0]
                 lineno = e.lineno
                 for i, tup in enumerate(linecnts):
@@ -517,8 +521,8 @@ def trans_include(repo_uri, fargs, transaction=None):
                         filename = "???"
                         lineno = "???"
 
-                error(_("File %(filename)s line %(lineno)s: %(err)s") %
-                    {"filename": filename, "lineno": lineno, "err": e},
+                error(_("File {filename} line {lineno}: {err}").format(
+                    filename=filename, lineno=lineno, err=e),
                     cmd="include")
                 return 1
 
@@ -541,8 +545,8 @@ def trans_include(repo_uri, fargs, transaction=None):
                                         break
 
                 if a.name in nopub_actions:
-                        error(_("invalid action for publication: %s") % str(a),
-                            cmd="include")
+                        error(_("invalid action for publication: {0}").format(
+                            str(a)), cmd="include")
                         invalid_action = True
                 else:
                         t.add(a)
@@ -552,9 +556,13 @@ def trans_include(repo_uri, fargs, transaction=None):
         else:
                 return 0
 
-def gen_actions(files, timestamp_files, target_files, minimal=False, visitors=[]):
+def gen_actions(files, timestamp_files, target_files, minimal=False, visitors=[],
+    use_default_owner=True):
         for filename in files:
-                bundle = pkg.bundle.make_bundle(filename, target_files)
+                bundle = pkg.bundle.make_bundle(filename,
+                    targetpaths=target_files,
+                    use_default_owner=use_default_owner)
+
                 for visitor in visitors:
                         visitor.visit(bundle)
 
@@ -586,8 +594,8 @@ def trans_import(repo_uri, args, visitors=[]):
         try:
                 trans_id = os.environ["PKG_TRANS_ID"]
         except KeyError:
-                print >> sys.stderr, \
-                    _("No transaction ID specified in $PKG_TRANS_ID")
+                print(_("No transaction ID specified in $PKG_TRANS_ID"),
+                    file=sys.stderr)
                 sys.exit(1)
 
         opts, pargs = getopt.getopt(args, "T:", ["target="])
@@ -612,20 +620,20 @@ def trans_import(repo_uri, args, visitors=[]):
         abandon = False
         try:
                 for action, err in gen_actions(pargs, timestamp_files,
-                    target_files, visitors=visitors):
+                    target_files, visitors=visitors, use_default_owner=True):
                         if err:
-                                error(_("invalid action for publication: %s") %
-                                    action, cmd="import")
+                                error(_("invalid action for publication: {0}").format(
+                                    action), cmd="import")
                                 abandon = True
                         else:
                                 if not abandon:
                                         t.add(action)
-        except TypeError, e:
+        except TypeError as e:
                 error(e, cmd="import")
                 return 1
-        except EnvironmentError, e:
+        except EnvironmentError as e:
                 if e.errno == errno.ENOENT:
-                        error("%s: '%s'" % (e.args[1], e.filename),
+                        error("{0}: '{1}'".format(e.args[1], e.filename),
                             cmd="import")
                         return 1
                 else:
@@ -643,16 +651,19 @@ def trans_import(repo_uri, args, visitors=[]):
 def trans_generate(args, visitors=[]):
         """Generate a package manifest based on the provided sources."""
 
-        opts, pargs = getopt.getopt(args, "T:", ["target="])
+        opts, pargs = getopt.getopt(args , "uT:", ["target="])
 
         timestamp_files = []
         target_files = []
+        use_default_owner = True
 
         for opt, arg in opts:
                 if opt == "-T":
                         timestamp_files.append(arg)
                 elif opt == "--target":
                         target_files.append(arg)
+                elif opt == "-u":
+                        use_default_owner = False
 
         if not args:
                 usage(_("No arguments specified for subcommand."),
@@ -660,17 +671,18 @@ def trans_generate(args, visitors=[]):
 
         try:
                 for action, err in gen_actions(pargs, timestamp_files,
-                    target_files, minimal=True, visitors=visitors):
+                    target_files, minimal=True, visitors=visitors,
+                    use_default_owner=use_default_owner):
                         if "path" in action.attrs and hasattr(action, "hash") \
                             and action.hash == "NOHASH":
                                 action.hash = action.attrs["path"]
-                        print action
-        except TypeError, e:
+                        print(action)
+        except TypeError as e:
                 error(e, cmd="generate")
                 return 1
-        except EnvironmentError, e:
+        except EnvironmentError as e:
                 if e.errno == errno.ENOENT:
-                        error("%s: '%s'" % (e.args[1], e.filename),
+                        error("{0}: '{1}'".format(e.args[1], e.filename),
                             cmd="generate")
                         return 1
                 else:
@@ -728,14 +740,14 @@ def main_func():
                                         try:
                                                 key, value = arg.split("=", 1)
                                         except (AttributeError, ValueError):
-                                                usage(_("%(opt)s takes argument of form "
-                                                    "name=value, not %(arg)s") % {
-                                                    "opt":  opt, "arg": arg })
+                                                usage(_("{opt} takes argument of form "
+                                                    "name=value, not {arg}").format(
+                                                    opt=opt, arg=arg))
                                 DebugValues.set_value(key, value)
                         elif opt in ("--help", "-?"):
                                 show_usage = True
-        except getopt.GetoptError, e:
-                usage(_("illegal global option -- %s") % e.opt)
+        except getopt.GetoptError as e:
+                usage(_("illegal global option -- {0}").format(e.opt))
 
         if repo_uri and not repo_uri.startswith("null:"):
                 repo_uri = misc.parse_uri(repo_uri)
@@ -784,28 +796,28 @@ def main_func():
                 elif subcommand == "refresh-index":
                         ret = trans_refresh_index(repo_uri, pargs)
                 else:
-                        usage(_("unknown subcommand '%s'") % subcommand)
+                        usage(_("unknown subcommand '{0}'").format(subcommand))
 
                 printed_space = False
                 for visitor in visitors:
                         for warn in visitor.warnings:
                                 if not printed_space:
-                                        print ""
+                                        print("")
                                         printed_space = True
                                 error(warn, cmd=subcommand)
 
                         for err in visitor.errors:
                                 if not printed_space:
-                                        print ""
+                                        print("")
                                         printed_space = True
                                 error(err, cmd=subcommand)
                                 ret = 1
-        except pkg.bundle.InvalidBundleException, e:
+        except pkg.bundle.InvalidBundleException as e:
                 error(e, cmd=subcommand)
                 ret = 1
-        except getopt.GetoptError, e:
-                usage(_("illegal %(cmd)s option -- %(opt)s") % \
-                    {"cmd": subcommand, "opt": e.opt})
+        except getopt.GetoptError as e:
+                usage(_("illegal {cmd} option -- {opt}").format(
+                    cmd=subcommand, opt=e.opt))
 
         return ret
 
@@ -826,13 +838,19 @@ if __name__ == "__main__":
                 __ret = 1
         except (pkg.actions.ActionError, trans.TransactionError,
             EnvironmentError, RuntimeError, pkg.fmri.FmriError,
-            apx.ApiException), _e:
+            apx.ApiException) as _e:
+                if isinstance(_e, EnvironmentError) and \
+                    _e.errno == errno.ENOMEM:
+                        error("\n" + misc.out_of_memory())
                 if not (isinstance(_e, IOError) and _e.errno == errno.EPIPE):
                         # Only print message if failure wasn't due to
                         # broken pipe (EPIPE) error.
-                        print >> sys.stderr, "pkgsend: %s" % _e
+                        print("pkgsend: {0}".format(_e), file=sys.stderr)
                 __ret = 1
-        except SystemExit, _e:
+        except MemoryError:
+                error("\n" + misc.out_of_memory())
+                __ret = 1
+        except SystemExit as _e:
                 raise _e
         except:
                 traceback.print_exc()

@@ -18,7 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 PKGVERS_COMPONENT = 0.5.11
@@ -70,14 +70,14 @@ ALL_MANIFESTS:sh  = \
 $(PUBLISHALL)MANIFESTS      = $(ALL_MANIFESTS)
 PKGCMDENV         = \
 	PATH=$(PKGROOT)/usr/bin:/usr/sbin:/usr/bin \
-	    PYTHONPATH=$(PKGROOT)/usr/lib/python2.6/vendor-packages
-PKG               = $(PKGCMDENV) pkg
-PKGDEPEND         = $(PKGCMDENV) pkgdepend
-PKGFMT            = $(PKGCMDENV) pkgfmt
-PKGLINT           = $(PKGCMDENV) pkglint
-PKGMOGRIFY        = $(PKGCMDENV) pkgmogrify
-PKGREPO           = $(PKGCMDENV) pkgrepo
-PKGSEND           = $(PKGCMDENV) pkgsend
+	    PYTHONPATH=$(PKGROOT)/usr/lib/python2.7/vendor-packages
+PKG               = /usr/bin/env $(PKGCMDENV) /usr/bin/python2.7 $(PKGROOT)/usr/bin/pkg
+PKGDEPEND         = /usr/bin/env $(PKGCMDENV) /usr/bin/python2.7 $(PKGROOT)/usr/bin/pkgdepend
+PKGFMT            = /usr/bin/env $(PKGCMDENV) /usr/bin/python2.7 $(PKGROOT)/usr/bin/pkgfmt
+PKGLINT           = /usr/bin/env $(PKGCMDENV) /usr/bin/python2.7 $(PKGROOT)/usr/bin/pkglint
+PKGMOGRIFY        = /usr/bin/env $(PKGCMDENV) /usr/bin/python2.7 $(PKGROOT)/usr/bin/pkgmogrify
+PKGREPO           = /usr/bin/env $(PKGCMDENV) /usr/bin/python2.7 $(PKGROOT)/usr/bin/pkgrepo
+PKGSEND           = /usr/bin/env $(PKGCMDENV) /usr/bin/python2.7 $(PKGROOT)/usr/bin/pkgsend
 MOGRIFESTS        = $(MANIFESTS:%.p5m=$(PDIR)/%.mog)
 ALL_MOGRIFESTS    = $(ALL_MANIFESTS:%.p5m=$(PDIR)/%.mog)
 PUBLIFESTS        = $(MANIFESTS:%.p5m=$(PDIR)/%.pub)
@@ -103,7 +103,7 @@ PKGMOG_DEFVALS    = \
 	PKGVERS_BRANCH=$(PKGVERS_BRANCH) \
 	PKGVERS=$(PKGVERS) \
 	REV=$(REV) \
-	PYDIR=usr/lib/python2.6 \
+	PYDIR=usr/lib/python2.7 \
 	PYDIRVP=usr/lib/python2.6/vendor-packages \
 	CHANGESET=$(CHANGESET) \
 	PKGPUBLISHER_LOCALIZABLE=$(PKGPUBLISHER_LOCALIZABLE)
@@ -251,7 +251,7 @@ lint: repository-metadata $(PDIR)
 # to pkgsend generate.
 TARGETS.cmd       = \
 	$(PKGMOGRIFY) -O /dev/null transforms/find-links $(MOGRIFESTS) | \
-		python -c 'import os, sys; print " ".join(("--target " + os.path.normpath(os.path.join(os.path.dirname(p), t)) for p, t in (l.strip().split() for l in sys.stdin.readlines())))'
+		python -c 'import os, sys; print(" ".join(("--target " + os.path.normpath(os.path.join(os.path.dirname(p), t)) for p, t in (l.strip().split() for l in sys.stdin.readlines()))))'
 
 # Create a pseudo-manifest of the proto area
 $(PDIR)/protomanifest: FRC transforms/compare-strip $(PDIR)

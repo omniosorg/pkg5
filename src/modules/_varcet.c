@@ -20,14 +20,14 @@
  */
 
 /*
- * Copyright (c) 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  */
 
 #include <Python.h>
 
 /*ARGSUSED*/
 static PyObject *
-_allow_facet(PyObject *self, PyObject *args)
+_allow_facet(PyObject *self, PyObject *args, PyObject *kwargs)
 {
 	PyObject *action = NULL;
 	PyObject *facets = NULL;
@@ -44,8 +44,12 @@ _allow_facet(PyObject *self, PyObject *args)
 	PyObject *ret = Py_True;
 	Py_ssize_t fpos = 0;
 	Py_ssize_t klen = 0;
+	/* This parameter is ignored. */
+	PyObject *publisher = NULL;
+	static char *kwlist[] = {"facets", "action", "publisher", NULL};
 
-	if (!PyArg_UnpackTuple(args, "_allow_facet", 2, 2, &facets, &action))
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO|O:_allow_facet",
+		kwlist, &facets, &action, &publisher))
 		return (NULL);
 
 	if ((act_attrs = PyObject_GetAttrString(action, "attrs")) == NULL)
@@ -112,10 +116,16 @@ _allow_facet(PyObject *self, PyObject *args)
 
 			/*
 			 * If facet is unknown to the system and no facet
-			 * patterns matched it, be inclusive and assume
-			 * True.
+			 * patterns matched it, then allow the action if it is
+			 * not a debug or optional facet.  The trailing '.' is
+			 * to encourage namespace usage.
 			 */
-			facet_ret = Py_True;
+			if (strncmp(as, "facet.debug.", 12) == 0 ||
+			    strncmp(as, "facet.optional.", 15) == 0) {
+				facet_ret = Py_False;
+			} else {
+				facet_ret = Py_True;
+			}
 		}
 
 prep_ret:
@@ -165,7 +175,7 @@ prep_ret:
 
 /*ARGSUSED*/
 static PyObject *
-_allow_variant(PyObject *self, PyObject *args)
+_allow_variant(PyObject *self, PyObject *args, PyObject *kwargs)
 {
 	PyObject *action = NULL;
 	PyObject *vars = NULL;
@@ -173,8 +183,12 @@ _allow_variant(PyObject *self, PyObject *args)
 	PyObject *attr = NULL;
 	PyObject *value = NULL;
 	Py_ssize_t pos = 0;
+	/* This parameter is ignored. */
+	PyObject *publisher = NULL;
+	static char *kwlist[] = {"vars", "action", "publisher", NULL};
 
-	if (!PyArg_UnpackTuple(args, "_allow_variant", 2, 2, &vars, &action))
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO|O:_allow_variant",
+		kwlist, &vars, &action, &publisher))
 		return (NULL);
 
 	if ((act_attrs = PyObject_GetAttrString(action, "attrs")) == NULL)
@@ -218,8 +232,10 @@ _allow_variant(PyObject *self, PyObject *args)
 }
 
 static PyMethodDef methods[] = {
-	{ "_allow_facet", (PyCFunction)_allow_facet, METH_VARARGS },
-	{ "_allow_variant", (PyCFunction)_allow_variant, METH_VARARGS },
+	{ "_allow_facet", (PyCFunction)_allow_facet,
+	    METH_VARARGS | METH_KEYWORDS },
+	{ "_allow_variant", (PyCFunction)_allow_variant,
+	    METH_VARARGS | METH_KEYWORDS },
 	{ NULL, NULL, 0, NULL }
 };
 

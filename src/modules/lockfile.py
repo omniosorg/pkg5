@@ -21,8 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 import errno
@@ -32,6 +31,7 @@ import platform
 
 import pkg.catalog
 import pkg.nrlock as nrlock
+import pkg.client.api_errors as api_errors
 
 from pkg.client import global_settings
 from pkg.misc import DummyLock
@@ -119,7 +119,20 @@ class LockFile(object):
 
                 # Caller should catch EACCES and EROFS.
                 try:
-                        lf = open(self._filepath, "ab+")
+                        # If the file is a symlink we catch an exception
+                        # and do not update the file.
+                        fd = os.open(self._filepath,
+                            os.O_RDWR|os.O_APPEND|os.O_CREAT|
+                            os.O_NOFOLLOW)
+                        lf = os.fdopen(fd, "ab+")
+                except OSError as e:
+                        self._lock.release()
+                        if e.errno == errno.ELOOP:
+                                raise api_errors.UnexpectedLinkError(
+                                    os.path.dirname(self._filepath),
+                                    os.path.basename(self._filepath),
+                                    e.errno)
+                        raise e
                 except:
                         self._lock.release()
                         raise
@@ -127,7 +140,7 @@ class LockFile(object):
                 # Attempt to lock the file.
                 try:
                         fcntl.lockf(lf, lock_type)
-                except IOError, e:
+                except IOError as e:
                         if e.errno not in (errno.EAGAIN, errno.EACCES):
                                 self._lock.release()
                                 raise
@@ -199,7 +212,7 @@ class FileLocked(Exception):
         def __str__(self):
                 errstr = "Unable to lock file"
                 if self.data:
-                        errstr += ": %s" % self.data
+                        errstr += ": {0}".format(self.data)
                 return errstr
 
 

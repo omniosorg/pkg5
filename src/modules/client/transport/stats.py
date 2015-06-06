@@ -21,8 +21,10 @@
 #
 
 #
-# Copyright (c) 2009, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
 #
+
+from __future__ import division
 
 import os
 import datetime
@@ -70,21 +72,21 @@ class RepoChooser(object):
         def dump(self):
                 """Write the repo statistics to stdout."""
 
-                hfmt = "%-41.41s %-30s %-6s %-4s %-4s %-8s %-10s %-5s %-7s %-4s"
-                dfmt = "%-41.41s %-30s %-6s %-4s %-4s %-8s %-10s %-5s %-6f %-4s"
-                misc.msg(hfmt % ("URL", "Proxy", "Good", "Err", "Conn", "Speed",
-                    "Size", "Used", "CSpeed", "Qual"))
+                hfmt = "{0:41.41} {1:30} {2:6} {3:4} {4:4} {5:8} {6:10} {7:5} {8:7} {9:4}"
+                dfmt = "{0:41.41} {1:30} {2:6} {3:4} {4:4} {5:8} {6:10} {7:5} {8:6f} {9:4}"
+                misc.msg(hfmt.format("URL", "Proxy", "Good", "Err", "Conn",
+                    "Speed", "Size", "Used", "CSpeed", "Qual"))
 
                 for ds in self.__rsobj.values():
 
                         speedstr = misc.bytes_to_str(ds.transfer_speed,
-                            "%(num).0f %(unit)s/s")
+                            "{num:>.0f} {unit}/s")
 
                         sizestr = misc.bytes_to_str(ds.bytes_xfr)
                         proxy = self.__get_proxy(ds)
-                        misc.msg(dfmt % (ds.url, proxy, ds.success, ds.failures,
-                            ds.num_connect, speedstr, sizestr, ds.used,
-                            ds.connect_time, ds.quality))
+                        misc.msg(dfmt.format(ds.url, proxy, ds.success,
+                            ds.failures, ds.num_connect, speedstr, sizestr,
+                            ds.used, ds.connect_time, ds.quality))
 
         def get_num_visited(self, repouri_list):
                 """Walk a list of TransportRepoURIs and return the number
@@ -414,7 +416,7 @@ class RepoStats(object):
 
                         if tx < Nused:
                                 return Cused * (Nused - tx)**2
-       
+
                         return 0
 
                 #
@@ -430,7 +432,7 @@ class RepoStats(object):
                 #
                 # Q = Unused_bonus() + Cspeed * ((bytes/.001+seconds) /
                 # origin_speed)^2 + random_bonus(Crand_max) - Cconn_speed *
-                # (connect_speed / origin_connect_speed)^2 - 
+                # (connect_speed / origin_connect_speed)^2 -
                 # Ccontent_error * (content_errors)^2 - Cerror *
                 # (non_decayable_errors + value_of_decayed_errors)^2
                 #

@@ -21,9 +21,10 @@
 #
 
 #
-# Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
+from __future__ import print_function
 import calendar
 import datetime
 import errno
@@ -72,7 +73,7 @@ class TransactionContentError(TransactionError):
 
         def __str__(self):
                 return _("Unrecognized or malformed data in operation payload: "
-                    "'%s'.") % self.data
+                    "'{0}'.").format(self.data)
 
 
 class TransactionOperationError(TransactionError):
@@ -89,29 +90,29 @@ class TransactionOperationError(TransactionError):
         def __str__(self):
                 if "client_release" in self._args:
                         return _("The specified client_release is invalid: "
-                            "'%s'") % self._args.get("msg", "")
+                            "'{0}'").format(self._args.get("msg", ""))
                 elif "fmri_version" in self._args:
-                        return _("'The specified FMRI, '%s', has an invalid "
-                            "version.") % self._args.get("pfmri", "")
+                        return _("'The specified FMRI, '{0}', has an invalid "
+                            "version.").format(self._args.get("pfmri", ""))
                 elif "valid_new_fmri" in self._args:
-                        return _("The specified FMRI, '%s', already exists or "
-                            "has been restricted.") % self._args.get("pfmri",
-                            "")
+                        return _("The specified FMRI, '{0}', already exists or "
+                            "has been restricted.").format(self._args.get("pfmri",
+                            ""))
                 elif "publisher_required" in self._args:
-                        return _("The specified FMRI, '%s', must include the "
+                        return _("The specified FMRI, '{0}', must include the "
                             "publisher prefix as the repository contains "
                             "package data for more than one publisher or "
-                            "a default publisher has not been defined.") % \
-                            self._args.get("pfmri", "")
+                            "a default publisher has not been defined.").format(
+                            self._args.get("pfmri", ""))
                 elif "missing_fmri" in self._args:
-                        return _("Need an existing instance of %s to exist to "
-                            "append to it") % self._args.get("pfmri", "")
+                        return _("Need an existing instance of {0} to exist to "
+                            "append to it").format(self._args.get("pfmri", ""))
                 elif "non_sig" in self._args:
                         return _("Only a signature can be appended to an "
                             "existing package")
                 elif "pfmri" in self._args:
-                        return _("The specified FMRI, '%s', is invalid.") % \
-                            self._args["pfmri"]
+                        return _("The specified FMRI, '{0}', is invalid.").format(
+                            self._args["pfmri"])
                 return str(self.data)
 
 
@@ -119,15 +120,16 @@ class TransactionUnknownIDError(TransactionError):
         """Used to indicate that the specified transaction ID is unknown."""
 
         def __str__(self):
-                return _("No Transaction matching ID '%s' could be found.") % \
-                    self.data
+                return _("No Transaction matching ID '{0}' could be found.").format(
+                    self.data)
 
 
 class TransactionAlreadyOpenError(TransactionError):
         """Used to indicate that a Transaction is already open for use."""
 
         def __str__(self):
-                return _("Transaction ID '%s' is already open.") % self.data
+                return _("Transaction ID '{0}' is already open.").format(
+                    self.data)
 
 
 class Transaction(object):
@@ -155,8 +157,8 @@ class Transaction(object):
         def get_basename(self):
                 assert self.open_time
                 # XXX should the timestamp be in ISO format?
-                return "%d_%s" % \
-                    (calendar.timegm(self.open_time.utctimetuple()),
+                return "{0:d}_{1}".format(
+                    calendar.timegm(self.open_time.utctimetuple()),
                     urllib.quote(str(self.fmri), ""))
 
         def open(self, rstore, client_release, pfmri):
@@ -180,7 +182,7 @@ class Transaction(object):
                 try:
                         self.fmri = fmri.PkgFmri(self.pkg_name,
                             self.client_release)
-                except fmri.FmriError, e:
+                except fmri.FmriError as e:
                         raise TransactionOperationError(e)
 
                 # Version is required for publication.
@@ -199,7 +201,7 @@ class Transaction(object):
 
                         self.fmri.publisher = default_pub
                         pkg_name = self.pkg_name
-                        pub_string = "pkg://%s/" % default_pub
+                        pub_string = "pkg://{0}/".format(default_pub)
                         if not pkg_name.startswith("pkg:/"):
                                 pkg_name = pub_string + pkg_name
                         else:
@@ -239,7 +241,7 @@ class Transaction(object):
 
                 try:
                         os.makedirs(self.dir, misc.PKG_DIR_MODE)
-                except EnvironmentError, e:
+                except EnvironmentError as e:
                         if e.errno == errno.EEXIST:
                                 raise TransactionAlreadyOpenError(
                                     trans_basename)
@@ -255,8 +257,9 @@ class Transaction(object):
                 # it to the manifest.  While it may seem inefficient to create
                 # an action string, convert it to an action, and then back, it
                 # does ensure that the server is adding a valid action.
-                fact = actions.fromstr("set name=pkg.fmri value=%s" % self.fmri)
-                print >> tfile, str(fact)
+                fact = actions.fromstr("set name=pkg.fmri value={0}".format(
+                    self.fmri))
+                print(str(fact), file=tfile)
                 tfile.close()
 
                 # XXX:
@@ -293,7 +296,7 @@ class Transaction(object):
                 try:
                         self.fmri = fmri.PkgFmri(self.pkg_name,
                             self.client_release)
-                except fmri.FmriError, e:
+                except fmri.FmriError as e:
                         raise TransactionOperationError(e)
 
                 # Version and timestamp is required for appending.
@@ -312,7 +315,7 @@ class Transaction(object):
 
                         self.fmri.publisher = default_pub
                         pkg_name = self.pkg_name
-                        pub_string = "pkg://%s/" % default_pub
+                        pub_string = "pkg://{0}/".format(default_pub)
                         if not pkg_name.startswith("pkg:/"):
                                 pkg_name = pub_string + pkg_name
                         else:
@@ -337,7 +340,7 @@ class Transaction(object):
 
                 try:
                         os.makedirs(self.dir, misc.PKG_DIR_MODE)
-                except EnvironmentError, e:
+                except EnvironmentError as e:
                         if e.errno == errno.EEXIST:
                                 raise TransactionAlreadyOpenError(
                                     trans_basename)
@@ -388,7 +391,7 @@ class Transaction(object):
                 try:
                         tfpath = os.path.join(self.dir, "manifest")
                         tfile = file(tfpath, tmode)
-                except IOError, e:
+                except IOError as e:
                         if e.errno == errno.ENOENT:
                                 return
                         raise
@@ -431,7 +434,7 @@ class Transaction(object):
                 # Discard the in-flight transaction data.
                 try:
                         shutil.rmtree(self.dir)
-                except EnvironmentError, e:
+                except EnvironmentError as e:
                         # Ensure that the error goes to stderr, and then drive
                         # on as the actual package was published.
                         misc.emsg(e)
@@ -442,7 +445,7 @@ class Transaction(object):
                 # state transition from TRANSACTING to ABANDONED
                 try:
                         shutil.rmtree(self.dir)
-                except EnvironmentError, e:
+                except EnvironmentError as e:
                         if e.filename == self.dir and e.errno != errno.ENOENT:
                                 raise
                 return "ABANDONED"
@@ -455,7 +458,7 @@ class Transaction(object):
                 # before further processing is done.
                 try:
                         action.validate()
-                except actions.ActionError, e:
+                except actions.ActionError as e:
                         raise TransactionOperationError(e)
 
                 if self.append_trans and action.name != "signature":
@@ -488,15 +491,15 @@ class Transaction(object):
                         # Extract ELF information
                         # XXX This needs to be modularized.
                         if haveelf and data[:4] == "\x7fELF":
-                                elf_name = os.path.join(self.dir, ".temp-%s"
-                                    % fname)
+                                elf_name = os.path.join(self.dir,
+                                    ".temp-{0}".format(fname))
                                 elf_file = open(elf_name, "wb")
                                 elf_file.write(data)
                                 elf_file.close()
 
                                 try:
                                         elf_info = elf.get_info(elf_name)
-                                except elf.ElfError, e:
+                                except elf.ElfError as e:
                                         raise TransactionContentError(e)
 
                                 try:
@@ -536,7 +539,7 @@ class Transaction(object):
 
                         try:
                                 dst_path = self.rstore.file(fname)
-                        except Exception, e:
+                        except Exception as e:
                                 # The specific exception can't be named here due
                                 # to the cyclic dependency between this class
                                 # and the repository class.
@@ -590,22 +593,22 @@ class Transaction(object):
                         raise TransactionOperationError(_("A package may not "
                             " be marked for both obsoletion and renaming."))
                 elif self.obsolete and action.name not in ("set", "signature"):
-                        raise TransactionOperationError(_("A '%(type)s' action "
+                        raise TransactionOperationError(_("A '{type}' action "
                             "cannot be present in an obsolete package: "
-                            "%(action)s") %
-                            {"type": action.name, "action": action})
+                            "{action}").format(
+                            type=action.name, action=action))
                 elif self.renamed and action.name not in \
                     ("depend", "set", "signature"):
-                        raise TransactionOperationError(_("A '%(type)s' action "
+                        raise TransactionOperationError(_("A '{type}' action "
                             "cannot be present in a renamed package: "
-                            "%(action)s") %
-                            {"type": action.name, "action": action})
+                            "{action}").format(
+                            type=action.name, action=action))
 
                 # Now that the action is known to be sane, we can add it to the
                 # manifest.
                 tfpath = os.path.join(self.dir, "manifest")
                 tfile = file(tfpath, "ab+")
-                print >> tfile, action
+                print(action, file=tfile)
                 tfile.close()
 
                 self.types_found.add(action.name)
@@ -625,7 +628,7 @@ class Transaction(object):
                             None)[0]
                         fname = hashes[default_hash_attr]
                         dst_path = self.rstore.file(fname)
-                except Exception, e:
+                except Exception as e:
                         # The specific exception can't be named here due
                         # to the cyclic dependency between this class
                         # and the repository class.

@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2008, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 import testutils
@@ -267,12 +267,6 @@ class TestPkgApiInstall(pkg5unittest.SingleDepotTestCase):
                 self.pkg("list -a")
                 self.__do_install(api_obj, ["foo"])
 
-                # Check that manifest cache file exists after install.
-                pfmri = fmri.PkgFmri(plist[1])
-                mdir = self.get_img_manifest_cache_dir(pfmri)
-                mcpath = os.path.join(mdir, "manifest.set")
-                assert os.path.exists(mcpath)
-
                 self.pkg("verify")
                 self.pkg("list")
 
@@ -295,23 +289,9 @@ class TestPkgApiInstall(pkg5unittest.SingleDepotTestCase):
                 api_obj.reset()
                 self.__do_uninstall(api_obj, ["foo"])
 
-                # Check that manifest cache file does not exist after uninstall.
-                assert not os.path.exists(mcpath)
-
                 self.pkg("verify")
                 self.pkg("list -a")
                 self.pkg("verify")
-
-                # Install foo again, then remove manifest cache files and then
-                # verify uninstall doesn't fail.
-                api_obj.reset()
-                self.__do_install(api_obj, ["foo"])
-                pkg_dir = os.path.join(mdir, "..", "..")
-                manifest.FactoredManifest.clear_cache(
-                    api_obj.img.get_manifest_dir(pfmri))
-                assert not os.path.exists(mcpath)
-                api_obj.reset()
-                self.__do_uninstall(api_obj, ["foo"])
 
         def test_basics_3(self):
                 """ Install foo@1.0, upgrade to foo@1.1, update foo@1.0,
@@ -457,7 +437,7 @@ class TestPkgApiInstall(pkg5unittest.SingleDepotTestCase):
 
                 # Now change the default publisher to 'test2' and publish
                 # another package.
-                self.pkgrepo("set -s %s publisher/prefix=test2" % self.rurl)
+                self.pkgrepo("set -s {0} publisher/prefix=test2".format(self.rurl))
                 self.pkgsend_bulk(self.rurl, self.foo10)
 
                 # Finally, create an image and verify that packages from
@@ -611,27 +591,27 @@ class TestPkgApiInstall(pkg5unittest.SingleDepotTestCase):
                         continue
 
                 # We should run into a problem if pkg(5) is out of date.
-                api_obj.reset()
-                self.__do_uninstall(api_obj, ["*"])
-                api_obj.reset()
-                self.__do_install(api_obj,
-                    ["foo@1.0", "SUNWcs", "package/pkg@1.0"])
-                api_obj.reset()
-                self.assertRaises(api_errors.IpkgOutOfDateException,
-                    lambda *args, **kwargs: list(
-                        api_obj.gen_plan_update(*args, **kwargs)))
+                # api_obj.reset()
+                # self.__do_uninstall(api_obj, ["*"])
+                # api_obj.reset()
+                # self.__do_install(api_obj,
+                #     ["foo@1.0", "SUNWcs", "package/pkg@1.0"])
+                # api_obj.reset()
+                # self.assertRaises(api_errors.IpkgOutOfDateException,
+                #     lambda *args, **kwargs: list(
+                #         api_obj.gen_plan_update(*args, **kwargs)))
 
                 # Use the metadata on release/name to determine it's an
                 # opensolaris system.
-                api_obj.reset()
-                self.__do_uninstall(api_obj, ["*"])
-                api_obj.reset()
-                self.__do_install(api_obj,
-                    ["foo@1.0", "release/name@2.0", "package/pkg@1.0"])
-                api_obj.reset()
-                self.assertRaises(api_errors.IpkgOutOfDateException,
-                    lambda *args, **kwargs: list(
-                        api_obj.gen_plan_update(*args, **kwargs)))
+                # api_obj.reset()
+                # self.__do_uninstall(api_obj, ["*"])
+                # api_obj.reset()
+                # self.__do_install(api_obj,
+                #     ["foo@1.0", "release/name@2.0", "package/pkg@1.0"])
+                # api_obj.reset()
+                # self.assertRaises(api_errors.IpkgOutOfDateException,
+                #     lambda *args, **kwargs: list(
+                #         api_obj.gen_plan_update(*args, **kwargs)))
 
                 # An older release/name which doesn't have the metadata should
                 # cause us to skip the check.
@@ -659,19 +639,19 @@ class TestPkgApiInstall(pkg5unittest.SingleDepotTestCase):
                 self.__do_update(api_obj, ["ips-incorporation@1.0", "pkg@1.0"])
 
                 idir = os.path.join(self.test_root, "pkg-mismatch")
-                self.pkg("image-create -F -p %s %s" % (self.rurl, idir))
+                self.pkg("image-create -F -p {0} {1}".format(self.rurl, idir))
 
                 mis_api_obj = self.get_img_api_obj(img_path=idir)
                 self.__do_install(mis_api_obj, ["release/name@2.0", "package/pkg@2.0"])
                 # The version found in the image pkg is being executed from must
                 # not be available in the image being operated on.  Removing the
                 # publisher is the easiest way to accomplish that.
-                self.pkg("-R %s unset-publisher test" % idir)
+                self.pkg("-R {0} unset-publisher test".format(idir))
 
                 mis_api_obj.reset()
-                self.assertRaises(api_errors.IpkgOutOfDateException,
-                    lambda *args, **kwargs: list(
-                        mis_api_obj.gen_plan_update(*args, **kwargs)))
+                #self.assertRaises(api_errors.IpkgOutOfDateException,
+                #    lambda *args, **kwargs: list(
+                #        mis_api_obj.gen_plan_update(*args, **kwargs)))
 
                 # Verify that if the installed version of pkg is from an
                 # unconfigured publisher and is newer than what is available
@@ -951,7 +931,7 @@ class TestPkgApiInstall(pkg5unittest.SingleDepotTestCase):
 
                         for bad_mode in ("", 'mode=""', "mode=???"):
                                 self.debug("Testing with bad mode "
-                                    "'%s'." % bad_mode)
+                                    "'{0}'.".format(bad_mode))
 
                                 bad_mdata = mdata.replace(src_mode, bad_mode)
                                 self.write_img_manifest(pfmri, bad_mdata)
@@ -962,7 +942,7 @@ class TestPkgApiInstall(pkg5unittest.SingleDepotTestCase):
 
                         for bad_owner in ("", 'owner=""', "owner=invaliduser"):
                                 self.debug("Testing with bad owner "
-                                    "'%s'." % bad_owner)
+                                    "'{0}'.".format(bad_owner))
 
                                 bad_mdata = mdata.replace("owner=root",
                                     bad_owner)
@@ -973,7 +953,7 @@ class TestPkgApiInstall(pkg5unittest.SingleDepotTestCase):
 
                         for bad_group in ("", 'group=""', "group=invalidgroup"):
                                 self.debug("Testing with bad group "
-                                    "'%s'." % bad_group)
+                                    "'{0}'.".format(bad_group))
 
                                 bad_mdata = mdata.replace("group=bin",
                                     bad_group)
@@ -986,9 +966,9 @@ class TestPkgApiInstall(pkg5unittest.SingleDepotTestCase):
                             'set name=description value="" \" my desc \" ""',
                             "set name=com.sun.service.escalations value="):
                                 self.debug("Testing with bad action "
-                                    "'%s'." % bad_act)
+                                    "'{0}'.".format(bad_act))
 
-                                bad_mdata = mdata + "%s\n" % bad_act
+                                bad_mdata = mdata + "{0}\n".format(bad_act)
                                 self.write_img_manifest(pfmri, bad_mdata)
                                 self.assertRaises(api_errors.InvalidPackageErrors,
                                     self.__do_install, api_obj,
@@ -1044,6 +1024,87 @@ class TestPkgApiInstall(pkg5unittest.SingleDepotTestCase):
                 self._api_update(api_obj, [])
                 self.pkg("list foo@1.1", exit=1)
                 self.pkg("list foo@1.2")
+
+        def test_pkg_mancache(self):
+                """Verify that client manifest cache is managed as expected."""
+
+                plist = self.pkgsend_bulk(self.rurl, (self.foo10, self.foo11),
+                    refresh_index=True)
+                api_obj = self.image_create(self.rurl)
+
+                self.pkg("list -af")
+                self.__do_install(api_obj, ["foo@1.0"])
+
+                # Verify that manifest file exists after install.
+                pfmri = fmri.PkgFmri(plist[0])
+                mpath = self.get_img_manifest_path(pfmri)
+                mdir = os.path.dirname(mpath)
+                assert os.path.exists(mpath)
+
+                # Verify that manifest cache file exists after install.
+                mcdir = self.get_img_manifest_cache_dir(pfmri)
+                mcpath = os.path.join(mcdir, "manifest.set")
+                assert os.path.exists(mcpath)
+
+                # Verify that manifest cache file and directories do not exist
+                # after uninstall.
+                api_obj.reset()
+                self.__do_uninstall(api_obj, ["foo"])
+                assert not os.path.exists(mcpath), \
+                    "manifest cache file '{0}' exists!".format(mcpath)
+                assert not os.path.exists(mcdir), \
+                    "manifest cache file directory exists!"
+                assert not os.path.exists(os.path.dirname(mcdir)), \
+                    "manifest cache parent directory '{0}' exists!".format(
+                    os.path.dirname(mcdir))
+
+                # Verify that manifest file and directories do not exist after
+                # uninstall.
+                assert not os.path.exists(mpath), \
+                    "manifest file '{0}' exists!".format(mpath)
+                assert not os.path.exists(mdir), \
+                    "manifest directory '{0}' exists!".format(mdir)
+
+                # Install foo@1.0, then update package to foo@1.1 and verify
+                # that old manifest is removed, but new remains.
+                self.__do_install(api_obj, ["foo@1.0"])
+                assert os.path.exists(mpath)
+                assert os.path.exists(mcpath)
+                self.__do_update(api_obj, ["foo@1.1"])
+
+                # Verify that old version of package manifest file and directory
+                # do not exist after update.
+                assert not os.path.exists(mcpath), \
+                    "old manifest cache file '{0}' exists!".format(mcpath)
+                assert not os.path.exists(mcdir), \
+                    "old manifest cache file directory exists!"
+
+                # Verify that new version of package manifest file and directory
+                # do exist after update.
+                pfmri = fmri.PkgFmri(plist[1])
+                mpath = self.get_img_manifest_path(pfmri)
+                mdir = os.path.dirname(mpath)
+                mcdir = self.get_img_manifest_cache_dir(pfmri)
+                mcpath = os.path.join(mcdir, "manifest.set")
+
+                # Install foo again, then remove manifest cache files and then
+                # verify uninstall doesn't fail.
+                api_obj.reset()
+                self.__do_install(api_obj, ["foo"])
+                pkg_dir = os.path.join(mcdir, "..", "..")
+                shutil.rmtree(os.path.dirname(mcdir))
+                assert not os.path.exists(os.path.dirname(mcdir)), \
+                    "manifest cache parent directory '{0}' exists!".format(
+                    os.path.dirname(mcdir))
+                api_obj.reset()
+                self.__do_uninstall(api_obj, ["foo"])
+
+                # Verify that manifest file and directories do not exist after
+                # uninstall.
+                assert not os.path.exists(mpath), \
+                    "manifest file '{0}' exists!".format(mpath)
+                assert not os.path.exists(mdir), \
+                    "manifest directory '{0}' exists!".format(mdir)
 
 
 class TestActionExecutionErrors(pkg5unittest.SingleDepotTestCase):
@@ -1122,11 +1183,11 @@ class TestActionExecutionErrors(pkg5unittest.SingleDepotTestCase):
         def __do_verify(api_obj, pfmri):
                 img = api_obj.img
                 progtrack = progress.NullProgressTracker()
-		progtrack.verify_start(1)
+                progtrack.plan_start(progtrack.PLAN_PKG_VERIFY, goal=1)
                 for act, errors, warnings, pinfo in img.verify(pfmri, progtrack,
                     forever=True):
-                        raise AssertionError("Action %s in package %s failed "
-                            "verification: %s, %s" % (act, pfmri, errors,
+                        raise AssertionError("Action {0} in package {1} failed "
+                            "verification: {2}, {3}".format(act, pfmri, errors,
                             warnings))
 
         @staticmethod

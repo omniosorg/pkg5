@@ -19,8 +19,8 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+#
+# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 """
@@ -189,7 +189,7 @@ def rename(src, dst):
         """
         try:
                 os.rename(src, dst)
-        except OSError, err:
+        except OSError as err:
                 if err.errno != errno.EEXIST:
                         raise
                 try:
@@ -206,7 +206,7 @@ def remove(path):
         """
         try:
                 os.unlink(path)
-        except OSError, err:
+        except OSError as err:
                 if err.errno != errno.EACCES:
                         raise
                 move_to_trash(path)
@@ -229,8 +229,8 @@ def assert_mode(path, mode):
         # only compare user's permission bits on Windows
         fmode = stat.S_IMODE(os.lstat(path).st_mode)
         if (mode & stat.S_IRWXU) != (fmode & stat.S_IRWXU):
-                ae = AssertionError("mode mismatch for %s, has %o, want %o" % 
-                    (path, fmode, mode))
+                ae = AssertionError("mode mismatch for {0}, has {1:o}, "
+                    "want {2:o}".format(path, fmode, mode))
                 ae.mode = fmode;
                 raise ae
 

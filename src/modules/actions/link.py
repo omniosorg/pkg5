@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2007, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 """module describing a (symbolic) link packaging object
@@ -56,11 +56,8 @@ class LinkAction(generic.Action):
         def install(self, pkgplan, orig):
                 """Client-side method that installs a link."""
 
-                path = self.attrs["path"]
                 target = self.attrs["target"]
-
-                path = os.path.normpath(os.path.sep.join(
-                    (pkgplan.image.get_root(), path)))
+                path = self.get_installed_path(pkgplan.image.get_root())
 
                 # Don't allow installation through symlinks.
                 self.fsobj_checkpath(pkgplan, path)
@@ -81,11 +78,8 @@ class LinkAction(generic.Action):
                 info).  The error list will be empty if the action has been
                 correctly installed in the given image."""
 
-                path = self.attrs["path"]
                 target = self.attrs["target"]
-
-                path = os.path.normpath(os.path.sep.join(
-                    (img.get_root(), path)))
+                path = self.get_installed_path(img.get_root())
 
                 lstat, errors, warnings, info, abort = \
                     self.verify_fsobj_common(img, stat.S_IFLNK)
@@ -97,9 +91,9 @@ class LinkAction(generic.Action):
                 atarget = os.readlink(path)
 
                 if target != atarget:
-                        errors.append(_("Target: '%(found)s' should be "
-                            "'%(expected)s'") % { "found": atarget,
-                            "expected": target })
+                        errors.append(_("Target: '{found}' should be "
+                            "'{expected}'").format(found=atarget,
+                            expected=target))
                 return errors, warnings, info
 
         def remove(self, pkgplan):
@@ -107,8 +101,7 @@ class LinkAction(generic.Action):
                 other than a link is found at the destination location, it
                 will be removed or salvaged."""
 
-                path = os.path.normpath(os.path.sep.join(
-                    (pkgplan.image.get_root(), self.attrs["path"])))
+                path = self.get_installed_path(pkgplan.image.get_root())
                 return self.remove_fsobj(pkgplan, path)
 
         def generate_indices(self):

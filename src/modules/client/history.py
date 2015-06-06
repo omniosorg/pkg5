@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 import copy
@@ -137,26 +137,26 @@ class _HistoryOperation(object):
 
         def __str__(self):
                 return """\
-Operation Name: %s
-Operation Result: %s
-Operation Start Time: %s
-Operation End Time: %s
+Operation Name: {0}
+Operation Result: {1}
+Operation Start Time: {2}
+Operation End Time: {3}
 Operation Start State:
-%s
+{4}
 Operation End State:
-%s
-Operation User: %s (%s)
-Operation Boot Env.: %s
-Operation Boot Env. Currrent: %s
-Operation Boot Env. UUID: %s
-Operation New Boot Env.: %s
-Operation New Boot Env. Current: %s
-Operation New Boot Env. UUID: %s
-Operation Snapshot: %s
-Operation Release Notes: %s
+{5}
+Operation User: {6} ({7})
+Operation Boot Env.: {8}
+Operation Boot Env. Currrent: {9}
+Operation Boot Env. UUID: {10}
+Operation New Boot Env.: {11}
+Operation New Boot Env. Current: {12}
+Operation New Boot Env. UUID: {13}
+Operation Snapshot: {14}
+Operation Release Notes: {15}
 Operation Errors:
-%s
-""" % (self.name, self.result, self.start_time, self.end_time,
+{16}
+""".format(self.name, self.result, self.start_time, self.end_time,
     self.start_state, self.end_state, self.username, self.userid,
     self.be, self.current_be, self.be_uuid, self.new_be, self.current_new_be,
     self.new_be_uuid, self.snapshot, self.release_notes, self.errors)
@@ -310,8 +310,8 @@ class History(object):
 
         def __setattr__(self, name, value):
                 if name == "client_args":
-                        raise AttributeError("'history' object attribute '%s' "
-                            "is read-only." % name)
+                        raise AttributeError("'history' object attribute '{0}' "
+                            "is read-only.".format(name))
 
                 if not name.startswith("operation_"):
                         return object.__setattr__(self, name, value)
@@ -328,8 +328,9 @@ class History(object):
                             "operation": _HistoryOperation()
                         })
                 elif not ops:
-                        raise AttributeError("'history' object attribute '%s' "
-                            "cannot be set before 'operation_name'." % name)
+                        raise AttributeError("'history' object attribute '{0}' "
+                            "cannot be set before 'operation_name'.".format(
+                            name))
 
                 op = ops[-1]["operation"]
                 setattr(op, name[len("operation_"):], value)
@@ -427,7 +428,7 @@ class History(object):
                 pathname = ops[-1]["pathname"]
                 if not pathname:
                         return os.path.join(self.path,
-                            "%s-01.xml" % ops[-1]["operation"].start_time)
+                            "{0}-01.xml".format(ops[-1]["operation"].start_time))
                 return pathname
 
         @property
@@ -444,7 +445,7 @@ class History(object):
                         for a in file(rpath, "r"):
                                 yield a.rstrip()
 
-                except Exception, e:
+                except Exception as e:
                         raise apx.HistoryLoadException(e)
                         
         def clear(self):
@@ -551,7 +552,7 @@ class History(object):
                 try:
                         if not uuid_be_dic:
                                 uuid_be_dic = bootenv.BootEnv.get_uuid_be_dic()
-                except apx.ApiException, e:
+                except apx.ApiException as e:
                         uuid_be_dic = {}
 
                 try:
@@ -572,7 +573,7 @@ class History(object):
                                             })
                 except KeyboardInterrupt:
                         raise
-                except Exception, e:
+                except Exception as e:
                         raise apx.HistoryLoadException(e)
 
         def __serialize_client_data(self, d):
@@ -677,7 +678,7 @@ class History(object):
                                 # created.  Assume that if the parent structure
                                 # does not exist, it shouldn't be created.
                                 os.mkdir(self.path, misc.PKG_DIR_MODE)
-                        except EnvironmentError, e:
+                        except EnvironmentError as e:
                                 if e.errno not in (errno.EROFS, errno.EACCES,
                                     errno.ENOENT):
                                         # Ignore read-only file system and
@@ -690,7 +691,7 @@ class History(object):
                                 return
                         except KeyboardInterrupt:
                                 raise
-                        except Exception, e:
+                        except Exception as e:
                                 raise apx.HistoryStoreException(e)
 
                 # Repeatedly attempt to write the history (only if it's because
@@ -707,7 +708,7 @@ class History(object):
                                     encoding=sys.getdefaultencoding())
                                 f.close()
                                 return
-                        except EnvironmentError, e:
+                        except EnvironmentError as e:
                                 if e.errno == errno.EEXIST:
                                         name, ext = os.path.splitext(
                                             os.path.basename(pathname))
@@ -715,7 +716,8 @@ class History(object):
                                         # Pick the next name in our sequence
                                         # and try again.
                                         pathname = os.path.join(self.path,
-                                            "%s-%02d%s" % (name, i + 1, ext))
+                                            "{0}-{1:>02d}{2}".format(name,
+                                            i + 1, ext))
                                         continue
                                 elif e.errno not in (errno.EROFS,
                                     errno.EACCES):
@@ -729,7 +731,7 @@ class History(object):
                                 return
                         except KeyboardInterrupt:
                                 raise
-                        except Exception, e:
+                        except Exception as e:
                                 raise apx.HistoryStoreException(e)
 
         def purge(self, be_name=None, be_uuid=None):
@@ -745,13 +747,13 @@ class History(object):
                         shutil.rmtree(self.path)
                 except KeyboardInterrupt:
                         raise
-                except EnvironmentError, e:
+                except EnvironmentError as e:
                         if e.errno in (errno.ENOENT, errno.ESRCH):
                                 # History already purged; record as successful.
                                 self.operation_result = RESULT_SUCCEEDED
                                 return
                         raise apx.HistoryPurgeException(e)
-                except Exception, e:
+                except Exception as e:
                         raise apx.HistoryPurgeException(e)
                 else:
                         self.operation_result = RESULT_SUCCEEDED
@@ -768,7 +770,7 @@ class History(object):
                         # ended properly.
                         while self.operation_name:
                                 self.operation_result = result
-                except HistoryStoreException:
+                except apx.HistoryStoreException:
                         # Ignore storage errors as it's likely that whatever
                         # caused the client to abort() also caused the storage
                         # of the history information to fail.

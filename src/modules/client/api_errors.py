@@ -21,10 +21,11 @@
 #
 
 #
-# Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 import errno
+import operator
 import os
 import xml.parsers.expat as expat
 import urlparse
@@ -124,19 +125,19 @@ class ImageLockedError(ApiException):
                     self.hostname is not None:
                         return _("The image cannot be modified as it is "
                             "currently in use by another package client: "
-                            "%(pid_name)s on %(host)s, pid %(pid)s.") % {
-                            "pid_name": self.pid_name, "pid": self.pid,
-                            "host": self.hostname }
+                            "{pid_name} on {host}, pid {pid}.").format(
+                            pid_name=self.pid_name, pid=self.pid,
+                            host=self.hostname)
                 if self.pid is not None and self.pid_name is not None:
                         return _("The image cannot be modified as it is "
                             "currently in use by another package client: "
-                            "%(pid_name)s on an unknown host, pid %(pid)s.") % {
-                            "pid_name": self.pid_name, "pid": self.pid }
+                            "{pid_name} on an unknown host, pid {pid}.").format(
+                            pid_name=self.pid_name, pid=self.pid)
                 elif self.pid is not None:
                         return _("The image cannot be modified as it is "
                             "currently in use by another package client: "
-                            "pid %(pid)s on %(host)s.") % {
-                            "pid": self.pid, "host": self.hostname }
+                            "pid {pid} on {host}.").format(
+                            pid=self.pid, host=self.hostname)
                 return _("The image cannot be modified as it is currently "
                     "in use by another package client.")
 
@@ -149,7 +150,7 @@ class ImageNotFoundException(ApiException):
                 self.root_dir = root_dir
 
         def __str__(self):
-                return _("No image rooted at '%s'") % self.user_dir
+                return _("No image rooted at '{0}'").format(self.user_dir)
 
 
 class ImageFormatUpdateNeeded(ApiException):
@@ -161,9 +162,9 @@ class ImageFormatUpdateNeeded(ApiException):
                 self.path = path
 
         def __str__(self):
-                return _("The image rooted at %s is written in an older format "
+                return _("The image rooted at {0} is written in an older format "
                     "and must be updated before the requested operation can be "
-                    "performed.") % self.path
+                    "performed.").format(self.path)
 
 class ImageInsufficentSpace(ApiException):
         """Used when insuffcient space exists for proposed operation"""
@@ -174,12 +175,12 @@ class ImageInsufficentSpace(ApiException):
 
         def __str__(self):
                 from pkg.misc import bytes_to_str
-                return _("Insufficent disk space available (%(avail)s)"
-                    "for estimated need (%(needed)s) for %(use)s") % {
-                    "avail":  bytes_to_str(self.avail),
-                    "needed": bytes_to_str(self.needed),
-                    "use": self.use
-                    }
+                return _("Insufficient disk space available ({avail}) "
+                    "for estimated need ({needed}) for {use}").format(
+                    avail=bytes_to_str(self.avail),
+                    needed=bytes_to_str(self.needed),
+                    use=self.use
+                   )
 
 
 class VersionException(ApiException):
@@ -214,7 +215,7 @@ class InvalidPackageErrors(ApiException):
         def __str__(self):
                 return _("The requested operation cannot be completed due "
                     "to invalid package metadata.  Details follow:\n\n"
-                    "%s") % "\n".join(str(e) for e in self.errors)
+                    "{0}").format("\n".join(str(e) for e in self.errors))
 
 
 class LicenseAcceptanceError(ApiException):
@@ -274,10 +275,10 @@ class PlanLicenseErrors(PlanPrepareException):
                 output = ""
                 for sfmri in self.__errors:
                         output += ("-" * 40) + "\n"
-                        output += _("Package: %s\n\n") % sfmri
+                        output += _("Package: {0}\n\n").format(sfmri)
                         for e in self.__errors[sfmri]:
                                 lic_name = e.dest.attrs["license"]
-                                output += _("License: %s\n") % lic_name
+                                output += _("License: {0}\n").format(lic_name)
                                 if e.dest.must_accept and not e.accepted:
                                         output += _("  License requires "
                                             "acceptance.")
@@ -332,9 +333,9 @@ class ImagePkgStateError(ApiException):
                 self.states = states
 
         def __str__(self):
-                return _("Invalid package state change attempted '%(states)s' "
-                    "for package '%(fmri)s'.") % { "states": self.states,
-                    "fmri": self.fmri }
+                return _("Invalid package state change attempted '{states}' "
+                    "for package '{fmri}'.").format(states=self.states,
+                    fmri=self.fmri)
 
 
 class IpkgOutOfDateException(ApiException):
@@ -370,10 +371,10 @@ class PermissionsException(ApiException):
 
         def __str__(self):
                 if self.path:
-                        return _("Could not operate on %s\nbecause of "
+                        return _("Could not operate on {0}\nbecause of "
                             "insufficient permissions. Please try the "
-                            "command again as a privileged user.") % \
-                            self.path
+                            "command again as a privileged user.").format(
+                            self.path)
                 else:
                         return _("""
 Could not complete the operation because of insufficient permissions.
@@ -386,9 +387,9 @@ class FileInUseException(PermissionsException):
                 assert path
 
         def __str__(self):
-                return _("Could not operate on %s\nbecause the file is "
+                return _("Could not operate on {0}\nbecause the file is "
                     "in use. Please stop using the file and try the\n"
-                    "operation again.") % self.path
+                    "operation again.").format(self.path)
 
 
 class UnprivilegedUserError(PermissionsException):
@@ -411,8 +412,8 @@ class ReadOnlyFileSystemException(PermissionsException):
 
         def __str__(self):
                 if self.path:
-                        return _("Could not complete the operation on %s: "
-                            "read-only filesystem.") % self.path
+                        return _("Could not complete the operation on {0}: "
+                            "read-only filesystem.").format(self.path)
                 return _("Could not complete the operation: read-only "
                         "filesystem.")
 
@@ -423,9 +424,9 @@ class InvalidLockException(ApiException):
                 self.path = path
 
         def __str__(self):
-                return _("Unable to obtain or operate on lock at %s.\n"
-                    "Please try the operation again as a privileged user.") \
-                    % self.path
+                return _("Unable to obtain or operate on lock at {0}.\n"
+                    "Please try the operation again as a privileged "
+                    "user.").format(self.path)
 
 
 class PackageMatchErrors(ApiException):
@@ -447,18 +448,18 @@ class PackageMatchErrors(ApiException):
                             "packages:")
 
                         res += [s]
-                        res += ["\t%s" % p for p in self.unmatched_fmris]
+                        res += ["\t{0}".format(p) for p in self.unmatched_fmris]
 
                 if self.multiple_matches:
-                        s = _("'%s' matches multiple packages")
+                        s = _("'{0}' matches multiple packages")
                         for p, lst in self.multiple_matches:
-                                res.append(s % p)
+                                res.append(s.format(p))
                                 for pfmri in lst:
-                                        res.append("\t%s" % pfmri)
+                                        res.append("\t{0}".format(pfmri))
 
                 if self.illegal:
-                        s = _("'%s' is an illegal FMRI")
-                        res += [ s % p for p in self.illegal ]
+                        s = _("'{0}' is an illegal FMRI")
+                        res += [ s.format(p) for p in self.illegal ]
 
                 if self.multispec:
                         s = _("The following different patterns specify the "
@@ -467,7 +468,7 @@ class PackageMatchErrors(ApiException):
                         for t in self.multispec:
                                 res += [
                                     ", ".join([t[i] for i in range(1, len(t))])
-                                    + ": %s" % t[0]
+                                    + ": {0}".format(t[0])
                                 ]
 
                 return "\n".join(res)
@@ -494,6 +495,7 @@ class PlanCreationException(ApiException):
             pkg_updates_required=EmptyI,
             rejected_pats=EmptyI,
             solver_errors=EmptyI,
+            no_repo_pubs=EmptyI,
             unmatched_fmris=EmptyI,
             would_install=EmptyI,
             wrong_publishers=EmptyI,
@@ -520,6 +522,7 @@ class PlanCreationException(ApiException):
                 self.rejected_pats         = rejected_pats
                 self.solver_errors         = solver_errors
                 self.unmatched_fmris       = unmatched_fmris
+                self.no_repo_pubs          = no_repo_pubs
                 self.would_install         = would_install
                 self.wrong_publishers      = wrong_publishers
                 self.wrong_variants        = wrong_variants
@@ -532,7 +535,7 @@ The following pattern(s) did not match any allowable packages.  Try
 using a different matching pattern, or refreshing publisher information:
 """)
                         res += [s]
-                        res += ["\t%s" % p for p in self.unmatched_fmris]
+                        res += ["\t{0}".format(p) for p in self.unmatched_fmris]
 
                 if self.rejected_pats:
                         s = _("""\
@@ -540,54 +543,54 @@ The following pattern(s) only matched packages rejected by user request.  Try
 using a different matching pattern, or refreshing publisher information:
 """)
                         res += [s]
-                        res += ["\t%s" % p for p in self.rejected_pats]
+                        res += ["\t{0}".format(p) for p in self.rejected_pats]
 
                 if self.wrong_variants:
                         s = _("""\
 The following pattern(s) only matched packages that are not available
 for the current image's architecture, zone type, and/or other variant:""")
                         res += [s]
-                        res += ["\t%s" % p for p in self.wrong_variants]
+                        res += ["\t{0}".format(p) for p in self.wrong_variants]
 
                 if self.wrong_publishers:
                         s = _("The following patterns only matched packages "
                             "that are from publishers other than that which "
                             "supplied the already installed version of this package")
                         res += [s]
-                        res += ["\t%s: %s" % (p[0], ", ".join(p[1])) for p in self.wrong_publishers]
+                        res += ["\t{0}: {1}".format(p[0], ", ".join(p[1])) for p in self.wrong_publishers]
 
                 if self.multiple_matches:
-                        s = _("'%s' matches multiple packages")
+                        s = _("'{0}' matches multiple packages")
                         for p, lst in self.multiple_matches:
-                                res.append(s % p)
+                                res.append(s.format(p))
                                 for pfmri in lst:
-                                        res.append("\t%s" % pfmri)
+                                        res.append("\t{0}".format(pfmri))
 
                 if self.missing_matches:
-                        s = _("'%s' matches no installed packages")
-                        res += [ s % p for p in self.missing_matches ]
+                        s = _("'{0}' matches no installed packages")
+                        res += [ s.format(p) for p in self.missing_matches ]
 
                 if self.illegal:
-                        s = _("'%s' is an illegal fmri")
-                        res += [ s % p for p in self.illegal ]
+                        s = _("'{0}' is an illegal fmri")
+                        res += [ s.format(p) for p in self.illegal ]
 
                 if self.badarch:
-                        s = _("'%(p)s' supports the following architectures: "
-                            "%(archs)s")
-                        a = _("Image architecture is defined as: %s")
-                        res += [ s % {"p": self.badarch[0],
-                            "archs": ", ".join(self.badarch[1])}]
-                        res += [ a % (self.badarch[2])]
+                        s = _("'{p}' supports the following architectures: "
+                            "{archs}")
+                        a = _("Image architecture is defined as: {0}")
+                        res += [ s.format(p=self.badarch[0],
+                            archs=", ".join(self.badarch[1]))]
+                        res += [ a.format(self.badarch[2])]
 
-                s = _("'%(p)s' depends on obsolete package '%(op)s'")
-                res += [ s % {"p": p, "op": op} for p, op in self.obsolete ]
+                s = _("'{p}' depends on obsolete package '{op}'")
+                res += [ s.format(p=p, op=op) for p, op in self.obsolete ]
 
                 if self.installed:
                         s = _("The proposed operation can not be performed for "
                             "the following package(s) as they are already "
                             "installed: ")
                         res += [s]
-                        res += ["\t%s" % p for p in self.installed]
+                        res += ["\t{0}".format(p) for p in self.installed]
 
                 if self.invalid_mediations:
                         s = _("The following mediations are not syntactically "
@@ -604,7 +607,7 @@ for the current image's architecture, zone type, and/or other variant:""")
                                 res += [
                                         ", ".join(
                                         [t[i] for i in range(1, len(t))])
-                                        + ": %s" % t[0]
+                                        + ": {0}".format(t[0])
                                         ]
                 if self.no_solution:
                         res += [_("No solution was found to satisfy constraints")]
@@ -617,8 +620,8 @@ Syncing this linked image would require the following package updates:
 """)
                         res += [s]
                         for (oldfmri, newfmri) in self.pkg_updates_required:
-                                res += ["%(oldfmri)s -> %(newfmri)s\n" % \
-                                    {"oldfmri": oldfmri, "newfmri": newfmri}]
+                                res += ["{oldfmri} -> {newfmri}\n".format(
+                                    oldfmri=oldfmri, newfmri=newfmri)]
 
                 if self.no_version:
                         res += self.no_version
@@ -633,13 +636,13 @@ persistently.""")
                         res = [s]
 
                 if self.missing_dependency:
-                        res += [_("Package %(pkg)s is missing a dependency: "
-                            "%(dep)s") %
-                            {"pkg": self.missing_dependency[0],
-                             "dep": self.missing_dependency[1]}]
+                        res += [_("Package {pkg} is missing a dependency: "
+                            "{dep}").format(
+                            pkg=self.missing_dependency[0],
+                             dep=self.missing_dependency[1])]
                 if self.nofiles:
                         res += [_("The following files are not packaged in this image:")]
-                        res += ["\t%s" % f for f in self.nofiles]
+                        res += ["\t{0}".format(f) for f in self.nofiles]
 
                 if self.solver_errors:
                         res += ["\n"]
@@ -650,28 +653,29 @@ persistently.""")
                         res += [_("The following packages are already "
                             "installed in this image; use uninstall to "
                             "avoid these:")]
-                        res += [ "\t%s" % s for s in self.already_installed]
+                        res += [ "\t{0}".format(s) for s in self.already_installed]
 
                 if self.would_install:
                         res += [_("The following packages are a target "
                             "of group dependencies; use install to unavoid "
                             "these:")]
-                        res += [ "\t%s" % s for s in self.would_install]
+                        res += [ "\t{0}".format(s) for s in self.would_install]
 
                 if self.not_avoided:
                         res += [_("The following packages are not on the "
                             "avoid list, so they\ncannot be removed from it.")]
-                        res += [ "\t%s" % s for s in sorted(self.not_avoided)]
+                        res += [ "\t{0}".format(s) for s in sorted(self.not_avoided)]
 
                 def __format_li_pubs(pubs, res):
                         i = 0
                         for pub, sticky in pubs:
-                                s = "    %s %d: %s" % (_("PUBLISHER"), i, pub)
+                                s = "    {0} {1:d}: {2}".format(_("PUBLISHER"),
+                                    i, pub)
                                 mod = []
                                 if not sticky:
                                         mod.append(_("non-sticky"))
                                 if mod:
-                                        s += " (%s)" % ",".join(mod)
+                                        s += " ({0})".format(",".join(mod))
                                 res.append(s)
                                 i += 1
 
@@ -691,6 +695,14 @@ The parent image has the following enabled publishers:"""))
                         res.append(_("""
 The child image has the following enabled publishers:"""))
                         __format_li_pubs(pubs, res)
+
+                if self.no_repo_pubs:
+                        res += [_("The following publishers do not have any "
+                            "configured package repositories and cannot be "
+                            "used in package dehydration or rehydration "
+                            "operations:\n")]
+                        res += ["\t{0}".format(s) for s in sorted(
+                            self.no_repo_pubs)]
 
                 return "\n".join(res)
 
@@ -733,17 +745,17 @@ class DuplicateActionError(ConflictingActionError):
                 kv = self._data[0][0].attrs[self._data[0][0].key_attr]
                 action = self._data[0][0].name
                 if len(pfmris) > 1:
-                        s = _("The following packages all deliver %(action)s "
-                            "actions to %(kv)s:\n") % locals()
+                        s = _("The following packages all deliver {action} "
+                            "actions to {kv}:\n").format(**locals())
                         for a, p in self._data:
-                                s += "\n  %s" % p
+                                s += "\n  {0}".format(p)
                         s += _("\n\nThese packages may not be installed together. "
                             "Any non-conflicting set may\nbe, or the packages "
                             "must be corrected before they can be installed.")
                 else:
                         pfmri = pfmris.pop()
-                        s = _("The package %(pfmri)s delivers multiple copies "
-                            "of %(action)s %(kv)s") % locals()
+                        s = _("The package {pfmri} delivers multiple copies "
+                            "of {action} {kv}").format(**locals())
                         s += _("\nThis package must be corrected before it "
                             "can be installed.")
 
@@ -764,18 +776,18 @@ class InconsistentActionTypeError(ConflictingActionError):
 
                 if len(pfmris) > 1:
                         s = _("The following packages deliver conflicting "
-                            "action types to %s:\n") % kv
+                            "action types to {0}:\n").format(kv)
                         for name, pl in ad.iteritems():
-                                s += "\n  %s:" % name
-                                s += "".join("\n    %s" % p for p in pl)
+                                s += "\n  {0}:".format(name)
+                                s += "".join("\n    {0}".format(p) for p in pl)
                         s += _("\n\nThese packages may not be installed together. "
                             "Any non-conflicting set may\nbe, or the packages "
                             "must be corrected before they can be installed.")
                 else:
                         pfmri = pfmris.pop()
                         types = list_to_lang(ad.keys())
-                        s = _("The package %(pfmri)s delivers conflicting "
-                            "action types (%(types)s) to %(kv)s") % locals()
+                        s = _("The package {pfmri} delivers conflicting "
+                            "action types ({types}) to {kv}").format(**locals())
                         s += _("\nThis package must be corrected before it "
                             "can be installed.")
                 return s
@@ -815,24 +827,24 @@ class InconsistentActionAttributeError(ConflictingActionError):
                 ])
 
                 s = _("The requested change to the system attempts to install "
-                    "multiple actions\nfor %(a)s '%(k)s' with conflicting "
-                    "attributes:\n\n") % {"a": actname, "k": keyattr}
+                    "multiple actions\nfor {a} '{k}' with conflicting "
+                    "attributes:\n\n").format(a=actname, k=keyattr)
                 allpkgs = set()
                 for num, action, pkglist in l:
                         allpkgs.update(pkglist)
                         if num <= 5:
                                 if num == 1:
-                                        t = _("    %(n)d package delivers '%(a)s':\n")
+                                        t = _("    {n:d} package delivers '{a}':\n")
                                 else:
-                                        t = _("    %(n)d packages deliver '%(a)s':\n")
-                                s += t % {"n": num, "a": action}
+                                        t = _("    {n:d} packages deliver '{a}':\n")
+                                s += t.format(n=num, a=action)
                                 for pkg in sorted(pkglist):
-                                        s += _("        %s\n") % pkg
+                                        s += _("        {0}\n").format(pkg)
                         else:
-                                t = _("    %(n)d packages deliver '%(a)s', including:\n")
-                                s += t % {"n": num, "a": action}
+                                t = _("    {n:d} packages deliver '{a}', including:\n")
+                                s += t.format(n=num, a=action)
                                 for pkg in sorted(pkglist)[:5]:
-                                        s += _("        %s\n") % pkg
+                                        s += _("        {0}\n").format(pkg)
 
                 if len(allpkgs) == 1:
                         s += _("\nThis package must be corrected before it "
@@ -855,22 +867,22 @@ def list_to_lang(l):
                 return l[0]
         if len(l) == 2:
                 # Used for a two-element list
-                return _("%(penultimate)s and %(ultimate)s") % {
-                    "penultimate": l[0],
-                    "ultimate": l[1]
-                }
+                return _("{penultimate} and {ultimate}").format(
+                    penultimate=l[0],
+                    ultimate=l[1]
+               )
         # In order to properly i18n this construct, we create two templates:
         # one for each element save the last, and one that tacks on the last
         # element.
         # 'elementtemplate' is for each element through the penultimate
-        elementtemplate = _("%s, ")
+        elementtemplate = _("{0}, ")
         # 'listtemplate' concatenates the concatenation of non-ultimate elements
         # and the ultimate element.
-        listtemplate = _("%(list)sand %(tail)s")
-        return listtemplate % {
-            "list": "".join(elementtemplate % i for i in l[:-1]),
-            "tail": l[-1]
-        }
+        listtemplate = _("{list}and {tail}")
+        return listtemplate.format(
+            list="".join(elementtemplate.format(i) for i in l[:-1]),
+            tail=l[-1]
+       )
 
 class ActionExecutionError(ApiException):
         """Used to indicate that action execution (such as install, remove,
@@ -916,7 +928,7 @@ class ActionExecutionError(ApiException):
                 errno = ""
                 if self.use_errno and self.error and \
                     hasattr(self.error, "errno"):
-                        errno = "[errno %d: %s]" % (self.error.errno,
+                        errno = "[errno {0:d}: {1}]".format(self.error.errno,
                             os.strerror(self.error.errno))
 
                 details = self.details or ""
@@ -927,20 +939,20 @@ class ActionExecutionError(ApiException):
                         return str(self.error)
 
                 if errno and details:
-                        details = "%s: %s" % (errno, details)
+                        details = "{0}: {1}".format(errno, details)
 
                 if details and not self.fmri:
                         details = _("Requested operation failed for action "
-                            "%(action)s:\n%(details)s") % {
-                            "action": self.action,
-                            "details": details }
+                            "{action}:\n{details}").format(
+                            action=self.action,
+                            details=details)
                 elif details:
                         details = _("Requested operation failed for package "
-                            "%(fmri)s:\n%(details)s") % { "fmri": self.fmri,
-                            "details": details }
+                            "{fmri}:\n{details}").format(fmri=self.fmri,
+                            details=details)
 
                 # If we only have one of the two, no need for the colon.
-                return "%s%s" % (errno, details)
+                return "{0}{1}".format(errno, details)
 
 
 class CatalogRefreshException(ApiException):
@@ -972,8 +984,9 @@ class AnarchicalCatalogFMRI(CatalogError):
         operations because it is missing publisher information."""
 
         def __str__(self):
-                return _("The FMRI '%s' does not contain publisher information "
-                    "and cannot be used for catalog operations.") % self.data
+                return _("The FMRI '{0}' does not contain publisher information "
+                    "and cannot be used for catalog operations.").format(
+                    self.data)
 
 
 class BadCatalogMetaRoot(CatalogError):
@@ -981,9 +994,9 @@ class BadCatalogMetaRoot(CatalogError):
         because the meta_root is invalid."""
 
         def __str__(self):
-                return _("Catalog meta_root '%(root)s' is invalid; unable "
-                    "to complete operation: '%(op)s'.") % { "root": self.data,
-                    "op": self._args.get("operation", None) }
+                return _("Catalog meta_root '{root}' is invalid; unable "
+                    "to complete operation: '{op}'.").format(root=self.data,
+                    op=self._args.get("operation", None))
 
 
 class BadCatalogPermissions(CatalogError):
@@ -1002,9 +1015,9 @@ class BadCatalogPermissions(CatalogError):
                     "permissions:\n")
                 for f in self.data:
                         fname, emode, fmode = f
-                        msg += _("\t%(fname)s: expected mode: %(emode)s, found "
-                            "mode: %(fmode)s\n") % { "fname": fname,
-                            "emode": emode, "fmode": fmode }
+                        msg += _("\t{fname}: expected mode: {emode}, found "
+                            "mode: {fmode}\n").format(fname=fname,
+                            emode=emode, fmode=fmode)
                 return msg
 
 
@@ -1012,8 +1025,8 @@ class BadCatalogSignatures(CatalogError):
         """Used to indicate that the Catalog signatures are not valid."""
 
         def __str__(self):
-                return _("The signature data for the '%s' catalog file is not "
-                    "valid.") % self.data
+                return _("The signature data for the '{0}' catalog file is not "
+                    "valid.").format(self.data)
 
 
 class BadCatalogUpdateIdentity(CatalogError):
@@ -1024,7 +1037,7 @@ class BadCatalogUpdateIdentity(CatalogError):
         def __str__(self):
                 return _("Unable to determine the updates needed for  "
                     "the current catalog using the provided catalog "
-                    "update data in '%s'.") % self.data
+                    "update data in '{0}'.").format(self.data)
 
 
 class DuplicateCatalogEntry(CatalogError):
@@ -1032,11 +1045,11 @@ class DuplicateCatalogEntry(CatalogError):
         performed since it would result in a duplicate catalog entry."""
 
         def __str__(self):
-                return _("Unable to perform '%(op)s' operation for catalog "
-                    "%(name)s; completion would result in a duplicate entry "
-                    "for package '%(fmri)s'.") % { "op": self._args.get(
-                    "operation", None), "name": self._args.get("catalog_name",
-                    None), "fmri": self.data }
+                return _("Unable to perform '{op}' operation for catalog "
+                    "{name}; completion would result in a duplicate entry "
+                    "for package '{fmri}'.").format(op=self._args.get(
+                    "operation", None), name=self._args.get("catalog_name",
+                    None), fmri=self.data)
 
 
 class CatalogUpdateRequirements(CatalogError):
@@ -1052,8 +1065,8 @@ class InvalidCatalogFile(CatalogError):
         """Used to indicate a Catalog file could not be loaded."""
 
         def __str__(self):
-                return _("Catalog file '%s' is invalid.\nUse 'pkgrepo rebuild' "
-                    "to create a new package catalog.") % self.data
+                return _("Catalog file '{0}' is invalid.\nUse 'pkgrepo rebuild' "
+                    "to create a new package catalog.").format(self.data)
 
 
 class MismatchedCatalog(CatalogError):
@@ -1063,11 +1076,11 @@ class MismatchedCatalog(CatalogError):
         as in a misconfigured or stale cache case."""
 
         def __str__(self):
-                return _("The content of the catalog for publisher '%s' "
+                return _("The content of the catalog for publisher '{0}' "
                     "doesn't match the catalog's attributes.  This is "
                     "likely the result of a mix of older and newer "
-                    "catalog files being provided for the publisher.") % \
-                    self.data
+                    "catalog files being provided for the publisher.").format(
+                    self.data)
 
 
 class ObsoleteCatalogUpdate(CatalogError):
@@ -1076,9 +1089,9 @@ class ObsoleteCatalogUpdate(CatalogError):
 
         def __str__(self):
                 return _("Unable to determine the updates needed for the "
-                    "catalog using the provided catalog update data in '%s'. "
+                    "catalog using the provided catalog update data in '{0}'. "
                     "The specified catalog updates are for an older version "
-                    "of the catalog and cannot be used.") % self.data
+                    "of the catalog and cannot be used.").format(self.data)
 
 
 class UnknownCatalogEntry(CatalogError):
@@ -1086,7 +1099,8 @@ class UnknownCatalogEntry(CatalogError):
         pattern could not be found in the catalog."""
 
         def __str__(self):
-                return _("'%s' could not be found in the catalog.") % self.data
+                return _("'{0}' could not be found in the catalog.").format(
+                    self.data)
 
 
 class UnknownUpdateType(CatalogError):
@@ -1094,7 +1108,7 @@ class UnknownUpdateType(CatalogError):
         unknown."""
 
         def __str__(self):
-                return _("Unknown catalog update type '%s'") % self.data
+                return _("Unknown catalog update type '{0}'").format(self.data)
 
 
 class UnrecognizedCatalogPart(CatalogError):
@@ -1102,8 +1116,8 @@ class UnrecognizedCatalogPart(CatalogError):
         or invalid."""
 
         def __str__(self):
-                return _("Unrecognized, unknown, or invalid CatalogPart '%s'") \
-                    % self.data
+                return _("Unrecognized, unknown, or invalid CatalogPart '{0}'").format(
+                    self.data)
 
 
 class InventoryException(ApiException):
@@ -1123,7 +1137,7 @@ class InventoryException(ApiException):
                 self.notfound.update(matcher)
                 self.notfound.update(publisher)
                 self.notfound.update(version)
-                self.notfound = list(self.notfound)
+                self.notfound = sorted(list(self.notfound))
 
                 assert self.illegal or self.notfound
 
@@ -1131,7 +1145,7 @@ class InventoryException(ApiException):
                 outstr = ""
                 for x in self.illegal:
                         # Illegal FMRIs have their own __str__ method
-                        outstr += "%s\n" % x
+                        outstr += "{0}\n".format(x)
 
                 if self.matcher or self.publisher or self.version:
                         outstr += _("No matching package could be found for "
@@ -1139,12 +1153,14 @@ class InventoryException(ApiException):
                             "the current publishers:\n")
 
                         for x in self.matcher:
-                                outstr += _("%s (pattern did not match)\n") % x
+                                outstr += \
+                                    _("{0} (pattern did not match)\n").format(x)
                         for x in self.publisher:
-                                outstr += _("%s (publisher did not "
-                                    "match)\n") % x
+                                outstr += _("{0} (publisher did not "
+                                    "match)\n").format(x)
                         for x in self.version:
-                                outstr += _("%s (version did not match)\n") % x
+                                outstr += \
+                                    _("{0} (version did not match)\n").format(x)
                 return outstr
 
 
@@ -1175,7 +1191,8 @@ class NegativeSearchResult(SearchException):
                 self.url = url
 
         def __str__(self):
-                return _("The search at url %s returned no results.") % self.url
+                return _("The search at url {0} returned no results.").format(
+                    self.url)
 
 
 class ProblematicSearchServers(SearchException):
@@ -1191,17 +1208,17 @@ class ProblematicSearchServers(SearchException):
         def __str__(self):
                 s = _("Some repositories failed to respond appropriately:\n")
                 for pub, err in self.failed_servers:
-                        s += _("%(o)s:\n%(msg)s\n") % \
-                            { "o": pub, "msg": err}
+                        s += _("{o}:\n{msg}\n").format(
+                            o=pub, msg=err)
                 for pub in self.invalid_servers:
-                        s += _("%s did not return a valid response.\n" \
-                            % pub)
+                        s += _("{0} did not return a valid "
+                            "response.\n".format(pub))
                 if len(self.unsupported_servers) > 0:
                         s += _("Some repositories don't support requested "
                             "search operation:\n")
                 for pub, err in self.unsupported_servers:
-                        s += _("%(o)s:\n%(msg)s\n") % \
-                            { "o": pub, "msg": err}
+                        s += _("{o}:\n{msg}\n").format(
+                            o=pub, msg=err)
 
                 return s
 
@@ -1228,9 +1245,9 @@ class UnsupportedSearchError(SearchException):
                 s = _("Search repository does not support the requested "
                     "protocol:")
                 if self.url:
-                        s += "\nRepository URL: %s" % self.url
+                        s += "\nRepository URL: {0}".format(self.url)
                 if self.proto:
-                        s += "\nRequested operation: %s" % self.proto
+                        s += "\nRequested operation: {0}".format(self.proto)
                 return s
 
         def __cmp__(self, other):
@@ -1286,9 +1303,9 @@ class ProblematicPermissionsIndexException(IndexingException):
         files or directories it should be able to. """
         def __str__(self):
                 return "Could not remove or create " \
-                    "%s because of incorrect " \
+                    "{0} because of incorrect " \
                     "permissions. Please correct this issue then " \
-                    "rebuild the index." % self.cause
+                    "rebuild the index.".format(self.cause)
 
 class WrapIndexingException(ApiException):
         """This exception is used to wrap an indexing exception during install,
@@ -1353,9 +1370,15 @@ class NonLeafPackageException(ApiException):
                 self.dependents = args[1]
 
         def __str__(self):
-                s = _("Unable to remove '%s' due to the following packages "
-                    "that depend on it:\n") % self.fmri
-                s += "\n".join(str(f) for f in self.dependents)
+                s = _("Unable to remove '{0}' due to the following packages "
+                    "that depend on it:\n").format(self.fmri.get_short_fmri(
+                        anarchy=True, include_scheme=False))
+                skey = operator.attrgetter('pkg_name')
+                s += "\n".join(
+                    "  {0}".format(f.get_short_fmri(anarchy=True,
+                        include_scheme=False))
+                    for f in sorted(self.dependents, key=skey)
+                )
                 return s
 
 def _str_autofix(self):
@@ -1381,10 +1404,10 @@ class InvalidDepotResponseException(ApiException):
         def __str__(self):
                 s = _("Unable to contact valid package repository")
                 if self.url:
-                        s += _(": %s") % self.url
+                        s += _(": {0}").format(self.url)
                 if self.data:
-                        s += ("\nEncountered the following error(s):\n%s") % \
-                            self.data
+                        s += ("\nEncountered the following error(s):\n{0}").format(
+                            self.data)
 
                 s += _str_autofix(self)
 
@@ -1410,7 +1433,7 @@ class InvalidP5IFile(DataError):
                 if self.data:
                         return _("The provided p5i data is in an unrecognized "
                             "format or does not contain valid publisher "
-                            "information: %s") % self.data
+                            "information: {0}").format(self.data)
                 return _("The provided p5i data is in an unrecognized format "
                     "or does not contain valid publisher information.")
 
@@ -1423,7 +1446,7 @@ class InvalidP5SFile(DataError):
                 if self.data:
                         return _("The provided p5s data is in an unrecognized "
                             "format or does not contain valid publisher "
-                            "information: %s") % self.data
+                            "information: {0}").format(self.data)
                 return _("The provided p5s data is in an unrecognized format "
                     "or does not contain valid publisher information.")
 
@@ -1454,8 +1477,8 @@ class UnsupportedP5SVersion(ApiException):
                 self.version = v
 
         def __str__(self):
-                return _("%s is not a supported version for creating a "
-                    "syspub response.") % self.version
+                return _("{0} is not a supported version for creating a "
+                    "syspub response.").format(self.version)
 
 
 class TransportError(ApiException):
@@ -1484,10 +1507,10 @@ class RetrievalError(ApiException):
         def __str__(self):
                 if self.location:
                         return _("Error encountered while retrieving data from "
-                            "'%(location)s':\n%(data)s") % \
-                            {"location": self.location, "data": self.data}
-                return _("Error encountered while retrieving data from: %s") % \
-                    self.data
+                            "'{location}':\n{data}").format(
+                            location=self.location, data=self.data)
+                return _("Error encountered while retrieving data from: {0}").format(
+                    self.data)
 
 
 class InvalidResourceLocation(ApiException):
@@ -1498,7 +1521,7 @@ class InvalidResourceLocation(ApiException):
                 self.data = data
 
         def __str__(self):
-                return _("'%s' is not a valid location.") % self.data
+                return _("'{0}' is not a valid location.").format(self.data)
 
 class BEException(ApiException):
         def __init__(self):
@@ -1510,8 +1533,8 @@ class InvalidBENameException(BEException):
                 self.be_name = be_name
 
         def __str__(self):
-                return _("'%s' is not a valid boot environment name.") % \
-                    self.be_name
+                return _("'{0}' is not a valid boot environment name.").format(
+                    self.be_name)
 
 class DuplicateBEName(BEException):
         """Used to indicate that there is an existing boot environment
@@ -1522,8 +1545,8 @@ class DuplicateBEName(BEException):
                 self.be_name = be_name
 
         def __str__(self):
-                return _("The boot environment '%s' already exists.") % \
-                    self.be_name
+                return _("The boot environment '{0}' already exists.").format(
+                    self.be_name)
 
 class BENamingNotSupported(BEException):
         def __init__(self, be_name):
@@ -1552,7 +1575,7 @@ class UnableToRenameBE(BEException):
                 }
                 return _("""\
 A problem occurred while attempting to rename the boot environment
-currently named %(orig)s to %(dest)s.""") % d
+currently named {orig} to {dest}.""").format(**d)
 
 class UnableToMountBE(BEException):
         def __init__(self, be_name, be_dir):
@@ -1561,8 +1584,8 @@ class UnableToMountBE(BEException):
                 self.mountpoint = be_dir
 
         def __str__(self):
-                return _("Unable to mount %(name)s at %(mt)s") % \
-                    {"name": self.name, "mt": self.mountpoint}
+                return _("Unable to mount {name} at {mt}").format(
+                    name=self.name, mt=self.mountpoint)
 
 class BENameGivenOnDeadBE(BEException):
         def __init__(self, be_name):
@@ -1612,23 +1635,25 @@ class BadPublisherMetaRoot(PublisherError):
         because the meta_root is invalid."""
 
         def __str__(self):
-                return _("Publisher meta_root '%(root)s' is invalid; unable "
-                    "to complete operation: '%(op)s'.") % { "root": self.data,
-                    "op": self._args.get("operation", None) }
+                return _("Publisher meta_root '{root}' is invalid; unable "
+                    "to complete operation: '{op}'.").format(root=self.data,
+                    op=self._args.get("operation", None))
 
 
 class BadPublisherAlias(PublisherError):
         """Used to indicate that a publisher alias is not valid."""
 
         def __str__(self):
-                return _("'%s' is not a valid publisher alias.") % self.data
+                return _("'{0}' is not a valid publisher alias.").format(
+                    self.data)
 
 
 class BadPublisherPrefix(PublisherError):
         """Used to indicate that a publisher name is not valid."""
 
         def __str__(self):
-                return _("'%s' is not a valid publisher name.") % self.data
+                return _("'{0}' is not a valid publisher name.").format(
+                    self.data)
 
 
 class ReservedPublisherPrefix(PublisherError):
@@ -1636,9 +1661,9 @@ class ReservedPublisherPrefix(PublisherError):
 
         def __str__(self):
                 fmri = self._args["fmri"]
-                return _("'%(pkg_pub)s' is a reserved publisher and does not "
-                    "contain the requested package: pkg:/%(pkg_name)s") % \
-                    {"pkg_pub": fmri.publisher, "pkg_name": fmri.pkg_name}
+                return _("'{pkg_pub}' is a reserved publisher and does not "
+                    "contain the requested package: pkg:/{pkg_name}").format(
+                    pkg_pub=fmri.publisher, pkg_name=fmri.pkg_name)
 
 
 class BadRepositoryAttributeValue(PublisherError):
@@ -1646,9 +1671,9 @@ class BadRepositoryAttributeValue(PublisherError):
         invalid."""
 
         def __str__(self):
-                return _("'%(value)s' is not a valid value for repository "
-                    "attribute '%(attribute)s'.") % {
-                    "value": self._args["value"], "attribute": self.data }
+                return _("'{value}' is not a valid value for repository "
+                    "attribute '{attribute}'.").format(
+                    value=self._args["value"], attribute=self.data)
 
 
 class BadRepositoryCollectionType(PublisherError):
@@ -1659,15 +1684,15 @@ class BadRepositoryCollectionType(PublisherError):
                 PublisherError.__init__(self, *args, **kwargs)
 
         def __str__(self):
-                return _("'%s' is not a valid repository collection type.") % \
-                    self.data
+                return _("'{0}' is not a valid repository collection type.").format(
+                    self.data)
 
 
 class BadRepositoryURI(PublisherError):
         """Used to indicate that a repository URI is not syntactically valid."""
 
         def __str__(self):
-                return _("'%s' is not a valid URI.") % self.data
+                return _("'{0}' is not a valid URI.").format(self.data)
 
 
 class BadRepositoryURIPriority(PublisherError):
@@ -1675,8 +1700,8 @@ class BadRepositoryURIPriority(PublisherError):
         not valid."""
 
         def __str__(self):
-                return _("'%s' is not a valid URI priority; integer value "
-                    "expected.") % self.data
+                return _("'{0}' is not a valid URI priority; integer value "
+                    "expected.").format(self.data)
 
 
 class BadRepositoryURISortPolicy(PublisherError):
@@ -1687,8 +1712,8 @@ class BadRepositoryURISortPolicy(PublisherError):
                 PublisherError.__init__(self, *args, **kwargs)
 
         def __str__(self):
-                return _("'%s' is not a valid repository URI sort policy.") % \
-                    self.data
+                return _("'{0}' is not a valid repository URI sort policy.").format(
+                    self.data)
 
 
 class DisabledPublisher(PublisherError):
@@ -1696,8 +1721,8 @@ class DisabledPublisher(PublisherError):
         during an operation."""
 
         def __str__(self):
-                return _("Publisher '%s' is disabled and cannot be used for "
-                    "packaging operations.") % self.data
+                return _("Publisher '{0}' is disabled and cannot be used for "
+                    "packaging operations.").format(self.data)
 
 
 class DuplicatePublisher(PublisherError):
@@ -1705,8 +1730,8 @@ class DuplicatePublisher(PublisherError):
         exists for an image."""
 
         def __str__(self):
-                return _("A publisher with the same name or alias as '%s' "
-                    "already exists.") % self.data
+                return _("A publisher with the same name or alias as '{0}' "
+                    "already exists.").format(self.data)
 
 
 class DuplicateRepository(PublisherError):
@@ -1715,7 +1740,7 @@ class DuplicateRepository(PublisherError):
 
         def __str__(self):
                 return _("A repository with the same name or origin URIs "
-                   "already exists for publisher '%s'.") % self.data
+                   "already exists for publisher '{0}'.").format(self.data)
 
 
 class DuplicateRepositoryMirror(PublisherError):
@@ -1723,8 +1748,8 @@ class DuplicateRepositoryMirror(PublisherError):
         repository mirror."""
 
         def __str__(self):
-                return _("Mirror '%s' already exists for the specified "
-                    "publisher.") % self.data
+                return _("Mirror '{0}' already exists for the specified "
+                    "publisher.").format(self.data)
 
 
 class DuplicateSyspubMirror(PublisherError):
@@ -1732,8 +1757,8 @@ class DuplicateSyspubMirror(PublisherError):
         system publisher."""
 
         def __str__(self):
-                return _("Mirror '%s' is already accessible through the "
-                    "system repository.") % self.data
+                return _("Mirror '{0}' is already accessible through the "
+                    "system repository.").format(self.data)
 
 
 class DuplicateRepositoryOrigin(PublisherError):
@@ -1741,8 +1766,8 @@ class DuplicateRepositoryOrigin(PublisherError):
         repository origin."""
 
         def __str__(self):
-                return _("Origin '%s' already exists for the specified "
-                    "publisher.") % self.data
+                return _("Origin '{0}' already exists for the specified "
+                    "publisher.").format(self.data)
 
 
 class DuplicateSyspubOrigin(PublisherError):
@@ -1750,8 +1775,8 @@ class DuplicateSyspubOrigin(PublisherError):
         system publisher."""
 
         def __str__(self):
-                return _("Origin '%s' is already accessible through the "
-                    "system repository.") % self.data
+                return _("Origin '{0}' is already accessible through the "
+                    "system repository.").format(self.data)
 
 
 class RemoveSyspubOrigin(PublisherError):
@@ -1759,16 +1784,16 @@ class RemoveSyspubOrigin(PublisherError):
         removed."""
 
         def __str__(self):
-                return _("Unable to remove origin '%s' since it is provided "
-                    "by the system repository.") % self.data
+                return _("Unable to remove origin '{0}' since it is provided "
+                    "by the system repository.").format(self.data)
 
 class RemoveSyspubMirror(PublisherError):
         """Used to indicate that a system publisher mirror may not be
         removed."""
 
         def __str__(self):
-                return _("Unable to remove mirror '%s' since it is provided "
-                    "by the system repository.") % self.data
+                return _("Unable to remove mirror '{0}' since it is provided "
+                    "by the system repository.").format(self.data)
 
 
 class NoPublisherRepositories(TransportError):
@@ -1780,9 +1805,12 @@ class NoPublisherRepositories(TransportError):
                 self.publisher = prefix
 
         def __str__(self):
-                return _("Unable to retrieve requested package data for "
-                    "publisher %s; no repositories are currently configured "
-                    "for use with this publisher.") % self.publisher
+                return _("""
+The requested operation requires that one or more package repositories are
+configured for publisher '{0}'.
+
+Use 'pkg set-publisher' to add new package repositories or restore previously
+configured package repositories for publisher '{0}'.""").format(self.publisher)
 
 
 class MoveRelativeToSelf(PublisherError):
@@ -1800,8 +1828,8 @@ class MoveRelativeToUnknown(PublisherError):
                 self.__unknown_pub = unknown_pub
 
         def __str__(self):
-                return _("%s is an unknown publisher; no other publishers can "
-                    "be ordered relative to it.") % self.__unknown_pub
+                return _("{0} is an unknown publisher; no other publishers can "
+                    "be ordered relative to it.").format(self.__unknown_pub)
 
 
 class SelectedRepositoryRemoval(PublisherError):
@@ -1818,7 +1846,7 @@ class UnknownLegalURI(PublisherError):
         provided criteria."""
 
         def __str__(self):
-                return _("Unknown legal URI '%s'.") % self.data
+                return _("Unknown legal URI '{0}'.").format(self.data)
 
 
 class UnknownPublisher(PublisherError):
@@ -1826,7 +1854,7 @@ class UnknownPublisher(PublisherError):
         provided criteria."""
 
         def __str__(self):
-                return _("Unknown publisher '%s'.") % self.data
+                return _("Unknown publisher '{0}'.").format(self.data)
 
 
 class UnknownRepositoryPublishers(PublisherError):
@@ -1843,30 +1871,30 @@ class UnknownRepositoryPublishers(PublisherError):
 
         def __str__(self):
                 if self.location:
-                        return _("The repository at %(location)s does not "
-                            "contain package data for %(unknown)s; only "
-                            "%(known)s.\n\nThis is either because the "
+                        return _("The repository at {location} does not "
+                            "contain package data for {unknown}; only "
+                            "{known}.\n\nThis is either because the "
                             "repository location is not valid, or because the "
                             "provided publisher does not match those known by "
-                            "the repository.") % {
-                            "unknown": ", ".join(self.unknown),
-                            "location": self.location,
-                            "known": ", ".join(self.known) }
+                            "the repository.").format(
+                            unknown=", ".join(self.unknown),
+                            location=self.location,
+                            known=", ".join(self.known))
                 if self.origins:
                         return _("One or more of the repository origin(s) "
                             "listed below contains package data for "
-                            "%(known)s; not %(unknown)s:\n\n%(origins)s\n\n"
+                            "{known}; not {unknown}:\n\n{origins}\n\n"
                             "This is either because one of the repository "
                             "origins is not valid for this publisher, or "
                             "because the list of known publishers retrieved "
                             "from the repository origin does not match the "
-                            "client.") % { "unknown": ", ".join(self.unknown),
-                            "known": ", ".join(self.known),
-                            "origins": "\n".join(str(o) for o in self.origins) }
+                            "client.").format(unknown=", ".join(self.unknown),
+                            known=", ".join(self.known),
+                            origins="\n".join(str(o) for o in self.origins))
                 return _("The specified publisher repository does not "
-                    "contain any package data for %(unknown)s; only "
-                    "%(known)s.") % { "unknown": ", ".join(self.unknown),
-                    "known": ", ".join(self.known) }
+                    "contain any package data for {unknown}; only "
+                    "{known}.").format(unknown=", ".join(self.unknown),
+                    known=", ".join(self.known))
 
 
 class UnknownRelatedURI(PublisherError):
@@ -1874,7 +1902,7 @@ class UnknownRelatedURI(PublisherError):
         the provided criteria."""
 
         def __str__(self):
-                return _("Unknown related URI '%s'.") % self.data
+                return _("Unknown related URI '{0}'.").format(self.data)
 
 
 class UnknownRepository(PublisherError):
@@ -1882,7 +1910,7 @@ class UnknownRepository(PublisherError):
         provided criteria."""
 
         def __str__(self):
-                return _("Unknown repository '%s'.") % self.data
+                return _("Unknown repository '{0}'.").format(self.data)
 
 
 class UnknownRepositoryMirror(PublisherError):
@@ -1890,7 +1918,7 @@ class UnknownRepositoryMirror(PublisherError):
         list of repository mirrors."""
 
         def __str__(self):
-                return _("Unknown repository mirror '%s'.") % self.data
+                return _("Unknown repository mirror '{0}'.").format(self.data)
 
 class UnsupportedRepositoryOperation(TransportError):
         """The publisher has no active repositories that support the
@@ -1904,8 +1932,8 @@ class UnsupportedRepositoryOperation(TransportError):
                 self.op = operation
 
         def __str__(self):
-                return _("Publisher '%(pub)s' has no repositories that support "
-                    "the '%(op)s' operation.") % self.__dict__
+                return _("Publisher '{pub}' has no repositories that support "
+                    "the '{op}' operation.").format(**self.__dict__)
 
 
 class RepoPubConfigUnavailable(PublisherError):
@@ -1922,13 +1950,13 @@ class RepoPubConfigUnavailable(PublisherError):
                         return _("The specified package repository does not "
                             "provide publisher configuration information.")
                 if self.location:
-                        return _("The package repository at %s does not "
+                        return _("The package repository at {0} does not "
                             "provide publisher configuration information or "
-                            "the information provided is incomplete.") % \
-                            self.location
-                return _("One of the package repository origins for %s does "
+                            "the information provided is incomplete.").format(
+                            self.location)
+                return _("One of the package repository origins for {0} does "
                     "not provide publisher configuration information or the "
-                    "information provided is incomplete.") % self.pub
+                    "information provided is incomplete.").format(self.pub)
 
 
 class UnknownRepositoryOrigin(PublisherError):
@@ -1936,7 +1964,7 @@ class UnknownRepositoryOrigin(PublisherError):
         list of repository origins."""
 
         def __str__(self):
-                return _("Unknown repository origin '%s'") % self.data
+                return _("Unknown repository origin '{0}'").format(self.data)
 
 
 class UnsupportedRepositoryURI(PublisherError):
@@ -1965,15 +1993,15 @@ class UnsupportedRepositoryURI(PublisherError):
                             "schemes.  Supported schemes are "
                             "file://, http://, and https://.")
                         for i, s in illegals:
-                                msg += _("\n  %(uri)s (scheme: "
-                                    "%(scheme)s)") % {"uri": i, "scheme": s }
+                                msg += _("\n  {uri} (scheme: "
+                                    "{scheme})").format(uri=i, scheme=s)
                         return msg
                 elif len(illegals) == 1:
                         i, s = illegals[0]
-                        return _("The URI '%(uri)s' uses the unsupported "
-                            "scheme '%(scheme)s'.  Supported schemes are "
-                            "file://, http://, and https://.") % {
-                            "uri": i, "scheme": s }
+                        return _("The URI '{uri}' uses the unsupported "
+                            "scheme '{scheme}'.  Supported schemes are "
+                            "file://, http://, and https://.").format(
+                            uri=i, scheme=s)
                 return _("The specified URI uses an unsupported scheme."
                     "  Supported schemes are: file://, http://, and "
                     "https://.")
@@ -1984,8 +2012,8 @@ class UnsupportedRepositoryURIAttribute(PublisherError):
         supported for the URI's scheme."""
 
         def __str__(self):
-                return _("'%(attr)s' is not supported for '%(scheme)s'.") % {
-                    "attr": self.data, "scheme": self._args["scheme"] }
+                return _("'{attr}' is not supported for '{scheme}'.").format(
+                    attr=self.data, scheme=self._args["scheme"])
 
 
 class UnsupportedProxyURI(PublisherError):
@@ -1995,10 +2023,10 @@ class UnsupportedProxyURI(PublisherError):
                 if self.data:
                         scheme = urlparse.urlsplit(self.data,
                             allow_fragments=0)[0]
-                        return _("The proxy URI '%(uri)s' uses the unsupported "
-                            "scheme '%(scheme)s'.  Supported schemes are "
-                            "http://, and https://.") % {
-                            "uri": self.data, "scheme": scheme }
+                        return _("The proxy URI '{uri}' uses the unsupported "
+                            "scheme '{scheme}'.  Supported schemes are "
+                            "http://, and https://.").format(
+                            uri=self.data, scheme=scheme)
                 return _("The specified proxy URI uses an unsupported scheme."
                     "  Supported schemes are: http://, and https://.")
 
@@ -2006,7 +2034,7 @@ class BadProxyURI(PublisherError):
         """Used to indicate that a proxy URI is not syntactically valid."""
 
         def __str__(self):
-                return _("'%s' is not a valid URI.") % self.data
+                return _("'{0}' is not a valid URI.").format(self.data)
 
 
 class UnknownSysrepoConfiguration(ApiException):
@@ -2047,13 +2075,14 @@ class SigningException(ApiException):
                 if self.pfmri:
                         if self.sig:
                                 return _("The relevant signature action is "
-                                    "found in %(pfmri)s and has a hash of "
-                                    "%(hsh)s") % \
-                                    {"pfmri": self.pfmri, "hsh": self.sig.hash}
-                        return _("The package involved is %s") % self.pfmri
+                                    "found in {pfmri} and has a hash of "
+                                    "{hsh}").format(
+                                    pfmri=self.pfmri, hsh=self.sig.hash)
+                        return _("The package involved is {0}").format(
+                            self.pfmri)
                 if self.sig:
                         return _("The relevant signature action's value "
-                            "attribute is %s") % self.sig.attrs["value"]
+                            "attribute is {0}").format(self.sig.attrs["value"])
                 return ""
 
 
@@ -2077,9 +2106,9 @@ class UnsupportedSignatureVersion(SigningException):
                 self.version = version
 
         def __str__(self):
-                return _("The signature action %(act)s was made using a "
-                    "version (%(ver)s) this version of pkg(5) doesn't "
-                    "understand.") % {"act":self.sig, "ver":self.version}
+                return _("The signature action {act} was made using a "
+                    "version ({ver}) this version of pkg(5) doesn't "
+                    "understand.").format(act=self.sig, ver=self.version)
 
 
 class CertificateException(SigningException):
@@ -2100,8 +2129,8 @@ class ModifiedCertificateException(CertificateException):
                 self.path = path
 
         def __str__(self):
-                return _("Certificate %s has been modified on disk. Its hash "
-                    "value is not what was expected.") % self.path
+                return _("Certificate {0} has been modified on disk. Its hash "
+                    "value is not what was expected.").format(self.path)
 
 
 class UntrustedSelfSignedCert(CertificateException):
@@ -2127,9 +2156,9 @@ class BrokenChain(CertificateException):
                         s = _("The following problems were encountered:\n") + \
                         "\n".join([str(e) for e in self.ext_exs])
                 return _("The certificate which issued this "
-                    "certificate: %(subj)s could not be found. The issuer "
-                    "is: %(issuer)s\n") % {"subj":self.cert.get_subject(),
-                    "issuer":self.cert.get_issuer()} + s + \
+                    "certificate: {subj} could not be found. The issuer "
+                    "is: {issuer}\n").format(subj=self.cert.get_subject(),
+                    issuer=self.cert.get_issuer()) + s + \
                     CertificateException.__str__(self)
 
 
@@ -2142,9 +2171,9 @@ class RevokedCertificate(CertificateException):
                 self.reason = reason
 
         def __str__(self):
-                return _("This certificate was revoked:%(cert)s for this "
-                    "reason:\n%(reason)s") % {"cert":self.cert.get_subject(),
-                    "reason":self.reason} + CertificateException.__str__(self)
+                return _("This certificate was revoked:{cert} for this "
+                    "reason:\n{reason}").format(cert=self.cert.get_subject(),
+                    reason=self.reason) + CertificateException.__str__(self)
 
 
 class UnverifiedSignature(SigningException):
@@ -2158,16 +2187,16 @@ class UnverifiedSignature(SigningException):
 
         def __str__(self):
                 if self.pfmri:
-                        return _("A signature in %(pfmri)s could not be "
+                        return _("A signature in {pfmri} could not be "
                             "verified for "
-                            "this reason:\n%(reason)s\nThe signature's hash is "
-                            "%(hash)s") % {"pfmri": self.pfmri,
-                            "reason": self.reason,
-                            "hash": self.sig.hash}
+                            "this reason:\n{reason}\nThe signature's hash is "
+                            "{hash}").format(pfmri=self.pfmri,
+                            reason=self.reason,
+                            hash=self.sig.hash)
                 return _("The signature with this signature value:\n"
-                    "%(sigval)s\n could not be verified for this reason:\n"
-                    "%(reason)s\n") % {"reason": self.reason,
-                    "sigval": self.sig.attrs["value"]}
+                    "{sigval}\n could not be verified for this reason:\n"
+                    "{reason}\n").format(reason=self.reason,
+                    sigval=self.sig.attrs["value"])
 
 
 class RequiredSignaturePolicyException(SigningException):
@@ -2180,13 +2209,13 @@ class RequiredSignaturePolicyException(SigningException):
         def __str__(self):
                 pub_str = self.pub.prefix
                 if self.pfmri:
-                        return _("The policy for %(pub_str)s requires "
+                        return _("The policy for {pub_str} requires "
                             "signatures to be present but no signature was "
-                            "found in %(fmri_str)s.") % \
-                            {"pub_str": pub_str, "fmri_str": self.pfmri}
-                return _("The policy for %(pub_str)s requires signatures to be "
-                    "present but no signature was found.") % {
-                    "pub_str": pub_str}
+                            "found in {fmri_str}.").format(
+                            pub_str=pub_str, fmri_str=self.pfmri)
+                return _("The policy for {pub_str} requires signatures to be "
+                    "present but no signature was found.").format(
+                    pub_str=pub_str)
 
 
 class MissingRequiredNamesException(SigningException):
@@ -2201,16 +2230,16 @@ class MissingRequiredNamesException(SigningException):
         def __str__(self):
                 pub_str = self.pub.prefix
                 if self.pfmri:
-                        return _("The policy for %(pub_str)s requires certain "
+                        return _("The policy for {pub_str} requires certain "
                             "CNs to be seen in a chain of trust. The following "
                             "required names couldn't be found for this "
-                            "package:%(fmri_str)s.\n%(missing)s") % \
-                            {"pub_str": pub_str, "fmri_str": self.pfmri,
-                            "missing": "\n".join(self.missing_names)}
-                return _("The policy for %(pub_str)s requires certain CNs to "
+                            "package:{fmri_str}.\n{missing}").format(
+                            pub_str=pub_str, fmri_str=self.pfmri,
+                            missing="\n".join(self.missing_names))
+                return _("The policy for {pub_str} requires certain CNs to "
                     "be seen in a chain of trust. The following required names "
-                    "couldn't be found.\n%(missing)s") % {"pub_str": pub_str,
-                    "missing": "\n".join(self.missing_names)}
+                    "couldn't be found.\n{missing}").format(pub_str=pub_str,
+                    missing="\n".join(self.missing_names))
 
 class UnsupportedCriticalExtension(SigningException):
         """Exception used when a certificate in the chain of trust uses a
@@ -2222,12 +2251,12 @@ class UnsupportedCriticalExtension(SigningException):
                 self.ext = ext
 
         def __str__(self):
-                return _("The certificate whose subject is %(cert)s could not "
+                return _("The certificate whose subject is {cert} could not "
                     "be verified "
                     "because it uses a critical extension that pkg5 cannot "
-                    "handle yet.\nExtension name:%(name)s\nExtension "
-                    "value:%(val)s") % {"cert": self.cert.get_subject(),
-                    "name":self.ext.get_name(), "val":self.ext.get_value()}
+                    "handle yet.\nExtension name:{name}\nExtension "
+                    "value:{val}").format(cert=self.cert.get_subject(),
+                    name=self.ext.get_name(), val=self.ext.get_value())
 
 class UnsupportedExtensionValue(SigningException):
         """Exception used when a certificate in the chain of trust has an
@@ -2240,14 +2269,14 @@ class UnsupportedExtensionValue(SigningException):
                 self.bad_val = bad_val
 
         def __str__(self):
-                s = _("The certificate whose subject is %(cert)s could not be "
+                s = _("The certificate whose subject is {cert} could not be "
                     "verified because it has an extension with a value that "
                     "pkg(5) does not understand."
-                    "\nExtension name:%(name)s\nExtension value:%(val)s") % \
-                    {"cert": self.cert.get_subject(),
-                    "name":self.ext.get_name(), "val":self.ext.get_value()}
+                    "\nExtension name:{name}\nExtension value:{val}").format(
+                    cert=self.cert.get_subject(),
+                    name=self.ext.get_name(), val=self.ext.get_value())
                 if self.bad_val:
-                        s += _("\nProblematic Value:%s") % (self.bad_val,)
+                        s += _("\nProblematic Value:{0}").format(self.bad_val)
                 return s
 
 class InappropriateCertificateUse(SigningException):
@@ -2263,13 +2292,13 @@ class InappropriateCertificateUse(SigningException):
                 self.use = use
 
         def __str__(self):
-                return _("The certificate whose subject is %(cert)s could not "
+                return _("The certificate whose subject is {cert} could not "
                     "be verified because it has been used inappropriately.  "
                     "The way it is used means that the value for extension "
-                    "%(name)s must include '%(use)s' but the value was "
-                    "'%(val)s'.") % {"cert": self.cert.get_subject(),
-                    "use": self.use, "name":self.ext.get_name(),
-                    "val":self.ext.get_value()}
+                    "{name} must include '{use}' but the value was "
+                    "'{val}'.").format(cert=self.cert.get_subject(),
+                    use=self.use, name=self.ext.get_name(),
+                    val=self.ext.get_value())
 
 class PathlenTooShort(InappropriateCertificateUse):
         """Exception used when a certificate in the chain of trust has been used
@@ -2284,16 +2313,16 @@ class PathlenTooShort(InappropriateCertificateUse):
                 self.cl = cert_length
 
         def __str__(self):
-                return _("The certificate whose subject is %(cert)s could not "
+                return _("The certificate whose subject is {cert} could not "
                     "be verified because it has been used inappropriately.  "
-                    "There can only be %(cl)s certificates between this "
-                    "certificate and the leaf certificate.  There are %(al)s "
+                    "There can only be {cl} certificates between this "
+                    "certificate and the leaf certificate.  There are {al} "
                     "certificates between this certificate and the leaf in "
-                    "this chain.") % {
-                        "cert": self.cert.get_subject(),
-                        "al": self.al,
-                        "cl": self.cl
-                    }
+                    "this chain.").format(
+                        cert=self.cert.get_subject(),
+                        al=self.al,
+                        cl=self.cl
+                   )
 
 
 class AlmostIdentical(ApiException):
@@ -2309,17 +2338,17 @@ class AlmostIdentical(ApiException):
 
         def __str__(self):
                 s = _("The signature to be added to the package has the same "
-                    "hash (%(hash)s), algorithm (%(algorithm)s), and "
-                    "version (%(version)s) as an existing signature, but "
+                    "hash ({hash}), algorithm ({algorithm}), and "
+                    "version ({version}) as an existing signature, but "
                     "doesn't match the signature exactly.  For this signature "
-                    "to be added, the existing signature must be removed.") % {
-                        "hash": self.hsh,
-                        "algorithm": self.algorithm,
-                        "version": self.version
-                    }
+                    "to be added, the existing signature must be removed.").format(
+                        hash=self.hsh,
+                        algorithm=self.algorithm,
+                        version=self.version
+                   )
                 if self.pkg:
-                        s += _("The package being signed was %(pkg)s") % \
-                            {"pkg": self.pkg}
+                        s += _("The package being signed was {pkg}").format(
+                            pkg=self.pkg)
                 return s
 
 
@@ -2332,10 +2361,10 @@ class DuplicateSignaturesAlreadyExist(ApiException):
                 self.pfmri = pfmri
 
         def __str__(self):
-                return _("%s could not be signed because it already has two "
+                return _("{0} could not be signed because it already has two "
                     "copies of this signature in it.  One of those signature "
                     "actions must be removed before the package is given to "
-                    "users.") % self.pfmri
+                    "users.").format(self.pfmri)
 
 
 class InvalidPropertyValue(ApiException):
@@ -2375,29 +2404,29 @@ class ExpiredCertificate(CertificateError):
         def __str__(self):
                 if self.publisher:
                         if self.uri:
-                                return _("Certificate '%(cert)s' for publisher "
-                                    "'%(pub)s' needed to access '%(uri)s', "
+                                return _("Certificate '{cert}' for publisher "
+                                    "'{pub}' needed to access '{uri}', "
                                     "has expired.  Please install a valid "
-                                    "certificate.") % { "cert": self.data,
-                                    "pub": self.publisher, "uri": self.uri }
-                        return _("Certificate '%(cert)s' for publisher "
-                            "'%(pub)s', has expired.  Please install a valid "
-                            "certificate.") % { "cert": self.data,
-                            "pub": self.publisher }
+                                    "certificate.").format(cert=self.data,
+                                    pub=self.publisher, uri=self.uri)
+                        return _("Certificate '{cert}' for publisher "
+                            "'{pub}', has expired.  Please install a valid "
+                            "certificate.").format(cert=self.data,
+                            pub=self.publisher)
                 if self.uri:
-                        return _("Certificate '%(cert)s', needed to access "
-                            "'%(uri)s', has expired.  Please install a valid "
-                            "certificate.") % { "cert": self.data,
-                            "uri": self.uri }
-                return _("Certificate '%s' has expired.  Please install a "
-                    "valid certificate.") % self.data
+                        return _("Certificate '{cert}', needed to access "
+                            "'{uri}', has expired.  Please install a valid "
+                            "certificate.").format(cert=self.data,
+                            uri=self.uri)
+                return _("Certificate '{0}' has expired.  Please install a "
+                    "valid certificate.").format(self.data)
 
 
 class ExpiredCertificates(CertificateError):
         """Used to collect ExpiredCertficate exceptions."""
 
         def __init__(self, errors):
-                
+
                 self.errors = []
 
                 assert (isinstance(errors, (list, tuple,
@@ -2418,18 +2447,18 @@ class ExpiredCertificates(CertificateError):
 
                 msg = ""
                 for pub, uris in pdict.items():
-                        msg += "\n%s:" % _("Publisher")
-                        msg += " %s" % pub
+                        msg += "\n{0}:".format(_("Publisher"))
+                        msg += " {0}".format(pub)
                         for uri in uris:
-                                msg += "\n  %s:\n" % _("Origin URI")
-                                msg += "    %s\n" % uri
-                                msg += "  %s:\n" % _("Certificate")
-                                msg += "    %s\n" % uri.ssl_cert
-                                msg += "  %s:\n" % _("Key")
-                                msg += "    %s\n" % uri.ssl_key
+                                msg += "\n  {0}:\n".format(_("Origin URI"))
+                                msg += "    {0}\n".format(uri)
+                                msg += "  {0}:\n".format(_("Certificate"))
+                                msg += "    {0}\n".format(uri.ssl_cert)
+                                msg += "  {0}:\n".format(_("Key"))
+                                msg += "    {0}\n".format(uri.ssl_key)
                 return _("One or more client key and certificate files have "
                     "expired. Please\nupdate the configuration for the "
-                    "publishers or origins listed below:\n %s") % msg
+                    "publishers or origins listed below:\n {0}").format(msg)
 
 
 class ExpiringCertificate(CertificateError):
@@ -2441,20 +2470,20 @@ class ExpiringCertificate(CertificateError):
                 days = self._args.get("days", 0)
                 if publisher:
                         if uri:
-                                return _("Certificate '%(cert)s' for publisher "
-                                    "'%(pub)s', needed to access '%(uri)s', "
-                                    "will expire in '%(days)s' days.") % {
-                                    "cert": self.data, "pub": publisher,
-                                    "uri": uri, "days": days }
-                        return _("Certificate '%(cert)s' for publisher "
-                            "'%(pub)s' will expire in '%(days)s' days.") % {
-                            "cert": self.data, "pub": publisher, "days": days }
+                                return _("Certificate '{cert}' for publisher "
+                                    "'{pub}', needed to access '{uri}', "
+                                    "will expire in '{days}' days.").format(
+                                    cert=self.data, pub=publisher,
+                                    uri=uri, days=days)
+                        return _("Certificate '{cert}' for publisher "
+                            "'{pub}' will expire in '{days}' days.").format(
+                            cert=self.data, pub=publisher, days=days)
                 if uri:
-                        return _("Certificate '%(cert)s', needed to access "
-                            "'%(uri)s', will expire in '%(days)s' days.") % {
-                            "cert": self.data, "uri": uri, "days": days }
-                return _("Certificate '%(cert)s' will expire in "
-                    "'%(days)s' days.") % { "cert": self.data, "days": days }
+                        return _("Certificate '{cert}', needed to access "
+                            "'{uri}', will expire in '{days}' days.").format(
+                            cert=self.data, uri=uri, days=days)
+                return _("Certificate '{cert}' will expire in "
+                    "'{days}' days.").format(cert=self.data, days=days)
 
 
 class InvalidCertificate(CertificateError):
@@ -2465,18 +2494,18 @@ class InvalidCertificate(CertificateError):
                 uri = self._args.get("uri", None)
                 if publisher:
                         if uri:
-                                return _("Certificate '%(cert)s' for publisher "
-                                    "'%(pub)s', needed to access '%(uri)s', is "
-                                    "invalid.") % { "cert": self.data,
-                                    "pub": publisher, "uri": uri }
-                        return _("Certificate '%(cert)s' for publisher "
-                            "'%(pub)s' is invalid.") % { "cert": self.data,
-                            "pub": publisher }
+                                return _("Certificate '{cert}' for publisher "
+                                    "'{pub}', needed to access '{uri}', is "
+                                    "invalid.").format(cert=self.data,
+                                    pub=publisher, uri=uri)
+                        return _("Certificate '{cert}' for publisher "
+                            "'{pub}' is invalid.").format(cert=self.data,
+                            pub=publisher)
                 if uri:
-                        return _("Certificate '%(cert)s' needed to access "
-                            "'%(uri)s' is invalid.") % { "cert": self.data,
-                            "uri": uri }
-                return _("Invalid certificate '%s'.") % self.data
+                        return _("Certificate '{cert}' needed to access "
+                            "'{uri}' is invalid.").format(cert=self.data,
+                            uri=uri)
+                return _("Invalid certificate '{0}'.").format(self.data)
 
 
 class NoSuchKey(CertificateError):
@@ -2487,18 +2516,18 @@ class NoSuchKey(CertificateError):
                 uri = self._args.get("uri", None)
                 if publisher:
                         if uri:
-                                return _("Unable to locate key '%(key)s' for "
-                                    "publisher '%(pub)s' needed to access "
-                                    "'%(uri)s'.") % { "key": self.data,
-                                    "pub": publisher, "uri": uri }
-                        return _("Unable to locate key '%(key)s' for publisher "
-                            "'%(pub)s'.") % { "key": self.data, "pub": publisher
-                            }
+                                return _("Unable to locate key '{key}' for "
+                                    "publisher '{pub}' needed to access "
+                                    "'{uri}'.").format(key=self.data,
+                                    pub=publisher, uri=uri)
+                        return _("Unable to locate key '{key}' for publisher "
+                            "'{pub}'.").format(key=self.data, pub=publisher
+                           )
                 if uri:
-                        return _("Unable to locate key '%(key)s' needed to "
-                            "access '%(uri)s'.") % { "key": self.data,
-                            "uri": uri }
-                return _("Unable to locate key '%s'.") % self.data
+                        return _("Unable to locate key '{key}' needed to "
+                            "access '{uri}'.").format(key=self.data,
+                            uri=uri)
+                return _("Unable to locate key '{0}'.").format(self.data)
 
 
 class NoSuchCertificate(CertificateError):
@@ -2510,18 +2539,19 @@ class NoSuchCertificate(CertificateError):
                 if publisher:
                         if uri:
                                 return _("Unable to locate certificate "
-                                    "'%(cert)s' for publisher '%(pub)s' needed "
-                                    "to access '%(uri)s'.") % {
-                                    "cert": self.data, "pub": publisher,
-                                    "uri": uri }
-                        return _("Unable to locate certificate '%(cert)s' for "
-                            "publisher '%(pub)s'.") % { "cert": self.data,
-                            "pub": publisher }
+                                    "'{cert}' for publisher '{pub}' needed "
+                                    "to access '{uri}'.").format(
+                                    cert=self.data, pub=publisher,
+                                    uri=uri)
+                        return _("Unable to locate certificate '{cert}' for "
+                            "publisher '{pub}'.").format(cert=self.data,
+                            pub=publisher)
                 if uri:
-                        return _("Unable to locate certificate '%(cert)s' "
-                            "needed to access '%(uri)s'.") % {
-                            "cert": self.data, "uri": uri }
-                return _("Unable to locate certificate '%s'.") % self.data
+                        return _("Unable to locate certificate '{cert}' "
+                            "needed to access '{uri}'.").format(
+                            cert=self.data, uri=uri)
+                return _("Unable to locate certificate '{0}'.").format(
+                    self.data)
 
 
 class NotYetValidCertificate(CertificateError):
@@ -2533,20 +2563,20 @@ class NotYetValidCertificate(CertificateError):
                 uri = self._args.get("uri", None)
                 if publisher:
                         if uri:
-                                return _("Certificate '%(cert)s' for publisher "
-                                    "'%(pub)s', needed to access '%(uri)s', "
-                                    "has a future effective date.") % {
-                                    "cert": self.data, "pub": publisher,
-                                    "uri": uri }
-                        return _("Certificate '%(cert)s' for publisher "
-                            "'%(pub)s' has a future effective date.") % {
-                            "cert": self.data, "pub": publisher }
+                                return _("Certificate '{cert}' for publisher "
+                                    "'{pub}', needed to access '{uri}', "
+                                    "has a future effective date.").format(
+                                    cert=self.data, pub=publisher,
+                                    uri=uri)
+                        return _("Certificate '{cert}' for publisher "
+                            "'{pub}' has a future effective date.").format(
+                            cert=self.data, pub=publisher)
                 if uri:
-                        return _("Certificate '%(cert)s' needed to access "
-                            "'%(uri)s' has a future effective date.") % {
-                            "cert": self.data, "uri": uri }
-                return _("Certificate '%s' has a future effective date.") % \
-                    self.data
+                        return _("Certificate '{cert}' needed to access "
+                            "'{uri}' has a future effective date.").format(
+                            cert=self.data, uri=uri)
+                return _("Certificate '{0}' has a future effective date.").format(
+                    self.data)
 
 
 class ServerReturnError(ApiException):
@@ -2558,7 +2588,7 @@ class ServerReturnError(ApiException):
                 self.line = line
 
         def __str__(self):
-                return _("Gave a bad response:%s") % self.line
+                return _("Gave a bad response:{0}").format(self.line)
 
 
 class MissingFileArgumentException(ApiException):
@@ -2569,7 +2599,7 @@ class MissingFileArgumentException(ApiException):
                 self.path = path
 
         def __str__(self):
-                return _("Could not find %s") % self.path
+                return _("Could not find {0}").format(self.path)
 
 
 class ManifestError(ApiException):
@@ -2593,7 +2623,7 @@ class BadManifestSignatures(ManifestError):
         def __str__(self):
                 if self.data:
                         return _("The signature data for the manifest of the "
-                            "'%s' package is not valid.") % self.data
+                            "'{0}' package is not valid.").format(self.data)
                 return _("The signature data for the manifest is not valid.")
 
 
@@ -2624,8 +2654,8 @@ class ImageCreationException(ApiException):
 
 class ImageAlreadyExists(ImageCreationException):
         def __str__(self):
-                return _("there is already an image at: %s.\nTo override, use "
-                    "the -f (force) option.") % self.path
+                return _("there is already an image at: {0}.\nTo override, use "
+                    "the -f (force) option.").format(self.path)
 
 
 class ImageCfgEmptyError(ApiException):
@@ -2633,7 +2663,7 @@ class ImageCfgEmptyError(ApiException):
 
         def __str__(self):
                 return _("The configuration data for the image rooted at "
-                    "%s is empty or missing.") % self.data
+                    "{0} is empty or missing.").format(self.data)
 
 
 class UnsupportedImageError(ApiException):
@@ -2645,15 +2675,15 @@ class UnsupportedImageError(ApiException):
                 self.path = path
 
         def __str__(self):
-                return _("The image rooted at %s is invalid or is not "
-                    "supported by this version of the packaging system.") % \
-                    self.path
+                return _("The image rooted at {0} is invalid or is not "
+                    "supported by this version of the packaging system.").format(
+                    self.path)
 
 
 class CreatingImageInNonEmptyDir(ImageCreationException):
         def __str__(self):
-                return _("the specified image path is not empty: %s.\nTo "
-                    "override, use the -f (force) option.") % self.path
+                return _("the specified image path is not empty: {0}.\nTo "
+                    "override, use the -f (force) option.").format(self.path)
 
 
 def _convert_error(e, ignored_errors=EmptyI):
@@ -2683,25 +2713,28 @@ class LinkedImageException(ApiException):
             attach_child_notsup=None,
             attach_parent_notsup=None,
             attach_root_as_child=None,
+            attach_with_curpath=None,
             child_bad_img=None,
             child_diverged=None,
             child_dup=None,
-            child_nested=None,
             child_not_in_altroot=None,
             child_not_nested=None,
-            child_path_eaccess=None,
+            child_op_failed=None,
             child_path_notabs=None,
             child_unknown=None,
             cmd_failed=None,
+            cmd_output_invalid=None,
             detach_child_notsup=None,
             detach_from_parent=None,
             detach_parent_notsup=None,
             img_linked=None,
+            intermediate_image=None,
             lin_malformed=None,
-            link_to_self=False,
+            link_to_self=None,
             parent_bad_img=None,
             parent_bad_notabs=None,
             parent_bad_path=None,
+            parent_nested=None,
             parent_not_in_altroot=None,
             pkg_op_failed=None,
             self_linked=None,
@@ -2713,25 +2746,28 @@ class LinkedImageException(ApiException):
                 self.attach_child_notsup = attach_child_notsup
                 self.attach_parent_notsup = attach_parent_notsup
                 self.attach_root_as_child = attach_root_as_child
+                self.attach_with_curpath = attach_with_curpath
                 self.child_bad_img = child_bad_img
                 self.child_diverged = child_diverged
                 self.child_dup = child_dup
-                self.child_nested = child_nested
                 self.child_not_in_altroot = child_not_in_altroot
                 self.child_not_nested = child_not_nested
-                self.child_path_eaccess = child_path_eaccess
+                self.child_op_failed = child_op_failed
                 self.child_path_notabs = child_path_notabs
                 self.child_unknown = child_unknown
                 self.cmd_failed = cmd_failed
+                self.cmd_output_invalid = cmd_output_invalid
                 self.detach_child_notsup = detach_child_notsup
                 self.detach_from_parent = detach_from_parent
                 self.detach_parent_notsup = detach_parent_notsup
                 self.img_linked = img_linked
+                self.intermediate_image = intermediate_image
                 self.lin_malformed = lin_malformed
                 self.link_to_self = link_to_self
                 self.parent_bad_img = parent_bad_img
                 self.parent_bad_notabs = parent_bad_notabs
                 self.parent_bad_path = parent_bad_path
+                self.parent_nested = parent_nested
                 self.parent_not_in_altroot = parent_not_in_altroot
                 self.pkg_op_failed = pkg_op_failed
                 self.self_linked = self_linked
@@ -2756,154 +2792,194 @@ class LinkedImageException(ApiException):
                 err = None
 
                 if attach_bad_prop is not None:
-                        err = _("Invalid linked image attach property: %s") % \
-                            attach_bad_prop
+                        err = _("Invalid linked image attach property: {0}").format(
+                            attach_bad_prop)
 
                 if attach_bad_prop_value is not None:
                         assert type(attach_bad_prop_value) in [tuple, list]
                         assert len(attach_bad_prop_value) == 2
                         err =  _("Invalid linked image attach property "
-                            "value: %s") % "=".join(attach_bad_prop_value)
+                            "value: {0}").format(
+                            "=".join(attach_bad_prop_value))
 
                 if attach_child_notsup is not None:
                         err = _("Linked image type does not support child "
-                            "attach: %s") % attach_child_notsup
+                            "attach: {0}").format(attach_child_notsup)
 
                 if attach_parent_notsup is not None:
                         err = _("Linked image type does not support parent "
-                            "attach: %s") % attach_parent_notsup
+                            "attach: {0}").format(attach_parent_notsup)
 
                 if attach_root_as_child is not None:
-                        err = _("Cannot attach root image as child")
+                        err = _("Cannot attach root image as child: {0}".format(
+                            attach_root_as_child))
+
+                if attach_with_curpath is not None:
+                        path, curpath = attach_with_curpath
+                        err = _("Cannot link images when an image is not at "
+                            "its default location.  The image currently "
+                            "located at:\n  {curpath}\n"
+                            "is normally located at:\n  {path}\n").format(
+                                path=path,
+                                curpath=curpath,
+                           )
 
                 if child_bad_img is not None:
                         if exitrv == None:
                                 exitrv = pkgdefs.EXIT_EACCESS
                         if lin:
                                 err = _("Can't initialize child image "
-                                    "(%(lin)s) at path: %(path)s") % {
-                                        "lin": lin,
-                                        "path": child_bad_img
-                                    }
+                                    "({lin}) at path: {path}").format(
+                                        lin=lin,
+                                        path=child_bad_img
+                                   )
                         else:
                                 err = _("Can't initialize child image "
-                                    "at path: %s") % child_bad_img
+                                    "at path: {0}").format(child_bad_img)
 
                 if child_diverged is not None:
                         if exitrv == None:
                                 exitrv = pkgdefs.EXIT_DIVERGED
-                        err = _("Linked image is diverged: %s") % \
-                            child_diverged
+                        err = _("Linked image is diverged: {0}").format(
+                            child_diverged)
 
                 if child_dup is not None:
                         err = _("A linked child image with this name "
-                            "already exists: %s") % child_dup
-
-                if child_nested is not None:
-                        cpath, ipath = child_nested
-                        err = _("Child image '%(cpath)s' is nested "
-                            "within another image: '%(ipath)s'") % {
-                                "cpath": cpath,
-                                "ipath": ipath,
-                            }
+                            "already exists: {0}").format(child_dup)
 
                 if child_not_in_altroot is not None:
                         path, altroot = child_not_in_altroot
-                        err = _("Child image '%(path)s' is not located "
-                           "within the parent's altroot '%(altroot)s'") % {
-                                "path": path,
-                                "altroot": altroot
-                            }
+                        err = _("Child image '{path}' is not located "
+                           "within the parent's altroot '{altroot}'").format(
+                                path=path,
+                                altroot=altroot
+                           )
 
                 if child_not_nested is not None:
                         cpath, ppath = child_not_nested
-                        err = _("Child image '%(cpath)s' is not nested "
-                            "within the parent image '%(ppath)s'") % {
-                                "cpath": cpath,
-                                "ppath": ppath,
-                            }
+                        err = _("Child image '{cpath}' is not nested "
+                            "within the parent image '{ppath}'").format(
+                                cpath=cpath,
+                                ppath=ppath,
+                           )
 
-                if child_path_eaccess is not None:
+                if child_op_failed is not None:
+                        op, cpath, e = child_op_failed
                         if exitrv == None:
                                 exitrv = pkgdefs.EXIT_EACCESS
                         if lin:
-                                err = _("Can't access child image "
-                                    "(%(lin)s) at path: %(path)s") % {
-                                        "lin": lin,
-                                        "path": child_path_eaccess
-                                    }
+                                err = _("Failed '{op}' for child image "
+                                    "({lin}) at path: {path}: "
+                                    "{strerror}").format(
+                                        op=op,
+                                        lin=lin,
+                                        path=cpath,
+                                        strerror=e,
+                                   )
                         else:
-                                err = _("Can't access child image "
-                                    "at path: %s") % child_path_eaccess
+                                err = _("Failed '{op}' for child image "
+                                    "at path: {path}: {strerror}").format(
+                                        op=op,
+                                        path=cpath,
+                                        strerror=e,
+                                   )
 
                 if child_path_notabs is not None:
-                        err = _("Child path not absolute: %s") % \
-                            child_path_notabs
+                        err = _("Child path not absolute: {0}").format(
+                            child_path_notabs)
 
                 if child_unknown is not None:
-                        err = _("Unknown child linked image: %s") % \
-                            child_unknown
+                        err = _("Unknown child linked image: {0}").format(
+                            child_unknown)
 
                 if cmd_failed is not None:
                         (rv, cmd, errout) = cmd_failed
                         err = _("The following subprocess returned an "
-                            "unexpected exit code of %(rv)d:\n    %(cmd)s") % \
-                            {"rv": rv, "cmd": cmd}
+                            "unexpected exit code of {rv:d}:\n    {cmd}").format(
+                            rv=rv, cmd=cmd)
                         if not errout:
                                 return
                         err += _("\nAnd generated the following error "
-                            "message:\n%(errout)s" % {"errout": errout})
+                            "message:\n{errout}".format(errout=errout))
+
+                if cmd_output_invalid is not None:
+                        (cmd, output) = cmd_output_invalid
+                        err = _(
+                            "The following subprocess:\n"
+                            "    {cmd}\n"
+                            "Generated the following unexpected output:\n"
+                            "{output}\n".format(
+                            cmd=" ".join(cmd), output="\n".join(output)))
 
                 if detach_child_notsup is not None:
                         err = _("Linked image type does not support "
-                            "child detach: %s") % detach_child_notsup
+                            "child detach: {0}").format(detach_child_notsup)
 
                 if detach_from_parent is not None:
                         if exitrv == None:
                                 exitrv = pkgdefs.EXIT_PARENTOP
                         err =  _("Parent linked to child, can not detach "
-                            "child: %s") % detach_from_parent
+                            "child: {0}").format(detach_from_parent)
 
                 if detach_parent_notsup is not None:
                         err = _("Linked image type does not support "
-                            "parent detach: %s") % detach_parent_notsup
+                            "parent detach: {0}").format(detach_parent_notsup)
 
                 if img_linked is not None:
-                        err = _("Image already a linked child: %s") % \
-                            img_linked
+                        err = _("Image already a linked child: {0}").format(
+                            img_linked)
+
+                if intermediate_image is not None:
+                        ppath, cpath, ipath = intermediate_image
+                        err = _(
+                            "Intermediate image '{ipath}' found between "
+                            "child '{cpath}' and "
+                            "parent '{ppath}'").format(
+                                ppath=ppath,
+                                cpath=cpath,
+                                ipath=ipath,
+                           )
 
                 if lin_malformed is not None:
-                        err = _("Invalid linked image name '%s'. "
+                        err = _("Invalid linked image name '{0}'. "
                             "Linked image names have the following format "
-                            "'<linked_image plugin>:<linked_image name>'") % \
-                            lin_malformed
+                            "'<linked_image plugin>:<linked_image name>'").format(
+                            lin_malformed)
 
-                if link_to_self:
-                        err = _("Can't link image to itself.")
+                if link_to_self is not None:
+                        err = _("Can't link image to itself: {0}")
 
                 if parent_bad_img is not None:
                         if exitrv == None:
                                 exitrv = pkgdefs.EXIT_EACCESS
-                        err = _("Can't initialize parent image at path: %s") % \
-                            parent_bad_img
+                        err = _("Can't initialize parent image at path: {0}").format(
+                            parent_bad_img)
 
                 if parent_bad_notabs is not None:
-                        err = _("Parent path not absolute: %s") % \
-                            parent_bad_notabs
+                        err = _("Parent path not absolute: {0}").format(
+                            parent_bad_notabs)
 
                 if parent_bad_path is not None:
                         if exitrv == None:
                                 exitrv = pkgdefs.EXIT_EACCESS
-                        err = _("Can't access parent image at path: %s") % \
-                            parent_bad_path
+                        err = _("Can't access parent image at path: {0}").format(
+                            parent_bad_path)
+
+                if parent_nested is not None:
+                        ppath, cpath = parent_nested
+                        err = _("A parent image '{ppath}' can not be nested "
+                            "within a child image '{cpath}'").format(
+                                ppath=ppath,
+                                cpath=cpath,
+                           )
 
                 if parent_not_in_altroot is not None:
                         path, altroot = parent_not_in_altroot
-                        err = _("Parent image '%(path)s' is not located "
-                            "within the child's altroot '%(altroot)s'") % {
-                                "path": path,
-                                "altroot": altroot
-                            }
+                        err = _("Parent image '{path}' is not located "
+                            "within the child's altroot '{altroot}'").format(
+                                path=path,
+                                altroot=altroot
+                           )
 
                 if pkg_op_failed is not None:
                         assert lin
@@ -2912,61 +2988,61 @@ class LinkedImageException(ApiException):
 
                         if e is None:
                                 err = _("""
-A '%(op)s' operation failed for child '%(lin)s' with an unexpected
-return value of %(exitrv)d and generated the following output:
-%(errout)s
+A '{op}' operation failed for child '{lin}' with an unexpected
+return value of {exitrv:d} and generated the following output:
+{errout}
 
 """
-                                ) % {
-                                    "lin": lin,
-                                    "op": op,
-                                    "exitrv": exitrv,
-                                    "errout": errout,
-                                }
+                                ).format(
+                                    lin=lin,
+                                    op=op,
+                                    exitrv=exitrv,
+                                    errout=errout,
+                               )
                         else:
                                 err = _("""
-A '%(op)s' operation failed for child '%(lin)s' with an unexpected
+A '{op}' operation failed for child '{lin}' with an unexpected
 exception:
-%(e)s
+{e}
 
 The child generated the following output:
-%(errout)s
+{errout}
 
 """
-                                ) % {
-                                    "lin": lin,
-                                    "op": op,
-                                    "errout": errout,
-                                    "e": e,
-                                }
+                                ).format(
+                                    lin=lin,
+                                    op=op,
+                                    errout=errout,
+                                    e=e,
+                               )
 
                 if self_linked is not None:
-                        err = _("Current image already a linked child: %s") % \
-                            self_linked
+                        err = _("Current image already a linked child: {0}").format(
+                            self_linked)
 
                 if self_not_child is not None:
                         if exitrv == None:
                                 exitrv = pkgdefs.EXIT_NOPARENT
-                        err = _("Current image is not a linked child: %s") % \
-                            self_not_child
+                        err = _("Current image is not a linked child: {0}").format(
+                            self_not_child)
 
                 if unparsable_output is not None:
                         (op, errout, e) = unparsable_output
                         err = _("""
-A '%(op)s' operation for child '%(lin)s' generated non-json output.
+A '{op}' operation for child '{lin}' generated non-json output.
 The json parser failed with the following error:
-%(e)s
+{e}
 
 The child generated the following output:
-%(errout)s
+{errout}
 
 """
-                                ) % {
-                                    "lin": lin,
-                                    "op": op,
-                                    "e": e,
-                                    "errout": errout,
-                                }
+                                ).format(
+                                    lin=lin,
+                                    op=op,
+                                    e=e,
+                                    errout=errout,
+                               )
 
                 # set default error return value
                 if exitrv == None:
@@ -2979,8 +3055,8 @@ The child generated the following output:
         def __str__(self):
                 assert self.lix_err or self.lix_bundle
                 assert not (self.lix_err and self.lix_bundle), \
-                   "self.lix_err = %s, self.lix_bundle = %s" % \
-                   (str(self.lix_err), str(self.lix_bundle))
+                   "self.lix_err = {0}, self.lix_bundle = {1}".format(
+                   str(self.lix_err), str(self.lix_bundle))
 
                 # single error
                 if self.lix_err:
@@ -3012,7 +3088,7 @@ The following packages were frozen at two different versions by
 the patterns provided.  The package stem and the versions it was frozen at are
 provided:""")
                         res += [s]
-                        res += ["\t%s\t%s" % (stem, " ".join([
+                        res += ["\t{0}\t{1}".format(stem, " ".join([
                             str(v) for v in versions]))
                             for stem, versions in sorted(self.multiversions)]
 
@@ -3021,7 +3097,7 @@ provided:""")
 The following patterns contained wildcards but matched no
 installed packages.""")
                         res += [s]
-                        res += ["\t%s" % pat for pat in sorted(
+                        res += ["\t{0}".format(pat) for pat in sorted(
                             self.unmatched_wildcards)]
 
                 if self.version_mismatch:
@@ -3030,10 +3106,10 @@ The following patterns attempted to freeze the listed packages
 at a version different from the version at which the packages are installed.""")
                         res += [s]
                         for pat in sorted(self.version_mismatch):
-                                res += ["\t%s" % pat]
+                                res += ["\t{0}".format(pat)]
                                 if len(self.version_mismatch[pat]) > 1:
                                         res += [
-                                            "\t\t%s" % stem
+                                            "\t\t{0}".format(stem)
                                             for stem
                                             in self.version_mismatch[pat]
                                         ]
@@ -3044,7 +3120,7 @@ The following patterns don't match installed packages and
 contain no version information.  Uninstalled packages can only be frozen by
 providing a version at which to freeze them.""")
                         res += [s]
-                        res += ["\t%s" % p for p in sorted(
+                        res += ["\t{0}".format(p) for p in sorted(
                             self.versionless_uninstalled)]
                 return "\n".join(res)
 
@@ -3052,7 +3128,8 @@ class InvalidFreezeFile(ApiException):
         """Used to indicate the freeze state file could not be loaded."""
 
         def __str__(self):
-                return _("The freeze state file '%s' is invalid.") % self.data
+                return _("The freeze state file '{0}' is invalid.").format(
+                    self.data)
 
 class UnknownFreezeFileVersion(ApiException):
         """Used when the version on the freeze state file isn't the version
@@ -3064,29 +3141,33 @@ class UnknownFreezeFileVersion(ApiException):
                 self.loc = location
 
         def __str__(self):
-                return _("The freeze state file '%(loc)s' was expected to have "
-                    "a version of %(exp)s, but its version was %(found)s") % {
-                    "exp": self.expected,
-                    "found": self.found,
-                    "loc": self.loc,
-                }
+                return _("The freeze state file '{loc}' was expected to have "
+                    "a version of {exp}, but its version was {found}").format(
+                    exp=self.expected,
+                    found=self.found,
+                    loc=self.loc,
+               )
 
 class InvalidOptionError(ApiException):
         """Used to indicate an issue with verifying options passed to a certain
         operation."""
 
-        GENERIC    = "generic"      # generic option violation
-        OPT_REPEAT = "opt_repeat"   # option repetition is not allowed
-        ARG_REPEAT = "arg_repeat"   # argument repetition is not allowed
-        INCOMPAT   = "incompat"     # option 'a' can not be specified with option 'b'
-        REQUIRED   = "required"     # option 'a' requires option 'b'
-        XOR        = "xor"          # either option 'a' or option 'b' must be specified
+        GENERIC      = "generic"      # generic option violation
+        OPT_REPEAT   = "opt_repeat"   # option repetition is not allowed
+        ARG_REPEAT   = "arg_repeat"   # argument repetition is not allowed
+        ARG_INVALID  = "arg_invalid"  # argument is invalid
+        INCOMPAT     = "incompat"     # option 'a' can not be specified with option 'b'
+        REQUIRED     = "required"     # option 'a' requires option 'b'
+        REQUIRED_ANY = "required_any" # option 'a' requires option 'b', 'c' or more
+        XOR          = "xor"          # either option 'a' or option 'b' must be specified
 
-        def __init__(self, err_type=GENERIC, options=[], msg=None):
+        def __init__(self, err_type=GENERIC, options=[], msg=None,
+            valid_args=[]):
 
                 self.err_type = err_type
                 self.options = options
                 self.msg = msg
+                self.valid_args = valid_args
 
         def __str__(self):
 
@@ -3100,28 +3181,43 @@ class InvalidOptionError(ApiException):
 
                 if self.err_type == self.OPT_REPEAT:
                         assert len(self.options) == 1
-                        return _("Option '%(option)s' may not be repeated.") % {
-                            "option" : self.options[0]}
+                        return _("Option '{option}' may not be repeated.").format(
+                            option=self.options[0])
                 elif self.err_type == self.ARG_REPEAT:
                         assert len(self.options) == 2
-                        return _("Argument '%(op1)s' for option '%(op2)s' may "
-                            "not be repeated.") % {"op1" : self.options[0],
-                            "op2" : self.options[1]}
+                        return _("Argument '{op1}' for option '{op2}' may "
+                            "not be repeated.").format(op1=self.options[0],
+                            op2=self.options[1])
+                elif self.err_type == self.ARG_INVALID:
+                        assert len(self.options) == 2
+                        s = _("Argument '{op1}' for option '{op2}' is "
+                            "invalid.").format(op1=self.options[0],
+                            op2=self.options[1])
+                        if self.valid_args:
+                                s += _("\nSupported: {0}").format(", ".join(
+                                    self.valid_args))
+                        return s
                 elif self.err_type == self.INCOMPAT:
                         assert len(self.options) == 2
-                        return _("The '%(op1)s' and '%(op2)s' option may "
-                            "not be combined.") % {"op1" : self.options[0],
-                            "op2" : self.options[1]}
+                        return _("The '{op1}' and '{op2}' option may "
+                            "not be combined.").format(op1=self.options[0],
+                            op2=self.options[1])
                 elif self.err_type == self.REQUIRED:
                         assert len(self.options) == 2
-                        return _("'%(op1)s' may only be used with "
-                            "'%(op2)s'.") % {"op1" : self.options[0],
-                            "op2" : self.options[1]}
+                        return _("'{op1}' may only be used with "
+                            "'{op2}'.").format(op1=self.options[0],
+                            op2=self.options[1])
+                elif self.err_type == self.REQUIRED_ANY:
+                        assert len(self.options) > 2
+                        return _("'{op1}' may only be used with "
+                            "'{op2}' or {op3}.").format(op1=self.options[0],
+                            op2=", ".join(self.options[1:-1]),
+                            op3=self.options[-1])
                 elif self.err_type == self.XOR:
                         assert len(self.options) == 2
-                        return _("Either '%(op1)s' or '%(op2)s' must be "
-                            "specified") % {"op1" : self.options[0],
-                            "op2" : self.options[1]}
+                        return _("Either '{op1}' or '{op2}' must be "
+                            "specified").format(op1=self.options[0],
+                            op2=self.options[1])
                 else:
                         return _("invalid option(s): ") + " ".join(self.options)
 
@@ -3146,3 +3242,33 @@ class InvalidOptionErrors(ApiException):
                         msgs.append(str(e))
                 return "\n".join(msgs)
 
+class UnexpectedLinkError(ApiException):
+        """Used to indicate that an image state file has been replaced
+        with a symlink."""
+
+        def __init__(self, path, filename, errno):
+                self.path = path
+                self.filename = filename
+                self.errno = errno
+
+        def __str__(self):
+                return _("Cannot update file: '{file}' at path "
+                    "'{path}', contains a symlink. "
+                    "[Error '{errno:d}': '{error}']").format(
+                    error=os.strerror(self.errno),
+                    errno=self.errno,
+                    path=self.path,
+                    file=self.filename,
+               )
+
+
+class InvalidConfigFile(ApiException):
+        """Used to indicate that a configuration file is invalid
+        or broken"""
+
+        def __init__(self, path):
+                self.path = path
+
+        def __str__(self):
+                return _("Cannot parse configuration file "
+                    "{path}'.").format(path=self.path)

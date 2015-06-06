@@ -21,7 +21,7 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
 
 import unittest
 import tempfile
@@ -31,12 +31,13 @@ import types
 import itertools
 
 import pkg as pkg
+import pkg.actions as actions
 import pkg.client.api_errors as api_errors
 import pkg.digest as digest
+import pkg.fmri as fmri
 import pkg.manifest as manifest
 import pkg.misc as misc
-import pkg.actions as actions
-import pkg.fmri as fmri
+import pkg.portable as portable
 import pkg.variant as variant
 
 # Set the path so that modules above can be found
@@ -179,7 +180,7 @@ file fff555ff9 mode=0555 owner=sch group=staff path=/usr/bin/i386/sort isa=i386
                         new_contents += str(d[1]) + "\n"
 
                 mtmp = manifest.Manifest()
-                #print new_contents
+                #print(new_contents)
                 mtmp.set_content(new_contents)
 
                 diffs = self.m2.combined_difference(mtmp)
@@ -191,7 +192,7 @@ file fff555ff9 mode=0555 owner=sch group=staff path=/usr/bin/i386/sort isa=i386
                 self.m1.set_content(self.m4_contents)
                 self.m2.set_content(self.m5_contents)
 
-                #print self.m2.display_differences(self.m1)
+                #print(self.m2.display_differences(self.m1))
 
                 diffs = self.m2.combined_difference(self.m1)
                 self.assertEqual(len(diffs), 1)
@@ -210,10 +211,10 @@ file fff555ff9 mode=0555 owner=sch group=staff path=/usr/bin/i386/sort isa=i386
                 # added
                 #
                 for d in diffs:
-                        if type(d[0]) == types.NoneType:
+                        if type(d[0]) == type(None):
                                 self.assertEqual(type(d[1]),
                                     pkg.actions.file.FileAction)
-                        if type(d[1]) == types.NoneType:
+                        if type(d[1]) == type(None):
                                 self.assertEqual(type(d[0]),
                                     pkg.actions.directory.DirectoryAction)
 
@@ -281,15 +282,15 @@ file fff555ff9 mode=0555 owner=sch group=staff path=/usr/bin/i386/sort isa=i386
                 #
                 self.assertEqual(len(diffs), 9)
                 for d in diffs:
-                        self.assertEqual(type(d[1]), types.NoneType)
+                        self.assertEqual(type(d[1]), type(None))
 
                 #
                 # Expect to see None -> something differences
                 #
                 self.assertEqual(len(diffs2), 9)
                 for d in diffs2:
-                        self.assertEqual(type(d[0]), types.NoneType)
-                        self.assertNotEqual(type(d[1]), types.NoneType)
+                        self.assertEqual(type(d[0]), type(None))
+                        self.assertNotEqual(type(d[1]), type(None))
 
         def test_diffs10(self):
                 """ ASSERT: changes in target are detected """
@@ -336,7 +337,7 @@ dir mode=0755 owner=bin group=sys path=usr
                         self.assertEqual(kv, ('dir', 'usr'))
                         for a in actions:
                                 acount += 1
-                                #print " %s %s" % (kv, a)
+                                #print(" {0} {1}".format(kv, a))
                 self.assertEqual(acount, 3)
 
         def test_errors(self):
@@ -391,7 +392,7 @@ dir owner=root path="opt/dir with whitespaces	in value" group=bin mode=0755 vari
 
         def setUp(self):
                 pkg5unittest.Pkg5TestCase.setUp(self)
-                self.cache_dir = tempfile.mkdtemp()
+                self.cache_dir = tempfile.mkdtemp(dir=self.test_root)
                 self.foo_content_p5m = self.make_misc_files(
                     { "foo_content.p5m": self.foo_content })[0]
 
@@ -410,7 +411,7 @@ dir owner=root path="opt/dir with whitespaces	in value" group=bin mode=0755 vari
                     contents=contents)
                 self.assertEqual(len(list(m1.gen_actions_by_type("dir"))), 2)
                 v = variant.Variants({"variant.foo":"one"})
-                m1.exclude_content([v.allow_action, lambda x: True])
+                m1.exclude_content([v.allow_action, lambda x, publisher: True])
                 self.assertEqual(len(list(m1.gen_actions_by_type("dir"))), 1)
 
         def test_store_to_disk(self):
@@ -432,7 +433,7 @@ dir owner=root path="opt/dir with whitespaces	in value" group=bin mode=0755 vari
                 """Verifies that get_directories() works as expected."""
 
                 v = variant.Variants({ "variant.arch": "sparc" })
-                excludes = [v.allow_action, lambda x: True]
+                excludes = [v.allow_action, lambda x, publisher: True]
 
                 m1 = manifest.FactoredManifest("foo-content@1.0", self.cache_dir,
                     pathname=self.foo_content_p5m)
@@ -478,9 +479,9 @@ dir owner=root path="opt/dir with whitespaces	in value" group=bin mode=0755 vari
                 with open(cfile_path, "wb") as f:
                         for a in m1.gen_actions_by_type("dir"):
                                 f.write(
-                                    "dir path=%s %s\n" % (a.attrs["path"],
+                                    "dir path={0} {1}\n".format(a.attrs["path"],
                                         " ".join(
-                                            "%s=%s" % (attr, a.attrs[attr])
+                                            "{0}={1}".format(attr, a.attrs[attr])
                                             for attr in itertools.chain(
                                                 *a.get_varcet_keys())
                                         )
@@ -498,6 +499,35 @@ dir owner=root path="opt/dir with whitespaces	in value" group=bin mode=0755 vari
                     pathname=self.foo_content_p5m)
                 do_get_dirs()
                 self.assert_(os.path.isfile(cfile_path))
+
+        def test_clear_cache(self):
+                """Verify that FactoredManifest.clear_cache() works as
+                expected."""
+
+                # Create FactoredManifest.
+                cache_dir = tempfile.mkdtemp(dir=self.test_root)
+                m1 = manifest.FactoredManifest("foo-content@1.0", cache_dir,
+                    pathname=self.foo_content_p5m)
+
+                # Verify cache was created.
+                cfile_path = os.path.join(cache_dir, "manifest.dircache")
+                self.assert_(os.path.isfile(cfile_path))
+
+                # Create random file in cache_dir.
+                rfile_path = os.path.join(cache_dir, "junk")
+                self.make_file(rfile_path, "junk")
+
+                # Verify that clear_cache() removes all known files from
+                # cache_dir and will not remove directory if unknown are
+                # present.
+                m1.clear_cache(cache_dir)
+                for name in os.listdir(cache_dir):
+                        self.assertEqualDiff(name, os.path.basename(rfile_path))
+
+                # Verify that clear_cache() removes cache_dir if empty.
+                portable.remove(rfile_path)
+                m1.clear_cache(cache_dir)
+                self.assert_(not os.path.exists(cache_dir))
 
 
 if __name__ == "__main__":

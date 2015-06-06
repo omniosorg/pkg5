@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 """module describing a directory packaging object
@@ -71,6 +71,60 @@ class DirectoryAction(generic.Action):
         def directory_references(self):
                 return [os.path.normpath(self.attrs["path"])]
 
+        def __create_directory(self, pkgplan, path, mode, **kwargs):
+                """Create a directory."""
+
+                try:
+                        self.makedirs(path, mode=mode,
+                            fmri=pkgplan.destination_fmri, **kwargs)
+                except OSError as e:
+                        if e.filename != path:
+                                # makedirs failed for some component
+                                # of the path.
+                                raise
+
+                        fs = os.lstat(path)
+                        fs_mode = stat.S_IFMT(fs.st_mode)
+                        if e.errno == errno.EROFS:
+                                # Treat EROFS like EEXIST if both are
+                                # applicable, since we'll end up with
+                                # EROFS instead.
+                                if stat.S_ISDIR(fs_mode):
+                                        return
+                                raise
+                        elif e.errno != errno.EEXIST:
+                                raise
+
+                        if stat.S_ISLNK(fs_mode):
+                                # User has replaced directory with a
+                                # link, or a package has been poorly
+                                # implemented.  It isn't safe to
+                                # simply re-create the directory as
+                                # that won't restore the files that
+                                # are supposed to be contained within.
+                                err_txt = _("Unable to create "
+                                    "directory {0}; it has been "
+                                    "replaced with a link.  To "
+                                    "continue, please remove the "
+                                    "link or restore the directory "
+                                    "to its original location and "
+                                    "try again.").format(path)
+                                raise apx.ActionExecutionError(
+                                    self, details=err_txt, error=e,
+                                    fmri=pkgplan.destination_fmri)
+                        elif stat.S_ISREG(fs_mode):
+                                # User has replaced directory with a
+                                # file, or a package has been poorly
+                                # implemented.  Salvage what's there,
+                                # and drive on.
+                                pkgplan.salvage(path)
+                                os.mkdir(path, mode)
+                        elif stat.S_ISDIR(fs_mode):
+                                # The directory already exists, but
+                                # ensure that the mode matches what's
+                                # expected.
+                                os.chmod(path, mode)
+
         def install(self, pkgplan, orig):
                 """Client-side method that installs a directory."""
 
@@ -95,8 +149,7 @@ class DirectoryAction(generic.Action):
                         oowner, ogroup = orig.get_fsobj_uid_gid(pkgplan,
                             pkgplan.origin_fmri)
 
-                path = os.path.normpath(os.path.sep.join((
-                    pkgplan.image.get_root(), self.attrs["path"])))
+                path = self.get_installed_path(pkgplan.image.get_root())
 
                 # Don't allow installation through symlinks.
                 self.fsobj_checkpath(pkgplan, path)
@@ -106,56 +159,7 @@ class DirectoryAction(generic.Action):
                         mode |= stat.S_IWUSR
 
                 if not orig:
-                        try:
-                                self.makedirs(path, mode=mode,
-                                    fmri=pkgplan.destination_fmri)
-                        except OSError, e:
-                                if e.filename != path:
-                                        # makedirs failed for some component
-                                        # of the path.
-                                        raise
-
-                                fs = os.lstat(path)
-                                fs_mode = stat.S_IFMT(fs.st_mode)
-                                if e.errno == errno.EROFS:
-                                        # Treat EROFS like EEXIST if both are
-                                        # applicable, since we'll end up with
-                                        # EROFS instead.
-                                        if stat.S_ISDIR(fs_mode):
-                                                return
-                                        raise
-                                elif e.errno != errno.EEXIST:
-                                        raise
-
-                                if stat.S_ISLNK(fs_mode):
-                                        # User has replaced directory with a
-                                        # link, or a package has been poorly
-                                        # implemented.  It isn't safe to
-                                        # simply re-create the directory as
-                                        # that won't restore the files that
-                                        # are supposed to be contained within.
-                                        err_txt = _("Unable to create "
-                                            "directory %s; it has been "
-                                            "replaced with a link.  To "
-                                            "continue, please remove the "
-                                            "link or restore the directory "
-                                            "to its original location and "
-                                            "try again.") % path
-                                        raise apx.ActionExecutionError(
-                                            self, details=err_txt, error=e,
-                                            fmri=pkgplan.destination_fmri)
-                                elif stat.S_ISREG(fs_mode):
-                                        # User has replaced directory with a
-                                        # file, or a package has been poorly
-                                        # implemented.  Salvage what's there,
-                                        # and drive on.
-                                        pkgplan.salvage(path)
-                                        os.mkdir(path, mode)
-                                elif stat.S_ISDIR(fs_mode):
-                                        # The directory already exists, but
-                                        # ensure that the mode matches what's
-                                        # expected.
-                                        os.chmod(path, mode)
+                        self.__create_directory(pkgplan, path, mode)
 
                 # The downside of chmodding the directory is that as a non-root
                 # user, if we set perms u-w, we won't be able to put anything in
@@ -169,7 +173,16 @@ class DirectoryAction(generic.Action):
                 # other failures.  Or can we require that everyone simply have
                 # file_dac_write who wants to use the tools.  Probably not.
                 elif mode != omode:
-                        os.chmod(path, mode)
+                        try:
+                                os.chmod(path, mode)
+                        except Exception as e:
+                                if e.errno != errno.EPERM and e.errno != \
+                                    errno.ENOSYS:
+                                        # Assume chmod failed due to a
+                                        # recoverable error.
+                                        self.__create_directory(pkgplan, path,
+                                            mode)
+                                        omode = oowner = ogroup = None
 
                 # if we're salvaging contents, move 'em now.
                 # directories with "salvage-from" attribute
@@ -185,10 +198,13 @@ class DirectoryAction(generic.Action):
                 if not orig or oowner != owner or ogroup != group:
                         try:
                                 portable.chown(path, owner, group)
-                        except OSError, e:
+                        except OSError as e:
                                 if e.errno != errno.EPERM and \
                                     e.errno != errno.ENOSYS:
-                                        raise
+                                        # Assume chown failed due to a
+                                        # recoverable error.
+                                        self.__create_directory(pkgplan, path,
+                                            mode, uid=owner, gid=group)
 
         def verify(self, img, **args):
                 """Returns a tuple of lists of the form (errors, warnings,
@@ -200,11 +216,10 @@ class DirectoryAction(generic.Action):
                 return errors, warnings, info
 
         def remove(self, pkgplan):
-                path = os.path.normpath(os.path.sep.join(
-                    (pkgplan.image.get_root(), self.attrs["path"])))
+                path = self.get_installed_path(pkgplan.image.get_root())
                 try:
                         os.rmdir(path)
-                except OSError, e:
+                except OSError as e:
                         if e.errno == errno.ENOENT:
                                 pass
                         elif e.errno in (errno.EEXIST, errno.ENOTEMPTY):
@@ -219,12 +234,13 @@ class DirectoryAction(generic.Action):
                         elif e.errno == errno.EBUSY and os.path.ismount(path):
                                 # User has replaced directory with mountpoint,
                                 # or a package has been poorly implemented.
-				if not self.attrs.get("implicit"):
-                                        err_txt = _("Unable to remove %s; it is "
+                                if not self.attrs.get("implicit"):
+                                        err_txt = _("Unable to remove {0}; it is "
                                             "in use as a mountpoint. To "
                                             "continue, please unmount the "
                                             "filesystem at the target "
-                                            "location and try again.") % path
+                                            "location and try again.").format(
+                                            path)
                                         raise apx.ActionExecutionError(self,
                                             details=err_txt, error=e,
                                             fmri=pkgplan.origin_fmri) 
@@ -232,11 +248,11 @@ class DirectoryAction(generic.Action):
                                 # os.path.ismount() is broken for lofs
                                 # filesystems, so give a more generic
                                 # error.
-				if not self.attrs.get("implicit"):
-                                        err_txt = _("Unable to remove %s; it "
+                                if not self.attrs.get("implicit"):
+                                        err_txt = _("Unable to remove {0}; it "
                                             "is in use by the system, another "
-                                            "process, or as a mountpoint.") \
-                                            % path
+                                            "process, or as a "
+                                            "mountpoint.").format(path)
                                         raise apx.ActionExecutionError(self,
                                             details=err_txt, error=e,
                                             fmri=pkgplan.origin_fmri)

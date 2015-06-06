@@ -18,7 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 set name=pkg.fmri value=pkg:/package/pkg/depot@$(PKGVERS)
@@ -34,6 +34,7 @@ dir  path=etc/pkg/depot
 dir  path=etc/pkg/depot/conf.d
 file path=etc/pkg/depot/depot.conf.mako
 file path=etc/pkg/depot/depot_httpd.conf.mako
+file path=etc/pkg/depot/depot_httpd_ssl_protocol.conf
 file path=etc/pkg/depot/depot_index.py pkg.tmp.autopyc=false
 dir  path=lib
 dir  path=lib/svc
@@ -43,7 +44,7 @@ dir  path=lib/svc/manifest/application/pkg
 file path=lib/svc/manifest/application/pkg/pkg-depot.xml
 file path=lib/svc/method/svc-pkg-depot
 dir  path=usr
-file path=usr/lib/pkg.depot-config mode=0755
+file path=usr/lib/pkg.depot-config mode=0755 pkg.depend.bypass-generate=.*
 dir  path=usr/share/lib/pkg/web
 file path=usr/share/lib/pkg/web/repos.shtml
 dir  path=usr/share/man/man1m
@@ -60,10 +61,11 @@ file path=var/log/pkg/depot/access_log owner=pkg5srv mode=0644 preserve=true
 file path=var/log/pkg/depot/error_log owner=pkg5srv mode=0644 preserve=true
 file path=var/log/pkg/depot/rewrite.log owner=pkg5srv mode=0644 preserve=true
 license cr_Oracle license=cr_Oracle
+depend type=require fmri=package/pkg@$(PKGVERS)
 #
 # The manual dependency on apache results from our calling apachectl from
 # our method script, and can't be detected by pkgdepend.
 #
 depend type=require fmri=web/server/apache-22
 # p5p support in the system repository requires mod_wsgi
-depend type=require fmri=web/server/apache-22/module/apache-wsgi-26
+depend type=require fmri=web/server/apache-22/module/apache-wsgi-27

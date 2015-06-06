@@ -21,14 +21,14 @@
 #
 
 #
-# Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 import fnmatch
 import re
 import urllib
 
-from version import Version, VersionError
+from pkg.version import Version, VersionError
 
 # In order to keep track of what publisher is presently the preferred publisher,
 # a prefix is included ahead of the name of the publisher.  If this prefix is
@@ -75,7 +75,7 @@ class IllegalFmri(FmriError):
                 self.nested_exc = nested_exc
 
         def __str__(self):
-                outstr = "%s '%s': " % (self.msg_prefix, self.fmri)
+                outstr = "{0} '{1}': ".format(self.msg_prefix, self.fmri)
                 if self.reason == IllegalFmri.BAD_VERSION:
                         return outstr + str(self.nested_exc)
                 if self.reason == IllegalFmri.BAD_PACKAGENAME:
@@ -93,8 +93,8 @@ class MissingVersionError(FmriError):
         the fmri since version information is missing."""
 
         def __str__(self):
-                return _("FMRI '%s' is missing version information.") % \
-                    self.fmri
+                return _("FMRI '{0}' is missing version information.").format(
+                    self.fmri)
 
 
 class PkgFmri(object):
@@ -133,7 +133,7 @@ class PkgFmri(object):
                                 try:
                                         self.version = Version(
                                             fmri[veridx + 1:], build_release)
-                                except VersionError, iv:
+                                except VersionError as iv:
                                         raise IllegalFmri(fmri,
                                             IllegalFmri.BAD_VERSION,
                                             nested_exc=iv)
@@ -247,7 +247,8 @@ class PkgFmri(object):
                 publisher, set preferred to True."""
 
                 if preferred and not publisher.startswith(PREF_PUB_PFX):
-                        self.publisher = "%s_%s" % (PREF_PUB_PFX, publisher)
+                        self.publisher = "{0}_{1}".format(PREF_PUB_PFX,
+                            publisher)
                 else:
                         self.publisher = publisher
 
@@ -312,14 +313,17 @@ class PkgFmri(object):
                     self.publisher.startswith(PREF_PUB_PFX) or anarchy:
                         if include_scheme:
                                 pkg_str = "pkg:/"
-                        return "%s%s" % (pkg_str, self.pkg_name)
+                        return "{0}{1}".format(pkg_str, self.pkg_name)
                 if include_scheme:
                         pkg_str = "pkg://"
-                return "%s%s/%s" % (pkg_str, self.publisher, self.pkg_name)
+                return "{0}{1}/{2}".format(pkg_str, self.publisher,
+                    self.pkg_name)
 
-        def get_short_fmri(self, default_publisher=None, anarchy=False):
+        def get_short_fmri(self, default_publisher=None, anarchy=False,
+            include_scheme=True):
                 """Return a string representation of the FMRI without a specific
                 version."""
+                pkg_str = ""
                 publisher = self.publisher
                 if not publisher:
                         publisher = default_publisher
@@ -329,11 +333,17 @@ class PkgFmri(object):
                 else:
                         version = "@" + self.version.get_short_version()
 
-                if not publisher or publisher.startswith(PREF_PUB_PFX) \
-                    or anarchy:
-                        return "pkg:/%s%s" % (self.pkg_name, version)
+                if (not publisher or publisher.startswith(PREF_PUB_PFX) or
+                    anarchy):
+                        if include_scheme:
+                                pkg_str = "pkg:/"
+                        return "{0}{1}{2}".format(pkg_str, self.pkg_name,
+                            version)
 
-                return "pkg://%s/%s%s" % (publisher, self.pkg_name, version)
+                if include_scheme:
+                        pkg_str = "pkg://"
+                return "{0}{1}/{2}{3}".format(pkg_str, publisher, self.pkg_name,
+                    version)
 
         def get_fmri(self, default_publisher=None, anarchy=False,
             include_scheme=True, include_build=True):
@@ -349,18 +359,20 @@ class PkgFmri(object):
                         if include_scheme:
                                 pkg_str = "pkg:/"
                         if self.version == None:
-                                return "%s%s" % (pkg_str, self.pkg_name)
+                                return "{0}{1}".format(pkg_str, self.pkg_name)
 
-                        return "%s%s@%s" % (pkg_str, self.pkg_name,
+                        return "{0}{1}@{2}".format(pkg_str, self.pkg_name,
                             self.version.get_version(
                                 include_build=include_build))
 
                 if include_scheme:
                         pkg_str = "pkg://"
                 if self.version == None:
-                        return "%s%s/%s" % (pkg_str, publisher, self.pkg_name)
+                        return "{0}{1}/{2}".format(pkg_str, publisher,
+                            self.pkg_name)
 
-                return "%s%s/%s@%s" % (pkg_str, publisher, self.pkg_name,
+                return "{0}{1}/{2}@{3}".format(pkg_str, publisher,
+                    self.pkg_name,
                     self.version.get_version(include_build=include_build))
 
         def hierarchical_names(self):
@@ -370,7 +382,7 @@ class PkgFmri(object):
                 names = self.pkg_name.split("/")
                 res = names[-1:]
                 for n in reversed(names[:-1]):
-                        res.append("%s/%s" % (n, res[-1]))
+                        res.append("{0}/{1}".format(n, res[-1]))
                 return res
 
         def __str__(self):
@@ -381,18 +393,19 @@ class PkgFmri(object):
                 """Return as specific an FMRI representation as possible."""
                 if not self.publisher:
                         if not self.version:
-                                fmristr = "pkg:/%s" % self.pkg_name
+                                fmristr = "pkg:/{0}".format(self.pkg_name)
                         else:
-                                fmristr = "pkg:/%s@%s" % (self.pkg_name,
+                                fmristr = "pkg:/{0}@{1}".format(self.pkg_name,
                                     self.version)
                 elif not self.version:
-                        fmristr = "pkg://%s/%s" % (self.publisher,
+                        fmristr = "pkg://{0}/{1}".format(self.publisher,
                             self.pkg_name)
                 else:
-                        fmristr = "pkg://%s/%s@%s" % (self.publisher,
+                        fmristr = "pkg://{0}/{1}@{2}".format(self.publisher,
                             self.pkg_name, self.version)
 
-                return "<pkg.fmri.PkgFmri '%s' at %#x>" % (fmristr, id(self))
+                return "<pkg.fmri.PkgFmri '{0}' at {1:#x}".format(fmristr,
+                    id(self))
 
         def __hash__(self):
                 #
@@ -431,24 +444,24 @@ class PkgFmri(object):
                 FMRI."""
 
                 if stemonly:
-                        return "%s" % (urllib.quote(self.pkg_name, ""))
+                        return "{0}".format(urllib.quote(self.pkg_name, ""))
 
                 if self.version is None:
                         raise MissingVersionError(self)
 
-                return "%s@%s" % (urllib.quote(self.pkg_name, ""),
+                return "{0}@{1}".format(urllib.quote(self.pkg_name, ""),
                     urllib.quote(str(self.version), ""))
 
         def get_dir_path(self, stemonly = False):
                 """Return the escaped directory path fragment for this FMRI."""
 
                 if stemonly:
-                        return "%s" % (urllib.quote(self.pkg_name, ""))
+                        return "{0}".format(urllib.quote(self.pkg_name, ""))
 
                 if self.version is None:
                         raise MissingVersionError(self)
 
-                return "%s/%s" % (urllib.quote(self.pkg_name, ""),
+                return "{0}/{1}".format(urllib.quote(self.pkg_name, ""),
                     urllib.quote(self.version.__str__(), ""))
 
         def get_url_path(self):
@@ -458,7 +471,7 @@ class PkgFmri(object):
                 if self.version is None:
                         raise MissingVersionError(self)
 
-                return "%s@%s" % (urllib.quote(self.pkg_name, ""),
+                return "{0}@{1}".format(urllib.quote(self.pkg_name, ""),
                     urllib.quote(self.version.__str__(), ""))
 
         def is_same_pkg(self, other):
@@ -501,7 +514,7 @@ class MatchingPkgFmri(PkgFmri):
         def __init__(self, *args, **kwargs):
                 try:
                         PkgFmri.__init__(self, *args, **kwargs)
-                except IllegalFmri, e:
+                except IllegalFmri as e:
                         raise IllegalMatchingFmri(e.fmri, e.reason,
                             detail=e.detail, nested_exc=e.nested_exc)
 

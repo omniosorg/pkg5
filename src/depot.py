@@ -1,4 +1,4 @@
-#!/usr/bin/python2.6
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -19,8 +19,10 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
 #
+
+from __future__ import print_function
 
 # pkg.depotd - package repository daemon
 
@@ -73,6 +75,8 @@ import sys
 import tempfile
 import urlparse
 
+from imp import reload
+
 try:
         import cherrypy
         version = cherrypy.__version__.split('.')
@@ -81,8 +85,8 @@ try:
         elif map(int, version) >= [3, 2, 0]:
                 raise ImportError
 except ImportError:
-        print >> sys.stderr, """cherrypy 3.1.0 or greater (but less than """ \
-            """3.2.0) is required to use this program."""
+        print("""cherrypy 3.1.0 or greater (but less than """
+            """3.2.0) is required to use this program.""", file=sys.stderr)
         sys.exit(2)
 
 import cherrypy.process.servers
@@ -127,7 +131,7 @@ def usage(text=None, retcode=2, full=False):
                     "information."))
                 sys.exit(retcode)
 
-        print """\
+        print("""\
 Usage: /usr/lib/pkg.depotd [-a address] [-d inst_root] [-p port] [-s threads]
            [-t socket_timeout] [--cfg] [--content-root]
            [--disable-ops op[/1][,...]] [--debug feature_list]
@@ -168,7 +172,7 @@ Usage: /usr/lib/pkg.depotd [-a address] [-d inst_root] [-p port] [-s threads]
         --debug         The name of a debug feature to enable; or a whitespace
                         or comma separated list of features to enable.
                         Possible values are: headers, hash=sha1+sha256,
-                        hash=sha256
+                        hash=sha256, hash=sha1+sha512_256, hash=sha512_256
         --image-root    The path to the image whose file information will be
                         used as a cache for file data.
         --log-access    The destination for any access related information
@@ -222,7 +226,7 @@ Options:
 Environment:
         PKG_REPO                Used as default inst_root if -d not provided.
         PKG_DEPOT_CONTENT       Used as default content_root if --content-root
-                                not provided."""
+                                not provided.""")
         sys.exit(retcode)
 
 class OptionError(Exception):
@@ -291,11 +295,13 @@ if __name__ == "__main__":
                         elif opt == "-s":
                                 threads = int(arg)
                                 if threads < THREADS_MIN:
-                                        raise OptionError, \
-                                            "minimum value is %d" % THREADS_MIN
+                                        raise OptionError(
+                                            "minimum value is {0:d}".format(
+                                            THREADS_MIN))
                                 if threads > THREADS_MAX:
-                                        raise OptionError, \
-                                            "maximum value is %d" % THREADS_MAX
+                                        raise OptionError(
+                                            "maximum value is {0:d}".format(
+                                            THREADS_MAX))
                                 ivalues["pkg"]["threads"] = threads
                         elif opt == "-t":
                                 ivalues["pkg"]["socket_timeout"] = arg
@@ -330,8 +336,8 @@ if __name__ == "__main__":
 
                         elif opt == "--disable-ops":
                                 if arg is None or arg == "":
-                                        raise OptionError, \
-                                            "An argument must be specified."
+                                        raise OptionError(
+                                            "An argument must be specified.")
 
                                 disableops = arg.split(",")
                                 for s in disableops:
@@ -345,14 +351,14 @@ if __name__ == "__main__":
                                             ds.DepotHTTP.REPO_OPS_DEFAULT:
                                                 raise OptionError(
                                                     "Invalid operation "
-                                                    "'%s'." % s)
+                                                    "'{0}'.".format(s))
                                         disable_ops.append(s)
                         elif opt == "--exit-ready":
                                 exit_ready = True
                         elif opt == "--image-root":
                                 ivalues["pkg"]["image_root"] = arg
                         elif opt.startswith("--log-"):
-                                prop = "log_%s" % opt.lstrip("--log-")
+                                prop = "log_{0}".format(opt.lstrip("--log-"))
                                 ivalues["pkg"][prop] = arg
                         elif opt in ("--help", "-?"):
                                 show_usage = True
@@ -366,9 +372,9 @@ if __name__ == "__main__":
                                 # ValueError is caught by caller.
                                 nasty_value = int(arg)
                                 if (nasty_value > 100 or nasty_value < 1):
-                                        raise OptionError, "Invalid value " \
-                                            "for nasty option.\n Please " \
-                                            "choose a value between 1 and 100."
+                                        raise OptionError("Invalid value "
+                                            "for nasty option.\n Please "
+                                            "choose a value between 1 and 100.")
                                 nasty = True
                                 ivalues["nasty"]["nasty_level"] = nasty_value
                         elif opt == "--nasty-sleep":
@@ -385,16 +391,16 @@ if __name__ == "__main__":
                                     "http", allow_fragments=0)
 
                                 if not netloc:
-                                        raise OptionError, "Unable to " \
-                                            "determine the hostname from " \
-                                            "the provided URL; please use a " \
-                                            "fully qualified URL."
+                                        raise OptionError("Unable to "
+                                            "determine the hostname from "
+                                            "the provided URL; please use a "
+                                            "fully qualified URL.")
 
                                 scheme = scheme.lower()
                                 if scheme not in ("http", "https"):
-                                        raise OptionError, "Invalid URL; http " \
-                                            "and https are the only supported " \
-                                            "schemes."
+                                        raise OptionError("Invalid URL; http "
+                                            "and https are the only supported "
+                                            "schemes.")
 
                                 # Rebuild the url with the sanitized components.
                                 ivalues["pkg"]["proxy_base"] = \
@@ -432,15 +438,15 @@ if __name__ == "__main__":
                                         # the value.
                                         arg = ""
                                 elif not os.path.isabs(arg):
-                                        raise OptionError, "The path to " \
-                                           "the Certificate file must be " \
-                                           "absolute."
+                                        raise OptionError("The path to "
+                                           "the Certificate file must be "
+                                           "absolute.")
                                 elif not os.path.exists(arg):
-                                        raise OptionError, "The specified " \
-                                            "file does not exist."
+                                        raise OptionError("The specified "
+                                            "file does not exist.")
                                 elif not os.path.isfile(arg):
-                                        raise OptionError, "The specified " \
-                                            "pathname is not a file."
+                                        raise OptionError("The specified "
+                                            "pathname is not a file.")
                                 ivalues["pkg"]["ssl_cert_file"] = arg
                         elif opt == "--ssl-key-file":
                                 if arg == "none" or arg == "":
@@ -448,25 +454,25 @@ if __name__ == "__main__":
                                         # the value.
                                         arg = ""
                                 elif not os.path.isabs(arg):
-                                        raise OptionError, "The path to " \
-                                           "the Private Key file must be " \
-                                           "absolute."
+                                        raise OptionError("The path to "
+                                           "the Private Key file must be "
+                                           "absolute.")
                                 elif not os.path.exists(arg):
-                                        raise OptionError, "The specified " \
-                                            "file does not exist."
+                                        raise OptionError("The specified "
+                                            "file does not exist.")
                                 elif not os.path.isfile(arg):
-                                        raise OptionError, "The specified " \
-                                            "pathname is not a file."
+                                        raise OptionError("The specified "
+                                            "pathname is not a file.")
                                 ivalues["pkg"]["ssl_key_file"] = arg
                         elif opt == "--ssl-dialog":
                                 if arg != "builtin" and \
                                     arg != "smf" and not \
                                     arg.startswith("exec:/") and not \
                                     arg.startswith("svc:"):
-                                        raise OptionError, "Invalid value " \
-                                            "specified.  Expected: builtin, " \
-                                            "exec:/path/to/program, smf, or " \
-                                            "an SMF FMRI."
+                                        raise OptionError("Invalid value "
+                                            "specified.  Expected: builtin, "
+                                            "exec:/path/to/program, smf, or "
+                                            "an SMF FMRI.")
 
                                 if arg.startswith("exec:"):
                                         if os_util.get_canonical_os_type() != \
@@ -474,17 +480,17 @@ if __name__ == "__main__":
                                                 # Don't allow a somewhat
                                                 # insecure authentication method
                                                 # on some platforms.
-                                                raise OptionError, "exec is " \
-                                                    "not a supported dialog " \
-                                                    "type for this operating " \
-                                                    "system."
+                                                raise OptionError("exec is "
+                                                    "not a supported dialog "
+                                                    "type for this operating "
+                                                    "system.")
 
                                         f = os.path.abspath(arg.split(
                                             "exec:")[1])
                                         if not os.path.isfile(f):
-                                                raise OptionError, "Invalid " \
-                                                    "file path specified for " \
-                                                    "exec."
+                                                raise OptionError("Invalid "
+                                                    "file path specified for "
+                                                    "exec.")
                                 ivalues["pkg"]["ssl_dialog"] = arg
                         elif opt == "--sort-file-max-size":
                                 ivalues["pkg"]["sort_file_max_size"] = arg
@@ -504,15 +510,15 @@ if __name__ == "__main__":
 
                 # Build configuration object.
                 dconf = ds.DepotConfig(target=user_cfg, overrides=ivalues)
-        except getopt.GetoptError, _e:
-                usage("pkg.depotd: %s" % _e.msg)
-        except api_errors.ApiException, _e:
-                usage("pkg.depotd: %s" % str(_e))
-        except OptionError, _e:
-                usage("pkg.depotd: option: %s -- %s" % (opt, _e))
+        except getopt.GetoptError as _e:
+                usage("pkg.depotd: {0}".format(_e.msg))
+        except api_errors.ApiException as _e:
+                usage("pkg.depotd: {0}".format(str(_e)))
+        except OptionError as _e:
+                usage("pkg.depotd: option: {0} -- {1}".format(opt, _e))
         except (ArithmeticError, ValueError):
-                usage("pkg.depotd: illegal option value: %s specified " \
-                    "for option: %s" % (arg, opt))
+                usage("pkg.depotd: illegal option value: {0} specified " \
+                    "for option: {1}".format(arg, opt))
 
         if show_usage:
                 usage(retcode=0, full=True)
@@ -608,9 +614,9 @@ if __name__ == "__main__":
         if not exit_ready:
                 try:
                         cherrypy.process.servers.check_port(address, port)
-                except Exception, e:
+                except Exception as e:
                         emsg("pkg.depotd: unable to bind to the specified "
-                            "port: %d. Reason: %s" % (port, e))
+                            "port: {0:d}. Reason: {1}".format(port, e))
                         sys.exit(1)
         else:
                 # Not applicable if we're not going to serve content
@@ -659,11 +665,12 @@ if __name__ == "__main__":
                                         stdout=subprocess.PIPE,
                                         stderr=None)
                                 p.wait()
-                        except Exception, __e:
+                        except Exception as __e:
                                 emsg("pkg.depotd: an error occurred while "
-                                    "executing [%s]; unable to obtain the "
+                                    "executing [{0}]; unable to obtain the "
                                     "passphrase needed to decrypt the SSL "
-                                    "private key file: %s" % (cmdline, __e))
+                                    "private key file: {1}".format(cmdline,
+                                    __e))
                                 sys.exit(1)
                         return p.stdout.read().strip("\n")
 
@@ -671,7 +678,7 @@ if __name__ == "__main__":
                         exec_path = ssl_dialog.split("exec:")[1]
                         if not os.path.isabs(exec_path):
                                 exec_path = os.path.join(pkg_root, exec_path)
-                        cmdline = "%s %s %d" % (exec_path, "''", port)
+                        cmdline = "{0} {1} {2:d}".format(exec_path, "''", port)
                 elif ssl_dialog == "smf" or ssl_dialog.startswith("svc:"):
                         if ssl_dialog == "smf":
                                 # Assume the configuration target was an SMF
@@ -681,7 +688,7 @@ if __name__ == "__main__":
                         else:
                                 svc_fmri = ssl_dialog
                         cmdline = "/usr/bin/svcprop -p " \
-                            "pkg_secure/ssl_key_passphrase %s" % svc_fmri
+                            "pkg_secure/ssl_key_passphrase {0}".format(svc_fmri)
 
                 # The key file requires decryption, but the user has requested
                 # exec-based authentication, so it will have to be decoded first
@@ -696,18 +703,18 @@ if __name__ == "__main__":
                         key_data.write(crypto.dump_privatekey(
                             crypto.FILETYPE_PEM, pkey))
                         key_data.seek(0)
-                except EnvironmentError, _e:
+                except EnvironmentError as _e:
                         emsg("pkg.depotd: unable to read the SSL private key "
-                            "file: %s" % _e)
+                            "file: {0}".format(_e))
                         sys.exit(1)
-                except crypto.Error, _e:
+                except crypto.Error as _e:
                         emsg("pkg.depotd: authentication or cryptography "
                             "failure while attempting to decode\nthe SSL "
-                            "private key file: %s" % _e)
+                            "private key file: {0}".format(_e))
                         sys.exit(1)
                 else:
                         # Redirect the server to the decrypted key file.
-                        ssl_key_file = "/dev/fd/%d" % key_data.fileno()
+                        ssl_key_file = "/dev/fd/{0:d}".format(key_data.fileno())
 
         # Setup our global configuration.
         gconf = {
@@ -751,16 +758,20 @@ if __name__ == "__main__":
                 # stdout and stderr as the Daemonizer (used for test suite and
                 # SMF service) requires this.
                 if log_cfg["access"] == "stdout":
-                        log_cfg["access"] = "/dev/fd/%d" % sys.stdout.fileno()
+                        log_cfg["access"] = "/dev/fd/{0:d}".format(
+                            sys.stdout.fileno())
                 elif log_cfg["access"] == "stderr":
-                        log_cfg["access"] = "/dev/fd/%d" % sys.stderr.fileno()
+                        log_cfg["access"] = "/dev/fd/{0:d}".format(
+                            sys.stderr.fileno())
                 elif log_cfg["access"] == "none":
                         log_cfg["access"] = "/dev/null"
 
                 if log_cfg["errors"] == "stderr":
-                        log_cfg["errors"] = "/dev/fd/%d" % sys.stderr.fileno()
+                        log_cfg["errors"] = "/dev/fd/{0:d}".format(
+                            sys.stderr.fileno())
                 elif log_cfg["errors"] == "stdout":
-                        log_cfg["errors"] = "/dev/fd/%d" % sys.stdout.fileno()
+                        log_cfg["errors"] = "/dev/fd/{0:d}".format(
+                            sys.stdout.fileno())
                 elif log_cfg["errors"] == "none":
                         log_cfg["errors"] = "/dev/null"
 
@@ -781,13 +792,13 @@ if __name__ == "__main__":
                         if dest == "none":
                                 h = logging.StreamHandler(LogSink())
                         else:
-                                h = logging.StreamHandler(eval("sys.%s" % \
-                                    dest))
+                                h = logging.StreamHandler(eval("sys.{0}".format(
+                                    dest)))
 
                         h.setLevel(logging.DEBUG)
                         h.setFormatter(cherrypy._cplogging.logfmt)
-                        log_obj = eval("cherrypy.log.%s" % \
-                            log_type_map[log_type]["attr"])
+                        log_obj = eval("cherrypy.log.{0}".format(
+                            log_type_map[log_type]["attr"]))
                         log_obj.addHandler(h)
                         # Since we've replaced cherrypy's log handler with our
                         # own, we don't want the output directed to a file.
@@ -810,8 +821,8 @@ if __name__ == "__main__":
                 except sr.RepositoryExistsError:
                         # Already exists, nothing to do.
                         pass
-                except (api_errors.ApiException, sr.RepositoryError), _e:
-                        emsg("pkg.depotd: %s" % _e)
+                except (api_errors.ApiException, sr.RepositoryError) as _e:
+                        emsg("pkg.depotd: {0}".format(_e))
                         sys.exit(1)
 
         try:
@@ -823,14 +834,14 @@ if __name__ == "__main__":
                     read_only=readonly, root=inst_root,
                     sort_file_max_size=sort_file_max_size,
                     writable_root=writable_root)
-        except (RuntimeError, sr.RepositoryError), _e:
-                emsg("pkg.depotd: %s" % _e)
+        except (RuntimeError, sr.RepositoryError) as _e:
+                emsg("pkg.depotd: {0}".format(_e))
                 sys.exit(1)
-        except search_errors.IndexingException, _e:
-                emsg("pkg.depotd: %s" % str(_e), "INDEX")
+        except search_errors.IndexingException as _e:
+                emsg("pkg.depotd: {0}".format(str(_e)), "INDEX")
                 sys.exit(1)
-        except api_errors.ApiException, _e:
-                emsg("pkg.depotd: %s" % str(_e))
+        except api_errors.ApiException as _e:
+                emsg("pkg.depotd: {0}".format(str(_e)))
                 sys.exit(1)
 
         if not rebuild and not add_content and not repo.mirror and \
@@ -847,30 +858,30 @@ if __name__ == "__main__":
                         if repo.root and exit_ready:
                                 repo.refresh_index()
                 except (sr.RepositoryError, search_errors.IndexingException,
-                    api_errors.ApiException), e:
+                    api_errors.ApiException) as e:
                         emsg(str(e), "INDEX")
                         sys.exit(1)
         elif rebuild:
                 try:
                         repo.rebuild(build_index=True)
-                except sr.RepositoryError, e:
+                except sr.RepositoryError as e:
                         emsg(str(e), "REBUILD")
                         sys.exit(1)
                 except (search_errors.IndexingException,
                     api_errors.UnknownErrors,
-                    api_errors.PermissionsException), e:
+                    api_errors.PermissionsException) as e:
                         emsg(str(e), "INDEX")
                         sys.exit(1)
         elif add_content:
                 try:
                         repo.add_content()
                         repo.refresh_index()
-                except sr.RepositoryError, e:
+                except sr.RepositoryError as e:
                         emsg(str(e), "ADD_CONTENT")
                         sys.exit(1)
                 except (search_errors.IndexingException,
                     api_errors.UnknownErrors,
-                    api_errors.PermissionsException), e:
+                    api_errors.PermissionsException) as e:
                         emsg(str(e), "INDEX")
                         sys.exit(1)
 
@@ -939,7 +950,7 @@ if __name__ == "__main__":
         try:
                 root = cherrypy.Application(depot)
                 cherrypy.quickstart(root, config=conf)
-        except Exception, _e:
+        except Exception as _e:
                 emsg("pkg.depotd: unknown error starting depot server, " \
                     "illegal option value specified?")
                 emsg(_e)

@@ -1,4 +1,4 @@
-#!/usr/bin/python2.6
+#!/usr/bin/python2.7
 #
 # CDDL HEADER START
 #
@@ -21,13 +21,14 @@
 #
 
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 #
 # membench - benchmark memory usage of various objects
 #
+
+from __future__ import print_function
 
 import pkg.fmri as fmri
 import pkg.version as version
@@ -39,25 +40,25 @@ def dotseq(num):
         return version.DotSequence("5.111111")
 
 def dotseq_different(num):
-        return version.DotSequence("5.%d" % num)
+        return version.DotSequence("5.{0:d}".format(num))
 
 def vers(num):
         return version.Version("0.5.11-0.111:20090428T172804Z")
 
 def vers_different(num):
-        return version.Version("0.5.11,5.11-0.%d:%08dT172804Z" % (num, num))
+        return version.Version("0.5.11,5.11-0.{0:d}:{1:0=8d}T172804Z".format(num, num))
 
 def mfmri(num):
         return fmri.PkgFmri("pkg:/SUNWttf-google-droid@0.5.11,5.11-0.121:20090816T233516Z")
                 
 def mfmri_different(num):
-        return fmri.PkgFmri("pkg:/SUNWttf-google-%d@0.5.11,5.11-0.%d:%08dT233516Z" % (num, num, num)) 
+        return fmri.PkgFmri("pkg:/SUNWttf-google-{0:d}@0.5.11,5.11-0.{1:d}:{2:0=8d}T233516Z".format(num, num, num)) 
 
 collection = []
 funcs = [dotseq, dotseq_different, vers, vers_different, mfmri, mfmri_different]
 
 for func in funcs:
-        print "#", func.__name__
+        print("#", func.__name__)
         pid = os.fork()
         if pid == 0:
                 startusage = misc.__getvmusage()
@@ -67,11 +68,11 @@ for func in funcs:
                         for m in xrange(1, 10):
                                 for d in xrange(1, 2):
                                         n += 1
-                                        collection.append(func(int("%04d%02d%02d" % (y, m, d))))
+                                        collection.append(func(int("{0:0=4d}{1:0=2d}{2:0=2d}".format(y, m, d))))
                 endusage = misc.__getvmusage()
 
                 est = (endusage - startusage) / n
-                print func.__name__, "%d rounds, estimated memory per object: %d bytes" % (n, est)
+                print(func.__name__, "{0:d} rounds, estimated memory per object: {1:d} bytes".format(n, est))
                 sys.exit(0)
         else:
                 os.wait()
