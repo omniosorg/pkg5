@@ -118,7 +118,6 @@ depend type=group fmri=gnome/window-manager/metacity
 depend type=group fmri=gnome/zenity
 depend type=group fmri=image/dcraw
 depend type=group fmri=image/editor/gimp
-depend type=group fmri=image/editor/gimp/gimp-help
 depend type=group fmri=image/imagemagick
 depend type=group fmri=image/viewer/eog
 depend type=group fmri=library/accessibility/brltty
