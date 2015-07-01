@@ -32,11 +32,13 @@ object."""
 from cStringIO import StringIO
 import errno
 import os
+
 try:
         # Some versions of python don't have these constants.
         os.SEEK_SET
 except AttributeError:
         os.SEEK_SET, os.SEEK_CUR, os.SEEK_END = range(3)
+import six
 import stat
 import types
 
@@ -134,6 +136,8 @@ class NSG(type):
                 return pkg.actions.fromstr(state)
 
 
+# metaclass-assignment; pylint: disable=W1623
+@six.add_metaclass(NSG)
 class Action(object):
         """Class representing a generic packaging object.
 
@@ -177,6 +181,8 @@ class Action(object):
         # Most types of actions do not have a payload.
         has_payload = False
 
+        # Python 3 will ignore the __metaclass__ field, but it's still useful
+        # for class attribute access.
         __metaclass__ = NSG
 
         # __init__ is provided as a native function (see end of class
@@ -194,7 +200,7 @@ class Action(object):
                         self.data = None
                         return
 
-                if isinstance(data, basestring):
+                if isinstance(data, six.string_types):
                         if not os.path.exists(data):
                                 raise pkg.actions.ActionDataError(
                                     _("No such file: '{0}'.").format(data),
@@ -271,7 +277,7 @@ class Action(object):
                 computed.  This may need to be done externally.
                 """
 
-                sattrs = self.attrs.keys()
+                sattrs = list(self.attrs.keys())
                 out = self.name
                 try:
                         h = self.hash
@@ -415,12 +421,12 @@ class Action(object):
                 # same.
                 sattrs = self.attrs
                 oattrs = other.attrs
-                sset = set(sattrs.iterkeys())
-                oset = set(oattrs.iterkeys())
+                sset = set(six.iterkeys(sattrs))
+                oset = set(six.iterkeys(oattrs))
                 if sset.symmetric_difference(oset):
                         return True
 
-                for a, x in sattrs.iteritems():
+                for a, x in six.iteritems(sattrs):
                         y = oattrs[a]
                         if x != y:
                                 if len(x) == len(y) and \
@@ -468,7 +474,7 @@ class Action(object):
 
         def consolidate_attrs(self):
                 """Removes duplicate values from values which are lists."""
-                for k in self.attrs.iterkeys():
+                for k in self.attrs:
                         if isinstance(self.attrs[k], list):
                                 self.attrs[k] = list(set(self.attrs[k]))
 
@@ -1114,7 +1120,7 @@ class Action(object):
                 for attr in required_attrs:
                         val = self.attrs.get(attr)
                         if not val or \
-                            (isinstance(val, basestring) and not val.strip()):
+                            (isinstance(val, six.string_types) and not val.strip()):
                                 errors.append((attr,
                                     _("{0} is required").format(attr)))
 

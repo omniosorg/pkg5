@@ -30,14 +30,15 @@ import logging
 import os
 import os.path
 import shutil
+import six
 import stat
 import sys
 import tempfile
-import urllib
 import zlib
-
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
+
+from six.moves.urllib.parse import unquote
 
 import pkg.actions as actions
 import pkg.catalog as catalog
@@ -64,6 +65,8 @@ import pkg.server.transaction as trans
 import pkg.pkgsubprocess as subprocess
 import pkg.version
 
+from pkg.pkggzip import PkgGzipFile
+
 CURRENT_REPO_VERSION = 4
 
 REPO_QUARANTINE_DIR = "pkg5-quarantine"
@@ -87,7 +90,6 @@ verify_default_checks = frozenset([
       VERIFY_DEPENDENCY,
 ])
 
-from pkg.pkggzip import PkgGzipFile
 
 class RepositoryError(Exception):
         """Base exception class for all Repository exceptions."""
@@ -96,12 +98,6 @@ class RepositoryError(Exception):
                 Exception.__init__(self, *args)
                 if args:
                         self.data = args[0]
-
-        def __unicode__(self):
-                # To workaround python issues 6108 and 2517, this provides a
-                # a standard wrapper for this class' exceptions so that they
-                # have a chance of being stringified correctly.
-                return str(self)
 
         def __str__(self):
                 return str(self.data)
@@ -544,8 +540,8 @@ class _RepoStore(object):
                 directory and the name of the manifest file, and returns an FMRI
                 constructed from the information in those components."""
 
-                v = pkg.version.Version(urllib.unquote(ver), None)
-                f = fmri.PkgFmri(urllib.unquote(os.path.basename(pkgpath)))
+                v = pkg.version.Version(unquote(ver), None)
+                f = fmri.PkgFmri(unquote(os.path.basename(pkgpath)))
                 f.version = v
                 return f
 
@@ -1691,7 +1687,7 @@ class _RepoStore(object):
                                 for name in slist:
                                         # Stem must be decoded before use.
                                         try:
-                                                pname = urllib.unquote(name)
+                                                pname = unquote(name)
                                         except Exception:
                                                 # Assume error is result of
                                                 # unexpected file in directory;
@@ -1711,7 +1707,7 @@ class _RepoStore(object):
 
                                                 # Version must be decoded before
                                                 # use.
-                                                pver = urllib.unquote(ver)
+                                                pver = unquote(ver)
                                                 try:
                                                         pfmri = fmri.PkgFmri(
                                                             "@".join((pname,
@@ -2307,7 +2303,7 @@ class _RepoStore(object):
 
                         # Stem must be decoded before use.
                         try:
-                                pname = urllib.unquote(name)
+                                pname = unquote(name)
                         except Exception:
                                 # Assume error is result of an
                                 # unexpected file in the directory. We
@@ -2323,7 +2319,7 @@ class _RepoStore(object):
                                 path = os.path.join(pdir, ver)
                                 # Version must be decoded before
                                 # use.
-                                pver = urllib.unquote(ver)
+                                pver = unquote(ver)
                                 try:
                                         pfmri = fmri.PkgFmri("@".join((pname,
                                             pver)),
@@ -3063,7 +3059,7 @@ class Repository(object):
                         finally:
                                 # This ensures that the original exception and
                                 # traceback are used.
-                                raise exc_value, None, exc_tb
+                                six.reraise(exc_value, None, exc_tb)
 
         def remove_publisher(self, pfxs, repo_path, synch=False):
                 """Removes a repository storage area and configuration
@@ -3498,7 +3494,7 @@ class Repository(object):
                 """
 
                 def merge(src, dest):
-                        for k, v in src.iteritems():
+                        for k, v in six.iteritems(src):
                                 if k in dest:
                                         dest[k].extend(v)
                                 else:
@@ -4354,7 +4350,7 @@ def repository_create(repo_uri, properties=misc.EmptyDict, version=None):
         raised.  Other errors can raise exceptions of class ApiException.
         """
 
-        if isinstance(repo_uri, basestring):
+        if isinstance(repo_uri, six.string_types):
                 repo_uri = publisher.RepositoryURI(misc.parse_uri(repo_uri))
 
         path = repo_uri.get_pathname()
@@ -4392,7 +4388,7 @@ def repository_create(repo_uri, properties=misc.EmptyDict, version=None):
 
                 # ...and this file (which can be empty).
                 try:
-                        with file(os.path.join(path, "cfg_cache"), "wb") as cf:
+                        with open(os.path.join(path, "cfg_cache"), "wb") as cf:
                                 cf.write("\n")
                 except EnvironmentError as e:
                         if e.errno == errno.EACCES:

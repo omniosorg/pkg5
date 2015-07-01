@@ -26,12 +26,14 @@
 
 # basic facet support
 
-from pkg._varcet import _allow_facet
-from pkg.misc import EmptyI, ImmutableDict
 import pkg.misc as misc
 import fnmatch
 import re
+import six
 import types
+
+from pkg._varcet import _allow_facet
+from pkg.misc import EmptyI, ImmutableDict
 
 class Facets(dict):
         # store information on facets; subclass dict
@@ -109,10 +111,10 @@ class Facets(dict):
 
                 return [
                         [misc.force_text(k), v, True]
-                        for k, v in obj.__inherited.iteritems()
+                        for k, v in six.iteritems(obj.__inherited)
                 ] + [
                         [misc.force_text(k), v, False]
-                        for k, v in obj.__local.iteritems()
+                        for k, v in six.iteritems(obj.__local)
                 ]
 
         @staticmethod
@@ -432,9 +434,9 @@ class Facets(dict):
         def update(self, d):
                 if type(d) == Facets:
                         # preserve inherited facets.
-                        for k, v in d.__inherited.iteritems():
+                        for k, v in six.iteritems(d.__inherited):
                                 self._set_inherited(k, v)
-                        for k, v in d.__local.iteritems():
+                        for k, v in six.iteritems(d.__local):
                                 self[k] = v
                         return
 
@@ -471,7 +473,7 @@ class Facets(dict):
                 return rv
 
         def items(self):
-                return [a for a in self.iteritems()]
+                return [a for a in six.iteritems(self)]
 
         def iteritems(self): # return in sorted order for display
                 for k in self.__keylist:

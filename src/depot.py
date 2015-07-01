@@ -74,14 +74,15 @@ import string
 import subprocess
 import sys
 import tempfile
-import urlparse
 import portend
 
 from imp import reload
+from six.moves.urllib.parse import urlparse, urlunparse
 
 try:
         import cherrypy
         version = cherrypy.__version__.split('.')
+        # comparison requires same type, therefore list conversion is needed
         if list(map(int, version)) < [3, 1, 0]:
                 raise ImportError
 except ImportError:
@@ -398,7 +399,7 @@ if __name__ == "__main__":
                                 # remove any scheme information since we
                                 # don't need it.
                                 scheme, netloc, path, params, query, \
-                                    fragment = urlparse.urlparse(arg,
+                                    fragment = urlparse(arg,
                                     "http", allow_fragments=0)
 
                                 if not netloc:
@@ -415,7 +416,7 @@ if __name__ == "__main__":
 
                                 # Rebuild the url with the sanitized components.
                                 ivalues["pkg"]["proxy_base"] = \
-                                    urlparse.urlunparse((scheme, netloc, path,
+                                    urlunparse((scheme, netloc, path,
                                     params, query, fragment))
                         elif opt == "--readonly":
                                 ivalues["pkg"]["readonly"] = True
@@ -705,7 +706,7 @@ if __name__ == "__main__":
                 # exec-based authentication, so it will have to be decoded first
                 # to an un-named temporary file.
                 try:
-                        with file(ssl_key_file, "rb") as key_file:
+                        with open(ssl_key_file, "rb") as key_file:
                                 pkey = crypto.load_privatekey(
                                     crypto.FILETYPE_PEM, key_file.read(),
                                     get_ssl_passphrase)

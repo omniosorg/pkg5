@@ -49,6 +49,7 @@ import logging
 import os
 import shlex
 import shutil
+import six
 import sys
 import tempfile
 import textwrap
@@ -1123,7 +1124,7 @@ def subcmd_contents(conf, args):
         # Determine if the query returned any results by "peeking" at the first
         # value returned from the generator expression.
         try:
-                got = gen_expr.next()
+                got = next(gen_expr)
         except StopIteration:
                 got = None
                 actionlist = []
@@ -1404,7 +1405,7 @@ def subcmd_set(conf, args):
 def _set_pub(conf, subcommand, props, pubs, repo):
         """Set publisher properties."""
 
-        for sname, sprops in props.iteritems():
+        for sname, sprops in six.iteritems(props):
                 if sname not in ("publisher", "repository"):
                         usage(_("unknown property section "
                             "'{0}'").format(sname), cmd=subcommand)
@@ -1444,7 +1445,7 @@ def _set_pub(conf, subcommand, props, pubs, repo):
 
                 try:
                         # Set/update the publisher's properties.
-                        for sname, sprops in props.iteritems():
+                        for sname, sprops in six.iteritems(props):
                                 if sname == "publisher":
                                         target = pub
                                 elif sname == "repository":
@@ -1453,7 +1454,7 @@ def _set_pub(conf, subcommand, props, pubs, repo):
                                                 target = publisher.Repository()
                                                 pub.repository = target
 
-                                for pname, val in sprops.iteritems():
+                                for pname, val in six.iteritems(sprops):
                                         attrname = pname.replace("-", "_")
                                         pval = getattr(target, attrname)
                                         if isinstance(pval, list) and \
@@ -1490,8 +1491,8 @@ def _set_repo(conf, subcommand, props, repo):
         """Set repository properties."""
 
         # Set properties.
-        for sname, props in props.iteritems():
-                for pname, val in props.iteritems():
+        for sname, props in six.iteritems(props):
+                for pname, val in six.iteritems(props):
                         repo.cfg.set_property(sname, pname, val)
         repo.write_config()
 

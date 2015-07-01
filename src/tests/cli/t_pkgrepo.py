@@ -44,8 +44,6 @@ import pkg.p5p
 import shutil
 import tempfile
 import time
-import urllib
-import urlparse
 import unittest
 
 try:

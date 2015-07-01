@@ -57,6 +57,7 @@ try:
         import logging
         import os
         import re
+        import six
         import socket
         import sys
         import tempfile
@@ -152,7 +153,7 @@ def format_update_error(e):
 def error(text, cmd=None):
         """Emit an error message prefixed by the command name """
 
-        if not isinstance(text, basestring):
+        if not isinstance(text, six.string_types):
                 # Assume it's an object that can be stringified.
                 text = str(text)
 
@@ -985,7 +986,7 @@ def __write_tmp_release_notes(plan):
                         os.chmod(path, 0o644)
                         tmpfile = os.fdopen(fd, "w+b")
                         for a in plan.get_release_notes():
-                                if isinstance(a, unicode):
+                                if isinstance(a, six.text_type):
                                         a = a.encode("utf-8")
                                 print(a, file=tmpfile)
                         tmpfile.close()
@@ -1450,7 +1451,7 @@ def __api_execute_plan(operation, api_inst):
                                 raise
 
                 if exc_value or exc_tb:
-                        raise exc_value, None, exc_tb
+                        six.reraise(exc_value, None, exc_tb)
 
         return rval
 
@@ -2443,7 +2444,7 @@ def list_mediators(op, api_inst, pargs, omit_headers, output_format,
                 # Configured mediator information
                 gen_mediators = (
                     (mediator, mediation)
-                    for mediator, mediation in api_inst.mediators.iteritems()
+                    for mediator, mediation in six.iteritems(api_inst.mediators)
                 )
 
         # Set minimum widths for mediator and version columns by using the
@@ -3541,7 +3542,7 @@ def list_contents(api_inst, args):
         # Determine if the query returned any results by "peeking" at the first
         # value returned from the generator expression.
         try:
-                found = gen_expr.next()
+                found = next(gen_expr)
         except StopIteration:
                 found = None
                 actionlist = []
@@ -3955,7 +3956,7 @@ def publisher_list(op, api_inst, pargs, omit_headers, preferred_only,
                         if "Properties" not in pub:
                                 continue
                         pub_items = sorted(
-                            pub["Properties"].iteritems())
+                            six.iteritems(pub["Properties"]))
                         property_padding = "                      "
                         properties_displayed = False
                         for k, v in pub_items:
@@ -3964,7 +3965,7 @@ def publisher_list(op, api_inst, pargs, omit_headers, preferred_only,
                                 if not properties_displayed:
                                         msg(_("           Properties:"))
                                         properties_displayed = True
-                                if not isinstance(v, basestring):
+                                if not isinstance(v, six.string_types):
                                         v = ", ".join(sorted(v))
                                 msg(property_padding, k + " =", str(v))
         return retcode
@@ -5050,9 +5051,9 @@ def history_list(api_inst, args):
                 if long_format:
                         data = __get_long_history_data(he, output)
                         for field, value in data:
-                                if isinstance(field, unicode):
+                                if isinstance(field, six.text_type):
                                         field = field.encode(enc)
-                                if isinstance(value, unicode):
+                                if isinstance(value, six.text_type):
                                         value = value.encode(enc)
                                 msg("{0:>18}: {1}".format(field, value))
 
@@ -5062,7 +5063,7 @@ def history_list(api_inst, args):
                         items = []
                         for col in columns:
                                 item = output[col]
-                                if isinstance(item, unicode):
+                                if isinstance(item, six.text_type):
                                         item = item.encode(enc)
                                 items.append(item)
                         msg(history_fmt.format(*items))

@@ -41,8 +41,9 @@ import pkg.p5i as p5i
 import shutil
 import sys
 import tempfile
-import urllib
-import urlparse
+
+from six.moves.urllib.parse import urlparse, urlunparse
+from six.moves.urllib.request import pathname2url
 
 class TestP5I(pkg5unittest.Pkg5TestCase):
         """Class to test the functionality of the pkg.p5i module."""
@@ -171,8 +172,8 @@ class TestP5I(pkg5unittest.Pkg5TestCase):
                 # Verify that parse returns the expected object and information
                 # when provided a file URI.
                 location = os.path.abspath(path1)
-                location = urlparse.urlunparse(("file", "",
-                    urllib.pathname2url(location), "", "", ""))
+                location = urlunparse(("file", "",
+                    pathname2url(location), "", "", ""))
                 validate_results(p5i.parse(location=location))
                 fobj.close()
                 fobj = None
@@ -190,8 +191,8 @@ class TestP5I(pkg5unittest.Pkg5TestCase):
                 # p5i information.
                 lcpath = os.path.join(self.test_root, "libc.so.1")
                 location = os.path.abspath(lcpath)
-                location = urlparse.urlunparse(("file", "",
-                    urllib.pathname2url(location), "", "", ""))
+                location = urlunparse(("file", "",
+                    pathname2url(location), "", "", ""))
 
                 # First, test as a file:// URI.
                 self.assertRaises(api_errors.InvalidP5IFile, p5i.parse,

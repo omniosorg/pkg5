@@ -44,19 +44,18 @@ import hashlib
 import os
 import pycurl
 import shutil
+import six
 import tempfile
 import time
-import urllib
-import urlparse
 import uuid
 
-from pkg.client import global_settings
-from pkg.client.debugvalues import DebugValues
-logger = global_settings.logger
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import padding
+from six.moves.urllib.parse import quote, urlsplit, urlparse, urlunparse, \
+    ParseResult
+from six.moves.urllib.request import url2pathname
 
 import pkg.catalog
 import pkg.client.api_errors as api_errors
@@ -67,6 +66,9 @@ import pkg.misc as misc
 import pkg.portable as portable
 import pkg.server.catalog as old_catalog
 
+from pkg.client import global_settings
+from pkg.client.debugvalues import DebugValues
+logger = global_settings.logger
 from pkg.misc import EmptyDict, EmptyI, SIGNATURE_POLICY, DictProperty, \
     PKG_RO_FILE_MODE
 
@@ -276,7 +278,7 @@ class RepositoryURI(object):
                         raise api_errors.UnsupportedRepositoryURIAttribute(
                             "ssl_cert", scheme=self.scheme)
                 if filename:
-                        if not isinstance(filename, basestring):
+                        if not isinstance(filename, six.string_types):
                                 raise api_errors.BadRepositoryAttributeValue(
                                     "ssl_cert", value=filename)
                         filename = os.path.normpath(filename)
@@ -289,7 +291,7 @@ class RepositoryURI(object):
                         raise api_errors.UnsupportedRepositoryURIAttribute(
                             "ssl_key", scheme=self.scheme)
                 if filename:
-                        if not isinstance(filename, basestring):
+                        if not isinstance(filename, six.string_types):
                                 raise api_errors.BadRepositoryAttributeValue(
                                     "ssl_key", value=filename)
                         filename = os.path.normpath(filename)
@@ -322,7 +324,7 @@ class RepositoryURI(object):
 
                 # Decompose URI to verify attributes.
                 scheme, netloc, path, params, query = \
-                    urlparse.urlsplit(uri, allow_fragments=0)
+                    urlsplit(uri, allow_fragments=0)
 
                 self.__scheme = scheme.lower()
                 self.__netloc = netloc
@@ -372,17 +374,17 @@ class RepositoryURI(object):
 
                 assert self.__uri
                 scheme, netloc, path, params, query, fragment = \
-                    urlparse.urlparse(self.__uri, allow_fragments=False)
+                    urlparse(self.__uri, allow_fragments=False)
                 if new_scheme == scheme:
                         return
-                self.uri = urlparse.urlunparse(
+                self.uri = urlunparse(
                     (new_scheme, netloc, path, params, query, fragment))
 
         def get_host(self):
                 """Get the host and port of this URI if it's a http uri."""
 
                 scheme, netloc, path, params, query, fragment = \
-                    urlparse.urlparse(self.__uri, allow_fragments=0)
+                    urlparse(self.__uri, allow_fragments=0)
                 if scheme != "file":
                         return netloc
                 return ""
@@ -392,9 +394,9 @@ class RepositoryURI(object):
                 URI or '' otherwise."""
 
                 scheme, netloc, path, params, query, fragment = \
-                    urlparse.urlparse(self.__uri, allow_fragments=0)
+                    urlparse(self.__uri, allow_fragments=0)
                 if scheme == "file":
-                        return urllib.url2pathname(path)
+                        return url2pathname(path)
                 return ""
 
         ssl_cert = property(lambda self: self.__ssl_cert, __set_ssl_cert, None,
@@ -423,7 +425,7 @@ class RepositoryURI(object):
                 """The URI scheme."""
                 if not self.__uri:
                         return ""
-                return urlparse.urlsplit(self.__uri, allow_fragments=0)[0]
+                return urlsplit(self.__uri, allow_fragments=0)[0]
 
         trailing_slash = property(lambda self: self.__trailing_slash,
             __set_trailing_slash, None,
@@ -513,7 +515,7 @@ class TransportRepoURI(RepositoryURI):
                 if isinstance(other, TransportRepoURI):
                         return self.uri == other.uri and \
                             self.proxy == other.proxy
-                if isinstance(other, basestring):
+                if isinstance(other, six.string_types):
                         return self.uri == other and self.proxy == None
                 return False
 
@@ -521,14 +523,14 @@ class TransportRepoURI(RepositoryURI):
                 if isinstance(other, TransportRepoURI):
                         return self.uri != other.uri or \
                             self.proxy != other.proxy
-                if isinstance(other, basestring):
+                if isinstance(other, six.string_types):
                         return self.uri != other or self.proxy != None
                 return True
 
         def __cmp__(self, other):
                 if not other:
                         return 1
-                if isinstance(other, basestring):
+                if isinstance(other, six.string_types):
                         other = TransportRepoURI(other)
                 elif not isinstance(other, TransportRepoURI):
                         return 1
@@ -1766,7 +1768,7 @@ pkg unset-publisher {0}
                                     pubs=[self.prefix]):
                                         pub, stem, ver = t
 
-                                        entry = dict(sentry.iteritems())
+                                        entry = dict(six.iteritems(sentry))
                                         try:
                                                 npart.add(metadata=entry,
                                                     op_time=op_time, pub=pub,
@@ -2676,9 +2678,9 @@ pkg unset-publisher {0}
                         raise api_errors.InvalidResourceLocation(uri.strip())
                 crl_host = DebugValues.get_value("crl_host")
                 if crl_host:
-                        orig = urlparse.urlparse(uri)
-                        crl = urlparse.urlparse(crl_host)
-                        uri = urlparse.urlunparse(urlparse.ParseResult(
+                        orig = urlparse(uri)
+                        crl = urlparse(crl_host)
+                        uri = urlunparse(ParseResult(
                             scheme=crl.scheme, netloc=crl.netloc,
                             path=orig.path,
                             params=orig.params, query=orig.params,
@@ -2687,7 +2689,7 @@ pkg unset-publisher {0}
                 # object.
                 if uri in self.__tmp_crls:
                         return self.__tmp_crls[uri]
-                fn = urllib.quote(uri, "")
+                fn = quote(uri, "")
                 assert os.path.isdir(self.__crl_root)
                 fpath = os.path.join(self.__crl_root, fn)
                 crl = None
@@ -2996,7 +2998,7 @@ pkg unset-publisher {0}
                 certs_with_problems = []
 
                 ca_dict = copy.copy(ca_dict)
-                for k, v in self.get_ca_certs().iteritems():
+                for k, v in six.iteritems(self.get_ca_certs()):
                         if k in ca_dict:
                                 ca_dict[k].extend(v)
                         else:
@@ -3195,7 +3197,7 @@ pkg unset-publisher {0}
 
                 if name == SIGNATURE_POLICY:
                         self.__sig_policy = None
-                        if isinstance(values, basestring):
+                        if isinstance(values, six.string_types):
                                 values = [values]
                         policy_name = values[0]
                         if policy_name not in sigpolicy.Policy.policies():
@@ -3229,7 +3231,7 @@ pkg unset-publisher {0}
                         self.__properties[SIGNATURE_POLICY] = policy_name
                         return
                 if name == "signature-required-names":
-                        if isinstance(values, basestring):
+                        if isinstance(values, six.string_types):
                                 values = self.__read_list(values)
                 self.__properties[name] = values
 
@@ -3246,15 +3248,15 @@ pkg unset-publisher {0}
 
         def __prop_iteritems(self):
                 """Support iteritems on properties"""
-                return self.__properties.iteritems()
+                return six.iteritems(self.__properties)
 
         def __prop_keys(self):
                 """Support keys() on properties"""
-                return self.__properties.keys()
+                return list(self.__properties.keys())
 
         def __prop_values(self):
                 """Support values() on properties"""
-                return self.__properties.values()
+                return list(self.__properties.values())
 
         def __prop_getdefault(self, name, value):
                 """Support getdefault() on properties"""
@@ -3272,7 +3274,7 @@ pkg unset-publisher {0}
         def __prop_update(self, d):
                 """Support update() on properties"""
 
-                for k, v in d.iteritems():
+                for k, v in six.iteritems(d):
                         # Must iterate through each value and
                         # set it this way so that the logic
                         # in __set_prop is used.

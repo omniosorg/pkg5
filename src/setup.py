@@ -28,6 +28,7 @@ import errno
 import fnmatch
 import os
 import platform
+import six
 import stat
 import sys
 import shutil
@@ -35,11 +36,9 @@ import re
 import subprocess
 import tarfile
 import tempfile
-import urllib
 import py_compile
 import hashlib
 import time
-import StringIO
 
 from distutils.errors import DistutilsError, DistutilsFileError
 from distutils.core import setup
@@ -687,10 +686,12 @@ class install_func(_install):
                                 else:
                                         file_util.copy_file(src, dest, update=1)
 
-                # Don't install the scripts for python 2.6.
-                if py_version == '2.6':
-                        return
-                for d, files in scripts[osname].iteritems():
+                # XXX Uncomment it when we need to deliver python 3.4 version
+                # of modules.
+                # Don't install the scripts for python 3.4.
+                # if py_version == '3.4':
+                #        return
+                for d, files in six.iteritems(scripts[osname]):
                         for (srcname, dstname) in files:
                                 dst_dir = util.change_root(self.root_dir, d)
                                 dst_path = util.change_root(self.root_dir,
@@ -743,7 +744,7 @@ class install_data_func(_install_data):
                                 self.outfiles.append(dir)
                         else:
                                 for file in files:
-                                        if isinstance(file, basestring):
+                                        if isinstance(file, six.string_types):
                                                 infile = file
                                                 outfile = os.path.join(dir,
                                                     os.path.basename(file))
@@ -988,7 +989,7 @@ class installfile(Command):
         def finalize_options(self):
                 if self.mode is None:
                         self.mode = 0o644
-                elif isinstance(self.mode, basestring):
+                elif isinstance(self.mode, six.string_types):
                         try:
                                 self.mode = int(self.mode, 8)
                         except ValueError:
@@ -1029,7 +1030,7 @@ def syntax_check(filename):
         except py_compile.PyCompileError as e:
                 res = ""
                 for err in e.exc_value:
-                        if isinstance(err, basestring):
+                        if isinstance(err, six.string_types):
                                 res += err + "\n"
                                 continue
 
@@ -1176,7 +1177,7 @@ class build_py_func(_build_py):
                         # tree.
                         try:
                                 ocontent = \
-                                    file(self.get_module_outfile(self.build_lib,
+                                    open(self.get_module_outfile(self.build_lib,
                                         [package], module)).read()
                                 ov = re.search(versionre, ocontent).group(1)
                         except IOError:
@@ -1188,7 +1189,7 @@ class build_py_func(_build_py):
                         if v == ov:
                                 return
 
-                        mcontent = file(module_file).read()
+                        mcontent = open(module_file).read()
                         mcontent = re.sub(versionre, vstr, mcontent)
                         tmpfd, tmp_file = tempfile.mkstemp()
                         os.write(tmpfd, mcontent)
