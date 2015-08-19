@@ -30,6 +30,7 @@ import operator
 import os
 import six
 import xml.parsers.expat as expat
+from functools import total_ordering
 from six.moves.urllib.parse import urlsplit
 
 # pkg classes
@@ -1253,6 +1254,7 @@ class SlowSearchUsed(SearchException):
                     "Run 'pkg rebuild-index' to improve search speed.")
 
 
+@total_ordering
 class UnsupportedSearchError(SearchException):
         """Returned when a search protocol is not supported by the
         remote server."""
@@ -1271,13 +1273,23 @@ class UnsupportedSearchError(SearchException):
                         s += "\nRequested operation: {0}".format(self.proto)
                 return s
 
-        def __cmp__(self, other):
+        def __eq__(self, other):
                 if not isinstance(other, UnsupportedSearchError):
-                        return -1
-                r = cmp(self.url, other.url)
-                if r != 0:
-                        return r
-                return cmp(self.proto, other.proto)
+                        return False
+                return self.url == other.url and \
+                    self.proto == other.proto
+
+        def __le__(self, other):
+                if not isinstance(other, UnsupportedSearchError):
+                        return True
+                if self.url < other.url:
+                        return True
+                if self.url != other.url:
+                        return False
+                return self.proto < other.proto
+
+        def __hash__(self):
+                return hash((self.url, self.proto))
 
 
 # IndexingExceptions.

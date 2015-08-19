@@ -1629,8 +1629,8 @@ class _RepoStore(object):
                         c.batch_mode = True
                         save_catalog = False
                         for pfmri in packages:
-				progtrack.job_add_progress(
-				    progtrack.JOB_REPO_UPDATE_CAT)
+                                progtrack.job_add_progress(
+                                    progtrack.JOB_REPO_UPDATE_CAT)
                                 try:
                                         c.remove_package(pfmri)
                                 except apx.UnknownCatalogEntry:
@@ -1640,7 +1640,7 @@ class _RepoStore(object):
                                 save_catalog = True
 
                         progtrack.job_add_progress(
-			    progtrack.JOB_REPO_UPDATE_CAT)
+                            progtrack.JOB_REPO_UPDATE_CAT)
                         c.batch_mode = False
                         if save_catalog:
                                 # Only need to re-write catalog if at least one
@@ -1657,11 +1657,11 @@ class _RepoStore(object):
                         # the repository.
                         pfiles = set()
                         progtrack.job_start(progtrack.JOB_REPO_ANALYZE_RM,
-			    goal=len(packages))
+                            goal=len(packages))
                         for pfmri in packages:
                                 pfiles.update(get_hashes(pfmri))
                                 progtrack.job_add_progress(
-				    progtrack.JOB_REPO_ANALYZE_RM)
+                                    progtrack.JOB_REPO_ANALYZE_RM)
                         progtrack.job_done(progtrack.JOB_REPO_ANALYZE_RM)
 
                         # Now for the slow part; iterate over every manifest in
@@ -1682,8 +1682,8 @@ class _RepoStore(object):
                                 )
 
                                 progtrack.job_start(
-				    progtrack.JOB_REPO_ANALYZE_REPO,
-				    goal=remaining)
+                                    progtrack.JOB_REPO_ANALYZE_REPO,
+                                    goal=remaining)
                                 for name in slist:
                                         # Stem must be decoded before use.
                                         try:
@@ -1730,21 +1730,21 @@ class _RepoStore(object):
                                                 # Any files in use by another
                                                 # package can't be removed.
                                                 pfiles -= get_hashes(pfmri)
-						progtrack.job_add_progress(progtrack.JOB_REPO_ANALYZE_REPO)
+                                                progtrack.job_add_progress(progtrack.JOB_REPO_ANALYZE_REPO)
                                 progtrack.job_done(
-				    progtrack.JOB_REPO_ANALYZE_REPO)
+                                    progtrack.JOB_REPO_ANALYZE_REPO)
 
                         # Next, remove the manifests of the packages to be
                         # removed.  (This is done before removing the files
                         # so that clients won't have a chance to retrieve a
                         # manifest which has missing files.)
                         progtrack.job_start(progtrack.JOB_REPO_RM_MFST,
-			    goal=len(packages))
+                            goal=len(packages))
                         for pfmri in packages:
                                 mpath = self.manifest(pfmri)
                                 portable.remove(mpath)
                                 progtrack.job_add_progress(
-				    progtrack.JOB_REPO_RM_MFST)
+                                    progtrack.JOB_REPO_RM_MFST)
                         progtrack.job_done(progtrack.JOB_REPO_RM_MFST)
 
                         # Next, remove any package files that are not
@@ -1758,7 +1758,7 @@ class _RepoStore(object):
                                 if fpath is not None:
                                         portable.remove(fpath)
                                         progtrack.job_add_progress(
-					    progtrack.JOB_REPO_RM_FILES)
+                                            progtrack.JOB_REPO_RM_FILES)
                         progtrack.job_done(progtrack.JOB_REPO_RM_FILES)
 
                         # Finally, tidy up repository structure by discarding
