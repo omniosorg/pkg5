@@ -106,6 +106,14 @@ py_version = '.'.join(platform.python_version_tuple()[:2])
 assert py_version in ('2.6', '2.7')
 py_install_dir = 'usr/lib/python' + py_version + '/vendor-packages'
 
+py64_executable = None
+#Python 3 is always 64 bit and located in /usr/bin.
+if float(py_version) < 3 and osname == 'sunos':
+        if arch == 'sparc':
+                py64_executable = '/usr/bin/sparcv9/python' + py_version
+        elif arch == 'i386':
+                py64_executable = '/usr/bin/amd64/python' + py_version
+
 scripts_dir = 'usr/bin'
 lib_dir = 'usr/lib'
 svc_method_dir = 'lib/svc/method'
@@ -697,7 +705,8 @@ class install_func(_install):
                                 dst_path = util.change_root(self.root_dir,
                                        os.path.join(d, dstname))
                                 dir_util.mkpath(dst_dir, verbose=True)
-                                file_util.copy_file(srcname, dst_path, update=True)
+                                file_util.copy_file(srcname, dst_path,
+                                    update=True)
                                 # make scripts executable
                                 os.chmod(dst_path,
                                     os.stat(dst_path).st_mode
@@ -787,6 +796,44 @@ def run_cmd(args, swdir, updenv=None, ignerr=False, savestderr=None):
                         sys.exit(1)
                 if stderr:
                         stderr.close()
+
+def _copy_file_contents(src, dst, buffer_size=16*1024):
+        """A clone of distutils.file_util._copy_file_contents() that modifies
+        python files as they are installed."""
+
+        # Look for shebang line to replace with arch-specific Python executable.
+        shebang_re = re.compile('^#!.*python[0-9]\.[0-9]')
+        first_buf = True
+
+        with open(src, "rb") as sfp:
+                try:
+                        os.unlink(dst)
+                except EnvironmentError as e:
+                        if e.errno != errno.ENOENT:
+                                raise DistutilsFileError("could not delete "
+                                    "'{0}': {1}".format(dst, e))
+
+                with open(dst, "wb") as dfp:
+                        while True:
+                                buf = sfp.read(buffer_size)
+                                if not buf:
+                                        break
+                                if src.endswith(".py"):
+                                        if not first_buf or not py64_executable:
+                                                dfp.write(buf)
+                                                continue
+
+                                        fl = buf[:buf.find(os.linesep) + 1]
+                                        sb_match = shebang_re.search(fl)
+                                        if sb_match:
+                                                buf = shebang_re.sub(
+                                                    "#!" + py64_executable,
+                                                    buf)
+                                dfp.write(buf)
+                                first_buf = False
+
+# Make file_util use our version of _copy_file_contents
+file_util._copy_file_contents = _copy_file_contents
 
 def intltool_update_maintain():
         """Check if scope of localization looks up-to-date or possibly not,
@@ -979,7 +1026,7 @@ class installfile(Command):
             ("mode=", "m", "file mode"),
         ]
 
-        description = "De-CDDLing file copy"
+        description = "Modifying file copy"
 
         def initialize_options(self):
                 self.file = None
