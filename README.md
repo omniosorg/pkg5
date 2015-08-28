@@ -14,7 +14,7 @@ Additional branches include:
 
 2.) r151XXX
 
-	As we issues releases, we will branch for each release.
+	As we issue releases, we will branch for each release.
 
 If you wish to discuss development here, join the discussion at
 omnios-discuss at lists dot omniti dot com.
