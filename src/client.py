@@ -3175,7 +3175,7 @@ def info(op, api_inst, pargs, display_license, info_local, info_remote,
                                 msg("")
 
                         if display_license and not quiet:
-                                for lic in pis:
+                                for lic in pis[1]:
                                         msg(lic)
                                 continue
 
@@ -3951,7 +3951,7 @@ def publisher_list(op, api_inst, pargs, omit_headers, preferred_only,
                             pub["Catalog Updated"])
                         display_signing_certs(pub)
                         msg(_("              Enabled:"),
-                            _(pub["Enabled"]))
+                            _(pub["enabled"]))
 
                         if "Properties" not in pub:
                                 continue

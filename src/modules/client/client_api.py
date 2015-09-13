@@ -1018,9 +1018,9 @@ def __api_prepare_plan(operation, api_inst):
                 return __prepare_json(EXIT_OOPS, errors=errors_json)
         except KeyboardInterrupt:
                 raise
-        except:
+        except Exception as e:
                 _error_json(_("\nAn unexpected error happened while preparing "
-                    "for {0}:").format(operation))
+                    "for {op}: {err}").format(op=operation, err=str(e)))
                 return __prepare_json(EXIT_OOPS, errors=errors_json)
         return __prepare_json(EXIT_OK)
 
@@ -1482,9 +1482,9 @@ def __api_op(_op, _api_inst, _accept=False, _li_ignore=None, _noexecute=False,
         if _review_release_notes and ret["status"] == EXIT_OK and \
             _stage == API_STAGE_DEFAULT and _api_inst.solaris_image():
                 data["release_notes_url"] = misc.get_release_notes_url()
-                ret = __prepare_json(EXIT_OK, data=data, op=_op)
+                ret = __prepare_json(EXIT_OK, data=data)
         elif ret["status"] == EXIT_OK and data:
-                ret = __prepare_json(EXIT_OK, data=data, op=_op)
+                ret = __prepare_json(EXIT_OK, data=data)
 
         return ret
 
@@ -2259,18 +2259,23 @@ def _publisher_list(op, api_inst, pargs, omit_headers, preferred_only,
                         pub_data["Catalog Updated"] = dt
                         collect_signing_certs(pub, pub_data)
                         if pub.disabled:
-                                pub_data["Enabled"] = "No"
+                                pub_data["enabled"] = "No"
                         else:
-                                pub_data["Enabled"] = "Yes"
+                                pub_data["enabled"] = "Yes"
+                        if pub.sticky:
+                                pub_data["sticky"] = "Yes"
+                        else:
+                                pub_data["sticky"] = "No"
+                        if pub.sys_pub:
+                                pub_data["sys_pub"] = "Yes"
+                        else:
+                                pub_data["sys_pub"] = "No"
                         if pub.properties:
                                 pub_data["Properties"] = {}
                                 for k, v in six.iteritems(pub.properties):
                                         pub_data["Properties"][k] = v
-                        if "publisher_details" not in data:
-                                data["publisher_details"] = [pub_data]
-                        else:
-                                data["publisher_details"].append(pub_data)
-
+                        data.setdefault("publisher_details", []).append(
+                            pub_data)
         return __prepare_json(retcode, data=data, errors=errors_json, op=op)
 
 def _info(op, api_inst, pargs, display_license, info_local, info_remote,
@@ -2334,10 +2339,8 @@ def _info(op, api_inst, pargs, display_license, info_local, info_remote,
                                 lics = []
                                 for lic in pi.licenses:
                                         lics.append(str(lic))
-                                if "licenses" not in data:
-                                        data["licenses"] = [lics]
-                                else:
-                                        data["licenses"].append(lics)
+                                data.setdefault("licenses", []).append(
+                                    [pi.pkg_stem, lics])
                         continue
 
                 if quiet:
@@ -2490,7 +2493,7 @@ examining the catalogs:\n""")
                         _error_json(err_txt, errors_json=errors_json,
                             errorType="info_no_licenses")
 
-        return __prepare_json(err, errors=errors_json, data=data, op=op)
+        return __prepare_json(err, errors=errors_json, data=data)
 
 def __refresh(api_inst, pubs, full_refresh=False):
         """Private helper method for refreshing publisher data."""
@@ -2796,6 +2799,9 @@ def __pkg(subcommand, pargs_json, opts_json, pkg_image=None,
         try:
                 if pargs_json == None:
                         pargs = []
+                # Pargs_json is already a list, use it.
+                elif isinstance(pargs_json, list):
+                        pargs = pargs_json
                 else:
                         pargs = json.loads(pargs_json)
                 if not isinstance(pargs, list):
@@ -2821,6 +2827,9 @@ def __pkg(subcommand, pargs_json, opts_json, pkg_image=None,
         try:
                 if opts_json == None:
                         opts = {}
+                # If opts_json is already a dict, use it.
+                elif isinstance(opts_json, dict):
+                        opts = opts_json
                 else:
                         opts = json.loads(opts_json, object_hook=_byteify)
                 if not isinstance(opts, dict):
@@ -2941,7 +2950,6 @@ def __pkg(subcommand, pargs_json, opts_json, pkg_image=None,
                     options=cli_opts, msg=e.msg)
                 err = {"reason": str(new_e)}
                 return api_inst, __prepare_json(EXIT_BADOPT, errors=err)
-
         return api_inst, func(op=subcommand, api_inst=api_inst,
             pargs=pargs, **opts)
 
@@ -3157,7 +3165,6 @@ def _pkg_invoke(subcommand=None, pargs_json=None, opts_json=None, pkg_image=None
             opts_json=opts_json, pkg_image=pkg_image,
             prog_delay=prog_delay, prog_tracker=prog_tracker,
             opts_mapping=opts_mapping, api_inst=api_inst, reset_api=reset_api)
-
         if return_api:
                 return _api_inst, ret_json
         else:
