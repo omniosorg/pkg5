@@ -2793,8 +2793,6 @@ Requires a reboot for all package operations by performing them in a new boot en
 This policy is the safest, but is more strict than most sites need since no packages can be added without a reboot.
 .RE
 
-.RE
-
 .sp
 .ne 2
 .mk
@@ -2819,6 +2817,8 @@ This policy is potentially risky only if newly installed software causes system 
 For package operations that require a reboot, a new boot environment is created and set as active on the next boot. A backup boot environment is not created unless explicitly requested.
 .sp
 This policy carries the greatest risk since if a packaging change to the live boot environment makes further changes impossible, there might be no recent boot environment to which one can fallback.
+.RE
+
 .RE
 
 .sp
