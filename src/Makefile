@@ -43,6 +43,7 @@ clobber := TARGET = clobber
 lint := TARGET = lint
 clint := TARGET = clint
 pylint := TARGET = pylint
+pep8 := TARGET = pep8
 test := TARGET = test
 test-verbose := TARGET = test-verbose
 test-generate := TARGET = test-generate
@@ -55,6 +56,8 @@ test-generate := TARGET = test-generate
 PYLINT_VER_CMD = PYTHONPATH= /usr/bin/pkg info $(PYLINT_FMRI) | \
 		 /usr/bin/grep Version | /usr/bin/awk -F: '{print $$2}' | \
 		 /usr/bin/sed -e 's/ //g'
+
+PEP8 = /usr/bin/pep8
 
 SUBDIRS=brand zoneproxy tsol util/mkcert
 
@@ -90,6 +93,9 @@ pylint: install
 	PYLINT_VER=$(PYLINT_VER_CMD:sh) $(PYTHON27) setup.py pylint
 	PYLINT_VER=$(PYLINT_VER_CMD:sh) $(PYTHON27) setup.py pylint_py3k
 
+pep8:
+	$(PEP8) --statistics --count `cat tests/pep8-whitelist.txt`
+
 #
 # This rule propagates the current make target through all of the
 # subdirectories in $SUBDIRS.
@@ -98,7 +104,7 @@ $(SUBDIRS): FRC
 	@cd $@; pwd; $(MAKE) $(TARGET) CC=$(CC)
 
 # Use the bits we just built to create the packages.
-packages: install pylint
+packages: install pylint pep8
 	@cd pkg; pwd; $(MAKE) $(TARGET) check \
 		PATH=$(CODE_WS)/proto/root_$$(uname -p)/usr/bin:$$PATH \
 		PYTHONPATH=$(CODE_WS)/proto/root_$$(uname -p)/usr/lib/python2.6/vendor-packages

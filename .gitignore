@@ -24,3 +24,4 @@
 /src/tests/.timing_history.txt
 /src/tests/*.pyc
 /src/tests/*/*.pyc
+/src/cffi_src/_*
