@@ -189,10 +189,16 @@ class TestPkgVerify(pkg5unittest.SingleDepotTestCase):
                 # Verify should find the extra alias and it should be treated
                 # as a warning.
                 self.pkg_verify("-v foo")
-                self.assertTrue("4321" in self.output)
+                #self.assertTrue("4321" in self.output)
+                self.assert_("4321" in self.output and "WARNING" in self.output)
 
-                # ...but it should not be treated as a fatal error.
+                # Test that warnings are displayed by default.
                 self.pkg_verify("foo")
+                self.assert_("4321" in self.output and "WARNING" in self.output)
+
+                # Vefify on system wide should also find the extra alias.
+                self.pkg_verify("")
+                self.assert_("4321" in self.output and "WARNING" in self.output)
 
         def test_02_installed(self):
                 """When multiple FMRIs are given to pkg verify, if any of them
