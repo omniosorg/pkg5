@@ -34,6 +34,7 @@ ROOTETCBRAND = $(ROOT)/etc/brand/ipkg
 ROOTUSRLIB = $(ROOT)/usr/lib
 ROOTBRAND = $(ROOTUSRLIB)/brand
 ROOTBRANDPKG = $(ROOTBRAND)/ipkg
+ROOTBRANDNLIPKG = $(ROOTBRAND)/nlipkg
 
 LINKBRANDPKG = /usr/lib/brand/ipkg
 
@@ -44,11 +45,13 @@ ROOTDIRS = \
 	$(ROOTETCZONES) \
 	$(ROOTUSRLIB) \
 	$(ROOTBRAND) \
-	$(ROOTBRANDPKG)
+	$(ROOTBRANDPKG) \
+	$(ROOTBRANDNLIPKG)
 
 ROOTFILES = \
 	$(ROOTETCBRAND)/pkgrm.conf \
 	$(ROOTETCBRAND)/smf_disable.conf \
+	$(ROOTETCZONES)/OInlipkg.xml \
 	$(ROOTETCZONES)/SUNWipkg.xml \
 	$(ROOTBRANDPKG)/attach \
 	$(ROOTBRANDPKG)/clone \
@@ -63,7 +66,9 @@ ROOTFILES = \
 	$(ROOTBRANDPKG)/prestate \
 	$(ROOTBRANDPKG)/smf_disable.lst \
 	$(ROOTBRANDPKG)/support \
-	$(ROOTBRANDPKG)/uninstall
+	$(ROOTBRANDPKG)/uninstall \
+	$(ROOTBRANDNLIPKG)/config.xml
+	
 
 BIN = \
 	support \
@@ -93,8 +98,12 @@ install: $(ROOTFILES)
 
 
 $(ROOT) $(ROOTETC) $(ROOTETCBRAND) $(ROOTETCZONES) $(ROOTUSRLIB) \
-	$(ROOTBRAND) $(ROOTBRANDPKG):
+	$(ROOTBRAND) $(ROOTBRANDPKG) $(ROOTBRANDNLIPKG):
 	mkdir -p $@
+
+$(ROOTBRANDNLIPKG)/config.xml: $(ROOTBRANDNLIPKG) config.xml
+	rm -f $@; $(INSTALL) -f $(ROOTBRANDNLIPKG) -m 0444 config.xml
+
 
 $(ROOTETCBRAND)/%: $(ROOTETCBRAND) %
 	rm -f $@; $(INSTALL) -f $(ROOTETCBRAND) -m 0644 $<
