@@ -25,6 +25,7 @@
 from __future__ import print_function
 import os
 import platform
+import shlex
 import signal
 import six
 import ssl
@@ -413,12 +414,12 @@ class DepotController(object):
                 self.__state = self.STARTING
 
                 self.__output = open(self.__logpath, "w", 0)
-                cmdline = " ".join(args)
+                # Use shlex to re-parse args.
+                pargs = shlex.split(" ".join(args))
 
                 newenv = os.environ.copy()
                 newenv.update(self.__env)
-                self.__depot_handle = subprocess.Popen(cmdline, env=newenv,
-                    shell=True,
+                self.__depot_handle = subprocess.Popen(pargs, env=newenv,
                     stdin=subprocess.PIPE,
                     stdout=self.__output,
                     stderr=self.__output,

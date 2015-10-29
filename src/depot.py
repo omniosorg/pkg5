@@ -71,6 +71,7 @@ import os
 import os.path
 import OpenSSL.crypto as crypto
 import string
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -673,7 +674,11 @@ if __name__ == "__main__":
                 def get_ssl_passphrase(*ignored):
                         p = None
                         try:
-                                p = subprocess.Popen(cmdline, shell=True,
+                                if cmdline:
+                                        cmdargs = shlex.split(cmdline)
+                                else:
+                                        cmdargs = []
+                                p = subprocess.Popen(cmdargs,
                                         stdout=subprocess.PIPE,
                                         stderr=None)
                                 p.wait()
