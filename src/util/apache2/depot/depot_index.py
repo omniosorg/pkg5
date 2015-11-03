@@ -39,6 +39,7 @@ from six.moves import http_client, queue
 from six.moves.urllib.parse import quote
 from six.moves.urllib.request import urlopen
 
+import pkg.misc as misc
 import pkg.p5i
 import pkg.server.api
 import pkg.server.repository as sr
@@ -404,10 +405,12 @@ class WsgiDepot(object):
                             pub)) for pub in repo.publishers]
                 repo_list.sort()
                 template = tlookup.get_template("repos.shtml")
-                return template.render_unicode(g_vars={"base": base,
+                # Starting in CherryPy 3.2, cherrypy.response.body only allows
+                # bytes.
+                return misc.force_bytes(template.render(g_vars={"base": base,
                     "pub": None, "http_depot": "true", "lang": accept_lang,
                     "repo_list": repo_list, "repo_pubs": repo_pubs
-                    })
+                    }))
 
         def default(self, *tokens, **params):
                 """ Our default handler is here to make sure we've called

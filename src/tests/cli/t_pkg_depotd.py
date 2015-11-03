@@ -504,6 +504,7 @@ class TestPkgDepot(pkg5unittest.SingleDepotTestCase):
                         url = urljoin(depot_url,
                             "{0}/catalog/1/catalog.attrs".format(p))
                         urlopen(url)
+                self.dc.stop()
 
 class TestDepotController(pkg5unittest.CliTestCase):
 
@@ -1041,7 +1042,7 @@ class TestDepotOutput(pkg5unittest.SingleDepotTestCase):
                         self.assertEqual(returned, expected)
 
         def test_2_depot_p5i(self):
-                """Verify the output of the depot /publisher operation."""
+                """Verify the output of the depot /p5i operation."""
 
                 # Now update the repository configuration while the depot is
                 # stopped so changes won't be overwritten on exit.
@@ -1123,24 +1124,16 @@ class TestDepotOutput(pkg5unittest.SingleDepotTestCase):
                     'search/1/False_2_None_None_%2Fvar%2Ffile',
                     "versions/0", "manifest/0/{0}".format(pfmri.get_url_path()),
                     "catalog/0", "catalog/1/catalog.attrs",
-                    "file/0/3aad0bca6f3a6f502c175700ebe90ef36e312d7e",
-                    "filelist/0"):
+                    "file/0/3aad0bca6f3a6f502c175700ebe90ef36e312d7e"):
                         hdrs = dict(get_headers(req_path))
 
                         # Fields must be referenced in lowercase.
-                        if req_path.startswith("filelist"):
-                                self.assertEqual(hdrs.get("expires", ""), "0")
-                                self.assertEqual(hdrs.get("cache-control", ""),
-                                    "no-cache, no-transform, must-revalidate")
-                                self.assertEqual(hdrs.get("pragma", None),
-                                    "no-cache")
-                        else:
-                                cc = hdrs.get("cache-control", "")
-                                self.assert_(cc.startswith("must-revalidate, "
-                                    "no-transform, max-age="))
-                                exp = hdrs.get("expires", None)
-                                self.assertNotEqual(exp, None)
-                                self.assert_(exp.endswith(" GMT"))
+                        cc = hdrs.get("cache-control", "")
+                        self.assertTrue(cc.startswith("must-revalidate, "
+                            "no-transform, max-age="))
+                        exp = hdrs.get("expires", None)
+                        self.assertNotEqual(exp, None)
+                        self.assertTrue(exp.endswith(" GMT"))
 
                 for req_path in ("catalog/1/catalog.hatters",
                     "file/0/3aad0bca6f3a6f502c175700ebe90ef36e312d7f"):
