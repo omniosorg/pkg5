@@ -2870,9 +2870,15 @@ class PkgSolver(object):
                         it = [fmri_list]
 
                 assert reason_id in range(_TRIM_MAX)
-                tup = (reason_id, reason, frozenset(fmri_adds))
 
                 for fmri in it:
+                        # There's ugly issue when we receive reason having set of fmris with require-any
+                        # dependencies, which differentiate only by timestamp. In this case add operation
+                        # fails. The workaround is to add only the first dependency to the trim dictionary.
+                        if (type(reason[1]) is tuple and len(reason[1])>1 and type(reason[1][1]) is list
+			  and len(reason[1][1])>=1):
+                                reason=(reason[0],(reason[1][0],reason[1][1][0]))
+                        tup = (reason_id, reason, frozenset(fmri_adds))
                         self.__trim_dict[fmri].add(tup)
 
         def __trim_older(self, fmri):
