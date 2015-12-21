@@ -551,9 +551,33 @@ def __prepare_json(status, op=None, schema=None, data=None, errors=None):
 def _collect_catalog_failures(cre, ignore_perms_failure=False, errors=None):
         total = cre.total
         succeeded = cre.succeeded
+        partial = 0
+        refresh_errstr = ""
+
+        for pub, err in cre.failed:
+                if isinstance(err, api_errors.CatalogOriginRefreshException):
+                        if len(err.failed) < err.total:
+                                partial += 1
+
+                        refresh_errstr += _("\n{0}/{1} repositories for "
+                            "publisher '{2}' could not be refreshed.\n").format(
+                            len(err.failed), err.total, pub)
+                        for o, e in err.failed:
+                                refresh_errstr += "\n"
+                                refresh_errstr += str(e)
+                        refresh_errstr += "\n"
+                else:
+                        refresh_errstr += "\n\n" + str(err)
+                 
+
+        partial_str = ":"
+        if partial:
+                partial_str = _(" ({0} partial):").format(str(partial))
 
         txt = _("pkg: {succeeded}/{total} catalogs successfully "
-            "updated:").format(succeeded=succeeded, total=total)
+            "updated{partial}").format(succeeded=succeeded, total=total,
+            partial=partial_str)
+
         if errors != None:
                 if cre.failed:
                         error = {"reason": txt, "errtype": "catalog_refresh"}
@@ -572,13 +596,13 @@ def _collect_catalog_failures(cre, ignore_perms_failure=False, errors=None):
         if cre.failed and ignore_perms_failure:
                 # Consider those that failed to have succeeded and add them
                 # to the actual successful total.
-                return succeeded + len(cre.failed)
+                return succeeded + partial + len(cre.failed)
 
-        for pub, err in cre.failed:
-                if errors != None:
-                        error = {"reason": str(err),
-                            "errtype": "catalog_refresh_failed"}
-                        errors.append(error)
+
+        if errors != None:
+                error = {"reason": str(refresh_errstr),
+                    "errtype": "catalog_refresh"}
+                errors.append(error)
 
         if cre.errmessage:
                 if errors != None:
@@ -586,7 +610,7 @@ def _collect_catalog_failures(cre, ignore_perms_failure=False, errors=None):
                             "errtype": "catalog_refresh"}
                         errors.append(error)
 
-        return succeeded
+        return succeeded + partial
 
 def _list_inventory(op, api_inst, pargs,
     li_parent_sync, list_all, list_installed_newest, list_newest,
@@ -626,7 +650,7 @@ def _list_inventory(op, api_inst, pargs,
                 # invalid as a result of publisher information
                 # changing (such as an origin uri, etc.).
                 try:
-                        api_inst.refresh()
+                        api_inst.refresh(ignore_unreachable=False)
                 except api_errors.PermissionsException:
                         # Ignore permission exceptions with the
                         # assumption that an unprivileged user is
@@ -1383,6 +1407,11 @@ def __api_op(_op, _api_inst, _accept=False, _li_ignore=None, _noexecute=False,
                     _unpackaged=_unpackaged, _unpackaged_only=_unpackaged_only,
                     display_plan_cb=display_plan_cb, logger=logger, **kwargs)
 
+                if "_failures" in _api_inst._img.transport.repo_status:
+                        ret.setdefault("data", {}).update(
+                            {"repo_status":
+                            _api_inst._img.transport.repo_status})
+
                 if ret["status"] != EXIT_OK:
                         return ret
                 if "data" in ret:
@@ -1402,9 +1431,9 @@ def __api_op(_op, _api_inst, _accept=False, _li_ignore=None, _noexecute=False,
                         exit_code = __verify_exit_status(_api_inst)
                         return __prepare_json(exit_code, data=data)
                 if _api_inst.planned_nothingtodo():
-                        return __prepare_json(EXIT_NOP)
+                        return __prepare_json(EXIT_NOP, data=data)
                 if _noexecute or _stage == API_STAGE_PLAN:
-                        return __prepare_json(EXIT_OK)
+                        return __prepare_json(EXIT_OK, data=data)
         else:
                 assert _stage in [API_STAGE_PREPARE, API_STAGE_EXECUTE]
                 __api_plan_load(_api_inst, _stage, _origins, logger=logger)
@@ -1418,7 +1447,7 @@ def __api_op(_op, _api_inst, _accept=False, _li_ignore=None, _noexecute=False,
                 if ret["status"] != EXIT_OK:
                         return ret
                 if _stage == API_STAGE_PREPARE:
-                        return __prepare_json(EXIT_OK)
+                        return __prepare_json(EXIT_OK, data=data)
 
         ret = __api_execute_plan(_op, _api_inst)
         pkg_timer.record("executing", logger=logger)
@@ -1619,8 +1648,7 @@ def _publisher_set(op, api_inst, pargs, ssl_key, ssl_cert, origin_uri,
 
                 if "errors" in ret_json:
                         for err in ret_json["errors"]:
-                                _error_json(err["reason"], cmd=op,
-                                    errors_json=errors_json)
+                                errors_json.append(err)
                 return __prepare_json(ret_json["status"], errors=errors_json)
 
         # Automatic configuration via -p case.
@@ -2552,12 +2580,10 @@ def _set_pub_error_wrap(func, pfx, raise_errors, *args, **kwargs):
                 for entry in raise_errors:
                         if isinstance(e, entry):
                                 raise
-                txt = _("Could not refresh the catalog for {0}\n").format(
-                    pfx)
-                for pub, err in e.failed:
-                        txt += "   \n{0}".format(err)
-                errors_json.append({"reason": txt})
+                succeeded = _collect_catalog_failures(e,
+                    ignore_perms_failure=True, errors=errors_json)
                 return __prepare_json(EXIT_OOPS, errors=errors_json)
+
         except api_errors.InvalidDepotResponseException as e:
                 for entry in raise_errors:
                         if isinstance(e, entry):
