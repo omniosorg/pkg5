@@ -511,10 +511,9 @@ fi
 pkglist="$pkglist
 	pkg:/SUNWcs
 	pkg:/SUNWcsd
+	pkg:/service/management/sysding
 	pkg:/system/network
 	pkg:/system/extended-system-utilities
-	pkg:/service/management/sysidtool
-	pkg:/system/management/sysidtool
 	pkg:/compress/bzip2
 	pkg:/compress/gzip
 	pkg:/compress/zip
@@ -623,15 +622,6 @@ if grep "^root::::type=role;" $ZONEROOT/etc/user_attr >/dev/null 2>&1; then
 	print "s/^root::::type=role;/root::::/\nw" |
 	    ed -s $ZONEROOT/etc/user_attr
 fi
-
-#
-# Make sure sysidtools run; we manually poke in the SSH action
-# so that we get an SSH key.  Yes, this is seriously borken.
-# See http://defect.opensolaris.org/bz/show_bug.cgi?id=741
-#
-printf "$m_more_brokenness\n"
-/usr/sbin/sysidconfig -b $ZONEROOT -a /lib/svc/method/sshd
-touch $ZONEROOT/etc/.UNCONFIGURED
 
 #
 # Labeled zones need to be able to modify /etc/gconf files, when gnome
