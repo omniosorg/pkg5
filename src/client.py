@@ -333,6 +333,7 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False):
             "[-nvq] [--accept] [--licenses] [--no-index] [--no-refresh]\n"
             "            [--no-parent-sync] [--no-pkg-updates]\n"
             "            [--linked-md-only] <propname>=<propvalue> ...")
+        priv_usage["copy-publishers-from"] = _("<dir>")
 
         def print_cmds(cmd_list, cmd_dic):
                 for cmd in cmd_list:
@@ -4090,6 +4091,25 @@ assistance."""))
         # each refresh requires a client image state rebuild.
         return __refresh(api_inst, added + updated)
 
+def copy_publishers_from(api_inst, args):
+        """pkg copy-publishers-from <dir>"""
+        opts, pargs = getopt.getopt(args, "")
+        if len(pargs) != 1:
+                usage(_("directory to copy from must be specified"),
+                      cmd="copy-publishers-from")
+        src_api_inst = __api_alloc(pargs[0], True, False)
+        if not src_api_inst:
+                return EXIT_OOPS
+        for n, pub in enumerate(src_api_inst.get_publishers()):
+                search_first = True if n == 0 else False
+                if api_inst.has_publisher(prefix=pub.prefix, alias=pub.prefix):
+                        api_inst.remove_publisher(prefix=pub.prefix,
+                                                  alias=pub.prefix)
+                api_inst.add_publisher(pub, refresh_allowed=False,
+                                       search_first=search_first)
+        api_inst.refresh()
+        return EXIT_OK
+
 def _add_update_pub(api_inst, prefix, pub=None, disable=None, sticky=None,
     origin_uri=None, add_mirrors=EmptyI, remove_mirrors=EmptyI,
     add_origins=EmptyI, remove_origins=EmptyI, ssl_cert=None, ssl_key=None,
@@ -5964,6 +5984,7 @@ cmds = {
     "change-facet"          : [change_facet],
     "change-variant"        : [change_variant],
     "contents"              : [list_contents],
+    "copy-publishers-from"  : [copy_publishers_from, 1],
     "detach-linked"         : [detach_linked, 0],
     "facet"                 : [list_facet],
     "fix"                   : [fix_image],
