@@ -68,7 +68,6 @@ extra_packages=""
 ZONENAME=""
 ZONEPATH=""
 pub_and_origins=""
-copy_from_gz=
 
 # Setup i18n output
 TEXTDOMAIN="SUNW_OST_OSCMD"
@@ -231,7 +230,7 @@ printf "$m_image\n" $ZONEROOT
 # other publishers. Otherwise, use all of the publishers from the GZ.
 if [[ -n $pub_and_origins ]]; then
 	LC_ALL=C $PKG image-create --zone --full -p $pub_and_origins \
-	    $ZONEROOT \ || fail_incomplete "$f_img"
+	    $ZONEROOT || fail_incomplete "$f_img"
 else
 	LC_ALL=C $PKG image-create --zone --full $ZONEROOT \
 	    || fail_incomplete "$f_img"
@@ -246,7 +245,6 @@ PKG_IMAGE="$ZONEROOT"
 export PKG_IMAGE
 
 LC_ALL=C $PKG publisher -Hn -F tsv | cut -f1,7 | while read pub url; do
-	[[ -z "$publisher" ]] && publisher="$pub"
 	printf "$m_publisher\n" $pub $url
 done
 
