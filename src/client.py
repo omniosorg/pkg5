@@ -363,6 +363,7 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False,
             "[-nvq] [--accept] [--licenses] [--no-index] [--no-refresh]\n"
             "            [--no-parent-sync] [--no-pkg-updates]\n"
             "            [--linked-md-only] <propname>=<propvalue> ...")
+        priv_usage["copy-publishers-from"] = _("<dir>")
 
         def print_cmds(cmd_list, cmd_dic):
                 for cmd in cmd_list:
@@ -3439,6 +3440,25 @@ def publisher_refresh(api_inst, args):
             api_inst.progresstracker.PHASE_UTILITY)
         return __refresh(api_inst, pargs, full_refresh=full_refresh)
 
+def copy_publishers_from(api_inst, args):
+        """pkg copy-publishers-from <dir>"""
+        opts, pargs = getopt.getopt(args, "")
+        if len(pargs) != 1:
+                usage(_("directory to copy from must be specified"),
+                      cmd="copy-publishers-from")
+        src_api_inst = __api_alloc(pargs[0], True, False)
+        if not src_api_inst:
+                return EXIT_OOPS
+        for n, pub in enumerate(src_api_inst.get_publishers()):
+                search_first = True if n == 0 else False
+                if api_inst.has_publisher(prefix=pub.prefix, alias=pub.prefix):
+                        api_inst.remove_publisher(prefix=pub.prefix,
+                                                  alias=pub.prefix)
+                api_inst.add_publisher(pub, refresh_allowed=False,
+                                       search_first=search_first)
+        api_inst.refresh()
+        return EXIT_OK
+
 def _get_ssl_cert_key(root, is_zone, ssl_cert, ssl_key):
         if ssl_cert is not None or ssl_key is not None:
                 # In the case of zones, the ssl cert given is assumed to
@@ -5042,6 +5062,7 @@ cmds = {
     "change-facet"          : [change_facet],
     "change-variant"        : [change_variant],
     "contents"              : [list_contents],
+    "copy-publishers-from"  : [copy_publishers_from, 1],
     "detach-linked"         : [detach_linked, 0],
     "dehydrate"             : [dehydrate],
     "exact-install"         : [exact_install],
