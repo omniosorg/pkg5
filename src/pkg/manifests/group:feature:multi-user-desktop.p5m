@@ -87,7 +87,6 @@ depend type=group fmri=gnome/applet/gnome-utility-applets
 #depend type=group fmri=gnome/config/gconf/multi-user-desktop
 depend type=group fmri=gnome/disk-analyzer/baobab
 depend type=group fmri=gnome/file-manager/nautilus
-depend type=group fmri=gnome/ggv
 depend type=group fmri=gnome/gnome-audio
 depend type=group fmri=gnome/gnome-dictionary
 depend type=group fmri=gnome/gnome-keyring
