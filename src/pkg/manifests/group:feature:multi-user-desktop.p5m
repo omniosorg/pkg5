@@ -87,7 +87,6 @@ depend type=group fmri=gnome/applet/gnome-utility-applets
 #depend type=group fmri=gnome/config/gconf/multi-user-desktop
 depend type=group fmri=gnome/disk-analyzer/baobab
 depend type=group fmri=gnome/file-manager/nautilus
-depend type=group fmri=gnome/gnome-audio
 depend type=group fmri=gnome/gnome-dictionary
 depend type=group fmri=gnome/gnome-keyring
 depend type=group fmri=gnome/gnome-log-viewer
@@ -120,6 +119,7 @@ depend type=group fmri=image/editor/gimp
 depend type=group fmri=image/imagemagick
 depend type=group fmri=image/viewer/eog
 depend type=group fmri=library/accessibility/brltty
+depend type=group fmri=library/audio/audiofile
 depend type=group fmri=library/demo/audio-samples
 depend type=group fmri=library/desktop/gtk2/gtk-backend-cups
 depend type=group fmri=library/gnome/gvfs
