@@ -20,7 +20,7 @@
  */
 
 /*
- *  Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
+ *  Copyright (c) 2009, 2016, Oracle and/or its affiliates. All rights reserved.
  *  Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
  */
 
@@ -430,12 +430,16 @@ getdynamic(int fd)
 			if (ea)
 				cp += ea->vna_next;
 			ea = (GElf_Vernaux*)cp;
-			if (liblist_add(veraux, ea->vna_name) == NULL)
+			if (liblist_add(veraux, ea->vna_name) == NULL) {
+				liblist_free(veraux);
 				goto bad;
+			}
 		}
 
-		if (liblist_add(vers, ev->vn_file) == NULL)
+		if (liblist_add(vers, ev->vn_file) == NULL) {
+			liblist_free(veraux);
 			goto bad;
+		}
 		vers->tail->verlist = veraux;
 
 		cp = buf;
