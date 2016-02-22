@@ -148,7 +148,6 @@ depend type=group fmri=print/mp
 depend type=group fmri=release/os-welcome
 depend type=group fmri=service/gnome/desktop-cache
 depend type=group fmri=service/network/dhcp/datastore/binfiles
-depend type=group fmri=service/postrun
 depend type=group fmri=system/display-manager/desktop-startup
 depend type=group fmri=system/display-manager/gdm
 $(i386_ONLY)depend type=group fmri=system/file-system/ntfsprogs
