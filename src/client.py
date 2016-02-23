@@ -1511,9 +1511,9 @@ pkg:/package/pkg' as a privileged user and then retry the {op}."""
                 display_catalog_failures(e)
                 return EXIT_OOPS
         if e_type == api_errors.ConflictingActionErrors:
-                error("\n" + str(e), cmd=op)
                 if verbose:
                         __display_plan(api_inst, verbose, noexecute)
+                error("\n" + str(e), cmd=op)
                 return EXIT_OOPS
         if e_type in (api_errors.InvalidPlanError,
             api_errors.ReadOnlyFileSystemException,
