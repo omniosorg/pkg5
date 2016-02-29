@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 from . import testutils
@@ -49,6 +49,7 @@ import time
 import unittest
 import zlib
 
+from pkg.actions import fromstr
 from pkg.digest import DEFAULT_HASH_FUNC
 from six.moves.urllib.parse import urlparse
 from six.moves.urllib.request import url2pathname
@@ -1527,7 +1528,6 @@ file elftest.so.1 mode=0755 owner=root group=bin path=bin/true
                 # 'test1', so retrieving all packages will involve multiple
                 # publishers.
                 self.pkgrecv(self.durl1, "-d {0} '*'".format(self.durl2))
-
 
 class TestPkgrecvHTTPS(pkg5unittest.HTTPSTestClass):
 
