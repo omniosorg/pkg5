@@ -1,6 +1,6 @@
 '\" te
-.\" Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
-.TH pkgmogrify 1 "12 Jul 2013" "SunOS 5.11" "User Commands"
+.\" Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
+.TH pkgmogrify 1 "8 Mar 2016" "SunOS 5.11" "User Commands"
 .SH NAME
 pkgmogrify \- Image Packaging System manifest transmogrifier
 .SH SYNOPSIS
@@ -14,7 +14,7 @@ pkgmogrify \- Image Packaging System manifest transmogrifier
 .SH DESCRIPTION
 .sp
 .LP
-\fBpkgmogrify\fR provides for programmatic editing of package manifests to simplify the typical transformations needed when automating software builds and package publication.
+\fBpkgmogrify\fR provides for programmatic editing of package manifests to simplify the typical transformations needed when automating software builds and package publication. It reads all of the file(s) in the order specified and then will apply any embedded directives found within as detailed in the Embedded Directives; section below. If no files are named, input will be read from stdin. '-' can also be specified as a filename to use stdin as input, alone, or in combination with other files.
 .sp
 .LP
 \fBpkgmogrify\fR provides the following:
