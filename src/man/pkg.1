@@ -1,5 +1,5 @@
 '\" te
-.\" Copyright (c) 2007, 2014, Oracle and/or its affiliates. All rights reserved.
+.\" Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
 .\" Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
 .TH pkg 1 "19 Jun 2018" "SunOS 5.11" "User Commands"
 .SH NAME
@@ -103,7 +103,8 @@ pkg \- Image Packaging System retrieval client
 
 .LP
 .nf
-/usr/bin/pkg verify [-Hqv] [\fIpkg_fmri_pattern\fR ...]
+/usr/bin/pkg verify [-Hqv] [--parsable \fIversion\fR]
+    [--unpackaged] [--unpackaged-only] [\fIpkg_fmri_pattern\fR ...]
 .fi
 
 .LP
@@ -112,7 +113,8 @@ pkg \- Image Packaging System retrieval client
     [--no-backup-be | --require-backup-be]
     [--backup-be-name \fIname\fR]
     [--deny-new-be | --require-new-be] [--be-name \fIname\fR]
-    [--accept] [--licenses] [\fIpkg_fmri_pattern\fR ...]
+    [--accept] [--licenses] [--parsable \fIversion\fR] [--unpackaged]
+    [\fIpkg_fmri_pattern\fR ...]
 .fi
 
 .LP
@@ -1515,7 +1517,7 @@ With the \fB-a\fR option (and by default), searching for \fBtoken\fR results in 
 .ne 2
 .mk
 .na
-\fB\fBpkg verify\fR [\fB-Hqv\fR] [\fIpkg_fmri_pattern\fR ...]\fR
+\fBpkg verify\fR [\fB-Hqv\fR] [--parsable \fBversion\fR] [--unpackaged] [--unpackaged-only] [\fIpkg_fmri_pattern\fR ...]
 .ad
 .sp .6
 .RS 4n
@@ -1535,7 +1537,7 @@ Validate the installation of only the specified packages installed in the curren
 .ne 2
 .mk
 .na
-\fB\fB-H\fR\fR
+\fB-H\fR
 .ad
 .sp .6
 .RS 4n
@@ -1546,7 +1548,19 @@ Omit the headers from the verification output.
 .ne 2
 .mk
 .na
-\fB\fB-q\fR\fR
+\fB--parsable version\fR
+.ad
+.sp .6
+.RS 4n
+Parsable output; the supported version is 0. Use of this option implies
+\fB-q\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB-q\fR
 .ad
 .sp .6
 .RS 4n
@@ -1557,7 +1571,29 @@ Suppress progress messages and all other output during the requested operation.
 .ne 2
 .mk
 .na
-\fB\fB-v\fR\fR
+\fB--unpackaged\fR
+.ad
+.sp .6
+.RS 4n
+Report unpackaged contents in addition to general output.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB--unpackaged-only\fR
+.ad
+.sp .6
+.RS 4n
+Report only unpackaged contents.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB-v\fR
 .ad
 .sp .6
 .RS 4n
@@ -1570,7 +1606,7 @@ Include informational messages regarding packages.
 .ne 2
 .mk
 .na
-\fB\fBpkg fix\fR [\fB-nvq\fR] [\fB--no-be-activate\fR] [\fB--no-backup-be\fR | \fB--require-backup-be\fR] [\fB--backup-be-name\fR \fIname\fR] [\fB--deny-new-be\fR | \fB--require-new-be\fR] [\fB--be-name\fR \fIname\fR] [\fB--accept\fR] [\fB--licenses\fR] [\fIpkg_fmri_pattern\fR ...]\fR
+\fBpkg fix\fR [\fB-nvq\fR] [\fB--no-be-activate\fR] [\fB--no-backup-be\fR | \fB--require-backup-be\fR] [\fB--backup-be-name\fR \fIname\fR] [\fB--deny-new-be\fR | \fB--require-new-be\fR] [\fB--be-name\fR \fIname\fR] [\fB--accept\fR] [\fB--licenses\fR] [\fB--parsable\fR <version>] [\fB--unpackaged\fR] [\fIpkg_fmri_pattern\fR ...]
 .ad
 .sp .6
 .RS 4n
@@ -1590,7 +1626,7 @@ Fix errors reported by \fBpkg verify\fR for only the specified packages installe
 .ne 2
 .mk
 .na
-\fB\fB--accept\fR\fR
+\fB--accept\fR
 .ad
 .sp .6
 .RS 4n
@@ -1601,11 +1637,34 @@ Indicate that you agree to and accept the terms of the licenses of the packages 
 .ne 2
 .mk
 .na
-\fB\fB--licenses\fR\fR
+\fB--licenses\fR
 .ad
 .sp .6
 .RS 4n
 Display all of the licenses for the packages that are installed or updated as part of this operation. For updated packages, display the license only if the license has changed.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB--parsable <version>\fR
+.ad
+.sp .6
+.RS 4n
+Parsable output; the supported version is 0. Use of this option implies
+\fB-q\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB--unpackaged\fR
+.ad
+.sp .6
+.RS 4n
+Report unpackaged contents in addition to general output.
 .RE
 
 For all other options, see the \fBinstall\fR command above.

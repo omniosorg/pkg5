@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
 # Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
 
 import os
@@ -86,6 +86,8 @@ STAGE                 = "stage"
 SUMMARY               = "summary"
 TAGGED                = "tagged"
 UPDATE_INDEX          = "update_index"
+UNPACKAGED            = "unpackaged"
+UNPACKAGED_ONLY       = "unpackaged_only"
 VERBOSE               = "verbose"
 SYNC_ACT              = "sync_act"
 ACT_TIMEOUT           = "act_timeout"
@@ -418,6 +420,13 @@ def opts_table_cb_li_no_psync(api_inst, opts, opts_new):
                 raise InvalidOptionError(InvalidOptionError.REQUIRED,
                     [LI_TARGET_LIST, LI_PARENT_SYNC])
 
+def opts_table_cb_unpackaged(api_inst, opts, opts_new):
+        # Check whether unpackaged and unpackaged_only options are used
+        # together.
+
+        if opts[UNPACKAGED] and opts[UNPACKAGED_ONLY]:
+                raise InvalidOptionError(InvalidOptionError.INCOMPAT,
+                    [UNPACKAGED, UNPACKAGED_ONLY])
 
 def __parse_linked_props(args):
         """"Parse linked image property options that were specified on the
@@ -624,10 +633,14 @@ def opts_table_cb_publishers(api_inst, opts, opts_new):
         opts_new[PUBLISHERS] = publishers
 
 def opts_table_cb_parsable(api_inst, opts, opts_new):
-        if opts[PARSABLE_VERSION] and opts.get(VERBOSE, False):
+        if opts[PARSABLE_VERSION] is not None and opts.get(VERBOSE, False):
                 raise InvalidOptionError(InvalidOptionError.INCOMPAT,
                     [VERBOSE, PARSABLE_VERSION])
-        if opts[PARSABLE_VERSION]:
+        if opts[PARSABLE_VERSION] is not None and opts.get(OMIT_HEADERS,
+            False):
+                raise InvalidOptionError(InvalidOptionError.INCOMPAT,
+                    [OMIT_HEADERS, PARSABLE_VERSION])
+        if opts[PARSABLE_VERSION] is not None:
                 try:
                         opts_new[PARSABLE_VERSION] = int(
                             opts[PARSABLE_VERSION])
@@ -1014,7 +1027,7 @@ opts_table_quiet = [
 
 opts_table_parsable = [
     opts_table_cb_parsable,
-    (PARSABLE_VERSION,     None,  [], {"type": ["null", "integer"],
+    (PARSABLE_VERSION,     None,  [None, 0], {"type": ["null", "integer"],
                                        "minimum": 0, "maximum": 0
                                       }),
 ]
@@ -1057,6 +1070,9 @@ opts_table_publishers = [
                          }),
 ]
 
+opts_table_unpackaged = [
+    (UNPACKAGED,       False, [], {"type": "boolean"}),
+]
 #
 # Options for pkg(1) subcommands.  Built by combining the option tables above,
 # with some optional subcommand unique options defined below.
@@ -1228,6 +1244,7 @@ opts_fix = \
     opts_table_licenses + \
     opts_table_no_headers + \
     opts_table_parsable + \
+    opts_table_unpackaged + \
     []
 
 opts_verify = \
@@ -1235,8 +1252,11 @@ opts_verify = \
     opts_table_verbose + \
     opts_table_no_headers + \
     opts_table_parsable + \
+    opts_table_unpackaged + \
     [
-    opts_table_cb_nqv
+    opts_table_cb_nqv,
+    opts_table_cb_unpackaged,
+    (UNPACKAGED_ONLY,  False, [], {"type": "boolean"}),
 ]
 
 opts_publisher = \
@@ -1369,6 +1389,16 @@ def opts_assemble(op, api_inst, opts, add_table=None, cwd=None):
                                     set(valid_args)):
                                         raise_error = True
                         else:
+                                # If the any of valid_args is integer, we first
+                                # try to convert the argument value into
+                                # integer. This is for CLI mode where arguments
+                                # are strings.
+                                if any(type(va) == int for va in valid_args):
+                                        try:
+                                                opts[avail_opt] = int(
+                                                    opts[avail_opt])
+                                        except Exception:
+                                                pass
                                 if opts[avail_opt] not in valid_args:
                                         raise_error = True
                         if raise_error:
