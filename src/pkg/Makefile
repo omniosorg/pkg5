@@ -18,7 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
 # Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
 #
 
@@ -76,15 +76,14 @@ ALL_MANIFESTS:sh  = \
 	exit 0
 $(PUBLISHALL)MANIFESTS      = $(ALL_MANIFESTS)
 PKGCMDENV         = \
-	PATH=$(PKGROOT)/usr/bin:/usr/sbin:/usr/bin \
-	    PYTHONPATH=$(PKGROOT)/usr/lib/python2.7/vendor-packages
-PKG               = /usr/bin/env $(PKGCMDENV) /usr/bin/python2.7 $(PKGROOT)/usr/bin/pkg
-PKGDEPEND         = /usr/bin/env $(PKGCMDENV) /usr/bin/python2.7 $(PKGROOT)/usr/bin/pkgdepend
-PKGFMT            = /usr/bin/env $(PKGCMDENV) /usr/bin/python2.7 $(PKGROOT)/usr/bin/pkgfmt
-PKGLINT           = /usr/bin/env $(PKGCMDENV) /usr/bin/python2.7 $(PKGROOT)/usr/bin/pkglint
-PKGMOGRIFY        = /usr/bin/env $(PKGCMDENV) /usr/bin/python2.7 $(PKGROOT)/usr/bin/pkgmogrify
-PKGREPO           = /usr/bin/env $(PKGCMDENV) /usr/bin/python2.7 $(PKGROOT)/usr/bin/pkgrepo
-PKGSEND           = /usr/bin/env $(PKGCMDENV) /usr/bin/python2.7 $(PKGROOT)/usr/bin/pkgsend
+	PATH=$(PKGROOT)/usr/bin:/usr/sbin:/usr/bin
+PKG               = $(PKGCMDENV) pkg
+PKGDEPEND         = $(PKGCMDENV) pkgdepend
+PKGFMT            = $(PKGCMDENV) pkgfmt
+PKGLINT           = $(PKGCMDENV) pkglint
+PKGMOGRIFY        = $(PKGCMDENV) pkgmogrify
+PKGREPO           = $(PKGCMDENV) pkgrepo
+PKGSEND           = $(PKGCMDENV) pkgsend
 MOGRIFESTS        = $(MANIFESTS:%.p5m=$(PDIR)/%.mog)
 ALL_MOGRIFESTS    = $(ALL_MANIFESTS:%.p5m=$(PDIR)/%.mog)
 PUBLIFESTS        = $(MANIFESTS:%.p5m=$(PDIR)/%.pub)
@@ -111,7 +110,9 @@ PKGMOG_DEFVALS    = \
 	PKGVERS=$(PKGVERS) \
 	REV=$(REV) \
 	PYDIR=usr/lib/python2.7 \
+	PY35DIR=usr/lib/python3.5 \
 	PYDIRVP=usr/lib/python2.7/vendor-packages \
+	PY35DIRVP=usr/lib/python3.5/vendor-packages \
 	CHANGESET=$(CHANGESET) \
 	PKGPUBLISHER_LOCALIZABLE=$(PKGPUBLISHER_LOCALIZABLE)
 PKGMOG_DEFINES    = $(PKGMOG_DEFVALS:%=-D %)

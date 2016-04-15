@@ -89,8 +89,10 @@ req_pylint_version = "1.4.3"
 # Unbuffer stdout and stderr.  This helps to ensure that subprocess output
 # is properly interleaved with output from this program.
 #
-sys.stdout = os.fdopen(sys.stdout.fileno(), "w", 0)
-sys.stderr = os.fdopen(sys.stderr.fileno(), "w", 0)
+# Can't have unbuffered text I/O in Python 3. This doesn't quite matter.
+if six.PY2:
+        sys.stdout = os.fdopen(sys.stdout.fileno(), "w", 0)
+        sys.stderr = os.fdopen(sys.stderr.fileno(), "w", 0)
 
 dist_dir = os.path.normpath(os.path.join(pwd, os.pardir, "proto", "dist_" + arch))
 build_dir = os.path.normpath(os.path.join(pwd, os.pardir, "proto", "build_" + arch))
@@ -104,7 +106,7 @@ cffi_dir = os.path.normpath(os.path.join(pwd, "cffi_src"))
 
 # Extract Python minor version.
 py_version = '.'.join(platform.python_version_tuple()[:2])
-assert py_version in ('2.6', '2.7')
+assert py_version in ('2.7', '3.5')
 py_install_dir = 'usr/lib/python' + py_version + '/vendor-packages'
 
 py64_executable = None
@@ -690,7 +692,6 @@ class install_func(_install):
                 """
 
                 _install.run(self)
-
                 for o_src, o_dest in hardlink_modules:
                         for e in [".py", ".pyc"]:
                                 src = util.change_root(self.root_dir, o_src + e)
@@ -706,11 +707,11 @@ class install_func(_install):
                                 else:
                                         file_util.copy_file(src, dest, update=1)
 
-                # XXX Uncomment it when we need to deliver python 3.4 version
+                # XXX Uncomment it when we need to deliver python 3.x version
                 # of modules.
-                # Don't install the scripts for python 3.4.
-                # if py_version == '3.4':
-                #        return
+                # Don't install the scripts for python 3.5
+                if py_version == '3.5':
+                        return
                 for d, files in six.iteritems(scripts[osname]):
                         for (srcname, dstname) in files:
                                 dst_dir = util.change_root(self.root_dir, d)
@@ -830,7 +831,7 @@ def _copy_file_contents(src, dst, buffer_size=16*1024):
                                 buf = sfp.read(buffer_size)
                                 if not buf:
                                         break
-                                if src.endswith(".py"):
+                                if dst.endswith(".py"):
                                         if not first_buf or not py64_executable:
                                                 dfp.write(buf)
                                                 continue
@@ -1072,8 +1073,10 @@ class build_func(_build):
 
 def get_git_version():
         try:
-                p = subprocess.Popen(['git', 'show', '--format=%at'], stdout = subprocess.PIPE)
-                return p.communicate()[0].split('\n')[0].strip()
+                p = subprocess.Popen(
+                    ['git', 'show', '--format=%at', '--no-patch'],
+                    stdout = subprocess.PIPE)
+                return p.communicate()[0].strip()
         except OSError:
                 print("ERROR: unable to obtain mercurial/git version",
                     file=sys.stderr)
@@ -1085,7 +1088,8 @@ def syntax_check(filename):
             This is needed because distutil's own use of pycompile (in the
             distutils.utils module) is broken, and doesn't stop on error. """
         try:
-                py_compile.compile(filename, os.devnull, doraise=True)
+                tmpfd, tmp_file = tempfile.mkstemp()
+                py_compile.compile(filename, tmp_file, doraise=True)
         except py_compile.PyCompileError as e:
                 res = ""
                 for err in e.exc_value:
@@ -1158,6 +1162,7 @@ class build_ext_func(_build_ext):
 
         def build_extension(self, ext):
                 # Build 32-bit
+                self.build_temp = str(self.build_temp)
                 _build_ext.build_extension(self, ext)
                 if not ext.build_64:
                         return
@@ -1167,8 +1172,8 @@ class build_ext_func(_build_ext):
                 d, f = os.path.split(self.build_temp)
 
                 # store our 64-bit extensions elsewhere
-                self.build_temp = d + "/temp64.{0}".format(
-                    os.path.basename(self.build_temp).replace("temp.", ""))
+                self.build_temp = str(d + "/temp64.{0}".format(
+                    os.path.basename(self.build_temp).replace("temp.", "")))
                 ext.extra_compile_args += ["-m64"]
                 ext.extra_link_args += ["-m64"]
                 self.build64 = True
@@ -1177,7 +1182,7 @@ class build_ext_func(_build_ext):
                 _build_ext.build_extension(self, ext)
 
                 # Reset to 32-bit
-                self.build_temp = old_build_temp
+                self.build_temp = str(old_build_temp)
                 ext.extra_compile_args.remove("-m64")
                 ext.extra_link_args.remove("-m64")
                 self.build64 = False
@@ -1188,7 +1193,9 @@ class build_ext_func(_build_ext):
                         return path
 
                 dpath, fpath = os.path.split(path)
-                return os.path.join(dpath, "64", fpath)
+                if py_version < '3.0':
+                        return os.path.join(dpath, "64", fpath)
+                return os.path.join(dpath, fpath)
 
 
 class build_py_func(_build_py):
@@ -1255,7 +1262,7 @@ class build_py_func(_build_py):
                                     open(self.get_module_outfile(self.build_lib,
                                         [package], module)).read()
                                 ov = re.search(versionre, ocontent).group(1)
-                        except IOError:
+                        except (IOError, AttributeError):
                                 ov = None
                         v = get_git_version()
                         vstr = 'VERSION = "{0}"'.format(v)
@@ -1264,20 +1271,21 @@ class build_py_func(_build_py):
                         if v == ov:
                                 return
 
-                        mcontent = open(module_file).read()
-                        mcontent = re.sub(versionre, vstr, mcontent)
-                        tmpfd, tmp_file = tempfile.mkstemp()
-                        os.write(tmpfd, mcontent)
-                        os.close(tmpfd)
+                        with open(module_file) as f:
+                                mcontent = f.read()
+                                mcontent = re.sub(versionre, vstr, mcontent)
+                                tmpfd, tmp_file = tempfile.mkstemp()
+                                with open(tmp_file, "w") as wf:
+                                        wf.write(mcontent)
                         print("doing version substitution: ", v)
-                        rv = _build_py.build_module(self, module, tmp_file, package)
+                        rv = _build_py.build_module(self, module, tmp_file, str(package))
                         os.unlink(tmp_file)
                         return rv
 
                 # Will raise a DistutilsError on failure.
                 syntax_check(module_file)
 
-                return _build_py.build_module(self, module, module_file, package)
+                return _build_py.build_module(self, module, module_file, str(package))
 
         def copy_file(self, infile, outfile, preserve_mode=1, preserve_times=1,
             link=None, level=1):
@@ -1297,10 +1305,10 @@ class build_py_func(_build_py):
                 # The timestamp for __init__.py is the timestamp for the
                 # workspace itself.
                 if outfile.endswith("/pkg/__init__.py"):
-                        src_mtime = self.timestamps["."]
+                        src_mtime = self.timestamps[b"."]
                 else:
                         src_mtime = self.timestamps.get(
-                            os.path.join("src", infile), self.timestamps["."])
+                            os.path.join("src", infile), self.timestamps[b"."])
 
                 # Force a copy of the file if the source timestamp is different
                 # from that of the destination, not just if it's newer.  This
@@ -1517,7 +1525,9 @@ class Extension(distutils.core.Extension):
         # build_64 in the object constructor instead of being forced to add it
         # after the object has been created.
         def __init__(self, name, sources, build_64=False, **kwargs):
-                distutils.core.Extension.__init__(self, name, sources, **kwargs)
+                # 'name' and the item in 'sources' must be a string literal
+                sources = [str(s) for s in sources]
+                distutils.core.Extension.__init__(self, str(name), sources, **kwargs)
                 self.build_64 = build_64
 
 # These are set to real values based on the platform, down below
@@ -1709,7 +1719,9 @@ setup(cmdclass = cmdclasses,
     ext_package = 'pkg',
     ext_modules = ext_modules,
     classifiers = [
-        'Programming Language :: Python :: 2 :: Only',
+        'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.5',
     ]
 )

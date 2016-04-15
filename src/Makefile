@@ -58,6 +58,7 @@ PYLINT_VER_CMD = PYTHONPATH= /usr/bin/pkg info $(PYLINT_FMRI) | \
 		 /usr/bin/sed -e 's/ //g'
 
 PEP8 = /usr/bin/pep8
+JOBS = 4
 
 SUBDIRS=brand zoneproxy tsol util/mkcert
 
@@ -80,6 +81,7 @@ clobber: $(SUBDIRS)
 #
 install: $(SUBDIRS)
 	ISALIST=i386 $(PYTHON27) setup.py install
+	$(PYTHON35) setup.py install
 
 lint:
 	$(PYTHON27) setup.py lint
@@ -103,14 +105,14 @@ pep8:
 $(SUBDIRS): FRC
 	@cd $@; pwd; $(MAKE) $(TARGET) CC=$(CC)
 
-# Use the bits we just built to create the packages.
-packages: install pylint pep8
+# Use the bits we just built to create the packages. - #XXX pep8
+packages: install
 	@cd pkg; pwd; $(MAKE) $(TARGET) check \
 		PATH=$(CODE_WS)/proto/root_$$(uname -p)/usr/bin:$$PATH \
-		PYTHONPATH=$(CODE_WS)/proto/root_$$(uname -p)/usr/lib/python2.6/vendor-packages
 
 test:
-	$(PYTHON27) setup.py test
+	$(PYTHON27) tests/run.py -j ${JOBS} -v
+	#$(PYTHON35) tests/run.py -j ${JOBS} -v
 
 test-verbose:
 	$(PYTHON27) setup.py test -v

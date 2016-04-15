@@ -22,7 +22,7 @@
 
 # Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
 
-import testutils
+from . import testutils
 if __name__ == "__main__":
         testutils.setup_environment("../../../proto")
 import pkg5unittest
@@ -106,7 +106,7 @@ class TestPkgVerify(pkg5unittest.SingleDepotTestCase):
 
                 # Should fail since foo is not installed.
                 self.pkg_verify("foo", exit=1)
-                self.assert_("Unexpected Exception" not in self.output)
+                self.assertTrue("Unexpected Exception" not in self.output)
 
                 # Now install package.
                 self.pkg("install foo")
@@ -117,7 +117,7 @@ class TestPkgVerify(pkg5unittest.SingleDepotTestCase):
                 # Unprivileged users don't cause a traceback.
                 retcode, output = self.pkg_verify("foo", su_wrap=True, out=True,
                     exit=1)
-                self.assert_("Traceback" not in output)
+                self.assertTrue("Traceback" not in output)
 
                 # Should not output anything when using -q.
                 self.pkg_verify("-q foo")
@@ -136,12 +136,12 @@ class TestPkgVerify(pkg5unittest.SingleDepotTestCase):
                 portable.remove(os.path.join(self.get_img_path(), "usr", "bin",
                     "bobcat"))
                 self.pkg_verify("foo", exit=1)
-                self.assert_("Unexpected Exception" not in self.output)
-                self.assert_("PACKAGE" in self.output and "STATUS" in self.output)
+                self.assertTrue("Unexpected Exception" not in self.output)
+                self.assertTrue("PACKAGE" in self.output and "STATUS" in self.output)
 
                 # Test that "-H" works as expected.
                 self.pkg_verify("foo -H", exit=1)
-                self.assert_("PACKAGE" not in self.output and
+                self.assertTrue("PACKAGE" not in self.output and
                     "STATUS" not in self.output)
 
                 # Should not output anything when using -q.
@@ -176,18 +176,20 @@ class TestPkgVerify(pkg5unittest.SingleDepotTestCase):
                 fpath = os.path.join(self.get_img_path(), "etc",
                     "driver_aliases")
 
-                with open(fpath, "ab+") as f:
+                with open(fpath, "r+") as f:
                         out = ""
                         for l in f:
                                 if l.find("zigit") != -1:
                                         nl = l.replace("1234", "4321")
                                         out += nl
                                 out += l
-                        f.truncate(0)
+                        f.seek(0)
                         f.write(out)
 
-                # Verify should find the extra alias...
-                self.pkg_verify("-v foo | grep 4321")
+                # Verify should find the extra alias and it should be treated
+                # as a warning.
+                self.pkg_verify("-v foo")
+                self.assertTrue("4321" in self.output)
 
                 # ...but it should not be treated as a fatal error.
                 self.pkg_verify("foo")
@@ -287,6 +289,14 @@ class TestPkgVerify(pkg5unittest.SingleDepotTestCase):
                 shutil.rmtree(self.img_path())
                 self.set_img_path(old_img_path)
 
+        def test_verify_invalid_fmri(self):
+                """Test invalid fmri triggers correct output."""
+
+                self.image_create(self.rurl)
+                self.pkg("install foo")
+
+                self.pkg_verify("foo@invalid", exit=1)
+                self.assertTrue("illegal fmri" in self.errout)
 
 if __name__ == "__main__":
         unittest.main()

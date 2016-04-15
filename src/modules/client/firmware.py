@@ -72,7 +72,9 @@ class Firmware(object):
                         try:
                                 proc = subprocess.Popen(args, stdout=subprocess.PIPE,
                                     stderr=subprocess.STDOUT)
-                                buf = proc.stdout.readlines()
+                                # output from proc is bytes
+                                buf = [misc.force_str(l) for l in
+                                    proc.stdout.readlines()]
                                 ret = proc.wait()
                                 # if there was output, something went wrong.
                                 # Since generic errors are often exit(1),

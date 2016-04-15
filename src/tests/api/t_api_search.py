@@ -22,7 +22,7 @@
 
 # Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
 
-import testutils
+from . import testutils
 if __name__ == "__main__":
 	testutils.setup_environment("../../../proto")
 import pkg5unittest
@@ -30,7 +30,6 @@ import pkg5unittest
 import copy
 import os
 import shutil
-import six
 import tempfile
 import time
 import unittest
@@ -44,6 +43,7 @@ import pkg.fmri as fmri
 import pkg.indexer as indexer
 import pkg.portable as portable
 import pkg.search_storage as ss
+from pkg.misc import force_str
 
 
 class TestApiSearchBasics(pkg5unittest.SingleDepotTestCase):
@@ -597,9 +597,8 @@ close
 
         @staticmethod
         def _get_lines(fp):
-                fh = open(fp, "rb")
-                lines = fh.readlines()
-                fh.close()
+                with open(fp, "r") as fh:
+                        lines = fh.readlines()
                 return lines
 
         def _search_op(self, api_obj, remote, token, test_value,
@@ -671,7 +670,7 @@ close
                                 res.append(i)
                 except api_errors.SlowSearchUsed:
                         ssu = True
-                self.assert_(ssu)
+                self.assertTrue(ssu)
                 if return_actions:
                         res = self._extract_action_from_res(res)
                 else:
@@ -1274,6 +1273,7 @@ close
                 # Overwrite the existing version number.
                 # By definition, the version 0 is never used.
                 fh.write("{0}".format(ver))
+                fh.close()
                 shutil.rmtree(index_dir)
                 shutil.move(index_dir_tmp, index_dir)
 
@@ -1339,9 +1339,9 @@ close
         def _check_no_index(self):
                 ind_dir, ind_dir_tmp = self._get_index_dirs()
                 if os.listdir(ind_dir):
-                        self.assert_(0)
+                        self.assertTrue(0)
                 if os.path.exists(ind_dir_tmp):
-                        self.assert_(0)
+                        self.assertTrue(0)
 
         @staticmethod
         def validateAssertRaises(ex_type, validate_func, func, *args, **kwargs):
@@ -1354,7 +1354,7 @@ close
 
         @staticmethod
         def _check_err(e, expected_str, expected_code):
-                err = e.read()
+                err = force_str(e.read())
                 if expected_code != e.code:
                         raise RuntimeError("Got wrong code, expected {0} got "
                             "{1}".format(expected_code, e.code))
@@ -1574,7 +1574,7 @@ class TestApiSearchBasicsP(TestApiSearchBasics):
                 self._api_install(api_obj, ["example_pkg"])
                 api_obj.rebuild_search_index()
                 self._api_install(api_obj, ["fat"])
-                self.assert_(not os.path.exists(tmp_dir))
+                self.assertTrue(not os.path.exists(tmp_dir))
                 self._run_local_tests(api_obj)
 
         def test_100_bug_6712_i386(self):
@@ -1912,6 +1912,7 @@ class TestApiSearchBasicsP(TestApiSearchBasics):
                 fh = open(main_file)
                 main_1 = fh.readlines()
                 main_len = len(main_1)
+                fh.close()
 
                 self.pkgsend_bulk(durl, self.example_pkg10, optional=False)
                 fh = open(tok_file)
@@ -2408,14 +2409,14 @@ class TestApiSearchBasics_nonP(TestApiSearchBasics):
                 self.__corrupt_depot(writ_dir)
                 # Since the depot is empty, should return no results but
                 # not error.
-                self.assert_(not os.path.isdir(ind_dir))
+                self.assertTrue(not os.path.isdir(ind_dir))
                 self._search_op(api_obj, True, 'e*', set())
 
                 self.pkgsend_bulk(durl, self.example_pkg10)
 
                 # Check when depot contains a package.
                 self.__corrupt_depot(writ_dir)
-                self.assert_(not os.path.isdir(ind_dir))
+                self.assertTrue(not os.path.isdir(ind_dir))
                 self._run_remote_tests(api_obj)
 
         def test_bug_8318(self):
@@ -2430,7 +2431,7 @@ class TestApiSearchBasics_nonP(TestApiSearchBasics):
                     self.res_remote_path)
                 self._search_op(api_obj, True, "example_path",
                     self.res_remote_path, servers=[{"origin": durl}])
-                lfh = open(self.dc.get_logpath(), "rb")
+                lfh = open(self.dc.get_logpath(), "r")
                 found = 0
                 num_expected = 7
                 for line in lfh:
@@ -2442,6 +2443,7 @@ class TestApiSearchBasics_nonP(TestApiSearchBasics):
                                             "found in list of possible "
                                             "uuids:{1}".format(s_uuid, uuids))
                                 found += 1
+                lfh.close()
                 if found != num_expected:
                         raise RuntimeError(("Found {0} instances of a "
                             "client uuid, expected to find {1}.").format(
@@ -2719,7 +2721,7 @@ class TestApiSearchMulti(pkg5unittest.ManyDepotTestCase):
                                 c_uuid = pub.client_uuid
                         except api_errors.UnknownPublisher:
                                 c_uuid = None
-                        lfh = open(self.dcs[d].get_logpath(), "rb")
+                        lfh = open(self.dcs[d].get_logpath(), "r")
                         found = 0
                         for line in lfh:
                                 if "X-IPKG-UUID:" in line:
@@ -2733,6 +2735,7 @@ class TestApiSearchMulti(pkg5unittest.ManyDepotTestCase):
                                                     s_uuid, c_uuid, d,
                                                     self.dcs[d].get_depot_url()))
                                         found += 1
+                        lfh.close()
                         if found != num_expected[d]:
                                 raise RuntimeError("d:{0}, found {1} instances of"
                                     " a client uuid, expected to find {2}.".format(

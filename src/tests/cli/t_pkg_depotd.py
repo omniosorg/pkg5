@@ -24,7 +24,7 @@
 # Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
-import testutils
+from . import testutils
 if __name__ == "__main__":
         testutils.setup_environment("../../../proto")
 import pkg5unittest
@@ -33,6 +33,7 @@ import datetime
 import os
 import shutil
 import six
+import sys
 import tempfile
 import time
 import unittest
@@ -120,19 +121,19 @@ class TestPkgDepot(pkg5unittest.SingleDepotTestCase):
         def test_depot_ping(self):
                 """ Ping the depot several times """
 
-                self.assert_(self.dc.is_alive())
-                self.assert_(self.dc.is_alive())
-                self.assert_(self.dc.is_alive())
-                self.assert_(self.dc.is_alive())
+                self.assertTrue(self.dc.is_alive())
+                self.assertTrue(self.dc.is_alive())
+                self.assertTrue(self.dc.is_alive())
+                self.assertTrue(self.dc.is_alive())
 
         def testStartStop(self):
                 """ Start and stop the depot several times """
                 self.dc.stop()
                 for i in range(0, 5):
                         self.dc.start()
-                        self.assert_(self.dc.is_alive())
+                        self.assertTrue(self.dc.is_alive())
                         self.dc.stop()
-                        self.assert_(not self.dc.is_alive())
+                        self.assertTrue(not self.dc.is_alive())
 
                 self.dc.start()
 
@@ -185,21 +186,21 @@ class TestPkgDepot(pkg5unittest.SingleDepotTestCase):
                 dir_file = os.path.join(depotpath, "search.dir")
                 pag_file = os.path.join(depotpath, "search.pag")
 
-                self.assert_(not os.path.exists(dir_file))
-                self.assert_(not os.path.exists(pag_file))
+                self.assertTrue(not os.path.exists(dir_file))
+                self.assertTrue(not os.path.exists(pag_file))
 
                 f = open(dir_file, "w")
                 f.close()
                 f = open(pag_file, "w")
                 f.close()
-                self.assert_(os.path.exists(dir_file))
-                self.assert_(os.path.exists(pag_file))
+                self.assertTrue(os.path.exists(dir_file))
+                self.assertTrue(os.path.exists(pag_file))
 
                 self.dc.stop()
                 self.dc.start()
                 self.pkgsend_bulk(durl, self.quux10)
-                self.assert_(not os.path.exists(dir_file))
-                self.assert_(not os.path.exists(pag_file))
+                self.assertTrue(not os.path.exists(dir_file))
+                self.assertTrue(not os.path.exists(pag_file))
 
         def test_bug_4489(self):
                 """Publish a package and then verify that the depot /info
@@ -252,7 +253,8 @@ class TestPkgDepot(pkg5unittest.SingleDepotTestCase):
                 plist = self.pkgsend_bulk(depot_url, self.info20)
 
                 openurl = urljoin(depot_url, "info/0/{0}".format(plist[0]))
-                content = urlopen(openurl).read()
+                # urlopen.read return bytes
+                content = misc.force_str(urlopen(openurl).read())
                 # Get text from content.
                 lines = content.splitlines()
                 info_dic = {}
@@ -270,7 +272,7 @@ class TestPkgDepot(pkg5unittest.SingleDepotTestCase):
                 ]
 
                 for line in lines:
-                        fields = line.split(":", 1)
+                        fields = misc.force_str(line).split(":", 1)
                         attr = fields[0].strip()
                         if attr == "License":
                                 break
@@ -282,13 +284,13 @@ class TestPkgDepot(pkg5unittest.SingleDepotTestCase):
 
                 # Read manifest.
                 openurl = urljoin(depot_url, "manifest/0/{0}".format(plist[0]))
-                content = urlopen(openurl).read()
+                content = misc.force_str(urlopen(openurl).read())
                 manifest = man.Manifest()
                 manifest.set_content(content=content)
                 fmri_content = manifest.get("pkg.fmri", "")
 
                 # Check if FMRI is empty.
-                self.assert_(fmri_content)
+                self.assertTrue(fmri_content)
                 pfmri = fmri.PkgFmri(fmri_content, None)
                 pub, name, ver = pfmri.tuple()
                 size, csize = manifest.get_size()
@@ -317,6 +319,8 @@ class TestPkgDepot(pkg5unittest.SingleDepotTestCase):
                 self.assertEqual(info_dic["Size"], misc.bytes_to_str(size))
                 self.assertEqual(info_dic["Compressed Size"], misc.bytes_to_str(csize))
                 self.assertEqual(info_dic["FMRI"], fmri_content)
+                if six.PY3:
+                        os.environ["LC_ALL"] = "en_US.UTF-8"
 
         def test_bug_5707(self):
                 """Testing depotcontroller.refresh()."""
@@ -355,7 +359,7 @@ class TestPkgDepot(pkg5unittest.SingleDepotTestCase):
                                 raise
 
                 f = urlopen("{0}/robots.txt".format(depot_url))
-                self.assert_(len(f.read()))
+                self.assertTrue(len(f.read()))
                 f.close()
 
         def test_repo_create(self):
@@ -375,22 +379,22 @@ class TestPkgDepot(pkg5unittest.SingleDepotTestCase):
                 self.dc.set_readonly()
                 self.dc.stop()
                 self.dc.start_expected_fail()
-                self.assert_(not self.dc.is_alive())
+                self.assertTrue(not self.dc.is_alive())
 
                 # Next, test readonly mode with a repo_dir that is empty.
                 os.makedirs(dpath, misc.PKG_DIR_MODE)
                 self.dc.set_readonly()
                 self.dc.start_expected_fail()
-                self.assert_(not self.dc.is_alive())
+                self.assertTrue(not self.dc.is_alive())
 
                 # Next, test readwrite (publishing) mode with a non-existent
                 # repo_dir.
                 shutil.rmtree(dpath)
                 self.dc.set_readwrite()
                 self.dc.start()
-                self.assert_(self.dc.is_alive())
+                self.assertTrue(self.dc.is_alive())
                 self.dc.stop()
-                self.assert_(not self.dc.is_alive())
+                self.assertTrue(not self.dc.is_alive())
 
                 # Next, test readwrite (publishing) mode with a non-existent
                 # repo_dir for an unprivileged user.
@@ -404,23 +408,23 @@ class TestPkgDepot(pkg5unittest.SingleDepotTestCase):
                 finally:
                         # Even if this test fails, this wrapper must be reset.
                         self.dc.set_wrapper(wr_start, wr_end)
-                self.assert_(not self.dc.is_alive())
+                self.assertTrue(not self.dc.is_alive())
 
                 # Next, test readwrite (publishing) mode with an empty repo_dir.
                 os.makedirs(dpath, misc.PKG_DIR_MODE)
                 self.dc.set_readwrite()
                 self.dc.start()
-                self.assert_(self.dc.is_alive())
+                self.assertTrue(self.dc.is_alive())
                 self.dc.stop()
-                self.assert_(not self.dc.is_alive())
+                self.assertTrue(not self.dc.is_alive())
 
                 # Finally, re-test readonly mode now that the repository has
                 # been created.
                 self.dc.set_readonly()
                 self.dc.start()
-                self.assert_(self.dc.is_alive())
+                self.assertTrue(self.dc.is_alive())
                 self.dc.stop()
-                self.assert_(not self.dc.is_alive())
+                self.assertTrue(not self.dc.is_alive())
 
                 # Cleanup.
                 shutil.rmtree(dpath)
@@ -545,9 +549,9 @@ class TestDepotController(pkg5unittest.CliTestCase):
                 self.__dc.set_port(self.next_free_port)
                 for i in range(0, 5):
                         self.__dc.start()
-                        self.assert_(self.__dc.is_alive())
+                        self.assertTrue(self.__dc.is_alive())
                         self.__dc.stop()
-                        self.assert_(not self.__dc.is_alive())
+                        self.assertTrue(not self.__dc.is_alive())
 
         def test_cfg_file(self):
                 cfg_file = os.path.join(self.test_root, "cfg2")
@@ -583,11 +587,11 @@ class TestDepotController(pkg5unittest.CliTestCase):
                                     os.path.isdir(index_dir) and \
                                     (not check_feed or os.path.isfile(feed))
 
-                        self.assert_(not os.path.exists(o_index_dir))
-                        self.assert_(os.path.isdir(index_dir))
+                        self.assertTrue(not os.path.exists(o_index_dir))
+                        self.assertTrue(os.path.isdir(index_dir))
                         if check_feed:
                                 try:
-                                        self.assert_(os.path.isfile(feed))
+                                        self.assertTrue(os.path.isfile(feed))
                                 except:
                                         raise RuntimeError("Feed cache file "
                                             "not found at '{0}'.".format(feed))
@@ -604,7 +608,7 @@ class TestDepotController(pkg5unittest.CliTestCase):
                                 except HTTPError as e:
                                         self.debug(str(e))
                                         time.sleep(1)
-                        self.assert_(got)
+                        self.assertTrue(got)
 
                 self.__dc.set_port(self.next_free_port)
                 durl = self.__dc.get_depot_url()
@@ -653,37 +657,37 @@ class TestDepotController(pkg5unittest.CliTestCase):
                 self.__dc.set_rebuild()
                 self.__dc.set_norefresh_index()
 
-                self.assert_(self.__dc.start_expected_fail())
+                self.assertTrue(self.__dc.start_expected_fail())
 
                 self.__dc.set_readonly()
                 self.__dc.set_norebuild()
                 self.__dc.set_refresh_index()
 
-                self.assert_(self.__dc.start_expected_fail())
+                self.assertTrue(self.__dc.start_expected_fail())
 
                 self.__dc.set_readonly()
                 self.__dc.set_rebuild()
                 self.__dc.set_refresh_index()
 
-                self.assert_(self.__dc.start_expected_fail())
+                self.assertTrue(self.__dc.start_expected_fail())
 
                 self.__dc.set_readwrite()
                 self.__dc.set_rebuild()
                 self.__dc.set_refresh_index()
 
-                self.assert_(self.__dc.start_expected_fail())
+                self.assertTrue(self.__dc.start_expected_fail())
 
                 self.__dc.set_mirror()
                 self.__dc.set_rebuild()
                 self.__dc.set_norefresh_index()
 
-                self.assert_(self.__dc.start_expected_fail())
+                self.assertTrue(self.__dc.start_expected_fail())
 
                 self.__dc.set_mirror()
                 self.__dc.set_norebuild()
                 self.__dc.set_refresh_index()
 
-                self.assert_(self.__dc.start_expected_fail())
+                self.assertTrue(self.__dc.start_expected_fail())
 
         def test_disable_ops(self):
                 """Verify that disable-ops works as expected."""
@@ -823,9 +827,10 @@ class TestDepotOutput(pkg5unittest.SingleDepotTestCase):
                 # Make sure the PKGDEPOT_CONTROLLER is not set in the newenv.
                 newenv = os.environ.copy()
                 newenv.pop("PKGDEPOT_CONTROLLER", None)
-                cmdargs = "/usr/bin/ctrun -o noorphan {0}/usr/lib/pkg.depotd " \
-                    "-p {1} -d {2} --content-root {3}/usr/share/lib/pkg " \
-                    "--readonly </dev/null > {4} 2> {5}".format(
+                cmdargs = "/usr/bin/ctrun -o noorphan {0} {1}/usr/lib/pkg.depotd " \
+                    "-p {2} -d {3} --content-root {4}/usr/share/lib/pkg " \
+                    "--readonly </dev/null --log-access={5} " \
+                    "--log-errors={6}".format(sys.executable,
                     pkg5unittest.g_pkg_path, self.next_free_port, repopath,
                     pkg5unittest.g_pkg_path, out_path, err_path)
 
@@ -837,7 +842,7 @@ class TestDepotOutput(pkg5unittest.SingleDepotTestCase):
                         depot_handle = subprocess.Popen(cmdargs, env=newenv,
                             shell=True)
 
-                        self.assert_(depot_handle != None, msg="Could not "
+                        self.assertTrue(depot_handle != None, msg="Could not "
                             "start depot")
                         begintime = time.time()
                         check_interval = 0.20
@@ -846,7 +851,7 @@ class TestDepotOutput(pkg5unittest.SingleDepotTestCase):
 
                         while (time.time() - begintime) <= 40.0:
                                 rc = depot_handle.poll()
-                                self.assert_(rc is None, msg="Depot exited "
+                                self.assertTrue(rc is None, msg="Depot exited "
                                     "unexpectedly")
 
                                 try:
@@ -859,14 +864,14 @@ class TestDepotOutput(pkg5unittest.SingleDepotTestCase):
                         if not daemon_started:
                                 if depot_handle:
                                         depot_handle.kill()
-                                self.assert_(daemon_started, msg="Could not "
+                                self.assertTrue(daemon_started, msg="Could not "
                                     "access depot daemon")
 
                         # Read the msgs from the err log file to verify log
                         # msgs.
                         with open(err_path, "r") as read_err:
                                 msgs = read_err.readlines()
-                                self.assert_(msgs, "Log message is "
+                                self.assertTrue(msgs, "Log message is "
                                     "empty. Check if the previous "
                                     "ctrun process shut down "
                                     "properly")
@@ -948,7 +953,7 @@ class TestDepotOutput(pkg5unittest.SingleDepotTestCase):
 
                                         fd, fpath = tempfile.mkstemp(
                                             suffix="html", dir=self.tpath)
-                                        fp = os.fdopen(fd, "w")
+                                        fp = os.fdopen(fd, "wb")
                                         fp.write(response.read())
                                         fp.close()
 
@@ -1017,11 +1022,19 @@ class TestDepotOutput(pkg5unittest.SingleDepotTestCase):
                 durl = self.dc.get_depot_url()
                 purl = urljoin(durl, "publisher/0")
                 entries = p5i.parse(location=purl)
-                assert entries[0][0].prefix == "test"
-                assert entries[1][0].prefix == "org.opensolaris.pending"
+                # entries's order is unstable in Python 3, but it doesn't really
+                # matter as long as the prefix is in entries.
+                if entries[0][0].prefix == "test":
+                        index = -1
+                        assert entries[1][0].prefix == "org.opensolaris.pending"
+                else:
+                        index = 0
+                        assert entries[0][0].prefix == "org.opensolaris.pending"
+                        assert entries[1][0].prefix == "test"
+
 
                 # Now verify that the parsed response has the expected data.
-                pub, pkglist = entries[-1]
+                pub, pkglist = entries[index]
                 cfgdata = self.repo_cfg
                 for prop in cfgdata["publisher"]:
                         self.assertEqual(getattr(pub, prop),
@@ -1125,12 +1138,18 @@ class TestDepotOutput(pkg5unittest.SingleDepotTestCase):
                     "catalog/0", "catalog/1/catalog.attrs",
                     "file/0/3aad0bca6f3a6f502c175700ebe90ef36e312d7e"):
                         hdrs = dict(get_headers(req_path))
-
-                        # Fields must be referenced in lowercase.
-                        cc = hdrs.get("cache-control", "")
-                        self.assertTrue(cc.startswith("must-revalidate, "
-                            "no-transform, max-age="))
-                        exp = hdrs.get("expires", None)
+                        if six.PY2:
+                                # Fields must be referenced in lowercase.
+                                cc = hdrs.get("cache-control", "")
+                                self.assertTrue(cc.startswith("must-revalidate, "
+                                    "no-transform, max-age="))
+                                exp = hdrs.get("expires", None)
+                        else:
+                                # Fields begin with uppercase.
+                                cc = hdrs.get("Cache-Control", "")
+                                self.assertTrue(cc.startswith("must-revalidate, "
+                                    "no-transform, max-age="))
+                                exp = hdrs.get("Expires", None)
                         self.assertNotEqual(exp, None)
                         self.assertTrue(exp.endswith(" GMT"))
 
@@ -1138,8 +1157,12 @@ class TestDepotOutput(pkg5unittest.SingleDepotTestCase):
                     "file/0/3aad0bca6f3a6f502c175700ebe90ef36e312d7f"):
 
                         hdrs = dict(get_headers(req_path))
-                        cc = hdrs.get("cache-control", None)
-                        prg = hdrs.get("pragma", None)
+                        if six.PY2:
+                                cc = hdrs.get("cache-control", None)
+                                prg = hdrs.get("pragma", None)
+                        else:
+                                cc = hdrs.get("Cache-Control", None)
+                                prg = hdrs.get("Pragma", None)
                         self.assertEqual(cc, None)
                         self.assertEqual(prg, None)
 
@@ -1175,9 +1198,9 @@ class TestDepotOutput(pkg5unittest.SingleDepotTestCase):
                 self.dc.set_address("::1")
                 self.dc.set_port(self.next_free_port)
                 self.dc.start()
-                self.assert_(self.dc.is_alive())
-                self.assert_(self.dc.is_alive())
-                self.assert_(self.dc.is_alive())
+                self.assertTrue(self.dc.is_alive())
+                self.assertTrue(self.dc.is_alive())
+                self.assertTrue(self.dc.is_alive())
 
                 # Check that we can retrieve something.
                 durl = self.dc.get_depot_url()

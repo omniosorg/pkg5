@@ -24,12 +24,12 @@
 # Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
-import testutils
+from . import testutils
 if __name__ == "__main__":
 	testutils.setup_environment("../../../proto")
 import pkg5unittest
 
-import cStringIO
+from six.moves import cStringIO
 import os
 import pkg.client.api as api
 import pkg.client.api_errors as api_errors
@@ -208,7 +208,7 @@ class TestPkgApi(pkg5unittest.SingleDepotTestCase):
                 self.pkgsend_bulk(self.rurl, self.foo10)
                 api_obj = self.image_create(self.rurl, prefix="bobcat")
 
-                self.assert_(api_obj.describe() is None)
+                self.assertTrue(api_obj.describe() is None)
 
                 self.assertRaises(api_errors.PlanMissingException,
                     api_obj.prepare)
@@ -221,7 +221,7 @@ class TestPkgApi(pkg5unittest.SingleDepotTestCase):
                 self.assertRaises(api_errors.PlanMissingException,
                     api_obj.prepare)
 
-                self.assert_(api_obj.describe() is None)
+                self.assertTrue(api_obj.describe() is None)
 
                 self.pkgsend_bulk(self.rurl, self.foo12)
                 api_obj.refresh(immediate=True)
@@ -233,7 +233,7 @@ class TestPkgApi(pkg5unittest.SingleDepotTestCase):
 
                 self.assertRaises(api_errors.PlanMissingException,
                     api_obj.prepare)
-                self.assert_(api_obj.describe() is None)
+                self.assertTrue(api_obj.describe() is None)
 
                 for pd in api_obj.gen_plan_uninstall(["foo"]):
                         continue
@@ -242,7 +242,7 @@ class TestPkgApi(pkg5unittest.SingleDepotTestCase):
 
                 self.assertRaises(api_errors.PlanMissingException,
                     api_obj.prepare)
-                self.assert_(api_obj.describe() is None)
+                self.assertTrue(api_obj.describe() is None)
 
         def test_reset(self):
                 """ Send empty package foo@1.0, install and uninstall """
@@ -257,22 +257,22 @@ class TestPkgApi(pkg5unittest.SingleDepotTestCase):
 
                 for pd in api_obj.gen_plan_install(["foo"]):
                         continue
-                self.assert_(api_obj.describe() is not None)
+                self.assertTrue(api_obj.describe() is not None)
                 api_obj.reset()
-                self.assert_(api_obj.describe() is None)
+                self.assertTrue(api_obj.describe() is None)
                 for pd in api_obj.gen_plan_install(["foo"]):
                         continue
-                self.assert_(api_obj.describe() is not None)
+                self.assertTrue(api_obj.describe() is not None)
                 api_obj.prepare()
                 api_obj.reset()
-                self.assert_(api_obj.describe() is None)
+                self.assertTrue(api_obj.describe() is None)
                 for pd in api_obj.gen_plan_install(["foo"]):
                         continue
-                self.assert_(api_obj.describe() is not None)
+                self.assertTrue(api_obj.describe() is not None)
                 api_obj.prepare()
                 api_obj.execute_plan()
                 api_obj.reset()
-                self.assert_(api_obj.describe() is None)
+                self.assertTrue(api_obj.describe() is None)
 
                 self.pkg("list")
                 self.pkg("verify")
@@ -282,44 +282,44 @@ class TestPkgApi(pkg5unittest.SingleDepotTestCase):
 
                 for pd in api_obj.gen_plan_update():
                         continue
-                self.assert_(api_obj.describe() is not None)
+                self.assertTrue(api_obj.describe() is not None)
                 api_obj.reset()
-                self.assert_(api_obj.describe() is None)
+                self.assertTrue(api_obj.describe() is None)
                 for pd in api_obj.gen_plan_update():
                         continue
-                self.assert_(api_obj.describe() is not None)
+                self.assertTrue(api_obj.describe() is not None)
                 api_obj.prepare()
                 api_obj.reset()
-                self.assert_(api_obj.describe() is None)
+                self.assertTrue(api_obj.describe() is None)
                 for pd in api_obj.gen_plan_update():
                         continue
-                self.assert_(api_obj.describe() is not None)
+                self.assertTrue(api_obj.describe() is not None)
                 api_obj.prepare()
                 api_obj.execute_plan()
                 api_obj.reset()
-                self.assert_(api_obj.describe() is None)
+                self.assertTrue(api_obj.describe() is None)
 
                 self.pkg("list")
                 self.pkg("verify")
 
                 for pd in api_obj.gen_plan_uninstall(["foo"]):
                         continue
-                self.assert_(api_obj.describe() is not None)
+                self.assertTrue(api_obj.describe() is not None)
                 api_obj.reset()
-                self.assert_(api_obj.describe() is None)
+                self.assertTrue(api_obj.describe() is None)
                 for pd in api_obj.gen_plan_uninstall(["foo"]):
                         continue
-                self.assert_(api_obj.describe() is not None)
+                self.assertTrue(api_obj.describe() is not None)
                 api_obj.prepare()
                 api_obj.reset()
-                self.assert_(api_obj.describe() is None)
+                self.assertTrue(api_obj.describe() is None)
                 for pd in api_obj.gen_plan_uninstall(["foo"]):
                         continue
-                self.assert_(api_obj.describe() is not None)
+                self.assertTrue(api_obj.describe() is not None)
                 api_obj.prepare()
                 api_obj.execute_plan()
                 api_obj.reset()
-                self.assert_(api_obj.describe() is None)
+                self.assertTrue(api_obj.describe() is None)
 
                 self.pkg("verify")
 
@@ -619,7 +619,7 @@ class TestPkgApi(pkg5unittest.SingleDepotTestCase):
                 }
 
                 # Dump the p5i data.
-                fobj = cStringIO.StringIO()
+                fobj = cStringIO()
                 api_obj.write_p5i(fobj, pkg_names=pnames, pubs=[pub])
 
                 # Verify that output matches expected output.
@@ -732,7 +732,8 @@ class TestPkgApi(pkg5unittest.SingleDepotTestCase):
                 # when provided a file path.
                 fobj.seek(0)
                 (fd1, path1) = tempfile.mkstemp(dir=self.test_root)
-                os.write(fd1, fobj.read())
+                with open(path1, "w") as f:
+                        f.write(fobj.read())
                 validate_results(api_obj.parse_p5i(location=path1))
 
                 # Verify that parse returns the expected object and information
@@ -764,7 +765,7 @@ class TestPkgApi(pkg5unittest.SingleDepotTestCase):
                 self._api_install(api_obj, ["foo"])
                 api_obj.remove_publisher("bobcat")
                 api_obj.remove_publisher("p5icat")
-                self.assert_(api_obj.get_highest_ranked_publisher().prefix,
+                self.assertTrue(api_obj.get_highest_ranked_publisher().prefix,
                     "bobcat")
 
         def test_deprecated(self):

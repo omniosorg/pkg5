@@ -22,16 +22,17 @@
 #
 
 #
-# Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
-import testutils
+from . import testutils
 if __name__ == "__main__":
         testutils.setup_environment("../../../proto")
 import pkg5unittest
 
 import copy
 import os
+import six
 import time
 import unittest
 import certgenerator
@@ -296,7 +297,7 @@ SSLRandomSeed connect builtin
                 _svcprop_conf = copy.deepcopy(svcprop_conf)
 
                 # ensure the arrays are the same length.
-                self.assert_(len(_svcs_conf) == len(_svcprop_conf))
+                self.assertTrue(len(_svcs_conf) == len(_svcprop_conf))
 
                 for index, conf in enumerate(_svcs_conf):
                         fmri = conf[0]
@@ -373,10 +374,10 @@ class TestHttpDepot(_Apache, pkg5unittest.ApacheDepotTestCase):
 
                 ret, output = self.depotconfig("", fill_missing_args=False,
                     out=True, exit=2)
-                self.assert_("Usage:" in output,
+                self.assertTrue("Usage:" in output,
                     "No usage string printed: {0}".format(output))
                 ret, output = self.depotconfig("--help", out=True, exit=2)
-                self.assert_("Usage:" in output,
+                self.assertTrue("Usage:" in output,
                     "No usage string printed: {0}".format(output))
 
         def test_2_htinvalid_root(self):
@@ -392,7 +393,7 @@ class TestHttpDepot(_Apache, pkg5unittest.ApacheDepotTestCase):
                             "-d {0} -F".format(invalid_root), out=True, stderr=True,
                             exit=1)
                         expected = invalid_root.split("=")[1]
-                        self.assert_(expected in err,
+                        self.assertTrue(expected in err,
                             "error message did not contain {0}: {1}".format(
                             expected, err))
 
@@ -402,7 +403,7 @@ class TestHttpDepot(_Apache, pkg5unittest.ApacheDepotTestCase):
                 self._set_smf_state(svcs_conf, svcprop_conf)
                 ret, output, err = self.depotconfig("", out=True, stderr=True,
                     exit=1)
-                self.assert_("/tmp" in err, "error message did not contain "
+                self.assertTrue("/tmp" in err, "error message did not contain "
                     "/tmp")
 
                 # ensure we pick up invalid writable_root directories
@@ -421,7 +422,7 @@ class TestHttpDepot(_Apache, pkg5unittest.ApacheDepotTestCase):
                 for invalid_cache in ["/dev/null", "/etc/passwd"]:
                         ret, output, err = self.depotconfig("-c {0}".format(
                             invalid_cache), out=True, stderr=True, exit=1)
-                        self.assert_(invalid_cache in err, "error message "
+                        self.assertTrue(invalid_cache in err, "error message "
                             "did not contain {0}: {1}".format(invalid_cache, err))
 
         def test_4_invalid_hthostname(self):
@@ -430,7 +431,7 @@ class TestHttpDepot(_Apache, pkg5unittest.ApacheDepotTestCase):
                 for invalid_host in ["1.2.3.4.5.6", "pkgsysrepotestname", "."]:
                         ret, output, err = self.depotconfig("-h {0}".format(
                             invalid_host), out=True, stderr=True, exit=1)
-                        self.assert_(invalid_host in err, "error message "
+                        self.assertTrue(invalid_host in err, "error message "
                             "did not contain {0}: {1}".format(invalid_host, err))
 
         def test_5_invalid_htlogs_dir(self):
@@ -439,7 +440,7 @@ class TestHttpDepot(_Apache, pkg5unittest.ApacheDepotTestCase):
                 for invalid_log in ["/dev/null", "/etc/passwd"]:
                         ret, output, err = self.depotconfig("-l {0}".format(invalid_log),
                             out=True, stderr=True, exit=1)
-                        self.assert_(invalid_log in err, "error message "
+                        self.assertTrue(invalid_log in err, "error message "
                             "did not contain {0}: {1}".format(invalid_log, err))
 
                 for invalid_log in ["/proc"]:
@@ -455,7 +456,7 @@ class TestHttpDepot(_Apache, pkg5unittest.ApacheDepotTestCase):
                 for invalid_port in [999999, "bobcat", "-1234"]:
                         ret, output, err = self.depotconfig("-p {0}".format(invalid_port),
                             out=True, stderr=True, exit=1)
-                        self.assert_(str(invalid_port) in err, "error message "
+                        self.assertTrue(str(invalid_port) in err, "error message "
                             "did not contain {0}: {1}".format(invalid_port, err))
 
         def test_7_invalid_htruntime_dir(self):
@@ -464,7 +465,7 @@ class TestHttpDepot(_Apache, pkg5unittest.ApacheDepotTestCase):
                 for invalid_runtime in ["/dev/null", "/etc/passwd", "/proc"]:
                         ret, output, err = self.depotconfig("-r {0}".format(
                             invalid_runtime), out=True, stderr=True, exit=1)
-                        self.assert_(invalid_runtime in err, "error message "
+                        self.assertTrue(invalid_runtime in err, "error message "
                             "did not contain {0}: {1}".format(invalid_runtime, err))
 
         def test_8_invalid_htcache_size(self):
@@ -474,7 +475,7 @@ class TestHttpDepot(_Apache, pkg5unittest.ApacheDepotTestCase):
                         ret, output, err = self.depotconfig(
                             "-s {0}".format(invalid_csize), out=True, stderr=True,
                             exit=1)
-                        self.assert_(str(invalid_csize) in err, "error message "
+                        self.assertTrue(str(invalid_csize) in err, "error message "
                             "did not contain {0}: {1}".format(invalid_csize, err))
 
         def test_9_invalid_httemplates_dir(self):
@@ -483,7 +484,7 @@ class TestHttpDepot(_Apache, pkg5unittest.ApacheDepotTestCase):
                 for invalid_tmp in ["/dev/null", "/etc/passwd", "/proc"]:
                         ret, output, err = self.depotconfig("-T {0}".format(invalid_tmp),
                             out=True, stderr=True, exit=1)
-                        self.assert_(invalid_tmp in err, "error message "
+                        self.assertTrue(invalid_tmp in err, "error message "
                             "did not contain {0}: {1}".format(invalid_tmp, err))
 
         def test_10_httype(self):
@@ -492,7 +493,7 @@ class TestHttpDepot(_Apache, pkg5unittest.ApacheDepotTestCase):
                 invalid_type = "weblogic"
                 ret, output, err = self.depotconfig("-t {0}".format(invalid_type),
                     out=True, stderr=True, exit=2)
-                self.assert_(invalid_type in err, "error message "
+                self.assertTrue(invalid_type in err, "error message "
                     "did not contain {0}: {1}".format(invalid_type, err))
                 # ensure we work with the supported type
                 self.depotconfig("-t apache2")
@@ -532,7 +533,7 @@ class TestHttpDepot(_Apache, pkg5unittest.ApacheDepotTestCase):
                 def get_url(url_path):
                         try:
                                 url_obj = urlopen(url_path, timeout=10)
-                                self.assert_(url_obj.code == 200,
+                                self.assertTrue(url_obj.code == 200,
                                     "Failed to open {0}: {1}".format(url_path,
                                     url_obj.code))
                                 url_obj.close()
@@ -572,7 +573,7 @@ class TestHttpDepot(_Apache, pkg5unittest.ApacheDepotTestCase):
                 except HTTPError as e:
                         if e.code == 404:
                                 raised_404 = True
-                self.assert_(raised_404, "Didn't get a 404 opening {0}".format(
+                self.assertTrue(raised_404, "Didn't get a 404 opening {0}".format(
                     bad_url))
 
                 # check that we can still reach other valid paths
@@ -624,7 +625,7 @@ class TestHttpDepot(_Apache, pkg5unittest.ApacheDepotTestCase):
                 ret, output = self.pkg(
                     "search -o action.raw -s {0}/usr new".format(self.ac.url),
                     out=True)
-                self.assert_("path=usr/bin/new" in output)
+                self.assertTrue("path=usr/bin/new" in output)
 
                 # publish a new package, and ensure we can install it
                 self.pkgsend_bulk(self.dcs[1].get_repo_url(), self.another_pkg)
@@ -665,7 +666,7 @@ class TestHttpDepot(_Apache, pkg5unittest.ApacheDepotTestCase):
                     self.ac.url), out=True)
                 sec_fmri_nobuild = pkg.fmri.PkgFmri(second[0]).get_fmri(
                     include_build=False)
-                self.assert_(sec_fmri_nobuild in output)
+                self.assertTrue(sec_fmri_nobuild in output)
                 dest = os.path.join(self.test_root, "test_13_hgpkgrecv")
                 os.mkdir(dest)
 
@@ -674,8 +675,8 @@ class TestHttpDepot(_Apache, pkg5unittest.ApacheDepotTestCase):
                     "-d {1} '*'".format(self.ac.url, dest))
 
                 # Quickly sanity check the contents
-                self.assert_(os.listdir(dest) == ["sample"])
-                self.assert_(
+                self.assertTrue(os.listdir(dest) == ["sample"])
+                self.assertTrue(
                     set(os.listdir(os.path.join(dest, "sample"))) ==
                     set([first_ver, second_ver]))
 
@@ -685,7 +686,7 @@ class TestHttpDepot(_Apache, pkg5unittest.ApacheDepotTestCase):
                 mf = pkg.manifest.Manifest()
                 mf.set_content(pathname=os.path.join(mf_path, "manifest.file"))
                 f_ac = mf.actions[0]
-                self.assert_(f_ac.attrs["path"] == "usr/bin/sample")
+                self.assertTrue(f_ac.attrs["path"] == "usr/bin/sample")
                 f_path = os.path.join(mf_path, f_ac.hash)
                 os.path.exists(f_path)
                 self.file_contains(f_path, "tmp/updated")
@@ -722,8 +723,8 @@ class TestHttpDepot(_Apache, pkg5unittest.ApacheDepotTestCase):
                 # verify that list commands work
                 ret, output = self.pkgrepo("-s {0} list -F tsv".format(depot_url),
                     out=True)
-                self.assert_("pkg://test1/sample@1.0" in output)
-                self.assert_("pkg://test1/new@1.0" not in output)
+                self.assertTrue("pkg://test1/sample@1.0" in output)
+                self.assertTrue("pkg://test1/new@1.0" not in output)
 
                 # rebuild, remove and set commands should fail, the latter two
                 # with exit code 2
@@ -734,7 +735,7 @@ class TestHttpDepot(_Apache, pkg5unittest.ApacheDepotTestCase):
 
                 # verify that status works
                 self.pkgrepo("-s {0} info".format(depot_url))
-                self.assert_("test1 1 online" in self.reduceSpaces(self.output))
+                self.assertTrue("test1 1 online" in self.reduceSpaces(self.output))
 
                 # verify search works for packages in the repository
                 self.pkg("set-publisher -p {0}".format(depot_url))
@@ -764,11 +765,11 @@ class TestHttpDepot(_Apache, pkg5unittest.ApacheDepotTestCase):
                 # we should now get search results for that new package
                 ret, output = self.pkg("search -s {0} /usr/bin/new".format(windex_url),
                     out=True)
-                self.assert_("usr/bin/new" in output)
+                self.assertTrue("usr/bin/new" in output)
                 ret, output = self.pkgrepo("-s {0} list -F tsv".format(windex_url),
                     out=True)
-                self.assert_("pkg://test3/sample@1.0" in output)
-                self.assert_("pkg://test3/new@1.0" in output)
+                self.assertTrue("pkg://test3/sample@1.0" in output)
+                self.assertTrue("pkg://test3/new@1.0" in output)
 
                 # ensure that refresh --no-catalog works, but refresh --no-index
                 # does not.
@@ -835,11 +836,17 @@ class TestHttpDepot(_Apache, pkg5unittest.ApacheDepotTestCase):
                         ret = False
                         try:
                                 u = urlopen(url)
-                                h = u.headers.get(header, "")
+                                if six.PY2:
+                                        h = u.headers.get(header, "")
+                                else:
+                                        # HTTPMessage inherits from
+                                        # email.Message in Python 3 so that it
+                                        # has a different method
+                                        h = u.headers.get_all(header, "")
                                 if value in h:
                                         return True
                         except Exception as e:
-                                self.assert_(False, "Error opening {0}: {1}".format(
+                                self.assertTrue(False, "Error opening {0}: {1}".format(
                                     url, e))
                         return ret
 
@@ -847,7 +854,7 @@ class TestHttpDepot(_Apache, pkg5unittest.ApacheDepotTestCase):
                         for headers in paths[path]:
                                 name, value = headers
                                 url = "{0}{1}".format(self.ac.url, path)
-                                self.assert_(header_contains(url, name, value),
+                                self.assertTrue(header_contains(url, name, value),
                                     "{0} did not contain the header {1}={2}".format(
                                     url, name, value))
 
@@ -893,7 +900,7 @@ class TestHttpDepot(_Apache, pkg5unittest.ApacheDepotTestCase):
                 # verify the instance is definitely the one using our custom
                 # httpd.conf
                 u = urlopen("{0}/pkg5test-server-status".format(self.ac.url))
-                self.assert_(u.code == http_client.OK,
+                self.assertTrue(u.code == http_client.OK,
                     "Error getting pkg5-server-status")
 
                 self.image_create()
@@ -936,27 +943,27 @@ class TestHttpsDepot(_Apache, pkg5unittest.HTTPSTestClass):
                 dummy_ret, dummy_output, err = self.depotconfig(
                     "--cert {0} --key {1}".format(cert, key),
                     out=True, stderr=True, exit=2)
-                self.assert_(len(err), "error message: Without --https, "
+                self.assertTrue(len(err), "error message: Without --https, "
                             "providing cert or key should fail but succeeded "
                             "instead.")
 
                 dummy_ret, dummy_output, err = self.depotconfig(
                     "--ca-cert {0} --ca-key {1}".format(cert, key),
                     out=True, stderr=True, exit=2)
-                self.assert_(len(err), "error message: Without --https, "
+                self.assertTrue(len(err), "error message: Without --https, "
                             "providing cert or key should fail but succeeded "
                             "instead.")
 
                 dummy_ret, dummy_output, err = self.depotconfig(
                     "--cert-chain {0}".format(cert), out=True, stderr=True, exit=2)
-                self.assert_(len(err), "error message: Without --https, "
+                self.assertTrue(len(err), "error message: Without --https, "
                             "providing cert or key should fail but succeeded "
                             "instead.")
 
                 # Checking that HTTPS is not supported in fragment mode.
                 dummy_ret, dummy_output, err = self.depotconfig(
                     "--https -F", out=True, stderr=True, exit=2)
-                self.assert_(len(err), "error message: Without --https, "
+                self.assertTrue(len(err), "error message: Without --https, "
                             "providing cert or key should fail but succeeded "
                             "instead.")
 
@@ -984,7 +991,7 @@ class TestHttpsDepot(_Apache, pkg5unittest.HTTPSTestClass):
                         ret, output, err = self.depotconfig("--https "
                             "--cert-key-dir {0}".format(
                             invalid_certkey_dir), out=True, stderr=True, exit=1)
-                        self.assert_(invalid_certkey_dir in err, "error message "
+                        self.assertTrue(invalid_certkey_dir in err, "error message "
                            "did not contain {0}: {1}".format(invalid_certkey_dir, err))
 
         def test_3_non_exist_cert_key(self):
@@ -1005,14 +1012,14 @@ class TestHttpsDepot(_Apache, pkg5unittest.HTTPSTestClass):
                 dummy_ret, dummy_output, err = self.depotconfig("--https "
                     "--cert {0} --key {1}".format(non_exist_cert, exist_key),
                     out=True, stderr=True, exit=1)
-                self.assert_(non_exist_cert in err, "error message "
+                self.assertTrue(non_exist_cert in err, "error message "
                     "did not contain {0}: {1}".format(non_exist_cert, err))
 
                 # Test checking user provided server key works.
                 dummy_ret, dummy_output, err = self.depotconfig("--https "
                     "--cert {0} --key {1}".format(exist_cert, non_exist_key),
                     out=True, stderr=True, exit=1)
-                self.assert_(non_exist_key in err, "error message "
+                self.assertTrue(non_exist_key in err, "error message "
                     "did not contain {0}: {1}".format(non_exist_key, err))
 
                 # Test checking user provided cert chain file works.
@@ -1020,7 +1027,7 @@ class TestHttpsDepot(_Apache, pkg5unittest.HTTPSTestClass):
                     "--cert {0} --key {1} --cert-chain {2}".format(
                     exist_cert, exist_key, non_exist_cert),
                     out=True, stderr=True, exit=1)
-                self.assert_(non_exist_cert in err, "error message "
+                self.assertTrue(non_exist_cert in err, "error message "
                     "did not contain {0}: {1}".format(non_exist_cert, err))
 
                 # Test checking user provided CA cert file works.
@@ -1029,7 +1036,7 @@ class TestHttpsDepot(_Apache, pkg5unittest.HTTPSTestClass):
                     "--ca-cert {0} --ca-key {1} --cert-key-dir {2}".format(
                     non_exist_cert, exist_key, tmp_dir),
                     out=True, stderr=True, exit=1)
-                self.assert_(non_exist_cert in err, "error message "
+                self.assertTrue(non_exist_cert in err, "error message "
                     "did not contain {0}: {1}".format(non_exist_cert, err))
 
                 # Test checking user provided CA key file works.
@@ -1037,7 +1044,7 @@ class TestHttpsDepot(_Apache, pkg5unittest.HTTPSTestClass):
                     "--ca-cert {0} --ca-key {1} --cert-key-dir {2}".format(
                     exist_cert, non_exist_key, tmp_dir),
                     out=True, stderr=True, exit=1)
-                self.assert_(non_exist_key in err, "error message "
+                self.assertTrue(non_exist_key in err, "error message "
                     "did not contain {0}: {1}".format(non_exist_key, err))
 
         def test_4_invalid_smf_fmri(self):
@@ -1052,7 +1059,7 @@ class TestHttpsDepot(_Apache, pkg5unittest.HTTPSTestClass):
                         dummy_ret, dummy_output, err = self.depotconfig(
                             "--https --cert-key-dir {0} --smf-fmri {1}".format(
                             tmp_dir, invalid_fmri), out=True, stderr=True)
-                        self.assert_(len(err), "error message: SMF FMRI "
+                        self.assertTrue(len(err), "error message: SMF FMRI "
                             "setting should fail but succeeded instead.")
 
                 # Test with wrong fmri.
@@ -1060,7 +1067,7 @@ class TestHttpsDepot(_Apache, pkg5unittest.HTTPSTestClass):
                 dummy_ret, dummy_output, err = self.depotconfig(
                     "--https --cert-key-dir {0} --smf-fmri {1}".format(
                     tmp_dir, wrong_fmri), out=True, stderr=True, exit=1)
-                self.assert_(len(err), "error message: SMF FMRI "
+                self.assertTrue(len(err), "error message: SMF FMRI "
                     "setting should fail but succeeded instead.")
 
         def test_5_https_gen_cert(self):

@@ -42,7 +42,6 @@ else:
 
 import atexit
 import ast
-import cStringIO
 import errno
 import inspect
 import itertools
@@ -59,7 +58,7 @@ import tempfile
 import threading
 import time
 
-from six.moves import http_client, queue
+from six.moves import cStringIO, http_client, queue
 from six.moves.urllib.parse import quote, urlunsplit
 
 # Without the below statements, tarfile will trigger calls to getpwuid and
@@ -388,7 +387,7 @@ class DepotHTTP(_Depot):
                 face.init(self)
 
                 # Map new publishers into operation space.
-                map(self.__map_pub_ops, self.repo.publishers - old_pubs)
+                list(map(self.__map_pub_ops, self.repo.publishers - old_pubs))
 
         def __map_pub_ops(self, pub_prefix):
                 # Map the publisher into the depot's operation namespace if
@@ -595,6 +594,9 @@ class DepotHTTP(_Depot):
                 response.headers["Content-type"] = "text/plain; charset=utf-8"
                 self.__set_response_expires("search", 86400, 86400)
 
+                # The WSGI script depot_index.py will call this method and a WSGI
+                # application under Python 3 must return bytes as the output, so
+                # we force the output to be bytes here.
                 def output():
                         # Yield the string used to let the client know it's
                         # talking to a valid search server.
@@ -604,7 +606,7 @@ class DepotHTTP(_Depot):
                                         if return_type == Query.RETURN_ACTIONS:
                                                 fmri_str, fv, line = vals
                                                 yield misc.force_bytes(
-						    "{0} {1} {2} {3} {4}\n".format(
+                                                    "{0} {1} {2} {3} {4}\n".format(
                                                     i, return_type, fmri_str,
                                                     quote(fv),
                                                     line.rstrip()))
@@ -612,7 +614,7 @@ class DepotHTTP(_Depot):
                                             Query.RETURN_PACKAGES:
                                                 fmri_str = vals
                                                 yield misc.force_bytes(
-						    "{0} {1} {2}\n".format(
+                                                    "{0} {1} {2}\n".format(
                                                     i, return_type, fmri_str))
                 return output()
 
@@ -1241,7 +1243,7 @@ class DepotHTTP(_Depot):
                 pub, name, ver = pfmri.tuple()
                 summary = m.get("pkg.summary", m.get("description", ""))
 
-                lsummary = cStringIO.StringIO()
+                lsummary = cStringIO()
                 for i, entry in enumerate(m.gen_actions_by_type("license")):
                         if i > 0:
                                 lsummary.write("\n")
@@ -1299,7 +1301,7 @@ License:
                         cherrypy.log("Request failed: {0}".format(str(e)))
                         raise cherrypy.HTTPError(http_client.NOT_FOUND, str(e))
 
-                buf = cStringIO.StringIO()
+                buf = cStringIO()
                 try:
                         p5i.write(buf, pubs)
                 except Exception as e:
@@ -1309,6 +1311,7 @@ License:
                         raise cherrypy.HTTPError(http_client.NOT_FOUND, str(e))
                 buf.seek(0)
                 self.__set_response_expires("publisher", 86400*365, 86400*365)
+                # Page handlers MUST return bytes.
                 return misc.force_bytes(buf.getvalue())
 
         @cherrypy.tools.response_headers(headers=[(
@@ -1335,7 +1338,7 @@ License:
                                 raise cherrypy.HTTPError(http_client.NOT_FOUND,
                                     str(e))
 
-                buf = cStringIO.StringIO()
+                buf = cStringIO()
                 try:
                         p5i.write(buf, pubs)
                 except Exception as e:
@@ -1386,7 +1389,7 @@ License:
                             for m in matches
                         ]
 
-                buf = cStringIO.StringIO()
+                buf = cStringIO()
                 pkg_names = { pub.prefix: matches }
                 p5i.write(buf, [pub], pkg_names=pkg_names)
                 buf.seek(0)
@@ -1446,6 +1449,7 @@ License:
                             "matching package found in repository."))
 
                 self.__set_response_expires("p5i", 86400*365, 86400*365)
+                # Page handlers MUST return bytes.
                 return misc.force_bytes(output)
 
         @cherrypy.tools.response_headers(headers=\

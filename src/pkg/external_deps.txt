@@ -35,6 +35,7 @@
     pkg:/system/library/math
     pkg:/system/library/security/crypto
     pkg:/system/linker
+    pkg:/system/locale
     pkg:/system/locale/extra
     pkg:/system/network
     pkg:/text/gnu-diffutils
@@ -42,8 +43,6 @@
     pkg:/text/gnu-grep
     pkg:/text/locale
     pkg:/text/tidy
-    pkg:/web/server/apache-22
-    pkg:/web/server/apache-22/module/apache-wsgi-27
     pkg:/web/wget
     pkg:/SUNWcs
     pkg:/system/zones

@@ -45,7 +45,6 @@ Listen ${host}:${port}
 # are actually available _before_ they are used.
 #
 
-<IfDefine 64bit>
 LoadModule authz_host_module libexec/64/mod_authz_host.so
 LoadModule cache_module libexec/64/mod_cache.so
 LoadModule disk_cache_module libexec/64/mod_disk_cache.so
@@ -60,29 +59,21 @@ LoadModule dir_module libexec/64/mod_dir.so
 LoadModule alias_module libexec/64/mod_alias.so
 LoadModule rewrite_module libexec/64/mod_rewrite.so
 LoadModule env_module libexec/64/mod_env.so
-LoadModule wsgi_module libexec/64/mod_wsgi-2.7.so
-</IfDefine>
-
-<IfDefine !64bit>
-LoadModule authz_host_module libexec/mod_authz_host.so
-LoadModule cache_module libexec/mod_cache.so
-LoadModule disk_cache_module libexec/mod_disk_cache.so
-LoadModule mem_cache_module libexec/mod_mem_cache.so
-LoadModule log_config_module libexec/mod_log_config.so
-LoadModule proxy_module libexec/mod_proxy.so
-LoadModule proxy_connect_module libexec/mod_proxy_connect.so
-LoadModule proxy_http_module libexec/mod_proxy_http.so
-LoadModule ssl_module libexec/mod_ssl.so
-LoadModule mime_module libexec/mod_mime.so
-LoadModule dir_module libexec/mod_dir.so
-LoadModule alias_module libexec/mod_alias.so
-LoadModule rewrite_module libexec/mod_rewrite.so
-LoadModule env_module libexec/mod_env.so
-LoadModule wsgi_module libexec/mod_wsgi-2.7.so
-</IfDefine>
+<%!
+    import os
+    import sys
+%>
+<%
+        context.write("""
+LoadModule wsgi_module libexec/mod_wsgi-{0}.so
+""".format(sys.version[:3]))
+%>
 
 # We only alias a specific script, not all files in ${sysrepo_template_dir}
 WSGIScriptAlias /wsgi_p5p ${sysrepo_template_dir}/sysrepo_p5p.py
+# Run wsgi script in the current version of Python runtime
+WSGIPythonHome sys.executable
+WSGIPythonPath os.pathsep.join(sys.path)
 WSGIDaemonProcess sysrepo processes=1 threads=21 user=pkg5srv group=pkg5srv display-name=pkg5_sysrepo inactivity-timeout=120
 WSGIProcessGroup sysrepo
 WSGISocketPrefix ${sysrepo_runtime_dir}/wsgi

@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 from __future__ import print_function
@@ -298,7 +298,7 @@ class DepotController(object):
                                 return True
                         else:
                                 return False
-                except URLError:
+                except URLError as e:
                         return False
                 return True
 
@@ -333,6 +333,7 @@ class DepotController(object):
                 # nuke everything later on.
                 args.append("setpgrp")
                 args.extend(self.__wrapper_start[:])
+                args.append(sys.executable)
                 args.append(self.__depot_path)
                 if self.__depot_content_root:
                         args.append("--content-root")
@@ -413,7 +414,8 @@ class DepotController(object):
 
                 self.__state = self.STARTING
 
-                self.__output = open(self.__logpath, "w", 0)
+                # Unbuffer is only allowed in binary mode.
+                self.__output = open(self.__logpath, "wb", 0)
                 # Use shlex to re-parse args.
                 pargs = shlex.split(" ".join(args))
 
@@ -427,6 +429,7 @@ class DepotController(object):
                 if self.__depot_handle == None:
                         raise DepotStateException("Could not start Depot")
                 self.__starttime = time.time()
+                self.__output.close()
 
         def start(self):
 
@@ -445,7 +448,7 @@ class DepotController(object):
                                 rc = self.__depot_handle.poll()
                                 if rc is not None:
                                         err = ""
-                                        with open(self.__logpath, "r", 0) as \
+                                        with open(self.__logpath, "rb", 0) as \
                                             errf:
                                                 err = errf.read()
                                         raise DepotStateException("Depot exited "
@@ -457,7 +460,6 @@ class DepotController(object):
                                         contact = True
                                         break
                                 time.sleep(check_interval)
-
                         if contact == False:
                                 self.kill()
                                 self.__state = self.HALTED

@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
 # Copyright 2017 Lauri Tirkkonen <lotheac@iki.fi>
 # Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
 #
@@ -31,10 +31,11 @@ implementation in the 'arch' extension module.
 """
 
 import os
+import six
 import subprocess
 import tempfile
 
-from os_unix import \
+from .os_unix import \
     get_group_by_name, get_user_by_name, get_name_by_gid, get_name_by_uid, \
     get_usernames_by_gid, is_admin, get_userid, get_username, chown, rename, \
     remove, link, copyfile, split_path, get_root, assert_mode

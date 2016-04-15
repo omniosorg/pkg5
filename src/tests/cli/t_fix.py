@@ -22,7 +22,7 @@
 
 # Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
 
-import testutils
+from . import testutils
 if __name__ == "__main__":
         testutils.setup_environment("../../../proto")
 import pkg5unittest
@@ -293,9 +293,9 @@ class TestFix(pkg5unittest.SingleDepotTestCase):
                         # missing already.
                         preserve = a.attrs.get("preserve")
                         if preserve == "renamenew":
-                                self.assert_(not os.path.exists(fpath + ".new"))
+                                self.assertTrue(not os.path.exists(fpath + ".new"))
                         elif preserve == "renameold":
-                                self.assert_(not os.path.exists(fpath + ".old"))
+                                self.assertTrue(not os.path.exists(fpath + ".old"))
 
                         if preserve:
                                 editables.append("{0}".format(a.attrs["path"]))
@@ -358,7 +358,7 @@ class TestFix(pkg5unittest.SingleDepotTestCase):
                 self.pkg("install drv")
 
                 fh = open(os.path.join(self.get_img_path(), "etc",
-                    "driver_aliases"), "wb")
+                    "driver_aliases"), "w")
                 # Change the entry from whee to wqee.
                 fh.write('wqee "pci8186,4321"\n')
                 fh.close()

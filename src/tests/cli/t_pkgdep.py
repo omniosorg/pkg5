@@ -22,7 +22,7 @@
 
 # Copyright (c) 2009, 2016, Oracle and/or its affiliates. All rights reserved.
 
-import testutils
+from . import testutils
 if __name__ == "__main__":
         testutils.setup_environment("../../../proto")
 import pkg5unittest
@@ -43,8 +43,12 @@ import pkg.publish.dependencies as dependencies
 
 DDP = base.Dependency.DEPEND_DEBUG_PREFIX
 
-py_ver_default = "2.7"
-py_ver_other = "3.4"
+if six.PY2:
+        py_ver_default = "2.7"
+        py_ver_other = "3.5"
+else:
+        py_ver_default = "3.5"
+        py_ver_other = "2.7"
 
 class TestPkgdepBasics(pkg5unittest.SingleDepotTestCase):
 
@@ -525,7 +529,7 @@ from pkg.misc import EmptyI
 """
 
         python3_so_text = """\
-#!/usr/bin/python3.4
+#!/usr/bin/python3.5
 
 import zlib
 """
@@ -644,7 +648,7 @@ depend fmri=pkg:/satisfying_manf type=require variant.foo=baz
                 discovered.
                 """
 
-                v3 = ver.startswith("3.") and "34m"
+                v3 = ver.startswith("3.") and "35m"
 
                 vp = self.get_ver_paths(ver, proto_area)
                 self.debug("ver_paths is {0}".format(vp))
@@ -760,10 +764,21 @@ depend fmri={dummy_fmri} {pfx}.file=python{bin_ver} {pfx}.path=usr/bin {pfx}.rea
                 return tmp + self.make_pyver_python_res(ver, proto, reason,
                     include_os=include_os)
 
-        pyver_resolve_dep_manf = """
+        if six.PY2:
+                # in this case, py_ver_default = "2.7", py_ver_other = "3.5"
+                pyver_resolve_dep_manf = """
 file NOHASH group=bin mode=0444 owner=root path=usr/lib/python{py_ver}/vendor-packages/pkg/indexer.py
 file NOHASH group=bin mode=0444 owner=root path=usr/lib/python{py_ver}/vendor-packages/pkg/__init__.py
 file NOHASH group=bin mode=0444 owner=root path=usr/lib/python{py_ver}/lib-dynload/64/pkg/search_storage.py
+file NOHASH group=bin mode=0444 owner=root path=usr/lib/python{py_ver}/vendor-packages/pkg/misc.py
+file NOHASH group=bin mode=0755 owner=root path=usr/bin/python
+"""
+        else:
+                # py_ver_default = "3.5", py_ver_other = "2.7"
+                pyver_resolve_dep_manf = """
+file NOHASH group=bin mode=0444 owner=root path=usr/lib/python{py_ver}/vendor-packages/pkg/indexer.py
+file NOHASH group=bin mode=0444 owner=root path=usr/lib/python{py_ver}/vendor-packages/pkg/__init__.py
+file NOHASH group=bin mode=0444 owner=root path=usr/lib/python{py_ver}/lib-tk/pkg/search_storage.py
 file NOHASH group=bin mode=0444 owner=root path=usr/lib/python{py_ver}/vendor-packages/pkg/misc.py
 file NOHASH group=bin mode=0755 owner=root path=usr/bin/python
 """
@@ -772,7 +787,7 @@ file NOHASH group=bin mode=0755 owner=root path=usr/bin/python
                 """Generate the expected results when resolving a manifest which
                 contains a file with a non-default version of python."""
 
-                v3 = py_ver_other.startswith("3.") and "34m"
+                v3 = py_ver_other.startswith("3.") and "35m"
                 patterns = (
                     "{0}.py", "{0}.pyc", "{0}.pyo",
                     "{0}.so", "64/{0}.so",
@@ -796,8 +811,14 @@ file NOHASH group=bin mode=0755 owner=root path=usr/bin/python
                 rel_paths = [
                     "usr/lib/python{py_ver}/vendor-packages/pkg/" + f + ".py"
                     for f in files + ["__init__"] if f != "search_storage"
-                ] + ["usr/bin/python",
-                    "usr/lib/python{py_ver}/lib-dynload/64/pkg/search_storage.py"]
+                ]
+
+                if six.PY2:
+                        rel_paths += ["usr/bin/python",
+                            "usr/lib/python{py_ver}/lib-dynload/64/pkg/search_storage.py"]
+                else:
+                        rel_paths += ["usr/bin/python",
+                            "usr/lib/python{py_ver}/lib-tk/pkg/search_storage.py"]
 
                 # Find the potential locations an imported python module might
                 # be found.
@@ -940,7 +961,7 @@ file NOHASH group=bin mode=0555 owner=root path=c/bin/perl variant.foo=c
                 res_fmris = set(["pkg:/b_link@0.5.11-0.151",
                     "pkg:/c@0.5.11-0.151", "pkg:/b_file@0.5.11-0.151"])
                 for d in deps[a_pth]:
-                        self.assert_(d.attrs["fmri"] in res_fmris,
+                        self.assertTrue(d.attrs["fmri"] in res_fmris,
                             "Unexpected fmri for:{0}".format(d))
                         res_fmris.remove(d.attrs["fmri"])
                         if d.attrs["fmri"] == \
@@ -976,7 +997,7 @@ file NOHASH group=bin mode=0555 owner=root path=c/bin/perl variant.foo=c
                     "pkg:/b_link2@0.5.11-0.151",
                     "pkg:/b_file@0.5.11-0.151"])
                 for d in deps[a_pth]:
-                        self.assert_(d.attrs["fmri"] in res_fmris,
+                        self.assertTrue(d.attrs["fmri"] in res_fmris,
                             "Unexpected fmri for:{0}".format(d))
                         res_fmris.remove(d.attrs["fmri"])
                         if d.attrs["fmri"] in \
@@ -1011,7 +1032,7 @@ file NOHASH group=bin mode=0555 owner=root path=c/bin/perl variant.foo=c
                 res_fmris = set(["pkg:/b_link@0.5.11-0.151",
                     "pkg:/c@0.5.11-0.151", "pkg:/b_file@0.5.11-0.151"])
                 for d in deps[a_pth]:
-                        self.assert_(d.attrs["fmri"] in res_fmris,
+                        self.assertTrue(d.attrs["fmri"] in res_fmris,
                             "Unexpected fmri for:{0}".format(d))
                         res_fmris.remove(d.attrs["fmri"])
                         if d.attrs["fmri"] == \
@@ -1067,7 +1088,7 @@ file NOHASH group=bin mode=0555 owner=root path=c/bin/perl variant.foo=c
 
         @staticmethod
         def __read_file(file_path):
-                fh = open(file_path, "rb")
+                fh = open(file_path, "r")
                 lines = fh.read()
                 fh.close()
                 return lines
@@ -1263,9 +1284,9 @@ SYMBOL_SCOPE {
                     mp, [self.test_proto_dir], {}, [], convert=False)
                 __check_res(es, ms, pkg_attrs)
                 self.assertEqual(len(ds), 2, "\n".join([str(d) for d in ds]))
-                expected_file_deps = set(["bar.so", "libc.so.1"])
-                found_file_deps = set(itertools.chain.from_iterable(
-                    [d.attrs[DDP + ".file"] for d in ds]))
+                expected_file_deps = ["bar.so", "libc.so.1"]
+                found_file_deps = sorted(set(itertools.chain.from_iterable(
+                    [d.attrs[DDP + ".file"] for d in ds])))
                 self.assertEqualDiff(expected_file_deps, found_file_deps)
 
                 # Test that SUNW_FILTER dependencies are treated as needed.
@@ -1280,9 +1301,9 @@ SYMBOL_SCOPE {
                     mp, [self.test_proto_dir], {}, [], convert=False)
                 __check_res(es, ms, pkg_attrs)
                 self.assertEqual(len(ds), 2, "\n".join([str(d) for d in ds]))
-                expected_file_deps = set(["bar.so", "libc.so.1"])
-                found_file_deps = set(itertools.chain.from_iterable(
-                    [d.attrs[DDP + ".file"] for d in ds]))
+                expected_file_deps = ["bar.so", "libc.so.1"]
+                found_file_deps = sorted(set(itertools.chain.from_iterable(
+                    [d.attrs[DDP + ".file"] for d in ds])))
                 self.assertEqualDiff(expected_file_deps, found_file_deps)
 
                 # Test that AUXILIARY dependencies are ignored.
@@ -1346,9 +1367,9 @@ SYMBOL_SCOPE {
                     mp, [self.test_proto_dir], {}, [], convert=False)
                 __check_res(es, ms, pkg_attrs)
                 self.assertEqual(len(ds), 2, "\n".join([str(d) for d in ds]))
-                expected_file_deps = set(["bar.so", "libc.so.1"])
-                found_file_deps = set(itertools.chain.from_iterable(
-                    [d.attrs[DDP + ".file"] for d in ds]))
+                expected_file_deps = ["bar.so", "libc.so.1"]
+                found_file_deps = sorted(set(itertools.chain.from_iterable(
+                    [d.attrs[DDP + ".file"] for d in ds])))
                 self.assertEqualDiff(expected_file_deps, found_file_deps)
 
         def test_opts(self):
@@ -1454,7 +1475,7 @@ SYMBOL_SCOPE {
                 m4_path = self.make_manifest(self.two_v_deps_baz_two)
                 # Use pkgfmt on the manifest to test for bug 18740.
                 self.pkgfmt(m1_path)
-                with open(m1_path, "rb") as fh:
+                with open(m1_path, "r") as fh:
                         m1_fmt = fh.read()
                 self.pkgdepend_resolve("-o -m {0}".format(
                     " ".join([m1_path, m2_path, m3_path, m4_path])), exit=1)
@@ -1790,8 +1811,8 @@ SYMBOL_SCOPE {
 
                 # Add FMRI to each manifest for use with publish.
                 for mpath, pfmri in pfmris.items():
-                        lines = open(mpath + ".res", "rb").readlines()
-                        with open(mpath + ".res", "wb") as mf:
+                        lines = open(mpath + ".res", "r").readlines()
+                        with open(mpath + ".res", "w") as mf:
                                 mf.write("set name=pkg.fmri value={0}\n".format(pfmri))
                                 for l in lines:
                                         if "pkg.fmri" in l:
@@ -2080,7 +2101,7 @@ file NOHASH group=bin mode=0555 owner=root path=usr/bin/perl variant.foo=c
                 res_fmris = set(["pkg:/b_link@0.5.11-0.151",
                     "pkg:/b_file@0.5.11-0.151", "pkg:/c@0.5.11-0.151"])
                 for d in deps[a_var_b_dep_pth]:
-                        self.assert_(d.attrs["fmri"] in res_fmris,
+                        self.assertTrue(d.attrs["fmri"] in res_fmris,
                             "Unexpected fmri for:{0}".format(d))
                         res_fmris.remove(d.attrs["fmri"])
                         if d.attrs["fmri"] == "pkg:/b_link@0.5.11-0.151":
@@ -2183,7 +2204,7 @@ depend fmri=__TBD pkg.debug.depend.file=perl pkg.debug.depend.path=usr/bin pkg.d
                 res_fmris = set(["pkg:/b_link@0.5.11-0.151",
                     "pkg:/c@0.5.11-0.151", "pkg:/b_file@0.5.11-0.151"])
                 for d in deps[a_var_limited_pth]:
-                        self.assert_(d.attrs["fmri"] in res_fmris,
+                        self.assertTrue(d.attrs["fmri"] in res_fmris,
                             "Unexpected fmri for:{0}".format(d))
                         res_fmris.remove(d.attrs["fmri"])
                         if d.attrs["fmri"] == "pkg:/b_link@0.5.11-0.151":
@@ -2277,7 +2298,9 @@ file NOHASH group=bin mode=0555 owner=root path=c/bin/perl variant.foo=c
                 self.assertEqual(e.path, twod_a_pth)
                 self.assertEqual(e.file_dep.attrs[dependencies.files_prefix],
                     "perl")
-                self.assertEqualDiff(set([
+                # Set is unordered, the output might be different in order, so
+                # we just assert the sets are equal.
+                self.assertEqual(set([
                     frozenset([("variant.foo", "a")]),
                     frozenset([("variant.foo", "b"), ("variant.bar", "x")]),
                     frozenset([("variant.foo", "b"), ("variant.bar", "z")])
@@ -2293,41 +2316,41 @@ file NOHASH group=bin mode=0555 owner=root path=c/bin/perl variant.foo=c
                 b_yz_link_var = set(["y"])
                 b_y_file_var = set(["y"])
                 for d in deps[twod_a_pth]:
-                        self.assert_(d.attrs["fmri"] in res_fmris,
+                        self.assertTrue(d.attrs["fmri"] in res_fmris,
                             "Unexpected fmri for:{0}".format(d))
                         if d.attrs["fmri"] == "pkg:/b_vw_link@0.5.11-0.151":
                                 self.assertEqual(
                                     d.attrs[dependencies.type_prefix], "link")
                                 self.assertEqual(d.attrs["variant.foo"], "b")
-                                self.assert_(
+                                self.assertTrue(
                                     d.attrs["variant.bar"] in b_vw_link_var)
                                 b_vw_link_var.remove(d.attrs["variant.bar"])
                         elif d.attrs["fmri"] == "pkg:/b_vwx_file@0.5.11-0.151":
                                 self.assertEqual(
                                     d.attrs[dependencies.type_prefix], "script")
                                 self.assertEqual(d.attrs["variant.foo"], "b")
-                                self.assert_(
+                                self.assertTrue(
                                     d.attrs["variant.bar"] in b_vwx_file_var)
                                 b_vwx_file_var.remove(d.attrs["variant.bar"])
                         elif d.attrs["fmri"] == "pkg:/b_y_file@0.5.11-0.151":
                                 self.assertEqual(
                                     d.attrs[dependencies.type_prefix], "script")
                                 self.assertEqual(d.attrs["variant.foo"], "b")
-                                self.assert_(
+                                self.assertTrue(
                                     d.attrs["variant.bar"] in b_y_file_var)
                                 b_y_file_var.remove(d.attrs["variant.bar"])
                         elif d.attrs["fmri"] == "pkg:/b_yz_link@0.5.11-0.151":
                                 self.assertEqual(
                                     d.attrs[dependencies.type_prefix], "link")
                                 self.assertEqual(d.attrs["variant.foo"], "b")
-                                self.assert_(
+                                self.assertTrue(
                                     d.attrs["variant.bar"] in b_yz_link_var)
                                 b_yz_link_var.remove(d.attrs["variant.bar"])
                         else:
                                 self.assertEqual(
                                     d.attrs[dependencies.type_prefix], "script")
                                 self.assertEqual(d.attrs["variant.foo"], "c")
-                                self.assert_("variant.bar" not in d.attrs)
+                                self.assertTrue("variant.bar" not in d.attrs)
 
                 self.assertEqual(len(deps[twod_c_pth]), 0)
                 self.assertEqual(len(deps[twod_b_vwx_file_pth]), 0)
@@ -2448,7 +2471,7 @@ dir group=bin mode=0755 owner=root path=bad_b/bin variant.foo=b
                             "\n".join([str(s) for s in deps[a_pth]]))
                         res_fmris = set(["pkg:/c@0.5.11-0.151"])
                         for d in deps[a_pth]:
-                                self.assert_(d.attrs["fmri"] in res_fmris,
+                                self.assertTrue(d.attrs["fmri"] in res_fmris,
                                     "Unexpected fmri for:{0}".format(d))
                                 res_fmris.remove(d.attrs["fmri"])
                                 self.assertEqual(d.attrs["variant.foo"], "c")
@@ -2572,7 +2595,7 @@ file NOHASH group=bin mode=0555 owner=root path=b/bin/perl variant.foo=d
                         self.assertEqual(d.attrs[dependencies.files_prefix],
                             ["perl"])
                         self.assertEqual(len(d.dep_vars.not_sat_set), 1)
-                        self.assert_(d.dep_vars.not_sat_set.issubset(
+                        self.assertTrue(d.dep_vars.not_sat_set.issubset(
                             res_not_sat_set))
                         for t in d.dep_vars.not_sat_set:
                                 res_not_sat_set.remove(t)
@@ -2618,8 +2641,8 @@ file NOHASH group=bin mode=0555 owner=root path=b/bin/perl variant.foo=d variant
                     frozenset([("variant.foo", "d"), ("variant.bar", "z")]),
                 ])
 
-                self.assertEqualDiff(not_sat_set, d.dep_vars.not_sat_set)
-                self.assertEqualDiff(set([
+                self.assertEqual(not_sat_set, d.dep_vars.not_sat_set)
+                self.assertEqual(set([
                     frozenset([("variant.foo", "b")]),
                     frozenset([("variant.foo", "d"), ("variant.bar", "y")])
                 ]), d.dep_vars.sat_set)
@@ -2807,7 +2830,7 @@ depend fmri=pkg:/a@0,5.11-1 type=conditional
                     manf_path, [self.test_proto_dir], {}, [],
                     convert=False)
                 self.assertEqual(len(es), 1)
-                self.assert_(isinstance(es[0],
+                self.assertTrue(isinstance(es[0],
                     actions.InvalidActionAttributesError))
 
         def test_python_combinations(self):
@@ -3022,9 +3045,9 @@ depend fmri=pkg:/a@0,5.11-1 type=conditional
 
                 # Create a python 3.x file that imports a native module.
                 tp = self.make_manifest(
-                    self.pyver_test_manf_1.format(py_ver="3.4"))
+                    self.pyver_test_manf_1.format(py_ver="3.5"))
                 fp = "usr/lib/python{0}/vendor-packages/pkg/" \
-                    "client/indexer.py".format("3.4")
+                    "client/indexer.py".format("3.5")
                 self.make_proto_text_file(fp, self.python3_so_text)
 
                 # Run generate
@@ -3042,9 +3065,9 @@ depend fmri=pkg:/a@0,5.11-1 type=conditional
                         for l in self.output.strip().splitlines()
                     )
                     if a.attrs.get(pfx + ".reason") == fp and
-                        "64/zlib.cpython-34m.so" in a.attrs[pfx + ".file"]
+                        "64/zlib.cpython-35m.so" in a.attrs[pfx + ".file"]
                 ]
-                self.assert_(len(acts) == 1)
+                self.assertTrue(len(acts) == 1)
 
                 self.check_res("", self.errout)
 

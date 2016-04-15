@@ -34,7 +34,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 
-import generic
+from . import generic
 import pkg.actions
 import pkg.client.api_errors as apx
 import pkg.digest as digest
@@ -473,7 +473,7 @@ class SignatureAction(generic.Action):
                 try:
                         pub_key.verify(
                             misc.hex_to_binary(self.attrs["value"]),
-                            self.actions_to_str(acts, ver),
+                            misc.force_bytes(self.actions_to_str(acts, ver)),
                             padding.PKCS1v15(),
                             hhash())
                 except InvalidSignature:

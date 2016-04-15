@@ -414,8 +414,8 @@ class PlanDescription(object):
                                     "version-source")
                         return mimpl, mver, mimpl_source, mver_source
 
-                for m in sorted(set(self._new_mediators.keys() +
-                    self._cfg_mediators.keys())):
+                for m in sorted(set(list(self._new_mediators.keys()) +
+                    list(self._cfg_mediators.keys()))):
                         orig_impl, orig_ver, orig_impl_source, \
                             orig_ver_source = get_mediation(
                                 self._cfg_mediators, m)
