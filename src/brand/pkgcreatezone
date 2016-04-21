@@ -292,6 +292,7 @@ pkglist="$pkglist
 pkglist="$pkglist
 	pkg:/shell/bash
 	pkg:/editor/vim
+	pkg:/network/openssh
 	pkg:/network/ssh
 	pkg:/network/ssh/ssh-key
 	pkg:/service/network/ssh"
