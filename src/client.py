@@ -2230,7 +2230,6 @@ def change_variant(op, api_inst, pargs,
                 if not name.startswith("variant."):
                         name = "variant.{0}".format(name)
 
-                # forcibly lowercase for 'true' or 'false'
                 if not value.islower() and value.lower() in ("true", "false"):
                         value = value.lower()
 
