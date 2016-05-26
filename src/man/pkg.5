@@ -690,7 +690,13 @@ The following attributes are recognized:
 .ad
 .sp .6
 .RS 4n
-The FMRI representing the dependent package. This is the \fBdependency\fR action's key attribute. The \fBfmri\fR value must not include the publisher. The package name is assumed to be complete. Dependencies of type \fBrequire-any\fR can have multiple \fBfmri\fR attributes. A version is optional on the \fBfmri\fR value, though for some types of dependencies, an \fBfmri\fR with no version has no meaning.
+The FMRI representing the dependent package. This is the \fBdependency\fR
+action's key attribute. The \fBfmri\fR value must not include the publisher.
+The package name is assumed to be complete. Dependencies of type
+\fBgroup-any\fR and \fBrequire-any\fR can have multiple \fBfmri\fR attributes.
+A version is optional on the \fBfmri\fR value, though for some types of
+dependencies, an \fBfmri\fR with no version has no meaning or the version is
+ignored.
 .RE
 
 .sp
@@ -754,7 +760,21 @@ The dependency is optional, but the version of the dependent package is constrai
 .ad
 .sp .6
 .RS 4n
-Any one of multiple dependent packages as specified by multiple \fBfmri\fR attributes can satisfy the dependency, following the same rules as the \fBrequire\fR dependency type.
+Any one of the packages specified by multiple \fBfmri\fR attributes can satisfy the dependency, following the same rules as the \fBrequire\fR dependency type.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBgroup-any\fR\fR
+.ad
+.sp .6
+.RS 4n
+Any one of multiple dependent packages as specified by multiple
+\fBfmri\fR attributes can satisfy the dependency, following the
+same rules as the \fBgroup\fR dependency type with the exception
+that non-obsolete package stems are preferred over obsolete ones.
 .RE
 
 .sp
