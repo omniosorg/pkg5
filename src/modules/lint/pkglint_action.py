@@ -1486,7 +1486,7 @@ class PkgActionChecker(base.ActionChecker):
                             pkg=manifest.fmri),
                             msgid="{0}{1}.2".format(self.name, pkglint_id))
 
-                if not re.match("^[a-z]([a-zA-Z1-9._-])*$", username):
+                if not re.match("^[a-z]([a-zA-Z0-9\._\-])*$", username):
                         engine.error(
                             _("Username {name} in {pkg} is invalid - see "
                             "passwd(4)").format(
