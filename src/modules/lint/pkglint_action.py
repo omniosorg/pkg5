@@ -1474,7 +1474,7 @@ class PkgActionChecker(base.ActionChecker):
                             "pkg": manifest.fmri},
                             msgid="%s%s.2" % (self.name, pkglint_id))
 
-                if not re.match("^[a-z]([a-zA-Z1-9._-])*$", username):
+                if not re.match("^[a-z]([a-zA-Z0-9._-])*$", username):
                         engine.error(
                             _("Username %(name)s in %(pkg)s is invalid - see "
                             "passwd(4)") %
