@@ -5243,12 +5243,12 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                 def origins_changed(oldr, newr):
                         old_origins = set([
                             (o.uri, o.ssl_cert,
-                                o.ssl_key, tuple(sorted(o.proxies)))
+                                o.ssl_key, tuple(sorted(o.proxies)), o.disabled)
                             for o in oldr.origins
                         ])
                         new_origins = set([
                             (o.uri, o.ssl_cert,
-                                o.ssl_key, tuple(sorted(o.proxies)))
+                                o.ssl_key, tuple(sorted(o.proxies)), o.disabled)
                             for o in newr.origins
                         ])
                         return (new_origins - old_origins), \
@@ -5374,10 +5374,11 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
 
                                 # Validate all new origins against publisher
                                 # configuration.
-                                for uri, ssl_cert, ssl_key, proxies in validate:
+                                for uri, ssl_cert, ssl_key, proxies, disabled \
+                                    in validate:
                                         repo = publisher.RepositoryURI(uri,
                                             ssl_cert=ssl_cert, ssl_key=ssl_key,
-                                            proxies=proxies)
+                                            proxies=proxies, disabled=disabled)
                                         pub.validate_config(repo)
 
                                 self.__refresh(pubs=[pub], immediate=True)

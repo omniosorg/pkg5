@@ -1576,10 +1576,11 @@ def _uninstall(op, api_inst, pargs,
 
 def _publisher_set(op, api_inst, pargs, ssl_key, ssl_cert, origin_uri,
     reset_uuid, add_mirrors, remove_mirrors, add_origins, remove_origins,
-    refresh_allowed, disable, sticky, search_before, search_after,
-    search_first, approved_ca_certs, revoked_ca_certs, unset_ca_certs,
-    set_props, add_prop_values, remove_prop_values, unset_props, repo_uri,
-    proxy_uri, verbose=None, li_erecurse=None):
+    enable_origins, disable_origins, refresh_allowed, disable, sticky,
+    search_before, search_after, search_first, approved_ca_certs,
+    revoked_ca_certs, unset_ca_certs, set_props, add_prop_values,
+    remove_prop_values, unset_props, repo_uri, proxy_uri,
+    verbose=None, li_erecurse=None):
         """Function to set publisher."""
 
         name = None
@@ -1604,7 +1605,9 @@ def _publisher_set(op, api_inst, pargs, ssl_key, ssl_cert, origin_uri,
                     api_inst, name, disable=disable, sticky=sticky,
                     origin_uri=origin_uri, add_mirrors=add_mirrors,
                     remove_mirrors=remove_mirrors, add_origins=add_origins,
-                    remove_origins=remove_origins, ssl_cert=ssl_cert,
+                    remove_origins=remove_origins,
+                    enable_origins=enable_origins,
+                    disable_origins=disable_origins, ssl_cert=ssl_cert,
                     ssl_key=ssl_key, search_before=search_before,
                     search_after=search_after, search_first=search_first,
                     reset_uuid=reset_uuid, refresh_allowed=refresh_allowed,
@@ -2048,6 +2051,12 @@ def _publisher_list(op, api_inst, pargs, omit_headers, preferred_only,
                                 set_value(field_data["proxied"], "F")
 
                                 set_value(field_data["uri"], uri)
+                                if uri.disabled:
+                                        set_value(field_data["enabled"],
+                                            _("false"))
+                                else:
+                                        set_value(field_data["enabled"],
+                                            _("true"))
 
                                 if uri.proxies:
                                         set_value(field_data["proxied"], _("T"))
@@ -2573,7 +2582,8 @@ def _set_pub_error_wrap(func, pfx, raise_errors, *args, **kwargs):
 
 def _add_update_pub(api_inst, prefix, pub=None, disable=None, sticky=None,
     origin_uri=None, add_mirrors=EmptyI, remove_mirrors=EmptyI,
-    add_origins=EmptyI, remove_origins=EmptyI, ssl_cert=None, ssl_key=None,
+    add_origins=EmptyI, remove_origins=EmptyI, enable_origins=EmptyI,
+    disable_origins=EmptyI, ssl_cert=None, ssl_key=None,
     search_before=None, search_after=None, search_first=False,
     reset_uuid=None, refresh_allowed=False,
     set_props=EmptyI, add_prop_values=EmptyI,
@@ -2593,7 +2603,8 @@ def _add_update_pub(api_inst, prefix, pub=None, disable=None, sticky=None,
                 except api_errors.UnknownPublisher as e:
                         if not origin_uri and not add_origins and \
                             (remove_origins or remove_mirrors or
-                            remove_prop_values or add_mirrors):
+                            remove_prop_values or add_mirrors or
+                            enable_origins or disable_origins):
                                 errors_json.append({"reason": str(e)})
                                 return __prepare_json(EXIT_OOPS,
                                     errors=errors_json)
@@ -2613,10 +2624,6 @@ def _add_update_pub(api_inst, prefix, pub=None, disable=None, sticky=None,
                         # configuration.
                         repo = publisher.Repository()
                         pub.repository = repo
-
-        if disable is not None:
-                # Set disabled property only if provided.
-                pub.disabled = disable
 
         if sticky is not None:
                 # Set stickiness only if provided
@@ -2667,7 +2674,44 @@ def _add_update_pub(api_inst, prefix, pub=None, disable=None, sticky=None,
 
                 for u in add:
                         uri = publisher.RepositoryURI(u, proxies=proxies)
-                        getattr(repo, "add_{0}".format(etype))(uri)
+                        try:
+                                getattr(repo, "add_{0}".format(etype)
+                                    )(uri)
+                        except (api_errors.DuplicateSyspubOrigin,
+                            api_errors.DuplicateRepositoryOrigin):
+                                # If this exception occurs, we know the
+                                # origin already exists. Then if it is
+                                # combined with --enable or --disable,
+                                # we turn it into an update task for the
+                                # origin. Otherwise, raise the exception
+                                # again.
+                                if not (disable_origins or enable_origins):
+                                        raise
+
+        if disable is not None:
+                # Set disabled property only if provided.
+                # If "*" in enable or disable origins list or disable without
+                # enable or disable origins specified, then it is a publisher
+                # level disable.
+                if not (enable_origins or disable_origins):
+                        pub.disabled = disable
+                else:
+                        if disable_origins:
+                                if "*" in disable_origins:
+                                        for o in repo.origins:
+                                                o.disabled = True
+                                else:
+                                        for diso in disable_origins:
+                                                ori = repo.get_origin(diso)
+                                                ori.disabled = True
+                        if enable_origins:
+                                if "*" in enable_origins:
+                                        for o in repo.origins:
+                                                o.disabled = False
+                                else:
+                                        for eno in enable_origins:
+                                                ori = repo.get_origin(eno)
+                                                ori.disabled = False
 
         # None is checked for here so that a client can unset a ssl_cert or
         # ssl_key by using -k "" or -c "".

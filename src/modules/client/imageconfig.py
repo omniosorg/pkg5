@@ -677,10 +677,16 @@ class ImageConfig(cfg.FileConfig):
                             (repo.mirrors, "mirror_info")]:
                                 plist = []
                                 for r in repouri_list:
+                                        # Convert boolean value into string for
+                                        # json.
+                                        r_disabled = "false"
+                                        if r.disabled:
+                                                r_disabled = "true"
                                         if not r.proxies:
                                                 plist.append(
                                                         {"uri": r.uri,
-                                                        "proxy": ""})
+                                                        "proxy": "",
+                                                        "disabled": r_disabled})
                                                 continue
                                         for p in r.proxies:
                                                 # sys_cfg proxy values should
@@ -700,7 +706,8 @@ class ImageConfig(cfg.FileConfig):
                                                         puri = p.uri
                                                 plist.append(
                                                     {"uri": r.uri,
-                                                    "proxy": puri})
+                                                    "proxy": puri,
+                                                    "disabled": r_disabled})
 
                                 self.set_property(section, prop_name,
                                     str(plist))
@@ -889,6 +896,7 @@ class ImageConfig(cfg.FileConfig):
                         for uri_info in plist:
                                 uri = uri_info["uri"]
                                 proxy = uri_info.get("proxy")
+                                disabled = uri_info.get("disabled", False)
                                 # Convert a "" proxy value to None
                                 if proxy == "":
                                         proxy = None
@@ -901,7 +909,8 @@ class ImageConfig(cfg.FileConfig):
                                         continue
 
                                 repouri_info.setdefault(uri, []).append(
-                                    {"uri": uri, "proxy": proxy})
+                                    {"uri": uri, "proxy": proxy,
+                                    "disabled": disabled})
 
                 props = {}
                 for k, v in six.iteritems(sec_idx):
@@ -949,8 +958,11 @@ class ImageConfig(cfg.FileConfig):
                                 # origin/mirror with no proxy.
                                 plist = info_map.get(uri, [{}])
                                 proxies = []
+                                disabled = False
                                 for uri_info in plist:
                                         proxy = uri_info.get("proxy")
+                                        if uri_info.get("disabled") == "true":
+                                                disabled = True
                                         if proxy:
                                                 if proxy == \
                                                     publisher.SYSREPO_PROXY:
@@ -964,11 +976,11 @@ class ImageConfig(cfg.FileConfig):
                                 if not any(uri.startswith(scheme + ":") for
                                     scheme in publisher.SSL_SCHEMES):
                                         repouri = publisher.RepositoryURI(uri,
-                                            proxies = proxies)
+                                            proxies=proxies, disabled=disabled)
                                 else:
                                         repouri = publisher.RepositoryURI(uri,
                                             ssl_cert=ssl_cert, ssl_key=ssl_key,
-                                            proxies=proxies)
+                                            proxies=proxies, disabled=disabled)
                                 repo_add_func(repouri)
 
                 pub = publisher.Publisher(prefix, alias=sec_idx["alias"],
