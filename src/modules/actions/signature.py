@@ -150,8 +150,7 @@ class SignatureAction(generic.Action):
 
                         chain_csizes.append(csize)
                         for attr in chashes:
-                                chain_chshes[attr].append(
-                                    chashes[attr].hexdigest())
+                                chain_chshes[attr].append(chashes[attr])
 
                 # Remove any unused hash attributes.
                 for cattrs in (chain_hshes, chain_chshes):
@@ -256,7 +255,7 @@ class SignatureAction(generic.Action):
                         shutil.rmtree(tmp_dir)
                         tmp_a.attrs["pkg.csize"] = csize
                         for attr in chashes:
-                                tmp_a.attrs[attr] = chashes[attr].hexdigest()
+                                tmp_a.attrs[attr] = chashes[attr]
                 elif self.hash:
                         tmp_a.hash = self.hash
                         for attr in digest.DEFAULT_HASH_ATTRS:
@@ -290,8 +289,7 @@ class SignatureAction(generic.Action):
                         shutil.rmtree(tmp_dir)
                         csizes.append(csize)
                         for attr in chashes:
-                                chain_chashes[attr].append(
-                                    chashes[attr].hexdigest())
+                                chain_chashes[attr].append(chashes[attr])
 
                 if chain_hashes:
                         for attr in digest.DEFAULT_CHAIN_ATTRS:
