@@ -84,7 +84,13 @@ if DebugValues["hash"] == "sha1+sha512_256" and sha512_supported:
         DEFAULT_CHAIN_CHASH_ATTRS = ["chain.chashes",
             "pkg.chain.chashes.sha512_256"]
 
-elif DebugValues["hash"] == "sha1+sha256":
+LEGACY_HASH_ATTRS = ["hash"]
+LEGACY_CHASH_ATTRS = ["chash"]
+LEGACY_CONTENT_HASH_ATTRS = ["elfhash"]
+LEGACY_CHAIN_ATTRS = ["chain"]
+LEGACY_CHAIN_CHASH_ATTRS = ["chain.chashes"]
+
+if DebugValues["hash"] == "sha1+sha256":
         # Simulate pkg(5) where SHA-1 and SHA-256 are used for publication
         DEFAULT_HASH_ATTRS = ["hash", "pkg.hash.sha256"]
         DEFAULT_CHASH_ATTRS = ["chash", "pkg.chash.sha256"]
