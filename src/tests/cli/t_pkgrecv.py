@@ -1415,6 +1415,88 @@ Estimated transfer size: 528.00 B
                 self.pkgrepo("verify -s {0} --disable dependency"
                     .format(self.dpath6))
 
+        def test_15_content_attrs(self):
+                """Ensure that relevant content-related attributes will not be
+                modified by pkgrecv.  This is important if changes are made to
+                how some attributes are calculated in the future and
+                modifications would invalidate signatures."""
+
+                #
+                # For now, this only needs to test 'elfhash'.
+                #
+                mfpath = os.path.join(self.test_root, "content-attrs.p5m")
+                with open(mfpath, "w") as mf:
+                        mf.write("""\
+set name=pkg.fmri value=pkg://test/content-attrs@1.0
+file elftest.so.1 mode=0755 owner=root group=bin path=bin/true
+""")
+
+                # Create a repository and publish sample package.
+                rpath = tempfile.mkdtemp(dir=self.test_root)
+                self.create_repo(rpath)
+                ret, pfmri = self.pkgsend(rpath,
+                    "publish -d {0} {1}".format(self.ro_data_root, mfpath))
+                self.pkgrepo("list -s {0}".format(rpath))
+
+                # Now get the actual manifest and get current elfhash value.
+                orepo = repo.Repository(root=rpath)
+                rmpath = orepo.manifest(pfmri)
+                rm = manifest.Manifest()
+                rm.set_content(pathname=rmpath)
+                ract = list(rm.gen_actions_by_type('file'))[0]
+                oelfhash = ract.attrs["elfhash"]
+
+                # Create a new repository and pkgrecv package to that one so
+                # that we can safely modify it in place.
+                nrpath = tempfile.mkdtemp(dir=self.test_root)
+                self.create_repo(nrpath)
+                self.pkgrecv(rpath, "-d {0} \*".format(nrpath))
+                nrepo = repo.Repository(root=nrpath)
+                nmpath = nrepo.manifest(pfmri)
+                nm = manifest.Manifest()
+                nmcontent = rm.tostr_unsorted().replace(
+                    "elfhash=", "elfhash=42.")
+                nm.set_content(nmcontent)
+                nm.store(nmpath)
+                # Modifying the manifest requires a catalog rebuild.
+                self.pkgrepo("rebuild --no-index -s {0}".format(nrpath))
+
+                # Now create another repository and pkgrecv package *without*
+                # using --clone to that one and verify that elfhash remains
+                # unchanged from previous repository version.
+                trpath = tempfile.mkdtemp(dir=self.test_root)
+                self.create_repo(trpath)
+                self.pkgrecv(nrpath, "-d {0} \*".format(trpath))
+                trepo = repo.Repository(root=trpath)
+                tmpath = trepo.manifest(pfmri)
+                tm = manifest.Manifest()
+                tm.set_content(pathname=tmpath)
+                tact = list(tm.gen_actions_by_type('file'))[0]
+                self.assertEqual("42." + oelfhash, tact.attrs["elfhash"])
+
+                # Do the same thing again, but use --clone this time.
+                trpath = tempfile.mkdtemp(dir=self.test_root)
+                self.create_repo(trpath)
+                self.pkgrecv(nrpath, "--clone -d {0} -p \*".format(trpath))
+                trepo = repo.Repository(root=trpath)
+                tmpath = trepo.manifest(pfmri)
+                tm = manifest.Manifest()
+                tm.set_content(pathname=tmpath)
+                tact = list(tm.gen_actions_by_type('file'))[0]
+                self.assertEqual("42." + oelfhash, tact.attrs["elfhash"])
+
+        def test_16_recv_old_republish(self):
+                """Verify that older logic of republication in pkgrecv works."""
+
+                f = fmri.PkgFmri(self.published[3], None)
+
+                self.dcs[2].stop()
+                self.dcs[2].set_disable_ops(["manifest/1"])
+                self.dcs[2].start()
+
+                self.pkgrecv(self.durl1, "-d {0} {1}".format(self.durl2, f))
+                self.dcs[2].unset_disable_ops()
+
 class TestPkgrecvHTTPS(pkg5unittest.HTTPSTestClass):
 
         example_pkg10 = """
