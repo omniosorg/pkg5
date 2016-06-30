@@ -1155,8 +1155,8 @@ class Transport(object):
 
                         repouri_key = d.get_repouri_key()
                         repostats = self.stats[repouri_key]
-                        if repostats.content_errors and retries > 1:
-                            header = d.build_refetch_header(header)
+                        header = Transport.__get_request_header(header,
+                            repostats, retries, d)
                         try:
                                 return d.get_datastream(fhash, v, header,
                                     ccancel=ccancel, pub=pub)
