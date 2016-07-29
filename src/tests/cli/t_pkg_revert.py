@@ -173,7 +173,7 @@ class TestPkgRevert(pkg5unittest.SingleDepotTestCase):
                 if sha512_supported:
                         self.pkg("-D hash=sha1+sha512_256 verify C", exit=1)
                         sha2 = "13729cb7183961b48ce300c2588c86ad123e7c636f38a0f3c8408a75fd079d09"
-                        self.assert_(sha2 in self.output, self.output)
+                        self.assertTrue(sha2 in self.output, self.output)
                 self.pkg("verify C", exit=1)
                 self.pkg("verify D", exit=1)
 

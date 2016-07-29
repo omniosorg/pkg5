@@ -308,7 +308,7 @@ getdynamic(int fd)
 		goto bad;
 	}
 
-	while ((scn = elf_nextscn(elf, scn))) {
+	while ((scn = elf_nextscn(elf, scn)) != NULL) {
 		if (gelf_getshdr(scn, &shdr) != &shdr) {
 			PyErr_SetString(ElfError, elf_errmsg(-1));
 			goto bad;
@@ -554,12 +554,22 @@ hashsection(char *name)
 	return (1);
 }
 
+#define	MODE_HASH1	0x1
+#define MODE_HASH256	0x2
+#define MODE_HASH512	0x4
+
+typedef struct hash_data {
+	SHA1_CTX	shc1;
+	SHA256_CTX	shc256;
+	SHA2_CTX	shc512;
+	int		mode;
+} hash_data_t;
+
 /*
  * Reads a section in 64k increments, adding it to the hash.
  */
 static int
-readhash(int fd, SHA1_CTX *shc, SHA256_CTX *shc2, off_t offset, off_t size,
-    int sha1, int sha256)
+readhash(int fd, off_t offset, off_t size, hash_data_t *hdata)
 {
 	off_t n;
 	char hashbuf[64 * 1024];
@@ -579,26 +589,53 @@ readhash(int fd, SHA1_CTX *shc, SHA256_CTX *shc2, off_t offset, off_t size,
 			PyErr_SetFromErrno(PyExc_IOError);
 			return (-1);
 		}
-                if (sha1 > 0) {
-		        SHA1Update(shc, hashbuf, rbytes);
-                }
-                if (sha256 > 0) {
-                        SHA256Update(shc2, hashbuf, rbytes);
-                }
+		if (hdata->mode & MODE_HASH1)
+		        SHA1Update(&hdata->shc1, hashbuf, rbytes);
+		if (hdata->mode & MODE_HASH256)
+		        SHA256Update(&hdata->shc256, hashbuf, rbytes);
+		if (hdata->mode & MODE_HASH512)
+		        SHA2Update(&hdata->shc512, hashbuf, rbytes);
 		size -= rbytes;
 	} while (size != 0);
 
 	return (0);
 }
 
-
 /*
- * gethashes - returns a struct filled with the hashes computed from an ELF
- * file.  Returns NULL if it encounters a problem (eg. not ELF file, offset out
- * of range).
+* gethashes - returns a pointer to a struct filled with the hex
+ * digests of hashes computed from an ELF file.
+ *
+ * On error, will set Python error and return NULL.
+ *
+ * On success, the caller is responsible for freeing the returned
+ * buffer. For the following input parameters, that structure will
+ * contain:
+ *
+ * input    : return structure member
+ * -------------------------------------------------------------------
+ * doelf > 0: generate hex digest of legacy SHA1 hash in .elfhash
+ *
+ * do256 > 0: generate hex digests of SHA-256 hashes of signed content
+ *            in .hash_sha256 and unsigned content in .uhash_sha256
+ *
+ * do512 > 0: generate hex digests of SHA-512/256 hashes of signed
+ *            content in .hash_sha512t_256 and unsigned content in
+ *            .uhash_sha512t_256
+ *
+ * The SHA-256 and SHA-512/256 hex digest strings are each prefaced
+ * with strings describing how the content was extracted from the Elf
+ * object, and which hashing algorithm was used on that content:
+ *
+ *	      gelf:sha256:hexdigest
+ *	      gelf:sha512t_256:hexdigest
+ *	      gelf.unsigned:sha256:hexdigest
+ *	      gelf.unsigned:sha512t_256:hexdigest
+ *
+ * If any of the functions used to extract that data and generate
+ * these hashes changes, those prefixes must also be changed.
  */
 hashinfo_t *
-gethashes(int fd, int dosha1, int dosha2)
+gethashes(int fd, int doelf, int do256, int do512)
 {
 	hashinfo_t	*hashes = NULL;
 	Elf		*elf = NULL;
@@ -606,31 +643,38 @@ gethashes(int fd, int dosha1, int dosha2)
 	GElf_Shdr	shdr;
 	size_t		sh_str = 0;
 	char		*name = NULL;
+	unsigned char	rawhash[SHA512_256_DIGEST_LENGTH];
+	char		hexchars[17] = "0123456789abcdef";
+	uint64_t	mask = 0xffffffff00000000ULL;
+	hash_data_t	hdata;
+	int		i;
 
-	SHA1_CTX	shc;
-        SHA256_CTX      shc2;
-
-	if (elf_version(EV_CURRENT) == EV_NONE) {
+	if (elf_version(EV_CURRENT) == EV_NONE ||
+	    (elf = elf_begin(fd, ELF_C_READ, NULL)) == NULL) {
 		PyErr_SetString(ElfError, elf_errmsg(-1));
 		return (NULL);
 	}
 
-	if (!(elf = elf_begin(fd, ELF_C_READ, NULL))) {
-		PyErr_SetString(ElfError, elf_errmsg(-1));
-		return (NULL);
-	}
-
-	if (!elf_getshstrndx(elf, &sh_str)) {
+	if (elf_kind(elf) != ELF_K_ELF || !elf_getshstrndx(elf, &sh_str)) {
 		PyErr_SetString(ElfError, elf_errmsg(-1));
 		goto err;
 	}
 
-        if (dosha1 > 0)
-                SHA1Init(&shc);
-        if (dosha2 > 0)
-                SHA256Init(&shc2);
+	hdata.mode = 0;
+        if (doelf > 0) {
+                SHA1Init(&hdata.shc1);
+		hdata.mode |= MODE_HASH1;
+	}
+        if (do256 > 0) {
+                SHA256Init(&hdata.shc256);
+		hdata.mode |= MODE_HASH256;
+	}
+        if (do512 > 0) {
+                SHA2Init(SHA512_256, &hdata.shc512);
+		hdata.mode |= MODE_HASH512;
+	}
 
-	while ((scn = elf_nextscn(elf, scn))) {
+	while ((scn = elf_nextscn(elf, scn)) != NULL) {
 		if (gelf_getshdr(scn, &shdr) != &shdr) {
 			PyErr_SetString(ElfError, elf_errmsg(-1));
 			goto err;
@@ -647,41 +691,92 @@ gethashes(int fd, int dosha1, int dosha2)
 		if (shdr.sh_type == SHT_NOBITS) {
 			/*
 			 * We can't just push shdr.sh_size into
-			 * SHA1Update(), as its raw bytes will be
+			 * SHAXUpdate(), as its raw bytes will be
 			 * different on x86 than they are on sparc.
 			 * Convert to network byte-order first.
 			 */
 			uint64_t n = shdr.sh_size;
-			uint64_t mask = 0xffffffff00000000ULL;
 			uint32_t top = htonl((uint32_t)((n & mask) >> 32));
 			uint32_t bot = htonl((uint32_t)n);
-			if (dosha1 > 0) {
-				SHA1Update(&shc, &top, sizeof (top));
-				SHA1Update(&shc, &bot, sizeof (bot));
+			if (hdata.mode & MODE_HASH1) {
+				SHA1Update(&hdata.shc1, &top, sizeof (top));
+				SHA1Update(&hdata.shc1, &bot, sizeof (bot));
 			}
-			if (dosha2 > 0) {
-				SHA256Update(&shc2, &top, sizeof (top));
-				SHA256Update(&shc2, &bot, sizeof (bot));
+			if (hdata.mode & MODE_HASH256) {
+				SHA256Update(&hdata.shc256, &top, sizeof (top));
+				SHA256Update(&hdata.shc256, &bot, sizeof (bot));
+			}
+			if (hdata.mode & MODE_HASH512) {
+				SHA2Update(&hdata.shc512, &top, sizeof (top));
+				SHA2Update(&hdata.shc512, &bot, sizeof (bot));
 			}
 		} else {
-			int hash;
-			hash = readhash(fd, &shc, &shc2, shdr.sh_offset,
-			    shdr.sh_size, dosha1, dosha2);
-
-			if (hash == -1)
+			if (readhash(fd, shdr.sh_offset, shdr.sh_size,
+			    &hdata) == -1)
 				goto err;
 		}
 	}
 
-	if ((hashes = malloc(sizeof (hashinfo_t))) == NULL) {
+	if ((hashes = calloc(1, sizeof (hashinfo_t))) == NULL) {
 		(void) PyErr_NoMemory();
 		return (NULL);
 	}
 
-        if (dosha1 > 0)
-	        SHA1Final(hashes->hash, &shc);
-        if (dosha2 > 0)
-                SHA256Final(hashes->hash256, &shc2);
+#define PUTHASH(chars) \
+	do { \
+		for (i = 0; i < (chars); i++) { \
+			*hp++ = hexchars[(rawhash[i] & 0xf0) >> 4]; \
+			*hp++ = hexchars[rawhash[i] & 0x0f]; \
+		} \
+ 		*hp = '\0'; \
+	} while (0)
+
+	if (hdata.mode & MODE_HASH1) {
+		char *hp = &hashes->elfhash[0];
+
+	        SHA1Final(rawhash, &hdata.shc1);
+		PUTHASH(SHA1_DIGEST_LENGTH);
+	}
+
+	if (hdata.mode & MODE_HASH256) {
+		char *hp = &hashes->hash_sha256[12];
+
+ 		SHA256Final(&rawhash[0], &hdata.shc256);
+ 		(void) snprintf(hashes->hash_sha256, 13, "gelf:sha256:");
+
+		PUTHASH(SHA256_DIGEST_LENGTH);
+
+		/*
+		 * Upstream includes .SUNW_SIGNATURE sections in the signed
+		 * hashes, and not in the unsigned. We currently use the same
+		 * hash for each.
+		 */
+		(void) snprintf(hashes->uhash_sha256, 22,
+		    "gelf.unsigned:sha256:");
+		strlcat(&hashes->uhash_sha256[21], &hashes->hash_sha256[12],
+		    sizeof (hashes->hash_sha256));
+	}
+
+	if (hdata.mode & MODE_HASH512) {
+		char *hp = &hashes->hash_sha512t_256[17];
+
+ 		SHA2Final(&rawhash[0], &hdata.shc512);
+		(void) snprintf(hashes->hash_sha512t_256, 18,
+		    "gelf:sha512t_256:");
+
+		PUTHASH(SHA512_256_DIGEST_LENGTH);
+
+		/*
+		 * Upstream includes .SUNW_SIGNATURE sections in the signed
+		 * hashes, and not in the unsigned. We currently use the same
+		 * hash for each.
+		 */
+		(void) snprintf(hashes->uhash_sha512t_256, 27,
+		    "gelf.unsigned:sha512t_256:");
+		strlcat(&hashes->uhash_sha512t_256[26],
+		    &hashes->hash_sha512t_256[17],
+		    sizeof (hashes->hash_sha512t_256));
+	}
 
 err:
 	(void) elf_end(elf);

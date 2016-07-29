@@ -21,6 +21,7 @@
 #
 
 # Copyright (c) 2009, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
 
 from . import testutils
 if __name__ == "__main__":
@@ -385,7 +386,7 @@ add dir group=sys mode=0755 owner=root path=usr/share
 add dir group=bin mode=0755 owner=root path=usr/share/info
 add dir group=bin mode=0755 owner=root path=usr/share/man
 add dir group=bin mode=0755 owner=root path=usr/share/man/man1
-add file ro_data/elftest.so.1 elfarch=i386 elfbits=32 elfhash=68cca393e816e6adcbac1e8ffe9c618de70413e0 group=bin mode=0555 owner=root path=usr/bin/gmake pkg.size=12
+add file ro_data/elftest.so.1 elfarch=i386 elfbits=32 elfhash=083308992c921537fd757548964f89452234dd11 group=bin mode=0555 owner=root path=usr/bin/gmake pkg.content-hash=bad_data pkg.size=12
 add file tmp/example_file group=bin mode=0444 owner=root path=usr/share/info/make.info pkg.size=12
 add file tmp/example_file group=bin mode=0444 owner=root path=usr/share/info/make.info-1 pkg.size=12
 add file tmp/example_file group=bin mode=0444 owner=root path=usr/share/info/make.info-2 pkg.size=12
@@ -401,7 +402,7 @@ close
 
         res_bug_983 = set([
             ("pkg:/SUNWgmake@3.81-0.89", "basename", "link path=usr/sfw/bin/gmake target=../../bin/gmake"),
-            ('pkg:/SUNWgmake@3.81-0.89', 'basename', 'file 038cc7a09940928aeac6966331a2f18bc40e7792 chash=a3e76bd1b97b715cddc93b2ad6502b41efa4d833 elfarch=i386 elfbits=32 elfhash=083308992c921537fd757548964f89452234dd11 group=bin mode=0555 owner=root path=usr/bin/gmake pkg.csize=1358 pkg.size=3948'),
+            ('pkg:/SUNWgmake@3.81-0.89', 'basename', 'file 038cc7a09940928aeac6966331a2f18bc40e7792 chash=a3e76bd1b97b715cddc93b2ad6502b41efa4d833 elfarch=i386 elfbits=32 elfhash=083308992c921537fd757548964f89452234dd11 group=bin mode=0555 owner=root path=usr/bin/gmake pkg.content-hash=gelf:sha512t_256:54f4cba7527ab9f78a85f7bb5a4e63315c8cae4a7e38f884e4bfd16bcab00821 pkg.content-hash=gelf.unsigned:sha512t_256:54f4cba7527ab9f78a85f7bb5a4e63315c8cae4a7e38f884e4bfd16bcab00821 pkg.content-hash=file:sha512t_256:2374db2dfb4968baad246ab37afc560cc9d278b6104a889a2727d9bcf6a20b17 pkg.content-hash=gzip:sha512t_256:17e38c279aad2c4877618246cb60cb4c795f6754880649c56d847e653fadd71c pkg.csize=1358 pkg.size=3948'),
             ('pkg:/SUNWgmake@3.81-0.89', 'gmake - GNU make', 'set name=description value="gmake - GNU make"')
         ])
 

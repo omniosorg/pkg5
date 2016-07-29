@@ -1442,9 +1442,6 @@ Estimated transfer size: 3.17 kB
                 how some attributes are calculated in the future and
                 modifications would invalidate signatures."""
 
-                #
-                # For now, this only needs to test 'elfhash'.
-                #
                 mfpath = os.path.join(self.test_root, "content-attrs.p5m")
                 with open(mfpath, "w") as mf:
                         mf.write("""\
@@ -1466,6 +1463,9 @@ file elftest.so.1 mode=0755 owner=root group=bin path=bin/true
                 rm.set_content(pathname=rmpath)
                 ract = list(rm.gen_actions_by_type('file'))[0]
                 oelfhash = ract.attrs["elfhash"]
+                # 'pkg.content-hash' values contains signed and unsigned value,
+                # we just need to extract one of them.
+                ocontenthash = ract.attrs["pkg.content-hash"][0]
 
                 # Create a new repository and pkgrecv package to that one so
                 # that we can safely modify it in place.
@@ -1477,6 +1477,8 @@ file elftest.so.1 mode=0755 owner=root group=bin path=bin/true
                 nm = manifest.Manifest()
                 nmcontent = rm.tostr_unsorted().replace(
                     "elfhash=", "elfhash=42.")
+                nmcontent = nmcontent.replace(
+                    "pkg.content-hash=", "pkg.content-hash=42.")
                 nm.set_content(nmcontent)
                 nm.store(nmpath)
                 # Modifying the manifest requires a catalog rebuild.
@@ -1494,6 +1496,8 @@ file elftest.so.1 mode=0755 owner=root group=bin path=bin/true
                 tm.set_content(pathname=tmpath)
                 tact = list(tm.gen_actions_by_type('file'))[0]
                 self.assertEqual("42." + oelfhash, tact.attrs["elfhash"])
+                self.assertEqual("42." + ocontenthash,
+                    tact.attrs["pkg.content-hash"][0])
 
                 # Do the same thing again, but use --clone this time.
                 trpath = tempfile.mkdtemp(dir=self.test_root)
@@ -1505,6 +1509,8 @@ file elftest.so.1 mode=0755 owner=root group=bin path=bin/true
                 tm.set_content(pathname=tmpath)
                 tact = list(tm.gen_actions_by_type('file'))[0]
                 self.assertEqual("42." + oelfhash, tact.attrs["elfhash"])
+                self.assertEqual("42." + ocontenthash,
+                    tact.attrs["pkg.content-hash"][0])
 
         def test_16_recv_old_republish(self):
                 """Verify that older logic of republication in pkgrecv works."""

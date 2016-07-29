@@ -88,11 +88,22 @@ class TestElf(pkg5unittest.Pkg5TestCase):
                 """Test that the elf routines generate the expected hash"""
 
                 o = os.path.join(self.test_root, "ro_data/elftest.so.1")
-                d = elf.get_hashes(o, sha1=True, sha256=True)
+                d = elf.get_hashes(o, elfhash=True, sha256=True,
+                    sha512t_256=True)
+
+                expected = [
+'gelf:sha256:7c4f1f347b6d6e65e7542ffb21a05471728a80a5449fddd715186c6cbfdba4b0',
+'gelf.unsigned:sha256:7c4f1f347b6d6e65e7542ffb21a05471728a80a5449fddd715186c6cbfdba4b0',
+'gelf:sha512t_256:54f4cba7527ab9f78a85f7bb5a4e63315c8cae4a7e38f884e4bfd16bcab00821',
+'gelf.unsigned:sha512t_256:54f4cba7527ab9f78a85f7bb5a4e63315c8cae4a7e38f884e4bfd16bcab00821',
+                ]
+
+                import pprint; pprint.pprint(d)
+
                 self.assertEqual(d['elfhash'],
                     '083308992c921537fd757548964f89452234dd11');
-                self.assertEqual(d['pkg.content-type.sha256'],
-                    '7c4f1f347b6d6e65e7542ffb21a05471728a80a5449fddd715186c6cbfdba4b0');
+                for hash in expected:
+                        self.assertTrue(hash in d['pkg.content-hash'])
 
         def test_get_hashes_params(self):
                 """Test that get_hashes(..) returns checksums according to the
@@ -103,22 +114,43 @@ class TestElf(pkg5unittest.Pkg5TestCase):
                 sha1_len = 40
                 sha256_len = 64
 
-                # the default is to return an SHA-1 elfhash only
+                # the default is to return both the SHA-1 elfhash and
+                # the SHA-256 pkg.content-hash
                 d = elf.get_hashes(self.elf_paths[0])
                 self.assertTrue(len(d["elfhash"]) == sha1_len)
-                self.assertTrue("pkg.content-type.sha256" not in d)
+                self.assertTrue("pkg.content-hash" in d)
+                self.assertTrue(len(d["pkg.content-hash"]) == 2)
+                for h in range(2):
+                        v = d["pkg.content-hash"][h].split(":")
+                        self.assertTrue(len(v) == 3)
+                        self.assertTrue(v[1] == "sha256")
+                        self.assertTrue(len(v[2]) == sha256_len)
 
-                d = elf.get_hashes(self.elf_paths[0], sha256=True)
-                self.assertTrue(len(d["elfhash"]) == sha1_len)
-                self.assertTrue(len(d["pkg.content-type.sha256"]) == sha256_len)
-
-                d = elf.get_hashes(self.elf_paths[0], sha1=False, sha256=True)
+                d = elf.get_hashes(self.elf_paths[0],
+                    elfhash=False, sha512t_256=True)
                 self.assertTrue("elfhash" not in d)
-                self.assertTrue(len(d["pkg.content-type.sha256"]) == sha256_len)
+                self.assertTrue("pkg.content-hash" in d)
+                self.assertTrue(len(d["pkg.content-hash"]) == 4)
+                sha256_count = 0
+                sha512t_256_count = 0
+                unsigned_count = 0
+                for h in range(4):
+                        v = d["pkg.content-hash"][h].split(":")
+                        self.assertTrue(len(v) == 3)
+                        self.assertTrue(len(v[2]) == sha256_len)
+                        if v[0].endswith(".unsigned"):
+                                unsigned_count += 1
+                        if v[1] == "sha256":
+                                sha256_count += 1
+                        elif v[1] == "sha512t_256":
+                                sha512t_256_count += 1
+                self.assertTrue(sha256_count == 2)
+                self.assertTrue(sha512t_256_count == 2)
+                self.assertTrue(unsigned_count == 2)
 
-                d = elf.get_hashes(self.elf_paths[0], sha1=False, sha256=False)
-                self.assertTrue("elfhash" not in d)
-                self.assertTrue("pkg.content-type.sha256" not in d)
+                d = elf.get_hashes(self.elf_paths[0], elfhash=False,
+                    sha256=False)
+                self.assertTrue(len(d) == 0)
 
 if __name__ == "__main__":
         unittest.main()
