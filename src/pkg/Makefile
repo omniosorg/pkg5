@@ -32,7 +32,7 @@ PLATNUM           = 0
 #BUILDID           = $(BUILDID.cmd:sh)
 BUILDID           = 151
 NIGHTLYID:sh      = hg parents --template '{rev}' 2>/dev/null || git rev-list --all | wc -l | sed s/\ //g
-CHANGESET:sh      = hg id -i 2>/dev/null || git log --pretty=format:'%h' -1..
+CHANGESET:sh      = hg id -i 2>/dev/null || git log --pretty=format:'%h' -1
 PKGVERS_BRANCH    = \
 	$(PKGVERS_COMPONENT).$(UPDATENUM).$(SRUNUM).$(PLATNUM).$(BUILDID).$(NIGHTLYID)
 #PKGVERS           = $(PKGVERS_COMPONENT),$(PKGVERS_BUILTON)-$(PKGVERS_BRANCH)

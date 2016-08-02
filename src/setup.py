@@ -1053,7 +1053,7 @@ class build_func(_build):
 
 def get_hg_version():
         try:
-                cmd = 'hg id -i 2>/dev/null || git log --pretty=format:\'%h\' -1..'
+                cmd = 'hg id -i 2>/dev/null || git log --pretty=format:\'%h\' -1'
                 p = subprocess.Popen(cmd, shell=True, stdout = subprocess.PIPE)
                 return p.communicate()[0].strip()
         except OSError:

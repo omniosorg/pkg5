@@ -32,7 +32,7 @@ SVR4_NAMES        = $(SVR4_NAMES.cmd:sh)
 
 # Main SVr4 packaging target
 _svr4: $(SVR4_NAMES:%=$(PKGDEST)/svr4/%/pkgmap)
-	pkgtrans $(PKGDEST)/svr4 pkg5-$$(hg id -i 2>/dev/null || git log --pretty=format:'%h' -1..).pkg $(SVR4_NAMES)
+	pkgtrans $(PKGDEST)/svr4 pkg5-$$(hg id -i 2>/dev/null || git log --pretty=format:'%h' -1).pkg $(SVR4_NAMES)
 
 $(PKGDEST)/svr4:
 	mkdir -p $@
