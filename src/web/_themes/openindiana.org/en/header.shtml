@@ -29,7 +29,7 @@
         </div>
         <div class="masthead">
                 <div class="content">
-                        <a id="logo" href="http://www.opensolaris.org/"></a>
+                        <a id="logo" href="https://www.openindiana.org/"></a>
                         <div class="menu">
                                 <ul>
 % for link, text in gmenu_items:
@@ -41,7 +41,7 @@
         </div>
         <div class="breadcrumbs">
 % for link, text in crumbs:
-        <a href="${link}">${text}</a> &gt; 
+        <a href="${link}">${text}</a> &gt;
 % endfor
         </div>
         <div class="page-title">
