@@ -150,7 +150,7 @@
 		have a dependency on.
 		-->
                 <propval name='repository' type='astring'
-			value='/var/share/pkg/repositories/solaris' />
+			value='/var/share/pkg/repositories/openindiana' />
 
                 <!-- A partial crontab(1) entry defining how often we
 		update the repository. We allow the special value
@@ -170,7 +170,7 @@
 		'config/ref_image' which we receive from.
 		 -->
 		<propval name='publishers' type='astring'
-			value='solaris' />
+			value='openindiana.org,hipster-encumbered' />
 
 		<!-- The cache_dir used for the -c option to pkgrecv(1M)
 		-->
@@ -201,12 +201,12 @@
                 <property_group name='config' type='application'>
                 <stability value='Evolving' />
                 <propval name='repository' type='astring'
-			value='/var/share/pkg/repositories/solaris' />
+			value='/var/share/pkg/repositories/openindiana' />
                 <propval name='crontab_period' type='astring'
-			value='30 2 random * *' />
+			value='30 2 * * *' />
                 <propval name='ref_image' type='astring' value='/' />
 		<propval name='publishers' type='astring'
-			value='solaris' />
+			value='openindiana.org,hipster-encumbered' />
                 <propval name='cache_dir' type='astring'
                         value='/var/cache/pkg/mirror' />
                 <propval name='debug' type='boolean' value='false' />
