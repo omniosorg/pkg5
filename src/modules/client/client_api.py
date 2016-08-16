@@ -568,7 +568,7 @@ def _collect_catalog_failures(cre, ignore_perms_failure=False, errors=None):
                         refresh_errstr += "\n"
                 else:
                         refresh_errstr += "\n\n" + str(err)
-                 
+
 
         partial_str = ":"
         if partial:
@@ -1173,7 +1173,7 @@ def __api_plan(_op, _api_inst, _accept=False, _li_ignore=None, _noexecute=False,
     _omit_headers=False, _origins=None, _parsable_version=None, _quiet=False,
     _quiet_plan=False, _review_release_notes=False, _show_licenses=False,
     _stage=API_STAGE_DEFAULT, _verbose=0, display_plan_cb=None, logger=None,
-    _unpackaged=False, _unpackaged_only=False, **kwargs):
+    _unpackaged=False, _unpackaged_only=False, _verify_paths=EmptyI, **kwargs):
 
         # All the api interface functions that we invoke have some
         # common arguments.  Set those up now.
@@ -1183,6 +1183,7 @@ def __api_plan(_op, _api_inst, _accept=False, _li_ignore=None, _noexecute=False,
         if _op == PKG_OP_VERIFY:
                 kwargs["unpackaged"] = _unpackaged
                 kwargs["unpackaged_only"] = _unpackaged_only
+                kwargs["verify_paths"] = _verify_paths
         elif _op == PKG_OP_FIX:
                 kwargs["unpackaged"] = _unpackaged
 
@@ -1384,7 +1385,7 @@ def __api_op(_op, _api_inst, _accept=False, _li_ignore=None, _noexecute=False,
     _origins=None, _parsable_version=None, _quiet=False, _quiet_plan=False,
     _review_release_notes=False, _show_licenses=False,
     _stage=API_STAGE_DEFAULT, _verbose=0,
-    _unpackaged=False, _unpackaged_only=False,
+    _unpackaged=False, _unpackaged_only=False, _verify_paths=EmptyI,
     display_plan_cb=None, logger=None,
     **kwargs):
         """Do something that involves the api.
@@ -1405,7 +1406,8 @@ def __api_op(_op, _api_inst, _accept=False, _li_ignore=None, _noexecute=False,
                     _show_licenses=_show_licenses, _stage=_stage,
                     _verbose=_verbose, _quiet_plan=_quiet_plan,
                     _unpackaged=_unpackaged, _unpackaged_only=_unpackaged_only,
-                    display_plan_cb=display_plan_cb, logger=logger, **kwargs)
+                    _verify_paths=_verify_paths, display_plan_cb=display_plan_cb,
+                    logger=logger, **kwargs)
 
                 if "_failures" in _api_inst._img.transport.repo_status:
                         ret.setdefault("data", {}).update(
@@ -2490,7 +2492,7 @@ examining the catalogs:\n""")
         return __prepare_json(err, errors=errors_json, data=data)
 
 def _verify(op, api_inst, pargs, omit_headers, parsable_version, quiet, verbose,
-    unpackaged, unpackaged_only, display_plan_cb=None, logger=None):
+    unpackaged, unpackaged_only, verify_paths, display_plan_cb=None, logger=None):
         """Determine if installed packages match manifests."""
 
         errors_json = []
@@ -2504,7 +2506,8 @@ def _verify(op, api_inst, pargs, omit_headers, parsable_version, quiet, verbose,
             _omit_headers=omit_headers, _quiet=quiet, _quiet_plan=True,
             _verbose=verbose, _parsable_version=parsable_version,
             _unpackaged=unpackaged, _unpackaged_only=unpackaged_only,
-            display_plan_cb=display_plan_cb, logger=logger)
+            _verify_paths=verify_paths, display_plan_cb=display_plan_cb,
+            logger=logger)
 
 def _fix(op, api_inst, pargs, accept, backup_be, backup_be_name, be_activate,
     be_name, new_be, noexecute, omit_headers, parsable_version, quiet,

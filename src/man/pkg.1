@@ -103,7 +103,7 @@ pkg \- Image Packaging System retrieval client
 
 .LP
 .nf
-/usr/bin/pkg verify [-Hqv] [--parsable \fIversion\fR]
+/usr/bin/pkg verify [-Hqv] [-p \fIpath\fR] [--parsable \fIversion\fR]
     [--unpackaged] [--unpackaged-only] [\fIpkg_fmri_pattern\fR ...]
 .fi
 
@@ -1517,7 +1517,7 @@ With the \fB-a\fR option (and by default), searching for \fBtoken\fR results in 
 .ne 2
 .mk
 .na
-\fBpkg verify\fR [\fB-Hqv\fR] [--parsable \fBversion\fR] [--unpackaged] [--unpackaged-only] [\fIpkg_fmri_pattern\fR ...]
+\fBpkg verify\fR [\fB-Hqv\fR] [-p \fIpath\fR] [--parsable \fIversion\fR] [--unpackaged] [--unpackaged-only] [\fIpkg_fmri_pattern\fR ...]
 .ad
 .sp .6
 .RS 4n
@@ -1530,7 +1530,7 @@ Validate the installation of all packages installed in the current image. If cur
 .ad
 .sp .6
 .RS 4n
-Validate the installation of only the specified packages installed in the current image.
+Validate the installation of only the specified packages installed in the current image. When used with \fB-p\fR, only the maching actions from the specified packages will be verified.
 .RE
 
 .sp
@@ -1542,6 +1542,23 @@ Validate the installation of only the specified packages installed in the curren
 .sp .6
 .RS 4n
 Omit the headers from the verification output.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB-p path\fR
+.ad
+.sp .6
+.RS 4n
+Validate individual files, links or directories by specifying the paths. Paths
+specified are assumed to be relative to the / of the image on which the verify
+is performed. If a directory or a link is specified, only the matching action
+for the directory or the link will be verified.
+.sp
+If no \fIpkg_fmri_pattern\fRs are provided when specifying paths, all matching
+actions from packages installed in the image will be verified.
 .RE
 
 .sp
@@ -4176,7 +4193,7 @@ $ \fBpkg -R /tmp/test_image rehydrate -p test1\fR
 .sp
 
 .LP
-\fBExample 35 \fRApply a hot-fix directly from a web repository
+\fBExample 35\fR Apply a hot-fix directly from a web repository
 .sp
 .LP
 Apply a hot-fix from a package archive file hosted on a remote web server
@@ -4193,7 +4210,7 @@ $ \fBpkg apply-hot-fix --be-name=testbe \e\fR
 .sp
 
 .LP
-\fBExample 36 \fRSet up a template for automatic boot environment naming
+\fBExample 36\fR Set up a template for automatic boot environment naming
 .sp
 .LP
 The following will result in boot environments which include the release
@@ -4213,6 +4230,20 @@ token is not available:
 .in +2
 .nf
 $ \fBpkg set-property auto-be-name bloody_%D\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 37\fR Verify an Individual Path in an Image
+.sp
+.LP
+Verify an individual file at path \fI/usr/bin/ls\fR and display
+verbose result.
+.sp
+.in +2
+.nf
+$ \fBpkg verify -v -p /usr/bin/ls\fR
 .fi
 .in -2
 .sp
