@@ -1096,7 +1096,15 @@ Display the license texts for the packages. This option can be combined with \fB
 .ad
 .sp .6
 .RS 4n
-Display the contents (action attributes) of all packages installed in the image. With no options, display the value of the \fBpath\fR attribute for actions installed in the current image, sorted alphabetically by attribute value. For information about actions and their attributes, see "Actions" in the \fBpkg\fR(5) man page. See also the list of pseudo attribute names below.
+Display the contents (action attributes) of all packages installed in the image. With no options, display the value of the \fBpath\fR attribute for actions installed in the current image, sorted alphabetically by attribute value.
+If the \fB-o\fR option is not specified, the key attributes, as described in
+\fBpkg\fR(5), of the related action name will be displayed instead.
+In addition, 'depend' actions will also include the 'type' attribute, and 'set' actions will include the 'value' attribute.
+.sp
+When more than one action name is specified, the default attributes are
+the set of all attributes, as described above, of all the specified actions.
+For information about actions and their attributes, see 'Actions' in the
+\fBpkg\fR(5) man page. See also the list of pseudo attribute names below.
 .sp
 .ne 2
 .mk
