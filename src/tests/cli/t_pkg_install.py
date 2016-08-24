@@ -3496,8 +3496,7 @@ adm
                 self.file_contains("testme", "preserve1")
                 self.pkg("{0} --parsable=0 preserve@3".format(install_cmd))
                 self._assertEditables()
-                self.file_contains("testme", "preserve1")
-                self.file_contains("testme", "junk")
+                self.file_contains("testme", ["preserve1", "junk"])
                 self.file_doesnt_exist("testme.old")
                 self.file_doesnt_exist("testme.new")
                 self.pkg("verify preserve")
@@ -3513,8 +3512,7 @@ adm
                     moved=[['testme', 'testme.update']],
                     installed=['testme'],
                 )
-                self.file_doesnt_contain("testme", "preserve3")
-                self.file_doesnt_contain("testme", "junk")
+                self.file_doesnt_contain("testme", ["preserve3", "junk"])
                 self.file_doesnt_exist("testme.old")
                 self.file_doesnt_exist("testme.new")
                 self.file_exists("testme.update")
@@ -3531,8 +3529,7 @@ adm
                 self._assertEditables(
                     updated=['testme'],
                 )
-                self.file_contains("testme", "preserve1")
-                self.file_contains("testme", "junk")
+                self.file_contains("testme", ["preserve1", "junk"])
                 self.file_doesnt_exist("testme.old")
                 self.file_doesnt_exist("testme.new")
 
@@ -3540,8 +3537,7 @@ adm
                 self._assertEditables(
                     updated=['testme'],
                 )
-                self.file_contains("testme", "preserve1")
-                self.file_contains("testme", "junk")
+                self.file_contains("testme", ["preserve1", "junk"])
                 self.file_doesnt_exist("testme.old")
                 self.file_doesnt_exist("testme.new")
                 self.file_doesnt_exist("testme.update")
@@ -4904,12 +4900,15 @@ adm:NP:6445::::::
                     self.grouptest))
                 self.image_create(self.rurl)
                 self.pkg("install basics")
+                self.file_doesnt_contain("etc/group", ["lp", "staff", "Kermit"])
                 self.pkg("install basics1")
 
                 self.pkg("install grouptest")
-                self.pkg("verify")
-                self.pkg("uninstall grouptest")
-                self.pkg("verify")
+                self.pkg("verify -v")
+                self.file_contains("etc/group", ["lp", "staff", "Kermit"])
+                self.pkg("uninstall -vvv grouptest")
+                self.pkg("verify -v")
+                self.file_doesnt_contain("etc/group", ["lp", "staff", "Kermit"])
 
         def test_grouptest_exact_install(self):
 
@@ -4917,11 +4916,16 @@ adm:NP:6445::::::
                     self.grouptest))
                 self.image_create(self.rurl)
                 self.pkg("exact-install basics basics1")
+                self.file_doesnt_contain("etc/group", ["lp", "staff", "Kermit"])
+
                 self.pkg("exact-install grouptest")
                 self.pkg("verify")
+                self.file_contains("etc/group", ["lp", "staff", "Kermit"])
                 self.pkg("list basics1", exit=1)
+
                 self.pkg("uninstall grouptest")
                 self.pkg("verify")
+                self.file_doesnt_contain("etc/group", ["lp", "staff", "Kermit"])
 
         def test_usertest_install(self):
 
@@ -4930,9 +4934,13 @@ adm:NP:6445::::::
                 self.image_create(self.rurl)
                 self.pkg("install basics")
                 self.pkg("install basics1")
+                self.file_doesnt_contain("etc/passwd", "Kermit")
+                self.file_doesnt_contain("etc/shadow", "Kermit")
 
                 self.pkg("install usertest")
                 self.pkg("verify")
+                self.file_contains("etc/passwd", "Kermit")
+                self.file_contains("etc/shadow", "Kermit")
                 self.pkg("contents -m usertest")
 
                 self.pkgsend_bulk(self.rurl, self.usertest11)
@@ -4943,6 +4951,8 @@ adm:NP:6445::::::
 
                 self.pkg("uninstall usertest")
                 self.pkg("verify")
+                self.file_doesnt_contain("etc/passwd", "Kermit")
+                self.file_doesnt_contain("etc/shadow", "Kermit")
 
         def test_usertest_exact_install(self):
 
@@ -4950,10 +4960,15 @@ adm:NP:6445::::::
                     self.grouptest, self.usertest10))
                 self.image_create(self.rurl)
                 self.pkg("exact-install basics basics1")
+                self.file_doesnt_contain("etc/passwd", "Kermit")
+                self.file_doesnt_contain("etc/shadow", "Kermit")
+
                 self.pkg("exact-install usertest")
                 self.pkg("verify")
                 self.pkg("list basics1", exit=1)
                 self.pkg("contents -m usertest")
+                self.file_contains("etc/passwd", "Kermit")
+                self.file_contains("etc/shadow", "Kermit")
 
                 self.pkgsend_bulk(self.rurl, self.usertest11)
                 self.pkg("refresh")
@@ -4963,6 +4978,8 @@ adm:NP:6445::::::
 
                 self.pkg("uninstall usertest")
                 self.pkg("verify")
+                self.file_doesnt_contain("etc/passwd", "Kermit")
+                self.file_doesnt_contain("etc/shadow", "Kermit")
 
         def test_primordial_usergroup_install(self):
                 """Ensure that we can install user and group actions in the same
@@ -5089,6 +5106,7 @@ adm:NP:6445::::::
                 self.pkg("install basics")
                 self.pkg("install simplegroup")
                 self.pkg("verify simplegroup")
+                self.file_contains("etc/group", "muppets")
 
                 # add additional members to group & verify
                 gpath = self.get_img_file_path("etc/group")
@@ -5099,6 +5117,8 @@ adm:NP:6445::::::
                         f.writelines(gdata)
                 self.pkg("verify simplegroup")
                 self.pkg("uninstall simplegroup")
+                self.pkg("verify")
+                self.file_doesnt_contain("etc/group", "muppets")
 
                 # verify that groups appear in gid order.
                 self.pkg("install simplegroup simplegroup2")
@@ -10163,8 +10183,7 @@ adm
                 # installed.
                 self.pkg("uninstall --parsable=0 overlayer")
                 self._assertEditables()
-                self.file_contains("etc/pam.conf", "zigit")
-                self.file_contains("etc/pam.conf", "file2")
+                self.file_contains("etc/pam.conf", ["zigit", "file2"])
 
                 # Verify that removing the last package delivering an overlaid
                 # file removes the file.
@@ -10187,15 +10206,13 @@ adm
                 self.file_append("etc/pam.conf", "zigit")
                 self.pkg("uninstall --parsable=0 overlaid")
                 self._assertEditables()
-                self.file_contains("etc/pam.conf", "file2")
-                self.file_contains("etc/pam.conf", "zigit")
+                self.file_contains("etc/pam.conf", ["file2", "zigit"])
 
                 # Re-install overlaid package and verify that file content
                 # does not change.
                 self.pkg("install --parsable=0 overlaid@0")
                 self._assertEditables()
-                self.file_contains("etc/pam.conf", "file2")
-                self.file_contains("etc/pam.conf", "zigit")
+                self.file_contains("etc/pam.conf", ["file2", "zigit"])
                 self.pkg("uninstall --parsable=0 overlaid overlayer")
                 self._assertEditables(
                     removed=["etc/pam.conf"],
@@ -10977,31 +10994,45 @@ adm
                     "dupuserp2@0")
                 self.pkg("verify", exit=1)
                 self.pkg("install otheruser")
+                self.file_contains("etc/passwd", "fozzie")
+                self.file_contains("etc/shadow", "fozzie")
                 self.pkg("uninstall otheruser")
+                self.file_doesnt_contain("etc/passwd", "fozzie")
+                self.file_doesnt_contain("etc/shadow", "fozzie")
                 self.pkg("verify", exit=1)
 
                 # If the packages involved get upgraded but leave the actions
                 # themselves alone, we should be okay.
                 self.pkg("install dupuserp2 dupuserp3")
+                self.file_contains("etc/passwd", "kermit")
+                self.file_contains("etc/shadow", "kermit")
                 self.pkg("verify", exit=1)
 
                 # Test that removing one of two offending actions reverts the
                 # system to a clean state.
                 self.pkg("uninstall dupuserp3")
+                self.file_contains("etc/passwd", "kermit")
+                self.file_contains("etc/shadow", "kermit")
                 self.pkg("verify")
 
                 # You should be able to upgrade to a fixed set of packages in
                 # order to move past the problem, too.
                 self.pkg("uninstall dupuserp2")
+                self.file_contains("etc/passwd", "kermit")
+                self.file_contains("etc/shadow", "kermit")
                 self.pkg("-D broken-conflicting-action-handling=1 install "
                     "dupuserp2@0")
                 self.pkg("update")
                 self.pkg("verify")
+                self.file_contains("etc/passwd", "kermit")
+                self.file_contains("etc/shadow", "kermit")
 
                 # If we upgrade to a version of a conflicting package that no
                 # longer has the conflict, but at the same time introduce a new
                 # conflicting user action, we should fail.
                 self.pkg("uninstall dupuserp2")
+                self.file_contains("etc/passwd", "kermit")
+                self.file_contains("etc/shadow", "kermit")
                 self.pkg("-D broken-conflicting-action-handling=1 install "
                     "dupuserp2@0")
                 self.pkg("install dupuserp2 dupuserp4", exit=1)
@@ -11014,8 +11045,12 @@ adm
                 self.pkg("-D broken-conflicting-action-handling=1 install "
                     "dupuserp1 dupuserp2@0 dupuserp3")
                 self.pkg("verify", exit=1)
+                self.file_contains("etc/passwd", "kermit")
+                self.file_contains("etc/shadow", "kermit")
                 out1 = self.output
                 self.pkg("uninstall dupuserp3")
+                self.file_contains("etc/passwd", "kermit")
+                self.file_contains("etc/shadow", "kermit")
                 self.pkg("verify", exit=1)
                 out2 = self.output
                 out2 = out2[out2.index("STATUS\n") + 7:]
@@ -11028,7 +11063,11 @@ adm
                 self.pkg("install userdb")
                 self.pkg("-D broken-conflicting-action-handling=1 install "
                     "dupuserp1 dupuserp2@0 dupuserp3")
+                self.file_contains("etc/passwd", "kermit")
+                self.file_contains("etc/shadow", "kermit")
                 self.pkg("uninstall dupuserp3 dupuserp2")
+                self.file_contains("etc/passwd", "kermit")
+                self.file_contains("etc/shadow", "kermit")
                 self.pkg("verify")
 
                 # Make sure we don't get confused when two actions in different
