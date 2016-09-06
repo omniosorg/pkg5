@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.7
 # -*- coding: iso-8859-1 -*-
 #
 # Copyright (C) 2002 Lars Gustäbel <lars@gustaebel.de>

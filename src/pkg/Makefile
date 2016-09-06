@@ -104,7 +104,7 @@ PKGMOG_DEFVALS    = \
 	PKGVERS=$(PKGVERS) \
 	REV=$(REV) \
 	PYDIR=usr/lib/python2.7 \
-	PYDIRVP=usr/lib/python2.6/vendor-packages \
+	PYDIRVP=usr/lib/python2.7/vendor-packages \
 	CHANGESET=$(CHANGESET) \
 	PKGPUBLISHER_LOCALIZABLE=$(PKGPUBLISHER_LOCALIZABLE)
 PKGMOG_DEFINES    = $(PKGMOG_DEFVALS:%=-D %)
