@@ -546,6 +546,12 @@ Incorrect attribute list.
                             action.InvalidActionAttributesError,
                             bad_act.validate)
 
+                # Verify mode attributes for file specified more than once are
+                # rejected.
+                nact = "file path=/usr/bin/foo owner=root group=root " \
+                    "mode=0555 mode=0555"
+                assertActionError(nact)
+
                 # Verify predicate and target attributes of FMRIs must be valid.
                 for nact in (
                     # FMRI value is invalid.
