@@ -3352,6 +3352,11 @@ class PkgUnicodeDecodeError(UnicodeDecodeError):
                 return "{0}. You passed in {1!r} {2}".format(s, self.obj,
                     type(self.obj))
 
+class UnsupportedVariantGlobbing(ApiException):
+        """Used to indicate that globbing for variant is not supported."""
+
+        def __str__(self):
+                return _("Globbing is not supported for variants.")
 
 # Vim hints
-# vim:ts=8:sw=8:et:fdm=marker
+# vim:ts=4:sw=4:et:fdm=marker
