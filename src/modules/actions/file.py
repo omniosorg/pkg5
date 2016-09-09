@@ -302,6 +302,8 @@ class FileAction(generic.Action):
                 # Handle system attributes.
                 sattr = self.attrs.get("sysattr")
                 if sattr:
+                        if isinstance(sattr, list):
+                                sattr = ",".join(sattr)
                         sattrs = sattr.split(",")
                         if len(sattrs) == 1 and \
                             sattrs[0] not in portable.get_sysattr_dict():
@@ -467,6 +469,8 @@ class FileAction(generic.Action):
                         # set on the file.
                         sattr = self.attrs.get("sysattr", None)
                         if sattr:
+                                if isinstance(sattr, list):
+                                        sattr = ",".join(sattr)
                                 sattrs = sattr.split(",")
                                 if len(sattrs) == 1 and \
                                     sattrs[0] not in portable.get_sysattr_dict():
