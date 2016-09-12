@@ -292,6 +292,7 @@ pkglist="$pkglist
 	pkg:///shell/bash
 	pkg:///shell/zsh
 	pkg:///editor/vim
+	pkg:///network/openssh
 	pkg:///network/openssh-server"
 
 #
