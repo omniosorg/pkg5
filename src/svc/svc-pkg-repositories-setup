@@ -47,13 +47,16 @@ case "$1" in
 			# /lib/svc/share/fs_include.sh
 			#
 			be=$special
-			rpool=$(print $be | cut -d / -f1)			
+			#rpool=$(print $be | cut -d / -f1)			
+			# we use now baseds, as OI does not provide a "fake" rpool for a zone
+			# we need to store our VARSHARE under <zoneroot>/ROOT/VARSHARE
+			baseds=$(/usr/bin/dirname $be)
 		else
 			# we're on a LiveCD, so exit immediately.
 			exit $SMF_EXIT_OK
 		fi
 
-		DS="$rpool/VARSHARE/pkg/repositories"
+		DS="$baseds/VARSHARE/pkg/repositories"
 
 		# If the dataset exists, we mount it along with any child
 		# datasets, then exit.
@@ -80,8 +83,8 @@ case "$1" in
 		$ZFS create -p $DS
 		check_failure $? "Unable to create $DS" $SMF_FMRI exit
 
-		for fs in "$rpool/VARSHARE/pkg" \
-		    "$rpool/VARSHARE/pkg/repositories" ; do
+		for fs in "$baseds/VARSHARE/pkg" \
+		    "$baseds/VARSHARE/pkg/repositories" ; do
 			$ZFS set canmount=noauto $fs
 		done
 
