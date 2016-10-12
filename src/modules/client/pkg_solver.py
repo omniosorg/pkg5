@@ -31,27 +31,27 @@ import operator
 import six
 import time
 
-import pkg.actions
-import pkg.catalog           as catalog
-import pkg.client.api_errors as api_errors
+from collections import defaultdict
+# Redefining built-in; pylint: disable=W0622
+from functools import reduce
+# Imports from package six are not grouped: pylint: disable=C0412
+from six.moves import range
+from itertools import chain
 
+import pkg.actions
+import pkg.catalog as catalog
+import pkg.client.api_errors as api_errors
 import pkg.client.image
 import pkg.fmri
 import pkg.misc as misc
 import pkg.solver
-import pkg.version           as version
+import pkg.version as version
 
-from collections import defaultdict
-# Redefining built-in; pylint: disable=W0622
-from functools import reduce
-from itertools import chain
 from pkg.actions.depend import known_types as dep_types
 from pkg.client.debugvalues import DebugValues
 from pkg.client.firmware import Firmware
 from pkg.client.pkgdefs import PKG_OP_UNINSTALL, PKG_OP_UPDATE
 from pkg.misc import EmptyI, EmptyDict, N_
-# Unable to import; pylint: disable=F0401
-from six.moves import range
 
 SOLVER_INIT    = "Initialized"
 SOLVER_OXY     = "Not possible"
@@ -132,6 +132,8 @@ class PkgSolver(object):
                 the set of pkg stems being avoided in the image due to
                 administrator action (e.g. --reject, uninstall)."""
 
+                # Value 'DebugValues' is unsubscriptable;
+                # pylint: disable=E1136
                 # check if we're allowed to use the solver
                 if DebugValues["no_solver"]:
                         raise RuntimeError("no_solver set, but solver invoked")
@@ -302,6 +304,8 @@ class PkgSolver(object):
                 self.__dg_incorp_cache = None
                 self.__linked_pkgs = set()
 
+                # Value 'DebugValues' is unsubscriptable;
+                # pylint: disable=E1136
                 if DebugValues["plan"]:
                         # Remaining data must be kept.
                         return rval
@@ -354,6 +358,8 @@ class PkgSolver(object):
                 """Raise a plan exception due to solution errors."""
 
                 solver_errors = None
+                # Value 'DebugValues' is unsubscriptable;
+                # pylint: disable=E1136
                 if DebugValues["plan"]:
                         solver_errors = self.get_trim_errors()
                 raise api_errors.PlanCreationException(no_solution=no_solution,
@@ -817,6 +823,8 @@ class PkgSolver(object):
                             "you wish installed."))
                 exp.no_solution = incs + info
 
+                # Value 'DebugValues' is unsubscriptable;
+                # pylint: disable=E1136
                 if DebugValues["plan"]:
                         exp.solver_errors = self.get_trim_errors()
                 raise exp
@@ -2303,7 +2311,7 @@ class PkgSolver(object):
 
                 # check if allowing obsolete packages helps
 
-                elif obsolete_ok == False:
+                elif not obsolete_ok:
                         # see if allowing obsolete pkgs gets us some matches
                         if len(fmris) == 1:
                                 matching, nonmatching = \
@@ -2426,6 +2434,8 @@ class PkgSolver(object):
 
                 # At a minimum, a solve_*() method must have been called first.
                 assert self.__state != SOLVER_INIT
+                # Value 'DebugValues' is unsubscriptable;
+                # pylint: disable=E1136
                 assert DebugValues["plan"]
 
                 return self.__fmri_list_errors(six.iterkeys(self.__trim_dict),
