@@ -83,6 +83,31 @@ The attributes listed below are not an exhaustive set. In fact, the attributes t
 .sp
 .LP
 Some attributes cause additional operations to be executed outside of the packaging context. These attributes are documented in the "Actuators" section below.
+.sp
+.LP
+Actions that are installed to a path must not deliver content to any of
+the following paths:
+.sp
+.in +6
+.nf
+\fI/system/volatile\fR
+\fI/tmp\fR
+\fI/var/share\fR
+\fI/var/tmp\fR
+.fi
+.in -6
+.sp
+Additionallly, the following directories are reserved for use by the system
+and should also not be used by actions:
+.sp
+.in +6
+.nf
+\fI/var/pkg\fR
+.fi
+.in -6
+
+.rt
+
 .SS "File Actions"
 .sp
 .LP
