@@ -90,6 +90,7 @@ from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCRequestHandler as \
     SimpleRPCRequestHandler
 from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCDispatcher as \
     SimpleRPCDispatcher
+import jsonrpclib.config as rpcconfig
 
 #
 # These includes make it easier for clients to catch the specific
@@ -409,7 +410,7 @@ class _PipedTransport(rpc.Transport):
         def __init__(self, fd, http_enc=True):
                 self.__pipe_file = PipeFile(fd, "client-transport")
                 self.__http_enc = http_enc
-                rpc.Transport.__init__(self)
+                rpc.Transport.__init__(self,config=rpcconfig.DEFAULT)
                 self.verbose = False
                 self._extra_headers = None
 
