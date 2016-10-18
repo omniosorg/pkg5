@@ -3132,5 +3132,12 @@ def set_fd_limits(printer=None):
                     .format(soft, e))
                 sys.exit(EXIT_OOPS)
 
+_varcetname_re = re.compile(r"\s")
+
+def valid_varcet_name(name):
+        """Check if the variant/facet name is valid. A valid variant/facet
+        name cannot contain whitespace"""
+        return _varcetname_re.search(name) is None
+
 # Vim hints
 # vim:ts=4:sw=4:et:fdm=marker
