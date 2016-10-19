@@ -173,11 +173,11 @@ close
         ])
 
         res_remote_path = set([
-            ("pkg:/example_pkg@1.0-0", "basename","file a686473102ba73bd7920fc0ab1d97e00a24ed704 chash=f88920ce1f61db185d127ccb32dc8cf401ae7a83 group=bin mode=0555 owner=root path=bin/example_path pkg.chash.sha512t_256=98026acb06f550ed66c22b4314c3ca48a92fce49735aa4c61c5cb4330bb83b81 pkg.content-hash=file:sha512t_256:e4e6f08153d331ec9d342f9f52c512fcbb2c4b46d4b5e8de5640ae5fbe022011 pkg.csize=30 pkg.size=12"),
+            ("pkg:/example_pkg@1.0-0", "basename","file a686473102ba73bd7920fc0ab1d97e00a24ed704 chash=f88920ce1f61db185d127ccb32dc8cf401ae7a83 group=bin mode=0555 owner=root path=bin/example_path pkg.content-hash=file:sha512t_256:e4e6f08153d331ec9d342f9f52c512fcbb2c4b46d4b5e8de5640ae5fbe022011 pkg.content-hash=gzip:sha512t_256:98026acb06f550ed66c22b4314c3ca48a92fce49735aa4c61c5cb4330bb83b81 pkg.csize=30 pkg.size=12"),
         ])
 
         res_remote_path_of_example_path = set([
-            ("pkg:/example_pkg@1.0-0", "path","file a686473102ba73bd7920fc0ab1d97e00a24ed704 chash=f88920ce1f61db185d127ccb32dc8cf401ae7a83 group=bin mode=0555 owner=root path=bin/example_path pkg.chash.sha512t_256=98026acb06f550ed66c22b4314c3ca48a92fce49735aa4c61c5cb4330bb83b81 pkg.content-hash=file:sha512t_256:e4e6f08153d331ec9d342f9f52c512fcbb2c4b46d4b5e8de5640ae5fbe022011 pkg.csize=30 pkg.size=12")
+            ("pkg:/example_pkg@1.0-0", "path","file a686473102ba73bd7920fc0ab1d97e00a24ed704 chash=f88920ce1f61db185d127ccb32dc8cf401ae7a83 group=bin mode=0555 owner=root path=bin/example_path pkg.content-hash=file:sha512t_256:e4e6f08153d331ec9d342f9f52c512fcbb2c4b46d4b5e8de5640ae5fbe022011 pkg.content-hash=gzip:sha512t_256:98026acb06f550ed66c22b4314c3ca48a92fce49735aa4c61c5cb4330bb83b81 pkg.csize=30 pkg.size=12")
         ])
 
         res_remote_bin = set([
@@ -242,7 +242,7 @@ close
             remote_fmri_string,
             ('pkg:/example_pkg@1.0-0', 'path', 'dir group=bin mode=0755 owner=root path=bin/example_dir'),
             ('pkg:/example_pkg@1.0-0', 'basename', 'dir group=bin mode=0755 owner=root path=bin/example_dir'),
-            ('pkg:/example_pkg@1.0-0', 'path', 'file a686473102ba73bd7920fc0ab1d97e00a24ed704 chash=f88920ce1f61db185d127ccb32dc8cf401ae7a83 group=bin mode=0555 owner=root path=bin/example_path pkg.chash.sha512t_256=98026acb06f550ed66c22b4314c3ca48a92fce49735aa4c61c5cb4330bb83b81 pkg.content-hash=file:sha512t_256:e4e6f08153d331ec9d342f9f52c512fcbb2c4b46d4b5e8de5640ae5fbe022011 pkg.csize=30 pkg.size=12'),
+            ('pkg:/example_pkg@1.0-0', 'path', 'file a686473102ba73bd7920fc0ab1d97e00a24ed704 chash=f88920ce1f61db185d127ccb32dc8cf401ae7a83 group=bin mode=0555 owner=root path=bin/example_path pkg.content-hash=file:sha512t_256:e4e6f08153d331ec9d342f9f52c512fcbb2c4b46d4b5e8de5640ae5fbe022011 pkg.content-hash=gzip:sha512t_256:98026acb06f550ed66c22b4314c3ca48a92fce49735aa4c61c5cb4330bb83b81 pkg.csize=30 pkg.size=12'),
             ("pkg:/example_pkg@1.0-0", "mediator", "link mediator=example mediator-implementation=unladen-swallow mediator-version=7.0 path=bin/exlink target=/bin/example_path")
         ]) | res_remote_path
 
@@ -291,7 +291,7 @@ close
         res_local_openssl = copy.copy(res_remote_openssl)
 
         res_local_path_example11 = set([
-            ("pkg:/example_pkg@1.1-0", "basename", "file a686473102ba73bd7920fc0ab1d97e00a24ed704 chash=f88920ce1f61db185d127ccb32dc8cf401ae7a83 group=bin mode=0555 owner=root path=bin/example_path11 pkg.chash.sha512t_256=98026acb06f550ed66c22b4314c3ca48a92fce49735aa4c61c5cb4330bb83b81 pkg.content-hash=file:sha512t_256:e4e6f08153d331ec9d342f9f52c512fcbb2c4b46d4b5e8de5640ae5fbe022011 pkg.csize=30 pkg.size=12")
+            ("pkg:/example_pkg@1.1-0", "basename", "file a686473102ba73bd7920fc0ab1d97e00a24ed704 chash=f88920ce1f61db185d127ccb32dc8cf401ae7a83 group=bin mode=0555 owner=root path=bin/example_path11 pkg.content-hash=file:sha512t_256:e4e6f08153d331ec9d342f9f52c512fcbb2c4b46d4b5e8de5640ae5fbe022011 pkg.content-hash=gzip:sha512t_256:98026acb06f550ed66c22b4314c3ca48a92fce49735aa4c61c5cb4330bb83b81 pkg.csize=30 pkg.size=12")
         ])
 
         res_local_bin_example11 = set([
@@ -303,7 +303,7 @@ close
         ])
 
         res_local_wildcard_example11 = set([
-            ("pkg:/example_pkg@1.1-0", "basename", "file a686473102ba73bd7920fc0ab1d97e00a24ed704 chash=f88920ce1f61db185d127ccb32dc8cf401ae7a83 group=bin mode=0555 owner=root path=bin/example_path11 pkg.chash.sha512t_256=98026acb06f550ed66c22b4314c3ca48a92fce49735aa4c61c5cb4330bb83b81 pkg.content-hash=file:sha512t_256:e4e6f08153d331ec9d342f9f52c512fcbb2c4b46d4b5e8de5640ae5fbe022011 pkg.csize=30 pkg.size=12"),
+            ("pkg:/example_pkg@1.1-0", "basename", "file a686473102ba73bd7920fc0ab1d97e00a24ed704 chash=f88920ce1f61db185d127ccb32dc8cf401ae7a83 group=bin mode=0555 owner=root path=bin/example_path11 pkg.content-hash=file:sha512t_256:e4e6f08153d331ec9d342f9f52c512fcbb2c4b46d4b5e8de5640ae5fbe022011 pkg.content-hash=gzip:sha512t_256:98026acb06f550ed66c22b4314c3ca48a92fce49735aa4c61c5cb4330bb83b81 pkg.csize=30 pkg.size=12"),
         ]).union(res_local_pkg_example11)
 
         res_cat_pkg10 = set([
@@ -350,11 +350,11 @@ close
         ])).union(fat_10_fmri_string)
 
         res_space_with_star = set([
-            ('pkg:/space_pkg@1.0-0', 'basename', 'file a686473102ba73bd7920fc0ab1d97e00a24ed704 chash=f88920ce1f61db185d127ccb32dc8cf401ae7a83 group=sys mode=0444 owner=nobody path="unique/with a space" pkg.chash.sha512t_256=98026acb06f550ed66c22b4314c3ca48a92fce49735aa4c61c5cb4330bb83b81 pkg.content-hash=file:sha512t_256:e4e6f08153d331ec9d342f9f52c512fcbb2c4b46d4b5e8de5640ae5fbe022011 pkg.csize=30 pkg.size=12')
+            ('pkg:/space_pkg@1.0-0', 'basename', 'file a686473102ba73bd7920fc0ab1d97e00a24ed704 chash=f88920ce1f61db185d127ccb32dc8cf401ae7a83 group=sys mode=0444 owner=nobody path="unique/with a space" pkg.content-hash=file:sha512t_256:e4e6f08153d331ec9d342f9f52c512fcbb2c4b46d4b5e8de5640ae5fbe022011 pkg.content-hash=gzip:sha512t_256:98026acb06f550ed66c22b4314c3ca48a92fce49735aa4c61c5cb4330bb83b81 pkg.csize=30 pkg.size=12')
         ])
 
         res_space_space_star = set([
-            ('pkg:/space_pkg@1.0-0', 'basename', 'file a686473102ba73bd7920fc0ab1d97e00a24ed704 chash=f88920ce1f61db185d127ccb32dc8cf401ae7a83 group=sys mode=0444 owner=nobody path="unique/with a space" pkg.chash.sha512t_256=98026acb06f550ed66c22b4314c3ca48a92fce49735aa4c61c5cb4330bb83b81 pkg.content-hash=file:sha512t_256:e4e6f08153d331ec9d342f9f52c512fcbb2c4b46d4b5e8de5640ae5fbe022011 pkg.csize=30 pkg.size=12'), ('pkg:/space_pkg@1.0-0', 'path', 'file a686473102ba73bd7920fc0ab1d97e00a24ed704 chash=f88920ce1f61db185d127ccb32dc8cf401ae7a83 group=sys mode=0444 owner=nobody path="unique/with a space" pkg.chash.sha512t_256=98026acb06f550ed66c22b4314c3ca48a92fce49735aa4c61c5cb4330bb83b81 pkg.content-hash=file:sha512t_256:e4e6f08153d331ec9d342f9f52c512fcbb2c4b46d4b5e8de5640ae5fbe022011 pkg.csize=30 pkg.size=12')
+            ('pkg:/space_pkg@1.0-0', 'basename', 'file a686473102ba73bd7920fc0ab1d97e00a24ed704 chash=f88920ce1f61db185d127ccb32dc8cf401ae7a83 group=sys mode=0444 owner=nobody path="unique/with a space" pkg.content-hash=file:sha512t_256:e4e6f08153d331ec9d342f9f52c512fcbb2c4b46d4b5e8de5640ae5fbe022011 pkg.content-hash=gzip:sha512t_256:98026acb06f550ed66c22b4314c3ca48a92fce49735aa4c61c5cb4330bb83b81 pkg.csize=30 pkg.size=12'), ('pkg:/space_pkg@1.0-0', 'path', 'file a686473102ba73bd7920fc0ab1d97e00a24ed704 chash=f88920ce1f61db185d127ccb32dc8cf401ae7a83 group=sys mode=0444 owner=nobody path="unique/with a space" pkg.content-hash=file:sha512t_256:e4e6f08153d331ec9d342f9f52c512fcbb2c4b46d4b5e8de5640ae5fbe022011 pkg.content-hash=gzip:sha512t_256:98026acb06f550ed66c22b4314c3ca48a92fce49735aa4c61c5cb4330bb83b81 pkg.csize=30 pkg.size=12')
         ])
 
         res_space_unique = set([
@@ -432,8 +432,8 @@ close
              "file a686473102ba73bd7920fc0ab1d97e00a24ed704 "
              "chash=f88920ce1f61db185d127ccb32dc8cf401ae7a83 group=bin "
              "mode=0555 owner=root path=bin/example_path "
-             "pkg.chash.sha512t_256=98026acb06f550ed66c22b4314c3ca48a92fce49735aa4c61c5cb4330bb83b81 "
              "pkg.content-hash=file:sha512t_256:e4e6f08153d331ec9d342f9f52c512fcbb2c4b46d4b5e8de5640ae5fbe022011 "
+             "pkg.content-hash=gzip:sha512t_256:98026acb06f550ed66c22b4314c3ca48a92fce49735aa4c61c5cb4330bb83b81 "
              "pkg.csize=30 "
              "pkg.size=12"),
             ("pkg:/example_pkg@1.0-0",
@@ -441,8 +441,8 @@ close
              "file a686473102ba73bd7920fc0ab1d97e00a24ed704 "
              "chash=f88920ce1f61db185d127ccb32dc8cf401ae7a83 group=bin "
              "mode=0555 owner=root path=bin/example_path "
-             "pkg.chash.sha512t_256=98026acb06f550ed66c22b4314c3ca48a92fce49735aa4c61c5cb4330bb83b81 "
              "pkg.content-hash=file:sha512t_256:e4e6f08153d331ec9d342f9f52c512fcbb2c4b46d4b5e8de5640ae5fbe022011 "
+             "pkg.content-hash=gzip:sha512t_256:98026acb06f550ed66c22b4314c3ca48a92fce49735aa4c61c5cb4330bb83b81 "
              "pkg.csize=30 "
              "pkg.size=12"),
              ("pkg:/example_pkg@1.0-0",
@@ -450,8 +450,8 @@ close
              "file a686473102ba73bd7920fc0ab1d97e00a24ed704 "
              "chash=f88920ce1f61db185d127ccb32dc8cf401ae7a83 group=bin "
              "mode=0555 owner=root path=bin/example_path "
-             "pkg.chash.sha512t_256=98026acb06f550ed66c22b4314c3ca48a92fce49735aa4c61c5cb4330bb83b81 "
              "pkg.content-hash=file:sha512t_256:e4e6f08153d331ec9d342f9f52c512fcbb2c4b46d4b5e8de5640ae5fbe022011 "
+             "pkg.content-hash=gzip:sha512t_256:98026acb06f550ed66c22b4314c3ca48a92fce49735aa4c61c5cb4330bb83b81 "
              "pkg.csize=30 "
              "pkg.size=12"),
             ("pkg:/example_pkg@1.0-0",
@@ -459,8 +459,8 @@ close
              "file a686473102ba73bd7920fc0ab1d97e00a24ed704 "
              "chash=f88920ce1f61db185d127ccb32dc8cf401ae7a83 group=bin "
              "mode=0555 owner=root path=bin/example_path "
-             "pkg.chash.sha512t_256=98026acb06f550ed66c22b4314c3ca48a92fce49735aa4c61c5cb4330bb83b81 "
              "pkg.content-hash=file:sha512t_256:e4e6f08153d331ec9d342f9f52c512fcbb2c4b46d4b5e8de5640ae5fbe022011 "
+             "pkg.content-hash=gzip:sha512t_256:98026acb06f550ed66c22b4314c3ca48a92fce49735aa4c61c5cb4330bb83b81 "
              "pkg.csize=30 "
              "pkg.size=12")
         ]) | res_remote_path
@@ -477,8 +477,8 @@ close
              "file a686473102ba73bd7920fc0ab1d97e00a24ed704 "
              "chash=f88920ce1f61db185d127ccb32dc8cf401ae7a83 group=bin "
              "mode=0555 owner=root path=bin/example_path "
-             "pkg.chash.sha512t_256=98026acb06f550ed66c22b4314c3ca48a92fce49735aa4c61c5cb4330bb83b81 "
              "pkg.content-hash=file:sha512t_256:e4e6f08153d331ec9d342f9f52c512fcbb2c4b46d4b5e8de5640ae5fbe022011 "
+             "pkg.content-hash=gzip:sha512t_256:98026acb06f550ed66c22b4314c3ca48a92fce49735aa4c61c5cb4330bb83b81 "
              "pkg.csize=30 "
              "pkg.size=12"),
             ("pkg:/example_pkg@1.0-0",
@@ -486,8 +486,8 @@ close
              "file a686473102ba73bd7920fc0ab1d97e00a24ed704 "
              "chash=f88920ce1f61db185d127ccb32dc8cf401ae7a83 group=bin "
              "mode=0555 owner=root path=bin/example_path "
-             "pkg.chash.sha512t_256=98026acb06f550ed66c22b4314c3ca48a92fce49735aa4c61c5cb4330bb83b81 "
              "pkg.content-hash=file:sha512t_256:e4e6f08153d331ec9d342f9f52c512fcbb2c4b46d4b5e8de5640ae5fbe022011 "
+             "pkg.content-hash=gzip:sha512t_256:98026acb06f550ed66c22b4314c3ca48a92fce49735aa4c61c5cb4330bb83b81 "
              "pkg.csize=30 "
              "pkg.size=12"),
             ("pkg:/example_pkg@1.0-0",
@@ -495,8 +495,8 @@ close
              "file a686473102ba73bd7920fc0ab1d97e00a24ed704 "
              "chash=f88920ce1f61db185d127ccb32dc8cf401ae7a83 group=bin "
              "mode=0555 owner=root path=bin/example_path "
-             "pkg.chash.sha512t_256=98026acb06f550ed66c22b4314c3ca48a92fce49735aa4c61c5cb4330bb83b81 "
              "pkg.content-hash=file:sha512t_256:e4e6f08153d331ec9d342f9f52c512fcbb2c4b46d4b5e8de5640ae5fbe022011 "
+             "pkg.content-hash=gzip:sha512t_256:98026acb06f550ed66c22b4314c3ca48a92fce49735aa4c61c5cb4330bb83b81 "
              "pkg.csize=30 "
              "pkg.size=12"),
             ("pkg:/example_pkg@1.0-0",
@@ -504,8 +504,8 @@ close
             "file a686473102ba73bd7920fc0ab1d97e00a24ed704 "
             "chash=f88920ce1f61db185d127ccb32dc8cf401ae7a83 group=bin "
             "mode=0555 owner=root path=bin/example_path "
-            "pkg.chash.sha512t_256=98026acb06f550ed66c22b4314c3ca48a92fce49735aa4c61c5cb4330bb83b81 "
             "pkg.content-hash=file:sha512t_256:e4e6f08153d331ec9d342f9f52c512fcbb2c4b46d4b5e8de5640ae5fbe022011 "
+            "pkg.content-hash=gzip:sha512t_256:98026acb06f550ed66c22b4314c3ca48a92fce49735aa4c61c5cb4330bb83b81 "
             "pkg.csize=30 "
             "pkg.size=12"),
             ("pkg:/example_pkg@1.0-0",
@@ -513,8 +513,8 @@ close
              "file a686473102ba73bd7920fc0ab1d97e00a24ed704 "
              "chash=f88920ce1f61db185d127ccb32dc8cf401ae7a83 group=bin "
              "mode=0555 owner=root path=bin/example_path "
-             "pkg.chash.sha512t_256=98026acb06f550ed66c22b4314c3ca48a92fce49735aa4c61c5cb4330bb83b81 "
              "pkg.content-hash=file:sha512t_256:e4e6f08153d331ec9d342f9f52c512fcbb2c4b46d4b5e8de5640ae5fbe022011 "
+             "pkg.content-hash=gzip:sha512t_256:98026acb06f550ed66c22b4314c3ca48a92fce49735aa4c61c5cb4330bb83b81 "
              "pkg.csize=30 "
              "pkg.size=12")
         ])
