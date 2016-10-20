@@ -336,7 +336,7 @@ class BootEnv(object):
                 if "PKG_NO_LIVE_ROOT" in os.environ:
                         return BootEnvNull.get_be_list()
                 # Check for the old beList() API since pkg(1) can be
-                # back published and live on a system without the 
+                # back published and live on a system without the
                 # latest libbe.
                 rc = 0
 
@@ -353,6 +353,13 @@ class BootEnv(object):
                         beList = []
 
                 return beList
+
+        @staticmethod
+        def get_be_names():
+                """Return a list of BE names."""
+                return [
+                    be.name for be in BootEnv.get_be_list() if be.name
+                ]
 
         @staticmethod
         def get_be_name(path):
@@ -792,6 +799,10 @@ class BootEnvNull(object):
 
         @staticmethod
         def get_be_list():
+                return []
+
+        @staticmethod
+        def get_be_names():
                 return []
 
         @staticmethod
