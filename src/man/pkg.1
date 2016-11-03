@@ -1600,7 +1600,9 @@ Suppress progress messages and all other output during the requested operation.
 .ad
 .sp .6
 .RS 4n
-Report unpackaged contents in addition to general output.
+Report unpackaged contents in addition to general output. Current unpackaged
+contents includes unpackaged files and unpackaged directories. This option can
+be combined with \fB--parsable\fR.
 .RE
 
 .sp
@@ -1611,7 +1613,9 @@ Report unpackaged contents in addition to general output.
 .ad
 .sp .6
 .RS 4n
-Report only unpackaged contents.
+Report only unpackaged contents. This option excludes general verification
+output and only reports the unpackaged files and directories. This option can
+be combined with \fB--parsable\fR
 .RE
 
 .sp
