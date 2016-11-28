@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.7
 #
 # CDDL HEADER START
 #
@@ -20,12 +20,15 @@
 # CDDL HEADER END
 #
 
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+#
+# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+#
+
 
 """an_first_timestamp.py - read first line of an Apache HTTPD log, and print 
    Unix timestamp"""
 
+from __future__ import print_function
 import datetime
 import fileinput
 import re
@@ -46,9 +49,9 @@ for l in fileinput.input(sys.argv[1:]):
                 continue
 
         mg = m.groupdict()
-        
+
         d = datetime.datetime(*(time.strptime(mg["date"] + ":" + mg["time"], "%d/%b/%Y:%H:%M:%S")[0:6]))
 
-        print "%d" % time.mktime(d.timetuple())
+        print("{0:d}".format(time.mktime(d.timetuple())))
         sys.exit(0)
 

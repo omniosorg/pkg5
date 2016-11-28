@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.7
 #
 # CDDL HEADER START
 #
@@ -20,9 +20,11 @@
 # CDDL HEADER END
 #
 
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+#
+# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+#
 
+from __future__ import print_function
 import datetime
 import fileinput
 import getopt
@@ -50,57 +52,57 @@ search_by_failure = {}
 pkg_pat = re.compile("/search/(?P<mversion>\d+)/(?P<keywords>.*)")
 
 def emit_search_report(summary_file, searchtype, label, results):
-        print "<pre>"
+        print("<pre>")
         for i, n in results:
-                print i, n
-        print "</pre>"
+                print(i, n)
+        print("</pre>")
 
         if summary_file:
-                print >>summary_file, """
-			<h3>Top 25 %(searchtype)s searches</h3>
-			<div id="search-%(searchtype)s-container">
-			<table id="search-%(searchtype)s-table">
-			<thead><tr><th>Term</th><th>%(label)s</th></tr></thead>
-		""" % {"label":label, "searchtype": searchtype}
+                print("""
+			<h3>Top 25 {searchtype} searches</h3>
+			<div id="search-{searchtype}-container">
+			<table id="search-{searchtype}-table">
+			<thead><tr><th>Term</th><th>{label}</th></tr></thead>
+		""".format(label=label, searchtype=searchtype), file=summary_file)
 
                 for i, n in results[:25]:
-                        print >>summary_file,  \
-			    "<tr><td>%s</td><td>%s</td></tr>" % (i, n)
+                        print("<tr><td>{0}</td><td>{1}</td></tr>".format(i, n),
+                file=summary_file)
 
-                print >>summary_file, "</table></div>"
-		print >>summary_file, """
+                print("</table></div>", file=summary_file)
+		print("""
 <script type="text/javascript">
 	var myDataSource =
 	    new YAHOO.util.DataSource(YAHOO.util.Dom.get(
-	    "search-%(searchtype)s-table"));
+	    "search-{searchtype}-table"));
 	myDataSource.responseType = YAHOO.util.DataSource.TYPE_HTMLTABLE;
 	myDataSource.responseSchema = {
 	    fields: [{key:"Term", sortable:true},
-		    {key:"%(label)s", parser:YAHOO.util.DataSource.parseNumber}
+		    {key:"{label}", parser:YAHOO.util.DataSource.parseNumber}
 	    ]
 	};
 
 	var myColumnDefs = [
 	    {key:"Term", sortable:true},
-	    {key:"%(label)s", sortable:true}
+	    {key:"{label}", sortable:true}
 	];
 
 	var myDataTable =
-	    new YAHOO.widget.DataTable("search-%(searchtype)s-container",
+	    new YAHOO.widget.DataTable("search-{searchtype}-container",
 	    myColumnDefs, myDataSource,
-	    {sortedBy:{key:"%(label)s", dir:YAHOO.widget.DataTable.CLASS_DESC}});
+	    {sortedBy:{key:"{label}", dir:YAHOO.widget.DataTable.CLASS_DESC}});
 </script>
-		""" % {"label":label, "searchtype": searchtype}
+                """.format(label=label, searchtype=searchtype), file=summary_file)
 
 
 
 def report_search_by_failure():
-        sfi = sorted(search_by_failure.items(), reverse=True, key=lambda(k,v): (v,k))
+        sfi = sorted(search_by_failure.items(), reverse=True, key=lambda k_v: (k_v[1],k_v[0]))
 	emit_search_report(summary_file, "failed", "Misses", sfi)
 
 
 def report_search_by_success():
-        ssi = sorted(search_by_success.items(), reverse=True, key=lambda(k,v): (v,k))
+        ssi = sorted(search_by_success.items(), reverse=True, key=lambda k_v1: (k_v1[1],k_v1[0]))
 	emit_search_report(summary_file, "successful", "Hits", ssi)
 
 

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.7
 #
 # CDDL HEADER START
 #
@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
 
 import testutils
 if __name__ == "__main__":
@@ -103,7 +103,7 @@ class TestPkgVarcet(pkg5unittest.SingleDepotTestCase):
                         # if not explicitly indicated.
                         errout = True
 
-                self.pkg("%s %s -H %s" % (cmd, " ".join(opts), " ".join(names)),
+                self.pkg("{0} {1} -H {2}".format(cmd, " ".join(opts), " ".join(names)),
                     exit=exit, su_wrap=su_wrap)
                 self.assertEqualDiff(expected, self.reduceSpaces(self.output))
                 if errout:
@@ -113,7 +113,7 @@ class TestPkgVarcet(pkg5unittest.SingleDepotTestCase):
 
         def __assert_varcet_matches_tsv(self, cmd, prefix, expected, errout=None,
             exit=0, opts=misc.EmptyI, names=misc.EmptyI, su_wrap=False):
-                self.pkg("%s %s -H -F tsv %s" % (cmd, " ".join(opts),
+                self.pkg("{0} {1} -H -F tsv {2}".format(cmd, " ".join(opts),
                     " ".join(names)), exit=exit, su_wrap=su_wrap)
                 expected = "".join(
                         (prefix + l)
@@ -127,7 +127,7 @@ class TestPkgVarcet(pkg5unittest.SingleDepotTestCase):
 
         def __assert_varcet_fails(self, cmd, operands, errout=True, exit=1,
             su_wrap=False):
-                self.pkg("%s %s" % (cmd, operands), exit=exit, su_wrap=su_wrap) 
+                self.pkg("{0} {1}".format(cmd, operands), exit=exit, su_wrap=su_wrap) 
                 if errout:
                         self.assert_(self.errout != "")
                 else:
@@ -174,7 +174,7 @@ class TestPkgVarcet(pkg5unittest.SingleDepotTestCase):
                 # Next, verify output after upgrading package to faceted
                 # version.
                 #
-                self.pkg("update %s" % pkg)
+                self.pkg("update {0}".format(pkg))
 
                 # Verify output for no options and no patterns.
                 exp_def = """\
@@ -185,8 +185,13 @@ doc.txt True local
 """
                 self.__assert_facet_matches(exp_def)
 
+                # Matched because facet is implicitly set.
+                exp_def = """\
+doc.pdf False local
+"""
+                self.__assert_facet_matches(exp_def, names=["doc.pdf"])
+
                 # Unmatched because facet is not explicitly set.
-                self.__assert_facet_fails("doc.pdf")
                 self.__assert_facet_fails("'*pdf'")
 
                 # Matched case for explicitly set.
@@ -292,14 +297,12 @@ doc.txt True local
                         # Unprivileged user case.
                         self.__assert_facet_matches("", opts=opts, su_wrap=True)
 
-                        # Unmatched case.
-                        self.__assert_facet_matches_default("", opts=opts,
-                            names=("bogus",), exit=1)
+                # Fails because not used by any installed package.
+                self.__assert_facet_fails("-i bogus")
 
-                        # Unmatched case tsv; subtly different as no error
-                        # output is expected.
-                        self.__assert_facet_matches_tsv("", opts=opts,
-                            names=("bogus",), exit=1, errout=False)
+                # Succeeds because implicitly set in image.
+                self.__assert_facet_matches_tsv("bogus\tTrue\tsystem\n",
+                    opts=("-a",), names=("bogus",))
 
                 #
                 # Next, verify output after setting facets.
@@ -357,44 +360,49 @@ doc.txt True local
                 # Next, verify output after upgrading package to varianted
                 # version.
                 #
-                self.pkg("update %s" % pkg)
+                self.pkg("update {0}".format(pkg))
 
                 # Verify output for no options and no patterns.
                 exp_def = """\
-arch %(variant.arch)s
+arch {0[variant.arch]}
 icecream strawberry
 opensolaris.zone global
-""" % variants
+""".format(variants)
                 self.__assert_variant_matches(exp_def)
 
+                # Matched because variant is implicitly false.
+                exp_def = """\
+debug.foo false
+""".format(variants)
+                self.__assert_variant_matches(exp_def, names=["debug.foo"])
+
                 # Unmatched because variant is not explicitly set.
-                self.__assert_variant_fails("debug.foo")
                 self.__assert_variant_fails("'*foo'")
 
                 # Matched case for explicitly set.
                 exp_def = """\
-arch %(variant.arch)s
+arch {0[variant.arch]}
 opensolaris.zone global
-""" % variants
+""".format(variants)
                 names = ("arch", "'variant.*zone'")
                 self.__assert_variant_matches(exp_def, names=names)
 
                 # Verify -a output.
                 exp_def = """\
-arch %(variant.arch)s
+arch {0[variant.arch]}
 debug.foo false
 icecream strawberry
 opensolaris.zone global
-""" % variants
+""".format(variants)
                 opts = ("-a",)
                 self.__assert_variant_matches(exp_def, opts=opts)
 
                 # Matched case for explicitly set and those in packages.
                 exp_def = """\
-arch %(variant.arch)s
+arch {0[variant.arch]}
 debug.foo false
 opensolaris.zone global
-""" % variants
+""".format(variants)
                 names = ("'variant.debug.*'", "arch", "'*zone'")
                 opts = ("-a",)
                 self.__assert_variant_matches(exp_def, opts=opts, names=names)
@@ -403,7 +411,7 @@ opensolaris.zone global
                 exp_def = """\
 debug.foo false
 icecream strawberry
-""" % variants
+""".format(variants)
                 opts = ("-i",)
                 self.__assert_variant_matches(exp_def, opts=opts)
 
@@ -424,7 +432,7 @@ icecream strawberry
                 exp_def = """\
 icecream neapolitan
 icecream strawberry
-""" % variants
+""".format(variants)
                 names = ("'ice*'",)
                 opts = ("-av",)
                 self.__assert_variant_matches(exp_def, opts=opts, names=names)
@@ -432,14 +440,14 @@ icecream strawberry
                 # Matched case in packages.
                 exp_def = """\
 icecream strawberry
-""" % variants
+""".format(variants)
                 names = ("'variant.*[!o]'",)
                 opts = ("-i",)
                 self.__assert_variant_matches(exp_def, opts=opts, names=names)
 
                 exp_def = """\
 debug.foo false
-""" % variants
+""".format(variants)
                 names = ("*foo",)
                 opts = ("-i",)
                 self.__assert_variant_matches(exp_def, opts=opts, names=names)
@@ -449,10 +457,10 @@ debug.foo false
                 self.pkg("uninstall foo")
 
                 exp_def = """\
-arch %(variant.arch)s
+arch {0[variant.arch]}
 icecream strawberry
 opensolaris.zone global
-""" % variants
+""".format(variants)
 
                 # Output should be the same for both -a and default cases with
                 # no packages installed.
@@ -479,6 +487,19 @@ opensolaris.zone global
                 self.__assert_variant_fails("-ai", exit=2)
                 self.__assert_variant_fails("-aiv", exit=2)
 
+                # Verify valid output format values do not cause failure
+                self.__assert_variant_fails("-F default", exit=0, errout=False)
+                self.__assert_variant_fails("--output-format default", exit=0,
+                    errout=False)
+
+                self.__assert_variant_fails("-F  json", exit=0, errout=False)
+                self.__assert_variant_fails("--output-format  json", exit=0,
+                    errout=False)
+
+                # Verify invalid output format values handled gracefully
+                self.__assert_variant_fails("-F dummy", exit=2)
+                self.__assert_variant_fails("--output-format dummy", exit=2)
+
                 #
                 # First, verify output before setting any variants or installing
                 # any packages.
@@ -487,9 +508,9 @@ opensolaris.zone global
                 # Output should be the same for -a and default cases with no
                 # variants set and no packages installed.
                 exp_def = """\
-arch %(variant.arch)s
+arch {0[variant.arch]}
 opensolaris.zone global
-""" % variants
+""".format(variants)
 
                 for opts in ((), ("-a",)):
                         # No operands specified case.
@@ -521,10 +542,10 @@ opensolaris.zone global
                 self.pkg("change-variant variant.icecream=strawberry")
 
                 exp_def = """\
-arch %(variant.arch)s
+arch {0[variant.arch]}
 icecream strawberry
 opensolaris.zone global
-""" % variants
+""".format(variants)
 
                 # Output should be the same for both -a and default cases with
                 # no packages installed.
@@ -538,10 +559,10 @@ opensolaris.zone global
 
                 # Verify output for no options and no patterns.
                 exp_def = """\
-arch %(variant.arch)s
+arch {0[variant.arch]}
 icecream strawberry
 opensolaris.zone global
-""" % variants
+""".format(variants)
                 self.__assert_variant_matches(exp_def)
 
                 # Verify -a output.
@@ -567,25 +588,25 @@ opensolaris.zone global
 
                 # Verify output for no options and no patterns.
                 exp_def = """\
-arch %(variant.arch)s
+arch {0[variant.arch]}
 icecream strawberry
 opensolaris.zone global
-""" % variants
+""".format(variants)
                 self.__assert_variant_matches(exp_def)
 
                 # Verify -a output.
                 exp_def = """\
-arch %(variant.arch)s
+arch {0[variant.arch]}
 icecream strawberry
 opensolaris.zone global
 unknown 
-""" % variants
+""".format(variants)
                 self.__assert_variant_matches(exp_def, opts=("-a",))
 
                 # Verify -i output.
                 exp_def = """\
 unknown 
-""" % variants
+""".format(variants)
                 self.__assert_variant_matches(exp_def, opts=("-i",))
 
                 # Verify -v, -av, and -iv output.
@@ -593,7 +614,7 @@ unknown
                         exp_def = """\
 unknown bar
 unknown foo
-""" % variants
+""".format(variants)
                         self.__assert_variant_matches(exp_def, opts=opts)
 
         def test_02_varcet_reject(self):

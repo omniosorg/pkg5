@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.7
 #
 # CDDL HEADER START
 #
@@ -20,8 +20,9 @@
 # CDDL HEADER END
 #
 
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+#
+# Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
+#
 
 import cPickle as pickle
 import datetime
@@ -116,6 +117,6 @@ for l in fileinput.input(args):
         count_entry(mg, d)
 
 # open, trunc
-pklfile = open("%s.%s.pkl" % (stem, timestamp), "wb")
+pklfile = open("{0}.{1}.pkl".format(stem, timestamp), "wb")
 pickle.dump(entry_by_date, pklfile)
 pklfile.close()

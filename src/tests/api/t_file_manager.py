@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.7
 #
 # CDDL HEADER START
 #
@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 import testutils
@@ -60,12 +60,12 @@ class TestFileManager(pkg5unittest.Pkg5TestCase):
         def check_exception(func, ex, str_bits, *args, **kwargs):
                 try:
                         func(*args, **kwargs)
-                except ex, e:
+                except ex as e:
                         s = str(e)
                         for b in str_bits:
                                 if b not in s:
                                         raise RuntimeError("Expected to find "
-                                            "%s in %s" % (b, s))
+                                            "{0} in {1}".format(b, s))
                 else:
                         raise RuntimeError("Didn't raise expected exception")
 
@@ -198,7 +198,7 @@ class TestFileManager(pkg5unittest.Pkg5TestCase):
                 try:
                         for i in fm2.walk():
                                 fs.remove(i)
-                except file_manager.UnrecognizedFilePaths, e:
+                except file_manager.UnrecognizedFilePaths as e:
                         self.assertEqual(e.fps, [p[len(self.base_dir) + 1:]])
                 self.assertEqual(fs, set())
 
@@ -298,7 +298,7 @@ class TestFileManager(pkg5unittest.Pkg5TestCase):
 
                 # Populate the managed location using the v0 layout.
                 for fhash in (hash1, hash2, hash3, hash4):
-                        self.touch_old_file(fhash, data="old-%s" % fhash)
+                        self.touch_old_file(fhash, data="old-{0}".format(fhash))
 
                 # Migrate it to the v1 layout and verify that each
                 # file contains the expected data.
@@ -309,7 +309,7 @@ class TestFileManager(pkg5unittest.Pkg5TestCase):
                             l1.lookup(fhash)))
 
                         f = open(loc, "rb")
-                        self.assertEqual(f.read(), "old-%s" % fhash)
+                        self.assertEqual(f.read(), "old-{0}".format(fhash))
                         f.close()
 
                 # Now replace each file using the old hashnames and verify
@@ -318,15 +318,15 @@ class TestFileManager(pkg5unittest.Pkg5TestCase):
                         loc = os.path.join(self.base_dir, l1.lookup(fhash))
                         self.assertTrue(os.path.exists(loc))
 
-                        npath = os.path.join(self.base_dir, "new-%s" % fhash)
+                        npath = os.path.join(self.base_dir, "new-{0}".format(fhash))
                         nfile = open(npath, "wb")
-                        nfile.write("new-%s" % fhash)
+                        nfile.write("new-{0}".format(fhash))
                         nfile.close()
                         fm.insert(fhash, npath)
 
                         loc = fm.lookup(fhash)
                         f = open(loc, "rb")
-                        self.assertEqual(f.read(), "new-%s" % fhash)
+                        self.assertEqual(f.read(), "new-{0}".format(fhash))
                         f.close()
 
 if __name__ == "__main__":

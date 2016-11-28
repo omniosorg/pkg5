@@ -1,3 +1,55 @@
+Version 80:
+Compatible with clients using versions 72-79.
+
+    pkg.client.api.ImageInterface has changed as follows:
+
+	* Added optional 'implicit' parameter to gen_facets() and
+	  gen_variants() methods to get effective value of facets and
+	  boolean variants.
+
+Version 79:
+Compatible with clients using versions 72-78.
+
+    pkg.client.api.PlanDescription has changed as follows:
+
+        * Added get_editable_changes() function to return the list of
+	  "editable" files that will be moved, removed, installed, or
+	  updated during the planned operation.
+
+Version 78:
+Compatible with clients using versions 72-77.
+
+    pkg.client.api.ImageInterface has changed as follows:
+
+        * Added 'li_recurse' parameter to
+            - gen_plan_update()
+            - gen_plan_uninstall()
+            - gen_plan_install()
+            - gen_plan_change_varcets()
+
+          These allow to run the above operations recursively in linked images.
+
+        * Added 'ignore_missing' parameter to
+             - gen_plan_uninstall()
+             - gen_plan_update()
+
+          This changes the behavior of uninstall and update to not fail if a
+          package for the requested operation is not found.
+
+Version 77:
+Compatible with clients using versions 72-76.
+
+    pkg.client.api.ImageInterface has changed as follows:
+
+        * Added 'act_timeout' parameter to
+            - gen_plan_update()
+            - gen_plan_uninstall()
+            - gen_plan_install()
+            - gen_plan_change_varcets()
+
+          These allow to use synchronous SMF actuators including a timeout. 
+
+
 Version 76:
 Compatible with clients using versions 72-75 [1].
 

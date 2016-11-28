@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.7
 #
 # CDDL HEADER START
 #
@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2008, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 import testutils
@@ -96,15 +96,15 @@ class TestActions(pkg5unittest.Pkg5TestCase):
                 if attrs != value:
                         self.fail("""\
 Incorrect attribute value.
-    Expected: %s
-    Actual:   %s""" % (value, attrs))
+    Expected: {0}
+    Actual:   {1}""".format(value, attrs))
 
         def assertAttributes(self, action, attrlist):
                 if sorted(action.attrs.keys()) != sorted(attrlist):
                         self.fail("""\
 Incorrect attribute list.
-    Expected: %s
-    Actual:   %s""" % (sorted(attrlist), sorted(action.attrs.keys())))
+    Expected: {0}
+    Actual:   {1}""".format(sorted(attrlist), sorted(action.attrs.keys())))
 
         def test_action_parser(self):
                 action.fromstr("file 12345 name=foo path=/tmp/foo")
@@ -298,9 +298,9 @@ Incorrect attribute list.
                     '\\' : '\\'
                 }
 
-                astr = "file %s path=usr/bin/foo mode=0755 owner=root group=bin"
+                astr = "file {0} path=usr/bin/foo mode=0755 owner=root group=bin"
                 for k, v  in d.iteritems():
-                        a = action.fromstr(astr % k)
+                        a = action.fromstr(astr.format(k))
                         self.assert_(action.fromstr(str(a)) == a)
                         self.assert_(a.hash == v)
                         self.assert_(k in str(a))
@@ -348,7 +348,7 @@ Incorrect attribute list.
 
                 try:
                         action.fromstr(text)
-                except action.MalformedActionError, e:
+                except action.MalformedActionError as e:
                         assert e.actionstr == text
                         malformed = True
 
@@ -454,11 +454,11 @@ Incorrect attribute list.
                         bad_act = action.fromstr(astr)
                         try:
                                 bad_act.validate()
-                        except Exception, e:
+                        except Exception as e:
                                 self.debug(str(e))
                         else:
-                                self.debug("expected failure validating: %s" %
-                                    astr)
+                                self.debug("expected failure validating: {0}".format(
+                                    astr))
 
                         self.assertRaises(
                             action.InvalidActionAttributesError,
@@ -477,7 +477,9 @@ Incorrect attribute list.
                     # root-image attribute is only valid for origin dependencies.
                     "depend type=require fmri=foo root-image=true",
                     # Multiple values for predicate are not allowed.
-                    "depend type=conditional predicate=foo predicate=bar fmri=baz"):
+                    "depend type=conditional predicate=foo predicate=bar fmri=baz",
+                    # Multiple values for ignore-check are not allowed.
+                    "depend type=require fmri=foo ignore-check=true ignore-check=false"):
                         assert_invalid_attrs(nact)
 
                 # Verify multiple values for file attributes are rejected.
@@ -485,8 +487,8 @@ Incorrect attribute list.
                     "overlay", "elfhash", "original_name", "facet.doc",
                     "owner", "group"):
                         nact = "file path=/usr/bin/foo owner=root group=root " \
-                            "mode=0555 %(attr)s=1 %(attr)s=2 %(attr)s=3" % {
-                            "attr": attr }
+                            "mode=0555 {attr}=1 {attr}=2 {attr}=3".format(
+                            attr=attr)
                         assert_invalid_attrs(nact)
 
                 # Verify invalid values are not allowed for mode attribute on
@@ -501,8 +503,8 @@ Incorrect attribute list.
                 # attributes.
                 for attr in ("category", "desc", "hotline", "name", "vendor",
                     "version"):
-                        nact = "legacy pkg=SUNWcs %(attr)s=1 %(attr)s=2" % {
-                            "attr": attr }
+                        nact = "legacy pkg=SUNWcs {attr}=1 {attr}=2".format(
+                            attr=attr)
                         assert_invalid_attrs(nact)
 
                 # Verify multiple values aren't allowed for gid of group.
@@ -516,22 +518,22 @@ Incorrect attribute list.
                 # Verify multiple values are not allowed for must-accept and
                 # must-display attributes of license actions.
                 for attr in ("must-accept", "must-display"):
-                        nact = "license license=copyright %(attr)s=true " \
-                            "%(attr)s=false" % { "attr": attr }
+                        nact = "license license=copyright {attr}=true " \
+                            "{attr}=false".format(attr=attr)
                         assert_invalid_attrs(nact)
 
                 # Ensure link and hardlink attributes are validated properly.
                 for aname in ("link", "hardlink"):
                         # Action with mediator without mediator properties is
                         # invalid.
-                        nact = "%s path=usr/bin/vi target=../sunos/bin/edit " \
-                            "mediator=vi" % aname
+                        nact = "{0} path=usr/bin/vi target=../sunos/bin/edit " \
+                            "mediator=vi".format(aname)
                         assert_invalid_attrs(nact)
 
                         # Action with multiple mediator values is invalid.
-                        nact = "%s path=usr/bin/vi target=../sunos/bin/edit " \
+                        nact = "{0} path=usr/bin/vi target=../sunos/bin/edit " \
                             "mediator=vi mediator=vim " \
-                            "mediator-implementatio=svr4" % aname
+                            "mediator-implementatio=svr4".format(aname)
                         assert_invalid_attrs(nact)
 
                         # Action with mediator properties without mediator
@@ -542,17 +544,17 @@ Incorrect attribute list.
                             "mediator-priority": "site",
                         }
                         for prop, val in props.iteritems():
-                                nact = "%s path=usr/bin/vi " \
-                                    "target=../sunos/bin/edit %s=%s" % (aname,
+                                nact = "{0} path=usr/bin/vi " \
+                                    "target=../sunos/bin/edit {1}={2}".format(aname,
                                     prop, val)
                                 assert_invalid_attrs(nact)
 
                         # Action with multiple values for any property is
                         # invalid.
                         for prop, val in props.iteritems():
-                                nact = "%s path=usr/bin/vi " \
+                                nact = "{0} path=usr/bin/vi " \
                                     "target=../sunos/bin/edit mediator=vi " \
-                                    "%s=%s %s=%s " % (aname, prop, val, prop,
+                                    "{1}={2} {3}={4} ".format(aname, prop, val, prop,
                                     val)
                                 if prop == "mediator-priority":
                                         # mediator-priority alone isn't
@@ -563,36 +565,36 @@ Incorrect attribute list.
 
                         # Verify invalid mediator names are rejected.
                         for value in ("not/valid", "not valid", "not.valid"):
-                                nact = "%s path=usr/bin/vi target=vim " \
-                                    "mediator=\"%s\" mediator-implementation=vim" \
-                                    % (aname, value)
+                                nact = "{0} path=usr/bin/vi target=vim " \
+                                    "mediator=\"{1}\" mediator-implementation=vim" \
+                                   .format(aname, value)
                                 assert_invalid_attrs(nact)
 
                         # Verify invalid mediator-versions are rejected.
                         for value in ("1.a", "abc", ".1"):
-                                nact = "%s path=usr/bin/vi target=vim " \
-                                    "mediator=vim mediator-version=%s" \
-                                    % (aname, value)
+                                nact = "{0} path=usr/bin/vi target=vim " \
+                                    "mediator=vim mediator-version={1}" \
+                                   .format(aname, value)
                                 assert_invalid_attrs(nact)
 
                         # Verify invalid mediator-implementations are rejected.
                         for value in ("1.a", "@", "@1", "vim@.1",
                             "vim@abc"):
-                                nact = "%s path=usr/bin/vi target=vim " \
-                                    "mediator=vim mediator-implementation=%s" \
-                                    % (aname, value)
+                                nact = "{0} path=usr/bin/vi target=vim " \
+                                    "mediator=vim mediator-implementation={1}" \
+                                   .format(aname, value)
                                 assert_invalid_attrs(nact)
 
                         # Verify multiple targets are not allowed.
-                        nact = "%s path=/usr/bin/foo target=bar target=baz" % \
-                            aname
+                        nact = "{0} path=/usr/bin/foo target=bar target=baz".format(
+                            aname)
                         assert_invalid_attrs(nact)
 
                 # Verify multiple values are not allowed for set actions such as
                 # pkg.description, pkg.obsolete, pkg.renamed, and pkg.summary.
                 for attr in ("pkg.description", "pkg.obsolete", "pkg.renamed",
-                    "pkg.summary"):
-                        nact = "set name=%s value=true value=false" % attr
+                    "pkg.summary", "pkg.depend.explicit-install"):
+                        nact = "set name={0} value=true value=false".format(attr)
                         assert_invalid_attrs(nact)
 
                 # Verify signature action attribute 'value' is required during
@@ -603,23 +605,34 @@ Incorrect attribute list.
                 # Verify multiple values aren't allowed for user attributes.
                 for attr in ("password", "group", "gcos-field", "home-dir",
                     "login-shell", "ftpuser"):
-                        nact = "user username=user %(attr)s=ab %(attr)s=cd " % \
-                            { "attr": attr }
+                        nact = "user username=user {attr}=ab {attr}=cd ".format(
+                            attr=attr)
                         assert_invalid_attrs(nact)
 
                 for attr in ("uid", "lastchg", "min","max", "warn", "inactive",
                     "expire", "flag"):
-                        nact = "user username=user %(attr)s=1 %(attr)s=2" % {
-                            "attr": attr }
+                        nact = "user username=user {attr}=1 {attr}=2".format(
+                            attr=attr)
                         assert_invalid_attrs(nact)
 
                 # Verify only numeric values are allowed for user attributes
                 # expecting a number.
                 for attr in ("uid", "lastchg", "min","max", "warn", "inactive",
                     "expire", "flag"):
-                        nact = "user username=user %s=abc" % attr
+                        nact = "user username=user {0}=abc".format(attr)
                         assert_invalid_attrs(nact)
 
+                # Malformed pkg actuators
+                assert_invalid_attrs(
+                    "set name=pkg.additional-update-on-uninstall "
+                    "value=&@M")
+                assert_invalid_attrs(
+                    "set name=pkg.additional-update-on-uninstall "
+                    "value=A@1 value=&@M")
+                # Unknown actuator (should pass)
+                act = action.fromstr(
+                    "set name=pkg.additional-update-on-update value=A@1")
+                act.validate()
 
 if __name__ == "__main__":
         unittest.main()

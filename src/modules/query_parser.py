@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.7
 #
 # CDDL HEADER START
 #
@@ -21,9 +21,10 @@
 #
 
 #
-# Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
+from __future__ import print_function
 import os
 import fnmatch
 import re
@@ -155,10 +156,10 @@ class QueryLexer(object):
 
         def t_error(self, t):
                 raise RuntimeError("\n".join(
-                    [_("An unparseable character in query at position : %d") %
-                        (self.get_pos() + 1),
-                    "%s" % self.get_string(),
-                    "%s" % (" " * self.get_pos() + "^")]))
+                    [_("An unparseable character in query at position : {0:d}").format(
+                        self.get_pos() + 1),
+                    "{0}".format(self.get_string()),
+                    "{0}".format(" " * self.get_pos() + "^")]))
 
         def build(self, **kwargs):
                 self.lexer = lex.lex(object=self, **kwargs)
@@ -185,7 +186,7 @@ class QueryLexer(object):
                         tok = self.lexer.token()
                         if not tok:
                                 break
-                        print >> sys.stderr, tok
+                        print(tok, file=sys.stderr)
 
 
 class QueryParser(object):
@@ -341,7 +342,7 @@ class QueryParser(object):
         def p_error(self, p):
                 raise ParseError(p, self.lexer.get_pos(),
                     self.lexer.get_string())
-                        
+
         def __init__(self, lexer):
                 """Build a parser using the lexer given as an argument."""
                 self.lexer = lexer
@@ -382,10 +383,10 @@ class QueryLengthExceeded(QueryException):
                 self.token_cnt = token_cnt
 
         def __str__(self):
-                return _("The number of terms in the query is %(len)i, "
+                return _("The number of terms in the query is {len:d}, "
                     "which exceeds the maximum supported "
-                    "value of %(maxt)i terms.") % { "len": self.token_cnt,
-                    "maxt": MAX_TOKEN_COUNT }
+                    "value of {maxt:d} terms.").format(len=self.token_cnt,
+                    maxt=MAX_TOKEN_COUNT)
 
 
 class DetailedValueError(QueryException):
@@ -397,12 +398,12 @@ class DetailedValueError(QueryException):
                 self.query = whole_query
 
         def __str__(self):
-                return _("In query %(query)s, %(name)s had a bad value of "
-                    "'%(bv)s'.") % {
-                        "query":self.query,
-                        "name":self.name,
-                        "bv":self.bad_value
-                    }
+                return _("In query {query}, {name} had a bad value of "
+                    "'{bv}'.").format(
+                        query=self.query,
+                        name=self.name,
+                        bv=self.bad_value
+                    )
 
 
 class IncompleteQuery(QueryException):
@@ -416,7 +417,7 @@ class IncompleteQuery(QueryException):
                     "case sensitivity, return type, number of results to "
                     "return, the number at which to start returning results, "
                     "and the text of the query.  The query provided lacked at "
-                    "least one of those fields:\n%s") % self.query
+                    "least one of those fields:\n{0}").format(self.query)
 
         
 class ParseError(QueryException):
@@ -430,9 +431,9 @@ class ParseError(QueryException):
                 # BUI will interpret a line starting with a \t as pre-formatted
                 # and put it in <pre> tags.
                 return "\n".join([_("Could not parse query."),
-                    _("Problem occurred with: %s\t") % self.p,
-                    "\t%s" % self.str,
-                    "\t%s" % (" " * max(self.pos - 1, 0) + "^")])
+                    _("Problem occurred with: {0}\t").format(self.p),
+                    "\t{0}".format(self.str),
+                    "\t{0}".format(" " * max(self.pos - 1, 0) + "^")])
 
 
 class Query(object):
@@ -478,7 +479,7 @@ class Query(object):
         def __str__(self):
                 """Return the v1 string representation of this query."""
 
-                return "%s_%s_%s_%s_%s" % (self.case_sensitive,
+                return "{0}_{1}_{2}_{3}_{4}".format(self.case_sensitive,
                     self.return_type, self.num_to_return, self.start_point,
                     self.text)
 
@@ -548,9 +549,9 @@ class BooleanQueryException(QueryException):
                 # BUI will interpret a line starting with a \t as pre-formatted
                 # and put it in <pre> tags.
                 ac_s = _("This expression produces action results:")
-                ac_q = "\t%s" % self.ac
+                ac_q = "\t{0}".format(self.ac)
                 pc_s = _("This expression produces package results:")
-                pc_q = "\t%s" % self.pc
+                pc_q = "\t{0}".format(self.pc)
                 return "\n".join([ac_s, ac_q, pc_s, pc_q,
                     _("'AND' and 'OR' require those expressions to produce "
                     "the same type of results.")])
@@ -659,10 +660,10 @@ class AndQuery(BooleanQuery):
                 
 
         def __str__(self):
-                return "(%s AND %s)" % (self.lc, self.rc)
+                return "({0!s} AND {1!s})".format(self.lc, self.rc)
 
         def __repr__(self):
-                return "(%r AND %r)" % (self.lc, self.rc)
+                return "({0!r} AND {1!r})".format(self.lc, self.rc)
         
 class OrQuery(BooleanQuery):
         """Class representing OR queries in the AST."""
@@ -710,10 +711,10 @@ class OrQuery(BooleanQuery):
                                         yield j
 
         def __str__(self):
-                return "(%s OR %s)" % (self.lc, self.rc)
+                return "({0!s} OR {1!s})".format(self.lc, self.rc)
 
         def __repr__(self):
-                return "(%r OR %r)" % (self.lc, self.rc)
+                return "({0!r} OR {1!r})".format(self.lc, self.rc)
 
 class PkgConversion(object):
         """Class representing a change from returning actions to returning
@@ -724,10 +725,10 @@ class PkgConversion(object):
                 self.return_type = Query.RETURN_PACKAGES
 
         def __str__(self):
-                return "p<%s>" % self.query
+                return "p<{0!s}>".format(self.query)
 
         def __repr__(self):
-                return "p<%r>" % self.query
+                return "p<{0!r}>".format(self.query)
 
         def set_info(self, **kwargs):
                 """This function passes information to the terms prior to
@@ -810,7 +811,8 @@ class PhraseQuery(object):
                 return "Phrase Query:'" + self.full_str + "'"
 
         def __str__(self):
-                return "%s:'%s'" % (self.query.field_strings(), self.full_str)
+                return "{0}:'{1}'".format(self.query.field_strings(),
+                    self.full_str)
 
         def add_field_restrictions(self, *params):
                 self.query.add_field_restrictions(*params)
@@ -895,8 +897,9 @@ class FieldQuery(object):
                 self.query.add_field_restrictions(*params)
 
         def __repr__(self):
-                return "( PN:%r AT:%r ST:%r Q:%r)" % (self.query.pkg_name,
-                    self.query.action_type, self.query.key, self.query)
+                return "( PN:{0!r} AT:{1!r} ST:{2!r} Q:{3!r})".format(
+                    self.query.pkg_name, self.query.action_type, self.query.key,
+                    self.query)
 
         def __str__(self):
                 return str(self.query)
@@ -941,7 +944,7 @@ class TopQuery(object):
                 self.num_to_return = None
 
         def __repr__(self):
-                return "TopQuery(%r)" % self.query
+                return "TopQuery({0!r})".format(self.query)
 
         def __str__(self):
                 return str(self.query)
@@ -1096,7 +1099,7 @@ class TermQuery(object):
                 return "( TermQuery: " + self._term + " )"
 
         def __str__(self):
-                return "%s:%s" % (self.field_strings(),
+                return "{0}:{1}".format(self.field_strings(),
                     self.__wc_to_string(False, self._term))
 
         def field_strings(self):
@@ -1372,7 +1375,7 @@ class TermQuery(object):
                                     self._dir_path, "pkg",
                                     matching_pfmri.get_name(),
                                     str(matching_pfmri.version)), "rb")
-                        except EnvironmentError, e:
+                        except EnvironmentError as e:
                                 if e.errno != errno.ENOENT:
                                         raise
                                 continue
@@ -1443,7 +1446,7 @@ class TermQuery(object):
                                         offsets = tmp_set
                                 else:
                                         offsets &= tmp_set
-                        except EnvironmentError, e:
+                        except EnvironmentError as e:
                                 if e.errno != errno.ENOENT:
                                         raise
                                 # If the file doesn't exist, then no actions
@@ -1461,7 +1464,7 @@ class TermQuery(object):
                                         offsets = tmp_set
                                 else:
                                         offsets &= tmp_set
-                        except EnvironmentError, e:
+                        except EnvironmentError as e:
                                 if e.errno != errno.ENOENT:
                                         raise
                                 # If the file doesn't exist, then no actions

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.7
 # -*- coding: iso-8859-1 -*-
 #
 # Copyright (C) 2002 Lars Gustäbel <lars@gustaebel.de>
@@ -29,14 +29,17 @@
 """
 
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
 #
+
+from __future__ import print_function
 
 #---------
 # Imports
 #---------
 import sys
+if sys.version > '3':
+        long = int
 import os
 import stat
 import time
@@ -45,14 +48,14 @@ import pkg.pkgsubprocess as subprocess
 
 # cpio magic numbers
 # XXX matches actual cpio archives and /etc/magic, but not archives.h
-CMN_ASC = 070701        # Cpio Magic Number for ASCII header
-CMN_BIN = 070707        # Cpio Magic Number for Binary header
-CMN_BBS = 0143561       # Cpio Magic Number for Byte-Swap header
-CMN_CRC = 070702        # Cpio Magic Number for CRC header
-CMS_ASC = "070701"      # Cpio Magic String for ASCII header
-CMS_CHR = "070707"      # Cpio Magic String for CHR (-c) header
-CMS_CRC = "070702"      # Cpio Magic String for CRC header
-CMS_LEN = 6             # Cpio Magic String length
+CMN_ASC = 0o70701        # Cpio Magic Number for ASCII header
+CMN_BIN = 0o70707        # Cpio Magic Number for Binary header
+CMN_BBS = 0o143561       # Cpio Magic Number for Byte-Swap header
+CMN_CRC = 0o70702        # Cpio Magic Number for CRC header
+CMS_ASC = "070701"       # Cpio Magic String for ASCII header
+CMS_CHR = "070707"       # Cpio Magic String for CHR (-c) header
+CMS_CRC = "070702"       # Cpio Magic String for CRC header
+CMS_LEN = 6              # Cpio Magic String length
 
 BLOCKSIZE = 512
 
@@ -124,14 +127,14 @@ class _Stream:
                 self.fileobj = fileobj
                 self.bufsize = bufsize
                 self.buf = ""
-                self.pos = 0L
+                self.pos = long(0)
                 self.closed = False
 
                 if type == "gz":
                         try:
                                 import zlib
                         except ImportError:
-                                raise CompressionError, "zlib module is not available"
+                                raise CompressionError("zlib module is not available")
                         self.zlib = zlib
                         self.crc = zlib.crc32("")
                         if mode == "r":
@@ -143,7 +146,7 @@ class _Stream:
                         try:
                                 import bz2
                         except ImportError:
-                                raise CompressionError, "bz2 module is not available"
+                                raise CompressionError("bz2 module is not available")
                         if mode == "r":
                                 self.dbuf = ""
                                 self.cmp = bz2.BZ2Decompressor()
@@ -160,7 +163,7 @@ class _Stream:
                 self.cmp = self.zlib.compressobj(9, self.zlib.DEFLATED,
                         -self.zlib.MAX_WBITS, self.zlib.DEF_MEM_LEVEL, 0)
                 timestamp = struct.pack("<L", long(time.time()))
-                self.__write("\037\213\010\010%s\002\377" % timestamp)
+                self.__write("\037\213\010\010{0}\002\377".format(timestamp))
                 if self.name.endswith(".gz"):
                         self.name = self.name[:-3]
                 self.__write(self.name + NUL)
@@ -199,7 +202,7 @@ class _Stream:
                         if self.type == "gz":
                                 self.fileobj.write(struct.pack("<l", self.crc))
                                 self.fileobj.write(struct.pack("<L", self.pos &
-                                        0xffffFFFFL))
+                                    long(0xffffFFFF)))
                 if not self._extfileobj:
                         self.fileobj.close()
 
@@ -213,9 +216,9 @@ class _Stream:
 
                 # taken from gzip.GzipFile with some alterations
                 if self.__read(2) != "\037\213":
-                        raise ReadError, "not a gzip file"
+                        raise ReadError("not a gzip file")
                 if self.__read(1) != "\010":
-                        raise CompressionError, "unsupported compression method"
+                        raise CompressionError("unsupported compression method")
 
                 flag = ord(self.__read(1))
                 self.__read(6)
@@ -251,7 +254,7 @@ class _Stream:
                                 self.read(self.bufsize)
                         self.read(remainder)
                 else:
-                        raise StreamError, "seeking backwards is not allowed"
+                        raise StreamError("seeking backwards is not allowed")
                 return self.pos
 
         def read(self, size=None):
@@ -270,7 +273,7 @@ class _Stream:
                 else:
                         buf = self._read(size)
                 self.pos += len(buf)
-                # print "reading %s bytes to %s (%s)" % (size, self.pos, self.fileobj.tell())
+                # print("reading {0} bytes to {1} ({2})".format(size, self.pos, self.fileobj.tell()))
                 return buf
 
         def _read(self, size):
@@ -324,12 +327,12 @@ class ExFileObject(object):
                 self.closed     = False
                 self.offset     = cpioinfo.offset_data
                 self.size       = cpioinfo.size
-                self.pos        = 0L
+                self.pos        = long(0)
                 self.linebuffer = ""
 
         def read(self, size=None):
                 if self.closed:
-                        raise ValueError, "file is closed"
+                        raise ValueError("file is closed")
                 self.fileobj.seek(self.offset + self.pos)
                 bytesleft = self.size - self.pos
                 if size is None:
@@ -345,7 +348,7 @@ class ExFileObject(object):
                 be mixed up (!).
                 """
                 if size < 0:
-                        size = sys.maxint
+                        size = sys.maxsize
 
                 nl = self.linebuffer.find("\n")
                 if nl >= 0:
@@ -421,7 +424,7 @@ class CpioInfo(object):
                 """
 
                 self.name       = name
-                self.mode       = 0666
+                self.mode       = 0o666
                 self.uid        = 0
                 self.gid        = 0
                 self.size       = 0
@@ -441,7 +444,8 @@ class CpioInfo(object):
                 self.padding    = 1
 
         def __repr__(self):
-                return "<%s %r at %#x>" % (self.__class__.__name__, self.name, id(self))
+                return "<{0} {1!r} at {2:#x}>".format(
+                    self.__class__.__name__, self.name, id(self))
 
         @classmethod
         def frombuf(cls, buf, fileobj, cpiofile=None):
@@ -469,7 +473,7 @@ class CpioInfo(object):
                         elif b == CMN_CRC:
                                 hdrtype = "CMN_CRC"
                         else:
-                                raise ValueError, "invalid cpio header"
+                                raise ValueError("invalid cpio header")
 
                 if hdrtype == "CMN_BIN":
                         buf += fileobj.read(26 - len(buf))
@@ -501,7 +505,7 @@ class CpioInfo(object):
                         buf += fileobj.read(cpioinfo.hdrsize - 110 - namesize)
                         cpioinfo.padding = 4
                 else:
-                        raise ValueError, "unsupported cpio header"
+                        raise ValueError("unsupported cpio header")
 
                 return cpioinfo
 
@@ -538,7 +542,7 @@ class CpioFile(object):
                 self.name = name
 
                 if len(mode) > 1 or mode not in "raw":
-                        raise ValueError, "mode must be 'r', 'a' or 'w'"
+                        raise ValueError("mode must be 'r', 'a' or 'w'")
                 self._mode = mode
                 self.mode = {"r": "rb", "a": "r+b", "w": "wb"}[mode]
 
@@ -564,7 +568,7 @@ class CpioFile(object):
                 self.closed     = False
                 self.members    = []    # list of members as CpioInfo objects
                 self._loaded    = False # flag if all members have been read
-                self.offset     = 0L    # current position in the archive file
+                self.offset     = long(0)    # current position in the archive file
 
                 if self._mode == "r":
                         self.firstmember = None
@@ -620,7 +624,7 @@ class CpioFile(object):
                 """
 
                 if not name and not fileobj:
-                        raise ValueError, "nothing to open"
+                        raise ValueError("nothing to open")
 
                 if ":" in mode:
                         filemode, comptype = mode.split(":", 1)
@@ -632,7 +636,7 @@ class CpioFile(object):
                         if comptype in cls.OPEN_METH:
                                 func = getattr(cls, cls.OPEN_METH[comptype])
                         else:
-                                raise CompressionError, "unknown compression type %r" % comptype
+                                raise CompressionError("unknown compression type {0!r}".format(comptype))
                         return func(name, filemode, fileobj)
 
                 elif "|" in mode:
@@ -641,7 +645,7 @@ class CpioFile(object):
                         comptype = comptype or "cpio"
 
                         if filemode not in "rw":
-                                raise ValueError, "mode must be 'r' or 'w'"
+                                raise ValueError("mode must be 'r' or 'w'")
 
                         t = cls(name, filemode,
                                 _Stream(name, filemode, comptype, fileobj, bufsize))
@@ -656,19 +660,19 @@ class CpioFile(object):
                                         return func(name, "r", fileobj)
                                 except (ReadError, CompressionError):
                                         continue
-                        raise ReadError, "file could not be opened successfully"
+                        raise ReadError("file could not be opened successfully")
 
                 elif mode in "aw":
                         return cls.cpioopen(name, mode, fileobj)
 
-                raise ValueError, "undiscernible mode"
+                raise ValueError("undiscernible mode")
 
         @classmethod
         def cpioopen(cls, name, mode="r", fileobj=None):
                 """Open uncompressed cpio archive name for reading or writing.
                 """
                 if len(mode) > 1 or mode not in "raw":
-                        raise ValueError, "mode must be 'r', 'a' or 'w'"
+                        raise ValueError("mode must be 'r', 'a' or 'w'")
                 return cls(name, mode, fileobj)
 
         @classmethod
@@ -677,13 +681,13 @@ class CpioFile(object):
                 Appending is not allowed.
                 """
                 if len(mode) > 1 or mode not in "rw":
-                        raise ValueError, "mode must be 'r' or 'w'"
+                        raise ValueError("mode must be 'r' or 'w'")
 
                 try:
                         import gzip
                         gzip.GzipFile
                 except (ImportError, AttributeError):
-                        raise CompressionError, "gzip module is not available"
+                        raise CompressionError("gzip module is not available")
 
                 pre, ext = os.path.splitext(name)
                 pre = os.path.basename(pre)
@@ -702,7 +706,7 @@ class CpioFile(object):
                                 gzip.GzipFile(name, mode, compresslevel,
                                         fileobj))
                 except IOError:
-                        raise ReadError, "not a gzip file"
+                        raise ReadError("not a gzip file")
                 t._extfileobj = False
                 return t
 
@@ -712,12 +716,12 @@ class CpioFile(object):
                 Appending is not allowed.
                 """
                 if len(mode) > 1 or mode not in "rw":
-                        raise ValueError, "mode must be 'r' or 'w'."
+                        raise ValueError("mode must be 'r' or 'w'.")
 
                 try:
                         import bz2
                 except ImportError:
-                        raise CompressionError, "bz2 module is not available"
+                        raise CompressionError("bz2 module is not available")
 
                 pre, ext = os.path.splitext(name)
                 pre = os.path.basename(pre)
@@ -726,24 +730,24 @@ class CpioFile(object):
                 cpioname = pre + ext
 
                 if fileobj is not None:
-                        raise ValueError, "no support for external file objects"
+                        raise ValueError("no support for external file objects")
 
                 try:
                         t = cls.cpioopen(cpioname, mode,
                             bz2.BZ2File(name, mode, compresslevel=compresslevel))
                 except IOError:
-                        raise ReadError, "not a bzip2 file"
+                        raise ReadError("not a bzip2 file")
                 t._extfileobj = False
                 return t
 
         @classmethod
         def p7zopen(cls, name, mode="r", fileobj=None):
                 """Open 7z compressed cpio archive name for reading, writing.
-                
+
                 Appending is not allowed
                 """
                 if len(mode) > 1 or mode not in "rw":
-                        raise ValueError, "mode must be 'r' or 'w'."
+                        raise ValueError("mode must be 'r' or 'w'.")
 
                 pre, ext = os.path.splitext(name)
                 pre = os.path.basename(pre)
@@ -754,7 +758,7 @@ class CpioFile(object):
                 try:
                         # To extract: 7z e -so <fname>
                         # To create an archive: 7z a -si <fname>
-                        cmd = "7z %s -%s %s" % (
+                        cmd = "7z {0} -{1} {2}".format(
                             {'r':'e',  'w':'a'}[mode],
                             {'r':'so', 'w':'si'}[mode],
                             name)
@@ -772,7 +776,7 @@ class CpioFile(object):
                         obj = _Stream(cpioname, mode, comptype, pobj, bufsize)
                         t = cls.cpioopen(cpioname, mode, obj)
                 except IOError:
-                        raise ReadError, "read/write via 7z failed"
+                        raise ReadError("read/write via 7z failed")
                 t._extfileobj = False
                 return t
 
@@ -792,7 +796,7 @@ class CpioFile(object):
                 """
                 cpioinfo = self._getmember(name)
                 if cpioinfo is None:
-                        raise KeyError, "filename %r not found" % name
+                        raise KeyError("filename {0!r} not found".format(name))
                 return cpioinfo
 
         def getmembers(self):
@@ -822,14 +826,14 @@ class CpioFile(object):
                                 return None
                         try:
                                 cpioinfo = CpioInfo.frombuf(buf, self.fileobj, self)
-                        except ValueError, e:
+                        except ValueError as e:
                                 if self.offset == 0:
-                                        raise ReadError, "empty, unreadable or compressed file"
+                                        raise ReadError("empty, unreadable or compressed file")
                                 return None
                         break
 
                 # if cpioinfo.chksum != calc_chksum(buf):
-                #         self._dbg(1, "cpiofile: Bad Checksum %r" % cpioinfo.name)
+                #         self._dbg(1, "cpiofile: Bad Checksum {0!r}".format(cpioinfo.name))
 
                 cpioinfo.offset = self.offset
 
@@ -887,9 +891,11 @@ class CpioFile(object):
 
         def _check(self, mode=None):
                 if self.closed:
-                        raise IOError, "%s is closed" % self.__class__.__name__
+                        raise IOError("{0} is closed".format(
+                            self.__class__.__name__))
                 if mode is not None and self._mode not in mode:
-                        raise IOError, "bad operation for mode %r" % self._mode
+                        raise IOError("bad operation for mode {0!r}".format(
+                            self._mode))
 
         def __iter__(self):
                 if self._loaded:
@@ -959,20 +965,21 @@ def is_cpiofile(name):
         return False
 
 if __name__ == "__main__":
-        print is_cpiofile(sys.argv[1])
+        print(is_cpiofile(sys.argv[1]))
 
         cf = CpioFile.open(sys.argv[1])
-        print "cpiofile is:", cf
+        print("cpiofile is:", cf)
 
         for ci in cf:
-                print "cpioinfo is:", ci
-                print "  mode:", oct(ci.mode)
-                print "  uid:", ci.uid
-                print "  gid:", ci.gid
-                print "  mtime:", ci.mtime, "(%s)" % time.ctime(ci.mtime)
-                print "  size:", ci.size
-                print "  name:", ci.name
+                print("cpioinfo is:", ci)
+                print("  mode:", oct(ci.mode))
+                print("  uid:", ci.uid)
+                print("  gid:", ci.gid)
+                print("  mtime:", ci.mtime, "({0})".format(
+                    time.ctime(ci.mtime)))
+                print("  size:", ci.size)
+                print("  name:", ci.name)
                 # f = cf.extractfile(ci)
                 # for l in f.readlines():
-                #         print l,
+                #         print(l, end=" ")
                 # f.close()

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.7
 #
 # CDDL HEADER START
 #
@@ -21,13 +21,17 @@
 #
 
 #
-# Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 from collections import namedtuple, defaultdict
+from functools import reduce
+
 import errno
+import fnmatch
 import hashlib
 import os
+import re
 import tempfile
 from itertools import groupby, chain, product, repeat, izip
 from operator import itemgetter
@@ -35,6 +39,7 @@ from operator import itemgetter
 import pkg.actions as actions
 import pkg.client.api_errors as apx
 import pkg.facet as facet
+import pkg.fmri as fmri
 import pkg.misc as misc
 import pkg.portable as portable
 import pkg.variant as variant
@@ -43,6 +48,37 @@ import pkg.version as version
 from pkg.misc import EmptyDict, EmptyI, expanddirs, PKG_FILE_MODE, PKG_DIR_MODE
 from pkg.actions.attribute import AttributeAction
 from pkg.actions.directory import DirectoryAction
+
+def _compile_fnpats(fn_pats):
+        """Private helper function that returns a compiled version of a
+        dictionary of fnmatch patterns."""
+
+        return dict(
+            (key, [
+                re.compile(fnmatch.translate(pat), re.IGNORECASE).match
+                for pat in pats
+            ])
+            for (key, pats) in fn_pats.iteritems()
+        )
+
+
+def _attr_matches(action, attr_match):
+        """Private helper function: given an action, return True if any of its
+        attributes' values matches the pattern for the same attribute in the
+        attr_match dictionary, and False otherwise. Note that the patterns must
+        be pre-comiled using re.compile() or _compile_fnpats."""
+
+        if not attr_match:
+                return True
+
+        for (attr, matches) in attr_match.iteritems():
+                if attr in action.attrs:
+                        for match in matches:
+                                for attrval in action.attrlist(attr):
+                                        if match(attrval):
+                                                return True
+        return False
+
 
 class ManifestDifference(
     namedtuple("ManifestDifference", "added changed removed")):
@@ -130,14 +166,20 @@ class Manifest(object):
                 self.attributes = {} # package-wide attributes
                 self.signatures = EmptyDict
                 self.excludes = EmptyI
+                if pfmri is not None:
+                        if not isinstance(pfmri, fmri.PkgFmri):
+                                pfmri = fmri.PkgFmri(pfmri)
+                        self.publisher = pfmri.publisher
+                else:
+                        self.publisher = None
 
         def __str__(self):
                 r = ""
                 if "pkg.fmri" not in self.attributes and self.fmri != None:
-                        r += "set name=pkg.fmri value=%s\n" % self.fmri
+                        r += "set name=pkg.fmri value={0}\n".format(self.fmri)
 
                 for act in sorted(self.actions):
-                        r += "%s\n" % act
+                        r += "{0}\n".format(act)
                 return r
 
         def as_lines(self):
@@ -145,10 +187,10 @@ class Manifest(object):
                 contents as lines of text."""
 
                 if "pkg.fmri" not in self.attributes and self.fmri != None:
-                        yield "set name=pkg.fmri value=%s\n" % self.fmri
+                        yield "set name=pkg.fmri value={0}\n".format(self.fmri)
 
                 for act in self.actions:
-                        yield "%s\n" % act
+                        yield "{0}\n".format(act)
 
         def tostr_unsorted(self):
                 return "".join((l for l in self.as_lines()))
@@ -170,8 +212,8 @@ class Manifest(object):
                         # to be sorted since the caller likely already does
                         # (such as pkgplan/imageplan).
                         return ManifestDifference(
-                            [(None, a) for a in self.gen_actions(self_exclude)],
-                            [], [])
+                            [(None, a) for a in self.gen_actions(
+                            excludes=self_exclude)], [], [])
 
                 def hashify(v):
                         """handle key values that may be lists"""
@@ -183,7 +225,7 @@ class Manifest(object):
                         # Transform list of actions into a dictionary keyed by
                         # action key attribute, key attribute and mediator, or
                         # id if there is no key attribute.
-                        for a in mf.gen_actions(excludes):
+                        for a in mf.gen_actions(excludes=excludes):
                                 if (a.name == "link" or
                                     a.name == "hardlink") and \
                                     a.attrs.get("mediator"):
@@ -249,7 +291,7 @@ class Manifest(object):
                                 try:
                                         key = set(a.attrlist(a.key_attr))
                                         key.update(
-                                            "%s=%s" % (v, a.attrs[v])
+                                            "{0}={1}".format(v, a.attrs[v])
                                             for v in a.get_varcet_keys()[0]
                                         )
                                         key = tuple(key)
@@ -310,11 +352,11 @@ class Manifest(object):
 
                 for src, dest in chain(*l):
                         if not src:
-                                out += "+ %s\n" % str(dest)
+                                out += "+ {0}\n".format(str(dest))
                         elif not dest:
-                                out += "- %s\n" + str(src)
+                                out += "- {0}\n" + str(src)
                         else:
-                                out += "%s -> %s\n" % (src, dest)
+                                out += "{0} -> {1}\n".format(src, dest)
                 return out
 
         def _gen_dirs_to_str(self):
@@ -354,7 +396,7 @@ class Manifest(object):
                         }
                         for mvariant in mvariants:
                                 a = "set name=pkg.mediator " \
-                                    "value=%s %s %s\n" % (mediation[0],
+                                    "value={0} {1} {2}\n".format(mediation[0],
                                      " ".join((
                                          "=".join(t)
                                           for t in values.iteritems()
@@ -438,8 +480,9 @@ class Manifest(object):
                         # declared at package level.  Omit the "variant." prefix
                         # from attribute values since that's implicit and can be
                         # added back when the action is parsed.
-                        yield "%s\n" % AttributeAction(None, name="pkg.variant",
-                            value=sorted(v[8:] for v in variants))
+                        yield "{0}\n".format(AttributeAction(None,
+                            name="pkg.variant",
+                            value=sorted(v[8:] for v in variants)))
 
                 # Emit a set action for every variant used with possible values
                 # if one does not already exist.
@@ -448,8 +491,8 @@ class Manifest(object):
                         # is desirable when generating the variant attr anyway.
                         variants[name] = sorted(variants[name])
                         if name not in self.attributes:
-                                yield "%s\n" % AttributeAction(None, name=name,
-                                    value=variants[name])
+                                yield "{0}\n".format(AttributeAction(None,
+                                    name=name, value=variants[name]))
 
                 if emit_facets:
                         # Get unvarianted facet set.
@@ -547,8 +590,8 @@ class Manifest(object):
                         # package operations will know that no facets are used
                         # by the package instead of having to scan the whole
                         # manifest.
-                        yield "%s\n" % AttributeAction(None,
-                            name="pkg.facet.common", value=val)
+                        yield "{0}\n".format(AttributeAction(None,
+                            name="pkg.facet.common", value=val))
 
                         # Now emit a pkg.facet action for each variant
                         # combination containing the list of facets unique to
@@ -561,20 +604,20 @@ class Manifest(object):
                                 # string below looks like this before hashing:
                                 #     variant.archi386variant.debug.osnetTrue...
                                 key = hashlib.sha1(
-                                    "".join("%s%s" % v for v in varkey)
+                                    "".join("{0}{1}".format(*v) for v in varkey)
                                 ).hexdigest()
 
                                 # Omit the "facet." prefix from attribute values
                                 # since that's implicit and can be added back
                                 # when the action is parsed.
                                 act = AttributeAction(None,
-                                    name="pkg.facet.%s" % key,
+                                    name="pkg.facet.{0}".format(key),
                                     value=sorted(f[6:] for f in fnames))
                                 attrs = act.attrs
                                 # Tag action with variants.
                                 for v in varkey:
                                         attrs[v[0]] = v[1]
-                                yield "%s\n" % act
+                                yield "{0}\n".format(act)
 
                 # Emit pkg.[c]size attribute for [compressed] size of package
                 # for each facet/variant combination.
@@ -603,23 +646,25 @@ class Manifest(object):
                                 # string below looks like this before hashing:
                                 #     facet.docTruevariant.archi386...
                                 key = hashlib.sha1(
-                                    "".join("%s%s" % v for v in varcetkeys)
+                                    "".join("{0}{1}".format(*v) for v in varcetkeys)
                                 ).hexdigest()
 
                                 # The sizes are abbreviated in the name of byte
                                 # conservation.
                                 act = AttributeAction(None,
-                                    name="pkg.sizes.%s" % key,
-                                    value=["csz=%s" % rcsize, "sz=%s" % rsize])
+                                    name="pkg.sizes.{0}".format(key),
+                                    value=["csz={0}".format(rcsize),
+                                    "sz={0}".format(rsize)])
                                 attrs = act.attrs
                                 for v in varcetkeys:
                                         attrs[v[0]] = v[1]
-                                yield "%s\n" % act
+                                yield "{0}\n".format(act)
 
                 if emit_sizes:
                         act = AttributeAction(None, name="pkg.sizes.common",
-                            value=["csz=%s" % csize, "sz=%s" % size])
-                        yield "%s\n" % act
+                            value=["csz={0}".format(csize),
+                            "sz={0}".format(size)])
+                        yield "{0}\n".format(act)
 
         def _actions_to_dict(self, references):
                 """create dictionary of all actions referenced explicitly or
@@ -668,7 +713,8 @@ class Manifest(object):
                 s = set([
                     a.attrs["path"]
                     for a in alist
-                    if not excludes or a.include_this(excludes)
+                    if not excludes or a.include_this(excludes,
+                        publisher=self.publisher)
                 ])
 
                 return list(s)
@@ -711,7 +757,7 @@ class Manifest(object):
                                         continue
 
                                 for f in misc.yield_matching("facet.", (
-                                    "facet.%s" % n
+                                    "facet.{0}".format(n)
                                     for n in val
                                 ), patterns):
                                         if f in seen:
@@ -771,7 +817,7 @@ class Manifest(object):
                                         found = True
                                         # Ensure variant entries exist (debug
                                         # variants may not) via defaultdict.
-                                        variants["variant.%s" % v]
+                                        variants["variant.{0}".format(v)]
                         elif aname[:8] == "variant.":
                                 for v in a.attrlist("value"):
                                         found = True
@@ -828,40 +874,58 @@ class Manifest(object):
                 for m in ret:
                         yield m, ret[m]
 
-        def gen_actions(self, excludes=EmptyI):
+        def gen_actions(self, attr_match=None, excludes=EmptyI):
                 """Generate actions in manifest through ordered callable list"""
 
                 if self.excludes == excludes:
                         excludes = EmptyI
                 assert excludes == EmptyI or self.excludes == EmptyI
+
+                if attr_match:
+                        attr_match = _compile_fnpats(attr_match)
+
+                pub = self.publisher
                 for a in self.actions:
                         for c in excludes:
-                                if not c(a):
+                                if not c(a, publisher=pub):
                                         break
                         else:
-                                yield a
+                                # These conditions are split by performance.
+                                if not attr_match:
+                                        yield a
+                                elif _attr_matches(a, attr_match):
+                                        yield a
 
-        def gen_actions_by_type(self, atype, excludes=EmptyI):
+        def gen_actions_by_type(self, atype, attr_match=None, excludes=EmptyI):
                 """Generate actions in the manifest of type "type"
                 through ordered callable list"""
 
                 if self.excludes == excludes:
                         excludes = EmptyI
                 assert excludes == EmptyI or self.excludes == EmptyI
+
+                if attr_match:
+                        attr_match = _compile_fnpats(attr_match)
+
+                pub = self.publisher
                 for a in self.actions_bytype.get(atype, []):
                         for c in excludes:
-                                if not c(a):
+                                if not c(a, publisher=pub):
                                         break
                         else:
-                                yield a
+                                # These conditions are split by performance.
+                                if not attr_match:
+                                        yield a
+                                elif _attr_matches(a, attr_match):
+                                        yield a
 
-        def gen_actions_by_types(self, atypes, excludes=EmptyI):
+        def gen_actions_by_types(self, atypes, attr_match=None, excludes=EmptyI):
                 """Generate actions in the manifest of types "atypes"
                 through ordered callable list."""
 
                 for atype in atypes:
                         for a in self.gen_actions_by_type(atype,
-                            excludes=excludes):
+                            attr_match=attr_match, excludes=excludes):
                                 yield a
 
         def gen_key_attribute_value_by_type(self, atype, excludes=EmptyI):
@@ -870,7 +934,7 @@ class Manifest(object):
 
                 return (
                     a.attrs.get(a.key_attr)
-                    for a in self.gen_actions_by_type(atype, excludes)
+                    for a in self.gen_actions_by_type(atype, excludes=excludes)
                 )
 
         def duplicates(self, excludes=EmptyI):
@@ -883,7 +947,7 @@ class Manifest(object):
                         return a.name, a.attrs.get(a.key_attr, id(a))
 
                 alldups = []
-                acts = [a for a in self.gen_actions(excludes)]
+                acts = [a for a in self.gen_actions(excludes=excludes)]
 
                 for k, g in groupby(sorted(acts, key=fun), fun):
                         glist = list(g)
@@ -920,7 +984,7 @@ class Manifest(object):
 
                         try:
                                 yield actions.fromstr(l)
-                        except actions.ActionError, e:
+                        except actions.ActionError as e:
                                 # Accumulate errors and continue so that as
                                 # much of the action data as possible can be
                                 # parsed.
@@ -971,7 +1035,7 @@ class Manifest(object):
                         try:
                                 with open(pathname, "rb") as mfile:
                                         content = mfile.read()
-                        except EnvironmentError, e:
+                        except EnvironmentError as e:
                                 raise apx._convert_error(e)
                 if isinstance(content, basestring):
                         if signatures:
@@ -988,8 +1052,9 @@ class Manifest(object):
                         self.add_action(action, excludes)
                 self.excludes = excludes
                 # Make sure that either no excludes were provided or that both
-                # variants and facet excludes were.
-                assert len(self.excludes) in (0, 2)
+                # variants and facet excludes were or that variant, facet and
+                # hydrate excludes were.
+                assert len(self.excludes) != 1
 
         def exclude_content(self, excludes):
                 """Remove any actions from the manifest which should be
@@ -1022,7 +1087,8 @@ class Manifest(object):
                         # Translate old action to new.
                         attrs["name"] = "publisher"
 
-                if excludes and not action.include_this(excludes):
+                if excludes and not action.include_this(excludes,
+                    publisher=self.publisher):
                         return
 
                 self.actions.append(action)
@@ -1071,7 +1137,7 @@ class Manifest(object):
 
                         seen = self.attributes.setdefault("pkg.facet", [])
                         for f in val:
-                                entry = "facet.%s" % f
+                                entry = "facet.{0}".format(f)
                                 if entry not in seen:
                                         # Prevent duplicates; it's possible a
                                         # given facet may be valid for more than
@@ -1086,7 +1152,7 @@ class Manifest(object):
                                 val = []
 
                         self.attributes[keyvalue] = [
-                            "variant.%s" % v
+                            "variant.{0}".format(v)
                             for v in val
                         ]
                         return
@@ -1117,11 +1183,11 @@ class Manifest(object):
 
                 try:
                         file_handle = file(file_path, "rb")
-                except EnvironmentError, e:
+                except EnvironmentError as e:
                         if e.errno != errno.ENOENT:
                                 raise
-                        log((_("%(fp)s:\n%(e)s") %
-                            { "fp": file_path, "e": e }))
+                        log((_("{fp}:\n{e}").format(
+                            fp=file_path, e=e)))
                         return {}
                 cur_pos = 0
                 line = file_handle.readline()
@@ -1166,31 +1232,30 @@ class Manifest(object):
                         if l and l[0] != "#":
                                 try:
                                         action = actions.fromstr(l)
-                                except actions.ActionError, e:
-                                        log((_("%(fp)s:\n%(e)s") %
-                                            { "fp": file_path, "e": e }))
+                                except actions.ActionError as e:
+                                        log((_("{fp}:\n{e}").format(
+                                            fp=file_path, e=e)))
                                 else:
                                         if not excludes or \
                                             action.include_this(excludes):
-                                                if action.attrs.has_key("path"):
+                                                if "path" in action.attrs:
                                                         np = action.attrs["path"].lstrip(os.path.sep)
                                                         action.attrs["path"] = \
                                                             np
                                                 try:
                                                         inds = action.generate_indices()
-                                                except KeyError, k:
-                                                        log(_("%(fp)s contains "
+                                                except KeyError as k:
+                                                        log(_("{fp} contains "
                                                             "an action which is"
                                                             " missing the "
                                                             "expected attribute"
-                                                            ": %(at)s.\nThe "
+                                                            ": {at}.\nThe "
                                                             "action is:"
-                                                            "%(act)s") %
-                                                            {
-                                                                "fp": file_path,
-                                                                "at": k.args[0],
-                                                                "act":l
-                                                            })
+                                                            "{act}").format(
+                                                                fp=file_path,
+                                                                at=k.args[0],
+                                                                act=l
+                                                           ))
                                                 else:
                                                         arg = cur_pos
                                                         if return_line:
@@ -1233,7 +1298,7 @@ class Manifest(object):
 
                 try:
                         os.makedirs(t_dir, mode=PKG_DIR_MODE)
-                except EnvironmentError, e:
+                except EnvironmentError as e:
                         if e.errno == errno.EACCES:
                                 raise apx.PermissionsException(e.filename)
                         if e.errno == errno.EROFS:
@@ -1244,7 +1309,7 @@ class Manifest(object):
 
                 try:
                         fd, fn = tempfile.mkstemp(dir=t_dir, prefix=t_prefix)
-                except EnvironmentError, e:
+                except EnvironmentError as e:
                         if e.errno == errno.EACCES:
                                 raise apx.PermissionsException(e.filename)
                         if e.errno == errno.EROFS:
@@ -1265,7 +1330,7 @@ class Manifest(object):
                 try:
                         os.chmod(fn, PKG_FILE_MODE)
                         portable.rename(fn, mfst_path)
-                except EnvironmentError, e:
+                except EnvironmentError as e:
                         if e.errno == errno.EACCES:
                                 raise apx.PermissionsException(e.filename)
                         if e.errno == errno.EROFS:
@@ -1304,8 +1369,8 @@ class Manifest(object):
                 elif ret == "false":
                         return False
                 else:
-                        raise ValueError(_("Attribute value '%s' not 'true' or "
-                            "'false'" % ret))
+                        raise ValueError(_("Attribute value '{0}' not 'true' or "
+                            "'false'".format(ret)))
 
         def get_size(self, excludes=EmptyI):
                 """Returns an integer tuple of the form (size, csize), where
@@ -1361,10 +1426,10 @@ class Manifest(object):
                             x for x in excludes
                             if x.__func__ != facet._allow_facet
                         ]
-                        # Excludes list must always have zero or two items; so
+                        # Excludes list must always have zero or 2+ items; so
                         # fake second entry.
-                        nexcludes.append(lambda x: True)
-                        assert len(nexcludes) == 2
+                        nexcludes.append(lambda x, publisher: True)
+                        assert len(nexcludes) > 1
 
                 for action in self.gen_actions():
                         # append any variants and facets to manifest dict
@@ -1379,7 +1444,7 @@ class Manifest(object):
                                         d[v].add(attrs[v])
 
                                 if not excludes or action.include_this(
-                                    nexcludes):
+                                    nexcludes, publisher=self.publisher):
                                         # While variants are package level (you
                                         # can't install a package without
                                         # setting the variant first), facets
@@ -1391,11 +1456,11 @@ class Manifest(object):
                         except TypeError:
                                 # Lists can't be set elements.
                                 raise actions.InvalidActionError(action,
-                                    _("%(forv)s '%(v)s' specified multiple times") %
-                                    {"forv": v.split(".", 1)[0], "v": v})
+                                    _("{forv} '{v}' specified multiple times").format(
+                                    forv=v.split(".", 1)[0], v=v))
 
                 return (variants, facets)
-                
+
         def __getitem__(self, key):
                 """Return the value for the package attribute 'key'."""
                 return self.attributes[key]
@@ -1455,15 +1520,15 @@ class FactoredManifest(Manifest):
                 Manifest.__init__(self, fmri)
                 self.__cache_root = cache_root
                 self.__pathname = pathname
-                # Make sure that either no excludes were provided or that both
-                # variants and facet excludes were.
-                assert len(excludes) in (0, 2)
+                # Make sure that either no excludes were provided or 2+ excludes
+                # were.
+                assert len(self.excludes) != 1
                 self.loaded = False
 
                 # Do we have a cached copy?
                 if not os.path.exists(self.pathname):
                         if contents is None:
-                                raise KeyError, fmri
+                                raise KeyError(fmri)
                         # we have no cached copy; save one
                         # don't specify excludes so on-disk copy has
                         # all variants
@@ -1542,18 +1607,18 @@ class FactoredManifest(Manifest):
                 # type exists for the package (avoids full manifest loads
                 # later).
                 for n, acts in self.actions_bytype.iteritems():
-                        t_prefix = "manifest.%s." % n
+                        t_prefix = "manifest.{0}.".format(n)
 
                         try:
                                 fd, fn = tempfile.mkstemp(dir=t_dir,
                                     prefix=t_prefix)
-                        except EnvironmentError, e:
+                        except EnvironmentError as e:
                                 raise apx._convert_error(e)
 
                         f = os.fdopen(fd, "wb")
                         try:
                                 for a in acts:
-                                        f.write("%s\n" % a)
+                                        f.write("{0}\n".format(a))
                                 if n == "set":
                                         # Add supplemental action data; yes this
                                         # does mean the cache is not the same as
@@ -1561,7 +1626,7 @@ class FactoredManifest(Manifest):
                                         # Signature verification is done using
                                         # the raw manifest.
                                         f.writelines(self._gen_attrs_to_str())
-                        except EnvironmentError, e:
+                        except EnvironmentError as e:
                                 raise apx._convert_error(e)
                         finally:
                                 f.close()
@@ -1569,8 +1634,8 @@ class FactoredManifest(Manifest):
                         try:
                                 os.chmod(fn, PKG_FILE_MODE)
                                 portable.rename(fn,
-                                    self.__cache_path("manifest.%s" % n))
-                        except EnvironmentError, e:
+                                    self.__cache_path("manifest.{0}".format(n)))
+                        except EnvironmentError as e:
                                 raise apx._convert_error(e)
 
                 def create_cache(name, refs):
@@ -1581,7 +1646,7 @@ class FactoredManifest(Manifest):
                                         f.writelines(refs())
                                 os.chmod(fn, PKG_FILE_MODE)
                                 portable.rename(fn, self.__cache_path(name))
-                        except EnvironmentError, e:
+                        except EnvironmentError as e:
                                 raise apx._convert_error(e)
 
                 create_cache("manifest.dircache", self._gen_dirs_to_str)
@@ -1591,7 +1656,8 @@ class FactoredManifest(Manifest):
         @staticmethod
         def clear_cache(cache_root):
                 """Remove all manifest cache files found in the given directory
-                (excluding the manifest itself).
+                (excluding the manifest itself) and the cache_root if it is
+                empty afterwards.
                 """
 
                 try:
@@ -1601,10 +1667,17 @@ class FactoredManifest(Manifest):
                                 try:
                                         portable.remove(os.path.join(
                                             cache_root, cname))
-                                except EnvironmentError, e:
+                                except EnvironmentError as e:
                                         if e.errno != errno.ENOENT:
                                                 raise
-                except EnvironmentError, e:
+
+                        # Ensure cache dir is removed if the last cache file is
+                        # removed; we don't care if it fails.
+                        try:
+                                os.rmdir(cache_root)
+                        except:
+                                pass
+                except EnvironmentError as e:
                         if e.errno != errno.ENOENT:
                                 # Only raise error if failure wasn't due to
                                 # cache directory not existing.
@@ -1627,19 +1700,20 @@ class FactoredManifest(Manifest):
                                                 for s in f
                                             )
                                             if not self.excludes or
-                                                a.include_this(self.excludes)
+                                                a.include_this(self.excludes,
+                                                    publisher=self.publisher)
                                         ]
                                 return
-                        except EnvironmentError, e:
+                        except EnvironmentError as e:
                                 raise apx._convert_error(e)
-                        except actions.ActionError, e:
+                        except actions.ActionError as e:
                                 # Cache file is malformed; hopefully due to bugs
                                 # that have been resolved (as opposed to actual
                                 # corruption).  Assume we should just ignore the
                                 # cache and load action data.
                                 try:
                                         self.clear_cache(self.__cache_root)
-                                except Exception, e:
+                                except Exception as e:
                                         # Ignore errors encountered during cache
                                         # dump for this specific case.
                                         pass
@@ -1657,7 +1731,7 @@ class FactoredManifest(Manifest):
                 self.__load_cached_data("manifest.dircache")
                 return Manifest.get_directories(self, excludes)
 
-        def gen_actions_by_type(self, atype, excludes=EmptyI):
+        def gen_actions_by_type(self, atype, attr_match=None, excludes=EmptyI):
                 """ generate actions of the specified type;
                 use already in-memory stuff if already loaded,
                 otherwise use per-action types files"""
@@ -1665,7 +1739,7 @@ class FactoredManifest(Manifest):
                 if self.loaded: #if already loaded, use in-memory cached version
                         # invoke subclass method to generate action by action
                         for a in Manifest.gen_actions_by_type(self, atype,
-                            excludes):
+                            attr_match=attr_match, excludes=excludes):
                                 yield a
                         return
 
@@ -1681,7 +1755,7 @@ class FactoredManifest(Manifest):
                                 self.__load()
                         # invoke subclass method to generate action by action
                         for a in Manifest.gen_actions_by_type(self, atype,
-                            excludes):
+                            attr_match=attr_match, excludes=excludes):
                                 yield a
                         return
 
@@ -1697,16 +1771,27 @@ class FactoredManifest(Manifest):
 
                 # Assume a cached copy exists; if not, tag the action type to
                 # avoid pointless I/O later.
-                mpath = self.__cache_path("manifest.%s" % atype)
+                mpath = self.__cache_path("manifest.{0}".format(atype))
+
+                if attr_match:
+                        attr_match = _compile_fnpats(attr_match)
 
                 try:
                         with open(mpath, "rb") as f:
                                 for l in f:
                                         a = actions.fromstr(l.rstrip())
-                                        if not excludes or \
-                                            a.include_this(excludes):
+                                        if (excludes and
+                                            not a.include_this(excludes,
+                                                publisher=self.publisher)):
+                                                continue
+                                        # These conditions are split by
+                                        # performance.
+                                        if not attr_match:
                                                 yield a
-                except EnvironmentError, e:
+                                        elif _attr_matches(a, attr_match):
+                                                yield a
+
+                except EnvironmentError as e:
                         if e.errno == errno.ENOENT:
                                 self._absent_cache.append(atype)
                                 return # no such action in this manifest
@@ -1755,7 +1840,8 @@ class FactoredManifest(Manifest):
                         for l in f:
                                 a = actions.fromstr(l.rstrip())
                                 if not self.excludes or \
-                                    a.include_this(self.excludes):
+                                    a.include_this(self.excludes,
+                                        publisher=self.publisher):
                                         self.fill_attributes(a)
 
                 return True
@@ -1807,10 +1893,11 @@ class FactoredManifest(Manifest):
                 return Manifest.search_dict(cache_path, excludes,
                     return_line=return_line)
 
-        def gen_actions(self, excludes=EmptyI):
+        def gen_actions(self, attr_match=None, excludes=EmptyI):
                 if not self.loaded:
                         self.__load()
-                return Manifest.gen_actions(self, excludes=excludes)
+                return Manifest.gen_actions(self, attr_match=attr_match,
+                    excludes=excludes)
 
         def __str__(self, excludes=EmptyI):
                 if not self.loaded:
@@ -1867,7 +1954,8 @@ class EmptyFactoredManifest(Manifest):
                 # origin has been removed.  This is an optimization for
                 # uninstall.
                 return ManifestDifference([], [],
-                    [(a, None) for a in origin.gen_actions(origin_exclude)])
+                    [(a, None) for a in origin.gen_actions(excludes=
+                    origin_exclude)])
 
         @staticmethod
         def get_directories(excludes):
@@ -1893,7 +1981,7 @@ class ManifestError(Exception):
         def __str__(self):
                 ret = []
                 for d in self.__duplicates:
-                        ret.append("%s\n%s\n\n" % d)
+                        ret.append("{0}\n{1}\n\n".format(*d))
 
                 return "\n".join(ret)
 

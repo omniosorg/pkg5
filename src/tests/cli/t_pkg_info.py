@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.7
 #
 # CDDL HEADER START
 #
@@ -20,17 +20,19 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
 
 import testutils
 if __name__ == "__main__":
         testutils.setup_environment("../../../proto")
 import pkg5unittest
 
+import json
 import os
 import shutil
 import unittest
 
+import pkg.catalog as catalog
 import pkg.actions as actions
 import pkg.fmri as fmri
 
@@ -182,6 +184,47 @@ class TestPkgInfoBasics(pkg5unittest.SingleDepotTestCase):
                 self.pkg("install jade")
                 self.pkg("verify -v")
 
+                # Now remove the manifest and manifest cache for jade and retry
+                # the info for an unprivileged user both local and remote.
+                pfmri = fmri.PkgFmri(plist[0])
+                mdir = os.path.dirname(self.get_img_manifest_path(pfmri))
+                shutil.rmtree(mdir)
+                self.assertFalse(os.path.exists(mdir))
+
+                mcdir = self.get_img_manifest_cache_dir(pfmri)
+                shutil.rmtree(mcdir)
+                self.assertFalse(os.path.exists(mcdir))
+
+                # A remote request should work even though local manifest is gone.
+                self.pkg("info -r jade", su_wrap=True)
+
+                # A local request should succeed even though manifest is missing
+                # since we can still retrieve it from the publisher repository.
+                self.pkg("info jade", su_wrap=True)
+
+                # Remove the publisher, and verify a remote or local request
+                # fails since the manifest isn't cached within the image and we
+                # can't retrieve it.
+                self.pkg("unset-publisher test")
+                self.pkg("info -r jade", su_wrap=True, exit=1)
+                self.assert_("no errors" not in self.errout, self.errout)
+                self.assert_("Unknown" not in self.errout, self.errout)
+
+                self.pkg("info jade", su_wrap=True, exit=1)
+                self.assert_("no errors" not in self.errout, self.errout)
+                self.assert_("Unknown" not in self.errout, self.errout)
+
+                self.pkg("set-publisher test")
+                self.pkg("info -r jade", su_wrap=True, exit=1)
+                self.assert_("no errors" not in self.errout, self.errout)
+                self.assert_("Unknown" not in self.errout, self.errout)
+
+                self.pkg("info jade", su_wrap=True, exit=1)
+                self.assert_("no errors" not in self.errout, self.errout)
+                self.assert_("Unknown" not in self.errout, self.errout)
+
+                self.pkg("set-publisher -p {0} test".format(self.durl))
+
                 # Check local info
                 self.pkg("info jade | grep 'State: Installed'")
                 self.pkg("info jade | grep '      Category: Applications/Sound and Video'")
@@ -210,28 +253,33 @@ class TestPkgInfoBasics(pkg5unittest.SingleDepotTestCase):
                 self.__check_qoutput(errout=False)
                 self.pkg("info -r turquoise")
 
-                # Now remove the manifest for turquoise and retry the info -r
-                # for an unprivileged user.
-                mdir = os.path.dirname(self.get_img_manifest_path(
-                    fmri.PkgFmri(plist[1])))
+                # Now remove the manifest and manifest cache for turquoise and
+                # retry the info -r for an unprivileged user.
+                pfmri = fmri.PkgFmri(plist[1])
+                mdir = os.path.dirname(self.get_img_manifest_path(pfmri))
                 shutil.rmtree(mdir)
                 self.assertFalse(os.path.exists(mdir))
+
+                mcdir = self.get_img_manifest_cache_dir(pfmri)
+                shutil.rmtree(mcdir)
+                self.assertFalse(os.path.exists(mcdir))
+
                 self.pkg("info -r turquoise", su_wrap=True)
 
                 # Verify output.
                 lines = self.output.split("\n")
-                self.assertEqual(lines[2], "   Description: Short desc")
-                self.assertEqual(lines[3],
+                self.assertEqual(lines[1], "   Description: Short desc")
+                self.assertEqual(lines[2],
                     "      Category: System/Security/Foo/bar/Baz")
                 self.pkg("info -r copper")
                 lines = self.output.split("\n")
-                self.assertEqual(lines[2],
+                self.assertEqual(lines[1],
                    "   Description: This package constrains package versions to those for build 123.")
 
-                self.assertEqual(lines[3], "                WARNING: Proper system update and correct package selection")
-                self.assertEqual(lines[4], "                depend on the presence of this incorporation.  Removing this")
-                self.assertEqual(lines[5], "                package will result in an unsupported system.")
-                self.assertEqual(lines[6], "         State: Not installed")
+                self.assertEqual(lines[2], "                WARNING: Proper system update and correct package selection")
+                self.assertEqual(lines[3], "                depend on the presence of this incorporation.  Removing this")
+                self.assertEqual(lines[4], "                package will result in an unsupported system.")
+                self.assertEqual(lines[5], "         State: Not installed")
                 # Should only print fatal errors when using -q.
                 self.pkg("info -qr turquoise")
                 self.__check_qoutput(errout=False)
@@ -285,6 +333,68 @@ class TestPkgInfoBasics(pkg5unittest.SingleDepotTestCase):
 
                 self.pkg("info --license silver 2>&1 | grep 'no license information'")
 
+        def test_info_attribute(self):
+                """Verify that 'pkg info' handles optional attributes as expected."""
+
+                pkg1 = """
+                    open jade@1.0,5.11-0
+                    add dir mode=0755 owner=root group=bin path=/bin
+                    add set name=info.classification value="org.opensolaris.category.2008:Applications/Sound and Video"
+                    add set name=info.maintainer value="Bob Smith <bob.smith@example.com>" value="allen knight <allen.knight@example.com>" value="Anna Kour <Anna.Kour@example.com"
+                    add set name=info.upstream value="Gisle Aas"
+                    add set name=info.source-url value=http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/URI-1.37.tar.gz
+                    add set name=info.maintainer-url value=""
+                    close
+                """
+
+                pkg2 = """
+                    open turquoise@1.0,5.11-0
+                    add dir mode=0755 owner=root group=bin path=/bin
+                    add set name=info.classification value=org.opensolaris.category.2008:System/Security/Foo/bar/Baz
+                    add set pkg.description="Short desc"
+                    close
+                """
+                pkg3 = """
+                    open copper@1.0,5.11-0
+                    add dir mode=0755 owner=root group=bin path=/bin
+                    add set pkg.description="This package constrains package versions to those for build 123.  WARNING: Proper system update and correct packagsudo ../run.py -dvo test_info_local_remote selection depend on the presence of this incorporation.  Removing this package will result in an unsupported system."
+                    add set name=opensolaris.gui.classification value=freedesktop.org:System
+                    add set name=info.maintainer-url value="abc"
+                    close
+                """
+
+                plist = self.pkgsend_bulk(self.rurl, (pkg1,pkg2,pkg3))
+                self.image_create(self.rurl)
+
+                # Install packages and verify
+                self.pkg("install jade")
+                self.pkg("install turquoise")
+                self.pkg("install copper")
+                self.pkg("verify -v")
+ 
+                # grep for some attributes that are defined and they have
+                # single values
+                self.pkg("info jade")
+                self.assert_("Category" in self.output) 
+                
+                # grep for some attributes that are defined and they have
+                # multiple values
+                self.pkg("info jade")
+                self.assert_("Project Maintainer" in self.output) 
+
+                # grep for some attributes that are defined , with no value
+                self.pkg("info jade")
+                self.assert_("Project Maintainer URL" not in self.output) 
+                   
+                # grep for same attributes that are defined above in different
+                # packages, with some value 
+                self.pkg("info copper")
+                self.assert_("Project Maintainer URL" in self.output) 
+
+                # grep for attributes that are not defined
+                self.pkg("info jade")
+                self.assert_("info.foo" not in self.output) 
+
         def test_info_bad_packages(self):
                 """Verify that pkg info handles packages with invalid
                 metadata."""
@@ -296,12 +406,12 @@ class TestPkgInfoBasics(pkg5unittest.SingleDepotTestCase):
                 plist = self.plist[:2]
 
                 # This should succeed and cause the manifests to be cached.
-                self.pkg("info -r %s" % " ".join(p for p in plist))
+                self.pkg("info -r {0}".format(" ".join(p for p in plist)))
 
                 # Now attempt to corrupt the client's copy of the manifest by
                 # adding malformed actions.
                 for p in plist:
-                        self.debug("Testing package %s ..." % p)
+                        self.debug("Testing package {0} ...".format(p))
                         pfmri = fmri.PkgFmri(p)
                         mdata = self.get_img_manifest(pfmri)
                         if mdata.find("dir") != -1:
@@ -313,10 +423,10 @@ class TestPkgInfoBasics(pkg5unittest.SingleDepotTestCase):
                             'set name=description value="" \" my desc \" ""',
                             "set name=com.sun.service.escalations value="):
                                 self.debug("Testing with bad action "
-                                    "'%s'." % bad_act)
-                                bad_mdata = mdata + "%s\n" % bad_act
+                                    "'{0}'.".format(bad_act))
+                                bad_mdata = mdata + "{0}\n".format(bad_act)
                                 self.write_img_manifest(pfmri, bad_mdata)
-                                self.pkg("info -r %s" % pfmri.pkg_name, exit=0)
+                                self.pkg("info -r {0}".format(pfmri.pkg_name), exit=0)
 
         def test_human_version(self):
                 """Verify that info returns the expected output for packages
@@ -343,20 +453,20 @@ class TestPkgInfoBasics(pkg5unittest.SingleDepotTestCase):
                 # Create an isolated repository for this test
                 repodir = os.path.join(self.test_root, "test-ranked")
                 self.create_repo(repodir)
-                self.pkgrepo("add-publisher -s %s test" % repodir)
+                self.pkgrepo("add-publisher -s {0} test".format(repodir))
                 self.pkgsend_bulk(repodir, (self.bronze10, self.human))
 
-                self.pkgrepo("add-publisher -s %s test2" % repodir)
-                self.pkgrepo("set -s %s publisher/prefix=test2" % repodir)
+                self.pkgrepo("add-publisher -s {0} test2".format(repodir))
+                self.pkgrepo("set -s {0} publisher/prefix=test2".format(repodir))
                 self.pkgsend_bulk(repodir, self.bronze10)
 
-                self.pkgrepo("add-publisher -s %s test3" % repodir)
-                self.pkgrepo("set -s %s publisher/prefix=test3" % repodir)
+                self.pkgrepo("add-publisher -s {0} test3".format(repodir))
+                self.pkgrepo("set -s {0} publisher/prefix=test3".format(repodir))
                 self.pkgsend_bulk(repodir, self.bronze10)
 
                 # Create a test image.
                 self.image_create()
-                self.pkg("set-publisher -p %s" % repodir)
+                self.pkg("set-publisher -p {0}".format(repodir))
 
                 # Test should be higher ranked than test2 since the default
                 # for auto-configuration is to use lexical order when
@@ -365,7 +475,6 @@ class TestPkgInfoBasics(pkg5unittest.SingleDepotTestCase):
                 self.pkg("info -r bronze human")
                 expected = """\
  Name: bronze
- Summary: 
  State: Not installed
  Publisher: test
  Version: 1.0
@@ -375,7 +484,6 @@ Packaging Date: Thu Sep 08 00:45:46 2011
  FMRI: pkg://test/bronze@1.0-0:20110908T004546Z
 
  Name: human
- Summary: 
  State: Not installed
  Publisher: test
  Version: 0.9.8.18 (0.9.8r)
@@ -391,7 +499,6 @@ Packaging Date: Thu Sep 08 00:45:46 2011
                 self.pkg("info -r //test2/bronze")
                 expected = """\
  Name: bronze
- Summary: 
  State: Not installed
  Publisher: test2
  Version: 1.0
@@ -408,7 +515,6 @@ Packaging Date: Thu Sep 08 00:45:46 2011
                 self.pkg("info -r //test/bronze bronze")
                 expected = """\
  Name: bronze
- Summary: 
  State: Not installed
  Publisher: test
  Version: 1.0
@@ -422,7 +528,6 @@ Packaging Date: Thu Sep 08 00:45:46 2011
                 self.pkg("info -r //test2/bronze bronze")
                 expected = """\
  Name: bronze
- Summary: 
  State: Not installed
  Publisher: test
  Version: 1.0
@@ -432,7 +537,6 @@ Packaging Date: Thu Sep 08 00:45:46 2011
  FMRI: pkg://test/bronze@1.0-0:20110908T004546Z
 
  Name: bronze
- Summary: 
  State: Not installed
  Publisher: test2
  Version: 1.0
@@ -446,7 +550,6 @@ Packaging Date: Thu Sep 08 00:45:46 2011
                 self.pkg("info -r //test3/bronze //test2/bronze bronze")
                 expected = """\
  Name: bronze
- Summary: 
  State: Not installed
  Publisher: test
  Version: 1.0
@@ -456,7 +559,6 @@ Packaging Date: Thu Sep 08 00:45:46 2011
  FMRI: pkg://test/bronze@1.0-0:20110908T004546Z
 
  Name: bronze
- Summary: 
  State: Not installed
  Publisher: test2
  Version: 1.0
@@ -466,7 +568,6 @@ Packaging Date: Thu Sep 08 00:45:46 2011
  FMRI: pkg://test2/bronze@1.0-0:20110908T004546Z
 
  Name: bronze
- Summary: 
  State: Not installed
  Publisher: test3
  Version: 1.0
@@ -543,16 +644,15 @@ Packaging Date: Thu Sep 08 00:45:46 2011
                 pkg_date = pfmri.version.get_timestamp().strftime("%c")
                 expected = """\
           Name: ren_correct
-       Summary: 
          State: Not installed (Renamed)
     Renamed to: target@1.0
      Publisher: test
        Version: 1.0
         Branch: None
-Packaging Date: %(pkg_date)s
+Packaging Date: {pkg_date}
           Size: 0.00 B
-          FMRI: %(pkg_fmri)s
-""" % { "pkg_date": pkg_date, "pkg_fmri": pfmri.get_fmri(include_build=False) }
+          FMRI: {pkg_fmri}
+""".format(pkg_date=pkg_date, pkg_fmri=pfmri.get_fmri(include_build=False))
                 self.assertEqualDiff(expected, actual)
 
                 # Next, verify that a renamed package (for a variant not
@@ -566,15 +666,14 @@ Packaging Date: %(pkg_date)s
                 pkg_date = pfmri.version.get_timestamp().strftime("%c")
                 expected = """\
           Name: ren_op_variant
-       Summary: 
          State: Not installed
      Publisher: test
        Version: 1.0
         Branch: None
-Packaging Date: %(pkg_date)s
+Packaging Date: {pkg_date}
           Size: 0.00 B
-          FMRI: %(pkg_fmri)s
-""" % { "pkg_date": pkg_date, "pkg_fmri": pfmri.get_fmri(include_build=False) }
+          FMRI: {pkg_fmri}
+""".format(pkg_date=pkg_date, pkg_fmri=pfmri.get_fmri(include_build=False))
                 self.assertEqualDiff(expected, actual)
 
                 # Next, verify that a renamed package (for a variant applicable
@@ -586,16 +685,14 @@ Packaging Date: %(pkg_date)s
                 pkg_date = pfmri.version.get_timestamp().strftime("%c")
                 expected = """\
           Name: ren_variant_missing
-       Summary: 
          State: Not installed (Renamed)
-    Renamed to: 
      Publisher: test
        Version: 1.0
         Branch: None
-Packaging Date: %(pkg_date)s
+Packaging Date: {pkg_date}
           Size: 0.00 B
-          FMRI: %(pkg_fmri)s
-""" % { "pkg_date": pkg_date, "pkg_fmri": pfmri.get_fmri(include_build=False) }
+          FMRI: {pkg_fmri}
+""".format(pkg_date=pkg_date, pkg_fmri=pfmri.get_fmri(include_build=False))
                 self.assertEqualDiff(expected, actual)
 
 
@@ -608,16 +705,14 @@ Packaging Date: %(pkg_date)s
                 pkg_date = pfmri.version.get_timestamp().strftime("%c")
                 expected = """\
           Name: ren_partial_variant
-       Summary: 
          State: Not installed (Renamed)
-    Renamed to: 
      Publisher: test
        Version: 1.0
         Branch: None
-Packaging Date: %(pkg_date)s
+Packaging Date: {pkg_date}
           Size: 0.00 B
-          FMRI: %(pkg_fmri)s
-""" % { "pkg_date": pkg_date, "pkg_fmri": pfmri.get_fmri(include_build=False) }
+          FMRI: {pkg_fmri}
+""".format(pkg_date=pkg_date, pkg_fmri=pfmri.get_fmri(include_build=False))
                 self.assertEqualDiff(expected, actual)
 
         def test_appropriate_license_files(self):
@@ -633,7 +728,7 @@ Packaging Date: %(pkg_date)s
                 self.pkg("install --licenses bronze@0.5")
                 self.assert_("tmp/copyright0" in self.output, "Expected "
                     "tmp/copyright0 to be in the output of the install. Output "
-                    "was:\n%s" % self.output)
+                    "was:\n{0}".format(self.output))
                 self.pkg("info -l --license bronze")
                 self.assertEqual("tmp/copyright0\n", self.output)
                 self.pkg("info -r --license bronze")
@@ -644,13 +739,41 @@ Packaging Date: %(pkg_date)s
                 self.pkg("update --licenses bronze@1.0")
                 self.assert_("tmp/copyright1" in self.output, "Expected "
                     "tmp/copyright1 to be in the output of the install. Output "
-                    "was:\n%s" % self.output)
+                    "was:\n{0}".format(self.output))
                 self.pkg("info -r --license bronze")
                 self.assertEqual("tmp/copyright1\n", self.output)
                 self.pkg("info -l --license bronze")
                 self.assertEqual("tmp/copyright1\n", self.output)
                 self.pkg("info -r --license bronze@0.5")
                 self.assertEqual("tmp/copyright0\n", self.output)
+
+        def test_info_update_install(self):
+                """Test that pkg info will show last update and install time"""
+
+                os.environ["LC_ALL"] = "C"
+                self.image_create(self.rurl)
+                self.pkg("install bronze@0.5")
+                path = os.path.join(self.img_path(),
+                    "var/pkg/state/installed/catalog.base.C")
+                entry = json.load(open(path))["test"]["bronze"][0]["metadata"]
+                last_install = catalog.basic_ts_to_datetime(
+                    entry["last-install"]).strftime("%c")
+                self.pkg(("info bronze | grep 'Last Install Time: "
+                    "{0}'").format(last_install))
+
+                # Now update the version.
+                self.pkg("install bronze@1.0")
+                entry = json.load(open(path))["test"]["bronze"][0]["metadata"]
+                last_install = catalog.basic_ts_to_datetime(
+                    entry["last-install"]).strftime("%c")
+                self.pkg(("info bronze | grep 'Last Install Time: "
+                    "{0}'").format(last_install))
+
+                # Last update should be existed this time.
+                last_update = catalog.basic_ts_to_datetime(
+                    entry["last-update"]).strftime("%c")
+                self.pkg(("info bronze | grep 'Last Update Time: "
+                    "{0}'").format(last_update))
 
 
 class TestPkgInfoPerTestRepo(pkg5unittest.SingleDepotTestCase):
@@ -696,13 +819,13 @@ class TestPkgInfoPerTestRepo(pkg5unittest.SingleDepotTestCase):
                                 fh.write(l)
                         self.assert_(a)
                         l = """\
-license %(hash)s license=foo chash=%(chash)s pkg.csize=%(csize)s \
-pkg.size=%(size)s""" % {
-    "hash":a.hash,
-    "chash":a.attrs["chash"],
-    "csize":a.attrs["pkg.csize"],
-    "size":a.attrs["pkg.size"]
-}
+license {hash} license=foo chash={chash} pkg.csize={csize} \
+pkg.size={size}""".format(
+    hash=a.hash,
+    chash=a.attrs["chash"],
+    csize=a.attrs["pkg.csize"],
+    size=a.attrs["pkg.size"]
+)
                         fh.write(l)
                 repo.rebuild()
 

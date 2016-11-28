@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.7
 #
 # CDDL HEADER START
 #
@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2007, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 """module describing a (hard) link packaging object
@@ -67,11 +67,8 @@ class HardLinkAction(link.LinkAction):
         def install(self, pkgplan, orig):
                 """Client-side method that installs a hard link."""
 
-                path = self.attrs["path"]
                 target = self.get_target_path()
-
-                path = os.path.normpath(os.path.sep.join(
-                    (pkgplan.image.get_root(), path)))
+                path = self.get_installed_path(pkgplan.image.get_root())
 
                 # Don't allow installation through symlinks.
                 self.fsobj_checkpath(pkgplan, path)
@@ -88,7 +85,7 @@ class HardLinkAction(link.LinkAction):
 
                 try:
                         os.link(fulltarget, path)
-                except EnvironmentError, e:
+                except EnvironmentError as e:
                         if e.errno != errno.ENOENT:
                                 raise ActionExecutionError(self, error=e)
 
@@ -96,9 +93,9 @@ class HardLinkAction(link.LinkAction):
                         # hardlink, a package hasn't declared correct
                         # dependencies, or the target hasn't been installed
                         # yet.
-                        err_txt = _("Unable to create hard link %(path)s; "
-                            "target %(target)s is missing.") % {
-                            "path": path, "target": fulltarget }
+                        err_txt = _("Unable to create hard link {path}; "
+                            "target {target} is missing.").format(
+                            path=path, target=fulltarget)
                         raise ActionExecutionError(self, details=err_txt,
                             error=e, fmri=pkgplan.destination_fmri)
 
@@ -118,14 +115,13 @@ class HardLinkAction(link.LinkAction):
                         return errors, warnings, info
 
                 target = self.get_target_path()
-                path = os.path.normpath(os.path.sep.join(
-                    (img.get_root(), self.attrs["path"])))
+                path = self.get_installed_path(img.get_root())
                 target = os.path.normpath(os.path.sep.join(
                     (img.get_root(), target)))
 
                 if not os.path.exists(target):
-                        errors.append(_("Target '%s' does not exist") %
-                            self.attrs["target"])
+                        errors.append(_("Target '{0}' does not exist").format(
+                            self.attrs["target"]))
 
                 # No point in continuing if no target
                 if errors:
@@ -133,10 +129,10 @@ class HardLinkAction(link.LinkAction):
 
                 try:
                         if os.stat(path).st_ino != os.stat(target).st_ino:
-                                errors.append(_("Broken: Path and Target (%s) "
-                                    "inodes not the same") %
-                                    self.get_target_path())
-                except OSError, e:
-                        errors.append(_("Unexpected Error: %s") % e)
+                                errors.append(_("Broken: Path and Target ({0}) "
+                                    "inodes not the same").format(
+                                    self.get_target_path()))
+                except OSError as e:
+                        errors.append(_("Unexpected Error: {0}").format(e))
 
                 return errors, warnings, info

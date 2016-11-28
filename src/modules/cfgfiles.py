@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.7
 #
 # CDDL HEADER START
 #
@@ -21,12 +21,13 @@
 #
 
 #
-# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 # NOTE: This module is inherently posix specific.  Care is taken in the modules
 # that use this module to not use it on other operating systems.
 
+from __future__ import print_function
 import datetime
 import errno
 import os
@@ -68,8 +69,8 @@ class CfgFile(object):
         assert(set(self.column_names) >= set(self.keys))
 
     def __str__(self):
-        return "CfgFile(%s):%s:%s:%s" % \
-            (self.filename, self.keys, self.column_names, self.index)
+        return "CfgFile({0}):{1}:{2}:{3}".format(
+            self.filename, self.keys, self.column_names, self.index)
 
     def getcolumnnames(self):
         return self.column_names
@@ -145,9 +146,9 @@ class CfgFile(object):
         for field in self.column_names:
             if field not in template:
                 if self.default_values[field] is None:
-                    raise RuntimeError, \
-                        "Required attribute %s is missing" % field
-                elif callable(self.default_values[field]):
+                    raise RuntimeError(
+                        "Required attribute {0} is missing".format(field))
+                elif hasattr(self.default_values[field], "__call__"):
                     template[field] = self.default_values[field]()
                 else:
                     template[field] = self.default_values[field]
@@ -172,10 +173,10 @@ class CfgFile(object):
 
     def valuetostr(self, template):
         """ print out values in file format """
-        return("%s" % self.separator.join(
+        return("{0}".format(self.separator.join(
             [
-                "%s" % template[key] for key in self.column_names
-                ]))
+                "{0}".format(template[key]) for key in self.column_names
+            ])))
 
     def writefile(self):
 
@@ -192,7 +193,7 @@ class CfgFile(object):
         os.chown(name, st.st_uid, st.st_gid)
 
         for l in self.getfilelines():
-            print >>file, l
+            print(l, file=file)
 
         file.close()
 
@@ -238,7 +239,8 @@ class PasswordFile(CfgFile):
         self.password_file.default_values["uid"] = self.getnextuid()
 
     def __str__(self):
-        return "PasswordFile: [%s %s]" % (self.password_file, self.shadow_file)
+        return "PasswordFile: [{0} {1}]".format(self.password_file,
+            self.shadow_file)
 
     def getvalue(self, template):
         """ merge dbs... do passwd file first to get right passwd value"""
@@ -274,7 +276,7 @@ class PasswordFile(CfgFile):
         for i in range(100):
             if str(i) not in uids:
                 return i
-        raise RuntimeError, "No free system uids"
+        raise RuntimeError("No free system uids")
 
     def getcolumnnames(self):
         names = self.password_file.column_names.copy()
@@ -328,7 +330,7 @@ class GroupFile(CfgFile):
         for i in range(100):
             if str(i) not in gids:
                 return i
-        raise RuntimeError, "No free system gids"
+        raise RuntimeError("No free system gids")
 
     def adduser(self, groupname, username):
         """"add named user to group; does not check if user exists"""
@@ -351,11 +353,11 @@ class GroupFile(CfgFile):
         """ remove named user from group """
         group = self.getvalue({"groupname": groupname})
         if not group:
-            raise RuntimeError, "subuser: No such group %s" % groupname
+            raise RuntimeError("subuser: No such group {0}".format(groupname))
         users = set(group["user-list"].replace(","," ").split())
         if username not in users:
-            raise RuntimeError, "User %s not in group %s" % (
-                username, groupname)
+            raise RuntimeError("User {0} not in group {1}".format(
+                username, groupname))
         users.remove(username)
         group["user-list"] = ",".join(users)
         self.setvalue(group)
@@ -364,7 +366,7 @@ class GroupFile(CfgFile):
         """ return list of additional groups user belongs to """
         return sorted([
                 t[1]["groupname"]
-                for t in self.index.values()                
+                for t in self.index.values()
                 if t[1] is not None and username in t[1]["user-list"].split(",")
                 ])
 
@@ -460,10 +462,11 @@ class UserattrFile(CfgFile):
         c = template.copy() # since we're mucking w/ this....
         attrdict = c["attributes"]
 
-        str = "%s" % ";".join(
+        str = "{0}".format(";".join(
             [
-                "%s=%s" % (key, ",".join(attrdict[key])) for key in attrdict
-                ])
+                "{0}={1}".format(key, ",".join(attrdict[key]))
+                for key in attrdict
+                ]))
         c["attributes"] = str
         return CfgFile.valuetostr(self, c)
 

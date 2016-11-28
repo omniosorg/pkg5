@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.7
 #
 # CDDL HEADER START
 #
@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 import errno
@@ -53,6 +53,7 @@ from pkg.client.transport.exception import TransportFailures
 # should use the constants defined here.
 
 BE_POLICY = "be-policy"
+CONTENT_UPDATE_POLICY = "content-update-policy"
 FLUSH_CONTENT_CACHE = "flush-content-cache-on-success"
 MIRROR_DISCOVERY = "mirror-discovery"
 SEND_UUID = "send-uuid"
@@ -62,11 +63,17 @@ CHECK_CERTIFICATE_REVOCATION = "check-certificate-revocation"
 default_policies = {
     BE_POLICY: "default",
     CHECK_CERTIFICATE_REVOCATION: False,
+    CONTENT_UPDATE_POLICY: "default",
     FLUSH_CONTENT_CACHE: True,
     MIRROR_DISCOVERY: False,
     SEND_UUID: True,
     SIGNATURE_POLICY: sigpolicy.DEFAULT_POLICY,
     USE_SYSTEM_REPO: False
+}
+
+default_policy_map = {
+    BE_POLICY: { "default": "create-backup" },
+    CONTENT_UPDATE_POLICY: { "default": "always" },
 }
 
 CA_PATH = "ca-path"
@@ -160,6 +167,9 @@ class ImageConfig(cfg.FileConfig):
                     cfg.PropDefined(BE_POLICY, allowed=["default",
                         "always-new", "create-backup", "when-required"],
                         default=default_policies[BE_POLICY]),
+                    cfg.PropDefined(CONTENT_UPDATE_POLICY, allowed=["default",
+                        "always", "when-required"],
+                        default=default_policies[CONTENT_UPDATE_POLICY]),
                     cfg.PropBool(FLUSH_CONTENT_CACHE,
                         default=default_policies[FLUSH_CONTENT_CACHE]),
                     cfg.PropBool(MIRROR_DISCOVERY,
@@ -178,7 +188,8 @@ class ImageConfig(cfg.FileConfig):
                     cfg.PropList("signature-required-names"),
                     cfg.Property(CHECK_CERTIFICATE_REVOCATION,
                         default=default_policies[
-                            CHECK_CERTIFICATE_REVOCATION])
+                            CHECK_CERTIFICATE_REVOCATION]),
+                    cfg.PropList("dehydrated")
                 ]),
                 cfg.PropertySection("facet", properties=[
                     cfg.PropertyTemplate("^facet\..*", prop_type=cfg.PropBool),
@@ -225,7 +236,7 @@ class ImageConfig(cfg.FileConfig):
                     cfg.Property("ssl_cert", value_map=_val_map_none),
                     cfg.Property("ssl_key", value_map=_val_map_none),
                     # Publisher signing information.
-                    cfg.PropDefined("property.%s" % SIGNATURE_POLICY,
+                    cfg.PropDefined("property.{0}".format(SIGNATURE_POLICY),
                         allowed=list(sigpolicy.Policy.policies()) + [DEF_TOKEN],
                         default=DEF_TOKEN),
                     cfg.PropList("property.signature-required-names"),
@@ -281,7 +292,7 @@ class ImageConfig(cfg.FileConfig):
                     version=version)
 
         def __str__(self):
-                return "%s\n%s" % (self.__publishers, self.__defs)
+                return "{0}\n{1}".format(self.__publishers, self.__defs)
 
         def remove_publisher(self, prefix):
                 """External functional interface - use property interface"""
@@ -325,7 +336,7 @@ class ImageConfig(cfg.FileConfig):
                         self.remove_property_value("property",
                             "publisher-search-order", prefix)
                 try:
-                        self.remove_section("authority_%s" % prefix)
+                        self.remove_section("authority_{0}".format(prefix))
                 except cfg.UnknownSectionError:
                         pass
                 del self.__publishers[prefix]
@@ -359,7 +370,18 @@ class ImageConfig(cfg.FileConfig):
                 not defined in the image configuration.
                 """
                 assert policy in default_policies
-                return self.get_property("property", policy)
+
+                prop = self.get_property("property", policy)
+
+                # If requested policy has a default mapping in
+                # default_policy_map, we substitute the correct value if it's
+                # still set to 'default'.
+                if policy in default_policy_map and \
+                    prop == default_policies[policy]:
+                        return default_policy_map[policy] \
+                            [default_policies[policy]]
+
+                return prop
 
         def get_property(self, section, name):
                 """Returns the value of the property object matching the given
@@ -578,7 +600,7 @@ class ImageConfig(cfg.FileConfig):
                 # add sections for any known linked children
                 for lin in sorted(self.linked_children):
                         linked_props = self.linked_children[lin]
-                        s = "linked_%s" % str(lin)
+                        s = "linked_{0}".format(str(lin))
                         for k in [li.PROP_NAME, li.PROP_PATH, li.PROP_RECURSE]:
                                 self.set_property(s, k, str(linked_props[k]))
 
@@ -586,7 +608,7 @@ class ImageConfig(cfg.FileConfig):
                 # Transfer current publisher information to configuration.
                 for prefix in self.__publishers:
                         pub = self.__publishers[prefix]
-                        section = "authority_%s" % pub.prefix
+                        section = "authority_{0}".format(pub.prefix)
 
                         for prop in ("alias", "prefix", "approved_ca_certs",
                             "revoked_ca_certs", "disabled", "sticky"):
@@ -684,7 +706,7 @@ class ImageConfig(cfg.FileConfig):
                                         # can be stringified properly.
                                         pval = [str(v) for v in pval]
 
-                                cfg_key = "repo.%s" % prop
+                                cfg_key = "repo.{0}".format(prop)
                                 if prop == "registration_uri":
                                         # Must be stringified.
                                         pval = str(pval)
@@ -702,8 +724,8 @@ class ImageConfig(cfg.FileConfig):
                         for key, val in pub.properties.iteritems():
                                 if val == DEF_TOKEN:
                                         continue
-                                self.set_property(section, "property.%s" % key,
-                                    val)
+                                self.set_property(section,
+                                    "property.{0}".format(key), val)
 
                 # Write configuration only if configuration directory exists;
                 # this is to prevent failure during the early stages of image
@@ -715,7 +737,7 @@ class ImageConfig(cfg.FileConfig):
                             DA_FILE)
                         try:
                                 portable.remove(da_path)
-                        except EnvironmentError, e:
+                        except EnvironmentError as e:
                                 # Don't care if the file is already gone.
                                 if e.errno != errno.ENOENT:
                                         exc = apx._convert_error(e)
@@ -1079,7 +1101,7 @@ class BlendedConfig(object):
                                         port = smf.get_prop(
                                             "application/pkg/zones-proxy-client",
                                             "config/listen_port")
-                                except smf.NonzeroExitException, e:
+                                except smf.NonzeroExitException as e:
                                         # If we can't get information out of
                                         # smf, try using pkg/sysrepo.
                                         try:
@@ -1090,9 +1112,9 @@ class BlendedConfig(object):
                                                 port = smf.get_prop(
                                                     "application/pkg/system-repository:default",
                                                     "config/port")
-                                        except smf.NonzeroExitException, e:
+                                        except smf.NonzeroExitException as e:
                                                 raise apx.UnknownSysrepoConfiguration()
-                                self.__proxy_url = "http://%s:%s" % (host, port)
+                                self.__proxy_url = "http://{0}:{1}".format(host, port)
                         # We use system=True so that we don't try to retrieve
                         # runtime $http_proxy environment variables in
                         # pkg.client.publisher.TransportRepoURI.__get_runtime_proxy(..)
@@ -1115,7 +1137,7 @@ class BlendedConfig(object):
                                                 # system repository
                                                 # configuration.
                                                 portable.remove(syscfg_path)
-                                        except OSError, e:
+                                        except OSError as e:
                                                 if e.errno == errno.ENOENT:
                                                         # Check to see whether
                                                         # we'll be able to write
@@ -1129,7 +1151,7 @@ class BlendedConfig(object):
                                                             syscfg_path, None)
                                                 else:
                                                         raise
-                                except OSError, e:
+                                except OSError as e:
                                         if e.errno in \
                                             (errno.EACCES, errno.EROFS):
                                                 # A permissions error means that
@@ -1153,9 +1175,9 @@ class BlendedConfig(object):
                                                 sysrepo_proxy=True)
                                 for p in pubs:
                                         assert not p.disabled, "System " \
-                                            "publisher %s was unexpectedly " \
+                                            "publisher {0} was unexpectedly " \
                                             "marked disabled in system " \
-                                            "configuration." % p.prefix
+                                            "configuration.".format(p.prefix)
                                         self.sys_cfg.publishers[p.prefix] = p
 
                                 self.sys_cfg.set_property("property",
@@ -1493,13 +1515,13 @@ class BlendedConfig(object):
                         raise apx.MoveRelativeToSelf()
 
                 if self.__is_sys_pub(being_moved):
-                        raise apx.ModifyingSyspubException(_("Publisher '%s' "
-                            "is a system publisher and cannot be moved.") %
-                            being_moved)
+                        raise apx.ModifyingSyspubException(_("Publisher '{0}' "
+                            "is a system publisher and cannot be moved.").format(
+                            being_moved))
                 if self.__is_sys_pub(staying_put):
-                        raise apx.ModifyingSyspubException(_("Publisher '%s' "
+                        raise apx.ModifyingSyspubException(_("Publisher '{0}' "
                             "is a system publisher and other publishers cannot "
-                            "be moved relative to it.") % staying_put)
+                            "be moved relative to it.").format(staying_put))
                 self.img_cfg.change_publisher_search_order(being_moved,
                     staying_put, after)
 
@@ -1536,8 +1558,8 @@ class BlendedConfig(object):
         def __del_publisher(self, prefix):
                 """Accessor method for publishers"""
                 if self.__is_sys_pub(prefix):
-                        raise apx.ModifyingSyspubException(_("%s is a system "
-                            "publisher and cannot be unset.") % prefix)
+                        raise apx.ModifyingSyspubException(_("{0} is a system "
+                            "publisher and cannot be unset.").format(prefix))
 
                 del self.img_cfg.publishers[prefix]
                 del self.__publishers[prefix]

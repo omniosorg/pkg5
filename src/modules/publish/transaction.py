@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.7
 #
 # CDDL HEADER START
 #
@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2007, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 """Provides a set of publishing interfaces for interacting with a pkg(5)
@@ -74,13 +74,13 @@ class TransactionRepositoryURLError(TransactionError):
 
         def __str__(self):
                 if "scheme" in self._args:
-                        return _("Unsupported scheme '%(scheme)s' in URL: "
-                            "'%(url)s'.") % { "scheme": self._args["scheme"],
-                            "url": self.data }
+                        return _("Unsupported scheme '{scheme}' in URL: "
+                            "'{url}'.").format(scheme=self._args["scheme"],
+                            url=self.data)
                 elif "netloc" in self._args:
-                        return _("Malformed URL: '%s'.") % self.data
-                return _("Invalid repository URL: '%(url)s': %(msg)s") % {
-                    "url": self.data, "msg": self._args.get("msg", "") }
+                        return _("Malformed URL: '{0}'.").format(self.data)
+                return _("Invalid repository URL: '{url}': {msg}").format(
+                    url=self.data, msg=self._args.get("msg", ""))
 
 
 class TransactionOperationError(TransactionError):
@@ -91,24 +91,24 @@ class TransactionOperationError(TransactionError):
 
         def __str__(self):
                 if "status" in self._args:
-                        return _("'%(op)s' failed for transaction ID "
-                            "'%(trans_id)s'; status '%(status)s': "
-                            "%(msg)s") % { "op": self.data,
-                            "trans_id": self._args.get("trans_id", ""),
-                            "status": self._args["status"],
-                            "msg": self._args.get("msg", "") }
+                        return _("'{op}' failed for transaction ID "
+                            "'{trans_id}'; status '{status}': "
+                            "{msg}").format(op=self.data,
+                            trans_id=self._args.get("trans_id", ""),
+                            status=self._args["status"],
+                            msg=self._args.get("msg", ""))
                 if self._args.get("trans_id", None):
-                        return _("'%(op)s' failed for transaction ID "
-                            "'%(trans_id)s': %(msg)s") % { "op": self.data,
-                            "trans_id": self._args["trans_id"],
-                            "msg": self._args.get("msg", ""),
-                            }
+                        return _("'{op}' failed for transaction ID "
+                            "'{trans_id}': {msg}").format(op=self.data,
+                            trans_id=self._args["trans_id"],
+                            msg=self._args.get("msg", ""),
+                           )
                 if self.data:
-                        return _("'%(op)s' failed; unable to initiate "
-                            "transaction:\n%(msg)s") % { "op": self.data,
-                            "msg": self._args.get("msg", "") }
-                return _("Unable to initiate transaction:\n%s") % \
-                    self._args.get("msg", "")
+                        return _("'{op}' failed; unable to initiate "
+                            "transaction:\n{msg}").format(op=self.data,
+                            msg=self._args.get("msg", ""))
+                return _("Unable to initiate transaction:\n{0}").format(
+                    self._args.get("msg", ""))
 
 
 class TransactionRepositoryInvalidError(TransactionError):
@@ -121,9 +121,9 @@ class UnsupportedRepoTypeOperationError(TransactionError):
         type of repository being operated on (http, file, etc.)."""
 
         def __str__(self):
-                return _("Unsupported operation '%(op)s' for the specified "
-                    "repository type '%(type)s'.") % { "op": self.data,
-                    "type": self._args.get("type", "") }
+                return _("Unsupported operation '{op}' for the specified "
+                    "repository type '{type}'.").format(op=self.data,
+                    type=self._args.get("type", ""))
 
 
 class NullTransaction(object):
@@ -147,7 +147,7 @@ class NullTransaction(object):
                         # Perform additional publication-time validation of
                         # actions before further processing is done.
                         action.validate(fmri=self.pkg_name)
-                except actions.ActionError, e:
+                except actions.ActionError as e:
                         raise TransactionOperationError("add",
                             trans_id=self.trans_id, msg=str(e))
 
@@ -159,8 +159,8 @@ class NullTransaction(object):
                 if not os.path.isfile(pth):
                         raise TransactionOperationError("add_file",
                             trans_id=self.trans_id, msg=str(_("The file to "
-                            "be added is not a file.  The path given was %s.") %
-                            pth))
+                            "be added is not a file.  The path given was {0}.").format(
+                            pth)))
 
         def close(self, abandon=False, add_to_catalog=True):
                 """Ends an in-flight transaction.  Returns a tuple containing
@@ -235,23 +235,23 @@ class TransportTransaction(object):
                         except sr.RepositoryExistsError:
                                 # Already exists, nothing to do.
                                 pass
-                        except (apx.ApiException, sr.RepositoryError), e:
+                        except (apx.ApiException, sr.RepositoryError) as e:
                                 raise TransactionOperationError(None,
                                     msg=str(e))
 
                 try:
                         repo = sr.Repository(properties=repo_props,
                             root=self.path)
-                except EnvironmentError, e:
+                except EnvironmentError as e:
                         raise TransactionOperationError(None, msg=_(
                             "An error occurred while trying to "
                             "initialize the repository directory "
-                            "structures:\n%s") % e)
-                except cfg.ConfigError, e:
+                            "structures:\n{0}").format(e))
+                except cfg.ConfigError as e:
                         raise TransactionRepositoryConfigError(str(e))
-                except sr.RepositoryInvalidError, e:
+                except sr.RepositoryInvalidError as e:
                         raise TransactionRepositoryInvalidError(str(e))
-                except sr.RepositoryError, e:
+                except sr.RepositoryError as e:
                         raise TransactionOperationError(None,
                             msg=str(e))
 
@@ -266,7 +266,7 @@ class TransportTransaction(object):
                         # Perform additional publication-time validation of
                         # actions before further processing is done.
                         action.validate()
-                except actions.ActionError, e:
+                except actions.ActionError as e:
                         raise TransactionOperationError("add",
                             trans_id=self.trans_id, msg=str(e))
 
@@ -274,7 +274,7 @@ class TransportTransaction(object):
                         self.transport.publish_add(self.publisher,
                             action=action, trans_id=self.trans_id,
                             progtrack=self.progtrack)
-                except apx.TransportError, e:
+                except apx.TransportError as e:
                         msg = str(e)
                         raise TransactionOperationError("add",
                             trans_id=self.trans_id, msg=msg)
@@ -287,13 +287,13 @@ class TransportTransaction(object):
                 if not os.path.isfile(pth):
                         raise TransactionOperationError("add_file",
                             trans_id=self.trans_id, msg=str(_("The file to "
-                            "be added is not a file.  The path given was %s.") %
-                            pth))
+                            "be added is not a file.  The path given was {0}.").format(
+                            pth)))
 
                 try:
                         self.transport.publish_add_file(self.publisher,
                             pth=pth, trans_id=self.trans_id)
-                except apx.TransportError, e:
+                except apx.TransportError as e:
                         msg = str(e)
                         raise TransactionOperationError("add_file",
                             trans_id=self.trans_id, msg=msg)
@@ -315,7 +315,7 @@ class TransportTransaction(object):
                         try:
                                 state, fmri = self.transport.publish_abandon(
                                     self.publisher, trans_id=self.trans_id)
-                        except apx.TransportError, e:
+                        except apx.TransportError as e:
                                 msg = str(e)
                                 raise TransactionOperationError("abandon",
                                     trans_id=self.trans_id, msg=msg)
@@ -324,7 +324,7 @@ class TransportTransaction(object):
                                 state, fmri = self.transport.publish_close(
                                     self.publisher, trans_id=self.trans_id,
                                     add_to_catalog=add_to_catalog)
-                        except apx.TransportError, e:
+                        except apx.TransportError as e:
                                 msg = str(e)
                                 raise TransactionOperationError("close",
                                     trans_id=self.trans_id, msg=msg)
@@ -341,7 +341,7 @@ class TransportTransaction(object):
                         trans_id = self.transport.publish_open(self.publisher,
                             client_release=os_util.get_os_release(),
                             pkg_name=self.pkg_name)
-                except apx.TransportError, e:
+                except apx.TransportError as e:
                         msg = str(e)
                         raise TransactionOperationError("open",
                             trans_id=self.trans_id, msg=msg)
@@ -365,7 +365,7 @@ class TransportTransaction(object):
                         trans_id = self.transport.publish_append(self.publisher,
                             client_release=os_util.get_os_release(),
                             pkg_name=self.pkg_name)
-                except apx.TransportError, e:
+                except apx.TransportError as e:
                         msg = str(e)
                         raise TransactionOperationError("append",
                             trans_id=self.trans_id, msg=msg)
@@ -387,7 +387,7 @@ class TransportTransaction(object):
 
                 try:
                         self.transport.publish_refresh_indexes(self.publisher)
-                except apx.TransportError, e:
+                except apx.TransportError as e:
                         msg = str(e)
                         raise TransactionOperationError(op,
                             trans_id=self.trans_id, msg=msg)
@@ -447,9 +447,9 @@ class Transaction(object):
                 if scheme.startswith("file"):
                         if netloc:
                                 raise TransactionRepositoryURLError(origin_url,
-                                    msg="'%s' contains host information, which "
+                                    msg="'{0}' contains host information, which "
                                     "is not supported for filesystem "
-                                    "operations." % netloc)
+                                    "operations.".format(netloc))
                         # as we're urlunparsing below, we need to ensure that
                         # the path starts with only one '/' character, if any
                         # are present

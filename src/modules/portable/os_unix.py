@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.7
 #
 # CDDL HEADER START
 #
@@ -19,8 +19,8 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+#
+# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 """
@@ -61,7 +61,7 @@ def already_called():
                 return False
 
 def get_isainfo():
-        return platform.uname()[5]	
+        return platform.uname()[5]
 
 def get_release():
         return os_util.get_os_release()
@@ -101,17 +101,17 @@ def get_group_by_name(name, dirpath, use_file):
 
         if not use_file:
                 return grp.getgrnam(name).gr_gid
-        try: 
+        try:
                 load_groups(dirpath)
                 return groups[dirpath][name].gr_gid
-        except OSError, e:
+        except OSError as e:
                 if e.errno != errno.ENOENT:
                         raise
                 # If the password file doesn't exist, bootstrap
                 # ourselves from the current environment.
                 return grp.getgrnam(name).gr_gid
         except KeyError:
-                raise KeyError, "group name not found: %s" % name
+                raise KeyError("group name not found: {0}".format(name))
 
 def get_user_by_name(name, dirpath, use_file):
         if not already_called():
@@ -119,17 +119,17 @@ def get_user_by_name(name, dirpath, use_file):
 
         if not use_file:
                 return pwd.getpwnam(name).pw_uid
-        try: 
+        try:
                 load_passwd(dirpath)
                 return users[dirpath][name].pw_uid
-        except OSError, e:
+        except OSError as e:
                 if e.errno != errno.ENOENT:
                         raise
                 # If the password file doesn't exist, bootstrap
                 # ourselves from the current environment.
                 return pwd.getpwnam(name).pw_uid
         except KeyError:
-                raise KeyError, "user name not found: %s" % name
+                raise KeyError("user name not found: {0}".format(name))
 
 def get_name_by_gid(gid, dirpath, use_file):
         if not already_called():
@@ -137,17 +137,17 @@ def get_name_by_gid(gid, dirpath, use_file):
 
         if not use_file:
                 return grp.getgrgid(gid).gr_name
-        try: 
+        try:
                 load_groups(dirpath)
                 return gids[dirpath][gid].gr_name
-        except OSError, e:
+        except OSError as e:
                 if e.errno != errno.ENOENT:
                         raise
                 # If the password file doesn't exist, bootstrap
                 # ourselves from the current environment.
                 return grp.getgrgid(gid).gr_name
         except KeyError:
-                raise KeyError, "group ID not found: %s" % gid
+                raise KeyError("group ID not found: {0}".format(gid))
 
 def get_name_by_uid(uid, dirpath, use_file):
         if not already_called():
@@ -155,17 +155,17 @@ def get_name_by_uid(uid, dirpath, use_file):
 
         if not use_file:
                 return pwd.getpwuid(uid).pw_name
-        try: 
+        try:
                 load_passwd(dirpath)
                 return uids[dirpath][uid].pw_name
-        except OSError, e:
+        except OSError as e:
                 if e.errno != errno.ENOENT:
                         raise
                 # If the password file doesn't exist, bootstrap
                 # ourselves from the current environment.
                 return pwd.getpwuid(uid).pw_name
         except KeyError:
-                raise KeyError, "user ID not found: %d" % uid
+                raise KeyError("user ID not found: {0:d}".format(uid))
 
 def load_passwd(dirpath):
         # check if we need to reload cache
@@ -234,7 +234,7 @@ def chown(path, owner, group):
 def rename(src, dst):
         try:
                 os.rename(src, dst)
-        except OSError, e:
+        except OSError as e:
                 # Handle the case where we tried to rename a file across a
                 # filesystem boundary.
                 if e.errno != errno.EXDEV or not os.path.isfile(src):
@@ -246,7 +246,7 @@ def rename(src, dst):
                 try:
                         fd, tmpdst = tempfile.mkstemp(suffix=".pkg5.xdev",
                             dir=os.path.dirname(dst))
-                except OSError, e:
+                except OSError as e:
                         # If we don't have sufficient permissions to put the
                         # file where we want it, then higher levels can deal
                         # with that effectively, but people will want to know
@@ -264,7 +264,7 @@ def remove(path):
 
 def link(src, dst):
         os.link(src, dst)
-        
+
 def split_path(path):
         return path.split('/')
 
@@ -274,8 +274,8 @@ def get_root(path):
 def assert_mode(path, mode):
         fmode = stat.S_IMODE(os.lstat(path).st_mode)
         if mode != fmode:
-                ae = AssertionError("mode mismatch for %s, has %o, want %o" % 
-                    (path, fmode, mode))
+                ae = AssertionError("mode mismatch for {0}, has {1:o}, "
+                    "want {2:o}".format(path, fmode, mode))
                 ae.mode = fmode;
                 raise ae
 

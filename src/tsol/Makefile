@@ -43,7 +43,7 @@ ROOTDIRS = \
 #
 
 $(ROOTDIRS):
-#	$(INSTALL) -d -m 0755 $@
+	$(INSTALL) -d -m 0755 $@
 
 all := TARGET = all
 clean := TARGET = clean

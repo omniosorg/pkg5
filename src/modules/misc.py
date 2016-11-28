@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.7
 #
 # CDDL HEADER START
 #
@@ -20,12 +20,15 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
 # Copyright 2014, OmniTI Computer Consulting, Inc. All rights reserved.
 
 """
 Misc utility functions used by the packaging system.
 """
+
+from __future__ import division
+from __future__ import print_function
 
 import OpenSSL.crypto as osc
 import cStringIO
@@ -55,6 +58,7 @@ import urlparse
 import zlib
 
 from collections import defaultdict
+from operator import itemgetter
 
 from stat import S_IFMT, S_IMODE, S_IRGRP, S_IROTH, S_IRUSR, S_IRWXU, \
     S_ISBLK, S_ISCHR, S_ISDIR, S_ISFIFO, S_ISLNK, S_ISREG, S_ISSOCK, \
@@ -92,9 +96,9 @@ def get_traceback_message():
         setup."""
 
         return _("""\n
-This is an internal error in pkg(5) version %(version)s.  Please log a
+This is an internal error in pkg(5) version {version}.  Please log a
 Service Request about this issue including the information above and this
-message.""") % { "version": VERSION }
+message.""").format(version=VERSION)
 
 def get_release_notes_url():
         """Return a release note URL pointing to the correct release notes
@@ -124,7 +128,7 @@ def copyfile(src_path, dst_path):
         shutil.copy2(src_path, dst_path)
         try:
                 portable.chown(dst_path, fs.st_uid, fs.st_gid)
-        except OSError, e:
+        except OSError as e:
                 if e.errno != errno.EPERM:
                         raise
 
@@ -163,7 +167,7 @@ def copytree(src, dst):
                         # The s11 fcs version of python doesn't have os.mknod()
                         # but sock.bind has a path length limitation that we can
                         # hit when archiving the test suite.
-                        # E1101 Module '%s' has no '%s' member
+                        # E1101 Module '{0}' has no '{1}' member
                         # pylint: disable=E1101
                         if hasattr(os, "mknod"):
                                 os.mknod(d_path, s.st_mode, s.st_dev)
@@ -171,7 +175,7 @@ def copytree(src, dst):
                                 try:
                                         sock.bind(d_path)
                                         sock.close()
-                                except sock.error, _e:
+                                except sock.error as _e:
                                         # Store original exception so that the
                                         # real cause of failure can be raised if
                                         # this fails.
@@ -181,7 +185,7 @@ def copytree(src, dst):
                         os.utime(d_path, (s.st_atime, s.st_mtime))
                 elif S_ISCHR(s.st_mode) or S_ISBLK(s.st_mode):
                         # the s11 fcs version of python doesn't have os.mknod()
-                        # E1101 Module '%s' has no '%s' member
+                        # E1101 Module '{0}' has no '{1}' member
                         # pylint: disable=E1101
                         if hasattr(os, "mknod"):
                                 os.mknod(d_path, s.st_mode, s.st_dev)
@@ -192,7 +196,7 @@ def copytree(src, dst):
                 elif S_IFMT(s.st_mode) == 0xe000: # event ports
                         pass
                 else:
-                        print "unknown file type:", oct(S_IFMT(s.st_mode))
+                        print("unknown file type:", oct(S_IFMT(s.st_mode)))
 
         os.chmod(dst, S_IMODE(src_stat.st_mode))
         os.chown(dst, src_stat.st_uid, src_stat.st_gid)
@@ -210,7 +214,7 @@ def move(src, dst):
 
         try:
                 os.rename(src, dst)
-        except EnvironmentError, e:
+        except EnvironmentError as e:
                 s = os.lstat(src)
 
                 if e.errno == errno.EXDEV:
@@ -224,11 +228,11 @@ def move(src, dst):
                                 os.utime(dst, (s.st_atime, s.st_mtime))
                                 os.unlink(src)
                 elif e.errno == errno.EINVAL and S_ISDIR(s.st_mode):
-                        raise shutil.Error, "Cannot move a directory '%s' " \
-                            "into itself '%s'." % (src, dst)
+                        raise shutil.Error("Cannot move a directory '{0}' "
+                            "into itself '{1}'.".format(src, dst))
                 elif e.errno == errno.ENOTDIR and S_ISDIR(s.st_mode):
-                        raise shutil.Error, "Destination path '%s' already " \
-                            "exists" % dst
+                        raise shutil.Error("Destination path '{0}' already "
+                            "exists".format(dst))
                 else:
                         raise
 
@@ -251,8 +255,8 @@ def url_affix_trailing_slash(u):
 
         return u
 
-_client_version = "pkg/%s (%s %s; %s %s; %%s; %%s)" % \
-    (VERSION, portable.util.get_canonical_os_name(), platform.machine(),
+_client_version = "pkg/{0} ({1} {2}; {3} {4}; {{0}}; {{1}})".format(
+    VERSION, portable.util.get_canonical_os_name(), platform.machine(),
     portable.util.get_os_release(), platform.version())
 
 def user_agent_str(img, client_name):
@@ -263,7 +267,7 @@ def user_agent_str(img, client_name):
         else:
                 imgtype = img.type
 
-        useragent = _client_version % (img_type_names[imgtype], client_name)
+        useragent = _client_version.format(img_type_names[imgtype], client_name)
 
         return useragent
 
@@ -345,7 +349,7 @@ def gunzip_from_stream(gz, outfile, hash_func=None, hash_funcs=None,
         hexadecimal digests computed using those functions is returned. The
         returned list is in the same order as 'hash_funcs'.
 
-        If 'ignore_hash' is False, we do not compute a hash when decompressing
+        If 'ignore_hash' is True, we do not compute a hash when decompressing
         the content and do not return any value.
         """
 
@@ -360,10 +364,10 @@ def gunzip_from_stream(gz, outfile, hash_func=None, hash_funcs=None,
         # Read the header
         magic = gz.read(2)
         if magic != "\037\213":
-                raise zlib.error, "Not a gzipped file"
+                raise zlib.error("Not a gzipped file")
         method = ord(gz.read(1))
         if method != 8:
-                raise zlib.error, "Unknown compression method"
+                raise zlib.error("Unknown compression method")
         flag = ord(gz.read(1))
         gz.read(6) # Discard modtime, extraflag, os
 
@@ -444,20 +448,20 @@ def msg(*text):
         """ Emit a message. """
 
         try:
-                print ' '.join([str(l) for l in text])
-        except IOError, e:
+                print(' '.join([str(l) for l in text]))
+        except IOError as e:
                 if e.errno == errno.EPIPE:
-                        raise PipeError, e
+                        raise PipeError(e)
                 raise
 
 def emsg(*text):
         """ Emit a message to sys.stderr. """
 
         try:
-                print >> sys.stderr, ' '.join([str(l) for l in text])
-        except IOError, e:
+                print(' '.join([str(l) for l in text]), file=sys.stderr)
+        except IOError as e:
                 if e.errno == errno.EPIPE:
-                        raise PipeError, e
+                        raise PipeError(e)
                 raise
 
 def setlocale(category, loc=None, printer=None):
@@ -478,18 +482,18 @@ def setlocale(category, loc=None, printer=None):
                 locale.getdefaultlocale()
         except (locale.Error, ValueError):
                 try:
-                        dl = " '%s.%s'" % locale.getdefaultlocale()
+                        dl = " '{0}.{1}'".format(*locale.getdefaultlocale())
                 except ValueError:
                         dl = ""
-                printer("Unable to set locale%s; locale package may be broken "
-                    "or\nnot installed.  Reverting to C locale." % dl)
+                printer("Unable to set locale{0}; locale package may be broken "
+                    "or\nnot installed.  Reverting to C locale.".format(dl))
                 locale.setlocale(category, "C")
 def N_(message):
         """Return its argument; used to mark strings for localization when
         their use is delayed by the program."""
         return message
 
-def bytes_to_str(nbytes, fmt="%(num).2f %(unit)s"):
+def bytes_to_str(nbytes, fmt="{num:>.2f} {unit}"):
         """Returns a human-formatted string representing the number of bytes
         in the largest unit possible.
 
@@ -514,11 +518,18 @@ def bytes_to_str(nbytes, fmt="%(num).2f %(unit)s"):
                         # unit of measure's range.
                         continue
 
-                return fmt % {
-                    "num": round(nbytes / float(limit / 2**10), 2),
-                    "unit": uom,
-                    "shortunit": shortuom
-                }
+                if "{num:d}" in fmt:
+                        return fmt.format(
+                            num=int(nbytes / float(limit / 2**10)),
+                            unit=uom,
+                            shortunit=shortuom
+                        )
+                else:
+                        return fmt.format(
+                            num=round(nbytes / float(limit / 2**10), 2),
+                            unit=uom,
+                            shortunit=shortuom
+                        )
 
 def get_rel_path(request, uri, pub=None):
         """Calculate the depth of the current request path relative to our
@@ -527,7 +538,7 @@ def get_rel_path(request, uri, pub=None):
 
         rpath = request.path_info
         if pub:
-                rpath = rpath.replace("/%s/" % pub, "/")
+                rpath = rpath.replace("/{0}/".format(pub), "/")
         depth = rpath.count("/") - 1
         return ("../" * depth) + uri
 
@@ -561,8 +572,7 @@ def get_data_digest(data, length=None, return_content=False,
         for this data. The keys must be present in 'hash_algs', a dictionary
         mapping keys to the factory methods that are used to create objects
         to compute them. The factory method must take no parameters, and must
-        return an object that has 'update()' and 'hexdigest()' methods. In the
-        current implementation, these are all hashlib factory methods.
+        return an object that has 'update()' and 'hexdigest()' methods.
 
         'hash_func' is provided as a convenience to simply hash the data with
         a single hash algorithm. The value of 'hash_func' should be the factory
@@ -582,7 +592,7 @@ def get_data_digest(data, length=None, return_content=False,
                 length = os.stat(data).st_size
 
         # Setup our results dictionary so that each attribute maps to a
-        # new hashlib object.
+        # new hash object.
         if hash_func:
                 hsh = hash_func()
         else:
@@ -619,7 +629,7 @@ def get_data_digest(data, length=None, return_content=False,
                 return hsh.hexdigest(), content.read()
 
         # The returned dictionary can now be populated with the hexdigests
-        # instead of the hashlib objects themselves.
+        # instead of the hash objects themselves.
         for attr in hash_results:
                 hash_results[attr] = hash_results[attr].hexdigest()
         return hash_results, content.read()
@@ -660,7 +670,7 @@ def compute_compressed_attrs(fname, file_path, data, size, compress_dir,
                 opath = os.path.join(compress_dir, fname)
                 ofile = PkgGzipFile(opath, "wb")
 
-                nbuf = size / bufsz
+                nbuf = size // bufsz
 
                 for n in range(0, nbuf):
                         l = n * bufsz
@@ -700,6 +710,21 @@ def compute_compressed_attrs(fname, file_path, data, size, compress_dir,
 class ProcFS(object):
         """This class is used as an interface to procfs."""
 
+        # Detect whether python is running in 32-bit or 64-bit
+        # environment based on pointer size.
+        _running_bit = struct.calcsize("P") * 8
+
+        actual_format = {32: {
+                              "long": "l",
+                              "uintptr_t": "I",
+                              "ulong": "L"
+                             },
+                         64: {
+                              "long": "q",
+                              "uintptr_t": "Q",
+                              "ulong": "Q"
+                             }}
+
         _ctype_formats = {
             # This dictionary maps basic c types into python format characters
             # that can be used with struct.unpack().  The format of this
@@ -711,27 +736,33 @@ class ProcFS(object):
             "char":        (1,  "c"),
             "char[]":      (1,  "s"),
             "int":         (1,  "i"),
-            "long":        (1,  "l"),
-            "uintptr_t":   (1,  "L"), # actually sizeof (void *), so use ulong.
+            "long":        (1,  actual_format[_running_bit]["long"]),
+            "uintptr_t":   (1,  actual_format[_running_bit]["uintptr_t"]),
             "ushort_t":    (1,  "H"),
 
             # other simple types (repeat count should always be 1)
             "ctid_t":      (1,  "i"), # ctid_t -> id_t -> int
-            "dev_t":       (1,  "L"), # dev_t -> ulong_t
+
+            # dev_t -> ulong_t
+            "dev_t":       (1,  actual_format[_running_bit]["ulong"]),
             "gid_t":       (1,  "I"), # gid_t -> uid_t -> uint_t
             "pid_t":       (1,  "i"), # pid_t -> int
             "poolid_t":    (1,  "i"), # poolid_t -> id_t -> int
             "projid_t":    (1,  "i"), # projid_t -> id_t -> int
-            "size_t":      (1,  "L"), # size_t -> ulong_t
+
+            # size_t -> ulong_t
+            "size_t":      (1,  actual_format[_running_bit]["ulong"]),
             "taskid_t":    (1,  "i"), # taskid_t -> id_t -> int
-            "time_t":      (1,  "l"), # time_t -> long
+
+            # time_t -> long
+            "time_t":      (1,  actual_format[_running_bit]["long"]),
             "uid_t":       (1,  "I"), # uid_t -> uint_t
             "zoneid_t":    (1,  "i"), # zoneid_t -> id_t -> int
             "id_t":        (1,  "i"), # id_t -> int
 
             # structures must be represented as character arrays
-            #"timestruc_t": (8,  "s"), # sizeof (timestruc_t) = 8
-	    "timestruc_t": (16,  "s"), # 64-bit sizeof (timestruc_t) = 16
+            # sizeof (timestruc_t) = 8 in 32-bit process, and = 16 in 64-bit.
+            "timestruc_t": (_running_bit // 4,  "s"),
         }
 
         _timestruct_desc = [
@@ -782,6 +813,12 @@ class ProcFS(object):
             ("int",         1,  "pr_filler"),
         ]
 
+        # For 64 bit process, the alignment is off by 4 bytes from pr_pctmem
+        # field. So add an additional pad here.
+        if _running_bit == 64:
+                _psinfo_desc = _psinfo_desc[0:17] + [("int", 1, "dum_pad")] + \
+                    _psinfo_desc[17:]
+
         _struct_descriptions = {
             # this list contains all the known structure description lists
             # the entry format is: <structure name>: \
@@ -821,7 +858,6 @@ class ProcFS(object):
 
                 # unpack the data into a list
                 rv = list(struct.unpack(fmt, data))
-
                 # check for any nested data that needs unpacking
                 for index, v in enumerate(desc):
                         ctype = v[0]
@@ -836,16 +872,16 @@ class ProcFS(object):
         def psinfo():
                 """Read the psinfo file and return its contents."""
 
-                # This works only on Solaris, in 32-bit mode.  It may not work
-                # on older or newer versions than 5.11.  Ideally, we would use
-                # libproc, or check sbrk(0), but this is expedient.  In most
-                # cases (there's a small chance the file will decode, but
-                # incorrectly), failure will raise an exception, and we'll
+                # This works only on Solaris, in 32-bit or 64-bit mode.  It may
+                # not work on older or newer versions than 5.11.  Ideally, we
+                # would use libproc, or check sbrk(0), but this is expedient.
+                # In most cases (there's a small chance the file will decode,
+                # but incorrectly), failure will raise an exception, and we'll
                 # fail safe.
+                psinfo_size = 232
 
-		# XXXOMNIOS We run in 64-bit mode.  psinfo_size is 288.
-                # psinfo_size = 232
-                psinfo_size = 288
+                if ProcFS._running_bit == 64:
+                        psinfo_size = 288
 
                 try:
                         psinfo_data = file("/proc/self/psinfo").read(
@@ -860,7 +896,6 @@ class ProcFS(object):
                         return None
 
                 return ProcFS._struct_unpack(psinfo_data, "psinfo_t")
-
 
 def __getvmusage():
         """Return the amount of virtual memory in bytes currently in use."""
@@ -887,8 +922,8 @@ def out_of_memory():
         try:
                 vmusage = __getvmusage()
                 if vmusage is not None:
-                        vsz = bytes_to_str(vmusage, fmt="%(num).0f%(unit)s")
-        except (MemoryError, EnvironmentError), __e:
+                        vsz = bytes_to_str(vmusage, fmt="{num}.0f{unit}")
+        except (MemoryError, EnvironmentError) as __e:
                 if isinstance(__e, EnvironmentError) and \
                     __e.errno != errno.ENOMEM:
                         raise
@@ -896,7 +931,7 @@ def out_of_memory():
         if vsz is not None:
                 error = """\
 There is not enough memory to complete the requested operation.  At least
-%(vsz)s of virtual memory was in use by this command before it ran out of memory.
+{vsz} of virtual memory was in use by this command before it ran out of memory.
 You must add more memory (swap or physical) or allow the system to access more
 existing memory, or quit other programs that may be consuming memory, and try
 the operation again."""
@@ -907,7 +942,7 @@ add more memory (swap or physical) or allow the system to access more existing
 memory, or quit other programs that may be consuming memory, and try the
 operation again."""
 
-        return _(error) % locals()
+        return _(error).format(**locals())
 
 
 # EmptyI for argument defaults
@@ -947,7 +982,7 @@ class ImmutableDict(dict):
 
         @staticmethod
         def __oops():
-                raise TypeError, "Item assignment to ImmutableDict"
+                raise TypeError("Item assignment to ImmutableDict")
 
 # A way to have a dictionary be a property
 
@@ -972,59 +1007,59 @@ class DictProperty(object):
 
                 def __getitem__(self, key):
                         if self.__fget is None:
-                                raise AttributeError, "unreadable attribute"
+                                raise AttributeError("unreadable attribute")
 
                         return self.__fget(self.__obj, key)
 
                 def __setitem__(self, key, value):
                         if self.__fset is None:
-                                raise AttributeError, "can't set attribute"
+                                raise AttributeError("can't set attribute")
                         self.__fset(self.__obj, key, value)
 
                 def __delitem__(self, key):
                         if self.__fdel is None:
-                                raise AttributeError, "can't delete attribute"
+                                raise AttributeError("can't delete attribute")
                         self.__fdel(self.__obj, key)
 
                 def iteritems(self):
                         if self.__iteritems is None:
-                                raise AttributeError, "can't iterate over items"
+                                raise AttributeError("can't iterate over items")
                         return self.__iteritems(self.__obj)
 
                 def keys(self):
                         if self.__keys is None:
-                                raise AttributeError, "can't iterate over keys"
+                                raise AttributeError("can't iterate over keys")
                         return self.__keys(self.__obj)
 
                 def values(self):
                         if self.__values is None:
-                                raise AttributeError, "can't iterate over " \
-                                    "values"
+                                raise AttributeError("can't iterate over "
+                                    "values")
                         return self.__values(self.__obj)
 
                 def get(self, key, default=None):
                         if self.__fgetdefault is None:
-                                raise AttributeError, "can't use get"
+                                raise AttributeError("can't use get")
                         return self.__fgetdefault(self.__obj, key, default)
 
                 def setdefault(self, key, default=None):
                         if self.__fsetdefault is None:
-                                raise AttributeError, "can't use setdefault"
+                                raise AttributeError("can't use setdefault")
                         return self.__fsetdefault(self.__obj, key, default)
 
                 def update(self, d):
                         if self.__update is None:
-                                raise AttributeError, "can't use update"
+                                raise AttributeError("can't use update")
                         return self.__update(self.__obj, d)
 
                 def pop(self, d, default):
                         if self.__pop is None:
-                                raise AttributeError, "can't use pop"
+                                raise AttributeError("can't use pop")
                         return self.__pop(self.__obj, d, default)
 
                 def __iter__(self):
                         if self.__iter is None:
-                                raise AttributeError, "can't iterate"
+                                raise AttributeError("can't iterate")
                         return self.__iter(self.__obj)
 
         def __init__(self, fget=None, fset=None, fdel=None, iteritems=None,
@@ -1068,7 +1103,7 @@ def build_cert(path, uri=None, pub=None):
                 cf = file(path, "rb")
                 certdata = cf.read()
                 cf.close()
-        except EnvironmentError, e:
+        except EnvironmentError as e:
                 if e.errno == errno.ENOENT:
                         raise api_errors.NoSuchCertificate(path, uri=uri,
                             publisher=pub)
@@ -1080,7 +1115,7 @@ def build_cert(path, uri=None, pub=None):
 
         try:
                 return osc.load_certificate(osc.FILETYPE_PEM, certdata)
-        except osc.Error, e:
+        except osc.Error as e:
                 # OpenSSL.crypto.Error
                 raise api_errors.InvalidCertificate(path, uri=uri,
                     publisher=pub)
@@ -1131,7 +1166,7 @@ def binary_to_hex(s):
         for p in s:
                 p = ord(p)
                 a = char_list[p % 16]
-                p = p/16
+                p = p // 16
                 b = char_list[p % 16]
                 res += b + a
         return res
@@ -1219,7 +1254,7 @@ def makedirs(pathname):
 
         try:
                 os.makedirs(pathname, PKG_DIR_MODE)
-        except EnvironmentError, e:
+        except EnvironmentError as e:
                 if e.filename == pathname and (e.errno == errno.EEXIST or
                     os.path.exists(e.filename)):
                         return
@@ -1306,7 +1341,8 @@ def recursive_chown_dir(d, uid, gid):
                         portable.chown(path, uid, gid)
 
 
-def opts_parse(op, args, opts_table, opts_mapping, usage_cb=None):
+def opts_parse(op, args, opts_table, opts_mapping, usage_cb=None,
+    use_cli_opts=True, **opts_kv):
         """Generic table-based options parsing function.  Returns a tuple
         consisting of a list of parsed options in the form (option, argument)
         and the remaining unparsed options. The parsed-option list may contain
@@ -1319,7 +1355,7 @@ def opts_parse(op, args, opts_table, opts_mapping, usage_cb=None):
         'opts_table' is a list of options the operation supports.
         The format of the list entries should be a tuple containing the
         option and its default value:
-            (option, default_value)
+            (option, default_value, [valid values], [json schema])
         It is valid to have other entries in the list when they are required
         for additional option processing elsewhere. These are ignore here. If
         the list entry is a tuple it must conform to the format oulined above.
@@ -1346,89 +1382,144 @@ def opts_parse(op, args, opts_table, opts_mapping, usage_cb=None):
         is the value of this option in the parsed option dictionary.
 
         'usage_cb' is a function pointer that should display usage information
-        and will be invoked if invalid arguments are detected."""
+        and will be invoked if invalid arguments are detected.
 
-        # list for getopt long options
-        opts_l_list = []
-        # getopt str for short options
-        opts_s_str = ""
+        'use_cli_opts' is to indicate the option type is a CLI option or
+        a key-value pair option.
 
-        # dict to map options returned by getopt to keys
-        opts_keys = dict()
+        'opts_kv' is the user provided opts that should be parsed. It is a
+        dictionary with key as option name and value as option argument.
+        """
+
+        if use_cli_opts:
+                # list for getopt long options
+                opts_l_list = []
+                # getopt str for short options
+                opts_s_str = ""
+
+                # dict to map options returned by getopt to keys
+                opts_keys = dict()
+        else:
+                opts_name_mapping = {}
 
         for entry in opts_table:
                 # option table contains functions for verification, ignore here
                 if type(entry) != tuple:
                         continue
-                opt, default, = entry
-                assert opt in opts_mapping
-                sopt, lopt = opts_mapping[opt]
-                # make sure an option was specified
-                assert sopt or lopt
-                if lopt != "":
-                        if default is None or type(default) == list:
-                                opts_l_list.append("%s=" % lopt)
-                        else:
-                                opts_l_list.append("%s" % lopt)
-                        opts_keys["--%s" % lopt] = opt
-                if sopt != "":
-                        if default is None or type(default) == list:
-                                opts_s_str += "%s:" % sopt
-                        else:
-                                opts_s_str += "%s" % sopt
-                        opts_keys["-%s" % sopt] = opt
+                if len(entry) == 2:
+                        opt, default = entry
+                elif len(entry) == 3:
+                        opt, default, dummy_valid_args = entry
+                elif len(entry) == 4:
+                        opt, default, dummy_valid_args, dummy_schema = entry
+                if use_cli_opts:
+                        assert opt in opts_mapping
+                        sopt, lopt = opts_mapping[opt]
+                        # make sure an option was specified
+                        assert sopt or lopt
+                        if lopt != "":
+                                if default is None or type(default) == list:
+                                        opts_l_list.append("{0}=".format(lopt))
+                                else:
+                                        opts_l_list.append("{0}".format(lopt))
+                                opts_keys["--{0}".format(lopt)] = opt
+                        if sopt != "":
+                                if default is None or type(default) == list:
+                                        opts_s_str += "{0}:".format(sopt)
+                                else:
+                                        opts_s_str += "{0}".format(sopt)
+                                opts_keys["-{0}".format(sopt)] = opt
+                else:
+                        # Add itself as a mapping for validation.
+                        opts_name_mapping[opt] = opt
+                        if opt in opts_mapping:
+                                optn = opts_mapping[opt]
+                                if optn:
+                                        opts_name_mapping[optn] = opt
 
         # Parse options.
-        try:
-                opts, pargs = getopt.getopt(args, opts_s_str, opts_l_list)
-        except getopt.GetoptError, e:
-                usage_cb(_("illegal option -- %s") % e.opt, cmd=op)
+        if use_cli_opts:
+                try:
+                        opts, pargs = getopt.getopt(args, opts_s_str,
+                            opts_l_list)
+                except getopt.GetoptError as e:
+                        usage_cb(_("illegal option -- {0}").format(e.opt),
+                            cmd=op)
+        else:
+                opts = opts_kv
 
         def get_default(option):
                 """Find the default value for a given option from opts_table."""
                 for x in opts_table:
                         if type(x) != tuple:
                                 continue
-                        opt, default = x
+                        if len(x) == 2:
+                                opt, default = x
+                        elif len(x) == 3:
+                                opt, default, dummy_valid_args = x
+                        elif len(x) == 4:
+                                opt, default, dummy_valid_args, \
+                                    dummy_schema = x
                         if option == opt:
                                 return default
 
-        # Assemble the options dictionary by passing in the right data types and
-        # take care of duplicates.
-        opt_dict = {}
-        for x in opts:
-                cli_opt, arg = x
-                opt = opts_keys[cli_opt]
-
+        def process_opts(opt, arg, opt_dict):
+                """Process option values."""
                 # Determine required option type based on the default value.
                 default = get_default(opt)
 
-                # Handle duplicates for integer and list types.
-                if type(default) == int:
-                        if opt in opt_dict:
-                                opt_dict[opt] += 1
-                        else:
-                                opt_dict[opt] = 1
-                        continue
-                if type(default) == list:
-                        if opt in opt_dict:
-                                opt_dict[opt].append(arg)
-                        else:
-                                opt_dict[opt] = [arg]
-                        continue
+                if use_cli_opts:
+                        # Handle duplicates for integer and list types.
+                        if type(default) == int:
+                                if opt in opt_dict:
+                                        opt_dict[opt] += 1
+                                else:
+                                        opt_dict[opt] = 1
+                                return
+                        if type(default) == list:
+                                if opt in opt_dict:
+                                        opt_dict[opt].append(arg)
+                                else:
+                                        opt_dict[opt] = [arg]
+                                return
 
                 # Boolean and string types can't be repeated.
                 if opt in opt_dict:
                         raise api_errors.InvalidOptionError(
                             api_errors.InvalidOptionError.OPT_REPEAT, [opt])
 
-                # For boolean options we have to toggle the default value.
+                # For boolean options we have to toggle the default value
+                # when in CLI mode.
                 if type(default) == bool:
-                        opt_dict[opt] = not default
+                        if use_cli_opts:
+                                opt_dict[opt] = not default
+                        else:
+                                opt_dict[opt] = arg
                 else:
                         opt_dict[opt] = arg
 
-        return opt_dict, pargs
+        # Assemble the options dictionary by passing in the right data types
+        # and take care of duplicates.
+        opt_dict = {}
+        if use_cli_opts:
+                for x in opts:
+                        cli_opt, arg = x
+                        opt = opts_keys[cli_opt]
+                        process_opts(opt, arg, opt_dict)
+
+                return opt_dict, pargs
+
+        for k, v in opts.items():
+                cli_opt, arg = k, v
+                if cli_opt in opts_name_mapping:
+                        cli_opt = opts_name_mapping[cli_opt]
+                else:
+                        raise api_errors.InvalidOptionError(
+                            api_errors.InvalidOptionError.GENERIC,
+                            [cli_opt])
+                process_opts(cli_opt, arg, opt_dict)
+
+        return opt_dict
 
 def api_cmdpath():
         """Returns the path to the executable that is invoking the api client
@@ -1471,7 +1562,7 @@ def api_pkgcmd():
         # propagate debug options
         for k, v in DebugValues.iteritems():
                 pkg_cmd.append("-D")
-                pkg_cmd.append("%s=%s" % (k, v))
+                pkg_cmd.append("{0}={1}".format(k, v))
 
         return pkg_cmd
 
@@ -1504,7 +1595,7 @@ def get_dir_size(path):
                     for d, dnames, fnames in os.walk(path)
                     for fname in fnames
                 )
-        except EnvironmentError, e:
+        except EnvironmentError as e:
                 # Access to protected member; pylint: disable=W0212
                 raise api_errors._convert_error(e)
 
@@ -1612,7 +1703,7 @@ def get_listing(desired_field_order, field_data, field_values, out_format,
                 val = " ".join(nval)
                 nval = None
                 if multi_value:
-                        val = "(%s)" % val
+                        val = "({0})".format(val)
                 entry[0][2] = val
 
         if out_format == "default":
@@ -1627,7 +1718,7 @@ def get_listing(desired_field_order, field_data, field_values, out_format,
                     1 for k in field_data
                     if filter_tsv(field_data[k])
                 )
-                fmt = "\t".join('%s' for x in xrange(num_fields))
+                fmt = "\t".join('{{{0}}}'.format(x) for x in xrange(num_fields))
                 filter_func = filter_tsv
         elif out_format == "json" or out_format == "json-formatted":
                 args = { "sort_keys": True }
@@ -1671,7 +1762,7 @@ def get_listing(desired_field_order, field_data, field_values, out_format,
         # Output a header if desired.
         output = ""
         if not omit_headers:
-                output += fmt % tuple(hdrs)
+                output += fmt.format(*hdrs)
                 output += "\n"
 
         for entry in field_values:
@@ -1682,7 +1773,7 @@ def get_listing(desired_field_order, field_data, field_values, out_format,
                 ))
                 values = map(get_value, sorted(filter(filter_func,
                     field_data.values()), sort_fields))
-                output += fmt % tuple(values)
+                output += fmt.format(*values)
                 output += "\n"
 
         return output
@@ -1693,7 +1784,7 @@ def truncate_file(f, size=0):
                 f.truncate(size)
         except IOError:
                 pass
-        except OSError, e:
+        except OSError as e:
                 # Access to protected member; pylint: disable=W0212
                 raise api_errors._convert_error(e)
 
@@ -1704,7 +1795,7 @@ def flush_output():
                 sys.stdout.flush()
         except IOError:
                 pass
-        except OSError, e:
+        except OSError as e:
                 # Access to protected member; pylint: disable=W0212
                 raise api_errors._convert_error(e)
 
@@ -1712,12 +1803,15 @@ def flush_output():
                 sys.stderr.flush()
         except IOError:
                 pass
-        except OSError, e:
+        except OSError as e:
                 # Access to protected member; pylint: disable=W0212
                 raise api_errors._convert_error(e)
 
 # valid json types
-json_types_immediates = (bool, float, int, long, str, type(None), unicode)
+if sys.version > '3':
+        json_types_immediates = (bool, float, int, str, type(None))
+else:
+        json_types_immediates = (bool, float, int, long, basestring, type(None))
 json_types_collections = (dict, list)
 json_types = tuple(json_types_immediates + json_types_collections)
 json_debug = False
@@ -1742,8 +1836,8 @@ def json_encode(name, data, desc, commonize=None, je_state=None):
 
         # debugging
         if je_state is None and json_debug:
-                print >> sys.stderr, "json_encode name: ", name
-                print >> sys.stderr, "json_encode data: ", data
+                print("json_encode name: ", name, file=sys.stderr)
+                print("json_encode data: ", data, file=sys.stderr)
 
         # we don't encode None
         if data is None:
@@ -1831,8 +1925,10 @@ def json_encode(name, data, desc, commonize=None, je_state=None):
 
                 # debugging
                 if json_debug:
-                        print >> sys.stderr, "json_encode finished name: ", name
-                        print >> sys.stderr, "json_encode finished data: ", data
+                        print("json_encode finished name: ", name,
+                            file=sys.stderr)
+                        print("json_encode finished data: ", data,
+                            file=sys.stderr)
 
                 return data
 
@@ -1847,13 +1943,21 @@ def json_encode(name, data, desc, commonize=None, je_state=None):
         data_type = getattr(data, "__metaclass__", type(data))
 
         # sanity check that the data type matches the description
-        assert desc_type == data_type, \
-            "unexpected %s for %s, expected: %s, value: %s" % \
-                (data_type, name, desc_type, data)
+        assert issubclass(data_type, desc_type), \
+            "unexpected {0} for {1}, expected: {2}, value: {3}".format(
+                data_type, name, desc_type, data)
+
+        # We should not see unicode strings getting passed in. The assert is
+        # necessary since we use the PkgDecoder hook function during json_decode
+        # to convert unicode objects back into escaped str objects, which would
+        # otherwise do that conversion unintentionally.
+        assert not isinstance(data_type, unicode), \
+            "unexpected unicode string: {0}".format(data)
 
         # we don't need to do anything for basic types
-        if desc_type in json_types_immediates:
-                return je_return(name, data, finish, je_state)
+        for t in json_types_immediates:
+                if issubclass(desc_type, t):
+                        return je_return(name, data, finish, je_state)
 
         # encode elements nested in a dictionary like object
         # return elements in a dictionary
@@ -1881,12 +1985,12 @@ def json_encode(name, data, desc, commonize=None, je_state=None):
                         # encode all key / value pairs
                         for k, v in data.iteritems():
                                 # encode the key
-                                name2 = "%s[%s].key()" % (name, desc_k)
+                                name2 = "{0}[{1}].key()".format(name, desc_k)
                                 k2 = json_encode(name2, k, desc_k,
                                     je_state=je_state)
 
                                 # encode the value
-                                name2 = "%s[%s].value()" % (name, desc_k)
+                                name2 = "{0}[{1}].value()".format(name, desc_k)
                                 v2 = json_encode(name2, v, desc_v,
                                     je_state=je_state)
 
@@ -1903,7 +2007,7 @@ def json_encode(name, data, desc, commonize=None, je_state=None):
                                 continue
 
                         # encode the value
-                        name2 = "%s[%s].value()" % (name, desc_k)
+                        name2 = "{0}[{1}].value()".format(name, desc_k)
                         rv[desc_k] = json_encode(name2, rv[desc_k], desc_v,
                             je_state=je_state)
                 return je_return(name, rv, finish, je_state)
@@ -1926,12 +2030,12 @@ def json_encode(name, data, desc, commonize=None, je_state=None):
 
                 # don't accidentally generate data via izip_longest
                 assert len(data) >= len(desc), \
-                    "%d >= %d" % (len(data), len(desc))
+                    "{0:d} >= {1:d}".format(len(data), len(desc))
 
                 i = 0
                 for data2, desc2 in itertools.izip_longest(data, desc,
                     fillvalue=list(desc)[0]):
-                        name2 = "%s[%i]" % (name, i)
+                        name2 = "{0}[{1:d}]".format(name, i)
                         i += 1
                         rv.append(json_encode(name2, data2, desc2,
                             je_state=je_state))
@@ -1946,11 +2050,12 @@ def json_encode(name, data, desc, commonize=None, je_state=None):
         # find an encoder for this class, which should be:
         #     <class>.getstate(obj, je_state)
         encoder = getattr(desc_type, "getstate", None)
-        assert encoder is not None, "no json encoder for: %s" % desc_type
+        assert encoder is not None, "no json encoder for: {0}".format(desc_type)
 
         # encode the data
         rv = encoder(data, je_state)
-        assert rv is not None, "json encoder returned none for: %s" % desc_type
+        assert rv is not None, "json encoder returned none for: {0}".format(
+            desc_type)
 
         # if we're commonizing this object, then assign it an object id and
         # save that object id and the encoded object into the object cache
@@ -1975,8 +2080,8 @@ def json_decode(name, data, desc, commonize=None, jd_state=None):
 
         # debugging
         if jd_state is None and json_debug:
-                print >> sys.stderr, "json_decode name: ", name
-                print >> sys.stderr, "json_decode data: ", data
+                print("json_decode name: ", name, file=sys.stderr)
+                print("json_decode data: ", data, file=sys.stderr)
 
         # we don't decode None
         if data is None:
@@ -2027,7 +2132,7 @@ def json_decode(name, data, desc, commonize=None, jd_state=None):
                         jd_state = [obj_cache, commonize]
 
         # verify state
-        assert type(name) == str, "type(name) == %s" % type(name)
+        assert type(name) == str, "type(name) == {0}".format(type(name))
         assert type(obj_cache) == dict
         assert type(commonize) == frozenset
         assert type(jd_state) == list and len(jd_state) == 2
@@ -2047,17 +2152,19 @@ def json_decode(name, data, desc, commonize=None, jd_state=None):
                 data_type = getattr(data, "__metaclass__", type(data))
 
                 # sanity check that the data type matches the description
-                assert desc_type == data_type, \
-                    "unexpected %s for %s, expected: %s, value: %s" % \
-                        (data_type, name, desc_type, rv)
+                assert issubclass(data_type, desc_type), \
+                    "unexpected {0} for {1}, expected: {2}, value: {3}".format(
+                        data_type, name, desc_type, data)
 
                 if not finish:
                         return data
 
                 # debugging
                 if json_debug:
-                        print >> sys.stderr, "json_decode finished name: ", name
-                        print >> sys.stderr, "json_decode finished data: ", data
+                        print("json_decode finished name: ", name,
+                            file=sys.stderr)
+                        print("json_decode finished data: ", data,
+                            file=sys.stderr)
                 return data
 
         # check if the description is a type object
@@ -2068,9 +2175,9 @@ def json_decode(name, data, desc, commonize=None, jd_state=None):
                 desc_type = type(desc)
 
         # we don't need to do anything for basic types
-        if desc_type in json_types_immediates:
-                rv = None
-                return jd_return(name, data, desc, finish, jd_state)
+        for t in json_types_immediates:
+                if issubclass(desc_type, t):
+                        return jd_return(name, data, desc, finish, jd_state)
 
         # decode elements nested in a dictionary
         # return elements in the specified dictionary like object
@@ -2102,12 +2209,12 @@ def json_decode(name, data, desc, commonize=None, jd_state=None):
                         # decode all key / value pairs
                         for k, v in data.iteritems():
                                 # decode the key
-                                name2 = "%s[%s].key()" % (name, desc_k)
+                                name2 = "{0}[{1}].key()".format(name, desc_k)
                                 k2 = json_decode(name2, k, desc_k,
                                     jd_state=jd_state)
 
                                 # decode the value
-                                name2 = "%s[%s].value()" % (name, desc_k)
+                                name2 = "{0}[{1}].value()".format(name, desc_k)
                                 v2 = json_decode(name2, v, desc_v,
                                     jd_state=jd_state)
 
@@ -2124,7 +2231,7 @@ def json_decode(name, data, desc, commonize=None, jd_state=None):
                                 continue
 
                         # decode the value
-                        name2 = "%s[%s].value()" % (name, desc_k)
+                        name2 = "{0}[{1}].value()".format(name, desc_k)
                         rv[desc_k] = json_decode(name2, rv[desc_k],
                             desc_v, jd_state=jd_state)
                 return jd_return(name, rv, desc, finish, jd_state)
@@ -2140,20 +2247,20 @@ def json_decode(name, data, desc, commonize=None, jd_state=None):
                         rv = rvtype([])
                         return jd_return(name, rv, desc, finish, jd_state)
 
-                # check if we're not encoding nested elements
+                # check if we're not decoding nested elements
                 if len(desc) == 0:
                         rv = rvtype(data)
                         return jd_return(name, rv, desc, finish, jd_state)
 
                 # don't accidentally generate data via izip_longest
                 assert len(data) >= len(desc), \
-                    "%d >= %d" % (len(data), len(desc))
+                    "{0:d} >= {1:d}".format(len(data), len(desc))
 
                 rv = []
                 i = 0
                 for data2, desc2 in itertools.izip_longest(data, desc,
                     fillvalue=list(desc)[0]):
-                        name2 = "%s[%i]" % (name, i)
+                        name2 = "{0}[{1:d}]".format(name, i)
                         i += 1
                         rv.append(json_decode(name2, data2, desc2,
                             jd_state=jd_state))
@@ -2163,7 +2270,7 @@ def json_decode(name, data, desc, commonize=None, jd_state=None):
         # find a decoder for this data, which should be:
         #     <class>.fromstate(state, jd_state)
         decoder = getattr(desc_type, "fromstate", None)
-        assert decoder is not None, "no json decoder for: %s" % desc_type
+        assert decoder is not None, "no json decoder for: {0}".format(desc_type)
 
         # if this object was commonized then get a reference to it from the
         # object cache.
@@ -2203,8 +2310,8 @@ def json_validate(name, data):
         the specified depth."""
 
         assert isinstance(data, json_types), \
-            "invalid json type \"%s\" for \"%s\", value: %s" % \
-            (type(data), name, str(data))
+            "invalid json type \"{0}\" for \"{1}\", value: {2}".format(
+            type(data), name, str(data))
 
         if type(data) == dict:
                 for k in data:
@@ -2212,17 +2319,18 @@ def json_validate(name, data):
                         # strings, which is a bit unexpected.  so make sure we
                         # don't have any of those.
                         assert type(k) != int, \
-                            "integer dictionary keys detected for: %s" % name
+                            "integer dictionary keys detected for: {0}".format(
+                                name)
 
                         # validate the key and the value
-                        new_name = "%s[%s].key()" % (name, k)
+                        new_name = "{0}[{1}].key()".format(name, k)
                         json_validate(new_name, k)
-                        new_name = "%s[%s].value()" % (name, k)
+                        new_name = "{0}[{1}].value()".format(name, k)
                         json_validate(new_name, data[k])
 
         if type(data) == list:
                 for i in range(len(data)):
-                        new_name = "%s[%i]" % (name, i)
+                        new_name = "{0}[{1:d}]".format(name, i)
                         json_validate(new_name, data[i])
 
 def json_diff(name, d0, d1, alld0, alld1):
@@ -2237,37 +2345,53 @@ def json_diff(name, d0, d1, alld0, alld1):
                 return "\n--- d0\n" + d(d0) + "\n+++ d1\n" + d(d1) + \
                     "\n--- alld0\n" + d(alld0) + "\n+++ alld1\n" + d(alld1)
 
-        assert type(d0) == type(d1), ("Json data types differ for \"%s\":\n"
-                "type 1: %s\ntype 2: %s\n") % (name, type(d0), type(d1)) + dbg()
+        assert type(d0) == type(d1), ("Json data types differ for \"{0}\":\n"
+                "type 1: {1}\ntype 2: {2}\n").format(name, type(d0),
+                    type(d1)) + dbg()
 
         if type(d0) == dict:
                 assert set(d0) == set(d1), (
-                   "Json dictionary keys differ for \"%s\":\n"
-                   "dict 1 missing: %s\n"
-                   "dict 2 missing: %s\n") % (name,
+                   "Json dictionary keys differ for \"{0}\":\n"
+                   "dict 1 missing: {1}\n"
+                   "dict 2 missing: {2}\n").format(name,
                    set(d1) - set(d0), set(d0) - set(d1)) + dbg()
 
                 for k in d0:
-                        new_name = "%s[%s]" % (name, k)
+                        new_name = "{0}[{1}]".format(name, k)
                         json_diff(new_name, d0[k], d1[k], alld0, alld1)
 
         if type(d0) == list:
                 assert len(d0) == len(d1), (
-                   "Json list lengths differ for \"%s\":\n"
-                   "list 1 length: %s\n"
-                   "list 2 length: %s\n") % (name,
+                   "Json list lengths differ for \"{0}\":\n"
+                   "list 1 length: {1}\n"
+                   "list 2 length: {2}\n").format(name,
                    len(d0), len(d1)) + dbg()
 
                 for i in range(len(d0)):
-                        new_name = "%s[%i]" % (name, i)
+                        new_name = "{0}[{1:d}]".format(name, i)
                         json_diff(new_name, d0[i], d1[i], alld0, alld1)
+
+def json_hook(dct):
+        """Hook routine used by the JSON module to ensure that unicode objects
+        are converted to string objects."""
+
+        rvdct = {}
+        for k, v in dct.iteritems():
+                if type(k) == unicode:
+                        k = k.encode("utf-8")
+                if type(v) == unicode:
+                        v = v.encode("utf-8")
+
+                rvdct[k] = v
+        return rvdct
 
 class Timer(object):
         """A class which can be used for measuring process times (user,
         system, and wait)."""
 
         __precision = 3
-        __log_fmt = "utime: %7.3f; stime: %7.3f; wtime: %7.3f"
+        __log_fmt = "utime: {0:>7.3f}; stime: {1:>7.3f}; wtime: {2:>7.3f}"
+        __log_fmt_shift = "utime: {1:>7.3f}; stime: {2:>7.3f}; wtime: {3:>7.3f}"
 
         def __init__(self, module):
                 self.__module = module
@@ -2293,19 +2417,20 @@ class Timer(object):
                     self.__zero1(wdelta)
 
         def __str__(self):
-                s = "\nTimings for %s: [\n" % self.__module
+                s = "\nTimings for {0}: [\n".format(self.__module)
                 utotal = stotal = wtotal = 0
                 phases = [i[0] for i in self.__timings] + ["total"]
                 phase_width = max([len(i) for i in phases]) + 1
-                fmt = "  %%-%ss %s;\n" % (phase_width, Timer.__log_fmt)
+                fmt = "  {{0:{0}}} {1};\n".format(phase_width,
+                    Timer.__log_fmt_shift)
                 for phase, udelta, sdelta, wdelta in self.__timings:
                         if self.__zero(udelta, sdelta, wdelta):
                                 continue
                         utotal += udelta
                         stotal += sdelta
                         wtotal += wdelta
-                        s += fmt % (phase + ":", udelta, sdelta, wdelta)
-                s += fmt % ("total:", utotal, stotal, wtotal)
+                        s += fmt.format(phase + ":", udelta, sdelta, wdelta)
+                s += fmt.format("total:", utotal, stotal, wtotal)
                 s += "]\n"
                 return s
 
@@ -2338,8 +2463,8 @@ class Timer(object):
                 self.__timings.append((phase, udelta, sdelta, wdelta))
                 self.__utime, self.__stime, self.__wtime = utime, stime, wtime
 
-                rv = "%s: %s: " % (self.__module, phase)
-                rv += Timer.__log_fmt % (udelta, sdelta, wdelta)
+                rv = "{0}: {1}: ".format(self.__module, phase)
+                rv += Timer.__log_fmt.format(udelta, sdelta, wdelta)
                 if logger:
                         logger.debug(rv)
                 return rv
@@ -2403,7 +2528,7 @@ class AsyncCall(object):
                         rv = e = None
                         try:
                                 rv = cb(*args, **kwargs)
-                        except Exception, e:
+                        except Exception as e:
                                 self.e = self.__e
                                 self.e.e = e
                                 self.e.tb = traceback.format_exc()
@@ -2411,7 +2536,7 @@ class AsyncCall(object):
 
                         self.rv = rv
 
-                except Exception, e:
+                except Exception as e:
                         # if we raise an exception here, we're hosed
                         self.rv = None
                         self.e = self.__e
@@ -2572,5 +2697,140 @@ def signame(signal_number):
                         if name.startswith("SIG") and "_" not in name:
                                 sigdict[getattr(signal, name)].append(name)
 
-        return "/".join(sigdict.get(signal_number, ["Unnamed signal: %d" %
-            signal_number]))
+        return "/".join(sigdict.get(signal_number,
+            ["Unnamed signal: {0:d}".format(signal_number)]))
+
+def list_actions_by_attrs(actionlist, attrs, show_all=False,
+    remove_consec_dup_lines=False, last_res=None):
+        """Produces a list of n tuples (where n is the length of attrs)
+        containing the relevant information about the actions.
+
+        The "actionlist" parameter is a list of tuples which contain the fmri
+        of the package that's the source of the action, the action, and the
+        publisher the action's package came from. If the actionlist was
+        generated by searching, the last two pieces, "match" and "match_type"
+        contain information about why this action was selected.
+
+        The "attrs" parameter is a list of the attributes of the action that
+        should be displayed.
+
+        The "show_all" parameter determines whether an action that lacks one
+        or more of the desired attributes will be displayed or not.
+
+        The "remove_consec_dup_lines" parameter determines whether consecutive
+        duplicate lines should be removed from the results.
+
+        The "last_res" parameter is a seed to compare the first result against
+        for duplicate removal.
+        """
+
+        # Assert that if last_res is set, we should be removing duplicate
+        # lines.
+        assert remove_consec_dup_lines or not last_res
+        last_line = last_res
+        for pfmri, action, pub, match, match_type in actionlist:
+                line = []
+                for attr in attrs:
+                        if action and attr in action.attrs:
+                                a = action.attrs[attr]
+                        elif attr == "action.name":
+                                a = action.name
+                        elif attr == "action.key":
+                                a = action.attrs[action.key_attr]
+                        elif attr == "action.raw":
+                                a = action
+                        elif attr in ("hash", "action.hash"):
+                                a = getattr(action, "hash", "")
+                        elif attr == "pkg.name":
+                                a = pfmri.get_name()
+                        elif attr == "pkg.fmri":
+                                a = pfmri.get_fmri(include_build=False)
+                        elif attr == "pkg.shortfmri":
+                                a = pfmri.get_short_fmri()
+                        elif attr == "pkg.publisher":
+                                a = pfmri.get_publisher()
+                                if a is None:
+                                        a = pub
+                                        if a is None:
+                                                a = ""
+                        elif attr == "search.match":
+                                a = match
+                        elif attr == "search.match_type":
+                                a = match_type
+                        else:
+                                a = ""
+                        line.append(a)
+
+                if (line and [l for l in line if str(l) != ""] or show_all) \
+                    and (not remove_consec_dup_lines or last_line is None or
+                    last_line != line):
+                        last_line = line
+                        yield line
+
+def _min_edit_distance(word1, word2):
+        """Calculate the minimal edit distance for converting word1 to word2,
+        based on Wagner-Fischer algorithm."""
+
+        m = len(word1)
+        n = len(word2)
+
+        # dp[i][j] stands for the edit distance between two strings with
+        # length i and j, i.e., word1[0,...,i-1] and word2[0,...,j-1]
+        dp = [[0 for i in range(n+1)] for j in range(m+1)]
+
+        ins_cost = 1.0
+        del_cost = 1.0
+        rep_cost = 1.0
+        for i in range(m+1):
+                dp[i][0] = del_cost * i
+        for i in range(n+1):
+                dp[0][i] = ins_cost * i
+
+        for i in range(1, m+1):
+                for j in range(1, n+1):
+                        if word1[i-1] == word2[j-1]:
+                                dp[i][j] = dp[i-1][j-1]
+                        else:
+                                dp[i][j] = min(
+                                    dp[i-1][j-1] + rep_cost,
+                                    dp[i][j-1] + ins_cost,
+                                    dp[i-1][j] + del_cost)
+
+        return dp[m][n]
+
+def suggest_known_words(text, known_words):
+        """Given a text, a list of known_words, suggest some correct
+        candidates from known_words."""
+
+        candidates = []
+        if not text:
+                return candidates
+
+        # We are confident to suggest if the text is part of the known words.
+        for known in known_words:
+                if len(text) < 4:
+                        # If the text's length is short, treat it as a prefix.
+                        if known.startswith(text):
+                                candidates.append(known)
+                elif text in known or known in text:
+                        # Otherwise check if the text is part of the known
+                        # words or vice verse.
+                        candidates.append(known)
+
+        if candidates:
+                if len(candidates) < 4:
+                        return candidates
+                else:
+                        # Give up suggestions if there are too many candidates.
+                        return
+
+        # If there are no candidates from the "contains" check, use the edit
+        # distance algorithm to seek further.
+        for known in known_words:
+                distance = _min_edit_distance(text, known)
+                if distance <= len(known) / 2.0:
+                        candidates.append((known, distance))
+
+        # Sort the candidates by their distance, and return the words only.
+        return [c[0] for c in sorted(candidates, key=itemgetter(1))]
+

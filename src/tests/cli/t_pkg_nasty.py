@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.7
 #
 # CDDL HEADER START
 #
@@ -21,9 +21,10 @@
 #
 
 #
-# Copyright (c) 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
+from __future__ import print_function
 import testutils
 if __name__ == "__main__":
         testutils.setup_environment("../../../proto")
@@ -34,6 +35,10 @@ import unittest
 import random
 import re
 import shutil
+import signal
+import time
+
+import pkg.portable as portable
 
 class TestPkgNasty(pkg5unittest.SingleDepotTestCase):
 
@@ -116,14 +121,14 @@ class TestPkgNasty(pkg5unittest.SingleDepotTestCase):
                     "PKG_CLIENT_MAX_CONSECUTIVE_ERRORS": "3",
                     "PKG_CLIENT_MAX_TIMEOUT": "2",
                     "PKG_CLIENT_LOWSPEED_TIMEOUT": \
-                        "%d" % (self.NASTY_SLEEP - 1),
+                        "{0:d}".format(self.NASTY_SLEEP - 1),
                 }
 
                 self.dc.start()
 
                 pubname = "test"
                 self.mfst_path = os.path.join(self.img_path(),
-                    "var/pkg/publisher/%s/pkg" % pubname)
+                    "var/pkg/publisher/{0}/pkg".format(pubname))
 
         def _rm_mfsts(self):
                 # Note that we have chosen not to ignore errors here,
@@ -138,7 +143,7 @@ class TestPkgNasty(pkg5unittest.SingleDepotTestCase):
                         log = open(lp)
                         lines = log.readlines()
                         self.debug("".join(lines[-50:]))
-                except StandardError:
+                except Exception:
                         self.debug("Failed to print log entries")
 
         def _trythis(self, label, kallable, ntries=10):
@@ -149,8 +154,8 @@ class TestPkgNasty(pkg5unittest.SingleDepotTestCase):
                 for tries in range(1, ntries + 1):
                         if tries > 1:
                                 self.debug(
-                                    "--try: '%s' try #%d" %
-                                    (label, tries))
+                                    "--try: '{0}' try #{1:d}".format(
+                                    label, tries))
                         ret = kallable()
                         if ret == 0:
                                 break
@@ -158,9 +163,9 @@ class TestPkgNasty(pkg5unittest.SingleDepotTestCase):
                         # Turn nastiness off on the depot and try again;
                         # this helps prevent waiting around forever for
                         # something to eventually work.
-                        self.debug("Note: Repeated failures for '%s' "
-                            "(%d times).  Disabling nasty and retrying" %
-                            (label, ntries))
+                        self.debug("Note: Repeated failures for '{0}' "
+                            "({1:d} times).  Disabling nasty and retrying".format(
+                            label, ntries))
                         # Reset environment params and depot nastiness.
                         # We have to edit self.nasty_env in place (as opposed
                         # to just replacing it) because a reference to it is
@@ -180,22 +185,22 @@ class TestPkgNasty(pkg5unittest.SingleDepotTestCase):
                         self.dc.set_nasty(self.NASTY_LEVEL)
                         if ret != 0:
                                 raise self.failureException(
-                                    "Failed '%s' %d times, then failed again "
-                                    "with nasty disabled.  Test failed" %
-                                    (label, ntries))
+                                    "Failed '{0}' {1:d} times, then failed again "
+                                    "with nasty disabled.  Test failed".format(
+                                    label, ntries))
 
         def do_main_loop(self, kallable):
                 """Loop running a nasty test.  Iterations tunable by setting
                 NASTY_ITERS in the process environment, i.e. NASTY_ITERS=100."""
                 for x in range(1, self.NASTY_ITERS + 1):
-                        self.debug("---- Iteration %d/%d ----" %
-                            (x, self.NASTY_ITERS))
+                        self.debug("---- Iteration {0:d}/{1:d} ----".format(
+                            x, self.NASTY_ITERS))
                         try:
                                 kallable()
                         except:
                                 self._dumplog()
-                                self.debug("---- Iteration %d/%d FAILED ----" %
-                                    (x, self.NASTY_ITERS))
+                                self.debug("---- Iteration {0:d}/{1:d} FAILED ----".format(
+                                    x, self.NASTY_ITERS))
                                 raise
 
 
@@ -242,7 +247,7 @@ class TestNastyInstall(TestPkgNasty):
                 path = os.path.join(self.img_path(), "A", "f1")
                 self.assert_(os.path.exists(path))
                 f = open(path, "w")
-                print >> f, "I LIKE COCONUTS!"
+                print("I LIKE COCONUTS!", file=f)
                 f.close()
                 self._trythis("revert",
                     lambda: self.pkg("revert A/f1", env_arg=env, exit=[0, 1]))
@@ -283,19 +288,19 @@ class TestNastyPkgUtils(TestPkgNasty):
                 env = self.nasty_env
                 self._trythis("pkgrepo get",
                     lambda: self.pkgrepo(
-                        "get -s %s" % self.durl, env_arg=env, exit=[0, 1]))
+                        "get -s {0}".format(self.durl), env_arg=env, exit=[0, 1]))
                 self._trythis("pkgrepo info",
                     lambda: self.pkgrepo(
-                        "info -s %s" % self.durl, env_arg=env, exit=[0, 1]))
+                        "info -s {0}".format(self.durl), env_arg=env, exit=[0, 1]))
                 self._trythis("pkgrepo list",
                     lambda: self.pkgrepo(
-                        "list -s %s" % self.durl, env_arg=env, exit=[0, 1]))
+                        "list -s {0}".format(self.durl), env_arg=env, exit=[0, 1]))
                 self._trythis("pkgrepo rebuild",
                     lambda: self.pkgrepo(
-                        "rebuild -s %s" % self.durl, env_arg=env, exit=[0, 1]))
+                        "rebuild -s {0}".format(self.durl), env_arg=env, exit=[0, 1]))
                 self._trythis("pkgrepo refresh",
                     lambda: self.pkgrepo(
-                        "refresh -s %s" % self.durl, env_arg=env, exit=[0, 1]))
+                        "refresh -s {0}".format(self.durl), env_arg=env, exit=[0, 1]))
 
         def test_pkgrepo_nasty_looping(self):
                 """Test the pkgrepo command against a nasty depot."""
@@ -317,31 +322,31 @@ class TestNastyTempPub(TestPkgNasty):
                 self.pkg("set-property signature-policy require-signatures")
 
                 # test list with temporary publisher
-                cmd = "list -a -g %s \*" % self.durl
+                cmd = "list -a -g {0} \*".format(self.durl)
                 self._trythis(cmd,
                     lambda: self.pkg(cmd, env_arg=env, exit=[0, 1]))
 
                 # test contents with temporary publisher
-                cmd = "contents -m -g %s -r testpkg/*A@1.1" % self.durl
+                cmd = "contents -m -g {0} -r testpkg/*A@1.1".format(self.durl)
                 self._trythis(cmd,
                     lambda: self.pkg(cmd, env_arg=env, exit=[0, 1]))
 
                 # clean out dl'd mfsts
                 self._rm_mfsts()
                 # test info with temporary publisher
-                cmd = "info -g %s \*" % self.durl
+                cmd = "info -g {0} \*".format(self.durl)
                 self._trythis(cmd,
                     lambda: self.pkg(cmd, env_arg=env, exit=[0, 1]))
 
                 # clean out dl'd mfsts
                 self._rm_mfsts()
                 # test install with temporary publisher
-                cmd = "install -g %s testpkg/*@1.0" % self.durl
+                cmd = "install -g {0} testpkg/*@1.0".format(self.durl)
                 self._trythis(cmd,
                     lambda: self.pkg(cmd, env_arg=env, exit=[0, 1]))
 
                 # test update with temporary publisher
-                cmd = "update -g %s" % self.durl
+                cmd = "update -g {0}".format(self.durl)
                 self._trythis(cmd,
                     lambda: self.pkg(cmd, env_arg=env, exit=[0, 1]))
 
@@ -349,6 +354,60 @@ class TestNastyTempPub(TestPkgNasty):
 
         def test_temppub_nasty_looping(self):
                 self.do_main_loop(self.__nasty_temppub_1_run)
+
+
+class TestNastySig(pkg5unittest.SingleDepotTestCase):
+        # Only start/stop the depot once (instead of for every test)
+        persistent_setup = True
+
+        foo10 = """
+            open foo@1.0,5.11-0
+            close """
+
+        def setUp(self):
+                pkg5unittest.SingleDepotTestCase.setUp(self)
+                self.pkgsend_bulk(self.rurl, self.foo10)
+
+        def test_00_sig(self):
+                """Verify pkg client handles SIGTERM, SIGHUP, SIGINT gracefully
+                and writes a history entry if possible."""
+
+                if portable.osname == "windows":
+                        # SIGHUP not supported on Windows.
+                        sigs = (signal.SIGINT, signal.SIGTERM)
+                else:
+                        sigs = (signal.SIGHUP, signal.SIGINT, signal.SIGTERM)
+
+                for sig in sigs:
+                        self.pkg_image_create(self.rurl)
+
+                        imgdir = os.path.join(self.img_path(), "var", "pkg")
+                        self.assert_(os.path.exists(imgdir))
+
+                        hfile = os.path.join(imgdir, "pkg5.hang")
+                        self.assert_(not os.path.exists(hfile))
+
+                        self.pkg("purge-history")
+
+                        hndl = self.pkg(
+                            ["-D", "simulate-plan-hang=true", "install", "foo"],
+                            handle=True, coverage=False)
+
+                        # Wait for hang file before sending signal.
+                        while not os.path.exists(hfile):
+                                self.assertEqual(hndl.poll(), None)
+                                time.sleep(0.25)
+
+                        hndl.send_signal(sig)
+                        rc = hndl.wait()
+
+                        self.assertEqual(rc, 1)
+
+                        # Verify that history records operation as canceled.
+                        self.pkg(["history", "-H"])
+                        hentry = self.output.splitlines()[-1]
+                        self.assert_("install" in hentry)
+                        self.assert_("Canceled" in hentry)
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-#!/usr/bin/python2.6
+#!/usr/bin/python2.7
 #
 # CDDL HEADER START
 #
@@ -21,10 +21,15 @@
 #
 
 #
-# Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 import hashlib
+try:
+        import pkg.sha512_t
+        sha512_supported = True
+except ImportError:
+        sha512_supported = False
 
 # When running the test suite, we alter our behaviour depending on certain
 # debug flags.
@@ -70,7 +75,16 @@ DEFAULT_HASH_NAME = "sha-1"
 # using the "most preferred" hash. See get_preferred_hash(..),
 # get_least_preferred_hash(..) and get_common_preferred_hash(..)
 #
-if DebugValues["hash"] == "sha1+sha256":
+if DebugValues["hash"] == "sha1+sha512_256" and sha512_supported:
+        # Simulate pkg(5) where SHA-1 and SHA-512/256 are used for publication
+        DEFAULT_HASH_ATTRS = ["hash", "pkg.hash.sha512_256"]
+        DEFAULT_CHASH_ATTRS = ["chash", "pkg.chash.sha512_256"]
+        DEFAULT_CONTENT_HASH_ATTRS = ["elfhash", "pkg.content-hash.sha512_256"]
+        DEFAULT_CHAIN_ATTRS = ["chain", "pkg.chain.sha512_256"]
+        DEFAULT_CHAIN_CHASH_ATTRS = ["chain.chashes",
+            "pkg.chain.chashes.sha512_256"]
+
+elif DebugValues["hash"] == "sha1+sha256":
         # Simulate pkg(5) where SHA-1 and SHA-256 are used for publication
         DEFAULT_HASH_ATTRS = ["hash", "pkg.hash.sha256"]
         DEFAULT_CHASH_ATTRS = ["chash", "pkg.chash.sha256"]
@@ -78,6 +92,14 @@ if DebugValues["hash"] == "sha1+sha256":
         DEFAULT_CHAIN_ATTRS = ["chain", "pkg.chain.sha256"]
         DEFAULT_CHAIN_CHASH_ATTRS = ["chain.chashes",
             "pkg.chain.chashes.sha256"]
+
+elif DebugValues["hash"] == "sha512_256" and sha512_supported:
+        # Simulate pkg(5) where SHA-1 is no longer used for publication
+        DEFAULT_HASH_ATTRS = ["pkg.hash.sha512_256"]
+        DEFAULT_CHASH_ATTRS = ["pkg.chash.sha512_256"]
+        DEFAULT_CONTENT_HASH_ATTRS = ["pkg.content-hash.sha512_256"]
+        DEFAULT_CHAIN_ATTRS = ["pkg.chain.sha512_256"]
+        DEFAULT_CHAIN_CHASH_ATTRS = ["pkg.chain.chashes.sha512_256"]
 
 elif DebugValues["hash"] == "sha256":
         # Simulate pkg(5) where SHA-1 is no longer used for publication
@@ -111,7 +133,7 @@ CHAIN_CHASH = 4
 # value being computed with this data, along with a 'hexdigest()' method to
 # return the hexadecimal value of the hash.
 #
-# At present, these are all hashlib factory methods. When maintaining these
+# At present, some of these are hashlib factory methods. When maintaining these
 # dictionaries, it is important to *never remove* entries from them, otherwise
 # clients with installed packages will not be able to verify their content when
 # pkg(5) is updated.
@@ -126,6 +148,9 @@ else:
             "pkg.hash.sha256": hashlib.sha256,
         }
 
+        if sha512_supported:
+                HASH_ALGS["pkg.hash.sha512_256"] = pkg.sha512_t.SHA512_t
+
 # A dictionary of the compressed hash attributes we know about.
 CHASH_ALGS = {}
 for key in HASH_ALGS:
@@ -138,7 +163,9 @@ CONTENT_HASH_ALGS = {}
 for key in HASH_ALGS:
         if key == "hash":
                 CONTENT_HASH_ALGS["elfhash"] = HASH_ALGS[key]
-        else:
+        # For now, we don't want content-hash in attributes by default since
+        # the algorithm for it is changing soon.
+        elif DebugValues["hash"]:
                 CONTENT_HASH_ALGS[key.replace("hash", "content-hash")] = \
                     HASH_ALGS[key]
 
@@ -164,12 +191,20 @@ for key in HASH_ALGS:
 if DebugValues["hash"] == "sha1":
         RANKED_HASH_ATTRS = ("hash")
 elif DebugValues["hash"] == "sha2":
-        RANKED_HASH_ATTRS = ("pkg.hash.sha256")
+        if sha512_supported:
+                RANKED_HASH_ATTRS = ("pkg.hash.sha512_256",)
+        else:
+                RANKED_HASH_ATTRS = ("pkg.hash.sha256",)
 else:
         RANKED_HASH_ATTRS = (
             "pkg.hash.sha256",
             "hash",
         )
+
+        if sha512_supported:
+                RANKED_HASH_ATTRS = (
+                    "pkg.hash.sha512_256",
+                ) + RANKED_HASH_ATTRS
 
 RANKED_CHASH_ATTRS = tuple(key.replace("hash", "chash")
     for key in RANKED_HASH_ATTRS)
@@ -177,7 +212,9 @@ _content_hash_attrs = []
 for key in RANKED_HASH_ATTRS:
         if key == "hash":
                 _content_hash_attrs.append("elfhash")
-        else:
+        # For now, we don't want content-hash in attributes by default since
+        # the algorithm for it is changing soon.
+        elif DebugValues["hash"]:
                 _content_hash_attrs.append(key.replace("hash", "content-hash"))
 
 RANKED_CONTENT_HASH_ATTRS = tuple(_content_hash_attrs)
@@ -255,8 +292,8 @@ def get_preferred_hash(action, hash_type=HASH):
 
         rank_tuple, hash_dic = _get_hash_dics(hash_type)
         if not (rank_tuple and hash_dic):
-                raise ValueError("Unknown hash_type %s passed to "
-                    "get_preferred_hash" % hash_type)
+                raise ValueError("Unknown hash_type {0} passed to "
+                    "get_preferred_hash".format(hash_type))
 
         for hash_attr_name in rank_tuple:
                 if hash_attr_name in action.attrs:
@@ -281,8 +318,8 @@ def get_preferred_hash(action, hash_type=HASH):
                 return None, None, None
 
         # This should never happen.
-        raise Exception("Error determining the preferred hash for %s %s" %
-            (action, hash_type))
+        raise Exception("Error determining the preferred hash for {0} {1}".format(
+            action, hash_type))
 
 
 def get_least_preferred_hash(action, hash_type=HASH):
@@ -303,8 +340,8 @@ def get_least_preferred_hash(action, hash_type=HASH):
 
         rank_list, hash_dic = _get_hash_dics(hash_type, reverse=True)
         if not (rank_list and hash_dic):
-                raise ValueError("Unknown hash_type %s passed to "
-                    "get_preferred_hash" % hash_type)
+                raise ValueError("Unknown hash_type {0} passed to "
+                    "get_preferred_hash".format(hash_type))
 
         if not action:
                 return rank_list[0], None, hash_dic[rank_list[0]]
@@ -326,8 +363,8 @@ def get_least_preferred_hash(action, hash_type=HASH):
                 return None, None, None
 
         # This should never happen.
-        raise Exception("Error determining the least preferred hash for %s %s" %
-            (action, hash_type))
+        raise Exception("Error determining the least preferred hash for {0} {1}".format(
+            action, hash_type))
 
 
 def get_common_preferred_hash(action, old_action, hash_type=HASH):
@@ -346,8 +383,8 @@ def get_common_preferred_hash(action, old_action, hash_type=HASH):
 
         rank_list, hash_dic = _get_hash_dics(hash_type)
         if not (rank_list and hash_dic):
-                raise ValueError("Unknown hash_type %s passed to "
-                    "get_preferred_common_hash" % hash_type)
+                raise ValueError("Unknown hash_type {0} passed to "
+                    "get_preferred_common_hash".format(hash_type))
 
         common_attrs = set(
             action.attrs.keys()).intersection(set(old_action.attrs.keys()))

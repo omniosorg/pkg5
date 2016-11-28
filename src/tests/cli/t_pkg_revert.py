@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.7
 #
 # CDDL HEADER START
 #
@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2011, 2013 Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 import testutils
@@ -34,6 +34,12 @@ import pkg.portable as portable
 import pkg.misc as misc
 import sys
 
+try:
+        import pkg.sha512
+        sha512_supported = True
+except ImportError:
+        sha512_supported = False
+
 class TestPkgRevert(pkg5unittest.SingleDepotTestCase):
         # Only start/stop the depot once (instead of for every test)
         persistent_setup = True
@@ -44,10 +50,7 @@ class TestPkgRevert(pkg5unittest.SingleDepotTestCase):
             add file etc/file1 mode=0555 owner=root group=bin path=etc/file1
             close
             # B@1.0 is published as part of pkgs2
-            open C@1.0,5.11-0
-            add dir mode=0755 owner=root group=bin path=etc
-            add file etc/file3 mode=0555 owner=root group=bin path=etc/file3 revert-tag=bob revert-tag=ted
-            close
+            # C@1.0 is published as part of pkgs3
             open D@1.0,5.11-0
             add dir mode=0755 owner=root group=bin path=etc
             add file etc/file4 mode=0555 owner=root group=bin path=etc/file4 revert-tag=bob revert-tag=ted revert-tag=carol
@@ -100,6 +103,14 @@ class TestPkgRevert(pkg5unittest.SingleDepotTestCase):
             close
             """
 
+        # A set of packages that we publish with additional hash attributes
+        pkgs3 = """
+            open C@1.0,5.11-0
+            add dir mode=0755 owner=root group=bin path=etc
+            add file etc/file3 mode=0555 owner=root group=bin path=etc/file3 revert-tag=bob revert-tag=ted
+            close
+            """
+
         misc_files = ["etc/file1", "etc/file2", "etc/file3", "etc/file4",
 		      "etc/file5"]
 
@@ -119,55 +130,6 @@ class TestPkgRevert(pkg5unittest.SingleDepotTestCase):
                         os.chown(file_path, ubin, groot)
                         os.chmod(file_path, misc.PKG_RO_FILE_MODE)
 
-        def create_some_files(self, paths):
-                ubin = portable.get_user_by_name("bin", None, False)
-                groot = portable.get_group_by_name("root", None, False)
-                for p in paths:
-                        if p.startswith(os.path.sep):
-                                p = p[1:]
-                        file_path = os.path.join(self.get_img_path(), p)
-                        dirpath = os.path.dirname(file_path)
-                        if not os.path.exists(dirpath):
-                                os.mkdir(dirpath)
-                        if p.endswith(os.path.sep):
-                                continue
-                        with open(file_path, "a+") as f:
-                                f.write("\ncontents\n")
-                        os.chown(file_path, ubin, groot)
-                        os.chmod(file_path, misc.PKG_RO_FILE_MODE)
-
-        def files_are_all_there(self, paths):
-                # check that files are there
-                for p in paths:
-                        if p.startswith(os.path.sep):
-                                p = p[1:]
-                        file_path = os.path.join(self.get_img_path(), p)
-                        isthere = os.path.exists(file_path)
-                        if p.endswith(os.path.sep):
-                                if not os.path.isdir(file_path):
-                                        if not isthere:
-                                                print >> sys.stderr, "missing dir %s" % file_path
-                                        else:
-                                                print >> sys.stderr, "not dir: %s" % file_path
-                                        return False
-                        else:
-                                if not os.path.isfile(file_path):
-                                        if not isthere:
-                                                print >> sys.stderr, "missing file %s" % file_path
-                                        else:
-                                                print >> sys.stderr, "not file: %s" % file_path
-                                        return False
-                return True
-
-        def files_are_all_missing(self, paths):
-                # make sure all files are gone
-                for p in paths:
-                        file_path = os.path.join(self.get_img_path(), p)
-                        if os.path.isfile(file_path):
-                                print file_path
-                                return False
-                return True
-
         def remove_file(self, path):
                 os.unlink(os.path.join(self.get_img_path(), path))
 
@@ -181,6 +143,12 @@ class TestPkgRevert(pkg5unittest.SingleDepotTestCase):
                 self.plist = self.pkgsend_bulk(self.rurl, self.pkgs)
                 self.plist.extend(self.pkgsend_bulk(self.rurl, self.pkgs2,
                     debug_hash="sha1+sha256"))
+                if sha512_supported:
+                        self.plist.extend(self.pkgsend_bulk(self.rurl,
+                            self.pkgs3, debug_hash="sha1+sha512_256"))
+                else:
+                        self.plist.extend(self.pkgsend_bulk(self.rurl,
+                            self.pkgs3))
 
         def test_revert(self):
                 self.image_create(self.rurl)
@@ -202,6 +170,10 @@ class TestPkgRevert(pkg5unittest.SingleDepotTestCase):
                 self.pkg("verify B", exit=1)
                 self.assert_(sha2 in self.output)
 
+                if sha512_supported:
+                        self.pkg("-D hash=sha1+sha512_256 verify C", exit=1)
+                        sha2 = "13729cb7183961b48ce300c2588c86ad123e7c636f38a0f3c8408a75fd079d09"
+                        self.assert_(sha2 in self.output, self.output)
                 self.pkg("verify C", exit=1)
                 self.pkg("verify D", exit=1)
 
@@ -233,19 +205,27 @@ class TestPkgRevert(pkg5unittest.SingleDepotTestCase):
                 self.pkg("revert -n --parsable=0 --tagged bob")
                 self.debug("\n".join(self.plist))
                 self.assertEqualParsable(self.output,
-                    affect_packages=[self.plist[10], self.plist[1],
-                    self.plist[2]])
+                    affect_packages=[self.plist[9], self.plist[12],
+                    self.plist[1]])
                 # When reverting damage, we always verify using the
                 # most-preferred hash, but retrieve content with the
-                # least-preferred hash: -D hash=sha1+sha256 should have no
-                # effect here whatsoever, but -D hash=sha256 should fail because
+                # least-preferred hash: -D hash=sha1+sha256 and
+                # -D hash=sha1+sha512_256 should have no effect here whatsoever,
+                # but -D hash=sha256 and -D hash=sha512_256 should fail because
                 # our repository stores its files by the SHA1 hash.
                 self.pkg("-D hash=sha256 revert --parsable=0 --tagged bob",
                     exit=1)
+                if sha512_supported:
+                        self.pkg("-D hash=sha512_256 revert --parsable=0 \
+                            --tagged ted", exit=1)
+                        self.pkg("-D hash=sha1+512_256 revert -n --parsable=0 \
+                            --tagged ted")
+                        self.assertEqualParsable(self.output,
+                            affect_packages=[self.plist[12], self.plist[1]])
                 self.pkg("-D hash=sha1+sha256 revert --parsable=0 --tagged bob")
                 self.assertEqualParsable(self.output,
-                    affect_packages=[self.plist[10], self.plist[1],
-                    self.plist[2]])
+                    affect_packages=[self.plist[9], self.plist[12],
+                    self.plist[1]])
                 self.pkg("verify A", exit=1)
                 self.pkg("verify B")
                 self.pkg("verify C")
@@ -300,36 +280,36 @@ class TestPkgRevert(pkg5unittest.SingleDepotTestCase):
 
                 # now create some unpackaged files
                 self.create_some_files(some_files)
-                self.assert_(self.files_are_all_there(some_files))
+                self.files_are_all_there(some_files)
                 # revert them
                 self.pkg("revert --tagged bob", 0)
                 self.pkg("verify")
-                self.assert_(self.files_are_all_missing(some_files))
+                self.files_are_all_missing(some_files)
 
                 # now create some unpackaged directories and files
                 some_dirs = ["etc/X/", "etc/Y/", "etc/Z/C", "etc/X/XX/"]
                 self.create_some_files(some_dirs + some_files)
-                self.assert_(self.files_are_all_there(some_dirs + some_files))
+                self.files_are_all_there(some_dirs + some_files)
                 # revert them
                 self.pkg("revert --tagged bob", 0)
                 self.pkg("verify")
-                self.assert_(self.files_are_all_missing(some_dirs + some_files))
+                self.files_are_all_missing(some_dirs + some_files)
 
                 # install a package w/ implicit directories
                 self.pkg("install X@1.0")
                 self.create_some_files(some_dirs + some_files + ["etc/wombat/XXX"])
-                self.assert_(self.files_are_all_there(some_dirs + some_files + ["etc/wombat/XXX"]))
+                self.files_are_all_there(some_dirs + some_files + ["etc/wombat/XXX"])
                 # revert them
                 self.pkg("revert --tagged bob", 0)
                 self.pkg("verify")
-                self.assert_(self.files_are_all_missing(some_dirs + some_files))
-                self.assert_(self.files_are_all_there(["etc/wombat/XXX"]))
+                self.files_are_all_missing(some_dirs + some_files)
+                self.files_are_all_there(["etc/wombat/XXX"])
                 # mix and match w/ regular tests
                 self.pkg("install B@1.1 C@1.1 D@1.1")
                 self.pkg("verify")
                 self.damage_all_files()
                 self.create_some_files(some_dirs + some_files + ["etc/wombat/XXX"])
-                self.assert_(self.files_are_all_there(some_dirs + some_files + ["etc/wombat/XXX"]))
+                self.files_are_all_there(some_dirs + some_files + ["etc/wombat/XXX"])
                 self.pkg("verify A", exit=1)
                 self.pkg("verify B", exit=1)
                 self.pkg("verify C", exit=1)
@@ -337,8 +317,8 @@ class TestPkgRevert(pkg5unittest.SingleDepotTestCase):
                 self.pkg("revert --tagged bob")
                 self.pkg("revert /etc/file1")
                 self.pkg("verify")
-                self.assert_(self.files_are_all_missing(some_dirs + some_files))
-                self.assert_(self.files_are_all_there(["etc/wombat/XXX"]))
+                self.files_are_all_missing(some_dirs + some_files)
+                self.files_are_all_there(["etc/wombat/XXX"])
                 # generate some problems
                 self.pkg("install Y")
                 self.pkg("verify")
@@ -359,14 +339,14 @@ class TestPkgRevert(pkg5unittest.SingleDepotTestCase):
                 some_dirs = ["dev/dir1/", "dev/dir1/", "dev/dir2/", "dev/cfg/dir3/"]
                 self.pkg("install dev dev2")
                 self.pkg("verify")
-                self.assert_(self.files_are_all_missing(some_dirs + some_files))
+                self.files_are_all_missing(some_dirs + some_files)
                 self.create_some_files(some_dirs + some_files)
-                self.assert_(self.files_are_all_there(some_dirs + some_files))
+                self.files_are_all_there(some_dirs + some_files)
                 self.pkg("verify -v")
-		self.damage_files(["dev/cfg/bar2"])
-		self.pkg("revert -vvv --tagged init-dev")
-		self.pkg("verify -v")
-		self.assert_(self.files_are_all_missing(some_dirs + some_files))
+                self.damage_files(["dev/cfg/bar2"])
+                self.pkg("revert -vvv --tagged init-dev")
+                self.pkg("verify -v")
+                self.files_are_all_missing(some_dirs + some_files)
 
 if __name__ == "__main__":
         unittest.main()

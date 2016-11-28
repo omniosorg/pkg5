@@ -1,4 +1,4 @@
-#!/usr/bin/python2.6 -u
+#!/usr/bin/python2.7 -u
 #
 # CDDL HEADER START
 #
@@ -21,13 +21,15 @@
 #
 
 #
-# Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
+from __future__ import print_function
 import simplejson as json
 import multiprocessing
 import os
 import sys
+from functools import reduce
 
 # We need cwd to be the same dir as our program.
 if os.path.dirname(__file__) != "" and \
@@ -51,29 +53,142 @@ sys.path.insert(0, ".")
 import tempfile
 covdir = tempfile.mkdtemp(prefix=".coverage-", dir=os.getcwd())
 
+import getopt
 import pkg5testenv
+import warnings
 cov = None
+
+def usage():
+        print("Usage: {0} [-ghptv] [-c format] [-b filename] "\
+            "[-o regexp]".format(sys.argv[0]), file=sys.stderr)
+        print("       {0} [-hptvx] [-c format] [-b filename] "\
+            "[-s regexp] [-o regexp]".format(sys.argv[0]), file=sys.stderr)
+        print("""\
+   -a <dir>       Archive failed test cases to <dir>/$pid/$testcasename
+   -b <filename>  Baseline filename
+   -c <format>    Collect code coverage data in xml or html format
+   -d             Show debug output, including commands run, and outputs
+   -f             Show fail/error information even when test is expected to fail
+   -g             Generate result baseline
+   -h             This help message
+   -j             Parallelism
+   -l             Run tests against live system
+   -o <regexp>    Run only tests that match regexp
+   -p             Parseable output format
+   -q             Quiet output
+   -s <regexp>    Run tests starting at regexp
+   -t             Generate timing info file
+   -v             Verbose output
+   -x             Stop after the first baseline mismatch
+   -z <port>      Lowest port the test suite should use
+""", file=sys.stderr)
+        sys.exit(2)
+
 if __name__ == "__main__":
-        # By specifying a directory for storing coverage data, this will
-        # start coverage immediately after initial environment setup and
-        # before any other pkg(5) modules are imported.
-        cov = pkg5testenv.setup_environment("../../proto", covdir=covdir)
+        #
+        # Start coverage before proceeding so that reports are accurate.
+        #
+        if covdir:
+                import coverage
+                os.chmod(covdir, 0o1777)
+                cov_file = "{0}/pkg5".format(covdir)
+                cov = coverage.coverage(data_file=cov_file, data_suffix=True)
+                cov.start()
+        # Make all warnings be errors.
+        warnings.simplefilter('error')
+
+        try:
+                #
+                # !!! WARNING !!!
+                #
+                # If you add options here, you need to also update setup.py's
+                # test_func to include said options.
+                #
+                opts, pargs = getopt.getopt(sys.argv[1:], "a:c:dfghj:lpqtuvxb:o:s:z:",
+                    ["generate-baseline", "parseable", "port", "timing",
+                    "verbose", "baseline-file", "only"])
+        except getopt.GetoptError as e:
+                print("Illegal option -- {0}".format(e.opt), file=sys.stderr)
+                sys.exit(1)
+
+        bfile = os.path.join(os.getcwd(), "baseline.txt")
+        generate = False
+        onlyval = []
+        output = ""
+        bailonfail = False
+        startattest = ""
+        timing_file = False
+        do_coverage = False
+        debug_output = False
+        show_on_expected_fail = False
+        archive_dir = None
+        port = 12001
+        quiet = False
+        system_test = False
+        jobs = 1
+
+        for opt, arg in opts:
+                if opt == "-v":
+                        output = "v"
+                elif opt == "-p":
+                        output = "p"
+                elif opt == "-c":
+                        do_coverage = True
+                        coverage_format = arg
+                elif opt == "-d":
+                        debug_output = True
+                elif opt == "-f":
+                        show_on_expected_fail = True
+                elif opt == "-g":
+                        generate = True
+                elif opt == "-b":
+                        bfile = arg
+                elif opt == "-o":
+                        onlyval.append(arg)
+                elif opt == "-x":
+                        bailonfail = True
+                elif opt == "-t":
+                        timing_file = True
+                elif opt == "-s":
+                        startattest = arg
+                elif opt == "-a":
+                        archive_dir = arg
+                elif opt == "-z":
+                        try:
+                                port = int(arg)
+                        except ValueError:
+                                print("The provided port must be an integer.",
+                                    file=sys.stderr)
+                                usage()
+                elif opt == "-h":
+                        usage()
+                elif opt == "-j":
+                        jobs = int(arg)
+                elif opt == "-q":
+                        quiet = True
+                elif opt == "-l":
+                        system_test = True
+                        print("Running tests on live system.")
+
+        pkg5testenv.setup_environment("../../proto", system_test=system_test)
 
 import baseline
-import coverage
-import fcntl
-import getopt
 import platform
 import re
 import shutil
 import subprocess
 import types
 import unittest
-import warnings
 
 import pkg5unittest
+import pkg.client.api as api
 from pkg5unittest import OUTPUT_DOTS, OUTPUT_VERBOSE, OUTPUT_PARSEABLE
 
+# Verify that CLIENT_API_VERSION is compatible.
+if pkg5unittest.CLIENT_API_VERSION not in api.COMPATIBLE_API_VERSIONS:
+        print("Test suite needs to be syned with the pkg bits.")
+        sys.exit(1)
+    
 osname = platform.uname()[0].lower()
 arch = 'unknown' 
 if osname == 'sunos':
@@ -91,16 +206,14 @@ ostype = os.name
 if ostype == '':
         ostype = 'unknown'
 
-jobs = 1
-
 class Pkg5TestLoader(unittest.TestLoader):
         suiteClass = pkg5unittest.Pkg5TestSuite
 
 def find_tests(testdir, testpats, startatpat=False, output=OUTPUT_DOTS,
     time_estimates=None):
         # Test pattern to match against
-        pats = [ re.compile("%s" % pat, re.IGNORECASE) for pat in testpats ]
-        startatpat = re.compile("%s" % startattest, re.IGNORECASE)
+        pats = [ re.compile("{0}".format(pat), re.IGNORECASE) for pat in testpats ]
+        startatpat = re.compile("{0}".format(startattest), re.IGNORECASE)
         seen = False
 
         def _istest(obj):
@@ -116,13 +229,13 @@ def find_tests(testdir, testpats, startatpat=False, output=OUTPUT_DOTS,
 
         def _vprint(*text):
                 if output == OUTPUT_VERBOSE or output == OUTPUT_PARSEABLE:
-                        print ' '.join([str(l) for l in text]),
+                        print(' '.join([str(l) for l in text]), end=" ")
 
         loader = Pkg5TestLoader()
         testclasses = []
         # "testdir" will be "api", "cli", etc., so find all the files in that 
         # directory that match the pattern "t_*.py".
-        _vprint("# Loading %s tests:\n" % testdir)
+        _vprint("# Loading {0} tests:\n".format(testdir))
         curlinepos = 0
         for f in sorted(os.listdir(testdir)):
                 if curlinepos == 0:
@@ -139,14 +252,14 @@ def find_tests(testdir, testpats, startatpat=False, output=OUTPUT_DOTS,
 
                 try:
                         obj = __import__(name)
-                except ImportError, e:
-                        print "Skipping %s: %s" % (name, str(e))
+                except ImportError as e:
+                        print("Skipping {0}: {1}".format(name, str(e)))
                         continue
 
                 if curlinepos != 0 and (curlinepos + len(filename) + 1) >= 78:
                         _vprint("\n#        ")
                         curlinepos = 9
-                _vprint("%s" % filename,)
+                _vprint("{0}".format(filename))
                 curlinepos += len(filename) + 1
 
                 # file object (t_filter, etc)
@@ -167,7 +280,7 @@ def find_tests(testdir, testpats, startatpat=False, output=OUTPUT_DOTS,
                                 # Make sure its a test method
                                 if not _istestmethod(attrname, methobj):
                                         continue
-                                full = "%s.%s.%s.%s" % (testdir,
+                                full = "{0}.{1}.{2}.{3}".format(testdir,
                                     filename, cname, attrname)
                                 # Remove this function from our class obj if
                                 # it doesn't match the test pattern
@@ -213,31 +326,6 @@ def find_tests(testdir, testpats, startatpat=False, output=OUTPUT_DOTS,
                         break
         return suite_list
 
-def usage():
-        print >> sys.stderr, "Usage: %s [-ghptv] [-c format] [-b filename] "\
-                "[-o regexp]" % sys.argv[0]
-        print >> sys.stderr, "       %s [-hptvx] [-c format] [-b filename] "\
-                "[-s regexp] [-o regexp]" % sys.argv[0]
-        print >> sys.stderr, \
-"""   -a <dir>       Archive failed test cases to <dir>/$pid/$testcasename
-   -b <filename>  Baseline filename
-   -c <format>    Collect code coverage data in xml or html format
-   -d             Show debug output, including commands run, and outputs
-   -f             Show fail/error information even when test is expected to fail
-   -g             Generate result baseline
-   -h             This help message
-   -j             Parallelism
-   -o <regexp>    Run only tests that match regexp
-   -p             Parseable output format
-   -q             Quiet output
-   -s <regexp>    Run tests starting at regexp
-   -t             Generate timing info file
-   -v             Verbose output
-   -x             Stop after the first baseline mismatch
-   -z <port>      Lowest port the test suite should use
-"""
-        sys.exit(2)
-
 def generate_coverage(cov_format, includes, omits, dest):
         if cov_format == "html":
                 cov_option = "-d"
@@ -250,12 +338,12 @@ def generate_coverage(cov_format, includes, omits, dest):
 
         cmd = ["coverage", cov_format]
         if includes and len(includes):
-            cmd.extend(["--include", ",".join(includes)])
+                cmd.extend(["--include", ",".join(includes)])
         if omits and len(omits):
-            cmd.extend(["--omit", ",".join(omits)])
+                cmd.extend(["--omit", ",".join(omits)])
         cmd.extend([cov_option, cov_dest])
 
-        print >> sys.stderr, "Generating coverage report via: ", " ".join(cmd)
+        print("Generating coverage report via: ", " ".join(cmd), file=sys.stderr)
         if subprocess.Popen(cmd).wait() != 0:
                 raise Exception("Failed to generate coverage report!")
 
@@ -268,90 +356,20 @@ def generate_coverage(cov_format, includes, omits, dest):
                 os.chown(cov_dest, uid, gid)
                 if cov_format == "html":
                         for f in os.listdir(cov_dest):
-                                os.chown("%s/%s" % (cov_dest, f), uid, gid)
+                                os.chown("{0}/{1}".format(cov_dest, f), uid, gid)
         except EnvironmentError:
                 pass
 
 
-                
-
 if __name__ == "__main__":
-        # Make all warnings be errors.
-        warnings.simplefilter('error')
-
-        try:
-
-                #
-                # !!! WARNING !!!
-                #
-                # If you add options here, you need to also update setup.py's
-                # test_func to include said options.
-                #
-                opts, pargs = getopt.getopt(sys.argv[1:], "a:c:dfghj:pqtuvxb:o:s:z:",
-                    ["generate-baseline", "parseable", "port", "timing",
-                    "verbose", "baseline-file", "only"])
-        except getopt.GetoptError, e:
-                print >> sys.stderr, "Illegal option -- %s" % e.opt
-                sys.exit(1)
-
-        bfile = os.path.join(os.getcwd(), "baseline.txt")
-        generate = False
-        onlyval = []
-        output = OUTPUT_DOTS
-        bailonfail = False
-        startattest = ""
-        timing_file = False
-        do_coverage = False
-        debug_output = False
-        show_on_expected_fail = False
-        archive_dir = None
-        port = 12001
-        quiet = False
-
-        for opt, arg in opts:
-                if opt == "-v":
-                        output = OUTPUT_VERBOSE
-                if opt == "-p":
-                        output = OUTPUT_PARSEABLE
-                if opt == "-c":
-                        do_coverage = True
-                        coverage_format = arg
-                if opt == "-d":
-                        pkg5unittest.g_debug_output = True
-                if opt == "-f":
-                        show_on_expected_fail = True
-                if opt == "-g":
-                        generate = True
-                if opt == "-b":
-                        bfile = arg
-                if opt == "-o":
-                        onlyval.append(arg)
-                if opt == "-x":
-                        bailonfail = True
-                if opt == "-t":
-                        timing_file = True
-                if opt == "-s":
-                        startattest = arg
-                if opt == "-a":
-                        archive_dir = arg
-                if opt == "-z":
-                        try:
-                                port = int(arg)
-                        except ValueError:
-                                print >> sys.stderr, "The provided port must " \
-                                    "be an integer."
-                                usage()
-                if opt == "-h":
-                        usage()
-                if opt == "-j":
-                        jobs = int(arg)
-                if opt == "-q":
-                        quiet = True
+        pkg5unittest.g_debug_output = debug_output
+        output = { "v": OUTPUT_VERBOSE,
+            "p": OUTPUT_PARSEABLE }.get(output, OUTPUT_DOTS)
 
         if (bailonfail or startattest) and generate:
                 usage()
         if quiet and (output != OUTPUT_DOTS):
-                print >> sys.stderr, "-q cannot be used with -v or -p"
+                print("-q cannot be used with -v or -p", file=sys.stderr)
                 usage()
 
         if output != OUTPUT_DOTS:
@@ -365,7 +383,7 @@ if __name__ == "__main__":
                 shutil.rmtree(covdir)
                 cov = None
         elif not coverage_format in ("xml", "html"):
-                print >> sys.stderr, "-c <format> must be xml or html"
+                print("-c <format> must be xml or html", file=sys.stderr)
                 usage()
 
         # Allow relative archive dir, but first convert it to abs. paths.
@@ -377,8 +395,8 @@ if __name__ == "__main__":
         import pkg.portable
 
         if not pkg.portable.is_admin():
-                print >> sys.stderr, "WARNING: You don't seem to be root." \
-                    " Some tests may fail."
+                print("WARNING: You don't seem to be root."
+                    " Some tests may fail.", file=sys.stderr)
         else:
                 ppriv = "/usr/bin/ppriv"
                 if os.path.exists(ppriv):
@@ -420,7 +438,7 @@ if __name__ == "__main__":
         # Make sure we capture stdout
         testlogfd, testlogpath = tempfile.mkstemp(suffix='.pkg-test.log')
         testlogfp = os.fdopen(testlogfd, "w")
-        print "# logging to %s" % testlogpath
+        print("# logging to {0}".format(testlogpath))
         sys.stdout = testlogfp
 
         if timing_file:
@@ -431,7 +449,7 @@ if __name__ == "__main__":
         # Set up coverage for cli tests
         if do_coverage:
                 cov_env = {
-                    "COVERAGE_FILE": "%s/pkg5" % covdir
+                    "COVERAGE_FILE": "{0}/pkg5".format(covdir)
                 }
                 cov_cmd = "coverage run -p"
         else:
@@ -443,11 +461,11 @@ if __name__ == "__main__":
         cmd = ["newtask", "-c", str(os.getpid())]
         ret = subprocess.call(cmd)
         if ret != 0:
-                print >> sys.stderr, "Couldn't find the 'newtask' command.  " \
+                print("Couldn't find the 'newtask' command.  " \
                     "Please ensure it's in your path before running the test " \
-                    "suite."
+                    "suite.", file=sys.stderr)
                 sys.exit(1)
-        
+
         # Run the python test suites
         runner = pkg5unittest.Pkg5TestRunner(baseline, output=output,
             timing_file=timing_file,
@@ -461,14 +479,14 @@ if __name__ == "__main__":
                 try:
                         res = runner.run(suite_list, jobs, port,
                             time_estimates, quiet, bfile)
-                except pkg5unittest.Pkg5TestCase.failureException, e:
+                except pkg5unittest.Pkg5TestCase.failureException as e:
                         exitval = 1
-                        print >> sys.stderr
-                        print >> sys.stderr, e
+                        print(file=sys.stderr)
+                        print(e, file=sys.stderr)
                         break
-                except pkg5unittest.TestStopException, e:
+                except pkg5unittest.TestStopException as e:
                         exitval = 1
-                        print >> sys.stderr
+                        print(file=sys.stderr)
                         break
                 if res.mismatches:
                         exitval = 1
@@ -487,7 +505,7 @@ if __name__ == "__main__":
                 newenv = os.environ.copy()
                 newenv.update(cov_env)
                 subprocess.Popen(["coverage", "combine"], env=newenv).wait()
-                os.rename("%s/pkg5" % covdir, ".coverage")
+                os.rename("{0}/pkg5".format(covdir), ".coverage")
                 shutil.rmtree(covdir)
 
                 omits = [
@@ -496,17 +514,18 @@ if __name__ == "__main__":
                     # Complex use of module importer makes this fail.
                     "*sysrepo_p5p.py"
                 ]
+                pkg_path = [os.path.join(pkg5unittest.g_pkg_path, "*")]
                 proto = ["{0}/*".format(pkg5unittest.g_proto_area)]
 
                 try:
-                    generate_coverage(coverage_format,
-                        proto,
-                        omits, "cov_proto")
-                    generate_coverage(coverage_format, None,
-                        proto + omits, "cov_tests")
-                except Exception, e:
-                    print >> sys.stderr, e                        
-                    exitval = 1
+                        generate_coverage(coverage_format,
+                            pkg_path,
+                            omits, "cov_pkg_path")
+                        generate_coverage(coverage_format, None,
+                            proto + omits, "cov_tests")
+                except Exception as e:
+                        print(e, file=sys.stderr)                        
+                        exitval = 1
 
                 # The coverage data file and report are most likely owned by
                 # root, if a true test run was performed.  Make the files owned

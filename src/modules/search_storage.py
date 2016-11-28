@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.7
 #
 # CDDL HEADER START
 #
@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 import os
@@ -103,7 +103,7 @@ def consistent_open(data_list, directory, timeout = 1):
                                         missing = None
                                         cur_version = None
                                         break
-                        except IOError, e:
+                        except IOError as e:
                                 if e.errno == errno.ENOENT:
                                         # If the index file is missing, ensure
                                         # that previous files were missing as
@@ -322,24 +322,24 @@ class IndexStoreMainDict(IndexStoreBase):
                 in _write_main_dict_line in indexer.py.
                 """
                 sep_chars = IndexStoreMainDict.sep_chars
-                res = "%s" % urllib.quote(str(token))
+                res = "{0}".format(urllib.quote(str(token)))
                 for ati, atl in enumerate(entries):
                         action_type, atl = atl
-                        res += "%s%s" % (sep_chars[0], action_type)
+                        res += "{0}{1}".format(sep_chars[0], action_type)
                         for sti, stl in enumerate(atl):
                                 subtype, stl = stl
-                                res += "%s%s" % (sep_chars[1], subtype)
+                                res += "{0}{1}".format(sep_chars[1], subtype)
                                 for fvi, fvl in enumerate(stl):
                                         full_value, fvl = fvl
-                                        res += "%s%s" % (sep_chars[2],
+                                        res += "{0}{1}".format(sep_chars[2],
                                             urllib.quote(str(full_value)))
                                         for pfi, pfl in enumerate(fvl):
                                                 pfmri_index, pfl = pfl
-                                                res += "%s%s" % (sep_chars[3],
+                                                res += "{0}{1}".format(sep_chars[3],
                                                     pfmri_index)
                                                 for offset in pfl:
-                                                        res += "%s%s" % \
-                                                            (sep_chars[4],
+                                                        res += "{0}{1}".format(
+                                                            sep_chars[4],
                                                             offset)
                 return res + "\n"
 
@@ -439,7 +439,7 @@ class IndexStoreListDict(IndexStoreBase):
                 # speed up of a factor of 4. Because this is a very hot path,
                 # the tradeoff seemed appropriate.
 
-                if not self._dict.has_key(entity):
+                if entity not in self._dict:
                         assert (len(self._list) == self._next_id)
                         if self._list_of_empties:
                                 use_id = self._list_of_empties.pop(0)
@@ -463,7 +463,7 @@ class IndexStoreListDict(IndexStoreBase):
 
         def has_entity(self, entity):
                 """check if entity is in storage """
-                return self._dict.has_key(entity)
+                return entity in self._dict
 
         def has_empty(self):
                 """Check if the structure has any empty elements which
@@ -522,7 +522,7 @@ class IndexStoreDict(IndexStoreBase):
                 return self._dict[in_id]
 
         def has_entity(self, entity):
-                return self._dict.has_key(entity)
+                return entity in self._dict
 
         def read_dict_file(self):
                 """Reads in a dictionary stored in line number -> entity
@@ -552,7 +552,7 @@ class IndexStoreDictMutable(IndexStoreBase):
                 return self._dict
 
         def has_entity(self, entity):
-                return self._dict.has_key(entity)
+                return entity in self._dict
 
         def get_id(self, entity):
                 return self._dict[entity]

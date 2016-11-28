@@ -1,4 +1,4 @@
-#!/usr/bin/python2.6
+#!/usr/bin/python2.7
 #
 # CDDL HEADER START
 #
@@ -21,9 +21,10 @@
 #
 
 #
-# Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
+from __future__ import print_function
 import getopt
 import gettext
 import locale
@@ -43,19 +44,19 @@ def usage(errmsg="", exitcode=2):
         error message.  Causes program to exit."""
 
         if errmsg:
-                print >> sys.stderr, "pkgdiff: %s" % errmsg
+                print("pkgdiff: {0}".format(errmsg), file=sys.stderr)
 
-        print _("""\
+        print(_("""\
 Usage:
         pkgdiff [-i attribute]... [-o attribute]
             [-t action_name[,action_name]...]...
-            [-v name=value]... (file1 | -) (file2 | -)""")
+            [-v name=value]... (file1 | -) (file2 | -)"""))
         sys.exit(exitcode)
 
 def error(text, exitcode=3):
         """Emit an error message prefixed by the command name """
 
-        print >> sys.stderr, "pkgdiff: %s" % text
+        print("pkgdiff: {0}".format(text), file=sys.stderr)
 
         if exitcode != None:
                 sys.exit(exitcode)
@@ -81,15 +82,16 @@ def main_func():
                         elif opt == "-v":
                                 args = arg.split("=")
                                 if len(args) != 2:
-                                        usage(_("variant option incorrect %s") % arg)
+                                        usage(_("variant option incorrect {0}").format(
+                                            arg))
                                 if not args[0].startswith("variant."):
                                         args[0] = "variant." + args[0]
                                 varattrs[args[0]].add(args[1])
                         elif opt in ("--help", "-?"):
                                 usage(exitcode=0)
 
-        except getopt.GetoptError, e:
-                usage(_("illegal global option -- %s") % e.opt)
+        except getopt.GetoptError as e:
+                usage(_("illegal global option -- {0}").format(e.opt))
 
         if len(pargs) != 2:
                 usage(_("two manifest arguments are required"))
@@ -102,7 +104,8 @@ def main_func():
 
         for v in varattrs:
                 if len(varattrs[v]) > 1:
-                        usage(_("For any variant, only one value may be specified."))
+                        usage(_("For any variant, only one value may be "
+                            "specified."))
                 varattrs[v] = varattrs[v].pop()
 
         ignoreattrs = set(ignoreattrs)
@@ -116,8 +119,8 @@ def main_func():
         )
 
         if utypes:
-                usage(_("unknown action types: %s" %
-                    apx.list_to_lang(list(utypes))))
+                usage(_("unknown action types: {0}".format(
+                    apx.list_to_lang(list(utypes)))))
 
         manifest1 = manifest.Manifest()
         manifest2 = manifest.Manifest()
@@ -128,9 +131,9 @@ def main_func():
                                 m.set_content(content=sys.stdin.read())
                         else:
                                 m.set_content(pathname=p)
-        except (pkg.actions.ActionError, apx.InvalidPackageErrors), e:
-                error(_("Action error in file %(p)s: %(e)s") % locals())
-        except (EnvironmentError, apx.ApiException), e:
+        except (pkg.actions.ActionError, apx.InvalidPackageErrors) as e:
+                error(_("Action error in file {p}: {e}").format(**locals()))
+        except (EnvironmentError, apx.ApiException) as e:
                 error(e)
 
         #
@@ -149,13 +152,13 @@ def main_func():
         v1 = manifest1.get_all_variants()
         v2 = manifest2.get_all_variants()
         for vname in varattrs:
-                for path, v, m in zip(pargs, (v1, v2), (manifest1, manifest2)):
+                for _path, v, m in zip(pargs, (v1, v2), (manifest1, manifest2)):
                         if vname not in v:
                                 continue
                         filt = varattrs[vname]
                         if filt not in v[vname]:
-                                usage(_("Manifest %(path)s doesn't support variant %(vname)s=%(filt)s" %
-                                    locals()))
+                                usage(_("Manifest {path} doesn't support "
+                                    "variant {vname}={filt}".format(**locals())))
                         # remove the variant tag
                         def rip(a):
                                 a.attrs.pop(vname, None)
@@ -179,7 +182,7 @@ def main_func():
         for k in set(v1.keys()) & set(v2.keys()):
                 if v1[k] != v2[k]:
                         error(_("Manifests support different variants "
-                            "%(v1)s %(v2)s") % {"v1": v1, "v2": v2})
+                            "{v1} {v2}").format(v1=v1, v2=v2))
 
         # Now, get a list of all possible variant values, including None
         # across all variants and both manifests
@@ -203,7 +206,7 @@ def main_func():
                 # avoid confusing manifest difference code w/ multiple
                 # actions w/ same key attribute values or getting dups
                 # in output
-                def allow(a):
+                def allow(a, publisher=None):
                         for k, v in tup:
                                 if v is not None:
                                         if k not in a.attrs or a.attrs[k] != v:
@@ -219,7 +222,7 @@ def main_func():
 
         # License action still causes spurious diffs... check again for now.
         real_diffs = [
-            (a,b)
+            (a, b)
             for a, b in diffs
             if a is None or b is None or a.different(b)
         ]
@@ -237,7 +240,8 @@ def main_func():
                         if res:
                                 return res
                         # sort by variant
-                        res = cmp(sorted(list(a.get_variant_template())), sorted(list(b.get_variant_template())))
+                        res = cmp(sorted(list(a.get_variant_template())),
+                            sorted(list(b.get_variant_template())))
                         if res:
                                 return res
                 else:
@@ -260,14 +264,17 @@ def main_func():
         def attrval(attrs, k, elide_iter=tuple()):
                 def q(s):
                         if " " in s or s == "":
-                                return '"%s"' % s
+                                return '"{0}"'.format(s)
                         else:
                                 return s
 
                 v = attrs[k]
                 if isinstance(v, list) or isinstance(v, set):
-                        out = " ".join(["%s=%s" %
-                            (k, q(lmt)) for lmt in sorted(v) if lmt not in elide_iter])
+                        out = " ".join([
+                            "{0}={1}".format(k, q(lmt))
+                            for lmt in sorted(v)
+                            if lmt not in elide_iter
+                        ])
                 elif " " in v or v == "":
                         out = k + "=\"" + v + "\""
                 else:
@@ -282,7 +289,8 @@ def main_func():
                 elif ignoreattrs:
                         if not set(a.attrs.keys()) - ignoreattrs:
                                 return False
-                print "%s %s" % (s, a)
+
+                print("{0} {1}".format(s, a))
                 return True
 
         different = False
@@ -296,53 +304,62 @@ def main_func():
                         s = []
 
                         if not onlyattrs:
-                                if hasattr(old, "hash") and "hash" not in ignoreattrs:
+                                if (hasattr(old, "hash") and
+                                    "hash" not in ignoreattrs):
                                         if old.hash != new.hash:
-                                                s.append("  - %s" % new.hash)
-                                                s.append("  + %s" % old.hash)
-                                attrdiffs = set(new.differences(old)) - ignoreattrs
-                                attrsames = sorted(list(set(old.attrs.keys() + new.attrs.keys()) -
+                                                s.append("  - {0}".format(old.hash))
+                                                s.append("  + {0}".format(new.hash))
+                                attrdiffs = (set(new.differences(old)) -
+                                    ignoreattrs)
+                                attrsames = sorted( list(set(old.attrs.keys() +
+                                    new.attrs.keys()) -
                                     set(new.differences(old))))
                         else:
-                                if hasattr(old, "hash") and "hash"  in onlyattrs:
+                                if hasattr(old, "hash") and "hash" in onlyattrs:
                                         if old.hash != new.hash:
-                                                s.append("  - %s" % new.hash)
-                                                s.append("  + %s" % old.hash)
-                                attrdiffs = set(new.differences(old)) & onlyattrs
-                                attrsames = sorted(list(set(old.attrs.keys() + new.attrs.keys()) -
+                                                s.append("  - {0}".format(old.hash))
+                                                s.append("  + {0}".format(new.hash))
+                                attrdiffs = (set(new.differences(old)) &
+                                    onlyattrs)
+                                attrsames = sorted(list(set(old.attrs.keys() +
+                                    new.attrs.keys()) -
                                     set(new.differences(old))))
 
                         for a in sorted(attrdiffs):
                                 if a in old.attrs and a in new.attrs and \
                                     isinstance(old.attrs[a], list) and \
                                     isinstance(new.attrs[a], list):
-                                        elide_set = set(old.attrs[a]) & set(new.attrs[a])
+                                        elide_set = (set(old.attrs[a]) &
+                                            set(new.attrs[a]))
                                 else:
                                         elide_set = set()
                                 if a in old.attrs:
-                                        diff_str = attrval(old.attrs, a, elide_iter=elide_set)
+                                        diff_str = attrval(old.attrs, a,
+                                            elide_iter=elide_set)
                                         if diff_str:
-                                                s.append("  - %s" % diff_str)
+                                                s.append("  - {0}".format(diff_str))
                                 if a in new.attrs:
-                                        diff_str = attrval(new.attrs, a, elide_iter=elide_set)
+                                        diff_str = attrval(new.attrs, a,
+                                            elide_iter=elide_set)
                                         if diff_str:
-                                                s.append("  + %s" % diff_str)
+                                                s.append("  + {0}".format(diff_str))
                         # print out part of action that is the same
                         if s:
                                 different = True
-                                print "%s %s %s" % (old.name,
+                                print("{0} {1} {2}".format(old.name,
                                     attrval(old.attrs, old.key_attr),
-                                    " ".join(("%s" % attrval(old.attrs,v)
-                                    for v in attrsames if v != old.key_attr)))
+                                    " ".join(("{0}".format(attrval(old.attrs,v))
+                                    for v in attrsames if v != old.key_attr))))
+
                                 for l in s:
-                                        print l
+                                        print(l)
 
         return int(different)
 
 def product(*args, **kwds):
         # product('ABCD', 'xy') --> Ax Ay Bx By Cx Cy Dx Dy
         # product(range(2), repeat=3) --> 000 001 010 011 100 101 110 111
-        # from python 2.6 itertools
+        # from python 2.7 itertools
         pools = map(tuple, args) * kwds.get('repeat', 1)
         result = [[]]
         for pool in pools:
@@ -355,9 +372,9 @@ if __name__ == "__main__":
                 exit_code = main_func()
         except (PipeError, KeyboardInterrupt):
                 exit_code = 1
-        except SystemExit, __e:
+        except SystemExit as __e:
                 exit_code = __e
-        except Exception, __e:
+        except Exception as __e:
                 traceback.print_exc()
                 error(misc.get_traceback_message(), exitcode=None)
                 exit_code = 99

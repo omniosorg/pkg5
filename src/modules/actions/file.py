@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.7
 #
 # CDDL HEADER START
 #
@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 """module describing a file packaging object
@@ -45,6 +45,7 @@ import pkg.misc as misc
 import pkg.portable as portable
 
 from pkg.client.api_errors import ActionExecutionError
+from pkg.client.debugvalues import DebugValues
 
 try:
         import pkg.elf as elf
@@ -59,7 +60,7 @@ class FileAction(generic.Action):
 
         name = "file"
         key_attr = "path"
-        unique_attrs = "path", "mode", "owner", "group", "preserve"
+        unique_attrs = "path", "mode", "owner", "group", "preserve", "sysattr"
         globally_identical = True
         namespace_group = "path"
         ordinality = generic._orderdict[name]
@@ -75,29 +76,53 @@ class FileAction(generic.Action):
                         """If the file exists, check if it is in use."""
                         if not orig:
                                 return
-                        path = os.path.normpath(
-                            os.path.join(pkgplan.image.get_root(),
-                            orig.attrs["path"]))
+                        path = orig.get_installed_path(pkgplan.image.get_root())
                         if os.path.isfile(path) and self.in_use(path):
-                                raise api_errors.FileInUseException, path
+                                raise api_errors.FileInUseException(path)
 
                 def preremove(self, pkgplan):
-                        path = os.path.normpath(
-                            os.path.join(pkgplan.image.get_root(),
-                            self.attrs["path"]))
+                        path = self.get_installed_path(pkgplan.image.get_root())
                         if os.path.isfile(path) and self.in_use(path):
-                                raise api_errors.FileInUseException, path
+                                raise api_errors.FileInUseException(path)
 
                 def in_use(self, path):
                         """Determine if a file is in use (locked) by trying
                         to rename the file to itself."""
                         try:
                                 os.rename(path, path)
-                        except OSError, err:
+                        except OSError as err:
                                 if err.errno != errno.EACCES:
                                         raise
                                 return True
                         return False
+
+        def __set_data(self, pkgplan):
+                """Private helper function to set the data field of the
+                action."""
+
+                hash_attr, hash_attr_val, hash_func = \
+                    digest.get_least_preferred_hash(self)
+
+                retrieved = pkgplan.image.imageplan._retrieved
+                retrieved.add(self.get_installed_path(
+                    pkgplan.image.get_root()))
+                if len(retrieved) > 50 or \
+                    DebugValues['max-plan-execute-retrievals'] == 1:
+                        raise api_errors.PlanExecutionError(retrieved)
+
+                # This is an unexpected file retrieval, so the retrieved file
+                # will be streamed directly from the source to the final
+                # destination and will not be stored in the image download
+                # cache.
+                try:
+                        pub = pkgplan.image.get_publisher(
+                            pkgplan.destination_fmri.publisher)
+                        data = pkgplan.image.transport.get_datastream(pub,
+                            hash_attr_val)
+                        return lambda: data
+                finally:
+                        pkgplan.image.cleanup_downloads()
+
 
         def install(self, pkgplan, orig):
                 """Client-side method that installs a file."""
@@ -113,8 +138,7 @@ class FileAction(generic.Action):
                 owner, group = self.get_fsobj_uid_gid(pkgplan,
                     pkgplan.destination_fmri)
 
-                final_path = os.path.normpath(os.path.sep.join(
-                    (pkgplan.image.get_root(), self.attrs["path"])))
+                final_path = self.get_installed_path(pkgplan.image.get_root())
 
                 # Don't allow installation through symlinks.
                 self.fsobj_checkpath(pkgplan, final_path)
@@ -123,8 +147,10 @@ class FileAction(generic.Action):
                         self.makedirs(os.path.dirname(final_path),
                             mode=misc.PKG_DIR_MODE,
                             fmri=pkgplan.destination_fmri)
-                elif not orig and not pkgplan.origin_fmri and \
-                     "preserve" in self.attrs and os.path.isfile(final_path):
+                elif (not orig and not pkgplan.origin_fmri and
+                     "preserve" in self.attrs and
+                     self.attrs["preserve"] != "abandon" and
+                     os.path.isfile(final_path)):
                         # Unpackaged editable file is already present during
                         # initial install; salvage it before continuing.
                         pkgplan.salvage(final_path)
@@ -147,7 +173,7 @@ class FileAction(generic.Action):
                 # XXX We should save the originally installed file.  It can be
                 # used as an ancestor for a three-way merge, for example.  Where
                 # should it be stored?
-                pres_type = self.__check_preserve(orig, pkgplan)
+                pres_type = self._check_preserve(orig, pkgplan)
                 do_content = True
                 old_path = None
                 if pres_type == True or (pres_type and
@@ -166,6 +192,8 @@ class FileAction(generic.Action):
                         old_path = final_path + ".old"
                 elif pres_type == "renamenew":
                         final_path = final_path + ".new"
+                elif pres_type == "abandon":
+                        return
 
                 # If it is a directory (and not empty) then we should
                 # salvage the contents.
@@ -174,7 +202,7 @@ class FileAction(generic.Action):
                     os.path.isdir(final_path):
                         try:
                                 os.rmdir(final_path)
-                        except OSError, e:
+                        except OSError as e:
                                 if e.errno == errno.ENOENT:
                                         pass
                                 elif e.errno in (errno.EEXIST, errno.ENOTEMPTY):
@@ -184,10 +212,14 @@ class FileAction(generic.Action):
                                         raise
 
                 # XXX This needs to be modularized.
-                # XXX This needs to be controlled by policy.
                 if do_content and self.needsdata(orig, pkgplan):
                         tfilefd, temp = tempfile.mkstemp(dir=os.path.dirname(
                             final_path))
+                        if not self.data:
+                                # The state of the filesystem changed after the
+                                # plan was prepared; attempt a one-off
+                                # retrieval of the data.
+                                self.data = self.__set_data(pkgplan)
                         stream = self.data()
                         tfile = os.fdopen(tfilefd, "wb")
                         try:
@@ -196,11 +228,12 @@ class FileAction(generic.Action):
                                     digest.get_preferred_hash(self)
                                 shasum = misc.gunzip_from_stream(stream, tfile,
                                     hash_func)
-                        except zlib.error, e:
+                        except zlib.error as e:
                                 raise ActionExecutionError(self,
-                                    details=_("Error decompressing payload: %s")
-                                    % (" ".join([str(a) for a in e.args])),
-                                    error=e)
+                                    details=_("Error decompressing payload: "
+                                        "{0}").format(
+                                        " ".join([str(a) for a in e.args])),
+                                        error=e)
                         finally:
                                 tfile.close()
                                 stream.close()
@@ -208,19 +241,19 @@ class FileAction(generic.Action):
                         if shasum != hash_val:
                                 raise ActionExecutionError(self,
                                     details=_("Action data hash verification "
-                                    "failure: expected: %(expected)s computed: "
-                                    "%(actual)s action: %(action)s") % {
-                                        "expected": hash_val,
-                                        "actual": shasum,
-                                        "action": self
-                                    })
+                                    "failure: expected: {expected} computed: "
+                                    "{actual} action: {action}").format(
+                                        expected=hash_val,
+                                        actual=shasum,
+                                        action=self
+                                   ))
 
                 else:
                         temp = final_path
 
                 try:
                         os.chmod(temp, mode)
-                except OSError, e:
+                except OSError as e:
                         # If the file didn't exist, assume that's intentional,
                         # and drive on.
                         if e.errno != errno.ENOENT:
@@ -230,7 +263,7 @@ class FileAction(generic.Action):
 
                 try:
                         portable.chown(temp, owner, group)
-                except OSError, e:
+                except OSError as e:
                         if e.errno != errno.EPERM:
                                 raise
 
@@ -239,20 +272,23 @@ class FileAction(generic.Action):
                 if do_content and old_path:
                         try:
                                 portable.rename(final_path, old_path)
-                        except OSError, e:
+                        except OSError as e:
                                 if e.errno != errno.ENOENT:
                                         # Only care if file isn't gone already.
                                         raise
 
                 # This is safe even if temp == final_path.
-                portable.rename(temp, final_path)
+                try:
+                        portable.rename(temp, final_path)
+                except OSError as e:
+                        raise api_errors.FileInUseException(final_path)
 
                 # Handle timestamp if specified (and content was installed).
                 if do_content and "timestamp" in self.attrs:
                         t = misc.timestamp_to_time(self.attrs["timestamp"])
                         try:
                                 os.utime(final_path, (t, t))
-                        except OSError, e:
+                        except OSError as e:
                                 if e.errno != errno.EACCES:
                                         raise
 
@@ -261,6 +297,33 @@ class FileAction(generic.Action):
                                 os.chmod(final_path, stat.S_IRUSR|stat.S_IWUSR)
                                 os.utime(final_path, (t, t))
                                 os.chmod(final_path, mode)
+
+                # Handle system attributes.
+                sattr = self.attrs.get("sysattr")
+                if sattr:
+                        sattrs = sattr.split(",")
+                        if len(sattrs) == 1 and \
+                            sattrs[0] not in portable.get_sysattr_dict():
+                                # not a verbose attr, try as a compact attr seq
+                                arg = sattrs[0]
+                        else:
+                                arg = sattrs
+
+                        try:
+                                portable.fsetattr(final_path, arg)
+                        except OSError as e:
+                                if e.errno != errno.EINVAL:
+                                        raise
+                                raise ActionExecutionError(self,
+                                    details=_("System attributes are not "
+                                    "supported on the target filesystem."))
+                        except ValueError as e:
+                                raise ActionExecutionError(self,
+                                    details=_("Could not set system attributes "
+                                    "'{attrlist}': {err}").format(
+                                        attrlist=sattr,
+                                        err=e
+                                   ))
 
         def verify(self, img, **args):
                 """Returns a tuple of lists of the form (errors, warnings,
@@ -271,8 +334,10 @@ class FileAction(generic.Action):
                 the preserve attribute is not present, that the hashes
                 and other attributes of the file match."""
 
-                path = os.path.normpath(os.path.sep.join(
-                    (img.get_root(), self.attrs["path"])))
+                if self.attrs.get("preserve") == "abandon":
+                        return [], [], []
+
+                path = self.get_installed_path(img.get_root())
 
                 lstat, errors, warnings, info, abort = \
                     self.verify_fsobj_common(img, stat.S_IFREG)
@@ -295,10 +360,10 @@ class FileAction(generic.Action):
                 if "preserve" not in self.attrs and \
                     "timestamp" in self.attrs and lstat.st_mtime != \
                     misc.timestamp_to_time(self.attrs["timestamp"]):
-                        errors.append(_("Timestamp: %(found)s should be "
-                            "%(expected)s") % {
-                            "found": misc.time_to_timestamp(lstat.st_mtime),
-                            "expected": self.attrs["timestamp"] })
+                        errors.append(_("Timestamp: {found} should be "
+                            "{expected}").format(
+                            found=misc.time_to_timestamp(lstat.st_mtime),
+                            expected=self.attrs["timestamp"]))
 
                 # avoid checking pkg.size if we have any content-hashes present;
                 # different size files may have the same content-hash
@@ -307,9 +372,9 @@ class FileAction(generic.Action):
                     not set(digest.RANKED_CONTENT_HASH_ATTRS).intersection(
                     set(self.attrs.keys())) and \
                     lstat.st_size != int(self.attrs["pkg.size"]):
-                        errors.append(_("Size: %(found)d bytes should be "
-                            "%(expected)d") % { "found": lstat.st_size,
-                            "expected": int(self.attrs["pkg.size"]) })
+                        errors.append(_("Size: {found:d} bytes should be "
+                            "{expected:d}").format(found=lstat.st_size,
+                            expected=int(self.attrs["pkg.size"])))
 
                 if "preserve" in self.attrs:
                         if args["verbose"] == False or lstat is None:
@@ -353,17 +418,17 @@ class FileAction(generic.Action):
                                         elfhash = elf.get_dynamic(path,
                                             sha1=get_sha1,
                                             sha256=get_sha256)[ehash_attr]
-                                except RuntimeError, e:
-                                        errors.append("ELF content hash: %s" %
-                                            e)
+                                except RuntimeError as e:
+                                        errors.append(
+                                            "ELF content hash: {0}".format(e))
 
                                 if elfhash is not None and \
                                     elfhash != elfhash_val:
                                         elferror = _("ELF content hash: "
-                                            "%(found)s "
-                                            "should be %(expected)s") % {
-                                            "found": elfhash,
-                                            "expected": elfhash_val }
+                                            "{found} "
+                                            "should be {expected}").format(
+                                            found=elfhash,
+                                            expected=elfhash_val)
 
                         # If we failed to compute the content hash, or the
                         # content hash failed to verify, try the file hash.
@@ -384,40 +449,80 @@ class FileAction(generic.Action):
                                                     "been changed"))
                                         elif elferror:
                                                 errors.append(elferror)
+                                                self.replace_required = True
                                         else:
                                                 errors.append(_("Hash: "
-                                                    "%(found)s should be "
-                                                    "%(expected)s") % {
-                                                    "found": sha_hash,
-                                                    "expected": hash_val })
-                                        self.replace_required = True
-                except EnvironmentError, e:
+                                                    "{found} should be "
+                                                    "{expected}").format(
+                                                    found=sha_hash,
+                                                    expected=hash_val))
+                                                self.replace_required = True
+
+                        # Check system attributes.
+                        # Since some attributes like 'archive' or 'av_modified'
+                        # are set automatically by the FS, it makes no sense to
+                        # check for 1:1 matches. So we only check that the
+                        # system attributes specified in the action are still
+                        # set on the file.
+                        sattr = self.attrs.get("sysattr", None)
+                        if sattr:
+                                sattrs = sattr.split(",")
+                                if len(sattrs) == 1 and \
+                                    sattrs[0] not in portable.get_sysattr_dict():
+                                        # not a verbose attr, try as a compact
+                                        set_attrs = portable.fgetattr(path,
+                                            compact=True)
+                                        sattrs = sattrs[0]
+                                else:
+                                        set_attrs = portable.fgetattr(path)
+
+                                for a in sattrs:
+                                        if a not in set_attrs:
+                                                errors.append(
+                                                    _("System attribute '{0}' "
+                                                    "not set").format(a))
+
+                except EnvironmentError as e:
                         if e.errno == errno.EACCES:
                                 errors.append(_("Skipping: Permission Denied"))
                         else:
-                                errors.append(_("Unexpected Error: %s") % e)
-                except Exception, e:
-                        errors.append(_("Unexpected Exception: %s") % e)
+                                errors.append(_("Unexpected Error: {0}").format(
+                                    e))
+                except Exception as e:
+                        errors.append(_("Unexpected Exception: {0}").format(e))
 
                 return errors, warnings, info
 
-        def __check_preserve(self, orig, pkgplan):
+        def _check_preserve(self, orig, pkgplan, orig_path=None):
                 """Return the type of preservation needed for this action.
 
                 Returns None if preservation is not defined by the action.
                 Returns False if it is, but no preservation is necessary.
                 Returns True for the normal preservation form.  Returns one of
                 the strings 'renameold', 'renameold.update', 'renamenew',
-                or 'legacy' for each of the respective forms of preservation.
+                'legacy', or 'abandon' for each of the respective forms of
+                preservation.
                 """
+
+                # If the logic in this function ever changes, all callers will
+                # need to be updated to reflect how they interpret return
+                # values.
 
                 try:
                         pres_type = self.attrs["preserve"]
                 except KeyError:
-                        return None
+                        return
 
-                final_path = os.path.normpath(os.path.sep.join(
-                    (pkgplan.image.get_root(), self.attrs["path"])))
+                if "elfhash" in self.attrs:
+                        # Don't allow preserve logic to be applied to elf files;
+                        # if we ever stop tagging elf binaries with this
+                        # attribute, this will need to be updated.
+                        return
+
+                if pres_type == "abandon":
+                        return pres_type
+
+                final_path = self.get_installed_path(pkgplan.image.get_root())
 
                 # 'legacy' preservation is very different than other forms of
                 # preservation as it doesn't account for the on-disk state of
@@ -442,6 +547,7 @@ class FileAction(generic.Action):
                 # boundaries.
                 is_file = os.path.isfile(final_path)
 
+                changed_hash = False
                 if orig:
                         # We must use the same hash algorithm when comparing old
                         # and new actions. Look for the most-preferred common
@@ -484,6 +590,10 @@ class FileAction(generic.Action):
                                                 return "renameold.update"
                                 return False
 
+                if (orig and orig_path):
+                        # Comparison will be based on a file being moved.
+                        is_file = os.path.isfile(orig_path)
+
                 # If the action has been marked with a preserve attribute, and
                 # the file exists and has a content hash different from what the
                 # system expected it to be, then we preserve the original file
@@ -492,11 +602,18 @@ class FileAction(generic.Action):
                         # if we had an action installed, then we know what hash
                         # function was used to compute it's hash attribute.
                         if orig:
-                                chash, cdata = misc.get_data_digest(final_path,
+                                if not orig_path:
+                                        orig_path = final_path
+                                chash, cdata = misc.get_data_digest(orig_path,
                                     hash_func=orig_hash_func)
                         if not orig or chash != orig_hash_val:
                                 if pres_type in ("renameold", "renamenew"):
                                         return pres_type
+                                return True
+                        elif not changed_hash and chash == orig_hash_val:
+                                # If packaged content has not changed since last
+                                # version and on-disk content matches the last
+                                # version, preserve on-disk file.
                                 return True
 
                 return False
@@ -508,13 +625,21 @@ class FileAction(generic.Action):
         def needsdata(self, orig, pkgplan):
                 if self.replace_required:
                         return True
-                # check for the presence of a simple elfhash attribute,
-                # and if that's present, look for the common preferred elfhash.
-                # For now, this is sufficient, but when additional content
-                # types are supported (and we stop publishing SHA-1 hashes) more
-                # work will be needed to compute 'bothelf'.
-                bothelf = orig and "elfhash" in orig.attrs and \
-                    "elfhash" in self.attrs
+
+                # import goes here to prevent circular import
+                from pkg.client.imageconfig import CONTENT_UPDATE_POLICY
+
+                use_content_hash = pkgplan.image.cfg.get_policy_str(
+                    CONTENT_UPDATE_POLICY) == "when-required"
+
+                # If content update policy allows it, check for the presence of
+                # a simple elfhash attribute, and if that's present, look for
+                # the common preferred elfhash.  For now, this is sufficient,
+                # but when additional content types are supported (and we stop
+                # publishing SHA-1 hashes) more work will be needed to compute
+                # 'bothelf'.
+                bothelf = use_content_hash and orig and \
+                    "elfhash" in orig.attrs and "elfhash" in self.attrs
                 if bothelf:
                         common_elf_attr, common_elfhash, common_orig_elfhash, \
                             common_elf_func = \
@@ -537,20 +662,23 @@ class FileAction(generic.Action):
 
                 if (changed_hash and (not bothelf or
                     common_orig_elfhash != common_elfhash)):
-                        return True
+                        if ("preserve" not in self.attrs or
+                            not pkgplan.origin_fmri or
+                            (pkgplan.destination_fmri.version <
+                            pkgplan.origin_fmri.version)):
+                                return True
                 elif orig:
                         # It's possible that the file content hasn't changed
                         # for an upgrade case, but the file is missing.  This
                         # ensures that for cases where the mode or some other
                         # attribute of the file has changed that the file will
                         # be installed.
-                        path = os.path.normpath(os.path.sep.join(
-                            (pkgplan.image.get_root(), self.attrs["path"])))
+                        path = self.get_installed_path(pkgplan.image.get_root())
                         if not os.path.isfile(path):
                                 return True
 
-                pres_type = self.__check_preserve(orig, pkgplan)
-                if pres_type != None and pres_type != True:
+                pres_type = self._check_preserve(orig, pkgplan)
+                if pres_type not in (None, True, "abandon"):
                         # Preserved files only need data if they're being
                         # changed (e.g. "renameold", etc.).
                         return True
@@ -558,8 +686,7 @@ class FileAction(generic.Action):
                 return False
 
         def remove(self, pkgplan):
-                path = os.path.normpath(os.path.sep.join(
-                    (pkgplan.image.get_root(), self.attrs["path"])))
+                path = self.get_installed_path(pkgplan.image.get_root())
 
                 # Are we supposed to save this file to restore it elsewhere
                 # or in another pkg? 'save_file' is set by the imageplan.
@@ -574,10 +701,13 @@ class FileAction(generic.Action):
                                 # likely overlaid and is moving).
                                 return
 
+                if self.attrs.get("preserve") == "abandon":
+                        return
+
                 try:
                         # Make file writable so it can be deleted.
                         os.chmod(path, stat.S_IWRITE|stat.S_IREAD)
-                except OSError, e:
+                except OSError as e:
                         if e.errno == errno.ENOENT:
                                 # Already gone; don't care.
                                 return
@@ -597,7 +727,7 @@ class FileAction(generic.Action):
                                         pkgplan.salvage(path)
                                         # Nothing more to do.
                                         return
-                        except EnvironmentError, e:
+                        except EnvironmentError as e:
                                 if e.errno == errno.ENOENT:
                                         # Already gone; don't care.
                                         return
@@ -650,7 +780,7 @@ class FileAction(generic.Action):
                 saved_name = image.temporary_file()
                 try:
                         misc.copyfile(full_path, saved_name)
-                except OSError, err:
+                except OSError as err:
                         if err.errno != errno.ENOENT:
                                 raise
 
@@ -671,12 +801,8 @@ class FileAction(generic.Action):
                         # Nothing to restore; original file is missing.
                         return
 
-                path = self.attrs["path"]
-
-                full_path = os.path.normpath(os.path.sep.join(
-                    (image.get_root(), path)))
-
-                assert(not os.path.exists(full_path))
+                full_path = self.get_installed_path(image.get_root())
+                assert not os.path.exists(full_path)
 
                 misc.copyfile(saved_name, full_path)
                 os.unlink(saved_name)

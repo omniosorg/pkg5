@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.7
 #
 # CDDL HEADER START
 #
@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2008, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 import testutils
@@ -334,7 +334,7 @@ class TestPkgApi(pkg5unittest.SingleDepotTestCase):
                 self.pkgsend_bulk(self.durl, (self.foo10, self.quux10))
                 try:
                         api_obj = self.image_create(self.durl, prefix="bobcat")
-                except api_errors.CatalogRefreshException, e:
+                except api_errors.CatalogRefreshException as e:
                         self.debug("\n".join(str(x[-1]) for x in e.failed))
                         raise
 
@@ -603,12 +603,12 @@ class TestPkgApi(pkg5unittest.SingleDepotTestCase):
                 # Strip timestamp information so that comparison with
                 # pre-generated test data will succeed.
                 ffoo = fmri.PkgFmri(plist[0])
-                sfoo = str(ffoo).replace(":%s" % ffoo.version.timestr, "")
+                sfoo = str(ffoo).replace(":{0}".format(ffoo.version.timestr), "")
                 ffoo = fmri.PkgFmri(sfoo)
                 sfoo = ffoo.get_fmri(anarchy=True)
 
                 fbar = fmri.PkgFmri(plist[1])
-                sbar = str(fbar).replace(":%s" % fbar.version.timestr, "")
+                sbar = str(fbar).replace(":{0}".format(fbar.version.timestr), "")
                 fbar = fmri.PkgFmri(sbar)
                 sbar = fbar.get_fmri(anarchy=True)
 
@@ -625,7 +625,7 @@ class TestPkgApi(pkg5unittest.SingleDepotTestCase):
                 # Verify that output matches expected output.
                 fobj.seek(0)
                 output = fobj.read()
-                self.assertEqualDiff(output, self.p5i_bobcat)
+                self.assertEqualJSON(output, self.p5i_bobcat)
 
                 def validate_results(results):
                         # First result should be 'bobcat' publisher and its
@@ -745,7 +745,7 @@ class TestPkgApi(pkg5unittest.SingleDepotTestCase):
                 # information that can't be retrieved (doesn't exist).
                 nefpath = os.path.join(self.test_root, "non-existent")
                 self.assertRaises(api_errors.RetrievalError,
-                    api_obj.parse_p5i, location="file://%s" % nefpath)
+                    api_obj.parse_p5i, location="file://{0}".format(nefpath))
 
                 self.assertRaises(api_errors.RetrievalError,
                     api_obj.parse_p5i, location=nefpath)
@@ -754,7 +754,7 @@ class TestPkgApi(pkg5unittest.SingleDepotTestCase):
                 # p5i information.
                 lcpath = os.path.join(self.test_root, "libc.so.1")
                 self.assertRaises(api_errors.InvalidP5IFile, api_obj.parse_p5i,
-                    location="file://%s" % lcpath)
+                    location="file://{0}".format(lcpath))
 
                 self.assertRaises(api_errors.InvalidP5IFile, api_obj.parse_p5i,
                     location=lcpath)
@@ -889,7 +889,7 @@ class TestPkgApi(pkg5unittest.SingleDepotTestCase):
 
                         # Verify the identity of the LicenseInfo objects.
                         self.assertEqual(dest.license,
-                            "copyright.%s" % pfmri.pkg_name)
+                            "copyright.{0}".format(pfmri.pkg_name))
 
                         # The license hasn't been accepted yet.
                         self.assertEqual(accepted, False)
@@ -1086,7 +1086,7 @@ class TestPkgApi(pkg5unittest.SingleDepotTestCase):
                 api_obj = self.image_create()
                 try:
                         api_obj.write_syspub("", [], 999)
-                except api_errors.UnsupportedP5SVersion, e:
+                except api_errors.UnsupportedP5SVersion as e:
                         str(e)
                 else:
                         raise RuntimeError("Expected write_syspub to raise "

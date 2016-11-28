@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.7
 #
 # CDDL HEADER START
 #
@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 """SystemV / Solaris packages.
@@ -36,6 +36,7 @@ XXX Some caveats about rewinding a datastream or multiple packages per
 datastream.
 """
 
+from __future__ import print_function
 import errno
 import gzip
 import os
@@ -136,15 +137,15 @@ class SolarisPackage(object):
                                         if g.readline().rstrip() == PKG_MAGIC:
                                                 fo = g
                                         else:
-                                                raise IOError, "not a package"
-                                except IOError, e:
+                                                raise IOError("not a package")
+                                except IOError as e:
                                         if e.args[0] not in (
                                             "Not a gzipped file",
                                             "not a package"):
                                                 raise
                                         else:
                                                 g.close()
-                                                raise ValueError, "%s is not a package" % path
+                                                raise ValueError("{0} is not a package".format(path))
 
                         pkgs = []
                         while True:
@@ -155,8 +156,8 @@ class SolarisPackage(object):
 
                         if len(pkgs) > 1:
                                 raise MultiPackageDatastreamException(
-                                    "%s contains %s packages" % \
-                                    (path, len(pkgs)))
+                                    "{0} contains {1} packages".format(
+                                    path, len(pkgs)))
 
                         # The cpio archive containing all the packages' pkginfo
                         # and pkgmap files starts on the next 512-byte boundary
@@ -200,7 +201,9 @@ class SolarisPackage(object):
 
                 try:
                         fp = file(self.pkgpath + "/install/depend")
-                except IOError, (err, msg):
+                except IOError as xxx_todo_changeme:
+                        # Missing depend file is just fine
+                        (err, msg) = xxx_todo_changeme.args
                         # Missing depend file is just fine
                         if err == errno.ENOENT:
                                 return []
@@ -283,14 +286,14 @@ if __name__ == "__main__":
         pkg = SolarisPackage(sys.argv[1])
 
         for key in sorted(pkg.pkginfo):
-                print key + '=' + str(pkg.pkginfo[key])
+                print(key + '=' + str(pkg.pkginfo[key]))
 
-        print
+        print()
 
         for obj in pkg.manifest:
-                print obj.type + ' ' + obj.pathname
+                print(obj.type + ' ' + obj.pathname)
 
-        print
+        print()
 
         for d in pkg.deps:
-                print d
+                print(d)

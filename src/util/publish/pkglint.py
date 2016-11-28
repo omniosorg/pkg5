@@ -1,4 +1,4 @@
-#!/usr/bin/python2.6
+#!/usr/bin/python2.7
 #
 # CDDL HEADER START
 #
@@ -21,7 +21,7 @@
 #
     
 #
-# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 import codecs
@@ -41,11 +41,13 @@ import pkg.lint.log as log
 import pkg.fmri as fmri
 import pkg.manifest
 import pkg.misc as misc
+import pkg.client.api_errors as apx
+import pkg.client.transport.exception as tx
 
 logger = None
 
 def error(message):
-        logger.error(_("Error: %s") % message)
+        logger.error(_("Error: {0}").format(message))
 
 def msg(message):
         logger.info(message)
@@ -64,7 +66,7 @@ def main_func():
         usage = \
             _("\n"
             "        %prog [-b build_no] [-c cache_dir] [-f file]\n"
-            "            [-l uri] [-p regexp] [-r uri] [-v]\n"
+            "            [-l uri ...] [-p regexp] [-r uri ...] [-v]\n"
             "            [manifest ...]\n"
             "        %prog -L")
         parser = OptionParser(usage=usage)
@@ -100,14 +102,6 @@ def main_func():
         pattern = opts.pattern
         opts.ref_uris = _make_list(opts.ref_uris)
         opts.lint_uris = _make_list(opts.lint_uris)
-
-        if len(opts.ref_uris) > 1:
-                parser.error(
-                    _("Only one -r option is supported."))
-
-        if len(opts.lint_uris) > 1:
-                parser.error(
-                   _("Only one -l option is supported."))
 
         logger = logging.getLogger("pkglint")
         ch = logging.StreamHandler(sys.stdout)
@@ -159,13 +153,13 @@ def main_func():
                 lint_engine.teardown()
                 lint_logger.close()
 
-        except engine.LintEngineSetupException, err:
+        except engine.LintEngineSetupException as err:
                 # errors during setup are likely to be caused by bad
                 # input or configuration, not lint errors in manifests.
                 error(err)
                 return 2
 
-        except engine.LintEngineException, err:
+        except engine.LintEngineException as err:
                 error(err)
                 return 1
 
@@ -181,15 +175,15 @@ def list_checks(checkers, exclude, verbose=False):
         width = 28
 
         def get_method_desc(method, verbose):
-                if "pkglint_desc" in method.func_dict and not verbose:
+                if "pkglint_desc" in method.__dict__ and not verbose:
                         return method.pkglint_desc
                 else:
-                        return "%s.%s.%s" % (method.im_class.__module__,
+                        return "{0}.{1}.{2}".format(method.im_class.__module__,
                             method.im_class.__name__,
                             method.im_func.func_name)
 
         def emit(name, value):
-                msg("%s %s" % (name.ljust(width), value))
+                msg("{0} {1}".format(name.ljust(width), value))
 
         def print_list(items):
                 k = items.keys()
@@ -238,15 +232,15 @@ def read_manifests(names, lint_logger):
                 try:
                         f = codecs.open(filename, "rb", "utf-8")
                         data = f.read()
-                except UnicodeDecodeError, e:
-                        lint_logger.critical(_("Invalid file %(file)s: "
-                            "manifest not encoded in UTF-8: %(err)s") %
-                            {"file": filename, "err": e},
+                except UnicodeDecodeError as e:
+                        lint_logger.critical(_("Invalid file {file}: "
+                            "manifest not encoded in UTF-8: {err}").format(
+                            file=filename, err=e),
                             msgid="lint.manifest002")
                         continue
-                except IOError, e:
+                except IOError as e:
                         lint_logger.critical(_("Unable to read manifest file "
-                            "%(file)s: %(err)s") % {"file": filename, "err": e},
+                            "{file}: {err}").format(file=filename, err=e),
                             msgid="lint.manifest001")
                         continue
                 lines.append(data)
@@ -257,7 +251,7 @@ def read_manifests(names, lint_logger):
                 manifest = pkg.manifest.Manifest()
                 try:
                         manifest.set_content(content="\n".join(lines))
-                except pkg.actions.ActionError, e:
+                except pkg.actions.ActionError as e:
                         lineno = e.lineno
                         for i, tup in enumerate(linecnts):
                                 if lineno > tup[0] and lineno <= tup[1]:
@@ -267,41 +261,41 @@ def read_manifests(names, lint_logger):
                                 lineno = "???"
 
                         lint_logger.critical(
-                            _("Error in %(file)s line: %(ln)s: %(err)s ") %
-                            {"file": filename,
-                             "ln": lineno,
-                             "err": str(e)}, "lint.manifest002")
+                            _("Error in {file} line: {ln}: {err} ").format(
+                            file=filename,
+                            ln=lineno,
+                            err=str(e)), "lint.manifest002")
                         manifest = None
-                except InvalidPackageErrors, e:
+                except InvalidPackageErrors as e:
                         lint_logger.critical(
-                            _("Error in file %(file)s: %(err)s") %
-                            {"file": filename,
-                            "err": str(e)}, "lint.manifest002")
+                            _("Error in file {file}: {err}").format(
+                            file=filename,
+                            err=str(e)), "lint.manifest002")
                         manifest = None
 
                 if manifest and "pkg.fmri" in manifest:
                         try:
                                 manifest.fmri = \
                                     pkg.fmri.PkgFmri(manifest["pkg.fmri"])
-                        except fmri.IllegalFmri, e:
+                        except fmri.IllegalFmri as e:
                                 lint_logger.critical(
-                                    _("Error in file %(file)s: "
-                                    "%(err)s") %
-                                    {"file": filename, "err": e},
+                                    _("Error in file {file}: "
+                                    "{err}").format(
+                                    file=filename, err=e),
                                     "lint.manifest002")
                         if manifest.fmri:
                                 if not manifest.fmri.version:
                                         lint_logger.critical(
-                                            _("Error in file %s: "
+                                            _("Error in file {0}: "
                                             "pkg.fmri does not include a "
-                                            "version string") % filename,
+                                            "version string").format(filename),
                                             "lint.manifest003")
                                 else:
                                         manifests.append(manifest)
 
                 elif manifest:
                         lint_logger.critical(
-                            _("Manifest %s does not declare fmri.") % filename,
+                            _("Manifest {0} does not declare fmri.").format(filename),
                             "lint.manifest003")
                 else:
                         manifests.append(None)
@@ -320,15 +314,19 @@ def _make_list(opt):
 
 if __name__ == "__main__":
         try:
-                value = main_func()
-                sys.exit(value)
+                __ret = main_func()
         except (PipeError, KeyboardInterrupt):
                 # We don't want to display any messages here to prevent
                 # possible further broken pipe (EPIPE) errors.
-                __ret = 1
-        except SystemExit, _e:
-                raise _e
+                __ret = 2
+        except SystemExit as __e:
+                __ret = __e.code
+        except (apx.InvalidDepotResponseException, tx.TransportFailures) as __e:
+                error(__e)
+                __ret = 2
         except:
                 traceback.print_exc()
                 error(misc.get_traceback_message())
-                sys.exit(99)
+                __ret = 99
+
+        sys.exit(__ret)

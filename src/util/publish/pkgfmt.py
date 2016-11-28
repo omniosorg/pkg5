@@ -1,4 +1,4 @@
-#!/usr/bin/python2.6
+#!/usr/bin/python2.7
 #
 # CDDL HEADER START
 #
@@ -20,8 +20,10 @@
 # CDDL HEADER END
 
 #
-# Copyright (c) 2009, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
 #
+
+from __future__ import print_function
 
 # Prefixes should be ordered alphabetically with most specific first.
 DRIVER_ALIAS_PREFIXES = (
@@ -93,9 +95,9 @@ def usage(errmsg="", exitcode=2):
                 error(errmsg)
 
         # -f is intentionally undocumented.
-        print >> sys.stderr, _("""\
+        print(_("""\
 Usage:
-        pkgfmt [-cdu] [file1] ... """)
+        pkgfmt [-cdu] [file1] ... """), file=sys.stderr)
 
         sys.exit(exitcode)
 
@@ -493,14 +495,14 @@ def write_line(line, fileobj):
                         opt_unwrap = False
 
         if comments:
-                print >> fileobj, comments
+                print(comments, file=fileobj)
 
         if opt_format == FMT_V2:
                 # Force 'dir' actions to use four spaces at beginning of lines
                 # so they line up with other filesystem actions such as file,
                 # link, etc.
                 output = re.sub("^dir ", "dir  ", output)
-        print >> fileobj, output
+        print(output, file=fileobj)
 
 def main_func():
         gettext.install("pkg", "/usr/share/locale",
@@ -533,12 +535,12 @@ def main_func():
                                 opt_unwrap = True
                         elif opt in ("--help", "-?"):
                                 usage(exitcode=0)
-        except getopt.GetoptError, e:
-                usage(_("illegal global option -- %s") % e.opt)
+        except getopt.GetoptError as e:
+                usage(_("illegal global option -- {0}").format(e.opt))
         if len(opt_set - set(["-f"])) > 1:
                 usage(_("only one of [cdu] may be specified"))
         if opt_format not in (FMT_V1, FMT_V2):
-                usage(_("unsupported format '%s'") % opt_format)
+                usage(_("unsupported format '{0}'").format(opt_format))
 
 
         def difference(in_file):
@@ -583,13 +585,13 @@ def main_func():
                                 # formatting or displaying diffs.
                                 ret = 0
 
-                        # Display formatted version (trailing comma needed to
+                        # Display formatted version (explicit 'end' needed to
                         # prevent output of extra newline) even if manifest
                         # didn't need formatting for the stdin case.  (The
                         # assumption is that it might be used in a pipeline.)
                         if formatted:
-                                print formatted,
-                except EnvironmentError, e:
+                                print(formatted, end="")
+                except EnvironmentError as e:
                         if e.errno == errno.EPIPE:
                                 # User closed input or output (i.e. killed piped
                                 # program before all input was read or output
@@ -622,15 +624,15 @@ def main_func():
                                                 continue
 
                                 ret = 1
-                                error(_("%s is not in pkgfmt form; run pkgfmt "
+                                error(_("{0} is not in pkgfmt form; run pkgfmt "
                                     "on file without -c or -d to reformat "
-                                    "manifest in place") % fname, exitcode=None)
+                                    "manifest in place").format(fname), exitcode=None)
                                 continue
                         elif opt_diffs:
-                                # Display differences (trailing comma needed to
+                                # Display differences (explicit 'end' needed to
                                 # prevent output of extra newline).
                                 ret = 1
-                                print formatted,
+                                print(formatted, end=" ")
                                 continue
                         elif ret != 1:
                                 # Treat as successful exit if not checking
@@ -648,15 +650,15 @@ def main_func():
                                 mode = os.stat(fname).st_mode
                                 os.chmod(tname, mode)
                                 os.rename(tname, fname)
-                        except EnvironmentError, e:
+                        except EnvironmentError as e:
                                 error(str(e), exitcode=1)
-                except (EnvironmentError, IOError), e:
+                except (EnvironmentError, IOError) as e:
                         error(str(e), exitcode=1)
                 finally:
                         if tname:
                                 try:
                                         pkg.portable.remove(tname)
-                                except EnvironmentError, e:
+                                except EnvironmentError as e:
                                         if e.errno != errno.ENOENT:
                                                 raise
 
@@ -680,9 +682,9 @@ def fmt_file(in_file, out_file):
                         # will simply be printed back out wherever they
                         # were found before or after actions.
                         for l in tp[2]:
-                                print >> out_file, l
+                                print(l, file=out_file)
                         if tp[1]:
-                                print >> out_file, tp[1]
+                                print(tp[1], file=out_file)
                 else:
                         lines.append(tp)
                         saw_action = True
@@ -703,7 +705,7 @@ if __name__ == "__main__":
                 # We don't want to display any messages here to prevent
                 # possible further broken pipe (EPIPE) errors.
                 __ret = 1
-        except SystemExit, _e:
+        except SystemExit as _e:
                 raise _e
         except:
                 traceback.print_exc()

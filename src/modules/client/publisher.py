@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.7
 #
 # CDDL HEADER START
 #
@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 #
@@ -450,8 +450,8 @@ class ProxyURI(RepositoryURI):
                 parent class from being set on ProxyURI objects."""
 
                 # We don't expect this string to be exposed to users.
-                raise ValueError("This property cannot be set to %s on a "
-                    "ProxyURI object." % value)
+                raise ValueError("This property cannot be set to {0} on a "
+                    "ProxyURI object.".format(value))
 
         system = property(lambda self: self.__system, __set_system, None,
             "True, if we should use the system publisher as a proxy.")
@@ -1262,7 +1262,7 @@ class Publisher(object):
                 lcfile = os.path.join(self.meta_root, "last_refreshed")
                 try:
                         mod_time = os.stat(lcfile).st_mtime
-                except EnvironmentError, e:
+                except EnvironmentError as e:
                         if e.errno == errno.ENOENT:
                                 return None
                         raise
@@ -1311,7 +1311,7 @@ class Publisher(object):
                         # tracking file.
                         try:
                                 portable.remove(lcfile)
-                        except EnvironmentError, e:
+                        except EnvironmentError as e:
                                 # If the file can't be removed due to
                                 # permissions, a read-only filesystem, or
                                 # because it doesn't exist, continue on.
@@ -1322,23 +1322,31 @@ class Publisher(object):
 
                 def create_tracker():
                         try:
-                                f = open(lcfile, "wb")
-                                f.write("%s\n" % misc.time_to_timestamp(
-                                    calendar.timegm(value.utctimetuple())))
-                                f.close()
-                        except EnvironmentError, e:
+                                # If the file is a symlink we catch an
+                                # exception and do not update the file.
+                                fd = os.open(lcfile,
+                                    os.O_WRONLY|os.O_NOFOLLOW|os.O_CREAT)
+                                os.write(fd, "{0}\n".format(
+                                    misc.time_to_timestamp(
+                                    calendar.timegm(value.utctimetuple()))))
+                                os.close(fd)
+                        except EnvironmentError as e:
+                                if e.errno == errno.ELOOP:
+                                        raise api_errors.UnexpectedLinkError(
+                                            os.path.dirname(lcfile),
+                                            os.path.basename(lcfile),
+                                            e.errno)
                                 # If the file can't be written due to
                                 # permissions or because the filesystem is
                                 # read-only, continue on.
                                 if e.errno not in (errno.EACCES, errno.EROFS):
                                         raise
-
                 try:
                         # If a time was provided, write out a special file that
                         # can be used to track the information with the actual
                         # time (in UTC) contained within.
                         create_tracker()
-                except EnvironmentError, e:
+                except EnvironmentError as e:
                         if e.errno != errno.ENOENT:
                                 raise
 
@@ -1349,7 +1357,7 @@ class Publisher(object):
                                 # If the directory can't be created due to
                                 # permissions, move on.
                                 pass
-                        except EnvironmentError, e:
+                        except EnvironmentError as e:
                                 # If the directory can't be created due to a
                                 # read-only filesystem, move on.
                                 if e.errno != errno.EROFS:
@@ -1420,40 +1428,40 @@ class Publisher(object):
                         origins = repo.origins
                         origin = origins[0]
                         logger.error(_("""
-Unable to retrieve package data for publisher '%(prefix)s' from one
+Unable to retrieve package data for publisher '{prefix}' from one
 of the following origin(s):
 
-%(origins)s
+{origins}
 
 The catalog retrieved from one of the origin(s) listed above only
-contains package data for: %(pubs)s.
-""") % { "origins": "\n".join(str(o) for o in origins), "prefix": self.prefix,
-    "pubs": ", ".join(pubs) })
+contains package data for: {pubs}.
+""").format(origins="\n".join(str(o) for o in origins), prefix=self.prefix,
+    pubs=", ".join(pubs)))
 
                         if global_settings.client_name != "pkg":
                                 logger.error(_("""\
 This is either a result of invalid origin information being provided
-for publisher '%s', or because the wrong publisher name was
+for publisher '{0}', or because the wrong publisher name was
 provided when this publisher was added.
-""") % self.prefix)
+""").format(self.prefix))
                                 # Remaining messages are for pkg client only.
                                 return
 
                         logger.error(_("""\
 To resolve this issue, correct the origin information provided for
-publisher '%(prefix)s' using the pkg set-publisher subcommand, or re-add
-the publisher using the correct name and remove the '%(prefix)s'
+publisher '{prefix}' using the pkg set-publisher subcommand, or re-add
+the publisher using the correct name and remove the '{prefix}'
 publisher.
-""") % { "prefix": self.prefix })
+""").format(prefix=self.prefix))
 
                         if len(pubs) == 1:
                                 logger.warning(_("""\
 To re-add this publisher with the correct name, execute the following
 commands as a privileged user:
 
-pkg set-publisher -P -g %(origin)s %(pub)s
-pkg unset-publisher %(prefix)s
-""") % { "origin": origin, "prefix": self.prefix, "pub": list(pubs)[0] })
+pkg set-publisher -P -g {origin} {pub}
+pkg unset-publisher {prefix}
+""").format(origin=origin, prefix=self.prefix, pub=list(pubs)[0]))
                                 return
 
                         logger.warning(_("""\
@@ -1464,15 +1472,15 @@ of the following commands as a privileged user:
 
                         for pfx in pubs:
                                 logger.warning(_("pkg set-publisher -P -g "
-                                    "%(origin)s %(pub)s\n") % {
-                                    "origin": origin, "pub": pfx })
+                                    "{origin} {pub}\n").format(
+                                    origin=origin, pub=pfx))
 
                         logger.warning(_("""\
 Afterwards, the old publisher should be removed by executing the
 following command as a privileged user:
 
-pkg unset-publisher %s
-""") % self.prefix)
+pkg unset-publisher {0}
+""").format(self.prefix))
 
         @property
         def catalog(self):
@@ -1516,7 +1524,7 @@ pkg unset-publisher %s
                 for path in (self.meta_root, self.catalog_root):
                         try:
                                 os.makedirs(path)
-                        except EnvironmentError, e:
+                        except EnvironmentError as e:
                                 if e.errno == errno.EACCES:
                                         raise api_errors.PermissionsException(
                                             e.filename)
@@ -1532,7 +1540,7 @@ pkg unset-publisher %s
                     self.__subj_root, self.__crl_root):
                         try:
                                 os.makedirs(path)
-                        except EnvironmentError, e:
+                        except EnvironmentError as e:
                                 if e.errno in (errno.EACCES, errno.EROFS):
                                         pass
                                 elif e.errno != errno.EEXIST:
@@ -1667,7 +1675,7 @@ pkg unset-publisher %s
                                         shutil.rmtree(opath)
                                 else:
                                         portable.remove(opath)
-                        except EnvironmentError, e:
+                        except EnvironmentError as e:
                                 raise api_errors._convert_error(e)
 
                 # if the catalog already exists on disk, is empty, and if
@@ -1688,7 +1696,7 @@ pkg unset-publisher %s
                                 try:
                                         portable.remove(os.path.join(
                                             self.catalog_root, entry))
-                                except EnvironmentError, e:
+                                except EnvironmentError as e:
                                         raise apx._convert_error(e)
 
                 # If there's only one origin, then just symlink its catalog
@@ -1903,7 +1911,7 @@ pkg unset-publisher %s
                         if full_refresh or v0_cat.origin() not in repo.origins:
                                 try:
                                         v0_cat.destroy(root=croot)
-                                except EnvironmentError, e:
+                                except EnvironmentError as e:
                                         if e.errno == errno.EACCES:
                                                 raise api_errors.PermissionsException(
                                                     e.filename)
@@ -1931,7 +1939,7 @@ pkg unset-publisher %s
                         # catalog retrieval instead.
                         try:
                                 v0_cat.destroy(root=croot)
-                        except EnvironmentError, e:
+                        except EnvironmentError as e:
                                 if e.errno == errno.EACCES:
                                         raise api_errors.PermissionsException(
                                             e.filename)
@@ -2088,7 +2096,7 @@ pkg unset-publisher %s
                 try:
                         misc.makedirs(croot)
                         tempdir = tempfile.mkdtemp(dir=croot)
-                except EnvironmentError, e:
+                except EnvironmentError as e:
                         if e.errno == errno.EACCES:
                                 raise api_errors.PermissionsException(
                                     e.filename)
@@ -2258,7 +2266,7 @@ pkg unset-publisher %s
 
                 try:
                         shutil.rmtree(self.meta_root)
-                except EnvironmentError, e:
+                except EnvironmentError as e:
                         if e.errno == errno.EACCES:
                                 raise api_errors.PermissionsException(
                                     e.filename)
@@ -2369,15 +2377,15 @@ pkg unset-publisher %s
 
                 try:
                         return m2.X509.load_cert_string(s)
-                except m2.X509.X509Error, e:
+                except m2.X509.X509Error as e:
                         if pkg_hash is not None:
                                 raise api_errors.BadFileFormat(_("The file "
-                                    "with hash %s was expected to be a PEM "
-                                    "certificate but it could not be read.") %
-                                    pkg_hash)
+                                    "with hash {0} was expected to be a PEM "
+                                    "certificate but it could not be "
+                                    "read.").format(pkg_hash))
                         raise api_errors.BadFileFormat(_("The following string "
                             "was expected to be a PEM certificate, but it "
-                            "could not be parsed as such:\n%s" % s))
+                            "could not be parsed as such:\n{0}".format(s)))
 
         def __add_cert(self, cert):
                 """Add the pem representation of the certificate 'cert' to the
@@ -2390,7 +2398,7 @@ pkg unset-publisher %s
                 try:
                         with open(pkg_hash_pth, "wb") as fh:
                                 fh.write(cert.as_pem())
-                except EnvironmentError, e:
+                except EnvironmentError as e:
                         file_problem = True
 
                 # Note that while we store certs by their subject hashes,
@@ -2401,7 +2409,7 @@ pkg unset-publisher %s
                 made_link = False
                 while not made_link:
                         fn = os.path.join(self.__subj_root,
-                            "%s.%s" % (subj_hsh, c))
+                            "{0}.{1}".format(subj_hsh, c))
                         if os.path.exists(fn):
                                 c += 1
                                 continue
@@ -2409,7 +2417,7 @@ pkg unset-publisher %s
                                 try:
                                         portable.link(pkg_hash_pth, fn)
                                         made_link = True
-                                except EnvironmentError, e:
+                                except EnvironmentError as e:
                                         pass
                         if not made_link:
                                 self.__issuers.setdefault(subj_hsh, []).append(
@@ -2470,11 +2478,11 @@ pkg unset-publisher %s
                 try:
                         while True:
                                 pth = os.path.join(self.__subj_root,
-                                    "%s.%s" % (name_hsh, c))
+                                    "{0}.{1}".format(name_hsh, c))
                                 cert = m2.X509.load_cert(pth)
                                 res.append(cert)
                                 c += 1
-                except EnvironmentError, e:
+                except EnvironmentError as e:
                         t = api_errors._convert_error(e,
                             [errno.ENOENT])
                         if t:
@@ -2518,31 +2526,37 @@ pkg unset-publisher %s
                 # Add new values to properties.
                 for n in add_prop_values.keys():
                         self.properties.setdefault(n, [])
+                        if not isinstance(self.properties[n], list):
+                                raise api_errors.InvalidPropertyValue(_(
+                                    "Cannot add a value to a single valued "
+                                    "property, The property name is '{name}' "
+                                    "and the current value is '{value}'"
+                                    ).format(name=n, value=self.properties[n]))
                         self.properties[n].extend(add_prop_values[n])
                 # Remove values from properties.
                 for n in remove_prop_values.keys():
                         if n not in self.properties:
                                 raise api_errors.InvalidPropertyValue(_(
                                     "Cannot remove a value from the property "
-                                    "%(name)s because the property does not "
-                                    "exist.") % {"name":n})
+                                    "{name} because the property does not "
+                                    "exist.").format(name=n))
                         if not isinstance(self.properties[n], list):
                                 raise api_errors.InvalidPropertyValue(_(
                                     "Cannot remove a value from a single "
                                     "valued property, unset must be used. The "
-                                    "property name is '%(name)s' and the "
-                                    "current value is '%(value)s'") %
-                                    {"name":n, "value":self.properties[n]})
+                                    "property name is '{name}' and the "
+                                    "current value is '{value}'").format(
+                                    name=n, value=self.properties[n]))
                         for v in remove_prop_values[n]:
                                 try:
                                         self.properties[n].remove(v)
                                 except ValueError:
                                         raise api_errors.InvalidPropertyValue(_(
-                                            "Cannot remove the value %(value)s "
-                                            "from the property %(name)s "
+                                            "Cannot remove the value {value} "
+                                            "from the property {name} "
                                             "because the value is not in the "
-                                            "property's list.") %
-                                            {"value":v, "name":n})
+                                            "property's list.").format(
+                                            value=v, name=n))
                 self.__delay_validation = False
                 self.__validate_properties()
 
@@ -2570,8 +2584,8 @@ pkg unset-publisher %s
                                     format=m2.X509.FORMAT_DER)
                         except m2.X509.X509Error:
                                 raise api_errors.BadFileFormat(_("The CRL file "
-                                    "%s is not in a recognized format.") %
-                                    pth)
+                                    "{0} is not in a recognized "
+                                    "format.").format(pth))
 
         def __get_crl(self, uri):
                 """Given a URI (for now only http URIs are supported), return
@@ -2632,7 +2646,7 @@ pkg unset-publisher %s
                 # try to retrieve it from the server.
                 try:
                         tmp_fd, tmp_pth = tempfile.mkstemp(dir=self.__crl_root)
-                except EnvironmentError, e:
+                except EnvironmentError as e:
                         if e.errno in (errno.EACCES, errno.EPERM):
                                 tmp_fd, tmp_pth = tempfile.mkstemp()
                         else:
@@ -2688,7 +2702,7 @@ pkg unset-publisher %s
                 # it as valid.
                 try:
                         ext = cert.get_ext("crlDistributionPoints")
-                except LookupError, e:
+                except LookupError as e:
                         return True
                 uri = ext.get_value()
                 crl = self.__get_crl(uri)
@@ -2757,7 +2771,7 @@ pkg unset-publisher %s
                                     "PATHLEN:" in supported_vs:
                                         try:
                                                 cert_pathlen = int(v[len("PATHLEN:"):])
-                                        except ValueError, e:
+                                        except ValueError as e:
                                                 raise api_errors.UnsupportedExtensionValue(cert, ext, v)
                                         if cur_pathlen > cert_pathlen:
                                                 raise api_errors.PathlenTooShort(cert, cur_pathlen, cert_pathlen)
@@ -2924,7 +2938,7 @@ pkg unset-publisher %s
                                                             cur_pathlen)
                                                         self.__check_revocation(c,
                                                             ca_dict, use_crls)
-                                                except (api_errors.UnsupportedCriticalExtension, api_errors.RevokedCertificate), e:
+                                                except (api_errors.UnsupportedCriticalExtension, api_errors.RevokedCertificate) as e:
                                                         certs_with_problems.append(e)
                                                         problem = True
                                                 # If this certificate has no
@@ -3009,7 +3023,7 @@ pkg unset-publisher %s
                 if self.sys_pub:
                         raise api_errors.ModifyingSyspubException(_("Cannot "
                             "set a property for a system publisher. The "
-                            "property was:%s") % name)
+                            "property was:{0}").format(name))
 
                 if name == SIGNATURE_POLICY:
                         self.__sig_policy = None
@@ -3018,9 +3032,9 @@ pkg unset-publisher %s
                         policy_name = values[0]
                         if policy_name not in sigpolicy.Policy.policies():
                                 raise api_errors.InvalidPropertyValue(_(
-                                    "%(val)s is not a valid value for this "
-                                    "property:%(prop)s") % {"val": policy_name,
-                                    "prop": SIGNATURE_POLICY})
+                                    "{val} is not a valid value for this "
+                                    "property:{prop}").format(val=policy_name,
+                                    prop=SIGNATURE_POLICY))
                         if policy_name == "require-names":
                                 if self.__delay_validation:
                                         # If __delay_validation is set, then
@@ -3042,8 +3056,8 @@ pkg unset-publisher %s
                         else:
                                 if len(values) > 1:
                                         raise api_errors.InvalidPropertyValue(_(
-                                            "The %s signature-policy takes no "
-                                            "argument.") % policy_name)
+                                            "The {0} signature-policy takes no "
+                                            "argument.").format(policy_name))
                         self.__properties[SIGNATURE_POLICY] = policy_name
                         return
                 if name == "signature-required-names":
@@ -3056,7 +3070,7 @@ pkg unset-publisher %s
                 if self.sys_pub:
                         raise api_errors.ModifyingSyspubException(_("Cannot "
                             "unset a property for a system publisher. The "
-                            "property was:%s") % name)
+                            "property was:{0}").format(name))
                 del self.__properties[name]
 
         def __prop_iter(self):

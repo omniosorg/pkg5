@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.7
 #
 # CDDL HEADER START
 #
@@ -21,8 +21,7 @@
 #
 
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 REQUIRE = 0
@@ -52,11 +51,11 @@ class Dependency(object):
 
 	def __repr__(self):
 		if self.type == REQUIRE:
-			return "%s => %s" % \
-				(self.host_pkg_fmri, self.req_pkg_fmri)
+			return "{0} => {1}".format(
+				self.host_pkg_fmri, self.req_pkg_fmri)
 		elif self.type == OPTIONAL:
-			return "%s o> %s" % \
-				(self.host_pkg_fmri, self.req_pkg_fmri)
+			return "{0} o> {1}".format(
+				self.host_pkg_fmri, self.req_pkg_fmri)
 		elif self.type == INCORPORATE:
-			return "%s >> %s" % \
-				(self.host_pkg_fmri, self.req_pkg_fmri)
+			return "{0} >> {1}".format(
+				self.host_pkg_fmri, self.req_pkg_fmri)

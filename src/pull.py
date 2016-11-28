@@ -1,4 +1,4 @@
-#!/usr/bin/python2.6
+#!/usr/bin/python2.7
 #
 # CDDL HEADER START
 #
@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 import calendar
@@ -134,7 +134,7 @@ Options:
                                 includes only the latest version of each package
 
         -n              Perform a trial run with no changes made.
-        
+
         -v              Display verbose output.
 
         -p publisher    Only clone the given publisher. Can be specified
@@ -147,7 +147,7 @@ Options:
                         repository to retrieve package data from.
 
         --clone         Make an exact copy of the source repository. By default,
-                        the clone operation will only succeed if publishers in 
+                        the clone operation will only succeed if publishers in
                         the  source  repository  are  also  present  in  the
                         destination.  By using -p, the operation can be limited
                         to  specific  publishers  which  will  be  added  to the
@@ -194,8 +194,9 @@ def cleanup(caller_error=False):
                 # the directory so downloads may be resumed.
                 if d == cache_dir and caller_error and download_start:
                         error(_("\n\nCached files were preserved in the "
-                            "following directory:\n\t%s\nUse pkgrecv -c "
-                            "to resume the interrupted download.") % cache_dir)
+                            "following directory:\n\t{0}\nUse pkgrecv -c "
+                            "to resume the interrupted download.").format(
+                            cache_dir))
                         continue
                 shutil.rmtree(d, ignore_errors=True)
 
@@ -241,8 +242,8 @@ def get_manifest(pfmri, xport_cfg, contents=False):
                 try:
                         m = manifest.FactoredManifest(pfmri, pkgdir)
                 except:
-                        abort(err=_("Unable to parse manifest '%(mpath)s' for "
-                            "package '%(pfmri)s'") % locals())
+                        abort(err=_("Unable to parse manifest '{mpath}' for "
+                            "package '{pfmri}'").format(**locals()))
 
         if contents:
                 return m.tostr_unsorted()
@@ -342,8 +343,8 @@ def fetch_catalog(src_pub, tracker, txport, target_catalog,
     include_updates=False):
         """Fetch the catalog from src_uri.
 
-	target_catalog is a hint about whether this is a destination catalog,
-	which helps the progress tracker render the refresh output properly."""
+        target_catalog is a hint about whether this is a destination catalog,
+        which helps the progress tracker render the refresh output properly."""
 
         src_uri = src_pub.repository.origins[0].uri
         tracker.refresh_start(1, full_refresh=True,
@@ -361,7 +362,7 @@ def fetch_catalog(src_pub, tracker, txport, target_catalog,
         try:
                 src_pub.refresh(full_refresh=True, immediate=True,
                     progtrack=tracker, include_updates=include_updates)
-        except apx.TransportError, e:
+        except apx.TransportError as e:
                 # Assume that a catalog doesn't exist for the target publisher,
                 # and drive on.  If there was an actual failure due to a
                 # transport issue, let the failure happen whenever some other
@@ -408,8 +409,8 @@ def main_func():
                 opts, pargs = getopt.getopt(sys.argv[1:], "ac:D:d:hkm:np:rs:v",
                     ["cert=", "key=", "dcert=", "dkey=", "newest", "raw",
                     "debug=", "clone"])
-        except getopt.GetoptError, e:
-                usage(_("Illegal option -- %s") % e.opt)
+        except getopt.GetoptError as e:
+                usage(_("Illegal option -- {0}").format(e.opt))
 
         for opt, arg in opts:
                 if opt == "-a":
@@ -428,9 +429,9 @@ def main_func():
                                 try:
                                         key, value = arg.split("=", 1)
                                 except (AttributeError, ValueError):
-                                        usage(_("%(opt)s takes argument of form "
-                                            "name=value, not %(arg)s") % {
-                                            "opt":  opt, "arg": arg })
+                                        usage(_("{opt} takes argument of form "
+                                            "name=value, not {arg}").format(
+                                            opt= opt, arg=arg))
                         DebugValues.set_value(key, value)
                 elif opt == "-h":
                         usage(retcode=0)
@@ -447,7 +448,8 @@ def main_func():
                                 all_timestamps = False
                                 all_versions = False
                         else:
-                                usage(_("Illegal option value -- %s") % arg)
+                                usage(_("Illegal option value -- {0}").format(
+                                    arg))
                 elif opt == "-n":
                         dry_run = True
                 elif opt == "-p":
@@ -500,6 +502,9 @@ def main_func():
 
         if clone and list_newest:
                 usage(_("--clone can not be used with --newest.\n"))
+
+        if clone and pargs:
+                usage(_("--clone does not support FMRI patterns"))
 
         if publishers and not clone:
                 usage(_("-p can only be used with --clone.\n"))
@@ -570,7 +575,7 @@ def get_matches(src_pub, tracker, xport, pargs, any_unmatched, any_matched,
                 try:
                         matches, refs, unmatched = \
                             src_cat.get_matching_fmris(pargs)
-                except apx.PackageMatchErrors, e:
+                except apx.PackageMatchErrors as e:
                         abort(str(e))
 
                 # Track anything that failed to match.
@@ -602,8 +607,8 @@ def archive_pkgs(pargs, target, list_newest, all_versions, all_timestamps,
 
         target = os.path.abspath(target)
         if os.path.exists(target):
-                error(_("Target archive '%s' already "
-                    "exists.") % target)
+                error(_("Target archive '{0}' already "
+                    "exists.").format(target))
                 abort()
 
         # Open the archive early so that permissions failures, etc. can be
@@ -628,8 +633,8 @@ def archive_pkgs(pargs, target, list_newest, all_versions, all_timestamps,
                 xport_cfg.pkg_root = os.path.join(basedir, src_pub.prefix)
 
                 tracker = get_tracker()
-                msg(_("Retrieving packages for publisher %s ...") %
-                    src_pub.prefix)
+                msg(_("Retrieving packages for publisher {0} ...").format(
+                    src_pub.prefix))
                 if pargs == None or len(pargs) == 0:
                         usage(_("must specify at least one pkgfmri"))
 
@@ -647,8 +652,8 @@ def archive_pkgs(pargs, target, list_newest, all_versions, all_timestamps,
                 get_files = 0
 
                 if not recursive:
-                        msg(_("Retrieving and evaluating %d package(s)...") %
-                            npkgs)
+                        msg(_("Retrieving and evaluating {0:d} package(s)...").format(
+                            npkgs))
 
 
                 tracker.manifest_fetch_start(npkgs)
@@ -657,7 +662,7 @@ def archive_pkgs(pargs, target, list_newest, all_versions, all_timestamps,
                 for f in matches:
                         try:
                                 m = get_manifest(f, xport_cfg)
-                        except apx.InvalidPackageErrors, e:
+                        except apx.InvalidPackageErrors as e:
                                 invalid_manifests.extend(e.errors)
                                 continue
                         good_matches.append(f)
@@ -675,7 +680,7 @@ def archive_pkgs(pargs, target, list_newest, all_versions, all_timestamps,
                         try:
                                 fs = os.stat(m.pathname)
                                 arc_bytes += fs.st_size
-                        except EnvironmentError, e:
+                        except EnvironmentError as e:
                                 raise apx._convert_error(e)
 
                         tracker.manifest_fetch_progress(completion=True)
@@ -701,7 +706,7 @@ def archive_pkgs(pargs, target, list_newest, all_versions, all_timestamps,
                         rjust_status = max(len(s[0]) for s in status)
                         rjust_value = max(len(s[1]) for s in status)
                         for s in status:
-                                msg("%s %s" % (s[0].rjust(rjust_status),
+                                msg("{0} {1}".format(s[0].rjust(rjust_status),
                                     s[1].rjust(rjust_value)))
 
                         msg(_("\nPackages to archive:"))
@@ -759,8 +764,8 @@ def archive_pkgs(pargs, target, list_newest, all_versions, all_timestamps,
 
         if invalid_manifests:
                 error(_("The following errors were encountered.  The packages "
-                    "listed were not\nreceived.\n%s") %
-                    "\n".join(str(im) for im in invalid_manifests))
+                    "listed were not\nreceived.\n{0}").format(
+                    "\n".join(str(im) for im in invalid_manifests)))
         if invalid_manifests and total_processed:
                 return pkgdefs.EXIT_PARTIAL
         if invalid_manifests:
@@ -778,7 +783,7 @@ def clone_repo(pargs, target, list_newest, all_versions, all_timestamps,
         total_processed = 0
         modified_pubs = set()
         deleted_pkgs = False
-        old_c_root = None
+        old_c_root = {}
         del_search_index = set()
 
         # Turn target into a valid URI.
@@ -792,7 +797,7 @@ def clone_repo(pargs, target, list_newest, all_versions, all_timestamps,
         try:
                 repo = sr.Repository(read_only=False,
                     root=target.get_pathname())
-        except sr.RepositoryInvalidError, e:
+        except sr.RepositoryInvalidError as e:
                 txt = str(e) + "\n\n"
                 txt += _("To create a repository, use the pkgrepo command.")
                 abort(err=txt)
@@ -810,8 +815,9 @@ def clone_repo(pargs, target, list_newest, all_versions, all_timestamps,
                         shutil.rmtree(old_c_root)
                         shutil.move(c_root, old_c_root)
                         shutil.copytree(src_cat_root, c_root)
-                except Exception, e:
-                        abort(err=_("Unable to copy catalog files: %s") % e)
+                except Exception as e:
+                        abort(err=_("Unable to copy catalog files: {0}").format(
+                            e))
                 return old_c_root
 
         # Check if all publishers in src are also in target. If not, add
@@ -827,8 +833,8 @@ def clone_repo(pargs, target, list_newest, all_versions, all_timestamps,
         unknown_pubs = []
         for p in publishers:
                 if p not in src_pubs and p != '*':
-                        abort(err=_("The publisher %s does not exist in the "
-                            "source repository." % p))
+                        abort(err=_("The publisher {0} does not exist in the "
+                            "source repository.".format(p)))
                 pubs_specified = True
 
         for sp in src_pubs:
@@ -850,20 +856,25 @@ def clone_repo(pargs, target, list_newest, all_versions, all_timestamps,
                     "Please use -p to specify which publishers need to be "
                     "cloned or -p '*' to clone all publishers.")
                 for p in unknown_pubs:
-                        txt += "\n    %s\n" % p
+                        txt += "\n    {0}\n".format(p)
                 abort(err=txt)
 
         # Create non-existent publishers.
         for p in pubs_to_add:
                 if not dry_run:
-                        msg(_("Adding publisher %s ...") % p.prefix)
-                        repo.add_publisher(p)
+                        msg(_("Adding publisher {0} ...").format(p.prefix))
+                        # add_publisher() will create a p5i file in the repo
+                        # store, containing origin and possible mirrors from
+                        # the src repo. These may not be valid for the new repo
+                        # so skip creation of this file.
+                        repo.add_publisher(p, skip_config=True)
                 else:
-                        msg(_("Adding publisher %s (dry-run) ...") % p.prefix)
+                        msg(_("Adding publisher {0} (dry-run) ...").format(
+                            p.prefix))
 
         for src_pub in pubs_to_sync:
-                msg(_("Processing packages for publisher %s ...") %
-                    src_pub.prefix)
+                msg(_("Processing packages for publisher {0} ...").format(
+                    src_pub.prefix))
                 tracker = get_tracker()
 
                 src_basedir = tempfile.mkdtemp(dir=temp_root,
@@ -924,8 +935,8 @@ def clone_repo(pargs, target, list_newest, all_versions, all_timestamps,
                 if len(to_rm) > 0:
                         msg(_("Packages to remove:"))
                         for f in to_rm:
-                                msg("    %s" % f.get_fmri(anarchy=True,
-                                    include_build=False))
+                                msg("    {0}".format(f.get_fmri(anarchy=True,
+                                    include_build=False)))
 
                         if not dry_run:
                                 msg(_("Removing packages ..."))
@@ -941,15 +952,15 @@ def clone_repo(pargs, target, list_newest, all_versions, all_timestamps,
                 if len(to_add) == 0:
                         msg(_("No packages to add."))
                         if deleted_pkgs:
-                                old_c_root = copy_catalog(src_cat_root,
-                                    src_pub.prefix)
+                                old_c_root[src_pub.prefix] = copy_catalog(
+                                    src_cat_root, src_pub.prefix)
                         continue
 
                 get_bytes = 0
                 get_files = 0
 
-                msg(_("Retrieving and evaluating %d package(s)...") %
-                    len(to_add))
+                msg(_("Retrieving and evaluating {0:d} package(s)...").format(
+                    len(to_add)))
 
                 # Retrieve manifests.
                 # Try prefetching manifests in bulk first for faster, parallel
@@ -967,7 +978,7 @@ def clone_repo(pargs, target, list_newest, all_versions, all_timestamps,
                 for f, i in to_add:
                         try:
                                 m = get_manifest(f, xport_cfg)
-                        except apx.InvalidPackageErrors, e:
+                        except apx.InvalidPackageErrors as e:
                                 invalid_manifests.extend(e.errors)
                                 continue
                         getb, getf, sendb, sendcb = get_sizes(m)
@@ -988,8 +999,8 @@ def clone_repo(pargs, target, list_newest, all_versions, all_timestamps,
                         try:
                                 misc.makedirs(dir_name)
                                 shutil.move(src_path, dst_path)
-                        except Exception, e:
-                                txt = _("Unable to copy manifest: %s") % e
+                        except Exception as e:
+                                txt = _("Unable to copy manifest: {0}").format(e)
                                 abort(err=txt)
 
                         tracker.manifest_fetch_progress(completion=True)
@@ -1013,14 +1024,14 @@ def clone_repo(pargs, target, list_newest, all_versions, all_timestamps,
                         rjust_status = max(len(s[0]) for s in status)
                         rjust_value = max(len(s[1]) for s in status)
                         for s in status:
-                                msg("%s %s" % (s[0].rjust(rjust_status),
+                                msg("{0} {1}".format(s[0].rjust(rjust_status),
                                     s[1].rjust(rjust_value)))
- 
+
                         msg(_("\nPackages to transfer:"))
                         for f, i in sorted(to_add):
                                 fmri = f.get_fmri(anarchy=True,
                                     include_scheme=False)
-                                msg("%s" % fmri)
+                                msg("{0}".format(fmri))
                         msg()
 
                 if dry_run:
@@ -1046,11 +1057,12 @@ def clone_repo(pargs, target, list_newest, all_versions, all_timestamps,
                 tracker.reset()
 
                 modified_pubs.add(src_pub.prefix)
-                old_c_root = copy_catalog(src_cat_root, src_pub.prefix)
+                old_c_root[src_pub.prefix] = copy_catalog(src_cat_root,
+                    src_pub.prefix)
 
         if invalid_manifests:
-                error(_("The following packages could not be retrieved:\n%s") %
-                    "\n".join(str(im) for im in invalid_manifests))
+                error(_("The following packages could not be retrieved:\n{0}").format(
+                    "\n".join(str(im) for im in invalid_manifests)))
 
         ret = 0
         # Run pkgrepo verify to check repo.
@@ -1059,12 +1071,13 @@ def clone_repo(pargs, target, list_newest, all_versions, all_timestamps,
                 cmd = os.path.join(os.path.dirname(misc.api_cmdpath()),
                     "pkgrepo")
                 args = [cmd, 'verify', '-s',
-                    target.get_pathname()]
+                    target.get_pathname(), '--disable', 'dependency']
 
                 try:
                         ret = subprocess.call(args)
-                except OSError, e:
-                        raise RuntimeError, "cannot execute %s: %s" % (args, e)
+                except OSError as e:
+                        raise RuntimeError("cannot execute {0}: {1}".format(
+                            args, e))
 
         # Cleanup. If verification was ok, remove backup copy of old catalog.
         # If not, move old catalog back into place and remove messed up catalog.
@@ -1073,11 +1086,11 @@ def clone_repo(pargs, target, list_newest, all_versions, all_timestamps,
                 try:
                         if ret:
                                 shutil.rmtree(c_root)
-                                shutil.move(old_c_root, c_root)
+                                shutil.move(old_c_root[pub], c_root)
                         else:
-                                shutil.rmtree(old_c_root)
-                except Exception, e:
-                        error(_("Unable to remove catalog files: %s") % e)
+                                shutil.rmtree(old_c_root[pub])
+                except Exception as e:
+                        error(_("Unable to remove catalog files: {0}").format(e))
                         # We don't abort here to make sure we can
                         # restore/delete as much as we can.
                         continue
@@ -1096,10 +1109,10 @@ def clone_repo(pargs, target, list_newest, all_versions, all_timestamps,
                 txt = _("\nThe search index for the following publishers has "
                     "been removed due to package removals.\n")
                 for p in del_search_index:
-                        txt += "    %s\n" % p
+                        txt += "    {0}\n".format(p)
                 txt += _("\nTo restore the search index for all publishers run"
-                    "\n'pkgrepo refresh --no-catalog -s %s'.\n") % \
-                    target.get_pathname()
+                    "\n'pkgrepo refresh --no-catalog -s {0}'.\n").format(
+                    target.get_pathname())
                 msg(txt)
 
         cleanup()
@@ -1126,8 +1139,8 @@ def transfer_pkgs(pargs, target, list_newest, all_versions, all_timestamps,
         for src_pub in xport_cfg.gen_publishers():
                 tracker = get_tracker()
                 if list_newest:
-			# Make sure the prog tracker knows we're doing a listing
-			# operation so that it suppresses irrelevant output.
+                        # Make sure the prog tracker knows we're doing a listing
+                        # operation so that it suppresses irrelevant output.
                         tracker.set_purpose(tracker.PURPOSE_LISTING)
 
                         if pargs or len(pargs) > 0:
@@ -1139,8 +1152,8 @@ def transfer_pkgs(pargs, target, list_newest, all_versions, all_timestamps,
                                 msg(f.get_fmri(include_build=False))
                         continue
 
-                msg(_("Processing packages for publisher %s ...") %
-                    src_pub.prefix)
+                msg(_("Processing packages for publisher {0} ...").format(
+                    src_pub.prefix))
                 if pargs == None or len(pargs) == 0:
                         usage(_("must specify at least one pkgfmri"))
 
@@ -1167,32 +1180,32 @@ def transfer_pkgs(pargs, target, list_newest, all_versions, all_timestamps,
                                 try:
                                         t = trans.Transaction(target,
                                             xport=dest_xport, pub=targ_pub)
-                                except trans.TransactionRepositoryInvalidError, e:
+                                except trans.TransactionRepositoryInvalidError as e:
                                         txt = str(e) + "\n\n"
                                         txt += _("To create a repository, use "
                                             "the pkgrepo command.")
                                         abort(err=txt)
-                                except trans.TransactionRepositoryConfigError, e:
+                                except trans.TransactionRepositoryConfigError as e:
                                         txt = str(e) + "\n\n"
                                         txt += _("The repository configuration "
                                             "for the repository located at "
-                                            "'%s' is not valid or the "
+                                            "'{0}' is not valid or the "
                                             "specified path does not exist.  "
                                             "Please correct the configuration "
                                             "of the repository or create a new "
-                                            "one.") % target
+                                            "one.").format(target)
                                         abort(err=txt)
-                                except trans.TransactionError, e:
+                                except trans.TransactionError as e:
                                         abort(err=e)
                 else:
                         basedir = target = os.path.abspath(target)
                         if not os.path.exists(basedir):
                                 try:
                                         os.makedirs(basedir, misc.PKG_DIR_MODE)
-                                except Exception, e:
+                                except Exception as e:
                                         error(_("Unable to create basedir "
-                                            "'%(dir)s': %(err)s") %
-                                            {"dir": basedir, "err": e})
+                                            "'{dir}': {err}").format(
+                                            dir=basedir, err=e))
                                         abort()
 
                 xport_cfg.pkg_root = basedir
@@ -1211,8 +1224,8 @@ def transfer_pkgs(pargs, target, list_newest, all_versions, all_timestamps,
 
                 def get_basename(pfmri):
                         open_time = pfmri.get_timestamp()
-                        return "%d_%s" % \
-                            (calendar.timegm(open_time.utctimetuple()),
+                        return "{0:d}_{1}".format(
+                            calendar.timegm(open_time.utctimetuple()),
                             urllib.quote(str(pfmri), ""))
 
                 # First, retrieve the manifests and calculate package transfer
@@ -1223,8 +1236,8 @@ def transfer_pkgs(pargs, target, list_newest, all_versions, all_timestamps,
                 send_bytes = 0
 
                 if not recursive:
-                        msg(_("Retrieving and evaluating %d package(s)...") %
-                            npkgs)
+                        msg(_("Retrieving and evaluating {0:d} package(s)...").format(
+                            npkgs))
 
                 tracker.manifest_fetch_start(npkgs)
 
@@ -1236,7 +1249,7 @@ def transfer_pkgs(pargs, target, list_newest, all_versions, all_timestamps,
                                 continue
                         try:
                                 m = get_manifest(f, xport_cfg)
-                        except apx.InvalidPackageErrors, e:
+                        except apx.InvalidPackageErrors as e:
                                 invalid_manifests.extend(e.errors)
                                 continue
                         pkgs_to_get.append(f)
@@ -1273,14 +1286,14 @@ def transfer_pkgs(pargs, target, list_newest, all_versions, all_timestamps,
                         rjust_status = max(len(s[0]) for s in status)
                         rjust_value = max(len(s[1]) for s in status)
                         for s in status:
-                                msg("%s %s" % (s[0].rjust(rjust_status),
+                                msg("{0} {1}".format(s[0].rjust(rjust_status),
                                     s[1].rjust(rjust_value)))
- 
+
                         msg(_("\nPackages to transfer:"))
                         for f in sorted(pkgs_to_get):
                                 fmri = f.get_fmri(anarchy=True,
                                     include_scheme=False)
-                                msg("%s" % fmri)
+                                msg("{0}".format(fmri))
                         msg()
 
                 if dry_run:
@@ -1367,7 +1380,7 @@ def transfer_pkgs(pargs, target, list_newest, all_versions, all_timestamps,
                                                         t.add_file(fname)
                                 # Always defer catalog update.
                                 t.close(add_to_catalog=False)
-                        except trans.TransactionError, e:
+                        except trans.TransactionError as e:
                                 abort(err=e)
 
                         # Dump data retrieved so far after each successful
@@ -1382,7 +1395,7 @@ def transfer_pkgs(pargs, target, list_newest, all_versions, all_timestamps,
                                         # and shouldn't be dumped.
                                         shutil.rmtree(cache_dir)
                                         misc.makedirs(cache_dir)
-                        except EnvironmentError, e:
+                        except EnvironmentError as e:
                                 raise apx._convert_error(e)
                         misc.makedirs(dest_xport_cfg.incoming_root)
 
@@ -1409,8 +1422,8 @@ def transfer_pkgs(pargs, target, list_newest, all_versions, all_timestamps,
         cleanup()
         if invalid_manifests:
                 error(_("The following errors were encountered.  The packages "
-                    "listed were not\nreceived.\n%s") %
-                    "\n".join(str(im) for im in invalid_manifests))
+                    "listed were not\nreceived.\n{0}").format(
+                    "\n".join(str(im) for im in invalid_manifests)))
         if invalid_manifests and total_processed:
                 return pkgdefs.EXIT_PARTIAL
         if invalid_manifests:
@@ -1432,7 +1445,7 @@ if __name__ == "__main__":
                 else:
                         __ret = 1
         except (pkg.actions.ActionError, trans.TransactionError, RuntimeError,
-            apx.ApiException), _e:
+            apx.ApiException) as _e:
                 error(_e)
                 try:
                         cleanup(True)
@@ -1449,13 +1462,13 @@ if __name__ == "__main__":
                         __ret = 99
                 else:
                         __ret = 1
-        except SystemExit, _e:
+        except SystemExit as _e:
                 try:
                         cleanup(False)
                 except:
                         __ret = 99
                 raise _e
-        except EnvironmentError, _e:
+        except EnvironmentError as _e:
                 if _e.errno != errno.ENOSPC and _e.errno != errno.EDQUOT:
                         raise
 
@@ -1476,7 +1489,7 @@ if __name__ == "__main__":
                 txt += "\n"
                 error(txt + _("Please verify that the filesystem containing "
                    "the following directories has enough space available:\n"
-                   "%s") % "\n".join(tdirs))
+                   "{0}").format("\n".join(tdirs)))
                 try:
                         cleanup()
                 except:

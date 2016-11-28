@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.7
 #
 # CDDL HEADER START
 #
@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 import os.path
@@ -74,7 +74,7 @@ class SMFManifestDependency(base.PublishingDependency):
                     full_paths=full_paths)
 
         def __repr__(self):
-                return "SMFDep(%s, %s, %s, %s)" % (self.action,
+                return "SMFDep({0}, {1}, {2}, {3})".format(self.action,
                     self.base_names, self.run_paths, self.pkg_vars)
 
         @staticmethod
@@ -98,12 +98,6 @@ class SMFManifestDependency(base.PublishingDependency):
                 SMFManifestDependency.instance_mf = {}
                 SMFManifestDependency.instance_deps = {}
 
-                def find(manifests, dirname, fnames):
-                         for file in fnames:
-                                 path = os.path.join(dirname, file)
-                                 if os.path.isfile(path):
-                                        manifests.append(path)
-
                 manifest_paths = []
 
                 # we want our proto_dirs to be the authoritative source
@@ -118,11 +112,12 @@ class SMFManifestDependency(base.PublishingDependency):
                                     location))
 
                 for location in manifest_paths:
-                        manifests = []
-                        os.path.walk(location, find, manifests)
-                        for manifest_file in manifests:
-                                SMFManifestDependency.__populate_smf_dics(
-                                    manifest_file)
+                        for dirpath, dirnames, filenames in os.walk(location):
+                                for f in filenames:
+                                        manifest_file = os.path.join(
+                                            dirpath, f)
+                                        SMFManifestDependency.__populate_smf_dics(
+                                            manifest_file)
         @staticmethod
         def __populate_smf_dics(manifest_file):
                 """Add a information information about the SMF instances and
@@ -194,14 +189,16 @@ def get_smf_dependencies(fmri, instance_deps):
                 # this can only happen if we've been asked to resolve a
                 # service-level FMRI, not a fully qualified instance FMRI
                 raise ValueError(
-                    _("more than one set of dependencies found: %s") % results)
+                    _("more than one set of dependencies found: {0}").format(
+                    results))
 
         results = search_smf_dic(fmri, SMFManifestDependency.instance_deps)
         if len(results) == 1:
                 return results[0]
         elif len(results) > 1:
                 raise ValueError(
-                    _("more than one set of dependencies found: %s") % results)
+                    _("more than one set of dependencies found: {0}").format(
+                    results))
 
         return []
 
@@ -238,8 +235,8 @@ def process_smf_manifest_deps(action, pkg_vars, **kwargs):
 
         if action.name != "file":
                 return [], \
-                    [ _("%s actions cannot deliver SMF manifests") %
-                    action.name ], {}
+                    [ _("{0} actions cannot deliver SMF manifests").format(
+                    action.name)], {}
 
         # we don't report an error here, as SMF manifest files may be delivered
         # to a location specifically not intended to be imported to the SMF
@@ -256,8 +253,8 @@ def process_smf_manifest_deps(action, pkg_vars, **kwargs):
 
         instance_mf, instance_deps = parse_smf_manifest(proto_file)
         if instance_mf is None:
-                return [], [ _("Unable to parse SMF manifest %s") %
-                    proto_file ], {}
+                return [], [ _("Unable to parse SMF manifest {0}").format(
+                    proto_file)], {}
 
         for fmri in instance_mf:
                 try:
@@ -267,9 +264,9 @@ def process_smf_manifest_deps(action, pkg_vars, **kwargs):
                         if instance is None:
                                 continue
 
-                except ValueError, err:
-                        elist.append(_("Problem resolving %(fmri)s: %(err)s") %
-                            locals())
+                except ValueError as err:
+                        elist.append(_("Problem resolving {fmri}: {err}").format(
+                            **locals()))
                         continue
 
                 # determine the set of SMF FMRIs we depend on
@@ -277,17 +274,17 @@ def process_smf_manifest_deps(action, pkg_vars, **kwargs):
                 try:
                         dep_fmris = set(
                             get_smf_dependencies(fmri, instance_deps))
-                except ValueError, err:
+                except ValueError as err:
                         elist.append(
-                            _("Problem determining dependencies for %(fmri)s:"
-                            "%(err)s") % locals())
+                            _("Problem determining dependencies for {fmri}:"
+                            "{err}").format(**locals()))
 
                 # determine the file paths that deliver those dependencies
                 for dep_fmri in dep_fmris:
                         try:
                                 manifests = resolve_smf_dependency(dep_fmri,
                                     instance_mf)
-                        except ValueError, err:
+                        except ValueError as err:
                                 # we've declared an SMF dependency, but can't
                                 # determine what file delivers it from the known
                                 # SMF manifests in either the proto area or the
@@ -295,8 +292,8 @@ def process_smf_manifest_deps(action, pkg_vars, **kwargs):
                                 manifests = []
                                 elist.append(
                                     _("Unable to generate SMF dependency on "
-                                    "%(dep_fmri)s declared in %(proto_file)s by "
-                                    "%(fmri)s: %(err)s") % locals())
+                                    "{dep_fmri} declared in {proto_file} by "
+                                    "{fmri}: {err}").format(**locals()))
 
                         if len(manifests) == 1:
                                 dep_manifests.add(manifests[0])
@@ -313,17 +310,17 @@ def process_smf_manifest_deps(action, pkg_vars, **kwargs):
                                         elist.append(
                                             _("Unable to generate SMF "
                                             "dependency on the service FMRI "
-                                            "%(dep_fmri)s declared in "
-                                            "%(proto_file)s by %(fmri)s. "
+                                            "{dep_fmri} declared in "
+                                            "{proto_file} by {fmri}. "
                                             "SMF dependencies should always "
                                             "resolve to SMF instances rather "
                                             "than SMF services and multiple "
                                             "files deliver instances of this "
-                                            "service: %(manifests)s") %
-                                            {"dep_fmri" : dep_fmri,
-                                            "proto_file": proto_file,
-                                            "fmri": fmri,
-                                            "manifests": ", ".join(manifests)})
+                                            "service: {manifests}").format(
+                                            dep_fmri=dep_fmri,
+                                            proto_file=proto_file,
+                                            fmri=fmri,
+                                            manifests=", ".join(manifests)))
 
                                 dep_manifests.add(tuple(manifests))
 
@@ -425,7 +422,7 @@ def parse_smf_manifest(smf_file):
                 svc_name = service.getAttribute("name")
                 if svc_name and not svc_name.startswith("/"):
                         svc_name = "/" + svc_name
-                        fmris.append("svc:%s" % svc_name)
+                        fmris.append("svc:{0}".format(svc_name))
                 else:
                         # no defined service name, so no dependencies here
                         continue
@@ -458,7 +455,7 @@ def parse_smf_manifest(smf_file):
                                         # called "default"
                                         duplicate_default = True
 
-                                fmri = "svc:%s:%s" % (svc_name, inst_name)
+                                fmri = "svc:{0}:{1}".format(svc_name, inst_name)
 
                                 # we can use getElementsByTagName here, since
                                 # there are no nested <dependency> tags that
@@ -476,12 +473,12 @@ def parse_smf_manifest(smf_file):
                                 fmris.append(fmri)
 
                 if create_default and not duplicate_default:
-                        fmri = "svc:%s:default" % svc_name
+                        fmri = "svc:{0}:default".format(svc_name)
                         fmris.append(fmri)
                         instance_deps[fmri] = svc_dependencies
 
                 # add the service FMRI
-                instance_deps["svc:%s" % svc_name] = svc_dependencies
+                instance_deps["svc:{0}".format(svc_name)] = svc_dependencies
                 for fmri in fmris:
                         instance_mf[fmri] = manifest_path
 

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.7
 #
 # CDDL HEADER START
 #
@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
 
 """Interfaces and implementation for the Catalog object, as well as functions
 that operate on lists of package FMRIs."""
@@ -90,17 +90,17 @@ class _JSONWriter(object):
                         # Set the file buffer size to the blocksize of our
                         # filesystem.
                         self.__bufsz = destvfs[statvfs.F_BSIZE]
-                except EnvironmentError, e:
+                except EnvironmentError as e:
                         if e.errno == errno.EACCES:
                                 raise api_errors.PermissionsException(
                                     e.filename)
-                except AttributeError, e:
+                except AttributeError as e:
                         # os.statvfs is not available on some platforms.
                         pass
 
                 try:
                         tfile = open(pathname, "wb", self.__bufsz)
-                except EnvironmentError, e:
+                except EnvironmentError as e:
                         if e.errno == errno.EACCES:
                                 raise api_errors.PermissionsException(
                                     e.filename)
@@ -253,7 +253,7 @@ class CatalogPartBase(object):
 
                 try:
                         mod_time = os.stat(self.pathname).st_mtime
-                except EnvironmentError, e:
+                except EnvironmentError as e:
                         if e.errno == errno.ENOENT:
                                 return None
                         raise
@@ -272,7 +272,7 @@ class CatalogPartBase(object):
                         if os.path.exists(self.pathname):
                                 try:
                                         portable.remove(self.pathname)
-                                except EnvironmentError, e:
+                                except EnvironmentError as e:
                                         if e.errno == errno.EACCES:
                                                 raise api_errors.PermissionsException(
                                                     e.filename)
@@ -301,7 +301,7 @@ class CatalogPartBase(object):
 
                 try:
                         fobj = file(location, "rb")
-                except EnvironmentError, e:
+                except EnvironmentError as e:
                         if e.errno == errno.ENOENT:
                                 raise api_errors.RetrievalError(e,
                                     location=location)
@@ -315,9 +315,9 @@ class CatalogPartBase(object):
 
                 try:
                         struct = json.load(fobj)
-                except EnvironmentError, e:
+                except EnvironmentError as e:
                         raise api_errors.RetrievalError(e)
-                except ValueError, e:
+                except ValueError as e:
                         # Not a valid catalog file.
                         raise api_errors.InvalidCatalogFile(location)
 
@@ -358,7 +358,7 @@ class CatalogPartBase(object):
                 # Ensure the permissions on the new file are correct.
                 try:
                         os.chmod(self.pathname, self.__file_mode)
-                except EnvironmentError, e:
+                except EnvironmentError as e:
                         if e.errno == errno.EACCES:
                                 raise api_errors.PermissionsException(
                                     e.filename)
@@ -468,8 +468,8 @@ class CatalogPart(CatalogPartBase):
                 for entry in ver_list:
                         if entry["version"] == ver:
                                 if not pfmri:
-                                        pfmri = "pkg://%s/%s@%s" % (pub, stem,
-                                            ver)
+                                        pfmri = "pkg://{0}/{1}@{2}".format(pub,
+                                            stem, ver)
                                 raise api_errors.DuplicateCatalogEntry(
                                     pfmri, operation="add",
                                     catalog_name=self.pathname)
@@ -596,7 +596,7 @@ class CatalogPart(CatalogPartBase):
 
                 for pub, stem, entry in self.__iter_entries(last=last,
                     ordered=ordered, pubs=pubs):
-                        yield "pkg://%s/%s@%s" % (pub,
+                        yield "pkg://{0}/{1}@{2}".format(pub,
                             stem, entry["version"])
                 return
 
@@ -672,7 +672,7 @@ class CatalogPart(CatalogPartBase):
                                     len(self.__data[pub][stem])
                 return (package_count, package_version_count)
 
-        def get_package_counts_by_pub(self):
+        def get_package_counts_by_pub(self, pubs=EmptyI):
                 """Returns a generator of tuples of the form (pub,
                 package_count, package_version_count).  'pub' is the publisher
                 prefix, 'package_count' is the number of unique packages for the
@@ -681,7 +681,7 @@ class CatalogPart(CatalogPartBase):
                 """
 
                 self.load()
-                for pub in self.publishers():
+                for pub in self.publishers(pubs=pubs):
                         package_count = 0
                         package_version_count = 0
                         for stem in self.__data[pub]:
@@ -729,7 +729,7 @@ class CatalogPart(CatalogPartBase):
                 # Results have to be sorted by stem first, and by
                 # publisher prefix second.
                 pkg_list = [
-                        "%s!%s" % (stem, pub)
+                        "{0}!{1}".format(stem, pub)
                         for pub in self.publishers(pubs=pubs)
                         for stem in self.__data[pub]
                 ]
@@ -1229,7 +1229,7 @@ class CatalogAttrs(CatalogPartBase):
                 struct = CatalogPartBase.load(self)
                 # Check to see that struct is as we expect: it must be a dict
                 # and have all of the elements in self.__DEFAULT_ELEMS.
-                if type(struct) != types.DictType or \
+                if type(struct) != dict or \
                     not (set(self.__DEFAULT_ELEMS.keys()) <= \
                     set(struct.keys())):
                         raise api_errors.InvalidCatalogFile(location)
@@ -1250,7 +1250,7 @@ class CatalogAttrs(CatalogPartBase):
                                 continue
 
                         if key in ("parts", "updates"):
-                                if type(val) != types.DictType:
+                                if type(val) != dict:
                                         raise api_errors.InvalidCatalogFile(
                                             location)
 
@@ -1261,8 +1261,8 @@ class CatalogAttrs(CatalogPartBase):
                                         if subpart != os.path.basename(subpart):
                                                 raise api_errors.\
                                                     UnrecognizedCatalogPart(
-                                                    "%s {%s: %s}" % (self.name,
-                                                    key, subpart))
+                                                    "{0} {{{1}: {2}}}".format(
+                                                    self.name, key, subpart))
 
                                 # Build datetimes from timestamps.
                                 for e in val:
@@ -1545,8 +1545,8 @@ class Catalog(object):
                 if self.SUMMARY in info_needed:
                         for locale in locales:
                                 part = self.get_part(
-                                    "%s.%s" % (self.__SUMM_PART_PFX, locale),
-                                    must_exist=True)
+                                    "{0}.{1}".format(self.__SUMM_PART_PFX,
+                                    locale), must_exist=True)
                                 if part is None:
                                         # Data not available for this
                                         # locale.
@@ -1630,10 +1630,15 @@ class Catalog(object):
         @staticmethod
         def __gen_actions(pfmri, actions, excludes=EmptyI):
                 errors = None
+                if not isinstance(pfmri, fmri.PkgFmri):
+                        # pfmri is assumed to be a FMRI tuple.
+                        pub, stem, ver = pfmri
+                else:
+                        pub = pfmri.publisher
                 for astr in actions:
                         try:
                                 a = pkg.actions.fromstr(astr)
-                        except pkg.actions.ActionError, e:
+                        except pkg.actions.ActionError as e:
                                 # Accumulate errors and continue so that as
                                 # much of the action data as possible can be
                                 # parsed.
@@ -1642,8 +1647,6 @@ class Catalog(object):
                                         # of list allocation/deallocation.
                                         errors = []
                                 if not isinstance(pfmri, fmri.PkgFmri):
-                                        # pfmri is assumed to be a FMRI tuple.
-                                        pub, stem, ver = pfmri
                                         pfmri = fmri.PkgFmri(name=stem,
                                             publisher=pub, version=ver)
                                 e.fmri = pfmri
@@ -1656,7 +1659,8 @@ class Catalog(object):
                                 # Don't filter actual facet or variant
                                 # set actions.
                                 yield a
-                        elif a.include_this(excludes):
+                        elif a.include_this(excludes,
+                            publisher=pub):
                                 yield a
 
                 if errors is not None:
@@ -1678,7 +1682,7 @@ class Catalog(object):
                         atypes = ("set",)
                 else:
                         raise RuntimeError(_("Unknown info_needed "
-                            "type: %s" % info_needed))
+                            "type: {0}".format(info_needed)))
 
                 for a, attr_name in self.__gen_manifest_actions(m, atypes,
                     excludes):
@@ -1705,9 +1709,11 @@ class Catalog(object):
         def __gen_manifest_actions(m, atypes, excludes):
                 """Private helper function to iterate over a Manifest's actions
                 by action type, returning tuples of (action, attr_name)."""
+                pub = m.publisher
                 for atype in atypes:
                         for a in m.gen_actions_by_type(atype):
-                                if not a.include_this(excludes):
+                                if not a.include_this(excludes,
+                                    publisher=pub):
                                         continue
 
                                 if atype == "set":
@@ -1789,7 +1795,7 @@ class Catalog(object):
 
                 logdate = datetime_to_update_ts(op_time)
                 for locale, metadata in updates.iteritems():
-                        name = "update.%s.%s" % (logdate, locale)
+                        name = "update.{0}.{1}".format(logdate, locale)
                         ulog = self.__get_update(name)
                         ulog.add(pfmri, operation, metadata=metadata,
                             op_time=op_time)
@@ -1867,7 +1873,7 @@ class Catalog(object):
                                         npat.version = \
                                             pkg.version.Version(pat_ver)
 
-                        except (fmri.FmriError, pkg.version.VersionError), e:
+                        except (fmri.FmriError, pkg.version.VersionError) as e:
                                 # Whatever the error was, return it.
                                 error = e
                         yield (pat, error, npat, matcher)
@@ -1887,7 +1893,7 @@ class Catalog(object):
                                     "last-modified": ulog.last_modified
                                 }
                                 for n, v in ulog.signatures.iteritems():
-                                        entry["signature-%s" % n] = v
+                                        entry["signature-{0}".format(n)] = v
 
                 # Save any CatalogParts that are currently in-memory,
                 # updating their related information in catalog.attrs
@@ -1910,7 +1916,7 @@ class Catalog(object):
                             "last-modified": part.last_modified
                         }
                         for n, v in part.signatures.iteritems():
-                                entry["signature-%s" % n] = v
+                                entry["signature-{0}".format(n)] = v
 
                 # Finally, save the catalog attributes.
                 attrs.save()
@@ -1962,11 +1968,12 @@ class Catalog(object):
                                             pathname).st_mode)
                                         if fmode != self.__file_mode:
                                                 bad_modes.append((pathname,
-                                                    "%o" % self.__file_mode,
-                                                    "%o" % fmode))
+                                                    "{0:o}".format(
+                                                    self.__file_mode),
+                                                    "{0:o}".format(fmode)))
                                 else:
                                         os.chmod(pathname, self.__file_mode)
-                        except EnvironmentError, e:
+                        except EnvironmentError as e:
                                 # If the file doesn't exist yet, move on.
                                 if e.errno == errno.ENOENT:
                                         continue
@@ -1978,8 +1985,8 @@ class Catalog(object):
                                     pathname).st_mode)
                                 if fmode != self.__file_mode:
                                         bad_modes.append((pathname,
-                                            "%o" % self.__file_mode,
-                                            "%o" % fmode))
+                                            "{0:o}".format(self.__file_mode),
+                                            "{0:o}".format(fmode)))
 
                 if bad_modes:
                         raise api_errors.BadCatalogPermissions(bad_modes)
@@ -2145,7 +2152,7 @@ class Catalog(object):
                                 entry["metadata"] = metadata
                         if manifest:
                                 for k, v in manifest.signatures.iteritems():
-                                        entry["signature-%s" % k] = v
+                                        entry["signature-{0}".format(k)] = v
                         part = self.get_part(self.__BASE_PART)
                         entries[part.name] = part.add(pfmri, metadata=entry,
                             op_time=op_time)
@@ -2173,7 +2180,8 @@ class Catalog(object):
                                                         continue
 
                                                 part = self.get_part("catalog"
-                                                    ".%s.%s" % (ctype, locale))
+                                                    ".{0}.{1}".format(ctype,
+                                                    locale))
                                                 entry = { "actions": acts }
                                                 entries[part.name] = part.add(
                                                     pfmri, metadata=entry,
@@ -2387,7 +2395,7 @@ class Catalog(object):
 
                         try:
                                 portable.remove(pname)
-                        except EnvironmentError, e:
+                        except EnvironmentError as e:
                                 if e.errno == errno.EACCES:
                                         raise api_errors.PermissionsException(
                                             e.filename)
@@ -2508,8 +2516,8 @@ class Catalog(object):
                 if self.SUMMARY in info_needed:
                         for locale in locales:
                                 part = self.get_part(
-                                    "%s.%s" % (self.__SUMM_PART_PFX, locale),
-                                    must_exist=True)
+                                    "{0}.{1}".format(self.__SUMM_PART_PFX,
+                                    locale), must_exist=True)
                                 if part is None:
                                         # Data not available for this
                                         # locale.
@@ -2767,8 +2775,8 @@ class Catalog(object):
                 if self.SUMMARY in info_needed:
                         for locale in locales:
                                 part = self.get_part(
-                                    "%s.%s" % (self.__SUMM_PART_PFX, locale),
-                                    must_exist=True)
+                                    "{0}.{1}".format(self.__SUMM_PART_PFX,
+                                    locale), must_exist=True)
                                 if part is None:
                                         # Data not available for this
                                         # locale.
@@ -3347,7 +3355,7 @@ class Catalog(object):
 
                 return proposed_dict, references, unmatched
 
-        def get_package_counts_by_pub(self):
+        def get_package_counts_by_pub(self, pubs=EmptyI):
                 """Returns a generator of tuples of the form (pub,
                 package_count, package_version_count).  'pub' is the publisher
                 prefix, 'package_count' is the number of unique packages for the
@@ -3363,7 +3371,7 @@ class Catalog(object):
                         # return no results properly to callers expecting
                         # a generator function.
                         return iter(())
-                return base.get_package_counts_by_pub()
+                return base.get_package_counts_by_pub(pubs=pubs)
 
         def get_part(self, name, must_exist=False):
                 """Returns the CatalogPart object for the named catalog part.
@@ -3458,7 +3466,7 @@ class Catalog(object):
                         # does not, then an incremental update cannot be safely
                         # performed since updates may be missing.
                         logdate = datetime_to_update_ts(old_lm)
-                        logname = "update.%s.%s" % (logdate, locale)
+                        logname = "update.{0}.{1}".format(logdate, locale)
 
                         if logname not in new_attrs.updates:
                                 incremental = False

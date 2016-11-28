@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.7
 #
 # CDDL HEADER START
 #
@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 # Visible changes to classes here require an update to
 # doc/client_api_versions.txt and/or doc/server_api_versions.txt.
@@ -99,9 +99,9 @@ class PackageCategory(object):
 
         def __str__(self, verbose=False):
                 if verbose:
-                        return "%s (%s)" % (self.category, self.scheme)
+                        return "{0} ({1})".format(self.category, self.scheme)
                 else:
-                        return "%s" % self.category
+                        return "{0}".format(self.category)
 
 
 class PackageInfo(object):
@@ -135,7 +135,7 @@ class PackageInfo(object):
             version=None, build_release=None, branch=None, packaging_date=None,
             size=None, csize=None, licenses=None, links=None, hardlinks=None,
             files=None, dirs=None, dependencies=None, description=None,
-            attrs=None):
+            attrs=None, last_update=None, last_install=None):
                 self.pkg_stem = pkg_stem
 
                 self.summary = summary
@@ -159,6 +159,8 @@ class PackageInfo(object):
                 self.dependencies = dependencies
                 self.description = description
                 self.attrs = attrs or {}
+                self.last_update = last_update
+                self.last_install = last_install
 
         def __str__(self):
                 return str(self.fmri)

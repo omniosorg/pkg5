@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.7
 #
 # CDDL HEADER START
 #
@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2007, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 import os
@@ -46,7 +46,7 @@ typemap = {
 class SolarisPackageDatastreamBundle(SolarisPackageDirBundle):
         """XXX Need a class comment."""
 
-        def __init__(self, filename, targetpaths=()):
+        def __init__(self, filename, **kwargs):
                 filename = os.path.normpath(filename)
                 self.pkg = SolarisPackage(filename)
                 self.pkgname = self.pkg.pkginfo["PKG"]
@@ -167,7 +167,7 @@ class SolarisPackageDatastreamBundle(SolarisPackageDirBundle):
                             target=mapline.target)
                 elif mapline.type == "i" and mapline.pathname == "copyright":
                         act = license.LicenseAction(ci.extractfile(),
-                            license="%s.copyright" % self.pkgname)
+                            license="{0}.copyright".format(self.pkgname))
                         act.hash = "install/copyright"
                 elif mapline.type == "i":
                         if mapline.pathname not in ["depend", "pkginfo"]:

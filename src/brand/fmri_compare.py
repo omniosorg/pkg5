@@ -1,4 +1,4 @@
-#!/usr/bin/python2.6
+#!/usr/bin/python2.7
 #
 # CDDL HEADER START
 #
@@ -24,6 +24,7 @@
 # Use is subject to license terms.
 #
 
+from __future__ import print_function
 import pkg.fmri
 import sys
 
@@ -38,22 +39,21 @@ try:
         x = pkg.fmri.PkgFmri(sys.argv[1])
         y = pkg.fmri.PkgFmri(sys.argv[2])
 except pkg.fmri.FmriError, e:
-        print >> sys.stderr, "error: %s" % str(e)
+        print ("error: %s" % str(e) , file=sys.stderr)
         sys.exit(1)
 
 if not x.is_same_pkg(y):
-        print >> sys.stderr, \
-            "error: can only compare two versions of the same package."
+        print ("error: can only compare two versions of the same package.", file=sys.stderr)
         sys.exit(1)
 
 if x < y:
-        print "<"
+        print("<")
 elif x > y:
-        print ">"
+        print(">")
 elif x == y:
-        print "="
+        print("=")
 else:
-        print >> sys.stderr, "panic"
+        print ("panic", file=sys.stderr)
         sys.exit(1)
 
 sys.exit(0)

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.7
 #
 # CDDL HEADER START
 #
@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 # This module provides a basic interface to smf.
@@ -43,9 +43,18 @@ SMF_SVC_TMP_DISABLED = 3
 SMF_SVC_TMP_ENABLED  = 4
 SMF_SVC_ENABLED      = 5
 
+EXIT_OK              = 0
+EXIT_FATAL           = 1
+EXIT_INVALID_OPTION  = 2
+EXIT_INSTANCE        = 3
+EXIT_DEPENDENCY      = 4
+EXIT_TIMEOUT         = 5
+
 svcprop_path = "/usr/bin/svcprop"
 svcadm_path  = "/usr/sbin/svcadm"
+svccfg_path = "/usr/sbin/svccfg"
 svcs_path = "/usr/bin/svcs"
+zlogin_path = "/usr/sbin/zlogin"
 
 class NonzeroExitException(Exception):
         def __init__(self, cmd, return_code, output):
@@ -60,33 +69,39 @@ class NonzeroExitException(Exception):
                 return str(self)
 
         def __str__(self):
-                return "Cmd %s exited with status %d, and output '%s'" %\
+                return "Cmd {0} exited with status {1:d}, and output '{2}'" %\
                     (self.cmd, self.return_code, self.output)
 
 
-def __call(args):
+def __call(args, zone=None):
         # a way to invoke a separate executable for testing
         cmds_dir = DebugValues.get_value("smf_cmds_dir")
         if cmds_dir:
                 args = (
                     os.path.join(cmds_dir,
                     args[0].lstrip("/")),) + args[1:]
+        if zone:
+                cmd = DebugValues.get_value("bin_zlogin")
+                if cmd is None:
+                        cmd = zlogin_path
+                args = (cmd, zone) + args
+
         try:
                 proc = subprocess.Popen(args, stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT)
                 buf = proc.stdout.readlines()
                 ret = proc.wait()
-        except OSError, e:
-                raise RuntimeError, "cannot execute %s: %s" % (args, e)
+        except OSError as e:
+                raise RuntimeError("cannot execute {0}: {1}".format(args, e))
 
         if ret != 0:
                 raise NonzeroExitException(args, ret, buf)
         return buf
 
-def get_state(fmri):
+def get_state(fmri, zone=None):
         """ return state of smf service """
 
-        props = get_props(fmri)
+        props = get_props(fmri, zone=zone)
         if not props:
                 return SMF_SVC_UNKNOWN
 
@@ -103,10 +118,10 @@ def get_state(fmri):
                 return SMF_SVC_ENABLED
         return SMF_SVC_DISABLED
 
-def is_disabled(fmri):
-        return get_state(fmri) < SMF_SVC_TMP_ENABLED
+def is_disabled(fmri, zone=None):
+        return get_state(fmri, zone=zone) < SMF_SVC_TMP_ENABLED
 
-def check_fmris(attr, fmris):
+def check_fmris(attr, fmris, zone=None):
         """ Walk a set of fmris checking that each is fully specifed with
         an instance.
         If an FMRI is not fully specified and does not contain at least
@@ -133,9 +148,9 @@ def check_fmris(attr, fmris):
 
                 fmris.remove(fmri)
                 if is_glob:
-                        cmd = (svcs_path, "-H", "-o", "fmri", "%s" % fmri)
+                        cmd = (svcs_path, "-H", "-o", "fmri", "{0}".format(fmri))
                         try:
-                                instances = __call(cmd)
+                                instances = __call(cmd, zone=zone)
                                 for instance in instances:
                                         fmris.add(instance.rstrip())
                         except NonzeroExitException:
@@ -144,15 +159,15 @@ def check_fmris(attr, fmris):
                 else:
                         logger.error(_("FMRI pattern might implicitly match " \
                             "more than one service instance."))
-                        logger.error(_("Actuators for %(attr)s will not be run " \
-                            "for %(fmri)s.") % locals())
+                        logger.error(_("Actuators for {attr} will not be run " \
+                            "for {fmri}.").format(**locals()))
         return fmris
 
-def get_props(svcfmri):
+def get_props(svcfmri, zone=None):
         args = (svcprop_path, "-c", svcfmri)
 
         try:
-                buf = __call(args)
+                buf = __call(args, zone=zone)
         except NonzeroExitException:
                 return {} # empty output == not installed
 
@@ -161,50 +176,78 @@ def get_props(svcfmri):
             for l in buf
         ])
 
-def get_prop(fmri, prop):
+def set_prop(fmri, prop, value, zone=None):
+        args = (svccfg_path, "-s", fmri, "setprop", "{0}={1}".format(prop,
+            value))
+        __call(args, zone=zone)
+
+def get_prop(fmri, prop, zone=None):
         args = (svcprop_path, "-c", "-p", prop, fmri)
-        buf = __call(args)
-        assert len(buf) == 1, "Was expecting one entry, got:%s" % buf
+        buf = __call(args, zone=zone)
+        assert len(buf) == 1, "Was expecting one entry, got:{0}".format(buf)
         buf = buf[0].rstrip("\n")
         return buf
 
-def enable(fmris, temporary=False):
+def enable(fmris, temporary=False, sync_timeout=0, zone=None):
         if not fmris:
                 return
         if isinstance(fmris, basestring):
                 fmris = (fmris,)
+
         args = [svcadm_path, "enable"]
+        if sync_timeout:
+                args.append("-s")
+#                if sync_timeout != -1:
+#                        args.append("-T {0:d}".format(sync_timeout))
         if temporary:
                 args.append("-t")
-        __call(tuple(args) + fmris)
+        # fmris could be a list so explicit cast is necessary
+        __call(tuple(args) + tuple(fmris), zone=zone)
 
-def disable(fmris, temporary=False):
+def disable(fmris, temporary=False, sync_timeout=0, zone=None):
         if not fmris:
                 return
         if isinstance(fmris, basestring):
                 fmris = (fmris,)
         args = [svcadm_path, "disable", "-s"]
+#        if sync_timeout > 0:
+#                args.append("-T {0:d}".format(sync_timeout))
         if temporary:
                 args.append("-t")
-        __call(tuple(args) + fmris)
+        # fmris could be a list so explicit cast is necessary
+        __call(tuple(args) + tuple(fmris), zone=zone)
 
-def mark(state, fmris):
+def mark(state, fmris, zone=None):
         if not fmris:
                 return
         if isinstance(fmris, basestring):
                 fmris = (fmris,)
-        __call((svcadm_path, "mark", state) + tuple(fmris))
+        args = [svcadm_path, "mark", state]
+        # fmris could be a list so explicit cast is necessary
+        __call(tuple(args) + tuple(fmris), zone=zone)
 
-def refresh(fmris):
+def refresh(fmris, sync_timeout=0, zone=None):
         if not fmris:
                 return
         if isinstance(fmris, basestring):
                 fmris = (fmris,)
-        __call((svcadm_path, "refresh") + tuple(fmris))
+        args = [svcadm_path, "refresh"]
+        if sync_timeout:
+                args.append("-s")
+#                if sync_timeout != -1:
+#                        args.append("-T {0:d}".format(sync_timeout))
+        # fmris could be a list so explicit cast is necessary
+        __call(tuple(args) + tuple(fmris), zone=zone)
 
-def restart(fmris):
+def restart(fmris, sync_timeout=0, zone=None):
         if not fmris:
                 return
         if isinstance(fmris, basestring):
                 fmris = (fmris,)
-        __call((svcadm_path, "restart") + tuple(fmris))
+        args = [svcadm_path, "restart"]
+        if sync_timeout:
+                args.append("-s")
+#                if sync_timeout != -1:
+#                        args.append("-T {0:d}".format(sync_timeout))
+        # fmris could be a list so explicit cast is necessary
+        __call(tuple(args) + tuple(fmris), zone=zone)

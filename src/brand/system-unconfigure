@@ -133,7 +133,12 @@ reset_networking() {
   rm -f $ALTROOT/etc/resolv.conf
   rm -f $ALTROOT/etc/inet/netmasks
   rm -f $ALTROOT/etc/inet/static_routes
-  cp /dev/null $ALTROOT/etc/ipadm/ipadm.conf
+  for file in $ALTROOT/etc/ipadm/*\.conf $ALTROOT/etc/dladm/*\.conf ; do
+    if [ -f "$file" ]; then
+      cp /dev/null "$file" || \
+        bomb "Failed to blank $ALTROOT/$file"
+    fi
+  done
 }
 
 reset_nsswitch() {

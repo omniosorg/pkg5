@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.7
 
 # CDDL HEADER START
 #
@@ -20,14 +20,15 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
 
+from __future__ import print_function
 import os
 import sys
 import platform
 import tempfile
 
-def setup_environment(path_to_proto, covdir=None, debug=False):
+def setup_environment(path_to_proto, debug=False, system_test=False):
         """ Set up environment for doing testing.
 
             We set PYTHONPATH and PATH so that they reference the proto
@@ -46,6 +47,8 @@ def setup_environment(path_to_proto, covdir=None, debug=False):
 
             If 'covdir' is provided, coverage will be started and the
             related coverage object returned.
+
+            If 'system_test' is True, tests will run on live system.
         """
 
         osname = platform.uname()[0].lower()
@@ -61,8 +64,8 @@ def setup_environment(path_to_proto, covdir=None, debug=False):
         elif osname == 'aix':
                 proc = osname
         else:
-                print "Unable to determine appropriate proto area location."
-                print "This is a porting problem."
+                print("Unable to determine appropriate proto area location.")
+                print("This is a porting problem.")
                 sys.exit(1)
 
         # Figure out from where we're invoking the command
@@ -70,16 +73,22 @@ def setup_environment(path_to_proto, covdir=None, debug=False):
         cmddir = os.path.realpath(cmddir)
 
         if "ROOT" in os.environ:
-                proto_area = os.environ["ROOT"]
+                pkg_path = os.environ["ROOT"]
         else:
-                proto_area = "%s/%s/root_%s" % (cmddir, path_to_proto, proc)
+                if system_test:
+                        pkg_path = "/"
+                else:
+                        pkg_path = "{0}/{1}/root_{2}".format(
+                            cmddir, path_to_proto, proc)
+
+        proto_area = "{0}/{1}/root_{2}".format(cmddir, path_to_proto, proc)
 
         # Clean up relative ../../, etc. out of path to proto
+        pkg_path = os.path.realpath(pkg_path)
         proto_area = os.path.realpath(proto_area)
 
-        pkgs = "%s/usr/lib/python2.6/vendor-packages" % proto_area
-        bins = "%s/usr/bin" % proto_area
-
+        pkgs = os.path.join(pkg_path, "usr/lib/python2.7/vendor-packages")
+        bins = os.path.join(pkg_path, "usr/bin")
         sys.path.insert(1, pkgs)
 
         #
@@ -103,21 +112,9 @@ def setup_environment(path_to_proto, covdir=None, debug=False):
                         del os.environ[k]
 
         #
-        # Start coverage before proceeding so that reports are accurate.
-        #
-        cov = None
-        if covdir:
-                # This must be imported here just after PYTHONPATH setup above.
-                import coverage
-                os.chmod(covdir, 01777)
-                cov_file = "%s/pkg5" % covdir
-                cov = coverage.coverage(data_file=cov_file, data_suffix=True)
-                cov.start()
-
-        #
         # Tell package manager where its application data files live.
         #
-        os.environ["PACKAGE_MANAGER_ROOT"] = proto_area
+        os.environ["PACKAGE_MANAGER_ROOT"] = pkg_path
 
         from pkg.client import global_settings
         global_settings.client_name = "pkg"
@@ -125,9 +122,8 @@ def setup_environment(path_to_proto, covdir=None, debug=False):
         import pkg5unittest
         pkg5unittest.g_proto_area = proto_area
         pkg5unittest.g_test_dir = cmddir
+        pkg5unittest.g_pkg_path = pkg_path
 
         # Save off the value for tempdir when we were invoked, since the
         # suite will subsequently modify tempdir to sandbox test cases.
         pkg5unittest.g_tempdir = tempfile.gettempdir()
-
-        return cov

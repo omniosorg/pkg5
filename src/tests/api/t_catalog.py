@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.7
 # -*- coding: utf-8 -*-
 #
 # CDDL HEADER START
@@ -21,8 +21,9 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2008, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
 
+from __future__ import print_function
 import testutils
 if __name__ == "__main__":
         testutils.setup_environment("../../../proto")
@@ -97,7 +98,7 @@ class TestCatalog(pkg5unittest.Pkg5TestCase):
                 target = os.path.join(self.test_root, name)
                 try:
                         os.makedirs(target, misc.PKG_DIR_MODE)
-                except OSError, e:
+                except OSError as e:
                         if e.errno != errno.EEXIST:
                                 raise e
                 return os.path.abspath(target)
@@ -115,13 +116,13 @@ class TestCatalog(pkg5unittest.Pkg5TestCase):
                     "set name=info.classification "
                     """value="i386 Application" variant.arch=i386\n"""
                     "set name=variant.arch value=i386 value=sparc\n"
-                    "set name=pkg.fmri value=\"%s\"\n"
-                    "set name=pkg.summary value=\"Summary %s\"\n"
-                    "set name=pkg.summary value=\"Sparc Summary %s\""
+                    "set name=pkg.fmri value=\"{0}\"\n"
+                    "set name=pkg.summary value=\"Summary {1}\"\n"
+                    "set name=pkg.summary value=\"Sparc Summary {2}\""
                     " variant.arch=sparc\n"
-                    "set name=pkg.summary:th value=\"ซอฟต์แวร์ %s\"\n"
-                    "set name=pkg.description value=\"Desc %s\"\n", "utf-8") % \
-                    (f, f, f, f, f)
+                    "set name=pkg.summary:th value=\"ซอฟต์แวร์ {3}\"\n"
+                    "set name=pkg.description value=\"Desc {4}\"\n", "utf-8").format(
+                    f, f, f, f, f)
 
                 if f.pkg_name == "zpkg":
                         lines += "set name=pkg.depend.install-hold value=test\n"
@@ -157,8 +158,8 @@ class TestCatalog(pkg5unittest.Pkg5TestCase):
                             'value="org.opensolaris.category.2009:GNOME (Desktop)"'),
                             ("set name=info.classification "
                             """value="i386 Application" variant.arch=i386"""),
-                            "set name=pkg.summary value=\"Summary %s\"" % f,
-                            "set name=pkg.description value=\"Desc %s\"" % f,
+                            "set name=pkg.summary value=\"Summary {0}\"".format(f),
+                            "set name=pkg.description value=\"Desc {0}\"".format(f),
                         ]
 
                 def expected_all_variant_summary(f):
@@ -170,18 +171,18 @@ class TestCatalog(pkg5unittest.Pkg5TestCase):
                             """value="Sparc Application" variant.arch=sparc"""),
                             ("set name=info.classification "
                             """value="i386 Application" variant.arch=i386"""),
-                            "set name=pkg.summary value=\"Summary %s\"" % f,
-                            ("set name=pkg.summary value=\"Sparc Summary %s\""
-                            " variant.arch=sparc" % f),
-                            "set name=pkg.description value=\"Desc %s\"" % f,
+                            "set name=pkg.summary value=\"Summary {0}\"".format(f),
+                            ("set name=pkg.summary value=\"Sparc Summary {0}\""
+                            " variant.arch=sparc".format(f)),
+                            "set name=pkg.description value=\"Desc {0}\"".format(f),
                         ]
 
                 def expected_all_locale_summary(f):
                         # The comparison has to be sorted for this case.
                         return sorted([
-                            "set name=pkg.summary value=\"Summary %s\"" % f,
-                            "set name=pkg.description value=\"Desc %s\"" % f,
-                            "set name=pkg.summary:th value=\"ซอฟต์แวร์ %s\"" % f,
+                            "set name=pkg.summary value=\"Summary {0}\"".format(f),
+                            "set name=pkg.description value=\"Desc {0}\"".format(f),
+                            "set name=pkg.summary:th value=\"ซอฟต์แวร์ {0}\"".format(f),
                             ('set name=info.classification '
                             'value="Desktop (GNOME)/Application" '
                             'value="org.opensolaris.category.2009:GNOME (Desktop)"'),
@@ -272,7 +273,7 @@ class TestCatalog(pkg5unittest.Pkg5TestCase):
                 for (pub, stem, ver), entry, actions in nc.entry_actions(
                     [nc.DEPENDENCY], last=True):
                         self.assert_((pub, stem, ver) in latest)
-                        f = fmri.PkgFmri("%s@%s" % (stem, ver), publisher=pub)
+                        f = fmri.PkgFmri("{0}@{1}".format(stem, ver), publisher=pub)
                         validate_dep(f, actions)
 
                 # This case should only return the summary-related actions (but
@@ -719,21 +720,21 @@ class TestCatalog(pkg5unittest.Pkg5TestCase):
                 p2_fmri = fmri.PkgFmri("pkg://opensolaris.org/"
                         "dependency@1.0,5.11-1:20000101T130000Z")
                 p2_man = manifest.Manifest(p2_fmri)
-                p2_man.set_content("set name=fmri value=%s\n"
-                    "depend type=require fmri=base@1.0\n" % p2_fmri.get_fmri(),
-                    signatures=True)
+                p2_man.set_content("set name=fmri value={0}\n"
+                    "depend type=require fmri=base@1.0\n".format(
+                    p2_fmri.get_fmri()), signatures=True)
 
                 p3_fmri = fmri.PkgFmri("pkg://opensolaris.org/"
                         "summary@1.0,5.11-1:20000101T140000Z")
                 p3_man = manifest.Manifest(p3_fmri)
-                p3_man.set_content("set name=fmri value=%s\n"
+                p3_man.set_content("set name=fmri value={0}\n"
                     "set description=\"Example Description\"\n"
                     "set pkg.description=\"Example pkg.Description\"\n"
                     "set summary=\"Example Summary\"\n"
                     "set pkg.summary=\"Example pkg.Summary\"\n"
                     "set name=info.classification value=\"org.opensolaris."
-                    "category.2008:Applications/Sound and Video\"\n" % \
-                    p3_fmri.get_fmri(), signatures=True)
+                    "category.2008:Applications/Sound and Video\"\n".format(
+                    p3_fmri.get_fmri()), signatures=True)
 
                 # Create and prep an empty catalog.
                 cpath = self.create_test_dir("test-06")
@@ -1153,7 +1154,7 @@ class TestCorruptCatalog(pkg5unittest.Pkg5TestCase):
         def test_corrupt_attrs2(self):
                 """Raise InvalidCatalogFile for a catalog.attrs w/ garbage"""
                 f = open(os.path.join(self.test_root, "catalog.attrs"), "w")
-                print >> f, 'garbage'
+                print('garbage', file=f)
                 f.close()
                 self.assertRaises(api_errors.InvalidCatalogFile,
                     catalog.Catalog, meta_root=self.test_root)
@@ -1172,7 +1173,7 @@ class TestCorruptCatalog(pkg5unittest.Pkg5TestCase):
                 f.close()
                 del struct["parts"]
                 f = open(fname, "w")
-                print >> f, simplejson.dumps(struct)
+                print(simplejson.dumps(struct), file=f)
                 f.close()
 
                 self.assertRaises(api_errors.InvalidCatalogFile,
@@ -1192,9 +1193,9 @@ class TestCorruptCatalog(pkg5unittest.Pkg5TestCase):
                 f.close()
                 # corrupt signature by one digit
                 sig = int(struct["_SIGNATURE"]["sha-1"], 16)
-                struct["_SIGNATURE"]["sha-1"] = "%x" % (sig + 1)
+                struct["_SIGNATURE"]["sha-1"] = "{0:x}".format(sig + 1)
                 f = open(fname, "w")
-                print >> f, simplejson.dumps(struct)
+                print(simplejson.dumps(struct), file=f)
                 f.close()
 
                 c = catalog.Catalog(meta_root=self.test_root)
@@ -1217,7 +1218,7 @@ class TestCorruptCatalog(pkg5unittest.Pkg5TestCase):
                 f.close()
                 del struct["_SIGNATURE"]
                 f = open(fname, "w")
-                print >> f, simplejson.dumps(struct)
+                print(simplejson.dumps(struct), file=f)
                 f.close()
 
                 c = catalog.Catalog(meta_root=self.test_root)
@@ -1240,7 +1241,7 @@ class TestCorruptCatalog(pkg5unittest.Pkg5TestCase):
                 f.close()
                 struct["parts"]["/badpartname/"] = {}
                 f = open(fname, "w")
-                print >> f, simplejson.dumps(struct)
+                print(simplejson.dumps(struct), file=f)
                 f.close()
 
                 # Catalog constructor should reject busted 'parts'

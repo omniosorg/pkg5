@@ -20,12 +20,12 @@
 #
 
 #
-# Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
 # Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
 #
 
-PYTHON = /usr/bin/python2.6
-CODE_WS = $$(hg root 2>/dev/null || git rev-parse --show-toplevel)
+PYTHON27 = /usr/bin/python2.7
+PYTHON34 = /usr/bin/python3.4
 
 all := TARGET = all
 install := TARGET = install
@@ -53,14 +53,14 @@ SUBDIRS=brand zoneproxy tsol
 all: $(SUBDIRS)
 	mkdir -p $(CODE_WS)/proto/build_i386/lib.solaris-2.11-i86pc-2.6/pkg/64
 	mkdir -p $(CODE_WS)/proto/build_i386/lib.solaris-2.11-i86pc-2.6/pkg/actions/64
-	ISALIST=i386 $(PYTHON) setup.py build
+	ISALIST=i386 $(PYTHON27) setup.py build
 
 clean: $(SUBDIRS)
-	$(PYTHON) setup.py clean
+	$(PYTHON27) setup.py clean
 	@cd pkg; pwd; make clean
 
 clobber: $(SUBDIRS)
-	$(PYTHON) setup.py clobber
+	$(PYTHON27) setup.py clobber
 	@cd pkg; pwd; make clobber
 
 #
@@ -68,18 +68,18 @@ clobber: $(SUBDIRS)
 # it's the best way to ensure things stay pylint clean.
 #
 install: $(SUBDIRS)
-	ISALIST=i386 $(PYTHON) setup.py install
+	ISALIST=i386 $(PYTHON27) setup.py install
 
 lint:
-	$(PYTHON) setup.py lint
+	$(PYTHON27) setup.py lint
 	@cd zoneproxy; pwd; make lint
 
 clint:
-	$(PYTHON) setup.py clint
+	$(PYTHON27) setup.py clint
 	@cd zoneproxy; pwd; make lint
 
 pylint: install
-	PYLINT_VER=$(PYLINT_VER_CMD:sh) $(PYTHON) setup.py pylint
+	PYLINT_VER=$(PYLINT_VER_CMD:sh) $(PYTHON27) setup.py pylint
 
 #
 # This rule propagates the current make target through all of the
@@ -95,12 +95,12 @@ packages: install pylint
 		PYTHONPATH=$(CODE_WS)/proto/root_$$(uname -p)/usr/lib/python2.6/vendor-packages
 
 test:
-	$(PYTHON) setup.py test
+	$(PYTHON27) setup.py test
 
 test-verbose:
-	$(PYTHON) setup.py test -v
+	$(PYTHON27) setup.py test -v
 
 test-generate:
-	$(PYTHON) setup.py test -g
+	$(PYTHON27) setup.py test -g
 
 FRC:

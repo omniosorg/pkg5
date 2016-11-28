@@ -27,7 +27,7 @@
 
 APACHE_HOME=/usr/apache2/2.2
 APACHE_ETC_ROOT=/etc/pkg/sysrepo
-APACHE_BIN=${APACHE_HOME}/bin/64
+APACHE_BIN=${APACHE_HOME}/bin
 
 #
 # Calling $APACHE_BIN/apachectl would source $APACHE_BIN/envvars, which

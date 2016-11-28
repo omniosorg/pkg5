@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.7
 #
 # CDDL HEADER START
 #
@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
 """module describing a license packaging object
@@ -79,12 +79,10 @@ class LicenseAction(generic.Action):
                 # ensure "path" is initialized.  it may not be if we've loaded
                 # a plan that was previously prepared.
                 self.preinstall(pkgplan, orig)
-                path = self.attrs["path"]
 
                 stream = self.data()
 
-                path = os.path.normpath(os.path.sep.join(
-                    (pkgplan.image.get_root(), path)))
+                path = self.get_installed_path(pkgplan.image.get_root())
 
                 # make sure the directory exists and the file is writable
                 if not os.path.exists(os.path.dirname(path)):
@@ -100,10 +98,10 @@ class LicenseAction(generic.Action):
                             digest.get_preferred_hash(self)
                         shasum = misc.gunzip_from_stream(stream, lfile,
                             hash_func=hash_func)
-                except zlib.error, e:
+                except zlib.error as e:
                         raise ActionExecutionError(self, details=_("Error "
-                            "decompressing payload: %s") %
-                            (" ".join([str(a) for a in e.args])), error=e)
+                            "decompressing payload: {0}").format(
+                            " ".join([str(a) for a in e.args])), error=e)
                 finally:
                         lfile.close()
                         stream.close()
@@ -111,18 +109,18 @@ class LicenseAction(generic.Action):
                 if shasum != hash_val:
                         raise ActionExecutionError(self, details=_("Action "
                             "data hash verification failure: expected: "
-                            "%(expected)s computed: %(actual)s action: "
-                            "%(action)s") % {
-                                "expected": hash_val,
-                                "actual": shasum,
-                                "action": self
-                            })
+                            "{expected} computed: {actual} action: "
+                            "{action}").format(
+                                expected=hash_val,
+                                actual=shasum,
+                                action=self
+                           ))
 
                 os.chmod(path, misc.PKG_RO_FILE_MODE)
 
                 try:
                         portable.chown(path, owner, group)
-                except OSError, e:
+                except OSError as e:
                         if e.errno != errno.EPERM:
                                 raise
 
@@ -148,17 +146,17 @@ class LicenseAction(generic.Action):
                         try:
                                 chash, cdata = misc.get_data_digest(path,
                                     hash_func=hash_func)
-                        except EnvironmentError, e:
+                        except EnvironmentError as e:
                                 if e.errno == errno.ENOENT:
-                                        errors.append(_("License file %s does "
-                                            "not exist.") % path)
+                                        errors.append(_("License file {0} does "
+                                            "not exist.").format(path))
                                         return errors, warnings, info
                                 raise
 
                         if chash != hash_val:
-                                errors.append(_("Hash: '%(found)s' should be "
-                                    "'%(expected)s'") % { "found": chash,
-                                    "expected": hash_val})
+                                errors.append(_("Hash: '{found}' should be "
+                                    "'{expected}'").format(found=chash,
+                                    expected=hash_val))
                 return errors, warnings, info
 
         def remove(self, pkgplan):
@@ -170,7 +168,7 @@ class LicenseAction(generic.Action):
                         # Make file writable so it can be deleted
                         os.chmod(path, S_IWRITE|S_IREAD)
                         os.unlink(path)
-                except OSError, e:
+                except OSError as e:
                         if e.errno != errno.ENOENT:
                                 raise
 
@@ -212,7 +210,7 @@ class LicenseAction(generic.Action):
                                     hash_func=hash_func)
                                 if chash == hash_attr_val:
                                         return txt
-                except EnvironmentError, e:
+                except EnvironmentError as e:
                         if e.errno != errno.ENOENT:
                                 raise
                 # If we get here, either the license file wasn't on disk, or the

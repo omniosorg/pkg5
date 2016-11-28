@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.7
 #
 # CDDL HEADER START
 #
@@ -21,9 +21,11 @@
 #
 
 #
-# Copyright (c) 2009, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
 # Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
 #
+
+from __future__ import division
 
 import errno
 import httplib
@@ -311,7 +313,7 @@ class CurlTransportEngine(TransportEngine):
                                 errors_seen += 1
 
                         if ex and ex.retryable:
-                                failures.append(ex) 
+                                failures.append(ex)
                         elif ex and not ex_to_raise:
                                 ex_to_raise = ex
 
@@ -362,9 +364,9 @@ class CurlTransportEngine(TransportEngine):
                         # nbytes/sec exceeds our minimum threshold.  If it does
                         # not, and the total time is longer than our timeout,
                         # discard the time calculation as it is bogus.
-                        if (bytespersec < 
+                        if (bytespersec <
                             global_settings.pkg_client_lowspeed_limit) and (
-                            seconds > 
+                            seconds >
                             global_settings.PKG_CLIENT_LOWSPEED_TIMEOUT):
                                 nbytes = 0
                                 seconds = 0
@@ -398,7 +400,7 @@ class CurlTransportEngine(TransportEngine):
                                 # If code >= 400, record this as an error.
                                 # Handlers above the engine get to decide
                                 # for 200/300 codes that aren't OK
-                                if respcode >= 400: 
+                                if respcode >= 400:
                                         repostats.record_error(
                                             decayable=ex.decayable)
                                         errors_seen += 1
@@ -409,11 +411,11 @@ class CurlTransportEngine(TransportEngine):
                                         repostats.record_error()
                                         errors_seen += 1
                                         reason = "Invalid HTTP status code " \
-                                            "from server" 
+                                            "from server"
                                         ex = tx.TransportProtoError(proto,
                                             url=url, reason=reason,
                                             repourl=urlstem, uuid=uuid)
-                                        ex.retryable = True 
+                                        ex.retryable = True
 
                                 # Stash retryable failures, arrange
                                 # to raise first fatal error after
@@ -718,9 +720,9 @@ class CurlTransportEngine(TransportEngine):
             sslkey=None, repourl=None, ccancel=None,
             data_fobj=None, data_fp=None, failonerror=True,
             progclass=None, progtrack=None, proxy=None, runtime_proxy=None):
-                """Invoke the engine to retrieve a single URL.  
+                """Invoke the engine to retrieve a single URL.
                 This routine sends the data in data, and returns the
-                server's response.  
+                server's response.
 
                 Callers wishing to obtain multiple URLs at once should use
                 addUrl() and run().
@@ -845,14 +847,14 @@ class CurlTransportEngine(TransportEngine):
 
                         # Headers common to all requests
                         for k, v in self.__common_header.iteritems():
-                                headerstr = "%s: %s" % (k, v)
-                                headerlist.append(headerstr.encode('ascii', 'ignore'))
+                                headerstr = "{0}: {1}".format(k, v)
+                                headerlist.append(headerstr)
 
                         # Headers specific to this request
                         if treq.header:
                                 for k, v in treq.header.iteritems():
-                                        headerstr = "%s: %s" % (k, v)
-                                        headerlist.append(headerstr.encode('ascii', 'ignore'))
+                                        headerstr = "{0}: {1}".format(k, v)
+                                        headerlist.append(headerstr)
 
                         hdl.setopt(pycurl.HTTPHEADER, headerlist)
 
@@ -869,7 +871,7 @@ class CurlTransportEngine(TransportEngine):
                         try:
                                 hdl.fobj = open(treq.filepath, "wb+",
                                     self.__file_bufsz)
-                        except EnvironmentError, e:
+                        except EnvironmentError as e:
                                 if e.errno == errno.EACCES:
                                         raise api_errors.PermissionsException(
                                             e.filename)
@@ -879,8 +881,8 @@ class CurlTransportEngine(TransportEngine):
                                 # Raise OperationError if it's not EACCES
                                 # or EROFS.
                                 raise tx.TransportOperationError(
-                                    "Unable to open file: %s" % e)
-         
+                                    "Unable to open file: {0}".format(e))
+
                         hdl.setopt(pycurl.WRITEDATA, hdl.fobj)
                         # Request filetime, if endpoint knows it.
                         hdl.setopt(pycurl.OPT_FILETIME, True)
@@ -891,8 +893,8 @@ class CurlTransportEngine(TransportEngine):
                         hdl.fobj = None
                 else:
                         raise tx.TransportOperationError("Transport invocation"
-                            " for URL %s did not specify filepath or write"
-                            " function." % treq.url)
+                            " for URL {0} did not specify filepath or write"
+                            " function.".format(treq.url))
 
                 if treq.failonerror:
                         hdl.setopt(pycurl.FAILONERROR, True)
@@ -915,14 +917,14 @@ class CurlTransportEngine(TransportEngine):
                         try:
                                 hdl.r_fobj = open(treq.read_filepath, "rb",
                                     self.__file_bufsz)
-                        except EnvironmentError, e:
+                        except EnvironmentError as e:
                                 if e.errno == errno.EACCES:
                                         raise api_errors.PermissionsException(
                                             e.filename)
                                 # Raise OperationError if it's not EACCES
                                 # or EROFS.
                                 raise tx.TransportOperationError(
-                                    "Unable to open file: %s" % e)
+                                    "Unable to open file: {0}".format(e))
 
                 if treq.compressible:
                         hdl.setopt(pycurl.ENCODING, "")
@@ -946,9 +948,9 @@ class CurlTransportEngine(TransportEngine):
                                     os.fstat(hdl.r_fobj.fileno()).st_size)
                         else:
                                 raise tx.TransportOperationError("Transport "
-                                    "operation for POST URL %s did not "
+                                    "operation for POST URL {0} did not "
                                     "supply data or read_fobj.  At least one "
-                                    "is required." % treq.url)
+                                    "is required.".format(treq.url))
                 elif treq.httpmethod == "PUT":
                         hdl.setopt(pycurl.UPLOAD, True)
                         if hdl.r_fobj or treq.read_fobj:
@@ -959,14 +961,14 @@ class CurlTransportEngine(TransportEngine):
                                     os.fstat(hdl.r_fobj.fileno()).st_size)
                         else:
                                 raise tx.TransportOperationError("Transport "
-                                    "operation for PUT URL %s did not "
-                                    "supply a read_fobj.  One is required."
-                                     % treq.url)
+                                    "operation for PUT URL {0} did not "
+                                    "supply a read_fobj.  One is "
+                                    "required.".format(treq.url))
                 elif treq.httpmethod == "DELETE":
                         hdl.setopt(pycurl.CUSTOMREQUEST, "DELETE")
                 else:
                         raise tx.TransportOperationError("Invalid http method "
-                            "'%s' specified." % treq.httpmethod)
+                            "'{0}' specified.".format(treq.httpmethod))
 
                 # Set up SSL options
                 if treq.sslcert:
@@ -1020,12 +1022,12 @@ class CurlTransportEngine(TransportEngine):
                                         hdl.fileprog.abort()
                                 try:
                                         os.remove(hdl.filepath)
-                                except EnvironmentError, e:
+                                except EnvironmentError as e:
                                         if e.errno != errno.ENOENT:
                                                 raise \
                                                     tx.TransportOperationError(
-                                                    "Unable to remove file: %s"
-                                                    % e)
+                                                    "Unable to remove file: "
+                                                    "{0}".format(e))
                         else:
                                 if hdl.fileprog:
                                         filesz = os.stat(hdl.filepath).st_size

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.7
 #
 # CDDL HEADER START
 #
@@ -20,9 +20,11 @@
 # CDDL HEADER END
 #
 
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+#
+# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+#
 
+from __future__ import print_function
 import datetime
 import fileinput
 import getopt
@@ -51,22 +53,22 @@ manifest_by_ver_pkg = {}
 pkg_pat = re.compile("/manifest/(?P<mversion>\d+)/(?P<stem>[^@]*)@(?P<version>.*)")
 
 def report_manifest_by_arch():
-        print "<pre>"
+        print("<pre>")
         for i in manifest_by_arch.keys():
-                print i, manifest_by_arch[i]
-        print "</pre>"
+                print(i, manifest_by_arch[i])
+        print("</pre>")
 
 def report_manifest_by_pkg():
-        print "<pre>"
-        for i, n in (sorted(manifest_by_pkg.items(), key=lambda(k,v): (v,k))): 
-                print i, n
-        print "</pre>"
+        print("<pre>")
+        for i, n in (sorted(manifest_by_pkg.items(), key=lambda k_v: (k_v[1],k_v[0]))):
+                print(i, n)
+        print("</pre>")
 
 def report_manifest_by_ver_pkg():
-        print "<pre>"
-        for i, n in (sorted(manifest_by_ver_pkg.items(), key=lambda(k,v): (v,k))): 
-                print i, n
-        print "</pre>"
+        print("<pre>")
+        for i, n in (sorted(manifest_by_ver_pkg.items(), key=lambda k_v: (k_v[1],k_v[0]))):
+                print(i, n)
+        print("</pre>")
 
 def count_manifest(mg, d):
         try:
@@ -132,7 +134,7 @@ for l in fileinput.input(args):
                 continue
 
         mg = m.groupdict()
-        
+
         d = None
 
         if lastdatetime and mg["date"] == lastdate:
@@ -153,7 +155,7 @@ for l in fileinput.input(args):
         count_manifest(mg, d)
 
 host_cache_save()
-manifest_by_country = ip_to_country(manifest_by_ip) 
+manifest_by_country = ip_to_country(manifest_by_ip)
 
 report_section_begin("Manifest", summary_file = summary_file)
 report_cols_begin(summary_file = summary_file)
