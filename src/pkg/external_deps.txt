@@ -1,11 +1,5 @@
     pkg:/archiver/gnu-tar
     pkg:/crypto/ca-certificates
-    pkg:/library/python-2/cherrypy
-    pkg:/library/python-2/m2crypto
-    pkg:/library/python-2/mako
-    pkg:/library/python-2/ply
-    pkg:/library/python-2/pybonjour
-    pkg:/library/python-2/pycurl
     pkg:/developer/assembler
     pkg:/developer/base-developer-utilities
     pkg:/developer/build/make
@@ -15,13 +9,6 @@
     pkg:/developer/gnome/gnome-doc-utils
     pkg:/developer/python/pylint
     pkg:/developer/versioning/mercurial
-#   XXX KEBE SAYS FIX ME!!!
-#   pkg:/library/python-2/coverage-26
-#   pkg:/library/python-2/jsonrpclib-26
-#   pkg:/library/python-2/locale-services
-#   pkg:/library/python-2/pyopenssl-26
-#   pkg:/library/python-2/simplejson-26
-#   pkg:/runtime/python-26
     pkg:/library/python-2/cherrypy-27
     pkg:/library/python-2/coverage-27
     pkg:/library/python-2/jsonrpclib-27
@@ -33,19 +20,6 @@
     pkg:/library/python-2/pycurl-27
     pkg:/library/python-2/pyopenssl-27
     pkg:/library/python-2/simplejson-27
-    pkg:/library/python/cherrypy-26
-    pkg:/library/python/cherrypy-27
-    pkg:/library/python/coverage-27
-    pkg:/library/python/jsonrpclib-27
-    pkg:/library/python/jsonschema-27
-    pkg:/library/python/locale-services
-    pkg:/library/python/m2crypto-27
-    pkg:/library/python/mako-27
-    pkg:/library/python/ply-27
-    pkg:/library/python/pybonjour-27
-    pkg:/library/python/pycurl-27
-    pkg:/library/python/pyopenssl-27
-    pkg:/library/python/simplejson-27
     pkg:/package/svr4
     pkg:/runtime/python-27
 #   pkg:/runtime/python-34
@@ -66,12 +40,9 @@
     pkg:/text/gnu-gettext
     pkg:/text/gnu-grep
     pkg:/text/locale
-<<<<<<< HEAD
-=======
     pkg:/text/tidy
     pkg:/web/server/apache-22
     pkg:/web/server/apache-22/module/apache-wsgi-27
->>>>>>> oi
     pkg:/web/wget
     pkg:/SUNWcs
     pkg:/system/zones
