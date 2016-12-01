@@ -1,11 +1,11 @@
     pkg:/archiver/gnu-tar
     pkg:/crypto/ca-certificates
-    pkg:/library/python-2/cherrypy
-    pkg:/library/python-2/m2crypto
-    pkg:/library/python-2/mako
-    pkg:/library/python-2/ply
-    pkg:/library/python-2/pybonjour
-    pkg:/library/python-2/pycurl
+    pkg:/library/python-2/cherrypy-26
+    pkg:/library/python-2/m2crypto-26
+    pkg:/library/python-2/mako-26
+    pkg:/library/python-2/ply-26
+    pkg:/library/python-2/pybonjour-26
+    pkg:/library/python-2/pycurl-26
     pkg:/developer/assembler
     pkg:/developer/base-developer-utilities
     pkg:/developer/build/make
