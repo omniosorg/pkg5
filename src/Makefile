@@ -21,10 +21,13 @@
 
 #
 # Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
-# Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
+# Copyright 2016, OmniTI Computer Consulting, Inc. All rights reserved.
 #
 
 PYTHON = /usr/bin/python2.6
+# Should match python version above.
+PYLINT_FMRI = pkg:/library/python-2/pylint-26
+
 CODE_WS = $$(hg root 2>/dev/null || git rev-parse --show-toplevel)
 
 all := TARGET = all
@@ -44,9 +47,9 @@ test-generate := TARGET = test-generate
 # pkg python modules from this workspace since they may be out of sync
 # with the pkg modules in the root filesystem).
 #
-PYLINT_VER_CMD = PYTHONPATH= /usr/bin/pkg info pkg:/developer/python/pylint | \
-	/usr/bin/grep Version | \
-	/usr/bin/awk -F: '{print $$2}' | /usr/bin/sed -e 's/ //g'
+PYLINT_VER_CMD = PYTHONPATH= /usr/bin/pkg info $(PYLINT_FMRI) | \
+		 /usr/bin/grep Version | /usr/bin/awk -F: '{print $$2}' | \
+		 /usr/bin/sed -e 's/ //g'
 
 SUBDIRS=brand zoneproxy tsol
 
