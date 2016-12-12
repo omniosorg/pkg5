@@ -27,9 +27,8 @@
 PYTHON27 = /usr/bin/python2.7
 PYTHON34 = /usr/bin/python3.4
 
-PYTHON = /usr/bin/python2.6
 # Should match python version above.
-PYLINT_FMRI = pkg:/library/python-2/pylint-26
+PYLINT_FMRI = pkg:/library/python-2/pylint-27
 
 CODE_WS = $$(hg root 2>/dev/null || git rev-parse --show-toplevel)
 
