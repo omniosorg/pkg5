@@ -813,12 +813,6 @@ class ProcFS(object):
             ("int",         1,  "pr_filler"),
         ]
 
-        # For 64 bit process, the alignment is off by 4 bytes from pr_pctmem
-        # field. So add an additional pad here.
-        if _running_bit == 64:
-                _psinfo_desc = _psinfo_desc[0:17] + [("int", 1, "dum_pad")] + \
-                    _psinfo_desc[17:]
-
         _struct_descriptions = {
             # this list contains all the known structure description lists
             # the entry format is: <structure name>: \
