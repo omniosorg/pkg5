@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2007, 2015, 2017, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2017, Oracle and/or its affiliates. All rights reserved.
 # Copyright 2014, OmniTI Computer Consulting, Inc. All rights reserved.
 
 """
@@ -247,7 +247,8 @@ def move(src, dst):
                         raise shutil.Error("Destination path '{0}' already "
                             "exists".format(dst))
                 else:
-                        raise
+                        # Access to protected member; pylint: disable=W0212
+                        raise api_errors._convert_error(e)
 
 def expanddirs(dirs):
         """given a set of directories, return expanded set that includes
