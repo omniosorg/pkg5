@@ -478,6 +478,7 @@ license cr_Oracle license=cr_Oracle
 #depend type=require fmri=crypto/ca-certificates
 depend type=require fmri=web/ca-bundle
 depend type=require fmri=library/python-2/cherrypy-27
+depend type=require fmri=library/python-2/functools32-27
 depend type=require fmri=library/python-2/jsonrpclib-27
 depend type=require fmri=library/python-2/jsonschema-27
 depend type=require fmri=library/python-2/m2crypto-27
