@@ -29,7 +29,7 @@
 #   newly-cloned zone for use.  It is similar to sys-unconfig, but designed
 #   only for use with zone cloning.
 
-SED=/usr/bin/gsed
+SED=/usr/bin/sed
 
 bomb() {
   echo ======================================================
