@@ -20,7 +20,7 @@
  */
 
 /*
- *  Copyright (c) 2009, 2016, Oracle and/or its affiliates. All rights reserved.
+ *  Copyright (c) 2009, 2017, Oracle and/or its affiliates. All rights reserved.
  *  Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
  */
 
@@ -281,6 +281,7 @@ getdynamic(int fd)
 
 	liblist_t	*deps = NULL;
 	off_t		rpath = 0, runpath = 0, def = 0;
+	char		*obj_type = NULL;
 
 	/* Verneed */
 	int a = 0;
@@ -392,6 +393,18 @@ getdynamic(int fd)
 			if (gd.d_un.d_val & DF_P1_DEFERRED) {
 				t++;
 			}
+		case DT_FLAGS_1:
+#ifdef DF_1_PIE
+			if (gd.d_un.d_val & DF_1_PIE) {
+				obj_type = "pie";
+			}
+#endif
+#ifdef DF_1_KMOD
+			if (gd.d_un.d_val & DF_1_KMOD) {
+				obj_type = "kmod";
+			}
+#endif
+			break;
 		}
 	}
 
@@ -497,6 +510,7 @@ getdynamic(int fd)
 	dyn->deps = deps;
 	dyn->def = def;
 	dyn->vers = verdef;
+	dyn->obj_type = obj_type;
 	return (dyn);
 
 bad:
