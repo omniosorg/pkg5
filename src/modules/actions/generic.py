@@ -298,7 +298,7 @@ class Action(object):
                                 # at the start succeeded.
                                 v = h
 
-                        if type(v) is list:
+                        if type(v) is list or type(v) is set:
                                 out += " " + " ".join([
                                     "=".join((k, quote_attr_value(lmt)))
                                     for lmt in v
