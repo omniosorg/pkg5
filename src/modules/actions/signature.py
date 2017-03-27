@@ -456,7 +456,8 @@ class SignatureAction(generic.Action):
                         e.act = self
                         raise
                 # Check that the certificate verifies against this signature.
-                pub_key = cert.get_pubkey(md=self.hash_alg)
+                pub_key = cert.get_pubkey()
+                pub_key.reset_context(md=self.hash_alg)
                 pub_key.verify_init()
                 pub_key.verify_update(self.actions_to_str(acts, ver))
                 res = pub_key.verify_final(
