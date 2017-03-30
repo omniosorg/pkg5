@@ -1,6 +1,6 @@
 '\" te
 .\" Copyright (c) 2007, 2014, Oracle and/or its affiliates. All rights reserved.
-.TH pkg 1 "28 May 2014" "SunOS 5.11" "User Commands"
+.TH pkg 1 "20 May 2016" "SunOS 5.11" "User Commands"
 .SH NAME
 pkg \- Image Packaging System retrieval client
 .SH SYNOPSIS
@@ -423,6 +423,10 @@ Force a full retrieval of all publisher metadata, instead of attempting an incre
 .sp .6
 .RS 4n
 Install and update the specified packages to the newest version that match \fIpkg_fmri_pattern\fR allowed by the packages installed in the image. To explicitly request the latest version of a package, use \fBlatest\fR for the version portion of \fIpkg_fmri_pattern\fR. For example, specify \fBvim@latest\fR. The \fIpkg_fmri_pattern\fR pattern can include the \fB?\fR and \fB*\fR characters as \fBglob\fR(3C)-style wildcards to match one or more packages.
+.sp
+Versions older or newer than what is already installed can be specified to perform in-place downgrades or upgrades of specific packages. Updating specific packages across package rename or obsolete boundaries is not supported.
+.sp
+Any preserved configuration files that are part of packages to be downgraded and that have been changed since the original version was installed are renamed using the extension \fB\&.update\fR. For more information about how the package system determines which files to preserve, and how these files are preserved during package upgrades, see "File Actions" in the \fBpkg\fR(5) man page.
 .sp
 Packages are selected based on publisher search order and stickiness. See the \fBpkg publisher\fR and \fBpkg set-publisher\fR commands for information about search order and stickiness. If the \fIpkg_fmri_pattern\fR does not specify the publisher, the first publisher that provides a matching package is used as the installation source. If that publisher does not provide a version of the package that can be installed in this image, then the installation operation fails. Use the \fBpkg list -a\fR command to see which publishers provide a version of the package that can be installed in this image.
 .sp
