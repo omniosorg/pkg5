@@ -379,6 +379,13 @@ if [[ -n $gz_entire_fmri ]]; then
 else
     incorp_list=gz_incorporations
 fi
+# If Python 2.6 is in the to-be-attached zone root (now set with PKGIMAGE),
+# add it to the incorp_list so we do not get a conflicting-install situation,
+# and can have the now-obsoleted/renamed Python 2.6 installed.
+LC_ALL=C $PKG list pkg://omnios/runtime/python-26 2>&1 >/dev/null
+if [[ $? == 0 ]]; then
+    incorp_list="$incorp_list pkg://omnios/runtime/python-26"
+fi
 
 #
 # If there is a cache, use it.
