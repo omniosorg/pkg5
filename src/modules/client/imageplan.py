@@ -504,8 +504,10 @@ class ImagePlan(object):
                 pub_ranks = self.image.get_publisher_ranks()
 
                 matched_vals, unmatched = self.__match_user_fmris(
-                    self.image, values, self.MATCH_INST_STEMS, pub_ranks=pub_ranks,
-                    installed_pkgs=installed_dict, raise_not_installed=False)
+                    self.image, values, self.MATCH_INST_STEMS,
+                    pub_ranks=pub_ranks, installed_pkgs=installed_dict,
+                    raise_not_installed=False,
+                    default_matcher=pkg.fmri.exact_name_match)
 
                 triggered_fmris = set()
                 for m in matched_vals.values():
@@ -564,9 +566,9 @@ class ImagePlan(object):
                                 continue
                         yield (exec_op, f)
 
-        def __set_pkg_actuators(self, fmris, op, solver_inst):
-                """Check the manifests for the pkgs specified by 'fmris' and add
-                them to the solver instance specified by 'solver_inst'. 'op'
+        def __set_pkg_actuators(self, patterns, op, solver_inst):
+                """Check the manifests for the pkgs specified by 'patterns' and
+                add them to the solver instance specified by 'solver_inst'. 'op'
                 defines the trigger operation which called this function."""
 
                 trigger_entries = {}
@@ -581,9 +583,12 @@ class ImagePlan(object):
                 pub_ranks = self.image.get_publisher_ranks()
 
                 # Match only on installed stems. This makes sure no new pkgs
-                # will get installed when an update is specified.
+                # will get installed when an update is specified.  Note that
+                # this allows trailing matches (i.e. 'ambiguous') matches that
+                # may result in failure as the list of patterns are assumed to
+                # be from user input.
                 matched_vals, unmatched = self.__match_user_fmris(
-                    self.image, fmris, self.MATCH_INST_VERSIONS,
+                    self.image, patterns, self.MATCH_INST_VERSIONS,
                     pub_ranks=pub_ranks, installed_pkgs=installed_dict,
                     raise_not_installed=False)
 
@@ -5618,7 +5623,8 @@ class ImagePlan(object):
         @staticmethod
         def __match_user_fmris(image, patterns, match_type,
             pub_ranks=misc.EmptyDict, installed_pkgs=misc.EmptyDict,
-            raise_not_installed=True, reject_set=misc.EmptyI):
+            raise_not_installed=True, reject_set=misc.EmptyI,
+            default_matcher=None):
                 """Given a user-specified list of patterns, return a dictionary
                 of matching fmris:
 
@@ -5649,7 +5655,12 @@ class ImagePlan(object):
 
                 Note that patterns starting w/ pkg:/ require an exact match;
                 patterns containing '*' will using fnmatch rules; the default
-                trailing match rules are used for remaining patterns.
+                trailing match rules are used for remaining patterns unless
+                'default_matcher' is specified.
+
+                'default_matcher' is an optional pkg.fmri.match_* method to
+                determine which matching rules should be applied to patterns
+                that do not use wildcards or start with 'pkg:/' or '/'.
 
                 Exactly duplicated patterns are ignored.
 
@@ -5720,6 +5731,8 @@ class ImagePlan(object):
                                 elif pat_stem.startswith("pkg:/") or \
                                     pat_stem.startswith("/"):
                                         matcher = pkg.fmri.exact_name_match
+                                elif default_matcher:
+                                        matcher = default_matcher
                                 else:
                                         matcher = pkg.fmri.fmri_match
 
