@@ -19,6 +19,7 @@
 # CDDL HEADER END
 #
 # Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
 # Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
 # Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
 #
@@ -134,10 +135,6 @@ clobber: clean
 
 pkgfmt:
 	$(PKGFMT) -c manifests/*.p5m
-
-# Pass SVr4 package production off to its own makefile
-svr4:
-	$(MAKE) -f Makefile.svr4 _svr4
 
 $(PDIR):
 	mkdir -p $@

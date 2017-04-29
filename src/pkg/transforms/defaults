@@ -18,6 +18,7 @@
 #
 # CDDL HEADER END
 #
+# Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
 # Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
 # Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
 #
@@ -69,7 +70,7 @@
 
 <transform file pkg.tmp.autopyc=.* -> delete pkg.tmp.autopyc .*>
 <transform pkg.tmp.pyversion=.* -> delete pkg.tmp.pyversion .*>
- 
+
 # Add actuators
 <transform file path=(var|lib)/svc/manifest/.*\.xml -> add restart_fmri svc:/system/manifest-import:default>
 
@@ -88,19 +89,6 @@
 <transform dir file link hardlink path=usr.*/man(/.+){0,1}$ -> \
     default facet.doc.man true>
 
-# Default values for legacy actions
-<transform legacy -> default name %{pkg.summary}>
-<transform legacy -> default desc %{pkg.description}>
-<transform legacy -> default vendor "Sun Microsystems, Inc.">
-<transform legacy -> default hotline "Please contact your local service provider">
-<transform legacy -> default category system>
-<transform legacy -> default arch $(ARCH)>
-# add a ,REV= string to any version attributes that don't have a REV=
-<transform legacy -> edit version (^(?!.*?,REV=).*) \\1,REV=$(REV)>
-
-# now emit those values
-<transform pkg info.repository-changeset=(.*) -> emit set name=info.repository-changeset value=%<1>>
-<transform pkg info.repository-url=(.*) -> emit set name=info.repository-url value=%<1>>
 set name=org.opensolaris.consolidation value=ips
 set name=variant.opensolaris.zone value=global value=nonglobal
 
