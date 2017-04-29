@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2017, Oracle and/or its affiliates. All rights reserved.
 #
 
 """This module provides the supported, documented interface for clients to
@@ -63,17 +63,18 @@ import glob
 import os
 import shutil
 import simplejson as json
-import six
 import sys
 import tempfile
 import threading
 import time
 import re as relib
 from functools import cmp_to_key
-# Imports from package six are not grouped: pylint: disable=C0412
+
 from six.moves.urllib.parse import unquote
 
 import pkg.actions as actions
+import six
+
 import pkg.catalog as catalog
 import pkg.client.api_errors as apx
 import pkg.client.bootenv as bootenv
@@ -796,7 +797,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                 try:
                         # This can raise if, for example, we're aborting
                         # because we have a PipeError and we can no longer
-                        # write.  So supress problems here.
+                        # write.  So suppress problems here.
                         if self.__progresstracker:
                                 self.__progresstracker.flush()
                 except:
