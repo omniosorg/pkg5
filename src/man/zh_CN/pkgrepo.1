@@ -976,9 +976,9 @@ $ \fBpkgrepo create /my/repository\fR
 $ \fBpkgrepo info -s /my/repository\fR
 PUBLISHER   PACKAGES STATUS UPDATED
 example.com 5        online 2011-07-22T18:09:09.769106Z
-$ \fBpkgrepo info -s http://pkg.omniti.com/omnios/release/\fR
-PUBLISHER         PACKAGES STATUS UPDATED
-jeos.omniti.com   3941     online 2010-11-12T19:24:25.967246Z
+$ \fBpkgrepo info -s https://pkg.omniosce.org/r151022/core/\fR
+PUBLISHER PACKAGES STATUS           UPDATED
+omnios    697      online           2017-07-11T21:58:08.054608Z
 .fi
 .in -2
 .sp
@@ -1021,10 +1021,13 @@ $ \fBpkgrepo get -s /my/repository\fR
 SECTION    PROPERTY VALUE
 publisher  prefix   ""
 repository version  4
-$ \fBpkgrepo get -s http://pkg.omniti.com/omnios/release/\fR
-SECTION    PROPERTY VALUE
-publisher  prefix   jeos.omniti.com
-repository version  4
+$ \fBpkgrepo get -s http://pkg.omniosce.org/r151022/core/\fR
+SECTION    PROPERTY                     VALUE
+publisher  prefix                       omnios
+repository check-certificate-revocation False
+repository signature-required-names     ()
+repository trust-anchor-directory       /etc/ssl/pkg/
+repository version                      4
 .fi
 .in -2
 .sp
@@ -1034,19 +1037,19 @@ repository version  4
 .sp
 .in +2
 .nf
-$ \fBpkgrepo get -s http://pkg.omniti.com/omnios/release/ -p all\fR
-PUBLISHER         SECTION    PROPERTY         VALUE
-jeos.omniti.com   publisher  alias
-jeos.omniti.com   publisher  prefix           jeos.omniti.com
-jeos.omniti.com   repository collection-type  core
-jeos.omniti.com   repository description      This\e repository\e serves\e the\e OmniOS 11\e Package\e repository.
-jeos.omniti.com   repository legal-uris       ()
-jeos.omniti.com   repository mirrors          (http://opkg.omniti.com/omnios/release/)
-jeos.omniti.com   repository name             OmniOS 11\e Package\e Repository
-jeos.omniti.com   repository origins          ()
-jeos.omniti.com   repository refresh-seconds
-jeos.omniti.com   repository registration-uri ""
-jeos.omniti.com   repository related-uris     ()
+$ \fBpkgrepo get -s http://pkg.omniosce.org/r151022/core/ -p all\fR
+PUBLISHER SECTION    PROPERTY         VALUE
+omnios    publisher  alias
+omnios    publisher  prefix           omnios
+omnios    repository collection-type  core
+omnios    repository description      IPS\ Packages\ for\ OmniOS\ r151022\ core
+omnios    repository legal-uris       ()
+omnios    repository mirrors          ()
+omnios    repository name             OmniOS\ r151022\ core
+omnios    repository origins          ()
+omnios    repository refresh-seconds
+omnios    repository registration-uri ""
+omnios    repository related-uris     ()
 .fi
 .in -2
 .sp
