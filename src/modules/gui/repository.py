@@ -88,7 +88,7 @@ class Repository(progress.GuiProgressTracker):
                 self.priority_changes = []
                 self.url_err = None
                 self.name_error = None
-                self.publisher_info = _("e.g. http://pkg.omniti.com/omnios/release")
+                self.publisher_info = _("e.g. https://pkg.omniosce.org/r151022/core")
                 self.publishers_list = None
                 self.repository_modify_publisher = None
                 self.no_changes = 0
