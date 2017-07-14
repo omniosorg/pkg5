@@ -2964,8 +2964,8 @@ msgid "_View"
 msgstr "_Ansicht"
 
 #: ../gui/data/packagemanager.ui.glade.h:169 ../modules/gui/repository.py:90
-msgid "e.g. http://pkg.omniti.com/omnios/release"
-msgstr "z. B. http://pkg.omniti.com/omnios/release"
+msgid "e.g. https://pkg.omniosce.org/r151022/core"
+msgstr "z. B. https://pkg.omniosce.org/r151022/core"
 
 #: ../gui/data/packagemanager.ui.h:170
 msgid "label"

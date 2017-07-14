@@ -423,12 +423,12 @@ $ \fBpkgrecv -s /export/repo -d /local/repo -r editor/gnu-emacs\fR
 \fBExample 7 \fRRetrieve Additional Packages and Changed Content
 .sp
 .LP
-Receive all packages that do not already exist and all changed content from the repository located at \fBhttp://pkg.omniti.com/omnios/bloody/\fR to the repository located at \fB/export/bloody\fR.
+Receive all packages that do not already exist and all changed content from the repository located at \fBhttps://pkg.omniosce.org/bloody/core/\fR to the repository located at \fB/export/bloody\fR.
 
 .sp
 .in +2
 .nf
-$ \fBpkgrecv -s http://pkg.omniti.com/omnios/bloody/ \e\fR
+$ \fBpkgrecv -s https://pkg.omniosce.org/bloody/core/ \e\fR
 \fB-d /export/bloody -m all-timestamps '*'\fR
 .fi
 .in -2
@@ -436,12 +436,12 @@ $ \fBpkgrecv -s http://pkg.omniti.com/omnios/bloody/ \e\fR
 
 .sp
 .LP
-Receive all packages that do not already exist and all changed content from the secure repository located at \fBhttps://pkg.omniti.com/omnios/bloody/\fR to the repository located at \fB/export/bloody\fR. 
+Receive all packages that do not already exist and all changed content from the secure repository located at \fBhttps://pkg.omniosce.org/bloody/core/\fR to the repository located at \fB/export/bloody\fR. 
 
 .sp
 .in +2
 .nf
-$ \fBpkgrecv -s https://pkg.oracle.com/solaris/support/ \e\fR
+$ \fBpkgrecv -s https://pkg.omniosce.org/bloody/core/ \e\fR
 \fB-d /export/bloody -m all-timestamps \e\fR
 \fB--key /var/pkg/ssl/Your-Organization.key.pem \e\fR
 \fB--cert /var/pkg/ssl/Your-Organization.certificate.pem '*'\fR
