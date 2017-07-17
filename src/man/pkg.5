@@ -1,8 +1,8 @@
 '\" te
-.\" Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
+.\" Copyright (c) 2009, 2017, Oracle and/or its affiliates. All rights reserved.
 .\" Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
 .\" Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
-.TH pkg 5 "27 Jul 2018" "SunOS 5.11" "Standards, Environments, and Macros"
+.TH pkg 5 "10 Sep 2018" "SunOS 5.11" "Standards, Environments, and Macros"
 .SH NAME
 pkg \- Image Packaging System
 .SH DESCRIPTION
@@ -311,6 +311,31 @@ The file delivered by the action overwrites any other action that has specified 
 .RE
 
 Changes to the installed file are preserved based on the value of the \fBpreserve\fR attribute of the overlaying file. On removal, the contents of the file are preserved if the action being overlaid is still installed, regardless of whether the \fBpreserve\fR attribute was specified. Only one action can overlay another, and the \fBmode\fR, \fBowner\fR, and \fBgroup\fR attributes must match.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBoverlay-attributes\fR
+.ad
+.sp .6
+.RS 4n
+Specifies whether image-modifying operations such as install, update, etc.
+should report errors when an overlaying action has a different \fBowner\fR,
+\fBgroup\fR, \fBmode\fR or \fBsysattr\fR from its overlaid action.
+\fBoverlay-attributes\fR is usually used in actions with \fBoverlay\fR equal to
+\fBallow\fR or \fBdeny\fR. When the value of \fBoverlay-attributes\fR for
+either overlaying action or overlaid action is \fBdeny\fR, an error will be
+gen- erated during image-modifying operations.  Also verification opera- tions
+will generate an error on those mismatched attributes: \fBowner\fR, \fBgroup\fR
+and \fBmode\fR if \fBoverlay\fR is equal to \fBdeny\fR for a pair of overlaid
+and overlaying action. Otherwise, an info message will be generated on the
+above mismatched attributes for the pair.  Regardless of the value of
+\fBoverlay-attributes\fR, mismatched attributes when comparing the on-disk
+attributes of a file to its packaged version will always be reported as errors.
+.sp
+
 .RE
 
 .sp
