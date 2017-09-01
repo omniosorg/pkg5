@@ -70,27 +70,28 @@ import logging
 import os
 import os.path
 import OpenSSL.crypto as crypto
+import string
 import subprocess
 import sys
 import tempfile
 import urlparse
+import portend
 
 from imp import reload
 
 try:
         import cherrypy
         version = cherrypy.__version__.split('.')
-        if map(int, version) < [3, 1, 0]:
-                raise ImportError
-        elif map(int, version) >= [3, 3, 0]:
+        if list(map(int, version)) < [3, 1, 0]:
                 raise ImportError
 except ImportError:
-        print >> sys.stderr, """cherrypy 3.1.0 or greater (but less than """ \
-            """3.3.0) is required to use this program."""
+        print("""cherrypy 3.1.0 or greater is required to use this program.""",
+            file=sys.stderr)
         sys.exit(2)
 
 import cherrypy.process.servers
 from cherrypy.process.plugins import Daemonizer
+from cherrypy._cpdispatch import Dispatcher
 
 from pkg.misc import msg, emsg, setlocale
 from pkg.client.debugvalues import DebugValues
@@ -101,8 +102,18 @@ import pkg.config as cfg
 import pkg.portable.util as os_util
 import pkg.search_errors as search_errors
 import pkg.server.depot as ds
-import pkg.server.depotresponse as dr
 import pkg.server.repository as sr
+
+
+# Starting in CherryPy 3.2, its default dispatcher converts all punctuation to
+# underscore. Since publisher name can contain the hyphen symbol "-", in order
+# to let the dispatcher to find the correct page handler, we need to skip
+# converting the hyphen symbol.
+punc = string.punctuation.replace("-", "_")
+translate = string.maketrans(punc, "_" * len(string.punctuation))
+class Pkg5Dispatcher(Dispatcher):
+        def __init__(self, **args):
+                Dispatcher.__init__(self, translate=translate)
 
 
 class LogSink(object):
@@ -613,7 +624,7 @@ if __name__ == "__main__":
         # the program will not bind to a port.
         if not exit_ready:
                 try:
-                        cherrypy.process.servers.check_port(address, port)
+                        portend.Checker().assert_free(address, port)
                 except Exception as e:
                         emsg("pkg.depotd: unable to bind to the specified "
                             "port: {0:d}. Reason: {1}".format(port, e))
@@ -897,18 +908,15 @@ if __name__ == "__main__":
 
         # Now build our site configuration.
         conf = {
-            "/": {
-                # We have to override cherrypy's default response_class so that
-                # we have access to the write() callable to stream data
-                # directly to the client.
-                "wsgi.response_class": dr.DepotResponse,
-            },
+            "/": {},
             "/robots.txt": {
                 "tools.staticfile.on": True,
                 "tools.staticfile.filename": os.path.join(depot.web_root,
                     "robots.txt")
             },
         }
+        if list(map(int, version)) >= [3, 2, 0]:
+                conf["/"]["request.dispatch"] = Pkg5Dispatcher()
 
         proxy_base = dconf.get_property("pkg", "proxy_base")
         if proxy_base:

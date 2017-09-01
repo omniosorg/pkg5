@@ -738,6 +738,17 @@ class Pkg5Dispatch(object):
 
                 toks = path_info.lstrip("/").split("/")
                 params = request.params
+                if not params:
+                        try:
+                                # Starting in CherryPy 3.2, it seems that
+                                # query_string doesn't pass into request.params,
+                                # so try harder here.
+                                from cherrypy.lib.httputil import parse_query_string
+                                params = parse_query_string(
+                                    request.query_string)
+                                request.params.update(params)
+                        except ImportError:
+                                pass
                 file_type = toks[-1].split(".")[-1]
 
                 try:
