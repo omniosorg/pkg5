@@ -481,6 +481,29 @@ class TestPkgDepot(pkg5unittest.SingleDepotTestCase):
 
                 res = urllib2.urlopen(repourl)
 
+        def test_publisher_prefix(self):
+                """Test that various publisher prefixes can be understood
+                by CherryPy's dispatcher."""
+
+                if self.dc.started:
+                        self.dc.stop()
+
+                depot_url = self.dc.get_depot_url()
+                repopath = os.path.join(self.test_root, "repo")
+                self.create_repo(repopath)
+                self.dc.set_repodir(repopath)
+                pubs = ["test-hyphen", "test.dot"]
+                for p in pubs:
+                        self.pkgrepo("-s {0} add-publisher {1}".format(
+                            repopath, p))
+                self.dc.start()
+                for p in pubs:
+                        # test that the catalog file can be found
+                        url = urljoin(depot_url,
+                            "{0}/catalog/1/catalog.attrs".format(p))
+                        urlopen(url)
+                self.dc.stop()
+
 
 class TestDepotController(pkg5unittest.CliTestCase):
 
