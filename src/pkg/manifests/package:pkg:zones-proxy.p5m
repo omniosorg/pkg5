@@ -1,0 +1,3 @@
+set name=pkg.fmri value=pkg:/package/pkg/zones-proxy@$(PKGVERS)
+set name=pkg.obsolete value=true
+
