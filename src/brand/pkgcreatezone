@@ -50,7 +50,6 @@ m_image=$(gettext       "       Image: Preparing at %s.")
 m_incorp=$(gettext      "Sanity Check: Looking for 'entire' incorporation.")
 m_core=$(gettext	"  Installing: Packages (output follows)")
 m_smf=$(gettext		" Postinstall: Copying SMF seed repository ...")
-m_mannote=$(gettext     "        Note: Man pages can be obtained by installing pkg:/system/manual")
 
 m_usage=$(gettext "\n        install [-h]\n        install [-c certificate_file] [-k key_file] [-P publisher=uri]\n                [-e extrapkg [...]]\n        install {-a archive|-d path} {-p|-u} [-s|-v]")
 
@@ -338,8 +337,6 @@ pkglist="$pkglist $extra_packages"
 #
 LC_ALL=C $PKG install --accept --no-index --no-refresh $pkglist || \
     pkg_err_check "$f_pkg"
-
-printf "\n$m_mannote\n"
 
 printf "$m_smf"
 PROFILEDIR=etc/svc/profile
