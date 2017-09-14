@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2015, 2017, Oracle and/or its affiliates. All rights reserved.
 # Copyright 2014, OmniTI Computer Consulting, Inc. All rights reserved.
 
 """
@@ -47,6 +47,7 @@ import resource
 import shutil
 import signal
 import simplejson as json
+import six
 import socket
 import struct
 import sys
@@ -2371,10 +2372,10 @@ def json_hook(dct):
 
         rvdct = {}
         for k, v in dct.iteritems():
-                if type(k) == unicode:
-                        k = k.encode("utf-8")
-                if type(v) == unicode:
-                        v = v.encode("utf-8")
+		if isinstance(k, six.string_types):
+			k = force_str(k)
+		if isinstance(v, six.string_types):
+			v = force_str(v)
 
                 rvdct[k] = v
         return rvdct
@@ -2827,4 +2828,42 @@ def suggest_known_words(text, known_words):
 
         # Sort the candidates by their distance, and return the words only.
         return [c[0] for c in sorted(candidates, key=itemgetter(1))]
+
+def force_bytes(s, encoding="utf-8", errors="strict"):
+        """Force the string into bytes."""
+
+        if isinstance(s, bytes):
+                if encoding == "utf-8":
+                        return s
+                return s.decode("utf-8", errors).encode(encoding,
+                    errors)
+        elif isinstance(s, six.string_types):
+                # this case is: unicode in Python 2 and str in Python 3
+                return s.encode(encoding, errors)
+        elif six.PY3:
+                # type not a string and Python 3's bytes() requires
+                # a string argument
+                return six.text_type(s).encode(encoding)
+        # type not a string
+        return bytes(s)
+
+
+def force_text(s, encoding="utf-8", errors="strict"):
+        """Force the string into text."""
+
+        if isinstance(s, six.text_type):
+                return s
+        if isinstance(s, six.string_types):
+                # this case is: str(bytes) in Python 2
+                return s.decode(encoding, errors)
+        elif isinstance(s, bytes):
+                # this case is: bytes in Python 3
+                return s.decode(encoding, errors)
+        # type not a string
+        return six.text_type(s)
+
+if six.PY3:
+        force_str = force_text
+else:
+        force_str = force_bytes
 

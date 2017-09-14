@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 from __future__ import division
@@ -604,20 +604,22 @@ class DepotHTTP(_Depot):
                 def output():
                         # Yield the string used to let the client know it's
                         # talking to a valid search server.
-                        yield str(Query.VALIDATION_STRING[1])
+                        yield misc.force_bytes(Query.VALIDATION_STRING[1])
                         for i, res in enumerate(res_list):
                                 for v, return_type, vals in res:
                                         if return_type == Query.RETURN_ACTIONS:
                                                 fmri_str, fv, line = vals
-                                                yield "{0} {1} {2} {3} {4}\n".format(
+                                                yield misc.force_bytes(
+						    "{0} {1} {2} {3} {4}\n".format(
                                                     i, return_type, fmri_str,
                                                     urllib.quote(fv),
-                                                    line.rstrip())
+                                                    line.rstrip()))
                                         elif return_type == \
                                             Query.RETURN_PACKAGES:
                                                 fmri_str = vals
-                                                yield "{0} {1} {2}\n".format(
-                                                    i, return_type, fmri_str)
+                                                yield misc.force_bytes(
+						    "{0} {1} {2}\n".format(
+                                                    i, return_type, fmri_str))
                 return output()
 
         search_1._cp_config = { "response.stream": True }
@@ -1384,7 +1386,7 @@ License:
                         raise cherrypy.HTTPError(httplib.NOT_FOUND, str(e))
                 buf.seek(0)
                 self.__set_response_expires("publisher", 86400*365, 86400*365)
-                return buf.getvalue()
+                return misc.force_bytes(buf.getvalue())
 
         @cherrypy.tools.response_headers(headers=[(
             "Content-Type", p5i.MIME_TYPE)])
@@ -1521,7 +1523,7 @@ License:
                             "matching package found in repository."))
 
                 self.__set_response_expires("p5i", 86400*365, 86400*365)
-                return output
+                return misc.force_bytes(output)
 
         @cherrypy.tools.response_headers(headers=\
             [("Content-Type", "application/json; charset=utf-8")])
@@ -1539,7 +1541,7 @@ License:
                 except Exception as e:
                         raise cherrypy.HTTPError(httplib.NOT_FOUND, _("Unable "
                             "to generate statistics."))
-                return out + "\n"
+                return misc.force_bytes(out + "\n")
 
 def nasty_before_handler(nasty_depot, maxroll=100):
         """Cherrypy Tool callable which generates various problems prior to a
