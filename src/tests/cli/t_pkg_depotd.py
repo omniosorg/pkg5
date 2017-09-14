@@ -499,9 +499,9 @@ class TestPkgDepot(pkg5unittest.SingleDepotTestCase):
                 self.dc.start()
                 for p in pubs:
                         # test that the catalog file can be found
-                        url = urljoin(depot_url,
+                        url = urlparse.urljoin(depot_url,
                             "{0}/catalog/1/catalog.attrs".format(p))
-                        urlopen(url)
+                        urllib2.urlopen(url)
                 self.dc.stop()
 
 
