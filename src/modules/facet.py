@@ -28,6 +28,7 @@
 
 from pkg._varcet import _allow_facet
 from pkg.misc import EmptyI, ImmutableDict
+import pkg.misc as misc
 import fnmatch
 import re
 import types
@@ -107,10 +108,10 @@ class Facets(dict):
                 that that can be easily stored using JSON, pickle, etc."""
 
                 return [
-                        [k, v, True]
+                        [misc.force_text(k), v, True]
                         for k, v in obj.__inherited.iteritems()
                 ] + [
-                        [k, v, False]
+                        [misc.force_text(k), v, False]
                         for k, v in obj.__local.iteritems()
                 ]
 

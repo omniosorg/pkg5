@@ -338,6 +338,10 @@ if __name__ == "__main__":
                 except excClass as e:
                         str(e)
                         return
+		except Exception as e:
+			raise self.failureException(
+			    "{1} raised instead of {0}"
+			    .format(excClass, type(e).__name__))
                 else:
                         raise self.failureException("{0} not raised".format(excClass))
 
