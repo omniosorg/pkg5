@@ -41,6 +41,7 @@ import warnings
 from mako.template import Template
 from mako.lookup import TemplateLookup
 from OpenSSL.crypto import *
+from OpenSSL.crypto import TYPE_RSA, TYPE_DSA
 
 import pkg
 import pkg.client.api_errors as apx
