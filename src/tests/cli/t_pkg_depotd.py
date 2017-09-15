@@ -502,8 +502,6 @@ class TestPkgDepot(pkg5unittest.SingleDepotTestCase):
                         url = urlparse.urljoin(depot_url,
                             "{0}/catalog/1/catalog.attrs".format(p))
                         urllib2.urlopen(url)
-                self.dc.stop()
-
 
 class TestDepotController(pkg5unittest.CliTestCase):
 
