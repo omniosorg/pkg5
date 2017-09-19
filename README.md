@@ -1,4 +1,4 @@
-This is the OmniTI child of OpenIndiana's pkg(5) child.
+This is the OmniOS child of OpenIndiana's pkg(5) child.
 
 Our branching strategy is that we do not alter upstream OI branches.
 
@@ -16,5 +16,5 @@ Additional branches include:
 
 	As we issue releases, we will branch for each release.
 
-If you wish to discuss development here, join the discussion at
-omnios-discuss at lists dot omniti dot com.
+If you wish to discuss development here, join the discussion on
+[Gitter](https://gitter.im/omniosorg/Lobby)
