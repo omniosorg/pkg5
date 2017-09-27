@@ -40,8 +40,7 @@ import warnings
 
 from mako.template import Template
 from mako.lookup import TemplateLookup
-from OpenSSL.crypto import *
-from OpenSSL.crypto import TYPE_RSA, TYPE_DSA
+from OpenSSL.crypto import TYPE_RSA, TYPE_DSA, PKey, load_privatekey, dump_privatekey, load_certificate, dump_certificate, X509, X509Extension, FILETYPE_PEM
 
 import pkg
 import pkg.client.api_errors as apx
