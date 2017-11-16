@@ -48,7 +48,6 @@ cli.t_pkg_sysrepo.py TestSysrepo.test_signature_policy_6|error
 cli.t_pkg_sysrepo.py TestSysrepo.test_signature_policy_7|error
 cli.t_pkg_sysrepo.py TestSysrepo.test_signature_policy_8|error
 cli.t_pkg_sysrepo.py TestSysrepo.test_syspub_toggle|error
-cli.t_pkg_temp_sources.py TestPkgTempSources.test_01_info|fail
 cli.t_pkgdep.py TestPkgdepBasics.test_PEP_3149|fail
 cli.t_pkgdep.py TestPkgdepBasics.test_bug_11805|error
 cli.t_pkgdep.py TestPkgdepBasics.test_bug_13059|fail
