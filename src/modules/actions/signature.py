@@ -470,12 +470,12 @@ class SignatureAction(generic.Action):
                 # Check that the certificate verifies against this signature.
                 pub_key = cert.public_key()
                 hhash = self.__get_hash_by_name(self.hash_alg)
-                verifier = pub_key.verifier(
-                    misc.hex_to_binary(self.attrs["value"]), padding.PKCS1v15(),
-                    hhash())
-                verifier.update(self.actions_to_str(acts, ver))
                 try:
-                        verifier.verify()
+                        pub_key.verify(
+                            misc.hex_to_binary(self.attrs["value"]),
+                            self.actions_to_str(acts, ver),
+                            padding.PKCS1v15(),
+                            hhash())
                 except InvalidSignature:
                         raise apx.UnverifiedSignature(self,
                             _("The signature value did not match the expected "

@@ -1565,7 +1565,7 @@ class TestPkgSign(pkg5unittest.SingleDepotTestCase):
 
                 self.assertTrue(crl.issuer == cert.issuer)
                 for rev in crl:
-                        if rev.serial_number == cert.serial:
+                        if rev.serial_number == cert.serial_number:
                                 break
                 else:
                         self.assertTrue(False, "Can not find revoked "

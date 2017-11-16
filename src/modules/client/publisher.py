@@ -2000,7 +2000,7 @@ pkg unset-publisher {0}
                         self.transport.get_catalog1(self, ["catalog.attrs"],
                             path=tempdir, redownload=redownload,
                             revalidate=revalidate, alt_repo=repo,
-			    progtrack=progtrack)
+                            progtrack=progtrack)
                 except api_errors.UnsupportedRepositoryOperation:
                         # No v1 catalogs available.
                         if v1_cat.exists:
@@ -2044,7 +2044,7 @@ pkg unset-publisher {0}
                                 self.transport.get_catalog1(self, flist,
                                     path=tempdir, redownload=redownload,
                                     revalidate=revalidate, alt_repo=repo,
-				    progtrack=progtrack)
+                                    progtrack=progtrack)
                         except api_errors.UnsupportedRepositoryOperation:
                                 # Couldn't find a v1 catalog after getting one
                                 # before.  This would be a bizzare error, but we
@@ -2126,7 +2126,7 @@ pkg unset-publisher {0}
                 try:
                         rval = self.__refresh_v1(croot, tempdir,
                             full_refresh, immediate, mismatched, repo,
-			    progtrack=progtrack,
+                            progtrack=progtrack,
                             include_updates=include_updates)
 
                         # Perform publisher metadata sanity checks.
@@ -2138,7 +2138,7 @@ pkg unset-publisher {0}
                         shutil.rmtree(tempdir, True)
 
         def __refresh(self, full_refresh, immediate, mismatched=False,
-	    progtrack=None, include_updates=False):
+            progtrack=None, include_updates=False):
                 """The method to handle the overall refresh process.  It
                 determines if a refresh is actually needed, and then calls
                 the first version-specific refresh method in the chain."""
@@ -2174,7 +2174,7 @@ pkg unset-publisher {0}
                 for origin, opath in self.__gen_origin_paths():
                         changed, refreshed = self.__refresh_origin(opath,
                             full_refresh, immediate, mismatched, origin,
-			    progtrack=progtrack,
+                            progtrack=progtrack,
                             include_updates=include_updates)
                         if changed:
                                 any_changed = True
@@ -2214,7 +2214,7 @@ pkg unset-publisher {0}
 
                 try:
                         return self.__refresh(full_refresh, immediate,
-			    progtrack=progtrack,
+                            progtrack=progtrack,
                             include_updates=include_updates)
                 except (api_errors.BadCatalogUpdateIdentity,
                     api_errors.DuplicateCatalogEntry,
@@ -2261,7 +2261,7 @@ pkg unset-publisher {0}
                         # This could be the result of a misbehaving or stale
                         # cache.
                         return self.__refresh(False, True, mismatched=True,
-			    progtrack=progtrack)
+                            progtrack=progtrack)
                 except (api_errors.BadCatalogSignatures,
                     api_errors.InvalidCatalogFile):
                         # Assembly of the catalog failed, but this could be due
@@ -2755,10 +2755,6 @@ pkg unset-publisher {0}
                 """Verify the signature of a certificate or CRL 'c' against a
                 provided public key 'key'."""
 
-                verifier = key.verifier(
-                    c.signature, padding.PKCS1v15(),
-                    c.signature_hash_algorithm)
-
                 if isinstance(c, x509.Certificate):
                         data = c.tbs_certificate_bytes
                 elif isinstance(c, x509.CertificateRevocationList):
@@ -2767,9 +2763,9 @@ pkg unset-publisher {0}
                         raise AssertionError("Invalid x509 object for "
                             "signature verification: {0}".format(type(c)))
 
-                verifier.update(data)
                 try:
-                        verifier.verify()
+                        key.verify(c.signature, data, padding.PKCS1v15(),
+                            c.signature_hash_algorithm)
                         return True
                 except Exception:
                         return False
@@ -2833,7 +2829,7 @@ pkg unset-publisher {0}
 
                 assert crl.issuer == cert.issuer
                 for rev in crl:
-                        if rev.serial_number != cert.serial:
+                        if rev.serial_number != cert.serial_number:
                                 continue
                         try:
                                 reason = rev.extensions.get_extension_for_oid(
@@ -2905,7 +2901,7 @@ pkg unset-publisher {0}
 
                 try:
                         exts = cert.extensions
-                except (ValueError, x509.UnsupportedExtension) as e:
+                except ValueError as e:
                         raise api_errors.InvalidCertificateExtensions(
                             cert, e)
 
