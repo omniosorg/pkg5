@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
 # Copyright 2016, OmniTI Computer Consulting, Inc. All rights reserved.
 #
 
@@ -53,7 +53,7 @@ PYLINT_VER_CMD = PYTHONPATH= /usr/bin/pkg info $(PYLINT_FMRI) | \
 		 /usr/bin/grep Version | /usr/bin/awk -F: '{print $$2}' | \
 		 /usr/bin/sed -e 's/ //g'
 
-SUBDIRS=brand zoneproxy tsol
+SUBDIRS=brand zoneproxy tsol util/mkcert
 
 all: $(SUBDIRS)
 	mkdir -p $(CODE_WS)/proto/build_i386/lib.solaris-2.11-i86pc-2.6/pkg/64

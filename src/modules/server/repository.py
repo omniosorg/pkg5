@@ -19,12 +19,13 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
 
 import cStringIO
 import codecs
 import datetime
 import errno
+import hashlib
 import logging
 import os
 import os.path
@@ -35,7 +36,8 @@ import tempfile
 import urllib
 import zlib
 
-import M2Crypto as m2
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend
 
 import pkg.actions as actions
 import pkg.catalog as catalog
@@ -2443,11 +2445,16 @@ class _RepoStore(object):
                         pth = os.path.join(trust_anchor_dir, fn)
                         if os.path.islink(pth):
                                 continue
-                        trusted_ca = m2.X509.load_cert(pth)
-                        # M2Crypto's subject hash doesn't match
-                        # openssl's subject hash so recompute it so all
-                        # hashes are in the same universe.
-                        s = trusted_ca.get_subject().as_hash()
+                        with open(pth, "rb") as f:
+                                trusted_ca = x509.load_pem_x509_certificate(
+                                    f.read(), default_backend())
+
+                        # Note that while we store certs by their subject
+                        # hashes, we use our own hashing since cryptography has
+                        # no interface for the subject hash and other crypto
+                        # frameworks have been inconsistent with OpenSSL.
+                        s = hashlib.sha1(misc.force_bytes(
+                            trusted_ca.subject)).hexdigest()
                         trust_anchors.setdefault(s, [])
                         trust_anchors[s].append(trusted_ca)
 

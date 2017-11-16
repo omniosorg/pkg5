@@ -69,12 +69,17 @@ import threading
 import traceback
 import types
 
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import serialization
+from imp import reload
+from socket import error as socketerror
+
 import pkg.client.api_errors as apx
 import pkg.misc as misc
 import pkg.client.publisher as publisher
 import pkg.portable as portable
 import pkg.server.repository as sr
-import M2Crypto as m2
 
 from imp import reload
 from pkg.client.debugvalues import DebugValues
@@ -924,9 +929,12 @@ if __name__ == "__main__":
 
         @staticmethod
         def calc_pem_hash(pth):
-                # Find the hash of pem representation the file.
-                cert = m2.X509.load_cert(pth)
-                return hashlib.sha1(cert.as_pem()).hexdigest()
+                """Find the hash of pem representation the file."""
+                with open(pth) as f:
+                        cert = x509.load_pem_x509_certificate(
+                            f.read(), default_backend())
+                return hashlib.sha1(
+                    cert.public_bytes(serialization.Encoding.PEM)).hexdigest()
 
         def reduceSpaces(self, string):
                 """Reduce runs of spaces down to a single space."""

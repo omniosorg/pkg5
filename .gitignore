@@ -12,6 +12,8 @@
 /src/gui/help/*/package-manager.xml
 /src/pkg/pkgtmp
 /src/po/*.mo
+/src/po/i18n_errs.txt
+/src/po/pkg.pot
 /src/tests/multiplatform.pyc
 /src/um/data/updatemanager-preferences.schemas
 /src/um/data/updatemanager.desktop
@@ -19,3 +21,6 @@
 /src/zoneproxy/zoneproxy-adm/zoneproxy-adm
 /src/zoneproxy/zoneproxy-client/zoneproxy-client
 /src/zoneproxy/zoneproxyd/zoneproxyd
+/src/tests/.timing_history.txt
+/src/tests/*.pyc
+/src/tests/*/*.pyc

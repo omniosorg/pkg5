@@ -18,7 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
 # Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
 #
 
@@ -472,16 +472,19 @@ license lic_minisat license="MIT (MiniSAT)" \
     com.oracle.info.description="MiniSAT 1.14.1" com.oracle.info.name=MiniSAT \
     com.oracle.info.tpno=17867 com.oracle.info.version=1.14.1
 license cr_Oracle license=cr_Oracle
-#depend type=group fmri=package/pkg/zones-proxy #    variant.opensolaris.zone=nonglobal
+#depend type=group fmri=package/pkg/zones-proxy
+#    variant.opensolaris.zone=nonglobal
 # cross zone dependency on linked image metadata
-#depend type=parent fmri=feature/package/dependency/self #    variant.opensolaris.zone=nonglobal
-#depend type=require fmri=crypto/ca-certificates
+#depend type=parent fmri=feature/package/dependency/self
+#    variant.opensolaris.zone=nonglobal
 depend type=require fmri=web/ca-bundle
+# CFFI import is done in C code, so it isn't picked up by pkgdepend
+depend type=require fmri=library/python-2/cffi-27
 depend type=require fmri=library/python-2/cherrypy-27
+depend type=require fmri=library/python-2/cryptography-27
 depend type=require fmri=library/python-2/functools32-27
 depend type=require fmri=library/python-2/jsonrpclib-27
 depend type=require fmri=library/python-2/jsonschema-27
-depend type=require fmri=library/python-2/m2crypto-27
 depend type=require fmri=library/python-2/mako-27
 depend type=require fmri=library/python-2/ply-27
 depend type=require fmri=library/python-2/pybonjour-27
