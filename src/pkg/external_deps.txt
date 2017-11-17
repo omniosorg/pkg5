@@ -13,7 +13,7 @@
     pkg:/library/python-2/coverage-27
     pkg:/library/python-2/jsonrpclib-27
     pkg:/library/python-2/locale-services
-    pkg:/library/python-2/m2crypto-27
+    pkg:/library/python-2/cryptography-27
     pkg:/library/python-2/mako-27
     pkg:/library/python-2/ply-27
     pkg:/library/python-2/pybonjour-27

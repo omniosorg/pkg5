@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 import testutils
@@ -36,6 +36,10 @@ import sys
 import tempfile
 import unittest
 
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import serialization
+
 import pkg.actions as action
 import pkg.actions.signature as signature
 import pkg.client.api_errors as apx
@@ -44,7 +48,6 @@ import pkg.facet as facet
 import pkg.fmri as fmri
 import pkg.misc as misc
 import pkg.portable as portable
-import M2Crypto as m2
 
 from pkg.client.debugvalues import DebugValues
 from pkg.pkggzip import PkgGzipFile
@@ -1307,15 +1310,13 @@ class TestPkgSign(pkg5unittest.SingleDepotTestCase):
                         i1=os.path.join(self.chain_certs_dir,
                             "ch1_ta3_cert.pem"))
                 self.pkgsign(self.rurl1, sign_args)
-
                 self.pkg_image_create(self.rurl1)
                 self.seed_ta_dir("ta3")
-
                 self.pkg("set-property signature-policy verify")
                 api_obj = self.get_img_api_obj()
                 self.assertRaises(apx.UnsupportedExtensionValue,
                     self._api_install, api_obj, ["example_pkg"])
-                # Tests that the cli can handle an UnsupportedCriticalExtension.
+                # Tests that the cli can handle an UnsupportedExtensionValue.
                 self.pkg("install example_pkg", exit=1)
                 self.pkg("set-property signature-policy ignore")
                 self.pkg("set-publisher --set-property signature-policy=ignore "
@@ -1328,7 +1329,7 @@ class TestPkgSign(pkg5unittest.SingleDepotTestCase):
                 extension causes an exception to be raised."""
 
                 plist = self.pkgsend_bulk(self.rurl1, self.example_pkg10)
-                sign_args = "-k {key} -c {cert} {name}".format(
+                sign_args = "-k {key} -c {cert} -i {i1} {name}".format(
                         name=plist[0],
                         key=os.path.join(self.keys_dir,
                             "cs6_ch1_ta3_key.pem"),
@@ -1345,6 +1346,66 @@ class TestPkgSign(pkg5unittest.SingleDepotTestCase):
                 api_obj = self.get_img_api_obj()
                 self.assertRaises(apx.UnsupportedExtensionValue,
                     self._api_install, api_obj, ["example_pkg"])
+                # Tests that the cli can handle an UnsupportedExtensionValue.
+                self.pkg("install example_pkg", exit=1)
+                self.pkg("set-property signature-policy ignore")
+                self.pkg("set-publisher --set-property signature-policy=ignore "
+                    "test")
+                api_obj = self.get_img_api_obj()
+                self._api_install(api_obj, ["example_pkg"])
+
+        def test_invalid_extension_1(self):
+                """Test that an invalid value in the extension causes an
+                exception to be raised."""
+
+                plist = self.pkgsend_bulk(self.rurl1, self.example_pkg10)
+                sign_args = "-k {key} -c {cert} -i {i1} {name}".format(
+                        name=plist[0],
+                        key=os.path.join(self.keys_dir,
+                            "cs9_ch1_ta3_key.pem"),
+                        cert=os.path.join(self.cs_dir,
+                            "cs9_ch1_ta3_cert.pem"),
+                        i1=os.path.join(self.chain_certs_dir,
+                            "ch1_ta3_cert.pem"))
+                self.pkgsign(self.rurl1, sign_args)
+
+                self.pkg_image_create(self.rurl1)
+                self.seed_ta_dir("ta3")
+
+                self.pkg("set-property signature-policy verify")
+                api_obj = self.get_img_api_obj()
+                self.assertRaises(apx.InvalidCertificateExtensions,
+                    self._api_install, api_obj, ["example_pkg"])
+                # Tests that the cli can handle an InvalidCertificateExtensions.
+                self.pkg("install example_pkg", exit=1)
+                self.pkg("set-property signature-policy ignore")
+                self.pkg("set-publisher --set-property signature-policy=ignore "
+                    "test")
+                api_obj = self.get_img_api_obj()
+                self._api_install(api_obj, ["example_pkg"])
+
+        def test_invalid_extension_2(self):
+                """Test that a critical extension that Cryptography can't
+                understand causes an exception to be raised."""
+
+                plist = self.pkgsend_bulk(self.rurl1, self.example_pkg10)
+                sign_args = "-k {key} -c {cert} {name}".format(
+                        name=plist[0],
+                        key=os.path.join(self.keys_dir,
+                            "cust_key.pem"),
+                        cert=os.path.join(self.cs_dir,
+                            "cust_cert.pem"))
+                self.pkgsign(self.rurl1, sign_args)
+
+                self.pkg_image_create(self.rurl1)
+                self.seed_ta_dir("cust")
+
+                self.pkg("set-property signature-policy verify")
+                api_obj = self.get_img_api_obj()
+                self.assertRaises(apx.UnsupportedCriticalExtension,
+                    self._api_install, api_obj, ["example_pkg"])
+                # Tests that the cli can handle an InvalidCertificateExtensions.
+                self.pkg("install example_pkg", exit=1)
                 self.pkg("set-property signature-policy ignore")
                 self.pkg("set-publisher --set-property signature-policy=ignore "
                     "test")
@@ -1492,11 +1553,23 @@ class TestPkgSign(pkg5unittest.SingleDepotTestCase):
         def test_crl_0(self):
                 """Test that the X509 CRL revocation works correctly."""
 
-                crl = m2.X509.load_crl(os.path.join(self.crl_dir,
-                    "ch1_ta4_crl.pem"))
-                revoked_cert = m2.X509.load_cert(os.path.join(self.cs_dir,
-                    "cs1_ch1_ta4_cert.pem"))
-                assert crl.is_revoked(revoked_cert)[0]
+                with open(os.path.join(self.crl_dir, "ch1_ta4_crl.pem"),
+                    "rb") as f:
+                        crl = x509.load_pem_x509_crl(
+                            f.read(), default_backend())
+
+                with open(os.path.join(self.cs_dir,
+                    "cs1_ch1_ta4_cert.pem"), "rb") as f:
+                        cert = x509.load_pem_x509_certificate(
+                            f.read(), default_backend())
+
+                self.assertTrue(crl.issuer == cert.issuer)
+                for rev in crl:
+                        if rev.serial_number == cert.serial_number:
+                                break
+                else:
+                        self.assertTrue(False, "Can not find revoked "
+                            "certificate in CRL!")
 
         def test_bogus_inter_certs(self):
                 """Test that if SignatureAction.set_signature is given invalid
@@ -2286,7 +2359,7 @@ class TestPkgSign(pkg5unittest.SingleDepotTestCase):
 
         def test_small_pathlen(self):
                 """Test that a chain cert which has a smaller pathlen value than
-                is needed is allowed."""
+                is needed is disallowed."""
 
                 plist = self.pkgsend_bulk(self.rurl1, self.example_pkg10)
                 sign_args = "-k {key} -c {cert} -i {i1} -i {i2} " \
@@ -2954,10 +3027,15 @@ close
                 repo_location = self.dcs[1].get_repodir()
                 cache_dir = os.path.join(self.test_root, "cache")
                 os.mkdir(cache_dir)
-                cert = m2.X509.load_cert(cert_path)
+
+                with open(cert_path, "rb") as f:
+                        cert = x509.load_pem_x509_certificate(
+                            f.read(), default_backend())
+
                 fd, new_cert = tempfile.mkstemp(dir=self.test_root)
                 with os.fdopen(fd, "wb") as fh:
-                        fh.write(cert.as_pem())
+                        fh.write(cert.public_bytes(
+                            serialization.Encoding.PEM))
 
                 # the file-store uses the least-preferred hash when storing
                 # content
@@ -2968,7 +3046,7 @@ close
                 os.mkdir(subdir)
                 fp = os.path.join(subdir, file_name)
                 fh = PkgGzipFile(fp, "wb")
-                fh.write(cert.as_pem())
+                fh.write(cert.public_bytes(serialization.Encoding.PEM))
                 fh.close()
 
                 self.pkgrecv(self.rurl2, "-c {0} -d {1} '*'".format(
@@ -3002,10 +3080,16 @@ close
                 repo_location = self.dcs[1].get_repodir()
                 cache_dir = os.path.join(self.test_root, "cache")
                 os.mkdir(cache_dir)
-                cert = m2.X509.load_cert(ta_path)
+
+                with open(ta_path, "rb") as f:
+                        cert = x509.load_pem_x509_certificate(
+                            f.read(), default_backend())
+
                 fd, new_cert = tempfile.mkstemp(dir=self.test_root)
                 with os.fdopen(fd, "wb") as fh:
-                        fh.write(cert.as_pem())
+                        fh.write(cert.public_bytes(
+                            serialization.Encoding.PEM))
+
                 for attr in digest.DEFAULT_HASH_ATTRS:
                         alg = digest.HASH_ALGS[attr]
                         file_name = misc.get_data_digest(new_cert,
@@ -3014,7 +3098,8 @@ close
                         os.mkdir(subdir)
                         fp = os.path.join(subdir, file_name)
                         fh = PkgGzipFile(fp, "wb")
-                        fh.write(cert.as_pem())
+                        fh.write(cert.public_bytes(
+                            serialization.Encoding.PEM))
                         fh.close()
 
                 self.pkgrecv(self.rurl2, "-c {0} -d {1} '*'".format(

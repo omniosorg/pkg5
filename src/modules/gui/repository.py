@@ -39,8 +39,10 @@ import sys
 import os
 import pango
 import datetime
+import hashlib
 import tempfile
-import M2Crypto as m2
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend
 import errno
 from threading import Thread
 from gettext import ngettext
@@ -886,7 +888,8 @@ class Repository(progress.GuiProgressTracker):
                         return
                 try:
                         cert = self.__get_new_cert(filename)
-                        sha = cert.get_fingerprint('sha1')
+			sha = hashlib.sha1(
+			    misc.force_bytes(cert.subject)).hexdigest()
                         ips_hash = PUBCERT_NOTSET_HASH
                         status = PUBCERT_APPROVED_STR
                         new = True
@@ -922,8 +925,9 @@ class Repository(progress.GuiProgressTracker):
                                     filename)
                         raise api_errors.ApiException(e)
                 try:
-                        cert = m2.X509.load_cert_string(s)
-                except m2.X509.X509Error, e:
+                        cert = x509.load_pem_x509_certificate(s,
+			    default_backend())
+                except ValueError as e:
                         raise api_errors.BadFileFormat(_("The file:\n"
                             " %s\nwas expected to be a PEM certificate but it "
                             "could not be read.") % filename)
@@ -967,7 +971,8 @@ class Repository(progress.GuiProgressTracker):
                         #Must have exisitng cert and new one to reinstate
                         return
                 orig_sha = cert.get_fingerprint('sha1')
-                new_sha = new_cert.get_fingerprint('sha1')
+                new_sha = hashlib.sha1(
+		    misc.force_bytes(new_cert.subject)).hexdigest()
                 if orig_sha != new_sha:
                         pub = self.repository_modify_publisher
                         if not pub:
