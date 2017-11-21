@@ -479,7 +479,7 @@ class TestPkgInfoBasics(pkg5unittest.SingleDepotTestCase):
  Publisher: test
  Version: 1.0
  Branch: 0
-Packaging Date: Thu Sep 08 00:45:46 2011
+Packaging Date: Thu Sep 8 00:45:46 2011
  Size: 54.00 B
  FMRI: pkg://test/bronze@1.0-0:20110908T004546Z
 
@@ -488,7 +488,7 @@ Packaging Date: Thu Sep 08 00:45:46 2011
  Publisher: test
  Version: 0.9.8.18 (0.9.8r)
  Branch: 0
-Packaging Date: Thu Sep 08 00:45:46 2011
+Packaging Date: Thu Sep 8 00:45:46 2011
  Size: 0.00 B
  FMRI: pkg://test/human@0.9.8.18-0:20110908T004546Z
 """
@@ -503,7 +503,7 @@ Packaging Date: Thu Sep 08 00:45:46 2011
  Publisher: test2
  Version: 1.0
  Branch: 0
-Packaging Date: Thu Sep 08 00:45:46 2011
+Packaging Date: Thu Sep 8 00:45:46 2011
  Size: 54.00 B
  FMRI: pkg://test2/bronze@1.0-0:20110908T004546Z
 """
@@ -519,7 +519,7 @@ Packaging Date: Thu Sep 08 00:45:46 2011
  Publisher: test
  Version: 1.0
  Branch: 0
-Packaging Date: Thu Sep 08 00:45:46 2011
+Packaging Date: Thu Sep 8 00:45:46 2011
  Size: 54.00 B
  FMRI: pkg://test/bronze@1.0-0:20110908T004546Z
 """
@@ -532,7 +532,7 @@ Packaging Date: Thu Sep 08 00:45:46 2011
  Publisher: test
  Version: 1.0
  Branch: 0
-Packaging Date: Thu Sep 08 00:45:46 2011
+Packaging Date: Thu Sep 8 00:45:46 2011
  Size: 54.00 B
  FMRI: pkg://test/bronze@1.0-0:20110908T004546Z
 
@@ -541,7 +541,7 @@ Packaging Date: Thu Sep 08 00:45:46 2011
  Publisher: test2
  Version: 1.0
  Branch: 0
-Packaging Date: Thu Sep 08 00:45:46 2011
+Packaging Date: Thu Sep 8 00:45:46 2011
  Size: 54.00 B
  FMRI: pkg://test2/bronze@1.0-0:20110908T004546Z
 """
@@ -554,7 +554,7 @@ Packaging Date: Thu Sep 08 00:45:46 2011
  Publisher: test
  Version: 1.0
  Branch: 0
-Packaging Date: Thu Sep 08 00:45:46 2011
+Packaging Date: Thu Sep 8 00:45:46 2011
  Size: 54.00 B
  FMRI: pkg://test/bronze@1.0-0:20110908T004546Z
 
@@ -563,7 +563,7 @@ Packaging Date: Thu Sep 08 00:45:46 2011
  Publisher: test2
  Version: 1.0
  Branch: 0
-Packaging Date: Thu Sep 08 00:45:46 2011
+Packaging Date: Thu Sep 8 00:45:46 2011
  Size: 54.00 B
  FMRI: pkg://test2/bronze@1.0-0:20110908T004546Z
 
@@ -572,7 +572,7 @@ Packaging Date: Thu Sep 08 00:45:46 2011
  Publisher: test3
  Version: 1.0
  Branch: 0
-Packaging Date: Thu Sep 08 00:45:46 2011
+Packaging Date: Thu Sep 8 00:45:46 2011
  Size: 54.00 B
  FMRI: pkg://test3/bronze@1.0-0:20110908T004546Z
 """

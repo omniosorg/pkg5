@@ -302,7 +302,7 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
                 self.pkg("{0} pkg:/foo@bar.baz".format(install_cmd), exit=1)
 
         def test_basics_1_install(self):
-                """ Send empty package foo@1.0, install and uninstall """
+                """Send empty package foo@1.0, install and uninstall """
 
                 plist = self.pkgsend_bulk(self.rurl, self.foo10)
                 self.image_create(self.rurl)
@@ -504,7 +504,9 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
                 self.dc.stop()
 
         def test_basics_5_install(self):
-                """ Install bar@1.0, upgrade to bar@1.1.
+                """Install bar@1.0, upgrade to bar@1.1,
+                downgrade to bar@1.0.
+
                 Boring should be left alone, while
                 foo gets upgraded as needed"""
 
@@ -514,14 +516,14 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
                 self.image_create(self.rurl)
 
                 self.pkg("install foo@1.0 bar@1.0 boring@1.0")
-                self.pkg("list")
                 self.pkg("list foo@1.0 boring@1.0 bar@1.0")
                 self.pkg("install -v bar@1.1") # upgrade bar
-                self.pkg("list")
                 self.pkg("list bar@1.1 foo@1.2 boring@1.0")
+                self.pkg("install -v bar@1.0") # downgrade bar
+                self.pkg("list bar@1.0 foo@1.2 boring@1.0")
 
         def test_basics_5_exact_install(self):
-                """ exact-nstall bar@1.0, upgrade to bar@1.1.
+                """exact-install bar@1.0, upgrade to bar@1.1.
                 Boring should be left alone, while
                 foo gets upgraded as needed"""
 
@@ -630,7 +632,7 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
                 shutil.rmtree(t2dir)
 
         def test_basics_7_install(self):
-                """ Add bar@1.1, install bar@1.0. """
+                """Add bar@1.1, install bar@1.0. """
 
                 self.pkgsend_bulk(self.rurl, self.xbar11)
                 self.image_create(self.rurl)
@@ -652,15 +654,15 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
                 self.pkg("exact-install foo@1.1 foo@1.2", exit=1)
 
         def test_basics_9_exact_install(self):
-                """Verify downgrade will fail with exact-install."""
+                """Verify downgrade will work with exact-install."""
 
                 self.pkgsend_bulk(self.rurl, (self.bar10, self.bar11,
                     self.foo10, self.foo12))
                 self.image_create(self.rurl)
 
                 self.pkg("install bar@1.1")
-                self.pkg("exact-install bar@1.0", exit=1)
-                self.pkg("list bar@1.1")
+                self.pkg("exact-install bar@1.0")
+                self.pkg("list bar@1.0")
                 self.pkg("list foo@1.2")
 
         def test_freeze_exact_install(self):
@@ -2242,6 +2244,49 @@ class TestPkgInstallCircularDependencies(pkg5unittest.SingleDepotTestCase):
                 self.pkg("{0} pkg1".format(install_cmd))
                 self.pkg("list")
                 self.pkg("verify -v")
+
+
+class TestPkgInstallUpdateSolverOutput(pkg5unittest.SingleDepotTestCase):
+        # Only start/stop the depot once (instead of for every test)
+        persistent_setup = True
+
+        octo10 = """
+            open octo@1.0,5.11-0
+            close
+        """
+
+        octo20 = """
+            open octo@2.0,5.11-0
+            close
+        """
+
+        incorp = """
+            open incorp@1.0,5.11-0
+            add depend type=incorporate fmri=pkg:/octo@2.0
+            close
+        """
+
+        def test_output_two_issues(self):
+                """ ^^^ hard to find a good name for this, it tests for bug
+                21130996.
+                In case one pkg triggers two or more issues, one of which is not
+                considered print-worthy, we wouldn't print anything at all."""
+
+                self.pkgsend_bulk(self.rurl,
+                    (self.incorp, self.octo10, self.octo20))
+                self.image_create(self.rurl)
+
+                self.pkg("install incorp octo@2")
+                self.pkg("install -v octo@1", exit=1)
+
+                # Check that the root cause for the issue is shown;
+                # the incorporation does not allow the older version.
+                self.assertTrue("incorp@1.0" in self.errout,
+                    "Excluding incorporation not shown in solver error.")
+                # Check that the notice about a newer version already installed
+                # is ommited (it's not relevant).
+                self.assertFalse("octo@2.0" in self.errout,
+                    "Newer version should not be shown in solver error.")
 
 
 class TestPkgInstallUpgrade(_TestHelper, pkg5unittest.SingleDepotTestCase):
@@ -7353,8 +7398,8 @@ class TestPkgInstallObsolete(pkg5unittest.SingleDepotTestCase):
                 self.pkg("exact-install foo@2", exit=4)
                 self.pkg("list foo", exit=1)
 
-                # Exact-nstalling a package with a dependency on an obsolete package
-                # fails. (2)
+                # Exact-installing a package with a dependency on an obsolete
+                # package fails. (2)
                 self.pkg("exact-install fbar", exit=1)
 
                 # Exact-installing a package with a dependency on a renamed
