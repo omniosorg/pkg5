@@ -11,6 +11,7 @@ pkgsign \- Image Packaging System signing utility
     [-i \fIpath_to_intermediate_cert\fR] ...
     [-k \fIpath_to_private_key\fR] [-n] -s \fIpath_or_uri\fR
     [--help] [--no-index] [--no-catalog]
+    [--dkey \fIssl_key\fR --dcert \fIssl_cert\fR]
     (\fIfmri\fR|\fIpattern\fR) ...
 .fi
 
@@ -119,6 +120,28 @@ Do not update the repository search indexes after the signed manifest has been r
 .sp .6
 .RS 4n
 Do not update the repository catalog after the signed manifest has been republished.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB--dkey\fR \fIssl_key\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specify a client SSL key file to use for communication with a remote HTTPS repository.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB--dcert\fR \fIssl_cert\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specify a client SSL certificate file to use for communication with a remote HTTPS repository.
 .RE
 
 .SH EXAMPLES

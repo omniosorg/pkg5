@@ -22,6 +22,7 @@
 
 #
 # Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright 2017 OmniOS Community Edition (OmniOSce) Association.
 #
 
 import getopt
@@ -90,6 +91,7 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT):
         emsg (_("""\
 Usage:
         pkgsign -s path_or_uri [-acikn] [--no-index] [--no-catalog]
+            [--dkey dest_key --dcert dest_cert]
             (fmri|pattern) ...
 """))
 
@@ -130,7 +132,7 @@ def main_func():
 
         try:
                 opts, pargs = getopt.getopt(sys.argv[1:], "a:c:i:k:ns:D:",
-                    ["help", "no-index", "no-catalog"])
+                    ["help", "no-index", "no-catalog", "dkey=", "dcert="])
         except getopt.GetoptError as e:
                 usage(_("illegal global option -- {0}").format(e.opt))
 
@@ -142,6 +144,8 @@ def main_func():
         add_to_catalog = True
         set_alg = False
         dry_run = False
+        dkey = None
+        dcert = None
 
         repo_uri = os.getenv("PKG_REPO", None)
         for opt, arg in opts:
@@ -164,6 +168,16 @@ def main_func():
                         if not os.path.isfile(key_path):
                                 usage(_("{0} was expected to be a key file "
                                     "but isn't a file.").format(key_path))
+                elif opt == "--dkey":
+                        dkey = os.path.abspath(arg)
+                        if not os.path.isfile(dkey):
+                                usage(_("{0} was expected to be a key file "
+                                    "but isn't a file.").format(dkey))
+                elif opt == "--dcert":
+                        dcert = os.path.abspath(arg)
+                        if not os.path.isfile(dcert):
+                                usage(_("{0} was expected to be a certificate "
+                                    "but isn't a file.").format(dcert))
                 elif opt == "-n":
                         dry_run = True
                 elif opt == "-s":
@@ -245,7 +259,8 @@ def main_func():
 
                 # Configure publisher(s)
                 transport.setup_publisher(repo_uri, "source", xport,
-                    xport_cfg, remote_prefix=True)
+                    xport_cfg, remote_prefix=True,
+                    ssl_key=dkey, ssl_cert=dcert)
                 pats = pargs
                 successful_publish = False
 
