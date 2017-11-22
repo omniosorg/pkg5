@@ -103,4 +103,7 @@ set name=variant.opensolaris.zone value=global value=nonglobal
 # Avoid generating dependencies against any 2.7 file.
 <transform file path=.*python2.7 -> default pkg.depend.bypass-generate .*>
 
+# Drop compiled python files
+<transform file path=.*\.py[co]$ -> drop>
+
 # vim: ft=pkg5manifest
