@@ -50,6 +50,7 @@ m_image=$(gettext       "       Image: Preparing at %s.")
 m_incorp=$(gettext      "Sanity Check: Looking for 'entire' incorporation.")
 m_core=$(gettext	"  Installing: Packages (output follows)")
 m_smf=$(gettext		" Postinstall: Copying SMF seed repository ...")
+m_noentire=$(gettext	"!WARNING! - No entire package found, installing minimal package set.")
 
 m_usage=$(gettext "\n        install [-h]\n        install [-c certificate_file] [-k key_file] [-P publisher=uri]\n                [-e extrapkg [...]]\n        install {-a archive|-d path} {-p|-u} [-s|-v]")
 
@@ -237,16 +238,6 @@ else
 	    || fail_incomplete "$f_img"
 fi
 
-# Change the value of PKG_IMAGE so that future PKG operation will work
-# on the newly created zone rather than the global zone
-
-PKG_IMAGE="$ZONEROOT"
-export PKG_IMAGE
-
-LC_ALL=C $PKG publisher -Hn -F tsv | cut -f1,7 | while read pub url; do
-	printf "$m_publisher\n" $pub $url
-done
-
 if [[ -f /var/pkg/pkg5.image && -d /var/pkg/publisher ]]; then
 	PKG_CACHEROOT=/var/pkg/publisher
 	export PKG_CACHEROOT
@@ -257,63 +248,32 @@ printf "$m_core\n"
 pkglist=""
 if [[ -n $entire_fmri ]]; then
 	pkglist="$pkglist $entire_fmri"
+
+	# Install the optional packages from entire iff they are installed
+	# in the GZ.
+	# (This is ksh so the following won't spawn a subshell and so it's
+	#  safe to update the global variable.)
+	$PKG contents -H -a type=optional -o fmri $entire_fmri \
+	    | while read pkg; do
+		$PKG list -q $pkg && pkglist="$pkglist $pkg"
+	done
+else
+	# If no entire was found, then add a small default set of packages.
+	# Assume the user knows what they are doing...
+
+	printf "\n$m_noentire\n\n"
+
+	pkglist="$pkglist
+	       pkg:///SUNWcs
+	       pkg:///SUNWcsd
+	       pkg:///package/pkg
+	       pkg:///system/network
+	       pkg:///system/network/routing
+	       pkg:///system/extended-system-utilities
+	       pkg:///shell/bash
+	       pkg:///editor/vim
+	"
 fi
-
-pkglist="$pkglist
-	pkg:///SUNWcs
-	pkg:///SUNWcsd
-	pkg:///system/network
-	pkg:///system/extended-system-utilities
-	pkg:///compress/bzip2
-	pkg:///compress/gzip
-	pkg:///compress/zip
-	pkg:///compress/unzip
-	pkg:///package/pkg"
-
-#
-# Get some diagnostic tools, truss, dtrace, etc.
-#
-pkglist="$pkglist
-	pkg:/developer/linker
-	pkg:/developer/dtrace"
-
-#
-# Needed for 'whois', 'snoop' I think; also provides rup, rmt, rsh etc.
-#
-pkglist="$pkglist
-	pkg:/service/network/network-clients
-	pkg:/network/ftp"
-
-#
-# Get at least one sensible shell, vim, ssh, ssh key utils, sshd.
-#
-pkglist="$pkglist
-	pkg:///shell/bash
-	pkg:///shell/zsh
-	pkg:///editor/vim
-	pkg:///network/openssh
-	pkg:///network/openssh-server"
-
-#
-# Get some name services and DNS.
-#
-pkglist="$pkglist
-	pkg:/system/network/nis
-	pkg:/network/dns/bind
-	pkg:/naming/ldap"
-
-#
-# Get nfs client and autofs; it's a pain not to have them.
-#
-pkglist="$pkglist
-	pkg:/system/file-system/autofs
-	pkg:/system/file-system/nfs"
-
-#
-# Get routing daemons.  They're required for useful exclusive stack zones.
-#
-pkglist="$pkglist
-	pkg:/system/network/routing"
 
 #
 # Get packages for TX zones if appropriate.
@@ -321,15 +281,19 @@ pkglist="$pkglist
 (( $brand_labeled == 1 )) && pkglist="$pkglist pkg:/system/trusted/trusted-nonglobal"
 
 #
-# Get man(1) but not the man pages
-#
-pkglist="$pkglist
-	pkg:/text/doctools"
-
-#
 # Add in any extra packages requested by the user.
 #
 pkglist="$pkglist $extra_packages"
+
+# Change the value of PKG_IMAGE so that future PKG operation will work
+# on the newly created zone rather than the global zone
+
+PKG_IMAGE="$ZONEROOT"
+export PKG_IMAGE
+
+LC_ALL=C $PKG publisher -Hn -F tsv | cut -f1,7 | while read pub url; do
+	printf "$m_publisher\n" $pub $url
+done
 
 #
 # Do the install; we just refreshed after image-create, so skip that.  We
