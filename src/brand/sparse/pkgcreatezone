@@ -1,0 +1,216 @@
+#!/bin/ksh -p
+#
+# {{{ CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END }}}
+
+#
+# Copyright (c) 2007, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2015, OmniTI Computer Consulting, Inc. All rights reserved.
+# Copyright 2017 OmniOS Community Edition (OmniOSce) Association.
+#
+
+#
+# Resetting GZ_IMAGE to something besides slash allows for simplified
+# debugging of various global zone image configurations-- simply make
+# an image somewhere with the appropriate interesting parameters.
+#
+GZ_IMAGE=${GZ_IMAGE:-/}
+PKG_IMAGE=$GZ_IMAGE
+export PKG_IMAGE
+
+. /usr/lib/brand/sparse/common.ksh
+
+f_a_obs=$(gettext "-a publisher=uri option is obsolete, use -P instead.")
+f_pkg5_missing=$(gettext "pkg(5) does not seem to be present on this system.\n")
+f_img=$(gettext "failed to create image\n")
+f_pkg=$(gettext "failed to install package\n")
+f_interrupted=$(gettext "Installation cancelled due to interrupt.\n")
+f_bad_publisher=$(gettext "Syntax error in publisher information.")
+f_no_entire_in_pref=$(gettext "Unable to locate the incorporation '%s' in the preferred publisher '%s'.\nUse -P to supply a publisher which contains this package.\n")
+f_lofs=$(gettext "Failed to set up loopback mounts.\n")
+
+m_publisher=$(gettext   "   Publisher: Using %s (%s).")
+m_cache=$(gettext       "       Cache: Using %s.")
+m_image=$(gettext       "       Image: Preparing at %s.")
+m_pkgsearch=$(gettext       "Finding packages with actions in %s.")
+m_incorp=$(gettext      "Sanity Check: Looking for 'entire' incorporation.")
+m_core=$(gettext    "  Installing: Packages (output follows)")
+m_smf=$(gettext     " Postinstall: Copying SMF seed repository ...")
+
+m_usage=$(gettext "\n        install [-h]\n        install [-s|-v]")
+
+m_done=$(gettext      " done.")
+
+trap_cleanup() {
+    print "$f_interrupted"
+    exit $int_code
+}
+
+int_code=$ZONE_SUBPROC_NOTCOMPLETE
+trap trap_cleanup INT
+
+ZONENAME=
+ZONEPATH=
+
+# Setup i18n output
+TEXTDOMAIN="SUNW_OST_OSCMD"
+export TEXTDOMAIN
+
+KEYDIR=/etc/ssl/pkg
+PKG=/usr/bin/pkg
+
+[ -x $PKG ] || fail_incomplete "$f_pkg5_missing"
+
+unset silent_mode
+unset verbose_mode
+
+while getopts "hR:svz:" opt; do
+    case $opt in
+        h)  fail_usage "";;
+        R)  ZONEPATH="$OPTARG" ;;
+        s)  silent_mode=1;;
+        v)  verbose_mode="-v";;
+        z)  ZONENAME="$OPTARG" ;;
+        *)  fail_usage "";;
+    esac
+done
+shift $((OPTIND-1))
+
+if [ -z "$ZONEPATH" -o -z "$ZONENAME" ]; then
+    print -u2 "Brand error: No zone path or name"
+    exit $ZONE_SUBPROC_USAGE
+fi
+
+# The install can't be both verbose AND silent...
+[ -n "$silent_mode" -a -n "$verbose_mode" ] \
+    && fail_usage "$f_incompat_options" "-s" "-v"
+
+zonename="$ZONENAME"
+zonepath="$ZONEPATH"
+ZONEROOT=$ZONEPATH/root
+
+#
+# Before installing the zone, set up ZFS dataset hierarchy for the zone root
+# dataset.
+#
+create_active_ds
+
+# Create the initial zone image.
+
+$PKG image-create \
+    --zone --full \
+    --variant variant.opensolaris.imagetype=partial \
+    $ZONEROOT \
+    || fail_incomplete "$f_img"
+
+# Create and mount the separate /lib/svc dataset
+/usr/sbin/zfs create -o canmount=noauto $ZONEPATH_DS/ROOT/$BENAME/svc \
+    || fail_fatal "$f_zfs_create"
+ACTIVE_DS=$ZONEPATH_DS/ROOT/$BENAME mount_overlays
+
+printf "$m_image\n" $ZONEROOT
+
+# Check for 'entire' package. We don't support sparse zones on systems without
+# one.
+
+entire_fmri=$(get_entire_incorp)
+
+[ -z "$entire_fmri" ] && \
+    fail_fatal "$f_no_entire_in_pref" $entire_fmri $publisher
+
+#
+# If we found an "entire" incorporation in the current image, then
+# check to see if it belongs to the default publisher.
+# If we have a user-specified publisher and origin from -P, consult
+# only that one; otherwise any origin from the first publisher will do.
+#
+
+list_origin=
+$PKG publisher -HPn -F tsv | cut -f1 | read publisher
+printf "$m_incorp\n"
+LC_ALL=C $PKG list $list_origin -af pkg://$publisher/$entire_fmri \
+    > /dev/null 2>&1
+[ $? -ne 0 ] && fail_fatal "$f_no_entire_in_pref" $entire_fmri $publisher
+
+pkglist="$entire_fmri"
+
+# Install the optional packages from entire iff they are installed in the GZ.
+$PKG contents -H -a type=optional -o fmri $entire_fmri | while read pkg; do
+        $PKG list -q $pkg && pkglist="$pkglist $pkg"
+done
+
+# Change the value of PKG_IMAGE so that future PKG operations will work
+# on the newly created zone rather than the global zone
+PKG_IMAGE="$ZONEROOT"
+export PKG_IMAGE
+
+##########
+
+LC_ALL=C $PKG copy-publishers-from $GZ_IMAGE || fail_incomplete "$f_img"
+
+LC_ALL=C $PKG add-property-value exclude-patterns 'usr/'
+LC_ALL=C $PKG add-property-value exclude-patterns 'sbin/'
+LC_ALL=C $PKG add-property-value exclude-patterns 'lib/(?!svc)'
+LC_ALL=C $PKG add-property-value key-files 'lib/svc/.org.opensolaris,pkgkey'
+
+LC_ALL=C $PKG publisher -Hn -F tsv | cut -f1,7 | while read pub url; do
+    printf "$m_publisher\n" $pub $url
+done
+
+if [ -f /var/pkg/pkg5.image -a -d /var/pkg/publisher ]; then
+    PKG_CACHEROOT=/var/pkg/publisher
+    export PKG_CACHEROOT
+    printf "$m_cache\n" $PKG_CACHEROOT
+fi
+
+printf "$m_core\n"
+
+#
+# Do the installation; we just refreshed after image-create, so skip that.
+# Also skip indexing here, as that is also what the LiveCD does.
+#
+LC_ALL=C $PKG install --accept --no-index --no-refresh $pkglist || \
+    pkg_err_check "$f_pkg"
+
+printf "$m_smf"
+PROFILEDIR=etc/svc/profile
+ln -s ns_files.xml $ZONEROOT/$PROFILEDIR/name_service.xml
+ln -s generic_limited_net.xml $ZONEROOT/$PROFILEDIR/generic.xml
+ln -s inetd_generic.xml $ZONEROOT/$PROFILEDIR/inetd_services.xml
+ln -s platform_none.xml $ZONEROOT/$PROFILEDIR/platform.xml
+
+# This was formerly done in i.manifest
+repfile=$ZONEROOT/etc/svc/repository.db
+cp $ZONEROOT/lib/svc/seed/nonglobal.db $repfile
+chmod 0600 $repfile
+chown root:sys $repfile
+
+printf "$m_done\n"
+
+# Set blank password
+sed -i -e 's%^root::%root:$5$kr1VgdIt$OUiUAyZCDogH/uaxH71rMeQxvpDEY2yX.x0ZQRnmeb9:%' $ZONEROOT/etc/shadow
+
+printf "$m_complete\n\n" ${SECONDS}
+printf "$m_postnote\n"
+printf "$m_postnote2\n"
+
+exit $ZONE_SUBPROC_OK
+
+# Vim hints
+# vim:ts=4:sw=4:et:fdm=marker

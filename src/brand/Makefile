@@ -22,6 +22,7 @@
 #
 # Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
 # Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
+# Copyright 2017 OmniOS Community Edition (OmniOSce) Association.
 #
 
 MACH:sh = uname -p
@@ -35,8 +36,8 @@ ROOTETCBRAND = $(ROOT)/etc/brand/ipkg
 ROOTUSRLIB = $(ROOT)/usr/lib
 ROOTBRAND = $(ROOTUSRLIB)/brand
 ROOTBRANDPKG = $(ROOTBRAND)/ipkg
-
-LINKBRANDPKG = /usr/lib/brand/lipkg
+LINKBRANDPKG = $(ROOTBRAND)/lipkg
+SPARSEBRANDPKG = $(ROOTBRAND)/sparse
 
 ROOTDIRS = \
 	$(ROOT) \
@@ -46,7 +47,8 @@ ROOTDIRS = \
 	$(ROOTUSRLIB) \
 	$(ROOTBRAND) \
 	$(ROOTBRANDPKG) \
-	$(LINKBRANDPKG)
+	$(LINKBRANDPKG) \
+	$(SPARSEBRANDPKG)
 
 ROOTFILES = \
 	$(ROOTETCBRAND)/pkgrm.conf \
@@ -67,7 +69,14 @@ ROOTFILES = \
 	$(ROOTBRANDPKG)/smf_disable.lst \
 	$(ROOTBRANDPKG)/support \
 	$(ROOTBRANDPKG)/system-unconfigure \
-	$(ROOTBRANDPKG)/uninstall
+	$(ROOTBRANDPKG)/uninstall \
+	$(SPARSEBRANDPKG)/config.xml \
+	$(SPARSEBRANDPKG)/pkgcreatezone \
+	$(SPARSEBRANDPKG)/platform.xml \
+	$(SPARSEBRANDPKG)/common.ksh \
+	$(SPARSEBRANDPKG)/verifyadm \
+	$(SPARSEBRANDPKG)/prestate \
+	$(SPARSEBRANDPKG)/poststate
 
 BIN = \
 	support \
@@ -97,7 +106,7 @@ install: $(ROOTFILES)
 
 
 $(ROOT) $(ROOTETC) $(ROOTETCBRAND) $(ROOTETCZONES) $(ROOTUSRLIB) \
-	$(ROOTBRAND) $(ROOTBRANDPKG) $(LINKBRANDPKG):
+	$(ROOTBRAND) $(ROOTBRANDPKG) $(LINKBRANDPKG) $(SPARSEBRANDPKG):
 	mkdir -p $@
 
 $(ROOTETCBRAND)/%: $(ROOTETCBRAND) %
@@ -108,3 +117,7 @@ $(ROOTETCZONES)/%: $(ROOTETCZONES) %
 
 $(ROOTBRANDPKG)/%: $(ROOTBRANDPKG) %
 	rm -f $@; $(INSTALL) -f $(ROOTBRANDPKG) -m 0444 $<
+
+$(SPARSEBRANDPKG)/%: $(SPARSEBRANDPKG) sparse/%
+	rm -f $@; $(INSTALL) -f $(SPARSEBRANDPKG) -m 0444 $<
+
