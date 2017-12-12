@@ -22,6 +22,7 @@
 
 #
 # Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright 2017 OmniOS Community Edition (OmniOSce) Association.
 #
 
 import errno
@@ -189,7 +190,9 @@ class ImageConfig(cfg.FileConfig):
                     cfg.Property(CHECK_CERTIFICATE_REVOCATION,
                         default=default_policies[
                             CHECK_CERTIFICATE_REVOCATION]),
-                    cfg.PropList("dehydrated")
+                    cfg.PropList("dehydrated"),
+                    cfg.PropList("exclude-patterns"),
+                    cfg.PropList("key-files")
                 ]),
                 cfg.PropertySection("facet", properties=[
                     cfg.PropertyTemplate("^facet\..*", prop_type=cfg.PropBool),
@@ -434,6 +437,9 @@ class ImageConfig(cfg.FileConfig):
                         self.variants["variant.arch"] = platform.processor()
                 if "variant.opensolaris.zone" not in self.variants:
                         self.variants["variant.opensolaris.zone"] = "global"
+                # Ensure imagetype variant is defined
+                if "variant.opensolaris.imagetype" not in self.variants:
+                        self.variants["variant.opensolaris.imagetype"] = "full"
 
                 # load linked image child properties
                 for s, v in idx.iteritems():

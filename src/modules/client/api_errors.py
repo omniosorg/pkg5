@@ -152,6 +152,15 @@ class ImageNotFoundException(ApiException):
         def __str__(self):
                 return _("No image rooted at '{0}'").format(self.user_dir)
 
+class ImageMissingKeyFile(ApiException):
+        """Used when an image does not contain all expected key files"""
+        def __init__(self, keyfile):
+                ApiException.__init__(self)
+                self.keyfile = keyfile
+
+        def __str__(self):
+                return _("Image is missing key file. "
+                    "Is everything mounted? '{0}'").format(self.keyfile)
 
 class ImageFormatUpdateNeeded(ApiException):
         """Used to indicate that an image cannot be used until its format is

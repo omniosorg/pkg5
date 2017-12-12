@@ -1,6 +1,7 @@
 '\" te
 .\" Copyright (c) 2007, 2014, Oracle and/or its affiliates. All rights reserved.
-.TH pkg 1 "20 May 2016" "SunOS 5.11" "User Commands"
+.\" Copyright 2017 OmniOS Community Edition (OmniOSce) Association.
+.TH pkg 1 "12 Dec 2017" "SunOS 5.11" "User Commands"
 .SH NAME
 pkg \- Image Packaging System retrieval client
 .SH SYNOPSIS
@@ -3104,6 +3105,20 @@ Default value: \fBalways\fR
 .ne 2
 .mk
 .na
+\fB\fBexclude-patterns\fR\fR
+.ad
+.sp .6
+.RS 4n
+(string list) Any package delivering an action to a path which matches one of these patterns is suppressed in the final execution plan. The regular expression syntax used is that of Python. For more information about Python regular expression syntax, use the command \fBpydoc re\fR or see more complete documentation at \fBhttp://docs.python.org/dev/howto/regex.html\fR. The regular expression is anchored at the beginning but not at the end. Therefore, a regular expression matching files by their extensions must include a leading \fB.*\fR and should include a trailing \fB$\fR.
+
+.sp
+Default value: \fB[]\fR (empty list)
+.RE
+
+.sp
+.ne 2
+.mk
+.na
 \fB\fBflush-content-cache-on-success\fR\fR
 .ad
 .sp .6
@@ -3113,6 +3128,19 @@ Default value: \fBalways\fR
 This property can be used to keep the content-cache small on systems with limited disk space. This property can cause operations to take longer to complete.
 .sp
 Default value: \fBTrue\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBkey-files\fR\fR
+.ad
+.sp .6
+.RS 4n
+(string list) A list of files which must exist within the image for it to be considered complete. If any listed file is missing, \fBpkg\fR(1) will refuse to perform update operations on the image.
+.sp
+Default value: \fB[]\fR (empty list)
 .RE
 
 .sp

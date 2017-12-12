@@ -4056,6 +4056,9 @@ def pubcheck_linked(op, api_inst, pargs):
         except api_errors.ImageLockedError as e:
                 error(e)
                 return EXIT_LOCKED
+        except api_errors.ImageMissingKeyFile as e:
+                error(e)
+                return EXIT_EACCESS
 
         return EXIT_OK
 
@@ -5487,6 +5490,11 @@ def handle_errors(func, non_wrap_print=True, *args, **kwargs):
                         _api_inst.abort(result=RESULT_FAILED_LOCKED)
                 error(__e)
                 __ret = EXIT_LOCKED
+        except api_errors.ImageMissingKeyFile as __e:
+                if _api_inst:
+                        _api_inst.abort(result=RESULT_FAILED_LOCKED)
+                error(__e)
+                __ret = EXIT_EACCESS
         except api_errors.TransportError as __e:
                 if _api_inst:
                         _api_inst.abort(result=RESULT_FAILED_TRANSPORT)
