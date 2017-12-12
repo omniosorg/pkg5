@@ -22,6 +22,7 @@
 
 #
 # Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright 2017 OmniOS Community Edition (OmniOSce) Association.
 #
 
 from __future__ import print_function
@@ -39,6 +40,7 @@ import tempfile
 import time
 import traceback
 import weakref
+import re as relib
 
 from functools import reduce
 
@@ -3789,6 +3791,16 @@ class ImagePlan(object):
                         elif pp.origin_fmri:
                                 self.__target_removal_count += 1
 
+                # If the image has an exclude-patterns property, build a
+                # regular expression to describe the targets that should
+                # be pruned from the plan actions.
+                ooce_exclude = self.image.get_property("exclude-patterns")
+                if len(ooce_exclude):
+                        exclude_regex = "^(?:" + ("|".join(ooce_exclude)) + ")"
+                        ooce_re = relib.compile(exclude_regex)
+                else:
+                        ooce_re = None
+
                 # we now have a workable set of pkgplans to add/upgrade/remove
                 # now combine all actions together to create a synthetic single
                 # step upgrade operation, and handle editable files moving from
@@ -3936,7 +3948,9 @@ class ImagePlan(object):
                                         inst_links = self.__get_symlinks()
                                 else:
                                         inst_links = self.__get_hardlinks()
-                                if lpath in inst_links:
+                                if ooce_re and ooce_re.search(lpath):
+                                        remove = False
+                                elif lpath in inst_links:
                                         # Another link delivers to the same
                                         # location, so assume it can't be
                                         # safely removed initially.
@@ -3976,6 +3990,9 @@ class ImagePlan(object):
                                 remove = False
                         elif ap.src.name == "legacy" and \
                             ap.src.attrs["pkg"] in self.__get_legacy():
+                                remove = False
+                        elif ooce_re and "path" in ap.src.attrs and \
+                            ooce_re.search(ap.src.attrs["path"]):
                                 remove = False
 
                         if not remove:
@@ -4045,6 +4062,12 @@ class ImagePlan(object):
                         if ap is None:
                                 continue
                         pt.plan_add_progress(pt.PLAN_ACTION_CONSOLIDATE)
+
+                        if ooce_re and "path" in ap.dst.attrs and \
+                            ooce_re.search(ap.dst.attrs["path"]):
+                                pp_needs_trimming.add(ap.p)
+                                ap.p.actions.added[plan_pos[id(ap.dst)]] = None
+                                self.pd.install_actions[i] = None
 
                         # In order to handle editable files that move their path
                         # or change pkgs, for all new files with original_name

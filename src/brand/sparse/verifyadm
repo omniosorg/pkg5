@@ -1,0 +1,40 @@
+#!/bin/ksh -p
+#
+# {{{ CDDL HEADER
+#
+# This file and its contents are supplied under the terms of the
+# Common Development and Distribution License ("CDDL"), version 1.0.
+# You may only use this file in accordance with the terms of version
+# 1.0 of the CDDL.
+#
+# A full copy of the text of the CDDL should have accompanied this
+# source. A copy of the CDDL is also available via the Internet at
+# http://www.illumos.org/license/CDDL.
+#
+# }}}
+
+# Copyright 2017 OmniOS Community Edition (OmniOSce) Association.
+
+. /usr/lib/brand/sparse/common.ksh
+
+[ $sparsedebug -eq 1 ] && echo "VERFIFYADM $*"
+
+ZONENAME=$1
+ZONEPATH=$2
+cmd="$3"
+
+if [ "$cmd" = "uninstall" ]; then
+	# When uninstalling, the overlays need unmounting or zoneadm
+	# will abort with an error. If the user subsequently chooses to
+	# stop the uninstall operation, or if one of the pre-checks fails
+	# the the zone will be left in a state with the root mounted but
+	# not the overlays until the zone is next booted. pkg(5) will spot
+	# this through the key-files attribute and refuse to perform
+	# operations on the image.
+	umount_overlays
+fi
+
+exit $ZONE_SUBPROC_OK
+
+# Vim hints
+# vim:fdm=marker

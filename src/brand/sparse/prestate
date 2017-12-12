@@ -1,0 +1,51 @@
+#!/bin/ksh -p
+#
+# {{{ CDDL HEADER
+#
+# This file and its contents are supplied under the terms of the
+# Common Development and Distribution License ("CDDL"), version 1.0.
+# You may only use this file in accordance with the terms of version
+# 1.0 of the CDDL.
+#
+# A full copy of the text of the CDDL should have accompanied this
+# source. A copy of the CDDL is also available via the Internet at
+# http://www.illumos.org/license/CDDL.
+#
+# }}}
+
+# Copyright 2017 OmniOS Community Edition (OmniOSce) Association.
+
+. /usr/lib/brand/sparse/common.ksh
+
+[ $sparsedebug -eq 1 ] && printf " PRESTATE $*"
+
+ZONENAME=$1
+ZONEPATH=$2
+state=$3
+cmd=$4
+ALTROOT=$5
+
+case $cmd in
+    0)
+	# Going to ready state
+	# When this script returns, the active zone dataset must be mounted
+	# ready for boot, but the overlays must not be since zoneadm will
+	# check for any mounted child filesystems and abort if found.
+
+	find_active_ds
+	umount_overlays
+	umount_active_ds
+	mount_active_ds
+	# Mount overlays at system boot so that everything is available for
+	# patching.
+	[ $state = 99 ] && mount_overlays
+	;;
+    1)
+	# Pre-boot
+	;;
+esac
+
+exit $ZONE_SUBPROC_OK
+
+# Vim hints
+# vim:fdm=marker

@@ -22,6 +22,7 @@
 
 #
 # Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright 2017 OmniOS Community Edition (OmniOSce) Association.
 #
 
 import atexit
@@ -572,6 +573,10 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                                 get_package_counts_by_pub(),
                             self.imgdir, self.transport,
                             self.cfg.get_policy("use-system-repo"))
+
+                for keyf in self.get_property("key-files"):
+                        if not os.path.exists(self.root + os.path.sep + keyf):
+                                raise apx.ImageMissingKeyFile(keyf)
 
                 self.__load_publisher_ssl()
 
