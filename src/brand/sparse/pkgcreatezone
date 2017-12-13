@@ -189,11 +189,13 @@ LC_ALL=C $PKG install --accept --no-index --no-refresh $pkglist || \
     pkg_err_check "$f_pkg"
 
 printf "$m_smf"
-PROFILEDIR=etc/svc/profile
-ln -s ns_files.xml $ZONEROOT/$PROFILEDIR/name_service.xml
-ln -s generic_limited_net.xml $ZONEROOT/$PROFILEDIR/generic.xml
-ln -s inetd_generic.xml $ZONEROOT/$PROFILEDIR/inetd_services.xml
-ln -s platform_none.xml $ZONEROOT/$PROFILEDIR/platform.xml
+PROFILEDIR=$ZONEROOT/etc/svc/profile
+cp /usr/lib/brand/sparse/profile.xml $PROFILEDIR/platform_sparse.xml
+[ -f $PROFILEDIR/platform.xml ] && rm -f $PROFILEDIR/platform.xml
+ln -s ns_files.xml $PROFILEDIR/name_service.xml
+ln -s generic_limited_net.xml $PROFILEDIR/generic.xml
+ln -s inetd_generic.xml $PROFILEDIR/inetd_services.xml
+ln -s platform_sparse.xml $PROFILEDIR/platform.xml
 
 # This was formerly done in i.manifest
 repfile=$ZONEROOT/etc/svc/repository.db
@@ -207,8 +209,6 @@ printf "$m_done\n"
 sed -i -e 's%^root::%root:$5$kr1VgdIt$OUiUAyZCDogH/uaxH71rMeQxvpDEY2yX.x0ZQRnmeb9:%' $ZONEROOT/etc/shadow
 
 printf "$m_complete\n\n" ${SECONDS}
-printf "$m_postnote\n"
-printf "$m_postnote2\n"
 
 exit $ZONE_SUBPROC_OK
 

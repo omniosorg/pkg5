@@ -1,0 +1,42 @@
+<?xml version='1.0'?>
+<!DOCTYPE service_bundle SYSTEM '/usr/share/lib/xml/dtd/service_bundle.dtd.1'>
+<!--
+    This file and its contents are supplied under the terms of the
+    Common Development and Distribution License ("CDDL"), version 1.0.
+    You may only use this file in accordance with the terms of version
+    1.0 of the CDDL.
+
+    A full copy of the text of the CDDL should have accompanied this
+    source. A copy of the CDDL is also available via the Internet at
+    http://www.illumos.org/license/CDDL.
+
+    Copyright 2017 OmniOS Community Edition (OmniOSce) Association.
+
+    This file is installed as the platform-specific service profile for
+    initial smf service configuration in a sparse zone.
+-->
+<service_bundle type='profile' name='sparse'>
+  <service name='system/filesystem/autofs' version='1' type='service'>
+    <instance name='default' enabled='false'/>
+  </service>
+  <service name='network/rpc/bind' version='1' type='service'>
+    <instance name='default' enabled='false'/>
+  </service>
+  <service name='network/rpc/smserver' version='1' type='service'>
+    <instance name='default' enabled='false'/>
+  </service>
+  <service name='network/rpc/gss' version='1' type='service'>
+    <instance name='default' enabled='false'/>
+  </service>
+  <service name='network/security/ktkt_warn' version='1' type='service'>
+    <instance name='default' enabled='false'/>
+  </service>
+  <service name='network/routing-setup' version='1' type='service'>
+    <property_group name='routeadm' type='framework'>
+        <propval name='default-ipv4-routing' type='boolean' value='false' />
+        <propval name='default-ipv6-routing' type='boolean' value='false' />
+        <propval name='ipv4-routing-set' type='boolean' value='false' />
+        <propval name='ipv6-routing-set' type='boolean' value='false' />
+    </property_group>
+  </service>
+</service_bundle>

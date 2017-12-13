@@ -60,6 +60,8 @@ MIRROR_DISCOVERY = "mirror-discovery"
 SEND_UUID = "send-uuid"
 USE_SYSTEM_REPO = "use-system-repo"
 CHECK_CERTIFICATE_REVOCATION = "check-certificate-revocation"
+EXCLUDE_PATTERNS = "exclude-patterns"
+KEY_FILES = "key-files"
 
 default_policies = {
     BE_POLICY: "default",
@@ -191,8 +193,8 @@ class ImageConfig(cfg.FileConfig):
                         default=default_policies[
                             CHECK_CERTIFICATE_REVOCATION]),
                     cfg.PropList("dehydrated"),
-                    cfg.PropList("exclude-patterns"),
-                    cfg.PropList("key-files")
+                    cfg.PropList(EXCLUDE_PATTERNS),
+                    cfg.PropList(KEY_FILES)
                 ]),
                 cfg.PropertySection("facet", properties=[
                     cfg.PropertyTemplate("^facet\..*", prop_type=cfg.PropBool),

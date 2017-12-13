@@ -57,6 +57,7 @@ import pkg.client.pkg_solver as pkg_solver
 import pkg.client.pkgdefs as pkgdefs
 import pkg.client.pkgplan as pkgplan
 import pkg.client.plandesc as plandesc
+import pkg.client.imageconfig as imageconfig
 import pkg.digest as digest
 import pkg.fmri
 import pkg.manifest as manifest
@@ -3794,7 +3795,8 @@ class ImagePlan(object):
                 # If the image has an exclude-patterns property, build a
                 # regular expression to describe the targets that should
                 # be pruned from the plan actions.
-                ooce_exclude = self.image.get_property("exclude-patterns")
+                ooce_exclude = self.image.get_property(
+                    imageconfig.EXCLUDE_PATTERNS)
                 if len(ooce_exclude):
                         exclude_regex = "^(?:" + ("|".join(ooce_exclude)) + ")"
                         ooce_re = relib.compile(exclude_regex)

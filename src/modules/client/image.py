@@ -574,7 +574,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                             self.imgdir, self.transport,
                             self.cfg.get_policy("use-system-repo"))
 
-                for keyf in self.get_property("key-files"):
+                for keyf in self.get_property(imageconfig.KEY_FILES):
                         if not os.path.exists(self.root + os.path.sep + keyf):
                                 raise apx.ImageMissingKeyFile(keyf)
 
