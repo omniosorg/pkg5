@@ -119,9 +119,7 @@ $PKG image-create \
     $ZONEROOT \
     || fail_incomplete "$f_img"
 
-# Create and mount the separate /lib/svc dataset
-/usr/sbin/zfs create -o canmount=noauto $ZONEPATH_DS/ROOT/$BENAME/svc \
-    || fail_fatal "$f_zfs_create"
+create_overlays $ZONEPATH_DS/ROOT/$BENAME
 ACTIVE_DS=$ZONEPATH_DS/ROOT/$BENAME mount_overlays
 
 printf "$m_image\n" $ZONEROOT
@@ -164,10 +162,13 @@ export PKG_IMAGE
 
 LC_ALL=C $PKG copy-publishers-from $GZ_IMAGE || fail_incomplete "$f_img"
 
-LC_ALL=C $PKG add-property-value exclude-patterns 'usr/'
+LC_ALL=C $PKG add-property-value exclude-patterns 'usr/(?!lib/fm)'
 LC_ALL=C $PKG add-property-value exclude-patterns 'sbin/'
 LC_ALL=C $PKG add-property-value exclude-patterns 'lib/(?!svc)'
-LC_ALL=C $PKG add-property-value key-files 'lib/svc/.org.opensolaris,pkgkey'
+for ov in $overlays; do
+    mp=${ov#*:}
+    LC_ALL=C $PKG add-property-value key-files "$mp/.org.opensolaris,pkgkey"
+done
 
 LC_ALL=C $PKG publisher -Hn -F tsv | cut -f1,7 | while read pub url; do
     printf "$m_publisher\n" $pub $url

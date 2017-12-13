@@ -17,6 +17,11 @@
 
 sparsedebug=0
 
+overlays="
+	svc:lib/svc
+	fm:usr/lib/fm
+"
+
 find_active_ds()
 {
 	get_current_gzbe
@@ -24,30 +29,46 @@ find_active_ds()
 	get_active_ds $CURRENT_GZBE $ZONEPATH_DS
 }
 
+create_overlays()
+{
+	typeset rootfs=$1
+	for ov in $overlays; do
+		ds=${ov%:*}
+		zfs create -o canmount=noauto $rootfs/$ds \
+		    || fail_fatal "$f_zfs_create"
+	done
+}
+
 umount_overlays()
 {
-	# Unmount the overlay lib/svc
 	[ $sparsedebug -gt 1 ] && echo "umount_overlays()"
-	if mount -p | cut -d' ' -f3 | egrep -s "^$ZONEPATH/root/lib/svc$"; then
-		[ $sparsedebug -gt 1 ] && echo " ... unmounting"
-		umount $ZONEPATH/root/lib/svc
-	fi
+	for ov in $overlays; do
+		mp=${ov#*:}
+		if mount -p | cut -d' ' -f3 | egrep -s "^$ZONEPATH/root/$mp$"
+		then
+			[ $sparsedebug -gt 1 ] && echo " ... unmounting $mp"
+			umount $ZONEPATH/root/$mp
+		fi
+	done
 }
 
 mount_overlays()
 {
-	# Mount lib/svc
 	[ $sparsedebug -gt 1 ] && echo "mount_overlays()"
-	[ -d $ZONEPATH/root/lib/svc ] || mkdir -p $ZONEPATH/root/lib/svc
-	mount -F zfs -O $ACTIVE_DS/svc $ZONEPATH/root/lib/svc \
-	    || fail_fatal "$f_zfs_mount"
-	keyf=$ZONEPATH/root/lib/svc/.org.opensolaris,pkgkey
-	if [ ! -f $keyf ]; then
-		# Create a flag file which is checked for by pkg before
-		# performing operations on this zone
-		touch $keyf
-		/bin/chmod S+vimmutable $keyf
-	fi
+	for ov in $overlays; do
+		ds=${ov%:*}
+		mp=${ov#*:}
+		[ -d $ZONEPATH/root/$mp ] || mkdir -p $ZONEPATH/root/$mp
+		mount -F zfs -O $ACTIVE_DS/$ds $ZONEPATH/root/$mp \
+		    || fail_fatal "$f_zfs_mount"
+		keyf=$ZONEPATH/root/$mp/.org.opensolaris,pkgkey
+		if [ ! -f $keyf ]; then
+			# Create a flag file which is checked for by pkg before
+			# performing operations on this zone
+			touch $keyf
+			/bin/chmod S+vimmutable $keyf
+		fi
+	done
 }
 
 umount_active_ds()
