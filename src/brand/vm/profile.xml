@@ -1,0 +1,76 @@
+<?xml version='1.0'?>
+<!DOCTYPE service_bundle SYSTEM '/usr/share/lib/xml/dtd/service_bundle.dtd.1'>
+<!--
+    This file and its contents are supplied under the terms of the
+    Common Development and Distribution License ("CDDL"), version 1.0.
+    You may only use this file in accordance with the terms of version
+    1.0 of the CDDL.
+
+    A full copy of the text of the CDDL should have accompanied this
+    source. A copy of the CDDL is also available via the Internet at
+    http://www.illumos.org/license/CDDL.
+
+    Copyright 2017 OmniOS Community Edition (OmniOSce) Association.
+
+    This file is installed as the platform-specific service profile for
+    initial smf service configuration in a vm zone.
+-->
+<service_bundle type='profile' name='vm'>
+  <service name='system/filesystem/autofs' version='1' type='service'>
+    <instance name='default' enabled='false'/>
+  </service>
+  <service name='network/rpc/bind' version='1' type='service'>
+    <instance name='default' enabled='false'/>
+  </service>
+  <service name='network/rpc/smserver' version='1' type='service'>
+    <instance name='default' enabled='false'/>
+  </service>
+  <service name='network/rpc/gss' version='1' type='service'>
+    <instance name='default' enabled='false'/>
+  </service>
+  <service name='network/security/ktkt_warn' version='1' type='service'>
+    <instance name='default' enabled='false'/>
+  </service>
+  <service name='network/routing-setup' version='1' type='service'>
+    <instance name='default' enabled='false'/>
+  </service>
+  <service name='network/netcfg' version='1' type='service'>
+    <instance name='default' enabled='false'/>
+  </service>
+  <service name='system/system-log' version='1' type='service'>
+    <instance name='default' enabled='false'/>
+  </service>
+  <service name='network/ip-interface-management' version='1' type='service'>
+    <instance name='default' enabled='true'/>
+  </service>
+  <service name='network/datalink-management' version='1' type='service'>
+    <instance name='default' enabled='true'/>
+  </service>
+  <service name='system/fmd' version='1' type='service'>
+    <instance name='default' enabled='false'/>
+  </service>
+  <service name='system/utmp' version='1' type='service'>
+    <instance name='default' enabled='false'/>
+  </service>
+  <service name='system/name-service-cache' version='1' type='service'>
+    <instance name='default' enabled='false'/>
+  </service>
+  <service name='system/cron' version='1' type='service'>
+    <instance name='default' enabled='false'/>
+  </service>
+  <service name='network/ssh' version='1' type='service'>
+    <instance name='default' enabled='false'/>
+  </service>
+  <service name='system/pfexec' version='1' type='service'>
+    <instance name='default' enabled='false'/>
+  </service>
+  <service name='system/sac' version='1' type='service'>
+    <instance name='default' enabled='false'/>
+  </service>
+  <service name='system/console-login' version='1' type='service'>
+    <instance name='default' enabled='false'/>
+  </service>
+  <service name='network/inetd' version='1' type='service'>
+    <instance name='default' enabled='false'/>
+  </service>
+</service_bundle>

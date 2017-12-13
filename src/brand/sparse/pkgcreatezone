@@ -79,10 +79,12 @@ PKG=/usr/bin/pkg
 
 unset silent_mode
 unset verbose_mode
+ZONEBRAND=sparse
 
-while getopts "hR:svz:" opt; do
+while getopts "hb:R:svz:" opt; do
     case $opt in
         h)  fail_usage "";;
+        b)  ZONEBRAND="$OPTARG" ;;
         R)  ZONEPATH="$OPTARG" ;;
         s)  silent_mode=1;;
         v)  verbose_mode="-v";;
@@ -191,12 +193,12 @@ LC_ALL=C $PKG install --accept --no-index --no-refresh $pkglist || \
 
 printf "$m_smf"
 PROFILEDIR=$ZONEROOT/etc/svc/profile
-cp /usr/lib/brand/sparse/profile.xml $PROFILEDIR/platform_sparse.xml
+cp /usr/lib/brand/$ZONEBRAND/profile.xml $PROFILEDIR/platform_$ZONEBRAND.xml
 [ -f $PROFILEDIR/platform.xml ] && rm -f $PROFILEDIR/platform.xml
 ln -s ns_files.xml $PROFILEDIR/name_service.xml
 ln -s generic_limited_net.xml $PROFILEDIR/generic.xml
 ln -s inetd_generic.xml $PROFILEDIR/inetd_services.xml
-ln -s platform_sparse.xml $PROFILEDIR/platform.xml
+ln -s platform_$ZONEBRAND.xml $PROFILEDIR/platform.xml
 
 # This was formerly done in i.manifest
 repfile=$ZONEROOT/etc/svc/repository.db
