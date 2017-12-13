@@ -35,6 +35,7 @@ dir  path=usr/lib/brand
 dir  path=usr/lib/brand/sparse
 file path=usr/lib/brand/sparse/config.xml mode=0644
 file path=usr/lib/brand/sparse/platform.xml mode=0644
+file path=usr/lib/brand/sparse/profile.xml mode=0644
 file path=usr/lib/brand/sparse/common.ksh mode=0755
 file path=usr/lib/brand/sparse/verifyadm mode=0755
 file path=usr/lib/brand/sparse/prestate mode=0755

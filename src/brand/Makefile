@@ -71,8 +71,9 @@ ROOTFILES = \
 	$(ROOTBRANDPKG)/system-unconfigure \
 	$(ROOTBRANDPKG)/uninstall \
 	$(SPARSEBRANDPKG)/config.xml \
-	$(SPARSEBRANDPKG)/pkgcreatezone \
 	$(SPARSEBRANDPKG)/platform.xml \
+	$(SPARSEBRANDPKG)/profile.xml \
+	$(SPARSEBRANDPKG)/pkgcreatezone \
 	$(SPARSEBRANDPKG)/common.ksh \
 	$(SPARSEBRANDPKG)/verifyadm \
 	$(SPARSEBRANDPKG)/prestate \
