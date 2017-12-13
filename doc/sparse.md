@@ -32,31 +32,34 @@ These are mounted using the following lines in the brand `platform.xml`:
         <global_mount special="/lib" directory="/lib" opt="ro,nodevices" type="lofs" />
 ```
 
-### Special consideration for /lib/svc
+### Special consideration for /lib/svc & /usr/lib/fm
 
 Although the `/lib` file-system is being shared with the global zone, the
 `/lib/svc` path generally contains different content in a non-global zone
 and so cannot be shared. For example some packages only deliver services to a
 particular zone type or may deliver a different version of the service.
+Similarly for the `/usr/lib/fm` location where some FMA plugins should not
+be present in non-global zones.
 
-In a sparse zone, `/lib/svc` is a separate ZFS dataset mounted on top of
-the directory from the global zone. Since OmniOS ZFS does not yet support
-the `overlay` filesystem property, this mount is done directly by the brand
-control scripts in a similar way to that in which boot-environments are
-mounted, with the addition of the `-O` flag to permit overlaying.
+In a sparse zone, `/lib/svc` and `/usr/lib/fm` are separate ZFS datasets
+mounted on top of the relevant directory from the global zone. Since OmniOS
+ZFS does not yet support the `overlay` filesystem property, these mounts are
+done directly by the brand control scripts in a similar way to that in which
+boot-environments are mounted, with the addition of the `-O` flag to permit
+overlaying.
 
-The file-system is left mounted when the zone is halted to facilitate
+The file-systems are left mounted when the zone is halted to facilitate
 patching in that state.
 
 In order to protect against problems that may result from attempting to
-patch a sparse IPS image when the `/lib/svc` file-system is not mounted,
+patch a sparse IPS image when an overlay file-system is not mounted,
 a new IPS image property has been added. The `key-files` property contains
 a list of files which must be present within the image for it to be considered
 complete. If the image is not complete then patching will not be permitted.
 
-During zone creation, `/lib/svc/.org.opensolaris,pkgkey` is created and
-set to be an immutable file, and the zone image `key-files` property is set to
-`lib/svc/.org.opensolaris,pkgkey`
+During zone creation, a `.org.opensolaris,pkgkey` is created in each overlay
+ and set to be an immutable file, and the path is added to the zone image
+`key-files` property.
 
 ## Partial delivery of packages
 
@@ -81,16 +84,16 @@ For a sparse zone, the `exclude-patterns` property is set to:
 
 ```
     [
-	'usr/',
+	'usr/(?!lib/fm)',
 	'sbin/',
 	'lib/(?!svc)'
     ]
 ```
 
-With the negative look-ahead allowing `/lib/svc` whilst preventing anything
-else being delivered to the read-only `/lib`. Note the trailing slash which
-still allows for delivery of the top-level directory (and therefore the
-eventual mountpoint) itself.
+With the negative look-aheads allowing (for example) `/lib/svc` whilst
+preventing anything else being delivered to the read-only `/lib`.
+Note the trailing slash which still allows for delivery of the top-level
+directory (and therefore the eventual mountpoint) itself.
 
 ## Reducing the number of installed packages
 
@@ -138,9 +141,9 @@ ca-path                        /etc/ssl/certs
 check-certificate-revocation   False
 content-update-policy          default
 dehydrated                     []
-exclude-patterns               ['usr/', 'sbin/', 'lib/(?!svc)']
+exclude-patterns               ['usr/(?!lib/fm)', 'sbin/', 'lib/(?!svc)']
 flush-content-cache-on-success True
-key-files                      ['lib/svc/.org.opensolaris,pkgkey']
+key-files                      ['lib/svc/.org.opensolaris,pkgkey', 'usr/lib/fm/.org.opensolaris,pkgkey']
 mirror-discovery               False
 preferred-authority
 publisher-search-order         ['omnios', 'extra.omnios']
