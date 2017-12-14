@@ -150,8 +150,10 @@ LC_ALL=C $PKG list $list_origin -af pkg://$publisher/$entire_fmri \
 
 pkglist="$entire_fmri"
 
-# Install the optional packages from entire iff they are installed in the GZ.
-$PKG contents -H -a type=optional -o fmri $entire_fmri | while read pkg; do
+# Install the optional packages from entire if they are installed in the GZ
+# and not constrained to IPS images of type 'full'
+$PKG contents -H -a type=optional -o fmri,variant.opensolaris.imagetype \
+    $entire_fmri | nawk '$2 != "full" { print $1 }' | while read pkg; do
         $PKG list -q $pkg && pkglist="$pkglist $pkg"
 done
 

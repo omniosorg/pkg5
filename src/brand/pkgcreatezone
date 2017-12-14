@@ -249,11 +249,11 @@ pkglist=""
 if [[ -n $entire_fmri ]]; then
 	pkglist="$pkglist $entire_fmri"
 
-	# Install the optional packages from entire iff they are installed
-	# in the GZ.
-	# (This is ksh so the following won't spawn a subshell and so it's
-	#  safe to update the global variable.)
-	$PKG contents -H -a type=optional -o fmri $entire_fmri \
+	# Install the optional packages from entire if they are installed
+	# in the GZ and not constrained to the global zone.
+	$PKG contents -H -a type=optional \
+	    -o fmri,variant.opensolaris.zone $entire_fmri \
+	    | nawk '$2 != "global" { print $1 }' \
 	    | while read pkg; do
 		$PKG list -q $pkg && pkglist="$pkglist $pkg"
 	done
