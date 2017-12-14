@@ -115,7 +115,7 @@ create_active_ds
 
 # Create the initial zone image.
 
-$PKG image-create \
+lc_pkg image-create \
     --zone --full \
     --variant variant.opensolaris.imagetype=partial \
     $ZONEROOT \
@@ -142,9 +142,9 @@ entire_fmri=$(get_entire_incorp)
 #
 
 list_origin=
-$PKG publisher -HPn -F tsv | cut -f1 | read publisher
+lc_pkg publisher -HPn -F tsv | cut -f1 | read publisher
 printf "$m_incorp\n"
-LC_ALL=C $PKG list $list_origin -af pkg://$publisher/$entire_fmri \
+lc_pkg list $list_origin -af pkg://$publisher/$entire_fmri \
     > /dev/null 2>&1
 [ $? -ne 0 ] && fail_fatal "$f_no_entire_in_pref" $entire_fmri $publisher
 
@@ -152,9 +152,9 @@ pkglist="$entire_fmri"
 
 # Install the optional packages from entire if they are installed in the GZ
 # and not constrained to IPS images of type 'full'
-$PKG contents -H -a type=optional -o fmri,variant.opensolaris.imagetype \
+lc_pkg contents -H -a type=optional -o fmri,variant.opensolaris.imagetype \
     $entire_fmri | nawk '$2 != "full" { print $1 }' | while read pkg; do
-        $PKG list -q $pkg && pkglist="$pkglist $pkg"
+        lc_pkg list -q $pkg && pkglist="$pkglist $pkg"
 done
 
 # Change the value of PKG_IMAGE so that future PKG operations will work
@@ -164,17 +164,17 @@ export PKG_IMAGE
 
 ##########
 
-LC_ALL=C $PKG copy-publishers-from $GZ_IMAGE || fail_incomplete "$f_img"
+lc_pkg copy-publishers-from $GZ_IMAGE || fail_incomplete "$f_img"
 
-LC_ALL=C $PKG add-property-value exclude-patterns 'usr/(?!lib/fm)'
-LC_ALL=C $PKG add-property-value exclude-patterns 'sbin/'
-LC_ALL=C $PKG add-property-value exclude-patterns 'lib/(?!svc)'
+lc_pkg add-property-value exclude-patterns 'usr/(?!lib/fm)'
+lc_pkg add-property-value exclude-patterns 'sbin/'
+lc_pkg add-property-value exclude-patterns 'lib/(?!svc)'
 for ov in $overlays; do
     mp=${ov#*:}
-    LC_ALL=C $PKG add-property-value key-files "$mp/.org.opensolaris,pkgkey"
+    lc_pkg add-property-value key-files "$mp/.org.opensolaris,pkgkey"
 done
 
-LC_ALL=C $PKG publisher -Hn -F tsv | cut -f1,7 | while read pub url; do
+lc_pkg publisher -Hn -F tsv | cut -f1,7 | while read pub url; do
     printf "$m_publisher\n" $pub $url
 done
 
@@ -190,7 +190,7 @@ printf "$m_core\n"
 # Do the installation; we just refreshed after image-create, so skip that.
 # Also skip indexing here, as that is also what the LiveCD does.
 #
-LC_ALL=C $PKG install --accept --no-index --no-refresh $pkglist || \
+lc_pkg install --accept --no-index --no-refresh $pkglist || \
     pkg_err_check "$f_pkg"
 
 printf "$m_smf"

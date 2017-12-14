@@ -23,6 +23,7 @@
 #
 # Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 # Copyright 2015, OmniTI Computer Consulting, Inc. All rights reserved.
+# Copyright 2017 OmniOS Community Edition (OmniOSce) Association.
 #
 
 . /usr/lib/brand/ipkg/common.ksh
@@ -149,7 +150,7 @@ gather_incorporations() {
 	typeset p=
 
 	for p in \
-	    $(LC_ALL=C $PKG search -Hl -o pkg.name \
+	    $(lc_pkg search -Hl -o pkg.name \
 	    ':pkg.depend.install-hold:core-os*');do
 		incorporations="$incorporations $(get_pkg_fmri $p)"
 	done
@@ -329,7 +330,7 @@ install_image "$inst_type" "$install_media"
 # Perform a sanity check to confirm that the image is not a global zone.
 #
 VARIANT=variant.opensolaris.zone
-variant=$(LC_ALL=C $PKG -R $ZONEROOT variant -H $VARIANT)
+variant=$(lc_pkg -R $ZONEROOT variant -H $VARIANT)
 [[ $? -ne 0 ]] && fatal "$f_sanity_variant" $VARIANT
 
 echo $variant | IFS=" " read variantname variantval
@@ -382,7 +383,7 @@ fi
 # If Python 2.6 is in the to-be-attached zone root (now set with PKGIMAGE),
 # add it to the incorp_list so we do not get a conflicting-install situation,
 # and can have the now-obsoleted/renamed Python 2.6 installed.
-LC_ALL=C $PKG list -q pkg://omnios/runtime/python-26
+lc_pkg list -q pkg://omnios/runtime/python-26
 if [[ $? == 0 ]]; then
     incorp_list="$incorp_list pkg://omnios/runtime/python-26"
 fi
@@ -398,7 +399,7 @@ fi
 
 log "$m_updating"
 
-LC_ALL=C $PKG copy-publishers-from $GZ_IMAGE
+lc_pkg copy-publishers-from $GZ_IMAGE
 
 #
 # Bring the ngz entire incorporation into sync with the gz as follows:
@@ -412,7 +413,7 @@ LC_ALL=C $PKG copy-publishers-from $GZ_IMAGE
 #
 if [[ -z $gz_entire_fmri && -n $ngz_entire_fmri ]]; then
 	if [[ $allow_update == 1 ]]; then
-		LC_ALL=C $PKG uninstall entire || pkg_err_check "$f_update"
+		lc_pkg uninstall entire || pkg_err_check "$f_update"
 	else
 		log "\n$m_need_update" "$ZONENAME"
 		EXIT_CODE=$ZONE_SUBPROC_NOTCOMPLETE
@@ -421,7 +422,7 @@ if [[ -z $gz_entire_fmri && -n $ngz_entire_fmri ]]; then
 fi
 
 if [[ $allow_update == 0 ]]; then
-	LC_ALL=C $PKG install --accept --no-refresh -n $incorp_list
+	lc_pkg install --accept --no-refresh -n $incorp_list
 	if [[ $? == 4 ]]; then
 		log "\n$m_complete"
 		EXIT_CODE=$ZONE_SUBPROC_OK
@@ -440,11 +441,11 @@ fi
 # same version as we have in the GZ.
 #
 if [[ -n $gz_entire_fmri && -z $ngz_entire_fmri ]]; then
-	LC_ALL=C $PKG install --accept --no-refresh entire  || \
+	lc_pkg install --accept --no-refresh entire  || \
 	    pkg_err_check "$f_update"
 fi
 
-LC_ALL=C $PKG install --accept --no-refresh $incorp_list  || \
+lc_pkg install --accept --no-refresh $incorp_list  || \
     pkg_err_check "$f_update"
 
 log "\n$m_sync_done"
