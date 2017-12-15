@@ -123,10 +123,6 @@ tree has them in the correct place.
 
 When re-attaching, the filesystem are changed back to use legacy mounting.
 
-## Clone
-
-TBC
-
 ## Examples
 
 ```

@@ -82,6 +82,9 @@ ROOTFILES = \
 	$(SPARSEBRANDPKG)/verifyadm \
 	$(SPARSEBRANDPKG)/prestate \
 	$(SPARSEBRANDPKG)/poststate \
+	$(SPARSEBRANDPKG)/attach \
+	$(SPARSEBRANDPKG)/detach \
+	$(SPARSEBRANDPKG)/clone \
 	\
 	$(VMBRANDPKG)/config.xml \
 	$(VMBRANDPKG)/platform.xml \

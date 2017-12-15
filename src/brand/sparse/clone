@@ -1,0 +1,227 @@
+#!/bin/ksh -p
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+#
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Use is subject to license terms.
+#
+# Copyright (C) 2013 by Jim Klimov - implemented the previously absent
+#    cloning of zones from specified snapshot, and avoidance of sys-unconfig
+# Copyright 2017 OmniOS Community Edition (OmniOSce) Association.
+
+. /usr/lib/brand/sparse/common.ksh
+
+m_usage=$(gettext "clone {sourcezone}")
+f_nosource=$(gettext "Error: unable to determine source zone dataset.")
+f_badsource=$(gettext "Error: specified snapshot is invalid for this source zone.")
+f_zfs_clone=$(gettext "Unable to clone zone's %s ZFS dataset.")
+
+#set -o xtrace
+
+# Clean up on failure
+trap_exit()
+{
+	if (( $ZONE_IS_MOUNTED != 0 )); then
+		error "$v_unmount"
+		zoneadm -z $ZONENAME unmount
+	fi
+
+	exit $ZONE_SUBPROC_INCOMPLETE
+}
+
+# Set up ZFS dataset hierarchy for the zone.
+
+ROOT="rpool/ROOT"
+
+# Other brand clone options are invalid for this brand.
+while getopts "R:s:Xz:" opt; do
+	case $opt in
+		R)	ZONEPATH="$OPTARG" ;;
+		s)	case "$OPTARG" in
+			*@*) # Full snapshot name was provided, or just "@snap"
+			     # Split this into dataset name (even if empty) and
+			     # snapshot name (also may be empty)
+				SNAPNAME="`echo "$OPTARG" | sed 's/^[^@]*@//'`"
+				REQUESTED_DS="`echo "$OPTARG" | sed 's/\([^@]*\)@.*$/\1/'`"
+				;;
+			*/*) # Only dataset name was passed, so we will make a
+			     # snapshot there automatically and clone off it
+				SNAPNAME=""
+				REQUESTED_DS="$OPTARG"
+				;;
+			*)   # Only snapshot name was passed, so we will clone
+			     # the source zone's active ZBE and this snapshot
+				SNAPNAME="$OPTARG"
+				REQUESTED_DS=""
+				;;
+			esac
+			;;
+		X)	NO_SYSUNCONFIG=yes ;;
+		z)	ZONENAME="$OPTARG" ;;
+		*)	fail_usage "";;
+	esac
+done
+shift $((OPTIND-1))
+
+if [ $# -ne 1 ]; then
+	fail_usage "";
+fi
+sourcezone="$1"
+
+get_current_gzbe
+
+if [ -z "$REQUESTED_DS" ]; then
+	# Find the active source zone dataset to clone.
+	sourcezonepath=`/usr/sbin/zoneadm -z $sourcezone list -p | awk -F: '{print $4}'`
+	if [ -z "$sourcezonepath" ]; then
+		fail_fatal "$f_nosource"
+	fi
+
+	get_zonepath_ds $sourcezonepath
+	get_active_ds $CURRENT_GZBE $ZONEPATH_DS
+else
+	# Sanity-check the provided dataset (should exist and be an IPS ZBE)
+	REQUESTED_DS="`echo "$REQUESTED_DS" | egrep '^.*/'"$sourcezone"'/ROOT/[^/]+$'`"
+	if [ $? != 0 -o x"$REQUESTED_DS" = x ]; then
+		fail_fatal "$f_badsource"
+	fi
+	zfs list -H -o \
+		org.opensolaris.libbe:parentbe,org.opensolaris.libbe:active \
+		"$REQUESTED_DS" > /dev/null || \
+			fail_fatal "$f_badsource"
+	ACTIVE_DS="$REQUESTED_DS"
+fi
+
+# Another sanity-check: requested snapshot exists for default or requested ZBE
+if [ x"$SNAPNAME" != x ]; then
+	zfs list -H "$ACTIVE_DS@$SNAPNAME" > /dev/null || \
+		fail_fatal "$f_badsource"
+fi
+
+#
+# Now set up the zone's datasets
+#
+
+#
+# First make the top-level dataset.
+#
+
+pdir=`/usr/bin/dirname $ZONEPATH`
+zpname=`/usr/bin/basename $ZONEPATH`
+
+get_zonepath_ds $pdir
+zpds=$ZONEPATH_DS
+
+fail_zonepath_in_rootds $zpds
+
+#
+# We need to tolerate errors while creating the datasets and making the
+# mountpoint, since these could already exist from some other BE.
+#
+
+/usr/sbin/zfs create $zpds/$zpname
+
+/usr/sbin/zfs create -o mountpoint=legacy -o zoned=on $zpds/$zpname/ROOT
+
+if [ x"$SNAPNAME" = x ]; then
+	# make snapshot
+	SNAPNAME=${ZONENAME}_snap
+	SNAPNUM=0
+	while [ $SNAPNUM -lt 100 ]; do
+		/usr/sbin/zfs snapshot -r $ACTIVE_DS@$SNAPNAME
+		if [ $? = 0 ]; then
+			break
+		fi
+		SNAPNUM=`expr $SNAPNUM + 1`
+		SNAPNAME="${ZONENAME}_snap$SNAPNUM"
+	done
+
+	# NOTE: This artificially limits us to 100 clones of a "golden" zone
+	# into a same-named (test?) zone, unless clones are based on some
+	# same snapshot via command-line
+	if [ $SNAPNUM -ge 100 ]; then
+		fail_fatal "$f_zfs_create"
+	fi
+fi
+
+# do clone
+BENAME=zbe
+BENUM=0
+while [ $BENUM -lt 100 ]; do
+	/usr/sbin/zfs clone $ACTIVE_DS@$SNAPNAME $zpds/$zpname/ROOT/$BENAME
+	if [ $? = 0 ]; then
+		for ov in $overlays; do
+			ds=${ov%:*}
+			/usr/sbin/zfs clone $ACTIVE_DS/$ds@$SNAPNAME \
+			    $zpds/$zpname/ROOT/$BENAME/$ds \
+			    || fail_incomplete "$f_zfs_clone" $ds
+		done
+		break
+	fi
+	BENUM=`expr $BENUM + 1`
+	BENAME="zbe-$BENUM"
+done
+
+if [ $BENUM -ge 100 ]; then
+	fail_fatal "$f_zfs_create"
+fi
+
+/usr/sbin/zfs set $PROP_ACTIVE=on $zpds/$zpname/ROOT/$BENAME || \
+	fail_incomplete "$f_zfs_create"
+
+/usr/sbin/zfs set $PROP_PARENT=$CURRENT_GZBE $zpds/$zpname/ROOT/$BENAME || \
+	fail_incomplete "$f_zfs_create"
+
+/usr/sbin/zfs set canmount=noauto $zpds/$zpname/ROOT/$BENAME || \
+	fail_incomplete "$f_zfs_create"
+
+if [ ! -d $ZONEPATH/root ]; then
+	/usr/bin/mkdir -p $ZONEPATH/root
+	/usr/bin/chmod 700 $ZONEPATH
+fi
+
+for ov in $overlays; do
+	ds=${ov%:*}
+	mp=${ov#*:}
+
+	zfs set canmount=noauto $zpds/$zpname/ROOT/$BENAME/$ds || \
+	    fail_incomplete "$f_ds_config" /$ds "canmount=noauto"
+done
+
+
+ZONE_IS_MOUNTED=0
+trap trap_exit EXIT
+
+#
+# Completion of unconfigure_zone will leave the zone root mounted for
+# ipkg brand zones.  The root won't be mounted for labeled brand zones.
+#
+is_brand_labeled
+(( $? == 0 )) && if [ x"$NO_SYSUNCONFIG" = xyes ]; then
+	vlog "$v_mounting"
+	ZONE_IS_MOUNTED=1
+	zoneadm -z $ZONENAME mount -f || fatal "$e_badmount"
+else
+	unconfigure_zone
+fi
+
+trap - EXIT
+exit $ZONE_SUBPROC_OK

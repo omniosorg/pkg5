@@ -40,6 +40,9 @@ file path=usr/lib/brand/sparse/common.ksh mode=0755
 file path=usr/lib/brand/sparse/verifyadm mode=0755
 file path=usr/lib/brand/sparse/prestate mode=0755
 file path=usr/lib/brand/sparse/poststate mode=0755
+file path=usr/lib/brand/sparse/attach mode=0755
+file path=usr/lib/brand/sparse/detach mode=0755
+file path=usr/lib/brand/sparse/clone mode=0755
 file path=usr/lib/brand/sparse/pkgcreatezone mode=0755
 license cr_Oracle license=cr_Oracle
 depend type=require fmri=system/zones/brand/ipkg@$(PKGVERS)
