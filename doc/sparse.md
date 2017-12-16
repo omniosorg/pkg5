@@ -117,11 +117,11 @@ the application of a platform-specific service manifest file -
 
 ## Attach/Detach
 
-TBC
+When a sparse branded zone is detached, the overlay filesystems are modified
+to adjust their mount points and restore ZFS auto-mounting so that the root
+tree has them in the correct place.
 
-## Clone
-
-TBC
+When re-attaching, the filesystem are changed back to use legacy mounting.
 
 ## Examples
 

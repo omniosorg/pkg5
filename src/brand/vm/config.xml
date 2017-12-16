@@ -30,7 +30,7 @@
 <!DOCTYPE brand PUBLIC "-//Sun Microsystems Inc//DTD Brands//EN"
     "file:///usr/share/lib/xml/dtd/brand.dtd.1">
 
-<brand name="sparse">
+<brand name="vm">
 	<modname></modname>
 
 	<initname>/sbin/init</initname>
@@ -38,7 +38,7 @@
 	<forcedlogin_cmd>/usr/bin/login -z %Z -f %u</forcedlogin_cmd>
 	<user_cmd>/usr/bin/getent passwd %u</user_cmd>
 
-	<install>/usr/lib/brand/sparse/pkgcreatezone -z %z -R %R</install>
+	<install>/usr/lib/brand/sparse/pkgcreatezone -b vm -z %z -R %R</install>
 	<installopts>a:c:d:e:hk:P:p:suv</installopts>
 	<boot></boot>
 	<sysboot>/usr/lib/brand/sparse/prestate %z %R 99 0</sysboot>
@@ -48,9 +48,9 @@
 	<verify_adm>/usr/lib/brand/sparse/verifyadm %z %R </verify_adm>
 	<postclone></postclone>
 	<postinstall></postinstall>
-	<attach>/usr/lib/brand/sparse/attach %z %R</attach>
-	<detach>/usr/lib/brand/sparse/detach -z %z -R %R</detach>
-	<clone>/usr/lib/brand/sparse/clone -z %z -R %R</clone>
+	<attach>/usr/lib/brand/ipkg/attach %z %R</attach>
+	<detach>/usr/lib/brand/ipkg/detach -z %z -R %R</detach>
+	<clone>/usr/lib/brand/ipkg/clone -z %z -R %R</clone>
 	<uninstall>/usr/lib/brand/ipkg/uninstall %z %R</uninstall>
 	<prestatechange>/usr/lib/brand/sparse/prestate %z %R</prestatechange>
 	<poststatechange>/usr/lib/brand/sparse/poststate %z %R</poststatechange>

@@ -574,9 +574,11 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                             self.imgdir, self.transport,
                             self.cfg.get_policy("use-system-repo"))
 
-                for keyf in self.get_property(imageconfig.KEY_FILES):
-                        if not os.path.exists(self.root + os.path.sep + keyf):
-                                raise apx.ImageMissingKeyFile(keyf)
+                if self.version == self.CURRENT_VERSION:
+                        for keyf in self.get_property(imageconfig.KEY_FILES):
+                                if not os.path.exists(
+                                    self.root + os.path.sep + keyf):
+                                        raise apx.ImageMissingKeyFile(keyf)
 
                 self.__load_publisher_ssl()
 

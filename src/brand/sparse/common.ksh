@@ -85,5 +85,29 @@ mount_active_ds() {
 	mount -F zfs $ACTIVE_DS $ZONEPATH/root || fail_fatal "$f_zfs_mount"
 }
 
+sanity_check() {
+	typeset dir="$1"
+	shift
+	res=0
+
+	#
+	# Check for some required directories.
+	#
+	checks="etc etc/svc var var/svc"
+	for x in $checks; do
+		if [[ ! -e $dir/$x ]]; then
+			log "$f_sanity_detail" "$x" "$dir"
+			res=1
+		fi
+	done
+	if (( $res != 0 )); then
+		log "$f_sanity_sparse"
+		log "$sanity_fail"
+		fatal "$install_fail" "$ZONENAME"
+	fi
+
+	vlog "$sanity_ok"
+}
+
 # Vim hints
 # vim:fdm=marker

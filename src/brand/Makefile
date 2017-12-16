@@ -38,6 +38,7 @@ ROOTBRAND = $(ROOTUSRLIB)/brand
 ROOTBRANDPKG = $(ROOTBRAND)/ipkg
 LINKBRANDPKG = $(ROOTBRAND)/lipkg
 SPARSEBRANDPKG = $(ROOTBRAND)/sparse
+VMBRANDPKG = $(ROOTBRAND)/vm
 
 ROOTDIRS = \
 	$(ROOT) \
@@ -48,13 +49,15 @@ ROOTDIRS = \
 	$(ROOTBRAND) \
 	$(ROOTBRANDPKG) \
 	$(LINKBRANDPKG) \
-	$(SPARSEBRANDPKG)
+	$(SPARSEBRANDPKG) \
+	$(VMBRANDPKG)
 
 ROOTFILES = \
 	$(ROOTETCBRAND)/pkgrm.conf \
 	$(ROOTETCBRAND)/smf_disable.conf \
 	$(ROOTETCZONES)/OMNIlipkg.xml \
 	$(ROOTETCZONES)/SUNWipkg.xml \
+	\
 	$(ROOTBRANDPKG)/attach \
 	$(ROOTBRANDPKG)/clone \
 	$(ROOTBRANDPKG)/common.ksh \
@@ -70,6 +73,7 @@ ROOTFILES = \
 	$(ROOTBRANDPKG)/support \
 	$(ROOTBRANDPKG)/system-unconfigure \
 	$(ROOTBRANDPKG)/uninstall \
+	\
 	$(SPARSEBRANDPKG)/config.xml \
 	$(SPARSEBRANDPKG)/platform.xml \
 	$(SPARSEBRANDPKG)/profile.xml \
@@ -77,7 +81,14 @@ ROOTFILES = \
 	$(SPARSEBRANDPKG)/common.ksh \
 	$(SPARSEBRANDPKG)/verifyadm \
 	$(SPARSEBRANDPKG)/prestate \
-	$(SPARSEBRANDPKG)/poststate
+	$(SPARSEBRANDPKG)/poststate \
+	$(SPARSEBRANDPKG)/attach \
+	$(SPARSEBRANDPKG)/detach \
+	$(SPARSEBRANDPKG)/clone \
+	\
+	$(VMBRANDPKG)/config.xml \
+	$(VMBRANDPKG)/platform.xml \
+	$(VMBRANDPKG)/profile.xml
 
 BIN = \
 	support \
@@ -107,7 +118,8 @@ install: $(ROOTFILES)
 
 
 $(ROOT) $(ROOTETC) $(ROOTETCBRAND) $(ROOTETCZONES) $(ROOTUSRLIB) \
-	$(ROOTBRAND) $(ROOTBRANDPKG) $(LINKBRANDPKG) $(SPARSEBRANDPKG):
+	$(ROOTBRAND) $(ROOTBRANDPKG) $(LINKBRANDPKG) $(SPARSEBRANDPKG) \
+	$(VMBRANDPKG):
 	mkdir -p $@
 
 $(ROOTETCBRAND)/%: $(ROOTETCBRAND) %
@@ -121,4 +133,7 @@ $(ROOTBRANDPKG)/%: $(ROOTBRANDPKG) %
 
 $(SPARSEBRANDPKG)/%: $(SPARSEBRANDPKG) sparse/%
 	rm -f $@; $(INSTALL) -f $(SPARSEBRANDPKG) -m 0444 $<
+
+$(VMBRANDPKG)/%: $(VMBRANDPKG) vm/%
+	rm -f $@; $(INSTALL) -f $(VMBRANDPKG) -m 0444 $<
 

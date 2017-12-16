@@ -23,6 +23,7 @@
 #
 # Copyright (c) 2007, 2011, Oracle and/or its affiliates. All rights reserved.
 # Copyright (c) 2015, OmniTI Computer Consulting, Inc. All rights reserved.
+# Copyright 2017 OmniOS Community Edition (OmniOSce) Association.
 #
 
 #
@@ -196,7 +197,7 @@ if [[ -n $entire_fmri ]]; then
 		$PKG publisher -HPn -F tsv | cut -f1 | read publisher
 	fi
 	printf "$m_incorp\n"
-	LC_ALL=C $PKG list $list_origin -af pkg://$publisher/$entire_fmri \
+	lc_pkg list $list_origin -af pkg://$publisher/$entire_fmri \
 		> /dev/null 2>&1
 	if [[ $? -ne 0 ]]; then
 		fail_fatal "$f_no_entire_in_pref" $entire_fmri $publisher
@@ -229,12 +230,12 @@ printf "$m_image\n" $ZONEROOT
 # If we have a publisher specified by -P, pass it to image-create and use no
 # other publishers. Otherwise, use all of the publishers from the GZ.
 if [[ -n $pub_and_origins ]]; then
-	LC_ALL=C $PKG image-create --zone --full -p $pub_and_origins \
+	lc_pkg image-create --zone --full -p $pub_and_origins \
 	    $ZONEROOT || fail_incomplete "$f_img"
 else
-	LC_ALL=C $PKG image-create --zone --full $ZONEROOT \
+	lc_pkg image-create --zone --full $ZONEROOT \
 	    || fail_incomplete "$f_img"
-	LC_ALL=C $PKG -R $ZONEROOT copy-publishers-from $GZ_IMAGE \
+	lc_pkg -R $ZONEROOT copy-publishers-from $GZ_IMAGE \
 	    || fail_incomplete "$f_img"
 fi
 
@@ -249,11 +250,11 @@ pkglist=""
 if [[ -n $entire_fmri ]]; then
 	pkglist="$pkglist $entire_fmri"
 
-	# Install the optional packages from entire iff they are installed
-	# in the GZ.
-	# (This is ksh so the following won't spawn a subshell and so it's
-	#  safe to update the global variable.)
-	$PKG contents -H -a type=optional -o fmri $entire_fmri \
+	# Install the optional packages from entire if they are installed
+	# in the GZ and not constrained to the global zone.
+	$PKG contents -H -a type=optional \
+	    -o fmri,variant.opensolaris.zone $entire_fmri \
+	    | nawk '$2 != "global" { print $1 }' \
 	    | while read pkg; do
 		$PKG list -q $pkg && pkglist="$pkglist $pkg"
 	done
@@ -291,7 +292,7 @@ pkglist="$pkglist $extra_packages"
 PKG_IMAGE="$ZONEROOT"
 export PKG_IMAGE
 
-LC_ALL=C $PKG publisher -Hn -F tsv | cut -f1,7 | while read pub url; do
+lc_pkg publisher -Hn -F tsv | cut -f1,7 | while read pub url; do
 	printf "$m_publisher\n" $pub $url
 done
 
@@ -299,7 +300,7 @@ done
 # Do the install; we just refreshed after image-create, so skip that.  We
 # also skip indexing here, as that is also what the LiveCD does.
 #
-LC_ALL=C $PKG install --accept --no-index --no-refresh $pkglist || \
+lc_pkg install --accept --no-index --no-refresh $pkglist || \
     pkg_err_check "$f_pkg"
 
 printf "$m_smf"

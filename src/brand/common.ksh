@@ -67,6 +67,10 @@ m_complete=$(gettext    "        Done: Installation completed in %s seconds.")
 m_postnote=$(gettext    "  Next Steps: Boot the zone, then log into the zone console (zlogin -C)")
 m_postnote2=$(gettext "              to complete the configuration process.")
 
+lc_pkg() {
+	LC_ALL=C /usr/bin/pkg "$@"
+}
+
 fail_incomplete() {
 	printf "ERROR: " 1>&2
 	printf "$@" 1>&2
@@ -311,21 +315,24 @@ unconfigure_zone() {
 	zoneadm -z $ZONENAME mount -f || fatal "$e_badmount"
 
 	ZONE_BRAND=`zoneadm list -pc | /usr/bin/nawk -v zone=$ZONENAME -F':' '$2 == zone { print $6 }'`
-	if [[ $ZONE_BRAND = "ipkg" || $ZONE_BRAND = "lipkg" ]]; then
+	case "$ZONE_BRAND" in
+	    ipkg|lipkg|sparse|vm)
 		zlogin -S $ZONENAME /usr/lib/brand/ipkg/system-unconfigure -R /a \
 		    >/dev/null 2>&1
 		if (( $? != 0 )); then
 			error "$e_unconfig"
 			failed=1
 		fi
-	else
+		;;
+	    *)
 		zlogin -S $ZONENAME /usr/sbin/sys-unconfig -R /a \
 		    </dev/null >/dev/null 2>&1
 		if (( $? != 0 )); then
 			error "$e_unconfig"
 			failed=1
 		fi
-	fi
+		;;
+	esac
 
 	vlog "$v_unmount"
 	zoneadm -z $ZONENAME unmount || fatal "$e_badunmount"
@@ -343,7 +350,7 @@ get_pkg_fmri() {
 	typeset pkg_fmri=
 	typeset info_out=
 
-	info_out=$(LC_ALL=C $PKG info pkg:/$pname 2>/dev/null)
+	info_out=$(lc_pkg info pkg:/$pname 2>/dev/null)
 	if [[ $? -ne 0 ]]; then
 		return 1
 	fi
@@ -371,7 +378,7 @@ get_publisher_attrs() {
 	typeset pname=$1
 	typeset utype=$2
 
-	LC_ALL=C $PKG publisher -HF tsv| \
+	lc_pkg publisher -HF tsv| \
 	    nawk '($5 == "'"$utype"'" || \
 	    ("'"$utype"'" == "origin" && $5 == "")) \
 	    && $1 == "'"$pname"'" \
@@ -438,7 +445,7 @@ get_publisher_urls() {
 		ptype_filter="false"
 	fi
 
-	LC_ALL=C $PKG publisher -HF tsv | \
+	lc_pkg publisher -HF tsv | \
 		nawk '($5 == "'"$utype"'" || \
 		("'"$utype"'" == "origin" && $5 == "")) && \
 		( "'"$ptype_filter"'" == "" || $3 == "'"$ptype_filter"'" ) \
@@ -478,9 +485,9 @@ get_pub_secinfo() {
 	typeset key=
 	typeset cert=
 
-	key=$(LC_ALL=C $PKG publisher $1 |
+	key=$(lc_pkg publisher $1 |
 	    nawk -F': ' '/SSL Key/ {print $2; exit 0}')
-	cert=$(LC_ALL=C $PKG publisher $1 |
+	cert=$(lc_pkg publisher $1 |
 	    nawk -F': ' '/SSL Cert/ {print $2; exit 0}')
 	print $key $cert
 }

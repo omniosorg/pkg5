@@ -26,7 +26,7 @@
 # Copyright 2017 OmniOS Community Edition (OmniOSce) Association.
 #
 
-. /usr/lib/brand/ipkg/common.ksh
+. /usr/lib/brand/sparse/common.ksh
 
 m_attach_log=$(gettext "Log File: %s")
 m_zfs=$(gettext "A ZFS file system was created for the zone.")
@@ -254,6 +254,19 @@ if [[ "$install_media" == "-" ]]; then
 	zfs set zoned=off $ZONEPATH_DS/ROOT
 	(( $? != 0 )) && fatal "$f_ds_config" $ZONEPATH_DS/ROOT "zoned=off"
 
+	for ov in $overlays; do
+		ds=${ov%:*}
+		mp=${ov#*:}
+
+		# Check for overlay presence
+		zfs list -H -t filesystem -o name $ACTIVE_DS/$ds \
+		    >/dev/null 2>&1 || fatal "$f_no_active_ds ($mp)"
+		zfs set canmount=noauto $ACTIVE_DS/$ds || \
+		    fatal "$f_ds_config" $ACTIVE_DS/$ds "canmount=noauto"
+		zfs inherit mountpoint $ACTIVE_DS/$ds || \
+		    fatal "$f_ds_config" $ACTIVE_DS/$ds "inherit mountpoint"
+	done
+
 	zfs set mountpoint=legacy $ZONEPATH_DS/ROOT
 	(( $? != 0 )) && fatal "$f_ds_config" $ZONEPATH_DS/ROOT \
 	    "mountpoint=legacy"
@@ -283,14 +296,10 @@ if [[ "$install_media" == "-" ]]; then
 	zfs inherit zoned $ACTIVE_DS
 	(( $? != 0 )) && fatal "$f_ds_config" $ACTIVE_DS "'inherit zoned'"
 
-	mounted_ds=`mount -p | nawk -v zroot=$ZONEROOT '{
-	    if ($3 == zroot && $4 == "zfs")
-		    print $1
-	}'`
-
-	if [[ -z $mounted_ds ]]; then
-		mount -F zfs $ACTIVE_DS $ZONEROOT || fatal "$f_zfs_mount"
-	fi
+	umount_overlays
+	umount_active_ds
+	mount_active_ds
+	mount_overlays
 else
 	#
 	# Since we're not using a pre-existing ZFS dataset layout, create
@@ -310,6 +319,7 @@ else
 	fi
 
 	create_active_ds
+	create_overlays $ZONEPATH_DS/ROOT/$BENAME
 fi
 
 #
