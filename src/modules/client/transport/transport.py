@@ -401,6 +401,12 @@ class ImageTransportCfg(TransportCfg):
                         raise KeyError
                 return self.__img.get_property(property_name)
 
+        def get_variant(self, variant_name):
+                if not self.__img.cfg:
+                        raise KeyError
+                return self.__img.cfg.get_property('variant',
+                    'variant.' + variant_name)
+
         def get_publisher(self, publisher_name):
                 return self.__img.get_publisher(publisher_name)
 
@@ -629,7 +635,8 @@ class Transport(object):
                 header = None
 
                 if isinstance(pub, publisher.Publisher):
-                        header = self.__build_header(uuid=self.__get_uuid(pub))
+                        header = self.__build_header(uuid=self.__get_uuid(pub),
+                            variant=self.__get_variant(pub))
 
                 # Call setup if the transport isn't configured or was shutdown.
                 if not self.__engine:
@@ -736,7 +743,8 @@ class Transport(object):
 
                 failures = tx.TransportFailures()
                 retry_count = global_settings.PKG_CLIENT_MAX_TIMEOUT
-                header = self.__build_header(uuid=self.__get_uuid(pub))
+                header = self.__build_header(uuid=self.__get_uuid(pub),
+                    variant=self.__get_variant(pub))
                 download_dir = self.cfg.incoming_root
                 if path:
                         croot = path
@@ -856,7 +864,8 @@ class Transport(object):
 
                 retry_count = global_settings.PKG_CLIENT_MAX_TIMEOUT
                 failures = []
-                header = self.__build_header(uuid=self.__get_uuid(pub))
+                header = self.__build_header(uuid=self.__get_uuid(pub),
+                    variant=self.__get_variant(pub))
 
                 if progtrack and ccancel:
                         progtrack.check_cancelation = ccancel
@@ -1020,7 +1029,8 @@ class Transport(object):
                 header = None
 
                 if isinstance(pub, publisher.Publisher):
-                        header = self.__build_header(uuid=self.__get_uuid(pub))
+                        header = self.__build_header(uuid=self.__get_uuid(pub),
+                            variant=self.__get_variant(pub))
 
                 for d, retries, v in self.__gen_repo(pub, retry_count,
                     origin_only=True, operation="publisher", versions=[0],
@@ -1097,7 +1107,8 @@ class Transport(object):
         def get_datastream(self, pub, fhash, ccancel=None):
                 retry_count = global_settings.PKG_CLIENT_MAX_TIMEOUT
                 failures = tx.TransportFailures()
-                header = self.__build_header(uuid=self.__get_uuid(pub))
+                header = self.__build_header(uuid=self.__get_uuid(pub),
+                    variant=self.__get_variant(pub))
 
                 for d, retries, v in self.__gen_repo(pub, retry_count,
                     operation="file", versions=[0, 1]):
@@ -1137,7 +1148,8 @@ class Transport(object):
 
                 retry_count = global_settings.PKG_CLIENT_MAX_TIMEOUT
                 failures = tx.TransportFailures()
-                header = self.__build_header(uuid=self.__get_uuid(pub))
+                header = self.__build_header(uuid=self.__get_uuid(pub),
+                    variant=self.__get_variant(pub))
 
                 alt_repo = None
                 if not fmri and self.cfg.alt_pubs:
@@ -1224,7 +1236,8 @@ class Transport(object):
                 header = None
 
                 if isinstance(pub, publisher.Publisher):
-                        header = self.__build_header(uuid=self.__get_uuid(pub))
+                        header = self.__build_header(uuid=self.__get_uuid(pub),
+                            variant=self.__get_variant(pub))
 
                 for d, retries, v in self.__gen_repo(pub, retry_count,
                     origin_only=True, operation="status", versions=[0],
@@ -1279,7 +1292,8 @@ class Transport(object):
                 mfst = fmri.get_url_path()
                 retry_count = global_settings.PKG_CLIENT_MAX_TIMEOUT
                 header = self.__build_header(intent=intent,
-                    uuid=self.__get_uuid(pub))
+                    uuid=self.__get_uuid(pub),
+                    variant=self.__get_variant(pub))
 
                 if not alt_repo:
                         alt_repo = self.cfg.get_pkg_alt_repo(fmri)
@@ -1332,7 +1346,8 @@ class Transport(object):
 
                 if isinstance(pub, publisher.Publisher):
                         header = self.__build_header(intent=intent,
-                            uuid=self.__get_uuid(pub))
+                            uuid=self.__get_uuid(pub),
+                            variant=self.__get_variant(pub))
 
                 # Call setup if the transport isn't configured or was shutdown.
                 if not self.__engine:
@@ -1489,7 +1504,8 @@ class Transport(object):
                                     fmri.publisher)
 
                         header = self.__build_header(intent=intent,
-                            uuid=self.__get_uuid(pub))
+                            uuid=self.__get_uuid(pub),
+                            variant=self.__get_variant(pub))
 
                         if eid not in mx_pub:
                                 mx_pub[eid] = MultiXfr(pub,
@@ -1728,7 +1744,7 @@ class Transport(object):
                 return True
 
         @staticmethod
-        def __build_header(intent=None, uuid=None):
+        def __build_header(intent=None, uuid=None, variant=None):
                 """Return a dictionary that contains various
                 header fields, depending upon what arguments
                 were passed to the function.  Supply intent header in intent
@@ -1742,6 +1758,9 @@ class Transport(object):
                 if uuid:
                         header["X-IPkg-UUID"] = uuid
 
+                if variant:
+                        header["X-IPkg-Variant"] = variant
+
                 if not header:
                         return None
 
@@ -1753,6 +1772,17 @@ class Transport(object):
 
                 try:
                         return pub.client_uuid
+                except KeyError:
+                        return None
+
+        def __get_variant(self, pub):
+                if not self.cfg.get_policy(imageconfig.SEND_UUID):
+                        return None
+
+                try:
+                        return (
+                            self.cfg.get_variant('opensolaris.zone') + ',' +
+                            self.cfg.get_variant('opensolaris.imagetype'))
                 except KeyError:
                         return None
 
@@ -1789,7 +1819,8 @@ class Transport(object):
                 header = None
 
                 if isinstance(pub, publisher.Publisher):
-                        header = self.__build_header(uuid=self.__get_uuid(pub))
+                        header = self.__build_header(uuid=self.__get_uuid(pub),
+                            variant=self.__get_variant(pub))
 
                 # download_dir is temporary download path.
                 download_dir = self.cfg.incoming_root
@@ -1968,7 +1999,8 @@ class Transport(object):
 
                 retry_count = global_settings.PKG_CLIENT_MAX_TIMEOUT
                 failures = tx.TransportFailures()
-                header = self.__build_header(uuid=self.__get_uuid(pub))
+                header = self.__build_header(uuid=self.__get_uuid(pub),
+                    variant=self.__get_variant(pub))
 
                 # Call setup if the transport isn't configured or was shutdown.
                 if not self.__engine:
@@ -2631,7 +2663,8 @@ class Transport(object):
 
                 failures = tx.TransportFailures()
                 retry_count = global_settings.PKG_CLIENT_MAX_TIMEOUT
-                header = self.__build_header(uuid=self.__get_uuid(pub))
+                header = self.__build_header(uuid=self.__get_uuid(pub),
+                    variant=self.__get_variant(pub))
 
                 if progtrack and ccancel:
                         progtrack.check_cancelation = ccancel
@@ -2664,7 +2697,8 @@ class Transport(object):
 
                 failures = tx.TransportFailures()
                 retry_count = global_settings.PKG_CLIENT_MAX_TIMEOUT
-                header = self.__build_header(uuid=self.__get_uuid(pub))
+                header = self.__build_header(uuid=self.__get_uuid(pub),
+                    variant=self.__get_variant(pub))
 
                 # Call setup if the transport isn't configured or was shutdown.
                 if not self.__engine:
@@ -2698,7 +2732,8 @@ class Transport(object):
 
                 failures = tx.TransportFailures()
                 retry_count = global_settings.PKG_CLIENT_MAX_TIMEOUT
-                header = self.__build_header(uuid=self.__get_uuid(pub))
+                header = self.__build_header(uuid=self.__get_uuid(pub),
+                    variant=self.__get_variant(pub))
 
                 for d, retries, v in self.__gen_repo(pub, retry_count,
                     origin_only=True, single_repository=True,
@@ -2732,7 +2767,8 @@ class Transport(object):
 
                 failures = tx.TransportFailures()
                 retry_count = global_settings.PKG_CLIENT_MAX_TIMEOUT
-                header = self.__build_header(uuid=self.__get_uuid(pub))
+                header = self.__build_header(uuid=self.__get_uuid(pub),
+                    variant=self.__get_variant(pub))
 
                 for d, retries, v in self.__gen_repo(pub, retry_count,
                     origin_only=True, single_repository=True, operation="close",
@@ -2764,7 +2800,8 @@ class Transport(object):
 
                 failures = tx.TransportFailures()
                 retry_count = global_settings.PKG_CLIENT_MAX_TIMEOUT
-                header = self.__build_header(uuid=self.__get_uuid(pub))
+                header = self.__build_header(uuid=self.__get_uuid(pub),
+                    variant=self.__get_variant(pub))
 
                 for d, retries, v in self.__gen_repo(pub, retry_count,
                     origin_only=True, single_repository=True, operation="open",
@@ -2793,7 +2830,8 @@ class Transport(object):
 
                 failures = tx.TransportFailures()
                 retry_count = global_settings.PKG_CLIENT_MAX_TIMEOUT
-                header = self.__build_header(uuid=self.__get_uuid(pub))
+                header = self.__build_header(uuid=self.__get_uuid(pub),
+                    variant=self.__get_variant(pub))
 
                 for d, retries, v in self.__gen_repo(pub, retry_count,
                     origin_only=True, single_repository=True, operation="admin",
@@ -2823,7 +2861,8 @@ class Transport(object):
 
                 failures = tx.TransportFailures()
                 retry_count = global_settings.PKG_CLIENT_MAX_TIMEOUT
-                header = self.__build_header(uuid=self.__get_uuid(pub))
+                header = self.__build_header(uuid=self.__get_uuid(pub),
+                    variant=self.__get_variant(pub))
 
                 # Call setup if transport isn't configured, or was shutdown.
                 if not self.__engine:
@@ -2857,7 +2896,8 @@ class Transport(object):
 
                 failures = tx.TransportFailures()
                 retry_count = global_settings.PKG_CLIENT_MAX_TIMEOUT
-                header = self.__build_header(uuid=self.__get_uuid(pub))
+                header = self.__build_header(uuid=self.__get_uuid(pub),
+                    variant=self.__get_variant(pub))
 
                 for d, retries, v in self.__gen_repo(pub, retry_count,
                     origin_only=True, single_repository=True, operation="admin",
@@ -2886,7 +2926,8 @@ class Transport(object):
 
                 failures = tx.TransportFailures()
                 retry_count = global_settings.PKG_CLIENT_MAX_TIMEOUT
-                header = self.__build_header(uuid=self.__get_uuid(pub))
+                header = self.__build_header(uuid=self.__get_uuid(pub),
+                    variant=self.__get_variant(pub))
 
                 for d, retries, v in self.__gen_repo(pub, retry_count,
                     origin_only=True, single_repository=True, operation="admin",
@@ -2915,7 +2956,8 @@ class Transport(object):
 
                 failures = tx.TransportFailures()
                 retry_count = global_settings.PKG_CLIENT_MAX_TIMEOUT
-                header = self.__build_header(uuid=self.__get_uuid(pub))
+                header = self.__build_header(uuid=self.__get_uuid(pub),
+                    variant=self.__get_variant(pub))
 
                 for d, retries, v in self.__gen_repo(pub, retry_count,
                     origin_only=True, single_repository=True, operation="admin",
@@ -2943,7 +2985,8 @@ class Transport(object):
 
                 failures = tx.TransportFailures()
                 retry_count = global_settings.PKG_CLIENT_MAX_TIMEOUT
-                header = self.__build_header(uuid=self.__get_uuid(pub))
+                header = self.__build_header(uuid=self.__get_uuid(pub),
+                    variant=self.__get_variant(pub))
 
                 # In this case, the operation and versions keywords are
                 # purposefully avoided as the underlying repo function
@@ -2975,7 +3018,8 @@ class Transport(object):
 
                 failures = tx.TransportFailures()
                 retry_count = global_settings.PKG_CLIENT_MAX_TIMEOUT
-                header = self.__build_header(uuid=self.__get_uuid(pub))
+                header = self.__build_header(uuid=self.__get_uuid(pub),
+                    variant=self.__get_variant(pub))
 
                 for d, retries, v in self.__gen_repo(pub, retry_count,
                     origin_only=True, single_repository=True, operation="admin",
