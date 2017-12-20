@@ -376,6 +376,7 @@ class TestPublisher(pkg5unittest.Pkg5TestCase):
                 pprops = {
                     "alias": "cat",
                     "client_uuid": "2c6a8ff8-20e5-11de-a818-001fd0979039",
+                    "client_uuid_time": "Wed Dec 20 13:24:40 2017",
                     "disabled": True,
                     "meta_root": os.path.join(self.test_root, "bobcat"),
                     "repository": r2obj,
