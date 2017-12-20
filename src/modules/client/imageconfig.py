@@ -224,6 +224,7 @@ class ImageConfig(cfg.FileConfig):
                     cfg.PropBool("disabled"),
                     cfg.PropBool("sticky"),
                     cfg.PropUUID("uuid", value_map=_val_map_none),
+                    cfg.Property("last_uuid", value_map=_val_map_none),
                     # Publisher transport information.
                     cfg.PropPubURIList("mirrors",
                         value_map=_val_map_none),
@@ -685,6 +686,8 @@ class ImageConfig(cfg.FileConfig):
 
                         # Store publisher UUID.
                         self.set_property(section, "uuid", pub.client_uuid)
+                        self.set_property(section, "last_uuid",
+                            pub.client_uuid_time)
 
                         # Write repository origins and mirrors, ensuring the
                         # list contains unique values.  We must check for
@@ -948,7 +951,9 @@ class ImageConfig(cfg.FileConfig):
                                 repo_add_func(repouri)
 
                 pub = publisher.Publisher(prefix, alias=sec_idx["alias"],
-                    client_uuid=sec_idx["uuid"], disabled=sec_idx["disabled"],
+                    client_uuid=sec_idx["uuid"],
+                    client_uuid_time=sec_idx["last_uuid"],
+                    disabled=sec_idx["disabled"],
                     repository=r, sticky=sec_idx.get("sticky", True),
                     props=props,
                     revoked_ca_certs=sec_idx.get("revoked_ca_certs", []),
@@ -958,6 +963,8 @@ class ImageConfig(cfg.FileConfig):
                         # Publisher has generated new uuid; ensure configuration
                         # matches.
                         self.set_property(sname, "uuid", pub.client_uuid)
+                        self.set_property(sname, "last_uuid",
+                            pub.client_uuid_time)
 
                 return prefix, pub
 
