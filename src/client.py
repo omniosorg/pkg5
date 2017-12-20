@@ -3462,6 +3462,7 @@ def copy_publishers_from(api_inst, args):
                 if api_inst.has_publisher(prefix=pub.prefix, alias=pub.prefix):
                         api_inst.remove_publisher(prefix=pub.prefix,
                                                   alias=pub.prefix)
+                pub.reset_client_uuid()
                 api_inst.add_publisher(pub, refresh_allowed=False,
                                        search_first=search_first)
         api_inst.refresh()
