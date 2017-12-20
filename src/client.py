@@ -364,6 +364,7 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False,
             "            [--no-parent-sync] [--no-pkg-updates]\n"
             "            [--linked-md-only] <propname>=<propvalue> ...")
         priv_usage["copy-publishers-from"] = _("<dir>")
+        priv_usage["list-uuids"] = ""
 
         def print_cmds(cmd_list, cmd_dic):
                 for cmd in cmd_list:
@@ -3468,6 +3469,13 @@ def copy_publishers_from(api_inst, args):
         api_inst.refresh()
         return EXIT_OK
 
+def list_uuids(api_inst, args):
+        """pkg list-uuids"""
+        for n, pub in enumerate(api_inst.get_publishers()):
+                msg("{0:18} {1} {2}".format(pub.prefix,
+                    pub.client_uuid, pub.client_uuid_time));
+        return EXIT_OK
+
 def _get_ssl_cert_key(root, is_zone, ssl_cert, ssl_key):
         if ssl_cert is not None or ssl_key is not None:
                 # In the case of zones, the ssl cert given is assumed to
@@ -5085,6 +5093,7 @@ cmds = {
     "install"               : [install],
     "list"                  : [list_inventory],
     "list-linked"           : [list_linked, 0],
+    "list-uuids"            : [list_uuids],
     "mediator"              : [list_mediators],
     "property"              : [property_list],
     "property-linked"       : [list_property_linked],
