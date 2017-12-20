@@ -1121,6 +1121,7 @@ class Publisher(object):
         _catalog = None
         __alias = None
         __client_uuid = None
+        __client_uuid_time = None
         __disabled = False
         __meta_root = None
         __origin_root = None
@@ -1140,7 +1141,7 @@ class Publisher(object):
         def __init__(self, prefix, alias=None, catalog=None, client_uuid=None,
             disabled=False, meta_root=None, repository=None,
             transport=None, sticky=True, props=None, revoked_ca_certs=EmptyI,
-            approved_ca_certs=EmptyI, sys_pub=False):
+            approved_ca_certs=EmptyI, sys_pub=False, client_uuid_time=None):
                 """Initialize a new publisher object.
 
                 'catalog' is an optional Catalog object to use in place of
@@ -1150,10 +1151,12 @@ class Publisher(object):
 
                 assert not (catalog and meta_root)
 
-                if client_uuid is None:
+                if (client_uuid is None or client_uuid_time is None
+                    or not len(client_uuid_time)):
                         self.reset_client_uuid()
                 else:
                         self.__client_uuid = client_uuid
+                        self.__client_uuid_time = client_uuid_time
 
                 self.sys_pub = False
 
@@ -1232,7 +1235,8 @@ class Publisher(object):
                     props=self.properties,
                     revoked_ca_certs=self.revoked_ca_certs,
                     approved_ca_certs=self.approved_ca_certs,
-                    sys_pub=self.sys_pub)
+                    sys_pub=self.sys_pub,
+                    client_uuid_time=self.__client_uuid_time)
                 pub._catalog = self._catalog
                 pub._source_object_id = id(self)
                 return pub
@@ -1409,6 +1413,9 @@ class Publisher(object):
 
         def __set_client_uuid(self, value):
                 self.__client_uuid = value
+
+        def __set_client_uuid_time(self, value):
+                self.__client_uuid_time = value
 
         def __set_stickiness(self, value):
                 if self.sys_pub:
@@ -2296,6 +2303,7 @@ pkg unset-publisher {0}
                 """Replaces the current client_uuid with a new UUID."""
 
                 self.__client_uuid = str(uuid.uuid1())
+                self.__client_uuid_time = dt.datetime.utcnow().ctime()
 
         def validate_config(self, repo_uri=None):
                 """Verify that the publisher's configuration (such as prefix)
@@ -3127,6 +3135,10 @@ pkg unset-publisher {0}
             __set_client_uuid,
             doc="A Universally Unique Identifier (UUID) used to identify a "
             "client image to a publisher.")
+
+        client_uuid_time = property(lambda self: self.__client_uuid_time,
+            __set_client_uuid_time,
+            doc="The last time that the UUID was generated")
 
         disabled = property(lambda self: self.__disabled, __set_disabled,
             doc="A boolean value indicating whether the publisher should be "
