@@ -444,7 +444,7 @@ If a package is on the avoid list, installing it removes it from that list.
 .ad
 .sp .6
 .RS 4n
-Specify the number of child images to update in parallel. When recursing into child images (usually installed \fBsolaris\fR branded non-global zones), update at most \fIn\fR child images in parallel. The default number of child images to update in parallel is 1. If \fIn\fR is 0 or a negative number, all child images are updated in parallel. See also \fBPKG_CONCURRENCY\fR in the "Environment Variables" section.
+Specify the number of child images to update in parallel. When recursing into child images (usually installed \fBlipkg\fR branded non-global zones), update at most \fIn\fR child images in parallel. The default number of child images to update in parallel is 1. If \fIn\fR is 0 or a negative number, all child images are updated in parallel. See also \fBPKG_CONCURRENCY\fR in the "Environment Variables" section.
 .RE
 
 .sp
@@ -490,7 +490,7 @@ Hide progress messages during the requested operation.
 .ad
 .sp .6
 .RS 4n
-Run this operation in the global zone and also in all installed \fBsolaris\fR branded non-global zones. The effect on the non-global zone is similar to logging into each non-global zone and running the command directly. Without this option, when you run \fBpkg\fR commands in the global zone, non-global zones are modified only to the extent required to keep them compatible with the global zone. With this option, the \fBpkg\fR operation is applied to all installed non-global zones except as limited by the \fB-z\fR and \fB-Z\fR options. Zones that are excluded by the \fB-z\fR and \fB-Z\fR options might still be modified if updates are required to keep them in sync with the global zone.
+Run this operation in the global zone and also in all installed \fBlipkg\fR branded non-global zones. The effect on the non-global zone is similar to logging into each non-global zone and running the command directly. Without this option, when you run \fBpkg\fR commands in the global zone, non-global zones are modified only to the extent required to keep them compatible with the global zone. With this option, the \fBpkg\fR operation is applied to all installed non-global zones except as limited by the \fB-z\fR and \fB-Z\fR options. Zones that are excluded by the \fB-z\fR and \fB-Z\fR options might still be modified if updates are required to keep them in sync with the global zone.
 .RE
 
 .sp
@@ -1186,7 +1186,7 @@ All attributes of matching actions.
 .ad
 .sp .6
 .RS 4n
-The full FMRI of the package containing the action, such as \fBpkg://solaris/group/feature/amp@0.5.11,5.11-0.175.0.0.0.2.1:20120705T153434Z\fR.
+The full FMRI of the package containing the action, such as \fBpkg://omnios/group/feature/amp@0.5.11,5.11-0.175.0.0.0.2.1:20120705T153434Z\fR.
 .RE
 
 .sp
@@ -1208,7 +1208,7 @@ The name of the package containing the action, such as \fBweb/amp\fR.
 .ad
 .sp .6
 .RS 4n
-The publisher of the package containing the action, such as \fBsolaris\fR.
+The publisher of the package containing the action, such as \fBomnios\fR.
 .RE
 
 .sp
@@ -1219,7 +1219,7 @@ The publisher of the package containing the action, such as \fBsolaris\fR.
 .ad
 .sp .6
 .RS 4n
-The short form FMRI of the package containing the action, such as \fBpkg://solaris/group/feature/amp@0.5.11,5.11-0.175\fR
+The short form FMRI of the package containing the action, such as \fBpkg://omnios/group/feature/amp@0.5.11,5.11-0.175\fR
 .RE
 
 The \fBcontents\fR and \fBsearch\fR subcommands are related: Both query the system for the contents of packages. The \fBcontents\fR subcommand displays actions in one or more installed or installable packages, filtering the output based on the specified options. The \fBsearch\fR subcommand approaches the query from the other direction, displaying the names of all packages that contain a user-supplied token.
@@ -1439,8 +1439,8 @@ To convert actions to the packages that contain those actions, use \fB<>\fR, as 
 .nf
 $ \fBpkg search \e<pkg\e>\fR
 PACKAGE                                  PUBLISHER
-pkg:/package/pkg@0.5.11-0.175.0.0.0.2.1  solaris
-pkg:/package/svr4@0.5.11-0.175.0.0.0.2.1 solaris
+pkg:/package/pkg@0.5.11-0.175.0.0.0.2.1  omnios
+pkg:/package/svr4@0.5.11-0.175.0.0.0.2.1 omnios
 .fi
 .in -2
 .sp
@@ -3960,7 +3960,7 @@ Default value: 5
 .RS 4n
 The number of child images to update in parallel. Ignored if the \fB-C\fR option is specified.
 .sp
-When recursing into child images (usually installed \fBsolaris\fR branded non-global zones), update at most \fB$PKG_CONCURRENCY\fR child images in parallel. If \fB$PKG_CONCURRENCY\fR is 0 or a negative number, all child images are updated in parallel.
+When recursing into child images (usually installed \fBlipkg\fR branded non-global zones), update at most \fB$PKG_CONCURRENCY\fR child images in parallel. If \fB$PKG_CONCURRENCY\fR is 0 or a negative number, all child images are updated in parallel.
 .sp
 Default value: 1
 .RE

@@ -15,14 +15,14 @@ Each package is represented by a fault management resource identifier (FMRI) wit
 .sp
 .in +2
 .nf
-pkg://solaris/system/library/c++-runtime@0.5.11,5.11-0.175.0.0.0.2.1:20120921T190358Z
+pkg://omnios/system/library/c++-runtime@0.5.11,5.11-0.175.0.0.0.2.1:20120921T190358Z
 .fi
 .in -2
 .sp
 
 .sp
 .LP
-\fBsolaris\fR is the publisher. \fBsystem/library/c++-runtime\fR is the package name. Although the namespace is hierarchical and arbitrarily deep, there is no enforced containment; the name is essentially arbitrary. The publisher information is optional, but must be preceded by \fBpkg://\fR if present. An FMRI that includes the publisher is often referred to as being "fully qualified." If publisher information is not present, then the package name should generally be preceded by \fBpkg:/\fR.
+\fBomnios\fR is the publisher. \fBsystem/library/c++-runtime\fR is the package name. Although the namespace is hierarchical and arbitrarily deep, there is no enforced containment; the name is essentially arbitrary. The publisher information is optional, but must be preceded by \fBpkg://\fR if present. An FMRI that includes the publisher is often referred to as being "fully qualified." If publisher information is not present, then the package name should generally be preceded by \fBpkg:/\fR.
 .sp
 .LP
 Packaging clients often allow the scheme of an FMRI to be omitted if it does not contain publisher information. For example, \fBpkg:/system/library/c++-runtime\fR can be written as \fBsystem/library/c++-runtime\fR. If the scheme is omitted, clients also allow omission of all but the last component of a package name for matching purposes. For example, \fBsystem/library/c++-runtime\fR could be written as \fBlibrary/c++-runtime\fR or \fBc++-runtime\fR, which would then match packages named \fBc++-runtime\fR or package names ending in \fB/c++-runtime\fR.
@@ -552,7 +552,7 @@ Specifies the version (expressed as a dot-separated sequence of nonnegative inte
 .ad
 .sp .6
 .RS 4n
-Specifies the implementation of the mediator for use in addition to or instead of the \fBmediator-version\fR. Implementation strings are not considered to be ordered and a string is arbitrary selected by \fBpkg\fR(5) if not explicitly specified by a system administrator.
+Specifies the implementation of the mediator for use in addition to or instead of the \fBmediator-version\fR. Implementation strings are not considered to be ordered and a string is arbitrarily selected by \fBpkg\fR(5) if not explicitly specified by a system administrator.
 .sp
 The value can be a string of arbitrary length composed of alphanumeric characters and spaces. If the implementation itself can be versioned or is versioned, then the version should be specified at the end of the string, after a @ (expressed as a dot-separated sequence of nonnegative integers). If multiple versions of an implementation exist, the default behavior is to select the implementation with the greatest version.
 .sp
