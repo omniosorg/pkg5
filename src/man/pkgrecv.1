@@ -119,10 +119,10 @@ Control which versions of packages are retrieved if \fIpattern\fR is specified o
 .sp
 .in +2
 .nf
-pkg://solaris/package/pkg@0.5.11,5.11-0.175.1.0.0.24.0:20120904T180335Z
-pkg://solaris/package/pkg@0.5.11,5.11-0.175.1.0.0.24.0:20120903T170234Z
-pkg://solaris/package/pkg@0.5.11,5.11-0.175.1.0.0.23.0:20120820T165108Z
-pkg://solaris/package/pkg@0.5.11,5.11-0.175.1.0.0.23.0:20120819T155007Z
+pkg://omnios/package/pkg@0.5.11,5.11-0.175.1.0.0.24.0:20120904T180335Z
+pkg://omnios/package/pkg@0.5.11,5.11-0.175.1.0.0.24.0:20120903T170234Z
+pkg://omnios/package/pkg@0.5.11,5.11-0.175.1.0.0.23.0:20120820T165108Z
+pkg://omnios/package/pkg@0.5.11,5.11-0.175.1.0.0.23.0:20120819T155007Z
 .fi
 .in -2
 
@@ -149,8 +149,8 @@ Retrieve the latest timestamp for each version of each matching \fIfmri\fR or \f
 .sp
 .in +2
 .nf
-pkg://solaris/package/pkg@0.5.11,5.11-0.175.1.0.0.24.0:20120904T180335Z
-pkg://solaris/package/pkg@0.5.11,5.11-0.175.1.0.0.23.0:20120820T165108Z
+pkg://omnios/package/pkg@0.5.11,5.11-0.175.1.0.0.24.0:20120904T180335Z
+pkg://omnios/package/pkg@0.5.11,5.11-0.175.1.0.0.23.0:20120820T165108Z
 .fi
 .in -2
 
@@ -168,7 +168,7 @@ Retrieve only the newest version of each matching \fIfmri\fR or \fIpattern\fR. I
 .sp
 .in +2
 .nf
-pkg://solaris/package/pkg@0.5.11,5.11-0.175.1.0.0.24.0:20120904T180335Z
+pkg://omnios/package/pkg@0.5.11,5.11-0.175.1.0.0.24.0:20120904T180335Z
 .fi
 .in -2
 
@@ -319,9 +319,9 @@ List the newest packages available from the repository on the system named \fBte
 .in +2
 .nf
 $ \fBpkgrecv -s http://test --newest\fR
-pkg://solaris/system/library/c++-runtime@0.5.11,5.11-0.175.0.0.0.2.1:20120921T190358Z
-pkg://solaris/system/library/freetype-2@2.4.8,5.11-0.175.1.0.0.7.1234:20120109T215840Z
-pkg://solaris/system/library/math@0.5.11,5.11-0.175.0.0.0.2.1:20120921T190432Z
+pkg://omnios/system/library/c++-runtime@0.5.11,5.11-0.175.0.0.0.2.1:20120921T190358Z
+pkg://omnios/system/library/freetype-2@2.4.8,5.11-0.175.1.0.0.7.1234:20120109T215840Z
+pkg://omnios/system/library/math@0.5.11,5.11-0.175.0.0.0.2.1:20120921T190432Z
 .fi
 .in -2
 .sp
@@ -338,7 +338,7 @@ Receive the \fBc++-runtime\fR package from Example 1 in a format suitable for us
 $ \fBpkgrecv -s http://test \e\fR
 \fB-d /local/repo --raw \e\fR
 \fBc++-runtime@0.5.11,5.11-0.175.0.0.0.2.1:20120921T190358Z\fR
-Processing packages for publisher solaris ...
+Processing packages for publisher omnios ...
 Retrieving and evaluating 1 package(s)...
 PROCESS       ITEMS     GET (MB)    SEND (MB)
 Completed       1/1      3.5/3.5      0.0/0.0
@@ -373,7 +373,7 @@ Receive only the latest version of the package \fBeditor/vim\fR from the system 
 .nf
 $ \fBpkgrecv -s http://test -d /local/repo -m latest -v \e\fR
 \fBeditor/vim\fR
-Processing packages for publisher solaris ...
+Processing packages for publisher omnios ...
 Retrieving and evaluating 1 package(s)...
 
 Retrieving packages ...
