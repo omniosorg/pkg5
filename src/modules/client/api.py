@@ -3261,6 +3261,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                                     location=str(repo))
 
                         for p in pubs:
+                                p.client_uuid = "transient"
                                 psrepo = p.repository
                                 if not psrepo:
                                         # Repository configuration info wasn't
