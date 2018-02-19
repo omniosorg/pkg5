@@ -68,6 +68,15 @@ pkg \- Image Packaging System retrieval client
 
 .LP
 .nf
+/usr/bin/pkg apply-hot-fix [-nvq] [--no-be-activate]
+    [--no-backup-be | --require-backup-be] [--backup-be-name \fIname\fR]
+    [--deny-new-be | --require-new-be] [--be-name \fIname\fR]
+    [-r [[-z \fIzonename\fR]... | [-Z \fIzonename\fR]... ]]
+    <path_or_uri> [\fIpkg_fmri_pattern\fR ...]
+.fi
+
+.LP
+.nf
 /usr/bin/pkg list [-Hafnqsuv] [-g \fIpath_or_uri\fR]...
     [--no-refresh] [\fIpkg_fmri_pattern\fR ...]
 .fi
@@ -780,6 +789,45 @@ Do not execute the client up-to-date check when updating all installed packages.
 .sp .6
 .RS 4n
 Ignore packages that are not installed. Using this option prevents \fBpkg update\fR from failing when attempting to update a package that is not currently installed.
+.RE
+
+For all other options, see the \fBinstall\fR command above.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBpkg apply-hot-fix\fR [\fB-nvq\fR] [\fB-r\fR [[\fB-z\fR \fIzonename\fR]... | [\fB-Z\fR \fIzonename\fR]... ]] [\fB--no-be-activate\fR] [\fB--no-backup-be\fR | \fB--require-backup-be\fR] [\fB--backup-be-name\fR \fIname\fR] [\fB--deny-new-be\fR | \fB--require-new-be\fR] [\fB--be-name\fR \fIname\fR] <\fIpath_or_uri\fR> [\fIpkg_fmri_pattern\fR ...]\fR
+.ad
+.sp .6
+.RS 4n
+Install a hot-fix bundle from the provided location.
+.sp
+In the command output, note any messages that say a new boot environment has been created. If a new boot environment has been created and activated, that is the environment that is booted by default on next reboot if you do not specify the \fB--no-be-activate\fR option. See the \fBbeadm\fR(1M) man page for information about managing boot environments.
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIpath_or_uri\fR\fR
+.ad
+.sp .6
+.RS 4n
+Use the specified package repository or archive as the source of package data for the operation. Repositories that require a client SSL certificate cannot be used with this option.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIpkg_fmri_pattern\fR\fR
+.ad
+.sp .6
+.RS 4n
+Update only the specified packages found within the hot-fix archive.
+.sp
+If more than one \fIpkg_fmri_pattern\fR is specified, and if any of the specified packages cannot be updated in this image, then none of the specified packages will be updated.
 .RE
 
 For all other options, see the \fBinstall\fR command above.
@@ -3882,6 +3930,23 @@ The following command rehydrates only files and hardlinks delivered by the \fBte
 .in +2
 .nf
 $ \fBpkg -R /tmp/test_image rehydrate -p test1\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 35 \fRApply a hot-fix directly from a web repository
+.sp
+.LP
+Apply a hot-fix from a package archive file hosted on a remote web server
+into a new boot environment called \fItestbe\fR.
+.sp
+.in +2
+.nf
+$ \fBpkg apply-hot-fix --be-name=testbe \e\fR
+.in +4
+\fBhttps://downloads.omniosce.org/pkg/bloody/hotfix-1234.p5p\fR
+.in -4
 .fi
 .in -2
 .sp

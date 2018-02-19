@@ -1086,6 +1086,13 @@ opts_update = \
     opts_table_missing + \
     []
 
+# "apply-hot-fix"
+opts_apply_hot_fix = \
+    opts_table_beopts + \
+    opts_table_nqv + \
+    opts_table_li_recurse + \
+    []
+
 # "attach-linked" cmd inherits all main cmd options
 opts_attach_linked = \
     opts_main + \
@@ -1242,6 +1249,7 @@ pkg_op_opts = {
     pkgdefs.PKG_OP_UNINSTALL      : opts_uninstall,
     pkgdefs.PKG_OP_UNSET_PUBLISHER: [],
     pkgdefs.PKG_OP_UPDATE         : opts_update,
+    pkgdefs.PKG_OP_APPLY_HOT_FIX  : opts_apply_hot_fix,
     pkgdefs.PKG_OP_VERIFY         : opts_verify
 }
 
