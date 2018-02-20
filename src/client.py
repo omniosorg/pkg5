@@ -62,6 +62,9 @@ try:
         import textwrap
         import time
         import traceback
+        import pycurl
+        import atexit
+        import shutil
 
         import pkg
         import pkg.actions as actions
@@ -72,6 +75,7 @@ try:
         import pkg.client.progress as progress
         import pkg.client.linkedimage as li
         import pkg.client.publisher as publisher
+        import pkg.client.transport.transport as transport
         import pkg.client.options as options
         import pkg.fmri as fmri
         import pkg.misc as misc
@@ -110,6 +114,17 @@ valid_special_attrs = ["action.hash", "action.key", "action.name", "action.raw"]
 
 valid_special_prefixes = ["action."]
 _api_inst = None
+
+tmpdirs = []
+tmpfiles = []
+
+@atexit.register
+def cleanup():
+        """To be called at program finish."""
+        for d in tmpdirs:
+                shutil.rmtree(d, True)
+        for f in tmpfiles:
+                os.unlink(f)
 
 def format_update_error(e):
         # This message is displayed to the user whenever an
@@ -155,8 +170,8 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False,
         adv_usage = {}
         priv_usage = {}
 
-        basic_cmds = ["refresh", "install", "uninstall", "update", "list",
-            "version"]
+        basic_cmds = ["refresh", "install", "uninstall", "update",
+            "apply-hot-fix", "list", "version"]
 
         basic_usage["install"] = _(
             "[-nvq] [-C n] [-g path_or_uri ...] [--accept]\n"
@@ -181,6 +196,12 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False,
             "            [-r [-z image_name ... | -Z image_name ...]]\n"
             "            [--sync-actuators | --sync-actuators-timeout timeout]\n"
             "            [--reject pkg_fmri_pattern ...] [pkg_fmri_pattern ...]")
+        basic_usage["apply-hot-fix"] = _(
+            "[-nvq] [--no-be-activate]\n"
+            "            [--no-backup-be | --require-backup-be] [--backup-be-name]\n"
+            "            [--deny-new-be | --require-new-be] [--be-name name]\n"
+            "            [-r [-z image_name ... | -Z image_name ...]]\n"
+            "            <path_or_uri> [pkg_fmri_pattern ...]")
         basic_usage["list"] = _(
             "[-Hafnqsuv] [-g path_or_uri ...] [--no-refresh]\n"
             "            [pkg_fmri_pattern ...]")
@@ -438,7 +459,7 @@ Usage:    pkg [options] command [cmd_options] [operands]"""))
                 logger.error(_("""
 Package Information  : list           search         info      contents
 Package Transitions  : update         install        uninstall
-                       history        exact-install
+                       history        exact-install  apply-hot-fix
 Package Maintenance  : verify         fix            revert
 Publishers           : publisher      set-publisher  unset-publisher
 Package Configuration: mediator       set-mediator   unset-mediator
@@ -2124,6 +2145,167 @@ def update(op, api_inst, pargs, accept, act_timeout, backup_be, backup_be_name,
             display_plan_cb=display_plan_cb, logger=logger)
 
         return __handle_client_json_api_output(out_json, op)
+
+def apply_hot_fix(**args):
+        """Attempt to install updates from specified hot-fix"""
+
+        if not args['pargs']:
+               usage(_("Source URL or file must be specified"), cmd=args['op'])
+
+        origin = misc.parse_uri(args['pargs'].pop(0), cwd=orig_cwd)
+
+        if args['verbose']:
+                msg("Resolved URL to: {0}".format(origin))
+
+        base = os.path.basename(origin)
+        if not base.endswith('.p5p'): base = base + '.p5p'
+        tmp_fd, tmp_pth = tempfile.mkstemp(prefix='pkg_hfa_', suffix="_" + base)
+        tmpfiles.append(tmp_pth)
+
+        if origin.startswith("file:///"):
+                shutil.copy2(origin[7:], tmp_pth)
+                origin = misc.parse_uri(tmp_pth, cwd=orig_cwd)
+        elif origin.startswith("http://") or origin.startswith("https://"):
+                # Download file to temporary area
+
+                if not args['quiet']:
+                        msg("Downloading hot-fix from {0}".format(origin))
+                if args['verbose']:
+                        msg("    -> {0}".format(tmp_pth))
+
+                with os.fdopen(tmp_fd, "wb") as fh:
+                        hdl = pycurl.Curl()
+                        hdl.setopt(pycurl.URL, origin)
+                        hdl.setopt(pycurl.WRITEDATA, fh)
+                        hdl.setopt(pycurl.FAILONERROR, 1)
+                        hdl.setopt(pycurl.CONNECTTIMEOUT,
+                            global_settings.PKG_CLIENT_CONNECT_TIMEOUT)
+                        #hdl.setopt(pycurl.VERBOSE, True)
+                        if args['verbose']:
+                                hdl.setopt(pycurl.NOPROGRESS, False)
+                        try:
+                                hdl.perform()
+                        except pycurl.error, error:
+                                errno, errstr = error
+                                msg("An error occurred: {0}".format(errstr))
+                                return
+
+                origin = misc.parse_uri(tmp_pth, cwd=orig_cwd)
+
+                if not args['quiet']:
+                        msg("Download complete.\n")
+        else:
+               usage(_("Invalid URL"), cmd=args['op'])
+
+        ######################################################################
+        # Determine packages held within the .p5p archive
+
+        if args['verbose']:
+                msg("Scanning package archive...")
+
+        # Create a transport & transport config
+        repo_uri = publisher.RepositoryURI(origin)
+        tmp_dir = tempfile.mkdtemp()
+        incoming_dir = tempfile.mkdtemp()
+        cache_dir = tempfile.mkdtemp()
+        tmpdirs.extend([tmp_dir, incoming_dir, cache_dir])
+
+        xport, xport_cfg = transport.setup_transport()
+        xport_cfg.add_cache(cache_dir, readonly=False)
+        xport_cfg.incoming_root = incoming_dir
+        xport_cfg.pkg_root = tmp_dir
+
+        # Configure target publisher.
+        xpub = transport.setup_publisher(origin, "target", xport, xport_cfg)
+        pub_data = xport.get_publisherdata(xpub)
+
+        pkglist = []
+        for p in pub_data:
+                # Refresh publisher data
+                p.repository = xpub.repository
+                p.meta_root = tempfile.mkdtemp()
+                tmpdirs.append(p.meta_root)
+                p.transport = xport
+                p.refresh(True, True)
+
+                cat = p.catalog
+                for f, states, attrs in cat.gen_packages(pubs=[p.prefix],
+                    return_fmris=True):
+                        pkglist.append(f.get_fmri(include_build=False))
+
+        if args['verbose']:
+                for pkg in pkglist:
+                        msg("    {0}".format(pkg))
+                msg("")
+
+        ######################################################################
+        # Add the hot-fix archive to the publisher
+
+        pubargs = {}
+
+        pubargs['api_inst'] = args['api_inst']
+        pubargs['op'] = 'set-publisher'
+        pubargs['add_origins'] = set([origin])
+        pubargs['pargs'] = ['omnios']
+
+        pubargs['ssl_key'] = None
+        pubargs['unset_ca_certs'] = []
+        pubargs['approved_ca_certs'] = []
+        pubargs['search_before'] = None
+        pubargs['sticky'] = None
+        pubargs['add_prop_values'] = {}
+        pubargs['revoked_ca_certs'] = []
+        pubargs['search_first'] = False
+        pubargs['refresh_allowed'] = True
+        pubargs['add_mirrors'] = set([])
+        pubargs['search_after'] = None
+        pubargs['disable'] = None
+        pubargs['set_props'] = {}
+        pubargs['reset_uuid'] = False
+        pubargs['remove_mirrors'] = set([])
+        pubargs['ssl_cert'] = None
+        pubargs['remove_prop_values'] = {}
+        pubargs['proxy_uri'] = None
+        pubargs['origin_uri'] = None
+        pubargs['remove_origins'] = set([])
+        pubargs['repo_uri'] = None
+        pubargs['unset_props'] = set([])
+
+        publisher_set(**pubargs)
+
+        ######################################################################
+        # Set up at-exit routine to remove publisher again
+
+        pubargs['remove_origins'] = pubargs['add_origins']
+        pubargs['add_origins'] = set([])
+
+        atexit.register(publisher_set, **pubargs)
+
+        ######################################################################
+        # Pass off to pkg update
+
+        args['op'] = 'update'
+        args['origins'] = set([])
+
+        if not args['pargs']:
+                args['pargs'] = pkglist
+
+        # These are options for update which are not exposed for apply-hot-fix
+        # Set to default values for this transaction.
+        args['parsable_version'] = None
+        args['accept'] = False
+        args['reject_pats'] = []
+        args['act_timeout'] = 0
+        args['refresh_catalogs'] = True
+        args['update_index'] = True
+        args['li_ignore'] = None
+        args['stage'] = 'default'
+        args['li_parent_sync'] = True
+        args['show_licenses'] = False
+        args['ignore_missing'] = False
+        args['force'] = False
+
+        return update(**args)
 
 def uninstall(op, api_inst, pargs,
     act_timeout, backup_be, backup_be_name, be_activate, be_name,
@@ -5111,6 +5293,7 @@ cmds = {
     "unset-mediator"        : [unset_mediator],
     "unset-publisher"       : [publisher_unset],
     "update"                : [update],
+    "apply-hot-fix"         : [apply_hot_fix],
     "update-format"         : [update_format],
     "variant"               : [list_variant],
     "verify"                : [verify],
