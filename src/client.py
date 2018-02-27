@@ -2164,6 +2164,28 @@ def apply_hot_fix(**args):
         tmp_fd, tmp_pth = tempfile.mkstemp(prefix='pkg_hfa_', suffix="_" + base)
         tmpfiles.append(tmp_pth)
 
+        ######################################################################
+        # Get list of installed packages
+
+        if args['verbose']:
+                msg("Retrieving installed package list...")
+
+        out_json = client_api._list_inventory(op='list',
+            api_inst=args['api_inst'], pargs='', li_parent_sync=False,
+            list_all=False, list_installed_newest=False, list_newest=False,
+            list_upgradable=False, origins=set([]), quiet=True,
+            refresh_catalogs=False);
+
+        if "data" in out_json:
+                pkglist = [ 'pkg://{0}/{1}'.format(entry['pub'], entry['pkg'])
+                    for entry in out_json["data"] ]
+        else:
+                error("Could not retrieve installed package list.")
+                return
+
+        ######################################################################
+        # Find hot-fix archive
+
         if origin.startswith("file:///"):
                 shutil.copy2(origin[7:], tmp_pth)
                 origin = misc.parse_uri(tmp_pth, cwd=orig_cwd)
@@ -2221,7 +2243,7 @@ def apply_hot_fix(**args):
         xpub = transport.setup_publisher(origin, "target", xport, xport_cfg)
         pub_data = xport.get_publisherdata(xpub)
 
-        pkglist = []
+        updatelist = []
         for p in pub_data:
                 # Refresh publisher data
                 p.repository = xpub.repository
@@ -2233,12 +2255,25 @@ def apply_hot_fix(**args):
                 cat = p.catalog
                 for f, states, attrs in cat.gen_packages(pubs=[p.prefix],
                     return_fmris=True):
-                        pkglist.append(f.get_fmri(include_build=False))
+                        fmri = f.get_fmri(include_build=False)
+                        try:
+                                bfmri = fmri.split('@')[0]
+                                if bfmri in pkglist:
+                                        updatelist.append(fmri)
+                                elif args['verbose']:
+                                        msg("     {0} not installed, skipping."
+                                            .format(bfmri))
+                        except:
+                                pass
 
         if args['verbose']:
-                for pkg in pkglist:
-                        msg("    {0}".format(pkg))
+                for pkg in updatelist:
+                        msg("    {0} will be updated.".format(pkg))
                 msg("")
+
+        if len(updatelist) < 1:
+                error("None of the packages in this hot-fix are installed.")
+                return
 
         ######################################################################
         # Add the hot-fix archive to the publisher
@@ -2290,7 +2325,7 @@ def apply_hot_fix(**args):
         args['origins'] = set([])
 
         if not args['pargs']:
-                args['pargs'] = pkglist
+                args['pargs'] = updatelist
 
         # These are options for update which are not exposed for apply-hot-fix
         # Set to default values for this transaction.
