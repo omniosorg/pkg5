@@ -22,7 +22,7 @@
 
 #
 # Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
-# Copyright 2017 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
 #
 
 import errno
@@ -62,6 +62,8 @@ USE_SYSTEM_REPO = "use-system-repo"
 CHECK_CERTIFICATE_REVOCATION = "check-certificate-revocation"
 EXCLUDE_PATTERNS = "exclude-patterns"
 KEY_FILES = "key-files"
+DEFAULT_RECURSE = "default-recurse"
+DEFAULT_CONCURRENCY = "recursion-concurrency"
 
 default_policies = {
     BE_POLICY: "default",
@@ -71,7 +73,8 @@ default_policies = {
     MIRROR_DISCOVERY: False,
     SEND_UUID: True,
     SIGNATURE_POLICY: sigpolicy.DEFAULT_POLICY,
-    USE_SYSTEM_REPO: False
+    USE_SYSTEM_REPO: False,
+    DEFAULT_RECURSE: False,
 }
 
 default_policy_map = {
@@ -85,6 +88,7 @@ default_properties = {
         CA_PATH: os.path.join(os.path.sep, "etc", "ssl", "certs"),
         # Path default is intentionally relative for this case.
         "trust-anchor-directory": os.path.join("etc", "ssl", "pkg"),
+        DEFAULT_CONCURRENCY: 1,
 }
 
 # Assume the repository metadata should be checked no more than once every
@@ -194,7 +198,12 @@ class ImageConfig(cfg.FileConfig):
                             CHECK_CERTIFICATE_REVOCATION]),
                     cfg.PropList("dehydrated"),
                     cfg.PropList(EXCLUDE_PATTERNS),
-                    cfg.PropList(KEY_FILES)
+                    cfg.PropList(KEY_FILES),
+                    cfg.PropBool(DEFAULT_RECURSE,
+                        default=default_policies[DEFAULT_RECURSE]),
+                    cfg.PropInt(DEFAULT_CONCURRENCY,
+                        minimum=0,
+                        default=default_properties[DEFAULT_CONCURRENCY]),
                 ]),
                 cfg.PropertySection("facet", properties=[
                     cfg.PropertyTemplate("^facet\..*", prop_type=cfg.PropBool),
