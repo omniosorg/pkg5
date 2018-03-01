@@ -21,6 +21,7 @@
 #
 
 # Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
 
 import os
 
@@ -30,6 +31,7 @@ import pkg.misc as misc
 
 from pkg.client.api_errors import InvalidOptionError, LinkedImageException
 from pkg.client import global_settings
+from pkg.client.imageconfig import DEFAULT_RECURSE, DEFAULT_CONCURRENCY
 
 _orig_cwd = None
 
@@ -58,6 +60,7 @@ LI_TARGET_ALL         = "li_target_all"
 LI_TARGET_LIST        = "li_target_list"
 # options for explicit recursion; see description in client.py
 LI_ERECURSE_ALL       = "li_erecurse_all"
+LI_ERECURSE_NONE      = "li_erecurse_none"
 LI_ERECURSE_INCL      = "li_erecurse_list"
 LI_ERECURSE_EXCL      = "li_erecurse_excl"
 LI_ERECURSE           = "li_erecurse"
@@ -521,9 +524,16 @@ def opts_table_cb_li_target1(api_inst, opts, opts_new):
 
 def opts_table_cb_li_recurse(api_inst, opts, opts_new):
 
+        # Just LI_ERECURSE is preserved in the final options and that is
+        # set to the list of child images selected for recursion.
         del opts_new[LI_ERECURSE_INCL]
         del opts_new[LI_ERECURSE_EXCL]
         del opts_new[LI_ERECURSE_ALL]
+        del opts_new[LI_ERECURSE_NONE]
+
+        if (api_inst.img.get_property(DEFAULT_RECURSE)
+            and not opts[LI_ERECURSE_NONE]):
+                opts[LI_ERECURSE_ALL] = True
 
         if opts[LI_ERECURSE_EXCL] and not opts[LI_ERECURSE_ALL]:
                 raise InvalidOptionError(InvalidOptionError.REQUIRED,
@@ -765,9 +775,16 @@ def opts_cb_fd(k, api_inst, opts, opts_new):
 
 def opts_table_cb_concurrency(api_inst, opts, opts_new):
         if opts[CONCURRENCY] is None:
-                # remove concurrency from parameters dict
-                del opts_new[CONCURRENCY]
-                return
+                # If the concurrency has been set by an environment variable
+                # then client_concurrency_set will be true. Don't override with
+                # the image default in this case.
+                if not global_settings.client_concurrency_set:
+                        opts[CONCURRENCY] = api_inst.img.get_property(
+                            DEFAULT_CONCURRENCY)
+                else:
+                        # remove concurrency from parameters dict
+                        del opts_new[CONCURRENCY]
+                        return
 
         # make sure we have an integer
         opts_cb_int(CONCURRENCY, api_inst, opts, opts_new)
@@ -953,6 +970,7 @@ opts_table_li_target1 = [
 opts_table_li_recurse = [
     opts_table_cb_li_recurse,
     (LI_ERECURSE_ALL,       False, [], {"type": "boolean"}),
+    (LI_ERECURSE_NONE,      False, [], {"type": "boolean"}),
     (LI_ERECURSE_INCL,      [], [], {"type": "array",
                                      "items": {"type": "string"}
                                     }),

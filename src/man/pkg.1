@@ -18,7 +18,7 @@ pkg \- Image Packaging System retrieval client
 .LP
 .nf
 /usr/bin/pkg install [-nvq] [-C \fIn\fR] [-g \fIpath_or_uri\fR]...
-    [-r [[-z \fIzonename\fR]... | [-Z \fIzonename\fR]... ]]
+    [-R | -r [[-z \fIzonename\fR]... | [-Z \fIzonename\fR]... ]]
     [--accept] [--licenses] [--no-index] [--no-refresh]
     [--no-be-activate]
     [--no-backup-be | --require-backup-be]
@@ -43,7 +43,7 @@ pkg \- Image Packaging System retrieval client
 .LP
 .nf
 /usr/bin/pkg uninstall [-nvq] [-C \fIn\fR]
-    [-r [[-z \fIzonename\fR]... | [-Z \fIzonename\fR]... ]]
+    [-R | -r [[-z \fIzonename\fR]... | [-Z \fIzonename\fR]... ]]
     [--ignore-missing] [--no-index] [--no-be-activate]
     [--no-backup-be | --require-backup-be]
     [--backup-be-name \fIname\fR]
@@ -55,7 +55,7 @@ pkg \- Image Packaging System retrieval client
 .LP
 .nf
 /usr/bin/pkg update [-fnvq] [-C \fIn\fR] [-g \fIpath_or_uri\fR]...
-    [-r [[-z \fIzonename\fR]... | [-Z \fIzonename\fR]... ]]
+    [-R | -r [[-z \fIzonename\fR]... | [-Z \fIzonename\fR]... ]]
     [--accept] [--ignore-missing] [--licenses]
     [--no-index] [--no-refresh] [--no-be-activate]
     [--no-backup-be | --require-backup-be]
@@ -71,7 +71,7 @@ pkg \- Image Packaging System retrieval client
 /usr/bin/pkg apply-hot-fix [-nvq] [--no-be-activate]
     [--no-backup-be | --require-backup-be] [--backup-be-name \fIname\fR]
     [--deny-new-be | --require-new-be] [--be-name \fIname\fR]
-    [-r [[-z \fIzonename\fR]... | [-Z \fIzonename\fR]... ]]
+    [-R | -r [[-z \fIzonename\fR]... | [-Z \fIzonename\fR]... ]]
     <path_or_uri> [\fIpkg_fmri_pattern\fR ...]
 .fi
 
@@ -156,7 +156,7 @@ pkg \- Image Packaging System retrieval client
 .LP
 .nf
 /usr/bin/pkg change-variant [-nvq] [-C \fIn\fR] [-g \fIpath_or_uri\fR]...
-    [-r [[-z \fIzonename\fR]... | [-Z \fIzonename\fR]... ]]
+    [-R | -r [[-z \fIzonename\fR]... | [-Z \fIzonename\fR]... ]]
     [--accept] [--licenses] [--no-be-activate]
     [--no-backup-be | --require-backup-be]
     [--backup-be-name \fIname\fR]
@@ -173,7 +173,7 @@ pkg \- Image Packaging System retrieval client
 .LP
 .nf
 /usr/bin/pkg change-facet [-nvq] [-C \fIn\fR] [-g \fIpath_or_uri\fR]...
-    [-r [[-z \fIzonename\fR]... | [-Z \fIzonename\fR]... ]]
+    [-R | -r [[-z \fIzonename\fR]... | [-Z \fIzonename\fR]... ]]
     [--accept] [--licenses] [--no-be-activate]
     [--no-backup-be | --require-backup-be]
     [--backup-be-name \fIname\fR]
@@ -428,7 +428,7 @@ Force a full retrieval of all publisher metadata, instead of attempting an incre
 .ne 2
 .mk
 .na
-\fB\fBpkg install\fR [\fB-nvq\fR] [\fB-C\fR \fIn\fR] [\fB-g\fR \fIpath_or_uri\fR]... [\fB-r\fR [[\fB-z\fR \fIzonename\fR]... | [\fB-Z\fR \fIzonename\fR]... ]] [\fB--accept\fR] [\fB--licenses\fR] [\fB--no-index\fR] [\fB--no-refresh\fR] [\fB--no-be-activate\fR] [\fB--no-backup-be\fR | \fB--require-backup-be\fR] [\fB--backup-be-name\fR \fIname\fR] [\fB--deny-new-be\fR | \fB--require-new-be\fR] [\fB--be-name\fR \fIname\fR] [\fB--reject\fR \fIpkg_fmri_pattern\fR]... [\fB--sync-actuators\fR | \fB--sync-actuators-timeout\fR \fItimeout\fR] \fIpkg_fmri_pattern\fR ...\fR
+\fBpkg install\fR [\fB-nvq\fR] [\fB-C\fR \fIn\fR] [\fB-g\fR \fIpath_or_uri\fR]... [\fB-R\fR | \fB-r\fR [[\fB-z\fR \fIzonename\fR]... | [\fB-Z\fR \fIzonename\fR]... ]] [\fB--accept\fR] [\fB--licenses\fR] [\fB--no-index\fR] [\fB--no-refresh\fR] [\fB--no-be-activate\fR] [\fB--no-backup-be\fR | \fB--require-backup-be\fR] [\fB--backup-be-name\fR \fIname\fR] [\fB--deny-new-be\fR | \fB--require-new-be\fR] [\fB--be-name\fR \fIname\fR] [\fB--reject\fR \fIpkg_fmri_pattern\fR]... [\fB--sync-actuators\fR | \fB--sync-actuators-timeout\fR \fItimeout\fR] \fIpkg_fmri_pattern\fR ...\fR
 .ad
 .sp .6
 .RS 4n
@@ -453,7 +453,7 @@ If a package is on the avoid list, installing it removes it from that list.
 .ad
 .sp .6
 .RS 4n
-Specify the number of child images to update in parallel. When recursing into child images (usually installed \fBlipkg\fR branded non-global zones), update at most \fIn\fR child images in parallel. The default number of child images to update in parallel is 1. If \fIn\fR is 0 or a negative number, all child images are updated in parallel. See also \fBPKG_CONCURRENCY\fR in the "Environment Variables" section.
+Specify the number of child images to update in parallel. When recursing into child images (usually installed \fBlipkg\fR branded non-global zones), update at most \fIn\fR child images in parallel. The default number of child images to update in parallel is 1. If \fIn\fR is 0 or a negative number, all child images are updated in parallel. See also \fBPKG_CONCURRENCY\fR in the "Environment Variables" section and \fBrecursion-concurrency\fR in the "Image Properties" section.
 .RE
 
 .sp
@@ -495,11 +495,22 @@ Hide progress messages during the requested operation.
 .ne 2
 .mk
 .na
-\fB\fB-r\fR\fR
+\fB-r\fR
 .ad
 .sp .6
 .RS 4n
-Run this operation in the global zone and also in all installed \fBlipkg\fR branded non-global zones. The effect on the non-global zone is similar to logging into each non-global zone and running the command directly. Without this option, when you run \fBpkg\fR commands in the global zone, non-global zones are modified only to the extent required to keep them compatible with the global zone. With this option, the \fBpkg\fR operation is applied to all installed non-global zones except as limited by the \fB-z\fR and \fB-Z\fR options. Zones that are excluded by the \fB-z\fR and \fB-Z\fR options might still be modified if updates are required to keep them in sync with the global zone.
+Run this operation in the global zone and also in all installed \fBlipkg\fR branded non-global zones. The effect on the non-global zone is similar to logging into each non-global zone and running the command directly. Without this option, when you run \fBpkg\fR commands in the global zone, non-global zones are modified only to the extent required to keep them compatible with the global zone. With this option, the \fBpkg\fR operation is applied to all installed non-global zones except as limited by the \fB-z\fR and \fB-Z\fR options. Zones that are excluded by the \fB-z\fR and \fB-Z\fR options might still be modified if updates are required to keep them in sync with the global zone. Recursion can be enabled by default for an image via the \fBdefault-recurse\fR package property; if this is set then it is not necessary to specify the \fB-r\fR option manually however the \fB-R\fR option can be specified to temporarily override recursion, see below.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-R\fR\fR
+.ad
+.sp .6
+.RS 4n
+Disable recursion into \fBlipkg\fR branded non-global zones. This option can be used to override the default policy set on the image, refer to \fBdefault-recurse\fR in the "Package Properties" section. Even with this option, when you run \fBpkg\fR commands in the global zone, non-global zones are modified to the extent required to keep them compatible with the global zone.
 .RE
 
 .sp
@@ -716,7 +727,7 @@ For descriptions of options, see the \fBinstall\fR command above.
 .ne 2
 .mk
 .na
-\fB\fBpkg uninstall\fR [\fB-nvq\fR] [\fB-C\fR \fIn\fR] [\fB-r\fR [[\fB-z\fR \fIzonename\fR]... | [\fB-Z\fR \fIzonename\fR]... ]] [\fB--ignore-missing\fR] [\fB--no-index\fR] [\fB--no-be-activate\fR] [\fB--no-backup-be\fR | \fB--require-backup-be\fR] [\fB--backup-be-name\fR \fIname\fR] [\fB--deny-new-be\fR | \fB--require-new-be\fR] [\fB--be-name\fR \fIname\fR] [\fB--sync-actuators\fR | \fB--sync-actuators-timeout\fR \fItimeout\fR] \fIpkg_fmri_pattern\fR ...\fR
+\fBpkg uninstall\fR [\fB-nvq\fR] [\fB-C\fR \fIn\fR] [\fB-R\fR | \fB-r\fR [[\fB-z\fR \fIzonename\fR]... | [\fB-Z\fR \fIzonename\fR]... ]] [\fB--ignore-missing\fR] [\fB--no-index\fR] [\fB--no-be-activate\fR] [\fB--no-backup-be\fR | \fB--require-backup-be\fR] [\fB--backup-be-name\fR \fIname\fR] [\fB--deny-new-be\fR | \fB--require-new-be\fR] [\fB--be-name\fR \fIname\fR] [\fB--sync-actuators\fR | \fB--sync-actuators-timeout\fR \fItimeout\fR] \fIpkg_fmri_pattern\fR ...\fR
 .ad
 .sp .6
 .RS 4n
@@ -743,7 +754,7 @@ For all other options, see the \fBinstall\fR command above.
 .ne 2
 .mk
 .na
-\fB\fBpkg update\fR [\fB-fnvq\fR] [\fB-C\fR \fIn\fR] [\fB-g\fR \fIpath_or_uri\fR]... [\fB-r\fR [[\fB-z\fR \fIzonename\fR]... | [\fB-Z\fR \fIzonename\fR]... ]] [\fB--accept\fR] [\fB--ignore-missing\fR] [\fB--licenses\fR] [\fB--no-index\fR] [\fB--no-refresh\fR] [\fB--no-be-activate\fR] [\fB--no-backup-be\fR | \fB--require-backup-be\fR] [\fB--backup-be-name\fR \fIname\fR] [\fB--deny-new-be\fR | \fB--require-new-be\fR] [\fB--be-name\fR \fIname\fR] [\fB--reject\fR \fIpkg_fmri_pattern\fR]... [\fB--sync-actuators\fR | \fB--sync-actuators-timeout\fR \fItimeout\fR] [\fIpkg_fmri_pattern\fR ...]\fR
+\fBpkg update\fR [\fB-fnvq\fR] [\fB-C\fR \fIn\fR] [\fB-g\fR \fIpath_or_uri\fR]... [\fB-R\fR | \fB-r\fR [[\fB-z\fR \fIzonename\fR]... | [\fB-Z\fR \fIzonename\fR]... ]] [\fB--accept\fR] [\fB--ignore-missing\fR] [\fB--licenses\fR] [\fB--no-index\fR] [\fB--no-refresh\fR] [\fB--no-be-activate\fR] [\fB--no-backup-be\fR | \fB--require-backup-be\fR] [\fB--backup-be-name\fR \fIname\fR] [\fB--deny-new-be\fR | \fB--require-new-be\fR] [\fB--be-name\fR \fIname\fR] [\fB--reject\fR \fIpkg_fmri_pattern\fR]... [\fB--sync-actuators\fR | \fB--sync-actuators-timeout\fR \fItimeout\fR] [\fIpkg_fmri_pattern\fR ...]\fR
 .ad
 .sp .6
 .RS 4n
@@ -798,7 +809,7 @@ For all other options, see the \fBinstall\fR command above.
 .ne 2
 .mk
 .na
-\fB\fBpkg apply-hot-fix\fR [\fB-nvq\fR] [\fB-r\fR [[\fB-z\fR \fIzonename\fR]... | [\fB-Z\fR \fIzonename\fR]... ]] [\fB--no-be-activate\fR] [\fB--no-backup-be\fR | \fB--require-backup-be\fR] [\fB--backup-be-name\fR \fIname\fR] [\fB--deny-new-be\fR | \fB--require-new-be\fR] [\fB--be-name\fR \fIname\fR] <\fIpath_or_uri\fR> [\fIpkg_fmri_pattern\fR ...]\fR
+\fBpkg apply-hot-fix\fR [\fB-nvq\fR] [\fB-R\fR | \fB-r\fR [[\fB-z\fR \fIzonename\fR]... | [\fB-Z\fR \fIzonename\fR]... ]] [\fB--no-be-activate\fR] [\fB--no-backup-be\fR | \fB--require-backup-be\fR] [\fB--backup-be-name\fR \fIname\fR] [\fB--deny-new-be\fR | \fB--require-new-be\fR] [\fB--be-name\fR \fIname\fR] <\fIpath_or_uri\fR> [\fIpkg_fmri_pattern\fR ...]\fR
 .ad
 .sp .6
 .RS 4n
@@ -1844,7 +1855,7 @@ Display the possible variant values that can be set for installed packages. The 
 .ne 2
 .mk
 .na
-\fB\fBpkg change-variant\fR [\fB-nvq\fR] [\fB-C\fR \fIn\fR] [\fB-g\fR \fIpath_or_uri\fR]... [\fB-r\fR [[\fB-z\fR \fIzonename\fR]... | [\fB-Z\fR \fIzonename\fR]... ]] [\fB--accept\fR] [\fB--licenses\fR] [\fB--no-be-activate\fR] [\fB--no-backup-be\fR | \fB--require-backup-be\fR] [\fB--backup-be-name\fR \fIname\fR] [\fB--deny-new-be\fR | \fB--require-new-be\fR] [\fB--be-name\fR \fIname\fR] [\fB--sync-actuators\fR | \fB--sync-actuators-timeout\fR \fItimeout\fR] \fIvariant_name\fR=\fIvalue\fR ...\fR
+\fBpkg change-variant\fR [\fB-nvq\fR] [\fB-C\fR \fIn\fR] [\fB-g\fR \fIpath_or_uri\fR]... [\fB-R\fR | \fB-r\fR [[\fB-z\fR \fIzonename\fR]... | [\fB-Z\fR \fIzonename\fR]... ]] [\fB--accept\fR] [\fB--licenses\fR] [\fB--no-be-activate\fR] [\fB--no-backup-be\fR | \fB--require-backup-be\fR] [\fB--backup-be-name\fR \fIname\fR] [\fB--deny-new-be\fR | \fB--require-new-be\fR] [\fB--be-name\fR \fIname\fR] [\fB--sync-actuators\fR | \fB--sync-actuators-timeout\fR \fItimeout\fR] \fIvariant_name\fR=\fIvalue\fR ...\fR
 .ad
 .sp .6
 .RS 4n
@@ -1936,7 +1947,7 @@ Include masked facets in the output. Display a column that indicates which, if a
 .ne 2
 .mk
 .na
-\fB\fBpkg change-facet\fR [\fB-nvq\fR] [\fB-C\fR \fIn\fR] [\fB-g\fR \fIpath_or_uri\fR]... [\fB-r\fR [[\fB-z\fR \fIzonename\fR]... | [\fB-Z\fR \fIzonename\fR]... ]] [\fB--accept\fR] [\fB--licenses\fR] [\fB--no-be-activate\fR] [\fB--no-backup-be\fR | \fB--require-backup-be\fR] [\fB--backup-be-name\fR \fIname\fR] [\fB--deny-new-be\fR | \fB--require-new-be\fR] [\fB--be-name\fR \fIname\fR] [\fB--sync-actuators\fR | \fB--sync-actuators-timeout\fR \fItimeout\fR] \fIfacet_name\fR=(\fBTrue\fR|\fBFalse\fR|\fBNone\fR) ...\fR
+\fBpkg change-facet\fR [\fB-nvq\fR] [\fB-C\fR \fIn\fR] [\fB-g\fR \fIpath_or_uri\fR]... [\fB-R\fR | \fB-r\fR [[\fB-z\fR \fIzonename\fR]... | [\fB-Z\fR \fIzonename\fR]... ]] [\fB--accept\fR] [\fB--licenses\fR] [\fB--no-be-activate\fR] [\fB--no-backup-be\fR | \fB--require-backup-be\fR] [\fB--backup-be-name\fR \fIname\fR] [\fB--deny-new-be\fR | \fB--require-new-be\fR] [\fB--be-name\fR \fIname\fR] [\fB--sync-actuators\fR | \fB--sync-actuators-timeout\fR \fItimeout\fR] \fIfacet_name\fR=(\fBTrue\fR|\fBFalse\fR|\fBNone\fR) ...\fR
 .ad
 .sp .6
 .RS 4n
@@ -3153,6 +3164,20 @@ Default value: \fBalways\fR
 .ne 2
 .mk
 .na
+\fBdefault-recurse\fR
+.ad
+.sp .6
+.RS 4n
+(boolean) If set to \fBTrue\fR, the package client will default to recursing into child \fBlipkg\fR images as if the \fB-r\fR option had been provided. This behaviour can be overriden via the \fB-R\fR option.
+
+.sp
+Default value: \fBFalse\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
 \fB\fBexclude-patterns\fR\fR
 .ad
 .sp .6
@@ -3202,6 +3227,19 @@ Default value: \fB[]\fR (empty list)
 (boolean) This property tells the client to discover link-local content mirrors using mDNS and DNS-SD. If this property is set to \fBTrue\fR, the client attempts to download package content from mirrors it dynamically discovers. To run a mirror that advertises its content via mDNS, see the \fBpkg.depotd\fR(1M) man page.
 .sp
 Default value: \fBFalse\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBrecursion-concurrency\fR
+.ad
+.sp .6
+.RS 4n
+(integer) Set the default concurrency for recursive package operations. Refer to the documentation for the \fB-C\fR option to \fBpkg install\fI above for more details.
+.sp
+Default value: \fB1\fR
 .RE
 
 .sp

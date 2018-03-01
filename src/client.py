@@ -22,7 +22,7 @@
 
 #
 # Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
-# Copyright 2017 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
 #
 
 #
@@ -179,14 +179,14 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False,
             "            [--licenses] [--no-be-activate] [--no-index] [--no-refresh]\n"
             "            [--no-backup-be | --require-backup-be] [--backup-be-name name]\n"
             "            [--deny-new-be | --require-new-be] [--be-name name]\n"
-            "            [-r [-z image_name ... | -Z image_name ...]]\n"
+            "            [-R | -r [-z image_name ... | -Z image_name ...]]\n"
             "            [--sync-actuators | --sync-actuators-timeout timeout]\n"
             "            [--reject pkg_fmri_pattern ... ] pkg_fmri_pattern ...")
         basic_usage["uninstall"] = _(
             "[-nvq] [-C n] [--ignore-missing] [--no-be-activate] [--no-index]\n"
             "            [--no-backup-be | --require-backup-be] [--backup-be-name]\n"
             "            [--deny-new-be | --require-new-be] [--be-name name]\n"
-            "            [-r [-z image_name ... | -Z image_name ...]]\n"
+            "            [-R | -r [-z image_name ... | -Z image_name ...]]\n"
             "            [--sync-actuators | --sync-actuators-timeout timeout]\n"
             "            pkg_fmri_pattern ...")
         basic_usage["update"] = _(
@@ -194,14 +194,14 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False,
             "            [--licenses] [--no-be-activate] [--no-index] [--no-refresh]\n"
             "            [--no-backup-be | --require-backup-be] [--backup-be-name]\n"
             "            [--deny-new-be | --require-new-be] [--be-name name]\n"
-            "            [-r [-z image_name ... | -Z image_name ...]]\n"
+            "            [-R | -r [-z image_name ... | -Z image_name ...]]\n"
             "            [--sync-actuators | --sync-actuators-timeout timeout]\n"
             "            [--reject pkg_fmri_pattern ...] [pkg_fmri_pattern ...]")
         basic_usage["apply-hot-fix"] = _(
             "[-nvq] [--no-be-activate]\n"
             "            [--no-backup-be | --require-backup-be] [--backup-be-name]\n"
             "            [--deny-new-be | --require-new-be] [--be-name name]\n"
-            "            [-r [-z image_name ... | -Z image_name ...]]\n"
+            "            [-R | -r [-z image_name ... | -Z image_name ...]]\n"
             "            <path_or_uri> [pkg_fmri_pattern ...]")
         basic_usage["list"] = _(
             "[-Hafnqsuv] [-g path_or_uri ...] [--no-refresh]\n"
@@ -289,7 +289,7 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False,
             "            [--licenses] [--no-be-activate] [--no-index] [--no-refresh]\n"
             "            [--no-backup-be | --require-backup-be] [--backup-be-name name]\n"
             "            [--deny-new-be | --require-new-be] [--be-name name]\n"
-            "            [-r [-z image_name ... | -Z image_name ...]]\n"
+            "            [-R | -r [-z image_name ... | -Z image_name ...]]\n"
             "            [--sync-actuators | --sync-actuators-timeout timeout]\n"
             "            [--reject pkg_fmri_pattern ... ]\n"
             "            <variant_spec>=<instance> ...")
@@ -299,7 +299,7 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False,
             "            [--licenses] [--no-be-activate] [--no-index] [--no-refresh]\n"
             "            [--no-backup-be | --require-backup-be] [--backup-be-name name]\n"
             "            [--deny-new-be | --require-new-be] [--be-name name]\n"
-            "            [-r [-z image_name ... | -Z image_name ...]]\n"
+            "            [-R | -r [-z image_name ... | -Z image_name ...]]\n"
             "            [--sync-actuators | --sync-actuators-timeout timeout]\n"
             "            [--reject pkg_fmri_pattern ... ]\n"
             "            <facet_spec>=[True|False|None] ...")
@@ -5182,10 +5182,14 @@ opts_mapping = {
     # specified in li_erecurse_list, only recurse into those. If any children
     # are specified in li_erecurse_excl, recurse into all children except for
     # those.
+    # Recursion can be turned on by default for an image through an image
+    # property. In this case, the li_erecurse_none option can be used to
+    # suppress recursion if desired.
     # Explicit recursion means we run the same operation in the child as we run
     # in the parent. Children we do not explicitely recurse into are still
     # getting synced.
     "li_erecurse_all" :    ("r", "recurse"),
+    "li_erecurse_none":    ("R", "norecurse"),
     "li_erecurse_list" :   ("z", ""),
     "li_erecurse_excl" :   ("Z", ""),
 
