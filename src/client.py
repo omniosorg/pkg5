@@ -5458,7 +5458,7 @@ def main_func():
         show_usage = False
         for opt, arg in opts:
                 if opt == "-D" or opt == "--debug":
-                        if arg in ["plan", "transport"]:
+                        if arg in ["plan", "transport", "exclude", "actions"]:
                                 key = arg
                                 value = "True"
                         else:

@@ -22,7 +22,7 @@
 
 #
 # Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
-# Copyright 2017 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
 #
 
 from __future__ import print_function
@@ -3795,13 +3795,15 @@ class ImagePlan(object):
                 # If the image has an exclude-patterns property, build a
                 # regular expression to describe the targets that should
                 # be pruned from the plan actions.
-                ooce_exclude = self.image.get_property(
+                img_exclude = self.image.get_property(
                     imageconfig.EXCLUDE_PATTERNS)
-                if len(ooce_exclude):
-                        exclude_regex = "^(?:" + ("|".join(ooce_exclude)) + ")"
-                        ooce_re = relib.compile(exclude_regex)
+                if len(img_exclude):
+                        exclude_regex = "^(?:" + ("|".join(img_exclude)) + ")"
+                        if DebugValues["exclude"]:
+                                print("Exclude Regex:", exclude_regex)
+                        exclude_re = relib.compile(exclude_regex)
                 else:
-                        ooce_re = None
+                        exclude_re = None
 
                 # we now have a workable set of pkgplans to add/upgrade/remove
                 # now combine all actions together to create a synthetic single
@@ -3818,6 +3820,8 @@ class ImagePlan(object):
                 for p in self.pd.pkg_plans:
                         pt.plan_add_progress(pt.PLAN_ACTION_MERGE)
                         for src, dest in p.gen_removal_actions():
+                                if DebugValues["actions"]:
+                                        print("Removal: " + str(src))
                                 if src.name == "user":
                                         self.pd.removed_users[src.attrs[
                                             "username"]] = p.origin_fmri
@@ -3865,6 +3869,9 @@ class ImagePlan(object):
                 for p in self.pd.pkg_plans:
                         pt.plan_add_progress(pt.PLAN_ACTION_MERGE)
                         for src, dest in p.gen_update_actions():
+                                if DebugValues["actions"]:
+                                        print("Update:" + str(src))
+                                        print("       " + str(dest))
                                 if dest.name == "user":
                                         self.pd.added_users[dest.attrs[
                                             "username"]] = p.destination_fmri
@@ -3886,6 +3893,8 @@ class ImagePlan(object):
                 for p in self.pd.pkg_plans:
                         pt.plan_add_progress(pt.PLAN_ACTION_MERGE)
                         for src, dest in p.gen_install_actions():
+                                if DebugValues["actions"]:
+                                        print("Install: " + str(dest))
                                 if dest.name == "user":
                                         self.pd.added_users[dest.attrs[
                                             "username"]] = p.destination_fmri
@@ -3950,7 +3959,9 @@ class ImagePlan(object):
                                         inst_links = self.__get_symlinks()
                                 else:
                                         inst_links = self.__get_hardlinks()
-                                if ooce_re and ooce_re.search(lpath):
+                                if exclude_re and exclude_re.search(lpath):
+                                        if DebugValues["exclude"]:
+                                                print("!Removal:", lpath)
                                         remove = False
                                 elif lpath in inst_links:
                                         # Another link delivers to the same
@@ -3993,8 +4004,10 @@ class ImagePlan(object):
                         elif ap.src.name == "legacy" and \
                             ap.src.attrs["pkg"] in self.__get_legacy():
                                 remove = False
-                        elif ooce_re and "path" in ap.src.attrs and \
-                            ooce_re.search(ap.src.attrs["path"]):
+                        elif exclude_re and "path" in ap.src.attrs and \
+                            exclude_re.search(ap.src.attrs["path"]):
+                                if DebugValues["exclude"]:
+                                        print("!Remove", ap.src.attrs["path"])
                                 remove = False
 
                         if not remove:
@@ -4065,8 +4078,10 @@ class ImagePlan(object):
                                 continue
                         pt.plan_add_progress(pt.PLAN_ACTION_CONSOLIDATE)
 
-                        if ooce_re and "path" in ap.dst.attrs and \
-                            ooce_re.search(ap.dst.attrs["path"]):
+                        if exclude_re and "path" in ap.dst.attrs and \
+                            exclude_re.search(ap.dst.attrs["path"]):
+                                if DebugValues["exclude"]:
+                                        print("!Install", ap.dst.attrs["path"])
                                 pp_needs_trimming.add(ap.p)
                                 ap.p.actions.added[plan_pos[id(ap.dst)]] = None
                                 self.pd.install_actions[i] = None
@@ -4185,6 +4200,24 @@ class ImagePlan(object):
 
                 del dest_pkgplans, nu_chg
 
+                # Cull any update actions that are excluded by the exclusion
+                # patterns configured in the image.
+                if exclude_re:
+                        for i, ap in enumerate(self.pd.update_actions):
+                                if ap is None:
+                                        continue
+                                path = None
+                                if ("path" in ap.src.attrs and
+                                    exclude_re.search(ap.src.attrs["path"])):
+                                        path = ap.src.attrs["path"]
+                                elif ("path" in ap.dst.attrs and
+                                    exclude_re.search(ap.dst.attrs["path"])):
+                                        path = ap.dst.attrs["path"]
+                                if path:
+                                        if DebugValues["exclude"]:
+                                                print("!Update", path)
+                                        self.pd.update_actions[i] = None
+
                 pt.plan_done(pt.PLAN_ACTION_CONSOLIDATE)
                 pt.plan_start(pt.PLAN_ACTION_MEDIATION)
                 pt.plan_add_progress(pt.PLAN_ACTION_MEDIATION)
@@ -4213,6 +4246,15 @@ class ImagePlan(object):
                 self.__finalize_mediation(prop_mediators)
 
                 pt.plan_done(pt.PLAN_ACTION_MEDIATION)
+
+                if DebugValues["actions"]:
+                        print("--- Final actions ---")
+                        for prop in ("removal_actions", "install_actions",
+                            "update_actions"):
+                                key = prop.split("_")[0]
+                                for a in getattr(self.pd, prop):
+                                        print("{0} {1}".format(key, str(a)))
+
                 pt.plan_start(pt.PLAN_ACTION_FINALIZE)
 
                 # Go over update actions
