@@ -51,7 +51,7 @@
 	<attach>/usr/lib/brand/sparse/attach %z %R</attach>
 	<detach>/usr/lib/brand/sparse/detach -z %z -R %R</detach>
 	<clone>/usr/lib/brand/sparse/clone -z %z -R %R</clone>
-	<uninstall>/usr/lib/brand/ipkg/uninstall %z %R</uninstall>
+	<uninstall>/usr/lib/brand/sparse/uninstall %z %R</uninstall>
 	<prestatechange>/usr/lib/brand/sparse/prestate %z %R</prestatechange>
 	<poststatechange>/usr/lib/brand/sparse/poststate %z %R</poststatechange>
 	<query>/usr/lib/brand/shared/query %z %R</query>
