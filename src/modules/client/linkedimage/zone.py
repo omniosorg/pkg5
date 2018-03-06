@@ -488,7 +488,7 @@ def _list_zones(root, path_transform):
                 # pylint: enable=W0511
                 if z_brand not in [
                     "lipkg", "solaris", "sn1", "labeled",
-                    "sparse", "vm", "kvm", "bhyve"]:
+                    "sparse", "kvm", "bhyve"]:
                         continue
 
                 # we don't care about the global zone.
