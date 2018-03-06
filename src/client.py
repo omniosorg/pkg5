@@ -329,6 +329,7 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False,
         adv_usage["property"] = _("[-H] [propname ...]")
 
         adv_usage["set-publisher"] = _("[-Ped] [-k ssl_key] [-c ssl_cert]\n"
+            "            [-O origin_to_set|--origin_uri=origin_to_set ...]\n"
             "            [-g origin_to_add|--add-origin=origin_to_add ...]\n"
             "            [-G origin_to_remove|--remove-origin=origin_to_remove ...]\n"
             "            [-m mirror_to_add|--add-mirror=mirror_to_add ...]\n"
@@ -3766,6 +3767,7 @@ def publisher_set(op, api_inst, pargs, ssl_key, ssl_cert, origin_uri,
     set_props, add_prop_values, remove_prop_values, unset_props, repo_uri,
     proxy_uri):
         """pkg set-publisher [-Ped] [-k ssl_key] [-c ssl_cert] [--reset-uuid]
+            [-O|--origin_uri origin to set]
             [-g|--add-origin origin to add] [-G|--remove-origin origin to
             remove] [-m|--add-mirror mirror to add] [-M|--remove-mirror mirror
             to remove] [-p repo_uri] [--enable] [--disable] [--no-refresh]
@@ -3780,6 +3782,9 @@ def publisher_set(op, api_inst, pargs, ssl_key, ssl_cert, origin_uri,
             [--unset-property name of property to delete]
             [--proxy proxy to use]
             [publisher] """
+
+        if origin_uri:
+                origin_uri = misc.parse_uri(origin_uri, cwd=orig_cwd)
 
         out_json = client_api._publisher_set(op, api_inst, pargs, ssl_key,
             ssl_cert, origin_uri, reset_uuid, add_mirrors, remove_mirrors,
@@ -5255,7 +5260,7 @@ opts_mapping = {
     "approved_ca_certs":      ("", "approve-ca-cert"),
     "revoked_ca_certs":       ("", "revoke-ca-cert"),
     "unset_ca_certs":         ("", "unset-ca-cert"),
-    "origin_uri":             ("O", ""),
+    "origin_uri":             ("O", "origin-uri"),
     "reset_uuid":             ("", "reset-uuid"),
     "add_mirrors":            ("m", "add-mirror"),
     "remove_mirrors":         ("M", "remove-mirror"),
@@ -5458,7 +5463,7 @@ def main_func():
         show_usage = False
         for opt, arg in opts:
                 if opt == "-D" or opt == "--debug":
-                        if arg in ["plan", "transport"]:
+                        if arg in ["plan", "transport", "exclude", "actions"]:
                                 key = arg
                                 value = "True"
                         else:

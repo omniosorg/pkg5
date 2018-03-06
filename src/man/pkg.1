@@ -235,6 +235,7 @@ pkg \- Image Packaging System retrieval client
 .LP
 .nf
 /usr/bin/pkg set-publisher [-Ped] [-c \fIssl_cert\fR] [-k \fIssl_key\fR]
+    [-O \fIorigin_to_set\fR | --origin-uri \fIorigin_to_set\fR]...
     [-g \fIorigin_to_add\fR | --add-origin \fIorigin_to_add\fR]...
     [-G \fIorigin_to_remove\fR | --remove-origin \fIorigin_to_remove\fR]...
     [-m \fImirror_to_add\fR | --add-mirror \fImirror_to_add\fR]...
@@ -2234,11 +2235,27 @@ Display only enabled publishers.
 .ne 2
 .mk
 .na
-\fB\fBpkg set-publisher\fR [-Ped] [\fB-c\fR \fIssl_cert\fR] [\fB-k\fR \fIssl_key\fR] [\fB-g\fR \fIorigin_to_add\fR | \fB--add-origin\fR \fIorigin_to_add\fR]... [\fB-G\fR \fIorigin_to_remove\fR | \fB--remove-origin\fR \fIorigin_to_remove\fR]... [\fB-m\fR \fImirror_to_add\fR | \fB--add-mirror\fR \fImirror_to_add\fR]... [\fB-M\fR \fImirror_to_remove\fR | \fB--remove-mirror\fR \fImirror_to_remove\fR]... [\fB--disable\fR] [\fB--enable\fR] [\fB--no-refresh\fR] [\fB--reset-uuid\fR] [\fB--non-sticky\fR] [\fB--sticky\fR] [\fB--search-after\fR \fIpublisher\fR] [\fB--search-before\fR \fIpublisher\fR] [\fB--search-first\fR] [\fB--approve-ca-cert\fR \fIpath_to_CA\fR] [\fB--revoke-ca-cert\fR \fIhash_of_CA_to_remove\fR] [\fB--unset-ca-cert\fR \fIhash_of_CA_to_remove\fR] [\fB--set-property\fR \fIname_of_property\fR=\fIvalue\fR] [\fB--add-property-value\fR \fIname_of_property\fR=\fIvalue_to_add\fR] [\fB--remove-property-value\fR \fIname_of_property\fR=\fIvalue_to_remove\fR] [\fB--unset-property\fR \fIname_of_property_to_delete\fR] [\fB--proxy\fR \fIproxy_to_use\fR] \fIpublisher\fR\fR
+\fB\fBpkg set-publisher\fR [-Ped] [\fB-c\fR \fIssl_cert\fR] [\fB-k\fR \fIssl_key\fR] [\fB-O\fR \fIorigin_to_set\fR | \fB--origin-uri\fR \fIorigin_to_set\fR] [\fB-g\fR \fIorigin_to_add\fR | \fB--add-origin\fR \fIorigin_to_add\fR]... [\fB-G\fR \fIorigin_to_remove\fR | \fB--remove-origin\fR \fIorigin_to_remove\fR]... [\fB-m\fR \fImirror_to_add\fR | \fB--add-mirror\fR \fImirror_to_add\fR]... [\fB-M\fR \fImirror_to_remove\fR | \fB--remove-mirror\fR \fImirror_to_remove\fR]... [\fB--disable\fR] [\fB--enable\fR] [\fB--no-refresh\fR] [\fB--reset-uuid\fR] [\fB--non-sticky\fR] [\fB--sticky\fR] [\fB--search-after\fR \fIpublisher\fR] [\fB--search-before\fR \fIpublisher\fR] [\fB--search-first\fR] [\fB--approve-ca-cert\fR \fIpath_to_CA\fR] [\fB--revoke-ca-cert\fR \fIhash_of_CA_to_remove\fR] [\fB--unset-ca-cert\fR \fIhash_of_CA_to_remove\fR] [\fB--set-property\fR \fIname_of_property\fR=\fIvalue\fR] [\fB--add-property-value\fR \fIname_of_property\fR=\fIvalue_to_add\fR] [\fB--remove-property-value\fR \fIname_of_property\fR=\fIvalue_to_remove\fR] [\fB--unset-property\fR \fIname_of_property_to_delete\fR] [\fB--proxy\fR \fIproxy_to_use\fR] \fIpublisher\fR\fR
 .ad
 .sp .6
 .RS 4n
 Update an existing publisher or add a publisher. If no options affecting search order are specified, new publishers are appended to the search order and are thus searched last.
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-O\fR \fIorigin_to_set\fR\fR
+.ad
+.br
+.na
+\fB\fB--origin-uri\fR \fIorigin_to_set\fR\fR
+.ad
+.sp .6
+.RS 4n
+Remove all existing origins for the given publisher and set a single new one. If a client SSL key/certificate is configured and the new origin transport is https, then the SSL information will be retained in the publisher.
+.RE
+
 .sp
 .ne 2
 .mk
