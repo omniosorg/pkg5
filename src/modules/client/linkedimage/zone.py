@@ -487,8 +487,7 @@ def _list_zones(root, path_transform):
                 # XXX: don't hard code brand names, use a brand attribute
                 # pylint: enable=W0511
                 if z_brand not in [
-                    "lipkg", "solaris", "sn1", "labeled",
-                    "sparse", "kvm", "bhyve"]:
+                    "lipkg", "solaris", "sn1", "labeled", "sparse"]:
                         continue
 
                 # we don't care about the global zone.
