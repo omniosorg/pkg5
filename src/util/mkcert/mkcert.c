@@ -32,12 +32,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 #include <openssl/pem.h>
 #include <openssl/conf.h>
 #include <openssl/x509v3.h>
+#include <openssl/bn.h>
 #ifndef OPENSSL_NO_ENGINE
 #include <openssl/engine.h>
+#endif
+
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#define EVP_PKEY_get0_RSA(x) ((x)->pkey.rsa)
 #endif
 
 int mkcert(X509 **x509p, EVP_PKEY **pkeyp, int bits, int serial, int days);
@@ -49,6 +55,7 @@ main(int argc, char **argv)
 	BIO *bio_err;
 	X509 *x509 = NULL;
 	EVP_PKEY *pkey = NULL;
+	RSA *rsa = NULL;
 	FILE *fp = NULL;
 
 	CRYPTO_mem_ctrl(CRYPTO_MEM_CHECK_ON);
@@ -57,7 +64,9 @@ main(int argc, char **argv)
 
 	mkcert(&x509, &pkey, 1024, 0, 365);
 
-	RSA_print_fp(stdout, pkey->pkey.rsa, 0);
+	rsa = EVP_PKEY_get0_RSA(pkey);
+	assert(rsa != NULL);
+	RSA_print_fp(stdout, rsa, 0);
 	X509_print_fp(stdout, x509);
 
 	fp = fopen("cust_key.pem", "w");
@@ -73,12 +82,11 @@ main(int argc, char **argv)
 #endif
 	CRYPTO_cleanup_all_ex_data();
 
-	CRYPTO_mem_leaks(bio_err);
 	BIO_free(bio_err);
 	return (0);
 }
 
-static void callback(int p, int n, void *arg)
+static int callback(int p, int n, BN_GENCB *cb)
 {
 	char c = 'B';
 
@@ -95,6 +103,7 @@ mkcert(X509 **x509p, EVP_PKEY **pkeyp, int bits, int serial, int days)
 	X509 *x;
 	EVP_PKEY *pk;
 	RSA *rsa;
+	BIGNUM *evalue;
 	X509_NAME *name = NULL;
 
 	if ((pkeyp == NULL) || (*pkeyp == NULL)) {
@@ -112,10 +121,21 @@ mkcert(X509 **x509p, EVP_PKEY **pkeyp, int bits, int serial, int days)
 	else
 		x = *x509p;
 
-	rsa = RSA_generate_key(bits, RSA_F4, callback, NULL);
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+	BN_GENCB _cb, *cb;
+	cb = &_cb;
+#else
+	BN_GENCB *cb = BN_GENCB_new();
+#endif
+	BN_GENCB_set(cb, callback, NULL);
+	rsa = RSA_new();
+	evalue = BN_new();
+	BN_set_word(evalue, RSA_F4);
+	assert(RSA_generate_key_ex(rsa, bits, evalue, cb) != 0);
 	if (!EVP_PKEY_assign_RSA(pk, rsa)) {
 		abort();
 	}
+	BN_free(evalue);
 	rsa = NULL;
 
 	X509_set_version(x, 2);
