@@ -2206,6 +2206,8 @@ def apply_hot_fix(**args):
                         hdl.setopt(pycurl.CONNECTTIMEOUT,
                             global_settings.PKG_CLIENT_CONNECT_TIMEOUT)
                         #hdl.setopt(pycurl.VERBOSE, True)
+                        hdl.setopt(pycurl.USERAGENT,
+                            misc.user_agent_str(None, 'hotfix'))
                         if args['verbose']:
                                 hdl.setopt(pycurl.NOPROGRESS, False)
                         try:
