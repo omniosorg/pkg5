@@ -346,6 +346,7 @@ subjectKeyIdentifier=hash
 authorityKeyIdentifier=keyid:always,issuer:always
 basicConstraints = critical,CA:true
 keyUsage = critical, keyCertSign, cRLSign
+subjectAltName = email:copy
 
 [ v3_ca_lp4 ]
 
@@ -428,7 +429,8 @@ issuerAltName = critical,issuer:copy
 # Used for a CA cert with an unsupported critical extension.
 
 basicConstraints = critical,CA:TRUE
-issuerAltName = critical,issuer:copy
+subjectAltName = email:copy
+issuerAltName = critical,email:ca
 
 [ issuer_ext_non_critical ]
 
