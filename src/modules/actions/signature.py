@@ -532,11 +532,12 @@ class SignatureAction(generic.Action):
                                     "correctly.").format(key_path))
 
                         hhash = self.__get_hash_by_name(self.hash_alg)
-                        signer = priv_key.signer(padding.PKCS1v15(), hhash())
-                        signer.update(misc.force_bytes(self.actions_to_str(acts,
-                            generic.Action.sig_version)))
-                        self.attrs["value"] = \
-                            misc.binary_to_hex(signer.finalize())
+                        self.attrs["value"] = misc.binary_to_hex(priv_key.sign(
+                                misc.force_bytes(self.actions_to_str(acts,
+                                    generic.Action.sig_version)),
+                                padding.PKCS1v15(),
+                                hhash()
+                        ))
 
         def generate_indices(self):
                 """Generates the indices needed by the search dictionary.  See
