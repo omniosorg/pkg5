@@ -127,6 +127,16 @@ def cleanup():
         for f in tmpfiles:
                 os.unlink(f)
 
+def notes_block(release_url):
+        url = "https://omniosce.org/"
+        msg("\n" + "-" * 75)
+        msg("{:35} {}".format("Find release notes:", release_url))
+        msg("-" * 75)
+        msg("{:35} {}{}".format("Get a support contract:", url, "invoice"))
+        msg("{:35} {}{}".format("Sponsor OmniOS development:", url, "patron"))
+        msg("{:35} {}{}".format("Contribute to OmniOS:", url, "joinus"))
+        msg("-" * 75 + "\n")
+
 def format_update_error(e):
         # This message is displayed to the user whenever an
         # ImageFormatUpdateNeeded exception is encountered.
@@ -1788,10 +1798,7 @@ def __api_op(_op, _api_inst, _accept=False, _li_ignore=None, _noexecute=False,
 
         if _review_release_notes and ret_code == EXIT_OK and \
             _stage == API_STAGE_DEFAULT and _api_inst.solaris_image():
-                msg("\n" + "-" * 75)
-                msg(_("NOTE: Please review release notes posted at:\n" ))
-                msg(misc.get_release_notes_url())
-                msg("-" * 75 + "\n")
+                notes_block(misc.get_release_notes_url())
 
         return ret_code
 
@@ -1999,10 +2006,7 @@ def __handle_client_json_api_output(out_json, op):
                     out_json["errors"], cmd=op)
 
         if "data" in out_json and "release_notes_url" in out_json["data"]:
-                msg("\n" + "-" * 75)
-                msg(_("NOTE: Please review release notes posted at:\n" ))
-                msg(out_json["data"]["release_notes_url"])
-                msg("-" * 75 + "\n")
+                notes_block(out_json["data"]["release_notes_url"])
         return out_json["status"]
 
 def _emit_error_general_cb(status, err, cmd=None, selected_type=[],
