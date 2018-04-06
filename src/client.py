@@ -127,15 +127,17 @@ def cleanup():
         for f in tmpfiles:
                 os.unlink(f)
 
-def notes_block(release_url):
+def notes_block(release_url=None):
         url = "https://omniosce.org/"
-        msg("\n" + "-" * 75)
-        msg("{:35} {}".format("Find release notes:", release_url))
-        msg("-" * 75)
-        msg("{:35} {}{}".format("Get a support contract:", url, "invoice"))
-        msg("{:35} {}{}".format("Sponsor OmniOS development:", url, "patron"))
-        msg("{:35} {}{}".format("Contribute to OmniOS:", url, "joinus"))
-        msg("-" * 75 + "\n")
+        if release_url is None:
+                release_url = misc.get_release_notes_url()
+        msg("\n" + "-" * 79)
+        msg("{:42} {}".format("Find release notes:", release_url))
+        msg("-" * 79)
+        msg("{:42} {}{}".format("Get a support contract:", url, "invoice"))
+        msg("{:42} {}{}".format("Sponsor OmniOS development:", url, "patron"))
+        msg("{:42} {}{}".format("Contribute to OmniOS:", url, "joinus"))
+        msg("-" * 79 + "\n")
 
 def format_update_error(e):
         # This message is displayed to the user whenever an
@@ -5461,7 +5463,7 @@ def main_func():
 
         try:
                 opts, pargs = getopt.getopt(sys.argv[1:], "R:D:?",
-                    ["debug=", "help", "runid="])
+                    ["debug=", "help", "runid=", 'notes'])
         except getopt.GetoptError as e:
                 usage(_("illegal global option -- {0}").format(e.opt))
 
@@ -5486,6 +5488,9 @@ def main_func():
                         runid = arg
                 elif opt in ("--help", "-?"):
                         show_usage = True
+                elif opt == "--notes":
+			notes_block()
+			return EXIT_OK
 
         # The globals in pkg.digest can be influenced by debug flags
         if DebugValues:
