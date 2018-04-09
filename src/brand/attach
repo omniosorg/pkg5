@@ -380,13 +380,24 @@ if [[ -n $gz_entire_fmri ]]; then
 else
     incorp_list=gz_incorporations
 fi
-# If Python 2.6 is in the to-be-attached zone root (now set with PKGIMAGE),
-# add it to the incorp_list so we do not get a conflicting-install situation,
-# and can have the now-obsoleted/renamed Python 2.6 installed.
-lc_pkg list -q pkg://omnios/runtime/python-26
-if [[ $? == 0 ]]; then
-    incorp_list="$incorp_list pkg://omnios/runtime/python-26"
-fi
+
+# Some packages have been renamed and as a result the old package name does
+# not appear in the 'entire' manifest. Requesting an update of just 'entire'
+# (as attach does) will then cause a conflict since the renamed package will
+# conflict with the old package and the old package is not selected for
+# upgrade. So, for known packages in this state, ensure that, if they are
+# installed in the zone then they are included in the list of packages to
+# update.
+for pkg in \
+	runtime/python-26 \
+	system/library/gcc-5-runtime \
+	system/library/g++-5-runtime \
+	system/library/gcc-6-runtime \
+	system/library/g++-6-runtime \
+; do
+	lc_pkg list -q pkg://omnios/$pkg && \
+		incorp_list="$incorp_list pkg://omnios/$pkg"
+done
 
 #
 # If there is a cache, use it.
@@ -413,6 +424,7 @@ lc_pkg copy-publishers-from $GZ_IMAGE
 #
 if [[ -z $gz_entire_fmri && -n $ngz_entire_fmri ]]; then
 	if [[ $allow_update == 1 ]]; then
+		log "Uninstalling entire from NGZ to allow update."
 		lc_pkg uninstall entire || pkg_err_check "$f_update"
 	else
 		log "\n$m_need_update" "$ZONENAME"
@@ -422,7 +434,7 @@ if [[ -z $gz_entire_fmri && -n $ngz_entire_fmri ]]; then
 fi
 
 if [[ $allow_update == 0 ]]; then
-	lc_pkg install --accept --no-refresh -n $incorp_list
+	lc_pkg -v install --accept --no-refresh -n $incorp_list
 	if [[ $? == 4 ]]; then
 		log "\n$m_complete"
 		EXIT_CODE=$ZONE_SUBPROC_OK
@@ -441,11 +453,11 @@ fi
 # same version as we have in the GZ.
 #
 if [[ -n $gz_entire_fmri && -z $ngz_entire_fmri ]]; then
-	lc_pkg install --accept --no-refresh entire  || \
+	lc_pkg -v install --accept --no-refresh entire || \
 	    pkg_err_check "$f_update"
 fi
 
-lc_pkg install --accept --no-refresh $incorp_list  || \
+lc_pkg -v install --accept --no-refresh $incorp_list || \
     pkg_err_check "$f_update"
 
 log "\n$m_sync_done"
