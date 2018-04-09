@@ -68,6 +68,7 @@ m_postnote=$(gettext    "  Next Steps: Boot the zone, then log into the zone con
 m_postnote2=$(gettext "              to complete the configuration process.")
 
 lc_pkg() {
+	[ "$1" = "-v" ] && shift && echo "PKG: $@" 1>&2
 	LC_ALL=C /usr/bin/pkg "$@"
 }
 
