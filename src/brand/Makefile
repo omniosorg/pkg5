@@ -72,17 +72,18 @@ ROOTFILES = \
 	$(ROOTBRANDPKG)/system-unconfigure \
 	$(ROOTBRANDPKG)/uninstall \
 	\
-	$(SPARSEBRANDPKG)/config.xml \
-	$(SPARSEBRANDPKG)/platform.xml \
-	$(SPARSEBRANDPKG)/profile.xml \
-	$(SPARSEBRANDPKG)/pkgcreatezone \
-	$(SPARSEBRANDPKG)/common.ksh \
-	$(SPARSEBRANDPKG)/verifyadm \
-	$(SPARSEBRANDPKG)/prestate \
-	$(SPARSEBRANDPKG)/poststate \
 	$(SPARSEBRANDPKG)/attach \
+	$(SPARSEBRANDPKG)/clone \
+	$(SPARSEBRANDPKG)/common.ksh \
+	$(SPARSEBRANDPKG)/config.xml \
 	$(SPARSEBRANDPKG)/detach \
-	$(SPARSEBRANDPKG)/clone
+	$(SPARSEBRANDPKG)/pkgcreatezone \
+	$(SPARSEBRANDPKG)/platform.xml \
+	$(SPARSEBRANDPKG)/poststate \
+	$(SPARSEBRANDPKG)/prestate \
+	$(SPARSEBRANDPKG)/profile.xml \
+	$(SPARSEBRANDPKG)/uninstall \
+	$(SPARSEBRANDPKG)/verifyadm
 
 BIN = \
 	support \
