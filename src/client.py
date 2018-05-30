@@ -134,7 +134,7 @@ def notes_block(release_url=None):
         msg("\n" + "-" * 79)
         msg("{:42} {}".format("Find release notes:", release_url))
         msg("-" * 79)
-        msg("{:42} {}{}".format("Get a support contract:", url, "invoice"))
+        msg("{:42} {}{}".format("Get a support contract:", url, "support"))
         msg("{:42} {}{}".format("Sponsor OmniOS development:", url, "patron"))
         msg("{:42} {}{}".format("Contribute to OmniOS:", url, "joinus"))
         msg("-" * 79 + "\n")

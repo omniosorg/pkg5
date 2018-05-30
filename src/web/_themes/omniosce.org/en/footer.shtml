@@ -6,5 +6,5 @@
 ##
 <%page args="g_vars"/>\
 <div class="page-container">
-        <div class="footer-line">Copyright 2017 OmniOS Community Edition.  All rights reserved.</div>
+        <div class="footer-line">Copyright 2018 OmniOS Community Edition. All rights reserved.</div>
 </div>
