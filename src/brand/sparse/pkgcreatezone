@@ -115,7 +115,7 @@ create_active_ds
 
 # Create the initial zone image.
 
-lc_pkg image-create \
+lc_pkg $verbose_mode image-create \
     --zone --full \
     --variant variant.opensolaris.imagetype=partial \
     $ZONEROOT \
@@ -157,6 +157,13 @@ lc_pkg contents -H -a type=optional -o fmri,variant.opensolaris.imagetype \
         lc_pkg list -q $pkg && pkglist="$pkglist $pkg"
 done
 
+# For packages which have a cross-zone version dependency, ensure that the
+# installed package is the same version as the global zone.
+lc_pkg search -H -a -o pkg.fmri depend::feature/package/dependency/self \
+    2>/dev/null | while read pkg; do
+        lc_pkg list -q $pkg && pkglist="$pkglist $pkg"
+done
+
 # Change the value of PKG_IMAGE so that future PKG operations will work
 # on the newly created zone rather than the global zone
 PKG_IMAGE="$ZONEROOT"
@@ -188,9 +195,9 @@ printf "$m_core\n"
 
 #
 # Do the installation; we just refreshed after image-create, so skip that.
-# Also skip indexing here, as that is also what the LiveCD does.
+# Also skip indexing here, as that is what the LiveCD does.
 #
-lc_pkg install --accept --no-index --no-refresh $pkglist || \
+lc_pkg $verbose_mode install --accept --no-index --no-refresh $pkglist || \
     pkg_err_check "$f_pkg"
 
 printf "$m_smf"
