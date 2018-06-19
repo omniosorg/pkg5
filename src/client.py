@@ -327,12 +327,14 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False,
         adv_usage["unset-property"] = _("propname ...")
         adv_usage["property"] = _("[-H] [propname ...]")
 
-        adv_usage["set-publisher"] = _("[-Ped] [-k ssl_key] [-c ssl_cert]\n"
+        adv_usage["set-publisher"] = _("[-Pedv] [-k ssl_key] [-c ssl_cert]\n"
+            "            [-O origin_to_set|--origin_uri=origin_to_set ...]\n"
             "            [-g origin_to_add|--add-origin=origin_to_add ...]\n"
             "            [-G origin_to_remove|--remove-origin=origin_to_remove ...]\n"
             "            [-m mirror_to_add|--add-mirror=mirror_to_add ...]\n"
             "            [-M mirror_to_remove|--remove-mirror=mirror_to_remove ...]\n"
             "            [-p repo_uri] [--enable] [--disable] [--no-refresh]\n"
+            "            [-R | -r [-z image_name ... | -Z image_name ...]]\n"
             "            [--reset-uuid] [--non-sticky] [--sticky]\n"
             "            [--search-after=publisher]\n"
             "            [--search-before=publisher]\n"
@@ -3728,11 +3730,13 @@ def publisher_set(op, api_inst, pargs, ssl_key, ssl_cert, origin_uri,
     refresh_allowed, disable, sticky, search_before, search_after,
     search_first, approved_ca_certs, revoked_ca_certs, unset_ca_certs,
     set_props, add_prop_values, remove_prop_values, unset_props, repo_uri,
-    proxy_uri):
-        """pkg set-publisher [-Ped] [-k ssl_key] [-c ssl_cert] [--reset-uuid]
+    proxy_uri, li_erecurse, verbose):
+        """pkg set-publisher [-Pedv] [-k ssl_key] [-c ssl_cert] [--reset-uuid]
+            [-O|--origin_uri origin to set]
             [-g|--add-origin origin to add] [-G|--remove-origin origin to
             remove] [-m|--add-mirror mirror to add] [-M|--remove-mirror mirror
             to remove] [-p repo_uri] [--enable] [--disable] [--no-refresh]
+            [-R | -r [-z image_name ... | -Z image_name ...]]
             [--sticky] [--non-sticky ] [--search-before=publisher]
             [--search-after=publisher]
             [--approve-ca-cert path to CA]
@@ -3757,6 +3761,27 @@ def publisher_set(op, api_inst, pargs, ssl_key, ssl_cert, origin_uri,
                 errors = out_json["errors"]
                 errors = _generate_error_messages(out_json["status"], errors,
                     selected_type=["publisher_set"])
+        elif li_erecurse is not None:
+                for li_name, li_rel, li_path in api_inst.list_linked():
+                        if li_rel != "child": continue
+                        if li_name not in li_erecurse: continue
+                        if verbose:
+                                print("Updating publisher on", li_name)
+                        li_api = __api_alloc(li_path, True, False)
+                        if not li_api: continue
+                        li_json = client_api._publisher_set(op, li_api,
+                            pargs, ssl_key, ssl_cert, origin_uri, reset_uuid,
+                            add_mirrors, remove_mirrors, add_origins,
+                            remove_origins, refresh_allowed, disable, sticky,
+                            search_before, search_after, search_first,
+                            approved_ca_certs, revoked_ca_certs, unset_ca_certs,
+                            set_props, add_prop_values, remove_prop_values,
+                            unset_props, repo_uri, proxy_uri)
+                        if "errors" in li_json:
+                                if not errors: errors = []
+                                errors.append(_generate_error_messages(
+                                    li_json["status"], li_json["errors"],
+                                        selected_type=["publisher_set"]))
 
         if "data" in out_json:
                 if "header" in out_json["data"]:
@@ -4208,8 +4233,7 @@ def list_facet(op, api_inst, pargs, omit_headers, output_format, list_all_items,
         # Successful if no facets exist or if at least one matched.
         return EXIT_OK
 
-def list_linked(op, api_inst, pargs,
-    li_ignore, omit_headers):
+def list_linked(op, api_inst, pargs, li_ignore, omit_headers):
         """pkg list-linked [-H]
 
         List all the linked images known to the current image."""
