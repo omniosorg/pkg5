@@ -276,6 +276,13 @@ else
 	"
 fi
 
+# For packages which have a cross-zone version dependency, ensure that the
+# installed package is the same version as the global zone.
+lc_pkg search -H -a -o pkg.fmri depend::feature/package/dependency/self \
+    2>/dev/null | while read pkg; do
+        lc_pkg list -q $pkg && pkglist="$pkglist $pkg"
+done
+
 #
 # Get packages for TX zones if appropriate.
 #
@@ -297,10 +304,10 @@ lc_pkg publisher -Hn -F tsv | cut -f1,7 | while read pub url; do
 done
 
 #
-# Do the install; we just refreshed after image-create, so skip that.  We
-# also skip indexing here, as that is also what the LiveCD does.
+# Do the installation; we just refreshed after image-create, so skip that. We
+# also skip indexing here, as that is what the LiveCD does.
 #
-lc_pkg install --accept --no-index --no-refresh $pkglist || \
+lc_pkg $verbose_mode install --accept --no-index --no-refresh $pkglist || \
     pkg_err_check "$f_pkg"
 
 printf "$m_smf"
