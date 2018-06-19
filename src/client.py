@@ -2317,16 +2317,19 @@ def apply_hot_fix(**args):
         pubargs['remove_origins'] = set([])
         pubargs['repo_uri'] = None
         pubargs['unset_props'] = set([])
+        pubargs['verbose'] = args['verbose']
+        pubargs['li_erecurse'] = set([
+                lin
+                for lin, rel, path in args['api_inst'].list_linked()
+                if rel == "child"
+        ])
+
+        cleanup_pubargs = pubargs.copy()
+        cleanup_pubargs['remove_origins'] = pubargs['add_origins']
+        cleanup_pubargs['add_origins'] = set([])
 
         publisher_set(**pubargs)
-
-        ######################################################################
-        # Set up at-exit routine to remove publisher again
-
-        pubargs['remove_origins'] = pubargs['add_origins']
-        pubargs['add_origins'] = set([])
-
-        atexit.register(publisher_set, **pubargs)
+        atexit.register(publisher_set, **cleanup_pubargs)
 
         ######################################################################
         # Pass off to pkg update
@@ -2338,7 +2341,8 @@ def apply_hot_fix(**args):
                 args['pargs'] = updatelist
 
         # These are options for update which are not exposed for apply-hot-fix
-        # Set to default values for this transaction.
+        # Set to default values for this transaction, except for 'force' which
+        # is true to allow hot-fixes to be applied to pkg itself.
         args['parsable_version'] = None
         args['accept'] = False
         args['reject_pats'] = []
@@ -2350,7 +2354,7 @@ def apply_hot_fix(**args):
         args['li_parent_sync'] = True
         args['show_licenses'] = False
         args['ignore_missing'] = False
-        args['force'] = False
+        args['force'] = True
 
         return update(**args)
 
