@@ -234,12 +234,8 @@ pkg \- Image Packaging System retrieval client
 
 .LP
 .nf
-<<<<<<< HEAD
-/usr/bin/pkg set-publisher [-Ped] [-c \fIssl_cert\fR] [-k \fIssl_key\fR]
-=======
 /usr/bin/pkg set-publisher [-Pedv] [-c \fIssl_cert\fR] [-k \fIssl_key\fR]
     [-O \fIorigin_to_set\fR | --origin-uri \fIorigin_to_set\fR]...
->>>>>>> 0ca4f1e9f... Add support for recursive set-publisher
     [-g \fIorigin_to_add\fR | --add-origin \fIorigin_to_add\fR]...
     [-G \fIorigin_to_remove\fR | --remove-origin \fIorigin_to_remove\fR]...
     [-m \fImirror_to_add\fR | --add-mirror \fImirror_to_add\fR]...
@@ -2225,11 +2221,7 @@ Display only enabled publishers.
 .ne 2
 .mk
 .na
-<<<<<<< HEAD
-\fB\fBpkg set-publisher\fR [-Ped] [\fB-c\fR \fIssl_cert\fR] [\fB-k\fR \fIssl_key\fR] [\fB-g\fR \fIorigin_to_add\fR | \fB--add-origin\fR \fIorigin_to_add\fR]... [\fB-G\fR \fIorigin_to_remove\fR | \fB--remove-origin\fR \fIorigin_to_remove\fR]... [\fB-m\fR \fImirror_to_add\fR | \fB--add-mirror\fR \fImirror_to_add\fR]... [\fB-M\fR \fImirror_to_remove\fR | \fB--remove-mirror\fR \fImirror_to_remove\fR]... [\fB--disable\fR] [\fB--enable\fR] [\fB--no-refresh\fR] [\fB--reset-uuid\fR] [\fB--non-sticky\fR] [\fB--sticky\fR] [\fB--search-after\fR \fIpublisher\fR] [\fB--search-before\fR \fIpublisher\fR] [\fB--search-first\fR] [\fB--approve-ca-cert\fR \fIpath_to_CA\fR] [\fB--revoke-ca-cert\fR \fIhash_of_CA_to_remove\fR] [\fB--unset-ca-cert\fR \fIhash_of_CA_to_remove\fR] [\fB--set-property\fR \fIname_of_property\fR=\fIvalue\fR] [\fB--add-property-value\fR \fIname_of_property\fR=\fIvalue_to_add\fR] [\fB--remove-property-value\fR \fIname_of_property\fR=\fIvalue_to_remove\fR] [\fB--unset-property\fR \fIname_of_property_to_delete\fR] [\fB--proxy\fR \fIproxy_to_use\fR] \fIpublisher\fR\fR
-=======
 \fB\fBpkg set-publisher\fR [-Pedv] [\fB-c\fR \fIssl_cert\fR] [\fB-k\fR \fIssl_key\fR] [\fB-O\fR \fIorigin_to_set\fR | \fB--origin-uri\fR \fIorigin_to_set\fR] [\fB-g\fR \fIorigin_to_add\fR | \fB--add-origin\fR \fIorigin_to_add\fR]... [\fB-G\fR \fIorigin_to_remove\fR | \fB--remove-origin\fR \fIorigin_to_remove\fR]... [\fB-m\fR \fImirror_to_add\fR | \fB--add-mirror\fR \fImirror_to_add\fR]... [\fB-M\fR \fImirror_to_remove\fR | \fB--remove-mirror\fR \fImirror_to_remove\fR]... [\fB-R\fR | \fB-r\fR [[\fB-z\fR \fIzonename\fR]... | [\fB-Z\fR \fIzonename\fR]... ]] [\fB--disable\fR] [\fB--enable\fR] [\fB--no-refresh\fR] [\fB--reset-uuid\fR] [\fB--non-sticky\fR] [\fB--sticky\fR] [\fB--search-after\fR \fIpublisher\fR] [\fB--search-before\fR \fIpublisher\fR] [\fB--search-first\fR] [\fB--approve-ca-cert\fR \fIpath_to_CA\fR] [\fB--revoke-ca-cert\fR \fIhash_of_CA_to_remove\fR] [\fB--unset-ca-cert\fR \fIhash_of_CA_to_remove\fR] [\fB--set-property\fR \fIname_of_property\fR=\fIvalue\fR] [\fB--add-property-value\fR \fIname_of_property\fR=\fIvalue_to_add\fR] [\fB--remove-property-value\fR \fIname_of_property\fR=\fIvalue_to_remove\fR] [\fB--unset-property\fR \fIname_of_property_to_delete\fR] [\fB--proxy\fR \fIproxy_to_use\fR] \fIpublisher\fR\fR
->>>>>>> 0ca4f1e9f... Add support for recursive set-publisher
 .ad
 .sp .6
 .RS 4n
