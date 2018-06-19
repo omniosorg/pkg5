@@ -1,7 +1,7 @@
 '\" te
 .\" Copyright (c) 2007, 2014, Oracle and/or its affiliates. All rights reserved.
-.\" Copyright 2017 OmniOS Community Edition (OmniOSce) Association.
-.TH pkg 1 "12 Dec 2017" "SunOS 5.11" "User Commands"
+.\" Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
+.TH pkg 1 "19 Jun 2018" "SunOS 5.11" "User Commands"
 .SH NAME
 pkg \- Image Packaging System retrieval client
 .SH SYNOPSIS
@@ -234,12 +234,13 @@ pkg \- Image Packaging System retrieval client
 
 .LP
 .nf
-/usr/bin/pkg set-publisher [-Ped] [-c \fIssl_cert\fR] [-k \fIssl_key\fR]
+/usr/bin/pkg set-publisher [-Pedv] [-c \fIssl_cert\fR] [-k \fIssl_key\fR]
     [-O \fIorigin_to_set\fR | --origin-uri \fIorigin_to_set\fR]...
     [-g \fIorigin_to_add\fR | --add-origin \fIorigin_to_add\fR]...
     [-G \fIorigin_to_remove\fR | --remove-origin \fIorigin_to_remove\fR]...
     [-m \fImirror_to_add\fR | --add-mirror \fImirror_to_add\fR]...
     [-M \fImirror_to_remove\fR | --remove-mirror \fImirror_to_remove\fR]...
+    [-R | -r [[-z \fIzonename\fR]... | [-Z \fIzonename\fR]... ]]
     [--disable] [--enable] [--no-refresh] [--reset-uuid]
     [--non-sticky] [--sticky] [--search-after \fIpublisher\fR]
     [--search-before \fIpublisher\fR] [--search-first]
@@ -2235,7 +2236,7 @@ Display only enabled publishers.
 .ne 2
 .mk
 .na
-\fB\fBpkg set-publisher\fR [-Ped] [\fB-c\fR \fIssl_cert\fR] [\fB-k\fR \fIssl_key\fR] [\fB-O\fR \fIorigin_to_set\fR | \fB--origin-uri\fR \fIorigin_to_set\fR] [\fB-g\fR \fIorigin_to_add\fR | \fB--add-origin\fR \fIorigin_to_add\fR]... [\fB-G\fR \fIorigin_to_remove\fR | \fB--remove-origin\fR \fIorigin_to_remove\fR]... [\fB-m\fR \fImirror_to_add\fR | \fB--add-mirror\fR \fImirror_to_add\fR]... [\fB-M\fR \fImirror_to_remove\fR | \fB--remove-mirror\fR \fImirror_to_remove\fR]... [\fB--disable\fR] [\fB--enable\fR] [\fB--no-refresh\fR] [\fB--reset-uuid\fR] [\fB--non-sticky\fR] [\fB--sticky\fR] [\fB--search-after\fR \fIpublisher\fR] [\fB--search-before\fR \fIpublisher\fR] [\fB--search-first\fR] [\fB--approve-ca-cert\fR \fIpath_to_CA\fR] [\fB--revoke-ca-cert\fR \fIhash_of_CA_to_remove\fR] [\fB--unset-ca-cert\fR \fIhash_of_CA_to_remove\fR] [\fB--set-property\fR \fIname_of_property\fR=\fIvalue\fR] [\fB--add-property-value\fR \fIname_of_property\fR=\fIvalue_to_add\fR] [\fB--remove-property-value\fR \fIname_of_property\fR=\fIvalue_to_remove\fR] [\fB--unset-property\fR \fIname_of_property_to_delete\fR] [\fB--proxy\fR \fIproxy_to_use\fR] \fIpublisher\fR\fR
+\fB\fBpkg set-publisher\fR [-Pedv] [\fB-c\fR \fIssl_cert\fR] [\fB-k\fR \fIssl_key\fR] [\fB-O\fR \fIorigin_to_set\fR | \fB--origin-uri\fR \fIorigin_to_set\fR] [\fB-g\fR \fIorigin_to_add\fR | \fB--add-origin\fR \fIorigin_to_add\fR]... [\fB-G\fR \fIorigin_to_remove\fR | \fB--remove-origin\fR \fIorigin_to_remove\fR]... [\fB-m\fR \fImirror_to_add\fR | \fB--add-mirror\fR \fImirror_to_add\fR]... [\fB-M\fR \fImirror_to_remove\fR | \fB--remove-mirror\fR \fImirror_to_remove\fR]... [\fB-R\fR | \fB-r\fR [[\fB-z\fR \fIzonename\fR]... | [\fB-Z\fR \fIzonename\fR]... ]] [\fB--disable\fR] [\fB--enable\fR] [\fB--no-refresh\fR] [\fB--reset-uuid\fR] [\fB--non-sticky\fR] [\fB--sticky\fR] [\fB--search-after\fR \fIpublisher\fR] [\fB--search-before\fR \fIpublisher\fR] [\fB--search-first\fR] [\fB--approve-ca-cert\fR \fIpath_to_CA\fR] [\fB--revoke-ca-cert\fR \fIhash_of_CA_to_remove\fR] [\fB--unset-ca-cert\fR \fIhash_of_CA_to_remove\fR] [\fB--set-property\fR \fIname_of_property\fR=\fIvalue\fR] [\fB--add-property-value\fR \fIname_of_property\fR=\fIvalue_to_add\fR] [\fB--remove-property-value\fR \fIname_of_property\fR=\fIvalue_to_remove\fR] [\fB--unset-property\fR \fIname_of_property_to_delete\fR] [\fB--proxy\fR \fIproxy_to_use\fR] \fIpublisher\fR\fR
 .ad
 .sp .6
 .RS 4n
@@ -2284,6 +2285,50 @@ Remove the URI or path from the list of origins for the given publisher. The spe
 .sp .6
 .RS 4n
 Remove the URI from the list of mirrors for the given publisher. The special value \fB*\fR can be used to remove all mirrors.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB-r\fR
+.ad
+.sp .6
+.RS 4n
+Run this operation in the global zone and also in all installed \fBlipkg\fR branded non-global zones. The effect on the non-global zone is similar to logging into each non-global zone and running the command directly. Without this option, when you run \fBpkg\fR commands in the global zone, non-global zones are modified only to the extent required to keep them compatible with the global zone. With this option, the \fBpkg\fR operation is applied to all installed non-global zones except as limited by the \fB-z\fR and \fB-Z\fR options. Zones that are excluded by the \fB-z\fR and \fB-Z\fR options might still be modified if updates are required to keep them in sync with the global zone. Recursion can be enabled by default for an image via the \fBdefault-recurse\fR package property; if this is set then it is not necessary to specify the \fB-r\fR option manually however the \fB-R\fR option can be specified to temporarily override recursion, see below.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-R\fR\fR
+.ad
+.sp .6
+.RS 4n
+Disable recursion into \fBlipkg\fR branded non-global zones. This option can be used to override the default policy set on the image, refer to \fBdefault-recurse\fR in the "Package Properties" section. Even with this option, when you run \fBpkg\fR commands in the global zone, non-global zones are modified to the extent required to keep them compatible with the global zone.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-z\fR \fIzonename\fR\fR
+.ad
+.sp .6
+.RS 4n
+Run this operation only in the specified non-global zone. The \fB-z\fR option can be specified multiple times. The \fB-z\fR option can only be used with the \fB-r\fR option. The \fB-z\fR option cannot be used with the \fB-Z\fR option.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-Z\fR \fIzonename\fR\fR
+.ad
+.sp .6
+.RS 4n
+Run this operation in all non-global zones except for the specified zone. The \fB-Z\fR option can be specified multiple times. The \fB-Z\fR option can only be used with the \fB-r\fR option. The \fB-Z\fR option cannot be used with the \fB-z\fR option.
 .RE
 
 .sp
@@ -2537,6 +2582,17 @@ For verifying signed packages, remove the certificate with the given hash from t
 .sp .6
 .RS 4n
 Remove an existing publisher property.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-v\fR\fR
+.ad
+.sp .6
+.RS 4n
+Issue verbose progress messages during the requested operation.
 .RE
 
 .RE
