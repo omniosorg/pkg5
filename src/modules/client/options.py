@@ -1088,6 +1088,8 @@ opts_set_publisher = \
     opts_table_pub_opts + \
     opts_table_pub_props + \
     opts_table_pub_search + \
+    opts_table_li_recurse + \
+    opts_table_verbose + \
     []
 
 opts_info = \
