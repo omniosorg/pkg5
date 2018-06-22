@@ -1632,7 +1632,7 @@ def _publisher_set(op, api_inst, pargs, ssl_key, ssl_cert, origin_uri,
     refresh_allowed, disable, sticky, search_before, search_after,
     search_first, approved_ca_certs, revoked_ca_certs, unset_ca_certs,
     set_props, add_prop_values, remove_prop_values, unset_props, repo_uri,
-    proxy_uri):
+    proxy_uri, verbose=None, li_erecurse=None):
         """Function to set publisher."""
 
         name = None
