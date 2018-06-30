@@ -22,15 +22,18 @@
 #
 # Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
 # Copyright 2016, OmniTI Computer Consulting, Inc. All rights reserved.
+# Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
 #
 
 PYTHON27 = /usr/bin/python2.7
-PYTHON34 = /usr/bin/python3.4
+PYTHON35 = /usr/bin/python3.5
 
 # Should match python version above.
 PYLINT_FMRI = pkg:/library/python-2/pylint-27
 
 CODE_WS = $$(hg root 2>/dev/null || git rev-parse --show-toplevel)
+
+CC=gcc
 
 all := TARGET = all
 install := TARGET = install
@@ -91,7 +94,7 @@ pylint: install
 # subdirectories in $SUBDIRS.
 #
 $(SUBDIRS): FRC
-	@cd $@; pwd; $(MAKE) $(TARGET)
+	@cd $@; pwd; $(MAKE) $(TARGET) CC=$(CC)
 
 # Use the bits we just built to create the packages.
 packages: install pylint
