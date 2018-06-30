@@ -15,7 +15,6 @@ cli.t_https.py TestHTTPS.test_expiring_certs|error
 cli.t_pkg_depotd.py TestDepotOutput.test_0_depot_bui_output|fail
 cli.t_pkg_install.py TestPkgInstallApache.test_corrupt_web_cache|error
 cli.t_pkg_install.py TestPkgInstallApache.test_granular_proxy|error
-cli.t_pkg_linked.py TestPkgLinkedRecurse.test_recursive_variant|fail
 cli.t_pkg_sysrepo.py TestSysrepo.test_01_basics|error
 cli.t_pkg_sysrepo.py TestSysrepo.test_01a_basics|error
 cli.t_pkg_sysrepo.py TestSysrepo.test_02_communication|error
