@@ -40,12 +40,6 @@ import pkg.client.transport.exception as tx
 import pkg.digest as digest
 import pkg.misc as misc
 
-try:
-        import pkg.sha512_t
-        sha512_supported = True
-except ImportError:
-        sha512_supported = False
-
 class PC(object):
         """This class contains publisher configuration used for setting up the
         depots and https apache instances needed by the tests."""
@@ -173,9 +167,6 @@ test4\ttrue\ttrue\ttrue\t\t\t\t
                     debug_hash="sha1+sha256")
                 self.pkgsend_bulk(self.rurl3, self.baz10,
                     debug_hash="sha1+sha256")
-                if sha512_supported:
-                        self.pkgsend_bulk(self.rurl3, self.caz10,
-                            debug_hash="sha1+sha512_256")
                 self.pkgsend_bulk(self.rurl4, self.bar10)
                 self.pkgsend_bulk(self.rurl5, self.foo11)
 
@@ -630,10 +621,6 @@ test4\ttrue\ttrue\ttrue\t\t\t\t
                 self.pkg("install baz")
                 self.pkg("contents -m baz")
                 self.assert_("pkg.hash.sha256" in self.output)
-                if sha512_supported:
-                        self.pkg("install caz")
-                        self.pkg("contents -m caz")
-                        self.assert_("pkg.hash.sha512_256" in self.output)
 
         def test_02_communication(self):
                 """Test that the transport for communicating with the depots is
@@ -966,15 +953,7 @@ test3\ttrue\ttrue\ttrue\torigin\tonline\t{durl3}/\thttp://localhost:{port}
                 # both the old configuration and the current configuration.
                 self.__check_publisher_dirs(["test1"])
 
-                if sha512_supported:
-                        expected = """\
-bar (test3) 1.0-0 ---
-baz (test3) 1.0-0 ---
-caz (test3) 1.0-0 ---
-example_pkg 1.0-0 ---
-"""
-                else:
-                        expected = """\
+                expected = """\
 bar (test3) 1.0-0 ---
 baz (test3) 1.0-0 ---
 example_pkg 1.0-0 ---
@@ -1001,15 +980,7 @@ test3\ttrue\ttrue\ttrue\torigin\tonline\t{durl3}/\thttp://localhost:{port}
                 self.__check_publisher_info(expected)
                 self.__check_publisher_dirs(["test1", "test3"])
 
-                if sha512_supported:
-                        expected = """\
-bar (test3) 1.0-0 ---
-baz (test3) 1.0-0 ---
-caz (test3) 1.0-0 ---
-example_pkg 1.0-0 ---
-"""
-                else:
-                        expected = """\
+                expected = """\
 bar (test3) 1.0-0 ---
 baz (test3) 1.0-0 ---
 example_pkg 1.0-0 ---
