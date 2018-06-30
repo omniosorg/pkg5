@@ -102,7 +102,7 @@ file path=$(PYDIRVP)/pkg/client/api_errors.py pkg.depend.bypass-generate=.*six.*
 # it can't import libbe_py, and is graceful in the face of its absence.
 #
 file path=$(PYDIRVP)/pkg/client/bootenv.py pkg.depend.bypass-generate=.*libbe.*
-file path=$(PYDIRVP)/pkg/client/client_api.py pkg.depend.bypass-generate=.*six.*
+file path=$(PYDIRVP)/pkg/client/client_api.py pkg.depend.bypass-generate=.*
 file path=$(PYDIRVP)/pkg/client/debugvalues.py
 file path=$(PYDIRVP)/pkg/client/firmware.py
 file path=$(PYDIRVP)/pkg/client/history.py
@@ -266,13 +266,14 @@ file path=usr/bin/pkgdepend
 file path=usr/bin/pkgdiff
 file path=usr/bin/pkgfmt
 file path=usr/bin/pkglint
-file path=usr/bin/pkgmerge pkg.depend.bypass-generate=.*six.*
+file path=usr/bin/pkgmerge
 file path=usr/bin/pkgmogrify
-file path=usr/bin/pkgrecv pkg.depend.bypass-generate=.*six.*
+file path=usr/bin/pkgrecv
 file path=usr/bin/pkgrepo
 file path=usr/bin/pkgsend
 file path=usr/bin/pkgsign
 file path=usr/bin/pkgsurf
+<transform file path=usr/bin/ -> set pkg.depend.bypass-generate .*six.*>
 dir  path=usr/lib
 file path=usr/lib/pkg.depotd mode=0755 pkg.depend.bypass-generate=.*
 dir  path=usr/share
