@@ -157,10 +157,10 @@ fromstr(PyObject *self, PyObject *args, PyObject *kwdict)
 	int *slashmap = NULL;
 	int strl, typestrl;
 	int i, ks, vs, keysize;
-	int smlen, smpos;
+	int smlen = 0, smpos = 0;
 	int hash_allowed;
 	bool concat = false;
-	char quote;
+	char quote = '\0';
 	PyObject *act_args = NULL;
 	PyObject *act_class = NULL;
 	PyObject *act_data = NULL;

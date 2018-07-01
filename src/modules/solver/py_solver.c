@@ -569,7 +569,7 @@ static struct PyModuleDef solvermodule ={
 #endif
 
 static PyObject *
-moduleinit()
+moduleinit(void)
 {
 	PyObject *m;
 
