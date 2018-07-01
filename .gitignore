@@ -25,3 +25,4 @@
 /src/tests/*.pyc
 /src/tests/*/*.pyc
 /src/cffi_src/_*
+/src/cffi_src/64
