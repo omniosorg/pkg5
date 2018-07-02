@@ -22,6 +22,7 @@
 
 #
 # Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
 #
 
 from __future__ import print_function
@@ -293,13 +294,20 @@ def find_tests(testdir, testpats, startatpat=False, output=OUTPUT_DOTS,
                         # We tack this in for pretty-printing.
                         classobj._Pkg5TestCase__suite_name = suitename
 
+                        # Skip some test classes. OmniOS does not currently
+                        # have Apache-backed repos or depots
+                        if cname in ['TestSysrepo', 'TestHTTPS',
+                            'TestBasicSysrepoCli', 'TestDetailedSysrepoCli',
+                            'TestHttpDepot', 'TestHttpsDepot']:
+                                continue
+
                         for attrname in dir(classobj):
                                 methobj = getattr(classobj, attrname)
                                 # Make sure its a test method
                                 if not _istestmethod(attrname, methobj):
                                         continue
                                 # Skip some test cases for Python 3.
-                                # test_bootenv requires boot-environment-utilities
+                                # test_bootenv requires boot-environment-utils
                                 # Python 3.x package
                                 if six.PY3 and (
                                     attrname in ["test_bootenv"]):
