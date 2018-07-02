@@ -534,3 +534,6 @@ class PkgRemote(object):
 
                 # enter the idle state
                 self.__set_state_idle()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

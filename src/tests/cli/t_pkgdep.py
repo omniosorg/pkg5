@@ -3086,3 +3086,6 @@ depend fmri=pkg:/a@0,5.11-1 type=conditional
 
 if __name__ == "__main__":
         unittest.main()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

@@ -570,3 +570,6 @@ class VariantCombinations(object):
         def __repr__(self):
                 return "VC Sat:{0} Unsat:{1}".format(sorted(self.__sat_set),
                     sorted(self.__not_sat_set))
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

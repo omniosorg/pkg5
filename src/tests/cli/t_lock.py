@@ -194,3 +194,6 @@ class TestPkgApi(pkg5unittest.SingleDepotTestCase):
 
                 self.pkg("refresh --full", su_wrap=True, exit=1)
                 self.assertTrue("contains a symlink" in self.errout)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

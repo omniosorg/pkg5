@@ -719,3 +719,6 @@ class PkgManifestChecker(base.ManifestChecker):
                                 targ_lst.append(pfmri)
 
                         target[p] = targ_lst
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

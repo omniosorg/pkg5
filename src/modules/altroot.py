@@ -403,3 +403,6 @@ def ar_img_prefix(root):
         if root_img:
                 return image.img_root_prefix
         return None
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

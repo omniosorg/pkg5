@@ -460,3 +460,6 @@ class Transaction(object):
                     create_repo=create_repo, pkg_name=pkg_name,
                     repo_props=repo_props, trans_id=trans_id, xport=xport,
                     pub=pub, progtrack=progtrack)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

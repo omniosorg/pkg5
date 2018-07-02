@@ -1021,3 +1021,6 @@ class Indexer(object):
                 """Unlocks the index."""
 
                 self.__lockfile.unlock()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

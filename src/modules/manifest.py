@@ -2025,3 +2025,6 @@ class ManifestError(Exception):
                         ret.append("{0}\n{1}\n\n".format(*d))
 
                 return "\n".join(ret)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

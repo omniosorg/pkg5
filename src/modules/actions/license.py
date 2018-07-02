@@ -270,3 +270,6 @@ class LicenseAction(generic.Action):
                 generic.Action._validate(self, fmri=fmri,
                     numeric_attrs=("pkg.csize", "pkg.size"),
                     single_attrs=("chash", "must-accept", "must-display"))
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

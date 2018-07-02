@@ -24,3 +24,6 @@ def choose(names, pat, case_sensitive):
                 if match(name):
                         result.append(name)
         return result
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

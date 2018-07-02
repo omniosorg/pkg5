@@ -979,3 +979,6 @@ if __name__ == "__main__":
                     "illegal option value specified?")
                 emsg(_e)
                 sys.exit(1)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

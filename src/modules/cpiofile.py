@@ -987,3 +987,6 @@ if __name__ == "__main__":
                 # for l in f.readlines():
                 #         print(l, end=" ")
                 # f.close()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

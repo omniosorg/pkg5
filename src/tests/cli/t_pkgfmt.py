@@ -1415,3 +1415,6 @@ depend type=require-any fmri=apple fmri=barge fmri=zoo
                 assert "Bobcat" not in self.output
                 assert "Middle Comment" in self.output
                 assert "End Comment" in self.output
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

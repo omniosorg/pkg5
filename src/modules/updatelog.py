@@ -220,3 +220,6 @@ class UpdateLog(object):
 # Allow these methods to be invoked without explictly naming the UpdateLog
 # class.
 recv = UpdateLog.recv
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

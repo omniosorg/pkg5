@@ -271,3 +271,6 @@ uucp:x:5:5:uucp Admin:/usr/lib/uucp:
 
 if __name__ == "__main__":
         unittest.main()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

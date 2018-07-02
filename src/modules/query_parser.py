@@ -1543,3 +1543,6 @@ class TermQuery(object):
                         file_handle.close()
                         for fv, at, st, l in send_res:
                                 yield at, st, fmri_str, fv, l
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

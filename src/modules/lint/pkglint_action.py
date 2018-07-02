@@ -1600,3 +1600,6 @@ class PkgActionChecker(base.ActionChecker):
 
         supported_pkg_actuator.pkglint_desc = _("package actuator should be "
             "set to a valid value")
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

@@ -34,3 +34,6 @@ import pkg5testenv
 
 def setup_environment(proto):
         pkg5testenv.setup_environment(proto)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

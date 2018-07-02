@@ -459,3 +459,6 @@ if __name__ == "__main__":
                 elif response:
                         for line in response.readlines():
                                 print(line.rstrip())
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

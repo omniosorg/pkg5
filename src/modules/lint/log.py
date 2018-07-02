@@ -241,3 +241,6 @@ class PlainLogFormatter(LogFormatter):
                         # of a flag (pkglint returns non-zero if self.emitted)
                         if msg.level > WARNING:
                                 self.emitted = True
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

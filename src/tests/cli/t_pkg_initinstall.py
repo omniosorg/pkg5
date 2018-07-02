@@ -114,3 +114,6 @@ class TestPkgInitInstall(pkg5unittest.SingleDepotTestCase):
 
                 self.file_is_sorted("etc/passwd", 2)
                 self.file_is_sorted("etc/group", 2)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

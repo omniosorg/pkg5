@@ -532,3 +532,6 @@ class Facets(dict):
 
 if six.PY2:
         Facets.allow_action = types.MethodType(_allow_facet, None, Facets)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

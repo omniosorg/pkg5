@@ -40,3 +40,6 @@ class UnknownAction(generic.Action):
 
         name = "unknown"
         ordinality = generic._orderdict[name]
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

@@ -626,3 +626,6 @@ stop/type astring method""",
                 self.file_contains(zlogin_output,
                     "zlogin "+zone)
                 os.unlink(zlogin_output)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

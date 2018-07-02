@@ -545,3 +545,6 @@ class RepoStats(object):
                    has been used for network operations."""
 
                 return self.__used
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

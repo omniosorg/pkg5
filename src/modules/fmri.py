@@ -636,3 +636,6 @@ def is_same_publisher(pub1, pub2):
 
 def is_valid_pkg_name(name):
         return g_valid_pkg_name.match(name)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

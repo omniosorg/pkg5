@@ -59,3 +59,6 @@ class PkgGzipFile(gzip.GzipFile):
                 hdrstr = f.read(len(PkgGzipFile.magic))
                 f.close()
                 return (hdrstr == PkgGzipFile.magic)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

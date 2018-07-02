@@ -971,3 +971,6 @@ if __name__ == "__main__":
                 # Ignore python's spurious pipe problems.
                 pass
         sys.exit(__retval)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

@@ -2250,3 +2250,6 @@ class DepotConfig(object):
                             overrides=overrides, version=version)
                 return cfg.FileConfig(target, definitions=cls.__defs,
                     overrides=overrides, version=version)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

@@ -254,3 +254,6 @@ def _get_pkg_cat_data(cat, info_needed, actions=None,
         if not PackageInfo.DESCRIPTION in info_needed:
                 desc = None
         return summ, desc, cat_info, deps
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

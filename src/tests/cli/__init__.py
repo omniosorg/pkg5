@@ -23,3 +23,6 @@
 # Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

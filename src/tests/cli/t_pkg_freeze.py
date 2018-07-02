@@ -316,3 +316,6 @@ providing a version at which to freeze them.
                 self.api_obj.freeze_pkgs(["*"], unfreeze=True)
                 self.api_obj.reset()
                 self.assertEqualDiff([], self.api_obj.get_frozen_list())
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

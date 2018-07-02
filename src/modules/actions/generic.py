@@ -1205,3 +1205,6 @@ class Action(object):
 if six.PY2:
         # create an unbound method
         Action.__init__ = types.MethodType(_common._generic_init, None, Action)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

@@ -198,3 +198,6 @@ Policy._policies[RequireNames.name] = RequireNames
 
 DEFAULT_POLICY = "verify"
 
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

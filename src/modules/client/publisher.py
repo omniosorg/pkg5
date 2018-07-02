@@ -3250,3 +3250,6 @@ pkg unset-publisher {0}
                 names = self.properties.get("signature-required-names", [])
                 self.__sig_policy = sigpolicy.Policy.policy_factory(txt, names)
                 return self.__sig_policy
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

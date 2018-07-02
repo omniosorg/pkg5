@@ -868,3 +868,6 @@ class FileAction(generic.Action):
 
 if six.PY2:
         FileAction.__init__ = types.MethodType(_common._file_init, None, FileAction)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

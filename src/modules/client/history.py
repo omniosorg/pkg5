@@ -908,3 +908,6 @@ class History(object):
                         if not name.startswith("__"):
                                 object.__setattr__(self, name, val)
                 self.__operations = self.__snapshot["__operations"]
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

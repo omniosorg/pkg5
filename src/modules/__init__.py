@@ -24,3 +24,6 @@
 # Use is subject to license terms.
 
 VERSION = "unknown"
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

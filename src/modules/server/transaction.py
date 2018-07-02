@@ -710,3 +710,6 @@ class Transaction(object):
                                 continue
                         src_path = os.path.join(self.dir, f)
                         self.rstore.cache_store.insert(f, src_path)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

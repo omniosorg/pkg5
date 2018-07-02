@@ -666,3 +666,6 @@ class PkgImage(object):
 #
 #
 opts_mapping = {}
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

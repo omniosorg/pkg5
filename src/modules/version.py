@@ -808,3 +808,6 @@ class MatchingVersion(Version):
                         return hash(self.timestr)
                 else:
                         return hash((self.release, self.branch))
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

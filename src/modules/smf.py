@@ -248,3 +248,6 @@ def restart(fmris, sync_timeout=0, zone=None):
 #                        args.append("-T {0:d}".format(sync_timeout))
         # fmris could be a list so explicit cast is necessary
         __call(tuple(args) + tuple(fmris), zone=zone)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

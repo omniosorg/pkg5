@@ -55,3 +55,6 @@ for l in fileinput.input(sys.argv[1:]):
         print("{0:d}".format(time.mktime(d.timetuple())))
         sys.exit(0)
 
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

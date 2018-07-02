@@ -135,3 +135,6 @@ def setup_environment(path_to_proto, debug=False, system_test=False):
         # Save off the value for tempdir when we were invoked, since the
         # suite will subsequently modify tempdir to sandbox test cases.
         pkg5unittest.g_tempdir = tempfile.gettempdir()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

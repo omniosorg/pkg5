@@ -1291,3 +1291,6 @@ def _manifest_sort_key(mf):
         if mf.fmri:
                 return mf.fmri
         return mf.get("pkg.fmri")
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

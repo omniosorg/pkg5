@@ -43,3 +43,6 @@ def copyfile(src, dst):
         """
         macostools.copy(src, dst)
 
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

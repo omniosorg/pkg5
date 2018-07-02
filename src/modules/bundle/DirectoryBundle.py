@@ -142,3 +142,6 @@ class DirectoryBundle(pkg.bundle.Bundle):
 
 def test(filename):
         return stat.S_ISDIR(os.stat(filename).st_mode)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

@@ -48,3 +48,6 @@ def chown(path, owner, group):
 
 
 
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

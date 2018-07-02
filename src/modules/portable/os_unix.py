@@ -307,3 +307,6 @@ def assert_mode(path, mode):
 def copyfile(src, dst):
         shutil.copyfile(src, dst)
 
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

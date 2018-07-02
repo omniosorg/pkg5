@@ -403,3 +403,6 @@ class Actuator(object):
                         self.__invoke(smf.enable, params, temporary=True,
                             sync_timeout=self.sync_timeout)
 
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

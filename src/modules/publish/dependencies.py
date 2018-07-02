@@ -1866,3 +1866,6 @@ def resolve_deps(manifest_paths, api_inst, system_patterns, prune_attrs=False):
 
         sys_fmris.update(unmatched_patterns)
         return pkg_deps, errs, warnings, sys_fmris, external_deps
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

@@ -73,3 +73,6 @@ def get_file_type(actions):
                         yield SMF_MANIFEST
                 else:
                         yield "unknown"
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

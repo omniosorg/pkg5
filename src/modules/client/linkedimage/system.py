@@ -138,3 +138,6 @@ class LinkedImageSystemChildPlugin(li.LinkedImageChildPlugin):
         def munge_props(self, props):
                 """See parent class for docstring."""
                 pass
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

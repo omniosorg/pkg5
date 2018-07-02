@@ -67,3 +67,6 @@ class Indexer(indexer.Indexer):
                         for d in self._data_dict.values():
                                 d.close_file_handle()
                 return res is not None
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

@@ -825,3 +825,6 @@ application = cherrypy.Application(wsgi_depot, None, config=conf)
 # Raise the level of the access log to make it quiet. For some reason,
 # setting log.access_file = "" or None doesn't work.
 application.log.access_log.setLevel(logging.WARNING)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

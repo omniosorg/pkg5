@@ -135,3 +135,6 @@ class HardLinkAction(link.LinkAction):
                         errors.append(_("Unexpected Error: {0}").format(e))
 
                 return errors, warnings, info
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

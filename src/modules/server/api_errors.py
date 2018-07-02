@@ -65,3 +65,6 @@ class UnrecognizedOptionsToInfo(ApiException):
                 s = _("Info does not recognize the following options: {0}").format(
                     ", ".join(str(o) for o in self._opts))
                 return s
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

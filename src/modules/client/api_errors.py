@@ -3342,3 +3342,6 @@ class PkgUnicodeDecodeError(UnicodeDecodeError):
                 return "{0}. You passed in {1!r} {2}".format(s, self.obj,
                     type(self.obj))
 
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

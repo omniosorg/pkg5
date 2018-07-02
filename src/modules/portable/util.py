@@ -84,3 +84,6 @@ def get_os_release():
         return '.'.join((re.sub('[^0-9]', ' ', release)).split())
 
 
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

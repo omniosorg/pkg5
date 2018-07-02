@@ -78,3 +78,6 @@ for func in funcs:
         else:
                 os.wait()
 
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

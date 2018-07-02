@@ -114,3 +114,6 @@ header = """
 """.format(hostname, hostname, hostname)
 
 print(header)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

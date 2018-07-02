@@ -767,3 +767,6 @@ def process_mog(file_args, ignoreincludes, verbose, includes, macros,
                 except RuntimeError as e:
                         process_error("File {0} line {1:d}: {2}".format(
                             filename, lineno, e), error_cb)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

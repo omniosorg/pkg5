@@ -26,3 +26,6 @@
 #
 
 __all__ = ["transaction"]
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

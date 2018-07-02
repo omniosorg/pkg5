@@ -112,3 +112,6 @@ def process_script_deps(action, pkg_vars, **kwargs):
                                 else:
                                         pkg_attrs[key] = py_attrs[key]
         return deps, elist, pkg_attrs
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

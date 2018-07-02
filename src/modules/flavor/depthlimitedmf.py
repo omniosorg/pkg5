@@ -402,3 +402,6 @@ if __name__ == "__main__":
                 sys.stdout.write("ERR {0}\n".format(e))
         except MultipleDefaultRunPaths as e:
                 sys.stdout.write("{0}\n".format(e))
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

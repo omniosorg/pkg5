@@ -35,3 +35,6 @@ img_type_names = {
     IMG_USER: "user"
 }
 
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

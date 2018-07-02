@@ -564,3 +564,6 @@ if __name__ == "__main__":
                 except EnvironmentError:
                         pass
         sys.exit(exitval)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

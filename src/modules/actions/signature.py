@@ -619,3 +619,6 @@ class SignatureAction(generic.Action):
                     numeric_attrs=("pkg.csize", "pkg.size"),
                     required_attrs=("value",), single_attrs=("algorithm",
                     "chash", "value"))
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

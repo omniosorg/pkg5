@@ -3022,3 +3022,6 @@ class NoPublishersForURI(api_errors.ApiException):
         def __str__(self):
                 return _("There are no publishers associated with the URI "
                    "'%s'.") % self.uri
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

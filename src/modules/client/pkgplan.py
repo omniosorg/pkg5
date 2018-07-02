@@ -668,3 +668,6 @@ class PkgPlan(object):
 
         def clear_origin_manifest(self):
                 self.__origin_mfst = manifest.NullFactoredManifest
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

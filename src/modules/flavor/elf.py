@@ -266,3 +266,6 @@ def process_elf_dependencies(action, pkg_vars, dyn_tok_conv, run_paths,
                     action.attrs[PD_PROTO_DIR]))
         del dyn_tok_conv["$ORIGIN"]
         return res, elist, {}
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

@@ -249,3 +249,6 @@ def generic_lock_set_str():
         lock_ts = pkg.catalog.now_to_basic_ts()
 
         return "\n".join((str(os.getpid()), platform.node(), lock_ts, "\n"))
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

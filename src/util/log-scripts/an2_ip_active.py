@@ -148,3 +148,6 @@ report_section_begin("Active IP addresses")
 print("<h3>Distinct IP addresses, by date</h3>")
 report_by_date(data, "distinct-cat-1d")
 report_section_end()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

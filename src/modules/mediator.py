@@ -187,3 +187,6 @@ def mediator_impl_matches(a, b):
         # which allows any version to match.  Otherwise,
         # version components must match exactly.
         return aver == None or bver == None or aver == bver
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

@@ -2791,3 +2791,6 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
 
 if __name__ == "__main__":
         unittest.main()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

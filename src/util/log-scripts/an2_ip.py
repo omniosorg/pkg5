@@ -56,3 +56,6 @@ report_by_country(total_by_country, "all")
 report_col_end("r")
 report_cols_end()
 report_section_end()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

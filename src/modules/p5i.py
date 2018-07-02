@@ -222,3 +222,6 @@ def write(fileobj, pubs, pkg_names=None):
         json.dump(dump_struct, fileobj, ensure_ascii=False,
             allow_nan=False, indent=2, sort_keys=True)
         fileobj.write("\n")
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

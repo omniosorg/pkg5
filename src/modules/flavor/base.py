@@ -429,3 +429,6 @@ def insert_default_runpath(default_runpath, run_paths):
                 # no PD_DEFAULT_PATH token, so we override the
                 # whole default search path
                 return run_paths
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

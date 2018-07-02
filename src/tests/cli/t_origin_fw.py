@@ -152,3 +152,6 @@ if __name__ == "__main__":
                 # check that we ignore dependencies w/ missing enumerators for now
                 self.pkg("install C@1.0")
 
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

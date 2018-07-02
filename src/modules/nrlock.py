@@ -94,3 +94,6 @@ class NRLockException(Exception):
 
         def __str__(self):
                 return str(self.data)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

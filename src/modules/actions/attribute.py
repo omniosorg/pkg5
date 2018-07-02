@@ -181,3 +181,6 @@ class AttributeAction(generic.Action):
                         # In all other cases, multiple values are assumed to be
                         # permissible.
                         generic.Action._validate(self, fmri=fmri)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

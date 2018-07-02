@@ -163,3 +163,6 @@ class MirrorDetector(object):
                         raise tx.mDNSException(errstr)
                 finally:
                         sd_hdl.close()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

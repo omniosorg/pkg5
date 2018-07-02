@@ -422,3 +422,6 @@ def set_action_data(payload, action, basedirs=None, bundles=None):
         # accessible.
         action.set_data(data)
         return data, used_src
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

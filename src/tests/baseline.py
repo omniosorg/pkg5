@@ -147,3 +147,6 @@ class BaseLine(object):
 class ReadOnlyBaseLine(BaseLine):
         def store(self):
                 raise NotImplementedError()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

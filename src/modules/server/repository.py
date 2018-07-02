@@ -4419,3 +4419,6 @@ def repository_create(repo_uri, properties=misc.EmptyDict, version=None):
 
         return Repository(create=True, read_only=False, properties=properties,
             root=path)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

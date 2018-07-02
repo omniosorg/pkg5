@@ -256,3 +256,6 @@ class TestAsyncRPC(pkg5unittest.Pkg5TestCase):
         def test_rpc_interruptions(self):
                 self.__test_rpc_interruptions(http_enc=True)
                 self.__test_rpc_interruptions(http_enc=False)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

@@ -114,3 +114,6 @@ def get_preferred_layout():
         """This function returns the single preferred layout to use."""
 
         return V1Layout()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

@@ -397,3 +397,6 @@ def handle(depot, request, response, pub):
                 cf.close()
 
         return serve_file(cfpath, MIME_TYPE)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

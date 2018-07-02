@@ -128,3 +128,6 @@ class Firmware(object):
                         self.__firmware[key] = ans
 
                 return self.__firmware[key]
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

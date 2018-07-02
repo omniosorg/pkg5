@@ -3983,3 +3983,6 @@ def basic_ts_to_datetime(ts):
         except ValueError:
                 usec = 0
         return datetime.datetime(year, month, day, hour, minutes, sec, usec)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

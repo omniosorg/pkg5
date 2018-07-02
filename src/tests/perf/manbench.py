@@ -134,3 +134,6 @@ for act in mf.gen_actions(attr_match={ "mode": "0444" }):
                             "({2:d} actions/sec)".format(t, int(n // t), int((n * 60) // t)))
         except KeyboardInterrupt:
                 sys.exit(0)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

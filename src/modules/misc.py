@@ -3027,3 +3027,6 @@ if six.PY2:
         force_str = force_bytes
 else:
         force_str = force_text
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

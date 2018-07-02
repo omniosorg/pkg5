@@ -1924,3 +1924,6 @@ class SMFConfig(Config):
 
                 raise SMFWriteError(self._target, _("Writing configuration "
                     "data to SMF is not supported at this time."))
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

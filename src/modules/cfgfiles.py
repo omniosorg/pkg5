@@ -471,3 +471,6 @@ class UserattrFile(CfgFile):
         c["attributes"] = str
         return CfgFile.valuetostr(self, c)
 
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

@@ -100,3 +100,6 @@ def get_platform():
         return
     from pkg.misc import force_text
     return force_text(ffi.string(ffi.cast("char *", buf)))
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

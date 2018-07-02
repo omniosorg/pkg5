@@ -59,3 +59,6 @@ class Dependency(object):
                 elif self.type == INCORPORATE:
                         return "{0} >> {1}".format(
                             self.host_pkg_fmri, self.req_pkg_fmri)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

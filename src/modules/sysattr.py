@@ -190,3 +190,6 @@ def get_attr_dict():
         value = force_text(ffi.string(lib.attr_to_option(i)))
         sys_attrs.setdefault(key, value)
     return sys_attrs
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

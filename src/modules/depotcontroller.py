@@ -594,3 +594,6 @@ if __name__ == "__main__":
         os.system("rm -fr {0}".format(__testdir))
         print("\nDone")
 
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

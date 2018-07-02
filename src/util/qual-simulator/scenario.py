@@ -222,3 +222,6 @@ six_origin.add_origin_uri("origin6", depot.SPEED_FAST, depot.CSPEED_MEDIUM)
 six_origin.set_megabytes(total_mb)
 
 six_origin.run()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

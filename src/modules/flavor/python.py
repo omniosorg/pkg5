@@ -316,3 +316,6 @@ def process_python_dependencies(action, pkg_vars, script_path, run_paths):
         if bad_lines:
                 errs.append(PythonSubprocessBadLine(" ".join(cmd), bad_lines))
         return deps, errs, {}
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

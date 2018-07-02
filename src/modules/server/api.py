@@ -796,3 +796,6 @@ class RequestInterface(_Interface):
                 """
                 return cherrypy.url(path=path, qs=qs, script_name=script_name,
                     relative=relative)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

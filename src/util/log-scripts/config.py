@@ -36,3 +36,6 @@ def get(option, default=None):
         if not value:
                 return default
         return value
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

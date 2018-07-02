@@ -213,3 +213,6 @@ class RepositoryURI(object):
                 rc[self.key()].record_progress(size, time)
 
                 return (errors, size, time)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

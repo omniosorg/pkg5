@@ -172,3 +172,6 @@ report_by_raw_agent(manifest_by_raw_agent, "manifest", summary_file = summary_fi
 report_manifest_by_pkg()
 report_manifest_by_ver_pkg()
 report_section_end(summary_file = summary_file)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

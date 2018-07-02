@@ -953,3 +953,6 @@ class TestClientApi(pkg5unittest.ManyDepotTestCase):
                 retjson = cli_inst.publisher_set(json.dumps(["test1"]))
                 self.assertTrue(retjson["status"] == 0)
                 self.assertTrue("errors" not in retjson)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

@@ -119,3 +119,6 @@ for l in fileinput.input(args):
 pklfile = open("{0}.{1}.pkl".format(stem, timestamp), "wb")
 pickle.dump(entry_by_date, pklfile)
 pklfile.close()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

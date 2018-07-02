@@ -5693,3 +5693,6 @@ class ImagePlan(object):
                             version_mismatch=installed_version_mismatches,
                             versionless_uninstalled=versionless_uninstalled)
                 return stems
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

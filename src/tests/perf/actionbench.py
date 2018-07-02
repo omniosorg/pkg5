@@ -241,3 +241,6 @@ mf.set_content(m)
         except KeyboardInterrupt:
                 import sys
                 sys.exit(0)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

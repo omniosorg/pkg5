@@ -1002,3 +1002,6 @@ from {imgroot}/etc/driver_aliases.".format(**errdict))
                         ret.append(("driver", "alias", self.attrs["alias"],
                             None))
                 return ret
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

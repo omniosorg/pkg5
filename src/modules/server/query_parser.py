@@ -93,3 +93,6 @@ class TermQuery(qp.TermQuery):
                 base_res = self._search_internal(fmris)
                 it = self._get_results(base_res)
                 return it
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

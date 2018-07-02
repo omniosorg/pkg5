@@ -343,3 +343,6 @@ class UserAction(generic.Action):
                 a = int(self.attrs.get("uid", 1024))
                 b = int(other.attrs.get("uid", 1024))
                 return (a > b) - (a < b)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

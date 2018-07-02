@@ -393,3 +393,6 @@ class StreamingFileObj(object):
                                 # convert to str as early as we can
                                 self.__headers[force_str(k.lower())] = \
                                         force_str(v.strip())
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

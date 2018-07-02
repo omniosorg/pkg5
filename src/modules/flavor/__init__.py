@@ -32,3 +32,6 @@ __all__ = [
     "python"
     "smf_manifest"
 ]
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

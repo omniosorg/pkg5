@@ -126,3 +126,6 @@ report_section_begin("Filelist", summary_file = summary_file)
 report_filelist_by_bytes()
 report_by_date(filelist_by_date, "filelist", summary_file = summary_file)
 report_section_end(summary_file = summary_file)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

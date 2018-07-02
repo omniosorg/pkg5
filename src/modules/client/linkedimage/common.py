@@ -3871,3 +3871,6 @@ def compute_path_transform(opath, npath):
         if oroot == nroot:
                 return PATH_TRANSFORM_NONE
         return (oroot, nroot)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

@@ -649,3 +649,6 @@ class PipedServerProxy(rpc.ServerProxy):
                     "http://localhost/RPC2",
                     transport=self.__piped_transport,
                     encoding=encoding, verbose=verbose, version=version)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

@@ -492,3 +492,6 @@ class mDNSException(TransportException):
 
         def __str__(self):
                 return self.err
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

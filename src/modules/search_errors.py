@@ -98,3 +98,6 @@ class IncorrectIndexFileHash(Exception):
         def __str__(self):
                 return "existing_val was:{0}\nincoming_val was:{1}".format(
                     self.ev, self.iv)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

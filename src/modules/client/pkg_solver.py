@@ -3179,3 +3179,6 @@ class PkgSolver(object):
                             'nonglobal'
                 else:
                         return False
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

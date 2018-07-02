@@ -346,3 +346,6 @@ def test_posix_printengine(output_file, ttymode):
         # just test that it works
         pe.isslow()
 
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

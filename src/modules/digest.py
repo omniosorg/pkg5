@@ -365,3 +365,6 @@ def get_common_preferred_hash(action, old_action, hash_type=HASH):
         if action.hash and old_action.hash:
                 return None, action.hash, old_action.hash, hashlib.sha1
         return None, None, None, None
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

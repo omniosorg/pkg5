@@ -295,3 +295,6 @@ class Popen(subprocess.Popen):
                                         os.close(errwrite)
                                 if devnull_fd is not None:
                                         os.close(devnull_fd)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

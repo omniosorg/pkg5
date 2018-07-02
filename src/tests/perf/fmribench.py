@@ -256,3 +256,6 @@ if __name__ == "__main__":
                 except:
                         print("#\n{0:40}  <Test Failed>".format(bname))
                         raise
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

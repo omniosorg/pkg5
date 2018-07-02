@@ -85,3 +85,6 @@ if __name__ == "__main__":
                 traceback.print_exc()
                 sys.exit(99)
         sys.exit(0)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

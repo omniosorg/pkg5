@@ -498,3 +498,6 @@ def has_smf_manifest_dir(path, prefix=None):
                 if check_path and check_path.startswith(location):
                         return True
         return False
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

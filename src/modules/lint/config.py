@@ -96,3 +96,6 @@ class PkglintConfig(object):
                         raise PkglintConfigException(
                             _("missing or corrupt pkglintrc file "
                             "{config_file}: {err}").format(**locals()))
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

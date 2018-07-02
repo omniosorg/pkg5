@@ -1192,3 +1192,6 @@ class TestSearchMultiPublisher(pkg5unittest.ManyDepotTestCase):
 
 if __name__ == "__main__":
         unittest.main()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

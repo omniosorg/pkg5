@@ -3400,3 +3400,6 @@ def test_progress_tracker(t, gofast=False):
         except KeyboardInterrupt:
                 t.flush()
         return
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

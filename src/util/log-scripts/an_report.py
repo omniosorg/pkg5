@@ -343,3 +343,6 @@ def report_by_raw_agent(data, title, summary_file = None):
         rf.close()
 
 
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

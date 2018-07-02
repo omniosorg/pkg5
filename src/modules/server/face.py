@@ -151,3 +151,6 @@ def respond(depot, request, response, pub, http_depot=None):
                 raise cherrypy.HTTPRedirect(e.data)
         except:
                 return __handle_error(path, http_client.INTERNAL_SERVER_ERROR)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

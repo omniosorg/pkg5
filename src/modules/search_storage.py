@@ -839,3 +839,6 @@ class InvertedDict(IndexStoreBase):
                                             self._dict[fmris].split()))
                                         break
                 return set(offs)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

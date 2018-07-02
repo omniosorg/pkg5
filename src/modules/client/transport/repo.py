@@ -2469,3 +2469,6 @@ class RepoCache(object):
 
                 if repouri.key() in self.__cache:
                         del self.__cache[repouri.key()]
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

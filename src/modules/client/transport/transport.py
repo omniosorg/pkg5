@@ -3710,3 +3710,6 @@ def setup_transport():
         xport = Transport(xport_cfg)
 
         return xport, xport_cfg
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

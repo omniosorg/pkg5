@@ -862,3 +862,6 @@ class PlanDescription(object):
                 if self._new_facets is None:
                         return None
                 return pkg.facet.Facets(self._new_facets)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

@@ -109,3 +109,6 @@ class PkgTarFile(tarfile.TarFile):
                                 raise
                         else:
                                 self._dbg(1, "tarfile: {0}".format(e))
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

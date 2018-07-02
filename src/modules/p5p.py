@@ -1322,3 +1322,6 @@ class Archive(object):
         def pathname(self):
                 """The absolute path of the archive file."""
                 return self.__arc_name
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

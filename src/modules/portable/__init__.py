@@ -276,3 +276,6 @@ for fragment in fragments:
 else:
         raise ImportError(
             "cannot find portable implementation class for os " + str(fragments))
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

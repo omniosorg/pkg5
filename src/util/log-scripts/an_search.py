@@ -227,3 +227,6 @@ report_search_by_success()
 report_col_end("r", summary_file = summary_file)
 report_cols_end(summary_file = summary_file)
 report_section_end(summary_file = summary_file)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

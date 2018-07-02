@@ -200,3 +200,6 @@ class LegacyAction(generic.Action):
                 generic.Action._validate(self, fmri=fmri,
                     single_attrs=("category", "desc", "hotline", "name",
                     "vendor", "version"))
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

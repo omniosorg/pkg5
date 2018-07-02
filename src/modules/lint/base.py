@@ -383,3 +383,6 @@ def _linted_manifest(manifest, lint_id):
                                     "in {manifest}").format(key=key,
                                     manifest=manifest.fmri))
         return False
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

@@ -374,3 +374,6 @@ if __name__ == "__main__":
                 exit_code = 99
 
         sys.exit(exit_code)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker
