@@ -76,7 +76,7 @@ class BaseLine(object):
                 """Return the list of failed tests."""
                 return self.__failed_list
 
-        def reportfailures(self):
+        def reportfailures(self, file='failures'):
                 """Display all test cases that failed to match the baseline
                 and their result.
                 """
@@ -96,7 +96,7 @@ class BaseLine(object):
                                 print("", file=stream)
                         op_baseline(sys.stderr)
                         try:
-                                with open('failures', 'w') as out:
+                                with open(file, 'w') as out:
                                         op_baseline(out)
                         except: pass
 

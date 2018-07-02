@@ -1,0 +1,9 @@
+cli.t_https.py TestDepotHTTPS.test_01_basics|error
+cli.t_pkg_depotd.py TestDepotOutput.test_0_depot_bui_output|fail
+cli.t_pkg_install.py TestPkgInstallApache.test_corrupt_web_cache|error
+cli.t_pkg_install.py TestPkgInstallApache.test_granular_proxy|error
+cli.t_pkgrecv.py TestPkgrecvHTTPS.test_01_basics|error
+cli.t_pkgrepo.py TestPkgRepo.test_03_info|fail
+cli.t_pkgrepo.py TestPkgRepo.test_10_list|fail
+cli.t_pkgrepo.py TestPkgrepoHTTPS.test_01_basics|error
+cli.t_pkgsend.py TestPkgsendHTTPS.test_01_basics|error
