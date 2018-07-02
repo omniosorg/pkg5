@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -82,16 +82,24 @@ class BaseLine(object):
                 """
                 lst = self.getfailures()
                 if lst:
-                        print("", file=sys.stderr)
-                        print(self.sep1, file=sys.stderr)
-                        print("BASELINE MISMATCH: The following results didn't "
-                         "match the baseline.", file=sys.stderr)
-                        print(self.sep2, file=sys.stderr)
-                        for name, result in lst:
-                                print("{0}: {1}".format(name, result), file=sys.stderr)
-                        print(self.sep2, file=sys.stderr)
-                        print("", file=sys.stderr)
-  
+                        def op_baseline(stream):
+                                print("", file=stream)
+                                print(self.sep1, file=stream)
+                                print("BASELINE MISMATCH: The following "
+                                    "results didn't match the baseline.",
+                                    file=stream)
+                                print(self.sep2, file=stream)
+                                for name, result in lst:
+                                        print("{0}: {1}".format(name, result),
+                                            file=stream)
+                                print(self.sep2, file=stream)
+                                print("", file=stream)
+                        op_baseline(sys.stderr)
+                        try:
+                                with open('failures', 'w') as out:
+                                        op_baseline(out)
+                        except: pass
+
         def store(self):
                 """Store the result set."""
                 # Only store the result set if we're generating a baseline

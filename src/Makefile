@@ -58,7 +58,7 @@ PYLINT_VER_CMD = PYTHONPATH= /usr/bin/pkg info $(PYLINT_FMRI) | \
 		 /usr/bin/sed -e 's/ //g'
 
 PEP8 = /usr/bin/pep8
-JOBS = 4
+JOBS = 8
 
 SUBDIRS=brand zoneproxy tsol util/mkcert
 
@@ -110,14 +110,8 @@ packages: install
 	@cd pkg; pwd; $(MAKE) $(TARGET) check \
 		PATH=$(CODE_WS)/proto/root_$$(uname -p)/usr/bin:$$PATH \
 
-test:
-	$(PYTHON27) tests/run.py -j ${JOBS} -v
-	#$(PYTHON35) tests/run.py -j ${JOBS} -v
-
-test-verbose:
-	$(PYTHON27) setup.py test -v
-
-test-generate:
-	$(PYTHON27) setup.py test -g
+test: install
+	-pfexec $(PYTHON27) tests/run.py -j ${JOBS}
+	-pfexec $(PYTHON35) tests/run.py -j ${JOBS}
 
 FRC:

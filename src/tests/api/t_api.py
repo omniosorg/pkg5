@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -26,7 +26,7 @@
 
 from . import testutils
 if __name__ == "__main__":
-	testutils.setup_environment("../../../proto")
+        testutils.setup_environment("../../../proto")
 import pkg5unittest
 
 from six.moves import cStringIO
@@ -116,8 +116,8 @@ class TestPkgApi(pkg5unittest.SingleDepotTestCase):
             add license license.licensed license=license.licensed must-accept=True
             close """
 
-	# NOTE:  spaces at the end (or lack thereof) here are important for
-	# specific versions of simplejson.
+        # NOTE:  spaces at the end (or lack thereof) here are important for
+        # specific versions of simplejson.
         p5i_bobcat = """{
   "packages": [
     "pkg:/bar@1.0,5.11-0",
@@ -343,8 +343,8 @@ class TestPkgApi(pkg5unittest.SingleDepotTestCase):
                 kcat = img.get_catalog(img.IMG_CATALOG_KNOWN)
                 entry = [e for f, e in kcat.entries()][0]
                 states = entry["metadata"]["states"]
-                self.assert_(pkgdefs.PKG_STATE_V1 in states)
-                self.assert_(pkgdefs.PKG_STATE_V0 not in states)
+                self.assertTrue(pkgdefs.PKG_STATE_V1 in states)
+                self.assertTrue(pkgdefs.PKG_STATE_V0 not in states)
 
                 # Next, disable v1 catalog for the depot and force a client
                 # refresh.  Only v0 state should be present.
@@ -364,8 +364,8 @@ class TestPkgApi(pkg5unittest.SingleDepotTestCase):
                 kcat = img.get_catalog(img.IMG_CATALOG_KNOWN)
                 entry = [e for f, e in kcat.entries()][0]
                 states = entry["metadata"]["states"]
-                self.assert_(pkgdefs.PKG_STATE_V1 not in states)
-                self.assert_(pkgdefs.PKG_STATE_V0 in states)
+                self.assertTrue(pkgdefs.PKG_STATE_V1 not in states)
+                self.assertTrue(pkgdefs.PKG_STATE_V0 in states)
 
                 # Verify that there is no dependency information present
                 # in the known or installed catalog.
@@ -416,8 +416,8 @@ class TestPkgApi(pkg5unittest.SingleDepotTestCase):
                 for cat in kcat, icat:
                         entry = [e for f, e in cat.entries()][0]
                         states = entry["metadata"]["states"]
-                        self.assert_(pkgdefs.PKG_STATE_INSTALLED in states)
-                        self.assert_(pkgdefs.PKG_STATE_V0 in states)
+                        self.assertTrue(pkgdefs.PKG_STATE_INSTALLED in states)
+                        self.assertTrue(pkgdefs.PKG_STATE_V0 in states)
 
                 # Finally, transition back to v1 catalog.  This requires
                 # creating a new api object since transport will think that
@@ -443,8 +443,8 @@ class TestPkgApi(pkg5unittest.SingleDepotTestCase):
                 # Verify state info.
                 for f, entry in kcat.entries():
                         states = entry["metadata"]["states"]
-                        self.assert_(pkgdefs.PKG_STATE_V1 in states)
-                        self.assert_(pkgdefs.PKG_STATE_V0 not in states)
+                        self.assertTrue(pkgdefs.PKG_STATE_V1 in states)
+                        self.assertTrue(pkgdefs.PKG_STATE_V0 not in states)
 
                 # Verify that there is dependency information present
                 # in the known and installed catalog.

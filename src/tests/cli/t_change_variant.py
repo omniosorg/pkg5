@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -279,10 +279,10 @@ class TestPkgChangeVariant(pkg5unittest.SingleDepotTestCase):
                             ic.variants["variant.arch"], v_arch))
 
                 if "variant.opensolaris.imagetype" not in ic.variants:
-                        self.assert_(False,
+                        self.assertTrue(False,
                             "unable to determine imagetype variant")
                 if ic.variants["variant.opensolaris.imagetype"] != v_imagetype:
-                        self.assert_(False, "unexpected imagetype variant")
+                        self.assertTrue(False, "unexpected imagetype variant")
 
                 if "variant.opensolaris.zone" not in ic.variants:
                         self.assertTrue(False,

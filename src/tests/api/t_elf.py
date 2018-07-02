@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -92,7 +92,7 @@ class TestElf(pkg5unittest.Pkg5TestCase):
 
                 # the default is to return an SHA-1 elfhash only
                 d = elf.get_dynamic(self.elf_paths[0])
-                self.assert_(len(d["elfhash"]) == sha1_len)
+                self.assertTrue(len(d["elfhash"]) == sha1_len)
                 self.assertTrue("pkg.content-type.sha256" not in d)
 
                 d = elf.get_dynamic(self.elf_paths[0], sha256=True)

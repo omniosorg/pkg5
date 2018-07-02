@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -193,7 +193,7 @@ file tmp/file/should/not/exist/here/foo group=bin mode=0755 owner=root path=foo/
 
         err_manf_1 = """\
 Couldn't find 'usr/xpg4/lib/libcurses.so.1' in any of the specified search directories:
-	{0}
+        {0}
 """
         res_manf_2 = """\
 depend {pfx}.file=libc.so.1 {pfx}.path=lib {pfx}.path=usr/lib fmri={dummy_fmri} type=require {pfx}.reason=usr/xpg4/lib/libcurses.so.1 variant.arch=foo {pfx}.type=elf
@@ -405,7 +405,7 @@ depend fmri={dummy_fmri} {depend_debug_prefix}.file=libc.so.1 {depend_debug_pref
 
         miss_payload_manf_error = """\
 Couldn't find 'foo/bar.py' in any of the specified search directories:
-	{path_pref}
+        {path_pref}
 """
 
         double_plat_error = """\
@@ -483,8 +483,8 @@ file NOHASH path=platform/foo/baz/no_such_named_file
         run_path_errors = """\
 The file dependency depend fmri={dummy_fmri} {pfx}.file=no_such_named_file {pfx}.path=platform/foo/baz {pfx}.path=platform/bar/baz {pfx}.path=lib {pfx}.path=usr/lib {pfx}.reason=foo/bar {pfx}.type=elf type=require delivered in pkg:/collision_manf has paths which resolve to multiple packages.
 The actions are:
-	depend fmri=pkg:/sat_bar_libc {pfx}.file=platform/bar/baz/no_such_named_file {pfx}.reason=foo/bar {pfx}.type=elf type=require
-	depend fmri=pkg:/sat_foo_libc {pfx}.file=platform/foo/baz/no_such_named_file {pfx}.reason=foo/bar {pfx}.type=elf type=require
+        depend fmri=pkg:/sat_bar_libc {pfx}.file=platform/bar/baz/no_such_named_file {pfx}.reason=foo/bar {pfx}.type=elf type=require
+        depend fmri=pkg:/sat_foo_libc {pfx}.file=platform/foo/baz/no_such_named_file {pfx}.reason=foo/bar {pfx}.type=elf type=require
 {unresolved_path} has unresolved dependency '
     depend type=require fmri=__TBD {pfx}.file=no_such_named_file \\
         {pfx}.reason=foo/bar {pfx}.type=elf \\
@@ -1121,9 +1121,9 @@ file NOHASH group=bin mode=0555 owner=root path=c/bin/perl variant.foo=c
                         opts.append("-shared")
                         # Never link to libgcc_s.so
                         opts.append("-nodefaultlibs")
-		if pic or shared_lib:
-			opts.append("-fPIC")
-			opts.append("-DPIC")
+                if pic or shared_lib:
+                        opts.append("-fPIC")
+                        opts.append("-DPIC")
                 if no_link:
                         opts.append("-c")
                 if mapfile:

@@ -46,9 +46,7 @@ cli.t_pkg_sysrepo.py TestSysrepo.test_signature_policy_6|error
 cli.t_pkg_sysrepo.py TestSysrepo.test_signature_policy_7|error
 cli.t_pkg_sysrepo.py TestSysrepo.test_signature_policy_8|error
 cli.t_pkg_sysrepo.py TestSysrepo.test_syspub_toggle|error
-cli.t_pkgdep.py TestPkgdepBasics.test_bug_11805|error
 cli.t_pkgdep.py TestPkgdepBasics.test_bug_13059|fail
-cli.t_pkgdep.py TestPkgdepBasics.test_output|error
 cli.t_pkgrecv.py TestPkgrecvHTTPS.test_01_basics|error
 cli.t_pkgrepo.py TestPkgrepoHTTPS.test_01_basics|error
 cli.t_pkgsend.py TestPkgsendHTTPS.test_01_basics|error

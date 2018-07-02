@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -358,7 +358,8 @@ class PkgRemote(object):
                     pkg_op, kwargs), t1=True)
 
                 # make the RPC call
-                rv = e = None
+                rv = None
+                e = None
                 rpc_method = getattr(rpc_client, pkg_op)
                 try:
                         # Catch "Exception"; pylint: disable=W0703

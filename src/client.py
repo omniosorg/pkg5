@@ -1873,19 +1873,11 @@ class RemoteDispatch(object):
                 remote dispatch routine with a call to handle_errors(), which
                 will catch and display any exceptions encountered."""
 
-                # Hack around yet more jsonrpc encoding weirdness.  We can't
-                # pass unicode strings as keyword arguments, so we have to
-                # ascii-ify everything.
-                newargs = {}
-                if isinstance(pwargs, dict):
-                        for key, value in pwargs.iteritems():
-                                newargs[str(key)] = value
-
                 # flush output before and after every operation.
                 misc.flush_output()
                 misc.truncate_file(sys.stdout)
                 misc.truncate_file(sys.stderr)
-                rv = handle_errors(self.__dispatch, True, op, newargs)
+                rv = handle_errors(self.__dispatch, True, op, pwargs)
                 misc.flush_output()
                 return rv
 
@@ -2226,7 +2218,7 @@ def apply_hot_fix(**args):
                                 hdl.setopt(pycurl.NOPROGRESS, False)
                         try:
                                 hdl.perform()
-                        except pycurl.error, error:
+                        except pycurl.error as error:
                                 errno, errstr = error
                                 msg("An error occurred: {0}".format(errstr))
                                 return

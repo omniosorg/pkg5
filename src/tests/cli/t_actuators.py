@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 # -*- coding: utf-8
 # CDDL HEADER START
 #
@@ -729,7 +729,7 @@ class TestPkgReleaseNotes(pkg5unittest.SingleDepotTestCase):
 
                 uni_out.index(self.multi_unicode)
                 uni_out.index(self.multi_ascii)
-		
+                
                 self.pkg("uninstall '*'")
 
         def test_release_note_8(self):

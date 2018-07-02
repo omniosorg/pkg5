@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -133,13 +133,13 @@ class TestPkgInfoBasics(pkg5unittest.SingleDepotTestCase):
                 self.pkg("info -r _usr/bin/stunnel", exit=1)
                 self.pkg("info _usr/bin/stunnel", exit=1)
 
-		# bad version
+                # bad version
                 self.pkg("install jade")
                 self.pkg("info pkg:/foo@bar.baz", exit=1)
                 self.pkg("info pkg:/foo@bar.baz jade", exit=1)
                 self.pkg("info -r pkg:/foo@bar.baz", exit=1)
 
-		# bad time
+                # bad time
                 self.pkg("info pkg:/foo@0.5.11,5.11-0.91:20080613T999999Z",
                     exit=1)
 

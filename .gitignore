@@ -1,5 +1,6 @@
 .intltool-merge-cache
 .make.state
+**/__pycache__
 /packages
 /proto
 /src/brand/fmri_compare
@@ -26,3 +27,4 @@
 /src/tests/*/*.pyc
 /src/cffi_src/_*
 /src/cffi_src/64
+/src/tests/failures

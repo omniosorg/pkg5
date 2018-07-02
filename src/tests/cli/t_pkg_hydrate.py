@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -46,7 +46,7 @@ class TestPkgHydrate(pkg5unittest.ManyDepotTestCase):
             add file dev/cfg/bar1 path=dev/cfg/bar1 mode=0555 owner=root group=bin facet.locale.fr=True variant.opensolaris.zone=global revert-tag="bob"
             add file dev/cfg/bar2 path=dev/cfg/bar2 mode=0644 owner=root group=bin overlay=true
             add link path=dev/cfg/bar1.slink target=bar1
-			add hardlink path=usr/bin/vi target=../../dev/cfg/bar2 mediator=vi mediator-implementation=dev
+                        add hardlink path=usr/bin/vi target=../../dev/cfg/bar2 mediator=vi mediator-implementation=dev
             close
             open dev@2.0,5.11-0
             add dir mode=0755 owner=root group=bin path=dev

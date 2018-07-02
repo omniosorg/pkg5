@@ -23,6 +23,7 @@
 # Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
 #
 
+<transform file path=usr/bin/ -> set pkg.depend.bypass-generate .*six.*>
 set name=pkg.fmri value=pkg:/package/pkg@$(PKGVERS)
 set name=pkg.summary value="Image Packaging System"
 set name=pkg.description \
@@ -199,8 +200,7 @@ file path=$(PYDIRVP)/pkg/p5p.py pkg.depend.bypass-generate=.*six.*
 file path=$(PYDIRVP)/pkg/p5s.py pkg.depend.bypass-generate=.*six.*
 file path=$(PYDIRVP)/pkg/pipeutils.py pkg.depend.bypass-generate=.*six.*
 file path=$(PYDIRVP)/pkg/pkggzip.py
-file path=$(PYDIRVP)/pkg/pkgsubprocess.py \
-    pkg.depend.bypass-generate=.*six.*
+file path=$(PYDIRVP)/pkg/pkgsubprocess.py pkg.depend.bypass-generate=.*six.*
 file path=$(PYDIRVP)/pkg/pkgtarfile.py
 dir  path=$(PYDIRVP)/pkg/portable
 file path=$(PYDIRVP)/pkg/portable/__init__.py pkg.depend.bypass-generate=.*
@@ -283,7 +283,6 @@ file path=usr/bin/pkgrepo
 file path=usr/bin/pkgsend
 file path=usr/bin/pkgsign
 file path=usr/bin/pkgsurf
-<transform file path=usr/bin/ -> set pkg.depend.bypass-generate .*six.*>
 dir  path=usr/lib
 file path=usr/lib/pkg.depotd mode=0755 pkg.depend.bypass-generate=.*
 dir  path=usr/share
@@ -501,14 +500,14 @@ license lic_minisat license="MIT (MiniSAT)" \
     com.oracle.info.description="MiniSAT 1.14.1" com.oracle.info.name=MiniSAT \
     com.oracle.info.tpno=17867 com.oracle.info.version=1.14.1
 license cr_Oracle license=cr_Oracle
+# CFFI import is done in C code, so it isn't picked up by pkgdepend
+depend type=require fmri=library/python-2/cffi-27
+depend type=require fmri=library/python-2/functools32-27
+depend type=require fmri=library/python-2/jsonschema-27
+depend type=require fmri=library/python-2/pybonjour-27
 #depend type=group fmri=package/pkg/zones-proxy
 #    variant.opensolaris.zone=nonglobal
 # cross zone dependency on linked image metadata
 #depend type=parent fmri=feature/package/dependency/self
 #    variant.opensolaris.zone=nonglobal
 depend type=require fmri=web/ca-bundle
-# CFFI import is done in C code, so it isn't picked up by pkgdepend
-depend type=require fmri=library/python-2/cffi-27
-depend type=require fmri=library/python-2/functools32-27
-depend type=require fmri=library/python-2/jsonschema-27
-depend type=require fmri=library/python-2/pybonjour-27

@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -1678,8 +1678,8 @@ test	tree		1.0	5.11	0	20110804T203458Z	pkg://test/tree@1.0,5.11-0:20110804T20345
                 self.assertEqualDiff(expected, self.output)
 
                 # json-formatted output.
-		# NOTE -> spaces at the end of lines, or lack thereof, are
-		# important and to which attention should be paid.
+                # NOTE -> spaces at the end of lines, or lack thereof, are
+                # important and to which attention should be paid.
                 self.pkgrepo("list -s %s -F json-formatted" % src)
                 expected = """\
 [

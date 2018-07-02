@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -142,7 +142,7 @@ close
 
         res_remote_case_sensitive = set([
             headers,
-            "pkg.fmri	set	test/example_pkg pkg:/example_pkg@1.0-0\n"
+            "pkg.fmri        set        test/example_pkg pkg:/example_pkg@1.0-0\n"
         ])
 
         res_remote_bin = set([

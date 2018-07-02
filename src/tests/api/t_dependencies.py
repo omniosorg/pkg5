@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -230,17 +230,17 @@ class Foo(object):
   svc:/application/pkg5test/service-default:default
 -->
 <service
-	name='application/pkg5test/service-default'
-	type='service'
-	version='0.1'>
+        name='application/pkg5test/service-default'
+        type='service'
+        version='0.1'>
 
-	<dependency
-		name="delivered-service"
-		grouping="require_all"
-		restart_on="none"
-		type="service">
-		<service_fmri value="svc:/application/pkg5test/delivered-many:nodeps" />
-	</dependency>
+        <dependency
+                name="delivered-service"
+                grouping="require_all"
+                restart_on="none"
+                type="service">
+                <service_fmri value="svc:/application/pkg5test/delivered-many:nodeps" />
+        </dependency>
 
         <!-- We should not pick this up as an IPS dependency -->
         <dependency
@@ -251,27 +251,27 @@ class Foo(object):
                 <service_fmri value="/var/foo/something.conf" />
         </dependency>
 
-	<create_default_instance enabled='true' />
-	<single_instance/>
-	<exec_method
-		type='method'
-		name='start'
-		exec=':true'
-		timeout_seconds='60'>
-		<method_context>
-			<method_credential user='root' group='root' />
-		</method_context>
-	</exec_method>
+        <create_default_instance enabled='true' />
+        <single_instance/>
+        <exec_method
+                type='method'
+                name='start'
+                exec=':true'
+                timeout_seconds='60'>
+                <method_context>
+                        <method_credential user='root' group='root' />
+                </method_context>
+        </exec_method>
 
-	<exec_method
-		type='method'
-		name='stop'
-		exec=':true'
-		timeout_seconds='60'>
-		<method_context>
-			<method_credential user='root' group='root' />
-		</method_context>
-	</exec_method>
+        <exec_method
+                type='method'
+                name='stop'
+                exec=':true'
+                timeout_seconds='60'>
+                <method_context>
+                        <method_credential user='root' group='root' />
+                </method_context>
+        </exec_method>
 </service>
 </service_bundle>
 """
@@ -303,18 +303,18 @@ class Foo(object):
   dependency, one instance of which would satisfy the dependency.
 -->
 <service
-	name='application/pkg5test/service-specific'
-	type='service'
-	version='0.1'>
+        name='application/pkg5test/service-specific'
+        type='service'
+        version='0.1'>
 
-	<dependency
-		name="delivered-service"
-		grouping="require_all"
-		restart_on="none"
-		type="service">
-		<service_fmri value="svc:/application/pkg5test/delivered-many:nodeps" />
+        <dependency
+                name="delivered-service"
+                grouping="require_all"
+                restart_on="none"
+                type="service">
+                <service_fmri value="svc:/application/pkg5test/delivered-many:nodeps" />
                 <service_fmri value="svc:/application/pkg5test/delivered-many:nodeps2" />
-	</dependency>
+        </dependency>
 
         <!-- We should not pick this up as an IPS dependency -->
         <dependency
@@ -325,27 +325,27 @@ class Foo(object):
                 <service_fmri value="/var/foo/something.conf" />
         </dependency>
 
-	<create_default_instance enabled='true' />
-	<single_instance/>
-	<exec_method
-		type='method'
-		name='start'
-		exec=':true'
-		timeout_seconds='60'>
-		<method_context>
-			<method_credential user='root' group='root' />
-		</method_context>
-	</exec_method>
+        <create_default_instance enabled='true' />
+        <single_instance/>
+        <exec_method
+                type='method'
+                name='start'
+                exec=':true'
+                timeout_seconds='60'>
+                <method_context>
+                        <method_credential user='root' group='root' />
+                </method_context>
+        </exec_method>
 
-	<exec_method
-		type='method'
-		name='stop'
-		exec=':true'
-		timeout_seconds='60'>
-		<method_context>
-			<method_credential user='root' group='root' />
-		</method_context>
-	</exec_method>
+        <exec_method
+                type='method'
+                name='stop'
+                exec=':true'
+                timeout_seconds='60'>
+                <method_context>
+                        <method_credential user='root' group='root' />
+                </method_context>
+        </exec_method>
 </service>
 </service_bundle>
 """
@@ -370,17 +370,17 @@ class Foo(object):
   svc:/application/pkg5test/service-default:default
 -->
 <service
-	name='application/pkg5test/service-general'
-	type='service'
-	version='0.1'>
+        name='application/pkg5test/service-general'
+        type='service'
+        version='0.1'>
 
-	<dependency
-		name="delivered-service"
-		grouping="require_all"
-		restart_on="none"
-		type="service">
-		<service_fmri value="svc:/application/pkg5test/delivered-many" />
-	</dependency>
+        <dependency
+                name="delivered-service"
+                grouping="require_all"
+                restart_on="none"
+                type="service">
+                <service_fmri value="svc:/application/pkg5test/delivered-many" />
+        </dependency>
 
         <!-- We should not pick this up as an IPS dependency -->
         <dependency
@@ -391,27 +391,27 @@ class Foo(object):
                 <service_fmri value="/var/foo/something.conf" />
         </dependency>
 
-	<create_default_instance enabled='true' />
-	<single_instance/>
-	<exec_method
-		type='method'
-		name='start'
-		exec=':true'
-		timeout_seconds='60'>
-		<method_context>
-			<method_credential user='root' group='root' />
-		</method_context>
-	</exec_method>
+        <create_default_instance enabled='true' />
+        <single_instance/>
+        <exec_method
+                type='method'
+                name='start'
+                exec=':true'
+                timeout_seconds='60'>
+                <method_context>
+                        <method_credential user='root' group='root' />
+                </method_context>
+        </exec_method>
 
-	<exec_method
-		type='method'
-		name='stop'
-		exec=':true'
-		timeout_seconds='60'>
-		<method_context>
-			<method_credential user='root' group='root' />
-		</method_context>
-	</exec_method>
+        <exec_method
+                type='method'
+                name='stop'
+                exec=':true'
+                timeout_seconds='60'>
+                <method_context>
+                        <method_credential user='root' group='root' />
+                </method_context>
+        </exec_method>
 </service>
 </service_bundle>
 """
@@ -449,20 +449,20 @@ class Foo(object):
   svc:/application/pkg5test/service-many:two
 -->
 <service
-	name='application/pkg5test/service-many'
-	type='service'
-	version='0.1'>
+        name='application/pkg5test/service-many'
+        type='service'
+        version='0.1'>
 
-	<!-- a dependency a different package delivers -->
-	<dependency
-		name="foreign-service"
-		grouping="require_all"
-		restart_on="none"
-		type="service">
-		<service_fmri value="svc:/application/pkg5test/foreign-many" />
-	</dependency>
+        <!-- a dependency a different package delivers -->
+        <dependency
+                name="foreign-service"
+                grouping="require_all"
+                restart_on="none"
+                type="service">
+                <service_fmri value="svc:/application/pkg5test/foreign-many" />
+        </dependency>
 
-	<!-- pkg(5) shouldn't see this as a dependency -->
+        <!-- pkg(5) shouldn't see this as a dependency -->
         <dependency
                 name="optional-service"
                 grouping="optional_all"
@@ -488,7 +488,7 @@ class Foo(object):
         </exec_method>
 
 
-	<instance name='one' enabled='false' >
+        <instance name='one' enabled='false' >
 
             <dependency
                 name="optional-service"
@@ -497,10 +497,10 @@ class Foo(object):
                 type="service">
                 <service_fmri value="svc:/application/pkg5test/foreign-many:default" />
             </dependency>
-	</instance>
+        </instance>
 
-	<!-- no dependencies here -->
-	<instance name='two' enabled='false' />
+        <!-- no dependencies here -->
+        <instance name='two' enabled='false' />
 
 </service>
 </service_bundle>
@@ -541,17 +541,17 @@ class Foo(object):
              svc:/application/pkg5test/another-unknown:default)
 -->
 <service
-	name='application/pkg5test/service-unknown'
-	type='service'
-	version='0.1'>
+        name='application/pkg5test/service-unknown'
+        type='service'
+        version='0.1'>
 
-	<dependency
-		name="delivered-service"
-		grouping="require_all"
-		restart_on="none"
-		type="service">
-		<service_fmri value="svc:/application/pkg5test/delivered-many:nodeps" />
-	</dependency>
+        <dependency
+                name="delivered-service"
+                grouping="require_all"
+                restart_on="none"
+                type="service">
+                <service_fmri value="svc:/application/pkg5test/delivered-many:nodeps" />
+        </dependency>
 
 
         <!-- pkg(5) should throw an error here, as we don't deliver this
@@ -564,31 +564,31 @@ class Foo(object):
                 <service_fmri value="svc:/application/pkg5test/unknown-service" />
         </dependency>
 
-	<create_default_instance enabled='true' />
+        <create_default_instance enabled='true' />
 
-	<exec_method
-		type='method'
-		name='start'
-		exec=':true'
-		timeout_seconds='60'>
-		<method_context>
-			<method_credential user='root' group='root' />
-		</method_context>
-	</exec_method>
+        <exec_method
+                type='method'
+                name='start'
+                exec=':true'
+                timeout_seconds='60'>
+                <method_context>
+                        <method_credential user='root' group='root' />
+                </method_context>
+        </exec_method>
 
-	<exec_method
-		type='method'
-		name='stop'
-		exec=':true'
-		timeout_seconds='60'>
-		<method_context>
-			<method_credential user='root' group='root' />
-		</method_context>
-	</exec_method>
+        <exec_method
+                type='method'
+                name='stop'
+                exec=':true'
+                timeout_seconds='60'>
+                <method_context>
+                        <method_credential user='root' group='root' />
+                </method_context>
+        </exec_method>
 
         <instance name='one' enabled='false' >
 
-    	    <!-- pkg(5) should throw an error being unable to resolve this -->
+                <!-- pkg(5) should throw an error being unable to resolve this -->
             <dependency
                 name="another"
                 grouping="require_all"
@@ -596,7 +596,7 @@ class Foo(object):
                 type="service">
                 <service_fmri value="svc:/application/pkg5test/another-unknown:default" />
             </dependency>
-	</instance>
+        </instance>
 </service>
 </service_bundle>
 """
@@ -624,34 +624,34 @@ None of these services or instances declare any dependencies.
 
 -->
 <service
-	name='application/pkg5test/delivered-many'
-	type='service'
-	version='0.1'>
+        name='application/pkg5test/delivered-many'
+        type='service'
+        version='0.1'>
 
-	<single_instance />
+        <single_instance />
 
-	<exec_method
-		type='method'
-		name='start'
-		exec=':true'
-		timeout_seconds='60'>
-		<method_context>
-			<method_credential user='root' group='root' />
-		</method_context>
-	</exec_method>
+        <exec_method
+                type='method'
+                name='start'
+                exec=':true'
+                timeout_seconds='60'>
+                <method_context>
+                        <method_credential user='root' group='root' />
+                </method_context>
+        </exec_method>
 
-	<exec_method
-		type='method'
-		name='stop'
-		exec=':true'
-		timeout_seconds='60'>
-		<method_context>
-			<method_credential user='root' group='root' />
-		</method_context>
-	</exec_method>
+        <exec_method
+                type='method'
+                name='stop'
+                exec=':true'
+                timeout_seconds='60'>
+                <method_context>
+                        <method_credential user='root' group='root' />
+                </method_context>
+        </exec_method>
 
-	<instance name="nodeps" enabled="true" />
-	<instance name='nodeps1' enabled='false' />
+        <instance name="nodeps" enabled="true" />
+        <instance name='nodeps1' enabled='false' />
 </service>
 </service_bundle>
 """
@@ -674,34 +674,34 @@ None of these services or instances declare any dependencies.
 
 -->
 <service
-	name='application/pkg5test/delivered-many'
-	type='service'
-	version='0.1'>
+        name='application/pkg5test/delivered-many'
+        type='service'
+        version='0.1'>
 
-	<single_instance />
+        <single_instance />
 
-	<exec_method
-		type='method'
-		name='start'
-		exec=':true'
-		timeout_seconds='60'>
-		<method_context>
-			<method_credential user='root' group='root' />
-		</method_context>
-	</exec_method>
+        <exec_method
+                type='method'
+                name='start'
+                exec=':true'
+                timeout_seconds='60'>
+                <method_context>
+                        <method_credential user='root' group='root' />
+                </method_context>
+        </exec_method>
 
-	<exec_method
-		type='method'
-		name='stop'
-		exec=':true'
-		timeout_seconds='60'>
-		<method_context>
-			<method_credential user='root' group='root' />
-		</method_context>
-	</exec_method>
+        <exec_method
+                type='method'
+                name='stop'
+                exec=':true'
+                timeout_seconds='60'>
+                <method_context>
+                        <method_credential user='root' group='root' />
+                </method_context>
+        </exec_method>
 
-	<instance name="nodeps2" enabled="true" />
-	<instance name='nodeps3' enabled='false' />
+        <instance name="nodeps2" enabled="true" />
+        <instance name='nodeps3' enabled='false' />
 </service>
 </service_bundle>
 """
@@ -727,31 +727,31 @@ None of these services or instances declare any dependencies.
 
 -->
 <service
-	name='application/pkg5test/foreign-single'
-	type='service'
-	version='0.1'>
+        name='application/pkg5test/foreign-single'
+        type='service'
+        version='0.1'>
 
-	<exec_method
-		type='method'
-		name='start'
-		exec=':true'
-		timeout_seconds='60'>
-		<method_context>
-			<method_credential user='root' group='root' />
-		</method_context>
-	</exec_method>
+        <exec_method
+                type='method'
+                name='start'
+                exec=':true'
+                timeout_seconds='60'>
+                <method_context>
+                        <method_credential user='root' group='root' />
+                </method_context>
+        </exec_method>
 
-	<exec_method
-		type='method'
-		name='stop'
-		exec=':true'
-		timeout_seconds='60'>
-		<method_context>
-			<method_credential user='root' group='root' />
-		</method_context>
-	</exec_method>
+        <exec_method
+                type='method'
+                name='stop'
+                exec=':true'
+                timeout_seconds='60'>
+                <method_context>
+                        <method_credential user='root' group='root' />
+                </method_context>
+        </exec_method>
 
-	<instance name='nodeps' enabled='false' />
+        <instance name='nodeps' enabled='false' />
 </service>
 </service_bundle>
 """
@@ -789,64 +789,64 @@ None of these services or instances declare any dependencies.
 -->
 
 <service
-	name='application/pkg5test/foreign-many'
-	type='service'
-	version='0.1'>
+        name='application/pkg5test/foreign-many'
+        type='service'
+        version='0.1'>
 
-	<exec_method
-		type='method'
-		name='start'
-		exec=':true'
-		timeout_seconds='60'>
-		<method_context>
-			<method_credential user='root' group='root' />
-		</method_context>
-	</exec_method>
+        <exec_method
+                type='method'
+                name='start'
+                exec=':true'
+                timeout_seconds='60'>
+                <method_context>
+                        <method_credential user='root' group='root' />
+                </method_context>
+        </exec_method>
 
-	<exec_method
-		type='method'
-		name='stop'
-		exec=':true'
-		timeout_seconds='60'>
-		<method_context>
-			<method_credential user='root' group='root' />
-		</method_context>
-	</exec_method>
+        <exec_method
+                type='method'
+                name='stop'
+                exec=':true'
+                timeout_seconds='60'>
+                <method_context>
+                        <method_credential user='root' group='root' />
+                </method_context>
+        </exec_method>
 
-	<!-- intentionally declaring the default service, as opposed to using
+        <!-- intentionally declaring the default service, as opposed to using
              create_default_service - to test smf manifest parsing code in pkg5 -->
-	<instance name='default' enabled='false' />
-	<instance name='nodeps' enabled='false' />
+        <instance name='default' enabled='false' />
+        <instance name='nodeps' enabled='false' />
 </service>
 
 <service
-	name='application/pkg5test/foreign-opt'
-	type='service'
-	version='0.1'>
+        name='application/pkg5test/foreign-opt'
+        type='service'
+        version='0.1'>
 
-	<single_instance />
+        <single_instance />
 
-	<exec_method
-		type='method'
-		name='start'
-		exec=':true'
-		timeout_seconds='60'>
-		<method_context>
-			<method_credential user='root' group='root' />
-		</method_context>
-	</exec_method>
+        <exec_method
+                type='method'
+                name='start'
+                exec=':true'
+                timeout_seconds='60'>
+                <method_context>
+                        <method_credential user='root' group='root' />
+                </method_context>
+        </exec_method>
 
-	<exec_method
-		type='method'
-		name='stop'
-		exec=':true'
-		timeout_seconds='60'>
-		<method_context>
-			<method_credential user='root' group='root' />
-		</method_context>
-	</exec_method>
+        <exec_method
+                type='method'
+                name='stop'
+                exec=':true'
+                timeout_seconds='60'>
+                <method_context>
+                        <method_credential user='root' group='root' />
+                </method_context>
+        </exec_method>
 
-	<instance name='nodeps' enabled='false' />
+        <instance name='nodeps' enabled='false' />
 </service>
 </service_bundle>
 """
@@ -860,23 +860,23 @@ None of these services or instances declare any dependencies.
 -->
 <service <<>  This is the broken line
 
-	name='application/pkg5test/brokenservice'
-	type='service'
-	version='0.1'>
+        name='application/pkg5test/brokenservice'
+        type='service'
+        version='0.1'>
 
-	<single_instance />
+        <single_instance />
 
-		<exec_method
-		type='method'
-		name='start'
-		exec=':true'
-		timeout_seconds='60'>
-		<method_context>
-			<method_credential user='root' group='root' />
-		</method_context>
-	</exec_method>
+                <exec_method
+                type='method'
+                name='start'
+                exec=':true'
+                timeout_seconds='60'>
+                <method_context>
+                        <method_credential user='root' group='root' />
+                </method_context>
+        </exec_method>
 
-	<instance name='default' enabled='false' />
+        <instance name='default' enabled='false' />
 </service>
 </service_bundle>
 """
@@ -897,11 +897,11 @@ None of these services or instances declare any dependencies.
 -->
 <service
 
-	name='application/pkg5test/deleteservice'
-	type='service'
-	version='0.1'>
-	<create_default_instance enabled='true' />
-	<single_instance/>
+        name='application/pkg5test/deleteservice'
+        type='service'
+        version='0.1'>
+        <create_default_instance enabled='true' />
+        <single_instance/>
         <dependency name='network'
                     grouping='require_all'
                     restart_on='error'

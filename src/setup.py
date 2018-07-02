@@ -831,7 +831,7 @@ def _copy_file_contents(src, dst, buffer_size=16*1024):
                                 buf = sfp.read(buffer_size)
                                 if not buf:
                                         break
-                                if dst.endswith(".py"):
+                                if src.endswith(".py"):
                                         if not first_buf or not py64_executable:
                                                 dfp.write(buf)
                                                 continue

@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -1287,7 +1287,7 @@ class TestPkgSign(pkg5unittest.SingleDepotTestCase):
 
                 # Make sure signing haven't created empty chain attrs
                 self.pkg("contents -m")
-                self.assert_(self.output.count("chain=") == 0)
+                self.assertTrue(self.output.count("chain=") == 0)
 
         def test_unknown_value_for_non_critical_extension(self):
                 """Test that an unknown value for a recognized non-critical

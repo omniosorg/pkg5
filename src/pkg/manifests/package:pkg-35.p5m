@@ -94,7 +94,7 @@ file path=$(PY35DIRVP)/pkg/client/client_api.py \
 file path=$(PY35DIRVP)/pkg/client/debugvalues.py
 file path=$(PY35DIRVP)/pkg/client/firmware.py
 file path=$(PY35DIRVP)/pkg/client/history.py
-file path=$(PY35DIRVP)/pkg/client/image.py pkg.depend.bypass-generate=.*six.*
+file path=$(PY35DIRVP)/pkg/client/image.py pkg.depend.bypass-generate=.*
 file path=$(PY35DIRVP)/pkg/client/imageconfig.py \
     pkg.depend.bypass-generate=.*six.*
 file path=$(PY35DIRVP)/pkg/client/imageplan.py
@@ -118,7 +118,7 @@ file path=$(PY35DIRVP)/pkg/client/plandesc.py
 file path=$(PY35DIRVP)/pkg/client/printengine.py
 file path=$(PY35DIRVP)/pkg/client/progress.py pkg.depend.bypass-generate=.*six.*
 file path=$(PY35DIRVP)/pkg/client/publisher.py \
-    pkg.depend.bypass-generate=.*six.*
+    pkg.depend.bypass-generate=.*
 file path=$(PY35DIRVP)/pkg/client/query_parser.py
 file path=$(PY35DIRVP)/pkg/client/rad_pkg.py
 file path=$(PY35DIRVP)/pkg/client/sigpolicy.py
@@ -136,7 +136,7 @@ file path=$(PY35DIRVP)/pkg/client/transport/repo.py \
 file path=$(PY35DIRVP)/pkg/client/transport/stats.py \
     pkg.depend.bypass-generate=.*six.*
 file path=$(PY35DIRVP)/pkg/client/transport/transport.py \
-    pkg.depend.bypass-generate=.*six.*
+    pkg.depend.bypass-generate=.*
 file path=$(PY35DIRVP)/pkg/config.py pkg.depend.bypass-generate=.*six.*
 file path=$(PY35DIRVP)/pkg/cpiofile.py pkg.depend.bypass-generate=.*six.*
 file path=$(PY35DIRVP)/pkg/dependency.py
@@ -208,13 +208,11 @@ dir  path=$(PY35DIRVP)/pkg/server
 file path=$(PY35DIRVP)/pkg/server/__init__.py
 file path=$(PY35DIRVP)/pkg/server/api.py
 file path=$(PY35DIRVP)/pkg/server/api_errors.py
-file path=$(PY35DIRVP)/pkg/server/depot.py \
-    pkg.depend.bypass-generate=.*pybonjour.* pkg.depend.bypass-generate=.*six.*
+file path=$(PY35DIRVP)/pkg/server/depot.py pkg.depend.bypass-generate=.*
 file path=$(PY35DIRVP)/pkg/server/face.py pkg.depend.bypass-generate=.*six.*
 file path=$(PY35DIRVP)/pkg/server/feed.py pkg.depend.bypass-generate=.*six.*
 file path=$(PY35DIRVP)/pkg/server/query_parser.py
-file path=$(PY35DIRVP)/pkg/server/repository.py \
-    pkg.depend.bypass-generate=.*six.*
+file path=$(PY35DIRVP)/pkg/server/repository.py pkg.depend.bypass-generate=.*
 file path=$(PY35DIRVP)/pkg/server/transaction.py \
     pkg.depend.bypass-generate=.*six.*
 file path=$(PY35DIRVP)/pkg/smf.py pkg.depend.bypass-generate=.*six.*

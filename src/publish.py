@@ -706,7 +706,7 @@ def trans_refresh_index(repo_uri, args):
         try:
                 t = trans.Transaction(repo_uri, xport=xport,
                     pub=pub).refresh_index()
-        except trans.TransactionError, e:
+        except trans.TransactionError as e:
                 error(e, cmd="refresh-index")
                 return 1
         return 0

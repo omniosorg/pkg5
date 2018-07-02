@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -46,8 +46,8 @@ class TestPrintEngine(pkg5unittest.Pkg5TestCase):
                         while True:
                                 termdata = masterf.read(1024)
                                 if len(termdata) < 1024:
-					if len(termdata) > 0:
-						print (termdata, file=sio)
+                                        if len(termdata) > 0:
+                                                print (termdata, file=sio)
                                         break
                                 print(termdata, file=sio)
 

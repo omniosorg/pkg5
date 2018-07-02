@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 # -*- coding: utf-8 -*-
 #
 # CDDL HEADER START
@@ -90,7 +90,7 @@ file fff555ff9 mode=0555 owner=sch group=staff path=/usr/bin/i386/sort isa=i386
 dir owner=root path=usr/bin group=bin mode=0755 variant.arch=i386 variant.arch=sparc
 dir owner=root path="opt/dir with spaces in value" group=bin mode=0755
 dir owner=root path="opt/dir with " \\
-    "whitespaces	" \\
+    "whitespaces        " \\
     "in value" group=bin mode=0755
 link path=usr/lib/amd64/libjpeg.so \\
 target=libjpeg.so.62.0.0
@@ -160,7 +160,7 @@ set name=pkg.description value="The Z Shell (zsh) is a Bourne-like shell designe
 depend fmri=pkg:/library/libc type=require
 group gid=10 groupname=testgroup
 dir group=bin mode=0755 owner=root path="opt/dir with spaces in value"
-dir group=bin mode=0755 owner=root path="opt/dir with whitespaces	in value"
+dir group=bin mode=0755 owner=root path="opt/dir with whitespaces        in value"
 dir group=bin mode=0755 owner=root path=usr/bin variant.arch=i386 variant.arch=sparc
 file fff555ff9 group=staff isa=i386 mode=0555 owner=sch path=usr/bin/i386/sort
 hardlink path=usr/bin/amd64/rksh93 target=ksh93 variant.opensolaris.zone=global

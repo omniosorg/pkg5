@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -51,7 +51,7 @@ class TestP5I(pkg5unittest.Pkg5TestCase):
         #
         # Whitespace (or lack thereof) at the ends of some lines in the below is
         # significant. It's also a function of which simplejson version you're
-	# running/using.
+        # running/using.
         #
         p5i_bobcat = """{
   "packages": [
@@ -211,8 +211,8 @@ class TestP5I(pkg5unittest.Pkg5TestCase):
                 as expected."""
 
                 # First, test the no repository case.
-		# NOTE:	Spaces, or lack thereof, at the end of a line, are
-		#	important.
+                # NOTE:        Spaces, or lack thereof, at the end of a line, are
+                #        important.
                 expected = """{
   "packages": [],
   "publishers": [
@@ -244,8 +244,8 @@ class TestP5I(pkg5unittest.Pkg5TestCase):
 
                 # Next, test the partial repository configuration case.  No
                 # origin is provided, but everything else is.
-		# NOTE:	Spaces, or lack thereof, at the end of a line, are
-		#	important.
+                # NOTE:        Spaces, or lack thereof, at the end of a line, are
+                #        important.
                 expected = """{
   "packages": [],
   "publishers": [
