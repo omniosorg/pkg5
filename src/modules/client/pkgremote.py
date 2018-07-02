@@ -358,13 +358,13 @@ class PkgRemote(object):
                     pkg_op, kwargs), t1=True)
 
                 # make the RPC call
-                rv = None
-                e = None
+                rv = e = None
                 rpc_method = getattr(rpc_client, pkg_op)
                 try:
                         # Catch "Exception"; pylint: disable=W0703
                         rv = rpc_method(**kwargs)
-                except Exception as e:
+                except Exception as ex:
+                        e = ex
                         self.__debug_msg("caught exception\n{0}".format(
                             traceback.format_exc()), t1=True)
                 else:
