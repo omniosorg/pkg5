@@ -203,7 +203,7 @@ depend {pfx}.file=libc.so.1 {pfx}.path=lib {pfx}.path=usr/lib fmri={dummy_fmri} 
 depend {pfx}.file=syslog {pfx}.path=var/log fmri={dummy_fmri} type=require {pfx}.reason=usr/foo {pfx}.type=hardlink
 """.format(pfx=base.Dependency.DEPEND_DEBUG_PREFIX, dummy_fmri=base.Dependency.DUMMY_FMRI)
 
-        res_manf_2_missing = "ascii text"
+        res_manf_2_missing = "unknown"
 
         resolve_error = """\
 {manf_path} has unresolved dependency '

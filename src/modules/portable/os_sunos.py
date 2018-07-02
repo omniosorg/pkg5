@@ -57,20 +57,27 @@ def get_platform():
 def get_file_type(actions):
         from pkg.flavor.smf_manifest import is_smf_manifest
         for a in actions:
-                path = a.attrs['path']
                 lpath = a.attrs[PD_LOCAL_PATH]
+                if os.stat(lpath).st_size == 0:
+                        # Some tests rely on this being identified
+                        yield "empty file"
+                        continue
                 try:
-                        with open(lpath, 'r') as f:
+                        with open(lpath, 'rb') as f:
                                 magic = f.read(4)
                 except FileNotFoundError:
                         yield UNFOUND
                         continue
-                if magic == '\x7fELF':
+                if magic == b'\x7fELF':
                         yield ELF
-                elif magic[:2] == '#!':
+                elif magic[:2] == b'#!':
                         yield EXEC
-                elif (path.endswith('.xml') and is_smf_manifest(lpath)):
-                        yield SMF_MANIFEST
+                elif lpath.endswith('.xml'):
+                        if is_smf_manifest(lpath):
+                                yield SMF_MANIFEST
+                        else:
+                                # Some tests rely on this type being identified
+                                yield "XML document"
                 else:
                         yield "unknown"
 

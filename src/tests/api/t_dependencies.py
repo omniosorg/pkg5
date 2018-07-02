@@ -1062,8 +1062,12 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
 file NOHASH group=sys mode=0755 owner=root path={bypass_path} \
     pkg.depend.bypass-generate=.* \
     pkg.depend.runpath=$PKGDEPEND_RUNPATH:opt
-file NOHASH group=sys mode=0755 owner=root path={runpath_mod_path}
-file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
+file NOHASH group=sys mode=0755 owner=root path={runpath_mod_path} \
+    pkg.depend.bypass-generate=.* \
+    pkg.depend.runpath=$PKGDEPEND_RUNPATH:opt
+file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path} \
+    pkg.depend.bypass-generate=.* \
+    pkg.depend.runpath=$PKGDEPEND_RUNPATH:opt
 """.format(**paths)
 
         # a manifest which uses a file wildcard to bypass generation
