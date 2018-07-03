@@ -17,3 +17,14 @@ r151XXX
 If you wish to discuss development here, join the discussion on
 [Gitter](https://gitter.im/omniosorg/Lobby)
 
+## Testing
+
+In order to run the test-suite with 8 jobs in parallel:
+
+```terminal
+$ cd src
+$ pfexec make test JOBS=8
+```
+
+Replace `pfexec` with `sudo` if that's your preference.
+
