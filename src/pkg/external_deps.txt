@@ -4,12 +4,15 @@
     pkg:/library/python-2/coverage-27
     pkg:/library/python-2/cryptography-27
     pkg:/library/python-2/jsonrpclib-27
+    pkg:/library/python-2/jsonschema-27
     pkg:/library/python-2/mako-27
     pkg:/library/python-2/ply-27
+    pkg:/library/python-2/portend-27
     pkg:/library/python-2/pybonjour-27
     pkg:/library/python-2/pycurl-27
     pkg:/library/python-2/pyopenssl-27
     pkg:/library/python-2/simplejson-27
+    pkg:/library/python-2/six-27
     #
     pkg:/runtime/python-35
     pkg:/library/python-3/cffi-35
@@ -20,6 +23,7 @@
     pkg:/library/python-3/jsonschema-35
     pkg:/library/python-3/mako-35
     pkg:/library/python-3/ply-35
+    pkg:/library/python-3/portend-35
     pkg:/library/python-3/pybonjour-35
     pkg:/library/python-3/pycurl-35
     pkg:/library/python-3/pyopenssl-35
@@ -44,4 +48,5 @@
     pkg:/text/gnu-gettext
     pkg:/text/gnu-grep
     pkg:/text/locale
+    pkg:/web/ca-bundle
     pkg:/web/wget
