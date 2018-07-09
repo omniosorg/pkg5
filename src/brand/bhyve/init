@@ -1,0 +1,198 @@
+#!/usr/bin/python3
+
+# {{{ CDDL HEADER
+#
+# This file and its contents are supplied under the terms of the
+# Common Development and Distribution License ("CDDL"), version 1.0.
+# You may only use this file in accordance with the terms of version
+# 1.0 of the CDDL.
+#
+# A full copy of the text of the CDDL should have accompanied this
+# source. A copy of the CDDL is also available via the Internet at
+# http://www.illumos.org/license/CDDL.
+#
+# }}}
+
+# Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
+
+import logging, os, subprocess, sys, time
+import xml.etree.ElementTree as etree
+from pprint import pprint, pformat
+
+logging.basicConfig(filename='/tmp/init.log', filemode='w', level=logging.DEBUG)
+
+zonexml = '/etc/zone.xml'
+uuidfile = '/etc/uuid'
+
+# Default values
+opts = {
+    'acpi':         'on',
+    'vcpus':        '1',
+    'ram':          '1G',
+    'bootrom':      'BHYVE_RELEASE_CSM',
+    'hostbridge':   'default',
+    'diskif':       'virtio-blk',
+    'netif':        'virtio-net-viona',
+    'type':         'generic',
+    'vnc':          'off',
+    'console':      '/dev/zconsole',
+}
+
+HOSTBRIDGE_SLOT = 0
+LPC_SLOT        = 1
+CDROM_SLOT      = 3
+BOOTDISK_SLOT   = 4
+DISK_SLOT       = 5
+NET_SLOT        = 6
+VNC_SLOT        = 30
+
+try:
+    with open(uuidfile) as file:
+        uuid = file.read().strip()
+        logging.info('Zone UUID: {0}'.format(uuid))
+except:
+    uuid = None
+
+try:
+    cfg = etree.parse(zonexml)
+except:
+    logging.error('Could not parse {0}'.format(zonexml))
+    sys.exit(1)
+root = cfg.getroot()
+logging.info('Parsed {0}'.format(zonexml))
+
+def opt(tag):
+    global opts, root
+    try:
+        el = root.find('./attr[@name="{0}"]'.format(tag))
+        opts[tag] = el.get('value').strip()
+        logging.debug('Found custom {0} attribute - "{1}"'
+            .format(tag, opts[tag]))
+    except:
+        pass
+
+for tag in opts.keys():
+    opt(tag)
+
+if opts['type'] == 'windows':
+    # See https://wiki.freebsd.org/bhyve/Windows
+    # ... There are currently some slot limitations with UEFI:
+    # ... - AHCI devices must be in slots 3/4/5/6
+    # ... - The PCI-ISA bus aka lpc must be in slot 31
+    logging.info('Adjusting LPC PCI slot for windows')
+    LPC_SLOT        = 31
+
+args = ['/usr/sbin/bhyve']
+
+if uuid:
+    args.extend(['-U', uuid])
+
+if opts['acpi'] == 'on':
+    args.append('-A')
+
+args.extend([
+    '-H',
+    '-B', '1,product=OmniOS HVM',
+    '-c', opts['vcpus'],
+    '-m', opts['ram'],
+])
+
+# Bootrom
+
+if opts['bootrom'].find('/') == -1:
+    opts['bootrom'] = '/usr/share/bhyve/firmware/{0}'.format(opts['bootrom'])
+if not opts['bootrom'].endswith('.fd'):
+    opts['bootrom'] += '.fd'
+args.extend(['-l', 'bootrom,{0}'.format(opts['bootrom'])])
+
+# Host bridge
+
+if opts['hostbridge'] == 'amd':
+    args.extend(['-s', '{0},amd_hostbridge'.format(HOSTBRIDGE_SLOT)])
+elif opts['hostbridge'] == 'none':
+    pass
+else:
+    args.extend(['-s', '{0},hostbridge'.format(HOSTBRIDGE_SLOT)])
+
+# LPC
+
+args.extend(['-s', '{0},lpc'.format(LPC_SLOT)])
+
+# Console
+
+args.extend(['-l', 'com1,' + opts['console']])
+
+# Disks
+
+def diskpath(arg):
+    if arg.startswith('/dev/zvol/rdsk'):
+        return arg
+    return '/dev/zvol/rdsk/{0}'.format(arg)
+
+try:
+    cdrom = root.find('./attr[@name="cdrom"]')
+    args.extend([
+        '-s', '{0}:0,{1},{2}'
+            .format(CDROM_SLOT, 'ahci-cd', cdrom.get('value').strip())
+    ])
+except:
+    pass
+
+try:
+    bootdisk = root.find('./attr[@name="bootdisk"]')
+    args.extend([
+        '-s', '{0}:0,{1},{2}'.format(BOOTDISK_SLOT, opts['diskif'],
+            diskpath(bootdisk.get('value').strip()))
+    ])
+except:
+    pass
+
+i = 0
+for disk in root.findall('./attr[@name="disk"]'):
+    args.extend([
+        '-s', '{0}:{1},{2},{3}'.format(DISK_SLOT,
+            i, opts['diskif'], diskpath(disk.get('value').strip()))
+    ])
+    i += 1
+
+# Network
+
+i = 0
+for f in root.findall('./network[@physical]'):
+    args.extend([
+        '-s', '{0}:{1},{2},{3}'
+            .format(NET_SLOT, i, opts['netif'], f.get('physical').strip())
+    ])
+    i += 1
+
+# VNC
+
+if len(opts['vnc']) and opts['vnc'] != 'off':
+    if opts['vnc'] == 'on':
+        opts['vnc'] = 'unix=/tmp/vm.vnc'
+    args.extend(['-s', '{0}:0,fbuf,vga=off,{1}'.format(VNC_SLOT, opts['vnc'])])
+    args.extend(['-s', '{0}:1,xhci,tablet'.format(VNC_SLOT)])
+
+# Pass-through devices not yet implemented
+
+# VM name
+
+name = root.get('name')
+args.append(name)
+
+logging.info('Final arguments: {0}'.format(pformat(args)))
+
+while True:
+    if os.path.exists('/dev/vmm/{0}'.format(name)):
+        logging.info('Destroying old bhyve instance')
+        subprocess.run(['/usr/sbin/bhyvectl', '--vm={0}'.format(name),
+            '--destroy'])
+    logging.info('Starting bhyve')
+    ret = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    logging.info("Bhyve exited {0}".format(ret.returncode))
+    logging.error("Error {0}".format(ret.stderr))
+    logging.debug("Output {0}".format(ret.stdout))
+    if ret.returncode != 0: break
+
+# Vim hints
+# vim:ts=4:sw=4:et:fdm=marker
