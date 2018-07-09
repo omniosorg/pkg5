@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -26,7 +26,7 @@
 
 import fnmatch
 import re
-import urllib
+from six.moves.urllib.parse import quote
 
 from pkg.version import Version, VersionError
 
@@ -52,12 +52,6 @@ class FmriError(Exception):
         def __init__(self, fmri):
                 Exception.__init__(self)
                 self.fmri = fmri
-
-        def __unicode__(self):
-                # To workaround python issues 6108 and 2517, this provides a
-                # a standard wrapper for this class' exceptions so that they
-                # have a chance of being stringified correctly.
-                return str(self)
 
 
 class IllegalFmri(FmriError):
@@ -411,7 +405,7 @@ class PkgFmri(object):
                 #
                 # __hash__ need not generate a unique hash value for all
                 # possible objects-- it must simply guarantee that two
-                # items which are equal (i.e. cmp(a,b) == 0) always hash to
+                # items which are equal (i.e. a = b) always hash to
                 # the same value.
                 #
                 h = self._hash
@@ -419,50 +413,102 @@ class PkgFmri(object):
                         h = self._hash = hash(self.version) + hash(self.pkg_name)
                 return h
 
-        def __cmp__(self, other):
+        def __eq__(self, other):
                 if not other:
-                        return 1
+                        return False
 
                 if not isinstance(other, PkgFmri):
-                        return -1
+                        return False
 
-                c = cmp(self.publisher, other.publisher)
+                if self.publisher == other.publisher and \
+                    self.pkg_name == other.pkg_name and \
+                    self.version == other.version:
+                        return True
+                return False
 
-                if c != 0:
-                        return c
+        def __ne__(self, other):
+                return not self == other
 
-                c = cmp(self.pkg_name, other.pkg_name)
+        def __lt__(self, other):
+                if not other:
+                        return False
 
-                if c != 0:
-                        return c
+                if not isinstance(other, PkgFmri):
+                        return True
 
-                return cmp(self.version, other.version)
+                if self.publisher != other.publisher:
+                        if self.publisher is None and other.publisher:
+                                return True
+                        if self.publisher and other.publisher is None:
+                                return False
+                        if self.publisher < other.publisher:
+                                return True
+                        return False
 
+                if self.pkg_name < other.pkg_name:
+                        return True
+                if self.pkg_name != other.pkg_name:
+                        return False
+
+                if self.version is None and other.version is None:
+                        return False
+                return self.version < other.version
+
+        def __gt__(self, other):
+                if not other:
+                        return True
+
+                if not isinstance(other, PkgFmri):
+                        return False
+
+                if self.publisher != other.publisher:
+                        if self.publisher and other.publisher is None:
+                                return True
+                        if self.publisher is None and other.publisher:
+                                return False
+                        if self.publisher > other.publisher:
+                                return True
+                        return False
+
+                if self.pkg_name > other.pkg_name:
+                        return True
+                if self.pkg_name != other.pkg_name:
+                        return False
+
+                if self.version is None and other.version is None:
+                        return False
+                return self.version > other.version
+
+        def __ge__(self, other):
+                return not self < other
+
+        def __le__(self, other):
+                return not self > other
 
         def get_link_path(self, stemonly = False):
                 """Return the escaped link (or file) path fragment for this
                 FMRI."""
 
                 if stemonly:
-                        return "{0}".format(urllib.quote(self.pkg_name, ""))
+                        return "{0}".format(quote(self.pkg_name, ""))
 
                 if self.version is None:
                         raise MissingVersionError(self)
 
-                return "{0}@{1}".format(urllib.quote(self.pkg_name, ""),
-                    urllib.quote(str(self.version), ""))
+                return "{0}@{1}".format(quote(self.pkg_name, ""),
+                    quote(str(self.version), ""))
 
         def get_dir_path(self, stemonly = False):
                 """Return the escaped directory path fragment for this FMRI."""
 
                 if stemonly:
-                        return "{0}".format(urllib.quote(self.pkg_name, ""))
+                        return "{0}".format(quote(self.pkg_name, ""))
 
                 if self.version is None:
                         raise MissingVersionError(self)
 
-                return "{0}/{1}".format(urllib.quote(self.pkg_name, ""),
-                    urllib.quote(self.version.__str__(), ""))
+                return "{0}/{1}".format(quote(self.pkg_name, ""),
+                    quote(self.version.__str__(), ""))
 
         def get_url_path(self):
                 """Return the escaped URL path fragment for this FMRI.
@@ -471,8 +517,8 @@ class PkgFmri(object):
                 if self.version is None:
                         raise MissingVersionError(self)
 
-                return "{0}@{1}".format(urllib.quote(self.pkg_name, ""),
-                    urllib.quote(self.version.__str__(), ""))
+                return "{0}@{1}".format(quote(self.pkg_name, ""),
+                    quote(self.version.__str__(), ""))
 
         def is_same_pkg(self, other):
                 """Return true if these packages are the same (although
@@ -500,6 +546,8 @@ class PkgFmri(object):
                 if self.pkg_name != other.pkg_name:
                         return False
 
+                if self.version is None and other.version is None:
+                        return True
                 if self.version < other.version:
                         return False
 
@@ -588,3 +636,6 @@ def is_same_publisher(pub1, pub2):
 
 def is_valid_pkg_name(name):
         return g_valid_pkg_name.match(name)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

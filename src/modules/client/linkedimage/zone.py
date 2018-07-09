@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
 # Copyright 2017 OmniOS Community Edition (OmniOSce) Association.
 #
 
@@ -34,6 +34,7 @@ information is stored within a parent image.
 
 # standard python classes
 import os
+import six
 import tempfile
 
 # pkg classes
@@ -44,7 +45,7 @@ import pkg.pkgsubprocess
 from pkg.client.debugvalues import DebugValues
 
 # import linked image common code
-import common as li # Relative import; pylint: disable=W0403
+from . import common as li # Relative import; pylint: disable=W0403
 
 # W0511 XXX / FIXME Comments; pylint: disable=W0511
 # XXX: should be defined by libzonecfg python wrapper
@@ -262,7 +263,7 @@ class LinkedImageZonePlugin(li.LinkedImagePlugin):
                 zlist = []
                 # state is unused
                 # pylint: disable=W0612
-                for zone, (path, state) in zdict.iteritems():
+                for zone, (path, state) in six.iteritems(zdict):
                         lin = li.LinkedImageName("{0}:{1}".format(self.__pname,
                             zone))
                         zlist.append([lin, path])
@@ -331,7 +332,7 @@ class LinkedImageZonePlugin(li.LinkedImagePlugin):
                 assert li.PROP_PATH in props
 
                 props[li.PROP_MODEL] = li.PV_MODEL_PUSH
-                for k, v in self.attach_props_def.iteritems():
+                for k, v in six.iteritems(self.attach_props_def):
                         if k not in props:
                                 props[k] = v
 
@@ -395,25 +396,28 @@ def _zonename():
         if not li.path_exists(cmd[0]):
                 return
 
-        fout = tempfile.TemporaryFile()
-        ferrout = tempfile.TemporaryFile()
+        # open a temporary file in text mode for compatible string handling
+        fout = tempfile.TemporaryFile(mode="w+")
+        ferrout = tempfile.TemporaryFile(mode="w+")
         p = pkg.pkgsubprocess.Popen(cmd, stdout=fout, stderr=ferrout)
         p.wait()
-        if (p.returncode != 0):
+        if p.returncode != 0:
                 cmd = " ".join(cmd)
                 ferrout.seek(0)
                 errout = "".join(ferrout.readlines())
+                ferrout.close()
                 raise apx.LinkedImageException(
                     cmd_failed=(p.returncode, cmd, errout))
 
         # parse the command output
         fout.seek(0)
         l = fout.readlines()[0].rstrip()
+        fout.close()
         return l
 
 def _zoneadm_list_parse(line, cmd, output):
         """Parse zoneadm list -p output.  It's possible for zonepath to
-        contain a ":".  If it does it will be escaped to be "\:".  (But note
+        contain a ":".  If it does it will be escaped to be "\\:".  (But note
         that if the zonepath contains a "\" it will not be escaped, which
         is argubaly a bug.)"""
 
@@ -423,7 +427,7 @@ def _zoneadm_list_parse(line, cmd, output):
         tmp_char = "\0"
         fields = [
                 field.replace(tmp_char, ":")
-                for field in line.replace("\:", tmp_char).split(":")
+                for field in line.replace(r"\:", tmp_char).split(":")
         ]
 
         try:
@@ -462,20 +466,23 @@ def _list_zones(root, path_transform):
         cmd.extend(["-R", str(root), "list", "-cp"])
 
         # execute zoneadm and save its output to a file
-        fout = tempfile.TemporaryFile()
-        ferrout = tempfile.TemporaryFile()
+        # open a temporary file in text mode for compatible string handling
+        fout = tempfile.TemporaryFile(mode="w+")
+        ferrout = tempfile.TemporaryFile(mode="w+")
         p = pkg.pkgsubprocess.Popen(cmd, stdout=fout, stderr=ferrout)
         p.wait()
-        if (p.returncode != 0):
+        if p.returncode != 0:
                 cmd = " ".join(cmd)
                 ferrout.seek(0)
                 errout = "".join(ferrout.readlines())
+                ferrout.close()
                 raise apx.LinkedImageException(
                     cmd_failed=(p.returncode, cmd, errout))
 
         # parse the command output
         fout.seek(0)
         output = fout.readlines()
+        fout.close()
         for l in output:
                 l = l.rstrip()
 
@@ -491,7 +498,7 @@ def _list_zones(root, path_transform):
                         continue
 
                 # we don't care about the global zone.
-                if (z_name == "global"):
+                if z_name == "global":
                         continue
 
                 # append "/root" to zonepath
@@ -522,8 +529,11 @@ def list_running_zones():
 
         zdict = _list_zones("/", li.PATH_TRANSFORM_NONE)
         rzdict = {}
-        for z_name, (z_path, z_state) in zdict.iteritems():
+        for z_name, (z_path, z_state) in six.iteritems(zdict):
                 if z_state == ZONE_STATE_STR_RUNNING:
                         rzdict[z_name] = z_path
 
         return rzdict
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

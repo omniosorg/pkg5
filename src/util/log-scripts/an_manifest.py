@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -33,9 +33,9 @@ import os
 import re
 import sys
 import time
-import urllib
 
 from an_report import *
+from six.moves.urllib.parse import unquote
 
 after = None
 before = None
@@ -85,14 +85,14 @@ def count_manifest(mg, d):
                 pg = pm.groupdict()
 
                 try:
-                        manifest_by_pkg[urllib.unquote(pg["stem"])] += 1
+                        manifest_by_pkg[unquote(pg["stem"])] += 1
                 except KeyError:
-                        manifest_by_pkg[urllib.unquote(pg["stem"])] = 1
+                        manifest_by_pkg[unquote(pg["stem"])] = 1
 
                 try:
-                        manifest_by_ver_pkg[urllib.unquote(pg["stem"] + "@" + pg["version"])] += 1
+                        manifest_by_ver_pkg[unquote(pg["stem"] + "@" + pg["version"])] += 1
                 except KeyError:
-                        manifest_by_ver_pkg[urllib.unquote(pg["stem"] + "@" + pg["version"])] = 1
+                        manifest_by_ver_pkg[unquote(pg["stem"] + "@" + pg["version"])] = 1
 
         agent = pkg_agent_pat.search(mg["agent"])
         if agent == None:
@@ -172,3 +172,6 @@ report_by_raw_agent(manifest_by_raw_agent, "manifest", summary_file = summary_fi
 report_manifest_by_pkg()
 report_manifest_by_ver_pkg()
 report_section_end(summary_file = summary_file)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

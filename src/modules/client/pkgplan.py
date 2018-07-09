@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -29,6 +29,7 @@ import grp
 import itertools
 import os
 import pwd
+import six
 import stat
 
 import pkg.actions
@@ -102,7 +103,7 @@ class PkgPlan(object):
         __state__desc = {
             "_autofix_pkgs": [ pkg.fmri.PkgFmri ],
             "_license_status": {
-                basestring: {
+                six.string_types[0]: {
                     "src": pkg.actions.generic.NSG,
                     "dest": pkg.actions.generic.NSG,
                 },
@@ -426,7 +427,7 @@ class PkgPlan(object):
                 entry).  Where 'entry' is a dict containing the license status
                 information."""
 
-                for lic, entry in self._license_status.iteritems():
+                for lic, entry in six.iteritems(self._license_status):
                         yield lic, entry
 
         def set_license_status(self, plicense, accepted=None, displayed=None):
@@ -607,6 +608,10 @@ class PkgPlan(object):
                             e.__class__.__name__, e))
                         raise
 
+        def execute_retry(self, src, dest):
+                """handle a retry operation"""
+                dest.retry(self, dest)
+
         def postexecute(self):
                 """Perform actions required after install or remove of a pkg.
 
@@ -663,3 +668,6 @@ class PkgPlan(object):
 
         def clear_origin_manifest(self):
                 self.__origin_mfst = manifest.NullFactoredManifest
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

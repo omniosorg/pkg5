@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -196,3 +196,6 @@ PKG_STATE_ALT_SOURCE = 99
 MSG_ERROR = 0
 MSG_WARNING = 1
 MSG_INFO = 2
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

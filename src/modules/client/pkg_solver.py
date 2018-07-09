@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,13 +21,14 @@
 #
 
 #
-# Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 """Provides the interfaces and exceptions needed to determine which packages
 should be installed, updated, or removed to perform a requested operation."""
 
 import operator
+import six
 import time
 
 import pkg.actions
@@ -83,7 +84,8 @@ _TRIM_REJECT = 19                  # --reject
 _TRIM_UNSUPPORTED = 20             # invalid or unsupported actions
 _TRIM_VARIANT = 21                 # unsupported variant (e.g. i386 on sparc)
 _TRIM_EXPLICIT_INSTALL = 22        # pkg.depend.explicit-install is true.
-_TRIM_MAX = 23                     # number of trim constants
+_TRIM_SYNCED_INC = 23              # incorporation must be in sync with parent
+_TRIM_MAX = 24                     # number of trim constants
 
 
 class DependencyException(Exception):
@@ -194,6 +196,7 @@ class PkgSolver(object):
                 self.__avoid_set = avoids.copy()# set of stems we're avoiding
                 self.__obs_set = None           # set of obsolete stems
                 self.__reject_set = set()       # set of stems we're rejecting
+                self.__linked_pkgs = set()      # pkgs that have parent deps
 
                 # Internal cache of created fmri objects.  Used so that the same
                 # PkgFmri doesn't need to be created more than once.  This isn't
@@ -223,6 +226,10 @@ class PkgSolver(object):
                         PKG_OP_UNINSTALL : set(),
                     },
                 }
+
+                self.__allowed_downgrades = set()  # allowed downrev FMRIs
+                self.__dg_incorp_cache = {}        # cache for downgradable
+                                                   # incorp deps
 
         def __str__(self):
                 s = "Solver: ["
@@ -278,6 +285,9 @@ class PkgSolver(object):
                 self.__dependents = None
                 self.__fmridict = {}
                 self.__firmware = None
+                self.__allowed_downgrades = None
+                self.__dg_incorp_cache = None
+                self.__linked_pkgs = set()
 
                 if DebugValues["plan"]:
                         # Remaining data must be kept.
@@ -469,7 +479,7 @@ class PkgSolver(object):
                                 break
 
                 # Remove trimmed items from possible_set.
-                possible.difference_update(self.__trim_dict.iterkeys())
+                possible.difference_update(six.iterkeys(self.__trim_dict))
 
         def __enforce_unique_packages(self, excludes):
                 """Constrain the solver solution so that only one version of
@@ -574,10 +584,7 @@ class PkgSolver(object):
                 if proposed is None:
                         proposed = set()
 
-                # Used to de-dup errors.
-                already_seen = set()
-
-                ret = []
+                uninstall_fmris = []
                 for name in (self.__installed_pkgs - proposed -
                     self.__reject_set - self.__avoid_set):
                         self.__progress()
@@ -591,19 +598,48 @@ class PkgSolver(object):
                                 continue
 
                         # no version of this package is allowed
-                        res = self.__fmri_list_errors(
-                            [self.__installed_dict[name]],
+                        uninstall_fmris.append(self.__installed_dict[name])
+
+                # Used to de-dup errors.
+                already_seen = set()
+                ret = []
+                msg = N_("Package {0} must be uninstalled before the "
+                    "requested operation can be "
+                    "performed.")
+
+                # First check for solver failures caused by missing parent
+                # dependencies.  We do this because missing parent dependency
+                # failures cause other cascading failures, so it's better to
+                # just emit these failures first, have the user fix them, and
+                # have them re-run the operation, so then we can provide more
+                # concise error output about other problems.
+                for fmri in uninstall_fmris:
+                        # Unused variable; pylint: disable=W0612
+                        for reason_id, reason_t, fmris in \
+                            self.__trim_dict[fmri]:
+                                if reason_id == _TRIM_PARENT_MISSING:
+                                        break
+                        else:
+                                continue
+                        res = self.__fmri_list_errors([fmri],
+                            already_seen=already_seen)
+                        assert res
+                        ret.extend([msg.format(fmri.pkg_name)])
+                        ret.extend(res)
+
+                if ret:
+                        self.__raise_solution_error(no_version=ret)
+
+                for fmri in uninstall_fmris:
+                        res = self.__fmri_list_errors([fmri],
                             already_seen=already_seen)
 
                         # If no errors returned, that implies that all of the
                         # reasons the FMRI was rejected aren't interesting.
                         if res:
-                                ret.extend([_("Package {0} must be uninstalled "
-                                    "before the requested operation can be "
-                                    "performed.").format(name)])
+                                ret.extend([msg.format(fmri.pkg_name)])
                                 ret.extend(res)
 
-                        # continue processing and accumulate all errors
                 if ret:
                         self.__raise_solution_error(no_version=ret)
 
@@ -733,7 +769,8 @@ class PkgSolver(object):
             new_variants=None, excludes=EmptyI,
             reject_set=frozenset(), trim_proposed_installed=True,
             relax_all=False, ignore_inst_parent_deps=False,
-            exact_install=False, installed_dict_tmp=EmptyDict):
+            exact_install=False, installed_dict_tmp=EmptyDict,
+            insync=False):
                 """Logic to install packages, change variants, and/or change
                 facets.
 
@@ -779,7 +816,9 @@ class PkgSolver(object):
 
                 'installed_dict_tmp' a dictionary containing the current
                 installed FMRIs indexed by pkg_name. Used when exact_install
-                is on."""
+                is on.
+
+                'insync' a flag indicating if the image is currently in sync."""
 
                 pt = self.__begin_solve()
 
@@ -848,6 +887,43 @@ class PkgSolver(object):
                 self.__inc_list = inc_list
 
                 self.__start_subphase(2)
+                # generate set of possible fmris
+                #
+                # ensure existing pkgs stay installed; explicitly add in
+                # installed fmris in case publisher change has occurred and
+                # some pkgs aren't part of new publisher
+                possible_set = set()
+                self.__allowed_downgrades = set()
+                for f in self.__installed_fmris - self.__removal_fmris:
+                        possible_set |= self.__comb_newer_fmris(f)[0] | set([f])
+
+                # Add the proposed fmris, populate self.__expl_install_dict and
+                # check for allowed downgrades.
+                self.__expl_install_dict = defaultdict(list)
+                for name, flist in proposed_dict.items():
+                        possible_set.update(flist)
+                        for f in flist:
+                                self.__progress()
+                                self.__allowed_downgrades |= \
+                                    self.__allow_incorp_downgrades(f,
+                                    excludes=excludes)
+                                if self.__is_explicit_install(f):
+                                        self.__expl_install_dict[name].append(f)
+
+                # For linked image sync we have to analyze all pkgs of the
+                # possible_set because no proposed pkgs will be given. However,
+                # that takes more time so only do this for syncs. The relax_all
+                # flag is an indicator of a sync operation.
+                if not proposed_dict.values() and relax_all:
+                        for f in possible_set:
+                                self.__progress()
+                                self.__allowed_downgrades |= \
+                                    self.__allow_incorp_downgrades(f,
+                                    excludes=excludes)
+
+                possible_set |= self.__allowed_downgrades
+
+                self.__start_subphase(3)
                 # If requested, trim any proposed fmris older than those of
                 # corresponding installed packages.
                 # Because we have introduced exact-install where
@@ -895,9 +971,39 @@ class PkgSolver(object):
                                 "installation version"))
                         # trim packages excluded by incorps in proposed.
                         self.__trim_recursive_incorps(proposed_dict[name],
-                            excludes)
+                            excludes, _TRIM_PROPOSED_INC)
 
-                self.__start_subphase(3)
+                # Trim packages with unsatisfied parent dependencies.  Then
+                # if the current image is out of sync, for packages with
+                # satisfied parent depencences (which will include
+                # incorporations), call __trim_recursive_incorps() to trim out
+                # more packages that are disallowed due to the synced
+                # incorporations.
+                if self.__is_child():
+                        possible_linked = defaultdict(set)
+                        for f in possible_set.copy():
+                                self.__progress()
+                                if not self.__trim_nonmatching_parents(f,
+                                    excludes, ignore_inst_parent_deps):
+                                        possible_set.remove(f)
+                                        continue
+                                if f in self.__linked_pkgs and not insync:
+                                        possible_linked[f.pkg_name].add(f)
+                        for name in possible_linked:
+                                # calling __trim_recursive_incorps can be
+                                # expensive so don't call it unnecessarily.
+                                if name in proposed_dict:
+                                        possible_linked[name] -= \
+                                            set(proposed_dict[name])
+                                if not possible_linked[name]:
+                                        continue
+                                self.__progress()
+                                self.__trim_recursive_incorps(
+                                    list(possible_linked[name]),
+                                    excludes, _TRIM_SYNCED_INC)
+                        del possible_linked
+
+                self.__start_subphase(4)
                 # now trim pkgs we cannot update due to maintained
                 # incorporations
                 for i, flist in zip(inc_list, con_lists):
@@ -913,18 +1019,18 @@ class PkgSolver(object):
                                     dotrim=False)[1], _TRIM_INSTALLED_INC,
                                     reason)
 
-                self.__start_subphase(4)
+                self.__start_subphase(5)
                 # now trim any pkgs we cannot update due to freezes
                 self.__trim_frozen(existing_freezes)
 
-                self.__start_subphase(5)
+                self.__start_subphase(6)
                 # elide any proposed versions that don't match variants (arch
                 # usually)
                 for name in proposed_dict:
                         for fmri in proposed_dict[name]:
                                 self.__trim_nonmatching_variants(fmri)
 
-                self.__start_subphase(6)
+                self.__start_subphase(7)
                 # remove any versions from proposed_dict that are in trim_dict
                 try:
                         self.__trim_proposed(proposed_dict)
@@ -932,25 +1038,6 @@ class PkgSolver(object):
                         # One or more proposed packages have been rejected.
                         self.__raise_install_error(exp, inc_list, proposed_dict,
                             set(), excludes)
-
-                self.__start_subphase(7)
-                # generate set of possible fmris
-                #
-                # ensure existing pkgs stay installed; explicitly add in
-                # installed fmris in case publisher change has occurred and
-                # some pkgs aren't part of new publisher
-                possible_set = set()
-                for f in self.__installed_fmris - self.__removal_fmris:
-                        possible_set |= self.__comb_newer_fmris(f)[0] | set([f])
-
-                # add the proposed fmris and populate self.__expl_install_dict.
-                self.__expl_install_dict = defaultdict(list)
-                for name, flist in proposed_dict.items():
-                        possible_set.update(flist)
-                        for fmri in flist:
-                                if self.__is_explicit_install(fmri):
-                                        self.__expl_install_dict[name].append(
-                                            fmri)
 
                 self.__start_subphase(8)
 
@@ -973,7 +1060,7 @@ class PkgSolver(object):
 
                 self.__start_subphase(10)
                 # remove all trimmed fmris from consideration
-                possible_set.difference_update(self.__trim_dict.iterkeys())
+                possible_set.difference_update(six.iterkeys(self.__trim_dict))
                 # remove any versions from proposed_dict that are in trim_dict
                 # as trim dict has been updated w/ missing dependencies
                 try:
@@ -1053,7 +1140,7 @@ class PkgSolver(object):
                 # and drive forward again w/ the remainder
                 self.__restore_solver(saved_solver)
 
-                for fmri in (saved_solution & self.__installed_fmris):
+                for fmri in saved_solution & self.__installed_fmris:
                         self.__addclauses(
                             self.__gen_one_of_these_clauses([fmri]))
 
@@ -1087,14 +1174,6 @@ class PkgSolver(object):
                 self.__set_removed_and_required_packages(rejected=reject_set)
                 self.__progress()
 
-                # trim fmris we cannot install because they're older
-                for f in self.__installed_fmris:
-                        self.__progress()
-                        self.__trim_older(f)
-
-                # now trim any pkgs we cannot update due to freezes
-                self.__trim_frozen(existing_freezes)
-
                 self.__start_subphase(2)
                 # generate set of possible fmris
                 possible_set = set()
@@ -1104,6 +1183,28 @@ class PkgSolver(object):
                         if not matching:            # disabled publisher...
                                 matching = set([f]) # staying put is an option
                         possible_set |= matching
+
+                self.__allowed_downgrades = set()
+                for f in possible_set:
+                        self.__allowed_downgrades |= \
+                            self.__allow_incorp_downgrades(f, excludes=excludes)
+                possible_set |= self.__allowed_downgrades
+
+                # trim fmris we cannot install because they're older
+                for f in self.__installed_fmris:
+                        self.__progress()
+                        self.__trim_older(f)
+
+                # now trim any pkgs we cannot update due to freezes
+                self.__trim_frozen(existing_freezes)
+
+                # Trim packages with unsatisfied parent dependencies.
+                if self.__is_child():
+                        for f in possible_set.copy():
+                                self.__progress()
+                                if not self.__trim_nonmatching_parents(f,
+                                    excludes):
+                                        possible_set.remove(f)
 
                 self.__start_subphase(3)
                 # Update the set of possible FMRIs with the transitive closure
@@ -1120,7 +1221,7 @@ class PkgSolver(object):
                 self.__start_subphase(4)
 
                 # remove all trimmed fmris from consideration
-                possible_set.difference_update(self.__trim_dict.iterkeys())
+                possible_set.difference_update(six.iterkeys(self.__trim_dict))
 
                 #
                 # Generate ids, possible_dict for clause generation.  Prepare
@@ -1169,9 +1270,12 @@ class PkgSolver(object):
 
                 incorps = self.__get_installed_upgradeable_incorps(
                     excludes)
-                if not incorps:
+                if not incorps or self.__is_child():
                         # If there are no installed, upgradeable incorporations,
-                        # then assume that no updates were available.
+                        # then assume that no updates were available.  Also if
+                        # we're a linked image child we may not be able to
+                        # update to the latest available incorporations due to
+                        # parent constraints, so don't generate an error.
                         return self.__end_solve(solution, excludes)
 
                 # Before making a guess, apply extra trimming to see if we can
@@ -1227,7 +1331,8 @@ class PkgSolver(object):
                 renamed_set = orig_installed_set - \
                     self.__elide_possible_renames(orig_installed_set, excludes)
 
-                proposed_removals = set(uninstall_list) | renamed_set
+                proposed_removals = set(uninstall_list) | renamed_set | \
+                    self.__triggered_ops[PKG_OP_UNINSTALL][PKG_OP_UNINSTALL]
 
                 # find pkgs which are going to be installed/updated
                 triggered_set = set()
@@ -1404,7 +1509,7 @@ class PkgSolver(object):
 
                 # assign clause numbers (ids) to possible pkgs
                 pkgid = 1
-                for name in sorted(self.__possible_dict.iterkeys()):
+                for name in sorted(six.iterkeys(self.__possible_dict)):
                         for fmri in reversed(self.__possible_dict[name]):
                                 self.__id2fmri[pkgid] = fmri
                                 self.__fmri2id[fmri] = pkgid
@@ -1448,151 +1553,8 @@ class PkgSolver(object):
                 CONSTRAINT.NONE of specified version and set of remaining
                 fmris."""
 
-                if dotrim or not obsolete_ok or not fmri.version or \
-                    not fmri.version.timestr:
-                        return self.__comb_common(fmri, dotrim,
-                            version.CONSTRAINT_NONE, obsolete_ok)
-
-                # In the case that a precise version (down to timestamp) is
-                # provided, no trimming is being done, and obsoletes are ok, the
-                # set of matching FMRIs can be determined without using version
-                # comparison because the solver caches catalog FMRIs in
-                # ascending version order.
-
-                # determine if the data is cacheable or cached:
-                tp = (fmri, dotrim, version.CONSTRAINT_NONE, obsolete_ok)
-                try:
-                        return self.__cache[tp]
-                except KeyError:
-                        pass
-
-                mver = fmri.version
-                # Always use a copy in reverse order (so versions are in
-                # descending order); return value may be cached.
-                all_fmris = self.__get_catalog_fmris(fmri.pkg_name)[::-1]
-
-                # frozensets are used so callers don't inadvertently
-                # update these sets (which may be cached).  Iteration is
-                # performed in descending version order with the
-                # assumption that systems are generally up-to-date so it
-                # should be faster to start at the end and look for the
-                # older version.
-                last_ver = None
-                for i, f in enumerate(all_fmris):
-                        if mver == f.version:
-                                last_ver = i
-                        elif last_ver is not None:
-                                break
-
-                if last_ver is not None:
-                        matching = frozenset(all_fmris[:last_ver + 1])
-                        remaining = frozenset(all_fmris[last_ver + 1:])
-                else:
-                        matching = frozenset()
-                        remaining = frozenset(all_fmris)
-
-                # if we haven't finished trimming, don't cache this
-                if not self.__trimdone:
-                        return matching, remaining
-
-                # cache the result
-                self.__cache[tp] = (matching, remaining)
-                return self.__cache[tp]
-
-        def __comb_common_noversion(self, fmri, dotrim, obsolete_ok):
-                """Implements versionless comb logic."""
-
-                all_fmris = self.__get_catalog_fmris(fmri.pkg_name)
-                matching = frozenset((
-                    f
-                    for f in all_fmris
-                    if not dotrim or f not in self.__trim_dict
-                    if obsolete_ok or not self.__fmri_is_obsolete(f)
-                ))
-                remaining = frozenset(set(all_fmris) - matching)
-                return matching, remaining
-
-        def __comb_common_version(self, fmri, dotrim, constraint, obsolete_ok):
-                """Implements versioned comb logic."""
-
-                # If using a version constraint that cares about branch (but not
-                # timestr), the fmris will have to be resorted so that the
-                # version chopping done here works as expected.  This is because
-                # version sort order is release, branch, timestr which is
-                # different than is_successor() order.  However, if the provided
-                # FMRI has a timestamp, doesn't have a branch, or we're applying
-                # a constraint that doesn't care about the branch, then we don't
-                # need to resort.
-                mver = fmri.version
-                branch_sort = not mver.timestr and mver.branch and \
-                    constraint not in (version.CONSTRAINT_NONE,
-                        version.CONSTRAINT_RELEASE,
-                        version.CONSTRAINT_RELEASE_MAJOR,
-                        version.CONSTRAINT_RELEASE_MINOR)
-
-                all_fmris = self.__get_catalog_fmris(fmri.pkg_name)
-                if branch_sort:
-                        # The first version of this attempted to perform
-                        # multiple passes to avoid the cost of sorting by
-                        # finding the last entry that matched CONSTRAINT_RELEASE
-                        # and then only resorting the slice of comb_fmris from
-                        # first_ver to last_ver, but that actually ended up
-                        # being slower because multiple passes with
-                        # is_successor() (even over a small portion of
-                        # comb_fmris) is more expensive than simply resorting
-                        # the entire list.  Ideally, we'd get the entries from
-                        # __get_catalog_fmris() in this order already which
-                        # would be faster since we'd avoid a second sort.
-                        skey = operator.attrgetter(
-                            'version.branch', 'version.release')
-                        # Always use a copy; return value may be cached.
-                        comb_fmris = sorted(all_fmris, key=skey,
-                            reverse=True)
-                else:
-                        # Always use a copy; return value may be cached.
-                        comb_fmris = all_fmris[::-1]
-
-                # Iteration is performed in descending version order with the
-                # assumption that systems are generally up-to-date so it should
-                # be faster to start at the end and look for the oldest version
-                # that matches.
-                first_ver = None
-                last_ver = None
-                for i, f in enumerate(comb_fmris):
-                        fver = f.version
-                        if ((fver.is_successor(mver, constraint=constraint) or
-                            fver == mver)):
-                                if first_ver is None:
-                                        first_ver = i
-                                last_ver = i
-                        elif last_ver is not None:
-                                break
-
-                if last_ver is not None:
-                        # Oddly enough, it's a little bit faster to iterate
-                        # through the slice of comb_fmris again and store
-                        # matches here instead of above.  Perhaps variable
-                        # scoping overhead is to blame?
-                        matching = []
-                        remaining = []
-                        for f in comb_fmris[first_ver:last_ver + 1]:
-                                if ((not dotrim or
-                                    f not in self.__trim_dict) and
-                                    (obsolete_ok or not
-                                        self.__fmri_is_obsolete(f))):
-                                        matching.append(f)
-                                else:
-                                        remaining.append(f)
-                        matching = frozenset(matching)
-                        remaining = frozenset(chain(
-                            comb_fmris[:first_ver],
-                            remaining,
-                            comb_fmris[last_ver + 1:]))
-                else:
-                        matching = frozenset()
-                        remaining = frozenset(comb_fmris)
-
-                return matching, remaining
+                return self.__comb_common(fmri, dotrim,
+                    version.CONSTRAINT_NONE, obsolete_ok)
 
         def __comb_common(self, fmri, dotrim, constraint, obsolete_ok):
                 """Underlying impl. of other comb routines"""
@@ -1604,14 +1566,18 @@ class PkgSolver(object):
                 if (not self.__trimdone and dotrim) or tp not in self.__cache:
                         # use frozensets so callers don't inadvertently update
                         # these sets (which may be cached).
-                        if not fmri.version or not fmri.version.release:
-                                matching, remaining = \
-                                    self.__comb_common_noversion(fmri, dotrim,
-                                        obsolete_ok)
-                        else:
-                                matching, remaining = \
-                                    self.__comb_common_version(fmri, dotrim,
-                                        constraint, obsolete_ok)
+                        all_fmris = set(self.__get_catalog_fmris(fmri.pkg_name))
+                        matching = frozenset([
+                            f
+                            for f in all_fmris
+                            if f not in self.__trim_dict or not dotrim
+                            if not fmri.version or
+                                fmri.version == f.version or
+                                f.version.is_successor(fmri.version,
+                                    constraint=constraint)
+                            if obsolete_ok or not self.__fmri_is_obsolete(f)
+                        ])
+                        remaining = frozenset(all_fmris - matching)
 
                         # if we haven't finished trimming, don't cache this
                         if not self.__trimdone:
@@ -1899,20 +1865,29 @@ class PkgSolver(object):
                                             set()).add(f)
                 return self.__dependents.get(pfmri, set())
 
-        def __trim_recursive_incorps(self, fmri_list, excludes):
+        def __trim_recursive_incorps(self, fmri_list, excludes, reason_id):
                 """trim packages affected by incorporations"""
                 processed = set()
 
                 work = [fmri_list]
+
+                if reason_id == _TRIM_PROPOSED_INC:
+                        reason = N_(
+                            "Excluded by proposed incorporation '{0}'")
+                elif reason_id == _TRIM_SYNCED_INC:
+                        reason = N_(
+                            "Excluded by synced parent incorporation '{0}'")
+                else:
+                        raise AssertionError(
+                            "Invalid reason_id value: {0}".format(reason_id))
 
                 while work:
                         fmris = work.pop()
                         processed.add(frozenset(fmris))
                         d = self.__combine_incorps(fmris, excludes)
                         for name in d:
-                                self.__trim(d[name][1], _TRIM_PROPOSED_INC,
-                                    (N_("Excluded by proposed incorporation "
-                                        "'{0}'"), (fmris[0].pkg_name,)))
+                                self.__trim(d[name][1], reason_id,
+                                    (reason, (fmris[0].pkg_name,)))
                                 to_do = d[name][0]
                                 if to_do and frozenset(to_do) not in processed:
                                         work.append(list(to_do))
@@ -2066,15 +2041,10 @@ class PkgSolver(object):
                         nonmatching = set(nonmatching)
 
                 elif dtype == "parent":
-                        if self.__parent_pkgs == None:
-                                # ignore this dependency
-                                matching = nonmatching = frozenset()
-                        else:
-                                matching, nonmatching = \
-                                    self.__comb_auto_fmris(fmri, dotrim=False,
-                                    obsolete_ok=True)
-
-                        # not required in the planned image
+                        # Parent dependency fmris must exist outside of the
+                        # current image, so we don't report any new matching
+                        # or nonmatching requirements for the solver.
+                        matching = nonmatching = frozenset()
                         required = False
 
                 elif dtype == "origin":
@@ -2219,7 +2189,7 @@ class PkgSolver(object):
                 relax_pkgs = set()
 
                 # check if we're a child image.
-                if self.__parent_pkgs is None:
+                if not self.__is_child():
                         return relax_pkgs
 
                 # if we're ignoring parent dependencies there is no reason to
@@ -2232,6 +2202,7 @@ class PkgSolver(object):
                         for da in self.__get_dependency_actions(f, excludes):
                                 if da.attrs["type"] != "parent":
                                         continue
+                                self.__linked_pkgs.add(f)
                                 if pkg.actions.depend.DEPEND_SELF in \
                                     da.attrlist("fmri"):
                                         relax_pkgs.add(f.pkg_name)
@@ -2267,7 +2238,7 @@ class PkgSolver(object):
                 assert self.__state != SOLVER_INIT
                 assert DebugValues["plan"]
 
-                return self.__fmri_list_errors(self.__trim_dict.iterkeys(),
+                return self.__fmri_list_errors(six.iterkeys(self.__trim_dict),
                     already_seen=set(), verbose=True)
 
         def __check_installed(self):
@@ -2751,7 +2722,7 @@ class PkgSolver(object):
                 # values that start w/ the relaxed ones...
                 relaxed_holds |= set([
                     hold
-                    for hold in install_holds.itervalues()
+                    for hold in six.itervalues(install_holds)
                     if [ r for r in relaxed_holds if hold.startswith(r + ".") ]
                 ])
 
@@ -2775,7 +2746,7 @@ class PkgSolver(object):
                 # those holds were relaxed.
                 versioned_dependents -= set([
                     pkg_name
-                    for pkg_name, hold_value in install_holds.iteritems()
+                    for pkg_name, hold_value in six.iteritems(install_holds)
                     if hold_value not in relaxed_holds
                 ])
                 # Build the list of fmris that 1) contain incorp. dependencies
@@ -2893,8 +2864,8 @@ class PkgSolver(object):
         def __trim_older(self, fmri):
                 """Trim any fmris older than this one"""
                 reason = (N_("Newer version {0} is already installed"), (fmri,))
-                self.__trim(self.__comb_newer_fmris(fmri, dotrim=False)[1],
-                    _TRIM_INSTALLED_NEWER, reason)
+                self.__trim(self.__comb_newer_fmris(fmri, dotrim=False)[1] -
+                    self.__allowed_downgrades, _TRIM_INSTALLED_NEWER, reason)
 
         def __trim_nonmatching_variants(self, fmri):
                 """Trim packages that don't support image architecture or other
@@ -2910,9 +2881,10 @@ class PkgSolver(object):
                                             "image architecture")
                                 else:
                                         reason = (N_("Package supports image "
-                                            "variant {0}=[{1}] but doesn't "
-                                            "support this image's {0} ({2})"),
-                                            (v, vd[v], self.__variants[v]))
+                                            "variant {0}={1} but doesn't "
+                                            "support this image's {0}={2}"),
+                                            (v, str(vd[v]),
+                                            str(self.__variants[v])))
 
                                 self.__trim(fmri, _TRIM_VARIANT, reason)
                 return reason == ""
@@ -2987,7 +2959,7 @@ class PkgSolver(object):
                 assert pkg_fmri.publisher
 
                 # if we're not a child then ignore "parent" dependencies.
-                if self.__parent_pkgs == None:
+                if not self.__is_child():
                         return True
 
                 # check if we're ignoring parent dependencies for installed
@@ -3008,6 +2980,7 @@ class PkgSolver(object):
                 if not pkg_deps:
                         # no parent dependencies.
                         return True
+                self.__linked_pkgs.add(pkg_fmri)
 
                 allowed = True
                 for f in pkg_deps:
@@ -3094,6 +3067,98 @@ class PkgSolver(object):
                 self.__trim(fmri, _TRIM_UNSUPPORTED,
                     N_("Package contains invalid or unsupported actions"))
 
+        def __get_older_incorp_pkgs(self, fmri, install_holds, excludes=EmptyI,
+            candidates=None, depth=0):
+                """Get all incorporated pkgs for the given 'fmri' whose versions
+                are older than what is currently installed in the image."""
+
+                if not candidates:
+                        candidates = set()
+
+                if fmri in self.__dg_incorp_cache:
+                        candidates |= self.__dg_incorp_cache[fmri]
+                        return candidates
+
+                if depth > 10:
+                        # Safeguard against circular dependencies.
+                        # If it happens, just end the recursion tree.
+                        return candidates
+
+                self.__dg_incorp_cache[fmri] = set()
+                self.__progress()
+
+                # Get all incorporated packages for this fmri.
+                matching_incorp_sets = [
+                    m[0]
+                    for m in
+                    self.__get_incorp_nonmatch_dict(fmri,excludes).values()
+                ]
+
+                for df in chain.from_iterable(matching_incorp_sets):
+                        if df.pkg_name not in self.__installed_dict:
+                                continue
+
+                        # Ignore pkgs which are incorporated at a higher or
+                        # the same version.
+                        inst_ver = self.__installed_dict[df.pkg_name].version
+                        if df.version.is_successor(inst_ver, None) or \
+                            df.version == inst_ver:
+                                continue
+
+                        # Do not allow implicit publisher switches
+                        if df.get_publisher() != fmri.get_publisher():
+                                continue
+
+                        # Do not allow pkgs which are marked for removal.
+                        if fmri in self.__removal_fmris:
+                                continue
+
+                        # Do not allow pkgs with install-holds but filter out
+                        # child holds
+                        install_hold = False
+                        for ha in [
+                            sa
+                            for sa in self.__get_actions(df, "set")
+                            if sa.attrs["name"] == "pkg.depend.install-hold"
+                        ]:
+                                install_hold = True
+                                for h in install_holds:
+                                        if ha.attrs["value"].startswith(h):
+                                                # This is a child hold of an
+                                                # incorporating pkg, ignore.
+                                                install_hold = False
+                                                break
+                                if not install_hold:
+                                        break
+                        if install_hold:
+                                continue
+
+                        self.__dg_incorp_cache[fmri].add(df)
+                        candidates.add(df)
+
+                        # Check if this pkgs has incorporate deps of its own.
+                        self.__get_older_incorp_pkgs(df, install_holds,
+                            excludes, candidates, depth+1)
+
+                return candidates
+
+        def __allow_incorp_downgrades(self, fmri, excludes=EmptyI):
+                """Find packages which have lower versions than installed but
+                are incorporated by a package in the proposed list."""
+
+                install_holds = set([
+                    sa.attrs["value"]
+                    for sa in self.__get_actions(fmri, "set")
+                    if sa.attrs["name"] == "pkg.depend.install-hold"
+                ])
+
+                # Get all pkgs which are incorporated by 'fmri',
+                # including nested incorps.
+                candidates = self.__get_older_incorp_pkgs(fmri, install_holds,
+                    excludes=excludes)
+
+                return candidates
+
         def __dotrim(self, fmri_list):
                 """Return fmri_list trimmed of any fmris in self.__trim_dict"""
 
@@ -3103,6 +3168,10 @@ class PkgSolver(object):
                     if f not in self.__trim_dict
                 ]
 
+        def __is_child(self):
+                """Return True if this image is a linked image child."""
+                return self.__parent_pkgs is not None
+
         def __is_zone(self):
                 """Return True if image is a nonglobal zone"""
                 if 'variant.opensolaris.zone' in self.__variants:
@@ -3110,3 +3179,6 @@ class PkgSolver(object):
                             'nonglobal'
                 else:
                         return False
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

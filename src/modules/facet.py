@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,17 +21,21 @@
 #
 
 #
-# Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 # basic facet support
 
-from pkg._varcet import _allow_facet
-from pkg.misc import EmptyI, ImmutableDict
 import pkg.misc as misc
 import fnmatch
 import re
+import six
 import types
+from functools import cmp_to_key
+
+import pkg.misc as misc
+from pkg._varcet import _allow_facet
+from pkg.misc import EmptyI, ImmutableDict
 
 class Facets(dict):
         # store information on facets; subclass dict
@@ -109,10 +113,10 @@ class Facets(dict):
 
                 return [
                         [misc.force_text(k), v, True]
-                        for k, v in obj.__inherited.iteritems()
+                        for k, v in six.iteritems(obj.__inherited)
                 ] + [
                         [misc.force_text(k), v, False]
-                        for k, v in obj.__local.iteritems()
+                        for k, v in six.iteritems(obj.__local)
                 ]
 
         @staticmethod
@@ -136,25 +140,28 @@ class Facets(dict):
                 and names."""
 
                 assert type(other) is Facets
-                return cmp(self.__keylist, other.__keylist)
+                return misc.cmp(self.__keylist, other.__keylist)
 
         def _cmp_values(self, other):
                 """Compare the facet values of two Facets objects.  This
                 comparison ignores any masked values."""
 
                 assert type(other) is Facets
-                return dict.__cmp__(self, other)
+                return misc.cmp(self, other)
 
         def _cmp_all_values(self, other):
                 """Compare all the facet values of two Facets objects.  This
                 comparison takes masked values into account."""
 
                 assert type(other) is Facets
-                rv = cmp(self.__inherited, other.__inherited)
+                rv = misc.cmp(self.__inherited, other.__inherited)
                 if rv == 0:
-                        rv = cmp(self.__local, other.__local)
+                        rv = misc.cmp(self.__local, other.__local)
                 return rv
 
+        # this __cmp__ is used as a helper function for the rich comparison
+        # methods.
+        # __cmp__ defined; pylint: disable=W1630
         def __cmp__(self, other):
                 """Compare two Facets objects.  This comparison takes masked
                 values into account."""
@@ -188,6 +195,9 @@ class Facets(dict):
                 # the case.
                 rv = self._cmp_all_values(other)
                 return rv
+
+        def __hash__(self):
+                return hash(str(self))
 
         def __eq__(self, other):
                 """redefine in terms of __cmp__()"""
@@ -235,19 +245,19 @@ class Facets(dict):
                         i = len(y) - len(x)
                         if i != 0:
                                 return i
-                        return cmp(x, y)
+                        return misc.cmp(x, y)
 
                 self.__keylist = []
                 self.__keylist += sorted([
                         i
                         for i in self
                         if i in self.__inherited
-                ], cmp=facet_sort)
+                ], key=cmp_to_key(facet_sort))
                 self.__keylist += sorted([
                         i
                         for i in self
                         if i not in self.__inherited
-                ], cmp=facet_sort)
+                ], key=cmp_to_key(facet_sort))
 
         def __setitem_internal(self, item, value, inherited=False):
                 if not item.startswith("facet."):
@@ -365,7 +375,7 @@ class Facets(dict):
 
         def _clear_inherited(self):
                 """Clear all inherited facet."""
-                for k in self.__inherited.keys():
+                for k in list(self.__inherited.keys()):
                         self.__delitem_internal(k, inherited=True)
 
         def _action_match(self, act):
@@ -432,9 +442,9 @@ class Facets(dict):
         def update(self, d):
                 if type(d) == Facets:
                         # preserve inherited facets.
-                        for k, v in d.__inherited.iteritems():
+                        for k, v in six.iteritems(d.__inherited):
                                 self._set_inherited(k, v)
-                        for k, v in d.__local.iteritems():
+                        for k, v in six.iteritems(d.__local):
                                 self[k] = v
                         return
 
@@ -516,4 +526,12 @@ class Facets(dict):
                 return self.__inherited_ro
 
 
-Facets.allow_action = types.MethodType(_allow_facet, None, Facets)
+        if six.PY3:
+                def allow_action(self, action, publisher=None):
+                        return _allow_facet(self, action, publisher=publisher)
+
+if six.PY2:
+        Facets.allow_action = types.MethodType(_allow_facet, None, Facets)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

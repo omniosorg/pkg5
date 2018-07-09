@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,29 +21,26 @@
 #
 
 #
-# Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 import inspect
 import os.path
-import ConfigParser
+import six
+import traceback
+from six.moves import configparser
 
 import pkg.variant as variant
-import traceback
+
 
 class LintException(Exception):
         """An exception thrown when something fatal has gone wrong during
         the linting."""
-        def __unicode__(self):
-                # To workaround python issues 6108 and 2517, this provides a
-                # a standard wrapper for this class' exceptions so that they
-                # have a chance of being stringified correctly.
-                return str(self)
+        pass
 
 class DuplicateLintedAttrException(Exception):
         """An exception thrown when we've found duplicate pkg.linted* keys."""
-        def __unicode__(self):
-                return str(self)
+        pass
 
 class Checker(object):
         """A base class for all lint checks.  pkg.lint.engine discovers classes
@@ -84,9 +81,12 @@ class Checker(object):
                         'pkglint_id' keyword argument default and returns it."""
 
                         # the short name for this checker class, Checker.name
-                        name = method.im_class.name
+                        name = method.__self__.__class__.name
 
-                        arg_spec = inspect.getargspec(method)
+                        if six.PY2:
+                                arg_spec = inspect.getargspec(method)
+                        else:
+                                arg_spec = inspect.getfullargspec(method)
 
                         # arg_spec.args is a tuple of the method args,
                         # populating the tuple with both arg values for
@@ -110,7 +110,11 @@ class Checker(object):
                         method = item[1]
                         # register the methods in the object that correspond
                         # to lint checks
-                        if "pkglint_id" in inspect.getargspec(method)[0]:
+                        if six.PY2:
+                                m = inspect.getargspec(method)
+                        else:
+                                m = inspect.getfullargspec(method)
+                        if "pkglint_id" in m[0]:
                                 value = "{0}.{1}.{2}".format(
                                     self.__module__,
                                     self.__class__.__name__, method.__name__)
@@ -246,10 +250,18 @@ class ManifestChecker(Checker):
 
                 if os.path.exists(self.classification_path):
                         try:
-                                self.classification_data = \
-                                    ConfigParser.SafeConfigParser()
-                                self.classification_data.readfp(
-                                    open(self.classification_path))
+                                if six.PY2:
+                                        self.classification_data = \
+                                            configparser.SafeConfigParser()
+                                        self.classification_data.readfp(
+                                            open(self.classification_path))
+                                else:
+                                        # SafeConfigParser has been renamed to
+                                        # ConfigParser in Python 3.2.
+                                        self.classification_data = \
+                                            configparser.ConfigParser()
+                                        self.classification_data.read_file(
+                                            open(self.classification_path))
                         except Exception as err:
                                 # any exception thrown here results in a null
                                 # classification_data object.  We deal with that
@@ -346,7 +358,7 @@ def _linted_action(action, lint_id):
         for key in action.attrs.keys():
                 if key.startswith("pkg.linted") and linted.startswith(key):
                         val = action.attrs.get(key, "false")
-                        if isinstance(val, basestring):
+                        if isinstance(val, six.string_types):
                                 if val.lower() == "true":
                                         return True
                         else:
@@ -362,7 +374,7 @@ def _linted_manifest(manifest, lint_id):
         for key in manifest.attributes.keys():
                 if key.startswith("pkg.linted") and linted.startswith(key):
                         val = manifest.attributes.get(key, "false")
-                        if isinstance(val, basestring):
+                        if isinstance(val, six.string_types):
                                 if val.lower() == "true":
                                         return True
                         else:
@@ -371,3 +383,6 @@ def _linted_manifest(manifest, lint_id):
                                     "in {manifest}").format(key=key,
                                     manifest=manifest.fmri))
         return False
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

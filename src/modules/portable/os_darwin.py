@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -19,8 +19,8 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+#
+# Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 """
@@ -28,10 +28,11 @@ Most if not all of the os_unix methods apply on Darwin. The methods
 below override the definitions from os_unix
 """
 
-from os_unix import \
+from .os_unix import \
     get_isainfo, get_release, get_platform, get_group_by_name, \
-    get_user_by_name, get_name_by_gid, get_name_by_uid, is_admin, get_userid, \
-    get_username, chown, rename, remove, link, split_path, get_root, assert_mode
+    get_user_by_name, get_name_by_gid, get_name_by_uid, get_usernames_by_gid, \
+    is_admin, get_userid, get_username, chown, rename, remove, link, \
+    split_path, get_root, assert_mode
 
 import macostools
 
@@ -42,3 +43,6 @@ def copyfile(src, dst):
         """
         macostools.copy(src, dst)
 
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

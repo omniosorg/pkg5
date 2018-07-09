@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 """module describing a package attribute
@@ -30,9 +30,10 @@ This module contains the AttributeAction class, which represents a single
 attribute of a package (package metadata).  Attributes are typed, and the
 possible types are: XXX."""
 
-import generic
+from . import generic
 import pkg.fmri
 import pkg.actions
+import six
 
 class AttributeAction(generic.Action):
         """Class representing a package attribute."""
@@ -84,7 +85,7 @@ class AttributeAction(generic.Action):
                 if isinstance(self.attrs["value"], list):
                         tmp = []
                         for v in self.attrs["value"]:
-                                assert isinstance(v, basestring)
+                                assert isinstance(v, six.string_types)
                                 if " " in v:
                                         words = v.split()
                                         for w in words:
@@ -180,3 +181,6 @@ class AttributeAction(generic.Action):
                         # In all other cases, multiple values are assumed to be
                         # permissible.
                         generic.Action._validate(self, fmri=fmri)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

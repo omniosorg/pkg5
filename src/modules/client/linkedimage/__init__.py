@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -75,3 +75,6 @@ Invalid linked image plugin class '{0}' for plugin '{1}'""".format(
 
 # Clean up temporary variables
 del _modname, _module, _nvlist, _classes, _i
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

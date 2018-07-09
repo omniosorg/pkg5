@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 """module describing a driver packaging object.
@@ -32,9 +32,11 @@ packaging object.
 
 from __future__ import print_function
 import os
+from . import generic
+import six
+
 from tempfile import mkstemp
 
-import generic
 import pkg.pkgsubprocess as subprocess
 from pkg.client.debugvalues import DebugValues
 
@@ -91,7 +93,9 @@ class DriverAction(generic.Action):
                 """Compare with other driver instance; defined to force
                 clone driver to be removed last"""
 
-                ret = cmp(self.attrs["name"], other.attrs["name"])
+                ret = (self.attrs["name"] > other.attrs["name"]) - \
+                    (self.attrs["name"] < other.attrs["name"])
+
                 if ret == 0:
                         return 0
 
@@ -209,7 +213,7 @@ class DriverAction(generic.Action):
                         # the aliases file.  What's left is what we should be
                         # checking for dups against, along with the rest of the
                         # drivers.
-                        for name in driver_actions.iterkeys():
+                        for name in driver_actions:
                                 file_db.pop(name, None)
 
                         # Build a mapping of aliases to driver names based on
@@ -217,14 +221,14 @@ class DriverAction(generic.Action):
                         a2d = {}
                         for alias, name in (
                             (a, n)
-                            for n, act_list in driver_actions.iteritems()
+                            for n, act_list in six.iteritems(driver_actions)
                             for act in act_list
                             for a in act.attrlist("alias")
                         ):
                                 a2d.setdefault(alias, set()).add(name)
 
                         # Enhance that mapping with data from driver_aliases.
-                        for name, aliases in file_db.iteritems():
+                        for name, aliases in six.iteritems(file_db):
                                 for alias in aliases:
                                         a2d.setdefault(alias, set()).add(name)
 
@@ -356,7 +360,7 @@ from {imgroot}/etc/driver_aliases.".format(**errdict))
                 if "devlink" in self.attrs:
                         dlp = os.path.normpath(os.path.join(
                             image.get_root(), "etc/devlink.tab"))
-                        dlf = file(dlp)
+                        dlf = open(dlp)
                         dllines = dlf.readlines()
                         dlf.close()
                         st = os.stat(dlp)
@@ -424,7 +428,7 @@ from {imgroot}/etc/driver_aliases.".format(**errdict))
                             image.get_root(), "etc/driver_classes"))
 
                         try:
-                                dcf = file(dcp, "r")
+                                dcf = open(dcp, "r")
                                 lines = dcf.readlines()
                                 dcf.close()
                         except IOError as e:
@@ -443,7 +447,7 @@ from {imgroot}/etc/driver_aliases.".format(**errdict))
                                     self.attrs["name"], i)]
 
                         try:
-                                dcf = file(dcp, "w")
+                                dcf = open(dcp, "w")
                                 dcf.writelines(lines)
                                 dcf.close()
                         except IOError as e:
@@ -468,7 +472,7 @@ from {imgroot}/etc/driver_aliases.".format(**errdict))
                             image.get_root(), "etc/devlink.tab"))
 
                         try:
-                                dlf = file(dlp)
+                                dlf = open(dlp)
                                 lines = dlf.readlines()
                                 dlf.close()
                                 st = os.stat(dlp)
@@ -622,7 +626,7 @@ from {imgroot}/etc/driver_aliases.".format(**errdict))
         def __gen_read_binding_file(img, path, minfields=None, maxfields=None,
             raw=False):
 
-                myfile = file(os.path.normpath(os.path.join(
+                myfile = open(os.path.normpath(os.path.join(
                     img.get_root(), path)))
                 for line in myfile:
                         line = line.strip()
@@ -757,7 +761,7 @@ from {imgroot}/etc/driver_aliases.".format(**errdict))
 
                 # Grab device policy
                 try:
-                        dpf = file(os.path.normpath(os.path.join(
+                        dpf = open(os.path.normpath(os.path.join(
                             img.get_root(), "etc/security/device_policy")))
                 except IOError as e:
                         e.args += ("etc/security/device_policy",)
@@ -796,7 +800,7 @@ from {imgroot}/etc/driver_aliases.".format(**errdict))
 
                 # Grab device privileges
                 try:
-                        dpf = file(os.path.normpath(os.path.join(
+                        dpf = open(os.path.normpath(os.path.join(
                             img.get_root(), "etc/security/extra_privs")))
                 except IOError as e:
                         e.args += ("etc/security/extra_privs",)
@@ -941,7 +945,7 @@ from {imgroot}/etc/driver_aliases.".format(**errdict))
                             image.get_root(), "etc/devlink.tab"))
 
                         try:
-                                dlf = file(dlp)
+                                dlf = open(dlp)
                                 lines = dlf.readlines()
                                 dlf.close()
                                 st = os.stat(dlp)
@@ -998,3 +1002,6 @@ from {imgroot}/etc/driver_aliases.".format(**errdict))
                         ret.append(("driver", "alias", self.attrs["alias"],
                             None))
                 return ret
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

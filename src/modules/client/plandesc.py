@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -41,12 +41,12 @@ import collections
 import itertools
 import operator
 import simplejson as json
+import six
 
 import pkg.actions
 import pkg.client.actuator
 import pkg.client.api_errors as apx
 import pkg.client.linkedimage as li
-import pkg.client.pkgplan
 import pkg.client.pkgplan
 import pkg.facet
 import pkg.fmri
@@ -414,8 +414,8 @@ class PlanDescription(object):
                                     "version-source")
                         return mimpl, mver, mimpl_source, mver_source
 
-                for m in sorted(set(self._new_mediators.keys() +
-                    self._cfg_mediators.keys())):
+                for m in sorted(set(list(self._new_mediators.keys()) +
+                    list(self._cfg_mediators.keys()))):
                         orig_impl, orig_ver, orig_impl_source, \
                             orig_ver_source = get_mediation(
                                 self._cfg_mediators, m)
@@ -510,7 +510,7 @@ class PlanDescription(object):
 
                 vs = []
                 if self._new_variants:
-                        vs = self._new_variants.items()
+                        vs = list(self._new_variants.items())
 
                 # sort results by variant name
                 vs.sort(key=lambda x: x[0])
@@ -720,12 +720,12 @@ class PlanDescription(object):
                 """Return all item messages.
 
                 'ordered' is an optional boolean value that indicates that
-                item messages will be sorted by msg_time. If False, item messages
-                will be in an arbitrary order."""
+                item messages will be sorted by msg_time. If False, item
+                messages will be in an arbitrary order."""
 
                 if ordered:
                         # Sort all the item messages by msg_time
-                        ordered_list = sorted(self._item_msgs.iteritems(),
+                        ordered_list = sorted(six.iteritems(self._item_msgs),
                             key=lambda k_v: k_v[1][0][0])
                         for item in ordered_list:
                                 item_id = item[0]
@@ -862,3 +862,6 @@ class PlanDescription(object):
                 if self._new_facets is None:
                         return None
                 return pkg.facet.Facets(self._new_facets)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

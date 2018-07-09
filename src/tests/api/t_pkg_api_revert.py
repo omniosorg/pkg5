@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,10 +21,10 @@
 #
 
 #
-# Copyright (c) 2014 Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
-import testutils
+from . import testutils
 if __name__ == "__main__":
         testutils.setup_environment("../../../proto")
 import pkg5unittest
@@ -85,3 +85,6 @@ class TestPkgApiRevert(pkg5unittest.SingleDepotTestCase):
 
 if __name__ == "__main__":
         unittest.main()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

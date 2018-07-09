@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -34,6 +34,7 @@ import itertools
 import simplejson as json
 import os
 import re
+import six
 import socket
 import sys
 import tempfile
@@ -41,6 +42,8 @@ import textwrap
 import time
 import traceback
 import jsonschema
+
+from six.moves import filter, map, range
 
 import pkg
 import pkg.actions as actions
@@ -75,17 +78,18 @@ SYSREPO_HIDDEN_URI = "<system-repository>"
 PROG_DELAY = 5.0
 
 
-def _byteify(input):
-        """Convert unicode string into byte string. This will be used by json
+def _strify(input):
+        """Convert unicode string into byte string in Python 2 and convert
+        bytes string into unicode string in Python 3. This will be used by json
         loads function."""
 
         if isinstance(input, dict):
-                return dict([(_byteify(key), _byteify(value)) for key, value in
-                    input.iteritems()])
+                return dict([(_strify(key), _strify(value)) for key, value in
+                    six.iteritems(input)])
         elif isinstance(input, list):
-                return [_byteify(element) for element in input]
-        elif isinstance(input, unicode):
-                return input.encode('utf-8')
+                return [_strify(element) for element in input]
+        elif isinstance(input, (six.string_types, bytes)):
+                return misc.force_str(input, "utf-8")
         else:
                 return input
 
@@ -380,7 +384,7 @@ def _format_update_error(e, errors_json=None):
 def _error_json(text, cmd=None, errors_json=None, errorType=None):
         """Prepare an error message for json output. """
 
-        if not isinstance(text, basestring):
+        if not isinstance(text, six.string_types):
                 # Assume it's an object that can be stringified.
                 text = str(text)
 
@@ -920,7 +924,7 @@ def __get_parsable_plan(api_inst, parsable_version, child_images=None):
             "create-backup-be": backup_be_created,
             "create-new-be": new_be_created,
             "image-name": None,
-            "licenses": sorted(licenses),
+            "licenses": sorted(licenses, key=lambda x: x[0]),
             "release-notes": release_notes,
             "remove-packages": sorted(removed_fmris),
             "space-available": space_available,
@@ -966,15 +970,16 @@ def __api_alloc(pkg_image, orig_cwd, prog_delay=PROG_DELAY, prog_tracker=None,
                         if pkg_image_used:
                                 _error_json(_("No image rooted at '{0}' "
                                     "(set by $PKG_IMAGE)").format(e.user_dir),
-                                    errors=errors_json)
+                                    errors_json=errors_json)
                         else:
                                 _error_json(_("No image rooted at '{0}'")
-                                   .format(e.user_dir), errors=errors_json)
+                                   .format(e.user_dir), errors_json=errors_json)
                 else:
-                        _error_json(_("No image found."), errors=errors_json)
+                        _error_json(_("No image found."),
+                            errors_json=errors_json)
                 return
         except api_errors.PermissionsException as e:
-                _error_json(e, errors=errors_json)
+                _error_json(e, errors_json=errors_json)
                 return
         except api_errors.ImageFormatUpdateNeeded as e:
                 _format_update_error(e, errors_json=errors_json)
@@ -1015,9 +1020,9 @@ def __api_prepare_plan(operation, api_inst):
                 return __prepare_json(EXIT_OOPS, errors=errors_json)
         except KeyboardInterrupt:
                 raise
-        except:
+        except Exception as e:
                 _error_json(_("\nAn unexpected error happened while preparing "
-                    "for {0}:").format(operation))
+                    "for {op}: {err}").format(op=operation, err=str(e)))
                 return __prepare_json(EXIT_OOPS, errors=errors_json)
         return __prepare_json(EXIT_OK)
 
@@ -1055,7 +1060,7 @@ def __api_execute_plan(operation, api_inst):
                 _error_json(_("Requested \"{0}\" operation would affect files "
                     "that cannot be modified in live image.\n"
                     "Please retry this operation on an alternate boot "
-                    "environment.").format(operation), errors=errors_json)
+                    "environment.").format(operation), errors_json=errors_json)
                 rval = __prepare_json(EXIT_NOTLIVE, errors=errors_json)
         except api_errors.CorruptedIndexException as e:
                 _error_json("The search index appears corrupted.  Please "
@@ -1087,7 +1092,7 @@ def __api_execute_plan(operation, api_inst):
         except Exception as e:
                 _error_json(_("An unexpected error happened during "
                     "{operation}: {err}").format(
-                    operation=operation, err=e), errors=errors_json)
+                    operation=operation, err=e), errors_json=errors_json)
                 rval = __prepare_json(EXIT_OOPS, errors=errors_json)
         finally:
                 exc_type = exc_value = exc_tb = None
@@ -1124,7 +1129,10 @@ def __api_execute_plan(operation, api_inst):
                                 raise
 
                 if exc_value or exc_tb:
-                        raise exc_value, None, exc_tb
+                        if six.PY2:
+                                six.reraise(exc_value, None, exc_tb)
+                        else:
+                                raise exc_value
 
         return rval
 
@@ -1161,10 +1169,10 @@ pkg:/package/pkg' as a privileged user and then retry the {op}."""
                 _collect_catalog_failures(e, errors=errors_json)
                 return __prepare_json(EXIT_OOPS, errors=errors_json)
         if e_type == api_errors.ConflictingActionErrors:
-                _error_json("\n" + str(e), cmd=op, errors_json=errors_json)
                 if verbose and display_plan_cb:
                         display_plan_cb(api_inst, verbose=verbose,
                             noexecute=noexecute, plan_only=True)
+                _error_json("\n" + str(e), cmd=op, errors_json=errors_json)
                 return __prepare_json(EXIT_OOPS, errors=errors_json)
         if e_type in (api_errors.InvalidPlanError,
             api_errors.ReadOnlyFileSystemException,
@@ -1371,7 +1379,7 @@ def __api_plan_save(api_inst, logger=None):
         oflags = os.O_CREAT | os.O_TRUNC | os.O_WRONLY
         try:
                 fd = os.open(path, oflags, 0o644)
-                with os.fdopen(fd, "wb") as fobj:
+                with os.fdopen(fd, "w") as fobj:
                         plan._save(fobj)
 
                 # cleanup any old style imageplan save files
@@ -1479,9 +1487,9 @@ def __api_op(_op, _api_inst, _accept=False, _li_ignore=None, _noexecute=False,
         if _review_release_notes and ret["status"] == EXIT_OK and \
             _stage == API_STAGE_DEFAULT and _api_inst.solaris_image():
                 data["release_notes_url"] = misc.get_release_notes_url()
-                ret = __prepare_json(EXIT_OK, data=data, op=_op)
+                ret = __prepare_json(EXIT_OK, data=data)
         elif ret["status"] == EXIT_OK and data:
-                ret = __prepare_json(EXIT_OK, data=data, op=_op)
+                ret = __prepare_json(EXIT_OK, data=data)
 
         return ret
 
@@ -1943,10 +1951,9 @@ def _publisher_list(op, api_inst, pargs, omit_headers, preferred_only,
                                _("SYSPUB"), _("ENABLED"), _("TYPE"),
                                _("STATUS"), _("P"), _("LOCATION"))
 
-        # Custom sort function for preserving field ordering
-        def sort_fields(one, two):
-                return desired_field_order.index(get_header(one)) - \
-                    desired_field_order.index(get_header(two))
+        # Custom key function for preserving field ordering
+        def key_fields(item):
+                return desired_field_order.index(get_header(item))
 
         # Functions for manipulating field_data records
         def filter_default(record):
@@ -1990,13 +1997,16 @@ def _publisher_list(op, api_inst, pargs, omit_headers, preferred_only,
                                 c["valid"] = False
                         else:
                                 nb = cert.get_notBefore()
-                                t = time.strptime(nb, "%Y%m%d%H%M%SZ")
+                                # strptime's first argument must be str
+                                t = time.strptime(misc.force_str(nb),
+                                    "%Y%m%d%H%M%SZ")
                                 nb = datetime.datetime.utcfromtimestamp(
                                     calendar.timegm(t))
                                 times["effective"] = nb.strftime("%c")
 
                                 na = cert.get_notAfter()
-                                t = time.strptime(na, "%Y%m%d%H%M%SZ")
+                                t = time.strptime(misc.force_str(na),
+                                    "%Y%m%d%H%M%SZ")
                                 na = datetime.datetime.utcfromtimestamp(
                                     calendar.timegm(t))
                                 times["expiration"] = na.strftime("%c")
@@ -2035,9 +2045,9 @@ def _publisher_list(op, api_inst, pargs, omit_headers, preferred_only,
 
                 # Extract our list of headers from the field_data
                 # dictionary Make sure they are extracted in the
-                # desired order by using our custom sort function.
-                hdrs = map(get_header, sorted(filter(filter_func,
-                           field_data.values()), sort_fields))
+                # desired order by using our custom key function.
+                hdrs = list(map(get_header, sorted(filter(filter_func,
+                    list(field_data.values())), key=key_fields)))
 
                 if not omit_headers:
                         data["headers"] = hdrs
@@ -2114,11 +2124,11 @@ def _publisher_list(op, api_inst, pargs, omit_headers, preferred_only,
 
                                 values = map(get_value,
                                     sorted(filter(filter_func,
-                                    field_data.values()), sort_fields)
+                                    field_data.values()), key=key_fields)
                                 )
                                 entry = []
                                 for e in values:
-                                        if isinstance(e, basestring):
+                                        if isinstance(e, six.string_types):
                                                 entry.append(e)
                                         else:
                                                 entry.append(str(e))
@@ -2148,11 +2158,11 @@ def _publisher_list(op, api_inst, pargs, omit_headers, preferred_only,
 
                                 values = map(get_value,
                                     sorted(filter(filter_func,
-                                    field_data.values()), sort_fields)
+                                    field_data.values()), key=key_fields)
                                 )
                                 entry = []
                                 for e in values:
-                                        if isinstance(e, basestring):
+                                        if isinstance(e, six.string_types):
                                                 entry.append(e)
                                         else:
                                                 entry.append(str(e))
@@ -2165,11 +2175,11 @@ def _publisher_list(op, api_inst, pargs, omit_headers, preferred_only,
                                 set_value(field_data["proxy"], "")
                                 values = map(get_value,
                                     sorted(filter(filter_func,
-                                    field_data.values()), sort_fields)
+                                    field_data.values()), key=key_fields)
                                 )
                                 entry = []
                                 for e in values:
-                                        if isinstance(e, basestring):
+                                        if isinstance(e, six.string_types):
                                                 entry.append(e)
                                         else:
                                                 entry.append(str(e))
@@ -2257,18 +2267,23 @@ def _publisher_list(op, api_inst, pargs, omit_headers, preferred_only,
                         pub_data["Catalog Updated"] = dt
                         collect_signing_certs(pub, pub_data)
                         if pub.disabled:
-                                pub_data["Enabled"] = "No"
+                                pub_data["enabled"] = "No"
                         else:
-                                pub_data["Enabled"] = "Yes"
+                                pub_data["enabled"] = "Yes"
+                        if pub.sticky:
+                                pub_data["sticky"] = "Yes"
+                        else:
+                                pub_data["sticky"] = "No"
+                        if pub.sys_pub:
+                                pub_data["sys_pub"] = "Yes"
+                        else:
+                                pub_data["sys_pub"] = "No"
                         if pub.properties:
                                 pub_data["Properties"] = {}
-                                for k, v in pub.properties.iteritems():
+                                for k, v in six.iteritems(pub.properties):
                                         pub_data["Properties"][k] = v
-                        if "publisher_details" not in data:
-                                data["publisher_details"] = [pub_data]
-                        else:
-                                data["publisher_details"].append(pub_data)
-
+                        data.setdefault("publisher_details", []).append(
+                            pub_data)
         return __prepare_json(retcode, data=data, errors=errors_json, op=op)
 
 def _info(op, api_inst, pargs, display_license, info_local, info_remote,
@@ -2332,10 +2347,8 @@ def _info(op, api_inst, pargs, display_license, info_local, info_remote,
                                 lics = []
                                 for lic in pi.licenses:
                                         lics.append(str(lic))
-                                if "licenses" not in data:
-                                        data["licenses"] = [lics]
-                                else:
-                                        data["licenses"].append(lics)
+                                data.setdefault("licenses", []).append(
+                                    [pi.pkg_stem, lics])
                         continue
 
                 if quiet:
@@ -2438,10 +2451,11 @@ def _info(op, api_inst, pargs, display_license, info_local, info_remote,
                     "info.source-url": _("Source URL")
                 }
 
-                for item in sorted(pi.attrs, key=addl_attr_list.get):
-                        if item in addl_attr_list:
-                                __append_attr_lists(addl_attr_list[item],
-                                    pi.get_attr_values(item))
+
+                for key in addl_attr_list:
+                        if key in pi.attrs:
+                                __append_attr_lists(addl_attr_list[key],
+                                    pi.get_attr_values(key))
 
                 if "package_attrs" not in data:
                         data["package_attrs"] = [attr_list]
@@ -2487,7 +2501,7 @@ examining the catalogs:\n""")
                         _error_json(err_txt, errors_json=errors_json,
                             errorType="info_no_licenses")
 
-        return __prepare_json(err, errors=errors_json, data=data, op=op)
+        return __prepare_json(err, errors=errors_json, data=data)
 
 def __refresh(api_inst, pubs, full_refresh=False):
         """Private helper method for refreshing publisher data."""
@@ -2793,22 +2807,23 @@ def __pkg(subcommand, pargs_json, opts_json, pkg_image=None,
         try:
                 if pargs_json == None:
                         pargs = []
+                # Pargs_json is already a list, use it.
+                elif isinstance(pargs_json, list):
+                        pargs = pargs_json
                 else:
                         pargs = json.loads(pargs_json)
                 if not isinstance(pargs, list):
-                        if not isinstance(pargs, basestring):
+                        if not isinstance(pargs, six.string_types):
                                 err = {"reason": "{0} is invalid.".format(
                                     arg_name)}
                                 errors_json.append(err)
                                 return None, __prepare_json(EXIT_OOPS,
                                     errors=errors_json)
-                        if isinstance(pargs, unicode):
-                                pargs = pargs.encode("utf-8")
+                        misc.force_str(pargs)
                         pargs = [pargs]
                 else:
                         for idx in range(len(pargs)):
-                                if isinstance(pargs[idx], unicode):
-                                        pargs[idx] = pargs[idx].encode("utf-8")
+                                misc.force_str(pargs[idx])
         except Exception as e:
                 err = {"reason": "{0} is invalid.".format(
                     arg_name)}
@@ -2818,8 +2833,11 @@ def __pkg(subcommand, pargs_json, opts_json, pkg_image=None,
         try:
                 if opts_json == None:
                         opts = {}
+                # If opts_json is already a dict, use it.
+                elif isinstance(opts_json, dict):
+                        opts = opts_json
                 else:
-                        opts = json.loads(opts_json, object_hook=_byteify)
+                        opts = json.loads(opts_json, object_hook=_strify)
                 if not isinstance(opts, dict):
                         err = {"reason": "opts_json is invalid."}
                         errors_json.append(err)
@@ -2938,7 +2956,6 @@ def __pkg(subcommand, pargs_json, opts_json, pkg_image=None,
                     options=cli_opts, msg=e.msg)
                 err = {"reason": str(new_e)}
                 return api_inst, __prepare_json(EXIT_BADOPT, errors=err)
-
         return api_inst, func(op=subcommand, api_inst=api_inst,
             pargs=pargs, **opts)
 
@@ -3107,6 +3124,9 @@ def __handle_errors_json(func, non_wrap_print=True, subcommand=None,
         except api_errors.InvalidConfigFile as __e:
                 _error_json(str(__e), errors_json=errors_json)
                 ret_json = __prepare_json(EXIT_OOPS, errors=errors_json)
+        except (api_errors.PkgUnicodeDecodeError, UnicodeEncodeError) as __e:
+                _error_json(str(__e), errors_json=errors_json)
+                ret_json = __prepare_json(EXIT_OOPS, errors=errors_json)
         except:
                 if _api_inst:
                         _api_inst.abort(result=RESULT_FAILED_UNKNOWN)
@@ -3154,7 +3174,6 @@ def _pkg_invoke(subcommand=None, pargs_json=None, opts_json=None, pkg_image=None
             opts_json=opts_json, pkg_image=pkg_image,
             prog_delay=prog_delay, prog_tracker=prog_tracker,
             opts_mapping=opts_mapping, api_inst=api_inst, reset_api=reset_api)
-
         if return_api:
                 return _api_inst, ret_json
         else:
@@ -3265,3 +3284,6 @@ cmds = {
 
 # Addendum table for option extensions.
 cmd_opts = {}
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

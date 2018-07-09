@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -366,3 +366,6 @@ class FileManager(object):
                                         unrecognized.append(fp)
                 if unrecognized:
                         raise UnrecognizedFilePaths(unrecognized)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

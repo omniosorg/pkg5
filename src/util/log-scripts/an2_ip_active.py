@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -24,8 +24,9 @@
 # Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
+from __future__ import division
 from __future__ import print_function
-import cPickle as pickle
+import six.moves.cPickle as pickle
 import datetime
 import time
 
@@ -65,9 +66,9 @@ Period: {0} - {1} ({2:d} days)<br />
 """.format(start_day, end_day, days)
 
         ndays = days
-        sz = (chart_hz / ndays)
+        sz = (chart_hz // ndays)
 
-        url = "cht=lc&chs={0:d}x{1:d}&chg={2:d},{3:d}&chds={4:d},{5:d}&chxt=y,x&chxl=0:|0|{6:d}|1:|{7}|{8}&chd=t:{9}".format(ndays * sz, chart_vt, 7 * sz, 250 * (chart_vt / chart_max), chart_min, chart_max, chart_max, start_day, end_day, chart_data)
+        url = "cht=lc&chs={0:d}x{1:d}&chg={2:d},{3:d}&chds={4:d},{5:d}&chxt=y,x&chxl=0:|0|{6:d}|1:|{7}|{8}&chd=t:{9}".format(ndays * sz, chart_vt, 7 * sz, 250 * (chart_vt // chart_max), chart_min, chart_max, chart_max, start_day, end_day, chart_data)
 
         fname = retrieve_chart("http://chart.apis.google.com/chart?{0}".format(url),
             "{0}-date".format(title))
@@ -83,7 +84,7 @@ Period: {0} - {1} ({2:d} days)<br />
 merge_entries_by_date = {}
 
 for fn in sys.argv[1:]:
-        f = file(fn, "rb")
+        f = open(fn, "rb")
         ebd = pickle.load(f)
         f.close()
 
@@ -147,3 +148,6 @@ report_section_begin("Active IP addresses")
 print("<h3>Distinct IP addresses, by date</h3>")
 report_by_date(data, "distinct-cat-1d")
 report_section_end()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

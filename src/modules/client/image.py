@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
 # Copyright 2017 OmniOS Community Edition (OmniOSce) Association.
 #
 
@@ -36,17 +36,16 @@ import os
 import platform
 import shutil
 import simplejson as json
+import six
 import stat
 import sys
 import tempfile
 import time
-import urllib
 
 from contextlib import contextmanager
-from pkg.client import global_settings
-logger = global_settings.logger
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
+from six.moves.urllib.parse import quote, unquote
 
 import pkg.actions
 import pkg.catalog
@@ -76,6 +75,9 @@ import pkg.portable                     as portable
 import pkg.server.catalog
 import pkg.smf                          as smf
 import pkg.version
+
+from pkg.client import global_settings
+logger = global_settings.logger
 
 from pkg.client.debugvalues import DebugValues
 from pkg.client.imagetypes import IMG_USER, IMG_ENTIRE
@@ -676,13 +678,29 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                                         setattr(u, prop, os.path.join(ssl_dir,
                                            os.path.basename(pval)))
 
+        def update_last_modified(self):
+                """Update $imgdir/modified timestamp for image; should be
+                called after any image modification has completed.  This
+                provides a public interface for programs that want to monitor
+                the image for modifications via event ports, etc."""
+
+                # This is usually /var/pkg/modified.
+                fname = os.path.join(self.imgdir, "modified")
+                try:
+                        with os.fdopen(
+                            os.open(fname, os.O_CREAT|os.O_NOFOLLOW,
+                                misc.PKG_FILE_MODE)) as f:
+                                os.utime(fname, None)
+                except EnvironmentError as e:
+                        raise apx._convert_error(e)
+
         def save_config(self):
                 # First, create the image directories if they haven't been, so
                 # the configuration file can be written.
                 self.mkdirs()
-
                 self.__store_publisher_ssl()
                 self.cfg.write()
+                self.update_last_modified()
                 self.__load_publisher_ssl()
 
                 # Remove the old the pkg.sysrepo(1M) cache, if present.
@@ -1052,8 +1070,10 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                         if os.path.exists(orig_root):
                                 # Ensure all output is discarded; it really
                                 # doesn't matter if this succeeds.
-                                subprocess.Popen("rm -rf {0}".format(orig_root),
-                                    shell=True, stdout=nullf, stderr=nullf)
+                                cmdargs = ["/usr/bin/rm", "-rf", orig_root]
+                                subprocess.Popen(cmdargs, stdout=nullf,
+                                    stderr=nullf)
+                        nullf.close()
                         return False
 
                 if not progtrack:
@@ -1100,7 +1120,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                         """Find the pkg's installed file named by filepath.
                         Return the publisher that installed this package."""
 
-                        f = file(filepath)
+                        f = open(filepath)
                         try:
                                 flines = f.readlines()
                                 version, pub = flines
@@ -1143,7 +1163,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                         installed[f.pkg_name] = f
 
                 for pl in os.listdir(installed_state_dir):
-                        fmristr = "{0}".format(urllib.unquote(pl))
+                        fmristr = "{0}".format(unquote(pl))
                         f = pkg.fmri.PkgFmri(fmristr)
                         add_installed_entry(f)
 
@@ -1405,7 +1425,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                                 # format stores licenses.
                                 dest = os.path.join(tmp_root, "license",
                                     pfmri.get_dir_path(stemonly=True),
-                                    urllib.quote(entry, ""))
+                                    quote(entry, ""))
                                 misc.makedirs(os.path.dirname(dest))
                                 try:
                                         os.link(src, dest)
@@ -1610,7 +1630,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                 if not os.path.isfile(f):
                         return []
 
-                return [ addslash(l.strip()) for l in file(f) ] + [p]
+                return [ addslash(l.strip()) for l in open(f) ] + [p]
 
         def get_cachedirs(self):
                 """Returns a list of tuples of the form (dir, readonly, pub,
@@ -1882,7 +1902,12 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                         elif origin and pub.repository and \
                             pub.repository.has_origin(origin):
                                 return pub
-                raise apx.UnknownPublisher(max(prefix, alias, origin))
+
+                if prefix is None and alias is None and origin is None:
+                        raise apx.UnknownPublisher(None)
+
+                raise apx.UnknownPublisher(max(i for i in
+                    [prefix, alias, origin] if i is not None))
 
         def pub_search_before(self, being_moved, staying_put):
                 """Moves publisher "being_moved" to before "staying_put"
@@ -2070,7 +2095,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
         def properties(self):
                 if not self.cfg:
                         raise apx.ImageCfgEmptyError(self.root)
-                return self.cfg.get_index()["property"].keys()
+                return list(self.cfg.get_index()["property"].keys())
 
         def add_publisher(self, pub, refresh_allowed=True, progtrack=None,
             approved_cas=EmptyI, revoked_cas=EmptyI, search_after=None,
@@ -2164,7 +2189,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                 for ca in approved_cas:
                         try:
                                 ca = os.path.abspath(ca)
-                                fh = open(ca, "rb")
+                                fh = open(ca, "r")
                                 s = fh.read()
                                 fh.close()
                         except EnvironmentError as e:
@@ -2593,7 +2618,8 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                         # intersection of installed and alternate minus
                         # the already configured.
                         newpubs = (instpubs & altpubs) - cfgpubs
-                        for pfx in newpubs:
+                        # Sort the set to get a deterministic output.
+                        for pfx in sorted(newpubs):
                                 npub = publisher.Publisher(pfx,
                                     repository=publisher.Repository())
                                 self.__add_publisher(npub,
@@ -2914,8 +2940,8 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                 # create the flag file and return 0
                 file_mode = misc.PKG_FILE_MODE
                 try:
-                        open(pathname, "w")
-                        os.chmod(pathname, file_mode)
+                        with open(pathname, "w"):
+                                os.chmod(pathname, file_mode)
                 except EnvironmentError as e:
                         if e.errno == errno.EACCES:
                                 raise apx.PermissionsException(e.filename)
@@ -3081,7 +3107,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
 
                                 # copy() is too slow here and catalog entries
                                 # are shallow so this should be sufficient.
-                                entry = dict(sentry.iteritems())
+                                entry = dict(six.iteritems(sentry))
                                 if not base:
                                         # Nothing else to do except add the
                                         # entry for non-base catalog parts.
@@ -3245,6 +3271,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                 # Ensure in-memory catalogs get reloaded.
                 self.__init_catalogs()
 
+                self.update_last_modified()
                 progtrack.cache_catalogs_done()
                 self.history.log_operation_end()
 
@@ -3564,9 +3591,9 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                         of, op = self.temporary_file(close=False)
                         bf, bp = self.temporary_file(close=False)
 
-                        sf = os.fdopen(sf, "wb")
-                        of = os.fdopen(of, "wb")
-                        bf = os.fdopen(bf, "wb")
+                        sf = os.fdopen(sf, "w")
+                        of = os.fdopen(of, "w")
+                        bf = os.fdopen(bf, "w")
 
                         # We need to make sure the files are coordinated.
                         timestamp = int(time.time())
@@ -3670,7 +3697,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                                         os.unlink(conflicting_keys_path)
                                 except:
                                         pass
-                                raise exc_info[0], exc_info[1], exc_info[2]
+                                six.reraise(exc_info[0], exc_info[1], exc_info[2])
 
                 progtrack.job_add_progress(progtrack.JOB_FAST_LOOKUP)
                 progtrack.job_done(progtrack.JOB_FAST_LOOKUP)
@@ -3699,7 +3726,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
 
                 try:
                         of = open(os.path.join(self.__action_cache_dir,
-                            "actions.offsets"), "rb")
+                            "actions.offsets"), "r")
                 except IOError as e:
                         if e.errno != errno.ENOENT:
                                 raise
@@ -3763,8 +3790,8 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                 """Open the actions file described in _create_fast_lookups() and
                 return the corresponding file object."""
 
-                sf = file(os.path.join(self.__action_cache_dir,
-                    "actions.stripped"), "rb")
+                sf = open(os.path.join(self.__action_cache_dir,
+                    "actions.stripped"), "r")
                 sversion = sf.readline().rstrip()
                 stimestamp = sf.readline().rstrip()
                 if internal:
@@ -3779,7 +3806,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
 
                 pth = os.path.join(self.__action_cache_dir, "keys.conflicting")
                 try:
-                        with open(pth, "rb") as fh:
+                        with open(pth, "r") as fh:
                                 version = fh.readline().rstrip()
                                 if version != "VERSION 1":
                                         return None
@@ -3861,6 +3888,9 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                                 return gid
                         else:
                                 raise
+
+        def get_usernames_by_gid(self, gid):
+                return portable.get_usernames_by_gid(gid, self.root)
 
         def update_index_dir(self, postfix="index"):
                 """Since the index directory will not reliably be updated when
@@ -4163,9 +4193,9 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                         stems_and_pats = imageplan.ImagePlan.freeze_pkgs_match(
                             self, pat_list)
                         return dict([(s, __make_publisherless_fmri(p))
-                            for s, p in stems_and_pats.iteritems()])
+                            for s, p in six.iteritems(stems_and_pats)])
                 if dry_run:
-                        return __calc_frozen().values()
+                        return list(__calc_frozen().values())
                 with self.locked_op("freeze"):
                         stems_and_pats = __calc_frozen()
                         # Get existing dictionary of frozen packages.
@@ -4174,9 +4204,9 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                         # comment.
                         timestamp = calendar.timegm(time.gmtime())
                         d.update([(s, (str(p), comment, timestamp))
-                            for s, p in stems_and_pats.iteritems()])
+                            for s, p in six.iteritems(stems_and_pats)])
                         self._freeze_dict_save(d)
-                        return stems_and_pats.values()
+                        return list(stems_and_pats.values())
 
         def unfreeze_pkgs(self, pat_list, progtrack, check_cancel, dry_run):
                 """Unfreeze the specified packages... use pattern matching on
@@ -4342,8 +4372,8 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                 progtrack.plan_all_start()
                 # compute dict of changing variants
                 if variants:
-                        new = set(variants.iteritems())
-                        cur = set(self.cfg.variants.iteritems())
+                        new = set(six.iteritems(variants))
+                        cur = set(six.iteritems(self.cfg.variants))
                         variants = dict(new - cur)
                 elif facets:
                         new_facets = self.get_facets()
@@ -4645,13 +4675,14 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                 self.__group_obsolete = set()
                 if os.path.isfile(state_file):
                         try:
-                                 version, d = json.load(open(state_file))
+                                 with open(state_file) as f:
+                                        version, d = json.load(f)
                         except EnvironmentError as e:
                                  raise apx._convert_error(e)
                         except ValueError as e:
                                  salvaged_path = self.salvage(state_file, 
                                      full_path=True)
-                                 logger.warn("Corrupted avoid list - salvaging"
+                                 logger.warning("Corrupted avoid list - salvaging"
                                      " file {state_file} in {salvaged_path}"
                                      .format(state_file=state_file,
                                      salvaged_path=salvaged_path))
@@ -4663,7 +4694,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                                 elif d[stem] == "obsolete":
                                         self.__group_obsolete.add(stem)
                                 else:
-                                        logger.warn("Corrupted avoid list - ignoring")
+                                        logger.warning("Corrupted avoid list - ignoring")
                                         self.__avoid_set = set()
                                         self.__group_obsolete = set()
                                         self.__avoid_set_altered = True
@@ -4686,7 +4717,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
 
                 state_file = os.path.join(self._statedir, "avoid_set")
                 tmp_file   = os.path.join(self._statedir, "avoid_set.new")
-                tf = file(tmp_file, "w")
+                tf = open(tmp_file, "w")
 
                 d = dict((a, "avoid") for a in self.__avoid_set)
                 d.update((a, "obsolete") for a in self.__group_obsolete)
@@ -4695,11 +4726,12 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                         json.dump((self.__AVOID_SET_VERSION, d), tf)
                         tf.close()
                         portable.rename(tmp_file, state_file)
-
                 except Exception as e:
-                        logger.warn("Cannot save avoid list: {0}".format(
+                        logger.warning("Cannot save avoid list: {0}".format(
                             str(e)))
                         return
+
+                self.update_last_modified()
 
                 self.__avoid_set_altered = False
 
@@ -4727,7 +4759,8 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                 state_file = os.path.join(self._statedir, "frozen_dict")
                 if os.path.isfile(state_file):
                         try:
-                                version, d = json.load(file(state_file))
+                                with open(state_file) as f:
+                                        version, d = json.load(f)
                         except EnvironmentError as e:
                                 raise apx._convert_error(e)
                         except ValueError as e:
@@ -4751,6 +4784,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                                 json.dump(
                                     (self.__FROZEN_DICT_VERSION, new_dict), tf)
                         portable.rename(tmp_file, state_file)
+                        self.update_last_modified()
                 except EnvironmentError as e:
                         raise apx._convert_error(e)
                 self.__rebuild_image_catalogs()
@@ -4784,3 +4818,6 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                         return True
 
                 return __allow_action_dehydrate
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

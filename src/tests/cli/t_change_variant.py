@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -20,9 +20,9 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2016, Oracle and/or its affiliates. All rights reserved.
 
-import testutils
+from . import testutils
 if __name__ == "__main__":
         testutils.setup_environment("../../../proto")
 import pkg5unittest
@@ -147,7 +147,7 @@ class TestPkgChangeVariant(pkg5unittest.SingleDepotTestCase):
                     " ".join(names)), exit=exit, su_wrap=su_wrap)
                 self.assertEqualDiff(expected, self.output)
                 if errout:
-                        self.assert_(self.errout != "")
+                        self.assertTrue(self.errout != "")
                 else:
                         self.assertEqualDiff("", self.errout)
 
@@ -160,14 +160,14 @@ class TestPkgChangeVariant(pkg5unittest.SingleDepotTestCase):
                 file_path = os.path.join(self.get_img_path(), path)
 
                 try:
-                        f = file(file_path)
+                        f = open(file_path)
                 except IOError as e:
                         if e.errno == errno.ENOENT and negate:
                                 return
                         raise
 
                 if negate and not token:
-                        self.assert_(False,
+                        self.assertTrue(False,
                             "File exists when it shouldn't: {0}".format(path))
 
                 token_re = re.compile(
@@ -184,10 +184,10 @@ class TestPkgChangeVariant(pkg5unittest.SingleDepotTestCase):
                 f.close()
 
                 if not negate and not found:
-                        self.assert_(False, "File {0} ({1}) does not contain {2}".format(
+                        self.assertTrue(False, "File {0} ({1}) does not contain {2}".format(
                             path, file_path, token))
                 if negate and found:
-                        self.assert_(False, "File {0} ({1}) contains {2}".format(
+                        self.assertTrue(False, "File {0} ({1}) contains {2}".format(
                             path, file_path, token))
 
         def p_verify(self, p=None, v_arch=None, v_imagetype=None, v_zone=None, negate=False):
@@ -271,24 +271,24 @@ class TestPkgChangeVariant(pkg5unittest.SingleDepotTestCase):
                 # verify the variant settings
                 ic = self.get_img_api_obj().img.cfg
                 if "variant.arch" not in ic.variants:
-                        self.assert_(False,
+                        self.assertTrue(False,
                             "unable to determine image arch variant")
                 if ic.variants["variant.arch"] != v_arch:
-                        self.assert_(False,
+                        self.assertTrue(False,
                             "unexpected arch variant: {0} != {1}".format(
                             ic.variants["variant.arch"], v_arch))
 
                 if "variant.opensolaris.imagetype" not in ic.variants:
-                        self.assert_(False,
+                        self.assertTrue(False,
                             "unable to determine imagetype variant")
                 if ic.variants["variant.opensolaris.imagetype"] != v_imagetype:
-                        self.assert_(False, "unexpected imagetype variant")
+                        self.assertTrue(False, "unexpected imagetype variant")
 
                 if "variant.opensolaris.zone" not in ic.variants:
-                        self.assert_(False,
+                        self.assertTrue(False,
                             "unable to determine image zone variant")
                 if ic.variants["variant.opensolaris.zone"] != v_zone:
-                        self.assert_(False, "unexpected zone variant")
+                        self.assertTrue(False, "unexpected zone variant")
 
 
                 # adjust the package list based on known dependancies.
@@ -537,6 +537,16 @@ variant.opensolaris.zone\t{2}
                 self.assertEqualParsable(self.output, change_variants=[
                     ["variant.arch", "i386"]])
 
+        def test_invalid_variant(self):
+                """Test that invalid input is handled appropriately"""
+
+                self.image_create(self.rurl, variants={
+                    "variant.arch": "i386",
+                    "variant.opensolaris.zone": "nonglobal"
+                })
+                self.pkg("install pkg_shared")
+                self.pkg("change-variant variant.opensolaris.zone=bogus")
+
 
 class TestPkgChangeVariantPerTestRepo(pkg5unittest.SingleDepotTestCase):
         """A separate test class is needed because these tests modify packages
@@ -602,3 +612,6 @@ class TestPkgChangeVariantPerTestRepo(pkg5unittest.SingleDepotTestCase):
 
 if __name__ == "__main__":
         unittest.main()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

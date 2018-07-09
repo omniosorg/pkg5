@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -781,3 +781,6 @@ class BootEnvNull(object):
 
 if "be" not in locals():
         BootEnv = BootEnvNull
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

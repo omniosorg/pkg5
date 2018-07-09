@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,10 +21,10 @@
 #
 
 #
-# Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
-import testutils
+from . import testutils
 if __name__ == "__main__":
         testutils.setup_environment("../../../proto")
 import pkg5unittest
@@ -42,23 +42,19 @@ import pkg.server.repository as sr
 import pkg.client.api_errors as apx
 import pkg.p5p
 import shutil
+import simplejson as json
+import six
+import subprocess
 import tempfile
 import time
-import urllib
-import urlparse
 import unittest
-
-try:
-        import pkg.sha512_t
-        sha512_supported = True
-except ImportError:
-        sha512_supported = False
 
 class TestPkgRepo(pkg5unittest.SingleDepotTestCase):
         # Cleanup after every test.
         persistent_setup = False
         # Tests in this suite use the read only data directory.
         need_ro_data = True
+        maxDiff = None
 
         tree10 = """
             open tree@1.0,5.11-0:20110804T203458Z
@@ -299,7 +295,7 @@ class TestPkgRepo(pkg5unittest.SingleDepotTestCase):
                 repo_uri = self.dc.get_repo_url()
                 depot_uri = self.dc.get_depot_url()
                 shutil.rmtree(repo_path)
-                self.assert_(not os.path.exists(repo_path))
+                self.assertTrue(not os.path.exists(repo_path))
                 self.pkgrepo("create -s {0} --version=3".format(repo_path))
 
                 # Verify get handles unknown properties gracefully.
@@ -371,7 +367,7 @@ repository\tversion\t3
 
                 # Verify that -H omits headers for full output.
                 self.pkgrepo("get -s {0} -H".format(repo_uri))
-                self.assert_(self.output.find("SECTION") == -1)
+                self.assertTrue(self.output.find("SECTION") == -1)
 
                 # Verify specific get default output and that
                 # -H omits headers for specific get output.
@@ -448,7 +444,7 @@ foo\tbar\tvalue
                 repo_uri = self.dc.get_repo_url()
                 depot_uri = self.dc.get_depot_url()
                 shutil.rmtree(repo_path)
-                self.assert_(not os.path.exists(repo_path))
+                self.assertTrue(not os.path.exists(repo_path))
                 self.pkgrepo("create -s {0} --version=3".format(repo_path))
                 self.pkgrepo("set -s {0} publisher/prefix=test".format(repo_path))
 
@@ -459,7 +455,7 @@ foo\tbar\tvalue
 
                 # Create version 4 repository.
                 shutil.rmtree(repo_path)
-                self.assert_(not os.path.exists(repo_path))
+                self.assertTrue(not os.path.exists(repo_path))
                 self.create_repo(repo_path)
 
                 # Verify get handles unknown publishers gracefully.
@@ -523,7 +519,7 @@ test\trepository\trelated-uris\t()
 
                 # Verify that -H omits headers for full output.
                 self.pkgrepo("get -s {0} -p all -H".format(repo_uri))
-                self.assert_(self.output.find("SECTION") == -1)
+                self.assertTrue(self.output.find("SECTION") == -1)
 
                 # Verify specific get default output and that
                 # -H omits headers for specific get output.
@@ -825,7 +821,7 @@ test1\t1\tonline\t2011-08-04T20:34:58Z
                 shutil.rmtree(repo_path)
 
                 # Create a repository and verify http-based repository access.
-                self.assert_(not os.path.exists(repo_path))
+                self.assertTrue(not os.path.exists(repo_path))
                 self.create_repo(repo_path)
                 self.dc.clear_property("publisher", "prefix")
                 self.dc.start()
@@ -979,7 +975,7 @@ test1\t1\tonline\t2011-08-04T20:34:58Z
                         )
                 except Exception as e:
                         self.debug("query exception: {0}".format(e))
-                        self.assert_(isinstance(e,
+                        self.assertTrue(isinstance(e,
                             sr.RepositorySearchUnavailableError))
                 else:
                         raise RuntimeError("Expected "
@@ -1010,7 +1006,7 @@ test1\t1\tonline\t2011-08-04T20:34:58Z
 
                 # Create a repository and verify network-based repository
                 # access.
-                self.assert_(not os.path.exists(repo_path))
+                self.assertTrue(not os.path.exists(repo_path))
                 self.create_repo(repo_path, properties={ "publisher": {
                     "prefix": "test" } })
                 self.dc.clear_property("publisher", "prefix")
@@ -1062,7 +1058,7 @@ test1\t1\tonline\t2011-08-04T20:34:58Z
 
                 # Now create a repository, publish a package, and deposit a
                 # junk file in the manifest directory.
-                self.assert_(not os.path.exists(repo_path))
+                self.assertTrue(not os.path.exists(repo_path))
                 self.create_repo(repo_path)
                 pfmri = self.pkgsend_bulk(repo_path, """
                     open pkg://test/foo@1.0
@@ -1071,7 +1067,7 @@ test1\t1\tonline\t2011-08-04T20:34:58Z
                 repo = self.get_repo(repo_path, read_only=True)
                 mdir = os.path.dirname(repo.manifest(pfmri))
                 jpath = os.path.join(mdir, "junk")
-                with open(jpath, "wb") as f:
+                with open(jpath, "w") as f:
                         f.write("random junk")
                 self.assertTrue(os.path.exists(jpath))
 
@@ -1262,7 +1258,7 @@ test1\t1\tonline\t2011-08-04T20:34:58Z
 
                 # Create a repository and verify network-based repository
                 # access.
-                self.assert_(not os.path.exists(repo_path))
+                self.assertTrue(not os.path.exists(repo_path))
                 self.create_repo(repo_path, properties={ "publisher": {
                     "prefix": "test" } })
                 self.dc.clear_property("publisher", "prefix")
@@ -1333,7 +1329,7 @@ test1\t1\tonline\t2011-08-04T20:34:58Z
 
                 # Verify version output is sane.
                 self.pkgrepo("version")
-                self.assert_(self.output.find(pkg.VERSION) != -1)
+                self.assertTrue(self.output.find(pkg.VERSION) != -1)
 
         def test_07_add_publisher(self):
                 """Verify that add-publisher subcommand works as expected."""
@@ -1451,7 +1447,7 @@ publisher\tprefix\texample.net
                 self.pkgrepo("remove -s {0} truck@2.0".format(dest_repo))
 
                 # The manifest should no longer exist.
-                self.assert_(not os.path.exists(mpath))
+                self.assertTrue(not os.path.exists(mpath))
 
                 # These two files are in use by other packages so should still
                 # exist.
@@ -1507,7 +1503,7 @@ publisher\tprefix\texample.net
                 # all versions were removed.
                 for mpath in mpaths:
                         pdir = os.path.dirname(mpath)
-                        self.assert_(not os.path.exists(pdir))
+                        self.assertTrue(not os.path.exists(pdir))
 
                 # Verify that entries for each package that was removed no
                 # longer exist in the catalog, but do exist in the catalog's
@@ -1516,7 +1512,7 @@ publisher\tprefix\texample.net
                 for pfx in ("test", "test2"):
                         c = repo.get_catalog(pub=pfx)
                         for f in c.fmris():
-                                self.assert_(f.pkg_name not in ("tree",
+                                self.assertTrue(f.pkg_name not in ("tree",
                                     "truck"))
 
                         removed = set()
@@ -1540,11 +1536,9 @@ publisher\tprefix\texample.net
                 for rstore in repo.rstores:
                         if not rstore.publisher:
                                 continue
-                        self.assert_(not os.listdir(rstore.file_root))
+                        self.assertTrue(not os.listdir(rstore.file_root))
 
                 hash_alg_list = ["sha256"]
-                if sha512_supported:
-                        hash_alg_list.append("sha512_256")
                 for hash_alg in hash_alg_list:
                         # Reset the src_repo for the rest of the test.
                         shutil.rmtree(src_repo)
@@ -1564,7 +1558,7 @@ publisher\tprefix\texample.net
                                     os.walk(rstore.file_root):
                                         for f in fnames:
                                                 if f not in known_hashes:
-                                                        self.assert_(False,
+                                                        self.assertTrue(False,
                                                             "Unexpected content "
                                                             "in repodir: {0}".format(f))
 
@@ -1577,7 +1571,7 @@ publisher\tprefix\texample.net
                         for rstore in repo.rstores:
                                 if not rstore.publisher:
                                         continue
-                                self.assert_(not os.listdir(rstore.file_root))
+                                self.assertTrue(not os.listdir(rstore.file_root))
 
                 # Cleanup.
                 shutil.rmtree(src_repo)
@@ -1638,8 +1632,8 @@ publisher\tprefix\texample.net
 {"branch": "0", "build-release": "5.11", \
 "info.classification": [{"value": ["org.opensolaris.category.2008:System/Core"]}], \
 "name": "tree", "pkg.fmri": "pkg://test/tree@1.0,5.11-0:20110804T203458Z", \
-"pkg.summary": [{"value": ["Leafy i386 package"], "variant.arch": ["i386"]}, \
-{"value": ["Leafy SPARC package"], "variant.arch": ["sparc"]}], \
+"pkg.summary": [{"value": ["Leafy SPARC package"], "variant.arch": ["sparc"]}, \
+{"value": ["Leafy i386 package"], "variant.arch": ["i386"]}], \
 "publisher": "test", "release": "1.0", "timestamp": "20110804T203458Z", \
 "variant.arch": [{"value": ["i386", "sparc"]}], \
 "version": "1.0,5.11-0:20110804T203458Z"}]"""
@@ -1684,8 +1678,8 @@ test	tree		1.0	5.11	0	20110804T203458Z	pkg://test/tree@1.0,5.11-0:20110804T20345
                 self.assertEqualDiff(expected, self.output)
 
                 # json-formatted output.
-		# NOTE -> spaces at the end of lines, or lack thereof, are
-		# important and to which attention should be paid.
+                # NOTE -> spaces at the end of lines, or lack thereof, are
+                # important and to which attention should be paid.
                 self.pkgrepo("list -s %s -F json-formatted" % src)
                 expected = """\
 [
@@ -1922,7 +1916,7 @@ test2	zoo		1.0	5.11	0	20110804T203458Z	pkg://test2/zoo@1.0,5.11-0:20110804T20345
 
         def __inject_depend(self, fmri_str, depend_str, pub=None):
                 mpath = self.__get_mf_path(fmri_str, pub=pub)
-                with open(mpath, "ab+") as mf:
+                with open(mpath, "a+") as mf:
                         mf.write(depend_str)
                 return mpath
 
@@ -2008,7 +2002,7 @@ test2	zoo		1.0	5.11	0	20110804T203458Z	pkg://test2/zoo@1.0,5.11-0:20110804T20345
                                 os.chown(os.path.dirname(mpath), 0, 0)
                         return mpath
                 else:
-                        assert_(False, "Invalid use of __inject_perm(..)!")
+                        assertTrue(False, "Invalid use of __inject_perm(..)!")
 
         def __repair_perm(self, path, parent=False):
                 """Repair errors introduced by __inject_perm."""
@@ -2023,14 +2017,14 @@ test2	zoo		1.0	5.11	0	20110804T203458Z	pkg://test2/zoo@1.0,5.11-0:20110804T20345
 
         def __inject_badsig(self, fmri_str):
                 mpath = self.__get_mf_path(fmri_str)
-                with open(mpath, "ab+") as mf:
+                with open(mpath, "a+") as mf:
                         mf.write("set name=pkg.t_pkgrepo.bad_sig value=foo")
                 return mpath
 
         def __repair_badsig(self, path):
                 mpath_new = path + ".new"
-                with open(path, "rb") as mf:
-                        with open(mpath_new, "wb") as mf_new:
+                with open(path, "r") as mf:
+                        with open(mpath_new, "w") as mf_new:
                                 for line in mf.readlines():
                                         if not "pkg.t_pkgrepo.bad_sig" in line:
                                                 mf_new.write(line)
@@ -2059,13 +2053,14 @@ test2	zoo		1.0	5.11	0	20110804T203458Z	pkg://test2/zoo@1.0,5.11-0:20110804T20345
                                         os.unlink(cpath)
                                         removed_file = True
                                 elif not corrupted_file:
-                                        open(cpath, "w").write("noodles")
+                                        with open(cpath, "w") as f:
+                                            f.write("noodles")
                                         corrupted_file = True
                                 else:
-                                        with open(cpath, "w") as badfile:
+                                        with open(cpath, "wb") as badfile:
                                                 gz = pkg.pkggzip.PkgGzipFile(
                                                     fileobj=badfile)
-                                                gz.write("noodles")
+                                                gz.write(b"noodles")
                                                 gz.close()
                                 bad_paths.append(cpath)
                 return bad_paths
@@ -2087,29 +2082,29 @@ test2	zoo		1.0	5.11	0	20110804T203458Z	pkg://test2/zoo@1.0,5.11-0:20110804T20345
                 bad_hash_path = self.__inject_badhash("tmp/truck1")
 
                 self.pkgrepo("-s {0} verify".format(repo_path), exit=1)
-                self.assert_(
+                self.assertTrue(
                     self.output.count("ERROR: Invalid file hash") == 1)
-                self.assert_(bad_hash_path in self.output)
-                self.assert_(fmris[0] in self.output)
+                self.assertTrue(bad_hash_path in self.output)
+                self.assertTrue(fmris[0] in self.output)
 
                 # fix the file in the repository, and publish another package
                 self.__repair_badhash("tmp/truck1")
                 self.pkgsend_bulk(repo_path, (self.amber20))
                 fmris += self.pkgsend_bulk(repo_path, (self.truck10))
                 self.pkgrepo("-s {0} verify".format(repo_path), exit=0)
-                self.assert_(bad_hash_path not in self.output)
+                self.assertTrue(bad_hash_path not in self.output)
                 bad_hash_path = self.__inject_badhash("tmp/truck1")
 
                 # verify we now get two errors when verifying the repository
                 self.pkgrepo("-s {0} verify".format(repo_path), exit=1)
-                self.assert_(
+                self.assertTrue(
                     self.output.count("ERROR: Invalid file hash") == 2)
                 for fmri in fmris:
-                        self.assert_(fmri in self.output)
-                self.assert_(bad_hash_path in self.output)
+                        self.assertTrue(fmri in self.output)
+                self.assertTrue(bad_hash_path in self.output)
                 # check we also print paths which deliver that corrupted file
-                self.assert_("etc/truck1" in self.output)
-                self.assert_("etc/trailer" in self.output)
+                self.assertTrue("etc/truck1" in self.output)
+                self.assertTrue("etc/trailer" in self.output)
 
                 # Corrupt another file to see that we can also spot files that
                 # aren't gzipped.
@@ -2119,17 +2114,15 @@ test2	zoo		1.0	5.11	0	20110804T203458Z	pkg://test2/zoo@1.0,5.11-0:20110804T20345
                 self.pkgrepo("-s {0} verify".format(repo_path), exit=1)
                 # we should get 3 bad file hashes now, since we've added truck20
                 # which also references etc/truck1, which is bad.
-                self.assert_(
+                self.assertTrue(
                     self.output.count("ERROR: Invalid file hash") == 3)
-                self.assert_(
+                self.assertTrue(
                     self.output.count("ERROR: Corrupted gzip file") == 1)
-                self.assert_(bad_gzip_path in self.output)
+                self.assertTrue(bad_gzip_path in self.output)
 
                 # Check that when verifying content, we always use the most
                 # preferred hash.
                 hash_alg_list = ["sha256"]
-                if sha512_supported:
-                        hash_alg_list.append("sha512_256")
                 for hash_alg in hash_alg_list:
                         # Remove all existing packages first.
                         self.pkgrepo("-s {0} remove {1}".format(repo_path,
@@ -2143,14 +2136,14 @@ test2	zoo		1.0	5.11	0	20110804T203458Z	pkg://test2/zoo@1.0,5.11-0:20110804T20345
                         bad_basename = os.path.basename(bad_hash_path)
 
                         self.pkgrepo("-s {0} verify".format(repo_path), exit=1)
-                        self.assert_(
+                        self.assertTrue(
                             self.output.count("ERROR: Invalid file hash") == 1)
 
                         # We should be verifying using the SHA-2 hash, and so we
                         # should only see the SHA-1 value in the output once,
                         # when printing the path to the file in the repository,
                         # not when reporting the computed or expected hash.
-                        self.assert_(self.output.count(bad_basename) == 1)
+                        self.assertTrue(self.output.count(bad_basename) == 1)
 
                         # Verify that when we publish using SHA-1 only, that we
                         # get the SHA-1 value printed twice: once when printing
@@ -2162,7 +2155,7 @@ test2	zoo		1.0	5.11	0	20110804T203458Z	pkg://test2/zoo@1.0,5.11-0:20110804T20345
                         self.__inject_badhash("tmp/truck1")
 
                         self.pkgrepo("-s {0} verify".format(repo_path), exit=1)
-                        self.assert_(self.output.count(bad_basename) == 2)
+                        self.assertTrue(self.output.count(bad_basename) == 2)
 
         def test_12_verify_badmanifest(self):
                 """Test that verify finds bad manifests."""
@@ -2176,22 +2169,22 @@ test2	zoo		1.0	5.11	0	20110804T203458Z	pkg://test2/zoo@1.0,5.11-0:20110804T20345
                 self.pkglint(bad_mf, exit=1)
 
                 self.pkgrepo("-s {0} verify".format(repo_path), exit=1)
-                self.assert_(bad_mf in self.output)
-                self.assert_("Corrupt manifest." in self.output)
+                self.assertTrue(bad_mf in self.output)
+                self.assertTrue("Corrupt manifest." in self.output)
 
                 # publish more packages, and verify we still get the one error
                 fmris += self.pkgsend_bulk(repo_path, (self.truck10,
                     self.amber10))
                 self.pkgrepo("-s {0} verify".format(repo_path), exit=1)
-                self.assert_(
+                self.assertTrue(
                     self.output.count("ERROR: Corrupt manifest.") == 1)
 
                 # break another manifest, and check we get two errors
                 another_bad_mf = self.__inject_badmanifest(fmris[-1])
                 self.pkgrepo("-s {0} verify".format(repo_path), exit=1)
-                self.assert_(another_bad_mf in self.output)
-                self.assert_(bad_mf in self.output)
-                self.assert_(
+                self.assertTrue(another_bad_mf in self.output)
+                self.assertTrue(bad_mf in self.output)
+                self.assertTrue(
                     self.output.count("Corrupt manifest.") == 2)
 
         def test_13_verify_nofile(self):
@@ -2204,10 +2197,10 @@ test2	zoo		1.0	5.11	0	20110804T203458Z	pkg://test2/zoo@1.0,5.11-0:20110804T20345
                 missing_file = self.__inject_nofile("tmp/truck1")
 
                 self.pkgrepo("-s {0} verify".format(repo_path), exit=1)
-                self.assert_(missing_file in self.output)
-                self.assert_("ERROR: Missing file: {0}".format(
+                self.assertTrue(missing_file in self.output)
+                self.assertTrue("ERROR: Missing file: {0}".format(
                     self.fhashes["tmp/truck1"] in self.output))
-                self.assert_(fmris[0] in self.output)
+                self.assertTrue(fmris[0] in self.output)
 
                 # publish another package that also delivers the file
                 # and inject the error again, checking that both manifests
@@ -2216,11 +2209,11 @@ test2	zoo		1.0	5.11	0	20110804T203458Z	pkg://test2/zoo@1.0,5.11-0:20110804T20345
                 self.__inject_nofile("tmp/truck1")
 
                 self.pkgrepo("-s {0} verify".format(repo_path), exit=1)
-                self.assert_(missing_file in self.output)
-                self.assert_(self.output.count("ERROR: Missing file: {0}".format(
+                self.assertTrue(missing_file in self.output)
+                self.assertTrue(self.output.count("ERROR: Missing file: {0}".format(
                     self.fhashes["tmp/truck1"])) == 2)
                 for f in fmris:
-                        self.assert_(f in self.output)
+                        self.assertTrue(f in self.output)
 
         def test_14_verify_permissions(self):
                 """Check that we can find files and manifests in the
@@ -2239,18 +2232,18 @@ test2	zoo		1.0	5.11	0	20110804T203458Z	pkg://test2/zoo@1.0,5.11-0:20110804T20345
                     su_wrap=True)
                 bad_path = self.__inject_perm(path="tmp/truck1")
                 self.pkgrepo("-s {0} verify".format(repo_path), exit=1, su_wrap=True)
-                self.assert_(bad_path in self.output)
-                self.assert_("ERROR: Verification failure" in self.output)
-                self.assert_(fmris[0] in self.output)
+                self.assertTrue(bad_path in self.output)
+                self.assertTrue("ERROR: Verification failure" in self.output)
+                self.assertTrue(fmris[0] in self.output)
                 self.__repair_perm(bad_path)
 
                 # Just break the parent directory, we should still report the
                 # hash file as unreadable
                 bad_parent = self.__inject_perm(path="tmp/truck1", parent=True)
                 self.pkgrepo("-s {0} verify".format(repo_path), exit=1, su_wrap=True)
-                self.assert_(bad_path in self.output)
-                self.assert_("ERROR: Verification failure" in self.output)
-                self.assert_(fmris[0] in self.output)
+                self.assertTrue(bad_path in self.output)
+                self.assertTrue("ERROR: Verification failure" in self.output)
+                self.assertTrue(fmris[0] in self.output)
                 self.__repair_perm(bad_parent)
                 # break some manifests
                 fmris = self.pkgsend_bulk(repo_path, (self.truck20),
@@ -2258,14 +2251,14 @@ test2	zoo		1.0	5.11	0	20110804T203458Z	pkg://test2/zoo@1.0,5.11-0:20110804T20345
 
                 bad_mf_path = self.__inject_perm(fmri_str=fmris[0])
                 self.pkgrepo("-s {0} verify".format(repo_path), exit=1, su_wrap=True)
-                self.assert_(bad_mf_path in self.output)
-                self.assert_("ERROR: Verification failure" in self.output)
+                self.assertTrue(bad_mf_path in self.output)
+                self.assertTrue("ERROR: Verification failure" in self.output)
 
                 # this should cause both manifests to report errors
                 bad_mf_path = self.__inject_perm(fmri_str=fmris[0], parent=True)
                 self.pkgrepo("-s {0} verify".format(repo_path), exit=1, su_wrap=True)
-                self.assert_(bad_mf_path in self.output)
-                self.assert_("ERROR: Verification failure" in self.output)
+                self.assertTrue(bad_mf_path in self.output)
+                self.assertTrue("ERROR: Verification failure" in self.output)
                 self.__repair_perm(bad_mf_path)
 
         def test_15_verify_badsig(self):
@@ -2277,8 +2270,8 @@ test2	zoo		1.0	5.11	0	20110804T203458Z	pkg://test2/zoo@1.0,5.11-0:20110804T20345
                 self.pkgrepo("-s {0} verify".format(repo_path))
                 bad_path = self.__inject_badsig(fmris[0])
                 self.pkgrepo("-s {0} verify".format(repo_path), exit=1)
-                self.assert_(bad_path in self.output)
-                self.assert_("ERROR: Bad signature." in self.output)
+                self.assertTrue(bad_path in self.output)
+                self.assertTrue("ERROR: Bad signature." in self.output)
                 self.__repair_badsig(bad_path)
                 self.pkgrepo("-s {0} verify".format(repo_path), exit=0)
 
@@ -2286,7 +2279,7 @@ test2	zoo		1.0	5.11	0	20110804T203458Z	pkg://test2/zoo@1.0,5.11-0:20110804T20345
                 # to verify
                 self.pkgsign_simple(repo_path, "\*")
                 self.pkgrepo("-s {0} verify".format(repo_path), exit=1)
-                self.assert_("ERROR: Bad signature." in self.output)
+                self.assertTrue("ERROR: Bad signature." in self.output)
 
                 # now set a trust anchor directory, and expect that pkgrepo
                 # verify will now pass
@@ -2333,7 +2326,7 @@ test2	zoo		1.0	5.11	0	20110804T203458Z	pkg://test2/zoo@1.0,5.11-0:20110804T20345
                 bad_paths = self.__inject_badchain(fmris[0])
                 self.pkgrepo("-s {0} verify".format(repo_path), exit=1)
                 for bad_path in bad_paths:
-                        self.assert_(bad_path in self.output)
+                        self.assertTrue(bad_path in self.output)
 
         def test_16_verify_warn_openperms(self):
                 """Test that we emit a warning message when the repository is
@@ -2343,13 +2336,13 @@ test2	zoo		1.0	5.11	0	20110804T203458Z	pkg://test2/zoo@1.0,5.11-0:20110804T20345
                 fmris = self.pkgsend_bulk(repo_path, (self.tree10))
                 os.chmod(self.test_root, 0o700)
                 self.pkgrepo("-s {0} verify".format(repo_path), exit=0)
-                self.assert_("WARNING: " in self.output)
-                self.assert_("svc:/application/pkg/system-repository" \
+                self.assertTrue("WARNING: " in self.output)
+                self.assertTrue("svc:/application/pkg/system-repository" \
                     in self.output)
-                self.assert_("ERROR: " not in self.output)
+                self.assertTrue("ERROR: " not in self.output)
                 os.chmod(self.test_root, 0o755)
                 self.pkgrepo("-s {0} verify".format(repo_path), exit=0)
-                self.assert_("WARNING: " not in self.output)
+                self.assertTrue("WARNING: " not in self.output)
 
         def test_17_verify_empty_pub(self):
                 """Test that we can verify a repository that contains a
@@ -2762,7 +2755,7 @@ test2	zoo		1.0	5.11	0	20110804T203458Z	pkg://test2/zoo@1.0,5.11-0:20110804T20345
             exit1=0, exit2=0):
                 """Run pkgrepo verify with ignored dep files."""
 
-                with open(ifpath, "wb") as iff:
+                with open(ifpath, "w") as iff:
                         iff.write(ientry)
                 self.pkgrepo("-s {0} verify -i {1}".format(repo_path, ifpath),
                     exit=exit1)
@@ -2832,7 +2825,7 @@ test2	zoo		1.0	5.11	0	20110804T203458Z	pkg://test2/zoo@1.0,5.11-0:20110804T20345
 
                 # Test duplicate entries will not cause problem.
                 ientry = "pkg=amber   depend=tree\npkg=amber   depend=tree"
-                with open(ifpath, "wb") as iff:
+                with open(ifpath, "w") as iff:
                         iff.write(ientry)
                 self.pkgrepo("-s {0} verify -i {1}".format(repo_path, ifpath))
                 # Test in -d mode, ignored_dep_file will not be used.
@@ -2955,7 +2948,7 @@ test2	zoo		1.0	5.11	0	20110804T203458Z	pkg://test2/zoo@1.0,5.11-0:20110804T20345
                 dep_inj = "depend fmri=tree type=require"
                 self.__make_repo_ignore_dep(repo_path, dep_inj)
                 ientry = "pkg=incorp@1.0 depend=tree"
-                with open(ifpath, "wb") as iff:
+                with open(ifpath, "w") as iff:
                         iff.write(ientry)
                 self.pkgrepo("-s {0} verify -i {1}".format(repo_path, ifpath))
                 self.pkgrepo("-s {0} verify -i {1} -d".format(repo_path, ifpath),
@@ -3028,12 +3021,12 @@ test2	zoo		1.0	5.11	0	20110804T203458Z	pkg://test2/zoo@1.0,5.11-0:20110804T20345
                     "depend fmri=forest@1.0 type=require\n"
                 self.__make_repo_ignore_dep(repo_path, dep_inj)
                 i1entry = "depend=tree@1.0 pkg=incorp\n"
-                with open(ifpath, "wb") as iff:
+                with open(ifpath, "w") as iff:
                         iff.write(i1entry)
                 i2entry = "depend=forest@1.0 pkg=incorp\n"
                 if2path = os.path.join(self.test_root, "tmp",
                     "ignored_dep_file2")
-                with open(if2path, "wb") as iff:
+                with open(if2path, "w") as iff:
                         iff.write(i2entry)
                 self.pkgrepo("-s {0} verify -i {1} -i {2}".format(repo_path, ifpath,
                     if2path))
@@ -3096,6 +3089,36 @@ test2	zoo		1.0	5.11	0	20110804T203458Z	pkg://test2/zoo@1.0,5.11-0:20110804T20345
                 self.__run_verify_with_ignore_file(repo_path, ientry, ifpath,
                     exit1=1, exit2=1)
 
+        def test_verify_ignore_non_certificate_file_or_directory(self):
+                """Ensure that invalid certificate files and directories
+                are ignored."""
+                repo_path = self.dc.get_repodir()
+                repo = self.dc.get_repo()
+                trust_anchor_dir = repo.cfg.get_property("repository",
+                    "trust-anchor-directory")
+                cert_path = os.path.join(trust_anchor_dir, "foo.pem")
+                cert_dir = os.path.join(trust_anchor_dir, "foo")
+                file_created = False
+                dir_created = False
+
+                # Test certificate load will not fail with a directoy in
+                # the trust anchor directory
+                if not os.path.exists(cert_dir):
+                        dir_created = True
+                        os.makedirs(cert_dir)
+                self.pkgrepo("-s {0} verify".format(repo_path))
+                if dir_created:
+                        os.rmdir(cert_dir)
+
+                # Test certificate load will not fail with an invalid 
+                # certificate file in the trust anchor directory
+                if not os.path.exists(cert_path):
+                        file_created = True
+                        open(cert_path, 'w').close()
+                self.pkgrepo("-s {0} verify".format(repo_path))
+                if file_created:
+                        os.remove(cert_path)
+
         def __get_fhashes(self, repodir, pub):
                 """Returns a list of file hashes for the publisher
                 pub in a given repository."""
@@ -3120,13 +3143,13 @@ test2	zoo		1.0	5.11	0	20110804T203458Z	pkg://test2/zoo@1.0,5.11-0:20110804T20345
                 self.debug(valid_hashes)
                 bad_path = self.__inject_badsig(fmris[0])
                 self.pkgrepo("-s {0} fix".format(repo_path))
-                self.assert_(fmris[0] in self.output)
-                self.assert_(not os.path.exists(bad_path))
+                self.assertTrue(fmris[0] in self.output)
+                self.assertTrue(not os.path.exists(bad_path))
 
                 # check our quarantine dir has been created
                 q_dir = os.path.sep.join([repo_path, "publisher", "test",
                     "pkg5-quarantine"])
-                self.assert_(os.path.exists(q_dir))
+                self.assertTrue(os.path.exists(q_dir))
 
                 # check the broken manifest is in the quarantine dir
                 mf_path_sub = bad_path.replace(
@@ -3134,21 +3157,21 @@ test2	zoo		1.0	5.11	0	20110804T203458Z	pkg://test2/zoo@1.0,5.11-0:20110804T20345
                 # quarantined items are stored in a new tmpdir per-session
                 q_dir_tmp = os.listdir(q_dir)[0]
                 q_mf_path = os.path.sep.join([q_dir, q_dir_tmp, mf_path_sub])
-                self.assert_(os.path.exists(q_mf_path))
+                self.assertTrue(os.path.exists(q_mf_path))
 
                 # make sure the package no longer appears in the catalog
                 self.pkgrepo("-s {0} list -F tsv".format(repo_path))
-                self.assert_(fmris[0] not in self.output)
+                self.assertTrue(fmris[0] not in self.output)
 
                 # ensure that only the manifest was quarantined - file hashes
                 # were left alone.
                 remaining_hashes = self.__get_fhashes(repo_path, "test")
-                self.assert_(set(valid_hashes) == set(remaining_hashes))
+                self.assertTrue(set(valid_hashes) == set(remaining_hashes))
 
                 # finally, ensure we can republish this package
                 fmris = self.pkgsend_bulk(repo_path, (self.tree10))
                 self.pkgrepo("-s {0} list -F tsv".format(repo_path))
-                self.assert_(fmris[0] in self.output)
+                self.assertTrue(fmris[0] in self.output)
 
         def test_33_fix_brokenfile(self):
                 """Test that operations that cause us to fix a file shared
@@ -3174,14 +3197,14 @@ test2	zoo		1.0	5.11	0	20110804T203458Z	pkg://test2/zoo@1.0,5.11-0:20110804T20345
                 # the manifest name printed twice: once when we encounter the
                 # broken file, then again when we print the summary of which
                 # packages need to be republished.
-                self.assert_(self.output.count(fmris[0]) == 2)
-                self.assert_(self.output.count(fmris[1]) == 2)
-                self.assert_(self.output.count("ERROR: Invalid file hash") == 2)
+                self.assertTrue(self.output.count(fmris[0]) == 2)
+                self.assertTrue(self.output.count(fmris[1]) == 2)
+                self.assertTrue(self.output.count("ERROR: Invalid file hash") == 2)
 
                 # the bad file name gets printed 3 times, once for each time
                 # a manifest references it and verify discovered the error,
                 # and once when we report where the file was moved to.
-                self.assert_(self.output.count(bad_file) == 3)
+                self.assertTrue(self.output.count(bad_file) == 3)
 
                 # check the broken file is in the quarantine dir and that
                 # we printed where it moved to
@@ -3193,13 +3216,13 @@ test2	zoo		1.0	5.11	0	20110804T203458Z	pkg://test2/zoo@1.0,5.11-0:20110804T20345
                 q_dir_tmp = os.listdir(q_dir)[0]
                 q_file_path = os.path.normpath(
                     os.path.sep.join([q_dir, q_dir_tmp, bad_file_sub]))
-                self.assert_(os.path.exists(q_file_path))
+                self.assertTrue(os.path.exists(q_file_path))
                 self.debug(q_file_path)
-                self.assert_(q_file_path in self.output)
+                self.assertTrue(q_file_path in self.output)
 
                 remaining_hashes = self.__get_fhashes(repo_path, "test1")
                 # check that we only quarantined the bad hash file
-                self.assert_(set(remaining_hashes) == \
+                self.assertTrue(set(remaining_hashes) == \
                     set(old_hashes) - set(os.path.basename(bad_file)))
 
                 # Make sure the repository is now clean, and remains so even
@@ -3209,7 +3232,7 @@ test2	zoo		1.0	5.11	0	20110804T203458Z	pkg://test2/zoo@1.0,5.11-0:20110804T20345
                 fmris = self.pkgsend_bulk(repo_path, (self.tree10,
                     self.trucknd10))
                 new_hashes = self.__get_fhashes(repo_path, "test1")
-                self.assert_(set(new_hashes) == set(old_hashes))
+                self.assertTrue(set(new_hashes) == set(old_hashes))
                 self.pkgrepo("-s {0} fix".format(repo_path))
 
         def test_34_fix_brokenperm(self):
@@ -3233,7 +3256,7 @@ test2	zoo		1.0	5.11	0	20110804T203458Z	pkg://test2/zoo@1.0,5.11-0:20110804T20345
 
                 self.pkgrepo("-s {0} fix".format(repo_path), exit=1, stderr=True,
                     su_wrap=True)
-                self.assert_(bad_path in self.errout)
+                self.assertTrue(bad_path in self.errout)
                 # the fix should succeed now, but not emit any output, because
                 # it's running as root, and the permissions are fine according
                 # to a root user
@@ -3241,7 +3264,7 @@ test2	zoo		1.0	5.11	0	20110804T203458Z	pkg://test2/zoo@1.0,5.11-0:20110804T20345
                 # but we should still be able to warn about the bad path for
                 # pkg5srv access.
                 self.pkgrepo("-s {0} verify".format(repo_path))
-                self.assert_("WARNING: " in self.output)
+                self.assertTrue("WARNING: " in self.output)
 
         def test_35_fix_unsupported_repo(self):
                 """Tests that when running fix on a v3 repo fails"""
@@ -3252,7 +3275,7 @@ test2	zoo		1.0	5.11	0	20110804T203458Z	pkg://test2/zoo@1.0,5.11-0:20110804T20345
                 self.pkgrepo("-s {0} set publisher/prefix=test".format(repo_path))
                 fmris = self.pkgsend_bulk(repo_path, (self.truck10))
                 self.pkgrepo("-s {0} fix".format(repo_path), exit=1)
-                self.assert_("only version 4 repositories are supported." in
+                self.assertTrue("only version 4 repositories are supported." in
                     self.errout)
 
         def test_36_fix_empty_missing_pub(self):
@@ -3264,7 +3287,7 @@ test2	zoo		1.0	5.11	0	20110804T203458Z	pkg://test2/zoo@1.0,5.11-0:20110804T20345
                 self.pkgrepo("-s {0} add-publisher empty".format(repo_path))
                 self.pkgrepo("-s {0} fix -p test".format(repo_path))
                 self.pkgrepo("-s {0} fix -p missing".format(repo_path), exit=1)
-                self.assert_("no matching publishers" in self.errout)
+                self.assertTrue("no matching publishers" in self.errout)
 
         def test_37_fix_dependency(self):
                 """Test with dependency errors, fix will fail."""
@@ -3347,14 +3370,14 @@ test2	zoo		1.0	5.11	0	20110804T203458Z	pkg://test2/zoo@1.0,5.11-0:20110804T20345
                     self.amber20, self.truck10, self.truck20))
                 self.pkgrepo("-s {0} remove-publisher example.com".format(
                     repo_path))
-                self.assert_("has been unset" in self.output)
+                self.assertTrue("has been unset" in self.output)
                 self.pkgrepo("get -s {0} -HFtsv publisher/prefix".format(repo_path))
                 expected = """\
 publisher\tprefix\t""
 """
                 self.assertEqualDiff(expected, self.output)
                 pdir = os.path.join(repo_path, "publisher", "example.com")
-                self.assert_(not os.path.exists(pdir))
+                self.assertTrue(not os.path.exists(pdir))
 
                 # Verify that multiple publishers can be removed at a time
                 # if there is a default one, the prefix field in repo con-
@@ -3363,7 +3386,7 @@ publisher\tprefix\t""
                     repo_path))
                 self.pkgrepo("-s {0} remove-publisher example.com example.net".format(
                     repo_path))
-                self.assert_("has been unset"
+                self.assertTrue("has been unset"
                     in self.output)
                 self.pkgrepo("get -s {0} -HFtsv publisher/prefix".format(repo_path))
                 expected = """\
@@ -3371,9 +3394,9 @@ publisher\tprefix\t""
 """
                 self.assertEqualDiff(expected, self.output)
                 pdir = os.path.join(repo_path, "publisher", "example.com")
-                self.assert_(not os.path.exists(pdir))
+                self.assertTrue(not os.path.exists(pdir))
                 pdir = os.path.join(repo_path, "publisher", "example.net")
-                self.assert_(not os.path.exists(pdir))
+                self.assertTrue(not os.path.exists(pdir))
 
                 # Verify that if one publisher is removed and only one left
                 # if the removed one a default one, the prefix field in repo con-
@@ -3382,16 +3405,16 @@ publisher\tprefix\t""
                     repo_path))
                 self.pkgrepo("-s {0} remove-publisher example.com".format(
                     repo_path))
-                self.assert_("the only publisher left" in self.output)
+                self.assertTrue("the only publisher left" in self.output)
                 self.pkgrepo("get -s {0} -HFtsv publisher/prefix".format(repo_path))
                 expected = """\
 publisher\tprefix\texample.net
 """
                 self.assertEqualDiff(expected, self.output)
                 pdir = os.path.join(repo_path, "publisher", "example.com")
-                self.assert_(not os.path.exists(pdir))
+                self.assertTrue(not os.path.exists(pdir))
                 pdir = os.path.join(repo_path, "publisher", "example.net")
-                self.assert_(os.path.exists(pdir))
+                self.assertTrue(os.path.exists(pdir))
 
                 # Verify that remove-publisher will exit with complete failure
                 # if all publishers do not exist.
@@ -3403,7 +3426,7 @@ publisher\tprefix\texample.net
                 self.pkgrepo("-s {0} remove-publisher example.net example.org".format(
                     repo_path), exit=1)
                 pdir = os.path.join(repo_path, "publisher", "example.net")
-                self.assert_(os.path.exists(pdir))
+                self.assertTrue(os.path.exists(pdir))
                 self.pkgrepo("get -s {0} -HFtsv publisher/prefix".format(repo_path))
                 expected = """\
 publisher\tprefix\texample.net
@@ -3447,14 +3470,14 @@ publisher\tprefix\texample.net
                     repo_path))
                 self.pkgrepo("-s {0} remove-publisher example.net".format(
                     repo_path))
-                self.assert_("has been unset" in self.output)
+                self.assertTrue("has been unset" in self.output)
                 self.pkgrepo("get -s {0} -HFtsv publisher/prefix".format(repo_path))
                 expected = """\
 publisher\tprefix\t""
 """
                 self.assertEqualDiff(expected, self.output)
                 pdir = os.path.join(repo_path, "publisher", "example.net")
-                self.assert_(not os.path.exists(pdir))
+                self.assertTrue(not os.path.exists(pdir))
 
                 # Verify that inaccessible publishers are handled correctly
                 shutil.rmtree(repo_path)
@@ -3474,14 +3497,14 @@ publisher\tprefix\t""
                 self.pkgrepo("-s {0} remove-publisher --synchronous example.com"
                    .format(repo_path))
                 repo_tmp_path = os.path.join(repo_path, "tmp")
-                self.assert_(os.listdir(repo_tmp_path) == [])
+                self.assertTrue(os.listdir(repo_tmp_path) == [])
                 self.pkgrepo("get -s {0} -HFtsv publisher/prefix".format(repo_path))
                 expected = """\
 publisher\tprefix\t""
 """
                 self.assertEqualDiff(expected, self.output)
                 pdir = os.path.join(repo_path, "publisher", "example.com")
-                self.assert_(not os.path.exists(pdir))
+                self.assertTrue(not os.path.exists(pdir))
 
         def test_40_contents(self):
                 """Verify that contents subcommand works as expected."""
@@ -3512,7 +3535,7 @@ publisher\tprefix\t""
                 for src in (repo_path, repo_uri):
                         self.pkgrepo("contents -s {0}".format(src))
                         for p in plist:
-                                self.assert_(self.__get_manifest_contents(p)
+                                self.assertTrue(self.__get_manifest_contents(p)
                                     in self.output)
 
                 # Verify ability to display specific packages but only using
@@ -3526,7 +3549,7 @@ publisher\tprefix\t""
                 # Verify ability to display multiple packages.
                 self.pkgrepo("contents -s {0} tree amber@1.0".format(repo_path))
                 for i in range(2):
-                        self.assert_(self.__get_manifest_contents(plist[i]) in
+                        self.assertTrue(self.__get_manifest_contents(plist[i]) in
                             self.output)
 
                 # Verify -m option works fine.
@@ -3536,7 +3559,7 @@ publisher\tprefix\t""
 
                 # Verify -t option works fine.
                 self.pkgrepo("contents -s {0} -t set tree".format(repo_path))
-                self.assert_("set" in self.output and "file" not in self.output)
+                self.assertTrue("set" in self.output and "file" not in self.output)
                 
                 # Verify graceful exit if no matching action type specified.
                 self.pkgrepo("contents -s {0} -t nosuchtype tree".format(repo_path),
@@ -3549,7 +3572,6 @@ publisher\tprefix\t""
                 # Verify that patterns matching packages only provided by one
                 # publisher will not result in partial failure.
                 self.pkgrepo("contents -s {0} zoo".format(repo_path))
-
 
 class TestPkgrepoHTTPS(pkg5unittest.HTTPSTestClass):
 
@@ -3665,3 +3687,6 @@ class TestPkgrepoHTTPS(pkg5unittest.HTTPSTestClass):
 
 if __name__ == "__main__":
         unittest.main()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -23,7 +23,7 @@
 # Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
 
 from __future__ import print_function
-import testutils
+from . import testutils
 if __name__ == "__main__":
         testutils.setup_environment("../../../proto")
 import pkg5unittest
@@ -69,7 +69,7 @@ class TestDependencyAnalyzer(pkg5unittest.Pkg5TestCase):
             "script_path": "lib/svc/method/svc-pkg-depot",
             "syslog_path": "var/log/syslog",
             "py_mod_path": "usr/lib/python2.7/vendor-packages/cProfile.py",
-            "py_mod_path34": "usr/lib/python3.4/vendor-packages/cProfile.py"
+            "py_mod_path35": "usr/lib/python3.5/vendor-packages/cProfile.py"
         }
 
         smf_paths = {
@@ -137,7 +137,7 @@ file NOHASH group=bin mode=0755 owner=root path={pkg_path}
 
         python_mod_manf = """ \
 file NOHASH group=bin mode=0755 owner=root path={py_mod_path}
-file NOHASH group=bin mode=0755 owner=root path={py_mod_path34}
+file NOHASH group=bin mode=0755 owner=root path={py_mod_path35}
 """.format(**paths)
 
         relative_ext_depender_manf = """ \
@@ -230,17 +230,17 @@ class Foo(object):
   svc:/application/pkg5test/service-default:default
 -->
 <service
-	name='application/pkg5test/service-default'
-	type='service'
-	version='0.1'>
+        name='application/pkg5test/service-default'
+        type='service'
+        version='0.1'>
 
-	<dependency
-		name="delivered-service"
-		grouping="require_all"
-		restart_on="none"
-		type="service">
-		<service_fmri value="svc:/application/pkg5test/delivered-many:nodeps" />
-	</dependency>
+        <dependency
+                name="delivered-service"
+                grouping="require_all"
+                restart_on="none"
+                type="service">
+                <service_fmri value="svc:/application/pkg5test/delivered-many:nodeps" />
+        </dependency>
 
         <!-- We should not pick this up as an IPS dependency -->
         <dependency
@@ -251,27 +251,27 @@ class Foo(object):
                 <service_fmri value="/var/foo/something.conf" />
         </dependency>
 
-	<create_default_instance enabled='true' />
-	<single_instance/>
-	<exec_method
-		type='method'
-		name='start'
-		exec=':true'
-		timeout_seconds='60'>
-		<method_context>
-			<method_credential user='root' group='root' />
-		</method_context>
-	</exec_method>
+        <create_default_instance enabled='true' />
+        <single_instance/>
+        <exec_method
+                type='method'
+                name='start'
+                exec=':true'
+                timeout_seconds='60'>
+                <method_context>
+                        <method_credential user='root' group='root' />
+                </method_context>
+        </exec_method>
 
-	<exec_method
-		type='method'
-		name='stop'
-		exec=':true'
-		timeout_seconds='60'>
-		<method_context>
-			<method_credential user='root' group='root' />
-		</method_context>
-	</exec_method>
+        <exec_method
+                type='method'
+                name='stop'
+                exec=':true'
+                timeout_seconds='60'>
+                <method_context>
+                        <method_credential user='root' group='root' />
+                </method_context>
+        </exec_method>
 </service>
 </service_bundle>
 """
@@ -303,18 +303,18 @@ class Foo(object):
   dependency, one instance of which would satisfy the dependency.
 -->
 <service
-	name='application/pkg5test/service-specific'
-	type='service'
-	version='0.1'>
+        name='application/pkg5test/service-specific'
+        type='service'
+        version='0.1'>
 
-	<dependency
-		name="delivered-service"
-		grouping="require_all"
-		restart_on="none"
-		type="service">
-		<service_fmri value="svc:/application/pkg5test/delivered-many:nodeps" />
+        <dependency
+                name="delivered-service"
+                grouping="require_all"
+                restart_on="none"
+                type="service">
+                <service_fmri value="svc:/application/pkg5test/delivered-many:nodeps" />
                 <service_fmri value="svc:/application/pkg5test/delivered-many:nodeps2" />
-	</dependency>
+        </dependency>
 
         <!-- We should not pick this up as an IPS dependency -->
         <dependency
@@ -325,27 +325,27 @@ class Foo(object):
                 <service_fmri value="/var/foo/something.conf" />
         </dependency>
 
-	<create_default_instance enabled='true' />
-	<single_instance/>
-	<exec_method
-		type='method'
-		name='start'
-		exec=':true'
-		timeout_seconds='60'>
-		<method_context>
-			<method_credential user='root' group='root' />
-		</method_context>
-	</exec_method>
+        <create_default_instance enabled='true' />
+        <single_instance/>
+        <exec_method
+                type='method'
+                name='start'
+                exec=':true'
+                timeout_seconds='60'>
+                <method_context>
+                        <method_credential user='root' group='root' />
+                </method_context>
+        </exec_method>
 
-	<exec_method
-		type='method'
-		name='stop'
-		exec=':true'
-		timeout_seconds='60'>
-		<method_context>
-			<method_credential user='root' group='root' />
-		</method_context>
-	</exec_method>
+        <exec_method
+                type='method'
+                name='stop'
+                exec=':true'
+                timeout_seconds='60'>
+                <method_context>
+                        <method_credential user='root' group='root' />
+                </method_context>
+        </exec_method>
 </service>
 </service_bundle>
 """
@@ -370,17 +370,17 @@ class Foo(object):
   svc:/application/pkg5test/service-default:default
 -->
 <service
-	name='application/pkg5test/service-general'
-	type='service'
-	version='0.1'>
+        name='application/pkg5test/service-general'
+        type='service'
+        version='0.1'>
 
-	<dependency
-		name="delivered-service"
-		grouping="require_all"
-		restart_on="none"
-		type="service">
-		<service_fmri value="svc:/application/pkg5test/delivered-many" />
-	</dependency>
+        <dependency
+                name="delivered-service"
+                grouping="require_all"
+                restart_on="none"
+                type="service">
+                <service_fmri value="svc:/application/pkg5test/delivered-many" />
+        </dependency>
 
         <!-- We should not pick this up as an IPS dependency -->
         <dependency
@@ -391,27 +391,27 @@ class Foo(object):
                 <service_fmri value="/var/foo/something.conf" />
         </dependency>
 
-	<create_default_instance enabled='true' />
-	<single_instance/>
-	<exec_method
-		type='method'
-		name='start'
-		exec=':true'
-		timeout_seconds='60'>
-		<method_context>
-			<method_credential user='root' group='root' />
-		</method_context>
-	</exec_method>
+        <create_default_instance enabled='true' />
+        <single_instance/>
+        <exec_method
+                type='method'
+                name='start'
+                exec=':true'
+                timeout_seconds='60'>
+                <method_context>
+                        <method_credential user='root' group='root' />
+                </method_context>
+        </exec_method>
 
-	<exec_method
-		type='method'
-		name='stop'
-		exec=':true'
-		timeout_seconds='60'>
-		<method_context>
-			<method_credential user='root' group='root' />
-		</method_context>
-	</exec_method>
+        <exec_method
+                type='method'
+                name='stop'
+                exec=':true'
+                timeout_seconds='60'>
+                <method_context>
+                        <method_credential user='root' group='root' />
+                </method_context>
+        </exec_method>
 </service>
 </service_bundle>
 """
@@ -449,20 +449,20 @@ class Foo(object):
   svc:/application/pkg5test/service-many:two
 -->
 <service
-	name='application/pkg5test/service-many'
-	type='service'
-	version='0.1'>
+        name='application/pkg5test/service-many'
+        type='service'
+        version='0.1'>
 
-	<!-- a dependency a different package delivers -->
-	<dependency
-		name="foreign-service"
-		grouping="require_all"
-		restart_on="none"
-		type="service">
-		<service_fmri value="svc:/application/pkg5test/foreign-many" />
-	</dependency>
+        <!-- a dependency a different package delivers -->
+        <dependency
+                name="foreign-service"
+                grouping="require_all"
+                restart_on="none"
+                type="service">
+                <service_fmri value="svc:/application/pkg5test/foreign-many" />
+        </dependency>
 
-	<!-- pkg(5) shouldn't see this as a dependency -->
+        <!-- pkg(5) shouldn't see this as a dependency -->
         <dependency
                 name="optional-service"
                 grouping="optional_all"
@@ -488,7 +488,7 @@ class Foo(object):
         </exec_method>
 
 
-	<instance name='one' enabled='false' >
+        <instance name='one' enabled='false' >
 
             <dependency
                 name="optional-service"
@@ -497,10 +497,10 @@ class Foo(object):
                 type="service">
                 <service_fmri value="svc:/application/pkg5test/foreign-many:default" />
             </dependency>
-	</instance>
+        </instance>
 
-	<!-- no dependencies here -->
-	<instance name='two' enabled='false' />
+        <!-- no dependencies here -->
+        <instance name='two' enabled='false' />
 
 </service>
 </service_bundle>
@@ -541,17 +541,17 @@ class Foo(object):
              svc:/application/pkg5test/another-unknown:default)
 -->
 <service
-	name='application/pkg5test/service-unknown'
-	type='service'
-	version='0.1'>
+        name='application/pkg5test/service-unknown'
+        type='service'
+        version='0.1'>
 
-	<dependency
-		name="delivered-service"
-		grouping="require_all"
-		restart_on="none"
-		type="service">
-		<service_fmri value="svc:/application/pkg5test/delivered-many:nodeps" />
-	</dependency>
+        <dependency
+                name="delivered-service"
+                grouping="require_all"
+                restart_on="none"
+                type="service">
+                <service_fmri value="svc:/application/pkg5test/delivered-many:nodeps" />
+        </dependency>
 
 
         <!-- pkg(5) should throw an error here, as we don't deliver this
@@ -564,31 +564,31 @@ class Foo(object):
                 <service_fmri value="svc:/application/pkg5test/unknown-service" />
         </dependency>
 
-	<create_default_instance enabled='true' />
+        <create_default_instance enabled='true' />
 
-	<exec_method
-		type='method'
-		name='start'
-		exec=':true'
-		timeout_seconds='60'>
-		<method_context>
-			<method_credential user='root' group='root' />
-		</method_context>
-	</exec_method>
+        <exec_method
+                type='method'
+                name='start'
+                exec=':true'
+                timeout_seconds='60'>
+                <method_context>
+                        <method_credential user='root' group='root' />
+                </method_context>
+        </exec_method>
 
-	<exec_method
-		type='method'
-		name='stop'
-		exec=':true'
-		timeout_seconds='60'>
-		<method_context>
-			<method_credential user='root' group='root' />
-		</method_context>
-	</exec_method>
+        <exec_method
+                type='method'
+                name='stop'
+                exec=':true'
+                timeout_seconds='60'>
+                <method_context>
+                        <method_credential user='root' group='root' />
+                </method_context>
+        </exec_method>
 
         <instance name='one' enabled='false' >
 
-    	    <!-- pkg(5) should throw an error being unable to resolve this -->
+                <!-- pkg(5) should throw an error being unable to resolve this -->
             <dependency
                 name="another"
                 grouping="require_all"
@@ -596,7 +596,7 @@ class Foo(object):
                 type="service">
                 <service_fmri value="svc:/application/pkg5test/another-unknown:default" />
             </dependency>
-	</instance>
+        </instance>
 </service>
 </service_bundle>
 """
@@ -624,34 +624,34 @@ None of these services or instances declare any dependencies.
 
 -->
 <service
-	name='application/pkg5test/delivered-many'
-	type='service'
-	version='0.1'>
+        name='application/pkg5test/delivered-many'
+        type='service'
+        version='0.1'>
 
-	<single_instance />
+        <single_instance />
 
-	<exec_method
-		type='method'
-		name='start'
-		exec=':true'
-		timeout_seconds='60'>
-		<method_context>
-			<method_credential user='root' group='root' />
-		</method_context>
-	</exec_method>
+        <exec_method
+                type='method'
+                name='start'
+                exec=':true'
+                timeout_seconds='60'>
+                <method_context>
+                        <method_credential user='root' group='root' />
+                </method_context>
+        </exec_method>
 
-	<exec_method
-		type='method'
-		name='stop'
-		exec=':true'
-		timeout_seconds='60'>
-		<method_context>
-			<method_credential user='root' group='root' />
-		</method_context>
-	</exec_method>
+        <exec_method
+                type='method'
+                name='stop'
+                exec=':true'
+                timeout_seconds='60'>
+                <method_context>
+                        <method_credential user='root' group='root' />
+                </method_context>
+        </exec_method>
 
-	<instance name="nodeps" enabled="true" />
-	<instance name='nodeps1' enabled='false' />
+        <instance name="nodeps" enabled="true" />
+        <instance name='nodeps1' enabled='false' />
 </service>
 </service_bundle>
 """
@@ -674,34 +674,34 @@ None of these services or instances declare any dependencies.
 
 -->
 <service
-	name='application/pkg5test/delivered-many'
-	type='service'
-	version='0.1'>
+        name='application/pkg5test/delivered-many'
+        type='service'
+        version='0.1'>
 
-	<single_instance />
+        <single_instance />
 
-	<exec_method
-		type='method'
-		name='start'
-		exec=':true'
-		timeout_seconds='60'>
-		<method_context>
-			<method_credential user='root' group='root' />
-		</method_context>
-	</exec_method>
+        <exec_method
+                type='method'
+                name='start'
+                exec=':true'
+                timeout_seconds='60'>
+                <method_context>
+                        <method_credential user='root' group='root' />
+                </method_context>
+        </exec_method>
 
-	<exec_method
-		type='method'
-		name='stop'
-		exec=':true'
-		timeout_seconds='60'>
-		<method_context>
-			<method_credential user='root' group='root' />
-		</method_context>
-	</exec_method>
+        <exec_method
+                type='method'
+                name='stop'
+                exec=':true'
+                timeout_seconds='60'>
+                <method_context>
+                        <method_credential user='root' group='root' />
+                </method_context>
+        </exec_method>
 
-	<instance name="nodeps2" enabled="true" />
-	<instance name='nodeps3' enabled='false' />
+        <instance name="nodeps2" enabled="true" />
+        <instance name='nodeps3' enabled='false' />
 </service>
 </service_bundle>
 """
@@ -727,31 +727,31 @@ None of these services or instances declare any dependencies.
 
 -->
 <service
-	name='application/pkg5test/foreign-single'
-	type='service'
-	version='0.1'>
+        name='application/pkg5test/foreign-single'
+        type='service'
+        version='0.1'>
 
-	<exec_method
-		type='method'
-		name='start'
-		exec=':true'
-		timeout_seconds='60'>
-		<method_context>
-			<method_credential user='root' group='root' />
-		</method_context>
-	</exec_method>
+        <exec_method
+                type='method'
+                name='start'
+                exec=':true'
+                timeout_seconds='60'>
+                <method_context>
+                        <method_credential user='root' group='root' />
+                </method_context>
+        </exec_method>
 
-	<exec_method
-		type='method'
-		name='stop'
-		exec=':true'
-		timeout_seconds='60'>
-		<method_context>
-			<method_credential user='root' group='root' />
-		</method_context>
-	</exec_method>
+        <exec_method
+                type='method'
+                name='stop'
+                exec=':true'
+                timeout_seconds='60'>
+                <method_context>
+                        <method_credential user='root' group='root' />
+                </method_context>
+        </exec_method>
 
-	<instance name='nodeps' enabled='false' />
+        <instance name='nodeps' enabled='false' />
 </service>
 </service_bundle>
 """
@@ -789,64 +789,64 @@ None of these services or instances declare any dependencies.
 -->
 
 <service
-	name='application/pkg5test/foreign-many'
-	type='service'
-	version='0.1'>
+        name='application/pkg5test/foreign-many'
+        type='service'
+        version='0.1'>
 
-	<exec_method
-		type='method'
-		name='start'
-		exec=':true'
-		timeout_seconds='60'>
-		<method_context>
-			<method_credential user='root' group='root' />
-		</method_context>
-	</exec_method>
+        <exec_method
+                type='method'
+                name='start'
+                exec=':true'
+                timeout_seconds='60'>
+                <method_context>
+                        <method_credential user='root' group='root' />
+                </method_context>
+        </exec_method>
 
-	<exec_method
-		type='method'
-		name='stop'
-		exec=':true'
-		timeout_seconds='60'>
-		<method_context>
-			<method_credential user='root' group='root' />
-		</method_context>
-	</exec_method>
+        <exec_method
+                type='method'
+                name='stop'
+                exec=':true'
+                timeout_seconds='60'>
+                <method_context>
+                        <method_credential user='root' group='root' />
+                </method_context>
+        </exec_method>
 
-	<!-- intentionally declaring the default service, as opposed to using
+        <!-- intentionally declaring the default service, as opposed to using
              create_default_service - to test smf manifest parsing code in pkg5 -->
-	<instance name='default' enabled='false' />
-	<instance name='nodeps' enabled='false' />
+        <instance name='default' enabled='false' />
+        <instance name='nodeps' enabled='false' />
 </service>
 
 <service
-	name='application/pkg5test/foreign-opt'
-	type='service'
-	version='0.1'>
+        name='application/pkg5test/foreign-opt'
+        type='service'
+        version='0.1'>
 
-	<single_instance />
+        <single_instance />
 
-	<exec_method
-		type='method'
-		name='start'
-		exec=':true'
-		timeout_seconds='60'>
-		<method_context>
-			<method_credential user='root' group='root' />
-		</method_context>
-	</exec_method>
+        <exec_method
+                type='method'
+                name='start'
+                exec=':true'
+                timeout_seconds='60'>
+                <method_context>
+                        <method_credential user='root' group='root' />
+                </method_context>
+        </exec_method>
 
-	<exec_method
-		type='method'
-		name='stop'
-		exec=':true'
-		timeout_seconds='60'>
-		<method_context>
-			<method_credential user='root' group='root' />
-		</method_context>
-	</exec_method>
+        <exec_method
+                type='method'
+                name='stop'
+                exec=':true'
+                timeout_seconds='60'>
+                <method_context>
+                        <method_credential user='root' group='root' />
+                </method_context>
+        </exec_method>
 
-	<instance name='nodeps' enabled='false' />
+        <instance name='nodeps' enabled='false' />
 </service>
 </service_bundle>
 """
@@ -860,23 +860,23 @@ None of these services or instances declare any dependencies.
 -->
 <service <<>  This is the broken line
 
-	name='application/pkg5test/brokenservice'
-	type='service'
-	version='0.1'>
+        name='application/pkg5test/brokenservice'
+        type='service'
+        version='0.1'>
 
-	<single_instance />
+        <single_instance />
 
-		<exec_method
-		type='method'
-		name='start'
-		exec=':true'
-		timeout_seconds='60'>
-		<method_context>
-			<method_credential user='root' group='root' />
-		</method_context>
-	</exec_method>
+                <exec_method
+                type='method'
+                name='start'
+                exec=':true'
+                timeout_seconds='60'>
+                <method_context>
+                        <method_credential user='root' group='root' />
+                </method_context>
+        </exec_method>
 
-	<instance name='default' enabled='false' />
+        <instance name='default' enabled='false' />
 </service>
 </service_bundle>
 """
@@ -897,11 +897,11 @@ None of these services or instances declare any dependencies.
 -->
 <service
 
-	name='application/pkg5test/deleteservice'
-	type='service'
-	version='0.1'>
-	<create_default_instance enabled='true' />
-	<single_instance/>
+        name='application/pkg5test/deleteservice'
+        type='service'
+        version='0.1'>
+        <create_default_instance enabled='true' />
+        <single_instance/>
         <dependency name='network'
                     grouping='require_all'
                     restart_on='error'
@@ -1062,8 +1062,12 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
 file NOHASH group=sys mode=0755 owner=root path={bypass_path} \
     pkg.depend.bypass-generate=.* \
     pkg.depend.runpath=$PKGDEPEND_RUNPATH:opt
-file NOHASH group=sys mode=0755 owner=root path={runpath_mod_path}
-file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
+file NOHASH group=sys mode=0755 owner=root path={runpath_mod_path} \
+    pkg.depend.bypass-generate=.* \
+    pkg.depend.runpath=$PKGDEPEND_RUNPATH:opt
+file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path} \
+    pkg.depend.bypass-generate=.* \
+    pkg.depend.runpath=$PKGDEPEND_RUNPATH:opt
 """.format(**paths)
 
         # a manifest which uses a file wildcard to bypass generation
@@ -1134,8 +1138,8 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                 pdir = "usr/lib/python{0}/vendor-packages".format(py_version)
                 self.make_proto_text_file("{0}/cProfile.py".format(pdir),
                     "#!/usr/bin/python\n\\1" + self.python_module_text)
-                
-	def make_smf_test_files(self):
+
+        def make_smf_test_files(self):
                 for manifest in self.smf_paths.keys():
                         self.make_proto_text_file(self.paths[manifest],
                             self.smf_manifest_text[manifest])
@@ -1170,14 +1174,14 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                                 raise RuntimeError("Got errors in results:" +
                                     "\n".join([str(s) for s in es]))
                         self.assertEqual(ms, {})
-                        self.assert_(len(ds) == 3)
+                        self.assertTrue(len(ds) == 3)
                         ans = set(["usr/foo", "usr/bar"])
                         for d in ds:
-                                self.assert_(d.dep_vars.is_satisfied())
-                                self.assert_(d.is_error())
+                                self.assertTrue(d.dep_vars.is_satisfied())
+                                self.assertTrue(d.is_error())
                                 if d.dep_key() == self.__path_to_key(
                                     self.paths["syslog_path"]):
-                                        self.assert_(
+                                        self.assertTrue(
                                             d.action.attrs["path"] in ans)
                                         ans.remove(d.action.attrs["path"])
                                 else:
@@ -1206,8 +1210,8 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                 if es != []:
                         raise RuntimeError("Got errors in results:" +
                             "\n".join([str(s) for s in es]))
-                self.assert_(len(ms) == 1)
-                self.assert_(len(ds) == 0)
+                self.assertTrue(len(ms) == 1)
+                self.assertTrue(len(ds) == 0)
 
                 # Check that internal dependencies are as expected.
                 ds, es, ms, pkg_attrs = dependencies.list_implicit_deps(t_path,
@@ -1219,27 +1223,27 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                 self.assertEqual(len(ms), 1)
                 self.assertEqual(len(ds), 1)
                 d = ds[0]
-                self.assert_(d.dep_vars.is_satisfied())
-                self.assert_(d.is_error())
+                self.assertTrue(d.dep_vars.is_satisfied())
+                self.assertTrue(d.is_error())
                 self.assertEqual(d.dep_key(), self.__path_to_key(
                     self.paths["syslog_path"]))
                 self.assertEqual(d.action.attrs["path"], "usr/foo")
-                self.assert_(dependencies.is_file_dependency(d))
+                self.assertTrue(dependencies.is_file_dependency(d))
 
         def test_ext_script(self):
                 """Check that a file that starts with #! and references a file
                 outside its package is reported as a dependency."""
-                
+
                 def _check_res(res):
                         ds, es, ms, pkg_attrs = res
                         if es != []:
                                 raise RuntimeError("Got errors in results:" +
                                     "\n".join([str(s) for s in es]))
                         self.assertEqual(ms, {})
-                        self.assert_(len(ds) == 1)
+                        self.assertTrue(len(ds) == 1)
                         d = ds[0]
-                        self.assert_(d.is_error())
-                        self.assert_(d.dep_vars.is_satisfied())
+                        self.assertTrue(d.is_error())
+                        self.assertTrue(d.dep_vars.is_satisfied())
                         self.assertEqual(d.dep_key(),
                             self.__path_to_key(self.paths["ksh_path"]))
                         self.assertEqual(d.action.attrs["path"],
@@ -1268,10 +1272,10 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                         raise RuntimeError("Got errors in results:" +
                             "\n".join([str(s) for s in es]))
                 self.assertEqual(ms, {})
-                self.assert_(len(ds) == 1)
+                self.assertTrue(len(ds) == 1)
                 d = ds[0]
-                self.assert_(d.is_error())
-                self.assert_(d.dep_vars.is_satisfied())
+                self.assertTrue(d.is_error())
+                self.assertTrue(d.dep_vars.is_satisfied())
                 self.assertEqual(d.base_names[0], "libc.so.1")
                 self.assertEqual(set(d.run_paths), set(["lib",
                     "usr/lib"]))
@@ -1282,9 +1286,9 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                     convert=False)
                 self.assertEqual(len(ds), 2)
                 for d in ds:
-                        self.assert_(d.is_error())
-                        self.assert_(d.dep_vars.is_satisfied())
-                        self.assert_(dependencies.is_file_dependency(d))
+                        self.assertTrue(d.is_error())
+                        self.assertTrue(d.dep_vars.is_satisfied())
+                        self.assertTrue(dependencies.is_file_dependency(d))
                         if d.dep_key() == self.__path_to_key(
                             self.paths["ksh_path"]):
                                 self.assertEqual(d.action.attrs["path"],
@@ -1296,7 +1300,7 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                         else:
                                 raise RuntimeError("Unexpected "
                                     "dependency path:{0}".format(d))
-                                
+
         def test_ext_elf(self):
                 """Check that an elf file that requires a library outside its
                 package is reported as a dependency."""
@@ -1307,10 +1311,10 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                                 raise RuntimeError("Got errors in results:" +
                                     "\n".join([str(s) for s in es]))
                         self.assertEqual(ms, {})
-                        self.assert_(len(ds) == 1)
+                        self.assertTrue(len(ds) == 1)
                         d = ds[0]
-                        self.assert_(d.is_error())
-                        self.assert_(d.dep_vars.is_satisfied())
+                        self.assertTrue(d.is_error())
+                        self.assertTrue(d.dep_vars.is_satisfied())
                         self.assertEqual(d.base_names[0], "libc.so.1")
                         self.assertEqual(set(d.run_paths),
                             set(["lib", "usr/lib"]))
@@ -1319,7 +1323,7 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                         self.assertEqual(
                                 d.action.attrs["path"],
                                 self.paths["curses_path"])
-                        self.assert_(dependencies.is_file_dependency(d))
+                        self.assertTrue(dependencies.is_file_dependency(d))
 
                 t_path = self.make_manifest(self.ext_elf_manf)
                 self.make_elf(self.paths["curses_path"])
@@ -1342,8 +1346,8 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                         self.assertEqual(ms, {})
                         self.assertEqual(len(ds), 1)
                         d = ds[0]
-                        self.assert_(d.is_error())
-                        self.assert_(d.dep_vars.is_satisfied())
+                        self.assertTrue(d.is_error())
+                        self.assertTrue(d.dep_vars.is_satisfied())
                         self.assertEqual(d.base_names[0], "libc.so.1")
                         self.assertEqual(set(d.run_paths),
                             set(["lib", "usr/lib"]))
@@ -1351,7 +1355,7 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                             self.__path_to_key(self.paths["libc_path"]))
                         self.assertEqual(d.action.attrs["path"],
                             self.paths["curses_path"])
-                        self.assert_(dependencies.is_file_dependency(d))
+                        self.assertTrue(dependencies.is_file_dependency(d))
 
                 t_path = self.make_manifest(self.int_elf_manf)
                 self.make_elf(self.paths["curses_path"])
@@ -1362,7 +1366,7 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                         raise RuntimeError("Got errors in results:" +
                             "\n".join([str(s) for s in es]))
                 self.assertEqual(ms, {})
-                self.assert_(len(d_map) == 0)
+                self.assertTrue(len(d_map) == 0)
 
                 # Check that internal dependencies are as expected.
                 _check_all_res(dependencies.list_implicit_deps(t_path,
@@ -1396,11 +1400,11 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
 
                         self.assertEqual(ms, {})
                         for d in ds:
-                                self.assert_(d.is_error())
+                                self.assertTrue(d.is_error())
                                 if d.dep_vars is None:
                                         raise RuntimeError("This dep had "
                                             "depvars of None:{0}".format(d))
-                                self.assert_(d.dep_vars.is_satisfied())
+                                self.assertTrue(d.dep_vars.is_satisfied())
                                 if not d.dep_key()[0] in expected_deps:
                                         raise RuntimeError("Got this "
                                             "unexpected dep:{0}\n\nd:{1}".format(
@@ -1453,11 +1457,11 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
 
                         self.assertEqual(ms, {})
                         for d in ds:
-                                self.assert_(d.is_error())
+                                self.assertTrue(d.is_error())
                                 if d.dep_vars is None:
                                         raise RuntimeError("This dep had "
                                             "depvars of None:{0}".format(d))
-                                self.assert_(d.dep_vars.is_satisfied())
+                                self.assertTrue(d.dep_vars.is_satisfied())
                                 if not d.dep_key()[0] in expected_deps:
                                         raise RuntimeError("Got this "
                                             "unexpected dep:{0}\n\nd:{1}".format(
@@ -1514,11 +1518,11 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
 
                         self.assertEqual(ms, {})
                         for d in ds:
-                                self.assert_(d.is_error())
+                                self.assertTrue(d.is_error())
                                 if d.dep_vars is None:
                                         raise RuntimeError("This dep had "
                                             "depvars of None:{0}".format(d))
-                                self.assert_(d.dep_vars.is_satisfied())
+                                self.assertTrue(d.dep_vars.is_satisfied())
                                 if not d.dep_key()[0] in expected_deps:
                                         raise RuntimeError("Got this "
                                             "unexpected dep:{0}\n\nd:{1}".format(
@@ -1532,7 +1536,7 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
 
                                         suffix = path_suffixes[bn]
                                         for p in d.run_paths:
-                                                self.assert_(
+                                                self.assertTrue(
                                                     p.endswith(suffix) or
                                                     p == os.path.dirname(
                                                     self.paths["pkg_path"]),
@@ -1565,13 +1569,13 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                 we try to import __main__"""
 
                 t_path = self.make_manifest(self.python_mod_manf)
-                self.make_python_test_files(3.4)
+                self.make_python_test_files(3.5)
                 self.make_python_test_files(2.7)
 
                 ds, es, ms, pkg_attrs = dependencies.list_implicit_deps(t_path,
                     [self.proto_dir], {}, [], convert=False)
-                self.assert_(es != 0, "Unexpected errors reported: {0}".format(es))
-                self.assert_(ds != 2, "Unexpected deps reported: {0}".format(ds))
+                self.assertTrue(es != 0, "Unexpected errors reported: {0}".format(es))
+                self.assertTrue(ds != 2, "Unexpected deps reported: {0}".format(ds))
 
         def test_python_relative_import_generation(self):
                 """This is a test for bug 14094.  It ensures that a python
@@ -1614,7 +1618,7 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
 
                 t_path = self.make_manifest(
                     self.relative_int_manf)
-                self.assert_(os.path.exists(os.path.join(self.proto_dir,
+                self.assertTrue(os.path.exists(os.path.join(self.proto_dir,
                     self.paths["relative_dependee"])))
 
                 ds, es, ms, pkg_attrs = dependencies.list_implicit_deps(t_path,
@@ -1656,12 +1660,12 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                 syntax error doesn't cause a traceback."""
 
                 t_path = self.make_manifest(self.python_mod_manf)
-                self.make_broken_python_test_file(3.4)
+                self.make_broken_python_test_file(3.5)
                 self.make_broken_python_test_file(2.7)
                 ds, es, ms, pkg_attrs = dependencies.list_implicit_deps(t_path,
                     [self.proto_dir], {}, [], convert=False)
-                self.assert_(es != 2, "Unexpected errors reported: {0}".format(es))
-                self.assert_(ds != 0, "Unexpected deps reported: {0}".format(ds))
+                self.assertTrue(es != 2, "Unexpected errors reported: {0}".format(es))
+                self.assertTrue(ds != 0, "Unexpected deps reported: {0}".format(ds))
                 for e in es:
                         self.debug(str(e))
 
@@ -1680,9 +1684,9 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                         raise RuntimeError("Got errors in results:" +
                             "\n".join([str(s) for s in es]))
                 self.assertEqual(ms, {})
-                self.assert_(len(ds) == 2)
+                self.assertTrue(len(ds) == 2)
                 for d in ds:
-                        self.assert_(d.is_error())
+                        self.assertTrue(d.is_error())
                         if d.dep_key() == self.__path_to_key(
                             self.paths["ksh_path"]):
                                 self.assertEqual(d.action.attrs["path"],
@@ -1727,9 +1731,9 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                         raise RuntimeError("Got errors in results:" +
                             "\n".join([str(s) for s in es]))
                 self.assertEqual(ms, {})
-                self.assert_(len(ds) == 1)
+                self.assertTrue(len(ds) == 1)
                 d = ds[0]
-                self.assert_(d.is_error())
+                self.assertTrue(d.is_error())
                 expected_not_sat = set([frozenset([("variant.arch", "foo")])])
                 expected_sat = set()
                 self.assertEqual(expected_sat, d.dep_vars.sat_set)
@@ -1745,9 +1749,9 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                         raise RuntimeError("Got errors in results:" +
                             "\n".join([str(s) for s in es]))
                 self.assertEqual(ms, {})
-                self.assert_(len(ds) == 2)
+                self.assertTrue(len(ds) == 2)
                 for d in ds:
-                        self.assert_(d.is_error())
+                        self.assertTrue(d.is_error())
                         # Because not removing internal dependencies means that
                         # no resolution of their variants happens, both
                         # dependencies have their variants as unsatisfied.
@@ -1785,9 +1789,9 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                         raise RuntimeError("Got errors in results:" +
                             "\n".join([str(s) for s in es]))
                 self.assertEqual(ms, {})
-                self.assert_(len(ds) == 2)
+                self.assertTrue(len(ds) == 2)
                 for d in ds:
-                        self.assert_(d.is_error())
+                        self.assertTrue(d.is_error())
                         if d.dep_key() == self.__path_to_key(
                             self.paths["ksh_path"]):
                                 self.assertEqual(d.action.attrs["path"],
@@ -1832,10 +1836,10 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                         raise RuntimeError("Got errors in results:" +
                             "\n".join([str(s) for s in es]))
                 self.assertEqual(ms, {})
-                self.assert_(len(ds) == 1)
+                self.assertTrue(len(ds) == 1)
                 d = ds[0]
 
-                self.assert_(d.is_error())
+                self.assertTrue(d.is_error())
                 expected_not_sat = set([frozenset([
                     ("variant.opensolaris.zone", "global")])])
                 expected_sat = set()
@@ -1854,9 +1858,9 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                             "\n".join([str(s) for s in es]))
                 self.assertEqual(ms, {})
                 self.assertEqual(pkg_attrs, {})
-                self.assert_(len(ds) == 2)
+                self.assertTrue(len(ds) == 2)
                 for d in ds:
-                        self.assert_(d.is_error())
+                        self.assertTrue(d.is_error())
                         # Because not removing internal dependencies means that
                         # no resolution of their variants happens, both
                         # dependencies have their variants as unsatisfied.
@@ -1914,7 +1918,7 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                 str(elf.UnsupportedDynamicToken("/proto_path", "/install",
                     "run_path", "tok"))
                 str(py.PythonModuleMissingPath("foo", "bar"))
-                str(py.PythonMismatchedVersion("2.7", "3.4", "foo", "bar"))
+                str(py.PythonMismatchedVersion("2.7", "3.5", "foo", "bar"))
                 str(py.PythonSubprocessError(2, "foo", "bar"))
                 str(py.PythonSubprocessBadLine("cmd", ["l1", "l2"]))
                 mi = dlmf.ModuleInfo("name", ["/d1", "/d2"])
@@ -1934,8 +1938,8 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                         self.assertEqual(ms, {})
                         self.assertEqual(len(ds), 1)
                         d = ds[0]
-                        self.assert_(d.is_error())
-                        self.assert_(d.dep_vars.is_satisfied())
+                        self.assertTrue(d.is_error())
+                        self.assertTrue(d.dep_vars.is_satisfied())
                         self.assertEqual(d.base_names[0], "libc.so.1")
                         self.assertEqual(set(d.run_paths),
                             set(["lib", "usr/lib"]))
@@ -1943,7 +1947,7 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                             self.__path_to_key(self.paths["libc_path"]))
                         self.assertEqual(d.action.attrs["path"],
                             self.paths["curses_path"])
-                        self.assert_(dependencies.is_file_dependency(d))
+                        self.assertTrue(dependencies.is_file_dependency(d))
 
                 t_path = self.make_manifest(self.int_elf_manf)
                 self.make_elf(os.path.join("foo", self.paths["curses_path"]))
@@ -1961,7 +1965,7 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                             es[0]))
                 self.assertEqual(es[0].dirs, [self.proto_dir])
                 self.assertEqual(ms, {})
-                self.assert_(len(d_map) == 0)
+                self.assertTrue(len(d_map) == 0)
 
                 # This should work since the "foo" directory has been added to
                 # the list of proto_dirs to use.
@@ -1972,7 +1976,7 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                         raise RuntimeError("Got errors in results:" +
                             "\n".join([str(s) for s in es]))
                 self.assertEqual(ms, {})
-                self.assert_(len(d_map) == 0)
+                self.assertTrue(len(d_map) == 0)
 
                 # This should be different because the empty text file
                 # is found before the binary file.
@@ -1987,8 +1991,8 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                 if len(ms) != 1:
                         raise RuntimeError("Didn't get expected types of "
                             "missing files:\n{0}".format(ms))
-                self.assertEqual(ms.keys()[0], "empty file")
-                self.assert_(len(d_map) == 0)
+                self.assertEqual(list(ms.keys())[0], "empty file")
+                self.assertTrue(len(d_map) == 0)
 
                 # This should find the binary file first and thus produce
                 # a depend action.
@@ -2000,7 +2004,7 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                         raise RuntimeError("Got errors in results:" +
                             "\n".join([str(s) for s in es]))
                 self.assertEqual(ms, {})
-                self.assert_(len(d_map) == 1)
+                self.assertTrue(len(d_map) == 1)
 
                 # Check alternative proto_dirs with hardlinks.
                 t_path = self.make_manifest(self.int_hardlink_manf)
@@ -2018,8 +2022,8 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                         raise RuntimeError("Wrong file was found missing:\n{0}".format(
                             es[0]))
                 self.assertEqual(es[0].dirs, [self.proto_dir])
-                self.assert_(len(ms) == 0)
-                self.assert_(len(ds) == 1)
+                self.assertTrue(len(ms) == 0)
+                self.assertTrue(len(ds) == 1)
 
                 # This test should pass because the needed directory has been
                 # added to the list of proto_dirs.
@@ -2030,8 +2034,8 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                 if es != []:
                         raise RuntimeError("Got errors in results:" +
                             "\n".join([str(s) for s in es]))
-                self.assert_(len(ms) == 1)
-                self.assert_(len(ds) == 0)
+                self.assertTrue(len(ms) == 1)
+                self.assertTrue(len(ds) == 0)
 
                 # Check alternative proto_dirs work with python files and
                 # scripts.
@@ -2059,11 +2063,11 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
 
                         self.assertEqual(ms, {})
                         for d in ds:
-                                self.assert_(d.is_error())
+                                self.assertTrue(d.is_error())
                                 if d.dep_vars is None:
                                         raise RuntimeError("This dep had "
                                             "depvars of None:{0}".format(d))
-                                self.assert_(d.dep_vars.is_satisfied())
+                                self.assertTrue(d.dep_vars.is_satisfied())
                                 if not d.dep_key()[0] in expected_deps:
                                         raise RuntimeError("Got this "
                                             "unexpected dep:{0}\n\nd:{1}".format(
@@ -2127,7 +2131,7 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
 
                                 for dep in self.smf_known_deps[fmri]:
                                         if dep not in deps[fmri]:
-                                                self.assert_(False,
+                                                self.assertTrue(False,
                                                     "{0} not found in "
                                                     "dependencies for {1}".format(
                                                     dep, manifest))
@@ -2145,7 +2149,7 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                 present in the provided pkg_attrs dictionary. Errors are
                 reported in an assertion message that includes manifest_name."""
 
-                self.assert_("org.opensolaris.smf.fmri" in pkg_attrs,
+                self.assertTrue("org.opensolaris.smf.fmri" in pkg_attrs,
                     "Missing org.opensolaris.smf.fmri key for {0}".format(
                     manifest_name))
 
@@ -2155,7 +2159,7 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                     " {1} got {2}".format(manifest_name, len(expected), found))
 
                 for fmri in expected:
-                            self.assert_(
+                            self.assertTrue(
                                 fmri in pkg_attrs["org.opensolaris.smf.fmri"],
                                 "{0} not in list of SMF instances/services "
                                 "from {1}".format(fmri, manifest_name))
@@ -2177,7 +2181,7 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                         raise RuntimeError("Got errors in results:" +
                             "\n".join([str(s) for s in es]))
 
-                self.assert_(len(ds) == 1, "Expected 1 dependency, got {0}".format(
+                self.assertTrue(len(ds) == 1, "Expected 1 dependency, got {0}".format(
                     len(ds)))
                 d = ds[0]
 
@@ -2196,9 +2200,9 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                 ds, es, ms, pkg_attrs = dependencies.list_implicit_deps(t_path,
                     [self.proto_dir], {}, [], remove_internal_deps=True,
                     convert=False)
-                self.assert_(len(ds) == 0, "Expected 0 dependencies, got {0}".format(
+                self.assertTrue(len(ds) == 0, "Expected 0 dependencies, got {0}".format(
                     len(ds)))
-                self.assert_(dependencies.is_file_dependency(d))
+                self.assertTrue(dependencies.is_file_dependency(d))
 
 
         def test_ext_smf_manifest(self):
@@ -2215,7 +2219,7 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                         raise RuntimeError("Got errors in results:" +
                             "\n".join([str(s) for s in es]))
 
-                self.assert_(len(ds) == 1, "Expected 1 dependency, got {0}".format(
+                self.assertTrue(len(ds) == 1, "Expected 1 dependency, got {0}".format(
                     len(ds)))
 
                 # verify we have identified the one external file we depend on
@@ -2248,7 +2252,7 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                     "analysis")
 
                 if "XML document" not in ms:
-                        self.assert_(False, "Broken SMF manifest file not"
+                        self.assertTrue(False, "Broken SMF manifest file not"
                             " declared")
 
                 broken_path = os.path.join(self.proto_dir, self.paths["broken"])
@@ -2268,7 +2272,7 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
 
                 # our dependency comes from service_single depending on
                 # delivered_many
-                self.assert_(len(ds) == 1, "Expected 1 dependency, got {0}".format(
+                self.assertTrue(len(ds) == 1, "Expected 1 dependency, got {0}".format(
                     len(ds)))
                 d = ds[0]
 
@@ -2294,13 +2298,13 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                     [self.proto_dir], {}, [], remove_internal_deps=False,
                     convert=False)
 
-                self.assert_(len(es) == 3,
+                self.assertTrue(len(es) == 3,
                     "Detected {0} error(s), expected 3".format(len(es)))
 
                 # our two dependencies come from:
                 # service_single depending on delivered_many_nodeps
                 # service_unknown depending on delivered_many_nodeps
-                self.assert_(len(ds) == 2, "Expected 2 dependencies, got {0}".format(
+                self.assertTrue(len(ds) == 2, "Expected 2 dependencies, got {0}".format(
                     len(ds)))
 
                 for d in ds:
@@ -2327,9 +2331,9 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                     [self.proto_dir], {}, [], remove_internal_deps=False,
                     convert=False)
 
-                self.assert_(len(es) == 0,
+                self.assertTrue(len(es) == 0,
                     "Detected {0} error(s), expected 0".format(len(es)))
-                self.assert_(len(ds) == 0, "Expected 0 dependencies, got {0}".format(
+                self.assertTrue(len(ds) == 0, "Expected 0 dependencies, got {0}".format(
                     len(ds)))
                 self.check_smf_fmris(pkg_attrs, self.smf_fmris["delete"] +
                     self.smf_fmris["foreign_single_nodeps"], "delete")
@@ -2369,12 +2373,12 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                 ds, es, ms, pkg_attrs = dependencies.list_implicit_deps(
                     t_path, [self.proto_dir], {}, [],
                     remove_internal_deps=False, convert=False)
-                self.assert_(len(es) == 0, "Detected {0} error(s), expected 0".format(
+                self.assertTrue(len(es) == 0, "Detected {0} error(s), expected 0".format(
                     len(es)))
-                self.assert_(len(ds) == 1, "Expected 1 dependency when "
+                self.assertTrue(len(ds) == 1, "Expected 1 dependency when "
                     "depending on a service, got {0}".format(len(ds)))
                 # ensure the dependencies are correct.
-                self.assert_(set(ds[0].full_paths) == set([
+                self.assertTrue(set(ds[0].full_paths) == set([
                     self.paths["delivered_many_nodeps"],
                     self.paths["delivered_many_nodeps_alt"]]),
                     "Expected two separate full_path entries, got {0}".format(
@@ -2383,8 +2387,8 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                 # for SMF dependencies on services that are satisfied by
                 # multiple instances in separate files, we should have no
                 # run_paths or base_names
-                self.assert_(ds[0].run_paths == [])
-                self.assert_(ds[0].base_names == [])
+                self.assertTrue(ds[0].run_paths == [])
+                self.assertTrue(ds[0].base_names == [])
 
                 # Test the second case: specific dependencies on instances
                 # satisfied by multiple (different) SMF manifests.
@@ -2392,9 +2396,9 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                 ds, es, ms, pkg_attrs = dependencies.list_implicit_deps(
                     t_path, [self.proto_dir], {}, [],
                     remove_internal_deps=False, convert=False)
-                self.assert_(len(es) == 0, "Detected {0} error(s), expected 0".format(
+                self.assertTrue(len(es) == 0, "Detected {0} error(s), expected 0".format(
                     len(es)))
-                self.assert_(len(ds) == 2, "Expected 2 dependencies, got {0}".format(
+                self.assertTrue(len(ds) == 2, "Expected 2 dependencies, got {0}".format(
                     len(ds)))
 
                 seen_nodeps3 = False
@@ -2406,12 +2410,12 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                                 seen_nodeps = True
                         elif actual == self.paths["delivered_many_nodeps_alt"]:
                                 seen_nodeps3 = True
-                        self.assert_(d.run_paths, "Expected a directory path "
+                        self.assertTrue(d.run_paths, "Expected a directory path "
                             "for {0}: {1}".format(d, d.run_paths))
-                        self.assert_(d.full_paths == [], "Expected an empty "
+                        self.assertTrue(d.full_paths == [], "Expected an empty "
                             "list for full_paths, got {0}".format(d.full_paths))
 
-                self.assert_(seen_nodeps3 and seen_nodeps, "Expected "
+                self.assertTrue(seen_nodeps3 and seen_nodeps, "Expected "
                     "dependencies were not generated when several SMF "
                     "instances were listed as 'require_all' dependencies.")
 
@@ -2422,20 +2426,20 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                 ds, es, ms, pkg_attrs = dependencies.list_implicit_deps(
                     t_path, [self.proto_dir], {}, [],
                     remove_internal_deps=False, convert=False)
-                self.assert_(len(es) == 0, "Detected {0} error(s), expected 0".format(
+                self.assertTrue(len(es) == 0, "Detected {0} error(s), expected 0".format(
                     len(es)))
-                self.assert_(len(ds) == 1, "Expected 1 dependency, got {0}".format(
+                self.assertTrue(len(ds) == 1, "Expected 1 dependency, got {0}".format(
                     len(ds)))
                 # ensure the dependencies are correct.
-                self.assert_(ds[0].full_paths == \
+                self.assertTrue(ds[0].full_paths == \
                     [self.paths["delivered_many_nodeps"]],
                     "d.full_paths entry was incorrect, got {0}".format(
                     ds[0].full_paths))
 
                 # since we've bypassed a dependency, we should not have
                 # run_paths or base_names
-                self.assert_(ds[0].run_paths == [])
-                self.assert_(ds[0].base_names == [])
+                self.assertTrue(ds[0].run_paths == [])
+                self.assertTrue(ds[0].base_names == [])
 
         def test_runpath_1(self):
                 """Test basic functionality of runpaths."""
@@ -2446,20 +2450,20 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                 ds, es, ms, pkg_attrs = dependencies.list_implicit_deps(t_path,
                     [self.proto_dir], {}, [], remove_internal_deps=False,
                     convert=False)
-                self.assert_(es==[], "Unexpected errors reported: {0}".format(es))
+                self.assertTrue(es==[], "Unexpected errors reported: {0}".format(es))
 
                 for dep in ds:
                         # only interested in seeing that our runpath was changed
                         if "pdtest.py" in dep.attrs["pkg.debug.depend.file"]:
-                                self.assert_("opt/pkgdep_runpath" in
+                                self.assertTrue("opt/pkgdep_runpath" in
                                     dep.attrs["pkg.debug.depend.path"])
-                                self.assert_("usr/lib/python2.7/pkgdep_runpath"
+                                self.assertTrue("usr/lib/python2.7/pkgdep_runpath"
                                     in dep.attrs["pkg.debug.depend.path"])
                                 # ensure this dependency was indeed generated
                                 # as a result of our test file
-                                self.assert_("pkgdep_test/file.py" in
+                                self.assertTrue("pkgdep_test/file.py" in
                                     dep.attrs["pkg.debug.depend.reason"])
-                        self.assert_(dependencies.is_file_dependency(dep))
+                        self.assertTrue(dependencies.is_file_dependency(dep))
 
         def test_runpath_2(self):
                 """Test invalid runpath attributes."""
@@ -2471,14 +2475,14 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                 ds, es, ms, pkg_attrs = dependencies.list_implicit_deps(t_path,
                     [self.proto_dir], {}, [], remove_internal_deps=False,
                     convert=False)
-                self.assert_(es != [], "No errors reported for broken runpath")
+                self.assertTrue(es != [], "No errors reported for broken runpath")
 
                 # test a runpath with multiple $PD_DEFAULT_RUNPATH components
                 t_path = self.make_manifest(self.python_invalid_runpath2_manf)
                 ds, es, ms, pkg_attrs = dependencies.list_implicit_deps(t_path,
                     [self.proto_dir], {}, [], remove_internal_deps=False,
                     convert=False)
-                self.assert_(es != [], "No errors reported for broken runpath")
+                self.assertTrue(es != [], "No errors reported for broken runpath")
 
         def test_runpath_3(self):
                 """Test setting an empty runpath attribute"""
@@ -2489,30 +2493,30 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                 ds, es, ms, pkg_attrs = dependencies.list_implicit_deps(t_path,
                     [self.proto_dir], {}, [], remove_internal_deps=False,
                     convert=False)
-                self.assert_(es != [], "No errors reported for empty runpath")
+                self.assertTrue(es != [], "No errors reported for empty runpath")
 
         def validate_bypass_dep(self, dep):
                 """Given a dependency which may be bypassed, if it has been,
                 it should have been expanded into a dependency containing just
                 pkg.debug.depend.fullpath entries.
                 """
-                self.assert_(dependencies.is_file_dependency(dep))
+                self.assertTrue(dependencies.is_file_dependency(dep))
 
                 if dep.attrs.get("pkg.debug.depend.fullpath", None):
                         for val in ["path", "file"]:
-                                self.assert_("pkg.debug.depend.{0}".format(val)
+                                self.assertTrue("pkg.debug.depend.{0}".format(val)
                                     not in dep.attrs, "We should not see a {0} "
                                     "entry in this dependency: {1}".format(
                                     val, dep))
-                                self.assert_(not dep.run_paths,
+                                self.assertTrue(not dep.run_paths,
                                     "Unexpected run_paths: {0}".format(dep))
-                                self.assert_(not dep.base_names,
+                                self.assertTrue(not dep.base_names,
                                     "Unexpected base_names: {0}".format(dep))
                 else:
-                        self.assert_("pkg.debug.depend.fullpath" not in
+                        self.assertTrue("pkg.debug.depend.fullpath" not in
                             dep.attrs, "We should not see a fullpath "
                             "entry in this dependency: {0}".format(dep))
-                        self.assert_(not dep.full_paths,
+                        self.assertTrue(not dep.full_paths,
                             "Unexpected full_paths: {0}".format(dep))
 
         def verify_bypass(self, ds, es, bypass):
@@ -2526,7 +2530,7 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                 We should never have all three attributes set.
                 """
 
-                self.assert_(len(es) == 0, "Errors reported during bypass: {0}".format(
+                self.assertTrue(len(es) == 0, "Errors reported during bypass: {0}".format(
                     es))
 
                 for dep in ds:
@@ -2542,7 +2546,7 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                                             filename)
                                             for dir in dep.run_paths])
 
-                        self.assert_(dependencies.is_file_dependency(dep))
+                        self.assertTrue(dependencies.is_file_dependency(dep))
 
                         # finally, check the dependencies
                         if dep_paths.intersection(set(bypass)):
@@ -2586,13 +2590,13 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                 ds, es, ms, pkg_attrs = dependencies.list_implicit_deps(t_path,
                     [self.proto_dir], {}, [], remove_internal_deps=False,
                     convert=False)
-                self.assert_(self.verify_bypass(ds, es, [
+                self.assertTrue(self.verify_bypass(ds, es, [
                     "opt/pkgdep_runpath/pdtest.py",
                     "usr/lib/python2.7/lib-dynload/pkgdep_runpath/pdtestmodule.so"]),
                     "Python script was not bypassed")
                 # now check we depend on some files which should not have been
                 # bypassed
-                self.assert_(self.verify_dep_generation(ds,
+                self.assertTrue(self.verify_dep_generation(ds,
                     ["usr/lib/python2.7/lib-dynload/pkgdep_runpath/pdtest.so",
                     "usr/lib/python2.7/plat-sunos5/pkgdep_runpath/pdtest/__init__.py",
                     "usr/lib/python2.7/lib-dynload/pkgdep_runpath/pdtest.py",
@@ -2603,7 +2607,7 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                     [self.proto_dir], {}, [], remove_internal_deps=False,
                     convert=False, ignore_bypass=True)
                 # the first two items in the list were previously bypassed
-                self.assert_(self.verify_dep_generation(ds,
+                self.assertTrue(self.verify_dep_generation(ds,
                     ["opt/pkgdep_runpath/pdtest.py",
                     "usr/lib/python2.7/lib-dynload/pkgdep_runpath/pdtestmodule.so",
                     "usr/lib/python2.7/lib-dynload/pkgdep_runpath/pdtest.so",
@@ -2624,9 +2628,9 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                             dependencies.list_implicit_deps(t_path,
                             [self.proto_dir], {}, [],
                             remove_internal_deps=False, convert=False)
-                        self.assert_(len(ds) == 0,
+                        self.assertTrue(len(ds) == 0,
                             "Did not generate exactly 0 dependencies")
-                        self.assert_(self.verify_bypass(ds, es,
+                        self.assertTrue(self.verify_bypass(ds, es,
                             ["usr/bin/ksh"]), "Ksh script was not bypassed")
 
                         # don't perform bypass
@@ -2635,9 +2639,9 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                             [self.proto_dir], {}, [],
                             remove_internal_deps=False, convert=False,
                             ignore_bypass=True)
-                        self.assert_(len(ds) == 1,
+                        self.assertTrue(len(ds) == 1,
                             "Did not generate exactly 1 dependency on ksh")
-                        self.assert_(self.verify_dep_generation(
+                        self.assertTrue(self.verify_dep_generation(
                             ds, ["usr/bin/ksh"]),
                             "Ksh script did not generate a dependency on ksh")
 
@@ -2650,11 +2654,11 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                     [self.proto_dir], {}, [], remove_internal_deps=False,
                     convert=False)
 
-                self.assert_(len(es) == 0, "Errors reported during bypass: {0}".format(
+                self.assertTrue(len(es) == 0, "Errors reported during bypass: {0}".format(
                     es))
 
                 # we should have bypassed all dependency generation on all files
-                self.assert_(len(ds) == 0, "Generated dependencies despite "
+                self.assertTrue(len(ds) == 0, "Generated dependencies despite "
                     "request to bypass all dependency generation.")
 
                 t_path = self.make_manifest(
@@ -2664,11 +2668,11 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                     [self.proto_dir], {}, [], remove_internal_deps=False,
                     convert=False)
 
-                self.assert_(self.verify_bypass(ds, es, [
+                self.assertTrue(self.verify_bypass(ds, es, [
                     "usr/lib/python2.7/lib-dynload/pkgdep_runpath/pdtest.pyo",
                     "usr/lib/python2.7/lib-old/pkgdep_runpath/pdtestmodule.so"]),
                     "Directory bypass wildcard failed")
-                self.assert_(self.verify_dep_generation(ds, [
+                self.assertTrue(self.verify_dep_generation(ds, [
                     "usr/lib/python2.7/pkgdep_runpath/__init__.py",
                     "usr/lib/python2.7/lib-old/pkgdep_runpath/__init__.py"]),
                     "Failed to generate dependencies, despite dir-wildcards")
@@ -2679,12 +2683,12 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                 ds, es, ms, pkg_attrs = dependencies.list_implicit_deps(t_path,
                     [self.proto_dir], {}, [], remove_internal_deps=False,
                     convert=False)
-                self.assert_(self.verify_bypass(ds, es, [
+                self.assertTrue(self.verify_bypass(ds, es, [
                     "opt/pkgdep_runpath/pdtest.pyo",
                     "opt/pkgdep_runpath/pdtestmodule.so"]),
                     "Failed to bypass some paths despite use of file-wildcard")
                 # we should still have dependencies on these
-                self.assert_(self.verify_dep_generation(ds, [
+                self.assertTrue(self.verify_dep_generation(ds, [
                     "usr/lib/python2.7/lib-dynload/pkgdep_runpath/pdtest.pyo",
                     "usr/lib/python2.7/lib-old/pkgdep_runpath/pdtestmodule.so"]),
                     "Failed to generate dependencies, despite file-wildcards")
@@ -2699,14 +2703,14 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                 ds, es, ms, pkg_attrs = dependencies.list_implicit_deps(t_path,
                     [self.proto_dir], {}, [], remove_internal_deps=False,
                     convert=False)
-                self.assert_(self.verify_bypass(ds, es, [
+                self.assertTrue(self.verify_bypass(ds, es, [
                     "opt/pkgdep_runpath/pdtest.py",
                     "usr/lib/python2.7/vendor-packages/pkgdep_runpath/pdtest.py"
                     "usr/lib/python2.7/site-packages/pkgdep_runpath/pdtest.py",
                     "usr/lib/python2.7/site-packages/pkgdep_runpath/pdtestmodule.so"]),
                     "Failed to bypass some paths despite use of combo-wildcard")
                 # we should still have dependencies on these
-                self.assert_(self.verify_dep_generation(ds, [
+                self.assertTrue(self.verify_dep_generation(ds, [
                     "usr/lib/python2.7/site-packages/pkgdep_runpath/pdtest.pyc",
                     "usr/lib/python2.7/lib-old/pkgdep_runpath/pdtestmodule.so"]),
                     "Failed to generate dependencies, despite file-wildcards")
@@ -2724,9 +2728,9 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                 for dep in ds:
                         # we expect that there are only file/path attributes
                         # since no bypasses have been performed
-                        self.assert_("pkg.debug.depend.file" in dep.attrs)
-                        self.assert_("pkg.debug.depend.path" in dep.attrs)
-                        self.assert_("pkg.debug.depend.fullpath"
+                        self.assertTrue("pkg.debug.depend.file" in dep.attrs)
+                        self.assertTrue("pkg.debug.depend.path" in dep.attrs)
+                        self.assertTrue("pkg.debug.depend.fullpath"
                             not in dep.attrs)
 
                 def all_paths(ds):
@@ -2749,7 +2753,7 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                     [self.proto_dir], {}, [], remove_internal_deps=False,
                     convert=False, ignore_bypass=True)
 
-                self.assert_(gen_paths == all_paths(ds),
+                self.assertTrue(gen_paths == all_paths(ds),
                     "generating dependencies with non-matching bypass entries "
                     "changed the returned dependencies")
 
@@ -2785,9 +2789,12 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                     remove_internal_deps=False, convert=False)
 
                 for a, b in [(ds, dsl), (pkg_attrs, pkg_attrsl)]:
-                            self.assert_(a == b, "Differences found comparing "
+                            self.assertTrue(a == b, "Differences found comparing "
                                 "proto_dir with symlinked proto_dir: {0} vs. {1}"
                                .format(a, b))
 
 if __name__ == "__main__":
         unittest.main()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

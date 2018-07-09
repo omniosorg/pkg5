@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -62,14 +62,7 @@ def __path_abs_to_relative(path):
         return path_new
 
 def __fd_to_path(fd):
-        """Given a file descriptor return the path to that file descriptor.
-
-        The readlink() call below can return ENOENT due to 6964121.  Normally
-        images live on zfs filesystems so this isn't a problem, but the pkg(5)
-        test suite runs all its tests on tmpfs filesystems, so this function
-        always fails in that case.  Either 6964121 should be fixed before fcs,
-        or we should come up with a different safe way to open files in an
-        alternate root."""
+        """Given a file descriptor return the path to that file descriptor."""
 
         path = "/proc/{0:d}/path/{1:d}".format(os.getpid(), fd)
         return os.readlink(path)
@@ -123,9 +116,6 @@ def ar_open(root, path, flags,
         try:
                 root = __fd_to_path(root_fd)
         except OSError as e:
-                # W0511 XXX / FIXME Comments; pylint: disable=W0511
-                # XXX: __fd_to_path() can return ENOENT due to 6964121
-                # pylint: enable=W0511
                 if e.errno != errno.ENOENT:
                         os.close(root_fd)
                         raise e
@@ -173,9 +163,6 @@ def ar_open(root, path, flags,
         try:
                 path = __fd_to_path(path_fd)
         except OSError as e:
-                # W0511 XXX / FIXME Comments; pylint: disable=W0511
-                # XXX: __fd_to_path() can return ENOENT due to 6964121
-                # pylint: enable=W0511
                 if e.errno != errno.ENOENT:
                         os.close(path_fd)
                         raise e
@@ -416,3 +403,6 @@ def ar_img_prefix(root):
         if root_img:
                 return image.img_root_prefix
         return None
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

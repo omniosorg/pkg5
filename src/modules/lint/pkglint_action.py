@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 from pkg.lint.engine import lint_fmri_successor
@@ -34,8 +34,8 @@ import pkg.lint.base as base
 from pkg.actions import ActionError
 from pkg.actions.file import FileAction
 import re
+import six
 import stat
-import string
 
 ObsoleteFmri = collections.namedtuple("ObsoleteFmri", "is_obsolete, fmri")
 
@@ -132,7 +132,7 @@ class PkgDupActionChecker(base.ActionChecker):
                                 variants = action.get_variant_template()
                                 variants.merge_unknown(pkg_vars)
                                 # Action attributes must be lists or strings.
-                                for k, v in variants.iteritems():
+                                for k, v in six.iteritems(variants):
                                         if isinstance(v, set):
                                                 action.attrs[k] = list(v)
                                         else:
@@ -1034,8 +1034,7 @@ class PkgActionChecker(base.ActionChecker):
                         if "_" in key:
                                 if key in ["original_name", "refresh_fmri",
                                     "restart_fmri", "suspend_fmri",
-                                    "disable_fmri", "clone_perms",
-                                    "reboot_needed"] or \
+                                    "disable_fmri", "clone_perms"] or \
                                         key.startswith("facet.locale.") or \
                                         key.startswith("facet.version-lock."):
                                         continue
@@ -1387,7 +1386,7 @@ class PkgActionChecker(base.ActionChecker):
                 if "fmri" not in action.attrs:
                         return
                 fmris = action.attrs["fmri"]
-                if isinstance(fmris, basestring):
+                if isinstance(fmris, six.string_types):
                         fmris = [fmris]
 
                 for fmri in fmris:
@@ -1601,3 +1600,6 @@ class PkgActionChecker(base.ActionChecker):
 
         supported_pkg_actuator.pkglint_desc = _("package actuator should be "
             "set to a valid value")
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -24,6 +24,7 @@
 # Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
+from __future__ import division
 from __future__ import print_function
 import datetime
 import fileinput
@@ -33,7 +34,6 @@ import os
 import re
 import sys
 import time
-import urllib
 
 from an_report import *
 
@@ -49,11 +49,12 @@ filelist_totals["bytes"] = 0
 
 pkg_pat = re.compile("/filelist/(?P<mversion>\d+)/(?P<trailing>.*)")
 
+# old-division; pylint: disable=W1619
 def report_filelist_by_bytes():
-        print("<p>Total kilobytes sent via filelist: {0:f}</p>".format(filelist_totals["kilobytes"] + float(filelist_totals["bytes"])/1024))
+        print("<p>Total kilobytes sent via filelist: {0:f}</p>".format(filelist_totals["kilobytes"] + filelist_totals["bytes"]/1024))
 
         if summary_file:
-                print("<p>Total kilobytes sent via filelist: {0:d}</p>".format(filelist_totals["kilobytes"] + float(filelist_totals["bytes"])/1024), file=summary_file)
+                print("<p>Total kilobytes sent via filelist: {0:f}</p>".format(filelist_totals["kilobytes"] + filelist_totals["bytes"]/1024), file=summary_file)
 
 def count_filelist(mg, d):
         try:
@@ -69,7 +70,7 @@ def count_filelist(mg, d):
                         filelist_totals["bytes"] += int(mg["subcode"])
 
                         if filelist_totals["bytes"] > 1024:
-                                filelist_totals["kilobytes"] += filelist_totals["bytes"] / 1024
+                                filelist_totals["kilobytes"] += filelist_totals["bytes"] // 1024
                                 filelist_totals["bytes"] = filelist_totals["bytes"] % 1024
 
                 # XXX should measure downtime via 503, other failure responses
@@ -125,3 +126,6 @@ report_section_begin("Filelist", summary_file = summary_file)
 report_filelist_by_bytes()
 report_by_date(filelist_by_date, "filelist", summary_file = summary_file)
 report_section_end(summary_file = summary_file)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

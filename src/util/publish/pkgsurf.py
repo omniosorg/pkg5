@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 #
@@ -71,9 +71,11 @@ import gettext
 import locale
 import os
 import shutil
+import six
 import sys
 import tempfile
 import traceback
+import warnings
 
 from itertools import repeat
 
@@ -119,7 +121,7 @@ def error(text, cmd=None):
         emsg(ws + text_nows)
 
 def cleanup(no_msg=False):
-	"""Remove temporary directories. Print error msg in case operation
+        """Remove temporary directories. Print error msg in case operation
         was not finished."""
 
         global temp_root
@@ -238,7 +240,7 @@ def get_matching_pkgs(cat, patterns):
                 msg += "\n\t".join(unmatched)
                 abort(msg)
 
-        return matching.keys()
+        return list(matching.keys())
 
 def get_manifest(repo, pub, pfmri):
         """ Retrieve a manifest with FMRI 'pfmri' of publisher 'pub' from
@@ -388,7 +390,7 @@ def use_ref(a, deps, ignores):
         if a.name == "depend":
                 # TODO: support dependency lists
                 # For now, treat as content change.
-                if not isinstance(a.attrs["fmri"], basestring):
+                if not isinstance(a.attrs["fmri"], six.string_types):
                         return False
                 dpfmri = fmri.PkgFmri(a.attrs["fmri"])
                 deps.add(dpfmri.get_pkg_stem())
@@ -414,7 +416,8 @@ def do_reversion(pub, ref_pub, target_repo, ref_xport, changes, ignores):
         # Prefetch requires an intent which it sends to the server. Here
         # we just use operation=reversion for all FMRIs.
         intent = "operation=reversion;"
-        ref_pkgs = zip(latest_ref_pkgs.values(), repeat(intent))
+        # use list() to force the zip() to evaluate
+        ref_pkgs = list(zip(latest_ref_pkgs.values(), repeat(intent)))
 
         # Retrieve reference manifests.
         # Try prefetching manifests in bulk first for faster, parallel
@@ -785,6 +788,9 @@ def main_func():
 # so that we can more easily detect these in testing of the CLI commands.
 #
 if __name__ == "__main__":
+        if six.PY3:
+                # disable ResourceWarning: unclosed file
+                warnings.filterwarnings("ignore", category=ResourceWarning)
         try:
                 __ret = main_func()
         except PipeError:
@@ -808,3 +814,6 @@ if __name__ == "__main__":
                 error(misc.get_traceback_message())
                 __ret = 99
         sys.exit(__ret)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

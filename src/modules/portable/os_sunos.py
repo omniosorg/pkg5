@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
 # Copyright 2017 Lauri Tirkkonen <lotheac@iki.fi>
 # Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
 #
@@ -31,13 +31,14 @@ implementation in the 'arch' extension module.
 """
 
 import os
+import six
 import subprocess
 import tempfile
 
-from os_unix import \
+from .os_unix import \
     get_group_by_name, get_user_by_name, get_name_by_gid, get_name_by_uid, \
-    is_admin, get_userid, get_username, chown, rename, remove, link, \
-    copyfile, split_path, get_root, assert_mode
+    get_usernames_by_gid, is_admin, get_userid, get_username, chown, rename, \
+    remove, link, copyfile, split_path, get_root, assert_mode
 from pkg.portable import ELF, EXEC, PD_LOCAL_PATH, UNFOUND, SMF_MANIFEST
 
 import pkg.arch as arch
@@ -56,19 +57,29 @@ def get_platform():
 def get_file_type(actions):
         from pkg.flavor.smf_manifest import is_smf_manifest
         for a in actions:
-                path = a.attrs['path']
                 lpath = a.attrs[PD_LOCAL_PATH]
+                if os.stat(lpath).st_size == 0:
+                        # Some tests rely on this being identified
+                        yield "empty file"
+                        continue
                 try:
-                        with open(lpath, 'r') as f:
+                        with open(lpath, 'rb') as f:
                                 magic = f.read(4)
                 except FileNotFoundError:
                         yield UNFOUND
                         continue
-                if magic == '\x7fELF':
+                if magic == b'\x7fELF':
                         yield ELF
-                elif magic[:2] == '#!':
+                elif magic[:2] == b'#!':
                         yield EXEC
-                elif (path.endswith('.xml') and is_smf_manifest(lpath)):
-                        yield SMF_MANIFEST
+                elif lpath.endswith('.xml'):
+                        if is_smf_manifest(lpath):
+                                yield SMF_MANIFEST
+                        else:
+                                # Some tests rely on this type being identified
+                                yield "XML document"
                 else:
                         yield "unknown"
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -20,9 +20,9 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
 
-import testutils
+from . import testutils
 if __name__ == "__main__":
         testutils.setup_environment("../../../proto")
 import pkg5unittest
@@ -33,6 +33,7 @@ import pkg.portable as portable
 import pkg.misc as misc
 import pkg.p5p
 import shutil
+import six
 import stat
 import tempfile
 import unittest
@@ -277,7 +278,7 @@ class TestPkgMediated(pkg5unittest.SingleDepotTestCase):
                     getattr(self, p)
                     for p in dir(self)
                     if p.startswith("pkg_") and isinstance(getattr(self, p),
-                        basestring)
+                        six.string_types)
                 ])
 
         def __assert_mediation_matches(self, expected, mediators=misc.EmptyI):
@@ -517,25 +518,25 @@ vi\tsystem\t\tsystem\tsvr4\t
                 def check_files(files):
                         for fpath in files:
                                 s = os.lstat(fpath)
-                                self.assert_(stat.S_ISREG(s.st_mode))
+                                self.assertTrue(stat.S_ISREG(s.st_mode))
 
                 def check_target(links, target):
                         for lpath in links:
                                 ltarget = os.readlink(lpath)
-                                self.assert_(target in ltarget)
+                                self.assertTrue(target in ltarget)
 
                 def check_not_target(links, target):
                         for lpath in links:
                                 ltarget = os.readlink(lpath)
-                                self.assert_(target not in ltarget)
+                                self.assertTrue(target not in ltarget)
 
                 def check_exists(links):
                         for lpath in links:
-                                self.assert_(os.path.exists(lpath))
+                                self.assertTrue(os.path.exists(lpath))
 
                 def check_not_exists(links):
                         for lpath in links:
-                                self.assert_(not os.path.exists(lpath))
+                                self.assertTrue(not os.path.exists(lpath))
 
                 def remove_links(links):
                         for lpath in links:
@@ -1092,10 +1093,10 @@ python\tsystem\t2.7\tsystem\tunladen-swallow\t
                             os.stat(target).st_ino)
 
                 def assert_exists(link):
-                        self.assert_(os.path.exists(lpath))
+                        self.assertTrue(os.path.exists(lpath))
 
                 def assert_not_exists(link):
-                        self.assert_(not os.path.exists(lpath))
+                        self.assertTrue(not os.path.exists(lpath))
 
                 vi_path = get_link_path("usr", "bin", "vi")
                 nvi_path = get_link_path("usr", "bin", "nvi")
@@ -1229,3 +1230,6 @@ foo\tlocal\t1\tsystem\t\t
 
 if __name__ == "__main__":
         unittest.main()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

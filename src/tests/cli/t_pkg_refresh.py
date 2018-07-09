@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -20,11 +20,11 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
 
-import testutils
+from . import testutils
 if __name__ == "__main__":
-	testutils.setup_environment("../../../proto")
+        testutils.setup_environment("../../../proto")
 import pkg5unittest
 
 import hashlib
@@ -36,6 +36,9 @@ import unittest
 
 import pkg.catalog as catalog
 import pkg.misc
+
+from pkg.client import global_settings
+from pkg.client.debugvalues import DebugValues
 
 
 class TestPkgRefreshMulti(pkg5unittest.ManyDepotTestCase):
@@ -67,10 +70,18 @@ class TestPkgRefreshMulti(pkg5unittest.ManyDepotTestCase):
             open food@1.2,5.11-0
             close """
 
+        cache10 = """
+            open cache@1.0
+            add file tmp/cat mode=0444 owner=root group=bin path=/etc/cat
+            close """
+
+        misc_files = ["tmp/cat"]
+
         def setUp(self):
                 # This test suite needs actual depots.
                 pkg5unittest.ManyDepotTestCase.setUp(self, ["test1", "test2",
                     "test1", "test1"], start_depots=True)
+                self.make_misc_files(self.misc_files)
 
                 self.durl1 = self.dcs[1].get_depot_url()
                 self.durl2 = self.dcs[2].get_depot_url()
@@ -142,7 +153,7 @@ class TestPkgRefreshMulti(pkg5unittest.ManyDepotTestCase):
                     self.reduce_spaces(expected).splitlines().sort(),
                     self.reduce_spaces(actual).splitlines().sort())
 
- 	def test_refresh_cli_options(self):
+        def test_refresh_cli_options(self):
                 """Test refresh and options."""
 
                 durl = self.dcs[1].get_depot_url()
@@ -353,6 +364,7 @@ class TestPkgRefreshMulti(pkg5unittest.ManyDepotTestCase):
                                         self.debug("l: {0}".format(l))
                                         if l:
                                                 entries.append({ hdr: l })
+                        logfile.close()
                 return entries
 
         def test_catalog_v1(self):
@@ -391,7 +403,7 @@ class TestPkgRefreshMulti(pkg5unittest.ManyDepotTestCase):
                 # and then get the list of updates files it has created.
                 repo = dc.get_repo()
                 v1_cat = repo.get_catalog("test1")
-                update = v1_cat.updates.keys()[-1]
+                update = list(v1_cat.updates.keys())[-1]
 
                 # All of the entries from the previous operations, and then
                 # entries for the catalog attrs file, and one catalog update
@@ -464,7 +476,7 @@ class TestPkgRefreshMulti(pkg5unittest.ManyDepotTestCase):
 
                 # Refresh to get an incremental update, and verify it worked.
                 self.pkg("refresh")
-                update = v1_cat.updates.keys()[-1]
+                update = list(v1_cat.updates.keys())[-1]
                 expected += [
                     "/catalog/1/catalog.attrs",
                     "/catalog/1/{0}".format(update)
@@ -508,7 +520,7 @@ class TestPkgRefreshMulti(pkg5unittest.ManyDepotTestCase):
 
                 # Refresh to get an incremental update, and verify it worked.
                 self.pkg("refresh")
-                update = v1_cat.updates.keys()[-1]
+                update = list(v1_cat.updates.keys())[-1]
                 expected += [
                     "/catalog/1/catalog.attrs",
                     "/catalog/1/{0}".format(update)
@@ -529,7 +541,7 @@ class TestPkgRefreshMulti(pkg5unittest.ManyDepotTestCase):
                 self.pkgsend_bulk(self.durl1, self.foo12)
                 repo = dc.get_repo()
                 v1_cat = repo.get_catalog("test1")
-                update = v1_cat.updates.keys()[-1]
+                update = list(v1_cat.updates.keys())[-1]
 
                 # Now verify that a refresh induces a full retrieval.  The
                 # catalog.attrs file will be retrieved twice due to the
@@ -614,7 +626,7 @@ class TestPkgRefreshMulti(pkg5unittest.ManyDepotTestCase):
                 # Next, purposefully corrupt the catalog.attrs file in the
                 # repository and attempt a refresh.  The client should fail
                 # gracefully.
-                f = open(os.path.join(v1_cat.meta_root, "catalog.attrs"), "wb")
+                f = open(os.path.join(v1_cat.meta_root, "catalog.attrs"), "w")
                 f.write("INVALID")
                 f.close()
                 self.pkg("refresh", exit=1)
@@ -625,6 +637,106 @@ class TestPkgRefreshMulti(pkg5unittest.ManyDepotTestCase):
                 shutil.copytree(old_cat, v1_cat.meta_root)
                 self.pkg("refresh")
 
+        def __gen_expected(self, count):
+                """Generate expected header fields result."""
+                expected = []
+                for i in range(count):
+                        expected.append({ "CACHE-CONTROL": "no-cache" })
+                for i in range(count):
+                        expected.append({ "PRAGMA": "no-cache" })
+                return expected
+
+        def test_ignore_network_cache_1(self):
+                """Verify that --no-network-cache option works for transport
+                module."""
+
+                dc = self.dcs[1]
+                self.pkgsend_bulk(self.durl1, self.cache10)
+
+                # First, verify refresh triggers expected cache headers when
+                # retrieving catalog.
+                self.image_create(self.durl1, prefix="test1")
+                dc.stop()
+                dc.set_debug_feature("headers")
+                dc.start()
+                self.pkg("--no-network-cache refresh")
+                entries = self.__get_cache_entries(dc)
+                expected = self.__gen_expected(2)
+                self.assertEqualDiff(entries, expected)
+
+                # Second, verify contents triggers expected cache headers when
+                # fetch manifest.
+                self.pkg("--no-network-cache contents -rm cache")
+                entries = self.__get_cache_entries(dc)
+                expected = self.__gen_expected(4)
+                self.assertEqualDiff(entries, expected)
+
+                # Third, verify install triggers expected cache headers.
+                self.pkg("--no-network-cache install cache")
+                entries = self.__get_cache_entries(dc)
+                expected = self.__gen_expected(7)
+                self.assertEqualDiff(entries, expected)
+
+        def test_ignore_network_cache_2(self):
+                """Verify that global setting client_no_network_cache works for
+                transport module."""
+
+                dc = self.dcs[1]
+                self.pkgsend_bulk(self.durl1, self.cache10)
+
+                # Verify refresh triggers expected cache headers when
+                # retrieving catalog.
+                api_obj = self.image_create(self.durl1, prefix="test1")
+                global_settings.client_no_network_cache = True
+                dc.stop()
+                dc.set_debug_feature("headers")
+                dc.start()
+                api_obj.refresh()
+                entries = self.__get_cache_entries(dc)
+                expected = self.__gen_expected(2)
+                self.assertEqualDiff(entries, expected)
+
+                # Verify install triggers expected cache headers.
+                self._api_install(api_obj, ["cache"])
+                entries = self.__get_cache_entries(dc)
+                expected = self.__gen_expected(5)
+                self.assertEqualDiff(entries, expected)
+
+        def test_ignore_network_cache_3(self):
+                """Verify that debug value no_network_cache works for
+                transport module."""
+
+                dc = self.dcs[1]
+                self.pkgsend_bulk(self.durl1, self.cache10)
+
+                # Verify refresh triggers expected cache headers when
+                # retrieving catalog.
+                api_obj = self.image_create(self.durl1, prefix="test1")
+                DebugValues["no_network_cache"] = "true"
+                dc.stop()
+                dc.set_debug_feature("headers")
+                dc.start()
+                api_obj.refresh()
+                entries = self.__get_cache_entries(dc)
+                expected = self.__gen_expected(2)
+                self.assertEqualDiff(entries, expected)
+
+                # Verify install triggers expected cache headers.
+                self._api_install(api_obj, ["cache"])
+                entries = self.__get_cache_entries(dc)
+                expected = self.__gen_expected(5)
+                self.assertEqualDiff(entries, expected)
+
+                # Verify pkgrecv triggers expected cache headers.
+                rpth = tempfile.mkdtemp(dir=self.test_root)
+                self.pkgrecv("{0} -d {1} -D no_network_cache=true --raw"
+                    " cache".format(self.durl1, rpth))
+                entries = self.__get_cache_entries(dc)
+                expected = self.__gen_expected(10)
+                self.assertEqualDiff(entries, expected)
 
 if __name__ == "__main__":
         unittest.main()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

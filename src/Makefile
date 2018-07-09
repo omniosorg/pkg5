@@ -22,15 +22,18 @@
 #
 # Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
 # Copyright 2016, OmniTI Computer Consulting, Inc. All rights reserved.
+# Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
 #
 
 PYTHON27 = /usr/bin/python2.7
-PYTHON34 = /usr/bin/python3.4
+PYTHON35 = /usr/bin/python3.5
 
 # Should match python version above.
 PYLINT_FMRI = pkg:/library/python-2/pylint-27
 
 CODE_WS = $$(hg root 2>/dev/null || git rev-parse --show-toplevel)
+
+CC=gcc
 
 all := TARGET = all
 install := TARGET = install
@@ -40,6 +43,7 @@ clobber := TARGET = clobber
 lint := TARGET = lint
 clint := TARGET = clint
 pylint := TARGET = pylint
+pep8 := TARGET = pep8
 test := TARGET = test
 test-verbose := TARGET = test-verbose
 test-generate := TARGET = test-generate
@@ -52,6 +56,9 @@ test-generate := TARGET = test-generate
 PYLINT_VER_CMD = PYTHONPATH= /usr/bin/pkg info $(PYLINT_FMRI) | \
 		 /usr/bin/grep Version | /usr/bin/awk -F: '{print $$2}' | \
 		 /usr/bin/sed -e 's/ //g'
+
+PEP8 = /usr/bin/pep8
+JOBS = 8
 
 SUBDIRS=brand zoneproxy tsol util/mkcert
 
@@ -74,6 +81,7 @@ clobber: $(SUBDIRS)
 #
 install: $(SUBDIRS)
 	ISALIST=i386 $(PYTHON27) setup.py install
+	$(PYTHON35) setup.py install
 
 lint:
 	$(PYTHON27) setup.py lint
@@ -85,27 +93,25 @@ clint:
 
 pylint: install
 	PYLINT_VER=$(PYLINT_VER_CMD:sh) $(PYTHON27) setup.py pylint
+	PYLINT_VER=$(PYLINT_VER_CMD:sh) $(PYTHON27) setup.py pylint_py3k
+
+pep8:
+	$(PEP8) --statistics --count `cat tests/pep8-whitelist.txt`
 
 #
 # This rule propagates the current make target through all of the
 # subdirectories in $SUBDIRS.
 #
 $(SUBDIRS): FRC
-	@cd $@; pwd; $(MAKE) $(TARGET)
+	@cd $@; pwd; $(MAKE) $(TARGET) CC=$(CC)
 
-# Use the bits we just built to create the packages.
-packages: install pylint
+# Use the bits we just built to create the packages. - #XXX pep8
+packages: install
 	@cd pkg; pwd; $(MAKE) $(TARGET) check \
 		PATH=$(CODE_WS)/proto/root_$$(uname -p)/usr/bin:$$PATH \
-		PYTHONPATH=$(CODE_WS)/proto/root_$$(uname -p)/usr/lib/python2.6/vendor-packages
 
-test:
-	$(PYTHON27) setup.py test
-
-test-verbose:
-	$(PYTHON27) setup.py test -v
-
-test-generate:
-	$(PYTHON27) setup.py test -g
+test: install
+	-pfexec $(PYTHON27) tests/run.py -j ${JOBS}
+	-pfexec $(PYTHON35) tests/run.py -j ${JOBS}
 
 FRC:

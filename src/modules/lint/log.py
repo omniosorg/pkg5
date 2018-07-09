@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -25,8 +25,9 @@
 #
 
 import logging
-import sys
 import os
+import six
+import sys
 
 from pkg.lint.base import DuplicateLintedAttrException, linted
 
@@ -56,9 +57,6 @@ class LintMessage(object):
                 self.level = level
                 self.producer = producer
                 self.msgid = msgid
-
-        def __unicode__(self):
-                return str(self.msg)
 
         def __str__(self):
                 return str(self.msg)
@@ -243,3 +241,6 @@ class PlainLogFormatter(LogFormatter):
                         # of a flag (pkglint returns non-zero if self.emitted)
                         if msg.level > WARNING:
                                 self.emitted = True
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

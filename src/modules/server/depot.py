@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -42,9 +42,7 @@ else:
 
 import atexit
 import ast
-import cStringIO
 import errno
-import httplib
 import inspect
 import itertools
 import math
@@ -52,13 +50,17 @@ import os
 import random
 import re
 import shutil
+import six
 import simplejson as json
 import socket
 import tarfile
 import tempfile
 import threading
 import time
-import urlparse
+
+from six.moves import cStringIO, http_client, queue
+from six.moves.urllib.parse import quote, urlunsplit
+
 # Without the below statements, tarfile will trigger calls to getpwuid and
 # getgrgid for every file downloaded.  This in turn leads to nscd usage which
 # limits the throughput of the depot process.  Setting these attributes to
@@ -66,9 +68,6 @@ import urlparse
 # information is unnecesary as it will not be used by the client.
 tarfile.pwd = None
 tarfile.grp = None
-
-import urllib
-import Queue
 
 import pkg
 import pkg.actions as actions
@@ -85,7 +84,6 @@ import pkg.server.repository as srepo
 import pkg.version
 
 from pkg.server.query_parser import Query, ParseError, BooleanQueryException
-
 
 class Dummy(object):
         """Dummy object used for dispatch method mapping."""
@@ -108,7 +106,6 @@ class DepotHTTP(_Depot):
             "catalog",
             "info",
             "manifest",
-            "filelist",
             "file",
             "open",
             "append",
@@ -128,7 +125,6 @@ class DepotHTTP(_Depot):
             "catalog",
             "info",
             "manifest",
-            "filelist",
             "file",
             "p5i",
             "publisher",
@@ -137,7 +133,6 @@ class DepotHTTP(_Depot):
 
         REPO_OPS_MIRROR = [
             "versions",
-            "filelist",
             "file",
             "publisher",
             "status",
@@ -162,8 +157,6 @@ class DepotHTTP(_Depot):
 
                 self.cfg = dconf
                 self.repo = repo
-                self.flist_requests = 0
-                self.flist_file_requests = 0
                 self.request_pub_func = request_pub_func
 
                 content_root = dconf.get_property("pkg", "content_root")
@@ -281,7 +274,7 @@ class DepotHTTP(_Depot):
 
                 try:
                         self.__bgtask.put(self.repo.refresh_index)
-                except Queue.Full:
+                except queue.Full:
                         # If another operation is already in progress, just
                         # log a warning and drive on.
                         cherrypy.log("Skipping indexing; another operation is "
@@ -394,7 +387,7 @@ class DepotHTTP(_Depot):
                 face.init(self)
 
                 # Map new publishers into operation space.
-                map(self.__map_pub_ops, self.repo.publishers - old_pubs)
+                list(map(self.__map_pub_ops, self.repo.publishers - old_pubs))
 
         def __map_pub_ops(self, pub_prefix):
                 # Map the publisher into the depot's operation namespace if
@@ -428,7 +421,7 @@ class DepotHTTP(_Depot):
                         op = tokens[1]
 
                 if op in self.REPO_OPS_DEFAULT and op not in self.vops:
-                        raise cherrypy.HTTPError(httplib.NOT_FOUND,
+                        raise cherrypy.HTTPError(http_client.NOT_FOUND,
                             "Operation not supported in current server mode.")
                 elif op not in self.vops:
                         request = cherrypy.request
@@ -445,20 +438,20 @@ class DepotHTTP(_Depot):
                         else:
                                 ver = int(tokens[2])
                 except IndexError:
-                        raise cherrypy.HTTPError(httplib.BAD_REQUEST,
+                        raise cherrypy.HTTPError(http_client.BAD_REQUEST,
                             "Missing version\n")
                 except ValueError:
-                        raise cherrypy.HTTPError(httplib.BAD_REQUEST,
+                        raise cherrypy.HTTPError(http_client.BAD_REQUEST,
                             "Non-integer version\n")
 
                 if ver not in self.vops[op]:
                         # 'version' is not supported for the operation.
-                        raise cherrypy.HTTPError(httplib.NOT_FOUND,
+                        raise cherrypy.HTTPError(http_client.NOT_FOUND,
                             "Version '{0}' not supported for operation '{1}'\n".format(
                             ver, op))
                 elif op == "open" and pub not in self.repo.publishers:
                         if not misc.valid_pub_prefix(pub):
-                                raise cherrypy.HTTPError(httplib.BAD_REQUEST,
+                                raise cherrypy.HTTPError(http_client.BAD_REQUEST,
                                     "Invalid publisher prefix: {0}\n".format(pub))
 
                         # Map operations for new publisher.
@@ -473,12 +466,12 @@ class DepotHTTP(_Depot):
                                     cherrypy.request.query_string)
                         raise cherrypy.InternalRedirect(rel_uri)
                 elif pub:
-                        raise cherrypy.HTTPError(httplib.BAD_REQUEST,
+                        raise cherrypy.HTTPError(http_client.BAD_REQUEST,
                             "Unknown publisher: {0}\n".format(pub))
 
                 # Assume 'version' is not supported for the operation for some
                 # other reason.
-                raise cherrypy.HTTPError(httplib.NOT_FOUND, "Version '{0}' not "
+                raise cherrypy.HTTPError(http_client.NOT_FOUND, "Version '{0}' not "
                     "supported for operation '{1}'\n".format(ver, op))
 
         @cherrypy.tools.response_headers(headers=\
@@ -491,7 +484,7 @@ class DepotHTTP(_Depot):
                 versions = "pkg-server {0}\n".format(pkg.VERSION)
                 versions += "\n".join(
                     "{0} {1}".format(op, " ".join(str(v) for v in vers))
-                    for op, vers in self.vops.iteritems()
+                    for op, vers in six.iteritems(self.vops)
                 ) + "\n"
                 return versions
 
@@ -516,14 +509,14 @@ class DepotHTTP(_Depot):
                         res_list = self.repo.search(query_args_lst,
                             pub=self._get_req_pub())
                 except srepo.RepositorySearchUnavailableError as e:
-                        raise cherrypy.HTTPError(httplib.SERVICE_UNAVAILABLE,
+                        raise cherrypy.HTTPError(http_client.SERVICE_UNAVAILABLE,
                             str(e))
                 except srepo.RepositoryError as e:
                         # Treat any remaining repository error as a 404, but
                         # log the error and include the real failure
                         # information.
                         cherrypy.log("Request failed: {0}".format(str(e)))
-                        raise cherrypy.HTTPError(httplib.NOT_FOUND, str(e))
+                        raise cherrypy.HTTPError(http_client.NOT_FOUND, str(e))
 
                 # Translate the results from v1 format into what a v0
                 # searcher expects as results.
@@ -559,28 +552,28 @@ class DepotHTTP(_Depot):
 
                 # Check for the POST method of doing a search request.
                 if not query_str_lst:
-                        query_str_lst = params.values()
-                elif params.values():
-                        raise cherrypy.HTTPError(httplib.BAD_REQUEST,
+                        query_str_lst = list(params.values())
+                elif list(params.values()):
+                        raise cherrypy.HTTPError(http_client.BAD_REQUEST,
                             "args:{0}, params:{1}".format(args, params))
 
                 if not query_str_lst:
-                        raise cherrypy.HTTPError(httplib.BAD_REQUEST)
+                        raise cherrypy.HTTPError(http_client.BAD_REQUEST)
 
                 try:
                         res_list = self.repo.search(query_str_lst,
                             pub=self._get_req_pub())
                 except (ParseError, BooleanQueryException) as e:
-                        raise cherrypy.HTTPError(httplib.BAD_REQUEST, str(e))
+                        raise cherrypy.HTTPError(http_client.BAD_REQUEST, str(e))
                 except srepo.RepositorySearchUnavailableError as e:
-                        raise cherrypy.HTTPError(httplib.SERVICE_UNAVAILABLE,
+                        raise cherrypy.HTTPError(http_client.SERVICE_UNAVAILABLE,
                             str(e))
                 except srepo.RepositoryError as e:
                         # Treat any remaining repository error as a 404, but
                         # log the error and include the real failure
                         # information.
                         cherrypy.log("Request failed: {0}".format(str(e)))
-                        raise cherrypy.HTTPError(httplib.NOT_FOUND, str(e))
+                        raise cherrypy.HTTPError(http_client.NOT_FOUND, str(e))
 
                 # In order to be able to have a return code distinguish between
                 # no results and search unavailable, we need to use a different
@@ -591,16 +584,19 @@ class DepotHTTP(_Depot):
                 # to the user.
                 if len(res_list) == 1:
                         try:
-                                tmp = res_list[0].next()
+                                tmp = next(res_list[0])
                                 res_list = [itertools.chain([tmp], res_list[0])]
                         except StopIteration:
-                                cherrypy.response.status = httplib.NO_CONTENT
+                                cherrypy.response.status = http_client.NO_CONTENT
                                 return
 
                 response = cherrypy.response
                 response.headers["Content-type"] = "text/plain; charset=utf-8"
                 self.__set_response_expires("search", 86400, 86400)
 
+                # The WSGI script depot_index.py will call this method and a WSGI
+                # application under Python 3 must return bytes as the output, so
+                # we force the output to be bytes here.
                 def output():
                         # Yield the string used to let the client know it's
                         # talking to a valid search server.
@@ -610,15 +606,15 @@ class DepotHTTP(_Depot):
                                         if return_type == Query.RETURN_ACTIONS:
                                                 fmri_str, fv, line = vals
                                                 yield misc.force_bytes(
-						    "{0} {1} {2} {3} {4}\n".format(
+                                                    "{0} {1} {2} {3} {4}\n".format(
                                                     i, return_type, fmri_str,
-                                                    urllib.quote(fv),
+                                                    quote(fv),
                                                     line.rstrip()))
                                         elif return_type == \
                                             Query.RETURN_PACKAGES:
                                                 fmri_str = vals
                                                 yield misc.force_bytes(
-						    "{0} {1} {2}\n".format(
+                                                    "{0} {1} {2}\n".format(
                                                     i, return_type, fmri_str))
                 return output()
 
@@ -637,7 +633,7 @@ class DepotHTTP(_Depot):
                         cat = self.repo.get_catalog(pub=self._get_req_pub())
                 except srepo.RepositoryError as e:
                         cherrypy.log("Request failed: {0}".format(str(e)))
-                        raise cherrypy.HTTPError(httplib.BAD_REQUEST, str(e))
+                        raise cherrypy.HTTPError(http_client.BAD_REQUEST, str(e))
 
                 response = cherrypy.response
                 response.headers["Content-type"] = "text/plain; charset=utf-8"
@@ -674,7 +670,7 @@ class DepotHTTP(_Depot):
                 try:
                         name = tokens[0]
                 except IndexError:
-                        raise cherrypy.HTTPError(httplib.FORBIDDEN,
+                        raise cherrypy.HTTPError(http_client.FORBIDDEN,
                             _("Directory listing not allowed."))
 
                 try:
@@ -685,7 +681,7 @@ class DepotHTTP(_Depot):
                         # log the error and include the real failure
                         # information.
                         cherrypy.log("Request failed: {0}".format(str(e)))
-                        raise cherrypy.HTTPError(httplib.NOT_FOUND, str(e))
+                        raise cherrypy.HTTPError(http_client.NOT_FOUND, str(e))
 
                 self.__set_response_expires("catalog", 86400, 86400)
                 return serve_file(fpath, "text/plain; charset=utf-8")
@@ -702,13 +698,13 @@ class DepotHTTP(_Depot):
                         pubs = self.repo.publishers
                 except Exception as e:
                         cherrypy.log("Request failed: {0}".format(e))
-                        raise cherrypy.HTTPError(httplib.BAD_REQUEST, str(e))
+                        raise cherrypy.HTTPError(http_client.BAD_REQUEST, str(e))
 
                 # A broken proxy (or client) has caused a fully-qualified FMRI
                 # to be split up.
                 comps = [t for t in tokens]
                 if not comps:
-                        raise cherrypy.HTTPError(httplib.FORBIDDEN,
+                        raise cherrypy.HTTPError(http_client.FORBIDDEN,
                             _("Directory listing not allowed."))
 
                 if len(comps) > 1 and comps[0] == "pkg:" and comps[1] in pubs:
@@ -726,13 +722,13 @@ class DepotHTTP(_Depot):
                         fpath = self.repo.manifest(pfmri,
                             pub=self._get_req_pub())
                 except (IndexError, fmri.FmriError) as e:
-                        raise cherrypy.HTTPError(httplib.BAD_REQUEST, str(e))
+                        raise cherrypy.HTTPError(http_client.BAD_REQUEST, str(e))
                 except srepo.RepositoryError as e:
                         # Treat any remaining repository error as a 404, but
                         # log the error and include the real failure
                         # information.
                         cherrypy.log("Request failed: {0}".format(str(e)))
-                        raise cherrypy.HTTPError(httplib.NOT_FOUND, str(e))
+                        raise cherrypy.HTTPError(http_client.NOT_FOUND, str(e))
 
                 # Send manifest
                 self.__set_response_expires("manifest", 86400*365, 86400*365)
@@ -766,77 +762,6 @@ class DepotHTTP(_Depot):
 
                         cherrypy.request.tar_stream = None
 
-        def filelist_0(self, *tokens, **params):
-                """Request data contains application/x-www-form-urlencoded
-                entries with the requested filenames.  The resulting tar stream
-                is output directly to the client. """
-
-                try:
-                        self.flist_requests += 1
-
-                        # Create a dummy file object that hooks to the write()
-                        # callable which is all tarfile needs to output the
-                        # stream.  This will write the bytes to the client
-                        # through our parent server process.
-                        f = Dummy()
-                        f.write = cherrypy.response.write
-
-                        tar_stream = tarfile.open(mode = "w|",
-                            fileobj = f)
-
-                        # We can use the request object for storage of data
-                        # specific to this request.  In this case, it allows us
-                        # to provide our on_end_request function with access to
-                        # the stream we are processing.
-                        cherrypy.request.tar_stream = tar_stream
-
-                        # This is a special hook just for this request so that
-                        # if an exception is encountered, the stream will be
-                        # closed properly regardless of which thread is
-                        # executing.
-                        cherrypy.request.hooks.attach("on_end_request",
-                            self._tar_stream_close, failsafe=True)
-
-                        pub = self._get_req_pub()
-                        for v in params.values():
-                                try:
-                                        filepath = self.repo.file(v, pub=pub)
-                                except srepo.RepositoryFileNotFoundError:
-                                        # If file isn't here, skip it
-                                        continue
-
-                                tar_stream.add(filepath, v, False)
-                                self.flist_file_requests += 1
-
-                        # Flush the remaining bytes to the client.
-                        tar_stream.close()
-                        cherrypy.request.tar_stream = None
-
-                except Exception as e:
-                        # If we find an exception of this type, the
-                        # client has most likely been interrupted.
-                        if isinstance(e, socket.error) \
-                            and e.args[0] == errno.EPIPE:
-                                return
-                        raise
-
-                yield ""
-
-        # We have to configure the headers either through the _cp_config
-        # namespace, or inside the function itself whenever we are using
-        # a streaming generator.  This is because headers have to be setup
-        # before the response even begins and the point at which @tools
-        # hooks in is too late.
-        filelist_0._cp_config = {
-            "response.stream": True,
-            "tools.response_headers.on": True,
-            "tools.response_headers.headers": [
-                ("Content-Type", "application/data"),
-                ("Pragma", "no-cache"),
-                ("Cache-Control", "no-cache, no-transform, must-revalidate"),
-                ("Expires", 0)
-            ]
-        }
 
         def file_0(self, *tokens):
                 """Outputs the contents of the file, named by the SHA-1 hash
@@ -850,13 +775,13 @@ class DepotHTTP(_Depot):
                 try:
                         fpath = self.repo.file(fhash, pub=self._get_req_pub())
                 except srepo.RepositoryFileNotFoundError as e:
-                        raise cherrypy.HTTPError(httplib.NOT_FOUND, str(e))
+                        raise cherrypy.HTTPError(http_client.NOT_FOUND, str(e))
                 except srepo.RepositoryError as e:
                         # Treat any remaining repository error as a 404, but
                         # log the error and include the real failure
                         # information.
                         cherrypy.log("Request failed: {0}".format(str(e)))
-                        raise cherrypy.HTTPError(httplib.NOT_FOUND, str(e))
+                        raise cherrypy.HTTPError(http_client.NOT_FOUND, str(e))
 
                 self.__set_response_expires("file", 86400*365, 86400*365)
                 return serve_file(fpath, "application/data")
@@ -872,7 +797,7 @@ class DepotHTTP(_Depot):
                         return self.file_0(*tokens)
                 elif method in ("POST", "PUT"):
                         return self.__upload_file(*tokens)
-                raise cherrypy.HTTPError(httplib.METHOD_NOT_ALLOWED,
+                raise cherrypy.HTTPError(http_client.METHOD_NOT_ALLOWED,
                     "{0} is not allowed".format(method))
 
         # We need to prevent cherrypy from processing the request body so that
@@ -904,7 +829,7 @@ class DepotHTTP(_Depot):
                 # XXX Authentication will be handled by virtue of possessing a
                 # signed certificate (or a more elaborate system).
                 if not pfmri:
-                        raise cherrypy.HTTPError(httplib.BAD_REQUEST,
+                        raise cherrypy.HTTPError(http_client.BAD_REQUEST,
                             _("A valid package FMRI must be specified."))
 
                 try:
@@ -916,7 +841,7 @@ class DepotHTTP(_Depot):
                         # that to mean that the server doesn't support this
                         # operation.
                         cherrypy.log("Request failed: {0}".format(e))
-                        raise cherrypy.HTTPError(httplib.BAD_REQUEST, str(e))
+                        raise cherrypy.HTTPError(http_client.BAD_REQUEST, str(e))
 
                 if pfmri.publisher and not self._get_req_pub():
                         self.__map_pub_ops(pfmri.publisher)
@@ -944,7 +869,7 @@ class DepotHTTP(_Depot):
                 # XXX Authentication will be handled by virtue of possessing a
                 # signed certificate (or a more elaborate system).
                 if not pfmri:
-                        raise cherrypy.HTTPError(httplib.BAD_REQUEST,
+                        raise cherrypy.HTTPError(http_client.BAD_REQUEST,
                             _("A valid package FMRI must be specified."))
 
                 try:
@@ -956,7 +881,7 @@ class DepotHTTP(_Depot):
                         # that to mean that the server doesn't support this
                         # operation.
                         cherrypy.log("Request failed: {0}".format(e))
-                        raise cherrypy.HTTPError(httplib.BAD_REQUEST, str(e))
+                        raise cherrypy.HTTPError(http_client.BAD_REQUEST, str(e))
 
                 if pfmri.publisher and not self._get_req_pub():
                         self.__map_pub_ops(pfmri.publisher)
@@ -978,7 +903,7 @@ class DepotHTTP(_Depot):
 
                 try:
                         # cherrypy decoded it, but we actually need it encoded.
-                        trans_id = urllib.quote(tokens[0], "")
+                        trans_id = quote(tokens[0], "")
                 except IndexError:
                         trans_id = None
 
@@ -995,7 +920,7 @@ class DepotHTTP(_Depot):
                         else:
                                 add_to_catalog = False
                 except ValueError as e:
-                        raise cherrypy.HTTPError(httplib.BAD_REQUEST,
+                        raise cherrypy.HTTPError(http_client.BAD_REQUEST,
                             "X-IPkg-Add-To-Catalog".format(e))
 
                 try:
@@ -1006,7 +931,7 @@ class DepotHTTP(_Depot):
                         # returned here as misc.versioned_urlopen will interpret
                         # that to mean that the server doesn't support this
                         # operation.
-                        raise cherrypy.HTTPError(httplib.BAD_REQUEST, str(e))
+                        raise cherrypy.HTTPError(http_client.BAD_REQUEST, str(e))
 
                 response = cherrypy.response
                 response.headers["Package-FMRI"] = pfmri
@@ -1077,11 +1002,11 @@ class DepotHTTP(_Depot):
                                     pub=self._get_req_pub(),
                                     refresh_index=False)
                         else:
-                                raise cherrypy.HTTPError(httplib.BAD_REQUEST,
+                                raise cherrypy.HTTPError(http_client.BAD_REQUEST,
                                    "Unknown or unsupported operation: '{0}'".format(
                                    cmd))
-                except Queue.Full:
-                        raise cherrypy.HTTPError(httplib.SERVICE_UNAVAILABLE,
+                except queue.Full:
+                        raise cherrypy.HTTPError(http_client.SERVICE_UNAVAILABLE,
                            "Another operation is already in progress; try "
                            "again later.")
 
@@ -1094,7 +1019,7 @@ class DepotHTTP(_Depot):
 
                 try:
                         # cherrypy decoded it, but we actually need it encoded.
-                        trans_id = urllib.quote(tokens[0], "")
+                        trans_id = quote(tokens[0], "")
                 except IndexError:
                         trans_id = None
 
@@ -1105,7 +1030,7 @@ class DepotHTTP(_Depot):
                         # returned here as misc.versioned_urlopen will interpret
                         # that to mean that the server doesn't support this
                         # operation.
-                        raise cherrypy.HTTPError(httplib.BAD_REQUEST, str(e))
+                        raise cherrypy.HTTPError(http_client.BAD_REQUEST, str(e))
 
         def add_0(self, *tokens):
                 """Adds an action and its content to an in-flight transaction
@@ -1115,7 +1040,7 @@ class DepotHTTP(_Depot):
 
                 try:
                         # cherrypy decoded it, but we actually need it encoded.
-                        trans_id = urllib.quote(tokens[0], "")
+                        trans_id = quote(tokens[0], "")
                 except IndexError:
                         trans_id = None
 
@@ -1125,7 +1050,7 @@ class DepotHTTP(_Depot):
                         entry_type = None
 
                 if entry_type not in actions.types:
-                        raise cherrypy.HTTPError(httplib.BAD_REQUEST, _("The "
+                        raise cherrypy.HTTPError(http_client.BAD_REQUEST, _("The "
                             "specified Action Type, '{0}', is not valid.").format(
                             entry_type))
 
@@ -1148,7 +1073,7 @@ class DepotHTTP(_Depot):
                                         attrs[a] = val
                                 except ValueError:
                                         raise cherrypy.HTTPError(
-                                            httplib.BAD_REQUEST, _("The "
+                                            http_client.BAD_REQUEST, _("The "
                                             "specified Action attribute value, "
                                             "'{0}', is not valid.").format(
                                             attrs[a]))
@@ -1164,7 +1089,7 @@ class DepotHTTP(_Depot):
                         action = actions.types[entry_type](data, **attrs)
                 except actions.ActionError as e:
                         cherrypy.log("Request failed: {0}".format(str(e)))
-                        raise cherrypy.HTTPError(httplib.BAD_REQUEST, str(e))
+                        raise cherrypy.HTTPError(http_client.BAD_REQUEST, str(e))
 
                 # XXX Once actions are labelled with critical nature.
                 # if entry_type in critical_actions:
@@ -1178,7 +1103,7 @@ class DepotHTTP(_Depot):
                         # that to mean that the server doesn't support this
                         # operation.
                         cherrypy.log("Request failed: {0}".format(str(e)))
-                        raise cherrypy.HTTPError(httplib.BAD_REQUEST, str(e))
+                        raise cherrypy.HTTPError(http_client.BAD_REQUEST, str(e))
 
         # We need to prevent cherrypy from processing the request body so that
         # add can parse the request body itself.  In addition, we also need to
@@ -1202,7 +1127,7 @@ class DepotHTTP(_Depot):
 
                 try:
                         # cherrypy decoded it, but we actually need it encoded.
-                        trans_id = urllib.quote(tokens[0], "")
+                        trans_id = quote(tokens[0], "")
                 except IndexError:
                         raise
                         trans_id = None
@@ -1212,7 +1137,7 @@ class DepotHTTP(_Depot):
 
                 size = int(request.headers.get("Content-Length", 0))
                 if size < 0:
-                        raise cherrypy.HTTPError(httplib.BAD_REQUEST,
+                        raise cherrypy.HTTPError(http_client.BAD_REQUEST,
                             _("file/1 must be sent a file."))
                 data = request.rfile
 
@@ -1223,7 +1148,7 @@ class DepotHTTP(_Depot):
                         # returned here as misc.versioned_urlopen will interpret
                         # that to mean that the server doesn't support this
                         # operation.
-                        raise cherrypy.HTTPError(httplib.BAD_REQUEST, str(e))
+                        raise cherrypy.HTTPError(http_client.BAD_REQUEST, str(e))
                 response.headers["Content-Length"] = "0"
                 return response.body
 
@@ -1255,9 +1180,9 @@ class DepotHTTP(_Depot):
                                 err = "Unknown index subcommand: {0}".format(
                                     cmd)
                                 cherrypy.log(err)
-                                raise cherrypy.HTTPError(httplib.NOT_FOUND, err)
-                except Queue.Full:
-                        raise cherrypy.HTTPError(httplib.SERVICE_UNAVAILABLE,
+                                raise cherrypy.HTTPError(http_client.NOT_FOUND, err)
+                except queue.Full:
+                        raise cherrypy.HTTPError(http_client.SERVICE_UNAVAILABLE,
                            "Another operation is already in progress; try "
                            "again later.")
 
@@ -1275,7 +1200,7 @@ class DepotHTTP(_Depot):
                         pubs = self.repo.publishers
                 except Exception as e:
                         cherrypy.log("Request failed: {0}".format(e))
-                        raise cherrypy.HTTPError(httplib.BAD_REQUEST, str(e))
+                        raise cherrypy.HTTPError(http_client.BAD_REQUEST, str(e))
 
                 # A broken proxy (or client) has caused a fully-qualified FMRI
                 # to be split up.
@@ -1301,16 +1226,16 @@ class DepotHTTP(_Depot):
                                         pfmri.publisher = pub
                         fpath = self.repo.manifest(pfmri, pub=pub)
                 except (IndexError, fmri.FmriError) as e:
-                        raise cherrypy.HTTPError(httplib.BAD_REQUEST, str(e))
+                        raise cherrypy.HTTPError(http_client.BAD_REQUEST, str(e))
                 except srepo.RepositoryError as e:
                         # Treat any remaining repository error as a 404, but
                         # log the error and include the real failure
                         # information.
                         cherrypy.log("Request failed: {0}".format(str(e)))
-                        raise cherrypy.HTTPError(httplib.NOT_FOUND, str(e))
+                        raise cherrypy.HTTPError(http_client.NOT_FOUND, str(e))
 
                 if not os.path.exists(fpath):
-                        raise cherrypy.HTTPError(httplib.NOT_FOUND)
+                        raise cherrypy.HTTPError(http_client.NOT_FOUND)
 
                 m = manifest.Manifest(pfmri)
                 m.set_content(pathname=fpath)
@@ -1318,7 +1243,7 @@ class DepotHTTP(_Depot):
                 pub, name, ver = pfmri.tuple()
                 summary = m.get("pkg.summary", m.get("description", ""))
 
-                lsummary = cStringIO.StringIO()
+                lsummary = cStringIO()
                 for i, entry in enumerate(m.gen_actions_by_type("license")):
                         if i > 0:
                                 lsummary.write("\n")
@@ -1328,7 +1253,7 @@ class DepotHTTP(_Depot):
                                 # Skip the license.
                                 continue
 
-                        with file(lpath, "rb") as lfile:
+                        with open(lpath, "rb") as lfile:
                                 misc.gunzip_from_stream(lfile, lsummary,
                                     ignore_hash=True)
                 lsummary.seek(0)
@@ -1374,18 +1299,19 @@ License:
                         # Publisher specified in request is unknown.
                         e = srepo.RepositoryUnknownPublisher(prefix)
                         cherrypy.log("Request failed: {0}".format(str(e)))
-                        raise cherrypy.HTTPError(httplib.NOT_FOUND, str(e))
+                        raise cherrypy.HTTPError(http_client.NOT_FOUND, str(e))
 
-                buf = cStringIO.StringIO()
+                buf = cStringIO()
                 try:
                         p5i.write(buf, pubs)
                 except Exception as e:
                         # Treat any remaining error as a 404, but log it and
                         # include the real failure information.
                         cherrypy.log("Request failed: {0}".format(str(e)))
-                        raise cherrypy.HTTPError(httplib.NOT_FOUND, str(e))
+                        raise cherrypy.HTTPError(http_client.NOT_FOUND, str(e))
                 buf.seek(0)
                 self.__set_response_expires("publisher", 86400*365, 86400*365)
+                # Page handlers MUST return bytes.
                 return misc.force_bytes(buf.getvalue())
 
         @cherrypy.tools.response_headers(headers=[(
@@ -1409,17 +1335,17 @@ License:
                                 # treat it as an unsupported operation.
                                 cherrypy.log("Request failed: {0}".format(
                                     str(e)))
-                                raise cherrypy.HTTPError(httplib.NOT_FOUND,
+                                raise cherrypy.HTTPError(http_client.NOT_FOUND,
                                     str(e))
 
-                buf = cStringIO.StringIO()
+                buf = cStringIO()
                 try:
                         p5i.write(buf, pubs)
                 except Exception as e:
                         # Treat any remaining error as a 404, but log it and
                         # include the real failure information.
                         cherrypy.log("Request failed: {0}".format(str(e)))
-                        raise cherrypy.HTTPError(httplib.NOT_FOUND, str(e))
+                        raise cherrypy.HTTPError(http_client.NOT_FOUND, str(e))
                 buf.seek(0)
                 self.__set_response_expires("publisher", 86400*365, 86400*365)
                 return buf.getvalue()
@@ -1446,7 +1372,7 @@ License:
                         # If this fails, it's ok to raise an exception since bad
                         # input was likely provided.
                         cherrypy.log("Request failed: {0}".format(e))
-                        raise cherrypy.HTTPError(httplib.BAD_REQUEST, str(e))
+                        raise cherrypy.HTTPError(http_client.BAD_REQUEST, str(e))
 
                 if not matches:
                         return ""
@@ -1463,7 +1389,7 @@ License:
                             for m in matches
                         ]
 
-                buf = cStringIO.StringIO()
+                buf = cStringIO()
                 pkg_names = { pub.prefix: matches }
                 p5i.write(buf, [pub], pkg_names=pkg_names)
                 buf.seek(0)
@@ -1482,7 +1408,7 @@ License:
                         pubs = self.repo.publishers
                 except Exception as e:
                         cherrypy.log("Request failed: {0}".format(e))
-                        raise cherrypy.HTTPError(httplib.BAD_REQUEST, str(e))
+                        raise cherrypy.HTTPError(http_client.BAD_REQUEST, str(e))
 
                 # A broken proxy (or client) has caused a fully-qualified FMRI
                 # to be split up.
@@ -1498,7 +1424,7 @@ License:
                         # proxy behaviour.
                         pfmri = "/".join(comps)
                 except IndexError:
-                        raise cherrypy.HTTPError(httplib.BAD_REQUEST)
+                        raise cherrypy.HTTPError(http_client.BAD_REQUEST)
 
                 # XXX This is a hack to deal with the fact that packagemanager
                 # brokenly expects all p5i URIs or files to have a .p5i
@@ -1519,10 +1445,11 @@ License:
                         output += self.__get_matching_p5i_data(rstore, pfmri)
 
                 if output == "":
-                        raise cherrypy.HTTPError(httplib.NOT_FOUND, _("No "
+                        raise cherrypy.HTTPError(http_client.NOT_FOUND, _("No "
                             "matching package found in repository."))
 
                 self.__set_response_expires("p5i", 86400*365, 86400*365)
+                # Page handlers MUST return bytes.
                 return misc.force_bytes(output)
 
         @cherrypy.tools.response_headers(headers=\
@@ -1539,7 +1466,7 @@ License:
                         out = json.dumps(dump_struct, ensure_ascii=False,
                             indent=2, sort_keys=True)
                 except Exception as e:
-                        raise cherrypy.HTTPError(httplib.NOT_FOUND, _("Unable "
+                        raise cherrypy.HTTPError(http_client.NOT_FOUND, _("Unable "
                             "to generate statistics."))
                 return misc.force_bytes(out + "\n")
 
@@ -1638,16 +1565,16 @@ class NastyDepotHTTP(DepotHTTP):
                 # are weighted by how often we want them to happen; the loop
                 # below then puts them into a pick-list.
                 errors = {
-                    httplib.REQUEST_TIMEOUT: 10,
-                    httplib.BAD_GATEWAY: 10,
-                    httplib.GATEWAY_TIMEOUT: 10,
-                    httplib.FORBIDDEN: 2,
-                    httplib.NOT_FOUND: 2,
-                    httplib.BAD_REQUEST: 2
+                    http_client.REQUEST_TIMEOUT: 10,
+                    http_client.BAD_GATEWAY: 10,
+                    http_client.GATEWAY_TIMEOUT: 10,
+                    http_client.FORBIDDEN: 2,
+                    http_client.NOT_FOUND: 2,
+                    http_client.BAD_REQUEST: 2
                 }
 
                 self.errlist = []
-                for x, n in errors.iteritems():
+                for x, n in six.iteritems(errors):
                         for i in range(0, n):
                                 self.errlist.append(x)
                 cherrypy.log("NASTY Depot Error List: {0}".format(
@@ -1670,6 +1597,7 @@ class NastyDepotHTTP(DepotHTTP):
                 self._lock.acquire()
 
                 self.nasty_cycle = (self.nasty_cycle + 1) % self.NASTY_CYCLE
+                # old-division; pylint: disable=W1619
                 self.maxroll_adj = 1 + self.NASTY_MULTIPLIER * \
                     math.sin(self.nasty_cycle *
                         (math.pi / self.NASTY_CYCLE))
@@ -1722,9 +1650,9 @@ class NastyDepotHTTP(DepotHTTP):
                 try:
                         nasty_level = int(tokens[0])
                 except (IndexError, ValueError):
-                        raise cherrypy.HTTPError(httplib.BAD_REQUEST)
+                        raise cherrypy.HTTPError(http_client.BAD_REQUEST)
                 if nasty_level < 0 or nasty_level > 100:
-                        raise cherrypy.HTTPError(httplib.BAD_REQUEST)
+                        raise cherrypy.HTTPError(http_client.BAD_REQUEST)
                 cherrypy.log("Nastiness set to {0:d} by client request".format(
                     nasty_level))
                 self.nasty_level = nasty_level
@@ -1743,7 +1671,7 @@ class NastyDepotHTTP(DepotHTTP):
                 if self.need_nasty_3():
                         cherrypy.log("NASTY versions_0: X-Ipkg-Error")
                         response = cherrypy.response
-                        response.status = httplib.UNAUTHORIZED
+                        response.status = http_client.UNAUTHORIZED
                         response.headers["X-Ipkg-Error"] = random.choice(["ENT",
                             "LIC", "SVR", "MNT", "YYZ", ""])
                         return ""
@@ -1762,7 +1690,7 @@ class NastyDepotHTTP(DepotHTTP):
                 if self.need_nasty_2():
                         cherrypy.log("NASTY versions_0: modified version #s")
                         versions = "pkg-server {0}-nasty\n".format(pkg.VERSION)
-                        for op, vers in self.vops.iteritems():
+                        for op, vers in six.iteritems(self.vops):
                                 versions += op + " "
                                 verlen = len(vers)
                                 for v in vers:
@@ -1793,7 +1721,7 @@ class NastyDepotHTTP(DepotHTTP):
                 versions = "pkg-server {0}\n".format(pkg.VERSION)
                 versions += "\n".join(
                     "{0} {1}".format(op, " ".join(str(v) for v in vers))
-                    for op, vers in self.vops.iteritems()
+                    for op, vers in six.iteritems(self.vops)
                 ) + "\n"
                 return versions
 
@@ -1811,7 +1739,7 @@ class NastyDepotHTTP(DepotHTTP):
                 # are toxic to clients who are facing a nasty antagonist--
                 # the client has no way to verify that the content, and
                 # things go badly off the rails.
-                raise cherrypy.HTTPError(httplib.BAD_REQUEST)
+                raise cherrypy.HTTPError(http_client.BAD_REQUEST)
 
         catalog_0._cp_config = {
             "response.stream": True,
@@ -1835,13 +1763,13 @@ class NastyDepotHTTP(DepotHTTP):
                         pubs = self.repo.publishers
                 except Exception as e:
                         cherrypy.log("Request failed: {0}".format(e))
-                        raise cherrypy.HTTPError(httplib.BAD_REQUEST, str(e))
+                        raise cherrypy.HTTPError(http_client.BAD_REQUEST, str(e))
 
                 # A broken proxy (or client) has caused a fully-qualified FMRI
                 # to be split up.
                 comps = [t for t in tokens]
                 if not comps:
-                        raise cherrypy.HTTPError(httplib.FORBIDDEN,
+                        raise cherrypy.HTTPError(http_client.FORBIDDEN,
                             _("Directory listing not allowed."))
 
                 if len(comps) > 1 and comps[0] == "pkg:" and comps[1] in pubs:
@@ -1859,13 +1787,13 @@ class NastyDepotHTTP(DepotHTTP):
                         fpath = self.repo.manifest(pfmri,
                             pub=self._get_req_pub())
                 except (IndexError, fmri.FmriError) as e:
-                        raise cherrypy.HTTPError(httplib.BAD_REQUEST, str(e))
+                        raise cherrypy.HTTPError(http_client.BAD_REQUEST, str(e))
                 except srepo.RepositoryError as e:
                         # Treat any remaining repository error as a 404, but
                         # log the error and include the real failure
                         # information.
                         cherrypy.log("Request failed: {0}".format(str(e)))
-                        raise cherrypy.HTTPError(httplib.NOT_FOUND, str(e))
+                        raise cherrypy.HTTPError(http_client.NOT_FOUND, str(e))
 
                 # NASTY
                 # Stash manifest entry for later use.
@@ -1891,136 +1819,6 @@ class NastyDepotHTTP(DepotHTTP):
             "tools.nasty_before.maxroll": 200
         }
 
-        def filelist_0(self, *tokens, **params):
-                """Request data contains application/x-www-form-urlencoded
-                entries with the requested filenames.  The resulting tar stream
-                is output directly to the client. """
-
-                try:
-                        self.flist_requests += 1
-
-                        # NASTY
-                        if self.need_nasty_2():
-                                cherrypy.log("NASTY filelist_0: empty response")
-                                return
-
-                        # Create a dummy file object that hooks to the write()
-                        # callable which is all tarfile needs to output the
-                        # stream.  This will write the bytes to the client
-                        # through our parent server process.
-                        f = Dummy()
-                        f.write = cherrypy.response.write
-
-                        tar_stream = tarfile.open(mode = "w|",
-                            fileobj = f)
-
-                        # We can use the request object for storage of data
-                        # specific to this request.  In this case, it allows us
-                        # to provide our on_end_request function with access to
-                        # the stream we are processing.
-                        cherrypy.request.tar_stream = tar_stream
-
-                        # This is a special hook just for this request so that
-                        # if an exception is encountered, the stream will be
-                        # closed properly regardless of which thread is
-                        # executing.
-                        cherrypy.request.hooks.attach("on_end_request",
-                            self._tar_stream_close, failsafe=True)
-
-                        pub = self._get_req_pub()
-                        for v in params.values():
-
-                                # NASTY
-                                # Stash filename for later use.
-                                # Toss out the list if it's larger than 1024
-                                # items.
-                                if len(self.requested_files) > 1024:
-                                        self.requested_files = [v]
-                                else:
-                                        self.requested_files.append(v)
-
-                                # NASTY
-                                if self.need_nasty_3():
-                                        # Give up early
-                                        cherrypy.log(
-                                            "NASTY filelist_0: give up early")
-                                        break
-                                elif self.need_nasty_3():
-                                        # Skip this file
-                                        cherrypy.log(
-                                            "NASTY filelist_0: skip a file")
-                                        continue
-                                elif self.need_nasty_4():
-                                        # Take a nap
-                                        self.nasty_nap()
-
-                                try:
-                                        filepath = self.repo.file(v, pub=pub)
-                                except srepo.RepositoryFileNotFoundError:
-                                        # If file isn't here, skip it
-                                        continue
-
-                                # NASTY
-                                # Send a file with the wrong content
-                                if self.need_nasty_4():
-                                        cherrypy.log(
-                                            "NASTY filelist_0: wrong content")
-                                        badfn = \
-                                            random.choice(self.requested_files)
-                                        badpath = self.__get_bad_path(badfn)
-
-                                        tar_stream.add(badpath, v, False)
-                                else:
-                                        tar_stream.add(filepath, v, False)
-
-                                self.flist_file_requests += 1
-
-                        # NASTY
-                        # Write garbage into the stream
-                        if self.need_nasty_3():
-                                cherrypy.log(
-                                    "NASTY filelist_0: add stream garbage")
-                                f.write("NASTY!")
-
-                        # NASTY
-                        # Send an extraneous file
-                        if self.need_nasty_3():
-                                cherrypy.log(
-                                    "NASTY filelist_0: send extra file")
-                                extrafn = random.choice(self.requested_files)
-                                extrapath = self.repo.file(extrafn, pub=pub)
-                                tar_stream.add(extrapath, extrafn, False)
-
-                        # Flush the remaining bytes to the client.
-                        tar_stream.close()
-                        cherrypy.request.tar_stream = None
-
-                except Exception as e:
-                        # If we find an exception of this type, the
-                        # client has most likely been interrupted.
-                        if isinstance(e, socket.error) \
-                            and e.args[0] == errno.EPIPE:
-                                return
-                        raise
-
-                yield ""
-
-        # We have to configure the headers either through the _cp_config
-        # namespace, or inside the function itself whenever we are using
-        # a streaming generator.  This is because headers have to be setup
-        # before the response even begins and the point at which @tools
-        # hooks in is too late.
-        filelist_0._cp_config = {
-            "response.stream": True,
-            "tools.response_headers.on": True,
-            "tools.response_headers.headers": [
-                ("Content-Type", "application/data"),
-                ("Pragma", "no-cache"),
-                ("Cache-Control", "no-cache, must-revalidate"),
-                ("Expires", 0)
-            ]
-        }
-
         def __get_bad_path(self, v):
                 fpath = self.repo.file(v, pub=self._get_req_pub())
                 return os.path.join(os.path.dirname(fpath), fpath)
@@ -2037,13 +1835,13 @@ class NastyDepotHTTP(DepotHTTP):
                 try:
                         fpath = self.repo.file(fhash, pub=self._get_req_pub())
                 except srepo.RepositoryFileNotFoundError as e:
-                        raise cherrypy.HTTPError(httplib.NOT_FOUND, str(e))
+                        raise cherrypy.HTTPError(http_client.NOT_FOUND, str(e))
                 except srepo.RepositoryError as e:
                         # Treat any remaining repository error as a 404, but
                         # log the error and include the real failure
                         # information.
                         cherrypy.log("Request failed: {0}".format(str(e)))
-                        raise cherrypy.HTTPError(httplib.NOT_FOUND, str(e))
+                        raise cherrypy.HTTPError(http_client.NOT_FOUND, str(e))
 
                 # NASTY
                 # Stash filename for later use.
@@ -2057,7 +1855,7 @@ class NastyDepotHTTP(DepotHTTP):
                 if self.need_nasty_4():
                         # Forget that the file is here
                         cherrypy.log("NASTY file_0: 404 NOT_FOUND")
-                        raise cherrypy.HTTPError(httplib.NOT_FOUND)
+                        raise cherrypy.HTTPError(http_client.NOT_FOUND)
 
                 # NASTY
                 # Send the wrong file
@@ -2084,7 +1882,7 @@ class NastyDepotHTTP(DepotHTTP):
                 try:
                         name = tokens[0]
                 except IndexError:
-                        raise cherrypy.HTTPError(httplib.FORBIDDEN,
+                        raise cherrypy.HTTPError(http_client.FORBIDDEN,
                             _("Directory listing not allowed."))
 
                 try:
@@ -2095,7 +1893,7 @@ class NastyDepotHTTP(DepotHTTP):
                         # log the error and include the real failure
                         # information.
                         cherrypy.log("Request failed: {0}".format(str(e)))
-                        raise cherrypy.HTTPError(httplib.NOT_FOUND, str(e))
+                        raise cherrypy.HTTPError(http_client.NOT_FOUND, str(e))
 
                 # NASTY
                 # Stash catalog entry for later use.
@@ -2123,8 +1921,8 @@ class NastyDepotHTTP(DepotHTTP):
         def search_1(self, *args, **params):
                 # Raise assorted errors; if not, call superclass search_1.
                 if self.need_nasty():
-                        errs = [httplib.NOT_FOUND, httplib.BAD_REQUEST,
-                            httplib.SERVICE_UNAVAILABLE]
+                        errs = [http_client.NOT_FOUND, http_client.BAD_REQUEST,
+                            http_client.SERVICE_UNAVAILABLE]
                         code = random.choice(errs)
                         cherrypy.log("NASTY search_1: HTTP {0:d}".format(code))
                         raise cherrypy.HTTPError(code)
@@ -2144,7 +1942,7 @@ class NastyDepotHTTP(DepotHTTP):
                         filesz = fst.st_size
                         nfile = open(filepath, "rb")
                 except EnvironmentError:
-                        raise cherrypy.HTTPError(httplib.NOT_FOUND)
+                        raise cherrypy.HTTPError(http_client.NOT_FOUND)
 
                 # NASTY
                 # Send incorrect content length
@@ -2232,7 +2030,7 @@ class DNSSD_Plugin(SimplePlugin):
                         proto = "http"
 
                 netloc = "{0}:{1}".format(socket.getfqdn(), self.port)
-                self.url = urlparse.urlunsplit((proto, netloc, '', '', ''))
+                self.url = urlunsplit((proto, netloc, '', '', ''))
 
         def reg_cb(self, sd_hdl, flags, error_code, name, regtype, domain):
                 """Callback invoked by service register function.  Arguments
@@ -2306,7 +2104,7 @@ class BackgroundTaskPlugin(SimplePlugin):
         def __init__(self, bus):
                 # Setup the background task queue.
                 SimplePlugin.__init__(self, bus)
-                self.__q = Queue.Queue(10)
+                self.__q = queue.Queue(10)
                 self.__thread = None
 
         def put(self, task, *args, **kwargs):
@@ -2314,7 +2112,7 @@ class BackgroundTaskPlugin(SimplePlugin):
                 isn't full.
                 """
                 if self.__q.unfinished_tasks > 9:
-                        raise Queue.Full()
+                        raise queue.Full()
                 self.__q.put_nowait((task, args, kwargs))
 
         def run(self):
@@ -2328,7 +2126,7 @@ class BackgroundTaskPlugin(SimplePlugin):
                                         # for a new task to appear.
                                         task, args, kwargs = \
                                             self.__q.get(timeout=.5)
-                                except Queue.Empty:
+                                except queue.Empty:
                                         continue
                                 task(*args, **kwargs)
                                 if hasattr(self.__q, "task_done"):
@@ -2452,3 +2250,6 @@ class DepotConfig(object):
                             overrides=overrides, version=version)
                 return cfg.FileConfig(target, definitions=cls.__defs,
                     overrides=overrides, version=version)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

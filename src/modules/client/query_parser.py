@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -448,3 +448,6 @@ class TermQuery(qp.TermQuery):
                 self.key = "path"
                 self.key_wildcard = False
                 return True
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

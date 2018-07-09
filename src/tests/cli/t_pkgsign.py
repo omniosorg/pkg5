@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -24,7 +24,8 @@
 # Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
-import testutils
+from __future__ import print_function
+from . import testutils
 if __name__ == "__main__":
         testutils.setup_environment("../../../proto")
 import pkg5unittest
@@ -51,12 +52,6 @@ import pkg.portable as portable
 
 from pkg.client.debugvalues import DebugValues
 from pkg.pkggzip import PkgGzipFile
-
-try:
-        import pkg.sha512_t
-        sha512_supported = True
-except ImportError:
-        sha512_supported = False
 
 obsolete_pkg = """
     open obs@1.0,5.11-0
@@ -536,8 +531,6 @@ class TestPkgSign(pkg5unittest.SingleDepotTestCase):
                 signature doesn't cause anything to break."""
 
                 self.base_multiple_signatures("sha256")
-                if sha512_supported:
-                        self.base_multiple_signatures("sha512_256")
 
         def test_no_empty_chain(self):
                 """Test that signing do not create empty chain"""
@@ -558,7 +551,7 @@ class TestPkgSign(pkg5unittest.SingleDepotTestCase):
 
                 # Make sure signing haven't created empty chain attrs
                 self.pkg("contents -m")
-                self.assert_(self.output.count("chain=") == 0)
+                self.assertTrue(self.output.count("chain=") == 0)
 
         def base_multiple_signatures(self, hash_alg):
                 plist = self.pkgsend_bulk(self.rurl1, self.example_pkg10)
@@ -604,11 +597,11 @@ class TestPkgSign(pkg5unittest.SingleDepotTestCase):
 
                 # Make sure we've got exactly 1 signature with SHA2 hashes
                 self.pkg("contents -m")
-                self.assert_(self.output.count("pkg.chain.{0}".format(hash_alg)) == 1)
-                self.assert_(self.output.count("pkg.chain.chashes") == 1)
+                self.assertTrue(self.output.count("pkg.chain.{0}".format(hash_alg)) == 1)
+                self.assertTrue(self.output.count("pkg.chain.chashes") == 1)
                 # and SHA1 hashes on both signatures
-                self.assert_(self.output.count("chain=") == 1)
-                self.assert_(self.output.count("chain.chashes=") == 1)
+                self.assertTrue(self.output.count("chain=") == 1)
+                self.assertTrue(self.output.count("chain.chashes=") == 1)
 
                 self._api_uninstall(api_obj, ["example_pkg"])
                 self.pkg("set-property signature-policy require-signatures")
@@ -1294,7 +1287,7 @@ class TestPkgSign(pkg5unittest.SingleDepotTestCase):
 
                 # Make sure signing haven't created empty chain attrs
                 self.pkg("contents -m")
-                self.assert_(self.output.count("chain=") == 0)
+                self.assertTrue(self.output.count("chain=") == 0)
 
         def test_unknown_value_for_non_critical_extension(self):
                 """Test that an unknown value for a recognized non-critical
@@ -1870,7 +1863,7 @@ class TestPkgSign(pkg5unittest.SingleDepotTestCase):
 
                 def cnt_crl_contacts(log_path):
                         c = 0
-                        with open(log_path, "rb") as fh:
+                        with open(log_path, "r") as fh:
                                 for line in fh:
                                         if "ch1_ta4_crl.pem" in line:
                                                 c += 1
@@ -1942,9 +1935,9 @@ class TestPkgSign(pkg5unittest.SingleDepotTestCase):
                 api_obj = self.__setup_signed_simple([self.var_pkg],
                     ["var_pkg"])
                 self.pkg("verify")
-                self.assert_(os.path.exists(os.path.join(self.img_path(),
+                self.assertTrue(os.path.exists(os.path.join(self.img_path(),
                     "baz")))
-                self.assert_(not os.path.exists(
+                self.assertTrue(not os.path.exists(
                     os.path.join(self.img_path(), "bin")))
 
                 # verify changing variant after install also works
@@ -1952,9 +1945,9 @@ class TestPkgSign(pkg5unittest.SingleDepotTestCase):
                     variants={ "variant.arch": "sparc" },
                     refresh_catalogs=False)
 
-                self.assert_(not os.path.exists(
+                self.assertTrue(not os.path.exists(
                     os.path.join(self.img_path(), "baz")))
-                self.assert_(os.path.exists(
+                self.assertTrue(os.path.exists(
                     os.path.join(self.img_path(), "bin")))
                 self.pkg("verify")
 
@@ -1964,18 +1957,18 @@ class TestPkgSign(pkg5unittest.SingleDepotTestCase):
                 api_obj = self.__setup_signed_simple([self.facet_pkg],
                     ["facet_pkg"])
                 self.pkg("verify")
-                self.assert_(os.path.exists(os.path.join(self.img_path(),
+                self.assertTrue(os.path.exists(os.path.join(self.img_path(),
                     "usr", "share", "doc", "i386_doc.txt")))
-                self.assert_(not os.path.exists(os.path.join(self.img_path(),
+                self.assertTrue(not os.path.exists(os.path.join(self.img_path(),
                     "usr", "share", "doc", "sparc_devel.txt")))
 
                 # verify changing facet after install also works
                 nfacets = facet.Facets({ "facet.doc": False })
                 self._api_change_varcets(api_obj, facets=nfacets,
                     refresh_catalogs=False)
-                self.assert_(not os.path.exists(os.path.join(self.img_path(),
+                self.assertTrue(not os.path.exists(os.path.join(self.img_path(),
                     "usr", "share", "doc", "i386_doc.txt")))
-                self.assert_(not os.path.exists(os.path.join(self.img_path(),
+                self.assertTrue(not os.path.exists(os.path.join(self.img_path(),
                     "usr", "share", "doc", "sparc_devel.txt")))
                 self.pkg("verify")
 
@@ -1986,7 +1979,7 @@ class TestPkgSign(pkg5unittest.SingleDepotTestCase):
                 def check_target(links, target):
                         for lpath in links:
                                 ltarget = os.readlink(lpath)
-                                self.assert_(ltarget.endswith(target))
+                                self.assertTrue(ltarget.endswith(target))
 
                 api_obj = self.__setup_signed_simple([self.med_pkg],
                     ["med_pkg"])
@@ -2004,7 +1997,7 @@ class TestPkgSign(pkg5unittest.SingleDepotTestCase):
                 # Verify removal of mediated links when no mediation applies
                 # works as expected.
                 self.pkg("set-mediator -V1.8 example")
-                self.assert_(not os.path.exists(ex_link))
+                self.assertTrue(not os.path.exists(ex_link))
                 self.pkg("verify")
 
                 # Verify mediated links are restored when mediation is reset.
@@ -2020,14 +2013,14 @@ class TestPkgSign(pkg5unittest.SingleDepotTestCase):
                     ["facet_pkg"])
                 self.pkg("verify")
                 doc_path = self.get_img_file_path("usr/share/doc/i386_doc.txt")
-                self.assert_(os.path.exists(doc_path))
+                self.assertTrue(os.path.exists(doc_path))
 
                 # Remove doc, then verify that fix and revert will restore it.
                 for cmd in ("fix", "revert usr/share/doc/i386_doc.txt"):
                         portable.remove(doc_path)
-                        self.assert_(not os.path.exists(doc_path))
+                        self.assertTrue(not os.path.exists(doc_path))
                         self.pkg(cmd)
-                        self.assert_(os.path.exists(doc_path))
+                        self.assertTrue(os.path.exists(doc_path))
 
         def test_conflicting_pkgs(self):
                 """Test that conflicting package repair works with signed
@@ -2039,7 +2032,7 @@ class TestPkgSign(pkg5unittest.SingleDepotTestCase):
                         api_obj = self.__setup_signed_simple([self.conflict_pkgs],
                             ["conflict_a_pkg", "conflict_b_pkg"])
                         rel_path = self.get_img_file_path("etc/release")
-                        self.assert_(os.path.exists(rel_path))
+                        self.assertTrue(os.path.exists(rel_path))
                 finally:
                         del DebugValues["broken-conflicting-action-handling"]
 
@@ -2253,7 +2246,7 @@ class TestPkgSign(pkg5unittest.SingleDepotTestCase):
                         tmp = l.replace("version={0}".format(old_ver),
                             "version={0}".format(new_ver))
                         s.append(tmp)
-                with open(mp, "wb") as fh:
+                with open(mp, "w") as fh:
                         for l in s:
                                 fh.write(l)
                 # Rebuild the repository catalog so that hash verification for
@@ -2450,7 +2443,7 @@ class TestPkgSign(pkg5unittest.SingleDepotTestCase):
                 self.pkgsign_simple(self.rurl1, plist[0])
 
                 mp = r.manifest(plist[0])
-                with open(mp, "rb") as fh:
+                with open(mp, "r") as fh:
                         ls = fh.readlines()
                 s = []
                 for l in ls:
@@ -2458,13 +2451,11 @@ class TestPkgSign(pkg5unittest.SingleDepotTestCase):
                         if l.startswith("signature"):
                                 s.append(l)
                         s.append(l)
-                with open(mp, "wb") as fh:
+                with open(mp, "w") as fh:
                         for l in s:
                                 fh.write(l)
 
                 hash_alg_list = ["sha256"]
-                if sha512_supported:
-                        hash_alg_list.append("sha512_256")
                 for hash_alg in hash_alg_list:
                         # Rebuild the catalog so that hash verification for the
                         # manifest won't cause problems.
@@ -2517,7 +2508,7 @@ class TestPkgSign(pkg5unittest.SingleDepotTestCase):
                 self.pkgsign_simple(self.rurl1, plist[0])
 
                 mp = r.manifest(plist[0])
-                with open(mp, "rb") as fh:
+                with open(mp, "r") as fh:
                         ls = fh.readlines()
                 s = []
                 for l in ls:
@@ -2528,7 +2519,7 @@ class TestPkgSign(pkg5unittest.SingleDepotTestCase):
                                 s.append(str(a))
                         else:
                                 s.append(l)
-                with open(mp, "wb") as fh:
+                with open(mp, "w") as fh:
                         for l in s:
                                 fh.write(l)
                 # Rebuild the catalog so that hash verification for the manifest
@@ -2661,9 +2652,9 @@ class TestPkgSign(pkg5unittest.SingleDepotTestCase):
                 portable.remove(os.path.join(self.img_path(),
                     "bin/example_path"))
                 self.pkg("verify", exit=1)
-                self.assert_("signature" not in self.errout)
+                self.assertTrue("signature" not in self.errout)
                 self.pkg("fix")
-                self.assert_("signature" not in self.errout)
+                self.assertTrue("signature" not in self.errout)
 
         def test_bug_18880_sig(self):
                 plist = self.pkgsend_bulk(self.rurl1, self.bug_18880_pkg)
@@ -2681,9 +2672,9 @@ class TestPkgSign(pkg5unittest.SingleDepotTestCase):
                 portable.remove(os.path.join(self.img_path(),
                     "bin/example_path"))
                 self.pkg("verify", exit=1)
-                self.assert_("signature" not in self.errout)
+                self.assertTrue("signature" not in self.errout)
                 self.pkg("fix")
-                self.assert_("signature" not in self.errout)
+                self.assertTrue("signature" not in self.errout)
 
         def test_bug_19055(self):
                 plist = self.pkgsend_bulk(self.rurl1,
@@ -2700,12 +2691,12 @@ class TestPkgSign(pkg5unittest.SingleDepotTestCase):
                 repo = self.dc.get_repo()
                 for pfmri in plist:
                         found = False
-                        with open(repo.manifest(pfmri), "rb") as fh:
+                        with open(repo.manifest(pfmri), "r") as fh:
                                 for l in fh:
                                         if l.startswith("signature"):
                                                 found = True
                                                 break
-                        self.assert_(found, "{0} was not signed.".format(pfmri))
+                        self.assertTrue(found, "{0} was not signed.".format(pfmri))
 
         def test_bug_19114_1(self):
                 """Test that an unparsable trust anchor which isn't needed
@@ -2844,7 +2835,7 @@ dir mode=0755 owner=root group=bin path=etc2 variant.num=two
                 self.pkg("verify B")
                 # Now test reverting by file.
                 with open(
-                    os.path.join(self.get_img_path(), "etc/fileB"), "wb") as fh:
+                    os.path.join(self.get_img_path(), "etc/fileB"), "w") as fh:
                         fh.write("\n")
                 self.pkg("verify B", exit=1)
                 self.pkg("revert /etc/fileB")
@@ -2852,7 +2843,7 @@ dir mode=0755 owner=root group=bin path=etc2 variant.num=two
                 # Now test reverting by tag since that's a separate code path in
                 # ImagePlan.plan_revert.
                 with open(
-                    os.path.join(self.get_img_path(), "etc/fileB"), "wb") as fh:
+                    os.path.join(self.get_img_path(), "etc/fileB"), "w") as fh:
                         fh.write("\n")
                 self.pkg("verify B", exit=1)
                 self.pkg("revert --tagged bob")
@@ -2937,6 +2928,26 @@ class TestPkgSignMultiDepot(pkg5unittest.ManyDepotTestCase):
                 self.pkgsign(self.rurl2, sign_args)
 
                 repo_location = self.dcs[1].get_repodir()
+                self.pkgrecv(self.rurl2, "-d {0} example_pkg".format(self.rurl1))
+                shutil.rmtree(repo_location)
+                self.pkgrepo("create {0}".format(repo_location))
+
+                # Add another signature that is just signed with the hash of
+                # the manifest.
+                sign_args = "{pkg}".format(
+                    pkg=plist[0]
+                )
+                self.pkgsign(self.rurl2, sign_args)
+                self.pkgrecv(self.rurl2, "-d {0} example_pkg".format(self.rurl1))
+                shutil.rmtree(repo_location)
+                self.pkgrepo("create {0}".format(repo_location))
+
+                # Add another signature that is just signed with the hash of
+                # the manifest. Test "-a" option.
+                sign_args = "-a sha256 {pkg}".format(
+                    pkg=plist[0]
+                )
+                self.pkgsign(self.rurl2, sign_args)
                 self.pkgrecv(self.rurl2, "-d {0} example_pkg".format(self.rurl1))
                 shutil.rmtree(repo_location)
                 self.pkgrepo("create {0}".format(repo_location))
@@ -3031,6 +3042,7 @@ close
                 with open(cert_path, "rb") as f:
                         cert = x509.load_pem_x509_certificate(
                             f.read(), default_backend())
+
 
                 fd, new_cert = tempfile.mkstemp(dir=self.test_root)
                 with os.fdopen(fd, "wb") as fh:
@@ -3242,8 +3254,8 @@ close
                 self.pkgrecv(self.rurl2, "-d {0} renamed obs".format(self.rurl1))
 
         def test_bug_18463(self):
-                """Check that the crl host is only contacted once, instead of
-                once per package."""
+                """Check that the crl host is only contacted twice, instead of
+                twice per package."""
 
                 self.dcs[3].start()
 
@@ -3267,12 +3279,15 @@ close
                 api_obj = self.get_img_api_obj()
                 self._api_install(api_obj, ["example_pkg", "foo"])
                 cnt = 0
-                with open(self.dcs[3].get_logpath(), "rb") as fh:
+                with open(self.dcs[3].get_logpath(), "r") as fh:
                         for l in fh:
                                 if "ch1.1_ta4_crl.pem" in l:
                                         cnt += 1
-                self.assertEqual(cnt, 1)
+                self.assertEqual(cnt, 2)
 
 
 if __name__ == "__main__":
         unittest.main()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

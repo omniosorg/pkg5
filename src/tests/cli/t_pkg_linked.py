@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 # -*- coding: utf-8 -*-
 #
 # CDDL HEADER START
@@ -28,7 +28,7 @@
 from __future__ import division
 from __future__ import print_function
 
-import testutils
+from . import testutils
 if __name__ == "__main__":
         testutils.setup_environment("../../../proto")
 import pkg5unittest
@@ -38,6 +38,7 @@ import os
 import itertools
 import re
 import shutil
+import six
 import tempfile
 import unittest
 import sys
@@ -70,8 +71,7 @@ class TestPkgLinked(pkg5unittest.ManyDepotTestCase):
         ]
 
         # generate packages that don't need to be synced
-        p_foo1_name_gen = "foo1"
-        pkgs = [p_foo1_name_gen + ver for ver in p_vers]
+        pkgs = ["foo1" + ver for ver in p_vers]
         p_foo1_name = dict(zip(range(len(pkgs)), pkgs))
         for i in p_foo1_name:
                 p_data = "open {0}\n".format(p_foo1_name[i])
@@ -82,8 +82,7 @@ class TestPkgLinked(pkg5unittest.ManyDepotTestCase):
                     close\n"""
                 p_foo1.append(p_data)
 
-        p_foo2_name_gen = "foo2"
-        pkgs = [p_foo2_name_gen + ver for ver in p_vers]
+        pkgs = ["foo2" + ver for ver in p_vers]
         p_foo2_name = dict(zip(range(len(pkgs)), pkgs))
         for i in p_foo2_name:
                 p_data = "open {0}\n".format(p_foo2_name[i])
@@ -95,8 +94,7 @@ class TestPkgLinked(pkg5unittest.ManyDepotTestCase):
                 p_all.append(p_data)
 
         # generate packages that do need to be synced
-        p_sync1_name_gen = "sync1"
-        pkgs = [p_sync1_name_gen + ver for ver in p_vers]
+        pkgs = ["sync1" + ver for ver in p_vers]
         p_sync1_name = dict(zip(range(len(pkgs)), pkgs))
         for i in p_sync1_name:
                 p_data = "open {0}\n".format(p_sync1_name[i])
@@ -111,8 +109,7 @@ class TestPkgLinked(pkg5unittest.ManyDepotTestCase):
                 p_sync1.append(p_data)
 
         # generate packages that do need to be synced
-        p_sync2_name_gen = "sync2"
-        pkgs = [p_sync2_name_gen + ver for ver in p_vers]
+        pkgs = ["sync2" + ver for ver in p_vers]
         p_sync2_name = dict(zip(range(len(pkgs)), pkgs))
         for i in p_sync2_name:
                 p_data = "open {0}\n".format(p_sync2_name[i])
@@ -2500,6 +2497,66 @@ class TestPkgLinkedRecurse(TestPkgLinked):
                 self._pkg([2], "list network", rv=EXIT_OOPS)
 
 
+class TestPkgLinkedIncorpDowngrade(TestPkgLinked):
+        """Test that incorporated pkgs can be downgraded if incorporation is
+        updated."""
+
+        pkgs = (
+                """
+                    open incorp@1.0,5.11-0.1
+                    add depend type=incorporate fmri=A@2
+                    add depend type=parent fmri={0}
+                    close """.format(pkg.actions.depend.DEPEND_SELF),
+                """
+                    open incorp@2.0,5.11-0.1
+                    add depend type=incorporate fmri=A@1
+                    add depend type=parent fmri={0}
+                    close """.format(pkg.actions.depend.DEPEND_SELF),
+                """
+                    open A@1.0,5.11-0.1
+                    add depend type=require fmri=pkg:/incorp
+                    close """,
+                """
+                    open A@2.0,5.11-0.1
+                    add depend type=require fmri=pkg:/incorp
+                    close """,
+        )
+
+        def setUp(self):
+                self.i_count = 3
+                pkg5unittest.ManyDepotTestCase.setUp(self, ["test"],
+                    image_count=self.i_count)
+
+                # get repo url
+                self.rurl1 = self.dcs[1].get_repo_url()
+
+                # setup image names and paths
+                self.i_name = []
+                self.i_path = []
+                self.i_api = []
+                self.i_api_reset = []
+                for i in range(self.i_count):
+                        name = "system:img{0:d}".format(i)
+                        self.i_name.insert(i, name)
+                        self.i_path.insert(i, self.img_path(i))
+
+                self.pkgsend_bulk(self.rurl1, self.pkgs)
+
+
+        def test_incorp_downgrade(self):
+                """Test that incorporated pkgs can be downgraded if
+                incorporation is updated."""
+
+                # create parent (0), push child (1, 2)
+                self._imgs_create(3)
+                self._attach_child(0, [1, 2])
+
+                self._pkg([0, 1, 2], "install -v incorp@1 A")
+                self._pkg([0, 1, 2], "list A@2")
+                self._pkg([0], "update -v incorp@2")
+                self._pkg([0, 1, 2], "list A@1")
+
+
 class TestFacetInheritance(TestPkgLinked):
         """Class to test facet inheritance between images.
 
@@ -3867,6 +3924,8 @@ class TestPkgLinkedScale(pkg5unittest.ManyDepotTestCase):
         """Test the scalability of the linked image subsystem."""
 
         max_image_count = 256
+        if six.PY3:
+                max_image_count = 32
 
         p_sync1 = []
         p_vers = [
@@ -3883,7 +3942,7 @@ class TestPkgLinkedScale(pkg5unittest.ManyDepotTestCase):
 
         # generate packages that do need to be synced
         p_sync1_name_gen = "sync1"
-        pkgs = [p_sync1_name_gen + ver for ver in p_vers]
+        pkgs = ["sync1" + ver for ver in p_vers]
         p_sync1_name = dict(zip(range(len(pkgs)), pkgs))
         for i in p_sync1_name:
                 p_data = "open {0}\n".format(p_sync1_name[i])
@@ -3947,7 +4006,12 @@ class TestPkgLinkedScale(pkg5unittest.ManyDepotTestCase):
 
                 The maximum value successfully tested here has been 512.  I
                 tried 1024 but it resulted in death by swapping on a u27 with
-                12 GB of memory."""
+                12 GB of memory.
+
+                Under Python 3, the maximum value successfully tested is 32.
+                I tried 64 but it resulted in "too many open files" on s12_89 on
+                a ThinkCentre M93p with 16 GB of memory.
+                """
 
                 # we will require at least 11 GB of memory to run this test.
                 # This is a rough estimate of required memory based on
@@ -4100,7 +4164,7 @@ exit 0""".strip("\n")
 
         # generate packages that do need to be synced
         p_sync1_name_gen = "sync1"
-        pkgs = [p_sync1_name_gen + ver for ver in p_vers]
+        pkgs = ["sync1" + ver for ver in p_vers]
         p_sync1_name = dict(zip(range(len(pkgs)), pkgs))
         for i in p_sync1_name:
                 p_data = "open {0}\n".format(p_sync1_name[i])
@@ -4133,7 +4197,7 @@ exit 0""".strip("\n")
                         self.i_path.insert(i, self.img_path(i))
 
         def __mk_bin(self, path, txt):
-                with file(path, "w+") as fobj:
+                with open(path, "w+") as fobj:
                         print(txt, file=fobj)
                 self.cmdline_run("chmod a+x {0}".format(path), coverage=False)
 
@@ -4253,7 +4317,7 @@ exit 0""".strip("\n")
                     if t != self.T_NONE
                 ])
                 for pdir in parents:
-                        p = os.path.join(base_path, cdir)
+                        p = os.path.join(base_path, limages[-1][0])
                         self.pkg("-R {0} audit-linked".format(p))
 
         def __ccmd(self, args, rv=0):
@@ -4304,7 +4368,7 @@ exit 0""".strip("\n")
                     ipath, liname, outfile1))
                 self.__ccmd("cat {0}".format(outfile1))
 
-                for p, v in props.iteritems():
+                for p, v in six.iteritems(props):
                         if v is None:
                                 # verify property is not present
                                 self.__ccmd(
@@ -4871,8 +4935,8 @@ exit 0""".strip("\n")
                     "-R {2} list-linked".format(
                     bin_zonename, bin_zoneadm, gzpath), exit=EXIT_OOPS)
 
-                self.assert_(self.output == "")
-                self.assert_("this is invalid zoneadm list -p output." in
+                self.assertTrue(self.output == "")
+                self.assertTrue("this is invalid zoneadm list -p output." in
                     self.errout)
 
         def test_linked_paths_zone_paths_with_colon(self):
@@ -4920,3 +4984,6 @@ exit 0""".strip("\n")
 
 if __name__ == "__main__":
         unittest.main()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

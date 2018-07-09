@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -24,15 +24,22 @@
 # Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
-import cStringIO
+from __future__ import  print_function
 import copy
+import datetime as dt
 import errno
-import httplib
 import os
 import simplejson as json
-import statvfs
+import six
 import tempfile
 import zlib
+from functools import cmp_to_key
+from io import BytesIO
+from six.moves import http_client, range
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend
+from six.moves.urllib.parse import quote, urlsplit, urlparse, urlunparse, \
+    ParseResult
 
 import pkg.catalog as catalog
 import pkg.client.api_errors as apx
@@ -59,6 +66,7 @@ import pkg.updatelog as updatelog
 from pkg.actions import ActionError
 from pkg.client import global_settings
 from pkg.client.debugvalues import DebugValues
+from pkg.misc import PKG_RO_FILE_MODE
 logger = global_settings.logger
 
 class TransportCfg(object):
@@ -163,7 +171,7 @@ class TransportCfg(object):
 
                 if isinstance(pub, publisher.Publisher):
                         pub = pub.prefix
-                elif not pub or not isinstance(pub, basestring):
+                elif not pub or not isinstance(pub, six.string_types):
                         pub = None
 
                 caches = [
@@ -248,7 +256,7 @@ class TransportCfg(object):
                 # Caches fully set at least once.
                 self.__caches_set = True
 
-                for pub in self.__caches.keys():
+                for pub in list(self.__caches.keys()):
                         if shared or pub != "__all":
                                 # Remove any publisher specific caches so that
                                 # the most current publisher information can be
@@ -562,6 +570,11 @@ class Transport(object):
                 self._lock = nrlock.NRLock()
                 self.cfg = tcfg
                 self.stats = tstats.RepoChooser()
+                self.repo_status = {}
+                self.__tmp_crls = {}
+                # Used to record those CRLs which are unreachable during the
+                # current operation.
+                self.__bad_crls = set()
 
         def __setup(self):
                 self.__engine = engine.CurlTransportEngine(self)
@@ -684,12 +697,12 @@ class Transport(object):
                                 failures.extend(ex.failures)
 
                         except tx.TransportProtoError as e:
-                                if e.code in (httplib.NOT_FOUND, errno.ENOENT):
+                                if e.code in (http_client.NOT_FOUND, errno.ENOENT):
                                         raise apx.UnsupportedSearchError(e.url,
                                             "search/1")
-                                elif e.code == httplib.NO_CONTENT:
+                                elif e.code == http_client.NO_CONTENT:
                                         no_result_url = e.url
-                                elif e.code in (httplib.BAD_REQUEST,
+                                elif e.code in (http_client.BAD_REQUEST,
                                     errno.EINVAL):
                                         raise apx.MalformedSearchRequest(e.url)
                                 elif e.retryable:
@@ -782,7 +795,7 @@ class Transport(object):
                                 # failures that it contains
                                 failures.extend(ex.failures)
                         except tx.TransportProtoError as e:
-                                if e.code == httplib.NOT_MODIFIED:
+                                if e.code == http_client.NOT_MODIFIED:
                                         return
                                 elif e.retryable:
                                         failures.append(e)
@@ -807,6 +820,28 @@ class Transport(object):
                                     pub.prefix, e, e))
 
                 raise failures
+
+        @staticmethod
+        def __ignore_network_cache():
+                """Check if transport should ignore network cache."""
+
+                inc_debug = False
+                inc_global = global_settings.client_no_network_cache
+                # Try to read from DebugValues.
+                if DebugValues.get("no_network_cache", False):
+                        inc_debug = True
+
+                return inc_debug or inc_global
+
+        @staticmethod
+        def __get_request_header(header, repostats, retries, repo):
+                """Get request header based on repository status and client
+                specified network cache option."""
+
+                if (repostats.content_errors and retries > 1) or \
+                    Transport.__ignore_network_cache():
+                        return repo.build_refetch_header(header)
+                return header
 
         @staticmethod
         def _verify_catalog(filename, dirname):
@@ -907,7 +942,7 @@ class Transport(object):
                         destvfs = os.statvfs(download_dir)
                         # Set the file buffer size to the blocksize of our
                         # filesystem.
-                        self.__engine.set_file_bufsz(destvfs[statvfs.F_BSIZE])
+                        self.__engine.set_file_bufsz(destvfs.f_bsize)
                 except EnvironmentError as e:
                         if e.errno == errno.EACCES:
                                 raise apx.PermissionsException(e.filename)
@@ -925,8 +960,8 @@ class Transport(object):
                         failedreqs = []
                         repostats = self.stats[d.get_repouri_key()]
                         gave_up = False
-                        if repostats.content_errors and retries > 1:
-                                header = d.build_refetch_header(header)
+                        header = Transport.__get_request_header(header,
+                            repostats, retries, d)
 
                         # This returns a list of transient errors
                         # that occurred during the transport operation.
@@ -988,7 +1023,7 @@ class Transport(object):
                                 try:
                                         self._verify_catalog(s, download_dir)
                                 except tx.InvalidContentException as e:
-                                        repostats.record_error(content=True)                                        
+                                        repostats.record_error(content=True)
                                         failedreqs.append(e.request)
                                         failures.append(e)
                                         if not flist:
@@ -1178,12 +1213,12 @@ class Transport(object):
 
                         repouri_key = d.get_repouri_key()
                         repostats = self.stats[repouri_key]
-                        if repostats.content_errors and retries > 1:
-                                header = d.build_refetch_header(header)
+                        header = Transport.__get_request_header(header,
+                            repostats, retries, d)
                         try:
                                 resp = d.get_datastream(fhash, v, header,
                                     ccancel=ccancel, pub=pub)
-                                s = cStringIO.StringIO()
+                                s = BytesIO()
                                 hash_val = misc.gunzip_from_stream(resp, s,
                                     hash_func=hash_func)
 
@@ -1199,7 +1234,8 @@ class Transport(object):
                                 content = s.getvalue()
                                 s.close()
 
-                                return content
+                                # we want str internally
+                                return misc.force_str(content)
 
                         except tx.ExcessiveTransientFailure as e:
                                 # If an endpoint experienced so many failures
@@ -1245,8 +1281,8 @@ class Transport(object):
                         try:
                                 repouri_key = d.get_repouri_key()
                                 repostats = self.stats[repouri_key]
-                                if repostats.content_errors and retries > 1:
-                                        header = d.build_refetch_header(header)
+                                header = Transport.__get_request_header(header,
+                                    repostats, retries, d)
                                 resp = d.get_status(header, ccancel=ccancel)
                                 infostr = resp.read()
 
@@ -1259,7 +1295,7 @@ class Transport(object):
                                 failures.extend(e.failures)
 
                         except (TypeError, ValueError) as e:
-                                
+
                                 exc = tx.TransferContentException(
                                     repouri_key[0],
                                     "Invalid stats response: {0}".format(e),
@@ -1286,7 +1322,7 @@ class Transport(object):
                 as fmri.  An optional intent string may be supplied
                 as intent."""
 
-                failures = tx.TransportFailures()
+                failures = tx.TransportFailures(pfmri=fmri)
                 pub_prefix = fmri.publisher
                 pub = self.cfg.get_publisher(pub_prefix)
                 mfst = fmri.get_url_path()
@@ -1330,7 +1366,7 @@ class Transport(object):
                 object."""
 
                 retry_count = global_settings.PKG_CLIENT_MAX_TIMEOUT
-                failures = tx.TransportFailures()
+                failures = tx.TransportFailures(pfmri=fmri)
                 pub_prefix = fmri.publisher
                 download_dir = self.cfg.incoming_root
                 mcontent = None
@@ -1370,12 +1406,16 @@ class Transport(object):
                         repouri_key = d.get_repouri_key()
                         repostats = self.stats[repouri_key]
                         verified = False
-                        if repostats.content_errors and retries > 1:
-                                header = d.build_refetch_header(header)
+                        header = Transport.__get_request_header(header,
+                            repostats, retries, d)
                         try:
                                 resp = d.get_manifest(fmri, header,
                                     ccancel=ccancel, pub=pub)
-                                mcontent = resp.read()
+                                # If resp is a StreamingFileObj obj, its read()
+                                # methods will return bytes. We need str for
+                                # manifest and here's the earliest point that
+                                # we can convert it to str.
+                                mcontent = misc.force_str(resp.read())
 
                                 verified = self._verify_manifest(fmri,
                                     content=mcontent, pub=pub)
@@ -1467,7 +1507,7 @@ class Transport(object):
                         destvfs = os.statvfs(download_dir)
                         # set the file buffer size to the blocksize of
                         # our filesystem
-                        self.__engine.set_file_bufsz(destvfs[statvfs.F_BSIZE])
+                        self.__engine.set_file_bufsz(destvfs.f_bsize)
                 except EnvironmentError as e:
                         if e.errno == errno.EACCES:
                                 return
@@ -1564,8 +1604,10 @@ class Transport(object):
 
                         # Possibly overkill, if any content errors were seen
                         # we modify the headers of all requests, not just the
-                        # ones that failed before.
-                        if repostats.content_errors and retries > 1:
+                        # ones that failed before. Also do this if we force
+                        # cache validation.
+                        if (repostats.content_errors and retries > 1) or \
+                            Transport.__ignore_network_cache():
                                 mfstlist = [(fmri, d.build_refetch_header(h))
                                     for fmri, h in mfstlist]
 
@@ -1630,7 +1672,7 @@ class Transport(object):
                                         continue
 
                                 try:
-                                        mf = file(dl_path)
+                                        mf = open(dl_path)
                                         mcontent = mf.read()
                                         mf.close()
                                         manifest.FactoredManifest(fmri,
@@ -1720,7 +1762,7 @@ class Transport(object):
                         return False
 
                 if mfstpath:
-                        mf = file(mfstpath)
+                        mf = open(mfstpath)
                         mcontent = mf.read()
                         mf.close()
                 elif content is not None:
@@ -1839,8 +1881,8 @@ class Transport(object):
 
                         failedreqs = []
                         repostats = self.stats[d.get_repouri_key()]
-                        if repostats.content_errors and retries > 1:
-                                header = d.build_refetch_header(header)
+                        header = Transport.__get_request_header(header,
+                            repostats, retries, d)
 
                         gave_up = False
 
@@ -1901,7 +1943,7 @@ class Transport(object):
                                             dl_path)
                                 except tx.InvalidContentException as e:
                                         mfile.subtract_progress(e.size)
-                                        e.request = s                                        
+                                        e.request = s
                                         repostats.record_error(content=True)
                                         failedreqs.append(s)
                                         failures.append(e)
@@ -1924,7 +1966,7 @@ class Transport(object):
                             x for x in failures
                             if x.request in failedreqs
                         ]
-                        tfailurex = tx.TransportFailures()
+                        tfailurex = tx.TransportFailures(pfmri=mfile.pfmri)
                         for f in failures:
                                 tfailurex.append(f)
                         raise tfailurex
@@ -1957,7 +1999,7 @@ class Transport(object):
                         destvfs = os.statvfs(download_dir)
                         # set the file buffer size to the blocksize of
                         # our filesystem
-                        self.__engine.set_file_bufsz(destvfs[statvfs.F_BSIZE])
+                        self.__engine.set_file_bufsz(destvfs.f_bsize)
                 except EnvironmentError as e:
                         if e.errno == errno.EACCES:
                                 raise apx.PermissionsException(e.filename)
@@ -1980,6 +2022,174 @@ class Transport(object):
                                 filelist.append(v)
 
                         self._get_files_list(mfile, filelist)
+
+        def __format_safe_read_crl(self, pth):
+                """CRLs seem to frequently come in DER format, so try reading
+                the CRL using both of the formats before giving up."""
+
+                with open(pth, "rb") as f:
+                        raw = f.read()
+
+                try:
+                        return x509.load_pem_x509_crl(raw, default_backend())
+                except ValueError:
+                        try:
+                                return x509.load_der_x509_crl(raw,
+                                    default_backend())
+                        except ValueError:
+                                raise apx.BadFileFormat(_("The CRL file "
+                                    "{0} is not in a recognized "
+                                    "format.").format(pth))
+
+        @LockedTransport()
+        def get_crl(self, uri, crl_root, more_uris=False):
+                """Given a URI (for now only http URIs are supported), return
+                the CRL object created from the file stored at that uri.
+
+                uri: URI for a CRL.
+
+                crl_root: file-system based crl root directory for storing
+                retrieved the CRL.
+                """
+
+                uri = uri.strip()
+                if uri.startswith("Full Name:"):
+                        uri = uri[len("Full Name:"):]
+                        uri = uri.strip()
+                if uri.startswith("URI:"):
+                        uri = uri[4:]
+                if not uri.startswith("http://") and \
+                    not uri.startswith("file://"):
+                        raise apx.InvalidResourceLocation(uri.strip())
+                crl_host = DebugValues.get_value("crl_host")
+                if crl_host:
+                        orig = urlparse(uri)
+                        crl = urlparse(crl_host)
+                        uri = urlunparse(ParseResult(
+                            scheme=crl.scheme, netloc=crl.netloc,
+                            path=orig.path,
+                            params=orig.params, query=orig.params,
+                            fragment=orig.fragment))
+                # If we've already read the CRL, use the previously created
+                # object.
+                if uri in self.__tmp_crls:
+                        return self.__tmp_crls[uri]
+                fn = quote(uri, "")
+                if not os.path.isdir(crl_root):
+                        raise apx.InvalidResourceLocation(_("CRL root: {0}"
+                            ).format(crl_root))
+
+                fpath = os.path.join(crl_root, fn)
+                crl = None
+                # Check if we already have a CRL for this URI.
+                if os.path.exists(fpath):
+                        # If we already have a CRL that we can read, check
+                        # whether it's time to retrieve a new one from the
+                        # location.
+                        try:
+                                crl = self.__format_safe_read_crl(fpath)
+                        except EnvironmentError:
+                                pass
+                        else:
+                                nu = crl.next_update
+                                cur_time = dt.datetime.utcnow()
+
+                                if cur_time < nu:
+                                        self.__tmp_crls[uri] = crl
+                                        return crl
+
+                # If the CRL is already known to be unavailable, don't try
+                # connecting to it again.
+                if uri in self.__bad_crls:
+                        return crl
+
+                # If no CRL already exists or it's time to try to get a new one,
+                # try to retrieve it from the server.
+                try:
+                        tmp_fd, tmp_pth = tempfile.mkstemp(dir=crl_root)
+                except EnvironmentError as e:
+                        if e.errno in (errno.EACCES, errno.EPERM):
+                                tmp_fd, tmp_pth = tempfile.mkstemp()
+                        else:
+                                raise apx._convert_error(e)
+
+                # Call setup if the transport isn't configured or was shutdown.
+                if not self.__engine:
+                        self.__setup()
+
+                orig = urlparse(uri)
+                # To utilize the transport engine, we need to pretend uri for
+                # a crl is like a repo, because the transport engine has some
+                # specific bookkeeping stats keyed by repouri and proxy.
+                # We did this to utilize it as much as possible.
+                repouri = urlunparse(ParseResult(scheme=orig.scheme,
+                    netloc=orig.netloc, path="", params="", query="",
+                    fragment=""))
+                proxy = misc.get_runtime_proxy(None, uri)
+                t_repouris = _convert_repouris([publisher.RepositoryURI(repouri,
+                    proxy=proxy)])
+
+                retries = 2
+                # We need to call get_repostats to establish the initial
+                # stats.
+                self.stats.get_repostats(t_repouris)
+                for i in range(retries):
+                        self.__engine.add_url(uri, filepath=tmp_pth,
+                            repourl=repouri, proxy=proxy)
+                        try:
+                                while self.__engine.pending:
+                                        self.__engine.run()
+                                rf = self.__engine.check_status()
+                                if rf:
+                                        # If there are non-retryable failure
+                                        # cases or more uris available, do not
+                                        # retry this one and add it to bad crl
+                                        # list.
+                                        if any(not f.retryable for f in rf) or \
+                                            more_uris:
+                                                self.__bad_crls.add(uri)
+                                                return crl
+                                        # Last retry failed, also consider it as
+                                        # a bad crl.
+                                        elif i >= retries - 1:
+                                                self.__bad_crls.add(uri)
+                                                return crl
+                                else:
+                                        break
+                        except tx.ExcessiveTransientFailure as e:
+                                # Since there are too many consecutive errors,
+                                # we probably just consider it as a bad crl.
+                                self.__bad_crls.add(uri)
+                                # Reset the engine.
+                                self.__engine.reset()
+                                return crl
+
+                try:
+                        ncrl = self.__format_safe_read_crl(tmp_pth)
+                except apx.BadFileFormat:
+                        portable.remove(tmp_pth)
+                        return crl
+                except EnvironmentError:
+                        # If the tmp_pth was deleted by transport engine or
+                        # anything else about opening files, do the following.
+                        try:
+                                portable.remove(tmp_pth)
+                        except EnvironmentError:
+                                pass
+                        return crl
+
+                try:
+                        portable.rename(tmp_pth, fpath)
+                        # Because the file was made using mkstemp, we need to
+                        # chmod it to match the other files in var/pkg.
+                        os.chmod(fpath, PKG_RO_FILE_MODE)
+                except EnvironmentError:
+                        self.__tmp_crls[uri] = ncrl
+                        try:
+                                portable.remove(tmp_pth)
+                        except EnvironmentError:
+                                pass
+                return ncrl
 
         def get_versions(self, pub, ccancel=None, alt_repo=None):
                 """Query the publisher's origin servers for versions
@@ -2014,8 +2224,8 @@ class Transport(object):
                     origin_only=True, alt_repo=alt_repo):
 
                         repostats = self.stats[d.get_repouri_key()]
-                        if repostats.content_errors and retries > 1:
-                                header = d.build_refetch_header(header)
+                        header = Transport.__get_request_header(header,
+                            repostats, retries, d)
 
                         # If a transport exception occurs,
                         # save it if it's retryable, otherwise
@@ -2195,18 +2405,18 @@ class Transport(object):
                         # later.
                         aremote = a[0].scheme != "file"
                         bremote = b[0].scheme != "file"
-                        return cmp(aremote, bremote) * -1
+                        return misc.cmp(aremote, bremote) * -1
 
                 if versions:
                         versions = sorted(versions, reverse=True)
 
                 fail = None
                 iteration = 0
-                for i in xrange(count):
+                for i in range(count):
                         iteration += 1
                         rslist = self.stats.get_repostats(repolist, origins)
                         if prefer_remote:
-                                rslist.sort(cmp=remote_first)
+                                rslist.sort(key=cmp_to_key(remote_first))
 
                         fail = tx.TransportFailures()
                         repo_found = False
@@ -2458,7 +2668,7 @@ class Transport(object):
                         pub = publisher.Publisher(fmri.publisher)
 
                 mfile = MultiFile(pub, self, progtrack, ccancel,
-                    alt_repo=alt_repo)
+                    alt_repo=alt_repo, pfmri=fmri)
 
                 return mfile
 
@@ -3101,8 +3311,14 @@ class MultiXfr(object):
         def __len__(self):
                 return len(self._hash)
 
-        def __nonzero__(self):
+        # Defining "boolness" of a class, Python 2 uses the special method
+        # called __nonzero__() while Python 3 uses __bool__(). For Python
+        # 2 and 3 compatibility, define __bool__() only, and let
+        # __nonzero__ = __bool__
+        def __bool__(self):
                 return bool(self._hash)
+
+        __nonzero__ = __bool__
 
         def add_hash(self, hashval, item):
                 """Add 'item' to list of values that exist for
@@ -3142,7 +3358,7 @@ class MultiXfr(object):
         def keys(self):
                 """Return a list of the keys in the hash."""
 
-                return self._hash.keys()
+                return list(self._hash.keys())
 
 
 class MultiFile(MultiXfr):
@@ -3151,7 +3367,8 @@ class MultiFile(MultiXfr):
         with the actions, and performs the download and content
         verification necessary to assure correct content installation."""
 
-        def __init__(self, pub, xport, progtrack, ccancel, alt_repo=None):
+        def __init__(self, pub, xport, progtrack, ccancel, alt_repo=None,
+            pfmri=None):
                 """Supply the destination publisher in the pub argument.
                 The transport object should be passed in xport."""
 
@@ -3159,6 +3376,7 @@ class MultiFile(MultiXfr):
                     ccancel=ccancel, alt_repo=alt_repo)
 
                 self._transport = xport
+                self.pfmri = pfmri
 
         def add_action(self, action):
                 """The multiple file retrieval operation is asynchronous.
@@ -3389,14 +3607,14 @@ class MultiFileNI(MultiFile):
                                     e.filename)
                         raise
 
-                src = file(current_path, "rb")
+                src = open(current_path, "rb")
                 outfile = os.fdopen(fd, "wb")
                 if self._decompress:
                         misc.gunzip_from_stream(src, outfile, ignore_hash=True)
                 else:
                         while True:
                                 buf = src.read(64 * 1024)
-                                if buf == "":
+                                if buf == b"":
                                         break
                                 outfile.write(buf)
                 outfile.close()
@@ -3417,7 +3635,7 @@ class MultiFileNI(MultiFile):
 # need to configure a transport and or publishers.
 
 def setup_publisher(repo_uri, prefix, xport, xport_cfg,
-    remote_prefix=False, remote_publishers=False, ssl_key=None, 
+    remote_prefix=False, remote_publishers=False, ssl_key=None,
     ssl_cert=None):
         """Given transport 'xport' and publisher configuration 'xport_cfg'
         take the string that identifies a repository by uri in 'repo_uri'
@@ -3492,3 +3710,6 @@ def setup_transport():
         xport = Transport(xport_cfg)
 
         return xport, xport_cfg
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

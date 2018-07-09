@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,14 +21,15 @@
 #
 
 #
-# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
-import testutils
+from . import testutils
 if __name__ == "__main__":
         testutils.setup_environment("../../../proto")
 import pkg5unittest
 
+import six
 import unittest
 import pkg.actions as action
 import pkg.actions.generic as generic
@@ -225,12 +226,12 @@ Incorrect attribute list.
                 # Really long actions with lots of backslash-escaped quotes
                 # should work.
                 a = action.fromstr(r'set name=pkg.description value="Sphinx is a tool that makes it easy to create intelligent \"and beautiful documentation f\"or Python projects (or \"other documents consisting of\" multiple reStructuredText so\"urces), written by Georg Bran\"dl. It was originally created\" to translate the new Python \"documentation, but has now be\"en cleaned up in the hope tha\"t it will be useful to many o\"ther projects. Sphinx uses re\"StructuredText as its markup \"language, and many of its str\"engths come from the power an\"d straightforwardness of reSt\"ructuredText and its parsing \"and translating suite, the Do\"cutils. Although it is still \"under constant development, t\"he following features are alr\"eady present, work fine and c\"an be seen \"in action\" \"in the Python docs: * Output \"formats: HTML (including Wind\"ows HTML Help) and LaTeX, for\" printable PDF versions * Ext\"ensive cross-references: sema\"ntic markup and automatic lin\"ks for functions, classes, gl\"ossary terms and similar piec\"es of information * Hierarchi\"cal structure: easy definitio\"n of a document tree, with au\"tomatic links to siblings, pa\"rents and children * Automati\"c indices: general index as w\"ell as a module index * Code \"handling: automatic highlight\"ing using the Pygments highli\"ghter * Various extensions ar\"e available, e.g. for automat\"ic testing of snippets and in\"clusion of appropriately formatted docstrings."')
-                self.assert_(a.attrs["value"].count('"') == 45)
+                self.assertTrue(a.attrs["value"].count('"') == 45)
 
                 # Make sure that the hash member of the action object properly
                 # contains the value of the "hash" named attribute.
                 a = action.fromstr("file hash=abc123 path=usr/bin/foo mode=0755 owner=root group=bin")
-                self.assert_(a.hash == "abc123")
+                self.assertTrue(a.hash == "abc123")
 
         def test_action_license(self):
                 """Test license action attributes."""
@@ -260,10 +261,18 @@ Incorrect attribute list.
                 self.assertEqual(a.must_accept, True)
                 self.assertEqual(a.must_display, False)
 
+        def __assert_action_str(self, astr, expected, expattrs):
+                """Private helper function for action stringification
+                testing."""
+                act = action.fromstr(astr)
+                self.assertEqualDiff(expected, str(act))
+                self.assertEqualDiff(expattrs, act.attrs)
+
         def test_action_tostr(self):
                 """Test that actions convert to strings properly.  This means
                 that we can feed the resulting string back into fromstr() and
-                get an identical action back."""
+                get an identical action back (excluding a few cases detailed in
+                the test)."""
 
                 for s in self.act_strings:
                         self.debug(str(s))
@@ -273,9 +282,9 @@ Incorrect attribute list.
                         if a.different(a2):
                                 self.debug("a1 " + str(a))
                                 self.debug("a2 " + str(a2))
-                                self.assert_(not a.different(a2))
+                                self.assertTrue(not a.different(a2))
 
-                # The one place that invariant doesn't hold is when you specify
+                # The first case that invariant doesn't hold is when you specify
                 # the payload hash as the named attribute "hash", in which case
                 # the resulting re-stringification emits the payload hash as a
                 # positional attribute again ...
@@ -283,10 +292,10 @@ Incorrect attribute list.
                 self.debug(s)
                 a = action.fromstr(s)
                 s2 = str(a)
-                self.assert_(s2.startswith("file abc123 "))
-                self.assert_("hash=abc123" not in s2)
+                self.assertTrue(s2.startswith("file abc123 "))
+                self.assertTrue("hash=abc123" not in s2)
                 a2 = action.fromstr(s2)
-                self.assert_(not a.different(a2))
+                self.assertTrue(not a.different(a2))
 
                 # ... unless of course the hash can't be represented that way.
                 d = {
@@ -299,11 +308,68 @@ Incorrect attribute list.
                 }
 
                 astr = "file {0} path=usr/bin/foo mode=0755 owner=root group=bin"
-                for k, v  in d.iteritems():
+                for k, v  in six.iteritems(d):
                         a = action.fromstr(astr.format(k))
-                        self.assert_(action.fromstr(str(a)) == a)
-                        self.assert_(a.hash == v)
-                        self.assert_(k in str(a))
+                        self.assertTrue(action.fromstr(str(a)) == a)
+                        self.assertTrue(a.hash == v)
+                        self.assertTrue(k in str(a))
+
+                # The attributes are verified separately from the stringified
+                # action in the tests below to ensure that the attributes were
+                # parsed independently and not as a single value (e.g.
+                # 'file path=etc/foo\nfacet.debug=true' is parsed as having a
+                # path attribute and a facet.debug attribute).
+
+                # The next case that invariant doesn't hold is when you have
+                # multiple, quoted values for a single attribute (this case
+                # primarily exists for use with line-continuation support
+                # offered by the Manifest class).
+                expected = 'set name=pkg.description value="foo bar baz"'
+                expattrs = { 'name': 'pkg.description', 'value': 'foo bar baz' }
+                for astr in (
+                    "set name=pkg.description value='foo ''bar ''baz'",
+                    "set name=pkg.description value='foo ' 'bar ' 'baz'",
+                    'set name=pkg.description value="foo " "bar " "baz"'):
+                        self.__assert_action_str(astr, expected, expattrs)
+
+                expected = "set name=pkg.description value='foo \"bar\" baz'"
+                expattrs = { 'name': 'pkg.description',
+                    'value': 'foo "bar" baz' }
+                for astr in (
+                    "set name=pkg.description value='foo \"bar\" ''baz'",
+                    "set name=pkg.description value='foo \"bar\" '\"baz\""):
+                        self.__assert_action_str(astr, expected, expattrs)
+
+                # The next case that invariant doesn't hold is when there are
+                # multiple whitespace characters between attributes or after the
+                # action type.
+                expected = 'set name=pkg.description value=foo'
+                expattrs = { 'name': 'pkg.description', 'value': 'foo' }
+                for astr in (
+                    "set  name=pkg.description value=foo",
+                    "set name=pkg.description  value=foo",
+                    "set  name=pkg.description  value=foo",
+                    "set\n name=pkg.description \nvalue=foo",
+                    "set\t\nname=pkg.description\t\nvalue=foo"):
+                        # To force stressing the parsing logic a bit more, we
+                        # parse an action with a multi-value attribute that
+                        # needs concatention each time before we parse a
+                        # single-value attribute that needs concatenation.
+                        #
+                        # This simulates a refcount bug that was found during
+                        # development and serves as an extra stress-test.
+                        self.__assert_action_str(
+                            'set name=multi-value value=bar value="foo ""baz"',
+                            'set name=multi-value value=bar value="foo baz"',
+                            { 'name': 'multi-value',
+                                'value': ['bar', 'foo baz'] })
+
+                        self.__assert_action_str(astr, expected, expattrs)
+
+                astr = 'file path=etc/foo\nfacet.debug=true'
+                expected = 'file NOHASH facet.debug=true path=etc/foo'
+                expattrs = { 'path': 'etc/foo', 'facet.debug': 'true' }
+                self.__assert_action_str(astr, expected, expattrs)
 
         def test_action_sig_str(self):
                 sig_act = action.fromstr(
@@ -324,7 +390,7 @@ Incorrect attribute list.
                         if a.different(a2):
                                 self.debug("a1 " + str(a))
                                 self.debug("a2 " + str(a2))
-                                self.assert_(not a.different(a2))
+                                self.assertTrue(not a.different(a2))
                         s4 = a.sig_str(sig_act, generic.Action.sig_version)
                         self.assertEqual(s2, s4)
                 # Test that using an unknown sig_version triggers the
@@ -338,9 +404,9 @@ Incorrect attribute list.
                 # argument action is None.
                 sig_act2 = action.fromstr(
                     "signature 98765 algorithm=foobar")
-                self.assert_(sig_act.sig_str(sig_act2,
+                self.assertTrue(sig_act.sig_str(sig_act2,
                     generic.Action.sig_version) is None)
-                self.assert_(sig_act2.sig_str(sig_act,
+                self.assertTrue(sig_act2.sig_str(sig_act,
                     generic.Action.sig_version) is None)
 
         def assertMalformed(self, text):
@@ -350,10 +416,12 @@ Incorrect attribute list.
                         action.fromstr(text)
                 except action.MalformedActionError as e:
                         assert e.actionstr == text
+                        self.debug(text)
+                        self.debug(str(e))
                         malformed = True
 
                 # If the action isn't malformed, something is wrong.
-                self.assert_(malformed, "Action not malformed: " + text)
+                self.assertTrue(malformed, "Action not malformed: " + text)
 
         def assertInvalid(self, text):
                 invalid = False
@@ -364,7 +432,7 @@ Incorrect attribute list.
                         invalid = True
 
                 # If the action isn't invalid, something is wrong.
-                self.assert_(invalid, "Action not invalid: " + text)
+                self.assertTrue(invalid, "Action not invalid: " + text)
 
         def test_action_errors(self):
                 # Unknown action type
@@ -396,10 +464,17 @@ Incorrect attribute list.
                 # Missing value
                 self.assertMalformed("file 1234 path=/tmp/foo broken=")
                 self.assertMalformed("file 1234 path=/tmp/foo broken= ")
+                self.assertMalformed("file 1234 path=/tmp/foo broken=\t")
+                self.assertMalformed("file 1234 path=/tmp/foo broken=\n")
                 self.assertMalformed("file 1234 path=/tmp/foo broken")
 
                 # Whitespace in key
                 self.assertMalformed("file 1234 path=/tmp/foo bro ken")
+                self.assertMalformed("file 1234 path=/tmp/foo\tbro\tken")
+                self.assertMalformed("file 1234 path=/tmp/foo\nbro\nken")
+                self.assertMalformed("file 1234 path ='/tmp/foo")
+                self.assertMalformed("file 1234 path\t=/tmp/foo")
+                self.assertMalformed("file 1234 path\n=/tmp/foo")
 
                 # Attribute value is invalid.
                 self.assertInvalid("depend type=unknown fmri=foo@1.0")
@@ -412,6 +487,13 @@ Incorrect attribute list.
 
                 # Mutiple fmri values only allowed for require-any deps.
                 self.assertInvalid("depend type=require fmri=foo fmri=bar")
+
+                # Multiple values never allowed for depend action 'type' attribute.
+                self.assertInvalid("depend type=require type=require-any fmri=foo")
+                if six.PY2:
+                # have to skip this test case in Python 3 because _common.c`set_invalid_action_error
+                # can't import "pkg.actions" due to some reasons
+                        self.assertInvalid("depend type=require type=require-any fmri=foo fmri=bar")
 
                 # 'path' attribute specified multiple times
                 self.assertInvalid("file 1234 path=foo path=foo mode=777 owner=root group=root")
@@ -450,7 +532,7 @@ Incorrect attribute list.
                 fact = "file 12345 name=foo path=/tmp/foo mode=XXX"
                 dact = "dir path=/tmp mode=XXX"
 
-                def assert_invalid_attrs(astr):
+                def assertTrueinvalid_attrs(astr):
                         bad_act = action.fromstr(astr)
                         try:
                                 bad_act.validate()
@@ -480,7 +562,7 @@ Incorrect attribute list.
                     "depend type=conditional predicate=foo predicate=bar fmri=baz",
                     # Multiple values for ignore-check are not allowed.
                     "depend type=require fmri=foo ignore-check=true ignore-check=false"):
-                        assert_invalid_attrs(nact)
+                        assertTrueinvalid_attrs(nact)
 
                 # Verify multiple values for file attributes are rejected.
                 for attr in ("pkg.size", "pkg.csize", "chash", "preserve",
@@ -489,7 +571,7 @@ Incorrect attribute list.
                         nact = "file path=/usr/bin/foo owner=root group=root " \
                             "mode=0555 {attr}=1 {attr}=2 {attr}=3".format(
                             attr=attr)
-                        assert_invalid_attrs(nact)
+                        assertTrueinvalid_attrs(nact)
 
                 # Verify invalid values are not allowed for mode attribute on
                 # file and dir actions.
@@ -497,7 +579,7 @@ Incorrect attribute list.
                         for bad_mode in ("", 'mode=""', "mode=???",
                             "mode=44755", "mode=44", "mode=999", "mode=0898"):
                                 nact = act.replace("mode=XXX", bad_mode)
-                                assert_invalid_attrs(nact)
+                                assertTrueinvalid_attrs(nact)
 
                 # Verify multiple values aren't allowed for legacy action
                 # attributes.
@@ -505,22 +587,22 @@ Incorrect attribute list.
                     "version"):
                         nact = "legacy pkg=SUNWcs {attr}=1 {attr}=2".format(
                             attr=attr)
-                        assert_invalid_attrs(nact)
+                        assertTrueinvalid_attrs(nact)
 
                 # Verify multiple values aren't allowed for gid of group.
                 nact = "group groupname=staff gid=100 gid=101"
-                assert_invalid_attrs(nact)
+                assertTrueinvalid_attrs(nact)
 
                 # Verify only numeric value is allowed for gid of group.
                 nact = "group groupname=staff gid=abc"
-                assert_invalid_attrs(nact)
+                assertTrueinvalid_attrs(nact)
 
                 # Verify multiple values are not allowed for must-accept and
                 # must-display attributes of license actions.
                 for attr in ("must-accept", "must-display"):
                         nact = "license license=copyright {attr}=true " \
                             "{attr}=false".format(attr=attr)
-                        assert_invalid_attrs(nact)
+                        assertTrueinvalid_attrs(nact)
 
                 # Ensure link and hardlink attributes are validated properly.
                 for aname in ("link", "hardlink"):
@@ -528,13 +610,13 @@ Incorrect attribute list.
                         # invalid.
                         nact = "{0} path=usr/bin/vi target=../sunos/bin/edit " \
                             "mediator=vi".format(aname)
-                        assert_invalid_attrs(nact)
+                        assertTrueinvalid_attrs(nact)
 
                         # Action with multiple mediator values is invalid.
                         nact = "{0} path=usr/bin/vi target=../sunos/bin/edit " \
                             "mediator=vi mediator=vim " \
                             "mediator-implementatio=svr4".format(aname)
-                        assert_invalid_attrs(nact)
+                        assertTrueinvalid_attrs(nact)
 
                         # Action with mediator properties without mediator
                         # is invalid.
@@ -543,15 +625,15 @@ Incorrect attribute list.
                             "mediator-implementation": "svr4",
                             "mediator-priority": "site",
                         }
-                        for prop, val in props.iteritems():
+                        for prop, val in six.iteritems(props):
                                 nact = "{0} path=usr/bin/vi " \
                                     "target=../sunos/bin/edit {1}={2}".format(aname,
                                     prop, val)
-                                assert_invalid_attrs(nact)
+                                assertTrueinvalid_attrs(nact)
 
                         # Action with multiple values for any property is
                         # invalid.
-                        for prop, val in props.iteritems():
+                        for prop, val in six.iteritems(props):
                                 nact = "{0} path=usr/bin/vi " \
                                     "target=../sunos/bin/edit mediator=vi " \
                                     "{1}={2} {3}={4} ".format(aname, prop, val, prop,
@@ -561,21 +643,21 @@ Incorrect attribute list.
                                         # valid, so test multiple value
                                         # invalid, add something.
                                         nact += " mediator-version=1.0"
-                                assert_invalid_attrs(nact)
+                                assertTrueinvalid_attrs(nact)
 
                         # Verify invalid mediator names are rejected.
                         for value in ("not/valid", "not valid", "not.valid"):
                                 nact = "{0} path=usr/bin/vi target=vim " \
                                     "mediator=\"{1}\" mediator-implementation=vim" \
                                    .format(aname, value)
-                                assert_invalid_attrs(nact)
+                                assertTrueinvalid_attrs(nact)
 
                         # Verify invalid mediator-versions are rejected.
                         for value in ("1.a", "abc", ".1"):
                                 nact = "{0} path=usr/bin/vi target=vim " \
                                     "mediator=vim mediator-version={1}" \
                                    .format(aname, value)
-                                assert_invalid_attrs(nact)
+                                assertTrueinvalid_attrs(nact)
 
                         # Verify invalid mediator-implementations are rejected.
                         for value in ("1.a", "@", "@1", "vim@.1",
@@ -583,50 +665,50 @@ Incorrect attribute list.
                                 nact = "{0} path=usr/bin/vi target=vim " \
                                     "mediator=vim mediator-implementation={1}" \
                                    .format(aname, value)
-                                assert_invalid_attrs(nact)
+                                assertTrueinvalid_attrs(nact)
 
                         # Verify multiple targets are not allowed.
                         nact = "{0} path=/usr/bin/foo target=bar target=baz".format(
                             aname)
-                        assert_invalid_attrs(nact)
+                        assertTrueinvalid_attrs(nact)
 
                 # Verify multiple values are not allowed for set actions such as
                 # pkg.description, pkg.obsolete, pkg.renamed, and pkg.summary.
                 for attr in ("pkg.description", "pkg.obsolete", "pkg.renamed",
                     "pkg.summary", "pkg.depend.explicit-install"):
                         nact = "set name={0} value=true value=false".format(attr)
-                        assert_invalid_attrs(nact)
+                        assertTrueinvalid_attrs(nact)
 
                 # Verify signature action attribute 'value' is required during
                 # publication.
                 nact = "signature 12345 algorithm=foo"
-                assert_invalid_attrs(nact)
+                assertTrueinvalid_attrs(nact)
 
                 # Verify multiple values aren't allowed for user attributes.
                 for attr in ("password", "group", "gcos-field", "home-dir",
                     "login-shell", "ftpuser"):
                         nact = "user username=user {attr}=ab {attr}=cd ".format(
                             attr=attr)
-                        assert_invalid_attrs(nact)
+                        assertTrueinvalid_attrs(nact)
 
                 for attr in ("uid", "lastchg", "min","max", "warn", "inactive",
                     "expire", "flag"):
                         nact = "user username=user {attr}=1 {attr}=2".format(
                             attr=attr)
-                        assert_invalid_attrs(nact)
+                        assertTrueinvalid_attrs(nact)
 
                 # Verify only numeric values are allowed for user attributes
                 # expecting a number.
                 for attr in ("uid", "lastchg", "min","max", "warn", "inactive",
                     "expire", "flag"):
                         nact = "user username=user {0}=abc".format(attr)
-                        assert_invalid_attrs(nact)
+                        assertTrueinvalid_attrs(nact)
 
                 # Malformed pkg actuators
-                assert_invalid_attrs(
+                assertTrueinvalid_attrs(
                     "set name=pkg.additional-update-on-uninstall "
                     "value=&@M")
-                assert_invalid_attrs(
+                assertTrueinvalid_attrs(
                     "set name=pkg.additional-update-on-uninstall "
                     "value=A@1 value=&@M")
                 # Unknown actuator (should pass)
@@ -636,3 +718,6 @@ Incorrect attribute list.
 
 if __name__ == "__main__":
         unittest.main()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

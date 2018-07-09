@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 PKG_CLIENT_NAME = "pkgrepo"
@@ -49,12 +49,14 @@ import logging
 import os
 import shlex
 import shutil
+import six
 import sys
 import tempfile
 import textwrap
 import traceback
 import warnings
 import itertools
+from imp import reload
 
 from pkg.client import global_settings
 from pkg.client.debugvalues import DebugValues
@@ -140,13 +142,13 @@ Subcommands:
      pkgrepo remove-publisher [-n] [--synchronous] -s repo_uri_or_path
          publisher ...
 
-     pkgrepo get [-F format] [-p publisher ...] -s repo_uri_or_path 
+     pkgrepo get [-F format] [-p publisher ...] -s repo_uri_or_path
          [--key ssl_key ... --cert ssl_cert ...] [section/property ...]
 
      pkgrepo info [-F format] [-H] [-p publisher ...] -s repo_uri_or_path
          [--key ssl_key ... --cert ssl_cert ...]
 
-     pkgrepo list [-F format] [-H] [-p publisher ...] -s repo_uri_or_path 
+     pkgrepo list [-F format] [-H] [-p publisher ...] -s repo_uri_or_path
          [--key ssl_key ... --cert ssl_cert ...] [pkg_fmri_pattern ...]
 
      pkgrepo contents [-m] [-t action_type ...] -s repo_uri_or_path
@@ -1047,26 +1049,26 @@ def refresh_pub(pub_data, xport):
 def subcmd_contents(conf, args):
         """List package contents."""
 
-	subcommand = "contents"
-	display_raw = False
-	pubs = set()
-	key = None
-	cert = None
+        subcommand = "contents"
+        display_raw = False
+        pubs = set()
+        key = None
+        cert = None
         attrs = []
         action_types = []
 
-	opts, pargs = getopt.getopt(args, "ms:t:", ["key=", "cert="])
-	for opt, arg in opts:
-		if opt == "-s":
+        opts, pargs = getopt.getopt(args, "ms:t:", ["key=", "cert="])
+        for opt, arg in opts:
+                if opt == "-s":
                         conf["repo_uri"] = parse_uri(arg)
-		elif opt == "-m":
-			display_raw = True
-		elif opt == "-t":
+                elif opt == "-m":
+                        display_raw = True
+                elif opt == "-t":
                         action_types.extend(arg.split(","))
-		elif opt == "--key":
-			key = arg
-		elif opt == "--cert":
-			cert = arg
+                elif opt == "--key":
+                        key = arg
+                elif opt == "--cert":
+                        cert = arg
 
         # Setup transport so configuration can be retrieved.
         if not conf.get("repo_uri", None):
@@ -1081,7 +1083,7 @@ def subcmd_contents(conf, args):
         if rval == EXIT_OOPS:
                 return rval
 
-        # Default output prints out the raw manifest. The -m option is implicit 
+        # Default output prints out the raw manifest. The -m option is implicit
         # for now and supported to make the interface equivalent to pkg
         # contents.
         if not attrs or display_raw:
@@ -1123,7 +1125,7 @@ def subcmd_contents(conf, args):
         # Determine if the query returned any results by "peeking" at the first
         # value returned from the generator expression.
         try:
-                got = gen_expr.next()
+                got = next(gen_expr)
         except StopIteration:
                 got = None
                 actionlist = []
@@ -1404,7 +1406,7 @@ def subcmd_set(conf, args):
 def _set_pub(conf, subcommand, props, pubs, repo):
         """Set publisher properties."""
 
-        for sname, sprops in props.iteritems():
+        for sname, sprops in six.iteritems(props):
                 if sname not in ("publisher", "repository"):
                         usage(_("unknown property section "
                             "'{0}'").format(sname), cmd=subcommand)
@@ -1444,7 +1446,7 @@ def _set_pub(conf, subcommand, props, pubs, repo):
 
                 try:
                         # Set/update the publisher's properties.
-                        for sname, sprops in props.iteritems():
+                        for sname, sprops in six.iteritems(props):
                                 if sname == "publisher":
                                         target = pub
                                 elif sname == "repository":
@@ -1453,7 +1455,7 @@ def _set_pub(conf, subcommand, props, pubs, repo):
                                                 target = publisher.Repository()
                                                 pub.repository = target
 
-                                for pname, val in sprops.iteritems():
+                                for pname, val in six.iteritems(sprops):
                                         attrname = pname.replace("-", "_")
                                         pval = getattr(target, attrname)
                                         if isinstance(pval, list) and \
@@ -1490,8 +1492,8 @@ def _set_repo(conf, subcommand, props, repo):
         """Set repository properties."""
 
         # Set properties.
-        for sname, props in props.iteritems():
-                for pname, val in props.iteritems():
+        for sname, props in six.iteritems(props):
+                for pname, val in six.iteritems(props):
                         repo.cfg.set_property(sname, pname, val)
         repo.write_config()
 
@@ -1954,3 +1956,6 @@ if __name__ == "__main__":
                 # Ignore python's spurious pipe problems.
                 pass
         sys.exit(__retval)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

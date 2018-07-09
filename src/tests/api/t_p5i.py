@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,17 +21,16 @@
 #
 
 #
-# Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
-import testutils
+from . import testutils
 if __name__ == "__main__":
         testutils.setup_environment("../../../proto")
 import pkg5unittest
 
 import errno
 import unittest
-import cStringIO
 import os
 import pkg.client.api_errors as api_errors
 import pkg.client.publisher as publisher
@@ -41,8 +40,10 @@ import pkg.p5i as p5i
 import shutil
 import sys
 import tempfile
-import urllib
-import urlparse
+
+from six.moves import cStringIO
+from six.moves.urllib.parse import urlparse, urlunparse
+from six.moves.urllib.request import pathname2url
 
 class TestP5I(pkg5unittest.Pkg5TestCase):
         """Class to test the functionality of the pkg.p5i module."""
@@ -50,7 +51,7 @@ class TestP5I(pkg5unittest.Pkg5TestCase):
         #
         # Whitespace (or lack thereof) at the ends of some lines in the below is
         # significant. It's also a function of which simplejson version you're
-	# running/using.
+        # running/using.
         #
         p5i_bobcat = """{
   "packages": [
@@ -121,11 +122,13 @@ class TestP5I(pkg5unittest.Pkg5TestCase):
                 }
 
                 # Dump the p5i data.
-                fobj = cStringIO.StringIO()
+                fobj = cStringIO()
                 p5i.write(fobj, [pub], pkg_names=pnames)
 
                 # Verify that the p5i data ends with a terminating newline.
-                fobj.seek(-1, 2)
+                # In Python 3, StringIO doesn't support non-zero relative seek.
+                fobj.seek(0, os.SEEK_END)
+                fobj.seek(fobj.tell() - 1)
                 self.assertEqual(fobj.read(), "\n")
 
                 # Verify that output matches expected output.
@@ -164,15 +167,16 @@ class TestP5I(pkg5unittest.Pkg5TestCase):
                 # when provided a file path.
                 fobj.seek(0)
                 (fd1, path1) = tempfile.mkstemp(dir=self.test_root)
-                os.write(fd1, fobj.read())
+                # tempfile.mkstemp open the file in binary mode
+                os.write(fd1, misc.force_bytes(fobj.read()))
                 os.close(fd1)
                 validate_results(p5i.parse(location=path1))
 
                 # Verify that parse returns the expected object and information
                 # when provided a file URI.
                 location = os.path.abspath(path1)
-                location = urlparse.urlunparse(("file", "",
-                    urllib.pathname2url(location), "", "", ""))
+                location = urlunparse(("file", "",
+                    pathname2url(location), "", "", ""))
                 validate_results(p5i.parse(location=location))
                 fobj.close()
                 fobj = None
@@ -190,8 +194,8 @@ class TestP5I(pkg5unittest.Pkg5TestCase):
                 # p5i information.
                 lcpath = os.path.join(self.test_root, "libc.so.1")
                 location = os.path.abspath(lcpath)
-                location = urlparse.urlunparse(("file", "",
-                    urllib.pathname2url(location), "", "", ""))
+                location = urlunparse(("file", "",
+                    pathname2url(location), "", "", ""))
 
                 # First, test as a file:// URI.
                 self.assertRaises(api_errors.InvalidP5IFile, p5i.parse,
@@ -207,8 +211,8 @@ class TestP5I(pkg5unittest.Pkg5TestCase):
                 as expected."""
 
                 # First, test the no repository case.
-		# NOTE:	Spaces, or lack thereof, at the end of a line, are
-		#	important.
+                # NOTE:        Spaces, or lack thereof, at the end of a line, are
+                #        important.
                 expected = """{
   "packages": [],
   "publishers": [
@@ -226,7 +230,7 @@ class TestP5I(pkg5unittest.Pkg5TestCase):
                 pub = self.__get_bobcat_pub(omit_repo=True)
 
                 # Dump the p5i data.
-                fobj = cStringIO.StringIO()
+                fobj = cStringIO()
                 p5i.write(fobj, [pub])
 
                 # Verify that output matches expected output.
@@ -236,12 +240,12 @@ class TestP5I(pkg5unittest.Pkg5TestCase):
 
                 # Now parse the result and verify no repositories are defined.
                 pub, pkg_names = p5i.parse(data=output)[0]
-                self.assert_(not pub.repository)
+                self.assertTrue(not pub.repository)
 
                 # Next, test the partial repository configuration case.  No
                 # origin is provided, but everything else is.
-		# NOTE:	Spaces, or lack thereof, at the end of a line, are
-		#	important.
+                # NOTE:        Spaces, or lack thereof, at the end of a line, are
+                #        important.
                 expected = """{
   "packages": [],
   "publishers": [
@@ -275,7 +279,7 @@ class TestP5I(pkg5unittest.Pkg5TestCase):
                 pub.repository.reset_origins()
 
                 # Dump the p5i data.
-                fobj = cStringIO.StringIO()
+                fobj = cStringIO()
                 p5i.write(fobj, [pub])
 
                 # Verify that output matches expected output.
@@ -291,3 +295,6 @@ class TestP5I(pkg5unittest.Pkg5TestCase):
 
 if __name__ == "__main__":
         unittest.main()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

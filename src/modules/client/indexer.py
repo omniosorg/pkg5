@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -19,8 +19,10 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+
+#
+# Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
+#
 
 
 # This Indexer class handles the client-side specific code for hashing the
@@ -65,3 +67,6 @@ class Indexer(indexer.Indexer):
                         for d in self._data_dict.values():
                                 d.close_file_handle()
                 return res is not None
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

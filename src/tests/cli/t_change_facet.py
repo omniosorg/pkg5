@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -20,9 +20,9 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2016, Oracle and/or its affiliates. All rights reserved.
 
-import testutils
+from . import testutils
 if __name__ == "__main__":
         testutils.setup_environment("../../../proto")
 import pkg5unittest
@@ -107,14 +107,14 @@ class TestPkgChangeFacet(pkg5unittest.SingleDepotTestCase):
                 file_path = os.path.join(self.get_img_path(), str(path))
 
                 try:
-                        f = file(file_path)
+                        open(file_path).close()
                 except IOError as e:
                         if e.errno == errno.ENOENT and negate:
                                 return
-                        self.assert_(False, "File {0} is missing".format(path))
+                        self.assertTrue(False, "File {0} is missing".format(path))
                 # file is there
                 if negate:
-                        self.assert_(False, "File {0} should not exist".format(path))
+                        self.assertTrue(False, "File {0} should not exist".format(path))
                 return
 
         def test_01_facets(self):
@@ -157,7 +157,7 @@ class TestPkgChangeFacet(pkg5unittest.SingleDepotTestCase):
                 )
 
                 # notice that a file should not exist according to its facet
-                file(os.path.join(self.get_img_path(), "3"), "w")
+                open(os.path.join(self.get_img_path(), "3"), "w").close()
                 self.pkg("verify", exit=1)
                 os.remove(os.path.join(self.get_img_path(), "3"))
 
@@ -308,7 +308,7 @@ class TestPkgChangeFacet(pkg5unittest.SingleDepotTestCase):
 
                 # First, install faceted package.
                 self.pkg("install pkg_A")
-                for i in xrange(9):
+                for i in range(9):
                         self.assert_file_is_there(i)
 
                 # Next, set general locale.*=False, but locale.fr=True.
@@ -646,3 +646,6 @@ class TestPkgChangeFacet(pkg5unittest.SingleDepotTestCase):
 
 if __name__ == "__main__":
         unittest.main()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

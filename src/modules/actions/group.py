@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 """module describing a user packaging object
@@ -30,7 +30,7 @@ This module contains the UserAction class, which represents a user
 packaging object.  This contains the attributes necessary to create
 a new user."""
 
-import generic
+from . import generic
 try:
         from pkg.cfgfiles import *
         have_cfgfiles = True
@@ -38,6 +38,7 @@ except ImportError:
         have_cfgfiles = False
 
 import pkg.client.api_errors as apx
+import pkg.actions
 
 class GroupAction(generic.Action):
         """Class representing a group packaging object.
@@ -63,10 +64,19 @@ class GroupAction(generic.Action):
                 """client-side method that adds the group
                    use gid from disk if different"""
                 if not have_cfgfiles:
-                        # the group action is ignored if cfgfiles is not available
+                        # the group action is ignored if cfgfiles is not
+                        # available.
                         return
 
                 template = self.extract(["groupname", "gid"])
+
+                root = pkgplan.image.get_root()
+                try:
+                        pw = PasswordFile(root, lock=True)
+                except EnvironmentError as e:
+                        if e.errno != errno.ENOENT:
+                                raise
+                        pw = None
 
                 gr = GroupFile(pkgplan.image)
 
@@ -77,15 +87,41 @@ class GroupAction(generic.Action):
                 #        (XXX this doesn't chown any files on-disk)
                 # else, nothing to do
                 if cur_attrs:
-                        if (cur_attrs["gid"] != self.attrs["gid"]):
-                                template = cur_attrs;
-                                template["gid"] = self.attrs["gid"]
-                        else:
+                        if (cur_attrs["gid"] == self.attrs["gid"]):
+                                if pw:
+                                        pw.unlock()
                                 return
+
+                        cur_gid = cur_attrs["gid"]
+                        template = cur_attrs;
+                        template["gid"] = self.attrs["gid"]
+                        # Update the user database with the new gid
+                        # as well.
+                        try:
+                                usernames = pkgplan.image.get_usernames_by_gid(
+                                    cur_gid)
+                                for username in usernames:
+                                        user_entry = pw.getuser(
+                                            username)
+                                        user_entry["gid"] = self.attrs[
+                                            "gid"]
+                                        pw.setvalue(user_entry)
+                        except Exception as e:
+                                if pw:
+                                        pw.unlock()
+                                txt = _("Group cannot be installed. "
+                                    "Updating related user entries "
+                                    "failed.")
+                                raise apx.ActionExecutionError(self,
+                                    error=e, details=txt,
+                                    fmri=pkgplan.destination_fmri)
+
                 # XXX needs modification if more attrs are used
                 gr.setvalue(template)
                 try:
                         gr.writefile()
+                        if pw:
+                                pw.writefile()
                 except EnvironmentError as e:
                         if e.errno != errno.ENOENT:
                                 raise
@@ -102,8 +138,12 @@ class GroupAction(generic.Action):
                         if "gid" in self.attrs:
                                 img._groupsbyname[self.attrs["groupname"]] = \
                                     int(self.attrs["gid"])
+                        raise pkg.actions.ActionRetry(self)
+                finally:
+                        if pw:
+                                pw.unlock()
 
-        def postinstall(self, pkgplan, orig):
+        def retry(self, pkgplan, orig):
                 groups = pkgplan.image._groups
                 if groups:
                         assert self in groups
@@ -129,7 +169,7 @@ class GroupAction(generic.Action):
                 # Get the default values if they're non-empty
                 grdefval = dict((
                     (k, v)
-                    for k, v in gr.getdefaultvalues().iteritems()
+                    for k, v in six.iteritems(gr.getdefaultvalues())
                     if v != ""
                 ))
 
@@ -202,6 +242,9 @@ class GroupAction(generic.Action):
                 will only hold true for actions installed at one time, but that's
                 generally what we need on initial install."""
                 # put unspecifed gids at the end
-                return cmp(int(self.attrs.get("gid", 1024)),
-                    int(other.attrs.get("gid", 1024)))
+                a = int(self.attrs.get("gid", 1024))
+                b = int(other.attrs.get("gid", 1024))
+                return (a > b) - (a < b)
 
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

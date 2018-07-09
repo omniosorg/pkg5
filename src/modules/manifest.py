@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,9 +21,10 @@
 #
 
 #
-# Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
+from __future__ import print_function
 from collections import namedtuple, defaultdict
 from functools import reduce
 
@@ -32,9 +33,11 @@ import fnmatch
 import hashlib
 import os
 import re
+import six
 import tempfile
-from itertools import groupby, chain, product, repeat, izip
+from itertools import groupby, chain, product, repeat
 from operator import itemgetter
+from six.moves import zip
 
 import pkg.actions as actions
 import pkg.client.api_errors as apx
@@ -58,7 +61,7 @@ def _compile_fnpats(fn_pats):
                 re.compile(fnmatch.translate(pat), re.IGNORECASE).match
                 for pat in pats
             ])
-            for (key, pats) in fn_pats.iteritems()
+            for (key, pats) in six.iteritems(fn_pats)
         )
 
 
@@ -71,7 +74,7 @@ def _attr_matches(action, attr_match):
         if not attr_match:
                 return True
 
-        for (attr, matches) in attr_match.iteritems():
+        for (attr, matches) in six.iteritems(attr_match):
                 if attr in action.attrs:
                         for match in matches:
                                 for attrval in action.attrlist(attr):
@@ -242,8 +245,8 @@ class Manifest(object):
                 sdict = dict(dictify(self, self_exclude))
                 odict = dict(dictify(origin, origin_exclude))
 
-                sset = set(sdict.iterkeys())
-                oset = set(odict.iterkeys())
+                sset = set(six.iterkeys(sdict))
+                oset = set(six.iterkeys(odict))
 
                 added = [(None, sdict[i]) for i in sset - oset]
                 removed = [(odict[i], None) for i in oset - sset]
@@ -397,7 +400,7 @@ class Manifest(object):
                                    a.attrs.get("mediator-implementation"))
 
                 mediators = self._actions_to_dict(gen_references)
-                for mediation, mvariants in mediators.iteritems():
+                for mediation, mvariants in six.iteritems(mediators):
                         values = {
                             "mediator-priority": mediation[1],
                             "mediator-version": mediation[2],
@@ -408,12 +411,12 @@ class Manifest(object):
                                     "value={0} {1} {2}\n".format(mediation[0],
                                      " ".join((
                                          "=".join(t)
-                                          for t in values.iteritems()
+                                          for t in six.iteritems(values)
                                           if t[1]
                                      )),
                                      " ".join((
                                          "=".join(t)
-                                         for t in mvariant.iteritems()
+                                         for t in six.iteritems(mvariant)
                                      ))
                                 )
                                 yield a
@@ -458,7 +461,7 @@ class Manifest(object):
 
                         afacets = []
                         avariants = []
-                        for attr, val in attrs.iteritems():
+                        for attr, val in six.iteritems(attrs):
                                 if attr[:8] == "variant.":
                                         variants[attr].add(val)
                                         avariants.append((attr, val))
@@ -509,7 +512,7 @@ class Manifest(object):
 
                         # For each variant combination, remove unvarianted
                         # facets since they are common to all variants.
-                        for varkey, fnames in facets.items():
+                        for varkey, fnames in list(facets.items()):
                                 fnames.difference_update(cfacets)
                                 if not fnames:
                                         # No facets unique to this combo;
@@ -564,7 +567,7 @@ class Manifest(object):
                                 # used by a single variant (think i386-only or
                                 # sparc-only content) would be seen unvarianted
                                 # (that's bad).
-                                vfacets = facets.values()
+                                vfacets = list(facets.values())
                                 vcfacets = vfacets[0].intersection(*vfacets[1:])
 
                                 if vcfacets:
@@ -574,7 +577,8 @@ class Manifest(object):
                                         cfacets.update(vcfacets)
 
                                         # Remove facets common to all combos.
-                                        for varkey, fnames in facets.items():
+                                        for varkey, fnames in list(
+                                            facets.items()):
                                                 fnames.difference_update(vcfacets)
                                                 if not fnames:
                                                         # No facets unique to
@@ -605,7 +609,7 @@ class Manifest(object):
                         # Now emit a pkg.facet action for each variant
                         # combination containing the list of facets unique to
                         # that combination.
-                        for varkey, fnames in facets.iteritems():
+                        for varkey, fnames in six.iteritems(facets):
                                 # A unique key for each combination is needed,
                                 # and using a hash obfuscates that interface
                                 # while giving us a reliable way to generate
@@ -613,7 +617,8 @@ class Manifest(object):
                                 # string below looks like this before hashing:
                                 #     variant.archi386variant.debug.osnetTrue...
                                 key = hashlib.sha1(
-                                    "".join("{0}{1}".format(*v) for v in varkey)
+                                    misc.force_bytes("".join(
+                                    "{0}{1}".format(*v) for v in varkey))
                                 ).hexdigest()
 
                                 # Omit the "facet." prefix from attribute values
@@ -654,9 +659,9 @@ class Manifest(object):
                                 # a reproducible, unique identifier.  The key
                                 # string below looks like this before hashing:
                                 #     facet.docTruevariant.archi386...
-                                key = hashlib.sha1(
+                                key = hashlib.sha1(misc.force_bytes(
                                     "".join("{0}{1}".format(*v) for v in varcetkeys)
-                                ).hexdigest()
+                                )).hexdigest()
 
                                 # The sizes are abbreviated in the name of byte
                                 # conservation.
@@ -970,11 +975,29 @@ class Manifest(object):
                 return alldups
 
         def __content_to_actions(self, content):
+                """Parse manifest content, stripping line-continuation
+                characters from the input as it is read; this results in actions
+                with values across multiple lines being passed to the
+                action parsing code whitespace-separated instead.
+                
+                For example:
+                        
+                set name=pkg.summary \
+                    value="foo"
+                set name=pkg.description value="foo " \
+                      "bar baz"
+
+                ...will each be passed to action parsing as:
+
+                set name=pkg.summary value="foo"
+                set name=pkg.description value="foo " "bar baz"
+                """
+
                 accumulate = ""
                 lineno = 0
                 errors = []
 
-                if isinstance(content, basestring):
+                if isinstance(content, six.string_types):
                         # Get an iterable for the string.
                         content = content.splitlines()
 
@@ -1042,11 +1065,15 @@ class Manifest(object):
                 # together has to be solved somewhere else, though.)
                 if pathname:
                         try:
-                                with open(pathname, "rb") as mfile:
+                                with open(pathname, "r") as mfile:
                                         content = mfile.read()
                         except EnvironmentError as e:
                                 raise apx._convert_error(e)
-                if isinstance(content, basestring):
+
+                if six.PY3 and isinstance(content, bytes):
+                        raise TypeError("content must be str, not bytes")
+
+                if isinstance(content, six.string_types):
                         if signatures:
                                 # Generate manifest signature based upon
                                 # input content, but only if signatures
@@ -1099,7 +1126,6 @@ class Manifest(object):
                 if excludes and not action.include_this(excludes,
                     publisher=self.publisher):
                         return
-
                 self.actions.append(action)
                 try:
                         self.actions_bytype[aname].append(action)
@@ -1191,7 +1217,7 @@ class Manifest(object):
                         log = lambda x: None
 
                 try:
-                        file_handle = file(file_path, "rb")
+                        file_handle = open(file_path, "r")
                 except EnvironmentError as e:
                         if e.errno != errno.ENOENT:
                                 raise
@@ -1283,7 +1309,7 @@ class Manifest(object):
                 # This must be an SHA-1 hash in order to interoperate with
                 # older clients.
                 sha_1 = hashlib.sha1()
-                if isinstance(mfstcontent, unicode):
+                if isinstance(mfstcontent, six.text_type):
                         # Byte stream expected, so pass encoded.
                         sha_1.update(mfstcontent.encode("utf-8"))
                 else:
@@ -1326,7 +1352,7 @@ class Manifest(object):
                                     e.filename)
                         raise
 
-                mfile = os.fdopen(fd, "wb")
+                mfile = os.fdopen(fd, "w")
 
                 #
                 # We specifically avoid sorting manifests before writing
@@ -1431,10 +1457,16 @@ class Manifest(object):
                         # allow you to be selective and various bits in
                         # pkg.manifest assume you always filter on both so we
                         # have to fake up a filter for facets.
-                        nexcludes = [
-                            x for x in excludes
-                            if x.__func__ != facet._allow_facet
-                        ]
+                        if six.PY2:
+                                nexcludes = [
+                                    x for x in excludes
+                                    if x.__func__ != facet._allow_facet
+                                ]
+                        else:
+                                nexcludes = [
+                                    x for x in excludes
+                                    if x.__func__ != facet.Facets.allow_action
+                                ]
                         # Excludes list must always have zero or 2+ items; so
                         # fake second entry.
                         nexcludes.append(lambda x, publisher: True)
@@ -1449,7 +1481,7 @@ class Manifest(object):
                                 continue
 
                         try:
-                                for v, d in izip(v_list, repeat(variants)):
+                                for v, d in zip(v_list, repeat(variants)):
                                         d[v].add(attrs[v])
 
                                 if not excludes or action.include_this(
@@ -1460,7 +1492,7 @@ class Manifest(object):
                                         # from the current action should only be
                                         # included if the action is not
                                         # excluded.
-                                        for v, d in izip(f_list, repeat(facets)):
+                                        for v, d in zip(f_list, repeat(facets)):
                                                 d[v].add(attrs[v])
                         except TypeError:
                                 # Lists can't be set elements.
@@ -1615,7 +1647,7 @@ class FactoredManifest(Manifest):
                 # so that empty cache files are created if no action of that
                 # type exists for the package (avoids full manifest loads
                 # later).
-                for n, acts in self.actions_bytype.iteritems():
+                for n, acts in six.iteritems(self.actions_bytype):
                         t_prefix = "manifest.{0}.".format(n)
 
                         try:
@@ -1624,7 +1656,7 @@ class FactoredManifest(Manifest):
                         except EnvironmentError as e:
                                 raise apx._convert_error(e)
 
-                        f = os.fdopen(fd, "wb")
+                        f = os.fdopen(fd, "w")
                         try:
                                 for a in acts:
                                         f.write("{0}\n".format(a))
@@ -1651,7 +1683,7 @@ class FactoredManifest(Manifest):
                         try:
                                 fd, fn = tempfile.mkstemp(dir=t_dir,
                                     prefix=name + ".")
-                                with os.fdopen(fd, "wb") as f:
+                                with os.fdopen(fd, "w") as f:
                                         f.writelines(refs())
                                 os.chmod(fn, PKG_FILE_MODE)
                                 portable.rename(fn, self.__cache_path(name))
@@ -1701,7 +1733,7 @@ class FactoredManifest(Manifest):
                 if os.path.exists(mpath):
                         # we have cached copy on disk; use it
                         try:
-                                with open(mpath, "rb") as f:
+                                with open(mpath, "r") as f:
                                         self._cache[name] = [
                                             a for a in
                                             (
@@ -1786,7 +1818,7 @@ class FactoredManifest(Manifest):
                         attr_match = _compile_fnpats(attr_match)
 
                 try:
-                        with open(mpath, "rb") as f:
+                        with open(mpath, "r") as f:
                                 for l in f:
                                         a = actions.fromstr(l.rstrip())
                                         if (excludes and
@@ -1845,7 +1877,7 @@ class FactoredManifest(Manifest):
                 mpath = self.__cache_path("manifest.set")
                 if not os.path.exists(mpath):
                         return False
-                with open(mpath, "rb") as f:
+                with open(mpath, "r") as f:
                         for l in f:
                                 a = actions.fromstr(l.rstrip())
                                 if not self.excludes or \
@@ -1993,3 +2025,6 @@ class ManifestError(Exception):
                         ret.append("{0}\n{1}\n\n".format(*d))
 
                 return "\n".join(ret)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

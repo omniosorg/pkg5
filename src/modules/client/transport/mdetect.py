@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -25,6 +25,7 @@
 #
 
 import random
+from six.moves import range
 
 import pkg.misc as misc
 import pkg.client.publisher as pub
@@ -58,7 +59,7 @@ class MirrorDetector(object):
                 five mirrors from the list of available mirrors."""
 
                 listlen = len(self._mirrors)
-                iterlst = random.sample(xrange(listlen), min(listlen, 5))
+                iterlst = random.sample(range(listlen), min(listlen, 5))
 
                 for v in iterlst:
                         yield self._mirrors[v]
@@ -162,3 +163,6 @@ class MirrorDetector(object):
                         raise tx.mDNSException(errstr)
                 finally:
                         sd_hdl.close()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

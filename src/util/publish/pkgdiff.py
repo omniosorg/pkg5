@@ -21,15 +21,18 @@
 #
 
 #
-# Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 from __future__ import print_function
 import getopt
 import gettext
 import locale
+import six
 import sys
 import traceback
+import warnings
+from functools import cmp_to_key
 
 import pkg.actions
 import pkg.variant as variant
@@ -38,6 +41,7 @@ import pkg.manifest as manifest
 import pkg.misc as misc
 from pkg.misc import PipeError
 from collections import defaultdict
+from itertools import product
 
 def usage(errmsg="", exitcode=2):
         """Emit a usage message and optionally prefix it with a more specific
@@ -234,31 +238,29 @@ def main_func():
         # First, a human version of action comparison that works across
         # variants and action changes...
         def compare(a, b):
+                # pull the relevant action out of the old value, new
+                # value tuples
+                a = a[0] if a[0] else a[1]
+                b = b[0] if b[0] else b[1]
+
                 if hasattr(a, "key_attr") and hasattr(b, "key_attr") and \
                     a.key_attr == b.key_attr:
-                        res = cmp(a.attrs[a.key_attr], b.attrs[b.key_attr])
+                        res = misc.cmp(a.attrs[a.key_attr], b.attrs[b.key_attr])
                         if res:
                                 return res
                         # sort by variant
-                        res = cmp(sorted(list(a.get_variant_template())),
+                        res = misc.cmp(sorted(list(a.get_variant_template())),
                             sorted(list(b.get_variant_template())))
                         if res:
                                 return res
                 else:
-                        res = cmp(a.ordinality, b.ordinality)
+                        res = misc.cmp(a.ordinality, b.ordinality)
                         if res:
                                 return res
-                return cmp(str(a), str(b))
-
-        # and something to pull the relevant action out of the old value, new
-        # value tuples
-        def tuple_key(a):
-                if not a[0]:
-                        return a[1]
-                return a[0]
+                return misc.cmp(str(a), str(b))
 
         # sort and....
-        diffs = sorted(diffs, key=tuple_key, cmp=compare)
+        diffs = sorted(diffs, key=cmp_to_key(compare))
 
         # handle list attributes
         def attrval(attrs, k, elide_iter=tuple()):
@@ -311,8 +313,8 @@ def main_func():
                                                 s.append("  + {0}".format(new.hash))
                                 attrdiffs = (set(new.differences(old)) -
                                     ignoreattrs)
-                                attrsames = sorted( list(set(old.attrs.keys() +
-                                    new.attrs.keys()) -
+                                attrsames = sorted( list(set(list(old.attrs.keys()) +
+                                    list(new.attrs.keys())) -
                                     set(new.differences(old))))
                         else:
                                 if hasattr(old, "hash") and "hash" in onlyattrs:
@@ -321,8 +323,8 @@ def main_func():
                                                 s.append("  + {0}".format(new.hash))
                                 attrdiffs = (set(new.differences(old)) &
                                     onlyattrs)
-                                attrsames = sorted(list(set(old.attrs.keys() +
-                                    new.attrs.keys()) -
+                                attrsames = sorted(list(set(list(old.attrs.keys()) +
+                                    list(new.attrs.keys())) -
                                     set(new.differences(old))))
 
                         for a in sorted(attrdiffs):
@@ -356,18 +358,10 @@ def main_func():
 
         return int(different)
 
-def product(*args, **kwds):
-        # product('ABCD', 'xy') --> Ax Ay Bx By Cx Cy Dx Dy
-        # product(range(2), repeat=3) --> 000 001 010 011 100 101 110 111
-        # from python 2.7 itertools
-        pools = map(tuple, args) * kwds.get('repeat', 1)
-        result = [[]]
-        for pool in pools:
-                result = [x+[y] for x in result for y in pool]
-        for prod in result:
-                yield tuple(prod)
-
 if __name__ == "__main__":
+        if six.PY3:
+                # disable ResourceWarning: unclosed file
+                warnings.filterwarnings("ignore", category=ResourceWarning)
         try:
                 exit_code = main_func()
         except (PipeError, KeyboardInterrupt):
@@ -380,3 +374,6 @@ if __name__ == "__main__":
                 exit_code = 99
 
         sys.exit(exit_code)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

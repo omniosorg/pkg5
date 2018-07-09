@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7 -u
+#!/usr/bin/python -u
 #
 # CDDL HEADER START
 #
@@ -21,7 +21,8 @@
 #
 
 #
-# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
 #
 
 from __future__ import print_function
@@ -53,6 +54,7 @@ sys.path.insert(0, ".")
 import tempfile
 covdir = tempfile.mkdtemp(prefix=".coverage-", dir=os.getcwd())
 
+import six
 import getopt
 import pkg5testenv
 import warnings
@@ -79,6 +81,7 @@ def usage():
    -s <regexp>    Run tests starting at regexp
    -t             Generate timing info file
    -v             Verbose output
+   -V             Do not redirect stdout
    -x             Stop after the first baseline mismatch
    -z <port>      Lowest port the test suite should use
 """, file=sys.stderr)
@@ -106,6 +109,10 @@ if __name__ == "__main__":
             'renamed to CRLEntryExtensionOID',
             category=PendingDeprecationWarning)
 
+        if six.PY3:
+                # Suppress ResourceWarning: unclosed file.
+                warnings.filterwarnings("ignore", category=ResourceWarning)
+
         try:
                 #
                 # !!! WARNING !!!
@@ -113,17 +120,21 @@ if __name__ == "__main__":
                 # If you add options here, you need to also update setup.py's
                 # test_func to include said options.
                 #
-                opts, pargs = getopt.getopt(sys.argv[1:], "a:c:dfghj:lpqtuvxb:o:s:z:",
+                opts, pargs = getopt.getopt(sys.argv[1:], "a:c:dfghj:lpqtuvVxb:o:s:z:",
                     ["generate-baseline", "parseable", "port", "timing",
                     "verbose", "baseline-file", "only"])
         except getopt.GetoptError as e:
                 print("Illegal option -- {0}".format(e.opt), file=sys.stderr)
                 sys.exit(1)
 
-        bfile = os.path.join(os.getcwd(), "baseline.txt")
+        if six.PY3:
+                bfile = os.path.join(os.getcwd(), "baseline3.txt")
+        else:
+                bfile = os.path.join(os.getcwd(), "baseline.txt")
         generate = False
         onlyval = []
         output = ""
+        sstdout = False
         bailonfail = False
         startattest = ""
         timing_file = False
@@ -139,6 +150,8 @@ if __name__ == "__main__":
         for opt, arg in opts:
                 if opt == "-v":
                         output = "v"
+                elif opt == "-V":
+                        sstdout = True
                 elif opt == "-p":
                         output = "p"
                 elif opt == "-c":
@@ -195,11 +208,11 @@ from pkg5unittest import OUTPUT_DOTS, OUTPUT_VERBOSE, OUTPUT_PARSEABLE
 
 # Verify that CLIENT_API_VERSION is compatible.
 if pkg5unittest.CLIENT_API_VERSION not in api.COMPATIBLE_API_VERSIONS:
-        print("Test suite needs to be syned with the pkg bits.")
+        print("Test suite needs to be synced with the pkg bits.")
         sys.exit(1)
-    
+
 osname = platform.uname()[0].lower()
-arch = 'unknown' 
+arch = 'unknown'
 if osname == 'sunos':
         arch = platform.processor()
 elif osname == 'linux':
@@ -226,13 +239,17 @@ def find_tests(testdir, testpats, startatpat=False, output=OUTPUT_DOTS,
         seen = False
 
         def _istest(obj):
-                if (isinstance(obj, type) and 
+                if (isinstance(obj, type) and
                     issubclass(obj, unittest.TestCase)):
                         return True
                 return False
         def _istestmethod(name, obj):
-                if name.startswith("test") and \
-                    isinstance(obj, types.MethodType):
+                if name.startswith("test"):
+                    if six.PY2 and isinstance(obj, types.MethodType):
+                        return True
+                    # There is no unbound methods in Python 3, instead they
+                    # simply become functions.
+                    elif six.PY3 and isinstance(obj, types.FunctionType):
                         return True
                 return False
 
@@ -284,10 +301,24 @@ def find_tests(testdir, testpats, startatpat=False, output=OUTPUT_DOTS,
                         # We tack this in for pretty-printing.
                         classobj._Pkg5TestCase__suite_name = suitename
 
+                        # Skip some test classes. OmniOS does not currently
+                        # have Apache-backed repos or depots
+                        if cname in ['TestSysrepo', 'TestHTTPS',
+                            'TestBasicSysrepoCli', 'TestDetailedSysrepoCli',
+                            'TestHttpDepot', 'TestHttpsDepot']:
+                                continue
+
                         for attrname in dir(classobj):
                                 methobj = getattr(classobj, attrname)
                                 # Make sure its a test method
                                 if not _istestmethod(attrname, methobj):
+                                        continue
+                                # Skip some test cases for Python 3.
+                                # test_bootenv requires boot-environment-utils
+                                # Python 3.x package
+                                if six.PY3 and (
+                                    attrname in ["test_bootenv"]):
+                                        delattr(classobj, attrname)
                                         continue
                                 full = "{0}.{1}.{2}.{3}".format(testdir,
                                     filename, cname, attrname)
@@ -331,8 +362,6 @@ def find_tests(testdir, testpats, startatpat=False, output=OUTPUT_DOTS,
         for t in sorted(testclasses, key=__key, reverse=True):
                 if t.test_count():
                         suite_list.append(t)
-                else:
-                        break
         return suite_list
 
 def generate_coverage(cov_format, includes, omits, dest):
@@ -420,7 +449,7 @@ if __name__ == "__main__":
         time_estimates = {}
         timing_history = os.path.join(os.getcwd(), ".timing_history.txt")
         if os.path.exists(timing_history):
-                with open(timing_history, "rb") as fh:
+                with open(timing_history, "r") as fh:
                         ver, time_estimates = json.load(fh)
 
         api_suite = find_tests("api", onlyval, startattest, output,
@@ -444,11 +473,15 @@ if __name__ == "__main__":
         baseline = baseline.BaseLine(bfile, generate)
         baseline.load()
 
-        # Make sure we capture stdout
-        testlogfd, testlogpath = tempfile.mkstemp(suffix='.pkg-test.log')
-        testlogfp = os.fdopen(testlogfd, "w")
-        print("# logging to {0}".format(testlogpath))
-        sys.stdout = testlogfp
+        if sstdout:
+                testlogfp = None
+        else:
+                # Make sure we capture stdout
+                testlogfd, testlogpath = tempfile.mkstemp(
+                    suffix='.pkg-test.log')
+                testlogfp = os.fdopen(testlogfd, "w")
+                print("# logging to {0}".format(testlogpath))
+                sys.stdout = testlogfp
 
         if timing_file:
                 timing_file = os.path.join(os.getcwd(), "timing_info.txt")
@@ -500,11 +533,15 @@ if __name__ == "__main__":
                 if res.mismatches:
                         exitval = 1
 
-        testlogfp.close()
+        if testlogfp:
+                testlogfp.close()
 
         # Update baseline results and display mismatches (failures)
         baseline.store()
-        baseline.reportfailures()
+        if six.PY3:
+                baseline.reportfailures('failures.3')
+        else:
+                baseline.reportfailures()
 
         # Stop and save coverage data for API tests, and combine coverage data
         # from all processes.
@@ -521,7 +558,9 @@ if __name__ == "__main__":
                     # These mako templates fail.
                     "*etc_pkg_*mako", "_depot_conf_mako",
                     # Complex use of module importer makes this fail.
-                    "*sysrepo_p5p.py"
+                    "*sysrepo_p5p.py",
+                    # Reading source file */fakeroot/pkg make this fail.
+                    "*/fakeroot/pkg",
                 ]
                 pkg_path = [os.path.join(pkg5unittest.g_pkg_path, "*")]
                 proto = ["{0}/*".format(pkg5unittest.g_proto_area)]
@@ -533,7 +572,7 @@ if __name__ == "__main__":
                         generate_coverage(coverage_format, None,
                             proto + omits, "cov_tests")
                 except Exception as e:
-                        print(e, file=sys.stderr)                        
+                        print(e, file=sys.stderr)
                         exitval = 1
 
                 # The coverage data file and report are most likely owned by
@@ -546,3 +585,6 @@ if __name__ == "__main__":
                 except EnvironmentError:
                         pass
         sys.exit(exitval)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

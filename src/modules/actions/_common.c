@@ -20,7 +20,7 @@
  */
 
 /*
- * Copyright (c) 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
  */
 
 /*
@@ -31,6 +31,13 @@
 
 static PyObject *nohash;
 
+#if PY_MAJOR_VERSION >= 3
+	#define PyBytes_AS_STRING PyUnicode_AsUTF8
+	#define PyBytes_AsString PyUnicode_AsUTF8
+	#define PyBytes_GET_SIZE PyUnicode_GET_LENGTH
+	#define PyBytes_FromStringAndSize PyUnicode_FromStringAndSize
+#endif
+
 static void
 set_invalid_action_error(const char *name, PyObject *action,
     PyObject *key_aname)
@@ -39,6 +46,10 @@ set_invalid_action_error(const char *name, PyObject *action,
 	PyObject *val = NULL;
 	PyObject *pkg_actions = NULL;
 
+	/*
+	 * TODO: unknown issue: importing pkg.actions can fail in Python 3, see
+	 * one test case in api/t_action.py`test_action_errors.
+	 */
 	if ((pkg_actions = PyImport_ImportModule("pkg.actions")) == NULL) {
 		/* No exception is set */
 		PyErr_SetString(PyExc_KeyError, "pkg.actions");
@@ -122,7 +133,7 @@ _generic_init_common(PyObject *action, PyObject *data, PyObject *attrs)
 
 	if ((key_attr = PyDict_GetItem(attrs, key_aname)) == NULL) {
 		PyObject *aname = PyObject_GetAttrString(action, "name");
-		char *ns = PyString_AS_STRING(aname);
+		char *ns = PyBytes_AS_STRING(aname);
 
 		/*
 		 * set actions allow an alternate value form, so
@@ -145,7 +156,7 @@ _generic_init_common(PyObject *action, PyObject *data, PyObject *attrs)
 
 	if (PyList_CheckExact(key_attr)) {
 		PyObject *aname = PyObject_GetAttrString(action, "name");
-		char *ns = PyString_AS_STRING(aname);
+		char *ns = PyBytes_AS_STRING(aname);
 		int multi_error = 0;
 
 		if (strcmp(ns, "depend") != 0) {
@@ -161,8 +172,15 @@ _generic_init_common(PyObject *action, PyObject *data, PyObject *attrs)
 			 * are allowed for key attribute.
 			 */
 			if (dt != NULL) {
-				char *ts = PyString_AsString(dt);
+				char *ts = PyBytes_AsString(dt);
 				if (ts == NULL) {
+					PyObject *type_aname =
+					    PyBytes_FromStringAndSize("type",
+						4);
+					set_invalid_action_error(
+					    "KeyAttributeMultiValueError",
+					    action, type_aname);
+					Py_DECREF(type_aname);
 					Py_DECREF(key_aname);
 					Py_DECREF(aname);
 					return (NULL);
@@ -188,7 +206,7 @@ _generic_init_common(PyObject *action, PyObject *data, PyObject *attrs)
 		Py_RETURN_NONE;
 	}
 
-	if ((path = PyString_AsString(path_attr)) != NULL) {
+	if ((path = PyBytes_AsString(path_attr)) != NULL) {
 		if (path[0] == '/') {
 			PyObject *stripped = PyObject_CallMethod(
 			    path_attr, "lstrip", "(s)", "/");
@@ -202,11 +220,11 @@ _generic_init_common(PyObject *action, PyObject *data, PyObject *attrs)
 				Py_DECREF(stripped);
 				return (NULL);
 			}
-			if (PyString_GET_SIZE(stripped) == 0)
+			if (PyBytes_GET_SIZE(stripped) == 0)
 				invalid_path = 1;
 			Py_DECREF(stripped);
 		} else {
-			if (PyString_GET_SIZE(path_attr) == 0)
+			if (PyBytes_GET_SIZE(path_attr) == 0)
 				invalid_path = 1;
 		}
 	} else {
@@ -271,27 +289,59 @@ static PyMethodDef methods[] = {
 	{ NULL, NULL, 0, NULL }
 };
 
-PyMODINIT_FUNC
-init_common(void)
+#if PY_MAJOR_VERSION >= 3
+static struct PyModuleDef commonmodule = {
+	PyModuleDef_HEAD_INIT,
+	"_common",
+	NULL,
+	-1,
+	methods
+};
+#endif
+
+static PyObject *
+moduleinit(void)
 {
 	PyObject *pkg_actions = NULL;
+	PyObject *m;
 
+#if PY_MAJOR_VERSION >= 3
+	if ((m = PyModule_Create(&commonmodule)) == NULL)
+		return (NULL);
+#else
 	/*
 	 * Note that module initialization functions are void and may not return
 	 * a value.  However, they should set an exception if appropriate.
 	 */
 	if (Py_InitModule("_common", methods) == NULL)
-		return;
+		return (NULL);
+#endif
 
 	if ((pkg_actions = PyImport_ImportModule("pkg.actions")) == NULL) {
 		/* No exception is set */
 		PyErr_SetString(PyExc_KeyError, "pkg.actions");
-		return;
+		return (NULL);
 	}
 
-	if ((nohash = PyString_FromStringAndSize("NOHASH", 6)) == NULL) {
+	if ((nohash = PyBytes_FromStringAndSize("NOHASH", 6)) == NULL) {
 		PyErr_SetString(PyExc_ValueError,
 		    "Unable to create nohash string object.");
-		return;
+		return (NULL);
 	}
+
+	return (m);
 }
+
+#if PY_MAJOR_VERSION >= 3
+PyMODINIT_FUNC
+PyInit__common(void)
+{
+	return (moduleinit());
+}
+#else
+PyMODINIT_FUNC
+init_common(void)
+{
+	moduleinit();
+}
+#endif

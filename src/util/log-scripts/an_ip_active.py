@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -24,7 +24,7 @@
 # Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
-import cPickle as pickle
+import six.moves.cPickle as pickle
 import datetime
 import fileinput
 import GeoIP
@@ -34,7 +34,6 @@ import os
 import re
 import sys
 import time
-import urllib
 
 from an_report import *
 
@@ -96,7 +95,7 @@ for l in fileinput.input(args):
                 continue
 
         mg = m.groupdict()
-        
+
         d = None
 
         if lastdatetime and mg["date"] == lastdate:
@@ -120,3 +119,6 @@ for l in fileinput.input(args):
 pklfile = open("{0}.{1}.pkl".format(stem, timestamp), "wb")
 pickle.dump(entry_by_date, pklfile)
 pklfile.close()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

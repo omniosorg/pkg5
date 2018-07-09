@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -19,22 +19,26 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 from __future__ import print_function
-import httplib
 import os
-import pkg.pkgsubprocess as subprocess
-import pkg.server.repository as sr
 import platform
+import shlex
+import signal
+import six
 import ssl
 import sys
-import signal
 import time
-import urllib
-import urllib2
-import urlparse
+
+from six.moves import http_client, range
+from six.moves.urllib.error import HTTPError, URLError
+from six.moves.urllib.request import pathname2url, urlopen
+from six.moves.urllib.parse import urlunparse, urljoin
+
+import pkg.pkgsubprocess as subprocess
+import pkg.server.repository as sr
 
 class DepotStateException(Exception):
 
@@ -161,7 +165,7 @@ class DepotController(object):
                     root=self.__dir, writable_root=self.__writable_root)
 
         def get_repo_url(self):
-                return urlparse.urlunparse(("file", "", urllib.pathname2url(
+                return urlunparse(("file", "", pathname2url(
                     self.__dir), "", "", ""))
 
         def set_readonly(self):
@@ -254,9 +258,9 @@ class DepotController(object):
                 running depots."""
                 self.__nasty = nastiness
                 if self.__depot_handle != None:
-                        nastyurl = urlparse.urljoin(self.get_depot_url(),
+                        nastyurl = urljoin(self.get_depot_url(),
                             "nasty/{0:d}".format(self.__nasty))
-                        url = urllib2.urlopen(nastyurl)
+                        url = urlopen(nastyurl)
                         url.close()
 
         def get_nasty(self):
@@ -280,26 +284,21 @@ class DepotController(object):
 
         def __network_ping(self):
                 try:
-                        repourl = urlparse.urljoin(self.get_depot_url(),
+                        repourl = urljoin(self.get_depot_url(),
                             "versions/0")
-                        py_version = '.'.join(
-                            platform.python_version_tuple()[:2])
-                        if py_version >= '2.7':
-                                # Disable SSL peer verification for Python 2.7,
-                                # we just want to check if the depot is running.
-                                url = urllib2.urlopen(repourl,
-                                    context=ssl._create_unverified_context())
-                        else:
-                                url = urllib2.urlopen(repourl)
+                        # Disable SSL peer verification, we just want to check
+                        # if the depot is running.
+                        url = urlopen(repourl,
+                            context=ssl._create_unverified_context())
                         url.close()
-                except urllib2.HTTPError as e:
+                except HTTPError as e:
                         # Server returns NOT_MODIFIED if catalog is up
                         # to date
-                        if e.code == httplib.NOT_MODIFIED:
+                        if e.code == http_client.NOT_MODIFIED:
                                 return True
                         else:
                                 return False
-                except urllib2.URLError:
+                except URLError as e:
                         return False
                 return True
 
@@ -334,6 +333,7 @@ class DepotController(object):
                 # nuke everything later on.
                 args.append("setpgrp")
                 args.extend(self.__wrapper_start[:])
+                args.append(sys.executable)
                 args.append(self.__depot_path)
                 if self.__depot_content_root:
                         args.append("--content-root")
@@ -380,7 +380,7 @@ class DepotController(object):
                 if self.__nasty_sleep:
                         args.append("--nasty-sleep {0:d}".format(self.__nasty_sleep))
                 for section in self.__props:
-                        for prop, val in self.__props[section].iteritems():
+                        for prop, val in six.iteritems(self.__props[section]):
                                 args.append("--set-property={0}.{1}='{2}'".format(
                                     section, prop, val))
                 if self.__writable_root:
@@ -414,13 +414,14 @@ class DepotController(object):
 
                 self.__state = self.STARTING
 
-                self.__output = open(self.__logpath, "w", 0)
-                cmdline = " ".join(args)
+                # Unbuffer is only allowed in binary mode.
+                self.__output = open(self.__logpath, "wb", 0)
+                # Use shlex to re-parse args.
+                pargs = shlex.split(" ".join(args))
 
                 newenv = os.environ.copy()
                 newenv.update(self.__env)
-                self.__depot_handle = subprocess.Popen(cmdline, env=newenv,
-                    shell=True,
+                self.__depot_handle = subprocess.Popen(pargs, env=newenv,
                     stdin=subprocess.PIPE,
                     stdout=self.__output,
                     stderr=self.__output,
@@ -428,6 +429,7 @@ class DepotController(object):
                 if self.__depot_handle == None:
                         raise DepotStateException("Could not start Depot")
                 self.__starttime = time.time()
+                self.__output.close()
 
         def start(self):
 
@@ -446,7 +448,7 @@ class DepotController(object):
                                 rc = self.__depot_handle.poll()
                                 if rc is not None:
                                         err = ""
-                                        with open(self.__logpath, "r", 0) as \
+                                        with open(self.__logpath, "rb", 0) as \
                                             errf:
                                                 err = errf.read()
                                         raise DepotStateException("Depot exited "
@@ -458,7 +460,6 @@ class DepotController(object):
                                         contact = True
                                         break
                                 time.sleep(check_interval)
-
                         if contact == False:
                                 self.kill()
                                 self.__state = self.HALTED
@@ -593,3 +594,6 @@ if __name__ == "__main__":
         os.system("rm -fr {0}".format(__testdir))
         print("\nDone")
 
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

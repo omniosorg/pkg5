@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -24,6 +24,7 @@
 # Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 import os.path
+import six
 import sys
 
 import pkg.misc as misc
@@ -54,7 +55,7 @@ class Firmware(object):
                 args = [os.path.join(firmware_dir, firmware_name[len("feature/firmware/"):])]
                 args.extend([
                     "{0}={1}".format(k, quote_attr_value(v))
-                    for k,v in sorted(dep_action.attrs.iteritems())
+                    for k,v in sorted(six.iteritems(dep_action.attrs))
                     if k not in ["type", "root-image", "fmri"]
                 ])
 
@@ -71,7 +72,9 @@ class Firmware(object):
                         try:
                                 proc = subprocess.Popen(args, stdout=subprocess.PIPE,
                                     stderr=subprocess.STDOUT)
-                                buf = proc.stdout.readlines()
+                                # output from proc is bytes
+                                buf = [misc.force_str(l) for l in
+                                    proc.stdout.readlines()]
                                 ret = proc.wait()
                                 # if there was output, something went wrong.
                                 # Since generic errors are often exit(1),
@@ -125,3 +128,6 @@ class Firmware(object):
                         self.__firmware[key] = ans
 
                 return self.__firmware[key]
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

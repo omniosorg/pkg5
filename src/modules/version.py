@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -29,7 +29,7 @@ import datetime
 import time
 import weakref
 
-from itertools import izip
+from six.moves import zip
 
 CONSTRAINT_NONE = 0
 CONSTRAINT_AUTO = 50
@@ -91,8 +91,8 @@ class DotSequence(list):
 
                 try:
                         list.__init__(self,
-                            map(DotSequence.dotsequence_val,
-                                dotstring.split(".")))
+                            list(map(DotSequence.dotsequence_val,
+                                dotstring.split("."))))
                 except ValueError:
                         raise IllegalDotSequence(dotstring)
 
@@ -113,7 +113,7 @@ class DotSequence(list):
                 if len(self) > len(other):
                         return False
 
-                for a, b in izip(self, other):
+                for a, b in zip(self, other):
                         if a != b:
                                 return False
                 return True
@@ -160,8 +160,8 @@ class MatchingDotSequence(DotSequence):
         def __init__(self, dotstring):
                 try:
                         list.__init__(self,
-                            map(self.dotsequence_val,
-                                dotstring.split(".")))
+                            list(map(self.dotsequence_val,
+                                dotstring.split("."))))
                 except ValueError:
                         raise IllegalDotSequence(dotstring)
 
@@ -208,6 +208,8 @@ class MatchingDotSequence(DotSequence):
                                         return False
                 return True
 
+        __hash__ = DotSequence.__hash__
+
         def is_subsequence(self, other):
                 """Return true if self is a "subsequence" of other, meaning that
                 other and self have identical components, up to the length of
@@ -219,7 +221,7 @@ class MatchingDotSequence(DotSequence):
                 if len(self) > len(other):
                         return False
 
-                for a, b in izip(self, other):
+                for a, b in zip(self, other):
                         if a != b:
                                 return False
                 return True
@@ -426,12 +428,23 @@ class Version(object):
                 if self.release != other.release:
                         return False
 
-                if self.branch < other.branch:
-                        return True
                 if self.branch != other.branch:
+                        if self.branch is None and other.branch:
+                                return True
+                        if self.branch and other.branch is None:
+                                return False
+                        if self.branch < other.branch:
+                                return True
                         return False
 
-                return self.timestr < other.timestr
+                if self.timestr != other.timestr:
+                        if self.timestr is None and other.timestr:
+                                return True
+                        if self.timestr and other.timestr is None:
+                                return False
+                        if self.timestr < other.timestr:
+                                return True
+                return False
 
         def __gt__(self, other):
                 """Returns True if 'self' comes after 'other', and vice versa.
@@ -448,20 +461,29 @@ class Version(object):
                 if self.release != other.release:
                         return False
 
-                if self.branch > other.branch:
-                        return True
                 if self.branch != other.branch:
+                        if self.branch and other.branch is None:
+                                return True
+                        if self.branch is None and other.branch:
+                                return False
+                        if self.branch > other.branch:
+                                return True
                         return False
 
-                return self.timestr > other.timestr
+                if self.timestr != other.timestr:
+                        if self.timestr and other.timestr is None:
+                                return True
+                        if self.timestr is None and other.timestr:
+                                return False
+                        if self.timestr > other.timestr:
+                                return True
+                return False
 
-        def __cmp__(self, other):
-                if self < other:
-                        return -1
-                if self > other:
-                        return 1
+        def __le__(self, other):
+                return not self > other
 
-                return 0
+        def __ge__(self, other):
+                return not self < other
 
         def __hash__(self):
                 # If a timestamp is present, it's enough to hash on, and is
@@ -786,3 +808,6 @@ class MatchingVersion(Version):
                         return hash(self.timestr)
                 else:
                         return hash((self.release, self.branch))
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

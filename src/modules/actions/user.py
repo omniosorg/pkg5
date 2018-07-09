@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 """module describing a user packaging object
@@ -30,8 +30,7 @@ This module contains the UserAction class, which represents a user
 packaging object.  This contains the attributes necessary to create
 a new user."""
 
-import errno
-import generic
+from . import generic
 try:
         from pkg.cfgfiles import *
         have_cfgfiles = True
@@ -39,6 +38,7 @@ except ImportError:
         have_cfgfiles = False
 
 import pkg.client.api_errors as apx
+import pkg.actions
 
 class UserAction(generic.Action):
         """Class representing a user packaging object."""
@@ -188,6 +188,7 @@ class UserAction(generic.Action):
                         if "uid" in self.attrs:
                                 img._usersbyname[self.attrs["username"]] = \
                                     int(self.attrs["uid"])
+                        raise pkg.actions.ActionRetry(self)
                 except KeyError as e:
                         # cannot find group
                         self.validate() # should raise error if no group in action
@@ -200,7 +201,7 @@ class UserAction(generic.Action):
                         if "pw" in locals():
                                 pw.unlock()
 
-        def postinstall(self, pkgplan, orig):
+        def retry(self, pkgplan, orig):
                 users = pkgplan.image._users
                 if users:
                         assert self in users
@@ -242,7 +243,7 @@ class UserAction(generic.Action):
                 # Get the default values if they're non-empty
                 pwdefval = dict((
                     (k, v)
-                    for k, v in pw.getdefaultvalues().iteritems()
+                    for k, v in six.iteritems(pw.getdefaultvalues())
                     if v != ""
                 ))
 
@@ -339,6 +340,9 @@ class UserAction(generic.Action):
                 will only hold true for actions installed at one time, but that's
                 generally what we need on initial install."""
                 # put unspecified uids at the end
-                return cmp(int(self.attrs.get("uid", 1024)),
-                    int(other.attrs.get("uid", 1024)))
+                a = int(self.attrs.get("uid", 1024))
+                b = int(other.attrs.get("uid", 1024))
+                return (a > b) - (a < b)
 
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

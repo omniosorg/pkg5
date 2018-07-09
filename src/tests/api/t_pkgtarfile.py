@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,10 +21,10 @@
 #
 
 #
-# Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
-import testutils
+from . import testutils
 if __name__ == "__main__":
         testutils.setup_environment("../../../proto")
 import pkg5unittest
@@ -49,7 +49,7 @@ class TestPkgTarFile(pkg5unittest.Pkg5TestCase):
                 filename = "baz"
                 create_path = os.path.join(filepath, filename)
                 os.makedirs(filepath)
-                wfp = file(create_path, "wb")
+                wfp = open(create_path, "wb")
                 buf = os.urandom(8192)
                 wfp.write(buf)
                 wfp.close()
@@ -67,7 +67,7 @@ class TestPkgTarFile(pkg5unittest.Pkg5TestCase):
                 # "read-only" folders on Windows are not actually read-only so
                 # the test below doesn't cause the exception to be raised
                 if portable.is_admin() or portable.util.get_canonical_os_type() == "windows":
-                        self.assert_(p.errorlevel == 2)
+                        self.assertTrue(p.errorlevel == 2)
                         p.close()
                         return
 
@@ -82,3 +82,6 @@ class TestPkgTarFile(pkg5unittest.Pkg5TestCase):
 
 if __name__ == "__main__":
         unittest.main()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

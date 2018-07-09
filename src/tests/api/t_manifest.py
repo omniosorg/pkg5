@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 # -*- coding: utf-8 -*-
 #
 # CDDL HEADER START
@@ -21,11 +21,12 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
 
 import unittest
 import tempfile
 import os
+import six
 import sys
 import types
 import itertools
@@ -61,7 +62,7 @@ file fff555fff mode=0555 owner=sch group=staff path=/usr/bin/i386/sort isa=i386
 set com.sun,test=false
 set com.sun,data=true
 depend type=require fmri=pkg:/library/libc
-file fff555ff9 mode=0555 owner=sch group=staff \
+file fff555ff9 mode=0555 owner=sch group=staff \\
  path=/usr/bin/i386/sort isa=i386
 file eeeaaaeee mode=0555 owner=sch group=staff path=/usr/bin/amd64/sort isa=amd64
 
@@ -71,21 +72,27 @@ file ff555ffd mode=0644 owner=root group=bin path=/kernel/drv/foo.conf
 """
 
                 self.m2_signatures = {
-                    "sha-1": "e600f5e48a838b11ed73fd4afedfc35638ab0bbf"
+                    "sha-1": "7272cb2461a8a4ccf958b7a7f13f3ae20cbb0212"
                 }
 
                 #
-                # Try to keep this up to date with on of
+                # Try to keep this up to date with one of
                 # every action type.
                 #
                 self.diverse_contents = """\
 set com.sun,test=false
+set name=pkg.description value="The Z Shell (zsh) is a Bourne-like shell " \\
+    "designed for interactive use, although it is also a powerful scripting " \\
+    "language.  Many of the useful features of bash, ksh, and tcsh were " \\
+    "incorporated into zsh, but many original features were added."
 depend type=require fmri=pkg:/library/libc
 file fff555ff9 mode=0555 owner=sch group=staff path=/usr/bin/i386/sort isa=i386
 dir owner=root path=usr/bin group=bin mode=0755 variant.arch=i386 variant.arch=sparc
 dir owner=root path="opt/dir with spaces in value" group=bin mode=0755
-dir owner=root path="opt/dir with whitespaces	in value" group=bin mode=0755
-link path=usr/lib/amd64/libjpeg.so \
+dir owner=root path="opt/dir with " \\
+    "whitespaces        " \\
+    "in value" group=bin mode=0755
+link path=usr/lib/amd64/libjpeg.so \\
 target=libjpeg.so.62.0.0
 hardlink path=usr/bin/amd64/rksh93 target=ksh93 variant.opensolaris.zone=global
 group groupname=testgroup gid=10
@@ -95,7 +102,7 @@ group groupname=testgroup gid=10
 set com.sun,test=false
 set com.sun,data=true
 depend type=require fmri=pkg:/library/libc
-file fff555ff9 mode=0555 owner=sch group=staff path=/usr/bin/i386/sort \
+file fff555ff9 mode=0555 owner=sch group=staff path=/usr/bin/i386/sort \\
 isa=i386
 """
 
@@ -118,10 +125,11 @@ file fff555ff9 mode=0555 owner=sch group=staff path=/usr/bin/i386/sort isa=i386
 
                 # Index raises an exception if the substring isn't found;
                 # if that were to happen, the test case would then fail.
-                str(self.m1).index("fmri=pkg:/library/libc")
-                str(self.m1).index("owner=sch")
-                str(self.m1).index("group=staff")
-                str(self.m1).index("isa=i386")
+                mstr = str(self.m1)
+                mstr.index("fmri=pkg:/library/libc")
+                mstr.index("owner=sch")
+                mstr.index("group=staff")
+                mstr.index("isa=i386")
 
                 # Verify set_content with a byte string with unicode data
                 # works.
@@ -130,15 +138,37 @@ file fff555ff9 mode=0555 owner=sch group=staff path=/usr/bin/i386/sort isa=i386
                 m.set_content(bstr)
                 output = list(m.as_lines())[0].rstrip()
                 self.assertEqual(bstr, output)
-                self.assert_(isinstance(output, str))
+                self.assertTrue(isinstance(output, str))
 
-                # Verify set_content with a Unicode string results in a
-                # byte string (for now).
+                # Verify set_content with a Unicode string works.
                 m = manifest.Manifest()
-                m.set_content(unicode(bstr, "utf-8"))
+                if six.PY2:
+                        m.set_content(six.text_type(bstr, "utf-8"))
+                else:
+                        m.set_content(bstr)
                 output = list(m.as_lines())[0].rstrip()
                 self.assertEqual(bstr, output)
-                self.assert_(isinstance(output, str))
+                self.assertTrue(isinstance(output, str))
+
+                # Verify Manifests using line continuation '\' are parsed as
+                # expected.
+                m = manifest.Manifest()
+                m.set_content(self.diverse_contents)
+                expected = sorted('''\
+set name=com.sun,test value=false
+set name=pkg.description value="The Z Shell (zsh) is a Bourne-like shell designed for interactive use, although it is also a powerful scripting language.  Many of the useful features of bash, ksh, and tcsh were incorporated into zsh, but many original features were added."
+depend fmri=pkg:/library/libc type=require
+group gid=10 groupname=testgroup
+dir group=bin mode=0755 owner=root path="opt/dir with spaces in value"
+dir group=bin mode=0755 owner=root path="opt/dir with whitespaces        in value"
+dir group=bin mode=0755 owner=root path=usr/bin variant.arch=i386 variant.arch=sparc
+file fff555ff9 group=staff isa=i386 mode=0555 owner=sch path=usr/bin/i386/sort
+hardlink path=usr/bin/amd64/rksh93 target=ksh93 variant.opensolaris.zone=global
+link path=usr/lib/amd64/libjpeg.so target=libjpeg.so.62.0.0
+'''.splitlines())
+                actual = sorted(l.strip() for l in m.as_lines())
+
+                self.assertEqualDiff(expected, actual)
 
         def test_diffs1(self):
                 """ humanized_differences runs to completion """
@@ -280,14 +310,14 @@ file fff555ff9 mode=0555 owner=sch group=staff path=/usr/bin/i386/sort isa=i386
                 #
                 # Expect to see something -> None differences
                 #
-                self.assertEqual(len(diffs), 9)
+                self.assertEqual(len(diffs), 10)
                 for d in diffs:
                         self.assertEqual(type(d[1]), type(None))
 
                 #
                 # Expect to see None -> something differences
                 #
-                self.assertEqual(len(diffs2), 9)
+                self.assertEqual(len(diffs2), 10)
                 for d in diffs2:
                         self.assertEqual(type(d[0]), type(None))
                         self.assertNotEqual(type(d[1]), type(None))
@@ -375,7 +405,10 @@ dir mode=0755 owner=bin group=sys path=usr
                 output1 = "".join(m1.as_lines())
 
                 m2 = manifest.Manifest()
-                m2.set_content(unicode(bstr, "utf-8"), signatures=True)
+                if six.PY2:
+                        m2.set_content(six.text_type(bstr, "utf-8"), signatures=True)
+                else:
+                        m2.set_content(bstr, signatures=True)
                 output2 = "".join(m2.as_lines())
                 self.assertEqualDiff(output1, output2)
                 self.assertEqualDiff(m1.signatures, m2.signatures)
@@ -387,7 +420,9 @@ class TestFactoredManifest(pkg5unittest.Pkg5TestCase):
 set name=pkg.fmri value=pkg:/foo-content@1.0
 dir owner=root path=usr/bin group=bin mode=0755 variant.arch=i386
 dir owner=root path="opt/dir with spaces in value" group=bin mode=0755
-dir owner=root path="opt/dir with whitespaces	in value" group=bin mode=0755 variant.debug.osnet=true
+dir owner=root path="opt/dir with " \\
+    "whitespaces   " \\
+    "in value" group=bin mode=0755 variant.debug.osnet=true
 """
 
         def setUp(self):
@@ -442,7 +477,7 @@ dir owner=root path="opt/dir with whitespaces	in value" group=bin mode=0755 vari
                     "opt/dir with spaces in value",
                     "opt",
                     "usr/bin",
-                    "opt/dir with whitespaces	in value",
+                    "opt/dir with whitespaces   in value",
                     "usr"
                 ]
 
@@ -453,17 +488,17 @@ dir owner=root path="opt/dir with whitespaces	in value" group=bin mode=0755 vari
 
                 def do_get_dirs():
                         actual = m1.get_directories([])
-                        self.assertEqualDiff(all_expected, actual)
+                        self.assertEqualDiff(sorted(all_expected), sorted(actual))
 
                         actual = m1.get_directories(excludes)
-                        self.assertEqualDiff(var_expected, actual)
+                        self.assertEqualDiff(sorted(var_expected), sorted(actual))
 
                 # Verify get_directories works for initial load.
                 do_get_dirs()
 
                 # Now repeat experiment using "cached" FactoredManifest.
                 cfile_path = os.path.join(self.cache_dir, "manifest.dircache")
-                self.assert_(os.path.isfile(cfile_path))
+                self.assertTrue(os.path.isfile(cfile_path))
                 m1 = manifest.FactoredManifest("foo-content@1.0", self.cache_dir,
                     pathname=self.foo_content_p5m)
 
@@ -476,7 +511,7 @@ dir owner=root path="opt/dir with whitespaces	in value" group=bin mode=0755 vari
                 m1 = manifest.FactoredManifest("foo-content@1.0", self.cache_dir,
                     pathname=self.foo_content_p5m)
 
-                with open(cfile_path, "wb") as f:
+                with open(cfile_path, "w") as f:
                         for a in m1.gen_actions_by_type("dir"):
                                 f.write(
                                     "dir path={0} {1}\n".format(a.attrs["path"],
@@ -492,13 +527,13 @@ dir owner=root path="opt/dir with whitespaces	in value" group=bin mode=0755 vari
 
                 # Verify cache file was removed (presumably because we
                 # detected it was malformed).
-                self.assert_(not os.path.exists(cfile_path))
+                self.assertTrue(not os.path.exists(cfile_path))
 
                 # Repeat tests again, verifying cache file is recreated.
                 m1 = manifest.FactoredManifest("foo-content@1.0", self.cache_dir,
                     pathname=self.foo_content_p5m)
                 do_get_dirs()
-                self.assert_(os.path.isfile(cfile_path))
+                self.assertTrue(os.path.isfile(cfile_path))
 
         def test_clear_cache(self):
                 """Verify that FactoredManifest.clear_cache() works as
@@ -511,7 +546,7 @@ dir owner=root path="opt/dir with whitespaces	in value" group=bin mode=0755 vari
 
                 # Verify cache was created.
                 cfile_path = os.path.join(cache_dir, "manifest.dircache")
-                self.assert_(os.path.isfile(cfile_path))
+                self.assertTrue(os.path.isfile(cfile_path))
 
                 # Create random file in cache_dir.
                 rfile_path = os.path.join(cache_dir, "junk")
@@ -527,8 +562,11 @@ dir owner=root path="opt/dir with whitespaces	in value" group=bin mode=0755 vari
                 # Verify that clear_cache() removes cache_dir if empty.
                 portable.remove(rfile_path)
                 m1.clear_cache(cache_dir)
-                self.assert_(not os.path.exists(cache_dir))
+                self.assertTrue(not os.path.exists(cache_dir))
 
 
 if __name__ == "__main__":
         unittest.main()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

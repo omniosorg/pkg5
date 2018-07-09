@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,10 +21,10 @@
 #
 
 #
-# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
-import testutils
+from . import testutils
 if __name__ == "__main__":
         testutils.setup_environment("../../../proto")
 import pkg5unittest
@@ -42,10 +42,10 @@ import pkg.misc as misc
 import pkg.portable as portable
 import stat
 import shutil
-import urllib
-import urlparse
 
 from pkg.client.debugvalues import DebugValues
+from six.moves.urllib.parse import urlunparse
+from six.moves.urllib.request import pathname2url
 
 PKG_CLIENT_NAME = "pkg"
 
@@ -326,7 +326,7 @@ class TestPkgApiInstall(pkg5unittest.SingleDepotTestCase):
                 libc_path = os.path.join(self.get_img_path(), "lib/libc.so.1")
                 fstat = os.stat(libc_path)
 
-                self.assert_(fstat[stat.ST_MTIME] == self.foo11_timestamp)
+                self.assertTrue(fstat[stat.ST_MTIME] == self.foo11_timestamp)
 
                 # check that verify finds changes
                 now = time.time()
@@ -508,9 +508,9 @@ class TestPkgApiInstall(pkg5unittest.SingleDepotTestCase):
                 self.__do_install(api_obj, ["bar@0.9"])
                 file_path = os.path.join(self.get_img_path(), "bin", "cat")
                 portable.remove(file_path)
-                self.assert_(not os.path.isfile(file_path))
+                self.assertTrue(not os.path.isfile(file_path))
                 self.__do_install(api_obj, ["bar@1.0"])
-                self.assert_(os.path.isfile(file_path))
+                self.assertTrue(os.path.isfile(file_path))
 
                 # Verify that if the directory containing a missing file is also
                 # missing that upgrade will still work as expected for the file.
@@ -518,19 +518,19 @@ class TestPkgApiInstall(pkg5unittest.SingleDepotTestCase):
                 self.__do_install(api_obj, ["bar@0.9"])
                 dir_path = os.path.dirname(file_path)
                 shutil.rmtree(dir_path)
-                self.assert_(not os.path.isdir(dir_path))
+                self.assertTrue(not os.path.isdir(dir_path))
                 self.__do_install(api_obj, ["bar@1.0"])
-                self.assert_(os.path.isfile(file_path))
+                self.assertTrue(os.path.isfile(file_path))
 
                 # Verify that missing files won't cause uninstall failure.
                 portable.remove(file_path)
-                self.assert_(not os.path.isfile(file_path))
+                self.assertTrue(not os.path.isfile(file_path))
                 self.__do_uninstall(api_obj, ["bar@1.0"])
 
                 # Verify that missing directories won't cause uninstall failure.
                 self.__do_install(api_obj, ["bar@1.0"])
                 shutil.rmtree(dir_path)
-                self.assert_(not os.path.isdir(dir_path))
+                self.assertTrue(not os.path.isdir(dir_path))
                 self.__do_uninstall(api_obj, ["bar@1.0"])
 
                 # Verify that missing files won't cause update failure if
@@ -543,7 +543,7 @@ class TestPkgApiInstall(pkg5unittest.SingleDepotTestCase):
 
                 # Verify that missing files won't cause uninstall failure if
                 # original_name is set.
-                self.assert_(os.path.isfile(file_path))
+                self.assertTrue(os.path.isfile(file_path))
                 portable.remove(file_path)
                 self.__do_uninstall(api_obj, ["moving@2.0"])
 
@@ -711,8 +711,8 @@ class TestPkgApiInstall(pkg5unittest.SingleDepotTestCase):
                 # Next, create a repository with an older version of pkg,
                 # and a newer version of foo.
                 new_repo_dir = os.path.join(self.test_root, "test2")
-                new_repo_uri = urlparse.urlunparse(("file", "",
-                    urllib.pathname2url(new_repo_dir), "", "", ""))
+                new_repo_uri = urlunparse(("file", "",
+                    pathname2url(new_repo_dir), "", "", ""))
 
                 self.create_repo(new_repo_dir,
                     properties={ "publisher": { "prefix": "test2" } })
@@ -1010,7 +1010,7 @@ class TestPkgApiInstall(pkg5unittest.SingleDepotTestCase):
                                     [pfmri.pkg_name])
 
                         for bad_act in (
-                            'set name=description value="" \" my desc \" ""',
+                            'set name=description value="" \" my desc  ""',
                             "set name=com.sun.service.escalations value="):
                                 self.debug("Testing with bad action "
                                     "'{0}'.".format(bad_act))
@@ -1250,7 +1250,7 @@ class TestActionExecutionErrors(pkg5unittest.SingleDepotTestCase):
         def __write_empty_file(target, mode=misc.PKG_FILE_MODE, owner="root",
             group="bin"):
                 f = open(target, "wb")
-                f.write("\n")
+                f.write(b"\n")
                 f.close()
                 os.chmod(target, mode)
                 owner = portable.get_user_by_name(owner, "/", True)
@@ -1349,14 +1349,14 @@ class TestActionExecutionErrors(pkg5unittest.SingleDepotTestCase):
                 # File replaced with a non-empty directory.
                 os.mkdir(dest_file, misc.PKG_FILE_MODE) # Intentionally wrong.
                 open(os.path.join(dest_file, "foobar"), "wb").close()
-                self.assert_(os.path.isfile(os.path.join(dest_file, "foobar")))
+                self.assertTrue(os.path.isfile(os.path.join(dest_file, "foobar")))
                 self.__do_install(api_obj, [file10_pfmri])
                 self.__do_verify(api_obj, file10_pfmri)
 
                 os.unlink(dest_file)
                 os.mkdir(dest_file, misc.PKG_FILE_MODE) # Intentionally wrong.
                 open(os.path.join(dest_file, "foobar"), "wb").close()
-                self.assert_(os.path.exists(os.path.join(dest_file, "foobar")))
+                self.assertTrue(os.path.exists(os.path.join(dest_file, "foobar")))
                 self.__do_uninstall(api_obj, [file10_pfmri])
 
                 # File replaced with a link.
@@ -1416,14 +1416,14 @@ class TestActionExecutionErrors(pkg5unittest.SingleDepotTestCase):
                 # Link replaced with a non-empty directory.
                 os.mkdir(dest_link, misc.PKG_FILE_MODE) # Intentionally wrong.
                 open(os.path.join(dest_link, "foobar"), "wb").close()
-                self.assert_(os.path.isfile(os.path.join(dest_link, "foobar")))
+                self.assertTrue(os.path.isfile(os.path.join(dest_link, "foobar")))
                 self.__do_install(api_obj, [link10_pfmri])
                 self.__do_verify(api_obj, link10_pfmri)
 
                 os.unlink(dest_link)
                 os.mkdir(dest_link, misc.PKG_FILE_MODE) # Intentionally wrong.
                 open(os.path.join(dest_link, "foobar"), "wb").close()
-                self.assert_(os.path.exists(os.path.join(dest_link, "foobar")))
+                self.assertTrue(os.path.exists(os.path.join(dest_link, "foobar")))
                 self.__do_uninstall(api_obj, [link10_pfmri])
 
                 # Link replaced with a file.
@@ -1485,14 +1485,14 @@ class TestActionExecutionErrors(pkg5unittest.SingleDepotTestCase):
                 # Hard link replaced with a non-empty directory.
                 os.mkdir(dest_hlink, misc.PKG_FILE_MODE) # Intentionally wrong.
                 open(os.path.join(dest_hlink, "foobar"), "wb").close()
-                self.assert_(os.path.isfile(os.path.join(dest_hlink, "foobar")))
+                self.assertTrue(os.path.isfile(os.path.join(dest_hlink, "foobar")))
                 self.__do_install(api_obj, [hlink10_pfmri])
                 self.__do_verify(api_obj, hlink10_pfmri)
 
                 os.unlink(dest_hlink)
                 os.mkdir(dest_hlink, misc.PKG_FILE_MODE) # Intentionally wrong.
                 open(os.path.join(dest_hlink, "foobar"), "wb").close()
-                self.assert_(os.path.exists(os.path.join(dest_hlink, "foobar")))
+                self.assertTrue(os.path.exists(os.path.join(dest_hlink, "foobar")))
                 self.__do_uninstall(api_obj, [hlink10_pfmri])
 
                 # Hard link replaced with a link.
@@ -1522,3 +1522,6 @@ class TestActionExecutionErrors(pkg5unittest.SingleDepotTestCase):
 
 if __name__ == "__main__":
         unittest.main()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

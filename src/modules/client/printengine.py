@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 """This module implements PrintEngine (abstract), POSIXPrintEngine and
@@ -33,12 +33,12 @@ import errno
 import logging
 import os
 import re
+import six
 import termios
 import time
 from abc import ABCMeta, abstractmethod
-import StringIO
 
-from pkg.misc import PipeError
+from pkg.misc import PipeError, force_str
 
 
 class PrintEngineException(Exception):
@@ -46,9 +46,8 @@ class PrintEngineException(Exception):
         def __str__(self):
                 return "PrintEngineException: {0}".format(" ".join(self.args))
 
-class PrintEngine(object):
+class PrintEngine(six.with_metaclass(ABCMeta, object)):
         """Abstract class defining what a PrintEngine must know how to do."""
-        __metaclass__ = ABCMeta
 
         def __init__(self):
                 pass
@@ -94,7 +93,7 @@ class POSIXPrintEngine(PrintEngine):
                 if not self.__ttymode:
                         return
 
-                self.__putp_re = re.compile("\$<[0-9]+>")
+                self.__putp_re = re.compile(r"\$<[0-9]+>")
                 self.__el = None
                 if not self._out_file.isatty():
                         raise PrintEngineException("Not a TTY")
@@ -116,7 +115,7 @@ class POSIXPrintEngine(PrintEngine):
                 # Hardware terminals are pretty much gone now; we choose
                 # to drop delays specified in termcap (delays are in the
                 # form: $<[0-9]+>).
-                self._out_file.write(self.__putp_re.sub("", string))
+                self._out_file.write(self.__putp_re.sub("", force_str(string)))
 
         def isslow(self):
                 """Returns true if out_file is 'slow' (<=9600 baud)."""
@@ -170,7 +169,7 @@ class POSIXPrintEngine(PrintEngine):
 
                 # find the rightmost newline in the msg
                 npos = outmsg.rfind("\n")
-                if (npos == -1):
+                if npos == -1:
                         self.__nchars_printed += len(outmsg)
                 else:
                         # there was an nl or cr, so only the portion
@@ -220,7 +219,7 @@ class LoggingPrintEngine(PrintEngine):
                 PrintEngine.__init__(self)
                 self._logger = logger
                 self._loglevel = loglevel
-                self._stringio = StringIO.StringIO()
+                self._stringio = six.StringIO()
                 self._pxpe = POSIXPrintEngine(self._stringio, False)
 
         def isslow(self):
@@ -315,13 +314,13 @@ def test_posix_printengine(output_file, ttymode):
         pe.cprint("left to right it should be inverse.")
         # Unused variable 'y'; pylint: disable=W0612
         for y in range(0, 2):
-                for x in xrange(0, 30, 1):
+                for x in range(0, 30, 1):
                         pe.cprint(" " * x, erase=True, end='')
                         pe.putp(standout)
                         pe.cprint("X", end='')
                         pe.putp(sgr0)
                         time.sleep(0.050)
-                for x in xrange(30, -1, -1):
+                for x in range(30, -1, -1):
                         pe.cprint(" " * x + "X", erase=True, end='')
                         time.sleep(0.050)
         pe.cprint("", erase=True)
@@ -347,3 +346,6 @@ def test_posix_printengine(output_file, ttymode):
         # just test that it works
         pe.isslow()
 
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

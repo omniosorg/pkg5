@@ -34,6 +34,10 @@ import shutil
 import sys
 import tempfile
 import traceback
+if sys.version_info[:2] >= (3, 4):
+        from importlib import reload
+else:
+        from imp import reload
 
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
@@ -412,3 +416,6 @@ if __name__ == "__main__":
                 error(misc.get_traceback_message())
                 __ret = 99
         sys.exit(__ret)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

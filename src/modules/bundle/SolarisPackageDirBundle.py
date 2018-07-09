@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -25,14 +25,16 @@
 #
 
 import os
+import six
+
 import pkg.bundle
 import pkg.misc as misc
 
-from pkg.sysvpkg import SolarisPackage
-from pkg.cpiofile import CpioFile
 from pkg.actions import *
 from pkg.actions.attribute import AttributeAction
 from pkg.actions.legacy import LegacyAction
+from pkg.cpiofile import CpioFile
+from pkg.sysvpkg import SolarisPackage
 
 
 class SolarisPackageDirBundle(pkg.bundle.Bundle):
@@ -168,6 +170,8 @@ class SolarisPackageDirBundle(pkg.bundle.Bundle):
                         return None
 
                 if mapline.type in "fev":
+                        # false positive
+                        # file-builtin; pylint: disable=W1607
                         act = file.FileAction(data, mode=mapline.mode,
                             owner=mapline.owner, group=mapline.group,
                             path=mapline.pathname,
@@ -183,7 +187,7 @@ class SolarisPackageDirBundle(pkg.bundle.Bundle):
                                 act.attrs["preserve"] = preserve
 
                         if act.hash == "NOHASH" and \
-                            isinstance(data, basestring) and \
+                            isinstance(data, six.string_types) and \
                             data.startswith(self.filename):
                                 act.hash = data[len(self.filename) + 1:]
                 elif mapline.type in "dx":
@@ -200,7 +204,7 @@ class SolarisPackageDirBundle(pkg.bundle.Bundle):
                         act = license.LicenseAction(data,
                             license="{0}.copyright".format(self.pkgname))
                         if act.hash == "NOHASH" and \
-                            isinstance(data, basestring) and \
+                            isinstance(data, six.string_types) and \
                             data.startswith(self.filename):
                                 act.hash = data[len(self.filename) + 1:]
                 elif mapline.type == "i":
@@ -301,3 +305,6 @@ def test(filename):
                 return True
 
         return False
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

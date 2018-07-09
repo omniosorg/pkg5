@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -34,3 +34,6 @@ import pkg5testenv
 
 def setup_environment(proto):
         pkg5testenv.setup_environment(proto)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

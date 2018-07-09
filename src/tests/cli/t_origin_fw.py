@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 # -*- coding: utf-8
 # CDDL HEADER START
 #
@@ -19,10 +19,10 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
 
 from __future__ import print_function
-import testutils
+from . import testutils
 if __name__ == "__main__":
         testutils.setup_environment("../../../proto")
 
@@ -40,6 +40,7 @@ class TestPkgFWDependencies(pkg5unittest.SingleDepotTestCase):
             "testdriver" :
 """#!/usr/bin/python
 import os
+import resource
 import sys
 
 def main():
@@ -49,13 +50,17 @@ def main():
         return 0
     for arg in sys.argv[1:]:
         if arg.startswith("minimum-version="):
-            c = cmp(installed_version, arg[len("minimum-version="):])
+            a = installed_version
+            b = arg[len("minimum-version="):]
+            c = (a > b) - (a < b)
             if c < 0:
                if int(devs_present) > 240:
                    devs_present = "240"
                return int(devs_present)
             return 0
         if arg.startswith("dump_core="):
+            # avoid creating a core file
+            resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
             os.abort()
     print("attribute minimum-version not specified in dependency")
     return 241
@@ -64,7 +69,7 @@ if __name__ == "__main__":
         # Make all warnings be errors.
         import warnings
         warnings.simplefilter('error')
-        
+
         sys.exit(main())
 """}
 
@@ -83,67 +88,70 @@ if __name__ == "__main__":
                     self.pkg_list+= ["""
                     open A@{0},5.11-0
                     add depend type=origin root-image=true fmri=pkg:/feature/firmware/testdriver minimum-version={1}
-                    close 
+                    close
                     open B@{2},5.11-0
-                    add depend type=origin root-image=true fmri=pkg:/feature/firmware/testdriver minimum-version={3} 
+                    add depend type=origin root-image=true fmri=pkg:/feature/firmware/testdriver minimum-version={3}
                     close """.format(*(t + t)) ]
 
-		self.pkg_list += ["""
+                self.pkg_list += ["""
                     open A@1.4,5.11-0
-                    add depend type=origin root-image=true fmri=pkg:/feature/firmware/testdriver 
+                    add depend type=origin root-image=true fmri=pkg:/feature/firmware/testdriver
                     close """]
 
-		self.pkg_list += ["""
+                self.pkg_list += ["""
                     open A@1.6,5.11-0
                     add depend type=origin root-image=true fmri=pkg:/feature/firmware/testdriver dump_core=1
                     close"""]
 
-		self.pkg_list += ["""
+                self.pkg_list += ["""
                     open C@1.0,5.11-0
                     add depend type=origin root-image=true fmri=pkg:/feature/firmware/no-such-enumerator
                     close"""]
 
         def test_fw_dependency(self):
                 """test origin firmware dependency"""
-		"""firmware test simulator uses alphabetic comparison"""
+                """firmware test simulator uses alphabetic comparison"""
 
-		if portable.osname != "sunos":
-			raise pkg5unittest.TestSkippedException(
-			    "Firmware check unsupported on this platform.")
+                if portable.osname != "sunos":
+                        raise pkg5unittest.TestSkippedException(
+                            "Firmware check unsupported on this platform.")
 
                 rurl = self.dc.get_repo_url()
                 plist = self.pkgsend_bulk(rurl, self.pkg_list)
                 self.image_create(rurl)
 
                 os.environ["PKG_INSTALLED_VERSION"] = "elf"
-		# trim some of the versions out; note that pkgs w/ firmware
-		# errors/problems are silently ignored.
+                # trim some of the versions out; note that pkgs w/ firmware
+                # errors/problems are silently ignored.
                 self.pkg("install A B")
-		self.pkg("list")
+                self.pkg("list")
                 self.pkg("verify A@1.1")
-		# test verify by changing device version
-		os.environ["PKG_INSTALLED_VERSION"] = "dwarf"
-		self.pkg("verify A@1.1", 1)
+                # test verify by changing device version
+                os.environ["PKG_INSTALLED_VERSION"] = "dwarf"
+                self.pkg("verify A@1.1", 1)
                 os.environ["PKG_INSTALLED_VERSION"] = "elf"
-		# exercise large number of devices code
+                # exercise large number of devices code
                 os.environ["PKG_NUM_FAKE_DEVICES"] = "500"
-		self.pkg("install A@1.3", 1)
-		# exercise general error codes
-		self.pkg("install A@1.4", 1)
-		self.pkg("install A@1.6", 1)
-		# verify that upreving the firmware lets us install more
+                self.pkg("install A@1.3", 1)
+                # exercise general error codes
+                self.pkg("install A@1.4", 1)
+                self.pkg("install A@1.6", 1)
+                # verify that upreving the firmware lets us install more
                 os.environ["PKG_INSTALLED_VERSION"] = "hobbit"
-		self.pkg("update")
-		self.pkg("verify A@1.2")
-		# simulate removing device
-		del os.environ["PKG_INSTALLED_VERSION"]
-		self.pkg("update")
-		self.pkg("list")
-		self.pkg("verify A@1.6") 
-		# ok since we never drop core 
-		# here as device 
-		# doesn't exist.
-		
-		# check that we ignore dependencies w/ missing enumerators for now
-		self.pkg("install C@1.0")
+                self.pkg("update")
+                self.pkg("verify A@1.2")
+                # simulate removing device
+                del os.environ["PKG_INSTALLED_VERSION"]
+                self.pkg("update")
+                self.pkg("list")
+                self.pkg("verify A@1.6")
+                # ok since we never drop core
+                # here as device
+                # doesn't exist.
 
+                # check that we ignore dependencies w/ missing enumerators for now
+                self.pkg("install C@1.0")
+
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -24,21 +24,24 @@
 # Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
-import testutils
+from . import testutils
 if __name__ == "__main__":
         testutils.setup_environment("../../../proto")
 import pkg5unittest
 
 import datetime
-import httplib
 import os
 import shutil
+import six
+import sys
 import tempfile
 import time
 import unittest
-import urllib
-import urllib2
-import urlparse
+
+from six.moves import http_client
+from six.moves.urllib.error import HTTPError, URLError
+from six.moves.urllib.parse import quote, urljoin
+from six.moves.urllib.request import urlopen
 
 import pkg.client.publisher as publisher
 import pkg.depotcontroller as dc
@@ -118,19 +121,19 @@ class TestPkgDepot(pkg5unittest.SingleDepotTestCase):
         def test_depot_ping(self):
                 """ Ping the depot several times """
 
-                self.assert_(self.dc.is_alive())
-                self.assert_(self.dc.is_alive())
-                self.assert_(self.dc.is_alive())
-                self.assert_(self.dc.is_alive())
+                self.assertTrue(self.dc.is_alive())
+                self.assertTrue(self.dc.is_alive())
+                self.assertTrue(self.dc.is_alive())
+                self.assertTrue(self.dc.is_alive())
 
         def testStartStop(self):
                 """ Start and stop the depot several times """
                 self.dc.stop()
                 for i in range(0, 5):
                         self.dc.start()
-                        self.assert_(self.dc.is_alive())
+                        self.assertTrue(self.dc.is_alive())
                         self.dc.stop()
-                        self.assert_(not self.dc.is_alive())
+                        self.assertTrue(not self.dc.is_alive())
 
                 self.dc.start()
 
@@ -183,29 +186,29 @@ class TestPkgDepot(pkg5unittest.SingleDepotTestCase):
                 dir_file = os.path.join(depotpath, "search.dir")
                 pag_file = os.path.join(depotpath, "search.pag")
 
-                self.assert_(not os.path.exists(dir_file))
-                self.assert_(not os.path.exists(pag_file))
+                self.assertTrue(not os.path.exists(dir_file))
+                self.assertTrue(not os.path.exists(pag_file))
 
                 f = open(dir_file, "w")
                 f.close()
                 f = open(pag_file, "w")
                 f.close()
-                self.assert_(os.path.exists(dir_file))
-                self.assert_(os.path.exists(pag_file))
+                self.assertTrue(os.path.exists(dir_file))
+                self.assertTrue(os.path.exists(pag_file))
 
                 self.dc.stop()
                 self.dc.start()
                 self.pkgsend_bulk(durl, self.quux10)
-                self.assert_(not os.path.exists(dir_file))
-                self.assert_(not os.path.exists(pag_file))
+                self.assertTrue(not os.path.exists(dir_file))
+                self.assertTrue(not os.path.exists(pag_file))
 
         def test_bug_4489(self):
                 """Publish a package and then verify that the depot /info
                 operation doesn't fail."""
                 depot_url = self.dc.get_depot_url()
                 plist = self.pkgsend_bulk(depot_url, self.info10)
-                repourl = urlparse.urljoin(depot_url, "info/0/{0}".format(plist[0]))
-                urllib2.urlopen(repourl)
+                repourl = urljoin(depot_url, "info/0/{0}".format(plist[0]))
+                urlopen(repourl)
 
         def test_bug_3739(self):
                 """Verify that a depot will return a 400 (Bad Request) error
@@ -217,10 +220,10 @@ class TestPkgDepot(pkg5unittest.SingleDepotTestCase):
                         for entry in ("BRCMbnx", "BRCMbnx%40a",
                             "BRCMbnx%400.5.11%2C5.11-0.101%3A20081119T231649a"):
                                 try:
-                                        urllib2.urlopen("{0}/{1}/0/{2}".format(durl,
+                                        urlopen("{0}/{1}/0/{2}".format(durl,
                                             operation, entry))
-                                except urllib2.HTTPError as e:
-                                        if e.code != httplib.BAD_REQUEST:
+                                except HTTPError as e:
+                                        if e.code != http_client.BAD_REQUEST:
                                                 raise
 
         def test_bug_5366(self):
@@ -230,18 +233,18 @@ class TestPkgDepot(pkg5unittest.SingleDepotTestCase):
                 depot_url = self.dc.get_depot_url()
                 plist = self.pkgsend_bulk(depot_url, self.system10)
                 # First, try it un-encoded.
-                repourl = urlparse.urljoin(depot_url, "info/0/{0}".format(plist[0]))
-                urllib2.urlopen(repourl)
-                repourl = urlparse.urljoin(depot_url, "manifest/0/{0}".format(
+                repourl = urljoin(depot_url, "info/0/{0}".format(plist[0]))
+                urlopen(repourl)
+                repourl = urljoin(depot_url, "manifest/0/{0}".format(
                     plist[0]))
-                urllib2.urlopen(repourl)
+                urlopen(repourl)
                 # Second, try it encoded.
-                repourl = urlparse.urljoin(depot_url, "info/0/{0}".format(
-                    urllib.quote(plist[0])))
-                urllib2.urlopen(repourl)
-                repourl = urlparse.urljoin(depot_url, "manifest/0/{0}".format(
-                    urllib.quote(plist[0])))
-                urllib2.urlopen(repourl)
+                repourl = urljoin(depot_url, "info/0/{0}".format(
+                    quote(plist[0])))
+                urlopen(repourl)
+                repourl = urljoin(depot_url, "manifest/0/{0}".format(
+                    quote(plist[0])))
+                urlopen(repourl)
 
         def test_info(self):
                 """Testing information showed in /info/0."""
@@ -249,8 +252,9 @@ class TestPkgDepot(pkg5unittest.SingleDepotTestCase):
                 depot_url = self.dc.get_depot_url();
                 plist = self.pkgsend_bulk(depot_url, self.info20)
 
-                openurl = urlparse.urljoin(depot_url, "info/0/{0}".format(plist[0]))
-                content = urllib2.urlopen(openurl).read()
+                openurl = urljoin(depot_url, "info/0/{0}".format(plist[0]))
+                # urlopen.read return bytes
+                content = misc.force_str(urlopen(openurl).read())
                 # Get text from content.
                 lines = content.splitlines()
                 info_dic = {}
@@ -268,7 +272,7 @@ class TestPkgDepot(pkg5unittest.SingleDepotTestCase):
                 ]
 
                 for line in lines:
-                        fields = line.split(":", 1)
+                        fields = misc.force_str(line).split(":", 1)
                         attr = fields[0].strip()
                         if attr == "License":
                                 break
@@ -279,14 +283,14 @@ class TestPkgDepot(pkg5unittest.SingleDepotTestCase):
                                         info_dic[attr] = ""
 
                 # Read manifest.
-                openurl = urlparse.urljoin(depot_url, "manifest/0/{0}".format(plist[0]))
-                content = urllib2.urlopen(openurl).read()
+                openurl = urljoin(depot_url, "manifest/0/{0}".format(plist[0]))
+                content = misc.force_str(urlopen(openurl).read())
                 manifest = man.Manifest()
                 manifest.set_content(content=content)
                 fmri_content = manifest.get("pkg.fmri", "")
 
                 # Check if FMRI is empty.
-                self.assert_(fmri_content)
+                self.assertTrue(fmri_content)
                 pfmri = fmri.PkgFmri(fmri_content, None)
                 pub, name, ver = pfmri.tuple()
                 size, csize = manifest.get_size()
@@ -315,6 +319,8 @@ class TestPkgDepot(pkg5unittest.SingleDepotTestCase):
                 self.assertEqual(info_dic["Size"], misc.bytes_to_str(size))
                 self.assertEqual(info_dic["Compressed Size"], misc.bytes_to_str(csize))
                 self.assertEqual(info_dic["FMRI"], fmri_content)
+                if six.PY3:
+                        os.environ["LC_ALL"] = "en_US.UTF-8"
 
         def test_bug_5707(self):
                 """Testing depotcontroller.refresh()."""
@@ -347,13 +353,13 @@ class TestPkgDepot(pkg5unittest.SingleDepotTestCase):
                 # any attempts to go outside that directory should fail
                 # with a 404 error.
                 try:
-                        urllib2.urlopen("{0}/../../../../bin/pkg".format(depot_url))
-                except urllib2.HTTPError as e:
-                        if e.code != httplib.NOT_FOUND:
+                        urlopen("{0}/../../../../bin/pkg".format(depot_url))
+                except HTTPError as e:
+                        if e.code != http_client.NOT_FOUND:
                                 raise
 
-                f = urllib2.urlopen("{0}/robots.txt".format(depot_url))
-                self.assert_(len(f.read()))
+                f = urlopen("{0}/robots.txt".format(depot_url))
+                self.assertTrue(len(f.read()))
                 f.close()
 
         def test_repo_create(self):
@@ -373,22 +379,22 @@ class TestPkgDepot(pkg5unittest.SingleDepotTestCase):
                 self.dc.set_readonly()
                 self.dc.stop()
                 self.dc.start_expected_fail()
-                self.assert_(not self.dc.is_alive())
+                self.assertTrue(not self.dc.is_alive())
 
                 # Next, test readonly mode with a repo_dir that is empty.
                 os.makedirs(dpath, misc.PKG_DIR_MODE)
                 self.dc.set_readonly()
                 self.dc.start_expected_fail()
-                self.assert_(not self.dc.is_alive())
+                self.assertTrue(not self.dc.is_alive())
 
                 # Next, test readwrite (publishing) mode with a non-existent
                 # repo_dir.
                 shutil.rmtree(dpath)
                 self.dc.set_readwrite()
                 self.dc.start()
-                self.assert_(self.dc.is_alive())
+                self.assertTrue(self.dc.is_alive())
                 self.dc.stop()
-                self.assert_(not self.dc.is_alive())
+                self.assertTrue(not self.dc.is_alive())
 
                 # Next, test readwrite (publishing) mode with a non-existent
                 # repo_dir for an unprivileged user.
@@ -402,23 +408,23 @@ class TestPkgDepot(pkg5unittest.SingleDepotTestCase):
                 finally:
                         # Even if this test fails, this wrapper must be reset.
                         self.dc.set_wrapper(wr_start, wr_end)
-                self.assert_(not self.dc.is_alive())
+                self.assertTrue(not self.dc.is_alive())
 
                 # Next, test readwrite (publishing) mode with an empty repo_dir.
                 os.makedirs(dpath, misc.PKG_DIR_MODE)
                 self.dc.set_readwrite()
                 self.dc.start()
-                self.assert_(self.dc.is_alive())
+                self.assertTrue(self.dc.is_alive())
                 self.dc.stop()
-                self.assert_(not self.dc.is_alive())
+                self.assertTrue(not self.dc.is_alive())
 
                 # Finally, re-test readonly mode now that the repository has
                 # been created.
                 self.dc.set_readonly()
                 self.dc.start()
-                self.assert_(self.dc.is_alive())
+                self.assertTrue(self.dc.is_alive())
                 self.dc.stop()
-                self.assert_(not self.dc.is_alive())
+                self.assertTrue(not self.dc.is_alive())
 
                 # Cleanup.
                 shutil.rmtree(dpath)
@@ -475,11 +481,11 @@ class TestPkgDepot(pkg5unittest.SingleDepotTestCase):
                 self.pkgsend_bulk(depot_url, self.foo10)
                 self.pkgsend_bulk(depot_url, self.entire10)
 
-                repourl = urlparse.urljoin(depot_url,
+                repourl = urljoin(depot_url,
                     "/en/catalog.shtml?version={0}&action=Browse".format(
-                    urllib.quote("entire@1.0,5.11-0")))
+                    quote("entire@1.0,5.11-0")))
 
-                res = urllib2.urlopen(repourl)
+                res = urlopen(repourl)
 
         def test_publisher_prefix(self):
                 """Test that various publisher prefixes can be understood
@@ -499,9 +505,9 @@ class TestPkgDepot(pkg5unittest.SingleDepotTestCase):
                 self.dc.start()
                 for p in pubs:
                         # test that the catalog file can be found
-                        url = urlparse.urljoin(depot_url,
+                        url = urljoin(depot_url,
                             "{0}/catalog/1/catalog.attrs".format(p))
-                        urllib2.urlopen(url)
+                        urlopen(url)
 
 class TestDepotController(pkg5unittest.CliTestCase):
 
@@ -543,9 +549,9 @@ class TestDepotController(pkg5unittest.CliTestCase):
                 self.__dc.set_port(self.next_free_port)
                 for i in range(0, 5):
                         self.__dc.start()
-                        self.assert_(self.__dc.is_alive())
+                        self.assertTrue(self.__dc.is_alive())
                         self.__dc.stop()
-                        self.assert_(not self.__dc.is_alive())
+                        self.assertTrue(not self.__dc.is_alive())
 
         def test_cfg_file(self):
                 cfg_file = os.path.join(self.test_root, "cfg2")
@@ -581,11 +587,11 @@ class TestDepotController(pkg5unittest.CliTestCase):
                                     os.path.isdir(index_dir) and \
                                     (not check_feed or os.path.isfile(feed))
 
-                        self.assert_(not os.path.exists(o_index_dir))
-                        self.assert_(os.path.isdir(index_dir))
+                        self.assertTrue(not os.path.exists(o_index_dir))
+                        self.assertTrue(os.path.isdir(index_dir))
                         if check_feed:
                                 try:
-                                        self.assert_(os.path.isfile(feed))
+                                        self.assertTrue(os.path.isfile(feed))
                                 except:
                                         raise RuntimeError("Feed cache file "
                                             "not found at '{0}'.".format(feed))
@@ -596,13 +602,13 @@ class TestDepotController(pkg5unittest.CliTestCase):
                                 if pub:
                                         pub = "{0}/".format(pub)
                                 try:
-                                        urllib2.urlopen("{0}{1}/feed".format(durl,
+                                        urlopen("{0}{1}/feed".format(durl,
                                             pub))
                                         got = True
-                                except urllib2.HTTPError as e:
+                                except HTTPError as e:
                                         self.debug(str(e))
                                         time.sleep(1)
-                        self.assert_(got)
+                        self.assertTrue(got)
 
                 self.__dc.set_port(self.next_free_port)
                 durl = self.__dc.get_depot_url()
@@ -651,37 +657,37 @@ class TestDepotController(pkg5unittest.CliTestCase):
                 self.__dc.set_rebuild()
                 self.__dc.set_norefresh_index()
 
-                self.assert_(self.__dc.start_expected_fail())
+                self.assertTrue(self.__dc.start_expected_fail())
 
                 self.__dc.set_readonly()
                 self.__dc.set_norebuild()
                 self.__dc.set_refresh_index()
 
-                self.assert_(self.__dc.start_expected_fail())
+                self.assertTrue(self.__dc.start_expected_fail())
 
                 self.__dc.set_readonly()
                 self.__dc.set_rebuild()
                 self.__dc.set_refresh_index()
 
-                self.assert_(self.__dc.start_expected_fail())
+                self.assertTrue(self.__dc.start_expected_fail())
 
                 self.__dc.set_readwrite()
                 self.__dc.set_rebuild()
                 self.__dc.set_refresh_index()
 
-                self.assert_(self.__dc.start_expected_fail())
+                self.assertTrue(self.__dc.start_expected_fail())
 
                 self.__dc.set_mirror()
                 self.__dc.set_rebuild()
                 self.__dc.set_norefresh_index()
 
-                self.assert_(self.__dc.start_expected_fail())
+                self.assertTrue(self.__dc.start_expected_fail())
 
                 self.__dc.set_mirror()
                 self.__dc.set_norebuild()
                 self.__dc.set_refresh_index()
 
-                self.assert_(self.__dc.start_expected_fail())
+                self.assertTrue(self.__dc.start_expected_fail())
 
         def test_disable_ops(self):
                 """Verify that disable-ops works as expected."""
@@ -693,9 +699,9 @@ class TestDepotController(pkg5unittest.CliTestCase):
                 self.__dc.start()
                 durl = self.__dc.get_depot_url()
                 try:
-                        urllib2.urlopen("{0}/catalog/1/".format(durl))
-                except urllib2.HTTPError as e:
-                        self.assertEqual(e.code, httplib.NOT_FOUND)
+                        urlopen("{0}/catalog/1/".format(durl))
+                except HTTPError as e:
+                        self.assertEqual(e.code, http_client.NOT_FOUND)
                 self.__dc.stop()
 
                 # For this disabled case, all /catalog/ operations should return
@@ -706,9 +712,9 @@ class TestDepotController(pkg5unittest.CliTestCase):
                 durl = self.__dc.get_depot_url()
                 for ver in (0, 1):
                         try:
-                                urllib2.urlopen("{0}/catalog/{1:d}/".format(durl, ver))
-                        except urllib2.HTTPError as e:
-                                self.assertEqual(e.code, httplib.NOT_FOUND)
+                                urlopen("{0}/catalog/{1:d}/".format(durl, ver))
+                        except HTTPError as e:
+                                self.assertEqual(e.code, http_client.NOT_FOUND)
                 self.__dc.stop()
 
                 # In the normal case, /catalog/1/ should return
@@ -717,9 +723,9 @@ class TestDepotController(pkg5unittest.CliTestCase):
                 self.__dc.start()
                 durl = self.__dc.get_depot_url()
                 try:
-                        urllib2.urlopen("{0}/catalog/1/".format(durl))
-                except urllib2.HTTPError as e:
-                        self.assertEqual(e.code, httplib.FORBIDDEN)
+                        urlopen("{0}/catalog/1/".format(durl))
+                except HTTPError as e:
+                        self.assertEqual(e.code, http_client.FORBIDDEN)
                 self.__dc.stop()
 
                 # A bogus operation should prevent the depot from starting.
@@ -821,9 +827,10 @@ class TestDepotOutput(pkg5unittest.SingleDepotTestCase):
                 # Make sure the PKGDEPOT_CONTROLLER is not set in the newenv.
                 newenv = os.environ.copy()
                 newenv.pop("PKGDEPOT_CONTROLLER", None)
-                cmdargs = "/usr/bin/ctrun -o noorphan {0}/usr/lib/pkg.depotd " \
-                    "-p {1} -d {2} --content-root {3}/usr/share/lib/pkg " \
-                    "--readonly </dev/null > {4} 2> {5}".format(
+                cmdargs = "/usr/bin/ctrun -o noorphan {0} {1}/usr/lib/pkg.depotd " \
+                    "-p {2} -d {3} --content-root {4}/usr/share/lib/pkg " \
+                    "--readonly </dev/null --log-access={5} " \
+                    "--log-errors={6}".format(sys.executable,
                     pkg5unittest.g_pkg_path, self.next_free_port, repopath,
                     pkg5unittest.g_pkg_path, out_path, err_path)
 
@@ -835,7 +842,7 @@ class TestDepotOutput(pkg5unittest.SingleDepotTestCase):
                         depot_handle = subprocess.Popen(cmdargs, env=newenv,
                             shell=True)
 
-                        self.assert_(depot_handle != None, msg="Could not "
+                        self.assertTrue(depot_handle != None, msg="Could not "
                             "start depot")
                         begintime = time.time()
                         check_interval = 0.20
@@ -844,27 +851,27 @@ class TestDepotOutput(pkg5unittest.SingleDepotTestCase):
 
                         while (time.time() - begintime) <= 40.0:
                                 rc = depot_handle.poll()
-                                self.assert_(rc is None, msg="Depot exited "
+                                self.assertTrue(rc is None, msg="Depot exited "
                                     "unexpectedly")
 
                                 try:
-                                        f = urllib2.urlopen(durl)
+                                        f = urlopen(durl)
                                         daemon_started = True
                                         break
-                                except urllib2.URLError as e:
+                                except URLError as e:
                                         time.sleep(check_interval)
 
                         if not daemon_started:
                                 if depot_handle:
                                         depot_handle.kill()
-                                self.assert_(daemon_started, msg="Could not "
+                                self.assertTrue(daemon_started, msg="Could not "
                                     "access depot daemon")
 
                         # Read the msgs from the err log file to verify log
                         # msgs.
                         with open(err_path, "r") as read_err:
                                 msgs = read_err.readlines()
-                                self.assert_(msgs, "Log message is "
+                                self.assertTrue(msgs, "Log message is "
                                     "empty. Check if the previous "
                                     "ctrun process shut down "
                                     "properly")
@@ -941,12 +948,12 @@ class TestDepotOutput(pkg5unittest.SingleDepotTestCase):
                                 for path in pages:
                                         # Any error responses will cause an
                                         # exception.
-                                        response = urllib2.urlopen(
+                                        response = urlopen(
                                             "{0}/{1}".format(durl, path))
 
                                         fd, fpath = tempfile.mkstemp(
                                             suffix="html", dir=self.tpath)
-                                        fp = os.fdopen(fd, "w")
+                                        fp = os.fdopen(fd, "wb")
                                         fp.write(response.read())
                                         fp.close()
 
@@ -998,7 +1005,7 @@ class TestDepotOutput(pkg5unittest.SingleDepotTestCase):
                         pub_repo = publisher.Repository()
                         pub.repository = pub_repo
 
-                for attr, val in self.pub_repo_cfg.iteritems():
+                for attr, val in six.iteritems(self.pub_repo_cfg):
                         setattr(pub_repo, attr, val)
                 repo.update_publisher(pub)
 
@@ -1013,20 +1020,28 @@ class TestDepotOutput(pkg5unittest.SingleDepotTestCase):
                 self.dc.start()
 
                 durl = self.dc.get_depot_url()
-                purl = urlparse.urljoin(durl, "publisher/0")
+                purl = urljoin(durl, "publisher/0")
                 entries = p5i.parse(location=purl)
-                assert entries[0][0].prefix == "test"
-                assert entries[1][0].prefix == "org.opensolaris.pending"
+                # entries's order is unstable in Python 3, but it doesn't really
+                # matter as long as the prefix is in entries.
+                if entries[0][0].prefix == "test":
+                        index = -1
+                        assert entries[1][0].prefix == "org.opensolaris.pending"
+                else:
+                        index = 0
+                        assert entries[0][0].prefix == "org.opensolaris.pending"
+                        assert entries[1][0].prefix == "test"
+
 
                 # Now verify that the parsed response has the expected data.
-                pub, pkglist = entries[-1]
+                pub, pkglist = entries[index]
                 cfgdata = self.repo_cfg
                 for prop in cfgdata["publisher"]:
                         self.assertEqual(getattr(pub, prop),
                             cfgdata["publisher"][prop])
 
                 repo = pub.repository
-                for prop, expected in self.pub_repo_cfg.iteritems():
+                for prop, expected in six.iteritems(self.pub_repo_cfg):
                         returned = getattr(repo, prop)
                         if prop.endswith("uris") or prop == "origins":
                                 uris = []
@@ -1039,7 +1054,7 @@ class TestDepotOutput(pkg5unittest.SingleDepotTestCase):
                         self.assertEqual(returned, expected)
 
         def test_2_depot_p5i(self):
-                """Verify the output of the depot /publisher operation."""
+                """Verify the output of the depot /p5i operation."""
 
                 # Now update the repository configuration while the depot is
                 # stopped so changes won't be overwritten on exit.
@@ -1057,7 +1072,7 @@ class TestDepotOutput(pkg5unittest.SingleDepotTestCase):
                 # and then verify that the parsed response has the expected
                 # package information under the expected publisher.
                 for p in plist:
-                        purl = urlparse.urljoin(durl, "p5i/0/{0}".format(p))
+                        purl = urljoin(durl, "p5i/0/{0}".format(p))
                         pub, pkglist = p5i.parse(location=purl)[0]
 
                         # p5i files contain non-qualified FMRIs as the FMRIs
@@ -1069,23 +1084,23 @@ class TestDepotOutput(pkg5unittest.SingleDepotTestCase):
                 # Try again, but only using package stems.
                 for p in plist:
                         stem = fmri.PkgFmri(p).pkg_name
-                        purl = urlparse.urljoin(durl, "p5i/0/{0}".format(stem))
+                        purl = urljoin(durl, "p5i/0/{0}".format(stem))
                         pub, pkglist = p5i.parse(location=purl)[0]
                         self.assertEqual(pkglist, [stem])
 
                 # Try again, but using wildcards (which will return a list of
                 # matching package stems).
-                purl = urlparse.urljoin(durl, "p5i/0/zfs*")
+                purl = urljoin(durl, "p5i/0/zfs*")
                 pub, pkglist = p5i.parse(location=purl)[0]
                 self.assertEqual(pkglist, ["zfs-extras", "zfs/utils"])
 
                 # Finally, verify that a non-existent package will error out
                 # with a httplib.NOT_FOUND.
                 try:
-                        urllib2.urlopen(urlparse.urljoin(durl,
+                        urlopen(urljoin(durl,
                             "p5i/0/nosuchpackage"))
-                except urllib2.HTTPError as e:
-                        if e.code != httplib.NOT_FOUND:
+                except HTTPError as e:
+                        if e.code != http_client.NOT_FOUND:
                                 raise
 
         def test_3_headers(self):
@@ -1108,11 +1123,11 @@ class TestDepotOutput(pkg5unittest.SingleDepotTestCase):
 
                 def get_headers(req_path):
                         try:
-                                rinfo = urllib2.urlopen(urlparse.urljoin(durl,
+                                rinfo = urlopen(urljoin(durl,
                                     req_path)).info()
-                                return rinfo.items()
-                        except urllib2.HTTPError as e:
-                                return e.info().items()
+                                return list(rinfo.items())
+                        except HTTPError as e:
+                                return list(e.info().items())
                         except Exception as e:
                                 raise RuntimeError("retrieval of {0} "
                                     "failed: {1}".format(req_path, str(e)))
@@ -1121,31 +1136,33 @@ class TestDepotOutput(pkg5unittest.SingleDepotTestCase):
                     'search/1/False_2_None_None_%2Fvar%2Ffile',
                     "versions/0", "manifest/0/{0}".format(pfmri.get_url_path()),
                     "catalog/0", "catalog/1/catalog.attrs",
-                    "file/0/3aad0bca6f3a6f502c175700ebe90ef36e312d7e",
-                    "filelist/0"):
+                    "file/0/3aad0bca6f3a6f502c175700ebe90ef36e312d7e"):
                         hdrs = dict(get_headers(req_path))
-
-                        # Fields must be referenced in lowercase.
-                        if req_path.startswith("filelist"):
-                                self.assertEqual(hdrs.get("expires", ""), "0")
-                                self.assertEqual(hdrs.get("cache-control", ""),
-                                    "no-cache, no-transform, must-revalidate")
-                                self.assertEqual(hdrs.get("pragma", None),
-                                    "no-cache")
-                        else:
+                        if six.PY2:
+                                # Fields must be referenced in lowercase.
                                 cc = hdrs.get("cache-control", "")
-                                self.assert_(cc.startswith("must-revalidate, "
+                                self.assertTrue(cc.startswith("must-revalidate, "
                                     "no-transform, max-age="))
                                 exp = hdrs.get("expires", None)
-                                self.assertNotEqual(exp, None)
-                                self.assert_(exp.endswith(" GMT"))
+                        else:
+                                # Fields begin with uppercase.
+                                cc = hdrs.get("Cache-Control", "")
+                                self.assertTrue(cc.startswith("must-revalidate, "
+                                    "no-transform, max-age="))
+                                exp = hdrs.get("Expires", None)
+                        self.assertNotEqual(exp, None)
+                        self.assertTrue(exp.endswith(" GMT"))
 
                 for req_path in ("catalog/1/catalog.hatters",
                     "file/0/3aad0bca6f3a6f502c175700ebe90ef36e312d7f"):
 
                         hdrs = dict(get_headers(req_path))
-                        cc = hdrs.get("cache-control", None)
-                        prg = hdrs.get("pragma", None)
+                        if six.PY2:
+                                cc = hdrs.get("cache-control", None)
+                                prg = hdrs.get("pragma", None)
+                        else:
+                                cc = hdrs.get("Cache-Control", None)
+                                prg = hdrs.get("Pragma", None)
                         self.assertEqual(cc, None)
                         self.assertEqual(prg, None)
 
@@ -1163,16 +1180,16 @@ class TestDepotOutput(pkg5unittest.SingleDepotTestCase):
                 durl = self.dc.get_depot_url()
                 self.pkgsend_bulk(durl, self.quux10, refresh_index=True)
 
-                surl = urlparse.urljoin(durl,
+                surl = urljoin(durl,
                     "en/search.shtml?action=Search&token=*")
-                urllib2.urlopen(surl).read()
-                surl = urlparse.urljoin(durl,
+                urlopen(surl).read()
+                surl = urljoin(durl,
                     "en/advanced_search.shtml?action=Search&token=*")
-                urllib2.urlopen(surl).read()
-                surl = urlparse.urljoin(durl,
+                urlopen(surl).read()
+                surl = urljoin(durl,
                     "en/advanced_search.shtml?token=*&show=a&rpp=50&"
                     "action=Advanced+Search")
-                urllib2.urlopen(surl).read()
+                urlopen(surl).read()
 
         def test_address(self):
                 """Verify that depot address can be set."""
@@ -1181,13 +1198,13 @@ class TestDepotOutput(pkg5unittest.SingleDepotTestCase):
                 self.dc.set_address("::1")
                 self.dc.set_port(self.next_free_port)
                 self.dc.start()
-                self.assert_(self.dc.is_alive())
-                self.assert_(self.dc.is_alive())
-                self.assert_(self.dc.is_alive())
+                self.assertTrue(self.dc.is_alive())
+                self.assertTrue(self.dc.is_alive())
+                self.assertTrue(self.dc.is_alive())
 
                 # Check that we can retrieve something.
                 durl = self.dc.get_depot_url()
-                verdata = urllib2.urlopen("{0}/versions/0/".format(durl))
+                verdata = urlopen("{0}/versions/0/".format(durl))
 
         def test_log_depot_daemon(self):
                 """Verify that depot daemon works properly and the error
@@ -1212,8 +1229,8 @@ class TestDepotOutput(pkg5unittest.SingleDepotTestCase):
                         # the error msg.
                         durl = "http://localhost:{0}/catalog/0".format(curport)
                         try:
-                                urllib2.urlopen(durl)
-                        except urllib2.URLError as e:
+                                urlopen(durl)
+                        except URLError as e:
                                 pass
                         # Stop the depot daemon.
                         self.__depot_daemon_stop(depot_handle)
@@ -1231,3 +1248,6 @@ class TestDepotOutput(pkg5unittest.SingleDepotTestCase):
 
 if __name__ == "__main__":
         unittest.main()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

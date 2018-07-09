@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,10 +21,10 @@
 #
 
 #
-# Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
-import testutils
+from . import testutils
 if __name__ == "__main__":
         testutils.setup_environment("../../../proto")
 import pkg5unittest
@@ -33,12 +33,6 @@ import os
 import pkg.portable as portable
 import pkg.misc as misc
 import sys
-
-try:
-        import pkg.sha512
-        sha512_supported = True
-except ImportError:
-        sha512_supported = False
 
 class TestPkgRevert(pkg5unittest.SingleDepotTestCase):
         # Only start/stop the depot once (instead of for every test)
@@ -112,10 +106,10 @@ class TestPkgRevert(pkg5unittest.SingleDepotTestCase):
             """
 
         misc_files = ["etc/file1", "etc/file2", "etc/file3", "etc/file4",
-		      "etc/file5"]
+            "etc/file5"]
 
-	additional_files = ["dev/foo", "dev/cfg/bar", "dev/cfg/blah",
-			    "dev/cfg/bar1", "dev/cfg/bar2"]
+        additional_files = ["dev/foo", "dev/cfg/bar", "dev/cfg/blah",
+            "dev/cfg/bar1", "dev/cfg/bar2"]
 
         def damage_all_files(self):
                 self.damage_files(self.misc_files)
@@ -143,12 +137,8 @@ class TestPkgRevert(pkg5unittest.SingleDepotTestCase):
                 self.plist = self.pkgsend_bulk(self.rurl, self.pkgs)
                 self.plist.extend(self.pkgsend_bulk(self.rurl, self.pkgs2,
                     debug_hash="sha1+sha256"))
-                if sha512_supported:
-                        self.plist.extend(self.pkgsend_bulk(self.rurl,
-                            self.pkgs3, debug_hash="sha1+sha512_256"))
-                else:
-                        self.plist.extend(self.pkgsend_bulk(self.rurl,
-                            self.pkgs3))
+                self.plist.extend(self.pkgsend_bulk(self.rurl,
+                    self.pkgs3))
 
         def test_revert(self):
                 self.image_create(self.rurl)
@@ -166,14 +156,10 @@ class TestPkgRevert(pkg5unittest.SingleDepotTestCase):
                 # the most-preferred hash available.
                 self.pkg("-D hash=sha1+sha256 verify B", exit=1)
                 sha2 = "e3868252b2b2de64e85f5b221e46eb23c428fe5168848eb36d113c66628131ce"
-                self.assert_(sha2 in self.output)
+                self.assertTrue(sha2 in self.output)
                 self.pkg("verify B", exit=1)
-                self.assert_(sha2 in self.output)
+                self.assertTrue(sha2 in self.output)
 
-                if sha512_supported:
-                        self.pkg("-D hash=sha1+sha512_256 verify C", exit=1)
-                        sha2 = "13729cb7183961b48ce300c2588c86ad123e7c636f38a0f3c8408a75fd079d09"
-                        self.assert_(sha2 in self.output, self.output)
                 self.pkg("verify C", exit=1)
                 self.pkg("verify D", exit=1)
 
@@ -215,13 +201,6 @@ class TestPkgRevert(pkg5unittest.SingleDepotTestCase):
                 # our repository stores its files by the SHA1 hash.
                 self.pkg("-D hash=sha256 revert --parsable=0 --tagged bob",
                     exit=1)
-                if sha512_supported:
-                        self.pkg("-D hash=sha512_256 revert --parsable=0 \
-                            --tagged ted", exit=1)
-                        self.pkg("-D hash=sha1+512_256 revert -n --parsable=0 \
-                            --tagged ted")
-                        self.assertEqualParsable(self.output,
-                            affect_packages=[self.plist[12], self.plist[1]])
                 self.pkg("-D hash=sha1+sha256 revert --parsable=0 --tagged bob")
                 self.assertEqualParsable(self.output,
                     affect_packages=[self.plist[9], self.plist[12],
@@ -350,3 +329,6 @@ class TestPkgRevert(pkg5unittest.SingleDepotTestCase):
 
 if __name__ == "__main__":
         unittest.main()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

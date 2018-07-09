@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -151,6 +151,8 @@ class SolarisPackageDatastreamBundle(SolarisPackageDirBundle):
                         return None
 
                 if mapline.type in "fev":
+                        # false positive
+                        # file-builtin; pylint: disable=W1607
                         act = file.FileAction(ci.extractfile(),
                             mode=mapline.mode, owner=mapline.owner,
                             group=mapline.group, path=mapline.pathname,
@@ -206,3 +208,6 @@ def test(filename):
                     "multiple\nfilesystem format packages."))
         except:
                 return False
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

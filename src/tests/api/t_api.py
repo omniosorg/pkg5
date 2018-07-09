@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -24,12 +24,12 @@
 # Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
-import testutils
+from . import testutils
 if __name__ == "__main__":
-	testutils.setup_environment("../../../proto")
+        testutils.setup_environment("../../../proto")
 import pkg5unittest
 
-import cStringIO
+from six.moves import cStringIO
 import os
 import pkg.client.api as api
 import pkg.client.api_errors as api_errors
@@ -116,8 +116,8 @@ class TestPkgApi(pkg5unittest.SingleDepotTestCase):
             add license license.licensed license=license.licensed must-accept=True
             close """
 
-	# NOTE:  spaces at the end (or lack thereof) here are important for
-	# specific versions of simplejson.
+        # NOTE:  spaces at the end (or lack thereof) here are important for
+        # specific versions of simplejson.
         p5i_bobcat = """{
   "packages": [
     "pkg:/bar@1.0,5.11-0",
@@ -208,7 +208,7 @@ class TestPkgApi(pkg5unittest.SingleDepotTestCase):
                 self.pkgsend_bulk(self.rurl, self.foo10)
                 api_obj = self.image_create(self.rurl, prefix="bobcat")
 
-                self.assert_(api_obj.describe() is None)
+                self.assertTrue(api_obj.describe() is None)
 
                 self.assertRaises(api_errors.PlanMissingException,
                     api_obj.prepare)
@@ -221,7 +221,7 @@ class TestPkgApi(pkg5unittest.SingleDepotTestCase):
                 self.assertRaises(api_errors.PlanMissingException,
                     api_obj.prepare)
 
-                self.assert_(api_obj.describe() is None)
+                self.assertTrue(api_obj.describe() is None)
 
                 self.pkgsend_bulk(self.rurl, self.foo12)
                 api_obj.refresh(immediate=True)
@@ -233,7 +233,7 @@ class TestPkgApi(pkg5unittest.SingleDepotTestCase):
 
                 self.assertRaises(api_errors.PlanMissingException,
                     api_obj.prepare)
-                self.assert_(api_obj.describe() is None)
+                self.assertTrue(api_obj.describe() is None)
 
                 for pd in api_obj.gen_plan_uninstall(["foo"]):
                         continue
@@ -242,7 +242,7 @@ class TestPkgApi(pkg5unittest.SingleDepotTestCase):
 
                 self.assertRaises(api_errors.PlanMissingException,
                     api_obj.prepare)
-                self.assert_(api_obj.describe() is None)
+                self.assertTrue(api_obj.describe() is None)
 
         def test_reset(self):
                 """ Send empty package foo@1.0, install and uninstall """
@@ -257,22 +257,22 @@ class TestPkgApi(pkg5unittest.SingleDepotTestCase):
 
                 for pd in api_obj.gen_plan_install(["foo"]):
                         continue
-                self.assert_(api_obj.describe() is not None)
+                self.assertTrue(api_obj.describe() is not None)
                 api_obj.reset()
-                self.assert_(api_obj.describe() is None)
+                self.assertTrue(api_obj.describe() is None)
                 for pd in api_obj.gen_plan_install(["foo"]):
                         continue
-                self.assert_(api_obj.describe() is not None)
+                self.assertTrue(api_obj.describe() is not None)
                 api_obj.prepare()
                 api_obj.reset()
-                self.assert_(api_obj.describe() is None)
+                self.assertTrue(api_obj.describe() is None)
                 for pd in api_obj.gen_plan_install(["foo"]):
                         continue
-                self.assert_(api_obj.describe() is not None)
+                self.assertTrue(api_obj.describe() is not None)
                 api_obj.prepare()
                 api_obj.execute_plan()
                 api_obj.reset()
-                self.assert_(api_obj.describe() is None)
+                self.assertTrue(api_obj.describe() is None)
 
                 self.pkg("list")
                 self.pkg("verify")
@@ -282,44 +282,44 @@ class TestPkgApi(pkg5unittest.SingleDepotTestCase):
 
                 for pd in api_obj.gen_plan_update():
                         continue
-                self.assert_(api_obj.describe() is not None)
+                self.assertTrue(api_obj.describe() is not None)
                 api_obj.reset()
-                self.assert_(api_obj.describe() is None)
+                self.assertTrue(api_obj.describe() is None)
                 for pd in api_obj.gen_plan_update():
                         continue
-                self.assert_(api_obj.describe() is not None)
+                self.assertTrue(api_obj.describe() is not None)
                 api_obj.prepare()
                 api_obj.reset()
-                self.assert_(api_obj.describe() is None)
+                self.assertTrue(api_obj.describe() is None)
                 for pd in api_obj.gen_plan_update():
                         continue
-                self.assert_(api_obj.describe() is not None)
+                self.assertTrue(api_obj.describe() is not None)
                 api_obj.prepare()
                 api_obj.execute_plan()
                 api_obj.reset()
-                self.assert_(api_obj.describe() is None)
+                self.assertTrue(api_obj.describe() is None)
 
                 self.pkg("list")
                 self.pkg("verify")
 
                 for pd in api_obj.gen_plan_uninstall(["foo"]):
                         continue
-                self.assert_(api_obj.describe() is not None)
+                self.assertTrue(api_obj.describe() is not None)
                 api_obj.reset()
-                self.assert_(api_obj.describe() is None)
+                self.assertTrue(api_obj.describe() is None)
                 for pd in api_obj.gen_plan_uninstall(["foo"]):
                         continue
-                self.assert_(api_obj.describe() is not None)
+                self.assertTrue(api_obj.describe() is not None)
                 api_obj.prepare()
                 api_obj.reset()
-                self.assert_(api_obj.describe() is None)
+                self.assertTrue(api_obj.describe() is None)
                 for pd in api_obj.gen_plan_uninstall(["foo"]):
                         continue
-                self.assert_(api_obj.describe() is not None)
+                self.assertTrue(api_obj.describe() is not None)
                 api_obj.prepare()
                 api_obj.execute_plan()
                 api_obj.reset()
-                self.assert_(api_obj.describe() is None)
+                self.assertTrue(api_obj.describe() is None)
 
                 self.pkg("verify")
 
@@ -343,8 +343,8 @@ class TestPkgApi(pkg5unittest.SingleDepotTestCase):
                 kcat = img.get_catalog(img.IMG_CATALOG_KNOWN)
                 entry = [e for f, e in kcat.entries()][0]
                 states = entry["metadata"]["states"]
-                self.assert_(pkgdefs.PKG_STATE_V1 in states)
-                self.assert_(pkgdefs.PKG_STATE_V0 not in states)
+                self.assertTrue(pkgdefs.PKG_STATE_V1 in states)
+                self.assertTrue(pkgdefs.PKG_STATE_V0 not in states)
 
                 # Next, disable v1 catalog for the depot and force a client
                 # refresh.  Only v0 state should be present.
@@ -364,8 +364,8 @@ class TestPkgApi(pkg5unittest.SingleDepotTestCase):
                 kcat = img.get_catalog(img.IMG_CATALOG_KNOWN)
                 entry = [e for f, e in kcat.entries()][0]
                 states = entry["metadata"]["states"]
-                self.assert_(pkgdefs.PKG_STATE_V1 not in states)
-                self.assert_(pkgdefs.PKG_STATE_V0 in states)
+                self.assertTrue(pkgdefs.PKG_STATE_V1 not in states)
+                self.assertTrue(pkgdefs.PKG_STATE_V0 in states)
 
                 # Verify that there is no dependency information present
                 # in the known or installed catalog.
@@ -416,8 +416,8 @@ class TestPkgApi(pkg5unittest.SingleDepotTestCase):
                 for cat in kcat, icat:
                         entry = [e for f, e in cat.entries()][0]
                         states = entry["metadata"]["states"]
-                        self.assert_(pkgdefs.PKG_STATE_INSTALLED in states)
-                        self.assert_(pkgdefs.PKG_STATE_V0 in states)
+                        self.assertTrue(pkgdefs.PKG_STATE_INSTALLED in states)
+                        self.assertTrue(pkgdefs.PKG_STATE_V0 in states)
 
                 # Finally, transition back to v1 catalog.  This requires
                 # creating a new api object since transport will think that
@@ -443,8 +443,8 @@ class TestPkgApi(pkg5unittest.SingleDepotTestCase):
                 # Verify state info.
                 for f, entry in kcat.entries():
                         states = entry["metadata"]["states"]
-                        self.assert_(pkgdefs.PKG_STATE_V1 in states)
-                        self.assert_(pkgdefs.PKG_STATE_V0 not in states)
+                        self.assertTrue(pkgdefs.PKG_STATE_V1 in states)
+                        self.assertTrue(pkgdefs.PKG_STATE_V0 not in states)
 
                 # Verify that there is dependency information present
                 # in the known and installed catalog.
@@ -619,7 +619,7 @@ class TestPkgApi(pkg5unittest.SingleDepotTestCase):
                 }
 
                 # Dump the p5i data.
-                fobj = cStringIO.StringIO()
+                fobj = cStringIO()
                 api_obj.write_p5i(fobj, pkg_names=pnames, pubs=[pub])
 
                 # Verify that output matches expected output.
@@ -732,7 +732,8 @@ class TestPkgApi(pkg5unittest.SingleDepotTestCase):
                 # when provided a file path.
                 fobj.seek(0)
                 (fd1, path1) = tempfile.mkstemp(dir=self.test_root)
-                os.write(fd1, fobj.read())
+                with open(path1, "w") as f:
+                        f.write(fobj.read())
                 validate_results(api_obj.parse_p5i(location=path1))
 
                 # Verify that parse returns the expected object and information
@@ -764,7 +765,7 @@ class TestPkgApi(pkg5unittest.SingleDepotTestCase):
                 self._api_install(api_obj, ["foo"])
                 api_obj.remove_publisher("bobcat")
                 api_obj.remove_publisher("p5icat")
-                self.assert_(api_obj.get_highest_ranked_publisher().prefix,
+                self.assertTrue(api_obj.get_highest_ranked_publisher().prefix,
                     "bobcat")
 
         def test_deprecated(self):
@@ -860,13 +861,11 @@ class TestPkgApi(pkg5unittest.SingleDepotTestCase):
                 for pd in api_obj.gen_plan_install(["licensed@1.0"]):
                         continue
 
-                def lic_sort(a, b):
-                        adest = a[2]
-                        bdest = b[2]
-                        return cmp(adest.license, bdest.license)
+                def lic_key(item):
+                        return item[2].license
 
                 plan = api_obj.describe()
-                lics = sorted(plan.get_licenses(), cmp=lic_sort)
+                lics = sorted(plan.get_licenses(), key=lic_key)
 
                 # Expect one license action for each package: "licensed", and
                 # its dependency "baz".
@@ -917,7 +916,7 @@ class TestPkgApi(pkg5unittest.SingleDepotTestCase):
                         continue
 
                 plan = api_obj.describe()
-                lics = sorted(plan.get_licenses(), cmp=lic_sort)
+                lics = sorted(plan.get_licenses(), key=lic_key)
 
                 # Expect two license actions, both of which should be for the
                 # licensed@1.2 package.
@@ -967,7 +966,7 @@ class TestPkgApi(pkg5unittest.SingleDepotTestCase):
                 # Set the copyright as having been displayed.
                 api_obj.set_plan_license_status(pfmri, "copyright.licensed",
                     displayed=True)
-                lics = sorted(plan.get_licenses(pfmri=pfmri), cmp=lic_sort)
+                lics = sorted(plan.get_licenses(pfmri=pfmri), key=lic_key)
 
                 # Verify displayed was updated and accepted remains False.
                 dest_fmri, src, dest, accepted, displayed = lics[0]
@@ -1062,7 +1061,7 @@ class TestPkgApi(pkg5unittest.SingleDepotTestCase):
                         continue
                 plan = api_obj.describe()
                 pfmri = fmri.PkgFmri(plist[5])
-                lics = sorted(plan.get_licenses(), cmp=lic_sort)
+                lics = sorted(plan.get_licenses(), key=lic_key)
                 for dest_fmri, src, dest, accepted, displayed in lics:
                         # License information should only be for "licensed@1.4".
                         self.assertEqual(pfmri, dest_fmri)
@@ -1094,3 +1093,6 @@ class TestPkgApi(pkg5unittest.SingleDepotTestCase):
 
 if __name__ == "__main__":
         unittest.main()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

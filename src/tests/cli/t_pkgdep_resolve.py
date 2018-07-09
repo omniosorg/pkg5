@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -20,11 +20,11 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2016, Oracle and/or its affiliates. All rights reserved.
 
-import testutils
+from . import testutils
 if __name__ == "__main__":
-	testutils.setup_environment("../../../proto")
+        testutils.setup_environment("../../../proto")
 import pkg5unittest
 
 import os
@@ -649,24 +649,24 @@ set name=pkg.fmri value=badreq@1,5.11
 depend fmri=pkg://// type=require
 """
                 m1_path = self.make_manifest(bad_require_dep_manf)
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([m1_path], self.api_obj, ["*"])
                 self.assertEqualDiff(set(), unused_fmris)
                 self.assertEqualDiff(set(), external_deps)
                 self.assertEqual(len(errs), 1)
-                self.assert_(isinstance(errs[0],
+                self.assertTrue(isinstance(errs[0],
                     actions.InvalidActionAttributesError))
 
                 bad_require_any_dep_manf = """\
 depend fmri=example_pkg fmri=pkg://////// fmri=pkg://// type=require-any
 """
                 m1_path = self.make_manifest(bad_require_any_dep_manf)
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([m1_path], self.api_obj, ["*"])
                 self.assertEqualDiff(set(), unused_fmris)
                 self.assertEqualDiff(set(), external_deps)
                 self.assertEqual(len(errs), 1)
-                self.assert_(isinstance(errs[0],
+                self.assertTrue(isinstance(errs[0],
                     actions.InvalidActionAttributesError))
 
                 bad_variant = """\
@@ -675,12 +675,12 @@ set name=variant.num value=one value=two
 depend fmri=pkg:/a@0,5.11-1 type=conditional predicate=pkg:/b@2,5.11-1 variant.nn
 """
                 m1_path = self.make_manifest(bad_variant)
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([m1_path], self.api_obj, ["*"])
                 self.assertEqualDiff(set(), unused_fmris)
                 self.assertEqualDiff(set(), external_deps)
                 self.assertEqual(len(errs), 1)
-                self.assert_(isinstance(errs[0],
+                self.assertTrue(isinstance(errs[0],
                     actions.MalformedActionError),
                     "Error was of the type. The type was:{0}. The error "
                     "was:\n:{1}".format(type(errs[0]), errs[0]))
@@ -738,6 +738,10 @@ dependency resolution:
                     ex_path + "foobar", var_fmri_path, empty_path, m1_path),
                     exit=1)
 
+                # Check that if -e points at a directory, no traceback happens.
+                self.pkgdepend_resolve("-e {0} -E -m {1}".format(
+                    self.test_root, m1_path), exit=1)
+
         def test_resolve_permissions(self):
                 """Test that a manifest or constraint file that pkgdepend
                 resolve can't access doesn't cause a traceback."""
@@ -758,7 +762,7 @@ dependency resolution:
                 m2_path = self.make_manifest(self.hardlink2_manf_deps)
                 p1_name = 'pkg:/{0}'.format(os.path.basename(m1_path))
                 p2_name = 'pkg:/{0}'.format(os.path.basename(m2_path))
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([m1_path, m2_path], self.api_obj,
                         ["*"])
                 if errs:
@@ -791,7 +795,7 @@ dependency resolution:
                 p3_name = "pkg:/example2_pkg@1.0-0"
                 p2_name = "pkg:/footest@0.5.11-0.117"
 
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([m1_path, m2_path], self.api_obj,
                         ["*"])
                 self.assertEqualDiff(set(), unused_fmris)
@@ -816,7 +820,7 @@ dependency resolution:
 
                 # Check that with system_patterns set to [], the system is
                 # not resolved against.  Bug 15777
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([m1_path, m2_path], self.api_obj,
                         [])
                 self.assertEqualDiff(set(), unused_fmris)
@@ -857,7 +861,7 @@ dependency resolution:
                 m3_path = self.make_manifest(self.simple_v_deps_baz)
                 p2_name = "s-v-bar"
                 p3_name = "s-v-baz"
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([m1_path, m2_path, m3_path],
                         self.api_obj, ["*"])
                 self.assertEqualDiff(set(), unused_fmris)
@@ -893,7 +897,7 @@ dependency resolution:
                 m3_path = self.make_manifest(self.simple_v_deps_baz2)
                 p2_name = "s-v-bar"
                 p3_name = "s-v-baz"
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([m1_path, m2_path, m3_path],
                         self.api_obj, ["*"])
                 self.assertEqualDiff(set(), unused_fmris)
@@ -928,7 +932,7 @@ dependency resolution:
                 p2_name = "s-v-bar"
                 p3_name = "s-v-baz-one"
                 p4_name = "s-v-baz-two"
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps(
                         [m1_path, m2_path, m3_path, m4_path], self.api_obj,
                         ["*"])
@@ -947,7 +951,7 @@ dependency resolution:
                                 self.assertEqual(
                                     d.attrs["variant.foo"],
                                     "bar")
-                                self.assert_("variant.num" not in d.attrs)
+                                self.assertTrue("variant.num" not in d.attrs)
                         elif d.attrs["fmri"] == "pkg:/s-v-baz-one":
                                 self.assertEqual(
                                     d.attrs["variant.foo"],
@@ -1007,19 +1011,19 @@ dependency resolution:
                 # or only one package which delivers the dependency is being
                 # resolved against.
                 for mf_path in [col_path, col_fullpath_path]:
-                        pkg_deps, errs, unused_fmris, external_deps = \
+                        pkg_deps, errs, warnings, unused_fmris, external_deps = \
                             dependencies.resolve_deps([mf_path, both_path],
                                 self.api_obj, ["*"])
                         __check_results(pkg_deps, errs, unused_fmris,
                             external_deps, "pkg:/sat_both", both_path, mf_path)
 
-                        pkg_deps, errs, unused_fmris, external_deps = \
+                        pkg_deps, errs, warnings, unused_fmris, external_deps = \
                             dependencies.resolve_deps([mf_path, py_path],
                                 self.api_obj, ["*"])
                         __check_results(pkg_deps, errs, unused_fmris,
                             external_deps, "pkg:/sat_py", py_path, mf_path)
 
-                        pkg_deps, errs, unused_fmris, external_deps = \
+                        pkg_deps, errs, warnings, unused_fmris, external_deps = \
                             dependencies.resolve_deps([mf_path, pyc_path],
                                 self.api_obj, ["*"])
                         __check_results(pkg_deps, errs, unused_fmris,
@@ -1028,7 +1032,7 @@ dependency resolution:
                         # This resolution should produce require-any
                         # dependencies because files which satisfy the
                         # dependency are delivered in two packages.
-                        pkg_deps, errs, unused_fmris, external_deps = \
+                        pkg_deps, errs, warnings, unused_fmris, external_deps = \
                             dependencies.resolve_deps([mf_path, py_path, pyc_path],
                                 self.api_obj, ["*"])
                         self.assertEqual(len(pkg_deps), 3)
@@ -1042,11 +1046,12 @@ dependency resolution:
                         self.assertEqual(len(pkg_deps[mf_path]), 1,
                             "Didn't get one dependency:\n{0}".format(
                             "\n".join([str(d) for d in pkg_deps[mf_path]])))
+                        d = pkg_deps[mf_path][0]
                         self.assertEqual(d.attrs["type"], "require-any")
                         self.assertEqual(set(d.attrs["fmri"]),
                             set(["pkg:/sat_py", "pkg:/sat_pyc"]))
 
-                        pkg_deps, errs, unused_fmris, external_deps = \
+                        pkg_deps, errs, warnings, unused_fmris, external_deps = \
                             dependencies.resolve_deps(
                                 [both_path, mf_path, py_path, pyc_path],
                                 self.api_obj, ["*"])
@@ -1062,6 +1067,7 @@ dependency resolution:
                         self.assertEqual(len(pkg_deps[mf_path]), 1,
                             "Didn't get one dependency:\n{0}".format(
                             "\n".join([str(d) for d in pkg_deps[mf_path]])))
+                        d = pkg_deps[mf_path][0]
                         self.assertEqual(d.attrs["type"], "require-any")
                         self.assertEqual(set(d.attrs["fmri"]), set(
                             ["pkg:/sat_py", "pkg:/sat_pyc", "pkg:/sat_both"]))
@@ -1077,7 +1083,7 @@ dependency resolution:
                 m1_path = self.make_manifest(self.simp_manf)
                 p2_name = "pkg:/variant_pkg@1.0-0"
 
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([m1_path], self.api_obj, ["*"])
                 self.assertEqualDiff(set(), unused_fmris)
                 self.assertEqualDiff(set(["variant_pkg"]), external_deps)
@@ -1151,19 +1157,19 @@ dependency resolution:
                 # package delivers both files which could satisfy the dependency
                 # or only one package which delivers the dependency is being
                 # resolved against.
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([col_path, both_path],
                         self.api_obj, ["*"])
                 __check_results(pkg_deps, errs, unused_fmris, external_deps,
                     "pkg:/sat_both", both_path, col_path)
 
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([col_path, bar_path],
                         self.api_obj, ["*"])
                 __check_results(pkg_deps, errs, unused_fmris, external_deps,
                     "pkg:/sat_bar_libc", bar_path, col_path)
 
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([col_path, foo_path],
                         self.api_obj, ["*"])
                 __check_results(pkg_deps, errs, unused_fmris, external_deps,
@@ -1171,7 +1177,7 @@ dependency resolution:
 
                 # This test should also pass because the dependencies will be
                 # variant tagged, just as the file delivery is.
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps(
                         [col_path_num_var, foo_path_num_var, bar_path_num_var],
                         self.api_obj, ["*"])
@@ -1196,7 +1202,7 @@ dependency resolution:
                 # dependency are delivered in two packages.  The other
                 # dependency should be a require dependency with
                 # variant.num=two.
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps(
                     [col_path_num_var, foo_path_num_var_both, bar_path_num_var],
                     self.api_obj, ["*"])
@@ -1224,11 +1230,11 @@ dependency resolution:
                         else:
                                 raise RuntimeError("Unexpected dependency:{0}".format(
                                     d))
-                self.assert_(have_req_any)
-                self.assert_(have_require)
+                self.assertTrue(have_req_any)
+                self.assertTrue(have_require)
 
                 # This resolution should also produce a require-any dependency.
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([col_path, bar_path, foo_path],
                         self.api_obj, ["*"])
                 self.assertEqual(len(pkg_deps), 3)
@@ -1246,7 +1252,7 @@ dependency resolution:
                     set(["pkg:/sat_bar_libc", "pkg:/sat_foo_libc"]))
 
                 # This resolution should also produce a require-any dependency.
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([col_path, bar_path, bar2_path],
                         self.api_obj, ["*"])
                 self.assertEqual(len(pkg_deps), 3)
@@ -1276,7 +1282,7 @@ dependency resolution:
                 manifests = [self.make_manifest(x) for x in
                     (self.newer_double_provides, self.double_deps)]
 
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps(manifests, self.api_obj, ["*"])
 
                 self.assertEqual(len(pkg_deps[manifests[1]]), 1)
@@ -1327,7 +1333,7 @@ dependency resolution:
                 res1_path = self.make_manifest(self.bug_17700_res1)
                 res2_path = self.make_manifest(self.bug_17700_res2)
 
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([dep_path, res1_path, res2_path],
                         self.api_obj, [])
                 self.assertEqualDiff(set(), unused_fmris)
@@ -1345,7 +1351,7 @@ dependency resolution:
                     "pkg:/system/kernel@1.0-1",
                     "pkg:/system/kernel/platform@1.0-1"]))
 
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([dep_path, res1_path, res2_path],
                         self.api_obj, ["*"])
                 self.assertEqual(len(pkg_deps), 3)
@@ -1407,7 +1413,7 @@ depend fmri=pkg1 type=require variant.num=four
 depend fmri=pkg2 type=require variant.foo=bar
 """
                 manf_path = self.make_manifest(dep_manf)
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([manf_path], self.api_obj,
                         [])
                 self.assertEqualDiff(set(), unused_fmris)
@@ -1457,7 +1463,7 @@ depend fmri=pkg2 type=require variant.foo=bar
                 self._api_install(self.api_obj, ["runtime/python-27"])
                 dep_path = self.make_manifest(self.bug_18045_dep)
 
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([dep_path], self.api_obj, ["*"])
                 if errs:
                         raise RuntimeError("Got the following unexpected "
@@ -1468,7 +1474,7 @@ depend fmri=pkg2 type=require variant.foo=bar
                 self.assertEqual(len(pkg_deps), 1)
                 self.assertEqual(len(pkg_deps[dep_path]), 1)
                 self.debug("fmri:{0}".format(pkg_deps[dep_path][0].attrs["fmri"]))
-                self.assert_(pkg_deps[dep_path][0].attrs["fmri"].startswith(
+                self.assertTrue(pkg_deps[dep_path][0].attrs["fmri"].startswith(
                     "pkg:/runtime/python-27@2.7.8-0.161"))
 
         def test_bug_18045_reverse(self):
@@ -1481,7 +1487,7 @@ depend fmri=pkg2 type=require variant.foo=bar
                 self._api_install(self.api_obj, ["runtime/python-27"])
                 dep_path = self.make_manifest(self.bug_18045_dep_reverse)
 
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([dep_path], self.api_obj, ["*"])
                 if errs:
                         raise RuntimeError("Got the following unexpected "
@@ -1492,7 +1498,7 @@ depend fmri=pkg2 type=require variant.foo=bar
                 self.assertEqual(len(pkg_deps), 1)
                 self.assertEqual(len(pkg_deps[dep_path]), 1)
                 self.debug("fmri:{0}".format(pkg_deps[dep_path][0].attrs["fmri"]))
-                self.assert_(pkg_deps[dep_path][0].attrs["fmri"].startswith(
+                self.assertTrue(pkg_deps[dep_path][0].attrs["fmri"].startswith(
                     "pkg:/runtime/python-27@2.7.8-0.161"))
 
         def test_bug_18045_mixed(self):
@@ -1505,7 +1511,7 @@ depend fmri=pkg2 type=require variant.foo=bar
                 self._api_install(self.api_obj, ["runtime/python-27"])
                 dep_path = self.make_manifest(self.bug_18045_dep_mixed)
 
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([dep_path], self.api_obj, ["*"])
                 if errs:
                         raise RuntimeError("Got the following unexpected "
@@ -1516,7 +1522,7 @@ depend fmri=pkg2 type=require variant.foo=bar
                 self.assertEqual(len(pkg_deps), 1)
                 self.assertEqual(len(pkg_deps[dep_path]), 1)
                 self.debug("fmri:{0}".format(pkg_deps[dep_path][0].attrs["fmri"]))
-                self.assert_(pkg_deps[dep_path][0].attrs["fmri"].startswith(
+                self.assertTrue(pkg_deps[dep_path][0].attrs["fmri"].startswith(
                     "pkg:/runtime/python-27@2.7.8-0.161"))
 
         def test_bug_18077(self):
@@ -1555,7 +1561,7 @@ depend fmri=pkg2 type=require variant.foo=bar
                 # Test that a single variant with two values is collapsed
                 # correctly.
                 p_path = self.make_manifest(self.bug_18130_provider_1)
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([d_path, p_path], self.api_obj,
                         [])
                 if errs:
@@ -1569,14 +1575,14 @@ depend fmri=pkg2 type=require variant.foo=bar
                     "of pkgdeps for the dependent package. Deps were:\n{0}".format(
                     "\n".join([str(d) for d in pkg_deps[d_path]])))
                 for k in pkg_deps[d_path][0].attrs:
-                        self.assert_(not k.startswith("variant."), "The "
+                        self.assertTrue(not k.startswith("variant."), "The "
                             "resulting dependency should not contain any "
                             "variants. The action is:\n{0}".format(
                             pkg_deps[d_path][0]))
 
                 # Test that combinations of two variant types works.
                 p_path = self.make_manifest(self.bug_18130_provider_2)
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([d_path, p_path], self.api_obj,
                         [])
                 if errs:
@@ -1594,7 +1600,7 @@ depend fmri=pkg2 type=require variant.foo=bar
                 # right simplification.
                 p_path = self.make_manifest(self.bug_18130_provider_3_1)
                 p2_path = self.make_manifest(self.bug_18130_provider_3_2)
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([d_path, p_path, p2_path],
                         self.api_obj, [])
                 if errs:
@@ -1617,19 +1623,19 @@ depend fmri=pkg2 type=require variant.foo=bar
                                 self.assertEqual(d.attrs[VOZ], "global")
                                 got_prov_2 = True
                         elif d.attrs["fmri"].startswith("pkg:/provider1"):
-                                self.assert_(VA in d.attrs)
+                                self.assertTrue(VA in d.attrs)
                                 if d.attrs[VA] == "i386":
                                         self.assertEqual(d.attrs[VOZ],
                                             "nonglobal")
                                         got_prov_1_i386 = True
                                 else:
                                         self.assertEqual(d.attrs[VA], "sparc")
-                                        self.assert_(VOZ not in d.attrs)
+                                        self.assertTrue(VOZ not in d.attrs)
                                         got_prov_1_sparc = True
                         else:
                                 raise RuntimeError("Unexpected fmri seen:{0}".format(
                                     d))
-                self.assert_(got_prov_2 and got_prov_1_i386 and
+                self.assertTrue(got_prov_2 and got_prov_1_i386 and
                     got_prov_1_sparc, "Got the right number of dependencies "
                     "but missed one of the expected ones. Deps were:\n{0}".format(
                     "\n".join([str(d) for d in pkg_deps[d_path]])))
@@ -1637,7 +1643,7 @@ depend fmri=pkg2 type=require variant.foo=bar
                 # Test that when a variant combination is satisfied, it's
                 # reported as being unresolved.
                 p_path = self.make_manifest(self.bug_18130_provider_3_1)
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([d_path, p_path], self.api_obj,
                         [])
                 self.assertEqualDiff(set(), unused_fmris)
@@ -1652,7 +1658,7 @@ depend fmri=pkg2 type=require variant.foo=bar
                 # Test that variants with 3 values as well as a combination of
                 # three variant types are collapsed correctly.
                 p_path = self.make_manifest(self.bug_18130_provider_4)
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([d_path, p_path], self.api_obj,
                         [])
                 if errs:
@@ -1666,7 +1672,7 @@ depend fmri=pkg2 type=require variant.foo=bar
                     "of pkgdeps for the dependent package. Deps were:\n{0}".format(
                     "\n".join([str(d) for d in pkg_deps[d_path]])))
                 for k in pkg_deps[d_path][0].attrs:
-                        self.assert_(not k.startswith("variant."), "The "
+                        self.assertTrue(not k.startswith("variant."), "The "
                             "resulting dependency should not contain any "
                             "variants. The action is:\n{0}".format(
                             pkg_deps[d_path][0]))
@@ -1675,7 +1681,7 @@ depend fmri=pkg2 type=require variant.foo=bar
                 # another package.
                 p_path = self.make_manifest(self.bug_18130_provider_5_1)
                 p2_path = self.make_manifest(self.bug_18130_provider_5_2)
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([d_path, p_path, p2_path],
                         self.api_obj, [])
                 if errs:
@@ -1701,19 +1707,19 @@ depend fmri=pkg2 type=require variant.foo=bar
                                 self.assertEqual(d.attrs[VD], "False")
                                 got_prov_2 = True
                         elif d.attrs["fmri"].startswith("pkg:/provider1"):
-                                self.assert_(VA in d.attrs)
+                                self.assertTrue(VA in d.attrs)
                                 if d.attrs[VA] == "i386":
-                                        self.assert_(VD not in d.attrs)
-                                        self.assert_(VOZ not in d.attrs)
+                                        self.assertTrue(VD not in d.attrs)
+                                        self.assertTrue(VOZ not in d.attrs)
                                         got_prov_1_i386 = True
                                 elif d.attrs[VA] == "sparc":
-                                        self.assert_(VD not in d.attrs)
-                                        self.assert_(VOZ not in d.attrs)
+                                        self.assertTrue(VD not in d.attrs)
+                                        self.assertTrue(VOZ not in d.attrs)
                                         got_prov_1_sparc = True
                                 else:
                                         self.assertEqual(d.attrs[VA], "foo")
                                         if d.attrs[VD] == "True":
-                                                self.assert_(VOZ not in d.attrs)
+                                                self.assertTrue(VOZ not in d.attrs)
                                                 got_prov_1_foo_debug = True
                                         else:
                                                 self.assertEqual(d.attrs[VD],
@@ -1724,7 +1730,7 @@ depend fmri=pkg2 type=require variant.foo=bar
                         else:
                                 raise RuntimeError("Unexpected fmri seen:{0}".format(
                                     d))
-                self.assert_(got_prov_2 and got_prov_1_i386 and
+                self.assertTrue(got_prov_2 and got_prov_1_i386 and
                     got_prov_1_sparc and got_prov_1_foo_debug and
                     got_prov_1_foo_nondebug_global, "Got the right number "
                     "of dependencies but missed one of the expected ones. "
@@ -1735,7 +1741,7 @@ depend fmri=pkg2 type=require variant.foo=bar
                 # variants are collapsed correctly.
                 p_path = self.make_manifest(self.bug_18130_provider_6_1)
                 p2_path = self.make_manifest(self.bug_18130_provider_6_2)
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([d_path, p_path, p2_path],
                         self.api_obj, [])
                 if errs:
@@ -1754,17 +1760,17 @@ depend fmri=pkg2 type=require variant.foo=bar
                 for d in pkg_deps[d_path]:
                         if d.attrs["fmri"].startswith("pkg:/provider2"):
                                 self.assertEqual(d.attrs[VD], "False")
-                                self.assert_(VOZ not in d.attrs)
-                                self.assert_(VA not in d.attrs)
+                                self.assertTrue(VOZ not in d.attrs)
+                                self.assertTrue(VA not in d.attrs)
                                 got_prov_2 = True
                         else:
-                                self.assert_(d.attrs["fmri"].startswith(
+                                self.assertTrue(d.attrs["fmri"].startswith(
                                     "pkg:/provider1"))
                                 self.assertEqual(d.attrs[VD], "True")
-                                self.assert_(VA not in d.attrs)
-                                self.assert_(VOZ not in d.attrs)
+                                self.assertTrue(VA not in d.attrs)
+                                self.assertTrue(VOZ not in d.attrs)
                                 got_prov_1 = True
-                self.assert_(got_prov_2 and got_prov_1, "Got the right number "
+                self.assertTrue(got_prov_2 and got_prov_1, "Got the right number "
                     "of dependencies but missed one of the expected ones. "
                     "Deps were:\n{0}".format(
                     "\n".join([str(d) for d in pkg_deps[d_path]])))
@@ -1772,7 +1778,7 @@ depend fmri=pkg2 type=require variant.foo=bar
                 # Test that variants won't be combined when they shouldn't be.
                 p_path = self.make_manifest(self.bug_18130_provider_7_1)
                 p2_path = self.make_manifest(self.bug_18130_provider_7_2)
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([d_path, p_path, p2_path],
                         self.api_obj, [])
                 if errs:
@@ -1797,7 +1803,7 @@ depend fmri=pkg2 type=require variant.foo=bar
                 l3_path = self.make_manifest(self.bug_18172_l3)
                 dest_path = self.make_manifest(self.bug_18172_dest)
 
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps(
                         [top_path, l1_path, l2_path, l3_path, dest_path],
                         self.api_obj, [])
@@ -1836,10 +1842,10 @@ depend fmri=pkg2 type=require variant.foo=bar
                         elif pfmri.startswith("pkg:/l2"):
                                 got_l2 = True
                         else:
-                                self.assert_(pfmri.startswith(
+                                self.assertTrue(pfmri.startswith(
                                     "pkg:/l3"))
                                 got_l3 = True
-                self.assert_(got_top and got_l1 and got_l2 and got_l3, "Got "
+                self.assertTrue(got_top and got_l1 and got_l2 and got_l3, "Got "
                     "the right number of dependencies but missed one of the "
                     "expected ones. Deps were:\n{0}".format(
                     "\n".join([str(d) for d in pkg_deps[top_path]])))
@@ -1858,7 +1864,7 @@ depend fmri=pkg2 type=require variant.foo=bar
                 self.api_obj.refresh(immediate=True)
                 self._api_install(self.api_obj, ["cs"])
 
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([cs2_path, ksh_path, zones_path],
                         self.api_obj, ["*"])
                 if errs:
@@ -1878,7 +1884,7 @@ depend fmri=pkg2 type=require variant.foo=bar
                 for d in pkg_deps[zones_path]:
                         pfmri = d.attrs["fmri"]
                         if pfmri.startswith("pkg:/cs"):
-                                self.assert_(pfmri.endswith("-2"))
+                                self.assertTrue(pfmri.endswith("-2"))
                                 self.assertEqual(
                                     d.attrs[dependencies.files_prefix],
                                     ["usr/lib/isaexec"])
@@ -1889,7 +1895,7 @@ depend fmri=pkg2 type=require variant.foo=bar
                                     d.attrs[dependencies.type_prefix], "script")
                                 got_cs2 = True
                         else:
-                                self.assert_(pfmri.startswith(
+                                self.assertTrue(pfmri.startswith(
                                     "pkg:/ksh"))
                                 self.assertEqual(
                                     d.attrs[dependencies.files_prefix],
@@ -1897,7 +1903,7 @@ depend fmri=pkg2 type=require variant.foo=bar
                                 self.assertEqual(
                                     d.attrs[dependencies.type_prefix], "link")
                                 got_ksh = True
-                self.assert_(got_cs2 and got_ksh, "Got the right number "
+                self.assertTrue(got_cs2 and got_ksh, "Got the right number "
                     "of dependencies but missed one of the expected ones. "
                     "Deps were:\n{0}".format(
                     "\n".join([str(d) for d in pkg_deps[zones_path]])))
@@ -1911,7 +1917,7 @@ depend fmri=pkg2 type=require variant.foo=bar
                 der_path = self.make_manifest(self.bug_18315_depender_manf)
                 dee_path = self.make_manifest(self.bug_18315_dependee_manf)
 
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps(
                         [l1_path, l2_path, der_path, dee_path], self.api_obj,
                         [])
@@ -1930,14 +1936,14 @@ depend fmri=pkg2 type=require variant.foo=bar
                     "\n".join([str(d) for d in pkg_deps[der_path]])))
                 for d in pkg_deps[der_path]:
                         if d.attrs["type"] == "require":
-                                self.assert_(d.attrs["fmri"].startswith(
+                                self.assertTrue(d.attrs["fmri"].startswith(
                                     "pkg:/dependee"))
                         else:
                                 self.assertEqual(d.attrs["type"], "require-any")
                                 self.assertEqual(len(d.attrs["fmri"]), 2)
                                 fmri0 = d.attrs["fmri"][0]
                                 fmri1 = d.attrs["fmri"][1]
-                                self.assert_(
+                                self.assertTrue(
                                     (fmri0.startswith("pkg:/link1") and
                                     fmri1.startswith("pkg:/link2")) or
                                     (fmri0.startswith("pkg:/link2") and
@@ -1956,7 +1962,7 @@ depend fmri=pkg2 type=require variant.foo=bar
                 der_path = self.make_manifest(self.bug_18315_var_depender_manf)
                 dee_path = self.make_manifest(self.bug_18315_var_dependee_manf)
 
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([l1_path, l2_path, der_path,
                         dee_path, lv1_path, lv2_path, lv3_path], self.api_obj,
                         [])
@@ -1976,10 +1982,10 @@ depend fmri=pkg2 type=require variant.foo=bar
                 for d in pkg_deps[der_path]:
                         if d.attrs["type"] == "require":
                                 if d.attrs.get("variant.arch", None) == "foo":
-                                        self.assert_(d.attrs["fmri"].startswith(
+                                        self.assertTrue(d.attrs["fmri"].startswith(
                                             "pkg:/link5"))
                                 else:
-                                        self.assert_(d.attrs["fmri"].startswith(
+                                        self.assertTrue(d.attrs["fmri"].startswith(
                                             "pkg:/dependee"))
                                 continue
                         self.assertEqual(d.attrs["type"], "require-any")
@@ -2012,7 +2018,7 @@ depend fmri=link1@1-1 type=require
                 der_path = self.make_manifest(bug_18318_depender_manf)
                 dee_path = self.make_manifest(self.bug_18315_dependee_manf)
 
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps(
                         [l1_path, l2_path, der_path, dee_path], self.api_obj,
                         [])
@@ -2047,7 +2053,7 @@ depend fmri=__TBD pkg.debug.depend.file=libc.so.1 pkg.debug.depend.path=lib/64 p
 """
                 der_path = self.make_manifest(bug_18318_depender_manf)
 
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps(
                         [l1_path, l2_path, der_path, dee_path], self.api_obj,
                         [])
@@ -2085,7 +2091,7 @@ depend fmri=link1 type=require
                 der_path = self.make_manifest(bug_18318_depender_manf)
                 dee_path = self.make_manifest(self.bug_18315_dependee_manf)
 
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps(
                         [l1_path, l2_path, der_path, dee_path], self.api_obj,
                         [])
@@ -2126,7 +2132,7 @@ depend fmri=link1@0.1 type=require
                 der_path = self.make_manifest(bug_18318_depender_manf)
                 dee_path = self.make_manifest(self.bug_18315_dependee_manf)
 
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps(
                         [l1_path, l2_path, der_path, dee_path], self.api_obj,
                         [])
@@ -2176,13 +2182,17 @@ depend fmri=link1@1-1 type=require
                 der_path = self.make_manifest(bug_18318_var_depender_manf)
                 dee_path = self.make_manifest(self.bug_18315_var_dependee_manf)
 
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([l1_path, l2_path,
                         der_path, dee_path, lv1_path, lv2_path, lv3_path],
                         self.api_obj, [])
                 if errs:
                         raise RuntimeError("Got the following unexpected "
                             "errors:\n{0}".format("\n".join(["{0}".format(e) for e in errs])))
+                self.assertEqual(len(warnings), 2)
+                for i in range(len(errs)):
+                        self.assertTrue(isinstance(errs[i],
+                            dependencies.DropPackageWarning))
                 self.assertEqualDiff(set(), unused_fmris)
                 self.assertEqualDiff(set(), external_deps)
                 self.assertEqual(len(pkg_deps), 7)
@@ -2223,7 +2233,7 @@ depend fmri=link1@1-1 type=require variant.arch=sparc
                 der_path = self.make_manifest(bug_18318_var_depender_manf)
                 dee_path = self.make_manifest(self.bug_18315_var_dependee_manf)
 
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([l1_path, l2_path, der_path,
                         dee_path, lv1_path, lv2_path, lv3_path], self.api_obj,
                         [])
@@ -2275,13 +2285,16 @@ depend fmri=link1@1-1 type=require variant.arch=i386
 
                 der_path = self.make_manifest(bug_18318_var_depender_manf)
 
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([l1_path, l2_path, der_path,
                         dee_path, lv1_path, lv2_path, lv3_path], self.api_obj,
                         [])
                 if errs:
                         raise RuntimeError("Got the following unexpected "
                             "errors:\n{0}".format("\n".join(["{0}".format(e) for e in errs])))
+                self.assertEqual(len(warnings), 1)
+                self.assertTrue(isinstance(warnings[0],
+                    dependencies.DropPackageWarning))
                 self.assertEqualDiff(set(), unused_fmris)
                 self.assertEqualDiff(set(), external_deps)
                 self.assertEqual(len(pkg_deps), 7)
@@ -2338,13 +2351,16 @@ file NOHASH path=usr/bin/baz group=sys mode=0600 owner=root
                 der_path = self.make_manifest(bug_18318_var_depender_manf)
                 dee_path = self.make_manifest(self.bug_18315_var_dependee_manf)
 
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([l1_path, l2_path, der_path,
                         dee_path, lv1_path, lv2_path, lv3_path], self.api_obj,
                         [])
                 if errs:
                         raise RuntimeError("Got the following unexpected "
                             "errors:\n{0}".format("\n".join(["{0}".format(e) for e in errs])))
+                self.assertEqual(len(warnings), 1)
+                self.assertTrue(isinstance(warnings[0],
+                    dependencies.DropPackageWarning))
                 self.assertEqualDiff(set(), unused_fmris)
                 self.assertEqualDiff(set(), external_deps)
                 self.assertEqual(len(pkg_deps), 7)
@@ -2369,7 +2385,7 @@ file NOHASH path=usr/bin/baz group=sys mode=0600 owner=root
                                 self.assertEqual(
                                     d.attrs[dependencies.type_prefix], "link")
                         else:
-                                self.assert_(
+                                self.assertTrue(
                                     d.attrs["fmri"].startswith("pkg:/link1"))
                                 self.assertEqual(d.attrs["type"], "require")
                                 self.assertEqual(
@@ -2395,7 +2411,7 @@ link path=usr/lib/64 target=amd64
                 file_path = self.make_manifest(file_manf)
                 link_path = self.make_manifest(link_manf)
 
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([file_path, link_path],
                         self.api_obj, [])
                 if errs:
@@ -2413,8 +2429,8 @@ link path=usr/lib/64 target=amd64
                 self.assertEqual(dep.attrs["type"], "require",
                     "type was {0} instead of require\ndep:{1}".format(
                     dep.attrs["type"], dep))
-                self.assert_("predicate" not in dep.attrs)
-                self.assert_(dep.attrs["fmri"].startswith("pkg:/link1"))
+                self.assertTrue("predicate" not in dep.attrs)
+                self.assertTrue(dep.attrs["fmri"].startswith("pkg:/link1"))
                 self.assertEqual(dep.attrs[self.depend_dp + ".type"], "link")
 
         def test_bug_18884_1(self):
@@ -2452,7 +2468,7 @@ file elfarch=i386 elfbits=32 group=bin mode=0555 owner=root path=usr/lib/isaexec
                 ksh_path = self.make_manifest(ksh_manf)
                 cos_path = self.make_manifest(core_os)
 
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([dep_path, ksh_path, cos_path],
                         self.api_obj, [])
                 if errs:
@@ -2468,10 +2484,10 @@ file elfarch=i386 elfbits=32 group=bin mode=0555 owner=root path=usr/lib/isaexec
                     "Deps were:\n{0}".format(
                     "\n".join([str(d) for d in pkg_deps[dep_path]])))
                 for dep in pkg_deps[dep_path]:
-                        self.assert_("variant.foo" not in dep.attrs, str(dep))
-                        self.assert_("variant.debug.osnet" not in
+                        self.assertTrue("variant.foo" not in dep.attrs, str(dep))
+                        self.assertTrue("variant.debug.osnet" not in
                             dep.attrs, str(dep))
-                        self.assert_("variant.opensolaris.zone" not in
+                        self.assertTrue("variant.opensolaris.zone" not in
                             dep.attrs, str(dep))
 
         def test_bug_18884_2(self):
@@ -2504,7 +2520,7 @@ file elfarch=i386 elfbits=32 group=bin mode=0555 owner=root path=usr/lib/isaexec
                 ksh_path = self.make_manifest(ksh_manf)
                 cos_path = self.make_manifest(core_os)
 
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([dep_path, ksh_path, cos_path],
                         self.api_obj, [])
                 if errs:
@@ -2520,9 +2536,9 @@ file elfarch=i386 elfbits=32 group=bin mode=0555 owner=root path=usr/lib/isaexec
                     "Deps were:\n{0}".format(
                     "\n".join([str(d) for d in pkg_deps[dep_path]])))
                 for dep in pkg_deps[dep_path]:
-                        self.assert_("variant.opensolaris.zone" not in
+                        self.assertTrue("variant.opensolaris.zone" not in
                             dep.attrs, str(dep))
-                        self.assert_("variant.debug.osnet" not in
+                        self.assertTrue("variant.debug.osnet" not in
                             dep.attrs, str(dep))
 
         def test_bug_19009_conditional_collapsing_corner_cases(self):
@@ -2539,7 +2555,7 @@ depend fmri=pkg:/b@1-1 type=require
 """
 
                 manf_path = self.make_manifest(manf)
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([manf_path], self.api_obj, [])
                 self.assertEqualDiff(set(), unused_fmris)
                 self.assertEqualDiff(set(["a", "b"]), external_deps)
@@ -2564,7 +2580,7 @@ depend fmri=pkg:/b@2-1 type=require variant.num=two
 """
 
                 manf_path = self.make_manifest(manf)
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([manf_path], self.api_obj, [])
                 self.assertEqual(len(errs), 0,
                     "\n".join([str(e) for e in errs]))
@@ -2588,18 +2604,18 @@ depend fmri=pkg:/b@2-1 type=require variant.num=two
                                 self.assertEqual(d.attrs["fmri"],
                                     "pkg:/a@0-1")
                                 self.assertEqual(d.attrs["variant.num"], "one")
-                                self.assert_("predicate" in d.attrs)
+                                self.assertTrue("predicate" in d.attrs)
                                 have_uncollapsed_cond = True
                         else:
                                 self.assertEqual(d.attrs["type"], "require")
                                 self.assertEqual(d.attrs["fmri"],
                                     "pkg:/a@0-1")
                                 self.assertEqual(d.attrs["variant.num"], "two")
-                                self.assert_("predicate" not in d.attrs)
+                                self.assertTrue("predicate" not in d.attrs)
                                 have_collapsed_cond = True
-                self.assert_(have_req)
-                self.assert_(have_uncollapsed_cond)
-                self.assert_(have_collapsed_cond)
+                self.assertTrue(have_req)
+                self.assertTrue(have_uncollapsed_cond)
+                self.assertTrue(have_collapsed_cond)
 
                 manf = """
 set name=pkg.fmri value=foo@1.0,5.11-1
@@ -2609,7 +2625,7 @@ depend fmri=pkg:/b@2-1 type=require
 """
 
                 manf_path = self.make_manifest(manf)
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([manf_path], self.api_obj, [])
                 self.assertEqualDiff(set(), unused_fmris)
                 self.assertEqualDiff(set(["a", "b"]), external_deps)
@@ -2629,10 +2645,10 @@ depend fmri=pkg:/b@2-1 type=require
                                 self.assertEqual(d.attrs["fmri"],
                                     "pkg:/a@0-1")
                                 self.assertEqual(d.attrs["variant.num"], "two")
-                                self.assert_("predicate" not in d.attrs)
+                                self.assertTrue("predicate" not in d.attrs)
                                 have_collapsed_cond = True
-                self.assert_(have_req)
-                self.assert_(have_collapsed_cond)
+                self.assertTrue(have_req)
+                self.assertTrue(have_collapsed_cond)
 
                 manf = """
 set name=pkg.fmri value=foo@1.0,5.11-1
@@ -2642,7 +2658,7 @@ depend fmri=pkg:/b@2-1 type=require variant.num=two
 """
 
                 manf_path = self.make_manifest(manf)
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([manf_path], self.api_obj, [])
                 self.assertEqual(len(errs), 0,
                     "\n".join([str(e) for e in errs]))
@@ -2663,10 +2679,10 @@ depend fmri=pkg:/b@2-1 type=require variant.num=two
                                 self.assertEqual(d.attrs["fmri"],
                                     "pkg:/a@0-1")
                                 self.assertEqual(d.attrs["variant.num"], "one")
-                                self.assert_("predicate" in d.attrs)
+                                self.assertTrue("predicate" in d.attrs)
                                 have_uncollapsed_cond = True
-                self.assert_(have_req)
-                self.assert_(have_uncollapsed_cond)
+                self.assertTrue(have_req)
+                self.assertTrue(have_uncollapsed_cond)
 
         def test_bug_19009_collapsing_conditional_to_require_any(self):
                 """Check that conditional dependencies don't get collapsed into
@@ -2684,7 +2700,7 @@ depend fmri=pkg:/b@2-1 type=require
 """
 
                 manf_path = self.make_manifest(manf)
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([manf_path], self.api_obj, [])
                 self.assertEqual(len(errs), 0,
                     "\n".join([str(e) for e in errs]))
@@ -2710,9 +2726,9 @@ depend fmri=pkg:/b@2-1 type=require
                                 self.assertEqual(d.attrs["fmri"],
                                     "pkg:/c@0-1")
                                 have_cond_c = True
-                self.assert_(have_req)
-                self.assert_(have_cond_a)
-                self.assert_(have_cond_c)
+                self.assertTrue(have_req)
+                self.assertTrue(have_cond_a)
+                self.assertTrue(have_cond_c)
 
                 # Check that manually specified conditional dependencies aren't
                 # collapsed into require-any dependencies even if other
@@ -2750,7 +2766,7 @@ file NOHASH group=sys mode=0600 owner=root path=var/log/bar
                 a_path = self.make_manifest(a_manf)
                 b_path = self.make_manifest(b_manf)
                 c_path = self.make_manifest(c_manf)
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps(
                         [manf_path, a_path, b_path, c_path],
                         self.api_obj, [])
@@ -2780,8 +2796,8 @@ file NOHASH group=sys mode=0600 owner=root path=var/log/bar
                                     "pkg:/c@3-1")
                                 have_cond_c = True
                 self.assertEqual(have_req, 2)
-                self.assert_(have_cond_a)
-                self.assert_(have_cond_c)
+                self.assertTrue(have_cond_a)
+                self.assertTrue(have_cond_c)
 
                 # Check that an inferred require-any dependency will not be
                 # removed if the require dependencies in the package are at a
@@ -2813,7 +2829,7 @@ file NOHASH group=sys mode=0600 owner=root path=var/log/bar
                 a_path = self.make_manifest(a_manf)
                 b_path = self.make_manifest(b_manf)
                 c_path = self.make_manifest(c_manf)
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([manf_path, a_path, b_path, c_path],
                         self.api_obj, [])
                 self.assertEqual(len(errs), 0,
@@ -2832,7 +2848,7 @@ file NOHASH group=sys mode=0600 owner=root path=var/log/bar
                         if d.attrs["type"] == "require-any":
                                 self.assertEqual(set(d.attrlist("fmri")),
                                     set(["pkg:/a@2-1", "pkg:/c@2-1"]))
-                                self.assert_("predicate" not in d.attrs)
+                                self.assertTrue("predicate" not in d.attrs)
                                 have_req_any = True
                         elif d.attrs["fmri"].startswith("pkg:/b"):
                                 self.assertEqual(d.attrs["type"], "require")
@@ -2848,9 +2864,9 @@ file NOHASH group=sys mode=0600 owner=root path=var/log/bar
                                     "pkg:/c@0-1")
                                 have_cond_c = True
                 self.assertEqual(have_req, 2)
-                self.assert_(have_cond_a)
-                self.assert_(have_cond_c)
-                self.assert_(have_req_any)
+                self.assertTrue(have_cond_a)
+                self.assertTrue(have_cond_c)
+                self.assertTrue(have_req_any)
 
         def __check_19009_results(self, pkg_deps, errs, paths,
             expected_conditionals, expected_require_any, expected_require,
@@ -2896,7 +2912,7 @@ file NOHASH group=sys mode=0600 owner=root path=var/log/bar
                         elif d.attrs["type"] == "require-any":
                                 found_require_any.add(frozenset(
                                     d.attrs["fmri"]))
-                                self.assert_(len(d.attrlist("fmri")) > 1)
+                                self.assertTrue(len(d.attrlist("fmri")) > 1)
                         elif d.attrs["type"] == "conditional":
                                 found_conditionals.add((d.attrs["fmri"],
                                     d.attrs["predicate"]))
@@ -2938,7 +2954,7 @@ digraph G {
 
                 # Collect the set of package names which should deliver a file.
                 for c in chains:
-                        self.assert_(len(c) > 1)
+                        self.assertTrue(len(c) > 1)
                         end_pfmris.add(c[-1])
                 # If only a single package delivers a file, then a require
                 # dependency is expected.
@@ -3038,7 +3054,7 @@ link path={path} target={target}
                     expected_require = self.__construct_19009_info(chains)
 
                 paths = [self.make_manifest(m) for m in manfs]
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps(paths, self.api_obj, [])
                 self.assertEqualDiff(set(), unused_fmris)
                 self.assertEqualDiff(set(), external_deps)
@@ -3047,7 +3063,7 @@ link path={path} target={target}
                 self.assertEqual(len(errs), 1)
                 err = errs[0]
                 self.assertEqual(len(err.conditionals), 1)
-                self.assert_(isinstance(err,
+                self.assertTrue(isinstance(err,
                     dependencies.NeedConditionalRequireAny))
                 # Check that the exception prints correctly.
                 self.debug(err)
@@ -3067,7 +3083,7 @@ link path={path} target={target}
                     expected_require = self.__construct_19009_info(chains)
 
                 paths = [self.make_manifest(m) for m in manfs]
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps(paths, self.api_obj, [])
                 self.assertEqualDiff(set(), unused_fmris)
                 self.assertEqualDiff(set(), external_deps)
@@ -3076,7 +3092,7 @@ link path={path} target={target}
                 self.assertEqual(len(errs), 1)
                 err = errs[0]
                 self.assertEqual(len(err.conditionals), 1)
-                self.assert_(isinstance(err,
+                self.assertTrue(isinstance(err,
                     dependencies.NeedConditionalRequireAny))
                 # Check that the exception prints correctly.
                 self.debug(err)
@@ -3096,7 +3112,7 @@ link path={path} target={target}
                     expected_require = self.__construct_19009_info(chains)
 
                 paths = [self.make_manifest(m) for m in manfs]
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps(paths, self.api_obj, [])
                 self.assertEqualDiff(set(), unused_fmris)
                 self.assertEqualDiff(set(), external_deps)
@@ -3105,7 +3121,7 @@ link path={path} target={target}
                 self.assertEqual(len(errs), 1)
                 err = errs[0]
                 self.assertEqual(len(err.conditionals), 1)
-                self.assert_(isinstance(err,
+                self.assertTrue(isinstance(err,
                     dependencies.NeedConditionalRequireAny))
                 # Check that the exception prints correctly.
                 self.debug(err)
@@ -3125,7 +3141,7 @@ link path={path} target={target}
                     expected_require = self.__construct_19009_info(chains)
 
                 paths = [self.make_manifest(m) for m in manfs]
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps(paths, self.api_obj, [])
                 self.assertEqualDiff(set(), unused_fmris)
                 self.assertEqualDiff(set(), external_deps)
@@ -3134,7 +3150,7 @@ link path={path} target={target}
                 self.assertEqual(len(errs), 1)
                 err = errs[0]
                 self.assertEqual(len(err.conditionals), 1)
-                self.assert_(isinstance(err,
+                self.assertTrue(isinstance(err,
                     dependencies.NeedConditionalRequireAny))
                 # Check that the exception prints correctly.
                 self.debug(err)
@@ -3154,7 +3170,7 @@ link path={path} target={target}
                     expected_require = self.__construct_19009_info(chains)
 
                 paths = [self.make_manifest(m) for m in manfs]
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps(paths, self.api_obj, [])
                 self.assertEqualDiff(set(), unused_fmris)
                 self.assertEqualDiff(set(), external_deps)
@@ -3163,7 +3179,7 @@ link path={path} target={target}
                 self.assertEqual(len(errs), 1)
                 err = errs[0]
                 self.assertEqual(len(err.conditionals), 1)
-                self.assert_(isinstance(err,
+                self.assertTrue(isinstance(err,
                     dependencies.NeedConditionalRequireAny))
                 # Check that the exception prints correctly.
                 self.debug(err)
@@ -3189,7 +3205,7 @@ link path={path} target={target}
                     "only apply when variant.num is one.")
 
                 paths = [self.make_manifest(m) for m in manfs]
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps(paths, self.api_obj, [])
                 self.assertEqualDiff(set(), unused_fmris)
                 self.assertEqualDiff(set(), external_deps)
@@ -3198,7 +3214,7 @@ link path={path} target={target}
 
                 self.assertEqual(len(errs), 1)
                 err = errs[0]
-                self.assert_(isinstance(err,
+                self.assertTrue(isinstance(err,
                     dependencies.NeedConditionalRequireAny))
                 self.assertEqual(len(err.conditionals), 1)
                 self.assertEqualDiff(sorted(set([
@@ -3232,7 +3248,7 @@ link path={path} target={target}
                     "bar.")
 
                 paths = [self.make_manifest(m) for m in manfs]
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps(paths, self.api_obj, [])
                 self.assertEqualDiff(set(), unused_fmris)
                 self.assertEqualDiff(set(), external_deps)
@@ -3240,7 +3256,7 @@ link path={path} target={target}
                     str(d) for d in pkg_deps[paths[0]]])))
                 self.assertEqual(len(errs), 1)
                 err = errs[0]
-                self.assert_(isinstance(err,
+                self.assertTrue(isinstance(err,
                     dependencies.NeedConditionalRequireAny))
                 self.assertEqual(len(err.conditionals), 1)
                 self.assertEqualDiff(sorted(set([
@@ -3273,7 +3289,7 @@ link path={path} target={target}
                     "only apply when variant.num is one.")
 
                 paths = [self.make_manifest(m) for m in manfs]
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps(paths, self.api_obj, [])
                 self.assertEqualDiff(set(), unused_fmris)
                 self.assertEqualDiff(set(), external_deps)
@@ -3281,7 +3297,7 @@ link path={path} target={target}
                     str(d) for d in pkg_deps[paths[0]]])))
                 self.assertEqual(len(errs), 1)
                 err = errs[0]
-                self.assert_(isinstance(err,
+                self.assertTrue(isinstance(err,
                     dependencies.NeedConditionalRequireAny))
                 self.assertEqual(len(err.conditionals), 1)
                 expected_vars = set([
@@ -3297,7 +3313,7 @@ link path={path} target={target}
 
                 # Check that the exception prints correctly.
                 self.debug(err)
-                self.assert_("variant.foo" not in str(err))
+                self.assertTrue("variant.foo" not in str(err))
 
         def test_bug_19009_no_links_one_variant(self):
                 """Test that resolve correctly handles multiple packages
@@ -3354,7 +3370,7 @@ file group=bin mode=0555 owner=root path=foo
 
                 # Check that one package delivering under all variants and one
                 # delivering under a particular combination works.
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([dep_path, res1_path, res2_path],
                         self.api_obj, [])
                 self.assertEqualDiff(set(), unused_fmris)
@@ -3384,8 +3400,8 @@ file group=bin mode=0555 owner=root path=foo
                         else:
                                 raise RuntimeError("Unexpected dependency:{0}"%
                                     d)
-                self.assert_(have_req_any)
-                self.assert_(have_required)
+                self.assertTrue(have_req_any)
+                self.assertTrue(have_required)
 
                 # Check that three packages each delivering under two of three
                 # variant values works.
@@ -3393,7 +3409,7 @@ file group=bin mode=0555 owner=root path=foo
                 res1_path = self.make_manifest(res1_manf_13)
                 res2_path = self.make_manifest(res2_manf_12)
                 res3_path = self.make_manifest(res3_manf_23)
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps(
                         [dep_path, res1_path, res2_path, res3_path],
                         self.api_obj, [])
@@ -3462,7 +3478,7 @@ file group=bin mode=0555 owner=root path=foo
                 res3_path = self.make_manifest(res3_manf)
 
                 # Check that resolving with two packages works...
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([dep_path, res1_path, res2_path],
                         self.api_obj, [])
                 self.assertEqualDiff(set(), unused_fmris)
@@ -3483,7 +3499,7 @@ file group=bin mode=0555 owner=root path=foo
                     set(["pkg:/res1@1.0", "pkg:/res2@1.0"]))
 
                 # And that three does as well.
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps(
                         [dep_path, res1_path, res2_path, res3_path],
                         self.api_obj, [])
@@ -3528,7 +3544,7 @@ file group=bin mode=0555 owner=root path=foo
                 paths = [
                     self.make_manifest(m) for m in ([new_a_manf] + manfs[1:])
                 ]
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps(paths, self.api_obj, [])
                 self.assertEqualDiff(set(), unused_fmris)
                 self.assertEqualDiff(set(), external_deps)
@@ -3568,7 +3584,7 @@ depend fmri=pkg:/D@2.0 type=require variant.num=one
                 paths = [
                     self.make_manifest(m) for m in ([new_a_manf] + manfs[1:])
                 ]
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps(paths, self.api_obj, [])
                 self.assertEqualDiff(set(), unused_fmris)
                 self.assertEqualDiff(set(), external_deps)
@@ -3630,7 +3646,7 @@ depend fmri=pkg:/F@2.0 type=require variant.num=one
                 paths = [
                     self.make_manifest(m) for m in ([new_a_manf] + manfs[1:])
                 ]
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps(paths, self.api_obj, [])
                 self.assertEqualDiff(set(), unused_fmris)
                 self.assertEqualDiff(set(), external_deps)
@@ -3691,7 +3707,7 @@ depend fmri=pkg:/G@2.0 type=require variant.num=two
                 paths = [
                     self.make_manifest(m) for m in ([new_a_manf] + manfs[1:])
                 ]
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps(paths, self.api_obj, [])
                 self.assertEqualDiff(set(), unused_fmris)
                 self.assertEqualDiff(set(), external_deps)
@@ -3757,7 +3773,7 @@ depend fmri=pkg:/D@2.0 type=require variant.num=one
                 paths = [
                     self.make_manifest(m) for m in ([new_a_manf] + manfs[1:])
                 ]
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps(paths, self.api_obj, [])
                 self.assertEqualDiff(set(), unused_fmris)
                 self.assertEqualDiff(set(), external_deps)
@@ -3788,7 +3804,7 @@ depend fmri=pkg:/D@2.0 type=require variant.num=one
                 for d in deps:
                         if d.attrs["fmri"] in ("pkg:/C@1.0", "pkg:/E@1.0"):
                                 self.assertEqual(d.attrs["type"], "conditional")
-                                self.assert_("variant.num" not in d.attrs)
+                                self.assertTrue("variant.num" not in d.attrs)
                         elif d.attrs["fmri"] == "pkg:/B@1.0":
                                 if d.attrs["type"] == "conditional":
                                         self.assertEqual(
@@ -3813,7 +3829,7 @@ depend fmri=pkg:/D@2.0 type=require variant.num=one
                                 self.assertEqual(d.attrs["type"], "require-any")
                                 self.assertEqual(set(d.attrs["fmri"]),
                                     set(["pkg:/F@1.0", "pkg:/G@1.0"]))
-                                self.assert_("variant.num" not in d.attrs)
+                                self.assertTrue("variant.num" not in d.attrs)
 
         def test_bug_19009_remove_paths_6(self):
                 """Test that when a require dependency on the middle of a
@@ -3838,7 +3854,7 @@ depend fmri=pkg:/D@2.0 type=require
                 paths = [
                     self.make_manifest(m) for m in ([new_a_manf] + manfs[1:])
                 ]
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps(paths, self.api_obj, [])
                 self.assertEqualDiff(set(), unused_fmris)
                 self.assertEqualDiff(set(), external_deps)
@@ -3869,18 +3885,18 @@ depend fmri=pkg:/D@2.0 type=require
                 for d in deps:
                         if d.attrs["fmri"] in ("pkg:/C@1.0", "pkg:/E@1.0"):
                                 self.assertEqual(d.attrs["type"], "conditional")
-                                self.assert_("variant.num" not in d.attrs)
+                                self.assertTrue("variant.num" not in d.attrs)
                         elif d.attrs["fmri"] == "pkg:/B@1.0":
                                 self.assertEqual(d.attrs["type"], "require")
-                                self.assert_("variant.num" not in d.attrs)
+                                self.assertTrue("variant.num" not in d.attrs)
                         elif d.attrs["fmri"] == "pkg:/D@2.0":
                                 self.assertEqual(d.attrs["type"], "require")
-                                self.assert_("variant.num" not in d.attrs)
+                                self.assertTrue("variant.num" not in d.attrs)
                         else:
                                 self.assertEqual(d.attrs["type"], "require-any")
                                 self.assertEqual(set(d.attrs["fmri"]),
                                     set(["pkg:/F@1.0", "pkg:/G@1.0"]))
-                                self.assert_("variant.num" not in d.attrs)
+                                self.assertTrue("variant.num" not in d.attrs)
 
         def test_bug_19009_simple_1(self):
                 """Check that resolve infers the correct dependencies when more
@@ -3896,7 +3912,7 @@ depend fmri=pkg:/D@2.0 type=require
                     expected_require = self.__construct_19009_info(chains)
 
                 paths = [self.make_manifest(m) for m in manfs]
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps(paths, self.api_obj, [])
                 self.assertEqualDiff(set(), unused_fmris)
                 self.assertEqualDiff(set(), external_deps)
@@ -3919,7 +3935,7 @@ depend fmri=pkg:/D@2.0 type=require
                     expected_require = self.__construct_19009_info(chains)
 
                 paths = [self.make_manifest(m) for m in manfs]
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps(paths, self.api_obj, [])
                 self.assertEqualDiff(set(), unused_fmris)
                 self.assertEqualDiff(set(), external_deps)
@@ -3941,7 +3957,7 @@ depend fmri=pkg:/D@2.0 type=require
                     expected_require = self.__construct_19009_info(chains)
 
                 paths = [self.make_manifest(m) for m in manfs]
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps(paths, self.api_obj, [])
                 self.assertEqualDiff(set(), unused_fmris)
                 self.assertEqualDiff(set(), external_deps)
@@ -3963,7 +3979,7 @@ depend fmri=pkg:/D@2.0 type=require
                     expected_require = self.__construct_19009_info(chains)
 
                 paths = [self.make_manifest(m) for m in manfs]
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps(paths, self.api_obj, [])
                 self.assertEqualDiff(set(), unused_fmris)
                 self.assertEqualDiff(set(), external_deps)
@@ -3986,7 +4002,7 @@ depend fmri=pkg:/D@2.0 type=require
                     expected_require = self.__construct_19009_info(chains)
 
                 paths = [self.make_manifest(m) for m in manfs]
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps(paths, self.api_obj, [])
                 self.assertEqualDiff(set(), unused_fmris)
                 self.assertEqualDiff(set(), external_deps)
@@ -4008,7 +4024,7 @@ depend fmri=pkg:/D@2.0 type=require
                     expected_require = self.__construct_19009_info(chains)
 
                 paths = [self.make_manifest(m) for m in manfs]
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps(paths, self.api_obj, [])
                 self.assertEqualDiff(set(), unused_fmris)
                 self.assertEqualDiff(set(), external_deps)
@@ -4060,7 +4076,7 @@ link path=f2 target=g2
 
                 manfs = [a_manf, b_manf, c_manf, d_manf, e_manf, f_manf, g_manf]
                 paths = [self.make_manifest(m) for m in manfs]
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps(paths, self.api_obj, [])
                 self.assertEqualDiff(set(), unused_fmris)
                 self.assertEqualDiff(set(), external_deps)
@@ -4079,7 +4095,7 @@ link path=f2 target=g2
                 manfs = [a_req_d_manf, b_manf, c_manf, d_manf, e_manf, f_manf,
                     g_manf]
                 paths = [self.make_manifest(m) for m in manfs]
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps(paths, self.api_obj, [])
                 self.assertEqualDiff(set(), unused_fmris)
                 self.assertEqualDiff(set(), external_deps)
@@ -4097,7 +4113,7 @@ link path=f2 target=g2
                 manfs = [a_req_g_manf, b_manf, c_manf, d_manf, e_manf, f_manf,
                     g_manf]
                 paths = [self.make_manifest(m) for m in manfs]
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps(paths, self.api_obj, [])
                 self.assertEqualDiff(set(), unused_fmris)
                 self.assertEqualDiff(set(), external_deps)
@@ -4115,7 +4131,7 @@ link path=f2 target=g2
                 manfs = [a_req_e_manf, b_manf, c_manf, d_manf, e_manf, f_manf,
                     g_manf]
                 paths = [self.make_manifest(m) for m in manfs]
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps(paths, self.api_obj, [])
                 self.assertEqualDiff(set(), unused_fmris)
                 self.assertEqualDiff(set(), external_deps)
@@ -4136,12 +4152,12 @@ set name=pkg.fmri value=foo@1.0,5.11-1
 depend fmri=pkg:/a@0-1 type=conditional
 """
                 manf_path = self.make_manifest(manf)
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([manf_path], self.api_obj, [])
                 self.assertEqualDiff(set(), unused_fmris)
                 self.assertEqualDiff(set(), external_deps)
                 self.assertEqual(len(errs), 1)
-                self.assert_(isinstance(errs[0],
+                self.assertTrue(isinstance(errs[0],
                     actions.InvalidActionAttributesError))
 
                 manf = """
@@ -4149,13 +4165,166 @@ set name=pkg.fmri value=foo@1.0,5.11-1
 depend fmri=pkg:/a@0-1 type=conditionalpredicate
 """
                 manf_path = self.make_manifest(manf)
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps([manf_path], self.api_obj, [])
                 self.assertEqualDiff(set(), unused_fmris)
                 self.assertEqualDiff(set(), external_deps)
                 self.assertEqual(len(errs), 1)
-                self.assert_(isinstance(errs[0], actions.InvalidActionError))
+                self.assertTrue(isinstance(errs[0], actions.InvalidActionError))
 
-                
+        def test_duplicate_require_any(self):
+                """Test that when one require-any dependency is the subset of
+                the other require-any dependency, the superset is omitted."""
+
+                manf = """
+set name=pkg.fmri value=foo@1.0,5.11-1
+set name=variant.foo value=i386
+file NOHASH group=bin mode=0755 owner=root path=usr/bin/perl_app
+depend fmri=__TBD pkg.debug.depend.file=perl pkg.debug.depend.path=usr/bin pkg.debug.depend.reason=usr/bin/perl_app pkg.debug.depend.type=script type=require
+depend fmri=__TBD pkg.debug.depend.file=perl pkg.debug.depend.path=usr/perl5/bin pkg.debug.depend.reason=usr/bin/perl_app pkg.debug.depend.type=script type=require
+"""
+
+                manual_dep = """
+depend fmri=pkg:/perl-512@5.12.5-1 fmri=pkg:/perl-516@5.16.3-1 fmri=pkg:/perl-520@5.20.1-1 type=require-any
+"""
+                perl512_manf = """
+set name=pkg.fmri value=pkg:/perl-512@5.12.5-1
+set name=variant.foo value=i386
+file tmp/foo group=bin mode=0755 owner=root path=usr/perl5/5.12/bin/perl
+link path=usr/bin/perl target=../perl5/5.12/bin/perl
+link path=usr/perl5/bin target=5.12/bin
+"""
+                # perl-516 doesn't deliver the link points to usr/perl5/bin,
+                # which trigger this bug
+                perl516_manf = """
+set name=pkg.fmri value=pkg:/perl-516@5.16.3-1
+set name=variant.foo value=i386
+file tmp/foo group=bin mode=0755 owner=root path=usr/perl5/5.16/bin/perl
+link path=usr/bin/perl target=../perl5/5.16/bin/perl
+"""
+                perl520_manf = """
+set name=pkg.fmri value=pkg:/perl-520@5.20.1-1
+set name=variant.foo value=i386
+file tmp/foo group=bin mode=0755 owner=root path=usr/perl5/5.20/bin/perl
+link path=usr/bin/perl target=../perl5/5.20/bin/perl
+link path=usr/perl5/bin target=5.20/bin
+"""
+                dep_path = self.make_manifest(manf)
+                perl512_path = self.make_manifest(perl512_manf)
+                perl516_path = self.make_manifest(perl516_manf)
+                perl520_path = self.make_manifest(perl520_manf)
+                p1_name = "pkg:/perl-512@5.12.5-1"
+                p2_name = "pkg:/perl-516@5.16.3-1"
+                p3_name = "pkg:/perl-520@5.20.1-1"
+
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
+                    dependencies.resolve_deps([dep_path, perl512_path,
+                    perl516_path, perl520_path], self.api_obj, [])
+                if errs:
+                        raise RuntimeError("Got the following unexpected "
+                            "errors:\n{0}".format("\n".join(["{0}".format(e)
+                            for e in errs])))
+                # Verify that a warning is emitted.
+                self.assertEqual(len(warnings), 1)
+                self.assertTrue(isinstance(warnings[0],
+                    dependencies.DropPackageWarning))
+                self.assertEqualDiff(set(), unused_fmris)
+                self.assertEqualDiff(set(), external_deps)
+                self.assertEqual(len(pkg_deps), 4)
+                # Ensure that only one require-any dependency is in the result.
+                self.assertEqual(len(pkg_deps[dep_path]), 1)
+                # Check that the subset is selected; the superset is omitted.
+                fmris = []
+                for f in pkg_deps[dep_path][0].attrs["fmri"]:
+                        fmris.append(f)
+                assert p1_name in fmris and p3_name in fmris
+
+                # Verify that pkgdep resolve doesn't exit with error code 1.
+                self.pkgdepend_resolve("{0} {1} {2} {3}".format(
+                    dep_path, perl512_path, perl516_path, perl520_path))
+
+                # Test that if a developer add a require-any dependency of
+                # their own, we won't omit it.
+                manual_path = self.make_manifest(manf + manual_dep)
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
+                    dependencies.resolve_deps([manual_path, perl512_path,
+                    perl516_path, perl520_path], self.api_obj, [])
+                self.assertEqualDiff(set(), unused_fmris)
+                self.assertEqualDiff(set(), external_deps)
+                self.assertEqual(len(pkg_deps), 4)
+                # Ensure the custom require-any dependency is in the result.
+                self.assertEqual(len(pkg_deps[manual_path]), 2)
+                fmris = []
+                for f in pkg_deps[manual_path][0].attrs["fmri"]:
+                        fmris.append(f)
+                assert p1_name in fmris and p2_name in fmris and p3_name in fmris
+
+                # Test that when one require-any dependency has the fmris that
+                # is a subset of the other require-any dependency's fmris,
+                # but if they are under different variant combinations, then the
+                # first dependency is not treated as a subset, therefore the
+                # superset could not be omitted.
+
+                manf = """
+set name=pkg.fmri value=foo@1.0,5.11-1
+set name=variant.foo value=a value=b
+file NOHASH group=bin mode=0755 owner=root path=usr/bin/perl_app
+depend fmri=__TBD pkg.debug.depend.file=perl pkg.debug.depend.path=usr/bin pkg.debug.depend.reason=usr/bin/perl_app pkg.debug.depend.type=script type=require variant.foo=a
+depend fmri=__TBD pkg.debug.depend.file=perl pkg.debug.depend.path=usr/perl5/bin pkg.debug.depend.reason=usr/bin/perl_app pkg.debug.depend.type=script type=require variant.foo=b
+"""
+                perl512_manf = """
+set name=pkg.fmri value=pkg:/perl-512@5.12.5-1
+set name=variant.foo value=a value=b
+file tmp/foo group=bin mode=0755 owner=root path=usr/perl5/5.12/bin/perl variant.foo=a variant.foo=b
+link path=usr/bin/perl target=../perl5/5.12/bin/perl
+link path=usr/perl5/bin target=5.12/bin
+"""
+                perl516_manf = """
+set name=pkg.fmri value=pkg:/perl-516@5.16.3-1
+set name=variant.foo value=a value=b
+file tmp/foo group=bin mode=0755 owner=root path=usr/perl5/5.16/bin/perl variant.foo=a variant.foo=b
+link path=usr/bin/perl target=../perl5/5.16/bin/perl
+"""
+                perl520_manf = """
+set name=pkg.fmri value=pkg:/perl-520@5.20.1-1
+set name=variant.foo value=a value=b
+file tmp/foo group=bin mode=0755 owner=root path=usr/perl5/5.20/bin/perl variant.foo=a variant.foo=b
+link path=usr/bin/perl target=../perl5/5.20/bin/perl
+link path=usr/perl5/bin target=5.20/bin
+"""
+                dep_path = self.make_manifest(manf)
+                perl512_path = self.make_manifest(perl512_manf)
+                perl516_path = self.make_manifest(perl516_manf)
+                perl520_path = self.make_manifest(perl520_manf)
+
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
+                    dependencies.resolve_deps([dep_path, perl512_path,
+                    perl516_path, perl520_path], self.api_obj, [])
+                if errs:
+                        raise RuntimeError("Got the following unexpected "
+                            "errors:\n{0}".format("\n".join([
+                            "{0}".format(e,) for e in errs])))
+                self.assertEqualDiff(set(), unused_fmris)
+                self.assertEqualDiff(set(), external_deps)
+                self.assertEqual(len(pkg_deps), 4)
+                # Ensure that two require-any dependencies are in the result.
+                self.assertEqual(len(pkg_deps[dep_path]), 2)
+                for d in pkg_deps[dep_path]:
+                        if d.attrs["variant.foo"] == "a":
+                                self.assertTrue(p1_name in d.attrs["fmri"])
+                                self.assertTrue(p2_name in d.attrs["fmri"])
+                                self.assertTrue(p3_name in d.attrs["fmri"])
+                        elif d.attrs["variant.foo"] == "b":
+                                self.assertTrue(p1_name in d.attrs["fmri"])
+                                self.assertTrue(p3_name in d.attrs["fmri"])
+
+                # Verify that a warning is not emitted.
+                self.pkgdepend_resolve("{0} {1} {2} {3}".format(
+                    dep_path, perl512_path, perl516_path, perl520_path))
+                self.assertTrue("WARNING: dropping dependency" not in self.output)
+
 if __name__ == "__main__":
         unittest.main()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,13 +21,14 @@
 #
 
 #
-# Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 # basic variant support
 
 import copy
 import itertools
+import six
 import types
 
 from collections import namedtuple
@@ -80,7 +81,11 @@ class _Variants(dict):
                 self.__keyset = set()
                 dict.clear(self)
 
-_Variants.allow_action = types.MethodType(_allow_variant, None, _Variants)
+        if six.PY3:
+                def allow_action(self, action, publisher=None):
+                        return _allow_variant(self, action, publisher=publisher)
+if six.PY2:
+        _Variants.allow_action = types.MethodType(_allow_variant, None, _Variants)
 
 
 class Variants(_Variants):
@@ -295,6 +300,8 @@ class VariantCombinations(object):
         def __ne__(self, other):
                 return not self.__eq__(other)
 
+        __hash__ = object.__hash__
+
         def is_empty(self):
                 """Returns whether self was created with any potential variant
                 values."""
@@ -482,7 +489,14 @@ class VariantCombinations(object):
                 while keep_going:
                         keep_going = False
                         # For each variant type ...
-                        for variant_name in self.__simpl_template:
+                        # Sort to ensure variant_name is being visited in a
+                        # reversed aliphatic order so that the logic below can
+                        # get a deterministic simplified variant combination
+                        # between Python 2 and 3.
+                        # For example, "variant.opensolaris.zone" should be
+                        # visited before "variant.arch".
+                        for variant_name in sorted(self.__simpl_template,
+                            reverse=True):
                                 def exclude_name(item):
                                         return [
                                             (k, v) for k, v in item
@@ -556,3 +570,6 @@ class VariantCombinations(object):
         def __repr__(self):
                 return "VC Sat:{0} Unsat:{1}".format(sorted(self.__sat_set),
                     sorted(self.__not_sat_set))
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

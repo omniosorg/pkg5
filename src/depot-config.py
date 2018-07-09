@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 import errno
@@ -32,6 +32,7 @@ import logging
 import os
 import re
 import shutil
+import six
 import simplejson as json
 import socket
 import sys
@@ -102,11 +103,7 @@ DEPOT_USER = "pkg5srv"
 DEPOT_GROUP = "pkg5srv"
 
 class DepotException(Exception):
-        def __unicode__(self):
-        # To workaround python issues 6108 and 2517, this provides a
-        # a standard wrapper for this class' exceptions so that they
-        # have a chance of being stringified correctly.
-                return str(self)
+        pass
 
 
 def error(text, cmd=None):
@@ -287,16 +284,17 @@ def _write_httpd_conf(pubs, default_pubs, runtime_dir, log_dir, template_dir,
                 # passthrough any filesystem path names, whatever the
                 # original encoding.
                 conf_lookup = TemplateLookup(directories=[template_dir])
+                disable_unicode = True if six.PY2 else False
                 if fragment:
                         conf_template = Template(
                             filename=fragment_conf_template_path,
-                            disable_unicode=True, lookup=conf_lookup)
+                            disable_unicode=disable_unicode, lookup=conf_lookup)
                         conf_path = os.path.join(runtime_dir,
                             DEPOT_FRAGMENT_FILENAME)
                 else:
                         conf_template = Template(
                             filename=httpd_conf_template_path,
-                            disable_unicode=True, lookup=conf_lookup)
+                            disable_unicode=disable_unicode, lookup=conf_lookup)
                         conf_path = os.path.join(runtime_dir,
                             DEPOT_HTTP_FILENAME)
 
@@ -318,15 +316,17 @@ def _write_httpd_conf(pubs, default_pubs, runtime_dir, log_dir, template_dir,
                     ssl_cert_chain_file=ssl_cert_chain_file
                 )
 
-                with file(conf_path, "wb") as conf_file:
+                with open(conf_path, "w") as conf_file:
                         conf_file.write(conf_text)
 
-        except socket.gaierror as err:
+        except (socket.gaierror, UnicodeError) as err:
+                # socket.getaddrinfo raise UnicodeDecodeError in Python 3
+                # for some input, such as '.'
                 raise DepotException(
                     _("Unable to write Apache configuration: {host}: "
                     "{err}").format(**locals()))
         except (OSError, IOError, EnvironmentError, apx.ApiException) as err:
-                traceback.print_exc(err)
+                traceback.print_exc()
                 raise DepotException(
                     _("Unable to write depot_httpd.conf: {0}").format(err))
 
@@ -338,7 +338,7 @@ def _write_versions_response(htdocs_path, fragment=False):
                     *DEPOT_VERSIONS_DIRNAME)
                 misc.makedirs(versions_path)
 
-                with file(os.path.join(versions_path, "index.html"), "w") as \
+                with open(os.path.join(versions_path, "index.html"), "w") as \
                     versions_file:
                         versions_file.write(
                             fragment and DEPOT_FRAGMENT_VERSIONS_STR or
@@ -361,7 +361,7 @@ def _write_publisher_response(pubs, htdocs_path, repo_prefix):
                             os.path.sep.join(
                                [repo_prefix, pub.prefix] + DEPOT_PUB_DIRNAME))
                         misc.makedirs(pub_path)
-                        with file(os.path.join(pub_path, "index.html"), "w") as\
+                        with open(os.path.join(pub_path, "index.html"), "w") as\
                             pub_file:
                                 p5i.write(pub_file, [pub])
 
@@ -369,7 +369,7 @@ def _write_publisher_response(pubs, htdocs_path, repo_prefix):
                 pub_path = os.path.join(htdocs_path,
                     os.path.sep.join([repo_prefix] + DEPOT_PUB_DIRNAME))
                 os.makedirs(pub_path)
-                with file(os.path.join(pub_path, "index.html"), "w") as \
+                with open(os.path.join(pub_path, "index.html"), "w") as \
                     pub_file:
                         p5i.write(pub_file, pub_objs)
 
@@ -383,7 +383,7 @@ def _write_status_response(status, htdocs_path, repo_prefix):
                 status_path = os.path.join(htdocs_path, repo_prefix,
                     os.path.sep.join(DEPOT_STATUS_DIRNAME), "index.html")
                 misc.makedirs(os.path.dirname(status_path))
-                with file(status_path, "w") as status_file:
+                with open(status_path, "w") as status_file:
                         status_file.write(json.dumps(status, ensure_ascii=False,
                             indent=2, sort_keys=True))
         except OSError as err:
@@ -445,17 +445,18 @@ def _createCertificateKey(serial, CN, starttime, endtime,
 
         # If there is a issuer key, sign with that key. Otherwise,
         # create a self-signed cert.
+        # Cert requires bytes.
         if issuerKey:
-                cert.add_extensions([X509Extension("basicConstraints", True,
-                    "CA:FALSE")])
+                cert.add_extensions([X509Extension(b"basicConstraints", True,
+                    b"CA:FALSE")])
                 cert.sign(issuerKey, digest)
         else:
-                cert.add_extensions([X509Extension("basicConstraints", True,
-                    "CA:TRUE")])
+                cert.add_extensions([X509Extension(b"basicConstraints", True,
+                    b"CA:TRUE")])
                 cert.sign(key, digest)
-        with open(dump_cert_path, "w") as f:
+        with open(dump_cert_path, "wb") as f:
                 f.write(dump_certificate(FILETYPE_PEM, cert))
-        with open(dump_key_path, "w") as f:
+        with open(dump_key_path, "wb") as f:
                 f.write(dump_privatekey(FILETYPE_PEM, key))
         return (cert, key)
 
@@ -987,6 +988,9 @@ if __name__ == "__main__":
 
         # Make all warnings be errors.
         warnings.simplefilter('error')
+        if six.PY3:
+                # disable ResourceWarning: unclosed file
+                warnings.filterwarnings("ignore", category=ResourceWarning)
 
         __retval = handle_errors(main_func)
         try:
@@ -995,3 +999,6 @@ if __name__ == "__main__":
                 # Ignore python's spurious pipe problems.
                 pass
         sys.exit(__retval)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

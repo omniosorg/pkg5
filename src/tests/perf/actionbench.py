@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -28,6 +28,7 @@
 # actionbench - benchmark action creation
 #
 
+from __future__ import division
 from __future__ import print_function
 
 import pkg.actions as actions
@@ -49,7 +50,7 @@ if __name__ == "__main__":
                 try:
                         t = timeit.Timer(str1, setup1).timeit(n)
                         print("{0:>20f}  {1:>8d} actions/sec".format(t,
-                            int(round(n / t))))
+                            int(n // t)))
                 except KeyboardInterrupt:
                         import sys
                         sys.exit(0)
@@ -60,46 +61,70 @@ a2 = actions.fromstr("dir group=bin mode=0755 owner=root path=usr/lib/libzonecfg
         """
 
         n = 520000
-        str2 = "cmp(a1, a2)"
+        str2 = "a1 == a2"
 
         print("action comparison")
+        print("\tequality")
         for i in (1, 2, 3):
 
                 try:
                         t = timeit.Timer(str2, setup2).timeit(n)
                         print("{0:>20f}  {1:>8d} action comparisons/sec".format(t,
-                            int(round(n / t))))
+                            int(n // t)))
                 except KeyboardInterrupt:
                         import sys
                         sys.exit(0)
 
+        str2 = "a1 > a2"
+        print("\tgt")
+        for i in (1, 2, 3):
 
-        print("minimalist comparison")
+                try:
+                        t = timeit.Timer(str2, setup2).timeit(n)
+                        print("{0:>20f}  {1:>8d} action comparisons/sec".format(t,
+                            int(n // t)))
+                except KeyboardInterrupt:
+                        import sys
+                        sys.exit(0)
+
+        str2 = "a1 < a2"
+        print("\tlt")
+        for i in (1, 2, 3):
+
+                try:
+                        t = timeit.Timer(str2, setup2).timeit(n)
+                        print("{0:>20f}  {1:>8d} action comparisons/sec".format(t,
+                            int(n // t)))
+                except KeyboardInterrupt:
+                        import sys
+                        sys.exit(0)
+
+        print("minimalist comparison equality")
 
         setup3 = """
 class superc(object):
-        def __cmp__(a, b):
-                return cmp(a.ordinality, b.ordinality)
+        def __lt__(a, b):
+                return a.ordinality == b.ordinality
 
 class aa(superc):
         def __init__(self):
-                self.ordinality = 1    
-                
+                self.ordinality = 1
+
 class bb(superc):
         def __init__(self):
                 self.ordinality = 2
-                
+
 a = aa()
 b = bb()
         """
 
-        str3 = "cmp(a, b)"
+        str3 = "a == b"
         for i in (1, 2, 3):
 
                 try:
                         t = timeit.Timer(str3, setup3).timeit(n)
                         print("{0:>20f}  {1:>8d} comparisons/sec".format(t,
-                            int(round(n / t))))
+                            int(n // t)))
                 except KeyboardInterrupt:
                         import sys
                         sys.exit(0)
@@ -118,7 +143,7 @@ a1 = actions.fromstr("file 1234 group=bin mode=0755 owner=root path=usr/lib/libz
                 try:
                         t = timeit.Timer(str4, setup4).timeit(n)
                         print("{0:>20f}  {1:>8d} actions to string/sec".format(t,
-                            int(round(n / t))))
+                            int(n // t)))
                 except KeyboardInterrupt:
                         import sys
                         sys.exit(0)
@@ -191,7 +216,7 @@ license f9562cfd7500134682a60f6d9d6dc256902917c8 license=SUNWzoner.copyright pat
 """
 
         n = 1000
-        
+
         str5="""
 mf = manifest.Manifest()
 mf.set_content(m)
@@ -203,7 +228,7 @@ mf.set_content(m)
 
                         t = timeit.Timer(str5, setup5).timeit(n)
                         print("{0:>20f} {1:>8d} manifest contents loads/sec ({2:d} actions/sec)".format(
-                            t, int(round(n / t)), int(round((n * 60) / t))))
+                            t, int(n // t), int((n * 60) // t)))
 
                 n = 1000000
                 str6 = "id(a1)"
@@ -212,7 +237,10 @@ mf.set_content(m)
 
                         t = timeit.Timer(str6, setup4).timeit(n)
                         print("{0:>20f} {1:>8d} calls to id(action) /sec".format(t,
-                            int(round(n / t))))
+                            int(n // t)))
         except KeyboardInterrupt:
                 import sys
                 sys.exit(0)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 # Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008 Python Software
 # Foundation; All Rights Reserved
 #
@@ -24,3 +24,6 @@ def choose(names, pat, case_sensitive):
                 if match(name):
                         result.append(name)
         return result
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

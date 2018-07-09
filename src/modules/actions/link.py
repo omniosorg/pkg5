@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 """module describing a (symbolic) link packaging object
@@ -31,9 +31,10 @@ packaging object."""
 
 import errno
 import os
+import six
 import stat
 
-import generic
+from . import generic
 import pkg.actions
 import pkg.mediator as med
 
@@ -116,7 +117,7 @@ class LinkAction(generic.Action):
                 if "mediator" in self.attrs:
                         rval.extend(
                             (self.name, k, v, None)
-                            for k, v in self.attrs.iteritems()
+                            for k, v in six.iteritems(self.attrs)
                             if k.startswith("mediator")
                         )
                 return rval
@@ -191,3 +192,6 @@ class LinkAction(generic.Action):
                 if errors:
                         raise pkg.actions.InvalidActionAttributesError(self,
                             errors, fmri=fmri)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

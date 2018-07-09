@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 import errno
@@ -29,6 +29,7 @@ import getopt
 import gettext
 import locale
 import os
+import six
 import sys
 import traceback
 import warnings
@@ -184,7 +185,7 @@ def generate(args):
                 return 1
 
         if echo_manf:
-                fh = open(manf, "rb")
+                fh = open(manf, "r")
                 for l in fh:
                         msg(l.rstrip())
                 fh.close()
@@ -192,7 +193,7 @@ def generate(args):
         for d in sorted(ds):
                 msg(d)
 
-        for key, value in pkg_attrs.iteritems():
+        for key, value in six.iteritems(pkg_attrs):
                 msg(actions.attribute.AttributeAction(**{key: value}))
 
         if show_missing:
@@ -282,14 +283,14 @@ def resolve(args, img_dir):
                 system_patterns = []
                 for f in constraint_files:
                         try:
-                                with open(f, "rb") as fh:
+                                with open(f, "r") as fh:
                                         for l in fh:
                                                 l = l.strip()
                                                 if l and not l.startswith("#"):
                                                         system_patterns.append(
                                                             l)
                         except EnvironmentError as e:
-                                if e.errno == errno.ENOENT:
+                                if e.errno in (errno.ENOENT, errno.EISDIR):
                                         error("{0}: '{1}'".format(
                                             e.args[1], e.filename),
                                             cmd="resolve")
@@ -329,7 +330,7 @@ def resolve(args, img_dir):
                 return 1
 
         try:
-                pkg_deps, errs, unused_fmris, external_deps = \
+                pkg_deps, errs, warnings, unused_fmris, external_deps = \
                     dependencies.resolve_deps(manifest_paths, api_inst,
                         system_patterns, prune_attrs=not verbose)
         except (actions.MalformedActionError, actions.UnknownActionError) as e:
@@ -371,6 +372,8 @@ def resolve(args, img_dir):
                 if ret_code == 0:
                         ret_code = 1
                 emsg(e)
+        for w in warnings:
+                emsg(w)
         return ret_code
 
 def __resolve_echo_line(l):
@@ -388,7 +391,7 @@ def __resolve_echo_line(l):
 
 def __echo_manifest(pth, out_func, strip_newline=False):
         try:
-                with open(pth, "rb") as fh:
+                with open(pth, "r") as fh:
                         text = ""
                         act = ""
                         for l in fh:
@@ -455,7 +458,7 @@ def write_res(deps, out_file, echo_manifest, manifest_path):
 
         ret_code = 0
         try:
-                out_fh = open(out_file, "wb")
+                out_fh = open(out_file, "w")
         except EnvironmentError:
                 ret_code = 1
                 emsg(_("Could not open output file {0} for writing").format(
@@ -587,6 +590,9 @@ if __name__ == "__main__":
 
         # Make all warnings be errors.
         warnings.simplefilter('error')
+        if six.PY3:
+                # disable ResourceWarning: unclosed file
+                warnings.filterwarnings("ignore", category=ResourceWarning)
 
         try:
                 __ret = main_func()
@@ -619,3 +625,6 @@ if __name__ == "__main__":
                 error(misc.get_traceback_message())
                 __ret = 99
         sys.exit(__ret)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

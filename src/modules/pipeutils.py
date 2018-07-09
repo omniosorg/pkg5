@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 """
@@ -69,12 +69,10 @@ A RPC client can be implemented as follows:
 """
 
 from __future__ import print_function
-import SocketServer
 import errno
 import fcntl
-import httplib
+import logging
 import os
-import platform
 import socket
 import stat
 import struct
@@ -97,8 +95,18 @@ from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCDispatcher as \
 #
 # Unused import; pylint: disable=W0611
 from jsonrpclib import ProtocolError as ProtocolError1
-from xmlrpclib import ProtocolError as ProtocolError2
+
+from six.moves import socketserver, http_client
+from six.moves.xmlrpc_client import ProtocolError as ProtocolError2
 # Unused import; pylint: enable=W0611
+
+from pkg.misc import force_bytes, force_str
+
+# jsonrpclib 0.2.6's SimpleJSONRPCServer makes logging calls, but we don't
+# configure logging in this file, so we attach a do-nothing handler to it to
+# prevent error message being output to sys.stderr.
+logging.getLogger("jsonrpclib.SimpleJSONRPCServer").addHandler(
+    logging.NullHandler())
 
 # debugging
 pipeutils_debug = (os.environ.get("PKG_PIPEUTILS_DEBUG", None) is not None)
@@ -121,10 +129,12 @@ class PipeFile(object):
         This class also support additional non-file special operations like
         sendfd() and recvfd()."""
 
-        def __init__(self, fd, debug_label, debug=pipeutils_debug):
+        def __init__(self, fd, debug_label, debug=pipeutils_debug,
+            http_enc=True):
                 self.__pipefd = fd
                 self.__readfh = None
                 self.closed = False
+                self.__http_enc = http_enc
 
                 # Pipes related objects should never live past an exec
                 flags = fcntl.fcntl(self.__pipefd, fcntl.F_GETFD)
@@ -188,14 +198,19 @@ class PipeFile(object):
                         # read from the fd that we received over the pipe
                         data = self.__readfh.readline(*args)
                         if data != "":
-                                return data
+                                if self.__http_enc:
+                                # Python 3`http.client`HTTPReponse`_read_status:
+                                # requires a bytes input.
+                                        return force_bytes(data, "iso-8859-1")
+                                else:
+                                        return data
                         # the fd we received over the pipe is empty
                         self.__readfh = None
 
                 # recieve a file descriptor from the pipe
                 fd = self.recvfd()
                 if fd == -1:
-                        return ""
+                        return b"" if self.__http_enc else ""
                 self.__readfh = os.fdopen(fd)
                 # return data from the received fd
                 return self.readline(*args)
@@ -220,10 +235,22 @@ class PipeFile(object):
                 # return data from the received fd
                 return self.read(size)
 
+        # For Python 3: self.fp requires a readinto method.
+        def readinto(self, b):
+                """Read up to len(b) bytes into the writable buffer *b* and
+                return the numbers of bytes read."""
+                # not-context-manager for py 2.7;
+                # pylint: disable=E1129
+                with memoryview(b) as view:
+                        data = self.read(len(view))
+                        view[:len(data)] = force_bytes(data)
+                return len(data)
+
         def write(self, msg):
                 """Write a string to the pipe."""
-                mf = tempfile.TemporaryFile()
-                mf.write(msg)
+                # JSON object must be str to be used in jsonrpclib
+                mf = tempfile.TemporaryFile(mode="w+")
+                mf.write(force_str(msg))
                 mf.flush()
                 self.sendfd(mf.fileno())
                 mf.close()
@@ -293,8 +320,11 @@ class PipeFile(object):
 class PipeSocket(PipeFile):
         """Object which makes a pipe look like a "socket" object."""
 
-        def __init__(self, fd, debug_label, debug=pipeutils_debug):
-                PipeFile.__init__(self, fd, debug_label, debug=debug)
+        def __init__(self, fd, debug_label, debug=pipeutils_debug,
+            http_enc=True):
+                self.__http_enc = http_enc
+                PipeFile.__init__(self, fd, debug_label, debug=debug,
+                    http_enc=http_enc)
 
         def makefile(self, mode='r', bufsize=-1):
                 """Return a file-like object associated with this pipe.
@@ -304,7 +334,8 @@ class PipeSocket(PipeFile):
 
                 dup_fd = os.dup(self.fileno())
                 self.debug_msg("makefile", "dup fd={0:d}".format(dup_fd))
-                return PipeFile(dup_fd, self.debug_label, debug=self.debug)
+                return PipeFile(dup_fd, self.debug_label, debug=self.debug,
+                    http_enc=self.__http_enc)
 
         def recv(self, bufsize, flags=0):
                 """Receive data from the pipe.
@@ -333,8 +364,11 @@ class PipeSocket(PipeFile):
                 """set socket opt."""
                 pass
 
-
-class PipedHTTPResponse(httplib.HTTPResponse):
+# pylint seems to be panic about these.
+# PipedHTTP: Class has no __init__ method; pylint: disable=W0232
+# PipedHTTPResponse.begin: Attribute 'will_close' defined outside __init__;
+# pylint: disable=W0201
+class PipedHTTPResponse(http_client.HTTPResponse):
         """Create a httplib.HTTPResponse like object that can be used with
         a pipe as a transport.  We override the minimum number of parent
         routines necessary."""
@@ -343,12 +377,12 @@ class PipedHTTPResponse(httplib.HTTPResponse):
                 """Our connection will never be automatically closed, so set
                 will_close to False."""
 
-                httplib.HTTPResponse.begin(self)
+                http_client.HTTPResponse.begin(self)
                 self.will_close = False
                 return
 
 
-class PipedHTTPConnection(httplib.HTTPConnection):
+class PipedHTTPConnection(http_client.HTTPConnection):
         """Create a httplib.HTTPConnection like object that can be used with
         a pipe as a transport.  We override the minimum number of parent
         routines necessary."""
@@ -356,16 +390,15 @@ class PipedHTTPConnection(httplib.HTTPConnection):
         # we use PipedHTTPResponse in place of httplib.HTTPResponse
         response_class = PipedHTTPResponse
 
-        def __init__(self, fd, port=None, strict=None):
+        def __init__(self, fd, port=None):
                 assert port is None
 
                 # invoke parent constructor
-                httplib.HTTPConnection.__init__(self, "localhost",
-                    strict=strict)
+                http_client.HTTPConnection.__init__(self, "localhost")
 
                 # self.sock was initialized by httplib.HTTPConnection
                 # to point to a socket, overwrite it with a pipe.
-                assert(type(fd) == int) and os.fstat(fd)
+                assert type(fd) == int and os.fstat(fd)
                 self.sock = PipeSocket(fd, "client-connection")
 
         def __del__(self):
@@ -383,25 +416,6 @@ class PipedHTTPConnection(httplib.HTTPConnection):
                 return self.sock.fileno()
 
 
-class PipedHTTP(httplib.HTTP):
-        """Create httplib.HTTP like object that can be used with
-        a pipe as a transport.  We override the minimum number of parent
-        routines necessary.
-
-        xmlrpclib uses the legacy httplib.HTTP class interfaces (instead of
-        the newer class httplib.HTTPConnection interfaces), so we need to
-        provide a "Piped" compatibility class that wraps the httplib.HTTP
-        compatibility class."""
-
-        _connection_class = PipedHTTPConnection
-
-        @property
-        def sock(self):
-                """Return the "socket" associated with this HTTP pipe
-                connection."""
-                return self._conn.sock
-
-
 class _PipedTransport(rpc.Transport):
         """Create a Transport object which can create new PipedHTTP
         connections via an existing pipe."""
@@ -409,7 +423,14 @@ class _PipedTransport(rpc.Transport):
         def __init__(self, fd, http_enc=True):
                 self.__pipe_file = PipeFile(fd, "client-transport")
                 self.__http_enc = http_enc
-                rpc.Transport.__init__(self)
+                # This is a workaround to cope with the jsonrpclib update
+                # (version 0.2.6) more safely. Once jsonrpclib is out in
+                # the OS build, we can change it to always pass a 'config'
+                # argument to __init__.
+                if hasattr(rpclib.config, "DEFAULT"):
+                        rpc.Transport.__init__(self, rpclib.config.DEFAULT)
+                else:
+                        rpc.Transport.__init__(self)
                 self.verbose = False
                 self._extra_headers = None
 
@@ -423,7 +444,7 @@ class _PipedTransport(rpc.Transport):
                 self.__pipe_file.close()
                 self.__pipe_file = None
 
-        def make_connection(self, host):
+        def make_connection(self, host): # Unused argument 'host'; pylint: disable=W0613
                 """Create a new PipedHTTP connection to the server.  This
                 involves creating a new pipe, and sending one end of the pipe
                 to the server, and then wrapping the local end of the pipe
@@ -437,19 +458,15 @@ class _PipedTransport(rpc.Transport):
                 self.__pipe_file.sendfd(server_pipefd)
                 os.close(server_pipefd)
 
-                py_version = '.'.join(
-                    platform.python_version_tuple()[:2])
                 if self.__http_enc:
                         # we're using http encapsulation so return a
                         # PipedHTTPConnection object
-                        if py_version >= '2.7':
-                                return PipedHTTPConnection(client_pipefd)
-                        else:
-                                return PipedHTTP(client_pipefd)
+                        return PipedHTTPConnection(client_pipefd)
 
                 # we're not using http encapsulation so return a
                 # PipeSocket object
-                return PipeSocket(client_pipefd, "client-connection")
+                return PipeSocket(client_pipefd, "client-connection",
+                    http_enc=self.__http_enc)
 
         def request(self, host, handler, request_body, verbose=0):
                 """Send a request to the server."""
@@ -465,14 +482,15 @@ class _PipedTransport(rpc.Transport):
                 return self.parse_response(c.makefile())
 
 
-class _PipedServer(SocketServer.BaseServer):
+class _PipedServer(socketserver.BaseServer):
         """Modeled after SocketServer.TCPServer."""
 
-        def __init__(self, fd, RequestHandlerClass):
+        def __init__(self, fd, RequestHandlerClass, http_enc=True):
                 self.__pipe_file = PipeFile(fd, "server-transport")
                 self.__shutdown_initiated = False
+                self.__http_enc = http_enc
 
-                SocketServer.BaseServer.__init__(self,
+                socketserver.BaseServer.__init__(self,
                     server_address="localhost",
                     RequestHandlerClass=RequestHandlerClass)
 
@@ -507,8 +525,8 @@ class _PipedServer(SocketServer.BaseServer):
                         self.initiate_shutdown()
                         raise socket.error()
 
-                return (PipeSocket(fd, "server-connection"),
-                    ("localhost", None))
+                return (PipeSocket(fd, "server-connection",
+                    http_enc=self.__http_enc), ("localhost", None))
 
 
 class _PipedHTTPRequestHandler(SimpleRPCRequestHandler):
@@ -572,7 +590,8 @@ class PipedRPCServer(_PipedServer, SimpleRPCDispatcher):
                 if not http_enc:
                         requestHandler = _PipedRequestHandler
 
-                _PipedServer.__init__(self, addr, requestHandler)
+                _PipedServer.__init__(self, addr, requestHandler,
+                    http_enc=http_enc)
 
         def  __check_for_server_errors(self, response):
                 """Check if a response is actually a fault object.  If so
@@ -630,3 +649,6 @@ class PipedServerProxy(rpc.ServerProxy):
                     "http://localhost/RPC2",
                     transport=self.__piped_transport,
                     encoding=encoding, verbose=verbose, version=version)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

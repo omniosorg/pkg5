@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -114,3 +114,6 @@ if __name__ == "__main__":
                 sys.exit(1)
         sys.exit(0)
 
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

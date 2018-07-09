@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -24,7 +24,6 @@
 from __future__ import print_function
 import atexit
 import cherrypy
-import httplib
 import logging
 import mako
 import os
@@ -35,9 +34,12 @@ import tempfile
 import threading
 import time
 import traceback
-import urllib
-import Queue
 
+from six.moves import http_client, queue
+from six.moves.urllib.parse import quote
+from six.moves.urllib.request import urlopen
+
+import pkg.misc as misc
 import pkg.p5i
 import pkg.server.api
 import pkg.server.repository as sr
@@ -77,7 +79,7 @@ class DepotException(Exception):
         def __init__(self, request, message):
                 self.request = request
                 self.message = message
-                self.http_status = httplib.INTERNAL_SERVER_ERROR
+                self.http_status = http_client.INTERNAL_SERVER_ERROR
 
         def __str__(self):
                 return "{0}: {1}".format(self.message, self.request)
@@ -89,7 +91,7 @@ class AdminOpsDisabledException(DepotException):
 
         def __init__(self, request):
                 self.request = request
-                self.http_status = httplib.FORBIDDEN
+                self.http_status = http_client.FORBIDDEN
 
         def __str__(self):
                 return "admin/0 operations are disabled. " \
@@ -104,7 +106,7 @@ class AdminOpNotSupportedException(DepotException):
         def __init__(self, request, cmd):
                 self.request = request
                 self.cmd = cmd
-                self.http_status = httplib.NOT_IMPLEMENTED
+                self.http_status = http_client.NOT_IMPLEMENTED
 
         def __str__(self):
                 return "admin/0 operations of type {type} are not " \
@@ -119,7 +121,7 @@ class IndexOpDisabledException(DepotException):
 
         def __init__(self, request):
                 self.request = request
-                self.http_status = httplib.FORBIDDEN
+                self.http_status = http_client.FORBIDDEN
 
         def __str__(self):
                 return "admin/0 operations to refresh indexes are not " \
@@ -134,7 +136,7 @@ class BackgroundTask(object):
 
         def __init__(self, size=10, busy_url=None):
                 self.size = size
-                self.__q = Queue.Queue(self.size)
+                self.__q = queue.Queue(self.size)
                 self.__thread = None
                 self.__running = False
                 self.__keep_busy_thread = None
@@ -155,7 +157,7 @@ class BackgroundTask(object):
                 isn't full.
                 """
                 if self.__q.unfinished_tasks > self.size - 1:
-                        raise Queue.Full()
+                        raise queue.Full()
                 self.__q.put_nowait((task, args, kwargs))
                 self.__keep_busy = True
 
@@ -170,7 +172,7 @@ class BackgroundTask(object):
                                         # for a new task to appear.
                                         task, args, kwargs = \
                                             self.__q.get(timeout=.5)
-                                except Queue.Empty:
+                                except queue.Empty:
                                         continue
                                 task(*args, **kwargs)
                                 if hasattr(self.__q, "task_done"):
@@ -190,7 +192,7 @@ class BackgroundTask(object):
                         time.sleep(KEEP_BUSY_INTERVAL)
                         if self.__keep_busy:
                                 try:
-                                        urllib.urlopen(self.__busy_url).close()
+                                        urlopen(self.__busy_url).close()
                                 except Exception as e:
                                         print("Failure encountered retrieving "
                                             "busy url {0}: {1}".format(
@@ -376,7 +378,7 @@ class WsgiDepot(object):
                 # despite the fact that we're not serving content for any one
                 # repository.  For the purposes of rendering this page, we'll
                 # use the first object we come across.
-                depot = depot_buis[depot_buis.keys()[0]]
+                depot = depot_buis[list(depot_buis.keys())[0]]
                 accept_lang = self.get_accept_lang(cherrypy.request, depot)
                 cherrypy.request.path_info = "/{0}".format(accept_lang)
                 tlookup = mako.lookup.TemplateLookup(
@@ -403,10 +405,12 @@ class WsgiDepot(object):
                             pub)) for pub in repo.publishers]
                 repo_list.sort()
                 template = tlookup.get_template("repos.shtml")
-                return template.render_unicode(g_vars={"base": base,
+                # Starting in CherryPy 3.2, cherrypy.response.body only allows
+                # bytes.
+                return misc.force_bytes(template.render(g_vars={"base": base,
                     "pub": None, "http_depot": "true", "lang": accept_lang,
                     "repo_list": repo_list, "repo_pubs": repo_pubs
-                    })
+                    }))
 
         def default(self, *tokens, **params):
                 """ Our default handler is here to make sure we've called
@@ -430,7 +434,7 @@ class WsgiDepot(object):
                         # When serving  theme resources we just choose the first
                         # repository we find, which is fine since we're serving
                         # content that's generic to all repositories, so we
-                        repo_prefix = repositories.keys()[0]
+                        repo_prefix = list(repositories.keys())[0]
                         repo = repositories[repo_prefix]
                         depot_bui = depot_buis[repo_prefix]
                         # use our custom request_pub_func, since theme resources
@@ -502,7 +506,7 @@ class WsgiDepot(object):
                 pub_mf = "/".join(redir[0:4])
                 pkg_name = "/".join(redir[4:])
                 # encode the URI so our RewriteRules can process them
-                pkg_name = urllib.quote(pkg_name)
+                pkg_name = quote(pkg_name)
                 pkg_name = pkg_name.replace("/", "%2F")
                 pkg_name = pkg_name.replace("%40", "@", 1)
 
@@ -564,7 +568,8 @@ class WsgiDepot(object):
 
                 dh = self.__build_depot_http()
                 tokens = self.__strip_pub(tokens, dh.repo)
-                return dh.info_0(*tokens[3:])
+                # In Python 3, a WSGI application must return bytes as its output
+                return misc.force_bytes(dh.info_0(*tokens[3:]))
 
         def p5i(self, *tokens):
                 """Use a DepotHTTP to return a p5i response."""
@@ -645,7 +650,7 @@ class WsgiDepot(object):
                         try:
                                 self.bgtask.put(repo.refresh_index,
                                     pub=pub_prefix)
-                        except Queue.Full as e:
+                        except queue.Full as e:
                                 retries = 10
                                 success = False
                                 while retries > 0 and not success:
@@ -659,14 +664,15 @@ class WsgiDepot(object):
                                                 pass
                                 if not success:
                                         raise cherrypy.HTTPError(
-                                            status=httplib.SERVICE_UNAVAILABLE,
+                                            status=http_client.SERVICE_UNAVAILABLE,
                                             message="Unable to refresh the "
                                             "index for {0} after repeated "
                                             "retries. Try again later.".format(
                                             request.path_info))
                 finally:
                         repository_lock.release()
-                return ""
+                # In Python 3, a WSGI application must return bytes as its output
+                return b""
 
         def wait_refresh(self, *tokens, **params):
                 """Not a pkg(5) operation, this allows clients to wait until any
@@ -678,7 +684,7 @@ class WsgiDepot(object):
                 """
                 self.setup(cherrypy.request)
                 self.bgtask.join()
-                return ""
+                return b""
 
 
 class Pkg5Dispatch(object):
@@ -697,7 +703,7 @@ class Pkg5Dispatch(object):
                 self.config = {}
 
         @staticmethod
-        def default_error_page(status=httplib.NOT_FOUND, message="oops",
+        def default_error_page(status=http_client.NOT_FOUND, message="oops",
             traceback=None, version=None):
                 """This function is registered as the default error page
                 for CherryPy errors.  This sets the response headers to
@@ -711,14 +717,14 @@ class Pkg5Dispatch(object):
                 # Server errors are interesting, so let's log them.  In the case
                 # of an internal server error, we send a 404 to the client. but
                 # log the full details in the server log.
-                if (status == httplib.INTERNAL_SERVER_ERROR or
+                if (status == http_client.INTERNAL_SERVER_ERROR or
                     status.startswith("500 ")):
                         # Convert the error to a 404 to obscure implementation
                         # from the client, but log the original error to the
                         # server logs.
                         error = cherrypy._cperror._HTTPErrorTemplate % \
-                            {"status": httplib.NOT_FOUND,
-                            "message": httplib.responses[httplib.NOT_FOUND],
+                            {"status": http_client.NOT_FOUND,
+                            "message": http_client.responses[http_client.NOT_FOUND],
                             "traceback": "",
                             "version": cherrypy.__version__}
                         print("Path that raised exception was {0}".format(
@@ -727,7 +733,7 @@ class Pkg5Dispatch(object):
                         return error
                 else:
                         error = cherrypy._cperror._HTTPErrorTemplate % \
-                            {"status": httplib.NOT_FOUND, "message": message,
+                            {"status": http_client.NOT_FOUND, "message": message,
                             "traceback": "", "version": cherrypy.__version__}
                         return error
 
@@ -773,10 +779,10 @@ class Pkg5Dispatch(object):
                                 cherrypy.response.body = self.app.admin(*toks,
                                     **params)
                         elif "/depot-keepalive" in path_info:
-                                return ""
+                                return b""
                         elif "/depot-wait-refresh" in path_info:
                                 self.app.wait_refresh(*toks, **params)
-                                return ""
+                                return b""
                         elif path_info == "/" or path_info == "/repos.shtml":
                                 cherrypy.response.body = self.app.repo_index(
                                     *toks, **params)
@@ -807,7 +813,7 @@ class Pkg5Dispatch(object):
                                 # converted and logged by our error handler
                                 # before the client sees it.
                                 raise cherrypy.HTTPError(
-                                    status=httplib.INTERNAL_SERVER_ERROR,
+                                    status=http_client.INTERNAL_SERVER_ERROR,
                                     message="".join(traceback.format_exc(e)))
 
 wsgi_depot = WsgiDepot()
@@ -819,3 +825,6 @@ application = cherrypy.Application(wsgi_depot, None, config=conf)
 # Raise the level of the access log to make it quiet. For some reason,
 # setting log.access_file = "" or None doesn't work.
 application.log.access_log.setLevel(logging.WARNING)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,16 +21,20 @@
 #
 
 #
-# Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 import atexit
 import collections
 import errno
 import tarfile as tf
-import pkg.pkggzip
-import pkg.pkgtarfile as ptf
 import os
+import shutil
+import six
+import sys
+import tempfile
+from six.moves.urllib.parse import unquote
+
 import pkg
 import pkg.client.api_errors as apx
 import pkg.client.publisher
@@ -40,10 +44,9 @@ import pkg.manifest
 import pkg.misc
 import pkg.portable
 import pkg.p5i
-import shutil
-import sys
-import tempfile
-import urllib
+import pkg.pkggzip
+import pkg.pkgtarfile as ptf
+from pkg.misc import force_bytes, force_str
 
 if sys.version > '3':
         long = int
@@ -124,7 +127,7 @@ class ArchiveIndex(object):
 
                 self.__closed = False
                 self.__name = name
-                self.__mode = mode + "b"
+                self.__mode = mode
                 try:
                         self.__file = pkg.pkggzip.PkgGzipFile(self.__name,
                             self.__mode)
@@ -158,8 +161,9 @@ class ArchiveIndex(object):
                 """Add an entry for the given archive file to the table of
                 contents."""
 
-                self.__file.write(self.ENTRY_FORMAT.format(name, offset,
-                    entry_size, size, typeflag))
+                # GzipFile.write requires bytes input
+                self.__file.write(force_bytes(self.ENTRY_FORMAT.format(
+                    name, offset, entry_size, size, typeflag)))
 
         def offsets(self):
                 """Returns a generator that yields tuples of the form (name,
@@ -169,19 +173,23 @@ class ArchiveIndex(object):
                 l = None
                 try:
                         for line in self.__file:
-                                if line[-2] != "\0":
+                                # Under Python 3, indexing on a bytes will
+                                # return an integer representing the
+                                # unicode code point of that character; we
+                                # need to use slicing to get the character.
+                                if line[-2:-1] != b"\0":
                                         # Filename contained newline.
                                         if l is None:
                                                 l = line
                                         else:
-                                                l += "\n"
+                                                l += b"\n"
                                                 l += line
                                         continue
                                 elif l is None:
                                         l = line
 
-                                name, offset, ignored = l.split("\0", 2)
-                                yield name, long(offset)
+                                name, offset, ignored = l.split(b"\0", 2)
+                                yield force_str(name), long(offset)
                                 l = None
                 except ValueError:
                         raise InvalidArchiveIndex(self.__name)
@@ -535,7 +543,7 @@ class Archive(object):
                 """
                 try:
                         fd, fn = tempfile.mkstemp(dir=self.__temp_dir)
-                        fobj = os.fdopen(fd, "wb")
+                        fobj = os.fdopen(fd, "w")
                 except EnvironmentError as e:
                         raise apx._convert_error(e)
                 return fobj, fn
@@ -723,7 +731,7 @@ class Archive(object):
                 """
 
                 assert pfmri and mpath and fpath
-                if isinstance(pfmri, basestring):
+                if isinstance(pfmri, six.string_types):
                         pfmri = pkg.fmri.PkgFmri(pfmri)
                 assert pfmri.publisher
                 self.__add_package(pfmri, mpath, fpath=fpath)
@@ -743,7 +751,7 @@ class Archive(object):
                 """
 
                 assert pfmri and repo
-                if isinstance(pfmri, basestring):
+                if isinstance(pfmri, six.string_types):
                         pfmri = pkg.fmri.PkgFmri(pfmri)
                 assert pfmri.publisher
                 self.__add_package(pfmri, repo.manifest(pfmri), repo=repo)
@@ -825,8 +833,8 @@ class Archive(object):
                 for name in self.__extract_offsets:
                         if name.startswith(manpath) and name.count("/") == 4:
                                 ignored, stem, ver = name.rsplit("/", 2)
-                                stem = urllib.unquote(stem)
-                                ver = urllib.unquote(ver)
+                                stem = unquote(stem)
+                                ver = unquote(ver)
                                 pfmri = pkg.fmri.PkgFmri(name=stem,
                                     publisher=pub, version=ver)
 
@@ -836,7 +844,7 @@ class Archive(object):
 
                                 fobj = self.get_file(name)
                                 m = pkg.manifest.Manifest(pfmri=pfmri)
-                                m.set_content(content=fobj.read(),
+                                m.set_content(content=force_str(fobj.read()),
                                     signatures=True)
                                 cat.add_package(pfmri, manifest=m)
 
@@ -930,7 +938,7 @@ class Archive(object):
 
                 assert not self.__closed and "r" in self.__mode
                 assert pfmri and path
-                if isinstance(pfmri, basestring):
+                if isinstance(pfmri, six.string_types):
                         pfmri = pkg.fmri.PkgFmri(pfmri)
                 assert pfmri.publisher
 
@@ -1124,7 +1132,7 @@ class Archive(object):
 
                 assert not self.__closed and "r" in self.__mode
                 assert pfmri
-                if isinstance(pfmri, basestring):
+                if isinstance(pfmri, six.string_types):
                         pfmri = pkg.fmri.PkgFmri(pfmri)
                 assert pfmri.publisher
 
@@ -1140,7 +1148,7 @@ class Archive(object):
                         return fobj
 
                 m = pkg.manifest.Manifest(pfmri=pfmri)
-                m.set_content(content=fobj.read(), signatures=True)
+                m.set_content(content=force_str(fobj.read()), signatures=True)
                 return m
 
         def get_publishers(self):
@@ -1148,7 +1156,7 @@ class Archive(object):
                 in the archive."""
 
                 if self.__pubs:
-                        return self.__pubs.values()
+                        return list(self.__pubs.values())
 
                 # If the extraction index doesn't exist, scan the complete
                 # archive and build one.
@@ -1180,7 +1188,7 @@ class Archive(object):
 
                                 self.__pubs[pfx] = pub
 
-                return self.__pubs.values()
+                return list(self.__pubs.values())
 
         def __cleanup(self):
                 """Private helper method to cleanup temporary files."""
@@ -1314,3 +1322,6 @@ class Archive(object):
         def pathname(self):
                 """The absolute path of the archive file."""
                 return self.__arc_name
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,10 +21,10 @@
 #
 
 #
-# Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
-import testutils
+from . import testutils
 if __name__ == "__main__":
         testutils.setup_environment("../../../proto")
 import pkg5unittest
@@ -32,6 +32,7 @@ import pkg5unittest
 import hashlib
 import os
 import shutil
+import six
 import stat
 import tempfile
 import certgenerator
@@ -249,8 +250,8 @@ class TestHTTPS(pkg5unittest.HTTPSTestClass):
 
                 # Refresh all publishers should try to validate all certs.
                 self.pkg("refresh", exit=1)
-                self.assert_("Publisher: tmp" in self.errout, self.errout)
-                self.assert_("Publisher: test" in self.errout, self.errout)
+                self.assertTrue("Publisher: tmp" in self.errout, self.errout)
+                self.assertTrue("Publisher: test" in self.errout, self.errout)
 
         def test_expiring_certs(self):
                 """Test that image-create will not raise exception for
@@ -292,13 +293,13 @@ class TestDepotHTTPS(pkg5unittest.SingleDepotTestCase):
 
         misc_files = {
             "tmp/example_file": "tmp/example_file",
-            "tmp/test_ssl_auth": """
+            "tmp/test_ssl_auth": """\
 #!/usr/bin/sh
 reserved=$1
 port=$2
 echo "123"
 """,
-            "tmp/test_ssl_auth_bad": """
+            "tmp/test_ssl_auth_bad": """\
 #!/usr/bin/sh
 reserved=$1
 port=$2
@@ -316,7 +317,7 @@ echo "12345"
                     *args, **kwargs)
 
         def seed_ta_dir(self, certs, dest_dir=None):
-                if isinstance(certs, basestring):
+                if isinstance(certs, six.string_types):
                         certs = [certs]
                 if not dest_dir:
                         dest_dir = self.ta_dir
@@ -419,3 +420,6 @@ echo "12345"
 
 if __name__ == "__main__":
         unittest.main()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

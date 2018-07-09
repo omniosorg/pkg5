@@ -20,39 +20,32 @@
 #
 # Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
 # Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
+# Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
 #
-
 set name=pkg.fmri value=pkg:/package/pkg@$(PKGVERS)
 set name=pkg.summary value="Image Packaging System"
 set name=pkg.description \
-    value="The Image Packaging System (IPS), or pkg(5), is the software delivery system used on Oracle Solaris.  This package contains the core command-line components and pkg.depotd server."
-set name=info.classification \
-    value=org.opensolaris.category.2008:System/Packaging
-set name=org.opensolaris.smf.fmri \
-    value=svc:/application/pkg/repositories-setup \
-    value=svc:/application/pkg/repositories-setup:default
+    value="The Image Packaging System (IPS), or pkg(5), is the software delivery system used on OmniOS."
 set name=variant.arch value=$(ARCH)
 dir  path=$(PYDIR)
 dir  path=$(PYDIRVP)
 dir  path=$(PYDIRVP)/pkg
 file path=$(PYDIRVP)/pkg-0.1-py2.7.egg-info
 dir  path=$(PYDIRVP)/pkg/64
+file path=$(PYDIRVP)/pkg/64/_arch.so
+file path=$(PYDIRVP)/pkg/64/_pspawn.so
+file path=$(PYDIRVP)/pkg/64/_sysattr.so
+file path=$(PYDIRVP)/pkg/64/_syscallat.so
 file path=$(PYDIRVP)/pkg/64/_varcet.so
-file path=$(PYDIRVP)/pkg/64/arch.so
 file path=$(PYDIRVP)/pkg/64/elf.so
-file path=$(PYDIRVP)/pkg/64/pspawn.so
-file path=$(PYDIRVP)/pkg/64/sha512_t.so
 file path=$(PYDIRVP)/pkg/64/solver.so
-file path=$(PYDIRVP)/pkg/64/sysattr.so
-file path=$(PYDIRVP)/pkg/64/syscallat.so
 file path=$(PYDIRVP)/pkg/__init__.py
+file path=$(PYDIRVP)/pkg/_arch.so
+file path=$(PYDIRVP)/pkg/_pspawn.so
+file path=$(PYDIRVP)/pkg/_sysattr.so
+file path=$(PYDIRVP)/pkg/_syscallat.so
 file path=$(PYDIRVP)/pkg/_varcet.so
 dir  path=$(PYDIRVP)/pkg/actions
-#
-# We ship a 64-bit version of _actions.so because it's
-# needed by the sysrepo_p5p which is a mod_wsgi application
-# that runs in a 64-bit apache instance.
-#
 dir  path=$(PYDIRVP)/pkg/actions/64
 file path=$(PYDIRVP)/pkg/actions/64/_actions.so
 file path=$(PYDIRVP)/pkg/actions/64/_common.so
@@ -75,7 +68,7 @@ file path=$(PYDIRVP)/pkg/actions/unknown.py
 file path=$(PYDIRVP)/pkg/actions/user.py
 file path=$(PYDIRVP)/pkg/altroot.py
 file path=$(PYDIRVP)/pkg/api_common.py
-file path=$(PYDIRVP)/pkg/arch.so
+file path=$(PYDIRVP)/pkg/arch.py
 dir  path=$(PYDIRVP)/pkg/bundle
 file path=$(PYDIRVP)/pkg/bundle/DirectoryBundle.py
 file path=$(PYDIRVP)/pkg/bundle/SolarisPackageDatastreamBundle.py
@@ -90,16 +83,13 @@ file path=$(PYDIRVP)/pkg/client/__init__.py
 file path=$(PYDIRVP)/pkg/client/actuator.py
 file path=$(PYDIRVP)/pkg/client/api.py
 file path=$(PYDIRVP)/pkg/client/api_errors.py
-#
-# Don't worry about the libbe import; the python code looks for it in case
-# it can't import libbe_py, and is graceful in the face of its absence.
-#
-file path=$(PYDIRVP)/pkg/client/bootenv.py pkg.depend.bypass-generate=.*libbe.*
+file path=$(PYDIRVP)/pkg/client/bootenv.py \
+    pkg.depend.bypass-generate=.*libbe.*
 file path=$(PYDIRVP)/pkg/client/client_api.py
 file path=$(PYDIRVP)/pkg/client/debugvalues.py
 file path=$(PYDIRVP)/pkg/client/firmware.py
 file path=$(PYDIRVP)/pkg/client/history.py
-file path=$(PYDIRVP)/pkg/client/image.py
+file path=$(PYDIRVP)/pkg/client/image.py pkg.depend.bypass-generate=.*
 file path=$(PYDIRVP)/pkg/client/imageconfig.py
 file path=$(PYDIRVP)/pkg/client/imageplan.py
 file path=$(PYDIRVP)/pkg/client/imagetypes.py
@@ -117,7 +107,7 @@ file path=$(PYDIRVP)/pkg/client/pkgremote.py
 file path=$(PYDIRVP)/pkg/client/plandesc.py
 file path=$(PYDIRVP)/pkg/client/printengine.py
 file path=$(PYDIRVP)/pkg/client/progress.py
-file path=$(PYDIRVP)/pkg/client/publisher.py
+file path=$(PYDIRVP)/pkg/client/publisher.py pkg.depend.bypass-generate=.*
 file path=$(PYDIRVP)/pkg/client/query_parser.py
 file path=$(PYDIRVP)/pkg/client/rad_pkg.py
 file path=$(PYDIRVP)/pkg/client/sigpolicy.py
@@ -144,7 +134,7 @@ file path=$(PYDIRVP)/pkg/file_layout/layout.py
 dir  path=$(PYDIRVP)/pkg/flavor
 file path=$(PYDIRVP)/pkg/flavor/__init__.py
 file path=$(PYDIRVP)/pkg/flavor/base.py
-file path=$(PYDIRVP)/pkg/flavor/depthlimitedmf.py
+file path=$(PYDIRVP)/pkg/flavor/depthlimitedmf.py pkg.depend.bypass-generate=.*
 file path=$(PYDIRVP)/pkg/flavor/elf.py
 file path=$(PYDIRVP)/pkg/flavor/hardlink.py
 file path=$(PYDIRVP)/pkg/flavor/python.py
@@ -165,6 +155,7 @@ file path=$(PYDIRVP)/pkg/lockfile.py
 file path=$(PYDIRVP)/pkg/manifest.py
 file path=$(PYDIRVP)/pkg/mediator.py
 file path=$(PYDIRVP)/pkg/misc.py
+file path=$(PYDIRVP)/pkg/mogrify.py
 file path=$(PYDIRVP)/pkg/nrlock.py
 file path=$(PYDIRVP)/pkg/p5i.py
 file path=$(PYDIRVP)/pkg/p5p.py
@@ -176,16 +167,12 @@ file path=$(PYDIRVP)/pkg/pkgtarfile.py
 dir  path=$(PYDIRVP)/pkg/portable
 file path=$(PYDIRVP)/pkg/portable/__init__.py
 file path=$(PYDIRVP)/pkg/portable/os_aix.py
-# Python on Solaris doesn't deliver the macostools module.
-file path=$(PYDIRVP)/pkg/portable/os_darwin.py \
-    pkg.depend.bypass-generate=.*macostools.*
+file path=$(PYDIRVP)/pkg/portable/os_darwin.py
 file path=$(PYDIRVP)/pkg/portable/os_sunos.py
 file path=$(PYDIRVP)/pkg/portable/os_unix.py
-# Python on Solaris doesn't deliver the win32api module.
-file path=$(PYDIRVP)/pkg/portable/os_windows.py \
-    pkg.depend.bypass-generate=.*win32api.*
+file path=$(PYDIRVP)/pkg/portable/os_windows.py
 file path=$(PYDIRVP)/pkg/portable/util.py
-file path=$(PYDIRVP)/pkg/pspawn.so
+file path=$(PYDIRVP)/pkg/pspawn.py
 dir  path=$(PYDIRVP)/pkg/publish
 file path=$(PYDIRVP)/pkg/publish/__init__.py
 file path=$(PYDIRVP)/pkg/publish/dependencies.py
@@ -198,20 +185,18 @@ file path=$(PYDIRVP)/pkg/server/__init__.py
 file path=$(PYDIRVP)/pkg/server/api.py
 file path=$(PYDIRVP)/pkg/server/api_errors.py
 file path=$(PYDIRVP)/pkg/server/catalog.py
-file path=$(PYDIRVP)/pkg/server/depot.py
-file path=$(PYDIRVP)/pkg/server/depotresponse.py
+file path=$(PYDIRVP)/pkg/server/depot.py pkg.depend.bypass-generate=.*
 file path=$(PYDIRVP)/pkg/server/face.py
 file path=$(PYDIRVP)/pkg/server/feed.py
 file path=$(PYDIRVP)/pkg/server/query_parser.py
-file path=$(PYDIRVP)/pkg/server/repository.py
+file path=$(PYDIRVP)/pkg/server/repository.py pkg.depend.bypass-generate=.*
 file path=$(PYDIRVP)/pkg/server/transaction.py
-file path=$(PYDIRVP)/pkg/sha512_t.so
 file path=$(PYDIRVP)/pkg/smf.py
 file path=$(PYDIRVP)/pkg/solver.so
-file path=$(PYDIRVP)/pkg/sysattr.so
-file path=$(PYDIRVP)/pkg/syscallat.so
+file path=$(PYDIRVP)/pkg/sysattr.py
+file path=$(PYDIRVP)/pkg/syscallat.py
 file path=$(PYDIRVP)/pkg/sysvpkg.py
-file path=$(PYDIRVP)/pkg/updatelog.py
+file path=$(PYDIRVP)/pkg/updatelog.py pkg.depend.bypass-generate=.*
 file path=$(PYDIRVP)/pkg/variant.py
 file path=$(PYDIRVP)/pkg/version.py
 dir  path=etc
@@ -226,19 +211,15 @@ dir  path=lib
 dir  path=lib/svc
 dir  path=lib/svc/manifest
 dir  path=lib/svc/manifest/application
-file path=lib/svc/manifest/application/pkg/pkg-mdns.xml \
-    pkg.depend.bypass-generate=.*
-file path=lib/svc/manifest/application/pkg/pkg-mirror.xml \
-    pkg.depend.bypass-generate=.*
-file path=lib/svc/manifest/application/pkg/pkg-repositories-setup.xml \
-    pkg.depend.bypass-generate=.*
-file path=lib/svc/manifest/application/pkg/pkg-server.xml \
-    pkg.depend.bypass-generate=.*
+file path=lib/svc/manifest/application/pkg/pkg-mdns.xml
+file path=lib/svc/manifest/application/pkg/pkg-mirror.xml
+file path=lib/svc/manifest/application/pkg/pkg-repositories-setup.xml
+file path=lib/svc/manifest/application/pkg/pkg-server.xml
 dir  path=lib/svc/method
-file path=lib/svc/method/svc-pkg-mdns pkg.depend.bypass-generate=.*
+file path=lib/svc/method/svc-pkg-mdns
 file path=lib/svc/method/svc-pkg-mirror
 file path=lib/svc/method/svc-pkg-repositories-setup
-file path=lib/svc/method/svc-pkg-server pkg.depend.bypass-generate=.*
+file path=lib/svc/method/svc-pkg-server
 dir  path=lib/svc/share
 file path=lib/svc/share/pkg5_include.sh
 dir  path=usr
@@ -256,7 +237,7 @@ file path=usr/bin/pkgsend
 file path=usr/bin/pkgsign
 file path=usr/bin/pkgsurf
 dir  path=usr/lib
-file path=usr/lib/pkg.depotd mode=0755 pkg.depend.bypass-generate=.*
+file path=usr/lib/pkg.depotd mode=0755
 dir  path=usr/share
 dir  path=usr/share/lib
 dir  path=usr/share/lib/pkg
@@ -460,10 +441,20 @@ file path=usr/share/pkg/transforms/locale
 file path=usr/share/pkg/transforms/smf-manifests
 dir  path=var/cache/pkg/mirror
 dir  path=var/log/pkg/mirror
+# The six compatibility layers cause detection problems for pkgdepend
+<transform file -> default pkg.depend.bypass-generate .*six.*>
+# pkgdepend doesn't understand the relative import syntax "from .x import y",
+# so we have to bypass generating dependencies on those files.
+<transform file path=$(PYDIRVP)/pkg/actions -> \
+    set pkg.depend.bypass-generate .*>
+<transform file path=$(PYDIRVP)/pkg/portable -> \
+    set pkg.depend.bypass-generate .*>
+<transform file path=$(PYDIRVP)/pkg/client/linkedimage/(?:system|zone).py -> \
+    set pkg.depend.bypass-generate .*>
+#
 group groupname=pkg5srv gid=97
 user username=pkg5srv gcos-field="pkg(5) server UID" group=pkg5srv password=NP \
     uid=97
-legacy pkg=SUNWipkg version=0.0.0
 license lic_gustaebel license="MIT (Lars Gustaebel)" \
     com.oracle.info.description="portions of the tarfile module from Python 2.4" \
     com.oracle.info.name=tarfile com.oracle.info.tpno=17819 \
@@ -472,22 +463,6 @@ license lic_minisat license="MIT (MiniSAT)" \
     com.oracle.info.description="MiniSAT 1.14.1" com.oracle.info.name=MiniSAT \
     com.oracle.info.tpno=17867 com.oracle.info.version=1.14.1
 license cr_Oracle license=cr_Oracle
-#depend type=group fmri=package/pkg/zones-proxy
-#    variant.opensolaris.zone=nonglobal
-# cross zone dependency on linked image metadata
-#depend type=parent fmri=feature/package/dependency/self
-#    variant.opensolaris.zone=nonglobal
-depend type=require fmri=web/ca-bundle
 # CFFI import is done in C code, so it isn't picked up by pkgdepend
 depend type=require fmri=library/python-2/cffi-27
-depend type=require fmri=library/python-2/cherrypy-27
-depend type=require fmri=library/python-2/cryptography-27
-depend type=require fmri=library/python-2/functools32-27
-depend type=require fmri=library/python-2/jsonrpclib-27
-depend type=require fmri=library/python-2/jsonschema-27
-depend type=require fmri=library/python-2/mako-27
-depend type=require fmri=library/python-2/ply-27
-depend type=require fmri=library/python-2/pybonjour-27
-depend type=require fmri=library/python-2/pycurl-27
-depend type=require fmri=library/python-2/pyopenssl-27
-depend type=require fmri=library/python-2/simplejson-27@3.6.5
+depend type=require fmri=web/ca-bundle

@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 #
@@ -36,8 +36,12 @@ import itertools
 import math
 import sys
 import simplejson as json
+import six
 import time
 from functools import wraps
+# Redefining built-in 'range'; pylint: disable=W0622
+# import-error: six.moves; pylint: disable=F0401
+from six.moves import range
 
 import pkg.client.pkgdefs as pkgdefs
 import pkg.client.publisher as publisher
@@ -196,9 +200,10 @@ class SpeedEstimator(object):
                 # used to disable 'startup mode' if the d/l completes
                 # very rapidly.  We'll always start giving the user an
                 # estimate once ratiocomplete >= 50%.
-                #
+                # pylint is picky about this message:
+                # old-division; pylint: disable=W1619
                 ratiocomplete = 0.0 if self.goalbytes == 0 else \
-                    self.__curtotal / float(self.goalbytes)
+                    self.__curtotal / self.goalbytes
 
                 #
                 # Keep track of whether we're in the warmup phase.  This
@@ -256,9 +261,12 @@ class SpeedEstimator(object):
         def get_final_speed(self):
                 if self.__donetime is None:
                         return None
-                if self.elapsed == 0.0:  # div by 0 paranoia
+                try:
+                        # pylint is picky about this message:
+                        # old-division; pylint: disable=W1619
+                        return self.goalbytes / self.elapsed()
+                except ZeroDivisionError:
                         return None
-                return self.goalbytes / float(self.elapsed())
 
         def elapsed(self):
                 return None if self.__donetime is None else \
@@ -340,10 +348,14 @@ class OutSpec(object):
                 s += ">"
                 return s
 
-        def __nonzero__(self):
-                return (bool(self.first) or bool(self.last) or
-                    bool(self.changed))
+        # Defining "boolness" of a class, Python 2 uses the special method
+        # called __nonzero__() while Python 3 uses __bool__(). For Python
+        # 2 and 3 compatibility, define __bool__() only, and let
+        # __nonzero__ = __bool__
+        def __bool__(self):
+                return bool(self.first) or bool(self.last) or bool(self.changed)
 
+        __nonzero__ = __bool__
 
 class TrackerItem(object):
         """This class describes an item of interest in tracking progress
@@ -506,8 +518,10 @@ class GoalTrackerItem(TrackerItem):
                 i.e. 37 / 100 would yield 37.0"""
                 if self.goalitems is None or self.goalitems == 0:
                         return 0
+                # pylint is picky about this message:
+                # old-division; pylint: disable=W1619
                 return math.floor(100.0 *
-                    float(self.items) / float(self.goalitems))
+                    self.items / self.goalitems)
 
         def __str__(self):
                 info = ""
@@ -1366,6 +1380,7 @@ class ProgressTracker(ProgressTrackerFrontend, ProgressTrackerBackend):
                         self._archive_output(OutSpec(last=True))
 
         def download_set_goal(self, npkgs, nfiles, nbytes):
+                # Attribute defined outside __init__; pylint: disable=W0201
                 self.dl_mode = self.DL_MODE_DOWNLOAD
                 self.dl_pkgs.goalitems = npkgs
                 self.dl_files.goalitems = nfiles
@@ -1512,7 +1527,7 @@ class ProgressTracker(ProgressTrackerFrontend, ProgressTrackerBackend):
                 self.dl_estimator = SpeedEstimator(self.dl_bytes.goalitems)
 
         def republish_start_pkg(self, pkgfmri, getbytes=None, sendbytes=None):
-                assert(isinstance(pkgfmri, pkg.fmri.PkgFmri))
+                assert isinstance(pkgfmri, pkg.fmri.PkgFmri)
 
                 if getbytes is not None:
                         # Allow reset of GET and SEND amounts on a per-package
@@ -1555,7 +1570,8 @@ class ProgressTracker(ProgressTrackerFrontend, ProgressTrackerBackend):
                 # this guard prevents us from updating the item (which has
                 # no goal set, and will raise an exception).
                 #
-                if self.repub_send_bytes.goalitems > 0:
+                if self.repub_send_bytes.goalitems and \
+                    self.repub_send_bytes.goalitems > 0:
                         self.repub_send_bytes.items += nbytes
                         self._republish_output(OutSpec())
 
@@ -1580,7 +1596,8 @@ class ProgressTracker(ProgressTrackerFrontend, ProgressTrackerBackend):
                         self.repub_pkgs.printed = True
 
         def lint_next_phase(self, goalitems, lint_phasetype):
-                self.lint_phasetype = lint_phasetype # pylint: disable=W0201
+                # Attribute defined outside __init__; pylint: disable=W0201
+                self.lint_phasetype = lint_phasetype
                 if self.lint_phase is not None:
                         self._lint_output(OutSpec(last=True))
                 if self.lint_phase is None:
@@ -1592,7 +1609,6 @@ class ProgressTracker(ProgressTrackerFrontend, ProgressTrackerBackend):
                 else:
                         phasename = _("Lint phase {0:d}".format(
                             self.lint_phase))
-                # Attribute defined outside __init__; pylint: disable=W0201
                 self.lintitems = GoalTrackerItem(phasename)
                 self.lintitems.goalitems = goalitems
                 self._lint_output(OutSpec(first=True))
@@ -1698,7 +1714,8 @@ class MultiProgressTracker(ProgressTrackerFrontend):
                 # Look in the ProgressTrackerFrontend for a list of frontend
                 # methods to multiplex.
                 #
-                for methname, m in ProgressTrackerFrontend.__dict__.iteritems():
+                for methname, m in six.iteritems(
+                    ProgressTrackerFrontend.__dict__):
                         if methname == "__init__":
                                 continue
                         if not inspect.isfunction(m):
@@ -2169,6 +2186,7 @@ class CommandLineProgressTracker(ProgressTracker):
                 lines = output.splitlines()
                 nlines = len(lines)
                 for linenum, line in enumerate(lines):
+                        line = misc.force_str(line)
                         if linenum < nlines - 1:
                                 self._pe.cprint("| " + line)
                         else:
@@ -2259,25 +2277,30 @@ class RADProgressTracker(CommandLineProgressTracker):
 
         def _phase_prefix(self):
                 if self.major_phase == self.PHASE_UTILITY:
-                        return ""
+                        return "Utility"
 
                 return self.phase_names[self.major_phase]
 
         #
         # Helper routines
         #
-        def __prep_prog_json_str(self, msg=None, phase=None, prog_json=None):
-                # prepare progress json formatted string.
+        def __prep_prog_json(self, msg=None, phase=None, prog_json=None):
+                # prepare progress json.
                 phase_name = self._phase_prefix()
                 if phase:
                         phase_name = phase
                 if prog_json:
-                        ret_json = prog_json
+                        return prog_json
                 else:
-                        ret_json = {self.O_PHASE: phase_name,
-                                    self.O_MESSAGE: msg
-                                   }
-                return json.dumps(ret_json)
+                        return {self.O_PHASE: phase_name,
+                            self.O_MESSAGE: msg}
+
+        def __handle_prog_output(self, prog_json, end="\n"):
+                # If event handler is set, report an event. Otherwise, print.
+                if self.__prog_event_handler:
+                        self.__prog_event_handler(event=prog_json)
+                else:
+                        self._pe.cprint(json.dumps(prog_json), end=end)
 
         def __generic_start(self, msg):
                 # In the case of listing/up-to-date check operations, we
@@ -2285,12 +2308,8 @@ class RADProgressTracker(CommandLineProgressTracker):
                 if self.purpose != self.PURPOSE_NORMAL:
                         return
 
-                prog_str = self.__prep_prog_json_str(msg)
-                # If event handler is set, report an event. Otherwise, print.
-                if self.__prog_event_handler:
-                        self.__prog_event_handler(desc=prog_str+"\n")
-                else:
-                        self._pe.cprint(prog_str)
+                prog_json = self.__prep_prog_json(msg)
+                self.__handle_prog_output(prog_json)
                 # indicate that we just printed.
                 self._ptimer.reset_now()
 
@@ -2300,12 +2319,8 @@ class RADProgressTracker(CommandLineProgressTracker):
                         return
                 if msg is None:
                         msg = _("Done")
-                prog_str = self.__prep_prog_json_str(msg, phase=phase,
-                        prog_json=prog_json)
-                if self.__prog_event_handler:
-                        self.__prog_event_handler(desc=prog_str+"\n")
-                else:
-                        self._pe.cprint(prog_str, end='\n')
+                prog_json = self.__prep_prog_json(msg, phase, prog_json)
+                self.__handle_prog_output(prog_json, end='\n')
                 self._ptimer.reset()
 
         def __generic_done_item(self, item, msg=None):
@@ -2318,22 +2333,16 @@ class RADProgressTracker(CommandLineProgressTracker):
                         else:
                                 msg = _("Done")
                 outmsg = msg.format(elapsed=item.elapsed())
-                prog_str = self.__prep_prog_json_str(outmsg)
-                if self.__prog_event_handler:
-                        self.__prog_event_handler(desc=prog_str+"\n")
-                else:
-                        self._pe.cprint(prog_str, end='\n')
+                prog_json = self.__prep_prog_json(outmsg)
+                self.__handle_prog_output(prog_json, end='\n')
                 self._ptimer.reset()
 
         def _change_purpose(self, op, np):
                 self._ptimer.reset()
                 if np == self.PURPOSE_PKG_UPDATE_CHK:
-                        prog_str = self.__prep_prog_json_str(
+                        prog_json = self.__prep_prog_json(
                             _("Checking that pkg(5) is up to date ..."))
-                        if self.__prog_event_handler:
-                                self.__prog_event_handler(desc=prog_str+"\n")
-                        else:
-                                self._pe.cprint(prog_str)
+                        self.__handle_prog_output(prog_json)
 
         def _cache_cats_output(self, outspec):
                 if outspec.first:
@@ -2397,17 +2406,14 @@ class RADProgressTracker(CommandLineProgressTracker):
                 goalitems = self.mfst_fetch.goalitems
                 if goalitems == None:
                         goalitems = 0
-                prog_str = json.dumps({self.O_PHASE: self._phase_prefix(),
+                prog_json = {self.O_PHASE: self._phase_prefix(),
                     self.O_MESSAGE: _("Fetching manifests"),
                     self.O_PRO_ITEMS: self.mfst_fetch.items,
                     self.O_GOAL_ITEMS: goalitems,
                     self.O_PCT_DONE: int(self.mfst_fetch.pctdone()),
                     self.O_ITEM_U: _("manifest")
-                    })
-                if self.__prog_event_handler:
-                        self.__prog_event_handler(desc=prog_str+"\n")
-                else:
-                        self._pe.cprint(prog_str)
+                    }
+                self.__handle_prog_output(prog_json)
 
         def _dl_output(self, outspec):
                 if not self._ptimer.time_to_print() and not outspec.first and \
@@ -2428,7 +2434,7 @@ class RADProgressTracker(CommandLineProgressTracker):
 
                 if not outspec.last:
                         # 'first' or time to print
-                        prog_str = json.dumps({
+                        prog_json = {
                             self.O_PHASE: self._phase_prefix(),
                             self.O_MESSAGE: _("Downloading"),
                             self.O_PRO_ITEMS: self.dl_bytes.items,
@@ -2436,11 +2442,8 @@ class RADProgressTracker(CommandLineProgressTracker):
                             self.O_PCT_DONE: int(self.dl_bytes.pctdone()),
                             self.O_SPEED: speedstr,
                             self.O_ITEM_U: _("byte")
-                            })
-                        if self.__prog_event_handler:
-                                self.__prog_event_handler(desc=prog_str+"\n")
-                        else:
-                                self._pe.cprint(prog_str)
+                            }
+                        self.__handle_prog_output(prog_json)
                 else:
                         # 'last'
                         prog_json = {self.O_PHASE: self._phase_prefix(),
@@ -2479,17 +2482,14 @@ class RADProgressTracker(CommandLineProgressTracker):
                         self.__generic_done(prog_json=prog_json)
                         return
 
-                prog_str = json.dumps({self.O_PHASE: self._phase_prefix(),
+                prog_json = {self.O_PHASE: self._phase_prefix(),
                     self.O_MESSAGE: _("Archiving"),
                     self.O_PRO_ITEMS: self.archive_bytes.items,
                     self.O_GOAL_ITEMS: self.archive_bytes.goalitems,
                     self.O_PCT_DONE: int(self.archive_bytes.pctdone()),
                     self.O_ITEM_U: _("byte")
-                    })
-                if self.__prog_event_handler:
-                        self.__prog_event_handler(desc=prog_str+"\n")
-                else:
-                        self._pe.cprint(prog_str)
+                    }
+                self.__handle_prog_output(prog_json)
 
         #
         # The progress tracking infrastructure wants to tell us about each
@@ -2506,17 +2506,14 @@ class RADProgressTracker(CommandLineProgressTracker):
                     sum(x.items for x in self._actionitems.values())
                 total_goal = \
                     sum(x.goalitems for x in self._actionitems.values())
-                prog_str = json.dumps({self.O_PHASE: self._phase_prefix(),
+                prog_json = {self.O_PHASE: self._phase_prefix(),
                     self.O_MESSAGE: _("Action activity"),
                     self.O_PRO_ITEMS: total_actions,
                     self.O_GOAL_ITEMS: total_goal,
                     self.O_TYPE: actionitem.name,
                     self.O_ITEM_U: _("action")
-                    })
-                if self.__prog_event_handler:
-                        self.__prog_event_handler(desc=prog_str+"\n")
-                else:
-                        self._pe.cprint(prog_str)
+                    }
+                self.__handle_prog_output(prog_json)
 
         def _act_output_all_done(self):
                 total_goal = \
@@ -2533,11 +2530,7 @@ class RADProgressTracker(CommandLineProgressTracker):
                     self.O_TIME: total_time,
                     self.O_TIME_U: _("second")
                     }
-                prog_str = self.__prep_prog_json_str(prog_json=prog_json)
-                if self.__prog_event_handler:
-                        self.__prog_event_handler(desc=prog_str+"\n")
-                else:
-                        self._pe.cprint(prog_str)
+                self.__handle_prog_output(prog_json)
 
         def _job_output(self, outspec, jobitem):
                 if outspec.first:
@@ -2550,27 +2543,17 @@ class RADProgressTracker(CommandLineProgressTracker):
                         if self.lint_phasetype == self.LINT_PHASETYPE_SETUP:
                                 msg = "{0} ... ".format(
                                     self.lintitems.name)
-                                prog_str = json.dumps({
-                                    self.O_PHASE: _("Setup"),
+                                prog_json = {self.O_PHASE: _("Setup"),
                                     self.O_MESSAGE: msg
-                                    })
-                                if self.__prog_event_handler:
-                                        self.__prog_event_handler(
-                                            desc=prog_str+"\n")
-                                else:
-                                        self._pe.cprint(prog_str)
+                                    }
+                                self.__handle_prog_output(prog_json)
                         elif self.lint_phasetype == self.LINT_PHASETYPE_EXECUTE:
                                 msg = "# --- {0} ---".format(
                                     self.lintitems.name)
-                                prog_str = json.dumps({
-                                    self.O_PHASE: _("Execute"),
+                                prog_json = {self.O_PHASE: _("Execute"),
                                     self.O_MESSAGE: msg
-                                    })
-                                if self.__prog_event_handler:
-                                        self.__prog_event_handler(
-                                            desc=prog_str+"\n")
-                                else:
-                                        self._pe.cprint(prog_str)
+                                    }
+                                self.__handle_prog_output(prog_json)
                 if outspec.last:
                         if self.lint_phasetype == self.LINT_PHASETYPE_SETUP:
                                 self.__generic_done(phase=_("Setup"))
@@ -2587,13 +2570,9 @@ class RADProgressTracker(CommandLineProgressTracker):
                 if self.linked_pkg_op == pkgdefs.PKG_OP_PUBCHECK:
                         self.__generic_done()
                         return
-                prog_str = self.__prep_prog_json_str(
+                prog_json = self.__prep_prog_json(
                     _("Finished processing linked images."))
-                if self.__prog_event_handler:
-                        self.__prog_event_handler(
-                            desc=prog_str+"\n")
-                else:
-                        self._pe.cprint(prog_str)
+                self.__handle_prog_output(prog_json)
 
         def __li_dump_output(self, output):
                 if not output:
@@ -2608,30 +2587,21 @@ class RADProgressTracker(CommandLineProgressTracker):
                     self.O_MESSAGE: _("Linked image '{0}' output:").format(lin)}
                 prog_json[self.O_LI_OUTPUT] = self.__li_dump_output(stdout)
                 prog_json[self.O_LI_ERROR] = self.__li_dump_output(stderr)
-                prog_str = self.__prep_prog_json_str(prog_json=prog_json)
-                if self.__prog_event_handler:
-                        self.__prog_event_handler(
-                            desc=prog_str+"\n")
-                else:
-                        self._pe.cprint(prog_str)
+                self.__handle_prog_output(prog_json)
 
         def _li_recurse_status_output(self, done):
                 if self.linked_pkg_op == pkgdefs.PKG_OP_PUBCHECK:
                         return
 
-                prog_str = json.dumps({self.O_PHASE: self._phase_prefix(),
+                prog_json = {self.O_PHASE: self._phase_prefix(),
                     self.O_MESSAGE: _("Linked images status"),
                     self.O_PRO_ITEMS: done,
                     self.O_GOAL_ITEMS: self.linked_total,
                     self.O_ITEM_U: _("linked image"),
                     self.O_RUNNING: [str(i) for i in self.linked_running]
-                    })
+                    }
 
-                if self.__prog_event_handler:
-                        self.__prog_event_handler(
-                            desc=prog_str+"\n")
-                else:
-                        self._pe.cprint(prog_str)
+                self.__handle_prog_output(prog_json)
 
         def _li_recurse_progress_output(self, lin):
                 if self.linked_pkg_op == pkgdefs.PKG_OP_PUBCHECK:
@@ -2656,7 +2626,7 @@ class RADProgressTracker(CommandLineProgressTracker):
                         self.__generic_done(prog_json=prog_json)
                         return
 
-                prog_str = json.dumps({self.O_PHASE: _("Reversion"),
+                prog_json = {self.O_PHASE: _("Reversion"),
                     self.O_MESSAGE: "Reversioning",
                     self.O_PRO_ITEMS: self.reversion_pkgs.items,
                     self.O_GOAL_PRO_ITEMS: self.reversion_pkgs.goalitems,
@@ -2664,12 +2634,8 @@ class RADProgressTracker(CommandLineProgressTracker):
                     self.O_GOAL_REV_ITEMS: self.reversion_revs.goalitems,
                     self.O_ADJ_ITEMS: self.reversion_adjs.items,
                     self.O_ITEM_U: _("package")
-                    })
-                if self.__prog_event_handler:
-                        self.__prog_event_handler(
-                            desc=prog_str+"\n")
-                else:
-                        self._pe.cprint(prog_str)
+                    }
+                self.__handle_prog_output(prog_json)
 
         @classmethod
         def get_json_schema(cls):
@@ -3160,6 +3126,7 @@ class FancyUNIXProgressTracker(ProgressTracker):
                 lines = output.splitlines()
                 nlines = len(lines)
                 for linenum, line in enumerate(lines):
+                        line = misc.force_str(line)
                         if linenum < nlines - 1:
                                 self._pe.cprint("| " + line)
                         else:
@@ -3317,8 +3284,8 @@ def test_progress_tracker(t, gofast=False):
         hunkmax = 8192
         approx_time = 5.0 * fast   # how long we want the dl to take
         # invent a list of random download chunks.
-        for pkgname, filelist in dlscript.iteritems():
-                for f in xrange(0, perpkgfiles):
+        for pkgname, filelist in six.iteritems(dlscript):
+                for f in range(0, perpkgfiles):
                         filesize = random.randint(0, filesizemax)
                         hunks = []
                         while filesize > 0:
@@ -3329,12 +3296,14 @@ def test_progress_tracker(t, gofast=False):
                                 pkggoalbytes += delta
                         filelist.append(hunks)
 
+        # pylint is picky about this message:
+        # old-division; pylint: disable=W1619
         pauseperfile = approx_time / pkggoalfiles
 
         try:
                 t.download_set_goal(len(dlscript), pkggoalfiles, pkggoalbytes)
                 n = 0
-                for pkgname, pkgfiles in dlscript.iteritems():
+                for pkgname, pkgfiles in six.iteritems(dlscript):
                         fmri = pkg.fmri.PkgFmri(pkgname)
                         t.download_start_pkg(fmri)
                         for pkgfile in pkgfiles:
@@ -3351,7 +3320,7 @@ def test_progress_tracker(t, gofast=False):
                 t.reset_download()
                 t.republish_set_goal(len(dlscript), pkggoalbytes, pkggoalbytes)
                 n = 0
-                for pkgname, pkgfiles in dlscript.iteritems():
+                for pkgname, pkgfiles in six.iteritems(dlscript):
                         fmri = pkg.fmri.PkgFmri(pkgname)
                         t.republish_start_pkg(fmri)
                         for pkgfile in pkgfiles:
@@ -3369,7 +3338,7 @@ def test_progress_tracker(t, gofast=False):
                 t.reset_download()
                 t.archive_set_goal("testarchive", pkggoalfiles, pkggoalbytes)
                 n = 0
-                for pkgname, pkgfiles in dlscript.iteritems():
+                for pkgname, pkgfiles in six.iteritems(dlscript):
                         for pkgfile in pkgfiles:
                                 for hunk in pkgfile:
                                         t.archive_add_progress(0, hunk)
@@ -3428,7 +3397,9 @@ def test_progress_tracker(t, gofast=False):
                                 t.lint_add_progress()
                                 time.sleep(0.02 * fast)
                 t.lint_done()
-
         except KeyboardInterrupt:
                 t.flush()
         return
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

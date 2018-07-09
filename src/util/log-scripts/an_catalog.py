@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -219,3 +219,6 @@ report_catalog_by_pkg_version()
 report_catalog_by_arch()
 report_section_end(summary_file = summary_file)
 
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

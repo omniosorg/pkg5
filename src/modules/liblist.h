@@ -50,7 +50,7 @@ typedef struct liblist {
 
 
 /* liblist utils */
-liblist_t *liblist_alloc();
+liblist_t *liblist_alloc(void);
 void liblist_free(liblist_t *lst);
 libnode_t *liblist_add(liblist_t *lst, off_t off);
 int liblist_foreach(liblist_t *lst, int (*cb)(libnode_t *, void *, void *),

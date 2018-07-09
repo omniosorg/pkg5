@@ -30,11 +30,15 @@ import getopt
 import gettext
 import locale
 import os
+import six
 import sys
 import traceback
 import warnings
 import errno
-from imp import reload
+if sys.version_info[:2] >= (3, 4):
+        from importlib import reload
+else:
+        from imp import reload
 
 import pkg.actions
 import pkg.bundle
@@ -54,7 +58,7 @@ nopub_actions = [ "unknown" ]
 def error(text, cmd=None):
         """Emit an error message prefixed by the command name """
 
-        if not isinstance(text, basestring):
+        if not isinstance(text, six.string_types):
                 # Assume it's an object that can be stringified.
                 text = str(text)
 
@@ -334,7 +338,7 @@ def trans_publish(repo_uri, fargs):
                 filelist = [("<stdin>", sys.stdin)]
         else:
                 try:
-                        filelist = [(f, file(f)) for f in pargs]
+                        filelist = [(f, open(f)) for f in pargs]
                 except IOError as e:
                         error(e, cmd="publish")
                         return 1
@@ -353,6 +357,7 @@ def trans_publish(repo_uri, fargs):
                 linecnt = len(data.splitlines())
                 linecnts.append((linecounter, linecounter + linecnt))
                 linecounter += linecnt
+                f.close()
 
         m = pkg.manifest.Manifest()
         try:
@@ -435,7 +440,7 @@ def trans_publish(repo_uri, fargs):
                         basename = os.path.basename(a.attrs["path"])
                         for pattern in timestamp_files:
                                 if fnmatch.fnmatch(basename, pattern):
-                                        if not isinstance(path, basestring):
+                                        if not isinstance(path, six.string_types):
                                                 # Target is from bundle; can't
                                                 # apply timestamp now.
                                                 continue
@@ -486,7 +491,7 @@ def trans_include(repo_uri, fargs, transaction=None):
                 filelist = [("<stdin>", sys.stdin)]
         else:
                 try:
-                        filelist = [(f, file(f)) for f in pargs]
+                        filelist = [(f, open(f)) for f in pargs]
                 except IOError as e:
                         error(e, cmd="include")
                         return 1
@@ -701,7 +706,7 @@ def trans_refresh_index(repo_uri, args):
         try:
                 t = trans.Transaction(repo_uri, xport=xport,
                     pub=pub).refresh_index()
-        except trans.TransactionError, e:
+        except trans.TransactionError as e:
                 error(e, cmd="refresh-index")
                 return 1
         return 0
@@ -829,6 +834,9 @@ if __name__ == "__main__":
 
         # Make all warnings be errors.
         warnings.simplefilter('error')
+        if six.PY3:
+                # disable ResourceWarning: unclosed file
+                warnings.filterwarnings("ignore", category=ResourceWarning)
 
         try:
                 __ret = main_func()
@@ -857,3 +865,6 @@ if __name__ == "__main__":
                 error(misc.get_traceback_message())
                 __ret = 99
         sys.exit(__ret)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

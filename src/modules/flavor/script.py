@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 import os
@@ -31,6 +31,7 @@ import pkg.flavor.base as base
 import pkg.flavor.python as python
 
 from pkg.portable import PD_LOCAL_PATH, PD_PROTO_DIR
+from pkg.misc import force_str
 
 class ScriptNonAbsPath(base.DependencyAnalysisError):
         """Exception that is raised when a file uses a relative path for the
@@ -70,7 +71,7 @@ def process_script_deps(action, pkg_vars, **kwargs):
                 return [], [], {}
 
         f = action.data()
-        l = f.readline()
+        l = force_str(f.readline())
         f.close()
 
         deps = []
@@ -111,3 +112,6 @@ def process_script_deps(action, pkg_vars, **kwargs):
                                 else:
                                         pkg_attrs[key] = py_attrs[key]
         return deps, elist, pkg_attrs
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

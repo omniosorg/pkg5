@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 #
@@ -29,7 +29,6 @@
 </%doc>
 <%
         import os.path
-        import urllib
         context.write("""
 #
 # This is an automatically generated file for IPS repositories, and
@@ -72,7 +71,6 @@ Listen ${host}:${port}
 # are actually available _before_ they are used.
 #
 
-<IfDefine 64bit>
 LoadModule authz_host_module libexec/64/mod_authz_host.so
 LoadModule log_config_module libexec/64/mod_log_config.so
 LoadModule ssl_module libexec/64/mod_ssl.so
@@ -82,31 +80,27 @@ LoadModule alias_module libexec/64/mod_alias.so
 LoadModule rewrite_module libexec/64/mod_rewrite.so
 LoadModule headers_module libexec/64/mod_headers.so
 LoadModule env_module libexec/64/mod_env.so
-LoadModule wsgi_module libexec/64/mod_wsgi-2.7.so
 LoadModule cache_module libexec/64/mod_cache.so
 LoadModule disk_cache_module libexec/64/mod_disk_cache.so
 LoadModule deflate_module libexec/64/mod_deflate.so
-</IfDefine>
-<IfDefine !64bit>
-LoadModule authz_host_module libexec/mod_authz_host.so
-LoadModule log_config_module libexec/mod_log_config.so
-LoadModule ssl_module libexec/mod_ssl.so
-LoadModule mime_module libexec/mod_mime.so
-LoadModule dir_module libexec/mod_dir.so
-LoadModule alias_module libexec/mod_alias.so
-LoadModule rewrite_module libexec/mod_rewrite.so
-LoadModule headers_module libexec/mod_headers.so
-LoadModule env_module libexec/mod_env.so
-LoadModule wsgi_module libexec/mod_wsgi-2.7.so
-LoadModule cache_module libexec/mod_cache.so
-LoadModule disk_cache_module libexec/mod_disk_cache.so
-LoadModule deflate_module libexec/mod_deflate.so
-</IfDefine>
+
+<%!
+    import os
+    import sys
+%>
+<%
+        context.write("""
+LoadModule wsgi_module libexec/mod_wsgi-{0}.so
+""".format(sys.version[:3]))
+%>
 
 # Turn on deflate for file types that support it
 AddOutputFilterByType DEFLATE text/html application/javascript text/css text/plain
 # We only alias a specific script, not all files in ${template_dir}
 WSGIScriptAlias ${sroot}/depot ${template_dir}/depot_index.py
+# Run wsgi script in the current version of Python runtime
+WSGIPythonHome sys.executable
+WSGIPythonPath os.pathsep.join(sys.path)
 
 # We set a 5 minute inactivity timeout: if no requests have been received in the
 # last 5 minutes and no requests are currently being processed, mod_wsgi shuts
@@ -117,9 +111,9 @@ WSGIScriptAlias ${sroot}/depot ${template_dir}/depot_index.py
         test_proto = os.environ.get("PKG5_TEST_PROTO", None)
         if test_proto:
                 context.write("""
-WSGIDaemonProcess pkgdepot processes=1 threads=21 user=pkg5srv group=pkg5srv display-name=pkg5_depot inactivity-timeout=300 python-path={0}/usr/lib/python2.7
-SetEnv PKG5_TEST_PROTO {1}
-""".format(test_proto, test_proto))
+WSGIDaemonProcess pkgdepot processes=1 threads=21 user=pkg5srv group=pkg5srv display-name=pkg5_depot inactivity-timeout=300 python-path={0}/usr/lib/python{1}
+SetEnv PKG5_TEST_PROTO {2}
+""".format(test_proto, sys.version[:3], test_proto))
         else:
                 context.write("""
 WSGIDaemonProcess pkgdepot processes=1 threads=21 user=pkg5srv group=pkg5srv display-name=pkg5_depot inactivity-timeout=300

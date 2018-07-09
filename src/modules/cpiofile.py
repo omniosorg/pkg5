@@ -1,7 +1,6 @@
-#!/usr/bin/python2.7
-# -*- coding: iso-8859-1 -*-
+#!/usr/bin/python
 #
-# Copyright (C) 2002 Lars Gustäbel <lars@gustaebel.de>
+# Copyright (C) 2002 Lars Gustaebel <lars@gustaebel.de>
 # All rights reserved.
 #
 # Permission  is  hereby granted,  free  of charge,  to  any person
@@ -29,7 +28,7 @@
 """
 
 #
-# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 from __future__ import print_function
@@ -44,6 +43,7 @@ import os
 import stat
 import time
 import struct
+from six.moves import range
 import pkg.pkgsubprocess as subprocess
 
 # cpio magic numbers
@@ -250,7 +250,7 @@ class _Stream:
                 """
                 if pos - self.pos >= 0:
                         blocks, remainder = divmod(pos - self.pos, self.bufsize)
-                        for i in xrange(blocks):
+                        for i in range(blocks):
                                 self.read(self.bufsize)
                         self.read(remainder)
                 else:
@@ -547,7 +547,7 @@ class CpioFile(object):
                 self.mode = {"r": "rb", "a": "r+b", "w": "wb"}[mode]
 
                 if not fileobj and not cfobj:
-                        fileobj = file(self.name, self.mode)
+                        fileobj = open(self.name, self.mode)
                         self._extfileobj = False
                 else:
                         # Copy constructor: just copy fileobj over and reset the
@@ -572,7 +572,7 @@ class CpioFile(object):
 
                 if self._mode == "r":
                         self.firstmember = None
-                        self.firstmember = self.next()
+                        self.firstmember = next(self)
 
                 if self._mode == "a":
                         # Move to the end of the archive,
@@ -580,7 +580,7 @@ class CpioFile(object):
                         self.firstmember = None
                         while True:
                                 try:
-                                        cpioinfo = self.next()
+                                        cpioinfo = next(self)
                                 except ReadError:
                                         self.fileobj.seek(0)
                                         break
@@ -696,7 +696,7 @@ class CpioFile(object):
                 cpioname = pre + ext
 
                 if fileobj is None:
-                        fileobj = file(name, mode + "b")
+                        fileobj = open(name, mode + "b")
 
                 if mode != "r":
                         name = tarname
@@ -809,7 +809,7 @@ class CpioFile(object):
                                         # scan the whole archive.
                 return self.members
 
-        def next(self):
+        def __next__(self):
                 self._check("ra")
                 if self.firstmember is not None:
                         m = self.firstmember
@@ -850,6 +850,8 @@ class CpioFile(object):
                 self.members.append(cpioinfo)
                 return cpioinfo
 
+        next = __next__
+
         def extractfile(self, member):
                 self._check("r")
 
@@ -878,13 +880,13 @@ class CpioFile(object):
                 else:
                         end = members.index(cpioinfo)
 
-                for i in xrange(end - 1, -1, -1):
+                for i in range(end - 1, -1, -1):
                         if name == members[i].name:
                                 return members[i]
 
         def _load(self):
                 while True:
-                        cpioinfo = self.next()
+                        cpioinfo = next(self)
                         if cpioinfo is None:
                                 break
                 self._loaded = True
@@ -938,9 +940,9 @@ class CpioIter:
         def __iter__(self):
                 return self
 
-        def next(self):
+        def __next__(self):
                 if not self.cpiofile._loaded:
-                        cpioinfo = self.cpiofile.next()
+                        cpioinfo = next(self.cpiofile)
                         if not cpioinfo:
                                 self.cpiofile._loaded = True
                                 raise StopIteration
@@ -951,6 +953,8 @@ class CpioIter:
                                 raise StopIteration
                 self.index += 1
                 return cpioinfo
+
+        next = __next__
 
 def is_cpiofile(name):
 
@@ -983,3 +987,6 @@ if __name__ == "__main__":
                 # for l in f.readlines():
                 #         print(l, end=" ")
                 # f.close()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

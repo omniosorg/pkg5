@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 # -*- coding: utf-8 -*-
 #
 # CDDL HEADER START
@@ -22,10 +22,10 @@
 #
 
 #
-# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
-import testutils
+from . import testutils
 if __name__ == "__main__":
         testutils.setup_environment("../../../proto")
 import pkg5unittest
@@ -36,6 +36,7 @@ import pwd
 import re
 import shutil
 import signal
+import six
 import stat
 import tempfile
 import time
@@ -102,14 +103,18 @@ class TestProperty(pkg5unittest.Pkg5TestCase):
                         # Verify that the stringified form of the property's
                         # value matches what is expected.
                         p1 = propcls(propname, default=val)
-                        self.assertEqual(unicode(p1), expstr)
-                        self.assertEqual(str(p1), expstr.encode("utf-8"))
+                        self.assertEqual(six.text_type(p1), expstr)
+                        if six.PY2:
+                                self.assertEqual(str(p1), expstr.encode("utf-8"))
+                        else:
+                                # str() call in Python 3 must return str (unicode).
+                                self.assertEqual(str(p1), expstr)
 
                         # Verify that a property value's stringified form
                         # provides can be parsed into an exact equivalent
                         # in native form (e.g. list -> string -> list).
                         p2 = propcls(propname)
-                        p2.value = unicode(p1)
+                        p2.value = six.text_type(p1)
                         self.assertEqual(p1.value, p2.value)
                         self.assertEqualDiff(str(p1), str(p2))
 
@@ -120,9 +125,12 @@ class TestProperty(pkg5unittest.Pkg5TestCase):
         def __verify_ex_stringify(self, ex):
                 encs = str(ex)
                 self.assertNotEqual(len(encs), 0)
-                unis = unicode(ex)
+                unis = six.text_type(ex)
                 self.assertNotEqual(len(unis), 0)
-                self.assertEqualDiff(encs, unis.encode("utf-8"))
+                if six.PY2:
+                        self.assertEqualDiff(encs, unis.encode("utf-8"))
+                else:
+                        self.assertEqualDiff(encs, unis)
 
         def test_base(self):
                 """Verify base property functionality works as expected."""
@@ -384,7 +392,7 @@ class TestProperty(pkg5unittest.Pkg5TestCase):
                         if excls == cfg.PropertyConfigError:
                                 # Can't stringify base class.
                                 continue
-                        map(self.__verify_ex_stringify, (ex1, ex2, ex3))
+                        list(map(self.__verify_ex_stringify, (ex1, ex2, ex3)))
 
                         if excls != cfg.UnknownPropertyValueError:
                                 continue
@@ -469,15 +477,27 @@ class TestProperty(pkg5unittest.Pkg5TestCase):
 
                 # Verify stringified form and that stringified form can be used
                 # to set value.
-                self.__verify_stringify(propcls, "list", [
-                    ([""], "['']"),
-                    (["box", "cat"], "['box', 'cat']"),
-                    # List literal form uses unicode_escape.
-                    ([TH_PACKAGE, "profit"],
-                        u"[u'{0}', 'profit']".format(
-                        TH_PACKAGE.encode("unicode_escape"))),
-                    (["\xfe", "bob cat"], "['\\xfe', 'bob cat']"),
-                ])
+                if six.PY2:
+                        self.__verify_stringify(propcls, "list", [
+                            ([""], "['']"),
+                            (["box", "cat"], "['box', 'cat']"),
+                            # List literal form uses unicode_escape.
+                            ([TH_PACKAGE, "profit"],
+                                u"[u'{0}', 'profit']".format(
+                                TH_PACKAGE.encode("unicode_escape"))),
+                            (["\xfe", "bob cat"], "['\\xfe', 'bob cat']"),
+                        ])
+                else:
+                        # unicode representation in Python 3 is not using
+                        # escape sequence
+                        self.__verify_stringify(propcls, "list", [
+                            ([""], "['']"),
+                            (["box", "cat"], "['box', 'cat']"),
+                            ([TH_PACKAGE, "profit"],
+                                "['{0}', 'profit']".format(
+                                TH_PACKAGE)),
+                            (["þ", "bob cat"], "['þ', 'bob cat']"),
+                        ])
 
                 # Verify allowed value functionality permits expected values.
                 p = propcls("list", allowed=["", "<pathname>",
@@ -574,8 +594,8 @@ class TestProperty(pkg5unittest.Pkg5TestCase):
                 blist = [
                     [[]], [{}], [object()], # Objects not expected.
                     123,                    # Numbers not expected.
-                    ["\xfe"],               # Arbitrary 8-bit data is not
-                    "\xfe",                 # supported.
+                    [b"\xfe"],              # Arbitrary 8-bit data is not
+                    b"\xfe",                # supported.
                 ]
 
                 self.__verify_init(propcls, "slist", glist, blist)
@@ -824,7 +844,7 @@ class TestPropertyTemplate(pkg5unittest.Pkg5TestCase):
                         extype = args.get("prop_type", cfg.Property)
 
                         prop = proptemp.create("name")
-                        self.assert_(isinstance(prop, extype))
+                        self.assertTrue(isinstance(prop, extype))
 
                         for attr in exp_attrs:
                                 self.assertEqual(getattr(prop, attr),
@@ -838,8 +858,13 @@ class TestPropertySection(pkg5unittest.Pkg5TestCase):
 
         def __verify_stringify(self, cls, explist):
                 for val, expstr in explist:
-                        self.assertEqual(unicode(cls(val)), expstr)
-                        self.assertEqual(str(cls(val)), expstr.encode("utf-8"))
+                        self.assertEqual(six.text_type(cls(val)), expstr)
+                        if six.PY2:
+                                self.assertEqual(str(cls(val)), expstr.encode(
+                                    "utf-8"))
+                        else:
+                                # str() call in Python 3 must return str (unicode).
+                                self.assertEqual(str(cls(val)), expstr)
 
         def test_base(self):
                 """Verify base section functionality works as expected."""
@@ -974,7 +999,7 @@ class TestPropertySectionTemplate(pkg5unittest.Pkg5TestCase):
                 sectemp = cfg.PropertySectionTemplate("name",
                     properties=exp_props)
                 sec = sectemp.create("name")
-                self.assert_(isinstance(sec, cfg.PropertySection))
+                self.assertTrue(isinstance(sec, cfg.PropertySection))
 
                 expected = sorted([
                     (p.name, type(p)) for p in exp_props
@@ -1182,7 +1207,7 @@ urilist_basic =
 urilist_default = http://example.com/,file:/example/path
 uuid_basic = 
 uuid_default = 16fd2706-8baf-433b-82eb-8c7fada847da
-""".format(uni_escape=TH_PACKAGE.encode("unicode_escape"),
+""".format(uni_escape=TH_PACKAGE.encode("unicode_escape") if six.PY2 else TH_PACKAGE,
     uni_txt=TH_PACKAGE),
             1: """\
 [CONFIGURATION]
@@ -1252,8 +1277,8 @@ str_basic =
                 conf = cfg.Config(definitions=self._defs, overrides=overrides,
                     version=0)
                 exp_state = copy.deepcopy(self._initial_state[0])
-                for sname, props in overrides.iteritems():
-                        for pname, value in props.iteritems():
+                for sname, props in six.iteritems(overrides):
+                        for pname, value in six.iteritems(props):
                                 exp_state[sname][pname] = value
                 self._verify_initial_state(conf, 0, exp_state=exp_state)
 
@@ -1267,18 +1292,27 @@ str_basic =
                 conf = cfg.Config(definitions=self._defs, version=1)
                 self.assertEqualDiff("""\
 [first_section]
-str_basic = 
 bool_basic = False
+str_basic = 
 
 """, str(conf))
 
                 conf.set_property("first_section", "str_basic", TH_PACKAGE)
-                self.assertEqualDiff("""\
+                if six.PY2:
+                        self.assertEqualDiff("""\
 [first_section]
-str_basic = {0}
 bool_basic = False
+str_basic = {0}
 
 """.format(TH_PACKAGE.encode("utf-8")), str(conf))
+                else:
+                        # str() must return str (unicode) in Python 3.
+                        self.assertEqualDiff("""\
+[first_section]
+bool_basic = False
+str_basic = {0}
+
+""".format(TH_PACKAGE), str(conf))
 
                 #
                 # Test unicode case with and without unicode data.
@@ -1286,18 +1320,18 @@ bool_basic = False
                 conf = cfg.Config(definitions=self._defs, version=1)
                 self.assertEqualDiff(u"""\
 [first_section]
-str_basic = 
 bool_basic = False
+str_basic = 
 
-""", unicode(conf))
+""", six.text_type(conf))
 
                 conf.set_property("first_section", "str_basic", TH_PACKAGE)
                 self.assertEqualDiff(u"""\
 [first_section]
-str_basic = {0}
 bool_basic = False
+str_basic = {0}
 
-""".format(TH_PACKAGE), unicode(conf))
+""".format(TH_PACKAGE), six.text_type(conf))
         
                 # Verify target is None.
                 self.assertEqual(conf.target, None)
@@ -1424,7 +1458,7 @@ new_property = {0}
                 portable.remove(scpath)
 
                 # Verify read and write of sample files.
-                for ver, content in self._initial_files.iteritems():
+                for ver, content in six.iteritems(self._initial_files):
                         scpath = self.make_misc_files({
                             "cfg_cache": content })[0]
 
@@ -1540,7 +1574,7 @@ new_property = {0}
 
                 secobj = conf.get_section("section")
                 self.assertEqual(secobj.name, "section")
-                self.assert_(isinstance(secobj, cfg.PropertySection))
+                self.assertTrue(isinstance(secobj, cfg.PropertySection))
 
                 conf.set_properties({
                     "section": {
@@ -1562,7 +1596,7 @@ new_property = {0}
                 secobj = conf.get_section("section")
                 props = [
                     secobj.get_property(p)
-                    for p in ("bool_prop", "str_prop", "int_prop")
+                    for p in sorted(["bool_prop", "str_prop", "int_prop"])
                 ]
                 expected = [(secobj, props)]
                 returned = []
@@ -1681,7 +1715,7 @@ new_property = {0}
                     True)
 
                 conf = cfg.Config(definitions=self._templated_defs, version=1)
-                self.assertEqualDiff([], conf.get_index().keys())
+                self.assertEqualDiff([], list(conf.get_index().keys()))
 
                 conf.set_property("authority_example.com", "prefix",
                     "example.com")
@@ -1955,9 +1989,12 @@ class TestSMFConfig(_TestConfigBase):
         def __verify_ex_stringify(self, ex):
                 encs = str(ex)
                 self.assertNotEqual(len(encs), 0)
-                unis = unicode(ex)
+                unis = six.text_type(ex)
                 self.assertNotEqual(len(unis), 0)
-                self.assertEqualDiff(encs, unis.encode("utf-8"))
+                if six.PY2:
+                        self.assertEqualDiff(encs, unis.encode("utf-8"))
+                else:
+                        self.assertEqualDiff(encs, unis)
 
         def test_exceptions(self):
                 """Verify that exception classes can be initialized as expected,
@@ -2095,7 +2132,7 @@ class TestSMFConfig(_TestConfigBase):
                         # attempted (not currently supported).
                         self.assertRaises(cfg.SMFWriteError, conf.write)
 
-                for ver, mfst_content in self._initial_files.iteritems():
+                for ver, mfst_content in six.iteritems(self._initial_files):
                         test_mfst(svc_fmri, ver, mfst_content, self._defs)
 
                 # Verify configuration data with unknown sections or properties
@@ -2116,3 +2153,6 @@ class TestSMFConfig(_TestConfigBase):
 
 if __name__ == "__main__":
         unittest.main()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

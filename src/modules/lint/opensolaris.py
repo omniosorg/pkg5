@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -78,3 +78,6 @@ class OpenSolarisManifestChecker(base.ManifestChecker):
         # opensolaris.manifest002 is obsolete and should not be reused.
         # opensolaris.manifest003 is obsolete and should not be reused.
         # opensolaris.manifest004 is obsolete and should not be reused.
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -63,12 +63,19 @@ import glob
 import os
 import shutil
 import simplejson as json
+import six
 import sys
 import tempfile
 import threading
 import time
-import urllib
 import re as relib
+from functools import cmp_to_key
+# Pylint seems to be panic about six even if it is installed. Instead of using
+# 'disable' here, a better way is to use ignore-modules in pylintrc, but
+# it has an issue that is not fixed until recently. See pylint/issues/#223.
+# import-error; pylint: disable=F0401
+# no-name-in-module; pylint: disable=E0611
+from six.moves.urllib.parse import unquote
 
 import pkg.catalog as catalog
 import pkg.client.api_errors as apx
@@ -362,7 +369,7 @@ explicitly set cmdpath when allocating an ImageInterface object, or
 override cmdpath when allocating an Image object by setting PKG_CMDPATH
 in the environment or by setting simulate_cmdpath in DebugValues.""")
 
-                if isinstance(img_path, basestring):
+                if isinstance(img_path, six.string_types):
                         # Store this for reset().
                         self._img_path = img_path
                         self._img = image.Image(img_path,
@@ -551,7 +558,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                  """
 
                 ret = {}
-                for m, mvalues in self._img.cfg.mediators.iteritems():
+                for m, mvalues in six.iteritems(self._img.cfg.mediators):
                         ret[m] = copy.copy(mvalues)
                         if "version" in ret[m]:
                                 # Don't expose internal Version object to
@@ -811,7 +818,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
 
                 for mediator in sorted(ret):
                         for med_priority, med_ver, med_impl in sorted(
-                            ret[mediator], cmp=med.cmp_mediations):
+                            ret[mediator], key=cmp_to_key(med.cmp_mediations)):
                                 val = {}
                                 if med_ver:
                                         # Don't expose internal Version object
@@ -836,7 +843,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
         def get_avoid_list(self):
                 """Return list of tuples of (pkg stem, pkgs w/ group
                 dependencies on this) """
-                return [a for a in self._img.get_avoid_dict().iteritems()]
+                return [a for a in six.iteritems(self._img.get_avoid_dict())]
 
         def gen_facets(self, facet_list, implicit=False, patterns=misc.EmptyI):
                 """A generator function that produces tuples of the form:
@@ -1143,7 +1150,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                 # re-raise the original exception. (we have to explicitly
                 # restate the original exception since we may have cleared the
                 # current exception scope above.)
-                raise exc_type, exc_value, exc_traceback
+                six.reraise(exc_type, exc_value, exc_traceback)
 
         def solaris_image(self):
                 """Returns True if the current image is a solaris image, or an
@@ -1217,9 +1224,9 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                     # arg name              type                   nullable
                     "_act_timeout":         (int,                  False),
                     "_be_activate":         (bool,                 False),
-                    "_be_name":             (basestring,           True),
+                    "_be_name":             (six.string_types,     True),
                     "_backup_be":           (bool,                 True),
-                    "_backup_be_name":      (basestring,           True),
+                    "_backup_be_name":      (six.string_types,     True),
                     "_ignore_missing":      (bool,                 False),
                     "_ipkg_require_latest": (bool,                 False),
                     "_li_erecurse":         (iter,                 True),
@@ -1535,11 +1542,12 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                         # this regressions tests the plan save/load code.
                         pd_json1 = self.__plan_desc.getstate(self.__plan_desc,
                             reset_volatiles=True)
-                        fobj = tempfile.TemporaryFile()
+                        fobj = tempfile.TemporaryFile(mode="w+")
                         json.dump(pd_json1, fobj, encoding="utf-8")
                         pd_new = plandesc.PlanDescription(_op)
                         pd_new._load(fobj)
                         pd_json2 = pd_new.getstate(pd_new, reset_volatiles=True)
+                        fobj.close()
                         del fobj, pd_new
                         pkg.misc.json_diff("PlanDescription", \
                             pd_json1, pd_json2, pd_json1, pd_json2)
@@ -2908,17 +2916,17 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
 
                 if self.__new_be == True:
 
-			# Remove any temporary hot-fix source origins from
-			# the cloned BE.
-			for pub in self._img.cfg.publishers.values():
-				if not pub.repository:
-					continue
+                        # Remove any temporary hot-fix source origins from
+                        # the cloned BE.
+                        for pub in self._img.cfg.publishers.values():
+                                if not pub.repository:
+                                        continue
 
-				for o in pub.repository.origins:
-					if relib.search(
-					    '/pkg_hfa_.*p5p/$', o.uri):
-						pub.repository.remove_origin(o)
-						self._img.save_config()
+                                for o in pub.repository.origins:
+                                        if relib.search(
+                                            '/pkg_hfa_.*p5p/$', o.uri):
+                                                pub.repository.remove_origin(o)
+                                                self._img.save_config()
 
                         be.activate_image(set_active=self.__be_activate)
                 else:
@@ -3235,10 +3243,10 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
 
                 # Determine highest ranked publisher for package stems
                 # listed in installed incorporations.
-                def pub_order(a, b):
-                        return cmp(pub_ranks[a][0], pub_ranks[b][0])
+                def pub_key(item):
+                        return pub_ranks[item][0]
 
-                for p in sorted(pub_ranks, cmp=pub_order):
+                for p in sorted(pub_ranks, key=pub_key):
                         if pubs and p not in pubs:
                                 continue
                         for stem in known_cat.names(pubs=[p]):
@@ -3255,7 +3263,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
 
                 ret_pubs = []
                 for repo_uri in repos:
-                        if isinstance(repo_uri, basestring):
+                        if isinstance(repo_uri, six.string_types):
                                 repo = publisher.RepositoryURI(repo_uri)
                         else:
                                 # Already a RepositoryURI.
@@ -3460,7 +3468,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                                         # copy() is too slow here and catalog
                                         # entries are shallow so this should be
                                         # sufficient.
-                                        entry = dict(sentry.iteritems())
+                                        entry = dict(six.iteritems(sentry))
                                         if not base:
                                                 # Nothing else to do except add
                                                 # the entry for non-base catalog
@@ -3585,10 +3593,10 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                                                         # repository for this
                                                         # unique set of origins.
                                                         origins = []
-                                                        map(origins.extend, [
+                                                        list(map(origins.extend, [
                                                            pkg_repos.get(rid).origins
                                                            for rid in rids
-                                                        ])
+                                                        ]))
                                                         npub = \
                                                             copy.copy(pub_map[pub])
                                                         nrepo = npub.repository
@@ -3923,13 +3931,10 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                         for p in pubs:
                                 pub_ranks.setdefault(p, (99, (p, False, False)))
 
-                        def pub_order(a, b):
-                                res = cmp(pub_ranks[a], pub_ranks[b])
-                                if res != 0:
-                                        return res
-                                return cmp(a, b)
+                        def pub_key(a):
+                                return (pub_ranks[a], a)
 
-                        pubs = sorted(pubs, cmp=pub_order)
+                        pubs = sorted(pubs, key=pub_key)
 
                 ranked_stems = {}
                 for t, entry, actions in pkg_cat.entry_actions(cat_info,
@@ -4095,7 +4100,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                                                 # structure sanely somewhere.
                                                 mods = tuple(
                                                     (k, tuple(sorted(a.attrlist(k))))
-                                                    for k in sorted(a.attrs.iterkeys())
+                                                    for k in sorted(six.iterkeys(a.attrs))
                                                     if k not in ("name", "value")
                                                 )
                                                 attrs[atname][mods].extend(atvlist)
@@ -4142,7 +4147,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                                         # image, elide packages that are not for
                                         # a matching variant value.
                                         is_list = type(atvalue) == list
-                                        for vn, vv in img_variants.iteritems():
+                                        for vn, vv in six.iteritems(img_variants):
                                                 if vn == atname and \
                                                     ((is_list and
                                                     vv not in atvalue) or \
@@ -4732,7 +4737,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                         subfields = fields[2].split(None, 2)
                         pfmri = fmri.PkgFmri(subfields[0])
                         return pfmri, (query_num, pub, (v, return_type,
-                            (pfmri, urllib.unquote(subfields[1]),
+                            (pfmri, unquote(subfields[1]),
                             subfields[2])))
                 elif return_type == Query.RETURN_PACKAGES:
                         pfmri = fmri.PkgFmri(fields[2])
@@ -4812,9 +4817,6 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                         # Must be a publisher object.
                         osets = entry.get_origin_sets()
                         if not osets:
-                                unsupported.append((entry.prefix,
-                                    apx.NoPublisherRepositories(
-                                    entry.prefix)))
                                 continue
                         for repo in osets:
                                 slist.append((entry, repo, entry.prefix))
@@ -4999,7 +5001,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                 search is really communicating with a search-enabled server."""
 
                 try:
-                        s = res.next()
+                        s = next(res)
                         return s == Query.VALIDATION_STRING[v]
                 except StopIteration:
                         return False
@@ -5210,7 +5212,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                 # First, attempt to match the updated publisher object to an
                 # existing one using the object id that was stored during
                 # copy().
-                for key, old in publishers.iteritems():
+                for key, old in six.iteritems(publishers):
                         if pub._source_object_id == id(old):
                                 # Store the new publisher's id and the old
                                 # publisher object so it can be restored if the
@@ -5226,7 +5228,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
 
                 # Next, be certain that the publisher's prefix and alias
                 # are not already in use by another publisher.
-                for key, old in publishers.iteritems():
+                for key, old in six.iteritems(publishers):
                         if pub._source_object_id == id(old):
                                 # Don't check the object we're replacing.
                                 continue
@@ -5239,7 +5241,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
 
                 # Next, determine what needs updating and add the updated
                 # publisher.
-                for key, old in publishers.iteritems():
+                for key, old in six.iteritems(publishers):
                         if pub._source_object_id == id(old):
                                 old = orig_pub[-1]
                                 if need_refresh(old, pub):
@@ -5263,8 +5265,10 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                                 break
 
                 def cleanup():
+                        # Attempting to unpack a non-sequence%s;
+                        # pylint: disable=W0633
                         new_id, old_pub = orig_pub
-                        for new_pfx, new_pub in publishers.iteritems():
+                        for new_pfx, new_pub in six.iteritems(publishers):
                                 if id(new_pub) == new_id:
                                         publishers[old_pub.prefix] = old_pub
                                         break
@@ -5572,7 +5576,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                 ]
                 fd, fp = tempfile.mkstemp()
                 try:
-                        fh = os.fdopen(fd, "wb")
+                        fh = os.fdopen(fd, "w")
                         p5s.write(fh, pubs, self._img.cfg)
                         fh.close()
                         portable.rename(fp, path)
@@ -5905,3 +5909,6 @@ def image_create(pkg_client_name, version_id, root, imgtype, is_zone,
         img.cleanup_downloads()
 
         return api_inst
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

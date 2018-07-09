@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,10 +21,10 @@
 #
 
 #
-# Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
-import testutils
+from . import testutils
 if __name__ == "__main__":
         testutils.setup_environment("../../../proto")
 import pkg5unittest
@@ -37,8 +37,6 @@ import pkg.server.repository as repo
 import shutil
 import tempfile
 import time
-import urllib
-import urlparse
 import unittest
 import zlib
 
@@ -424,6 +422,17 @@ class TestUtilMerge(pkg5unittest.ManyDepotTestCase):
                     "-d {0} -p noodles".format(self.test_root),
                 ]), exit=1)
 
+                # Create the target repository.
+                repodir = os.path.join(self.test_root, "test_0_repo")
+                self.create_repo(repodir)
+
+                # Should fail because of no matching packages.
+                self.pkgmerge(" ".join([
+                    "-s arch=i386,{0}".format(self.rurl1),
+                    "-d {0} nomatching".format(repodir),
+                ]), exit=1)
+                shutil.rmtree(repodir)
+
         def test_1_single_merge(self):
                 """Verify that merge functionality works as expected when
                 specifying a single source."""
@@ -489,7 +498,7 @@ set name=variant.arch value=i386\
                 }
 
                 for f in cat.fmris():
-                        with open(repo.manifest(f), "rb") as m:
+                        with open(repo.manifest(f), "r") as m:
                                 actual = "".join(sorted(l for l in m)).strip()
                         expected = merged_expected[f.pkg_name]
                         self.assertEqualDiff(expected, actual)
@@ -531,7 +540,7 @@ set name=variant.arch value=i386\
 
                 # Verify that each package was merged correctly.
                 for f in cat.fmris():
-                        with open(repo.manifest(f), "rb") as m:
+                        with open(repo.manifest(f), "r") as m:
                                 actual = "".join(sorted(l for l in m)).strip()
                         expected = merged_expected[f.pkg_name]
                         self.assertEqualDiff(expected, actual)
@@ -627,7 +636,7 @@ set name=variant.arch value=sparc\
                }
 
                 for f in nlist:
-                        with open(repo.manifest(f), "rb") as m:
+                        with open(repo.manifest(f), "r") as m:
                                 actual = "".join(sorted(l for l in m)).strip()
                         expected = merged_expected[f.pkg_name]
                         self.assertEqualDiff(expected, actual)
@@ -707,7 +716,7 @@ set name=variant.arch value=sparc value=arm\
                }
 
                 for f in nlist:
-                        with open(repo.manifest(f), "rb") as m:
+                        with open(repo.manifest(f), "r") as m:
                                 actual = "".join(sorted(l for l in m)).strip()
                         expected = merged_expected[f.pkg_name]
                         self.assertEqualDiff(expected, actual)
@@ -751,7 +760,7 @@ set name=variant.arch value=sparc value=i386 value=arm\
 
                 # Verify that each package was merged correctly.
                 for f in cat.fmris():
-                        with open(repo.manifest(f), "rb") as m:
+                        with open(repo.manifest(f), "r") as m:
                                 actual = "".join(sorted(l for l in m)).strip()
                         expected = merged_expected[f.pkg_name]
                         self.assertEqualDiff(expected, actual)
@@ -867,7 +876,7 @@ set name=variant.debug value=false value=true\
                }
 
                 for f in nlist:
-                        with open(repo.manifest(f), "rb") as m:
+                        with open(repo.manifest(f), "r") as m:
                                 actual = "".join(sorted(l for l in m)).strip()
                         expected = merged_expected[f.pkg_name]
                         self.assertEqualDiff(expected, actual)
@@ -891,7 +900,7 @@ set name=variant.debug value=false value=true\
 
                 repo = self.get_repo(repodir)
                 for f in nlist:
-                        with open(repo.manifest(f), "rb") as m:
+                        with open(repo.manifest(f), "r") as m:
                                 actual = "".join(sorted(l for l in m)).strip()
                         expected = merged_expected[f.pkg_name]
                         self.assertEqualDiff(expected, actual)
@@ -992,7 +1001,7 @@ set name=variant.debug value=false variant.arch=arm\
 
                 repo = self.get_repo(repodir)
                 for f in nlist:
-                        with open(repo.manifest(f), "rb") as m:
+                        with open(repo.manifest(f), "r") as m:
                                 actual = "".join(sorted(l for l in m)).strip()
                         expected = merged_expected[f.pkg_name]
                         self.assertEqualDiff(expected, actual)
@@ -1026,7 +1035,7 @@ set name=variant.arch value=sparc value=i386\
 """.format(self.published_blend[2])
 
                 for f in cat.fmris():
-                        with open(repo.manifest(f), "rb") as m:
+                        with open(repo.manifest(f), "r") as m:
                                 actual = "".join(sorted(l for l in m)).strip()
                 self.assertEqualDiff(expected, actual)
                 shutil.rmtree(repodir)
@@ -1200,7 +1209,7 @@ set name=variant.debug value=false\
                         # and their content matches what we expect.
                         for key in keys:
                                 f = fmri_dic[key]
-                                with open(sr.manifest(f), "rb") as manf:
+                                with open(sr.manifest(f), "r") as manf:
                                         actual = "".join(
                                             sorted(l for l in manf)).strip()
                                 self.assertEqualDiff(expected[f], actual)
@@ -1212,7 +1221,7 @@ set name=variant.debug value=false\
                             for entry in fmris])
                         known_pubs = set(
                             [p.prefix for p in sr.get_publishers()])
-                        self.assert_(pubs == known_pubs,
+                        self.assertTrue(pubs == known_pubs,
                             "Repository at {0} didn't contain the "
                             "expected set of publishers")
 
@@ -1220,10 +1229,10 @@ set name=variant.debug value=false\
                         # in 'keys' in the repository by walking all
                         # publishers, and all packages in the repository
                         for pub in sr.get_publishers():
-                                cat = sr.get_catalog(pub=p.prefix)
+                                cat = sr.get_catalog(pub=pub.prefix)
                                 for f in cat.fmris():
                                         if f.get_fmri() not in fmris:
-                                                self.assert_(False,
+                                                self.assertTrue(False,
                                                     "{0} not in repository".format(f))
 
                 # test merging all publishers.
@@ -1312,7 +1321,7 @@ set name=variant.arch value=PPC value=ARM\
 """.format(self.published_17[0])
 
                 for f in cat.fmris():
-                        with open(repo.manifest(f), "rb") as m:
+                        with open(repo.manifest(f), "r") as m:
                                 actual = "".join(sorted(l for l in m)).strip()
                 self.assertEqualDiff(expected, actual)
                 shutil.rmtree(repodir)
@@ -1324,7 +1333,7 @@ set name=variant.arch value=PPC value=ARM\
                 for pub in pubs:
                         cat = repository.get_catalog(pub=pub)
                         for f in cat.fmris():
-                                with open(repository.manifest(f), "rb") as m:
+                                with open(repository.manifest(f), "r") as m:
                                         actual += "".join(
                                             sorted(l for l in m)).strip()
                         actual += "\n"
@@ -1332,3 +1341,6 @@ set name=variant.arch value=PPC value=ARM\
 
 if __name__ == "__main__":
         unittest.main()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

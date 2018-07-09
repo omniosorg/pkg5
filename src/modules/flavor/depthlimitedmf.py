@@ -1,8 +1,8 @@
-#!/usr/bin/python2.7
-# Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009 Python
+#!/usr/bin/python
+# Copyright (c) 2001, 2016, 2003, 2016, 2005, 2016, 2007, 2016, 2009 Python
 # Software Foundation; All Rights Reserved
 #
-# Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
 
 
 """A standalone version of ModuleFinder which limits the depth of exploration
@@ -90,14 +90,17 @@ class ModuleInfo(object):
 
 
 if __name__ == "__main__":
-        class MultipleDefaultRunPaths(Exception):
+        try:
+                import pkg.misc as misc
+                import gettext
+                import locale
+                misc.setlocale(locale.LC_ALL, "")
+                gettext.install("pkg", "/usr/share/locale",
+                    codeset=locale.getpreferredencoding())
+        except ImportError:
+                pass
 
-                def __unicode__(self):
-                        # To workaround python issues 6108 and 2517, this
-                        # provides a a standard wrapper for this class'
-                        # exceptions so that they have a chance of being
-                        # stringified correctly.
-                        return str(self)
+        class MultipleDefaultRunPaths(Exception):
 
                 def __str__(self):
                         return _(
@@ -204,7 +207,11 @@ class DepthLimitedModuleFinder(modulefinder.ModuleFinder):
 
                 res = []
                 code = co.co_code
-                if sys.version_info >= (2, 5):
+                if sys.version_info >= (2, 5) and sys.version_info < (3, 6):
+                        # Python 3.6's modulefinder.py got rid of
+                        # scan_opcodes_25() and renamed scan_opcodes_25()
+                        # to scan_opcodes(). Previously old scan_opcodes()
+                        # was for Python 2.4 and earlier.
                         scanner = self.scan_opcodes_25
                 else:
                         scanner = self.scan_opcodes
@@ -395,3 +402,6 @@ if __name__ == "__main__":
                 sys.stdout.write("ERR {0}\n".format(e))
         except MultipleDefaultRunPaths as e:
                 sys.stdout.write("{0}\n".format(e))
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

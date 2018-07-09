@@ -20,7 +20,7 @@
 # CDDL HEADER END
 
 #
-# Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 from __future__ import print_function
@@ -54,7 +54,6 @@ DRIVER_ALIAS_PREFIXES = (
 # 7) key attribute tags come first
 
 try:
-        import cStringIO
         import copy
         import errno
         import getopt
@@ -63,10 +62,14 @@ try:
         import operator
         import os
         import re
+        import six
         import sys
         import tempfile
         import traceback
+        import warnings
         from difflib import unified_diff
+        from functools import cmp_to_key
+        from six.moves import cStringIO
 
         import pkg
         import pkg.actions
@@ -208,12 +211,12 @@ def cmplines(a, b):
                         return 5
                 return 2
 
-        c = cmp(typeord(a[0]), typeord(b[0]))
+        c = misc.cmp(typeord(a[0]), typeord(b[0]))
         if c:
                 return c
 
         if opt_format != FMT_V2:
-                c = cmp(a[0].name, b[0].name)
+                c = misc.cmp(a[0].name, b[0].name)
                 if c:
                         return c
 
@@ -277,13 +280,19 @@ def cmplines(a, b):
                 if not b_sk:
                         b_sk = b[0].attrs[key_attr]
 
-                c = cmp(a_sk, b_sk)
-                if c:
+                c = misc.cmp(a_sk, b_sk)
+                # misc.cmp raises NotImplemented for uncomparable types in
+                # Python 3. Sort them based on stringified key attribute.
+                if c is NotImplemented:
+                        c = misc.cmp(str(a_sk), str(b_sk))
+                        if c:
+                                return c
+                elif c:
                         return c
 
         # No key attribute or key attribute sorting provides equal placement, so
         # sort based on stringified action.
-        return cmp(str(a[0]), str(b[0]))
+        return misc.cmp(str(a[0]), str(b[0]))
 
 def write_line(line, fileobj):
         """Write out a manifest line"""
@@ -367,13 +376,9 @@ def write_line(line, fileobj):
                 # No special order for all other cases.
                 return 0
 
-        # actual cmp function
-        def cmpkv(a, b):
-                c = cmp(kvord(a), kvord(b))
-                if c:
-                        return c
-
-                return cmp(a[0], b[0])
+        # actual key function
+        def key_func(a):
+                return (kvord(a), a[0])
 
         JOIN_TOK = " \\\n    "
         def grow(a, b, rem_values, force_nl=False):
@@ -431,9 +436,9 @@ def write_line(line, fileobj):
         def cmp_aliases(a, b):
                 if opt_format == FMT_V1:
                         # Simple comparison for V1 format.
-                        return cmp(a, b)
+                        return misc.cmp(a, b)
                 # For V2 format, order aliases by interpreted value.
-                return cmp(get_alias_key(a), get_alias_key(b))
+                return misc.cmp(get_alias_key(a), get_alias_key(b))
 
         def astr(aout):
                 # Number of attribute values for first line and remaining.
@@ -446,7 +451,7 @@ def write_line(line, fileobj):
                 rem_count = total_count
 
                 # Now build the action output string an attribute at a time.
-                for k, v in sorted(sattrs.iteritems(), cmp=cmpkv):
+                for k, v in sorted(six.iteritems(sattrs), key=key_func):
                         # Newline breaks are only forced when there is more than
                         # one value for an attribute.
                         if not (isinstance(v, list) or isinstance(v, set)):
@@ -458,8 +463,8 @@ def write_line(line, fileobj):
 
                         cmp_attrs = None
                         if k == "alias":
-                                cmp_attrs = cmp_aliases
-                        for lmt in sorted(nv, cmp=cmp_attrs):
+                                cmp_attrs = cmp_to_key(cmp_aliases)
+                        for lmt in sorted(nv, key=cmp_attrs):
                                 force_nl = use_force_nl and \
                                     (k == "alias" or (opt_format == FMT_V2 and
                                     k.startswith("pkg.debug")))
@@ -545,8 +550,8 @@ def main_func():
 
         def difference(in_file):
                 whole_f1 = in_file.readlines()
-                f2 = cStringIO.StringIO()
-                fmt_file(cStringIO.StringIO("".join(whole_f1)), f2)
+                f2 = cStringIO()
+                fmt_file(cStringIO("".join(whole_f1)), f2)
                 f2.seek(0)
                 whole_f2 = f2.readlines()
 
@@ -562,7 +567,7 @@ def main_func():
         flist = pargs
         if not flist:
                 try:
-                        in_file = cStringIO.StringIO()
+                        in_file = cStringIO()
                         in_file.write(sys.stdin.read())
                         in_file.seek(0)
 
@@ -607,7 +612,8 @@ def main_func():
                         # something goes wrong.
                         path = os.path.abspath(fname)
 
-                        rcode, formatted = difference(open(fname, "rb"))
+                        with open(fname, "r") as f:
+                                rcode, formatted = difference(f)
                         if rcode == 0:
                                 continue
 
@@ -616,8 +622,8 @@ def main_func():
                                 # a format explicitly, try V1 format.
                                 if not orig_opt_format:
                                         opt_format = FMT_V1
-                                        rcode, formatted = difference(
-                                            open(fname, "rb"))
+                                        with open(fname, "r") as f:
+                                                rcode, formatted = difference(f)
                                         opt_format = FMT_V2
                                         if rcode == 0:
                                                 # Manifest is in V1 format.
@@ -642,7 +648,7 @@ def main_func():
                         # Replace manifest with formatted version.
                         pathdir = os.path.dirname(path)
                         tfd, tname = tempfile.mkstemp(dir=pathdir)
-                        with os.fdopen(tfd, "wb") as t:
+                        with os.fdopen(tfd, "w") as t:
                                 t.write(formatted)
 
                         try:
@@ -689,7 +695,7 @@ def fmt_file(in_file, out_file):
                         lines.append(tp)
                         saw_action = True
 
-        lines.sort(cmp=cmplines)
+        lines.sort(key=cmp_to_key(cmplines))
         for l in lines:
                 write_line(l, out_file)
         out_file.writelines("\n".join(trailing_comments))
@@ -699,6 +705,9 @@ def fmt_file(in_file, out_file):
 
 
 if __name__ == "__main__":
+        if six.PY3:
+                # disable ResourceWarning: unclosed file
+                warnings.filterwarnings("ignore", category=ResourceWarning)
         try:
                 __ret = main_func()
         except (PipeError, KeyboardInterrupt):
@@ -713,3 +722,6 @@ if __name__ == "__main__":
                 __ret = 99
 
         sys.exit(__ret)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

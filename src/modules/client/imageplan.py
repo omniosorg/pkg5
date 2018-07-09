@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
 # Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
 #
 
@@ -30,10 +30,12 @@ from collections import defaultdict, namedtuple
 import contextlib
 import errno
 import fnmatch
+import io
 import itertools
 import mmap
 import operator
 import os
+import six
 import stat
 import sys
 import tempfile
@@ -42,7 +44,7 @@ import traceback
 import weakref
 import re as relib
 
-from functools import reduce
+from functools import cmp_to_key, reduce
 
 from pkg.client import global_settings
 logger = global_settings.logger
@@ -359,7 +361,17 @@ class ImagePlan(object):
                 # if we're changing variants or facets, save that to the plan.
                 if new_variants or facet_change or masked_facet_change:
                         self.pd._varcets_change = True
-                        self.pd._new_variants = new_variants
+                        if new_variants:
+                                # This particular data are passed as unicode
+                                # instead of bytes in the child image due to the
+                                # jsonrpclib update, so we use force_str here to
+                                # reduce the pain in comparing json data type.
+                                self.pd._new_variants = {}
+                                for k, v in new_variants.items():
+                                        self.pd._new_variants[misc.force_str(k)] = \
+                                            misc.force_str(v)
+                        else:
+                                self.pd._new_variants = new_variants
                         self.pd._old_facets   = self.image.cfg.facets
                         self.pd._new_facets   = new_facets
                         self.pd._facet_change = facet_change
@@ -389,7 +401,7 @@ class ImagePlan(object):
                         dehydrate = set()
                 dehydrate = set(dehydrate) | (old_dehydrated - rehydrate)
 
-                self.operations_pubs = dehydrate
+                self.operations_pubs = sorted(dehydrate)
                 # Only allows actions in new image that cannot be dehydrated
                 # or that are in the dehydrate list and not in the rehydrate
                 # list.
@@ -457,16 +469,23 @@ class ImagePlan(object):
                 for m in matched_vals.values():
                         triggered_fmris |= set(m)
 
-                # When matching on the requested FMRI remove the versions which
-                # might be already in the image because we don't want them in
-                # the proposed list for the solver. Otherwise we might trim on
-                # the installed version which prevents us from downgrading.
+                # Removals are done by stem so we have to make sure we only add
+                # removal FMRIs for versions which are actually installed. If
+                # the actuator specifies a version which is not installed, treat
+                # as nop.
+                # For updates, we have to remove versions which are already in
+                # the image because we don't want them in the proposed list for
+                # the solver. Otherwise we might trim on the installed version
+                # which prevents us from downgrading.
                 for t in triggered_fmris.copy():
-                        if t in installed_dict.values():
+                        if (exec_op == pkgdefs.PKG_OP_UNINSTALL and
+                            t not in installed_dict.values()) or \
+                            (exec_op != pkgdefs.PKG_OP_UNINSTALL
+                            and t in installed_dict.values()):
                                 triggered_fmris.remove(t)
-                        else:
-                                self.__pkg_actuators.add((trigger_fmri,
-                                    t.pkg_name, trigger_op, exec_op))
+                                continue
+                        self.__pkg_actuators.add((trigger_fmri, t.pkg_name,
+                            trigger_op, exec_op))
 
                 solver_inst.add_triggered_op(trigger_op, exec_op,
                     triggered_fmris)
@@ -647,7 +666,8 @@ class ImagePlan(object):
                                 ignore_inst_parent_deps=\
                                     ignore_inst_parent_deps,
                                 exact_install=exact_install,
-                                installed_dict_tmp=installed_dict_tmp)
+                                installed_dict_tmp=installed_dict_tmp,
+                                insync=self.image.linked.insync)
 
                         return solver, new_vector, new_avoid_obs
 
@@ -1047,7 +1067,7 @@ class ImagePlan(object):
                 pt.plan_start(pt.PLAN_MEDIATION_CHG)
                 # keys() is used since entries are deleted during iteration.
                 update_mediators = {}
-                for m in self.pd._new_mediators.keys():
+                for m in list(self.pd._new_mediators.keys()):
                         pt.plan_add_progress(pt.PLAN_MEDIATION_CHG)
                         for k in ("implementation", "version"):
                                 if k in self.pd._new_mediators[m]:
@@ -1307,7 +1327,8 @@ class ImagePlan(object):
                                         reject_set=reject_set,
                                         trim_proposed_installed=False,
                                         ignore_inst_parent_deps=\
-                                            ignore_inst_parent_deps)
+                                            ignore_inst_parent_deps,
+                                        insync=self.image.linked.insync)
                         else:
                                 # Updating all installed packages requires a
                                 # different solution path.
@@ -1479,7 +1500,7 @@ class ImagePlan(object):
 
                 # build the pkg plans, making sure to propose only one repair
                 # per fmri
-                for f, m in set(revert_dirs.keys() + revert_dict.keys()):
+                for f, m in set(list(revert_dirs.keys()) + list(revert_dict.keys())):
                         needs_delete = revert_dirs[(f, m)]
                         needs_change = revert_dict[(f, m)]
                         if not needs_delete and not needs_change:
@@ -1561,14 +1582,14 @@ class ImagePlan(object):
                 pstat = os.lstat(path)
                 mode = oct(stat.S_IMODE(pstat.st_mode))
                 if stat.S_ISLNK(pstat.st_mode):
-                        return pkg.actions.link.LinkAction(
+                        return pkg.actions.link.LinkAction(None,
                             target=os.readlink(path), path=pubpath)
                 elif stat.S_ISDIR(pstat.st_mode):
-                        return pkg.actions.directory.DirectoryAction(
+                        return pkg.actions.directory.DirectoryAction(None,
                             mode=mode, owner="root",
                             group="bin", path=pubpath)
                 else: # treat everything else as a file
-                        return pkg.actions.file.FileAction(
+                        return pkg.actions.file.FileAction(None,
                             mode=mode, owner="root",
                             group="bin", path=pubpath)
 
@@ -1714,7 +1735,7 @@ class ImagePlan(object):
         def __dicts2fmrichanges(olddict, newdict):
                 return [
                     (olddict.get(k, None), newdict.get(k, None))
-                    for k in set(olddict.keys() + newdict.keys())
+                    for k in set(list(olddict.keys()) + list(newdict.keys()))
                 ]
 
         def reboot_advised(self):
@@ -2207,7 +2228,7 @@ class ImagePlan(object):
                 else:
                         msg, actions = ret
 
-                if not isinstance(msg, basestring):
+                if not isinstance(msg, six.string_types):
                         return False
 
                 if msg == "nothing":
@@ -2410,7 +2431,8 @@ class ImagePlan(object):
                                 pns = None
                                 i = 0
                                 while 1:
-                                        line = sf.readline()
+                                        # sf is reading in binary mode
+                                        line = misc.force_str(sf.readline())
                                         i += 1
                                         if i > cnt:
                                                 break
@@ -2456,7 +2478,7 @@ class ImagePlan(object):
 
                 # .keys() is being used because we're removing keys from the
                 # dictionary as we go.
-                for key in new.keys():
+                for key in list(new.keys()):
                         actions = new[key]
                         assert len(actions) > 0
                         oactions = old.get(key, [])
@@ -2539,7 +2561,7 @@ class ImagePlan(object):
 
                 # .keys() is being used because we're removing keys from the
                 # dictionary as we go.
-                for key in old.keys():
+                for key in list(old.keys()):
                         # If actions that aren't in conflict are being removed,
                         # then nothing more needs to be done.
                         if key not in new:
@@ -2550,7 +2572,7 @@ class ImagePlan(object):
                 """Check all the newly installed actions for conflicts with
                 existing actions."""
 
-                for key, actions in new.iteritems():
+                for key, actions in six.iteritems(new):
                         oactions = old.get(key, [])
 
                         self.__progtrack.plan_add_progress(
@@ -2600,7 +2622,7 @@ class ImagePlan(object):
                 # Ensure that overlay and preserve file semantics are handled
                 # as expected when conflicts only exist in packages that are
                 # being removed.
-                for key, oactions in old.iteritems():
+                for key, oactions in six.iteritems(old):
                         self.__progtrack.plan_add_progress(
                             self.__progtrack.PLAN_ACTION_CONFLICT)
 
@@ -2632,12 +2654,12 @@ class ImagePlan(object):
                         return None
 
                 bad_keys = set()
-                for ns, key_dict in nsd.iteritems():
+                for ns, key_dict in six.iteritems(nsd):
                         if type(ns) != int:
                                 type_func = ImagePlan.__check_inconsistent_types
                         else:
                                 type_func = noop
-                        for key, actions in key_dict.iteritems():
+                        for key, actions in six.iteritems(key_dict):
                                 if len(actions) == 1:
                                         continue
                                 if type_func(actions, []) is not None:
@@ -2722,7 +2744,16 @@ class ImagePlan(object):
 
                 # Group action types by namespace groups
                 kf = operator.attrgetter("namespace_group")
-                types = sorted(pkg.actions.types.itervalues(), key=kf)
+                # Unequal types are not comparable in Python 3, therefore
+                # convert them to the same type 'int' first.
+                def key(a):
+                        kf = a.namespace_group
+                        if kf is None:
+                            return -1
+                        elif kf == "path":
+                            return 20
+                        return kf
+                types = sorted(six.itervalues(pkg.actions.types), key=key)
 
                 namespace_dict = dict(
                     (ns, list(action_classes))
@@ -2740,7 +2771,7 @@ class ImagePlan(object):
                 fmri_dict = weakref.WeakValueDictionary()
                 # Iterate over action types in namespace groups first; our first
                 # check should be for action type consistency.
-                for ns, action_classes in namespace_dict.iteritems():
+                for ns, action_classes in six.iteritems(namespace_dict):
                         pt.plan_add_progress(pt.PLAN_ACTION_CONFLICT)
                         # There's no sense in checking actions which have no
                         # limits
@@ -2774,8 +2805,8 @@ class ImagePlan(object):
                                 # cache which could conflict with the new
                                 # actions being installed, or with actions
                                 # already installed, but not getting removed.
-                                keys = set(itertools.chain(new.iterkeys(),
-                                    old.iterkeys()))
+                                keys = set(itertools.chain(six.iterkeys(new),
+                                    six.iterkeys(old)))
                                 self.__update_act(keys, old, False,
                                     offset_dict, action_classes, msf,
                                     gone_fmris, fmri_dict)
@@ -2784,7 +2815,7 @@ class ImagePlan(object):
                                 # action cache which are staying on the system,
                                 # and could conflict with the actions being
                                 # installed.
-                                keys = set(old.iterkeys())
+                                keys = set(six.iterkeys(old))
                                 self.__update_act(keys, new, True,
                                     offset_dict, action_classes, msf,
                                     gone_fmris | changing_fmris, fmri_dict)
@@ -3317,10 +3348,9 @@ class ImagePlan(object):
                         misc.makedirs(dpath)
                         fd, path = tempfile.mkstemp(suffix=".txt",
                             dir=dpath, prefix="release-notes-")
-                        tmpfile = os.fdopen(fd, "wb")
+                        tmpfile = os.fdopen(fd, "w")
                         for note in self.pd.release_notes[1]:
-                                if isinstance(note, unicode):
-                                        note = note.encode("utf-8")
+                                note = misc.force_str(note)
                                 print(note, file=tmpfile)
                         # make file world readable
                         os.chmod(path, 0o644)
@@ -3484,7 +3514,7 @@ class ImagePlan(object):
 
                         # Pick first "optimal" version and/or implementation.
                         for opt_priority, opt_ver, opt_impl in sorted(values,
-                            cmp=med.cmp_mediations):
+                            key=cmp_to_key(med.cmp_mediations)):
                                 if med_ver_source == "local":
                                         if opt_ver != med_ver:
                                                 # This mediation not allowed
@@ -3713,7 +3743,7 @@ class ImagePlan(object):
                                 # mediations provided by the image administrator.
                                 prop_mediators[m] = new_mediation
 
-                for m, new_mediation in prop_mediators.iteritems():
+                for m, new_mediation in six.iteritems(prop_mediators):
                         # If after processing all mediation data, a source wasn't
                         # marked for a particular component, mark it as being
                         # sourced from 'system'.
@@ -3731,7 +3761,7 @@ class ImagePlan(object):
                 # Initially assume mediation is changing.
                 self.pd._mediators_change = True
 
-                for m in prop_mediators.keys():
+                for m in list(prop_mediators.keys()):
                         if m not in cfg_mediators:
                                 if prop_mediators[m]:
                                         # Fully-defined mediation not in previous
@@ -3745,8 +3775,8 @@ class ImagePlan(object):
                         mediation = cfg_mediators[m]
                         if any(
                             k
-                            for k in set(prop_mediators[m].keys() +
-                                mediation.keys())
+                            for k in set(list(prop_mediators[m].keys()) +
+                                list(mediation.keys()))
                             if prop_mediators[m].get(k) != mediation.get(k)):
                                 # Mediation has changed.
                                 break
@@ -4322,8 +4352,12 @@ class ImagePlan(object):
                 # a perfect sort of this, but we only really care for things
                 # we fetch over the wire.
                 #
-                self.pd.pkg_plans.sort(
-                    key=operator.attrgetter("destination_fmri"))
+                def key_func(a):
+                        if a.destination_fmri:
+                                return a.destination_fmri
+                        return ""
+
+                self.pd.pkg_plans.sort(key=key_func)
 
                 pt.plan_done(pt.PLAN_ACTION_FINALIZE)
 
@@ -4545,9 +4579,9 @@ class ImagePlan(object):
 
                 # check for available space
                 self.__update_avail_space()
-                if self.pd._bytes_added > self.pd._bytes_avail:
+                if (self.pd._bytes_added - self.pd._cbytes_added) > self.pd._bytes_avail:
                         raise api_errors.ImageInsufficentSpace(
-                            self.pd._bytes_added,
+                            self.pd._bytes_added - self.pd._cbytes_added,
                             self.pd._bytes_avail,
                             _("Root filesystem"))
 
@@ -4624,7 +4658,7 @@ class ImagePlan(object):
                         root = os.path.normpath(self.image.root)
 
                         rzones = zone.list_running_zones()
-                        for z, path in rzones.iteritems():
+                        for z, path in six.iteritems(rzones):
                                 if os.path.normpath(path) == root:
                                         self.pd._actuators.set_zone(z)
                                         # there should be only on zone per path
@@ -4658,7 +4692,7 @@ class ImagePlan(object):
                                 # This prevents two drivers from ever attempting
                                 # to have the same alias at the same time.
                                 for name, aliases in \
-                                    self.pd._rm_aliases.iteritems():
+                                    six.iteritems(self.pd._rm_aliases):
                                         driver.DriverAction.remove_aliases(name,
                                             aliases, self.image)
 
@@ -4666,11 +4700,21 @@ class ImagePlan(object):
                                 # be re-used.
                                 self.pd.removal_actions = []
 
-                                # execute installs
+                                # execute installs; if action throws a retry
+                                # exception try it again afterward.
+                                retries = []
                                 for p, src, dest in self.pd.install_actions:
-                                        p.execute_install(src, dest)
+                                        try:
+                                                p.execute_install(src, dest)
+                                                pt.actions_add_progress(
+                                                    pt.ACTION_INSTALL)
+                                        except pkg.actions.ActionRetry:
+                                                retries.append((p, src, dest))
+                                for p, src, dest in retries:
+                                        p.execute_retry(src, dest)
                                         pt.actions_add_progress(
                                             pt.ACTION_INSTALL)
+                                retries = []
                                 pt.actions_done(pt.ACTION_INSTALL)
 
                                 # Done with installs, so discard them so memory
@@ -4725,6 +4769,11 @@ class ImagePlan(object):
                                         self.image.cfg.set_property("property",
                                             "dehydrated", self.operations_pubs)
                                         self.image.save_config()
+                                else:
+                                        # Mark image as modified if not calling
+                                        # save_config (which will do it for us).
+                                        self.image.update_last_modified()
+
                         except EnvironmentError as e:
                                 if e.errno == errno.EACCES or \
                                     e.errno == errno.EPERM:
@@ -4752,8 +4801,16 @@ class ImagePlan(object):
                         except:
                                 # Ensure the real cause of failure is raised.
                                 pass
-                        raise api_errors.InvalidPackageErrors([
-                            exc_value]), None, exc_tb
+                        if six.PY2:
+                                six.reraise(api_errors.InvalidPackageErrors([
+                                    exc_value]), None, exc_tb)
+                        else:
+                                # six.reraise requires the first argument
+                                # callable if the second argument is None.
+                                # Also the traceback is automatically attached,
+                                # in Python 3, so we can simply raise it.
+                                raise api_errors.InvalidPackageErrors([
+                                    exc_value])
                 except:
                         exc_type, exc_value, exc_tb = sys.exc_info()
                         self.pd.state = plandesc.EXECUTED_ERROR
@@ -4764,7 +4821,11 @@ class ImagePlan(object):
                                 # This ensures that the original exception and
                                 # traceback are used if exec_fail_actuators
                                 # fails.
-                                raise exc_value, None, exc_tb
+                                if six.PY2:
+                                        six.reraise(exc_value, None, exc_tb)
+                                else:
+                                        raise exc_value
+
                 else:
                         self.pd._actuators.exec_post_actuators(self.image)
 
@@ -4844,7 +4905,7 @@ class ImagePlan(object):
 
         def __is_image_empty(self):
                 try:
-                        self.image.gen_installed_pkg_names().next()
+                        next(self.image.gen_installed_pkg_names())
                         return False
                 except StopIteration:
                         return True
@@ -5265,7 +5326,7 @@ class ImagePlan(object):
                                                         # value.
                                                         atvalue = a.attrs["value"]
                                                         is_list = type(atvalue) == list
-                                                        for vn, vv in variants.iteritems():
+                                                        for vn, vv in six.iteritems(variants):
                                                                 if vn == atname and \
                                                                     ((is_list and
                                                                     vv not in atvalue) or \
@@ -5332,7 +5393,7 @@ class ImagePlan(object):
                                     for pf in renamed_fmris[f]
                                 ])
 
-                                for pkg_name in ret[p].keys():
+                                for pkg_name in list(ret[p].keys()):
                                         if pkg_name in targets:
                                                 del ret[p][pkg_name]
 
@@ -5357,13 +5418,13 @@ class ImagePlan(object):
                                 ])))
                         else:
                                 # single match or wildcard
-                                for k, pfmris in ret[p].iteritems():
+                                for k, pfmris in six.iteritems(ret[p]):
                                         # for each matching package name
                                         matchdict.setdefault(k, []).append(
                                             (p, pfmris))
 
                 proposed_dict = {}
-                for name, lst in matchdict.iteritems():
+                for name, lst in six.iteritems(matchdict):
                         nwc_ps = [
                             (p, set(pfmris))
                             for p, pfmris in lst
@@ -5506,7 +5567,7 @@ class ImagePlan(object):
                         # Rebuild proposed_dict based on latest version of every
                         # package.
                         sort_key = operator.attrgetter("version")
-                        for pname, flist in proposed_dict.iteritems():
+                        for pname, flist in six.iteritems(proposed_dict):
                                 # Must sort on version; sorting by FMRI would
                                 # sort by publisher, then by version which is
                                 # not desirable.
@@ -5580,7 +5641,7 @@ class ImagePlan(object):
 
                 # For each fmri, pattern where the pattern matched the fmri
                 # including the version ...
-                for full_fmri, pat in references.iteritems():
+                for full_fmri, pat in six.iteritems(references):
                         parts = pat.split("@", 1)
                         # If the pattern doesn't include a version, then add the
                         # version the package is installed at to the list of
@@ -5618,7 +5679,7 @@ class ImagePlan(object):
                             anarchy=True, include_scheme=False), set()).add(p)
                 # Check whether one stem has been frozen at non-identical
                 # versions.
-                for k, v in stems.iteritems():
+                for k, v in six.iteritems(stems):
                         if len(v) > 1:
                                 multiversions.append((k, v))
                         else:
@@ -5632,3 +5693,6 @@ class ImagePlan(object):
                             version_mismatch=installed_version_mismatches,
                             versionless_uninstalled=versionless_uninstalled)
                 return stems
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

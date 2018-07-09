@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -20,10 +20,10 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
 
 
-import testutils
+from . import testutils
 if __name__ == "__main__":
         testutils.setup_environment("../../../proto")
 import pkg5unittest
@@ -36,6 +36,7 @@ import pkg.portable as portable
 import pkg.misc as misc
 import pkg.p5p
 import shutil
+import six
 import stat
 import tempfile
 import unittest
@@ -105,12 +106,12 @@ class TestPkgCompositePublishers(pkg5unittest.ManyDepotTestCase):
             "tmp/foo.1", "tmp/README", "tmp/LICENSE", "tmp/quux"]
 
         def __seed_ta_dir(self, certs, dest_dir=None):
-                if isinstance(certs, basestring):
+                if isinstance(certs, six.string_types):
                         certs = [certs]
                 if not dest_dir:
                         dest_dir = self.ta_dir
-                self.assert_(dest_dir)
-                self.assert_(self.raw_trust_anchor_dir)
+                self.assertTrue(dest_dir)
+                self.assertTrue(self.raw_trust_anchor_dir)
                 for c in certs:
                         name = "{0}_cert.pem".format(c)
                         portable.copyfile(
@@ -329,10 +330,10 @@ class TestPkgCompositePublishers(pkg5unittest.ManyDepotTestCase):
                 """Verify that the info operation works as expected when
                 compositing publishers.
                 """
-		# because we compare date strings we must run this in
-		# a consistent locale, which we made 'C'
+                # because we compare date strings we must run this in
+                # a consistent locale, which we made 'C'
 
-		os.environ['LC_ALL'] = 'C'
+                os.environ['LC_ALL'] = 'C'
 
                 # Create an image and verify no packages are known.
                 self.image_create(self.empty_rurl, prefix=None)
@@ -388,6 +389,10 @@ Last Install Time: {pkg_install}
     pkg_fmri=self.foo10.get_fmri(include_build=False),
     pkg_install=pkg_install)
                 self.assertEqualDiff(expected, self.output)
+
+                # Change locale back to 'UTF-8' to not affect other test cases.
+                if six.PY3:
+                        os.environ["LC_ALL"] = "en_US.UTF-8"
 
         def test_02_contents(self):
                 """Verify that the contents operation works as expected when
@@ -556,10 +561,10 @@ Last Install Time: {pkg_install}
                 self.assertEqualDiff(expected, output)
 
                 # Add a publisher with no origins and verify output still
-                # matches expected (although it will currently exit 3).
+                # matches expected.
                 self.pkg("set-publisher no-origins")
                 self.pkg("search -Hpr -o pkg.shortfmri /usr/bin/foo OR "
-                    "/usr/bin/quark OR Incorporation", exit=3)
+                    "/usr/bin/quark OR Incorporation")
                 output = self.reduceSpaces(self.output)
 
                 # Elide error output from client to verify that search
@@ -589,3 +594,6 @@ Last Install Time: {pkg_install}
 
 if __name__ == "__main__":
         unittest.main()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

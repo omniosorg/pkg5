@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 # The portable module provide access to methods that require operating system-
@@ -113,6 +113,12 @@ def get_name_by_uid(uid, dirpath, use_file):
         user name is retrieved from the operating system.
         Exceptions:
             KeyError if the specified group does not exist"""
+        raise NotImplementedError
+
+def get_usernames_by_gid(gid, dirpath):
+        """ Return all user names associated with a group ID.
+        The user name is first retrieved from an OS-specific file rooted
+        by dirpath. If failed, try to retrieve it from the operating system."""
         raise NotImplementedError
 
 def is_admin():
@@ -250,13 +256,12 @@ PD_DEFAULT_RUNPATH = "$PKGDEPEND_RUNPATH"
 PD_BYPASS_GENERATE = "pkg.depend.bypass-generate"
 
 import platform
-import util as os_util
+from . import util as os_util
 
 osname = os_util.get_canonical_os_name()
 ostype = os_util.get_canonical_os_type()
-distro = platform.dist()[0].lower()
 
-fragments = [distro, osname, ostype]
+fragments = [osname, ostype]
 for fragment in fragments:
         modname = 'os_' + fragment
 
@@ -264,10 +269,13 @@ for fragment in fragments:
         # then try the more generic OS Name module (e.g. os_linux),
         # then the OS type module (e.g. os_unix)        
         try:
-                exec('from {0} import *'.format(modname))
+                exec('from .{0} import *'.format(modname))
                 break
         except ImportError:
                 pass
 else:
         raise ImportError(
             "cannot find portable implementation class for os " + str(fragments))
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

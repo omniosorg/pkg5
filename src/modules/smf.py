@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,17 +21,20 @@
 #
 
 #
-# Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 # This module provides a basic interface to smf.
 
 import os
+import six
 
+import pkg.misc as misc
 import pkg.pkgsubprocess as subprocess
 
 from pkg.client import global_settings
 from pkg.client.debugvalues import DebugValues
+from six.moves.urllib.parse import urlparse
 
 logger = global_settings.logger
 
@@ -62,12 +65,6 @@ class NonzeroExitException(Exception):
                 self.return_code = return_code
                 self.output = output
 
-        def __unicode__(self):
-                # To workaround python issues 6108 and 2517, this provides a
-                # a standard wrapper for this class' exceptions so that they
-                # have a chance of being stringified correctly.
-                return str(self)
-
         def __str__(self):
                 return "Cmd {0} exited with status {1:d}, and output '{2}'".format(
                     self.cmd, self.return_code, self.output)
@@ -89,7 +86,7 @@ def __call(args, zone=None):
         try:
                 proc = subprocess.Popen(args, stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT)
-                buf = proc.stdout.readlines()
+                buf = [misc.force_str(l) for l in proc.stdout.readlines()]
                 ret = proc.wait()
         except OSError as e:
                 raise RuntimeError("cannot execute {0}: {1}".format(args, e))
@@ -129,7 +126,7 @@ def check_fmris(attr, fmris, zone=None):
         from the set that is returned and an error message is logged.
         """
 
-        if isinstance(fmris, basestring):
+        if isinstance(fmris, six.string_types):
                 fmris = set([fmris])
         chars = "*?[!^"
         for fmri in fmris.copy():
@@ -191,7 +188,7 @@ def get_prop(fmri, prop, zone=None):
 def enable(fmris, temporary=False, sync_timeout=0, zone=None):
         if not fmris:
                 return
-        if isinstance(fmris, basestring):
+        if isinstance(fmris, six.string_types):
                 fmris = (fmris,)
 
         args = [svcadm_path, "enable"]
@@ -207,7 +204,7 @@ def enable(fmris, temporary=False, sync_timeout=0, zone=None):
 def disable(fmris, temporary=False, sync_timeout=0, zone=None):
         if not fmris:
                 return
-        if isinstance(fmris, basestring):
+        if isinstance(fmris, six.string_types):
                 fmris = (fmris,)
         args = [svcadm_path, "disable", "-s"]
 #        if sync_timeout > 0:
@@ -220,7 +217,7 @@ def disable(fmris, temporary=False, sync_timeout=0, zone=None):
 def mark(state, fmris, zone=None):
         if not fmris:
                 return
-        if isinstance(fmris, basestring):
+        if isinstance(fmris, six.string_types):
                 fmris = (fmris,)
         args = [svcadm_path, "mark", state]
         # fmris could be a list so explicit cast is necessary
@@ -229,7 +226,7 @@ def mark(state, fmris, zone=None):
 def refresh(fmris, sync_timeout=0, zone=None):
         if not fmris:
                 return
-        if isinstance(fmris, basestring):
+        if isinstance(fmris, six.string_types):
                 fmris = (fmris,)
         args = [svcadm_path, "refresh"]
         if sync_timeout:
@@ -242,7 +239,7 @@ def refresh(fmris, sync_timeout=0, zone=None):
 def restart(fmris, sync_timeout=0, zone=None):
         if not fmris:
                 return
-        if isinstance(fmris, basestring):
+        if isinstance(fmris, six.string_types):
                 fmris = (fmris,)
         args = [svcadm_path, "restart"]
         if sync_timeout:
@@ -251,3 +248,6 @@ def restart(fmris, sync_timeout=0, zone=None):
 #                        args.append("-T {0:d}".format(sync_timeout))
         # fmris could be a list so explicit cast is necessary
         __call(tuple(args) + tuple(fmris), zone=zone)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

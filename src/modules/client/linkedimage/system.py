@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 """
@@ -34,7 +34,7 @@ stored within a parent images pkg5.image configuration file.
 import pkg.client.pkgdefs as pkgdefs
 
 # import linked image common code
-import common as li # Relative import; pylint: disable=W0403
+from . import common as li # Relative import; pylint: disable=W0403
 
 
 class LinkedImageSystemPlugin(li.LinkedImagePlugin):
@@ -138,3 +138,6 @@ class LinkedImageSystemChildPlugin(li.LinkedImageChildPlugin):
         def munge_props(self, props):
                 """See parent class for docstring."""
                 pass
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

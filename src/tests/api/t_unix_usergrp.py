@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -20,10 +20,11 @@
 # CDDL HEADER END
 #
 
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+#
+# Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+#
 
-import testutils
+from . import testutils
 if __name__ == "__main__":
         testutils.setup_environment("../../../proto")
 import pkg5unittest
@@ -45,7 +46,7 @@ class TestUserGroup(pkg5unittest.Pkg5TestCase):
                 if not os.path.exists("/etc/group"):
                         return
 
-                grpfile = file(os.path.join(self.test_root, "etc", "group"), "w")
+                grpfile = open(os.path.join(self.test_root, "etc", "group"), "w")
                 grpfile.write( \
 """root::0:
 gk::0:
@@ -61,9 +62,9 @@ tty::7:root,adm""")
                 self.assertRaises(KeyError, portable.get_group_by_name,
                     "ThisShouldNotExist", self.test_root, True)
 
-                self.assert_(0 == \
+                self.assertTrue(0 == \
                     portable.get_group_by_name("root", self.test_root, True))
-                self.assert_(0 == \
+                self.assertTrue(0 == \
                     portable.get_group_by_name("gk", self.test_root, True))
 
                 self.assertRaises(KeyError, portable.get_name_by_gid,
@@ -81,7 +82,7 @@ tty::7:root,adm""")
                 # out to the OS's version.  And AFAIK all unix systems have
                 # a group with gid 0.
                 grpname = portable.get_name_by_gid(0, self.test_root, True)
-                self.assert_(0 == \
+                self.assertTrue(0 == \
                     portable.get_group_by_name(grpname, self.test_root, True))
 
         def testGroup3(self):
@@ -89,7 +90,7 @@ tty::7:root,adm""")
                 if not os.path.exists("/etc/group"):
                         return
 
-                grpfile = file(os.path.join(self.test_root, "etc", "group"), "w")
+                grpfile = open(os.path.join(self.test_root, "etc", "group"), "w")
                 grpfile.write( \
 """root::0:
 blorg
@@ -103,13 +104,13 @@ tty::7:root,adm
 gk::0:
 +""")
                 grpfile.close()
-                self.assert_("root" == \
+                self.assertTrue("root" == \
                     portable.get_name_by_gid(0, self.test_root, True))
-                self.assert_(0 == \
+                self.assertTrue(0 == \
                     portable.get_group_by_name("root", self.test_root, True))
-                self.assert_(0 == \
+                self.assertTrue(0 == \
                     portable.get_group_by_name("gk", self.test_root, True))
-                self.assert_(7 == \
+                self.assertTrue(7 == \
                     portable.get_group_by_name("tty", self.test_root, True))
 
                 self.assertRaises(KeyError, portable.get_group_by_name,
@@ -127,7 +128,7 @@ gk::0:
                 if not os.path.exists("/etc/group"):
                         return
 
-                grpfile = file(os.path.join(self.test_root, "etc", "group"), "w")
+                grpfile = open(os.path.join(self.test_root, "etc", "group"), "w")
                 grpfile.write( \
 """root::0:
 gk::0:
@@ -139,13 +140,13 @@ mail::6:root
 tty::7:root,adm
 +""")
                 grpfile.close()
-                self.assert_("root" == \
+                self.assertTrue("root" == \
                     portable.get_name_by_gid(0, self.test_root, True))
-                self.assert_(0 == \
+                self.assertTrue(0 == \
                     portable.get_group_by_name("root", self.test_root, True))
-                self.assert_(0 == \
+                self.assertTrue(0 == \
                     portable.get_group_by_name("gk", self.test_root, True))
-                self.assert_(7 == \
+                self.assertTrue(7 == \
                     portable.get_group_by_name("tty", self.test_root, True))
 
                 self.assertRaises(KeyError, portable.get_group_by_name,
@@ -156,7 +157,7 @@ tty::7:root,adm
                 if not os.path.exists("/etc/passwd"):
                         return
 
-                passwd = file(os.path.join(self.test_root, "etc", "passwd"), "w")
+                passwd = open(os.path.join(self.test_root, "etc", "passwd"), "w")
                 passwd.write( \
 """root:x:0:0::/root:/usr/bin/bash
 gk:x:0:0::/root:/usr/bin/bash
@@ -172,11 +173,11 @@ moop:x:999:999:moop:/usr/moop:""")
                 self.assertRaises(KeyError, portable.get_user_by_name,
                     "ThisShouldNotExist", self.test_root, True)
 
-                self.assert_(0 == \
+                self.assertTrue(0 == \
                     portable.get_user_by_name("root", self.test_root, True))
-                self.assert_(0 == \
+                self.assertTrue(0 == \
                     portable.get_user_by_name("gk", self.test_root, True))
-                self.assert_(999 == \
+                self.assertTrue(999 == \
                     portable.get_user_by_name("moop", self.test_root, True))
 
                 self.assertRaises(KeyError, portable.get_name_by_uid,
@@ -193,9 +194,9 @@ moop:x:999:999:moop:/usr/moop:""")
 
                 # This should work on unix systems, since we'll "bootstrap"
                 # out to the OS's version.
-                self.assert_(0 == \
+                self.assertTrue(0 == \
                     portable.get_user_by_name("root", self.test_root, True))
-                self.assert_("root" == \
+                self.assertTrue("root" == \
                     portable.get_name_by_uid(0, self.test_root, True))
 
 
@@ -204,7 +205,7 @@ moop:x:999:999:moop:/usr/moop:""")
                 if not os.path.exists("/etc/passwd"):
                         return
 
-                passwd = file(os.path.join(self.test_root, "etc", "passwd"), "w")
+                passwd = open(os.path.join(self.test_root, "etc", "passwd"), "w")
                 passwd.write( \
 """root:x:0:0::/root:/usr/bin/bash
 daemon:x:1:1::/:
@@ -220,11 +221,11 @@ lp:x:71:8:Line Printer Admin:/usr/spool/lp:
 uucp:x:5:5:uucp Admin:/usr/lib/uucp:
 +""")
                 passwd.close()
-                self.assert_(0 == \
+                self.assertTrue(0 == \
                     portable.get_user_by_name("root", self.test_root, True))
-                self.assert_(0 == \
+                self.assertTrue(0 == \
                     portable.get_user_by_name("gk", self.test_root, True))
-                self.assert_("uucp" == \
+                self.assertTrue("uucp" == \
                     portable.get_name_by_uid(5, self.test_root, True))
 
                 self.assertRaises(KeyError, portable.get_user_by_name,
@@ -242,7 +243,7 @@ uucp:x:5:5:uucp Admin:/usr/lib/uucp:
                 if not os.path.exists("/etc/passwd"):
                         return
 
-                passwd = file(os.path.join(self.test_root, "etc", "passwd"), "w")
+                passwd = open(os.path.join(self.test_root, "etc", "passwd"), "w")
                 passwd.write( \
 """root:x:0:0::/root:/usr/bin/bash
 gk:x:0:0::/root:/usr/bin/bash
@@ -255,13 +256,13 @@ lp:x:71:8:Line Printer Admin:/usr/spool/lp:
 uucp:x:5:5:uucp Admin:/usr/lib/uucp:
 +""")
                 passwd.close()
-                self.assert_(0 == \
+                self.assertTrue(0 == \
                     portable.get_user_by_name("root", self.test_root, True))
-                self.assert_(0 == \
+                self.assertTrue(0 == \
                     portable.get_user_by_name("gk", self.test_root, True))
-                self.assert_("root" == \
+                self.assertTrue("root" == \
                     portable.get_name_by_uid(0, self.test_root, True))
-                self.assert_("uucp" == \
+                self.assertTrue("uucp" == \
                     portable.get_name_by_uid(5, self.test_root, True))
 
                 self.assertRaises(KeyError, portable.get_user_by_name,
@@ -270,3 +271,6 @@ uucp:x:5:5:uucp Admin:/usr/lib/uucp:
 
 if __name__ == "__main__":
         unittest.main()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

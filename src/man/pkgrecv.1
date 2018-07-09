@@ -1,6 +1,6 @@
 '\" te
-.\" Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
-.TH pkgrecv 1 "21 Nov 2013" "SunOS 5.11" "User Commands"
+.\" Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
+.TH pkgrecv 1 "08 Oct 2015" "SunOS 5.11" "User Commands"
 .SH NAME
 pkgrecv \- Image Packaging System content retrieval utility
 .SH SYNOPSIS
@@ -8,7 +8,7 @@ pkgrecv \- Image Packaging System content retrieval utility
 .nf
 /usr/bin/pkgrecv [-aknrv] [-s (\fIsrc_path\fR|\fIsrc_uri\fR)]
     [-d (\fIdest_path\fR|\fIdest_uri\fR)] [-c \fIcache_dir\fR]
-    [-m \fImatch\fR] [--raw]
+    [-m \fImatch\fR] [--mog-file \fIfile_path\fR ...] [--raw]
     [--key \fIsrc_key\fR --cert \fIsrc_cert\fR]
     [--dkey \fIdest_key\fR --dcert \fIdest_cert\fR]
     (\fIfmri\fR|\fIpattern\fR) ...
@@ -180,7 +180,25 @@ pkg://omnios/package/pkg@0.5.11,5.11-0.175.1.0.0.24.0:20120904T180335Z
 .ne 2
 .mk
 .na
-\fB\fB-n\fR\fR
+\fB--mog-file \fIfile_path\fR
+.ad
+.sp .6
+.RS 4n
+Specifies a file containing pkgmogrify(1) transforms to be
+applied to the manifest of each package before it is copied to the destination
+package repository. '-' can be specified to use stdin as input. If both files
+and '-' are specified together, '-' will be ignored and only files specified
+are used. Use of this option will automatically cause any existing package
+signatures to be dropped from the package. Adding new hashable actions
+such as files and licenses is not allowed. This option can be specified
+multiple times. This option may not be combined with --clone.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB-n\fR
 .ad
 .sp .6
 .RS 4n
@@ -191,7 +209,7 @@ Perform a trial run with no changes made.
 .ne 2
 .mk
 .na
-\fB\fB-p\fR \fIpublisher\fR\fR
+\fB-p\fR \fIpublisher\fR
 .ad
 .sp .6
 .RS 4n
@@ -478,6 +496,22 @@ $ \fBpkgrecv -s /my/archive.p5p -d /export/repo '*'\fR
 .in -2
 .sp
 
+.LP
+\fBExample 10 \fRChange publisher name
+.sp
+.LP
+Change the publisher name of the package 'foo' and all its
+dependencies into 'extra' during republishing.
+.sp
+.in +2
+.nf
+$ \fBecho '<transform set name=pkg.fmri -> edit value\fR
+  \fB(pkg://).*?(/.*) \\1extra\\2>' | \\\fR
+  \fBpkgrecv -s repo1 -d repo2 --mog-file - foo\fR
+.fi
+.in -2
+.sp
+
 .SH ENVIRONMENT VARIABLES
 .sp
 .LP
@@ -489,7 +523,7 @@ The following environment variables are supported:
 \fB\fBPKG_DEST\fR\fR
 .ad
 .RS 12n
-.rt  
+.rt
 The path of a directory to save the retrieved package to, or the file system path or URI of a repository or package archive where the packages will be copied.
 .RE
 

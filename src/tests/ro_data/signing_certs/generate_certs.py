@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -201,3 +201,6 @@ if __name__ == "__main__":
             "../../tests/ro_data/signing_certs/produced/code_signing_certs/")
         shutil.copy("cust_cert.pem",
             "../../tests/ro_data/signing_certs/produced/trust_anchors/")
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

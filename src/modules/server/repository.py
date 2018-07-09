@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,7 +21,8 @@
 #
 # Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
 
-import cStringIO
+from __future__ import print_function
+
 import codecs
 import datetime
 import errno
@@ -30,14 +31,15 @@ import logging
 import os
 import os.path
 import shutil
+import six
 import stat
 import sys
 import tempfile
-import urllib
 import zlib
-
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
+from io import BytesIO
+from six.moves.urllib.parse import unquote
 
 import pkg.actions as actions
 import pkg.catalog as catalog
@@ -64,6 +66,8 @@ import pkg.server.transaction as trans
 import pkg.pkgsubprocess as subprocess
 import pkg.version
 
+from pkg.pkggzip import PkgGzipFile
+
 CURRENT_REPO_VERSION = 4
 
 REPO_QUARANTINE_DIR = "pkg5-quarantine"
@@ -87,7 +91,6 @@ verify_default_checks = frozenset([
       VERIFY_DEPENDENCY,
 ])
 
-from pkg.pkggzip import PkgGzipFile
 
 class RepositoryError(Exception):
         """Base exception class for all Repository exceptions."""
@@ -96,12 +99,6 @@ class RepositoryError(Exception):
                 Exception.__init__(self, *args)
                 if args:
                         self.data = args[0]
-
-        def __unicode__(self):
-                # To workaround python issues 6108 and 2517, this provides a
-                # a standard wrapper for this class' exceptions so that they
-                # have a chance of being stringified correctly.
-                return str(self)
 
         def __str__(self):
                 return str(self.data)
@@ -544,8 +541,8 @@ class _RepoStore(object):
                 directory and the name of the manifest file, and returns an FMRI
                 constructed from the information in those components."""
 
-                v = pkg.version.Version(urllib.unquote(ver), None)
-                f = fmri.PkgFmri(urllib.unquote(os.path.basename(pkgpath)))
+                v = pkg.version.Version(unquote(ver), None)
+                f = fmri.PkgFmri(unquote(os.path.basename(pkgpath)))
                 f.version = v
                 return f
 
@@ -1633,8 +1630,8 @@ class _RepoStore(object):
                         c.batch_mode = True
                         save_catalog = False
                         for pfmri in packages:
-				progtrack.job_add_progress(
-				    progtrack.JOB_REPO_UPDATE_CAT)
+                                progtrack.job_add_progress(
+                                    progtrack.JOB_REPO_UPDATE_CAT)
                                 try:
                                         c.remove_package(pfmri)
                                 except apx.UnknownCatalogEntry:
@@ -1644,7 +1641,7 @@ class _RepoStore(object):
                                 save_catalog = True
 
                         progtrack.job_add_progress(
-			    progtrack.JOB_REPO_UPDATE_CAT)
+                            progtrack.JOB_REPO_UPDATE_CAT)
                         c.batch_mode = False
                         if save_catalog:
                                 # Only need to re-write catalog if at least one
@@ -1661,11 +1658,11 @@ class _RepoStore(object):
                         # the repository.
                         pfiles = set()
                         progtrack.job_start(progtrack.JOB_REPO_ANALYZE_RM,
-			    goal=len(packages))
+                            goal=len(packages))
                         for pfmri in packages:
                                 pfiles.update(get_hashes(pfmri))
                                 progtrack.job_add_progress(
-				    progtrack.JOB_REPO_ANALYZE_RM)
+                                    progtrack.JOB_REPO_ANALYZE_RM)
                         progtrack.job_done(progtrack.JOB_REPO_ANALYZE_RM)
 
                         # Now for the slow part; iterate over every manifest in
@@ -1686,12 +1683,12 @@ class _RepoStore(object):
                                 )
 
                                 progtrack.job_start(
-				    progtrack.JOB_REPO_ANALYZE_REPO,
-				    goal=remaining)
+                                    progtrack.JOB_REPO_ANALYZE_REPO,
+                                    goal=remaining)
                                 for name in slist:
                                         # Stem must be decoded before use.
                                         try:
-                                                pname = urllib.unquote(name)
+                                                pname = unquote(name)
                                         except Exception:
                                                 # Assume error is result of
                                                 # unexpected file in directory;
@@ -1711,7 +1708,7 @@ class _RepoStore(object):
 
                                                 # Version must be decoded before
                                                 # use.
-                                                pver = urllib.unquote(ver)
+                                                pver = unquote(ver)
                                                 try:
                                                         pfmri = fmri.PkgFmri(
                                                             "@".join((pname,
@@ -1734,21 +1731,21 @@ class _RepoStore(object):
                                                 # Any files in use by another
                                                 # package can't be removed.
                                                 pfiles -= get_hashes(pfmri)
-						progtrack.job_add_progress(progtrack.JOB_REPO_ANALYZE_REPO)
+                                                progtrack.job_add_progress(progtrack.JOB_REPO_ANALYZE_REPO)
                                 progtrack.job_done(
-				    progtrack.JOB_REPO_ANALYZE_REPO)
+                                    progtrack.JOB_REPO_ANALYZE_REPO)
 
                         # Next, remove the manifests of the packages to be
                         # removed.  (This is done before removing the files
                         # so that clients won't have a chance to retrieve a
                         # manifest which has missing files.)
                         progtrack.job_start(progtrack.JOB_REPO_RM_MFST,
-			    goal=len(packages))
+                            goal=len(packages))
                         for pfmri in packages:
                                 mpath = self.manifest(pfmri)
                                 portable.remove(mpath)
                                 progtrack.job_add_progress(
-				    progtrack.JOB_REPO_RM_MFST)
+                                    progtrack.JOB_REPO_RM_MFST)
                         progtrack.job_done(progtrack.JOB_REPO_RM_MFST)
 
                         # Next, remove any package files that are not
@@ -1762,7 +1759,7 @@ class _RepoStore(object):
                                 if fpath is not None:
                                         portable.remove(fpath)
                                         progtrack.job_add_progress(
-					    progtrack.JOB_REPO_RM_FILES)
+                                            progtrack.JOB_REPO_RM_FILES)
                         progtrack.job_done(progtrack.JOB_REPO_RM_FILES)
 
                         # Finally, tidy up repository structure by discarding
@@ -1937,9 +1934,18 @@ class _RepoStore(object):
                         else:
                                 os.fchmod(fd, misc.PKG_FILE_MODE)
 
-                        with os.fdopen(fd, "wb") as f:
-                                with codecs.EncodedFile(f, "utf-8") as ef:
-                                        p5i.write(ef, [pub])
+                        if six.PY2:
+                                with os.fdopen(fd, "wb") as f:
+                                        with codecs.EncodedFile(f, "utf-8") as ef:
+                                                p5i.write(ef, [pub])
+                        else:
+                               # we use simpleson.dump() in p5i.write(),
+                               # simplejson module will produce str objects
+                               # in Python 3, therefore fp.write()
+                               # must support str input.
+
+                                with open(fd, "w", encoding="utf-8") as fp:
+                                        p5i.write(fp, [pub])
                         portable.rename(fn, p5ipath)
                 except EnvironmentError as e:
                         if e.errno == errno.EACCES:
@@ -2307,7 +2313,7 @@ class _RepoStore(object):
 
                         # Stem must be decoded before use.
                         try:
-                                pname = urllib.unquote(name)
+                                pname = unquote(name)
                         except Exception:
                                 # Assume error is result of an
                                 # unexpected file in the directory. We
@@ -2323,7 +2329,7 @@ class _RepoStore(object):
                                 path = os.path.join(pdir, ver)
                                 # Version must be decoded before
                                 # use.
-                                pver = urllib.unquote(ver)
+                                pver = unquote(ver)
                                 try:
                                         pfmri = fmri.PkgFmri("@".join((pname,
                                             pver)),
@@ -2443,11 +2449,15 @@ class _RepoStore(object):
 
                 for fn in os.listdir(trust_anchor_dir):
                         pth = os.path.join(trust_anchor_dir, fn)
-                        if os.path.islink(pth):
+                        if not os.path.isfile(pth) or os.path.islink(pth):
                                 continue
                         with open(pth, "rb") as f:
-                                trusted_ca = x509.load_pem_x509_certificate(
-                                    f.read(), default_backend())
+                                try:
+                                        trusted_ca = \
+                                            x509.load_pem_x509_certificate(
+                                                f.read(), default_backend())
+                                except ValueError as e:
+                                        pass
 
                         # Note that while we store certs by their subject
                         # hashes, we use our own hashing since cryptography has
@@ -2465,7 +2475,7 @@ class _RepoStore(object):
                                 yield err
                 except (Exception, EnvironmentError) as e:
                         import traceback
-                        traceback.print_exc(e)
+                        traceback.print_exc()
                         raise apx._convert_error(e)
                 finally:
                         self.__unlock_rstore()
@@ -3063,7 +3073,10 @@ class Repository(object):
                         finally:
                                 # This ensures that the original exception and
                                 # traceback are used.
-                                raise exc_value, None, exc_tb
+                                if six.PY2:
+                                        six.reraise(exc_value, None, exc_tb)
+                                else:
+                                        raise exc_value
 
         def remove_publisher(self, pfxs, repo_path, synch=False):
                 """Removes a repository storage area and configuration
@@ -3104,11 +3117,11 @@ class Repository(object):
                         self.__unlock_repository()
 
                 nullf = open(os.devnull, "w")
-                args = "/usr/bin/rm -rf " + " ".join(tmp_paths)
+                args = ["/usr/bin/rm", "-rf"]
+                args.extend(tmp_paths)
                 if not synch:
-                        args = "/usr/bin/nohup " + args
-                subp = subprocess.Popen(args, shell=True,
-                    stdout=nullf, stderr=nullf)
+                        args = ["/usr/bin/nohup"] + args
+                subp = subprocess.Popen(args, stdout=nullf, stderr=nullf)
 
                 if synch:
                         subp.wait()
@@ -3498,7 +3511,7 @@ class Repository(object):
                 """
 
                 def merge(src, dest):
-                        for k, v in src.iteritems():
+                        for k, v in six.iteritems(src):
                                 if k in dest:
                                         dest[k].extend(v)
                                 else:
@@ -4354,7 +4367,7 @@ def repository_create(repo_uri, properties=misc.EmptyDict, version=None):
         raised.  Other errors can raise exceptions of class ApiException.
         """
 
-        if isinstance(repo_uri, basestring):
+        if isinstance(repo_uri, six.string_types):
                 repo_uri = publisher.RepositoryURI(misc.parse_uri(repo_uri))
 
         path = repo_uri.get_pathname()
@@ -4392,7 +4405,7 @@ def repository_create(repo_uri, properties=misc.EmptyDict, version=None):
 
                 # ...and this file (which can be empty).
                 try:
-                        with file(os.path.join(path, "cfg_cache"), "wb") as cf:
+                        with open(os.path.join(path, "cfg_cache"), "w") as cf:
                                 cf.write("\n")
                 except EnvironmentError as e:
                         if e.errno == errno.EACCES:
@@ -4406,3 +4419,6 @@ def repository_create(repo_uri, properties=misc.EmptyDict, version=None):
 
         return Repository(create=True, read_only=False, properties=properties,
             root=path)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

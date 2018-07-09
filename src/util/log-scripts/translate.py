@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -99,3 +99,6 @@ outfile.close()
 for x in ops:
         print("# {0}: {1:d}".format(x, cnt[x]))
 
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,21 +21,20 @@
 #
 
 #
-# Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 import copy
 import os
+import simplejson as json
+from six.moves.urllib.parse import urlparse, urlunparse
+
 import pkg.client.api_errors as api_errors
 import pkg.client.publisher as publisher
 import pkg.digest as digest
 import pkg.fmri as fmri
-import simplejson as json
-import urllib
-import urllib2
-import urlparse
-
 from pkg.client.imageconfig import DEF_TOKEN
+from pkg.misc import force_bytes
 
 CURRENT_VERSION = 0
 
@@ -59,9 +58,9 @@ def parse(proxy_host, data):
                         if val.startswith("http://{0}".format(
                             publisher.SYSREPO_PROXY)):
                                 scheme, netloc, path, params, query, fragment =\
-                                    urlparse.urlparse(val)
+                                    urlparse(val)
                                 r = publisher.RepositoryURI(
-                                        urlparse.urlunparse((scheme, proxy_host,
+                                        urlunparse((scheme, proxy_host,
                                         path, params, query, fragment)))
                         else:
                                 # This URI needs to be proxied through the
@@ -191,7 +190,7 @@ def write(fileobj, pubs, cfg):
                                 res.append("http://{0}/{1}/{2}".format(
                                     publisher.SYSREPO_PROXY, prefix,
                                     digest.DEFAULT_HASH_FUNC(
-                                    m.uri.rstrip("/")).hexdigest()
+                                    force_bytes(m.uri.rstrip("/"))).hexdigest()
                                     ))
                         else:
                                 assert False, "{0} is an unknown scheme.".format(
@@ -278,3 +277,6 @@ def write(fileobj, pubs, cfg):
         json.dump(dump_struct, fileobj, ensure_ascii=False,
             allow_nan=False, indent=2, sort_keys=True)
         fileobj.write("\n")
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

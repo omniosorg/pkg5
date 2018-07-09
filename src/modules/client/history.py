@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -28,6 +28,7 @@ import copy
 import errno
 import os
 import shutil
+import six
 import sys
 import traceback
 import xml.dom.minidom as xmini
@@ -344,7 +345,12 @@ class History(object):
                         # last operation's exception won't be recorded to this
                         # one.  If the error hasn't been recorded by now, it
                         # doesn't matter anyway, so should be safe to clear.
-                        sys.exc_clear()
+                        # sys.exc_clear() isn't supported in Python 3, and
+                        # couldn't find a replacement.
+                        try:
+                                sys.exc_clear()
+                        except:
+                                pass
 
                         # Mark the operation as having started and record
                         # other, relevant information.
@@ -439,15 +445,15 @@ class History(object):
                 if not self.operation_release_notes:
                         return
                 try:
-                        rpath = os.path.join(self.root_dir, 
+                        rpath = os.path.join(self.root_dir,
                             "notes", 
                             self.operation_release_notes)
-                        for a in file(rpath, "r"):
+                        for a in open(rpath, "r"):
                                 yield a.rstrip()
 
                 except Exception as e:
                         raise apx.HistoryLoadException(e)
-                        
+
         def clear(self):
                 """Discards all information related to the current history
                 object.
@@ -806,7 +812,7 @@ class History(object):
                         except (AttributeError, KeyError):
                                 # Failing an exact match, determine if this
                                 # error is a subclass of an existing one.
-                                for entry, val in error_results.iteritems():
+                                for entry, val in six.iteritems(error_results):
                                         if isinstance(error, entry):
                                                 result = val
                                                 break
@@ -842,7 +848,7 @@ class History(object):
                                         output = traceback.format_exc()
                                         use_current_stack = False
 
-                        if isinstance(error, basestring):
+                        if isinstance(error, six.string_types):
                                 output = error
                         elif use_current_stack:
                                 # Assume the current stack is more useful if
@@ -898,7 +904,10 @@ class History(object):
                 if not self.__snapshot:
                         return
 
-                for name, val in self.__snapshot.iteritems():
+                for name, val in six.iteritems(self.__snapshot):
                         if not name.startswith("__"):
                                 object.__setattr__(self, name, val)
                 self.__operations = self.__snapshot["__operations"]
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

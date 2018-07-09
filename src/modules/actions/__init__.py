@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 """
@@ -83,20 +83,23 @@ for modname in __all__:
                         payload_types[cls.name] = cls
 
 # Clean up after ourselves
-del f, modname, module, nvlist, classes, c, cls
+del modname, module, nvlist, classes, cls
 
 
 class ActionError(Exception):
         """Base exception class for Action errors."""
 
-        def __unicode__(self):
-                # To workaround python issues 6108 and 2517, this provides a
-                # a standard wrapper for this class' exceptions so that they
-                # have a chance of being stringified correctly.
-                return str(self)
-
         def __str__(self):
                 raise NotImplementedError()
+
+class ActionRetry(ActionError):
+        def __init__(self, *args):
+                ActionError.__init__(self)
+                self.actionstr = str(args[0])
+
+        def __str__(self):
+                return _("Need to try installing {action} again").format(
+                    action=self.actionstr)
 
 class UnknownActionError(ActionError):
         def __init__(self, *args):
@@ -227,7 +230,7 @@ class InvalidActionAttributesError(ActionError):
 
 # This must be imported *after* all of the exception classes are defined as
 # _actions module init needs the exception objects.
-from _actions import fromstr
+from ._actions import fromstr
 
 def attrsfromstr(string):
         """Create an attribute dict given a string w/ key=value pairs.
@@ -267,7 +270,10 @@ def internalizelist(atype, args, ahash=None, basedirs=None):
         attrs = {}
 
         try:
-                for a, v in [kv.split("=", 1) for kv in args]:
+                # list comprehension in Python 3 doesn't leak loop control
+                # variable to surrounding variable, so use a regular loop
+                for kv in args:
+                        a, v = kv.split("=", 1)
                         if v == '' or a == '':
                                 kvi = args.index(kv) + 1
                                 p1 = " ".join(args[:kvi])
@@ -307,7 +313,7 @@ def internalizelist(atype, args, ahash=None, basedirs=None):
                         "{0} action cannot have a 'data' attribute".format(
                         atype))
 
-        action = types[atype](**attrs)
+        action = types[atype](data, **attrs)
         if ahash:
                 action.hash = ahash
 
@@ -416,3 +422,6 @@ def set_action_data(payload, action, basedirs=None, bundles=None):
         # accessible.
         action.set_data(data)
         return data, used_src
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

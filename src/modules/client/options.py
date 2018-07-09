@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -1387,3 +1387,6 @@ def opts_assemble(op, api_inst, opts, add_table=None, cwd=None):
 
         return rv_updated
 
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

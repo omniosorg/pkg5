@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 """module describing a generic packaging object
@@ -29,25 +29,27 @@
 This module contains the Action class, which represents a generic packaging
 object."""
 
-from cStringIO import StringIO
 import errno
 import os
+
 try:
         # Some versions of python don't have these constants.
         os.SEEK_SET
 except AttributeError:
         os.SEEK_SET, os.SEEK_CUR, os.SEEK_END = range(3)
+import six
 import stat
 import types
+from io import BytesIO
 
-import _common
 import pkg.actions
 import pkg.client.api_errors as apx
 import pkg.digest as digest
 import pkg.portable as portable
 import pkg.variant as variant
 
-from pkg.misc import EmptyDict
+from . import _common
+from pkg.misc import EmptyDict, force_str
 
 # Directories must precede all filesystem object actions; hardlinks must follow
 # all filesystem object actions (except links).  Note that user and group
@@ -134,6 +136,8 @@ class NSG(type):
                 return pkg.actions.fromstr(state)
 
 
+# metaclass-assignment; pylint: disable=W1623
+@six.add_metaclass(NSG)
 class Action(object):
         """Class representing a generic packaging object.
 
@@ -177,6 +181,8 @@ class Action(object):
         # Most types of actions do not have a payload.
         has_payload = False
 
+        # Python 3 will ignore the __metaclass__ field, but it's still useful
+        # for class attribute access.
         __metaclass__ = NSG
 
         # __init__ is provided as a native function (see end of class
@@ -194,7 +200,7 @@ class Action(object):
                         self.data = None
                         return
 
-                if isinstance(data, basestring):
+                if isinstance(data, six.string_types):
                         if not os.path.exists(data):
                                 raise pkg.actions.ActionDataError(
                                     _("No such file: '{0}'.").format(data),
@@ -243,12 +249,12 @@ class Action(object):
                                                     TypeError):
                                                         d = data.read()
                                                         sz = len(d)
-                                                        data = StringIO(d)
+                                                        data = BytesIO(d)
                                         except (AttributeError, TypeError):
                                                 # Raw data was provided; fake a
                                                 # file object.
                                                 sz = len(data)
-                                                data = StringIO(data)
+                                                data = BytesIO(data)
                         except EnvironmentError as e:
                                 raise pkg.actions.ActionDataError(e)
 
@@ -271,7 +277,7 @@ class Action(object):
                 computed.  This may need to be done externally.
                 """
 
-                sattrs = self.attrs.keys()
+                sattrs = list(self.attrs.keys())
                 out = self.name
                 try:
                         h = self.hash
@@ -290,6 +296,11 @@ class Action(object):
                 sattrs.sort()
 
                 for k in sattrs:
+                        # Octal literal in Python 3 begins with "0o", such as
+                        # "0o755", but we want to keep "0755" in the output.
+                        if k == "mode" and isinstance(self.attrs[k], str) and \
+                            self.attrs[k].startswith("0o"):
+                                self.attrs[k] = "0" + self.attrs[k][2:]
                         try:
                                v = self.attrs[k]
                         except KeyError:
@@ -356,6 +367,10 @@ class Action(object):
                 # We pay a performance penalty to do so, but it seems worth it.
                 for k in sorted(self.attrs.keys()):
                         v = self.attrs[k]
+                        # Octal literal in Python 3 begins with "0o", such as
+                        # "0o755", but we want to keep "0755" in the output.
+                        if k == "mode" and v.startswith("0o"):
+                                self.attrs[k] = "0" + v[2:]
                         if type(v) is list:
                                 out += " " + " ".join([
                                     "{0}={1}".format(k, q(lmt)) for lmt in sorted(v)
@@ -389,18 +404,33 @@ class Action(object):
                         return False
                 return True
 
-        def __cmp__(self, other):
-                """Compare actions for ordering.  The ordinality of a
-                   given action is computed and stored at action
-                   initialization."""
-
-                res = cmp(self.ordinality, other.ordinality)
-                if res == 0:
-                        return self.compare(other) # often subclassed
-                return res
+        def __hash__(self):
+                return hash(id(self))
 
         def compare(self, other):
-                return cmp(id(self), id(other))
+                return (id(self) > id(other)) - (id(self) < id(other))
+
+        def __lt__(self, other):
+                if self.ordinality == other.ordinality:
+                        if self.compare(other) < 0: # often subclassed
+                                return True
+                        else:
+                                return False
+                return self.ordinality < other.ordinality
+
+        def __gt__(self, other):
+                if self.ordinality == other.ordinality:
+                        if self.compare(other) > 0: # often subclassed
+                                return True
+                        else:
+                                return False
+                return self.ordinality > other.ordinality
+
+        def __le__(self, other):
+                return self == other or self < other
+
+        def __ge__(self, other):
+                return self == other or self > other
 
         def different(self, other, cmp_hash=True):
                 """Returns True if other represents a non-ignorable change from
@@ -415,12 +445,12 @@ class Action(object):
                 # same.
                 sattrs = self.attrs
                 oattrs = other.attrs
-                sset = set(sattrs.iterkeys())
-                oset = set(oattrs.iterkeys())
+                sset = set(six.iterkeys(sattrs))
+                oset = set(six.iterkeys(oattrs))
                 if sset.symmetric_difference(oset):
                         return True
 
-                for a, x in sattrs.iteritems():
+                for a, x in six.iteritems(sattrs):
                         y = oattrs[a]
                         if x != y:
                                 if len(x) == len(y) and \
@@ -468,7 +498,7 @@ class Action(object):
 
         def consolidate_attrs(self):
                 """Removes duplicate values from values which are lists."""
-                for k in self.attrs.iterkeys():
+                for k in self.attrs:
                         if isinstance(self.attrs[k], list):
                                 self.attrs[k] = list(set(self.attrs[k]))
 
@@ -654,7 +684,7 @@ class Action(object):
                 for conflicting actions checks during image planning
                 operations."""
 
-                for key in self.attrs.keys():
+                for key in list(self.attrs.keys()):
                         # strip out variant and facet information
                         if key[:8] == "variant." or key[:6] == "facet.":
                                 del self.attrs[key]
@@ -677,7 +707,7 @@ class Action(object):
         def strip_variants(self):
                 """Remove all variant tags from the attrs dictionary."""
 
-                for k in self.attrs.keys():
+                for k in list(self.attrs.keys()):
                         if k.startswith("variant."):
                                 del self.attrs[k]
 
@@ -1114,7 +1144,7 @@ class Action(object):
                 for attr in required_attrs:
                         val = self.attrs.get(attr)
                         if not val or \
-                            (isinstance(val, basestring) and not val.strip()):
+                            (isinstance(val, six.string_types) and not val.strip()):
                                 errors.append((attr,
                                     _("{0} is required").format(attr)))
 
@@ -1167,4 +1197,14 @@ class Action(object):
                 raise apx.ActionExecutionError(self, details=err_txt,
                     fmri=fmri)
 
-Action.__init__ = types.MethodType(_common._generic_init, None, Action)
+        if six.PY3:
+                def __init__(self, data=None, **attrs):
+                        # create a bound method (no unbound method in Python 3)
+                        _common._generic_init(self, data, **attrs)
+
+if six.PY2:
+        # create an unbound method
+        Action.__init__ = types.MethodType(_common._generic_init, None, Action)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

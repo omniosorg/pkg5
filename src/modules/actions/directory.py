@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 """module describing a directory packaging object
@@ -30,7 +30,7 @@ This module contains the DirectoryAction class, which represents a
 directory-type packaging object."""
 
 import errno
-import generic
+from . import generic
 import os
 import pkg.portable as portable
 import pkg.actions
@@ -51,7 +51,8 @@ class DirectoryAction(generic.Action):
         ordinality = generic._orderdict[name]
 
         def compare(self, other):
-                return cmp(self.attrs["path"], other.attrs["path"])
+                return (self.attrs["path"] > other.attrs["path"]) - \
+                    (self.attrs["path"] < other.attrs["path"])
 
         def differences(self, other):
                 """Returns a list of attributes that have different values
@@ -288,3 +289,6 @@ class DirectoryAction(generic.Action):
                 if errors:
                         raise pkg.actions.InvalidActionAttributesError(self,
                             errors, fmri=fmri)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

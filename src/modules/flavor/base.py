@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -25,6 +25,7 @@
 #
 
 import os
+from functools import total_ordering
 
 import pkg.actions.depend as depend
 import pkg.variant as variant
@@ -32,12 +33,7 @@ import pkg.variant as variant
 from pkg.portable import PD_DEFAULT_RUNPATH
 
 class DependencyAnalysisError(Exception):
-
-        def __unicode__(self):
-                # To workaround python issues 6108 and 2517, this provides a
-                # a standard wrapper for this class' exceptions so that they
-                # have a chance of being stringified correctly.
-                return str(self)
+        pass
 
 
 class MissingFile(DependencyAnalysisError):
@@ -99,6 +95,7 @@ class InvalidPublishingDependency(DependencyAnalysisError):
                     "Invalid publishing dependency: {0}").format(self.error)
 
 
+@total_ordering
 class Dependency(depend.DependencyAction):
         """Base, abstract class to represent the dependencies a dependency
         generator can produce."""
@@ -177,16 +174,20 @@ class Dependency(depend.DependencyAction):
 
                 return self.action.attrs["path"]
 
-        def __cmp__(self, other):
-                """Generic way of ordering two Dependency objects."""
+        def key(self):
+                """Keys for ordering two Dependency objects. Use ComparableMinxin
+                to do the rich comparison."""
+                return (self.dep_key(), self.action_path(),
+                    self.__class__.__name__)
 
-                r = cmp(self.dep_key(), other.dep_key())
-                if r == 0:
-                        r = cmp(self.action_path(), other.action_path())
-                if r == 0:
-                        r = cmp(self.__class__.__name__,
-                            other.__class__.__name__)
-                return r
+        def __eq__(self, other):
+                return self.key() == other.key()
+
+        def __lt__(self, other):
+                return self.key() < other.key()
+
+        def __hash__(self):
+                return hash(self.key())
 
         def get_vars_str(self):
                 """Produce a string representation of the variants that apply
@@ -428,3 +429,6 @@ def insert_default_runpath(default_runpath, run_paths):
                 # no PD_DEFAULT_PATH token, so we override the
                 # whole default search path
                 return run_paths
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

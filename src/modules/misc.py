@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -31,14 +31,12 @@ from __future__ import division
 from __future__ import print_function
 
 import OpenSSL.crypto as osc
-import cStringIO
 import calendar
 import collections
 import datetime
 import errno
 import fnmatch
 import getopt
-import itertools
 import locale
 import os
 import platform
@@ -55,11 +53,22 @@ import threading
 import time
 import traceback
 import urllib
-import urlparse
 import zlib
 
+from binascii import hexlify, unhexlify
 from collections import defaultdict
+from io import BytesIO
 from operator import itemgetter
+# Pylint seems to be panic about six even if it is installed. Instead of using
+# 'disable' here, a better way is to use ignore-modules in pylintrc, but
+# it has an issue that is not fixed until recently. See pylint/issues/#223.
+# import-error; pylint: disable=F0401
+# no-name-in-module; pylint: disable=E0611
+# Redefining built-in 'range'; pylint: disable=W0622
+# Module 'urllib' has no 'parse' member; pylint: disable=E1101
+from six.moves import range, zip_longest
+from six.moves.urllib.parse import urlsplit, urlparse, urlunparse
+from six.moves.urllib.request import pathname2url, url2pathname
 
 from stat import S_IFMT, S_IMODE, S_IRGRP, S_IROTH, S_IRUSR, S_IRWXU, \
     S_ISBLK, S_ISCHR, S_ISDIR, S_ISFIFO, S_ISLNK, S_ISREG, S_ISSOCK, \
@@ -165,12 +174,14 @@ def copytree(src, dst):
                         os.utime(d_path, (s.st_atime, s.st_mtime))
                 elif S_ISSOCK(s.st_mode):
                         sock = socket.socket(socket.AF_UNIX)
+                        # os.mknod doesn't work correctly in 64 bit.
+                        run_bit = struct.calcsize("P") * 8
                         # The s11 fcs version of python doesn't have os.mknod()
                         # but sock.bind has a path length limitation that we can
                         # hit when archiving the test suite.
                         # E1101 Module '{0}' has no '{1}' member
                         # pylint: disable=E1101
-                        if hasattr(os, "mknod"):
+                        if hasattr(os, "mknod") and run_bit == 32:
                                 os.mknod(d_path, s.st_mode, s.st_dev)
                         else:
                                 try:
@@ -203,7 +214,7 @@ def copytree(src, dst):
         os.chown(dst, src_stat.st_uid, src_stat.st_gid)
         os.utime(dst, (src_stat.st_atime, src_stat.st_mtime))
         if problem:
-                raise problem[0], problem[1], problem[2]
+                six.reraise(problem[0], problem[1], problem[2])
 
 def move(src, dst):
         """Rewrite of shutil.move() that uses our copy of copytree()."""
@@ -277,7 +288,7 @@ _hostname_re = re.compile(r"""^(?:[a-zA-Z0-9\-]+[a-zA-Z0-9\-\.]*
                    |(?:\d{1,3}\.){3}\d{3}
                    |\[([a-fA-F0-9\.]*:){,7}[a-fA-F0-9\.]+\])$""", re.X)
 
-_invalid_host_chars = re.compile(".*[^a-zA-Z0-9\-\.:\[\]]+")
+_invalid_host_chars = re.compile(r".*[^a-zA-Z0-9\-\.:\[\]]+")
 _valid_proto = ["file", "http", "https"]
 
 def valid_pub_prefix(prefix):
@@ -305,21 +316,24 @@ def valid_pub_url(url, proxy=False):
                 return False
 
         # First split the URL and check if the scheme is one we support
-        o = urlparse.urlsplit(url)
+        o = urlsplit(url)
 
         if not o[0] in _valid_proto:
                 return False
 
         if o[0] == "file":
-                path = urlparse.urlparse(url, "file", allow_fragments=0)[2]
-                path = urllib.url2pathname(path)
+                path = urlparse(url, "file", allow_fragments=0)[2]
+                path = url2pathname(path)
                 if not os.path.abspath(path):
                         return False
                 # No further validation to be done.
                 return True
 
         # Next verify that the network location is valid
-        host = urllib.splitport(o[1])[0]
+        if six.PY3:
+                host = urllib.parse.splitport(o[1])[0]
+        else:
+                host = urllib.splitport(o[1])[0]
 
         if proxy:
                 # We may have authentication details in the proxy URI, which
@@ -364,7 +378,7 @@ def gunzip_from_stream(gz, outfile, hash_func=None, hash_funcs=None,
 
         # Read the header
         magic = gz.read(2)
-        if magic != "\037\213":
+        if magic != b"\037\213":
                 raise zlib.error("Not a gzipped file")
         method = ord(gz.read(1))
         if method != 8:
@@ -382,14 +396,14 @@ def gunzip_from_stream(gz, outfile, hash_func=None, hash_funcs=None,
         if flag & FNAME:
                 while True:
                         s = gz.read(1)
-                        if not s or s == "\000":
+                        if not s or s == b"\000":
                                 break
 
         # Discard a null-terminated comment
         if flag & FCOMMENT:
                 while True:
                         s = gz.read(1)
-                        if not s or s == "\000":
+                        if not s or s == b"\000":
                                 break
 
         # Discard a 16-bit CRC
@@ -408,7 +422,7 @@ def gunzip_from_stream(gz, outfile, hash_func=None, hash_funcs=None,
 
         while True:
                 buf = gz.read(64 * 1024)
-                if buf == "":
+                if buf == b"":
                         ubuf = dcobj.flush()
                         if ignore_hash:
                                 pass
@@ -513,6 +527,8 @@ def bytes_to_str(nbytes, fmt="{num:>.2f} {unit}"):
         ]
 
         for uom, shortuom, limit in units:
+                # pylint is picky about this message:
+                # old-division; pylint: disable=W1619
                 if uom != _("EB") and nbytes >= limit:
                         # Try the next largest unit of measure unless this is
                         # the largest or if the byte size is within the current
@@ -521,13 +537,13 @@ def bytes_to_str(nbytes, fmt="{num:>.2f} {unit}"):
 
                 if "{num:d}" in fmt:
                         return fmt.format(
-                            num=int(nbytes / float(limit / 2**10)),
+                            num=int(nbytes / (limit // 2**10)),
                             unit=uom,
                             shortunit=shortuom
                         )
                 else:
                         return fmt.format(
-                            num=round(nbytes / float(limit / 2**10), 2),
+                            num=round(nbytes / (limit // 2**10), 2),
                             unit=uom,
                             shortunit=shortuom
                         )
@@ -583,8 +599,8 @@ def get_data_digest(data, length=None, return_content=False,
 
         bufsz = 128 * 1024
         closefobj = False
-        if isinstance(data, basestring):
-                f = file(data, "rb", bufsz)
+        if isinstance(data, six.string_types):
+                f = open(data, "rb", bufsz)
                 closefobj = True
         else:
                 f = data
@@ -605,7 +621,7 @@ def get_data_digest(data, length=None, return_content=False,
 
         # Read the data in chunks and compute the SHA hashes as the data comes
         # in.  A large read on some platforms (e.g. Windows XP) may fail.
-        content = cStringIO.StringIO()
+        content = BytesIO()
         while length > 0:
                 data = f.read(min(bufsz, length))
                 if return_content:
@@ -622,7 +638,7 @@ def get_data_digest(data, length=None, return_content=False,
                 if l == 0:
                         break
                 length -= l
-        content.reset()
+        content.seek(0)
         if closefobj:
                 f.close()
 
@@ -700,7 +716,8 @@ def compute_compressed_attrs(fname, file_path, data, size, compress_dir,
                 chashes[chash_attr] = chash_algs[chash_attr]()
         while True:
                 cdata = cfile.read(bufsz)
-                if cdata == "":
+                # cdata is bytes
+                if cdata == b"":
                         break
                 for chash_attr in chashes:
                         chashes[chash_attr].update(
@@ -828,7 +845,7 @@ class ProcFS(object):
         }
 
         # fill in <format string> and <namedtuple> in _struct_descriptions
-        for struct_name, v in _struct_descriptions.iteritems():
+        for struct_name, v in six.iteritems(_struct_descriptions):
                 desc = v[0]
 
                 # update _struct_descriptions with a format string
@@ -879,8 +896,8 @@ class ProcFS(object):
                         psinfo_size = 288
 
                 try:
-                        psinfo_data = file("/proc/self/psinfo").read(
-                            psinfo_size)
+                        with open("/proc/self/psinfo", "rb") as f:
+                                psinfo_data = f.read(psinfo_size)
                 # Catch "Exception"; pylint: disable=W0703
                 except Exception:
                         return None
@@ -1021,6 +1038,10 @@ class DictProperty(object):
                                 raise AttributeError("can't iterate over items")
                         return self.__iteritems(self.__obj)
 
+                # for Python 3 compatibility
+                def items(self):
+                        return self.iteritems()
+
                 def keys(self):
                         if self.__keys is None:
                                 raise AttributeError("can't iterate over keys")
@@ -1095,7 +1116,7 @@ def build_cert(path, uri=None, pub=None):
         related publisher."""
 
         try:
-                cf = file(path, "rb")
+                cf = open(path, "rb")
                 certdata = cf.read()
                 cf.close()
         except EnvironmentError as e:
@@ -1126,7 +1147,8 @@ def validate_ssl_cert(ssl_cert, prefix=None, uri=None):
 
         now = datetime.datetime.utcnow()
         nb = cert.get_notBefore()
-        t = time.strptime(nb, "%Y%m%d%H%M%SZ")
+        # strptime's first argument must be str
+        t = time.strptime(force_str(nb), "%Y%m%d%H%M%SZ")
         nbdt = datetime.datetime.utcfromtimestamp(
             calendar.timegm(t))
 
@@ -1138,7 +1160,7 @@ def validate_ssl_cert(ssl_cert, prefix=None, uri=None):
                     publisher=prefix)
 
         na = cert.get_notAfter()
-        t = time.strptime(na, "%Y%m%d%H%M%SZ")
+        t = time.strptime(force_str(na), "%Y%m%d%H%M%SZ")
         nadt = datetime.datetime.utcfromtimestamp(
             calendar.timegm(t))
 
@@ -1150,31 +1172,15 @@ def validate_ssl_cert(ssl_cert, prefix=None, uri=None):
 
         return cert
 
-# Used for the conversion of the signature value between hex and binary.
-char_list = "0123456789abcdef"
-
 def binary_to_hex(s):
         """Converts a string of bytes to a hexadecimal representation.
         """
-
-        res = ""
-        for p in s:
-                p = ord(p)
-                a = char_list[p % 16]
-                p = p // 16
-                b = char_list[p % 16]
-                res += b + a
-        return res
+        return force_str(hexlify(s))
 
 def hex_to_binary(s):
         """Converts a string of hex digits to the binary representation.
         """
-
-        res = ""
-        for i in range(0, len(s), 2):
-                res += chr(char_list.find(s[i]) * 16 +
-                    char_list.find(s[i+1]))
-        return res
+        return unhexlify(s)
 
 def config_temp_root():
         """Examine the environment.  If the environment has set TMPDIR, TEMP,
@@ -1223,11 +1229,11 @@ def parse_uri(uri, cwd=None):
                 elif not os.path.isabs(uri):
                         uri = os.path.normpath(os.path.join(cwd, uri))
 
-                uri = urlparse.urlunparse(("file", "",
-                    urllib.pathname2url(uri), "", "", ""))
+                uri = urlunparse(("file", "",
+                    pathname2url(uri), "", "", ""))
 
         scheme, netloc, path, params, query, fragment = \
-            urlparse.urlparse(uri, "file", allow_fragments=0)
+            urlparse(uri, "file", allow_fragments=0)
         scheme = scheme.lower()
 
         if scheme == "file":
@@ -1237,7 +1243,7 @@ def parse_uri(uri, cwd=None):
                         path = "/" + path.lstrip("/")
 
         # Rebuild the URI with the sanitized components.
-        return urlparse.urlunparse((scheme, netloc, path, params,
+        return urlunparse((scheme, netloc, path, params,
             query, fragment))
 
 
@@ -1295,16 +1301,16 @@ class Singleton(type):
         """Set __metaclass__ to Singleton to create a singleton.
         See http://en.wikipedia.org/wiki/Singleton_pattern """
 
-        def __init__(mcs, name, bases, dictionary):
-                super(Singleton, mcs).__init__(name, bases, dictionary)
-                mcs.instance = None
+        def __init__(cls, name, bases, dictionary):
+                super(Singleton, cls).__init__(name, bases, dictionary)
+                cls.instance = None
 
-        def __call__(mcs, *args, **kw):
-                if mcs.instance is None:
-                        mcs.instance = super(Singleton, mcs).__call__(*args,
+        def __call__(cls, *args, **kw):
+                if cls.instance is None:
+                        cls.instance = super(Singleton, cls).__call__(*args,
                             **kw)
 
-                return mcs.instance
+                return cls.instance
 
 
 EmptyDict = ImmutableDict()
@@ -1552,10 +1558,10 @@ def api_pkgcmd():
                 except OSError:
                         pass
 
-        pkg_cmd = [pkg_bin]
+        pkg_cmd = [sys.executable] + [pkg_bin]
 
         # propagate debug options
-        for k, v in DebugValues.iteritems():
+        for k, v in six.iteritems(DebugValues):
                 pkg_cmd.append("-D")
                 pkg_cmd.append("{0}={1}".format(k, v))
 
@@ -1637,10 +1643,9 @@ def get_listing(desired_field_order, field_data, field_values, out_format,
         """
         # Missing docstring; pylint: disable=C0111
 
-        # Custom sort function for preserving field ordering
-        def sort_fields(one, two):
-                return desired_field_order.index(get_header(one)) - \
-                    desired_field_order.index(get_header(two))
+        # Custom key function for preserving field ordering
+        def key_fields(item):
+                return desired_field_order.index(get_header(item))
 
         # Functions for manipulating field_data records
         def filter_default(record):
@@ -1713,7 +1718,7 @@ def get_listing(desired_field_order, field_data, field_values, out_format,
                     1 for k in field_data
                     if filter_tsv(field_data[k])
                 )
-                fmt = "\t".join('{{{0}}}'.format(x) for x in xrange(num_fields))
+                fmt = "\t".join('{{{0}}}'.format(x) for x in range(num_fields))
                 filter_func = filter_tsv
         elif out_format == "json" or out_format == "json-formatted":
                 args = { "sort_keys": True }
@@ -1724,12 +1729,12 @@ def get_listing(desired_field_order, field_data, field_values, out_format,
                 # any explicitly named fields are only included if 'json'
                 # is explicitly listed.
                 def fmt_val(v):
-                        if isinstance(v, basestring):
+                        if isinstance(v, six.string_types):
                                 return v
                         if isinstance(v, (list, tuple, set, frozenset)):
                                 return [fmt_val(e) for e in v]
                         if isinstance(v, dict):
-                                for k, e in v.iteritems():
+                                for k, e in six.iteritems(v):
                                         v[k] = fmt_val(e)
                                 return v
                         return str(v)
@@ -1751,8 +1756,8 @@ def get_listing(desired_field_order, field_data, field_values, out_format,
         # Extract the list of headers from the field_data dictionary.  Ensure
         # they are extracted in the desired order by using the custom sort
         # function.
-        hdrs = map(get_header, sorted(filter(filter_func, field_data.values()),
-            sort_fields))
+        hdrs = map(get_header, sorted(filter(filter_func,
+            field_data.values()), key=key_fields))
 
         # Output a header if desired.
         output = ""
@@ -1761,13 +1766,16 @@ def get_listing(desired_field_order, field_data, field_values, out_format,
                 output += "\n"
 
         for entry in field_values:
-                map(set_value, (
+                # In Python 3, map() returns an iterator and will not process
+                # elements unless being called, so we turn it into a list to
+                # force it to process elements.
+                list(map(set_value, (
                     (field_data[f], v)
-                    for f, v in entry.iteritems()
+                    for f, v in six.iteritems(entry)
                     if f in field_data
-                ))
+                )))
                 values = map(get_value, sorted(filter(filter_func,
-                    field_data.values()), sort_fields))
+                    field_data.values()), key=key_fields))
                 output += fmt.format(*values)
                 output += "\n"
 
@@ -1803,10 +1811,8 @@ def flush_output():
                 raise api_errors._convert_error(e)
 
 # valid json types
-if sys.version > '3':
-        json_types_immediates = (bool, float, int, str, type(None))
-else:
-        json_types_immediates = (bool, float, int, long, basestring, type(None))
+json_types_immediates = (bool, float, six.integer_types, six.string_types,
+    type(None))
 json_types_collections = (dict, list)
 json_types = tuple(json_types_immediates + json_types_collections)
 json_debug = False
@@ -1910,7 +1916,7 @@ def json_encode(name, data, desc, commonize=None, je_state=None):
                 # strings (that way we're encoder/decoder independent).
                 obj_cache = je_state[1]
                 obj_cache2 = {}
-                for obj_id, obj_state in obj_cache.itervalues():
+                for obj_id, obj_state in six.itervalues(obj_cache):
                         obj_cache2[str(obj_id)] = obj_state
 
                 data = { "json_state": data, "json_objects": obj_cache2 }
@@ -1942,12 +1948,14 @@ def json_encode(name, data, desc, commonize=None, je_state=None):
             "unexpected {0} for {1}, expected: {2}, value: {3}".format(
                 data_type, name, desc_type, data)
 
+        # The following situation is only true for Python 2.
         # We should not see unicode strings getting passed in. The assert is
         # necessary since we use the PkgDecoder hook function during json_decode
         # to convert unicode objects back into escaped str objects, which would
         # otherwise do that conversion unintentionally.
-        assert not isinstance(data_type, unicode), \
-            "unexpected unicode string: {0}".format(data)
+        if six.PY2:
+                assert not isinstance(data_type, six.text_type), \
+                    "unexpected unicode string: {0}".format(data)
 
         # we don't need to do anything for basic types
         for t in json_types_immediates:
@@ -1967,7 +1975,7 @@ def json_encode(name, data, desc, commonize=None, je_state=None):
 
                 # lookup the first descriptor to see if we have
                 # generic type description.
-                desc_k, desc_v = desc.items()[0]
+                desc_k, desc_v = list(desc.items())[0]
 
                 # if the key in the first type pair is a type then we
                 # have a generic type description that applies to all
@@ -1978,7 +1986,7 @@ def json_encode(name, data, desc, commonize=None, je_state=None):
                         assert len(desc) == 1
 
                         # encode all key / value pairs
-                        for k, v in data.iteritems():
+                        for k, v in six.iteritems(data):
                                 # encode the key
                                 name2 = "{0}[{1}].key()".format(name, desc_k)
                                 k2 = json_encode(name2, k, desc_k,
@@ -1996,7 +2004,7 @@ def json_encode(name, data, desc, commonize=None, je_state=None):
                 # we have element specific value type descriptions.
                 # encode the specific values.
                 rv.update(data)
-                for desc_k, desc_v in desc.iteritems():
+                for desc_k, desc_v in six.iteritems(desc):
                         # check for the specific key
                         if desc_k not in rv:
                                 continue
@@ -2014,7 +2022,8 @@ def json_encode(name, data, desc, commonize=None, je_state=None):
                 # we always return a new list
                 rv = []
 
-                # check for an empty list since we use izip_longest
+                # check for an empty list since we use izip_longest(zip_longest
+                # in python 3)
                 if len(data) == 0:
                         return je_return(name, rv, finish, je_state)
 
@@ -2023,12 +2032,13 @@ def json_encode(name, data, desc, commonize=None, je_state=None):
                         rv.extend(data)
                         return je_return(name, rv, finish, je_state)
 
-                # don't accidentally generate data via izip_longest
+                # don't accidentally generate data via izip_longest(zip_longest
+                # in python 3)
                 assert len(data) >= len(desc), \
                     "{0:d} >= {1:d}".format(len(data), len(desc))
 
                 i = 0
-                for data2, desc2 in itertools.izip_longest(data, desc,
+                for data2, desc2 in zip_longest(data, desc,
                     fillvalue=list(desc)[0]):
                         name2 = "{0}[{1:d}]".format(name, i)
                         i += 1
@@ -2080,7 +2090,7 @@ def json_decode(name, data, desc, commonize=None, jd_state=None):
 
         # we don't decode None
         if data is None:
-                return (data)
+                return data
 
         # initialize parameters to default
         if commonize is None:
@@ -2191,7 +2201,7 @@ def json_decode(name, data, desc, commonize=None, jd_state=None):
 
                 # lookup the first descriptor to see if we have
                 # generic type description.
-                desc_k, desc_v = desc.items()[0]
+                desc_k, desc_v = list(desc.items())[0]
 
                 # if the key in the descriptor is a type then we have
                 # a generic type description that applies to all keys
@@ -2202,7 +2212,7 @@ def json_decode(name, data, desc, commonize=None, jd_state=None):
                         assert len(desc) == 1
 
                         # decode all key / value pairs
-                        for k, v in data.iteritems():
+                        for k, v in six.iteritems(data):
                                 # decode the key
                                 name2 = "{0}[{1}].key()".format(name, desc_k)
                                 k2 = json_decode(name2, k, desc_k,
@@ -2220,7 +2230,7 @@ def json_decode(name, data, desc, commonize=None, jd_state=None):
                 # we have element specific value type descriptions.
                 # copy all data and then decode the specific values
                 rv.update(data)
-                for desc_k, desc_v in desc.iteritems():
+                for desc_k, desc_v in six.iteritems(desc):
                         # check for the specific key
                         if desc_k not in rv:
                                 continue
@@ -2237,7 +2247,8 @@ def json_decode(name, data, desc, commonize=None, jd_state=None):
                 # get the return type
                 rvtype = type(desc)
 
-                # check for an empty list since we use izip_longest
+                # check for an empty list since we use izip_longest(zip_longest
+                # in python 3)
                 if len(data) == 0:
                         rv = rvtype([])
                         return jd_return(name, rv, desc, finish, jd_state)
@@ -2247,13 +2258,14 @@ def json_decode(name, data, desc, commonize=None, jd_state=None):
                         rv = rvtype(data)
                         return jd_return(name, rv, desc, finish, jd_state)
 
-                # don't accidentally generate data via izip_longest
+                # don't accidentally generate data via izip_longest(zip_longest
+                # in python 3)
                 assert len(data) >= len(desc), \
                     "{0:d} >= {1:d}".format(len(data), len(desc))
 
                 rv = []
                 i = 0
-                for data2, desc2 in itertools.izip_longest(data, desc,
+                for data2, desc2 in zip_longest(data, desc,
                     fillvalue=list(desc)[0]):
                         name2 = "{0}[{1:d}]".format(name, i)
                         i += 1
@@ -2368,14 +2380,15 @@ def json_diff(name, d0, d1, alld0, alld1):
 
 def json_hook(dct):
         """Hook routine used by the JSON module to ensure that unicode objects
-        are converted to string objects."""
+        are converted to bytes objects in Python 2 and ensures that bytes
+        objects are converted to str objects in Python 3."""
 
         rvdct = {}
-        for k, v in dct.iteritems():
-		if isinstance(k, six.string_types):
-			k = force_str(k)
-		if isinstance(v, six.string_types):
-			v = force_str(v)
+        for k, v in six.iteritems(dct):
+                if isinstance(k, six.string_types):
+                        k = force_str(k)
+                if isinstance(v, six.string_types):
+                        v= force_str(v)
 
                 rvdct[k] = v
         return rvdct
@@ -2622,7 +2635,7 @@ def get_runtime_proxy(proxy, uri):
 
         if no_proxy or no_proxy_upper:
                 # SplitResult has a netloc member; pylint: disable=E1103
-                netloc = urlparse.urlsplit(uri, allow_fragments=0).netloc
+                netloc = urlsplit(uri, allow_fragments=0).netloc
                 host = netloc.split(":")[0]
                 if host in no_proxy or no_proxy == ["*"]:
                         return "-"
@@ -2637,6 +2650,8 @@ def get_runtime_proxy(proxy, uri):
 def decode(s):
         """convert non-ascii strings to unicode;
         replace non-convertable chars"""
+        if six.PY3:
+                return s
         try:
                 # this will fail if any 8 bit chars in string
                 # this is a nop if string is ascii.
@@ -2905,3 +2920,113 @@ def check_ca(cert):
 
         return kuse_sign is not False and bconst_ca
 
+def smallest_diff_key(a, b):
+        """Return the smallest key 'k' in 'a' such that a[k] != b[k]."""
+        keys = [k for k in a if a.get(k) != b.get(k)]
+        if not keys:
+                return None
+        return min(keys)
+
+def dict_cmp(a, b):
+        """cmp method for dictionary, translated from the source code
+        http://svn.python.org/projects/python/trunk/Objects/dictobject.c"""
+
+        if len(a) != len(b):
+                return cmp(len(a), len(b))
+
+        adiff = smallest_diff_key(a, b)
+        bdiff = smallest_diff_key(b, a)
+        if adiff is None and bdiff is None:
+                return 0
+        if adiff != bdiff:
+                return cmp(adiff, bdiff)
+        return cmp(a[adiff], b[bdiff])
+
+def cmp(a, b):
+        """Implementaion for Python 2.7's built-in function cmp(), which is
+        removed in Python 3."""
+
+        if isinstance(a, dict) and isinstance(b, dict):
+                return dict_cmp(a, b)
+
+        try:
+                if a == b:
+                        return 0
+                elif a < b:
+                        return -1
+                else:
+                        return 1
+        except TypeError:
+                if a is None and b:
+                        return -1
+                if a and b is None:
+                        return 1
+                return NotImplemented
+
+def set_memory_limit(bytes, allow_override=True):
+        """Limit memory consumption of current process to 'bytes'."""
+
+        if allow_override:
+                try:
+                        bytes = int(os.environ["PKG_CLIENT_MAX_PROCESS_SIZE"])
+                except (KeyError, ValueError):
+                        pass
+
+        try:
+                resource.setrlimit(resource.RLIMIT_DATA, (bytes, bytes))
+        except AttributeError:
+                # If platform doesn't support RLIMIT_DATA, just ignore it.
+                pass
+        except ValueError:
+                # An unprivileged user can not raise a previously set limit,
+                # if that ever happens, just ignore it.
+                pass
+
+
+def force_bytes(s, encoding="utf-8", errors="strict"):
+        """Force the string into bytes."""
+
+        if isinstance(s, bytes):
+                return s
+        try:
+                if isinstance(s, six.string_types):
+                        # this case is: unicode in Python 2 and str in Python 3
+                        return s.encode(encoding, errors)
+                elif six.PY3:
+                        # type not a string and Python 3's bytes() requires
+                        # a string argument
+                        return six.text_type(s).encode(encoding)
+                # type not a string
+                s = bytes(s)
+        except UnicodeEncodeError:
+                raise
+        return s
+
+
+def force_text(s, encoding="utf-8", errors="strict"):
+        """Force the string into text."""
+
+        if isinstance(s, six.text_type):
+                return s
+        try:
+                if isinstance(s, (six.string_types, bytes)):
+                        # this case is: str(bytes) in Python 2 and bytes in
+                        # Python 3
+                        s = s.decode(encoding, errors)
+                else:
+                        # type not a string
+                        s = six.text_type(s)
+        except UnicodeDecodeError as e:
+                raise api_errors.PkgUnicodeDecodeError(s, *e.args)
+        return s
+
+# force_str minimizes the work for compatible string handling between Python
+# 2 and 3 because we will have the native string type in its runtime, that is,
+# bytes in Python 2 and unicode string in Python 3.
+if six.PY2:
+        force_str = force_bytes
+else:
+        force_str = force_text
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

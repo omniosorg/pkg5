@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -28,6 +28,7 @@
 # membench - benchmark memory usage of various objects
 #
 
+from __future__ import division
 from __future__ import print_function
 
 import pkg.fmri as fmri
@@ -64,16 +65,19 @@ for func in funcs:
                 startusage = misc.__getvmusage()
                 n = 0
                 # Generate a good sized series of valid YYYYMMDD strings
-                for y in xrange(1, 10000):
-                        for m in xrange(1, 10):
-                                for d in xrange(1, 2):
+                for y in range(1, 10000):
+                        for m in range(1, 10):
+                                for d in range(1, 2):
                                         n += 1
                                         collection.append(func(int("{0:0=4d}{1:0=2d}{2:0=2d}".format(y, m, d))))
                 endusage = misc.__getvmusage()
 
-                est = (endusage - startusage) / n
+                est = (endusage - startusage) // n
                 print(func.__name__, "{0:d} rounds, estimated memory per object: {1:d} bytes".format(n, est))
                 sys.exit(0)
         else:
                 os.wait()
 
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

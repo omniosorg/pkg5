@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -55,6 +55,8 @@ class TarBundle(pkg.bundle.Bundle):
 
         def action(self, tarfile, tarinfo):
                 if tarinfo.isreg():
+                        # false positive
+                        # file-builtin; pylint: disable=W1607
                         return file.FileAction(tarfile.extractfile(tarinfo),
                             mode=oct(stat.S_IMODE(tarinfo.mode)),
                             owner=tarinfo.uname, group=tarinfo.gname,
@@ -76,3 +78,6 @@ class TarBundle(pkg.bundle.Bundle):
 
 def test(filename):
         return tarfile.is_tarfile(filename)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -22,7 +22,7 @@
 
 # Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
 
-import testutils
+from . import testutils
 if __name__ == "__main__":
         testutils.setup_environment("../../../proto")
 import pkg5unittest
@@ -36,20 +36,14 @@ import shutil
 import stat
 import tempfile
 import unittest
-import urllib
-import urllib2
+from six.moves import range
+from six.moves.urllib.error import HTTPError
+from six.moves.urllib.request import urlopen, Request, pathname2url
 
 from pkg import misc
 from pkg.actions import fromstr
 from pkg.digest import DEFAULT_HASH_FUNC
 import pkg.portable as portable
-
-try:
-        import pkg.sha512_t
-        sha512_supported = True
-except ImportError:
-        sha512_supported = False
-
 
 class TestPkgsendBasics(pkg5unittest.SingleDepotTestCase):
         persistent_setup = False
@@ -122,7 +116,7 @@ class TestPkgsendBasics(pkg5unittest.SingleDepotTestCase):
                 # A destination repository must be specified.
                 self.pkgsend("", "close", exit=2)
                 self.pkgsend("", "publish", exit=2)
-                self.assert_("pkgsend publish:" in self.errout)
+                self.assertTrue("pkgsend publish:" in self.errout)
 
         def test_1_pkgsend_abandon(self):
                 """Verify that an abandoned tranasaction is not published."""
@@ -302,13 +296,14 @@ class TestPkgsendBasics(pkg5unittest.SingleDepotTestCase):
                 try:
                         url = "{0}/{1}/0/{2}".format(dhurl, "add", "/".join((trx_id,
                             "set")))
-                        req = urllib2.Request(url=url, headers=headers)
-                        urllib2.urlopen(req)
-                except urllib2.HTTPError as e:
+                        req = Request(url=url, headers=headers)
+                        urlopen(req)
+                except HTTPError as e:
                         err_txt = e.read()
-                        self.assert_("The specified Action attribute "
-                            "value" in err_txt)
-                        self.assert_("is not valid." in err_txt)
+                        # err_txt is bytes
+                        self.assertTrue(b"The specified Action attribute "
+                            b"value" in err_txt)
+                        self.assertTrue(b"is not valid." in err_txt)
                 else:
                         raise RuntimeError("Test failed!")
 
@@ -390,7 +385,7 @@ class TestPkgsendBasics(pkg5unittest.SingleDepotTestCase):
 
                 # First create our dummy data file.
                 fd, fpath = tempfile.mkstemp(dir=self.test_root)
-                fp = os.fdopen(fd, "wb")
+                fp = os.fdopen(fd, "w")
                 fp.write("foo")
                 fp.close()
 
@@ -421,10 +416,10 @@ class TestPkgsendBasics(pkg5unittest.SingleDepotTestCase):
                 dir_2 = os.path.join(rootdir, "dir_2")
                 os.mkdir(dir_1)
                 os.mkdir(dir_2)
-                file(os.path.join(dir_1, "A"), "wb").close()
-                file(os.path.join(dir_2, "B"), "wb").close()
+                open(os.path.join(dir_1, "A"), "w").close()
+                open(os.path.join(dir_2, "B"), "w").close()
                 mfpath = os.path.join(rootdir, "manifest_test")
-                with open(mfpath, "wb") as mf:
+                with open(mfpath, "w") as mf:
                         mf.write("""file NOHASH mode=0755 owner=root group=bin path=/A
                             file NOHASH mode=0755 owner=root group=bin path=/B
                             set name=pkg.fmri value=testmultipledirs@1.0
@@ -695,7 +690,7 @@ file 6a1ae3def902f5612a43f0c0836fe05bc4f237cf chash=be9c91959ec782acb0f081bf4bf1
                                         if err.errno != os.errno.EEXIST:
                                                 raise
                                 fpath = os.path.join(pkgroot, entry)
-                                f = file(fpath, "wb")
+                                f = open(fpath, "w")
                                 f.write("test" + entry)
                                 f.close()
                                 # compute a digest of the file we just created,
@@ -712,12 +707,12 @@ file 6a1ae3def902f5612a43f0c0836fe05bc4f237cf chash=be9c91959ec782acb0f081bf4bf1
                                                 raise
 
                 pkginfopath = os.path.join(pkgroot, "pkginfo")
-                pkginfo = file(pkginfopath, "w")
+                pkginfo = open(pkginfopath, "w")
                 pkginfo.write(pkginfo_contents)
                 pkginfo.close()
 
                 prototypepath = os.path.join(pkgroot, "prototype")
-                prototype = file(prototypepath, "w")
+                prototype = open(prototypepath, "w")
                 prototype.write(prototype_contents)
                 prototype.close()
 
@@ -878,7 +873,7 @@ file 6a1ae3def902f5612a43f0c0836fe05bc4f237cf chash=be9c91959ec782acb0f081bf4bf1
                 """Verify that "pkgsend refresh-index" triggers indexing."""
 
                 dhurl = self.dc.get_depot_url()
-                dfurl = "file://{0}".format(urllib.pathname2url(self.dc.get_repodir()))
+                dfurl = "file://{0}".format(pathname2url(self.dc.get_repodir()))
 
                 fd, fpath = tempfile.mkstemp(dir=self.test_root)
 
@@ -1032,7 +1027,7 @@ dir path=foo/bar mode=0755 owner=root group=bin
                 self.dc.stop()
                 rpath = self.dc.get_repodir()
                 fpath = os.path.join(self.test_root, "manifest")
-                f = file(fpath, "w")
+                f = open(fpath, "w")
                 f.write(pkg_manifest)
                 f.close()
                 self.pkgsend("file://{0}".format(rpath),
@@ -1144,9 +1139,9 @@ dir path=foo/bar mode=0755 owner=root group=bin
                 url = self.dc.get_depot_url()
 
                 def check_errors(err):
-                        self.assert_('ERROR: class action script used in nopkg: foobar/baz belongs to "myclass" class' in err)
-                        self.assert_("ERROR: script present in nopkg: myclass" in err)
-                        self.assert_("ERROR: script present in nopkg: postinstall" in err)
+                        self.assertTrue('ERROR: class action script used in nopkg: foobar/baz belongs to "myclass" class' in err)
+                        self.assertTrue("ERROR: script present in nopkg: myclass" in err)
+                        self.assertTrue("ERROR: script present in nopkg: postinstall" in err)
 
                 self.pkgsend(url, "open nopkg@1.0")
                 self.pkgsend(url, "import {0}".format(os.path.join(rootdir, "nopkg.pkg")),
@@ -1160,22 +1155,22 @@ dir path=foo/bar mode=0755 owner=root group=bin
 
         def check_sysv_scripting(self, err):
                 """Verify we've reported any class action or install scripts"""
-                self.assert_('ERROR: class action script used in nopkg: foobar/baz belongs to "myclass" class' in err)
-                self.assert_("ERROR: script present in nopkg: myclass" in err)
-                self.assert_("ERROR: script present in nopkg: postinstall" in err)
+                self.assertTrue('ERROR: class action script used in nopkg: foobar/baz belongs to "myclass" class' in err)
+                self.assertTrue("ERROR: script present in nopkg: myclass" in err)
+                self.assertTrue("ERROR: script present in nopkg: postinstall" in err)
 
         def check_sysv_parameters(self, output):
                 """Verify we've automatically converted some pkginfo parameters
                 """
-                self.assert_(
+                self.assertTrue(
                     "set name=pkg.description value=\"This is a sample package\""
                     in output)
-                self.assert_("set name=pkg.summary value=\"No package\""
+                self.assertTrue("set name=pkg.summary value=\"No package\""
                     in output)
-                self.assert_("set name=pkg.send.convert.pkg-contents value=bobcat"
+                self.assertTrue("set name=pkg.send.convert.pkg-contents value=bobcat"
                     in output)
                 # this pkginfo parameter should be ignored
-                self.assert_("rstate" not in output)
+                self.assertTrue("rstate" not in output)
 
         def test_20_multi_pkg_bundle(self):
                 """Verify we return an error for a multi-package datastream."""
@@ -1191,7 +1186,7 @@ dir path=foo/bar mode=0755 owner=root group=bin
                     os.path.join(rootdir, "nopkg.pkg")), coverage=False)
                 self.pkgsend(url, "generate {0}".format(os.path.join(rootdir,
                     "nopkg.pkg")), exit=1)
-                self.assert_("Multi-package datastreams are not supported." in
+                self.assertTrue("Multi-package datastreams are not supported." in
                     self.errout)
 
         def test_21_uri_paths(self):
@@ -1218,10 +1213,10 @@ dir path=foo/bar mode=0755 owner=root group=bin
                 dir_2 = os.path.join(rootdir, "dir_2")
                 os.mkdir(dir_1)
                 os.mkdir(dir_2)
-                file(os.path.join(dir_1, "A"), "wb").close()
-                file(os.path.join(dir_2, "B"), "wb").close()
+                open(os.path.join(dir_1, "A"), "w").close()
+                open(os.path.join(dir_2, "B"), "w").close()
                 mfpath = os.path.join(rootdir, "manifest_test")
-                with open(mfpath, "wb") as mf:
+                with open(mfpath, "w") as mf:
                         mf.write("""file NOHASH mode=0755 owner=root group=bin path=/A
                             file NOHASH mode=0755 owner=root group=bin path=/B
                             set name=pkg.fmri value=testmultipledirs@1.0,5.10
@@ -1236,7 +1231,7 @@ dir path=foo/bar mode=0755 owner=root group=bin
                 self.image_create(dhurl)
                 self.pkg("install testmultipledirs")
                 self.pkg("list -vH testmultipledirs@1.0")
-                self.assert_("testmultipledirs@1.0" in self.output)
+                self.assertTrue("testmultipledirs@1.0" in self.output)
 
                 self.pkg("verify")
                 self.image_destroy()
@@ -1255,9 +1250,9 @@ dir path=foo/bar mode=0755 owner=root group=bin
                 rootdir = self.test_root
                 dir_1 = os.path.join(rootdir, "dir_1")
                 os.mkdir(dir_1)
-                file(os.path.join(dir_1, "A"), "wb").close()
+                open(os.path.join(dir_1, "A"), "w").close()
                 mfpath = os.path.join(rootdir, "manifest_test")
-                with open(mfpath, "wb") as mf:
+                with open(mfpath, "w") as mf:
                         mf.write("""file NOHASH mode=0755 owner=root group=bin path=/A
                             set name=pkg.fmri value=testnoversion
                             """)
@@ -1271,14 +1266,14 @@ dir path=foo/bar mode=0755 owner=root group=bin
                 doesn't traceback."""
 
                 mfpath = os.path.join(self.test_root, "foo.p5m")
-                with open(mfpath, "wb") as mf:
+                with open(mfpath, "w") as mf:
                         mf.write("""set name=pkg.fmri value=foo@1
 link payload-pathname path=/usr/bin/foo target=bar""")
                 self.pkgsend("", "-s {0} publish {1}".format(
                     self.dc.get_depot_url(), mfpath), exit=1)
                 self.pkgsend("", "-s {0} publish {1}".format(
                     self.dc.get_repo_url(), mfpath), exit=1)
-                with open(mfpath, "wb") as mf:
+                with open(mfpath, "w") as mf:
                         mf.write("""set name=pkg.fmri value=foo@1
 dir path=/usr/bin/foo target=bar hash=payload-pathname""")
                 self.pkgsend("", "-s {0} publish {1}".format(
@@ -1304,8 +1299,6 @@ dir path=/usr/bin/foo target=bar hash=payload-pathname""")
                 compute, other attributes are left alone."""
 
                 self.base_26_pkgsend_multihash("sha256")
-                if sha512_supported:
-                        self.base_26_pkgsend_multihash("sha512_256")
 
         def base_26_pkgsend_multihash(self, hash_alg):
                 # we use a file:// URI rather than the repo URI so we don't have
@@ -1316,7 +1309,7 @@ dir path=/usr/bin/foo target=bar hash=payload-pathname""")
                 mfpath = os.path.join(self.test_root, "pkgsend_multihash.mf")
                 payload = self.make_misc_files(["pkgsend_multihash"])[0]
 
-                with open(mfpath, "wb") as mf:
+                with open(mfpath, "w") as mf:
                         mf.write("""
 set name=pkg.fmri value=pkg:/multihash@1.0
 file {0} path=/foo owner=root group=sys mode=0644 pkg.hash.{1}=spaghetti \
@@ -1325,16 +1318,16 @@ file {0} path=/foo owner=root group=sys mode=0644 pkg.hash.{1}=spaghetti \
                 self.pkgsend("", "-s {0} publish {1}".format(furi, mfpath))
                 self.image_create(furi)
                 self.pkg("contents -rm multihash")
-                self.assert_("pkg.hash.{0}=spaghetti".format(hash_alg in self.output))
+                self.assertTrue("pkg.hash.{0}=spaghetti".format(hash_alg in self.output))
 
                 self.pkgsend("", "-s {0} publish {1}".format(furi, mfpath),
                     debug_hash="sha1+{0}".format(hash_alg))
                 self.pkg("refresh")
 
                 self.pkg("contents -rm multihash")
-                self.assert_("pkg.hash.{0}=spaghetti".format(hash_alg)
+                self.assertTrue("pkg.hash.{0}=spaghetti".format(hash_alg)
                     not in self.output)
-                self.assert_("pkg.hash.rot13=caesar" in self.output)
+                self.assertTrue("pkg.hash.rot13=caesar" in self.output)
 
         def test_27_ownership(self):
                 """Test whether the ownership of the file will change if the
@@ -1405,7 +1398,6 @@ path=dir-foo/subdir-foo/subdirfile-foo\n""".format(
                 self.assertEqualDiff(self.reduceSpaces(expected),
                     self.reduceSpaces(actual))
 
-
 class TestPkgsendHardlinks(pkg5unittest.CliTestCase):
 
         def test_bundle_dir_hardlinks(self):
@@ -1449,7 +1441,7 @@ class TestPkgsendHardlinks(pkg5unittest.CliTestCase):
                 def do_test(*pathnames):
                         self.debug("=" * 70)
                         self.debug("Testing: {0}".format(pathnames,))
-                        for i in xrange(len(pathnames)):
+                        for i in range(len(pathnames)):
                                 l = list(pathnames)
                                 p = l.pop(i)
                                 do_test_one(p, l)
@@ -1556,10 +1548,10 @@ class TestPkgsendHTTPS(pkg5unittest.HTTPSTestClass):
                 rootdir = self.test_root
                 dir_1 = os.path.join(rootdir, "dir_1")
                 os.mkdir(dir_1)
-                file(os.path.join(dir_1, "A"), "wb").close()
-                file(os.path.join(dir_1, "B"), "wb").close()
+                open(os.path.join(dir_1, "A"), "w").close()
+                open(os.path.join(dir_1, "B"), "w").close()
                 mfpath = os.path.join(rootdir, "manifest_test")
-                with open(mfpath, "wb") as mf:
+                with open(mfpath, "w") as mf:
                         mf.write("""file NOHASH mode=0755 owner=root group=bin path=/A
                             file NOHASH mode=0755 owner=root group=bin path=/B
                             set name=pkg.fmri value=httpstest@1.0,5.10
@@ -1583,12 +1575,12 @@ class TestPkgsendHTTPS(pkg5unittest.HTTPSTestClass):
                 # Add the trust anchor needed to verify the server's identity.
                 self.seed_ta_dir("ta7")
 
-                # Try to publish a simple package to SSL-secured repo  
+                # Try to publish a simple package to SSL-secured repo
                 self.pkgsend(self.url, "publish --key {key} --cert {cert} "
                     "-d {dir} {mani}".format(**arg_dict))
 
                 # Try to publish a simple package to SSL-secured repo without
-                # prvoviding certs (should fail).  
+                # prvoviding certs (should fail).
                 self.pkgsend(self.url, "publish -d {dir} {mani}".format(**arg_dict),
                     exit=1)
 
@@ -1617,12 +1609,12 @@ class TestPkgsendHTTPS(pkg5unittest.HTTPSTestClass):
                 self.pkgsend(self.url, "publish --key {empty} "
                     "--cert {cert} -d {dir} {mani}".format(**arg_dict), exit=1)
 
-                # No permissions to read certificate 
+                # No permissions to read certificate
                 self.pkgsend(self.url, "publish --key {key} "
                     "--cert {verboten} -d {dir} {mani}".format(**arg_dict),
                     su_wrap=True, exit=1)
 
-                # No permissions to read key 
+                # No permissions to read key
                 self.pkgsend(self.url, "publish --key {verboten} "
                     "--cert {cert} -d {dir} {mani}".format(**arg_dict),
                     su_wrap=True, exit=1)
@@ -1630,3 +1622,6 @@ class TestPkgsendHTTPS(pkg5unittest.HTTPSTestClass):
 
 if __name__ == "__main__":
         unittest.main()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

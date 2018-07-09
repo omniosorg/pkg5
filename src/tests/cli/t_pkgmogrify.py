@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -20,10 +20,10 @@
 # CDDL HEADER END
 #
 #
-# Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
-import testutils
+from . import testutils
 if __name__ == "__main__":
         testutils.setup_environment("../../../proto")
 import pkg5unittest
@@ -32,10 +32,12 @@ import errno
 import os
 import re
 import shutil
+import six
 import stat
 import sys
 import tempfile
 import unittest
+from pkg.misc import EmptyI
 
 class TestPkgMogrify(pkg5unittest.CliTestCase):
         """Tests for the pkgmogrify publication tool."""
@@ -155,52 +157,51 @@ file NOHASH path=kernel/drv/common2 reboot-needed=true
         def setUp(self):
                 pkg5unittest.CliTestCase.setUp(self)
 
-                f = file(os.path.join(self.test_root, "source_file"), "wb")
-                f.write(self.pkgcontents)
-                f.close()
+                with open(os.path.join(self.test_root, "source_file"), "w") as f:
+                        f.write(self.pkgcontents)
 
-                f = file(os.path.join(self.test_root, "source_file2"), "wb")
-                f.write(self.pkgcontents2)
-                f.close()
+                with open(os.path.join(self.test_root, "source_file2"), "w") as f:
+                        f.write(self.pkgcontents2)
 
-                f = file(os.path.join(self.test_root, "source_file3"), "wb")
-                f.write(self.pkgcontents3)
-                f.close()
+                with open(os.path.join(self.test_root, "source_file3"), "w") as f:
+                        f.write(self.pkgcontents3)
 
                 # Map the transform names to path names
                 xformpaths = dict((
                     (name, os.path.join(self.test_root, "transform_{0}".format(i)))
-                    for i, name in enumerate(self.transforms.iterkeys())
+                    for i, name in enumerate(six.iterkeys(self.transforms))
                 ))
 
                 # Now that we have path names, we can use the expandos in the
                 # transform contents to embed those pathnames, and write the
                 # transform files out.
-                for name, path in xformpaths.iteritems():
-                        f = file(path, "wb")
-                        self.transforms[name] = self.transforms[name].format(**xformpaths)
-                        f.write(self.transforms[name])
-                        f.close()
+                for name, path in six.iteritems(xformpaths):
+                        with open(path, "w") as f:
+                                self.transforms[name] = self.transforms[name].format(**xformpaths)
+                                f.write(self.transforms[name])
 
                 self.transform_contents = self.transforms
                 self.transforms = xformpaths
 
-        def pkgmogrify(self, sources, defines=None, output=None, args="", exit=0):
+        def pkgmogrify(self, sources=EmptyI, defines=None,
+            output=None, args="", exit=0, stdin=None):
                 if defines is None:
                         defines = self.basic_defines
 
                 defines = " ".join([
                     "-D {0}={1}".format(k, v)
-                    for k, v in defines.iteritems()
+                    for k, v in six.iteritems(defines)
                 ])
+
                 sources = " ".join(sources)
+
                 if output:
                         args += " -O {0}".format(output)
 
-                cmd = "{0}/usr/bin/pkgmogrify {1} {2} {3}".format(
+                cmd = sys.executable + " {0}/usr/bin/pkgmogrify {1} {2} {3}".format(
                     pkg5unittest.g_pkg_path, defines, args, sources)
 
-                self.cmdline_run(cmd, exit=exit)
+                self.cmdline_run(cmd, stdin=stdin, exit=exit)
 
         def __countMatches(self, regex, path=None):
                 """Count how many lines in the output of the previously run
@@ -208,7 +209,8 @@ file NOHASH path=kernel/drv/common2 reboot-needed=true
                 specified, the contents of that file are searched."""
 
                 if path is not None:
-                        output = file(path).read()
+                        with open(path) as f:
+                                output = f.read()
                 else:
                         output = self.output + self.errout
 
@@ -242,7 +244,7 @@ file NOHASH path=kernel/drv/common2 reboot-needed=true
 
                 c = self.__countMatches(regex, path)
 
-                self.assert_(c == 0, "Match for '{0}' found unexpectedly".format(regex))
+                self.assertTrue(c == 0, "Match for '{0}' found unexpectedly".format(regex))
 
         def test_1(self):
                 """Basic and nested macro substitution.  Allow a macro to
@@ -266,6 +268,11 @@ file NOHASH path=kernel/drv/common2 reboot-needed=true
                 self.pkgmogrify(sources, defines=defines)
                 self.assertMatch("SUNWxorg-mesa")
 
+                # stdin only
+                with open(source_file, "r") as f:
+                        self.pkgmogrify(stdin=f, defines=defines)
+                        self.assertMatch("SUNWxorg-mesa")
+
         def test_2(self):
                 """The -O option: output goes to a file rather than stdout."""
 
@@ -285,6 +292,12 @@ file NOHASH path=kernel/drv/common2 reboot-needed=true
                 self.pkgmogrify([self.transforms["X11->Y11"], source_file])
                 self.assertNoMatch("X11")
                 self.assertMatch("Y11")
+
+                # stdin and source file combined
+                with open(source_file, "r") as f:
+                        self.pkgmogrify(["-", self.transforms["X11->Y11"]], stdin=f)
+                        self.assertNoMatch("X11")
+                        self.assertMatch("Y11")
 
                 self.pkgmogrify([self.transforms["add bobcat"], source_file])
                 self.assertMatch("bobcat", count=3)
@@ -639,3 +652,6 @@ file NOHASH path=kernel/drv/common2 reboot-needed=true
 
 if __name__ == "__main__":
         unittest.main()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

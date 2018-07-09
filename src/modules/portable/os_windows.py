@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 """
@@ -39,7 +39,7 @@ import errno
 import stat
 import tempfile
 import threading
-import util as os_util
+from . import util as os_util
 
 def get_isainfo():
         """ TODO: Detect Windows 64-bit"""
@@ -66,7 +66,11 @@ def get_name_by_gid(gid, dirpath, use_file):
 
 def get_name_by_uid(uid, dirpath, use_file):
         """group names/numbers are ignored on Windows."""
-        return '' 
+        return ''
+
+def get_usernames_by_gid(gid, dirpath, use_file):
+        """group names/numbers are ignored on Windows."""
+        return []
 
 def get_userid():
         """group names/numbers are ignored on Windows."""
@@ -236,3 +240,6 @@ def assert_mode(path, mode):
 
 def copyfile(src, dst):
         shutil.copyfile(src, dst)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

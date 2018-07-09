@@ -57,6 +57,7 @@ try:
         import logging
         import os
         import re
+        import six
         import socket
         import sys
         import tempfile
@@ -84,7 +85,10 @@ try:
         import pkg.portable as portable
         import pkg.version as version
 
-        from imp import reload
+        if sys.version_info[:2] >= (3, 4):
+                from importlib import reload
+        else:
+                from imp import reload
         from pkg.client import global_settings
         from pkg.client.api import (IMG_TYPE_ENTIRE, IMG_TYPE_PARTIAL,
             IMG_TYPE_USER, RESULT_CANCELED, RESULT_FAILED_BAD_REQUEST,
@@ -152,7 +156,7 @@ def format_update_error(e):
 def error(text, cmd=None):
         """Emit an error message prefixed by the command name """
 
-        if not isinstance(text, basestring):
+        if not isinstance(text, six.string_types):
                 # Assume it's an object that can be stringified.
                 text = str(text)
 
@@ -463,6 +467,7 @@ Usage:
                 logger.error(_("""
 Options:
         -R dir
+        --no-network-cache
         --help or -?
 
 Environment:
@@ -983,10 +988,9 @@ def __write_tmp_release_notes(plan):
                         fd, path = tempfile.mkstemp(suffix=".txt", prefix="release-notes")
                         # make file world readable
                         os.chmod(path, 0o644)
-                        tmpfile = os.fdopen(fd, "w+b")
+                        tmpfile = os.fdopen(fd, "w+")
                         for a in plan.get_release_notes():
-                                if isinstance(a, unicode):
-                                        a = a.encode("utf-8")
+                                a = misc.force_str(a)
                                 print(a, file=tmpfile)
                         tmpfile.close()
                         return path
@@ -1078,13 +1082,13 @@ def __display_parsable_plan(api_inst, parsable_version, child_images=None):
 
                 for dfmri, src_li, dest_li, acc, disp in \
                     plan.get_licenses():
-                        src_tup = None
+                        src_tup = ()
                         if src_li:
                                 li_txt = misc.decode(src_li.get_text())
                                 src_tup = (str(src_li.fmri), src_li.license,
                                     li_txt, src_li.must_accept,
                                     src_li.must_display)
-                        dest_tup = None
+                        dest_tup = ()
                         if dest_li:
                                 li_txt = misc.decode(dest_li.get_text())
                                 dest_tup = (str(dest_li.fmri),
@@ -1112,7 +1116,7 @@ def __display_parsable_plan(api_inst, parsable_version, child_images=None):
             "create-backup-be": backup_be_created,
             "create-new-be": new_be_created,
             "image-name": None,
-            "licenses": sorted(licenses),
+            "licenses": sorted(licenses, key=lambda x: (x[0], x[1], x[2])),
             "release-notes": release_notes,
             "remove-packages": sorted(removed_fmris),
             "space-available": space_available,
@@ -1450,7 +1454,10 @@ def __api_execute_plan(operation, api_inst):
                                 raise
 
                 if exc_value or exc_tb:
-                        raise exc_value, None, exc_tb
+                        if six.PY2:
+                                six.reraise(exc_value, None, exc_tb)
+                        else:
+                                raise exc_value
 
         return rval
 
@@ -1510,9 +1517,9 @@ pkg:/package/pkg' as a privileged user and then retry the {op}."""
                 display_catalog_failures(e)
                 return EXIT_OOPS
         if e_type == api_errors.ConflictingActionErrors:
-                error("\n" + str(e), cmd=op)
                 if verbose:
                         __display_plan(api_inst, verbose, noexecute)
+                error("\n" + str(e), cmd=op)
                 return EXIT_OOPS
         if e_type in (api_errors.InvalidPlanError,
             api_errors.ReadOnlyFileSystemException,
@@ -1699,7 +1706,7 @@ def __api_plan_save(api_inst):
         oflags = os.O_CREAT | os.O_TRUNC | os.O_WRONLY
         try:
                 fd = os.open(path, oflags, 0o644)
-                with os.fdopen(fd, "wb") as fobj:
+                with os.fdopen(fd, "w") as fobj:
                         plan._save(fobj)
 
                 # cleanup any old style imageplan save files
@@ -1866,19 +1873,11 @@ class RemoteDispatch(object):
                 remote dispatch routine with a call to handle_errors(), which
                 will catch and display any exceptions encountered."""
 
-                # Hack around yet more jsonrpc encoding weirdness.  We can't
-                # pass unicode strings as keyword arguments, so we have to
-                # ascii-ify everything.
-                newargs = {}
-                if isinstance(pwargs, dict):
-                        for key, value in pwargs.iteritems():
-                                newargs[str(key)] = value
-
                 # flush output before and after every operation.
                 misc.flush_output()
                 misc.truncate_file(sys.stdout)
                 misc.truncate_file(sys.stderr)
-                rv = handle_errors(self.__dispatch, True, op, newargs)
+                rv = handle_errors(self.__dispatch, True, op, pwargs)
                 misc.flush_output()
                 return rv
 
@@ -2219,7 +2218,7 @@ def apply_hot_fix(**args):
                                 hdl.setopt(pycurl.NOPROGRESS, False)
                         try:
                                 hdl.perform()
-                        except pycurl.error, error:
+                        except pycurl.error as error:
                                 errno, errstr = error
                                 msg("An error occurred: {0}".format(errstr))
                                 return
@@ -2382,9 +2381,9 @@ def revert(op, api_inst, pargs,
                 usage(_("at least one file path or tag name required"), cmd=op)
 
         return __api_op(op, api_inst, _noexecute=noexecute, _quiet=quiet,
-            _verbose=verbose, be_activate=be_activate, be_name=be_name,
-            new_be=new_be, _parsable_version=parsable_version, args=pargs,
-            tagged=tagged)
+            _verbose=verbose, backup_be=backup_be, be_activate=be_activate,
+            backup_be_name=backup_be_name, be_name=be_name, new_be=new_be,
+            _parsable_version=parsable_version, args=pargs, tagged=tagged)
 
 def dehydrate(op, api_inst, pargs, noexecute, publishers, quiet, verbose):
         """Minimize image size for later redeployment."""
@@ -2443,7 +2442,7 @@ def list_mediators(op, api_inst, pargs, omit_headers, output_format,
                 # Configured mediator information
                 gen_mediators = (
                     (mediator, mediation)
-                    for mediator, mediation in api_inst.mediators.iteritems()
+                    for mediator, mediation in six.iteritems(api_inst.mediators)
                 )
 
         # Set minimum widths for mediator and version columns by using the
@@ -3174,7 +3173,7 @@ def info(op, api_inst, pargs, display_license, info_local, info_remote,
                                 msg("")
 
                         if display_license and not quiet:
-                                for lic in pis:
+                                for lic in pis[1]:
                                         msg(lic)
                                 continue
 
@@ -3541,7 +3540,7 @@ def list_contents(api_inst, args):
         # Determine if the query returned any results by "peeking" at the first
         # value returned from the generator expression.
         try:
-                found = gen_expr.next()
+                found = next(gen_expr)
         except StopIteration:
                 found = None
                 actionlist = []
@@ -3950,12 +3949,12 @@ def publisher_list(op, api_inst, pargs, omit_headers, preferred_only,
                             pub["Catalog Updated"])
                         display_signing_certs(pub)
                         msg(_("              Enabled:"),
-                            _(pub["Enabled"]))
+                            _(pub["enabled"]))
 
                         if "Properties" not in pub:
                                 continue
                         pub_items = sorted(
-                            pub["Properties"].iteritems())
+                            six.iteritems(pub["Properties"]))
                         property_padding = "                      "
                         properties_displayed = False
                         for k, v in pub_items:
@@ -3964,7 +3963,7 @@ def publisher_list(op, api_inst, pargs, omit_headers, preferred_only,
                                 if not properties_displayed:
                                         msg(_("           Properties:"))
                                         properties_displayed = True
-                                if not isinstance(v, basestring):
+                                if not isinstance(v, six.string_types):
                                         v = ", ".join(sorted(v))
                                 msg(property_padding, k + " =", str(v))
         return retcode
@@ -4467,7 +4466,7 @@ def sync_linked(op, api_inst, pargs, accept, backup_be, backup_be_name,
     li_pkg_updates, li_target_all, li_target_list, new_be, noexecute, origins,
     parsable_version, quiet, refresh_catalogs, reject_pats, show_licenses,
     stage, update_index, verbose):
-        """pkg audit-linked [-a|-l <li-name>]
+        """pkg sync-linked [-a|-l <li-name>]
             [-nvq] [--accept] [--licenses] [--no-index] [--no-refresh]
             [--no-parent-sync] [--no-pkg-updates]
             [--linked-md-only] [-a|-l <name>]
@@ -4926,9 +4925,9 @@ def history_list(api_inst, args):
                         else:
                                 fmt = history_cols[col][1]
                         if history_fmt:
-                                history_fmt += "{{{0:d}:{1}}}".format(i, fmt)
+                                history_fmt += "{{{0:d}!s:{1}}}".format(i, fmt)
                         else:
-                                history_fmt = "{{0:{0}}}".format(fmt)
+                                history_fmt = "{{0!s:{0}}}".format(fmt)
                         headers.append(history_cols[col][0])
                 if not omit_headers:
                         msg(history_fmt.format(*headers))
@@ -5050,11 +5049,9 @@ def history_list(api_inst, args):
                 if long_format:
                         data = __get_long_history_data(he, output)
                         for field, value in data:
-                                if isinstance(field, unicode):
-                                        field = field.encode(enc)
-                                if isinstance(value, unicode):
-                                        value = value.encode(enc)
-                                msg("{0:>18}: {1}".format(field, value))
+                                field = misc.force_str(field, encoding=enc)
+                                value = misc.force_str(value, encoding=enc)
+                                msg("{0!s:>18}: {1!s}".format(field, value))
 
                         # Separate log entries with a blank line.
                         msg("")
@@ -5062,8 +5059,7 @@ def history_list(api_inst, args):
                         items = []
                         for col in columns:
                                 item = output[col]
-                                if isinstance(item, unicode):
-                                        item = item.encode(enc)
+                                item = misc.force_str(item, encoding=enc)
                                 items.append(item)
                         msg(history_fmt.format(*items))
         return EXIT_OK
@@ -5489,7 +5485,7 @@ def main_func():
 
         try:
                 opts, pargs = getopt.getopt(sys.argv[1:], "R:D:?",
-                    ["debug=", "help", "runid=", 'notes'])
+                    ["debug=", "help", "runid=", "notes", "no-network-cache"])
         except getopt.GetoptError as e:
                 usage(_("illegal global option -- {0}").format(e.opt))
 
@@ -5517,6 +5513,8 @@ def main_func():
                 elif opt == "--notes":
                         notes_block()
                         return EXIT_OK
+                elif opt == "--no-network-cache":
+                        global_settings.client_no_network_cache = True
 
         # The globals in pkg.digest can be influenced by debug flags
         if DebugValues:
@@ -5860,6 +5858,9 @@ to perform the requested operation.  Details follow:\n\n{0}""").format(__e))
         except api_errors.InvalidConfigFile as __e:
                 error("\n" + str(__e))
                 __ret = EXIT_OOPS
+        except (api_errors.PkgUnicodeDecodeError, UnicodeEncodeError) as __e:
+                error("\n" + str(__e))
+                __ret = EXIT_OOPS
         except:
                 if _api_inst:
                         _api_inst.abort(result=RESULT_FAILED_UNKNOWN)
@@ -5895,6 +5896,9 @@ if __name__ == "__main__":
         # Make all warnings be errors.
         import warnings
         warnings.simplefilter('error')
+        if six.PY3:
+                # disable ResourceWarning: unclosed file
+                warnings.filterwarnings("ignore", category=ResourceWarning)
 
         # Attempt to handle SIGHUP/SIGTERM gracefully.
         import signal
@@ -5914,3 +5918,6 @@ if __name__ == "__main__":
                 # Ignore python's spurious pipe problems.
                 pass
         sys.exit(__retval)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

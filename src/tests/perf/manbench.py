@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -28,6 +28,7 @@
 # manbench - benchmark manifest operations
 #
 
+from __future__ import division
 from __future__ import print_function
 
 import sys
@@ -125,11 +126,14 @@ for act in mf.gen_actions(attr_match={ "mode": "0444" }):
                 for i in (1, 2, 3):
                         t = timeit.Timer(str1, setup1).timeit(n)
                         print("{0:>20f} {1:>8d} manifest gen_actions()/sec " \
-                            "({2:d} actions/sec)".format(t, int(round(n / t)), int(round((n * 60) / t))))
+                            "({2:d} actions/sec)".format(t, int(n // t), int((n * 60) // t)))
                 print("manifest gen_actions - attr_match")
                 for i in (1, 2, 3):
                         t = timeit.Timer(str2, setup1).timeit(n)
                         print("{0:>20f} {1:>8d} manifest gen_actions()/sec " \
-                            "({2:d} actions/sec)".format(t, int(round(n / t)), int(round((n * 60) / t))))
+                            "({2:d} actions/sec)".format(t, int(n // t), int((n * 60) // t)))
         except KeyboardInterrupt:
                 sys.exit(0)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

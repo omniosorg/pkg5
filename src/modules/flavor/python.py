@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 import os
@@ -32,6 +32,7 @@ import sys
 import pkg.flavor.base as base
 import pkg.flavor.depthlimitedmf as modulefinder
 
+from pkg.misc import force_str
 from pkg.portable import PD_LOCAL_PATH, PD_PROTO_DIR
 
 class PythonModuleMissingPath(base.DependencyAnalysisError):
@@ -292,6 +293,7 @@ def process_python_dependencies(action, pkg_vars, script_path, run_paths):
                 return [], [PythonSubprocessError(None, " ".join(cmd),\
                     str(e))], {}
         out, err = sp.communicate()
+        out = force_str(out)
         if sp.returncode:
                 errs.append(PythonSubprocessError(sp.returncode, " ".join(cmd),
                     err))
@@ -314,3 +316,6 @@ def process_python_dependencies(action, pkg_vars, script_path, run_paths):
         if bad_lines:
                 errs.append(PythonSubprocessBadLine(" ".join(cmd), bad_lines))
         return deps, errs, {}
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

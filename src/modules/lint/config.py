@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 
 #
 # CDDL HEADER START
@@ -22,13 +22,16 @@
 #
 
 #
-# Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 # aspects of pkglint configuration
 
-import ConfigParser
 import os
+import six
+from collections import OrderedDict
+
+from six.moves import configparser
 
 defaults = {
     "log_level": "INFO",
@@ -44,15 +47,14 @@ defaults = {
     "version.pattern": "*,5.11-0."
     }
 
+# Ensure the order of the items is the same.
+defaults = OrderedDict(sorted(defaults.items(), key=lambda t: t[0]))
+
 class PkglintConfigException(Exception):
         """An exception thrown when something fatal happens while reading the
         config.
         """
-        def __unicode__(self):
-                # To workaround python issues 6108 and 2517, this provides a
-                # a standard wrapper for this class' exceptions so that they
-                # have a chance of being stringified correctly.
-                return str(self)
+        pass
 
 class PkglintConfig(object):
         def __init__(self, config_file=None):
@@ -62,16 +64,27 @@ class PkglintConfig(object):
                                 # ConfigParser doesn't do a good job of
                                 # error reporting, so we'll just try to open
                                 # the file
-                                file(config_file, "r").close()
+                                open(config_file, "r").close()
                         except (EnvironmentError) as err:
                                 raise PkglintConfigException(
                                     _("unable to read config file: {0} ").format(
                                     err))
                 try:
-                        self.config = ConfigParser.SafeConfigParser(defaults)
+                        if six.PY2:
+                                self.config = configparser.SafeConfigParser(
+                                    defaults)
+                        else:
+                                # SafeConfigParser has been renamed to
+                                # ConfigParser in Python 3.2.
+                                self.config = configparser.ConfigParser(
+                                    defaults)
                         if not config_file:
-                                self.config.readfp(
-                                    open("/usr/share/lib/pkg/pkglintrc"))
+                                if six.PY2:
+                                        self.config.readfp(
+                                            open("/usr/share/lib/pkg/pkglintrc"))
+                                else:
+                                        self.config.read_file(
+                                            open("/usr/share/lib/pkg/pkglintrc"))
                                 self.config.read(
                                     [os.path.expanduser("~/.pkglintrc")])
                         else:
@@ -79,7 +92,10 @@ class PkglintConfig(object):
 
                         # sanity check our config by looking for a known key
                         self.config.get("pkglint", "log_level")
-                except ConfigParser.Error as err:
+                except configparser.Error as err:
                         raise PkglintConfigException(
                             _("missing or corrupt pkglintrc file "
                             "{config_file}: {err}").format(**locals()))
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

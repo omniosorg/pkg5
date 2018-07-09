@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,10 +21,10 @@
 #
 
 #
-# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
-import testutils
+from . import testutils
 if __name__ == "__main__":
         testutils.setup_environment("../../../proto")
 import pkg5unittest
@@ -36,6 +36,7 @@ import pkg.client.image as image
 import pkg.config as cfg
 import pkg.misc as misc
 import shutil
+import six
 import unittest
 
 
@@ -107,11 +108,11 @@ class TestPkgImageCreateBasics(pkg5unittest.ManyDepotTestCase):
                         return "{0}/pkg/{1}/installed".format(imgdir,
                             fmri.get_dir_path())
 
-                f = file(install_file(fmri), "w")
+                f = open(install_file(fmri), "w")
                 f.writelines(["VERSION_1\n_PRE_", fmri.publisher])
                 f.close()
 
-                fi = file("{0}/state/installed/{1}".format(imgdir,
+                fi = open("{0}/state/installed/{1}".format(imgdir,
                     fmri.get_link_path()), "w")
                 fi.close()
 
@@ -119,10 +120,12 @@ class TestPkgImageCreateBasics(pkg5unittest.ManyDepotTestCase):
         def __transform_v1_v0(v1_cat, v0_dest):
                 name = os.path.join(v0_dest, "attrs")
                 f = open(name, "wb")
-                f.write("S "
-                    "Last-Modified: {0}\n".format(v1_cat.last_modified.isoformat()))
-                f.write("S prefix: CRSV\n")
-                f.write("S npkgs: {0}\n".format(v1_cat.package_version_count))
+                f.write(misc.force_bytes("S "
+                    "Last-Modified: {0}\n".format(
+                     v1_cat.last_modified.isoformat())))
+                f.write(misc.force_bytes("S prefix: CRSV\n"))
+                f.write(misc.force_bytes(
+                        "S npkgs: {0}\n".format(v1_cat.package_version_count)))
                 f.close()
 
                 name = os.path.join(v0_dest, "catalog")
@@ -130,7 +133,8 @@ class TestPkgImageCreateBasics(pkg5unittest.ManyDepotTestCase):
                 # Now write each FMRI in the catalog in the v0 format:
                 # V pkg:/SUNWdvdrw@5.21.4.10.8,5.11-0.86:20080426T173208Z
                 for pub, stem, ver in v1_cat.tuples():
-                        f.write("V pkg:/{0}@{1}\n".format(stem, ver))
+                        f.write(misc.force_bytes(
+                                "V pkg:/{0}@{1}\n".format(stem, ver)))
                 f.close()
 
         def test_force(self):
@@ -190,7 +194,7 @@ class TestPkgImageCreateBasics(pkg5unittest.ManyDepotTestCase):
                     user_provided_dir=True, cmdpath=cmdpath)
                 pub = img.get_publisher(prefix=prefix)
                 for section in pub_cfg:
-                        for prop, val in pub_cfg[section].iteritems():
+                        for prop, val in six.iteritems(pub_cfg[section]):
                                 if section == "publisher":
                                         pub_val = getattr(pub, prop)
                                 else:
@@ -573,7 +577,7 @@ class TestPkgImageCreateBasics(pkg5unittest.ManyDepotTestCase):
                 for pl in sorted(os.listdir(inst_state_dir)):
                         # If there any other files but catalog files here, then
                         # the old state information didn't get properly removed.
-                        self.assert_(pl.startswith("catalog."))
+                        self.assertTrue(pl.startswith("catalog."))
 
                 # Verify origin configuration is intact.
                 expected = """\
@@ -684,9 +688,9 @@ test2\ttrue\tfalse\tfalse\torigin\tonline\t{1}/\t-
 
                 # Finally, check that repository and ssl data still exists
                 # through all the upgrades.
-                self.assert_(os.path.exists(os.path.join(rpath,
+                self.assertTrue(os.path.exists(os.path.join(rpath,
                     "pkg5.repository")))
-                self.assert_(os.path.exists(sslfile))
+                self.assertTrue(os.path.exists(sslfile))
 
         def test_9_bad_image_state(self):
                 """Verify that the pkg(1) command handles invalid image state
@@ -799,3 +803,6 @@ class TestImageCreateNoDepot(pkg5unittest.CliTestCase):
 
 if __name__ == "__main__":
         unittest.main()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

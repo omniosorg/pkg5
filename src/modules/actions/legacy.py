@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 """module describing a legacy packaging object
@@ -36,7 +36,7 @@ import errno
 import itertools
 import time
 
-import generic
+from . import generic
 from pkg import misc
 
 class LegacyAction(generic.Action):
@@ -101,7 +101,7 @@ class LegacyAction(generic.Action):
                 attrs.append(("INSTDATE",
                     time.strftime("%b %d %Y %H:%M")))
 
-                with open(pkginfo, "wb") as pfile:
+                with open(pkginfo, "w") as pfile:
                         for k, v in attrs:
                                 pfile.write("{0}={1}\n".format(k, v))
 
@@ -112,7 +112,7 @@ class LegacyAction(generic.Action):
                 # need them) appear.
 
                 try:
-                        file(os.path.join(pkgplan.image.get_root(),
+                        open(os.path.join(pkgplan.image.get_root(),
                             "var/sadm/install/contents"), "a").close()
                 except IOError as e:
                         if e.errno != errno.ENOENT:
@@ -200,3 +200,6 @@ class LegacyAction(generic.Action):
                 generic.Action._validate(self, fmri=fmri,
                     single_attrs=("category", "desc", "hotline", "name",
                     "vendor", "version"))
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

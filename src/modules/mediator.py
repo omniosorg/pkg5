@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -23,7 +23,9 @@
 # Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
 
 import re
+import six
 
+import pkg.misc as misc
 import pkg.version as version
 
 def valid_mediator(value):
@@ -31,7 +33,7 @@ def valid_mediator(value):
         string is a valid name for a link mediation.  'valid' is a boolean
         and 'error' is None or a string containing the error."""
 
-        if isinstance(value, basestring):
+        if isinstance(value, six.string_types):
                 if re.match("^[a-zA-Z0-9\-]+$", value):
                         return True, None
         return False, _("'{0}' is not a valid mediator; only alphanumeric "
@@ -43,7 +45,7 @@ def valid_mediator_version(value):
         a boolean and 'error' is None or a string containing the error."""
 
         error = ""
-        if isinstance(value, basestring):
+        if isinstance(value, six.string_types):
                 try:
                         version.Version(value)
                         return True, None
@@ -62,7 +64,7 @@ def parse_mediator_implementation(value):
         object representing the version.  If the implementation is not valid
         a tuple of (None, None) will be returned."""
 
-        if not isinstance(value, basestring):
+        if not isinstance(value, six.string_types):
                 return None, None
 
         if "@" in value:
@@ -93,7 +95,7 @@ def valid_mediator_implementation(value, allow_empty_version=False):
 
         error = ""
         iname = iver = None
-        if isinstance(value, basestring):
+        if isinstance(value, six.string_types):
                 if "@" in value:
                         iname, iver = value.rsplit("@", 1)
                 else:
@@ -142,24 +144,24 @@ def cmp_mediations(a, b):
 
         aprio = _MED_PRIORITIES.get(a[0], 3)
         bprio = _MED_PRIORITIES.get(b[0], 3)
-        res = cmp(aprio, bprio)
+        res = misc.cmp(aprio, bprio)
         if res != 0:
                 return res
 
         aver = a[1]
         bver = b[1]
-        res = cmp(aver, bver)
+        res = misc.cmp(aver, bver)
         if res != 0:
                 # Invert version sort so greatest is first.
                 return res * -1
 
         aimpl, aver = parse_mediator_implementation(a[2])
         bimpl, bver = parse_mediator_implementation(b[2])
-        res = cmp(aimpl, bimpl)
+        res = misc.cmp(aimpl, bimpl)
         if res != 0:
                 return res
 
-        res = cmp(aver, bver)
+        res = misc.cmp(aver, bver)
         if res != 0:
                 # Invert version sort so greatest is first.
                 return res * -1
@@ -185,3 +187,6 @@ def mediator_impl_matches(a, b):
         # which allows any version to match.  Otherwise,
         # version components must match exactly.
         return aver == None or bver == None or aver == bver
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

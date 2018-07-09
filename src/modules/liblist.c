@@ -33,7 +33,7 @@
 static int copyto_liblist_cb(libnode_t *, void *, void *);
 
 liblist_t *
-liblist_alloc()
+liblist_alloc(void)
 {
 	liblist_t *n;
 

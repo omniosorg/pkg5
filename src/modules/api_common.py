@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -28,6 +28,8 @@
 
 """Contains API functions and classes common to both pkg.client.api and
 pkg.server.api."""
+
+import six
 
 import pkg.client.pkgdefs as pkgdefs
 import pkg.fmri as fmri
@@ -191,10 +193,10 @@ class PackageInfo(object):
                 # of an action's modifiers?
                 if isinstance(modifiers, dict):
                         modifiers = tuple(
-                            (k, isinstance(modifiers[k], basestring) and
+                            (k, isinstance(modifiers[k], six.string_types) and
                                 tuple([sorted(modifiers[k])]) or
                                 tuple(sorted(modifiers[k])))
-                            for k in sorted(modifiers.iterkeys())
+                            for k in sorted(six.iterkeys(modifiers))
                         )
                 return self.attrs.get(name, {modifiers: []}).get(
                     modifiers, [])
@@ -252,3 +254,6 @@ def _get_pkg_cat_data(cat, info_needed, actions=None,
         if not PackageInfo.DESCRIPTION in info_needed:
                 desc = None
         return summ, desc, cat_info, deps
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

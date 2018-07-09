@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -24,8 +24,11 @@
 # Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
+import six
 import pkg.client.api_errors as apx
+from functools import total_ordering
 
+@total_ordering
 class Policy(object):
         """Abstract base Policy class.  It defines the interface all subclasses
         must provide.
@@ -53,8 +56,13 @@ class Policy(object):
                 Not implemented in the base class."""
                 raise NotImplementedError()
 
-        def __cmp__(self, other):
-                return cmp(self.strictness, other.strictness)
+        def __lt__(self, other):
+                return self.strictness < other.strictness
+
+        def __eq__(self, other):
+                return self.strictness == other.strictness
+
+        __hash__ = None
 
         def combine(self, other):
                 """If the other signature policy is more strict than this
@@ -157,7 +165,7 @@ class RequireNames(Policy):
                 assert req_names, "RequireNames requires at least one name " \
                     "to be passed to the constructor."
                 Policy.__init__(self, *args, **kwargs)
-                if isinstance(req_names, basestring):
+                if isinstance(req_names, six.string_types):
                         req_names = [req_names]
                 self.required_names = frozenset(req_names)
 
@@ -190,3 +198,6 @@ Policy._policies[RequireNames.name] = RequireNames
 
 DEFAULT_POLICY = "verify"
 
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

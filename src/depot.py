@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 from __future__ import print_function
@@ -71,17 +71,24 @@ import os
 import os.path
 import OpenSSL.crypto as crypto
 import string
+import shlex
+import six
+import string
 import subprocess
 import sys
 import tempfile
-import urlparse
 import portend
 
-from imp import reload
+if sys.version_info[:2] >= (3, 4):
+        from importlib import reload
+else:
+        from imp import reload
+from six.moves.urllib.parse import urlparse, urlunparse
 
 try:
         import cherrypy
         version = cherrypy.__version__.split('.')
+        # comparison requires same type, therefore list conversion is needed
         if list(map(int, version)) < [3, 1, 0]:
                 raise ImportError
 except ImportError:
@@ -110,7 +117,10 @@ import pkg.server.repository as sr
 # to let the dispatcher to find the correct page handler, we need to skip
 # converting the hyphen symbol.
 punc = string.punctuation.replace("-", "_")
-translate = string.maketrans(punc, "_" * len(string.punctuation))
+if six.PY2:
+        translate = string.maketrans(punc, "_" * len(string.punctuation))
+else:
+        translate = str.maketrans(punc, "_" * len(string.punctuation))
 class Pkg5Dispatcher(Dispatcher):
         def __init__(self, **args):
                 Dispatcher.__init__(self, translate=translate)
@@ -398,7 +408,7 @@ if __name__ == "__main__":
                                 # remove any scheme information since we
                                 # don't need it.
                                 scheme, netloc, path, params, query, \
-                                    fragment = urlparse.urlparse(arg,
+                                    fragment = urlparse(arg,
                                     "http", allow_fragments=0)
 
                                 if not netloc:
@@ -415,7 +425,7 @@ if __name__ == "__main__":
 
                                 # Rebuild the url with the sanitized components.
                                 ivalues["pkg"]["proxy_base"] = \
-                                    urlparse.urlunparse((scheme, netloc, path,
+                                    urlunparse((scheme, netloc, path,
                                     params, query, fragment))
                         elif opt == "--readonly":
                                 ivalues["pkg"]["readonly"] = True
@@ -672,7 +682,11 @@ if __name__ == "__main__":
                 def get_ssl_passphrase(*ignored):
                         p = None
                         try:
-                                p = subprocess.Popen(cmdline, shell=True,
+                                if cmdline:
+                                        cmdargs = shlex.split(cmdline)
+                                else:
+                                        cmdargs = []
+                                p = subprocess.Popen(cmdargs,
                                         stdout=subprocess.PIPE,
                                         stderr=None)
                                 p.wait()
@@ -683,7 +697,7 @@ if __name__ == "__main__":
                                     "private key file: {1}".format(cmdline,
                                     __e))
                                 sys.exit(1)
-                        return p.stdout.read().strip("\n")
+                        return p.stdout.read().strip(b"\n")
 
                 if ssl_dialog.startswith("exec:"):
                         exec_path = ssl_dialog.split("exec:")[1]
@@ -705,12 +719,13 @@ if __name__ == "__main__":
                 # exec-based authentication, so it will have to be decoded first
                 # to an un-named temporary file.
                 try:
-                        with file(ssl_key_file, "rb") as key_file:
+                        with open(ssl_key_file, "rb") as key_file:
                                 pkey = crypto.load_privatekey(
                                     crypto.FILETYPE_PEM, key_file.read(),
                                     get_ssl_passphrase)
 
-                        key_data = tempfile.TemporaryFile()
+                        key_data = tempfile.NamedTemporaryFile(dir=pkg_root,
+                            delete=True)
                         key_data.write(crypto.dump_privatekey(
                             crypto.FILETYPE_PEM, pkey))
                         key_data.seek(0)
@@ -725,7 +740,7 @@ if __name__ == "__main__":
                         sys.exit(1)
                 else:
                         # Redirect the server to the decrypted key file.
-                        ssl_key_file = "/dev/fd/{0:d}".format(key_data.fileno())
+                        ssl_key_file = key_data.name
 
         # Setup our global configuration.
         gconf = {
@@ -741,7 +756,8 @@ if __name__ == "__main__":
             "server.ssl_private_key": ssl_key_file,
             "server.thread_pool": threads,
             "tools.log_headers.on": True,
-            "tools.encode.on": True
+            "tools.encode.on": True,
+            "tools.encode.encoding": "utf-8",
         }
 
         if "headers" in dconf.get_property("pkg", "debug"):
@@ -963,3 +979,6 @@ if __name__ == "__main__":
                     "illegal option value specified?")
                 emsg(_e)
                 sys.exit(1)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

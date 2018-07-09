@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 """
@@ -40,7 +40,7 @@ import shutil
 import stat
 import sys
 import tempfile
-import util as os_util
+from . import util as os_util
 # used to cache contents of passwd and group files
 users = {}
 uids = {}
@@ -167,6 +167,31 @@ def get_name_by_uid(uid, dirpath, use_file):
         except KeyError:
                 raise KeyError("user ID not found: {0:d}".format(uid))
 
+def get_usernames_by_gid(gid, dirpath):
+        if not already_called():
+                get_usernames_by_gid(gid, dirpath)
+
+        try:
+                load_passwd(dirpath)
+                return [unam
+                    for unam, pwdentry in users[dirpath].items()
+                    if str(pwdentry.pw_gid) == gid
+                ]
+        except OSError as e:
+                if e.errno != errno.ENOENT:
+                        raise
+                # If the password file doesn't exist, bootstrap
+                # ourselves from the current environment.
+                # The following call could be expensive.
+                allpwdentries = pwd.getpwall()
+                if not allpwdentries:
+                        allpwdentries = []
+                return [
+                    pwdentry.pw_name
+                    for pwdentry in allpwdentries
+                    if str(pwdentry.pw_gid) == gid
+                ]
+
 def load_passwd(dirpath):
         # check if we need to reload cache
         passwd_file = os.path.join(dirpath, "etc/passwd")
@@ -175,7 +200,7 @@ def load_passwd(dirpath):
                 return
         users[dirpath] = user = {}
         uids[dirpath] = uid = {}
-        f = file(passwd_file)
+        f = open(passwd_file)
         for line in f:
                 arr = line.rstrip().split(":")
                 if len(arr) != 7:
@@ -206,7 +231,7 @@ def load_groups(dirpath):
                 return
         groups[dirpath] = group = {}
         gids[dirpath] = gid = {}
-        f = file(group_file)
+        f = open(group_file)
         for line in f:
                 arr = line.rstrip().split(":")
                 if len(arr) != 4:
@@ -282,3 +307,6 @@ def assert_mode(path, mode):
 def copyfile(src, dst):
         shutil.copyfile(src, dst)
 
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

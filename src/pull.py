@@ -21,9 +21,10 @@
 #
 
 #
-# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
+from __future__ import print_function
 import calendar
 import errno
 import getopt
@@ -34,9 +35,9 @@ import shutil
 import sys
 import tempfile
 import traceback
-import urllib
 import warnings
 
+import pkg.actions as actions
 import pkg.catalog as catalog
 import pkg.client.progress as progress
 import pkg.fmri
@@ -46,6 +47,7 @@ import pkg.client.pkgdefs as pkgdefs
 import pkg.client.publisher as publisher
 import pkg.client.transport.transport as transport
 import pkg.misc as misc
+import pkg.mogrify as mog
 import pkg.p5p
 import pkg.pkgsubprocess as subprocess
 import pkg.publish.transaction as trans
@@ -55,6 +57,7 @@ import pkg.version as version
 from pkg.client import global_settings
 from pkg.misc import emsg, get_pkg_otw_size, msg, PipeError
 from pkg.client.debugvalues import DebugValues
+from six.moves.urllib.parse import quote
 
 # Globals
 archive = False
@@ -95,7 +98,8 @@ def usage(usage_error=None, retcode=2):
         msg(_("""\
 Usage:
         pkgrecv [-aknrv] [-s src_uri] [-d (path|dest_uri)] [-c cache_dir]
-            [-m match] [--raw] [--key src_key --cert src_cert]
+            [-m match] [--mog-file file_path ...] [--raw]
+            [--key src_key --cert src_cert]
             [--dkey dest_key --dcert dest_cert]
             (fmri|pattern) ...
         pkgrecv [-s src_repo_uri] --newest
@@ -156,6 +160,13 @@ Options:
                         the source will be removed.
                         Cloning will leave the destination repository altered in
                         case of an error.
+
+        --mog-file      Specifies the path to a file containing pkgmogrify(1)
+                        transforms to be applied to every package before it is
+                        copied to the destination. A path of '-' can be
+                        specified to use stdin.  This option can be specified
+                        multiple times.  This option can not be combined with
+                        --clone.
 
         --newest        List the most recent versions of the packages available
                         from the specified repository and exit.  (All other
@@ -392,6 +403,7 @@ def main_func():
         cert = None
         dkey = None
         dcert = None
+        mog_files = []
         publishers = []
         clone = False
         verbose = False
@@ -401,14 +413,17 @@ def main_func():
         gettext.install("pkg", "/usr/share/locale",
             codeset=locale.getpreferredencoding())
 
+        # set process limits for memory consumption to 8GB
+        misc.set_memory_limit(8 * 1024 * 1024 * 1024)
+
         global_settings.client_name = "pkgrecv"
         target = os.environ.get("PKG_DEST", None)
         src_uri = os.environ.get("PKG_SRC", None)
 
         try:
                 opts, pargs = getopt.getopt(sys.argv[1:], "ac:D:d:hkm:np:rs:v",
-                    ["cert=", "key=", "dcert=", "dkey=", "newest", "raw",
-                    "debug=", "clone"])
+                    ["cert=", "key=", "dcert=", "dkey=", "mog-file=", "newest",
+                    "raw", "debug=", "clone"])
         except getopt.GetoptError as e:
                 usage(_("Illegal option -- {0}").format(e.opt))
 
@@ -422,7 +437,7 @@ def main_func():
                 elif opt == "-d":
                         target = arg
                 elif opt == "-D" or opt == "--debug":
-                        if arg in ["plan", "transport"]:
+                        if arg in ["plan", "transport", "mogrify"]:
                                 key = arg
                                 value = "True"
                         else:
@@ -460,6 +475,8 @@ def main_func():
                         src_uri = arg
                 elif opt == "-v":
                         verbose = True
+                elif opt == "--mog-file":
+                        mog_files.append(arg)
                 elif opt == "--newest":
                         list_newest = True
                 elif opt == "--raw":
@@ -509,6 +526,9 @@ def main_func():
         if publishers and not clone:
                 usage(_("-p can only be used with --clone.\n"))
 
+        if mog_files and clone:
+                usage(_("--mog-file can not be used with --clone.\n"))
+
         incoming_dir = tempfile.mkdtemp(dir=temp_root,
             prefix=global_settings.client_name + "-")
         tmpdirs.append(incoming_dir)
@@ -538,6 +558,7 @@ def main_func():
                 args += (publishers,)
                 return clone_repo(*args)
 
+        args += (mog_files,)
         if archive:
                 # Retrieving package data for archival requires a different mode
                 # of operation so gets its own routine.  Notably, it requires
@@ -598,13 +619,143 @@ def get_matches(src_pub, tracker, xport, pargs, any_unmatched, any_matched,
 
         return matches
 
+def __mog_helper(mog_files, fmri, mpathname):
+        """Helper routine for mogrifying manifest. Precondition: mog_files
+        has at least one element."""
+
+        ignoreincludes = False
+        mog_verbose = False
+        includes = []
+        macros = {}
+        printinfo = []
+        output = []
+        line_buffer = []
+
+        # Set mogrify in verbose mode for debugging.
+        if DebugValues.get_value("mogrify"):
+                mog_verbose = True
+
+        # Take out "-" symbol. If the only one element is "-", input_files
+        # will be empty, then stdin is used. If more than elements, the
+        # effect of "-" will be ignored, and system only takes input from
+        # real files provided.
+        input_files = [mf for mf in mog_files if mf != "-"]
+        mog.process_mog(input_files, ignoreincludes, mog_verbose, includes,
+            macros, printinfo, output, error_cb=None,
+            sys_supply_files=[mpathname])
+
+        try:
+                for p in printinfo:
+                        print("{0}".format(p), file=sys.stdout)
+        except IOError as e:
+                error(_("Cannot write extra data {0}").format(e))
+
+        # Collect new contents of mogrified manifest.
+        # emitted tracks output so far to avoid duplicates.
+        emitted = set()
+        for comment, actionlist, prepended_macro in output:
+                if comment:
+                        for l in comment:
+                                line_buffer.append("{0}"
+                                    .format(l))
+
+                for i, action in enumerate(actionlist):
+                        if action is None:
+                                continue
+                        if prepended_macro is None:
+                                s = "{0}".format(action)
+                        else:
+                                s = "{0}{1}".format(
+                                    prepended_macro, action)
+                        # The first action is the original
+                        # action and should be collected;
+                        # later actions are all emitted and
+                        # should only be collected if not
+                        # duplicates.
+                        if i == 0:
+                                line_buffer.append(s)
+                        elif s not in emitted:
+                                line_buffer.append(s)
+                                emitted.add(s)
+
+        # Print the mogrified result for debugging purpose.
+        if mog_verbose:
+                print("{0}".format("Mogrified manifest for {0}: (subject to "
+                    "validation)\n".format(fmri.get_fmri(anarchy=True,
+                    include_scheme=False))), file=sys.stdout)
+                for line in line_buffer:
+                        print("{0}".format(line), file=sys.stdout)
+
+        # Find the mogrified fmri. Make it equal to the old fmri first just
+        # to make sure it always has a value.
+        nfmri = fmri
+        new_lines = []
+        for al in line_buffer:
+                if not al.strip():
+                        continue
+
+                if al.strip().startswith("#"):
+                        continue
+                try:
+                        act = actions.fromstr(al)
+                except Exception as e:
+                        # If any exception encoutered here, that means the
+                        # action is corrupted with mogrify.
+                        abort(e)
+                if act.name == "set" and act.attrs["name"] == "pkg.fmri":
+                        # Construct mogrified new fmri.
+                        try:
+                                nfmri = pkg.fmri.PkgFmri(
+                                    act.attrs["value"])
+                        except Exception as ex:
+                                abort("Invalid FMRI for set action:\n{0}"
+                                    .format(al))
+                if hasattr(act, "hash"):
+                        # Drop the signature.
+                        if act.name == "signature":
+                                continue
+                        # Check whether new contents such as files and licenses
+                        # was added via mogrify. This should not be allowed.
+                        if "pkg.size" not in act.attrs:
+                                abort("Adding new hashable content {0} is not "
+                                    "allowed.".format(act.hash))
+                elif act.name == "depend":
+                        try:
+                                fmris = act.attrs["fmri"]
+                                if not isinstance(fmris, list):
+                                        fmris = [fmris]
+                                for f in fmris:
+                                        pkg.fmri.PkgFmri(f)
+                        except Exception as ex:
+                                abort("Invalid FMRI(s) for depend action:\n{0}"
+                                    .format(al))
+                new_lines.append(al)
+
+        return (nfmri, new_lines)
+
+def _rm_temp_raw_files(fmri, xport_cfg, ignore_errors=False):
+        # pkgdir is a directory with format: pkg_name/version.
+        # pkg_parentdir is the actual pkg_name directory.
+        pkgdir = xport_cfg.get_pkg_dir(fmri)
+        pkg_parentdir = os.path.dirname(pkgdir)
+        shutil.rmtree(pkgdir,
+            ignore_errors=ignore_errors)
+
+        # If the parent directory become empty,
+        # remove it as well.
+        if not os.listdir(pkg_parentdir):
+                shutil.rmtree(pkg_parentdir,
+                    ignore_errors=ignore_errors)
+
 def archive_pkgs(pargs, target, list_newest, all_versions, all_timestamps,
     keep_compresed, raw, recursive, dry_run, verbose, dest_xport_cfg, src_uri,
-    dkey, dcert):
+    dkey, dcert, mog_files):
         """Retrieve source package data completely and then archive it."""
 
         global cache_dir, download_start, xport, xport_cfg
-
+        do_mog = False
+        if mog_files:
+                do_mog = True
         target = os.path.abspath(target)
         if os.path.exists(target):
                 error(_("Target archive '{0}' already "
@@ -658,6 +809,7 @@ def archive_pkgs(pargs, target, list_newest, all_versions, all_timestamps,
 
                 tracker.manifest_fetch_start(npkgs)
 
+                fmappings = {}
                 good_matches = []
                 for f in matches:
                         try:
@@ -665,8 +817,39 @@ def archive_pkgs(pargs, target, list_newest, all_versions, all_timestamps,
                         except apx.InvalidPackageErrors as e:
                                 invalid_manifests.extend(e.errors)
                                 continue
-                        good_matches.append(f)
-                        getb, getf, arcb, arccb = get_sizes(m)
+
+                        nf = f
+                        if do_mog:
+                                try:
+                                        nf, line_buffer = __mog_helper(mog_files,
+                                            f, m.pathname)
+                                        # Create mogrified manifest.
+                                        # Remove the old raw pkg data first.
+                                        _rm_temp_raw_files(f, xport_cfg)
+                                        nm = pkg.manifest.FactoredManifest(nf,
+                                            xport_cfg.get_pkg_dir(nf),
+                                            contents="\n".join(
+                                            line_buffer))
+                                except EnvironmentError as e:
+                                        _rm_temp_raw_files(nf, xport_cfg,
+                                            ignore_errors=True)
+                                        raise apx._convert_error(e)
+                                except Exception as e:
+                                        _rm_temp_raw_files(nf, xport_cfg,
+                                            ignore_errors=True)
+                                        abort(_("Creating mogrified "
+                                            "manifest failed: {0}"
+                                            ).format(str(e)))
+                        else:
+                                # Use the original manifest if no
+                                # mogrify is done.
+                                nm = m
+
+                        # Store a mapping between new fmri and new manifest for
+                        # future use.
+                        fmappings[nf] = nm
+                        good_matches.append(nf)
+                        getb, getf, arcb, arccb = get_sizes(nm)
                         get_bytes += getb
                         get_files += getf
 
@@ -678,7 +861,7 @@ def archive_pkgs(pargs, target, list_newest, all_versions, all_timestamps,
                         # Also include the the manifest file itself in the
                         # amount of bytes to archive.
                         try:
-                                fs = os.stat(m.pathname)
+                                fs = os.stat(nm.pathname)
                                 arc_bytes += fs.st_size
                         except EnvironmentError as e:
                                 raise apx._convert_error(e)
@@ -710,8 +893,8 @@ def archive_pkgs(pargs, target, list_newest, all_versions, all_timestamps,
                                     s[1].rjust(rjust_value)))
 
                         msg(_("\nPackages to archive:"))
-                        for f in sorted(matches):
-                                fmri = f.get_fmri(anarchy=True,
+                        for nf in sorted(matches):
+                                fmri = nf.get_fmri(anarchy=True,
                                     include_scheme=False)
                                 msg(fmri)
                         msg()
@@ -726,23 +909,23 @@ def archive_pkgs(pargs, target, list_newest, all_versions, all_timestamps,
                         total_processed = len(matches)
                         continue
 
-                for f in matches:
-                        tracker.download_start_pkg(f)
-                        pkgdir = xport_cfg.get_pkg_dir(f)
+                for nf in matches:
+                        tracker.download_start_pkg(nf)
+                        pkgdir = xport_cfg.get_pkg_dir(nf)
                         mfile = xport.multi_file_ni(src_pub, pkgdir,
                             progtrack=tracker)
-                        m = get_manifest(f, xport_cfg)
-                        add_hashes_to_multi(m, mfile)
+                        nm = fmappings[nf]
+                        add_hashes_to_multi(nm, mfile)
 
                         if mfile:
                                 download_start = True
                                 mfile.wait_files()
 
                         if not dry_run:
-                                archive_list.append((f, m.pathname, pkgdir))
+                                archive_list.append((nf, nm.pathname, pkgdir))
 
                         # Nothing more to do for this package.
-                        tracker.download_end_pkg(f)
+                        tracker.download_end_pkg(nf)
                         total_processed += 1
 
                 tracker.download_done()
@@ -1070,7 +1253,7 @@ def clone_repo(pargs, target, list_newest, all_versions, all_timestamps,
                 msg(_("\n\nVerifying repository contents."))
                 cmd = os.path.join(os.path.dirname(misc.api_cmdpath()),
                     "pkgrepo")
-                args = [cmd, 'verify', '-s',
+                args = [sys.executable, cmd, 'verify', '-s',
                     target.get_pathname(), '--disable', 'dependency']
 
                 try:
@@ -1124,7 +1307,7 @@ def clone_repo(pargs, target, list_newest, all_versions, all_timestamps,
 
 def transfer_pkgs(pargs, target, list_newest, all_versions, all_timestamps,
     keep_compressed, raw, recursive, dry_run, verbose, dest_xport_cfg, src_uri,
-    dkey, dcert):
+    dkey, dcert, mog_files):
         """Retrieve source package data and optionally republish it as each
         package is retrieved.
         """
@@ -1135,6 +1318,10 @@ def transfer_pkgs(pargs, target, list_newest, all_versions, all_timestamps,
         any_matched = []
         invalid_manifests = []
         total_processed = 0
+        do_mog = False
+
+        if mog_files:
+                do_mog = True
 
         for src_pub in xport_cfg.gen_publishers():
                 tracker = get_tracker()
@@ -1211,10 +1398,6 @@ def transfer_pkgs(pargs, target, list_newest, all_versions, all_timestamps,
                 xport_cfg.pkg_root = basedir
                 dest_xport_cfg.pkg_root = basedir
 
-                if republish:
-                        targ_cat = fetch_catalog(targ_pub, tracker,
-                            dest_xport, True)
-
                 matches = get_matches(src_pub, tracker, xport, pargs,
                     any_unmatched, any_matched, all_versions, all_timestamps,
                     recursive)
@@ -1226,7 +1409,7 @@ def transfer_pkgs(pargs, target, list_newest, all_versions, all_timestamps,
                         open_time = pfmri.get_timestamp()
                         return "{0:d}_{1}".format(
                             calendar.timegm(open_time.utctimetuple()),
-                            urllib.quote(str(pfmri), ""))
+                            quote(str(pfmri), ""))
 
                 # First, retrieve the manifests and calculate package transfer
                 # sizes.
@@ -1242,30 +1425,112 @@ def transfer_pkgs(pargs, target, list_newest, all_versions, all_timestamps,
                 tracker.manifest_fetch_start(npkgs)
 
                 pkgs_to_get = []
+                new_targ_cats = {}
+                new_targ_pubs = {}
+                fmappings = {}
+
                 while matches:
                         f = matches.pop()
-                        if republish and targ_cat.get_entry(f):
-                                tracker.manifest_fetch_progress(completion=True)
-                                continue
                         try:
                                 m = get_manifest(f, xport_cfg)
                         except apx.InvalidPackageErrors as e:
                                 invalid_manifests.extend(e.errors)
                                 continue
-                        pkgs_to_get.append(f)
 
-                        getb, getf, sendb, sendcb = get_sizes(m)
-                        get_bytes += getb
-                        get_files += getf
+                        nf = f
+                        if do_mog:
+                                try:
+                                        nf, line_buffer = __mog_helper(mog_files,
+                                            f, m.pathname)
+                                except Exception as e:
+                                        _rm_temp_raw_files(f, xport_cfg,
+                                            ignore_errors=True)
+                                        abort(err=e)
+
+                        # Figure out whether the package is already in
+                        # the target repository or not.
+                        if republish:
+                                # Check whether the fmri already exists in the
+                                # target repository.
+                                if nf.publisher not in new_targ_cats:
+                                        newpub = transport.setup_publisher(
+                                            target, nf.publisher, dest_xport,
+                                            dest_xport_cfg, ssl_key=dkey,
+                                            ssl_cert=dcert)
+                                        # If no publisher transport
+                                        # established. That means it is a
+                                        # remote host. set remote prefix
+                                        # equal to True.
+                                        if not newpub:
+                                                newpub = transport.setup_publisher(
+                                                    target, nf.publisher,
+                                                    dest_xport, dest_xport_cfg,
+                                                    remote_prefix=True,
+                                                    ssl_key=dkey,
+                                                    ssl_cert=dcert)
+                                        new_targ_pubs[nf.publisher] = newpub
+                                        newcat = fetch_catalog(newpub, tracker,
+                                            dest_xport, True)
+                                        new_targ_cats[nf.publisher] = newcat
+                                        if newcat.get_entry(nf):
+                                                tracker.manifest_fetch_progress(
+                                                    completion=True)
+                                                continue
+                                # If we already have a catalog in the
+                                # cache, use it.
+                                elif new_targ_cats[nf.publisher].get_entry(nf):
+                                        tracker.manifest_fetch_progress(
+                                            completion=True)
+                                        continue
+
+                        if do_mog:
+                                # We have examined which packge to
+                                # republish. Then we need store the
+                                # mogrified manifest for future use.
+                                try:
+                                        # Create mogrified manifest.
+                                        # Remove the old raw pkg data first.
+                                        _rm_temp_raw_files(f, xport_cfg)
+                                        nm = pkg.manifest.FactoredManifest(nf,
+                                            xport_cfg.get_pkg_dir(nf),
+                                            contents="\n".join(
+                                            line_buffer))
+                                except EnvironmentError as e:
+                                        _rm_temp_raw_files(nf, xport_cfg,
+                                            ignore_errors=True)
+                                        raise apx._convert_error(e)
+                                except Exception as e:
+                                        _rm_temp_raw_files(nf, xport_cfg,
+                                            ignore_errors=True)
+                                        abort(_("Creating mogrified "
+                                            "manifest failed: {0}"
+                                            ).format(str(e)))
+
+                        else:
+                                # Use the original manifest if no
+                                # mogrify is done.
+                                nm = m
+
+                        getb, getf, sendb, sendcb = get_sizes(nm)
                         if republish:
                                 # For now, normal republication always uses
                                 # uncompressed data as already compressed data
                                 # is not supported for publication.
                                 send_bytes += sendb
 
+                        # Store a mapping between new fmri and new manifest for
+                        # future use.
+                        fmappings[nf] = nm
+                        pkgs_to_get.append(nf)
+
+                        get_bytes += getb
+                        get_files += getf
+
+                        if dry_run:
+                                _rm_temp_raw_files(nf, xport_cfg,
+                                    ignore_errors=True)
                         tracker.manifest_fetch_progress(completion=True)
                 tracker.manifest_fetch_done()
-
                 # Next, retrieve and store the content for each package.
                 tracker.republish_set_goal(len(pkgs_to_get), get_bytes,
                     send_bytes)
@@ -1303,47 +1568,41 @@ def transfer_pkgs(pargs, target, list_newest, all_versions, all_timestamps,
 
                 processed = 0
                 pkgs_to_get = sorted(pkgs_to_get)
-                for f in pkgs_to_get:
-                        tracker.republish_start_pkg(f)
-                        pkgdir = xport_cfg.get_pkg_dir(f)
+                for nf in pkgs_to_get:
+                        tracker.republish_start_pkg(nf)
+                        # Processing republish.
+                        nm = fmappings[nf]
+                        pkgdir = xport_cfg.get_pkg_dir(nf)
                         mfile = xport.multi_file_ni(src_pub, pkgdir,
                             not keep_compressed, tracker)
-                        m = get_manifest(f, xport_cfg)
-                        add_hashes_to_multi(m, mfile)
-
+                        add_hashes_to_multi(nm, mfile)
                         if mfile:
                                 download_start = True
                                 mfile.wait_files()
 
                         if not republish:
                                 # Nothing more to do for this package.
-                                tracker.republish_end_pkg(f)
+                                tracker.republish_end_pkg(nf)
                                 continue
 
-                        # Get first line of original manifest so that inclusion
-                        # of the scheme can be determined.
                         use_scheme = True
-                        contents = get_manifest(f, xport_cfg, contents=True)
-                        if contents.splitlines()[0].find("pkg:/") == -1:
+                        # Check whether to include scheme based on new
+                        # manifest.
+                        if not any(a.name == "set" and str(a).find("pkg:/") >= 0
+                            for a in nm.gen_actions()):
                                 use_scheme = False
 
-                        pkg_name = f.get_fmri(include_scheme=use_scheme)
-                        pkgdir = xport_cfg.get_pkg_dir(f)
+                        pkg_name = nf.get_fmri(include_scheme=use_scheme)
 
+                        # Use the new fmri for constructing a transaction id.
                         # This is needed so any previous failures for a package
                         # can be aborted.
-                        trans_id = get_basename(f)
-
-                        if not targ_pub:
-                                targ_pub = transport.setup_publisher(target,
-                                    src_pub.prefix, dest_xport, dest_xport_cfg,
-                                    remote_prefix=True, ssl_key=dkey,
-                                    ssl_cert=dcert)
-
+                        trans_id = get_basename(nf)
                         try:
                                 t = trans.Transaction(target, pkg_name=pkg_name,
                                     trans_id=trans_id, xport=dest_xport,
-                                    pub=targ_pub, progtrack=tracker)
+                                    pub=new_targ_pubs[nf.publisher],
+                                    progtrack=tracker)
 
                                 # Remove any previous failed attempt to
                                 # to republish this package.
@@ -1354,7 +1613,7 @@ def transfer_pkgs(pargs, target, list_newest, all_versions, all_timestamps,
                                         pass
 
                                 t.open()
-                                for a in m.gen_actions():
+                                for a in nm.gen_actions():
                                         if a.name == "set" and \
                                             a.attrs.get("name", "") in ("fmri",
                                             "pkg.fmri"):
@@ -1363,13 +1622,15 @@ def transfer_pkgs(pargs, target, list_newest, all_versions, all_timestamps,
                                                 # added to the manifest.
                                                 continue
 
-                                        if hasattr(a, "hash"):
+                                        if a.has_payload:
                                                 fname = os.path.join(pkgdir,
                                                     a.hash)
+
                                                 a.data = lambda: open(fname,
                                                     "rb")
                                         t.add(a)
-                                        if a.name == "signature":
+                                        if a.name == "signature" and \
+                                            not do_mog:
                                                 # We always store content in the
                                                 # repository by the least-
                                                 # preferred hash.
@@ -1400,7 +1661,7 @@ def transfer_pkgs(pargs, target, list_newest, all_versions, all_timestamps,
                         misc.makedirs(dest_xport_cfg.incoming_root)
 
                         processed += 1
-                        tracker.republish_end_pkg(f)
+                        tracker.republish_end_pkg(nf)
 
                 tracker.republish_done()
                 tracker.reset()
@@ -1434,7 +1695,10 @@ if __name__ == "__main__":
 
         # Make all warnings be errors.
         warnings.simplefilter('error')
-
+        import six
+        if six.PY3:
+                # disable ResourceWarning: unclosed file
+                warnings.filterwarnings("ignore", category=ResourceWarning)
         try:
                 __ret = main_func()
         except (KeyboardInterrupt, apx.CanceledException):
@@ -1496,6 +1760,14 @@ if __name__ == "__main__":
                         __ret = 99
                 else:
                         __ret = 1
+        except pkg.fmri.IllegalFmri as _e:
+                error(_e)
+                try:
+                        cleanup()
+                except:
+                        __ret = 99
+                else:
+                        __ret = 1
         except:
                 traceback.print_exc()
                 error(misc.get_traceback_message())
@@ -1508,3 +1780,6 @@ if __name__ == "__main__":
                 except:
                         pass
         sys.exit(__ret)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

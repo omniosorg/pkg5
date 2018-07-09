@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 # -*- coding: utf-8 -*-
 #
 # CDDL HEADER START
@@ -21,10 +21,10 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
 
 from __future__ import print_function
-import testutils
+from . import testutils
 if __name__ == "__main__":
         testutils.setup_environment("../../../proto")
 import pkg5unittest
@@ -33,8 +33,10 @@ import errno
 import os
 import shutil
 import simplejson
+import six
 import stat
 import unittest
+from functools import cmp_to_key
 
 import pkg.actions
 import pkg.fmri as fmri
@@ -48,6 +50,7 @@ import pkg.variant as variant
 
 class TestCatalog(pkg5unittest.Pkg5TestCase):
         """Tests for all catalog functionality."""
+        maxDiff = None
 
         def setUp(self):
                 pkg5unittest.Pkg5TestCase.setUp(self)
@@ -105,7 +108,7 @@ class TestCatalog(pkg5unittest.Pkg5TestCase):
 
         def __gen_manifest(self, f):
                 m = manifest.Manifest()
-                lines = unicode(
+                lines = misc.force_text(
                     "depend fmri=foo@1.0 type=require\n"
                     "set name=facet.devel value=true\n"
                     "set name=info.classification "
@@ -121,7 +124,7 @@ class TestCatalog(pkg5unittest.Pkg5TestCase):
                     "set name=pkg.summary value=\"Sparc Summary {2}\""
                     " variant.arch=sparc\n"
                     "set name=pkg.summary:th value=\"ซอฟต์แวร์ {3}\"\n"
-                    "set name=pkg.description value=\"Desc {4}\"\n", "utf-8").format(
+                    "set name=pkg.description value=\"Desc {4}\"\n").format(
                     f, f, f, f, f)
 
                 if f.pkg_name == "zpkg":
@@ -209,15 +212,15 @@ class TestCatalog(pkg5unittest.Pkg5TestCase):
 
                 # Next, ensure its populated.
                 def ordered(a, b):
-                        rval = cmp(a.pkg_name, b.pkg_name)
+                        rval = misc.cmp(a.pkg_name, b.pkg_name)
                         if rval != 0:
                                 return rval
-                        rval = cmp(a.publisher, b.publisher)
+                        rval = misc.cmp(a.publisher, b.publisher)
                         if rval != 0:
                                 return rval
-                        return cmp(a.version, b.version) * -1
+                        return misc.cmp(a.version, b.version) * -1
                 self.assertEqual([f for f in nc.fmris(ordered=True)],
-                    sorted(pkg_src_list, cmp=ordered))
+                    sorted(pkg_src_list, key=cmp_to_key(ordered)))
 
                 # This case should raise an AssertionError.
                 try:
@@ -263,7 +266,7 @@ class TestCatalog(pkg5unittest.Pkg5TestCase):
 
                 latest = [f for f in nc.fmris(last=True)]
                 for f, actions in nc.actions([nc.DEPENDENCY], last=True):
-                        self.assert_(f in latest)
+                        self.assertTrue(f in latest)
                         validate_dep(f, actions)
 
                 latest = [
@@ -272,7 +275,7 @@ class TestCatalog(pkg5unittest.Pkg5TestCase):
                 ]
                 for (pub, stem, ver), entry, actions in nc.entry_actions(
                     [nc.DEPENDENCY], last=True):
-                        self.assert_((pub, stem, ver) in latest)
+                        self.assertTrue((pub, stem, ver) in latest)
                         f = fmri.PkgFmri("{0}@{1}".format(stem, ver), publisher=pub)
                         validate_dep(f, actions)
 
@@ -480,7 +483,7 @@ class TestCatalog(pkg5unittest.Pkg5TestCase):
                 c = catalog.Catalog(meta_root=cpath, log_updates=True)
 
                 # Verify that a newly created catalog has no signature data.
-                for sigs in c.signatures.itervalues():
+                for sigs in six.itervalues(c.signatures):
                         self.assertEqual(len(sigs), 0)
 
                 # Verify that a newly created catalog will validate since no
@@ -503,7 +506,7 @@ class TestCatalog(pkg5unittest.Pkg5TestCase):
                 self.assertTrue("catalog.base.C" in old_sigs)
 
                 updates = 0
-                for fname, sigs in old_sigs.iteritems():
+                for fname, sigs in six.iteritems(old_sigs):
                         self.assertTrue(len(sigs) >= 1)
 
                         if fname.startswith("update."):
@@ -573,39 +576,39 @@ class TestCatalog(pkg5unittest.Pkg5TestCase):
                         self.assertEqual(rlist, elist)
 
                 def fmri_order(a, b):
-                        rval = cmp(a.pkg_name, b.pkg_name)
+                        rval = misc.cmp(a.pkg_name, b.pkg_name)
                         if rval != 0:
                                 return rval
-                        rval = cmp(a.publisher, b.publisher)
+                        rval = misc.cmp(a.publisher, b.publisher)
                         if rval != 0:
                                 return rval
-                        return cmp(a.version, b.version) * -1
+                        return misc.cmp(a.version, b.version) * -1
 
                 def tuple_order(a, b):
                         apub, astem, aver = a
                         bpub, bstem, bver = b
-                        rval = cmp(astem, bstem)
+                        rval = misc.cmp(astem, bstem)
                         if rval != 0:
                                 return rval
-                        rval = cmp(apub, bpub)
+                        rval = misc.cmp(apub, bpub)
                         if rval != 0:
                                 return rval
                         aver = version.Version(aver)
                         bver = version.Version(bver)
-                        return cmp(aver, bver) * -1
+                        return misc.cmp(aver, bver) * -1
 
                 def tuple_entry_order(a, b):
                         (apub, astem, aver), entry = a
                         (bpub, bstem, bver), entry = b
-                        rval = cmp(astem, bstem)
+                        rval = misc.cmp(astem, bstem)
                         if rval != 0:
                                 return rval
-                        rval = cmp(apub, bpub)
+                        rval = misc.cmp(apub, bpub)
                         if rval != 0:
                                 return rval
                         aver = version.Version(aver)
                         bver = version.Version(bver)
-                        return cmp(aver, bver) * -1
+                        return misc.cmp(aver, bver) * -1
 
                 # test fmris()
                 for pubs in ([], ["extra", "opensolaris.org"], ["extra"],
@@ -631,7 +634,7 @@ class TestCatalog(pkg5unittest.Pkg5TestCase):
                         self.assertEqual(rlist, elist)
 
                         # Check ordered functionality.
-                        elist.sort(cmp=fmri_order)
+                        elist.sort(key=cmp_to_key(fmri_order))
 
                         rlist = [f for f in self.c.fmris(last=True,
                             ordered=True, pubs=pubs)]
@@ -652,7 +655,7 @@ class TestCatalog(pkg5unittest.Pkg5TestCase):
                                     f.version > elist[f.get_pkg_stem()].version:
                                         elist[f.get_pkg_stem()] = f
                         elist = [(f, {}) for f in sorted(elist.values(),
-                            cmp=fmri_order)]
+                            key=cmp_to_key(fmri_order))]
                         rlist = [e for e in self.c.entries(last=True,
                             ordered=True, pubs=pubs)]
                         self.assertEqual(rlist, elist)
@@ -678,7 +681,7 @@ class TestCatalog(pkg5unittest.Pkg5TestCase):
                                 pub, stem, ver = f.tuple()
                                 ver = str(ver)
                                 nlist.append(((pub, stem, ver), {}))
-                        elist = sorted(nlist, cmp=tuple_entry_order)
+                        elist = sorted(nlist, key=cmp_to_key(tuple_entry_order))
                         nlist = None
                         rlist = [e for e in self.c.tuple_entries(last=True,
                             ordered=True, pubs=pubs)]
@@ -793,11 +796,11 @@ class TestCatalog(pkg5unittest.Pkg5TestCase):
                 entry = cat.get_entry(p2_fmri)
                 self.assertEqual(entry["metadata"], { "foo": True })
 
-                self.assert_(cat.last_modified > orig_cat_lm)
-                self.assert_(base.last_modified > orig_base_lm)
+                self.assertTrue(cat.last_modified > orig_cat_lm)
+                self.assertTrue(base.last_modified > orig_base_lm)
 
                 part_lm = cat.parts[base.name]["last-modified"]
-                self.assert_(base.last_modified == part_lm)
+                self.assertTrue(base.last_modified == part_lm)
 
         def test_07_updates(self):
                 """Verify that catalog updates are applied as expected."""
@@ -847,7 +850,7 @@ class TestCatalog(pkg5unittest.Pkg5TestCase):
                         # Verify that the updates available to the original
                         # catalog are the same as the updated needed to update
                         # the duplicate.
-                        self.assertEqual(src.updates.keys(), updates)
+                        self.assertEqual(list(src.updates.keys()), updates)
 
                         # Apply original catalog's updates to the duplicate.
                         dest.apply_updates(src.meta_root)
@@ -925,8 +928,8 @@ class TestCatalog(pkg5unittest.Pkg5TestCase):
                 nc.append(c)
                 nc.finalize(pfmris=set([f for f in c.fmris()]))
 
-                self.assertEqual([f for f in c.fmris()],
-                    [f for f in nc.fmris()])
+                self.assertEqual(sorted([f for f in c.fmris()]),
+                    sorted([f for f in nc.fmris()]))
                 self.assertEqual(c.package_version_count,
                     nc.package_version_count)
 
@@ -986,8 +989,8 @@ class TestCatalog(pkg5unittest.Pkg5TestCase):
                                 break
                 nc.finalize()
 
-                self.assertEqual([f for f in c.fmris()],
-                    [f for f in nc.fmris()])
+                self.assertEqual(sorted([f for f in c.fmris()]),
+                    sorted([f for f in nc.fmris()]))
                 self.assertEqual(c.package_version_count,
                     nc.package_version_count)
 
@@ -1251,3 +1254,6 @@ class TestCorruptCatalog(pkg5unittest.Pkg5TestCase):
 
 if __name__ == "__main__":
         unittest.main()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

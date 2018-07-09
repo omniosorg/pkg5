@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -25,18 +25,20 @@
 #
 
 import errno
-import httplib
 import pycurl
 
-import pkg.client.api_errors as api_errors
+from functools import total_ordering
+from six.moves import http_client
 
-retryable_http_errors = set((httplib.REQUEST_TIMEOUT, httplib.BAD_GATEWAY,
-        httplib.GATEWAY_TIMEOUT, httplib.NOT_FOUND))
+retryable_http_errors = set((http_client.REQUEST_TIMEOUT, http_client.BAD_GATEWAY,
+        http_client.GATEWAY_TIMEOUT, http_client.NOT_FOUND))
 retryable_file_errors = set((pycurl.E_FILE_COULDNT_READ_FILE, errno.EAGAIN,
     errno.ENOENT))
 
+import pkg.client.api_errors as api_errors
+
 # Errors that stats.py may include in a decay-able error rate
-decayable_http_errors = set((httplib.NOT_FOUND,))
+decayable_http_errors = set((http_client.NOT_FOUND,))
 decayable_file_errors = set((pycurl.E_FILE_COULDNT_READ_FILE, errno.EAGAIN,
     errno.ENOENT))
 decayable_pycurl_errors = set((pycurl.E_OPERATION_TIMEOUTED,
@@ -58,8 +60,8 @@ decayable_proto_errors = {
 }
 
 proto_code_map = {
-    "http": httplib.responses,
-    "https": httplib.responses
+    "http": http_client.responses,
+    "https": http_client.responses
 }
 
 retryable_pycurl_errors = set((pycurl.E_COULDNT_CONNECT, pycurl.E_PARTIAL_FILE,
@@ -96,16 +98,17 @@ class TransportFailures(TransportException):
         # code can reasonably 'except TransportException' and get either
         # a single-valued or in this case a multi-valued instance.
         #
-        def __init__(self):
+        def __init__(self, pfmri=None):
                 TransportException.__init__(self)
                 self.exceptions = []
+                self.pfmri = pfmri
 
         def append(self, exc):
                 found = False
 
                 assert isinstance(exc, TransportException)
                 for x in self.exceptions:
-                        if cmp(x, exc) == 0:
+                        if x == exc:
                                 x.count += 1
                                 found = True
                                 break
@@ -122,12 +125,17 @@ class TransportFailures(TransportException):
                         return "[no errors accumulated]"
 
                 s = ""
+                if self.pfmri:
+                        s += "{0}\n".format(self.pfmri)
+
                 for i, x in enumerate(self.exceptions):
+                        s += "  "
                         if len(self.exceptions) > 1:
                                 s += "{0:d}: ".format(i + 1)
                         s += str(x)
                         if x.count > 1:
-                                s += " (happened {0:d} times)".format(x.count)
+                                s += _(" (happened {0:d} times)").format(
+                                    x.count)
                         s += "\n"
                 s += self._str_autofix()
                 return s
@@ -136,6 +144,7 @@ class TransportFailures(TransportException):
                 return len(self.exceptions)
 
 
+@total_ordering
 class TransportProtoError(TransportException):
         """Raised when errors occur in the transport protocol."""
 
@@ -186,24 +195,25 @@ class TransportProtoError(TransportException):
                         s +="\nAdditional Details:\n{0}".format(self.details)
                 return s
 
-        def __cmp__(self, other):
+        def key(self):
+                return (self.proto, self.code, self.url, self.details,
+                    self.reason)
+
+        def __eq__(self, other):
                 if not isinstance(other, TransportProtoError):
-                        return -1
-                r = cmp(self.proto, other.proto)
-                if r != 0:
-                        return r
-                r = cmp(self.code, other.code)
-                if r != 0:
-                        return r
-                r = cmp(self.url, other.url)
-                if r != 0:
-                        return r
-                r = cmp(self.details, other.details)
-                if r != 0:
-                        return r
-                return cmp(self.reason, other.reason)
+                        return False
+                return self.key() == other.key()
+
+        def __lt__(self, other):
+                if not isinstance(other, TransportProtoError):
+                        return True
+                return self.key() < other.key()
+
+        def __hash__(self):
+                return hash(self.key())
 
 
+@total_ordering
 class TransportFrameworkError(TransportException):
         """Raised when errors occur in the transport framework."""
 
@@ -244,21 +254,24 @@ class TransportFrameworkError(TransportException):
                 s += self._str_autofix()
                 return s
 
-        def __cmp__(self, other):
+        def key(self):
+                return (self.code, self.url, self.proxy, self.reason)
+
+        def __eq__(self, other):
                 if not isinstance(other, TransportFrameworkError):
-                        return -1
-                r = cmp(self.code, other.code)
-                if r != 0:
-                        return r
-                r = cmp(self.url, other.url)
-                if r != 0:
-                        return r
-                r = cmp(self.proxy, other.proxy)
-                if r != 0:
-                        return r
-                return cmp(self.reason, other.reason)
+                        return False
+                return self.key() == other.key()
+
+        def __lt__(self, other):
+                if not isinstance(other, TransportFrameworkError):
+                        return True
+                return self.key() < other.key()
+
+        def __hash__(self):
+                return hash(self.key())
 
 
+@total_ordering
 class TransportStallError(TransportException):
         """Raised when stalls occur in the transport framework."""
 
@@ -280,15 +293,24 @@ class TransportStallError(TransportException):
                         s += "\nProxy: '{0}'".format(self.proxy)
                 return s
 
-        def __cmp__(self, other):
+        def key(self):
+                return (self.url, self.proxy)
+
+        def __eq__(self, other):
                 if not isinstance(other, TransportStallError):
-                        return -1
-                r = cmp(self.url, other.url)
-                if r != 0:
-                        return r
-                return cmp(self.proxy, other.proxy)
+                        return False
+                return self.key() == other.key()
+
+        def __lt__(self, other):
+                if not isinstance(other, TransportStallError):
+                        return True
+                return self.key() < other.key()
+
+        def __hash__(self):
+                return hash(self.key())
 
 
+@total_ordering
 class TransferContentException(TransportException):
         """Raised when there are problems downloading the requested content."""
 
@@ -310,18 +332,24 @@ class TransferContentException(TransportException):
                 s += "."
                 return s
 
-        def __cmp__(self, other):
+        def key(self):
+                return (self.url, self.proxy, self.reason)
+
+        def __eq__(self, other):
                 if not isinstance(other, TransferContentException):
-                        return -1
-                r = cmp(self.url, other.url)
-                if r != 0:
-                        return r
-                r = cmp(self.proxy, other.proxy)
-                if r != 0:
-                        return r
-                return cmp(self.reason, other.reason)
+                        return False
+                return self.key() == other.key()
+
+        def __lt__(self, other):
+                if not isinstance(other, TransferContentException):
+                        return True
+                return self.key() < other.key()
+
+        def __hash__(self):
+                return hash(self.key())
 
 
+@total_ordering
 class InvalidContentException(TransportException):
         """Raised when the content's hash/chash doesn't verify, or the
         content is received in an unreadable format."""
@@ -347,21 +375,24 @@ class InvalidContentException(TransportException):
                         s += "\nProxy: {0}".format(self.proxy)
                 return s
 
-        def __cmp__(self, other):
+        def key(self):
+                return (self.path, self.reason, self.proxy, self.url)
+
+        def __eq__(self, other):
                 if not isinstance(other, InvalidContentException):
-                        return -1
-                r = cmp(self.path, other.path)
-                if r != 0:
-                        return r
-                r = cmp(self.reason, other.reason)
-                if r != 0:
-                        return r
-                r = cmp(self.proxy, other.proxy)
-                if r != 0:
-                        return r
-                return cmp(self.url, other.url)
+                        return False
+                return self.key() == other.key()
+
+        def __lt__(self, other):
+                if not isinstance(other, InvalidContentException):
+                        return True
+                return self.key() < other.key()
+
+        def __hash__(self):
+                return hash(self.key())
 
 
+@total_ordering
 class PkgProtoError(TransportException):
         """Raised when the pkg protocol doesn't behave according to
         specification.  This is different than TransportProtoError, which
@@ -393,24 +424,25 @@ class PkgProtoError(TransportException):
                         s += ":\n{0}".format(self.reason)
                 return s
 
-        def __cmp__(self, other):
+        def key(self):
+                return (self.url, self.operation, self.version,
+                    self.proxy, self.reason)
+
+        def __eq__(self, other):
                 if not isinstance(other, PkgProtoError):
-                        return -1
-                r = cmp(self.url, other.url)
-                if r != 0:
-                        return r
-                r = cmp(self.operation, other.operation)
-                if r != 0:
-                        return r
-                r = cmp(self.version, other.version)
-                if r != 0:
-                        return r
-                r = cmp(self.proxy, other.proxy)
-                if r != 0:
-                        return r
-                return cmp(self.reason, other.reason)
+                        return False
+                return self.key() == other.key()
+
+        def __lt__(self, other):
+                if not isinstance(other, PkgProtoError):
+                        return True
+                return self.key() < other.key()
+
+        def __hash__(self):
+                return hash(self.key())
 
 
+@total_ordering
 class ExcessiveTransientFailure(TransportException):
         """Raised when the transport encounters too many retryable errors
         at a single endpoint."""
@@ -434,16 +466,22 @@ class ExcessiveTransientFailure(TransportException):
                         s += "Count: {0} ".format(self.count)
                 return s
 
-        def __cmp__(self, other):
+        def key(self):
+                return (self.url, self.proxy, self.count)
+
+        def __eq__(self, other):
                 if not isinstance(other, ExcessiveTransientFailure):
-                        return -1
-                r = cmp(self.url, other.url)
-                if r != 0:
-                        return r
-                r = cmp(self.proxy, other.proxy)
-                if r != 0:
-                        return r
-                return cmp(self.count, other.count)
+                        return False
+                return self.key() == other.key()
+
+        def __lt__(self, other):
+                if not isinstance(other, ExcessiveTransientFailure):
+                        return True
+                return self.key() < other.key()
+
+        def __hash__(self):
+                return hash(self.key())
+
 
 class mDNSException(TransportException):
         """Used when mDNS operations fail."""
@@ -454,3 +492,6 @@ class mDNSException(TransportException):
 
         def __str__(self):
                 return self.err
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

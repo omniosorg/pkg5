@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 """module describing a (hard) link packaging object
@@ -30,8 +30,7 @@ This module contains the HardLinkAction class, which represents a hardlink-type
 packaging object."""
 
 import errno
-import generic
-import link
+from . import generic, link
 import os
 import stat
 
@@ -136,3 +135,6 @@ class HardLinkAction(link.LinkAction):
                         errors.append(_("Unexpected Error: {0}").format(e))
 
                 return errors, warnings, info
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

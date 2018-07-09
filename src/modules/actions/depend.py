@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -31,8 +31,9 @@ This module contains the DependencyAction class, which represents a
 relationship between the package containing the action and another package.
 """
 
-import generic
+from . import generic
 import re
+import six
 
 import pkg.actions
 import pkg.client.pkgdefs as pkgdefs
@@ -318,10 +319,10 @@ class DependencyAction(generic.Action):
                 # it creating a dummy timestamp.  So we have to split it apart
                 # manually.
                 #
-                if isinstance(pfmris, basestring):
+                if isinstance(pfmris, six.string_types):
                         pfmris = [pfmris]
                 inds = []
-                pat = re.compile(r"pkg:///|pkg://[^/]*/|pkg:/") 
+                pat = re.compile(r"pkg:///|pkg://[^/]*/|pkg:/")
                 for p in pfmris:
                         # Strip pkg:/ or pkg:/// from the fmri.
                         # If fmri has pkg:// then strip the prefix
@@ -376,13 +377,9 @@ class DependencyAction(generic.Action):
                         # No special order for all other cases.
                         return 0
 
-                # actual cmp function
-                def cmpkv(a, b):
-                        c = cmp(kvord(a), kvord(b))
-                        if c:
-                                return c
-
-                        return cmp(a[0], b[0])
+                # actual key function
+                def key_func(a):
+                        return (kvord(a), a[0])
 
                 JOIN_TOK = " \\\n    " + base_indent
                 def grow(a, b, rem_values, force_nl=False):
@@ -418,7 +415,8 @@ class DependencyAction(generic.Action):
 
                         # Now build the action output string an attribute at a
                         # time.
-                        for k, v in sorted(act.attrs.iteritems(), cmp=cmpkv):
+                        for k, v in sorted(six.iteritems(act.attrs),
+                            key=key_func):
                                 # Newline breaks are only forced when there is
                                 # more than one value for an attribute.
                                 if not (isinstance(v, list) or
@@ -491,3 +489,6 @@ class DependencyAction(generic.Action):
                 if errors:
                         raise pkg.actions.InvalidActionAttributesError(self,
                             errors, fmri=fmri)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

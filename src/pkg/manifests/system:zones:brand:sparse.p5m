@@ -23,8 +23,7 @@
 #
 
 set name=pkg.fmri value=pkg:/system/zones/brand/sparse@$(PKGVERS)
-set name=pkg.summary \
-    value="Image Packaging System branded zone - sparse zones"
+set name=pkg.summary value="Image Packaging System branded zone - sparse zones"
 set name=pkg.description \
     value="A branded zone whose software is managed using the Image Packaging System, and where some filesystems are shared with the global zone."
 set name=info.classification \

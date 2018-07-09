@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -20,13 +20,17 @@
 # CDDL HEADER END
 
 #
-# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 import cherrypy
 import itertools
 import os
-import StringIO
+import six
+
+from functools import cmp_to_key
+from io import BytesIO
+from operator import itemgetter
 
 import pkg.catalog
 import pkg.client.pkgdefs as pkgdefs
@@ -40,7 +44,6 @@ import pkg.version as version
 
 from pkg.api_common import (PackageInfo, LicenseInfo, PackageCategory,
     _get_pkg_cat_data)
-from operator import itemgetter
 
 CURRENT_API_VERSION = 12
 
@@ -131,7 +134,9 @@ class CatalogInterface(_Interface):
                     for pfmri in pfmris
                 )
 
-                self.__get_allowed_packages(cat, pfmri, allowed,
+                # pfmri is not leaked from the above list comprehension in
+                # Python 3, so we need to use pfmris[-1] explicitly.
+                self.__get_allowed_packages(cat, pfmris[-1], allowed,
                     build_release=build_release, excludes=excludes,
                     pubs=pubs)
 
@@ -139,7 +144,7 @@ class CatalogInterface(_Interface):
                 # incorporations above.
                 cat_info = frozenset([cat.DEPENDENCY])
                 remaining = set(cat.names(pubs=pubs)) - \
-                    set(allowed.iterkeys())
+                    set(six.iterkeys(allowed))
                 for pkg_name in remaining:
                         for ver, flist in cat.fmris_by_version(pkg_name,
                             pubs=pubs):
@@ -506,7 +511,7 @@ class CatalogInterface(_Interface):
 
                 def filtered_search(results, mver):
                         try:
-                                result = results.next()
+                                result = next(results)
                         except StopIteration:
                                 return
 
@@ -521,11 +526,11 @@ class CatalogInterface(_Interface):
 
                                         if a.pkg_name == b.pkg_name:
                                                 # Version in descending order.
-                                                return cmp(a.version,
+                                                return misc.cmp(a.version,
                                                     b.version) * -1
-                                        return cmp(a, b)
+                                        return misc.cmp(a, b)
                                 return filter_results(sorted(results,
-                                    cmp=cmp_fmris), mver)
+                                    key=cmp_to_key(cmp_fmris)), mver)
 
                         return filter_results(results, mver)
 
@@ -572,14 +577,15 @@ class CatalogInterface(_Interface):
                 manifest mfst."""
                 license_lst = []
                 for lic in mfst.gen_actions_by_type("license"):
-                        s = StringIO.StringIO()
+                        s = BytesIO()
                         lpath = self._depot.repo.file(lic.hash, pub=self._pub)
-                        lfile = file(lpath, "rb")
+                        lfile = open(lpath, "rb")
                         misc.gunzip_from_stream(lfile, s, ignore_hash=True)
                         text = s.getvalue()
                         s.close()
                         license_lst.append(LicenseInfo(mfst.fmri, lic,
                             text=text))
+                        lfile.close()
                 return license_lst
 
         @property
@@ -625,20 +631,6 @@ class ConfigInterface(_Interface):
                 return self._depot.repo.file_requests
 
         @property
-        def filelist_requests(self):
-                """The number of /filelist operation requests that have occurred
-                during the current server session.
-                """
-                return self._depot.flist_requests
-
-        @property
-        def filelist_file_requests(self):
-                """The number of files served by /filelist operations requested
-                during the current server session.
-                """
-                return self._depot.flist_file_requests
-
-        @property
         def in_flight_transactions(self):
                 """The number of package transactions awaiting completion.
                 """
@@ -679,7 +671,7 @@ class ConfigInterface(_Interface):
                 See pkg.depotd(1M) for the list of properties.
                 """
                 rval = {}
-                for sname, props in self._depot.cfg.get_index().iteritems():
+                for sname, props in six.iteritems(self._depot.cfg.get_index()):
                         rval[sname] = [p for p in props]
                 return rval
 
@@ -708,7 +700,7 @@ class ConfigInterface(_Interface):
                                                 format.
                 """
                 rval = {}
-                for sname, props in self._depot.repo.cfg.get_index().iteritems():
+                for sname, props in six.iteritems(self._depot.repo.cfg.get_index()):
                         rval[sname] = [p for p in props]
                 return rval
 
@@ -804,3 +796,6 @@ class RequestInterface(_Interface):
                 """
                 return cherrypy.url(path=path, qs=qs, script_name=script_name,
                     relative=relative)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

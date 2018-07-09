@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 """
@@ -32,6 +32,8 @@ Primarily used by linked images when recursing into child images.
 # standard python classes
 import os
 import select
+import six
+import subprocess
 import tempfile
 import traceback
 
@@ -100,6 +102,8 @@ class PkgRemote(object):
                 else:
                         prefix = "PkgRemote({0}) client: ".format(id(self))
 
+                # it's not an enforcement but a coding style
+                # logging-format-interpolation; pylint: disable=W1202
                 global_settings.logger.info("{0}{1}".format(prefix, msg))
 
         def __rpc_server_fork(self, img_path,
@@ -131,8 +135,23 @@ class PkgRemote(object):
                 fstderr = tempfile.TemporaryFile()
 
                 try:
-                        p = pkg.pkgsubprocess.Popen(pkg_cmd,
-                            stdout=fstdout, stderr=fstderr)
+                        # Under Python 3.4, os.pipe() returns non-inheritable
+                        # file descriptors. On UNIX, subprocess makes file
+                        # descriptors of the pass_fds parameter inheritable.
+                        # Since our pkgsubprocess use posix_pspawn* and doesn't
+                        # have an interface for pass_fds, we reuse the Python
+                        # module subprocess here.
+                        # unexpected-keyword-arg 'pass_fds';
+                        # pylint: disable=E1123
+                        if six.PY2:
+                                p = pkg.pkgsubprocess.Popen(pkg_cmd,
+                                    stdout=fstdout, stderr=fstderr)
+                        else:
+                                p = subprocess.Popen(pkg_cmd,
+                                    stdout=fstdout, stderr=fstderr,
+                                    pass_fds=(server_cmd_pipe,
+                                    server_prog_pipe_fobj.fileno()))
+
                 except OSError as e:
                         # Access to protected member; pylint: disable=W0212
                         raise apx._convert_error(e)
@@ -150,14 +169,13 @@ class PkgRemote(object):
 
                 # create a pipe for communication between the client and server
                 client_cmd_pipe, server_cmd_pipe = os.pipe()
-
                 # create a pipe that the server server can use to indicate
                 # progress to the client.  wrap the pipe fds in python file
                 # objects so that they gets closed automatically when those
                 # objects are dereferenced.
                 client_prog_pipe, server_prog_pipe = os.pipe()
-                client_prog_pipe_fobj = os.fdopen(client_prog_pipe, "rw")
-                server_prog_pipe_fobj = os.fdopen(server_prog_pipe, "rw")
+                client_prog_pipe_fobj = os.fdopen(client_prog_pipe, "r")
+                server_prog_pipe_fobj = os.fdopen(server_prog_pipe, "w")
 
                 # initialize the client side of the RPC server
                 rpc_client = pkg.pipeutils.PipedServerProxy(client_cmd_pipe)
@@ -345,7 +363,8 @@ class PkgRemote(object):
                 try:
                         # Catch "Exception"; pylint: disable=W0703
                         rv = rpc_method(**kwargs)
-                except Exception as e:
+                except Exception as ex:
+                        e = ex
                         self.__debug_msg("caught exception\n{0}".format(
                             traceback.format_exc()), t1=True)
                 else:
@@ -355,9 +374,9 @@ class PkgRemote(object):
                 # truncates its output file after each operation, so we always
                 # read output from the beginning of the file.
                 fstdout.seek(0)
-                stdout = "".join(fstdout.readlines())
+                stdout = b"".join(fstdout.readlines())
                 fstderr.seek(0)
-                stderr = "".join(fstderr.readlines())
+                stderr = b"".join(fstderr.readlines())
 
                 self.__debug_msg("exiting", t1=True)
                 return (rv, e, stdout, stderr)
@@ -378,7 +397,7 @@ class PkgRemote(object):
                 self.__debug_msg("starting", t2=True)
                 async_call.join()
                 try:
-                        os.write(prog_pipe.fileno(), ".")
+                        os.write(prog_pipe.fileno(), b".")
                 except (IOError, OSError):
                         pass
                 self.__debug_msg("exiting", t2=True)
@@ -471,8 +490,9 @@ class PkgRemote(object):
                 rvtuple = e = None
                 try:
                         rvtuple = self.__async_rpc_caller.result()
-                except pkg.misc.AsyncCallException as e:
-                        pass
+                except pkg.misc.AsyncCallException as ex:
+                        # due to python 3 scoping rules
+                        e = ex
 
                 # assume we didn't get any results
                 rv = pkgdefs.EXIT_OOPS
@@ -482,6 +502,8 @@ class PkgRemote(object):
                 if e is None:
                         # unpack our results.
                         # our results can contain an embedded exception.
+                        # Attempting to unpack a non-sequence%s;
+                        # pylint: disable=W0633
                         rv, e, stdout, stderr = rvtuple
 
                 # make sure the return value is an int
@@ -512,3 +534,6 @@ class PkgRemote(object):
 
                 # enter the idle state
                 self.__set_state_idle()
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

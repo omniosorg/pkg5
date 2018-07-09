@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,15 +21,14 @@
 #
 
 #
-# Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
-import testutils
+from . import testutils
 if __name__ == "__main__":
-	testutils.setup_environment("../../../proto")
+        testutils.setup_environment("../../../proto")
 import pkg5unittest
 
-import cStringIO
 import os
 import pkg.client.api_errors as api_errors
 import pkg.client.progress as progress
@@ -195,3 +194,6 @@ class TestPkgApi(pkg5unittest.SingleDepotTestCase):
 
                 self.pkg("refresh --full", su_wrap=True, exit=1)
                 self.assertTrue("contains a symlink" in self.errout)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

@@ -28,6 +28,7 @@ import errno
 import fnmatch
 import os
 import platform
+import six
 import stat
 import sys
 import shutil
@@ -35,11 +36,9 @@ import re
 import subprocess
 import tarfile
 import tempfile
-import urllib
 import py_compile
 import hashlib
 import time
-import StringIO
 
 from distutils.errors import DistutilsError, DistutilsFileError
 from distutils.core import setup
@@ -84,14 +83,16 @@ elif osname == 'aix':
 pwd = os.path.normpath(sys.path[0])
 
 # the version of pylint that we must have in order to run the pylint checks.
-req_pylint_version = "0.25.2"
+req_pylint_version = "1.4.3"
 
 #
 # Unbuffer stdout and stderr.  This helps to ensure that subprocess output
 # is properly interleaved with output from this program.
 #
-sys.stdout = os.fdopen(sys.stdout.fileno(), "w", 0)
-sys.stderr = os.fdopen(sys.stderr.fileno(), "w", 0)
+# Can't have unbuffered text I/O in Python 3. This doesn't quite matter.
+if six.PY2:
+        sys.stdout = os.fdopen(sys.stdout.fileno(), "w", 0)
+        sys.stderr = os.fdopen(sys.stderr.fileno(), "w", 0)
 
 dist_dir = os.path.normpath(os.path.join(pwd, os.pardir, "proto", "dist_" + arch))
 build_dir = os.path.normpath(os.path.join(pwd, os.pardir, "proto", "build_" + arch))
@@ -101,11 +102,20 @@ else:
         root_dir = os.path.normpath(os.path.join(pwd, os.pardir, "proto", "root_" + arch))
 pkgs_dir = os.path.normpath(os.path.join(pwd, os.pardir, "packages", arch))
 extern_dir = os.path.normpath(os.path.join(pwd, "extern"))
+cffi_dir = os.path.normpath(os.path.join(pwd, "cffi_src"))
 
 # Extract Python minor version.
 py_version = '.'.join(platform.python_version_tuple()[:2])
-assert py_version in ('2.6', '2.7')
+assert py_version in ('2.7', '3.5')
 py_install_dir = 'usr/lib/python' + py_version + '/vendor-packages'
+
+py64_executable = None
+#Python 3 is always 64 bit and located in /usr/bin.
+if float(py_version) < 3 and osname == 'sunos':
+        if arch == 'sparc':
+                py64_executable = '/usr/bin/sparcv9/python' + py_version
+        elif arch == 'i386':
+                py64_executable = '/usr/bin/amd64/python' + py_version
 
 scripts_dir = 'usr/bin'
 lib_dir = 'usr/lib'
@@ -403,17 +413,14 @@ userattrd_files = ['util/misc/user_attr.d/package:pkg']
 pkg_locales = \
     'ar ca cs de es fr he hu id it ja ko nl pl pt_BR ru sk sv zh_CN zh_HK zh_TW'.split()
 
-sha512_t_srcs = [
-        'modules/sha512_t.c'
-        ]
 sysattr_srcs = [
-        'modules/sysattr.c'
+        'cffi_src/_sysattr.c'
         ]
 syscallat_srcs = [
-        'modules/syscallat.c'
+        'cffi_src/_syscallat.c'
         ]
 pspawn_srcs = [
-        'modules/pspawn.c'
+        'cffi_src/_pspawn.c'
         ]
 elf_srcs = [
         'modules/elf.c',
@@ -421,7 +428,7 @@ elf_srcs = [
         'modules/liblist.c',
         ]
 arch_srcs = [
-        'modules/arch.c'
+        'cffi_src/_arch.c'
         ]
 _actions_srcs = [
         'modules/actions/_actions.c'
@@ -456,7 +463,7 @@ class pylint_func(Command):
         def escape(astring):
                 return astring.replace(' ', '\\ ')
 
-        def run(self, quiet=False):
+        def run(self, quiet=False, py3k=False):
 
                 def supported_pylint_ver(version):
                         """Compare the installed version against the version
@@ -474,6 +481,8 @@ class pylint_func(Command):
                                 try:
                                         if int(inst) < int(req):
                                                 return False
+                                        elif int(inst) > int(req):
+                                                return True
                                 except ValueError:
                                         # if we somehow get non-numeric version
                                         # components, we ignore them.
@@ -502,6 +511,7 @@ class pylint_func(Command):
                 proto = os.path.join(root_dir, py_install_dir)
                 sys.path.insert(0, proto)
 
+
                 # Insert tests directory onto sys.path so any custom checkers
                 # can be found.
                 sys.path.insert(0, os.path.join(pwd, 'tests'))
@@ -509,22 +519,38 @@ class pylint_func(Command):
                 from pylint import lint
 
                 #
-                # For some reason, the load-plugins option, when used in the
-                # rcfile, does not work, so we put it here instead, to load
-                # our custom checkers.
-                #
                 # Unfortunately, pylint seems pretty fragile and will crash if
                 # we try to run it over all the current pkg source.  Hence for
                 # now we only run it over a subset of the source.  As source
                 # files are made pylint clean they should be added to the
                 # pylint_targets list.
                 #
-                args = ['--load-plugins=multiplatform']
-                if quiet:
-                        args += ['--reports=no']
-                args += ['--rcfile', os.path.join(pwd, 'tests', 'pylintrc')]
-                args += pylint_targets
-                lint.Run(args)
+                if not py3k:
+                        args = []
+                        if quiet:
+                                args += ['--reports=no']
+                        args += ['--rcfile={0}'.format(os.path.join(
+                            pwd, 'tests', 'pylintrc'))]
+                        args += pylint_targets
+                        lint.Run(args)
+                else:
+                        #
+                        # In Python 3 porting mode, all checkers will be
+                        # disabled and only messages emitted by the porting
+                        # checker will be displayed. Therefore we need to run
+                        # this checker separately.
+                        #
+                        args = []
+                        if quiet:
+                                args += ['--reports=no']
+                        args += ['--rcfile={0}'.format(os.path.join(
+                            pwd, 'tests', 'pylintrc_py3k'))]
+                        # We check all Python files in the gate.
+                        for root, dirs, files in os.walk(pwd):
+                                for f in files:
+                                    if f.endswith(".py"):
+                                            args += [os.path.join(root, f)]
+                        lint.Run(args)
 
 
 class pylint_func_quiet(pylint_func):
@@ -532,6 +558,9 @@ class pylint_func_quiet(pylint_func):
         def run(self, quiet=False):
                 pylint_func.run(self, quiet=True)
 
+class pylint_func_py3k(pylint_func):
+        def run(self, quiet=False, py3k=False):
+                pylint_func.run(self, py3k=True)
 
 include_dirs = [ 'modules' ]
 lint_flags = [ '-u', '-axms', '-erroff=E_NAME_DEF_NOT_USED2' ]
@@ -596,12 +625,6 @@ class clint_func(Command):
                             ['-I' + self.escape(get_python_inc())] + \
                             ["{0}{1}".format("-l", k) for k in sysattr_libraries] + \
                             sysattr_srcs
-                        sha512_tcmd = lint + lint_flags + \
-                            ['-D_FILE_OFFSET_BITS=64'] + \
-                            ["{0}{1}".format("-I", k) for k in include_dirs] + \
-                            ['-I' + self.escape(get_python_inc())] + \
-                            ["{0}{1}".format("-l", k) for k in sha512_t_libraries] + \
-                            sha512_t_srcs
 
                         print(" ".join(archcmd))
                         os.system(" ".join(archcmd))
@@ -619,8 +642,6 @@ class clint_func(Command):
                         os.system(" ".join(syscallatcmd))
                         print(" ".join(sysattrcmd))
                         os.system(" ".join(sysattrcmd))
-                        print(" ".join(sha512_tcmd))
-                        os.system(" ".join(sha512_tcmd))
 
 
 # Runs both C and Python lint
@@ -671,7 +692,6 @@ class install_func(_install):
                 """
 
                 _install.run(self)
-
                 for o_src, o_dest in hardlink_modules:
                         for e in [".py", ".pyc"]:
                                 src = util.change_root(self.root_dir, o_src + e)
@@ -687,16 +707,19 @@ class install_func(_install):
                                 else:
                                         file_util.copy_file(src, dest, update=1)
 
-                # Don't install the scripts for python 2.6.
-                if py_version == '2.6':
+                # XXX Uncomment it when we need to deliver python 3.x version
+                # of modules.
+                # Don't install the scripts for python 3.5
+                if py_version == '3.5':
                         return
-                for d, files in scripts[osname].iteritems():
+                for d, files in six.iteritems(scripts[osname]):
                         for (srcname, dstname) in files:
                                 dst_dir = util.change_root(self.root_dir, d)
                                 dst_path = util.change_root(self.root_dir,
                                        os.path.join(d, dstname))
                                 dir_util.mkpath(dst_dir, verbose=True)
-                                file_util.copy_file(srcname, dst_path, update=True)
+                                file_util.copy_file(srcname, dst_path,
+                                    update=True)
                                 # make scripts executable
                                 os.chmod(dst_path,
                                     os.stat(dst_path).st_mode
@@ -743,7 +766,7 @@ class install_data_func(_install_data):
                                 self.outfiles.append(dir)
                         else:
                                 for file in files:
-                                        if isinstance(file, basestring):
+                                        if isinstance(file, six.string_types):
                                                 infile = file
                                                 outfile = os.path.join(dir,
                                                     os.path.basename(file))
@@ -786,6 +809,44 @@ def run_cmd(args, swdir, updenv=None, ignerr=False, savestderr=None):
                         sys.exit(1)
                 if stderr:
                         stderr.close()
+
+def _copy_file_contents(src, dst, buffer_size=16*1024):
+        """A clone of distutils.file_util._copy_file_contents() that modifies
+        python files as they are installed."""
+
+        # Look for shebang line to replace with arch-specific Python executable.
+        shebang_re = re.compile('^#!.*python[0-9]\.[0-9]')
+        first_buf = True
+
+        with open(src, "rb") as sfp:
+                try:
+                        os.unlink(dst)
+                except EnvironmentError as e:
+                        if e.errno != errno.ENOENT:
+                                raise DistutilsFileError("could not delete "
+                                    "'{0}': {1}".format(dst, e))
+
+                with open(dst, "wb") as dfp:
+                        while True:
+                                buf = sfp.read(buffer_size)
+                                if not buf:
+                                        break
+                                if src.endswith(".py"):
+                                        if not first_buf or not py64_executable:
+                                                dfp.write(buf)
+                                                continue
+
+                                        fl = buf[:buf.find(os.linesep) + 1]
+                                        sb_match = shebang_re.search(fl)
+                                        if sb_match:
+                                                buf = shebang_re.sub(
+                                                    "#!" + py64_executable,
+                                                    buf)
+                                dfp.write(buf)
+                                first_buf = False
+
+# Make file_util use our version of _copy_file_contents
+file_util._copy_file_contents = _copy_file_contents
 
 def intltool_update_maintain():
         """Check if scope of localization looks up-to-date or possibly not,
@@ -978,7 +1039,7 @@ class installfile(Command):
             ("mode=", "m", "file mode"),
         ]
 
-        description = "De-CDDLing file copy"
+        description = "Modifying file copy"
 
         def initialize_options(self):
                 self.file = None
@@ -988,7 +1049,7 @@ class installfile(Command):
         def finalize_options(self):
                 if self.mode is None:
                         self.mode = 0o644
-                elif isinstance(self.mode, basestring):
+                elif isinstance(self.mode, six.string_types):
                         try:
                                 self.mode = int(self.mode, 8)
                         except ValueError:
@@ -1012,8 +1073,10 @@ class build_func(_build):
 
 def get_git_version():
         try:
-                p = subprocess.Popen(['git', 'show', '--format=%at'], stdout = subprocess.PIPE)
-                return p.communicate()[0].split('\n')[0].strip()
+                p = subprocess.Popen(
+                    ['git', 'show', '--format=%at', '--no-patch'],
+                    stdout = subprocess.PIPE)
+                return p.communicate()[0].strip()
         except OSError:
                 print("ERROR: unable to obtain mercurial/git version",
                     file=sys.stderr)
@@ -1025,11 +1088,12 @@ def syntax_check(filename):
             This is needed because distutil's own use of pycompile (in the
             distutils.utils module) is broken, and doesn't stop on error. """
         try:
-                py_compile.compile(filename, os.devnull, doraise=True)
+                tmpfd, tmp_file = tempfile.mkstemp()
+                py_compile.compile(filename, tmp_file, doraise=True)
         except py_compile.PyCompileError as e:
                 res = ""
                 for err in e.exc_value:
-                        if isinstance(err, basestring):
+                        if isinstance(err, six.string_types):
                                 res += err + "\n"
                                 continue
 
@@ -1098,6 +1162,7 @@ class build_ext_func(_build_ext):
 
         def build_extension(self, ext):
                 # Build 32-bit
+                self.build_temp = str(self.build_temp)
                 _build_ext.build_extension(self, ext)
                 if not ext.build_64:
                         return
@@ -1107,8 +1172,8 @@ class build_ext_func(_build_ext):
                 d, f = os.path.split(self.build_temp)
 
                 # store our 64-bit extensions elsewhere
-                self.build_temp = d + "/temp64.{0}".format(
-                    os.path.basename(self.build_temp).replace("temp.", ""))
+                self.build_temp = str(d + "/temp64.{0}".format(
+                    os.path.basename(self.build_temp).replace("temp.", "")))
                 ext.extra_compile_args += ["-m64"]
                 ext.extra_link_args += ["-m64"]
                 self.build64 = True
@@ -1117,7 +1182,7 @@ class build_ext_func(_build_ext):
                 _build_ext.build_extension(self, ext)
 
                 # Reset to 32-bit
-                self.build_temp = old_build_temp
+                self.build_temp = str(old_build_temp)
                 ext.extra_compile_args.remove("-m64")
                 ext.extra_link_args.remove("-m64")
                 self.build64 = False
@@ -1128,7 +1193,9 @@ class build_ext_func(_build_ext):
                         return path
 
                 dpath, fpath = os.path.split(path)
-                return os.path.join(dpath, "64", fpath)
+                if py_version < '3.0':
+                        return os.path.join(dpath, "64", fpath)
+                return os.path.join(dpath, fpath)
 
 
 class build_py_func(_build_py):
@@ -1164,6 +1231,22 @@ class build_py_func(_build_py):
                             file=sys.stderr)
                         sys.exit(1)
 
+                # Before building extensions, we need to generate .c files
+                # for the C extension modules by running the CFFI build
+                # script files.
+                for path in os.listdir(cffi_dir):
+                        if not path.startswith("build_"):
+                                continue
+                        path = os.path.join(cffi_dir, path)
+                        # make scripts executable
+                        os.chmod(path,
+                            os.stat(path).st_mode
+                            | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+
+                        # run the scripts
+                        p = subprocess.Popen(
+                            [sys.executable, path])
+
                 return ret
 
         # override the build_module method to do VERSION substitution on
@@ -1176,10 +1259,10 @@ class build_py_func(_build_py):
                         # tree.
                         try:
                                 ocontent = \
-                                    file(self.get_module_outfile(self.build_lib,
+                                    open(self.get_module_outfile(self.build_lib,
                                         [package], module)).read()
                                 ov = re.search(versionre, ocontent).group(1)
-                        except IOError:
+                        except (IOError, AttributeError):
                                 ov = None
                         v = get_git_version()
                         vstr = 'VERSION = "{0}"'.format(v)
@@ -1188,20 +1271,21 @@ class build_py_func(_build_py):
                         if v == ov:
                                 return
 
-                        mcontent = file(module_file).read()
-                        mcontent = re.sub(versionre, vstr, mcontent)
-                        tmpfd, tmp_file = tempfile.mkstemp()
-                        os.write(tmpfd, mcontent)
-                        os.close(tmpfd)
+                        with open(module_file) as f:
+                                mcontent = f.read()
+                                mcontent = re.sub(versionre, vstr, mcontent)
+                                tmpfd, tmp_file = tempfile.mkstemp()
+                                with open(tmp_file, "w") as wf:
+                                        wf.write(mcontent)
                         print("doing version substitution: ", v)
-                        rv = _build_py.build_module(self, module, tmp_file, package)
+                        rv = _build_py.build_module(self, module, tmp_file, str(package))
                         os.unlink(tmp_file)
                         return rv
 
                 # Will raise a DistutilsError on failure.
                 syntax_check(module_file)
 
-                return _build_py.build_module(self, module, module_file, package)
+                return _build_py.build_module(self, module, module_file, str(package))
 
         def copy_file(self, infile, outfile, preserve_mode=1, preserve_times=1,
             link=None, level=1):
@@ -1221,10 +1305,10 @@ class build_py_func(_build_py):
                 # The timestamp for __init__.py is the timestamp for the
                 # workspace itself.
                 if outfile.endswith("/pkg/__init__.py"):
-                        src_mtime = self.timestamps["."]
+                        src_mtime = self.timestamps[b"."]
                 else:
                         src_mtime = self.timestamps.get(
-                            os.path.join("src", infile), self.timestamps["."])
+                            os.path.join("src", infile), self.timestamps[b"."])
 
                 # Force a copy of the file if the source timestamp is different
                 # from that of the destination, not just if it's newer.  This
@@ -1363,6 +1447,14 @@ class clobber_func(Command):
                 shutil.rmtree(pkgs_dir, True)
                 print("deleting " + extern_dir)
                 shutil.rmtree(extern_dir, True)
+                # These files generated by the CFFI build scripts are useless
+                # at this point, therefore clean them up.
+                print("deleting temporary files generated by CFFI")
+                for path in os.listdir(cffi_dir):
+                        if not path.startswith("_"):
+                                continue
+                        path = os.path.join(cffi_dir, path)
+                        rm_f(path)
 
 class test_func(Command):
         # NOTE: these options need to be in sync with tests/run.py and the
@@ -1433,7 +1525,9 @@ class Extension(distutils.core.Extension):
         # build_64 in the object constructor instead of being forced to add it
         # after the object has been created.
         def __init__(self, name, sources, build_64=False, **kwargs):
-                distutils.core.Extension.__init__(self, name, sources, **kwargs)
+                # 'name' and the item in 'sources' must be a string literal
+                sources = [str(s) for s in sources]
+                distutils.core.Extension.__init__(self, str(name), sources, **kwargs)
                 self.build_64 = build_64
 
 # These are set to real values based on the platform, down below
@@ -1482,7 +1576,6 @@ ext_modules = [
         ]
 elf_libraries = None
 sysattr_libraries = None
-sha512_t_libraries = None
 data_files = web_files
 cmdclasses = {
         'install': install_func,
@@ -1497,6 +1590,7 @@ cmdclasses = {
         'clint': clint_func,
         'pylint': pylint_func,
         'pylint_quiet': pylint_func_quiet,
+        'pylint_py3k': pylint_func_py3k,
         'clean': clean_func,
         'clobber': clobber_func,
         'test': test_func,
@@ -1574,10 +1668,9 @@ if osname == 'sunos' or osname == "linux":
         if osname == 'sunos':
             elf_libraries += [ 'md' ]
             sysattr_libraries = [ 'nvpair' ]
-            sha512_t_libraries = [ 'md' ]
             ext_modules += [
                     Extension(
-                            'arch',
+                            '_arch',
                             arch_srcs,
                             include_dirs = include_dirs,
                             extra_compile_args = compile_args,
@@ -1586,7 +1679,7 @@ if osname == 'sunos' or osname == "linux":
 			    build_64 = True
                             ),
                     Extension(
-                            'pspawn',
+                            '_pspawn',
                             pspawn_srcs,
                             include_dirs = include_dirs,
                             extra_compile_args = compile_args,
@@ -1595,7 +1688,7 @@ if osname == 'sunos' or osname == "linux":
 			    build_64 = True
                             ),
                     Extension(
-                            'syscallat',
+                            '_syscallat',
                             syscallat_srcs,
                             include_dirs = include_dirs,
                             extra_compile_args = compile_args,
@@ -1604,20 +1697,10 @@ if osname == 'sunos' or osname == "linux":
                             build_64 = True
                             ),
                     Extension(
-                            'sysattr',
+                            '_sysattr',
                             sysattr_srcs,
                             include_dirs = include_dirs,
                             libraries = sysattr_libraries,
-                            extra_compile_args = compile_args,
-                            extra_link_args = link_args,
-                            define_macros = [('_FILE_OFFSET_BITS', '64')],
-                            build_64 = True
-                            ),
-                    Extension(
-                            'sha512_t',
-                            sha512_t_srcs,
-                            include_dirs = include_dirs,
-                            libraries = sha512_t_libraries,
                             extra_compile_args = compile_args,
                             extra_link_args = link_args,
                             define_macros = [('_FILE_OFFSET_BITS', '64')],
@@ -1635,4 +1718,13 @@ setup(cmdclass = cmdclasses,
     data_files = data_files,
     ext_package = 'pkg',
     ext_modules = ext_modules,
-    )
+    classifiers = [
+        'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.5',
+    ]
+)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

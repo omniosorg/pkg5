@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,18 +21,19 @@
 #
 
 #
-# Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
-import testutils
+from . import testutils
 if __name__ == "__main__":
-	testutils.setup_environment("../../../proto")
+        testutils.setup_environment("../../../proto")
 import pkg5unittest
 
 import multiprocessing
 import os
 import random
 import signal
+import six
 import sys
 import threading
 import time
@@ -83,9 +84,14 @@ class TestAsyncRPC(pkg5unittest.Pkg5TestCase):
                 # test async call with invalid arguments
                 ac = AsyncCall()
                 ac.start(self.__add, 1, 2, 3)
-                self.assertRaisesRegexp(AsyncCallException,
-                    "takes exactly 2 arguments",
-                    ac.result)
+                if six.PY2:
+                        self.assertRaisesRegexp(AsyncCallException,
+                            "takes exactly 2 arguments",
+                            ac.result)
+                else:
+                        self.assertRaisesRegexp(AsyncCallException,
+                            "takes 2 positional arguments",
+                            ac.result)
                 ac = AsyncCall()
                 ac.start(self.__add, x=1, y=2, z=3)
                 self.assertRaisesRegexp(AsyncCallException,
@@ -250,3 +256,6 @@ class TestAsyncRPC(pkg5unittest.Pkg5TestCase):
         def test_rpc_interruptions(self):
                 self.__test_rpc_interruptions(http_enc=True)
                 self.__test_rpc_interruptions(http_enc=False)
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

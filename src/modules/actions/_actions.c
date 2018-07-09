@@ -20,12 +20,17 @@
  */
 
 /*
- * Copyright (c) 2008, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
  */
 
 #include <Python.h>
 
+#include <stdbool.h>
 #include <string.h>
+
+#if PY_MAJOR_VERSION >= 3
+	#define PyBytes_AsString PyUnicode_AsUTF8
+#endif
 
 static PyObject *MalformedActionError;
 static PyObject *InvalidActionError;
@@ -48,7 +53,7 @@ static const char *notident = "hash attribute not identical to positional hash";
 static const char *nohash = "action type doesn't allow payload";
 
 static inline int
-add_to_attrs(PyObject *attrs, PyObject *key, PyObject *attr)
+add_to_attrs(PyObject *attrs, PyObject *key, PyObject *attr, bool concat)
 {
 	int ret;
 	PyObject *list;
@@ -57,8 +62,49 @@ add_to_attrs(PyObject *attrs, PyObject *key, PyObject *attr)
 	if (av == NULL)
 		return (PyDict_SetItem(attrs, key, attr));
 
-	if (PyList_CheckExact(av))
+	if (PyList_CheckExact(av)) {
+		if (concat) {
+			Py_ssize_t len;
+			PyObject *str, *oldstr;
+
+			/*
+			 * PyList_GET_ITEM() returns a borrowed reference.
+			 * We grab a reference to that string because
+			 * PyString_Concat() will steal one, and the list needs
+			 * to have one around for when we call into
+			 * PyList_SetItem().  PyString_Concat() returns a new
+			 * object in str with a new reference, which we must
+			 * *not* decref after putting into the list.
+			 */
+			len = PyList_GET_SIZE(av);
+			oldstr = str = PyList_GET_ITEM(av, len - 1);
+			Py_INCREF(oldstr);
+			/* decrefing "attr" is handled by caller */
+#if PY_MAJOR_VERSION >= 3
+			str = PyUnicode_Concat(str, attr);
+#else
+			PyString_Concat(&str, attr);
+#endif
+			if (str == NULL)
+				return (-1);
+			return (PyList_SetItem(av, len - 1, str));
+		}
+
 		return (PyList_Append(av, attr));
+	} else if (concat) {
+		Py_INCREF(av);
+		/* decrefing "attr" is handled by caller */
+#if PY_MAJOR_VERSION >= 3
+		av = PyUnicode_Concat(av, attr);
+#else
+		PyString_Concat(&av, attr);
+#endif
+		if (av == NULL)
+			return (-1);
+		ret = PyDict_SetItem(attrs, key, av);
+		Py_DECREF(av);
+		return (ret);
+	}
 
 	if ((list = PyList_New(2)) == NULL)
 		return (-1);
@@ -95,6 +141,11 @@ set_invaliderr(const char *str, const char *msg)
 	}
 }
 
+/*
+ * Note that action parsing does not support line-continuation ('\'); that
+ * support is provided by the Manifest class.
+ */
+
 /*ARGSUSED*/
 static PyObject *
 fromstr(PyObject *self, PyObject *args, PyObject *kwdict)
@@ -106,9 +157,10 @@ fromstr(PyObject *self, PyObject *args, PyObject *kwdict)
 	int *slashmap = NULL;
 	int strl, typestrl;
 	int i, ks, vs, keysize;
-	int smlen, smpos;
+	int smlen = 0, smpos = 0;
 	int hash_allowed;
-	char quote;
+	bool concat = false;
+	char quote = '\0';
 	PyObject *act_args = NULL;
 	PyObject *act_class = NULL;
 	PyObject *act_data = NULL;
@@ -122,7 +174,7 @@ fromstr(PyObject *self, PyObject *args, PyObject *kwdict)
 		UQVAL,	/* unquoted value	*/
 		QVAL,	/* quoted value		*/
 		WS	/* whitespace		*/
-	} state;
+	} state, prevstate;
 
 	/*
 	 * If malformed() or invalid() are used, CLEANUP_REFS can only be used
@@ -161,7 +213,7 @@ fromstr(PyObject *self, PyObject *args, PyObject *kwdict)
 		return (NULL);
 	}
 
-	s = strpbrk(str, " \t");
+	s = strpbrk(str, " \t\n");
 
 	i = strl;
 	if (s == NULL) {
@@ -179,7 +231,7 @@ fromstr(PyObject *self, PyObject *args, PyObject *kwdict)
 	typestrl = s - str;
 	hash_allowed = 0;
 	if (typestrl == 4) {
-	        if (strncmp(str, "file", 4) == 0) {
+		if (strncmp(str, "file", 4) == 0) {
 			act_class = aclass_file;
 			hash_allowed = 1;
 		} else if (strncmp(str, "link", 4) == 0)
@@ -202,16 +254,16 @@ fromstr(PyObject *self, PyObject *args, PyObject *kwdict)
 		if (strncmp(str, "hardlink", 8) == 0)
 			act_class = aclass_hardlink;
 	} else if (typestrl == 7) {
-	        if (strncmp(str, "license", 7) == 0) {
+		if (strncmp(str, "license", 7) == 0) {
 			act_class = aclass_license;
 			hash_allowed = 1;
 		} else if (strncmp(str, "unknown", 7) == 0)
 			act_class = aclass_unknown;
 	} else if (typestrl == 9) {
-	        if (strncmp(str, "signature", 9) == 0) {
+		if (strncmp(str, "signature", 9) == 0) {
 			act_class = aclass_signature;
 			hash_allowed = 1;
-                }
+		}
 	} else if (typestrl == 5) {
 		if (strncmp(str, "group", 5) == 0)
 			act_class = aclass_group;
@@ -236,7 +288,7 @@ fromstr(PyObject *self, PyObject *args, PyObject *kwdict)
 	}
 
 	ks = vs = typestrl;
-	state = WS;
+	prevstate = state = WS;
 	if ((attrs = PyDict_New()) == NULL) {
 		PyMem_Free(str);
 		return (NULL);
@@ -246,29 +298,41 @@ fromstr(PyObject *self, PyObject *args, PyObject *kwdict)
 			keysize = i - ks;
 			keystr = &str[ks];
 
-			if (str[i] == ' ' || str[i] == '\t') {
+			if (str[i] == ' ' || str[i] == '\t' || str[i] == '\n') {
 				if (PyDict_Size(attrs) > 0 || hash != NULL) {
 					malformed("whitespace in key");
 					CLEANUP_REFS;
 					return (NULL);
 				} else {
-					if ((hash = PyString_FromStringAndSize(
-					    keystr, keysize)) == NULL) {
+#if PY_MAJOR_VERSION >= 3
+					hash = PyUnicode_FromStringAndSize(
+					    keystr, keysize);
+#else
+					hash = PyString_FromStringAndSize(
+					    keystr, keysize);
+#endif
+					if (hash == NULL) {
 						CLEANUP_REFS;
 						return (NULL);
 					}
 					if (!hash_allowed) {
-					    invalid(nohash);
-					    CLEANUP_REFS;
-					    return (NULL);
+						invalid(nohash);
+						CLEANUP_REFS;
+						return (NULL);
 					}
 					hashstr = strndup(keystr, keysize);
+					prevstate = state;
 					state = WS;
-
 				}
 			} else if (str[i] == '=') {
-				if ((key = PyString_FromStringAndSize(
-				    keystr, keysize)) == NULL) {
+#if PY_MAJOR_VERSION >= 3
+				key = PyUnicode_FromStringAndSize(
+				    keystr, keysize);
+#else
+				key = PyString_FromStringAndSize(
+				    keystr, keysize);
+#endif
+				if (key == NULL) {
 					CLEANUP_REFS;
 					return (NULL);
 				}
@@ -279,8 +343,8 @@ fromstr(PyObject *self, PyObject *args, PyObject *kwdict)
 					CLEANUP_REFS;
 					return (NULL);
 				}
-				if (!hash_allowed && keysize == 4 && 
-                                    strncmp(keystr, "hash", keysize) == 0) {
+				if (!hash_allowed && keysize == 4 &&
+				    strncmp(keystr, "hash", keysize) == 0) {
 					invalid(nohash);
 					CLEANUP_REFS;
 					return (NULL);
@@ -290,7 +354,11 @@ fromstr(PyObject *self, PyObject *args, PyObject *kwdict)
 				 * Pool attribute key to reduce memory usage and
 				 * potentially improve lookup performance.
 				 */
+#if PY_MAJOR_VERSION >= 3
+				PyUnicode_InternInPlace(&key);
+#else
 				PyString_InternInPlace(&key);
+#endif
 
 				if (i == ks) {
 					malformed("impossible: missing key");
@@ -302,14 +370,17 @@ fromstr(PyObject *self, PyObject *args, PyObject *kwdict)
 					return (NULL);
 				}
 				if (str[i] == '\'' || str[i] == '\"') {
+					prevstate = state;
 					state = QVAL;
 					quote = str[i];
 					vs = i + 1;
-				} else if (str[i] == ' ' || str[i] == '\t') {
+				} else if (str[i] == ' ' || str[i] == '\t' ||
+				    str[i] == '\n') {
 					malformed("missing value");
 					CLEANUP_REFS;
 					return (NULL);
 				} else {
+					prevstate = state;
 					state = UQVAL;
 					vs = i;
 				}
@@ -325,7 +396,9 @@ fromstr(PyObject *self, PyObject *args, PyObject *kwdict)
 				/*
 				 * "slashmap" is a list of the positions of the
 				 * backslashes that need to be removed from the
-				 * final attribute string.
+				 * final attribute string; it is not used for
+				 * line continuation which is only supported
+				 * by the Manifest class.
 				 */
 				if (slashmap == NULL) {
 					smlen = 16;
@@ -361,6 +434,7 @@ fromstr(PyObject *self, PyObject *args, PyObject *kwdict)
 					slashmap[smpos] = -1;
 				}
 			} else if (str[i] == quote) {
+				prevstate = state;
 				state = WS;
 				if (slashmap != NULL) {
 					char *sattr;
@@ -389,8 +463,14 @@ fromstr(PyObject *self, PyObject *args, PyObject *kwdict)
 					free(slashmap);
 					slashmap = NULL;
 
-					if ((attr = PyString_FromStringAndSize(
-					    sattr, attrlen - o)) == NULL) {
+#if PY_MAJOR_VERSION >= 3
+					attr = PyUnicode_FromStringAndSize(
+					    sattr, attrlen - o);
+#else
+					attr = PyString_FromStringAndSize(
+					    sattr, attrlen - o);
+#endif
+					if (attr == NULL) {
 						free(sattr);
 						CLEANUP_REFS;
 						return (NULL);
@@ -398,15 +478,21 @@ fromstr(PyObject *self, PyObject *args, PyObject *kwdict)
 					free(sattr);
 				} else {
 					Py_XDECREF(attr);
-					if ((attr = PyString_FromStringAndSize(
-					    &str[vs], i - vs)) == NULL) {
+#if PY_MAJOR_VERSION >= 3
+					attr = PyUnicode_FromStringAndSize(
+					    &str[vs], i - vs);
+#else
+					attr = PyString_FromStringAndSize(
+					    &str[vs], i - vs);
+#endif
+					if (attr == NULL) {
 						CLEANUP_REFS;
 						return (NULL);
 					}
 				}
 
 				if (strncmp(keystr, "hash=", 5) == 0) {
-					char *as = PyString_AsString(attr);
+					char *as = PyBytes_AsString(attr);
 					if (hashstr && strcmp(as, hashstr)) {
 						invalid(notident);
 						CLEANUP_REFS;
@@ -415,22 +501,34 @@ fromstr(PyObject *self, PyObject *args, PyObject *kwdict)
 					hash = attr;
 					attr = NULL;
 				} else {
+#if PY_MAJOR_VERSION >= 3
+					PyUnicode_InternInPlace(&attr);
+#else
 					PyString_InternInPlace(&attr);
-					if (add_to_attrs(attrs, key,
-					    attr) == -1) {
+#endif
+
+					if (add_to_attrs(attrs, key, attr,
+					    concat) == -1) {
 						CLEANUP_REFS;
 						return (NULL);
 					}
+					concat = false;
 				}
 			}
 		} else if (state == UQVAL) {
-			if (str[i] == ' ' || str[i] == '\t') {
+			if (str[i] == ' ' || str[i] == '\t' || str[i] == '\n') {
+				prevstate = state;
 				state = WS;
 				Py_XDECREF(attr);
+#if PY_MAJOR_VERSION >= 3
+				attr = PyUnicode_FromStringAndSize(&str[vs],
+				    i - vs);
+#else
 				attr = PyString_FromStringAndSize(&str[vs],
 				    i - vs);
+#endif
 				if (strncmp(keystr, "hash=", 5) == 0) {
-					char *as = PyString_AsString(attr);
+					char *as = PyBytes_AsString(attr);
 					if (hashstr && strcmp(as, hashstr)) {
 						invalid(notident);
 						CLEANUP_REFS;
@@ -439,23 +537,38 @@ fromstr(PyObject *self, PyObject *args, PyObject *kwdict)
 					hash = attr;
 					attr = NULL;
 				} else {
+#if PY_MAJOR_VERSION >= 3
+					PyUnicode_InternInPlace(&attr);
+#else
 					PyString_InternInPlace(&attr);
-					if (add_to_attrs(attrs, key,
-					    attr) == -1) {
+#endif
+					if (add_to_attrs(attrs, key, attr,
+					    false) == -1) {
 						CLEANUP_REFS;
 						return (NULL);
 					}
 				}
 			}
 		} else if (state == WS) {
-			if (str[i] != ' ' && str[i] != '\t') {
+			if (str[i] != ' ' && str[i] != '\t' && str[i] != '\n') {
 				state = KEY;
 				ks = i;
 				if (str[i] == '=') {
 					malformed("missing key");
 					CLEANUP_REFS;
 					return (NULL);
+				} else if (prevstate == QVAL &&
+				    (str[i] == '\'' || str[i] == '\"')) {
+					/*
+					 * We find ourselves with two adjacent
+					 * quoted values, which we concatenate.
+					 */
+					state = QVAL;
+					quote = str[i];
+					vs = i + 1;
+					concat = true;
 				}
+				prevstate = WS;
 			}
 		}
 	}
@@ -466,9 +579,13 @@ fromstr(PyObject *self, PyObject *args, PyObject *kwdict)
 	 */
 	if (state == UQVAL) {
 		Py_XDECREF(attr);
+#if PY_MAJOR_VERSION >= 3
+		attr = PyUnicode_FromStringAndSize(&str[vs], i - vs);
+#else
 		attr = PyString_FromStringAndSize(&str[vs], i - vs);
+#endif
 		if (strncmp(keystr, "hash=", 5) == 0) {
-			char *as = PyString_AsString(attr);
+			char *as = PyBytes_AsString(attr);
 			if (hashstr && strcmp(as, hashstr)) {
 				invalid(notident);
 				CLEANUP_REFS;
@@ -477,8 +594,12 @@ fromstr(PyObject *self, PyObject *args, PyObject *kwdict)
 			hash = attr;
 			attr = NULL;
 		} else {
+#if PY_MAJOR_VERSION >= 3
+			PyUnicode_InternInPlace(&attr);
+#else
 			PyString_InternInPlace(&attr);
-			if (add_to_attrs(attrs, key, attr) == -1) {
+#endif
+			if (add_to_attrs(attrs, key, attr, false) == -1) {
 				CLEANUP_REFS;
 				return (NULL);
 			}
@@ -542,20 +663,36 @@ static PyMethodDef methods[] = {
 	{ NULL, NULL, 0, NULL }
 };
 
-PyMODINIT_FUNC
-init_actions(void)
+#if PY_MAJOR_VERSION >= 3
+static struct PyModuleDef actionmodule = {
+	PyModuleDef_HEAD_INIT,
+	"_action",
+	NULL,
+	-1,
+	methods
+};
+#endif
+
+static PyObject *
+moduleinit(void)
 {
 	PyObject *action_types = NULL;
 	PyObject *pkg_actions = NULL;
 	PyObject *sys = NULL;
 	PyObject *sys_modules = NULL;
+	PyObject *m;
 
+#if PY_MAJOR_VERSION >= 3
+	if ((m = PyModule_Create(&actionmodule)) == NULL)
+		return (NULL);
+#else
 	/*
 	 * Note that module initialization functions are void and may not return
 	 * a value.  However, they should set an exception if appropriate.
 	 */
 	if (Py_InitModule("_actions", methods) == NULL)
-		return;
+		return (NULL);
+#endif
 
 	/*
 	 * We need to retrieve the MalformedActionError object from pkg.actions.
@@ -566,17 +703,17 @@ init_actions(void)
 	 */
 
 	if ((sys = PyImport_ImportModule("sys")) == NULL)
-		return;
+		return (NULL);
 
 	if ((sys_modules = PyObject_GetAttrString(sys, "modules")) == NULL)
-		return;
+		return (NULL);
 
 	if ((pkg_actions = PyDict_GetItemString(sys_modules, "pkg.actions"))
 	    == NULL) {
 		/* No exception is set */
 		PyErr_SetString(PyExc_KeyError, "pkg.actions");
 		Py_DECREF(sys_modules);
-		return;
+		return (NULL);
 	}
 	Py_DECREF(sys_modules);
 
@@ -605,7 +742,7 @@ init_actions(void)
 	if ((action_types = PyObject_GetAttrString(pkg_actions,
 	    "types")) == NULL) {
 		PyErr_SetString(PyExc_KeyError, "pkg.actions.types missing!");
-		return;
+		return (NULL);
 	}
 
 	/*
@@ -618,7 +755,7 @@ init_actions(void)
 		PyErr_SetString(PyExc_KeyError, \
 		    "Action type class missing: " name); \
 		Py_DECREF(action_types); \
-		return; \
+		return (NULL); \
 	}
 
 	cache_class(aclass_attribute, "set");
@@ -636,4 +773,20 @@ init_actions(void)
 	cache_class(aclass_user, "user");
 
 	Py_DECREF(action_types);
+
+	return (m);
 }
+
+#if PY_MAJOR_VERSION >= 3
+PyMODINIT_FUNC
+PyInit__actions(void)
+{
+	return (moduleinit());
+}
+#else
+PyMODINIT_FUNC
+init_actions(void)
+{
+	moduleinit();
+}
+#endif

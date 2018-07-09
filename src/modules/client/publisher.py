@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 #
@@ -34,29 +34,30 @@
 # modules/client/api.py:__init__.
 #
 
+from __future__ import print_function
+
 import calendar
 import collections
 import copy
-import cStringIO
 import datetime as dt
 import errno
 import hashlib
 import os
 import pycurl
 import shutil
+import six
 import tempfile
 import time
-import urllib
-import urlparse
 import uuid
 
-from pkg.client import global_settings
-from pkg.client.debugvalues import DebugValues
-logger = global_settings.logger
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import padding
+from io import BytesIO
+from six.moves.urllib.parse import quote, urlsplit, urlparse, urlunparse, \
+    ParseResult
+from six.moves.urllib.request import url2pathname
 
 import pkg.catalog
 import pkg.client.api_errors as api_errors
@@ -67,8 +68,10 @@ import pkg.misc as misc
 import pkg.portable as portable
 import pkg.server.catalog as old_catalog
 
-from pkg.misc import EmptyDict, EmptyI, SIGNATURE_POLICY, DictProperty, \
-    PKG_RO_FILE_MODE
+from pkg.client import global_settings
+from pkg.client.debugvalues import DebugValues
+logger = global_settings.logger
+from pkg.misc import EmptyDict, EmptyI, SIGNATURE_POLICY, DictProperty
 
 # The "core" type indicates that a repository contains all of the dependencies
 # declared by packages in the repository.  It is primarily used for operating
@@ -214,12 +217,27 @@ class RepositoryURI(object):
                         return self.uri != other
                 return True
 
-        def __cmp__(self, other):
+        __hash__ = object.__hash__
+
+        def __lt__(self, other):
                 if not other:
-                        return 1
+                        return False
                 if not isinstance(other, RepositoryURI):
                         other = RepositoryURI(other)
-                return cmp(self.uri, other.uri)
+                return self.uri < other.uri
+
+        def __gt__(self, other):
+                if not other:
+                        return True
+                if not isinstance(other, RepositoryURI):
+                        other = RepositoryURI(other)
+                return self.uri > other.uri
+
+        def __le__(self, other):
+                return self == other or self < other
+
+        def __ge__(self, other):
+                return self == other or self > other
 
         def __set_priority(self, value):
                 if value is not None:
@@ -276,7 +294,7 @@ class RepositoryURI(object):
                         raise api_errors.UnsupportedRepositoryURIAttribute(
                             "ssl_cert", scheme=self.scheme)
                 if filename:
-                        if not isinstance(filename, basestring):
+                        if not isinstance(filename, six.string_types):
                                 raise api_errors.BadRepositoryAttributeValue(
                                     "ssl_cert", value=filename)
                         filename = os.path.normpath(filename)
@@ -289,7 +307,7 @@ class RepositoryURI(object):
                         raise api_errors.UnsupportedRepositoryURIAttribute(
                             "ssl_key", scheme=self.scheme)
                 if filename:
-                        if not isinstance(filename, basestring):
+                        if not isinstance(filename, six.string_types):
                                 raise api_errors.BadRepositoryAttributeValue(
                                     "ssl_key", value=filename)
                         filename = os.path.normpath(filename)
@@ -322,7 +340,7 @@ class RepositoryURI(object):
 
                 # Decompose URI to verify attributes.
                 scheme, netloc, path, params, query = \
-                    urlparse.urlsplit(uri, allow_fragments=0)
+                    urlsplit(uri, allow_fragments=0)
 
                 self.__scheme = scheme.lower()
                 self.__netloc = netloc
@@ -372,17 +390,17 @@ class RepositoryURI(object):
 
                 assert self.__uri
                 scheme, netloc, path, params, query, fragment = \
-                    urlparse.urlparse(self.__uri, allow_fragments=False)
+                    urlparse(self.__uri, allow_fragments=False)
                 if new_scheme == scheme:
                         return
-                self.uri = urlparse.urlunparse(
+                self.uri = urlunparse(
                     (new_scheme, netloc, path, params, query, fragment))
 
         def get_host(self):
                 """Get the host and port of this URI if it's a http uri."""
 
                 scheme, netloc, path, params, query, fragment = \
-                    urlparse.urlparse(self.__uri, allow_fragments=0)
+                    urlparse(self.__uri, allow_fragments=0)
                 if scheme != "file":
                         return netloc
                 return ""
@@ -392,9 +410,9 @@ class RepositoryURI(object):
                 URI or '' otherwise."""
 
                 scheme, netloc, path, params, query, fragment = \
-                    urlparse.urlparse(self.__uri, allow_fragments=0)
+                    urlparse(self.__uri, allow_fragments=0)
                 if scheme == "file":
-                        return urllib.url2pathname(path)
+                        return url2pathname(path)
                 return ""
 
         ssl_cert = property(lambda self: self.__ssl_cert, __set_ssl_cert, None,
@@ -423,7 +441,7 @@ class RepositoryURI(object):
                 """The URI scheme."""
                 if not self.__uri:
                         return ""
-                return urlparse.urlsplit(self.__uri, allow_fragments=0)[0]
+                return urlsplit(self.__uri, allow_fragments=0)[0]
 
         trailing_slash = property(lambda self: self.__trailing_slash,
             __set_trailing_slash, None,
@@ -513,7 +531,7 @@ class TransportRepoURI(RepositoryURI):
                 if isinstance(other, TransportRepoURI):
                         return self.uri == other.uri and \
                             self.proxy == other.proxy
-                if isinstance(other, basestring):
+                if isinstance(other, six.string_types):
                         return self.uri == other and self.proxy == None
                 return False
 
@@ -521,22 +539,43 @@ class TransportRepoURI(RepositoryURI):
                 if isinstance(other, TransportRepoURI):
                         return self.uri != other.uri or \
                             self.proxy != other.proxy
-                if isinstance(other, basestring):
+                if isinstance(other, six.string_types):
                         return self.uri != other or self.proxy != None
                 return True
 
-        def __cmp__(self, other):
+        __hash__ = object.__hash__
+
+        def __lt__(self, other):
                 if not other:
-                        return 1
-                if isinstance(other, basestring):
+                        return False
+                if isinstance(other, six.string_types):
                         other = TransportRepoURI(other)
                 elif not isinstance(other, TransportRepoURI):
-                        return 1
-                res = cmp(self.uri, other.uri)
-                if res == 0:
-                        return cmp(self.proxy, other.proxy)
-                else:
-                        return res
+                        return False
+                if self.uri < other.uri:
+                        return True
+                if self.uri != other.uri:
+                        return False
+                return self.proxy < other.proxy
+
+        def __gt__(self, other):
+                if not other:
+                        return True
+                if isinstance(other, six.string_types):
+                        other = TransportRepoURI(other)
+                elif not isinstance(other, TransportRepoURI):
+                        return True
+                if self.uri > other.uri:
+                        return True
+                if self.uri != other.uri:
+                        return False
+                return self.proxy > other.proxy
+
+        def __le__(self, other):
+                return self == other or self < other
+
+        def __ge__(self, other):
+                return self == other or self > other
 
         def key(self):
                 """Returns a value that can be used to identify this RepoURI
@@ -1134,9 +1173,6 @@ class Publisher(object):
         # from during __copy__.
         _source_object_id = None
 
-        # Used to record those CRLs which are unreachable during the current
-        # operation.
-        __bad_crls = set()
 
         def __init__(self, prefix, alias=None, catalog=None, client_uuid=None,
             disabled=False, meta_root=None, repository=None,
@@ -1176,7 +1212,6 @@ class Publisher(object):
                 self.__delay_validation = False
 
                 self.__properties = {}
-                self.__tmp_crls = {}
 
                 # Writing out an EmptyI to a config file and reading it back
                 # in doesn't work correctly at the moment, but reading and
@@ -1211,12 +1246,25 @@ class Publisher(object):
                 # Must be done last.
                 self._catalog = catalog
 
-        def __cmp__(self, other):
+        def __lt__(self, other):
                 if other is None:
-                        return 1
+                        return False
                 if isinstance(other, Publisher):
-                        return cmp(self.prefix, other.prefix)
-                return cmp(self.prefix, other)
+                        return self.prefix < other.prefix
+                return self.prefix < other
+
+        def __gt__(self, other):
+                if other is None:
+                        return True
+                if isinstance(other, Publisher):
+                        return self.prefix > other.prefix
+                return self.prefix > other
+
+        def __le__(self, other):
+                return not self > other
+
+        def __ge__(self, other):
+                return not self < other
 
         @staticmethod
         def __contains__(key):
@@ -1247,6 +1295,8 @@ class Publisher(object):
                 if isinstance(other, str):
                         return self.prefix == other
                 return False
+
+        __hash__ = object.__hash__
 
         def __getitem__(self, key):
                 """Deprecated compatibility interface allowing publisher
@@ -1346,9 +1396,9 @@ class Publisher(object):
                                 # exception and do not update the file.
                                 fd = os.open(lcfile,
                                     os.O_WRONLY|os.O_NOFOLLOW|os.O_CREAT)
-                                os.write(fd, "{0}\n".format(
+                                os.write(fd, misc.force_bytes("{0}\n".format(
                                     misc.time_to_timestamp(
-                                    calendar.timegm(value.utctimetuple()))))
+                                    calendar.timegm(value.utctimetuple())))))
                                 os.close(fd)
                         except EnvironmentError as e:
                                 if e.errno == errno.ELOOP:
@@ -1657,7 +1707,7 @@ pkg unset-publisher {0}
                 # path length problems. In order for this image to interoperate
                 # with older clients, we must use sha-1 here.
                 return os.path.join(self.__origin_root,
-                    hashlib.sha1(origin.uri).hexdigest())
+                    hashlib.sha1(misc.force_bytes(origin.uri)).hexdigest())
 
         def __gen_origin_paths(self):
                 if not os.path.exists(self.__origin_root):
@@ -1673,7 +1723,7 @@ pkg unset-publisher {0}
                 # We must interoperate with older clients, so force the use of
                 # sha-1 here.
                 ohashes = [
-                    hashlib.sha1(o.uri).hexdigest()
+                    hashlib.sha1(misc.force_bytes(o.uri)).hexdigest()
                     for o in self.repository.origins
                 ]
 
@@ -1766,7 +1816,7 @@ pkg unset-publisher {0}
                                     pubs=[self.prefix]):
                                         pub, stem, ver = t
 
-                                        entry = dict(sentry.iteritems())
+                                        entry = dict(six.iteritems(sentry))
                                         try:
                                                 npart.add(metadata=entry,
                                                     op_time=op_time, pub=pub,
@@ -2413,12 +2463,13 @@ pkg unset-publisher {0}
                             "was expected to be a PEM certificate, but it "
                             "could not be parsed as such:\n{0}".format(s)))
 
-        def __add_cert(self, cert):
+        def __add_cert(self, cert, pkg_hash=None):
                 """Add the pem representation of the certificate 'cert' to the
                 certificates this publisher knows about."""
 
                 self.create_meta_root()
-                pkg_hash = self.__hash_cert(cert)
+                if not pkg_hash:
+                        pkg_hash = self.__hash_cert(cert)
                 pkg_hash_pth = os.path.join(self.cert_root, pkg_hash)
                 file_problem = False
                 try:
@@ -2486,14 +2537,14 @@ pkg unset-publisher {0}
                 c = self.__string_to_cert(s, pkg_hash)
                 if not pth_exists:
                         try:
-                                self.__add_cert(c)
+                                self.__add_cert(c, pkg_hash=pkg_hash)
                         except api_errors.PermissionsException:
                                 pass
                 if only_retrieve:
                         return None
 
                 if verify_hash:
-                        h = misc.get_data_digest(cStringIO.StringIO(s),
+                        h = misc.get_data_digest(BytesIO(misc.force_bytes(s)),
                             length=len(s), hash_func=hash_func)[0]
                         if h != pkg_hash:
                                 raise api_errors.ModifiedCertificateException(c,
@@ -2549,8 +2600,8 @@ pkg unset-publisher {0}
                                 self.__rebuild_subj_root()
                                 try:
                                         res.append(load_cert(pth))
-                                except EnvironmentError as e:
-                                        if e.errno != errno.ENOENT:
+                                except EnvironmentError as ex:
+                                        if ex.errno != errno.ENOENT:
                                                 raise
 
                         t = api_errors._convert_error(e,
@@ -2643,122 +2694,6 @@ pkg unset-publisher {0}
                                     "At least one name must be provided for "
                                     "the signature-required-names policy."))
 
-        def __format_safe_read_crl(self, pth):
-                """CRLs seem to frequently come in DER format, so try reading
-                the CRL using both of the formats before giving up."""
-
-                with open(pth, "rb") as f:
-                        raw = f.read()
-
-                try:
-                        return x509.load_pem_x509_crl(raw, default_backend())
-                except ValueError:
-                        try:
-                                return x509.load_der_x509_crl(raw,
-                                    default_backend())
-                        except ValueError:
-                                raise api_errors.BadFileFormat(_("The CRL file "
-                                    "{0} is not in a recognized "
-                                    "format.").format(pth))
-
-        def __get_crl(self, uri):
-                """Given a URI (for now only http URIs are supported), return
-                the CRL object created from the file stored at that uri."""
-
-                uri = uri.strip()
-                if uri.startswith("Full Name:"):
-                        uri = uri[len("Full Name:"):]
-                        uri = uri.strip()
-                if uri.startswith("URI:"):
-                        uri = uri[4:]
-                if not uri.startswith("http://") and \
-                    not uri.startswith("file://"):
-                        raise api_errors.InvalidResourceLocation(uri.strip())
-                crl_host = DebugValues.get_value("crl_host")
-                if crl_host:
-                        orig = urlparse.urlparse(uri)
-                        crl = urlparse.urlparse(crl_host)
-                        uri = urlparse.urlunparse(urlparse.ParseResult(
-                            scheme=crl.scheme, netloc=crl.netloc,
-                            path=orig.path,
-                            params=orig.params, query=orig.params,
-                            fragment=orig.fragment))
-                # If we've already read the CRL, use the previously created
-                # object.
-                if uri in self.__tmp_crls:
-                        return self.__tmp_crls[uri]
-                fn = urllib.quote(uri, "")
-                assert os.path.isdir(self.__crl_root)
-                fpath = os.path.join(self.__crl_root, fn)
-                crl = None
-                # Check if we already have a CRL for this URI.
-                if os.path.exists(fpath):
-                        # If we already have a CRL that we can read, check
-                        # whether it's time to retrieve a new one from the
-                        # location.
-                        try:
-                                crl = self.__format_safe_read_crl(fpath)
-                        except EnvironmentError:
-                                pass
-                        else:
-                                nu = crl.next_update
-                                cur_time = dt.datetime.utcnow()
-
-                                if cur_time < nu:
-                                        self.__tmp_crls[uri] = crl
-                                        return crl
-                # If the CRL is already known to be unavailable, don't try
-                # connecting to it again.
-                if uri in Publisher.__bad_crls:
-                        return crl
-                # If no CRL already exists or it's time to try to get a new one,
-                # try to retrieve it from the server.
-                try:
-                        tmp_fd, tmp_pth = tempfile.mkstemp(dir=self.__crl_root)
-                except EnvironmentError as e:
-                        if e.errno in (errno.EACCES, errno.EPERM):
-                                tmp_fd, tmp_pth = tempfile.mkstemp()
-                        else:
-                                raise apx._convert_error(e)
-                with os.fdopen(tmp_fd, "wb") as fh:
-                        hdl = pycurl.Curl()
-                        hdl.setopt(pycurl.URL, uri)
-                        hdl.setopt(pycurl.WRITEDATA, fh)
-                        hdl.setopt(pycurl.FAILONERROR, 1)
-                        hdl.setopt(pycurl.CONNECTTIMEOUT,
-                            global_settings.PKG_CLIENT_CONNECT_TIMEOUT)
-                        try:
-                                hdl.perform()
-                        except pycurl.error:
-                                # If the CRL is unavailable, add it to the list
-                                # of bad crls.
-                                Publisher.__bad_crls.add(uri)
-                                # If we should treat failure to get a new CRL
-                                # as a failure, raise an exception here. If not,
-                                # if we should use an old CRL if it exists,
-                                # return that here. If none is available and
-                                # that means the cert should not be treated as
-                                # revoked, return None here.
-                                return crl
-                try:
-                        ncrl = self.__format_safe_read_crl(tmp_pth)
-                except api_errors.BadFileFormat:
-                        portable.remove(tmp_pth)
-                        return crl
-                try:
-                        portable.rename(tmp_pth, fpath)
-                        # Because the file was made using mkstemp, we need to
-                        # chmod it to match the other files in var/pkg.
-                        os.chmod(fpath, PKG_RO_FILE_MODE)
-                except EnvironmentError:
-                        self.__tmp_crls[uri] = ncrl
-                        try:
-                                portable.remove(tmp_pth)
-                        except EnvironmentError:
-                                pass
-                return ncrl
-
-
         def __verify_x509_signature(self, c, key):
                 """Verify the signature of a certificate or CRL 'c' against a
                 provided public key 'key'."""
@@ -2778,7 +2713,7 @@ pkg unset-publisher {0}
                 except Exception:
                         return False
 
-        def __check_crl(self, cert, ca_dict, crl_uri):
+        def __check_crl(self, cert, ca_dict, crl_uri, more_uris=False):
                 """Determines whether the certificate has been revoked by the
                 CRL located at 'crl_uri'.
 
@@ -2787,7 +2722,10 @@ pkg unset-publisher {0}
                 The 'ca_dict' is a dictionary which maps subject hashes to
                 certs treated as trust anchors."""
 
-                crl = self.__get_crl(crl_uri)
+                crl = None
+                if self.transport:
+                        crl = self.transport.get_crl(crl_uri, self.__crl_root,
+                            more_uris=more_uris)
 
                 # If we couldn't retrieve a CRL from the distribution point
                 # and no CRL is cached on disk, assume the cert has not been
@@ -2884,6 +2822,7 @@ pkg unset-publisher {0}
                 except x509.ExtensionNotFound:
                         return
 
+                crl_uris = []
                 for dp in dps:
                         if not dp.full_name:
                                 # we don't support relative names
@@ -2893,7 +2832,12 @@ pkg unset-publisher {0}
                                     x509.UniformResourceIdentifier):
                                         # we only support URIs
                                         continue
-                                self.__check_crl(cert, ca_dict, str(uri.value))
+                                crl_uris.append(str(uri.value))
+
+                for i, uri in enumerate(crl_uris):
+                        more_uris = i < len(crl_uris) - 1
+                        self.__check_crl(cert, ca_dict, uri,
+                            more_uris=more_uris)
 
         def __check_revocation(self, cert, ca_dict, use_crls):
                 hsh = self.__hash_cert(cert)
@@ -2996,7 +2940,7 @@ pkg unset-publisher {0}
                 certs_with_problems = []
 
                 ca_dict = copy.copy(ca_dict)
-                for k, v in self.get_ca_certs().iteritems():
+                for k, v in six.iteritems(self.get_ca_certs()):
                         if k in ca_dict:
                                 ca_dict[k].extend(v)
                         else:
@@ -3174,7 +3118,7 @@ pkg unset-publisher {0}
                 """Take a list in string representation and convert it back
                 to a Python list."""
 
-                list_str = list_str.encode("utf-8")
+                list_str = misc.force_str(list_str)
                 # Strip brackets and any whitespace
                 list_str = list_str.strip("][ ")
                 # Strip comma and any whitespeace
@@ -3195,7 +3139,7 @@ pkg unset-publisher {0}
 
                 if name == SIGNATURE_POLICY:
                         self.__sig_policy = None
-                        if isinstance(values, basestring):
+                        if isinstance(values, six.string_types):
                                 values = [values]
                         policy_name = values[0]
                         if policy_name not in sigpolicy.Policy.policies():
@@ -3229,7 +3173,7 @@ pkg unset-publisher {0}
                         self.__properties[SIGNATURE_POLICY] = policy_name
                         return
                 if name == "signature-required-names":
-                        if isinstance(values, basestring):
+                        if isinstance(values, six.string_types):
                                 values = self.__read_list(values)
                 self.__properties[name] = values
 
@@ -3246,15 +3190,15 @@ pkg unset-publisher {0}
 
         def __prop_iteritems(self):
                 """Support iteritems on properties"""
-                return self.__properties.iteritems()
+                return six.iteritems(self.__properties)
 
         def __prop_keys(self):
                 """Support keys() on properties"""
-                return self.__properties.keys()
+                return list(self.__properties.keys())
 
         def __prop_values(self):
                 """Support values() on properties"""
-                return self.__properties.values()
+                return list(self.__properties.values())
 
         def __prop_getdefault(self, name, value):
                 """Support getdefault() on properties"""
@@ -3272,7 +3216,11 @@ pkg unset-publisher {0}
         def __prop_update(self, d):
                 """Support update() on properties"""
 
-                for k, v in d.iteritems():
+                # The logic in __set_prop requires that the item with key
+                # 'SIGNATURE_POLICY' comes before the item with key
+                # 'signature-required-names'.
+                od = collections.OrderedDict(sorted(six.iteritems(d)))
+                for k, v in six.iteritems(od):
                         # Must iterate through each value and
                         # set it this way so that the logic
                         # in __set_prop is used.
@@ -3302,3 +3250,6 @@ pkg unset-publisher {0}
                 names = self.properties.get("signature-required-names", [])
                 self.__sig_policy = sigpolicy.Policy.policy_factory(txt, names)
                 return self.__sig_policy
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

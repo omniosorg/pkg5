@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -49,3 +49,6 @@ def process_hardlink_deps(action, pkg_vars):
 
         target = action.get_target_path()
         return [HardlinkDependency(action, target, pkg_vars)]
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker
