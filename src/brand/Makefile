@@ -22,7 +22,7 @@
 #
 # Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
 # Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
-# Copyright 2017 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
 #
 
 MACH:sh = uname -p
@@ -38,6 +38,8 @@ ROOTBRAND = $(ROOTUSRLIB)/brand
 ROOTBRANDPKG = $(ROOTBRAND)/ipkg
 LINKBRANDPKG = $(ROOTBRAND)/lipkg
 SPARSEBRANDPKG = $(ROOTBRAND)/sparse
+BHYVEBRANDPKG = $(ROOTBRAND)/bhyve
+KVMBRANDPKG = $(ROOTBRAND)/kvm
 
 ROOTDIRS = \
 	$(ROOT) \
@@ -48,7 +50,9 @@ ROOTDIRS = \
 	$(ROOTBRAND) \
 	$(ROOTBRANDPKG) \
 	$(LINKBRANDPKG) \
-	$(SPARSEBRANDPKG)
+	$(SPARSEBRANDPKG) \
+	$(BHYVEBRANDPKG) \
+	$(KVMBRANDPKG)
 
 ROOTFILES = \
 	$(ROOTETCBRAND)/pkgrm.conf \
@@ -83,7 +87,19 @@ ROOTFILES = \
 	$(SPARSEBRANDPKG)/prestate \
 	$(SPARSEBRANDPKG)/profile.xml \
 	$(SPARSEBRANDPKG)/uninstall \
-	$(SPARSEBRANDPKG)/verifyadm
+	$(SPARSEBRANDPKG)/verifyadm \
+	\
+	$(BHYVEBRANDPKG)/config.xml \
+	$(BHYVEBRANDPKG)/platform.xml \
+	$(BHYVEBRANDPKG)/init \
+	$(BHYVEBRANDPKG)/createzone \
+	$(BHYVEBRANDPKG)/socat \
+	$(BHYVEBRANDPKG)/support \
+	\
+	$(KVMBRANDPKG)/config.xml \
+	$(KVMBRANDPKG)/platform.xml \
+	$(KVMBRANDPKG)/init \
+	$(KVMBRANDPKG)/support
 
 BIN = \
 	support \
@@ -113,7 +129,8 @@ install: $(ROOTFILES)
 
 
 $(ROOT) $(ROOTETC) $(ROOTETCBRAND) $(ROOTETCZONES) $(ROOTUSRLIB) \
-	$(ROOTBRAND) $(ROOTBRANDPKG) $(LINKBRANDPKG) $(SPARSEBRANDPKG):
+	$(ROOTBRAND) $(ROOTBRANDPKG) $(LINKBRANDPKG) \
+	$(SPARSEBRANDPKG) $(BHYVEBRANDPKG) $(KVMBRANDPKG):
 	mkdir -p $@
 
 $(ROOTETCBRAND)/%: $(ROOTETCBRAND) %
@@ -127,4 +144,10 @@ $(ROOTBRANDPKG)/%: $(ROOTBRANDPKG) %
 
 $(SPARSEBRANDPKG)/%: $(SPARSEBRANDPKG) sparse/%
 	rm -f $@; $(INSTALL) -f $(SPARSEBRANDPKG) -m 0444 $<
+
+$(BHYVEBRANDPKG)/%: $(BHYVEBRANDPKG) bhyve/%
+	rm -f $@; $(INSTALL) -f $(BHYVEBRANDPKG) -m 0444 $<
+
+$(KVMBRANDPKG)/%: $(KVMBRANDPKG) kvm/%
+	rm -f $@; $(INSTALL) -f $(KVMBRANDPKG) -m 0444 $<
 

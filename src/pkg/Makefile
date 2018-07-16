@@ -20,11 +20,15 @@
 #
 # Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
 # Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
+# Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
 #
 
 PKGVERS_COMPONENT = 0.5.11
 PKGVERS_BUILTON   = 5.11
-BUILDNUM          = 151002
+BUILDNUM.cmd      = \
+	nawk '$$1 == "OmniOS" { print $$3 }' /etc/release | tr -d '[a-z]'
+#BUILDNUM          = 151002
+BUILDNUM          = $(BUILDNUM.cmd:sh)
 UPDATENUM         = 0
 SRUNUM            = 0
 PLATNUM           = 0
@@ -36,7 +40,7 @@ BUILDID           = 0
 #NIGHTLYID:sh      = hg parents --template '{rev}'
 NIGHTLYID         = 1
 #CHANGESET.cmd     = hg id -i
-CHANGESET.cmd     = git show --abbrev-commit | head -1 | awk '{print $$2;}'
+CHANGESET.cmd     = git show --format=%h --no-patch
 CHANGESET         = $(CHANGESET.cmd:sh)
 CURBUILD.cmd      = \
 	$(PKG) -R / list -H osnet-incorporation | \
