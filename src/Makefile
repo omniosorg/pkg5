@@ -80,15 +80,15 @@ clobber: $(SUBDIRS)
 # it's the best way to ensure things stay pylint clean.
 #
 install: $(SUBDIRS)
-	ISALIST=i386 $(PYTHON27) setup.py install
-	$(PYTHON35) setup.py install
+	ISALIST=i386 CC=$(CC) $(PYTHON27) setup.py install
+	CC=$(CC) $(PYTHON35) setup.py install
 
 lint:
-	$(PYTHON27) setup.py lint
+	CC=$(CC) $(PYTHON27) setup.py lint
 	@cd zoneproxy; pwd; make lint
 
 clint:
-	$(PYTHON27) setup.py clint
+	CC=$(CC) $(PYTHON27) setup.py clint
 	@cd zoneproxy; pwd; make lint
 
 pylint: install
@@ -109,6 +109,7 @@ $(SUBDIRS): FRC
 packages: install
 	@cd pkg; pwd; $(MAKE) $(TARGET) check \
 		PATH=$(CODE_WS)/proto/root_$$(uname -p)/usr/bin:$$PATH \
+		CC=$(CC)
 
 test: install
 	-pfexec $(PYTHON27) tests/run.py -j ${JOBS}
