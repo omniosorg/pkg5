@@ -76,6 +76,14 @@ get_active_ds $CURRENT_GZBE $ZONEPATH_DS
     fail_incomplete "$f_ds_config" "$ACTIVE_DS" "mountpoint=$zonepath/root"
 
 #
+# If the GZ is updated whilst the zone is in a detached state, then the
+# cached data relating to GZ packages becomes stale and can cause problems
+# with subsequent re-attaching. Remove the linked state and cache directory.
+#
+[ -d "$zonepath/root/var/pkg/linked" ] && \
+    rm -rf "$zonepath/root/var/pkg/linked"
+
+#
 # There is no sw inventory in an ipkg branded zone, so just use the original
 # xml file.
 #
