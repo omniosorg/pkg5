@@ -3420,6 +3420,19 @@ Follow the same requirements as \fBrequire-signatures\fR but also require that t
 .sp
 .LP
 The following properties define signature policy for a particular publisher. The image properties of the same name define signature policy for the image. To view the current values of these properties for a particular publisher, use the \fBpkg publisher\fR \fIpublisher_name\fR command. To modify the values of these publisher signature policy properties, use the \fB--set-property\fR and \fB--unset-property\fR options of the \fBpkg set-publisher\fR command.
+
+.sp
+.ne 2
+.mk
+.na
+\fBnochild\fR
+.ad
+.sp .6
+.RS 4n
+(boolean) If this property is set to True then the publisher is not required to
+be present in linked child images.
+.RE
+
 .sp
 .ne 2
 .mk
