@@ -3101,6 +3101,61 @@ For all other options, see the \fBinstall\fR command above.
 .sp
 .LP
 The following properties define characteristics of the image. These properties store information about the purpose, content, and behavior of the image. To view the current values of these properties in the image, use the \fBpkg property\fR command. To modify the values of these properties, use the \fBpkg set-property\fR and \fBpkg unset-property\fR commands.
+
+.sp
+.ne 2
+.mk
+.na
+\fBauto-be-name\fR
+.ad
+.sp .6
+.RS 4n
+(string) A template to be used for building a name for a new boot environment
+if one is required as a result of an update. Without this property being set,
+and assuming that the \fB--be-name\fR option is not provided, the new BE will
+be named after the current, with an incrementing numerical suffix. If an update
+requires a new boot environment but is not associated with an OmniOS release
+then the template will not be used. The \fB--be-name\fR option always overrides
+this property. The template can contain the following tokens; see the
+"Examples" section for some suggested values.
+
+.sp
+.ne 2
+.mk
+.na
+\fB%d\fR
+.ad
+.sp .6
+.RS 4n
+The date of the update being installed - \fIYYYY.MM.DD\R
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB%D\fR
+.ad
+.sp .6
+.RS 4n
+The date of the update being installed - \fIYYYYMMDD\R
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB%r\fR
+.ad
+.sp .6
+.RS 4n
+The release being installed, without the leading \fIr\fR - e.g. \fB151026c\fR
+.RE
+
+.sp
+Default value: \fBomnios-r%r\fR
+.RE
+
 .sp
 .ne 2
 .mk
@@ -3420,6 +3475,19 @@ Follow the same requirements as \fBrequire-signatures\fR but also require that t
 .sp
 .LP
 The following properties define signature policy for a particular publisher. The image properties of the same name define signature policy for the image. To view the current values of these properties for a particular publisher, use the \fBpkg publisher\fR \fIpublisher_name\fR command. To modify the values of these publisher signature policy properties, use the \fB--set-property\fR and \fB--unset-property\fR options of the \fBpkg set-publisher\fR command.
+
+.sp
+.ne 2
+.mk
+.na
+\fBnochild\fR
+.ad
+.sp .6
+.RS 4n
+(boolean) If this property is set to True then the publisher is not required to
+be present in linked child images.
+.RE
+
 .sp
 .ne 2
 .mk
@@ -4058,6 +4126,31 @@ $ \fBpkg apply-hot-fix --be-name=testbe \e\fR
 .in +4
 \fBhttps://downloads.omniosce.org/pkg/bloody/hotfix-1234.p5p\fR
 .in -4
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 36 \fRSet up a template for automatic boot environment naming
+.sp
+.LP
+The following will result in boot environments which include the release
+name and date, for example \fIomnios_r151026k_20180716\fR
+.sp
+.in +2
+.nf
+$ \fBpkg set-property auto-be-name omnios_r%r_%D\fR
+.fi
+.in -2
+.sp
+
+.LP
+For bloody releases, the release name does not change and so the \fI%r\fR
+token is not available:
+.sp
+.in +2
+.nf
+$ \fBpkg set-property auto-be-name bloody_%D\fR
 .fi
 .in -2
 .sp

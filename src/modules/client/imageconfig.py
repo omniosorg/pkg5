@@ -67,6 +67,7 @@ EXCLUDE_PATTERNS = "exclude-patterns"
 KEY_FILES = "key-files"
 DEFAULT_RECURSE = "default-recurse"
 DEFAULT_CONCURRENCY = "recursion-concurrency"
+AUTO_BE_NAME = "auto-be-name"
 
 default_policies = {
     BE_POLICY: "default",
@@ -92,6 +93,7 @@ default_properties = {
         # Path default is intentionally relative for this case.
         "trust-anchor-directory": os.path.join("etc", "ssl", "pkg"),
         DEFAULT_CONCURRENCY: 1,
+        AUTO_BE_NAME: "omnios-r%r",
 }
 
 # Assume the repository metadata should be checked no more than once every
@@ -207,6 +209,9 @@ class ImageConfig(cfg.FileConfig):
                     cfg.PropInt(DEFAULT_CONCURRENCY,
                         minimum=0,
                         default=default_properties[DEFAULT_CONCURRENCY]),
+                    cfg.Property(AUTO_BE_NAME,
+                        default=default_properties[AUTO_BE_NAME]),
+                        value_map=_val_map_none),
                 ]),
                 cfg.PropertySection("facet", properties=[
                     cfg.PropertyTemplate("^facet\..*", prop_type=cfg.PropBool),

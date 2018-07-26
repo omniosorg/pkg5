@@ -77,6 +77,7 @@ from functools import cmp_to_key
 # no-name-in-module; pylint: disable=E0611
 from six.moves.urllib.parse import unquote
 
+import pkg.actions as actions
 import pkg.catalog as catalog
 import pkg.client.api_errors as apx
 import pkg.client.bootenv as bootenv
@@ -695,6 +696,55 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
 
                 self._activity_lock.release()
 
+        def __auto_be_name(self):
+                try:
+                        be_template = self._img.cfg.get_property(
+                            'property', imgcfg.AUTO_BE_NAME)
+                except:
+                        be_template = None
+
+                if not be_template or len(be_template) == 0:
+                        return
+
+                release = date = None
+                # Check to see if release/name is being updated
+                for src, dest in self._img.imageplan.plan_desc:
+                        if dest.get_name() != 'release/name':
+                                continue
+                        # It is, extract attributes
+                        for a in self._img.imageplan.pd.update_actions:
+                                if not isinstance(a.dst,
+                                    actions.attribute.AttributeAction):
+                                        continue
+                                name = a.dst.attrs['name']
+                                if name == 'ooce.release':
+                                        release = a.dst.attrs['value']
+                                elif name == 'ooce.release.build':
+                                        date = a.dst.attrs['value']
+                                if release and date:
+                                        break
+                        break
+
+                if not release and not date:
+                        # No variables changed in this update
+                        return
+
+                if '%r' in be_template and not release:
+                        return
+                if '%d' in be_template and not date:
+                        return
+                if '%D' in be_template and not date:
+                        return
+                if release:
+                        be_template = be_template.replace('%r', release)
+                if date:
+                        be_template = be_template.replace('%d', date)
+                        be_template = be_template.replace('%D',
+                            date.replace('.', ''))
+
+                be = bootenv.BootEnv(self._img)
+                self.__be_name = be.get_new_be_name(new_bename=be_template)
+
         def __set_be_creation(self):
                 """Figure out whether or not we'd create a new or backup boot
                 environment given inputs and plan.  Toss cookies if we need a
@@ -714,6 +764,12 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                 elif self.__new_be is False and \
                     self._img.imageplan.reboot_needed():
                         raise apx.ImageUpdateOnLiveImageException()
+
+                # If a new BE is required and no BE name has been provided
+                # on the command line, attempt to determine a BE name
+                # automatically.
+                if self.__new_be == True and self.__be_name == None:
+                        self.__auto_be_name()
 
                 if not self.__new_be and self.__backup_be is None:
                         # Create a backup be if allowed by policy (note that the

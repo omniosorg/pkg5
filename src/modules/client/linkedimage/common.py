@@ -3420,6 +3420,7 @@ def get_pubs(img):
         return [
             [str(p), p.sticky]
             for p in img.get_sorted_publishers(inc_disabled=False)
+            if not p.nochild
         ]
 
 def get_packages(img, pd=None):
