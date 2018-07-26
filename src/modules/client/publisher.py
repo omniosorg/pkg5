@@ -1288,6 +1288,12 @@ class Publisher(object):
                         raise
                 return dt.datetime.utcfromtimestamp(mod_time)
 
+        def __get_nochild(self):
+                try:
+                        return self.__properties['nochild']
+                except KeyError:
+                        return False
+
         def __ne__(self, other):
                 if isinstance(other, Publisher):
                         return self.prefix != other.prefix
@@ -3143,6 +3149,10 @@ pkg unset-publisher {0}
         disabled = property(lambda self: self.__disabled, __set_disabled,
             doc="A boolean value indicating whether the publisher should be "
             "used for packaging operations.")
+
+        nochild = property(__get_nochild, None,
+            doc="A boolean value indicating whether the publisher should be "
+            "present in children.")
 
         last_refreshed = property(__get_last_refreshed, __set_last_refreshed,
             doc="A datetime object representing the time (in UTC) the "

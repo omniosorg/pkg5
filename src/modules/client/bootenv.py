@@ -146,53 +146,58 @@ class BootEnv(object):
                         # if were are on UFS.
                         raise RuntimeError("recoveryDisabled")
 
-        def __get_new_be_name(self, suffix=None):
+        def get_new_be_name(self, new_bename=None, suffix=None):
                 """Create a new boot environment name."""
 
-                new_bename = self.be_name
+                if new_bename == None:
+                        new_bename = self.be_name
                 if suffix:
                         new_bename += suffix
+
                 base, sep, rev = new_bename.rpartition("-")
                 if sep and rev.isdigit():
-                        # The source BE has already been auto-named, so we need
-                        # to bump the revision.  List all BEs, cycle through the
-                        # names and find the one with the same basename as
-                        # new_bename, and has the highest revision.  Then add
-                        # one to it.  This means that gaps in the numbering will
-                        # not be filled.
-                        rev = int(rev)
-                        maxrev = rev
-
-                        for d in self.beList:
-                                oben = d.get("orig_be_name", None)
-                                if not oben:
-                                        continue
-                                nbase, sep, nrev = oben.rpartition("-")
-                                if (not sep or nbase != base or
-                                    not nrev.isdigit()):
-                                        continue
-                                maxrev = max(int(nrev), rev)
+                        maxrev = int(rev)
                 else:
-                        # If we didn't find the separator, or if the rightmost
-                        # part wasn't an integer, then we just start with the
-                        # original name.
+                        # new_bename does not include a numerical suffix
+                        # so start with the bare name
                         base = new_bename
                         maxrev = 0
+
+                # List all BEs, cycle through the names and find the
+                # one with the same basename as new_bename which has the
+                # highest revision. This revision will be the starting
+                # point for building the new BE name so that gaps in the
+                # numbering are not filled.
+
+                for d in self.beList:
+                        oben = d.get("orig_be_name", None)
+                        if not oben:
+                                continue
+                        nbase, sep, nrev = oben.rpartition("-")
+                        if (not sep or nbase != base or
+                            not nrev.isdigit()):
+                                continue
+                        maxrev = max(int(nrev), maxrev)
 
                 good = False
                 num = maxrev
                 while not good:
-                        new_bename = "-".join((base, str(num)))
+                        if num > 0:
+                                new_bename = "-".join((base, str(num)))
+                        else:
+                                new_bename = base
                         for d in self.beList:
                                 oben = d.get("orig_be_name", None)
                                 if not oben:
                                         continue
                                 if oben == new_bename:
+                                        # Already exists
                                         break
                         else:
                                 good = True
 
                         num += 1
+
                 return new_bename
 
         def __store_image_state(self):
@@ -391,7 +396,7 @@ class BootEnv(object):
                                 raise api_errors.UnableToCopyBE()
 
                         if not be_name:
-                                be_name = self.__get_new_be_name(
+                                be_name = self.get_new_be_name(
                                     suffix="-backup-1")
                         ret = be.beRename(be_name_clone, be_name)
                         if ret != 0:
@@ -464,8 +469,7 @@ class BootEnv(object):
                         logger.error(_("pkg: '{cmd}' failed. \nwith "
                             "a return code of {ret:d}.").format(
                             cmd=" ".join(cmd), ret=ret))
-                    
-                
+
         def activate_image(self, set_active=True):
                 """Activate a clone of the BE being operated on.
                         If were operating on a non-live BE then
@@ -747,6 +751,10 @@ class BootEnvNull(object):
 
         @staticmethod
         def get_active_be_name():
+                pass
+
+        @staticmethod
+        def get_new_be_name(new_bename=None, suffix=None):
                 pass
 
         @staticmethod
