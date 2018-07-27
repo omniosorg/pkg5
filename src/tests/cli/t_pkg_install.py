@@ -4118,7 +4118,7 @@ adm
                 self.pkg("install --parsable=0 presinstallonly@2")
                 self._assertEditables()
                 self.file_contains("testme", "unpackaged")
-                self.assert_(not os.path.exists(os.path.join(sroot, "testme")))
+                self.assertTrue(not os.path.exists(os.path.join(sroot, "testme")))
                 # Verify uninstall of the package will not remove the file.
                 self.pkg("uninstall presinstallonly")
                 self.file_exists("testme")
