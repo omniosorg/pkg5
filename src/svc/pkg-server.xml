@@ -83,7 +83,15 @@
 		type='method'
 		name='start'
 		exec='%{pkg/pkg_root}/lib/svc/method/svc-pkg-server %m'
-		timeout_seconds='0' />
+		timeout_seconds='0'>
+		<method_context security_flags='aslr'>
+			<method_credential
+                            user='pkg5srv'
+                            group='pkg5srv'
+                            privileges='basic,!file_link_any,!proc_info,!proc_session'
+			/>
+		</method_context>
+	</exec_method>
 
 	<exec_method
 		type='method'
