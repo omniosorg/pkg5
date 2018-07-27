@@ -211,4 +211,5 @@ license lic_minisat license="MIT (MiniSAT)" \
 license cr_Oracle license=cr_Oracle
 # CFFI import is done in C code, so it isn't picked up by pkgdepend
 depend type=require fmri=library/python-3/cffi-35
+depend type=require fmri=library/python-3/prettytable-35
 depend type=require fmri=web/ca-bundle

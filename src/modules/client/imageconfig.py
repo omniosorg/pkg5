@@ -210,7 +210,7 @@ class ImageConfig(cfg.FileConfig):
                         minimum=0,
                         default=default_properties[DEFAULT_CONCURRENCY]),
                     cfg.Property(AUTO_BE_NAME,
-                        default=default_properties[AUTO_BE_NAME]),
+                        default=default_properties[AUTO_BE_NAME],
                         value_map=_val_map_none),
                 ]),
                 cfg.PropertySection("facet", properties=[
