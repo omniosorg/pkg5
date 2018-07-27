@@ -2119,7 +2119,7 @@ def __repo_diff(conf, pubs, xport, rpubs, rxport, tmp_dir, verbose, quiet,
                         info_table = PrettyTable(res_dict["table_header"],
                             encoding=locale.getpreferredencoding())
                         info_table.align = "r"
-                        info_table.align[unicode(_("Publisher"),
+                        info_table.align[misc.force_text(_("Publisher"),
                             locale.getpreferredencoding())] = "l"
                         # Calculate column wise maximum number for formatting.
                         col_maxs = 4 * [0]
@@ -2135,7 +2135,7 @@ def __repo_diff(conf, pubs, xport, rpubs, rxport, tmp_dir, verbose, quiet,
                                 for idx, cell in enumerate(td):
                                         if not cell:
                                                 t_row.append("-")
-                                        elif isinstance(cell, basestring):
+                                        elif isinstance(cell, six.string_types):
                                                 t_row.append(cell)
                                         elif isinstance(cell, dict):
                                                 t_row.append(ftemp.format(
@@ -2367,6 +2367,9 @@ if __name__ == "__main__":
 
         # Make all warnings be errors.
         warnings.simplefilter('error')
+        if six.PY3:
+                # disable ResourceWarning: unclosed file
+                warnings.filterwarnings("ignore", category=ResourceWarning)
 
         __retval = handle_errors(main_func)
         try:

@@ -3653,13 +3653,13 @@ class TestPkgrepoMultiRepo(pkg5unittest.ManyDepotTestCase):
                 # Verify empty repos comparison with just publisher names.
                 self.pkgrepo("diff -s {0} -s {1}".format(self.rurl1,
                     self.rurl2), exit=10)
-                self.assert_("test1" in self.output and "test2" in
+                self.assertTrue("test1" in self.output and "test2" in
                     self.output)
                 self.pkgrepo("diff -s {0} -s {1}".format(self.rurl1,
                     self.rurl3))
                 self.pkgrepo("diff -s {0} -s {1}".format(self.durl1,
                     self.durl3))
-                self.assert_(not self.output)
+                self.assertTrue(not self.output)
                 self.pkgrepo("diff -p test1 -s {0} -s {1}".format(self.rurl1,
                     self.rurl2), exit=1)
                 self.pkgrepo("diff -s {0} -s {1}".format(self.durl1,
@@ -3677,45 +3677,45 @@ class TestPkgrepoMultiRepo(pkg5unittest.ManyDepotTestCase):
                 self.pkgsend_bulk(self.rurl3, (self.foo10))
                 self.pkgrepo("diff -s {0} -s {1}".format(self.rurl1,
                     self.rurl3))
-                self.assert_(not self.output)
+                self.assertTrue(not self.output)
                 self.pkgrepo("diff -v -s {0} -s {1}".format(self.rurl1,
                     self.rurl3))
-                self.assert_(not self.output)
+                self.assertTrue(not self.output)
                 self.pkgrepo("diff -v -s {0} -s {1}".format(self.durl1,
                     self.durl3))
                 self.pkgrepo("diff -s {0} -s {1}".format(self.rurl1,
                     self.rurl2), exit=10)
-                self.assert_("test1" in self.output and "test2" in
+                self.assertTrue("test1" in self.output and "test2" in
                     self.output)
 
                 # Test -q option.
                 self.pkgrepo("diff -q -s {0} -s {1}".format(self.rurl1,
                     self.rurl2), exit=10)
-                self.assert_(not self.output)
+                self.assertTrue(not self.output)
                 self.pkgrepo("diff -q -s {0} -s {1}".format(self.rurl1,
                     self.rurl3))
-                self.assert_(not self.output)
+                self.assertTrue(not self.output)
 
                 self.pkgsend_bulk(self.rurl1, (self.foo20t1))
                 self.pkgsend_bulk(self.rurl2, (self.foo20t1))
                 self.pkgsend_bulk(self.rurl3, (self.foo20t2))
                 self.pkgrepo("diff -s {0} -s {1}".format(self.rurl1,
                     self.rurl3), exit=10)
-                self.assert_("test1" in self.output)
+                self.assertTrue("test1" in self.output)
                 self.pkgrepo("diff -v -s {0} -s {1}".format(self.rurl1,
                     self.rurl3), exit=10)
-                self.assert_("- pkg://test1/foo@2.0,5.11-0:20120804T203458Z" in
+                self.assertTrue("- pkg://test1/foo@2.0,5.11-0:20120804T203458Z" in
                     self.output)
-                self.assert_("+ pkg://test1/foo@2.0,5.11-0:20130804T203458Z" in
+                self.assertTrue("+ pkg://test1/foo@2.0,5.11-0:20130804T203458Z" in
                     self.output)
-                self.assert_("(1 pkg(s) with 1 version(s) are in both "
+                self.assertTrue("(1 pkg(s) with 1 version(s) are in both "
                     "repositories.)" in self.output)
-                self.assert_("test1" in self.output)
+                self.assertTrue("test1" in self.output)
 
                 # Test --strict option.
                 self.pkgrepo("diff --strict -s {0} -s {1}".format(self.rurl1,
                     self.rurl3), exit=10)
-                self.assert_("catalog" in self.output)
+                self.assertTrue("catalog" in self.output)
 
                 self.pkgrepo("diff --strict -s {0} -s {1}".format(self.rurl1,
                     self.rurl2), exit=10)
@@ -3745,19 +3745,19 @@ class TestPkgrepoMultiRepo(pkg5unittest.ManyDepotTestCase):
                 # timestamps.
                 self.pkgrepo("diff -s {0} -s {1}".format(self.rurl1,
                     self.rurl3), exit=10)
-                self.assert_("test1" in self.output)
-                self.assert_("test2" not in self.output)
+                self.assertTrue("test1" in self.output)
+                self.assertTrue("test2" not in self.output)
                 self.pkgrepo("diff -q -s {0} -s {1}".format(self.rurl1,
                     self.rurl2), exit=10)
-                self.assert_(not self.output)
+                self.assertTrue(not self.output)
 
                 self.pkgrepo("diff -v -s {0} -s {1}".format(self.rurl1,
                     self.rurl2), exit=10)
-                self.assert_("- test1" in self.output and "test2" not in
+                self.assertTrue("- test1" in self.output and "test2" not in
                     self.output and "+ test3" in self.output)
                 self.pkgrepo("diff -q -s {0} -s {1}".format(self.rurl1,
                     self.rurl2), exit=10)
-                self.assert_(not self.output)
+                self.assertTrue(not self.output)
                 self.pkgrepo("diff --parsable --strict -s {0} -s {1}".format(
                     self.rurl1, self.rurl2), exit=10)
                 expected = {
@@ -3780,7 +3780,7 @@ class TestPkgrepoMultiRepo(pkg5unittest.ManyDepotTestCase):
 "minus_pubs": [{"publisher": "test1", "packages": 1, "versions": 2}],
 "plus_pubs": [{"publisher": "test3", "packages": 2, "versions": 2}]}
                 output = json.loads(self.output)
-                self.assert_("common_pubs" in output)
+                self.assertTrue("common_pubs" in output)
                 output["common_pubs"][0]["catalog"]["+"] = "replaced"
                 output["common_pubs"][0]["catalog"]["-"] = "replaced"
                 self.assertEqualJSON(json.dumps(expected),
@@ -3788,70 +3788,70 @@ class TestPkgrepoMultiRepo(pkg5unittest.ManyDepotTestCase):
                 # Test -p option.
                 self.pkgrepo("diff -vp test2 -s {0} -s {1}".format(self.rurl1,
                     self.rurl2))
-                self.assert_(not self.output)
+                self.assertTrue(not self.output)
                 # Enable strict check.
                 self.pkgrepo("diff -vp test2 --strict -s {0} -s {1}".format(
                     self.rurl1, self.rurl2), exit=10)
-                self.assert_("test2" in self.output)
+                self.assertTrue("test2" in self.output)
                 self.pkgrepo("diff -p test2 --strict -s {0} -s {1}".format(
                     self.rurl1, self.rurl2), exit=10)
-                self.assert_("test2" in self.output)
-                self.assert_("Repo1:" not in self.output)
+                self.assertTrue("test2" in self.output)
+                self.assertTrue("Repo1:" not in self.output)
 
                 # Test set relationship.
                 self.pkgsend_bulk(self.rurl1, (self.bar10))
                 self.pkgrepo("diff -s {0} -s {1}".format(self.rurl1,
                     self.rurl3), exit=10)
-                self.assert_("test1" in self.output)
-                self.assert_("test2" in self.output and "0 [0]" in \
+                self.assertTrue("test1" in self.output)
+                self.assertTrue("test2" in self.output and "0 [0]" in \
                     self.output)
                 self.pkgrepo("diff --parsable -s {0} -s {1}".format(self.rurl1,
                     self.rurl3), exit=10)
                 output = json.loads(self.output)
                 # test2 in repo1 is the superset of test2 in repo2.
-                self.assert_(output["table_data"][1][2]["packages"] == 0)
-                self.assert_(output["table_data"][1][2]["versions"] == 0)
+                self.assertTrue(output["table_data"][1][2]["packages"] == 0)
+                self.assertTrue(output["table_data"][1][2]["versions"] == 0)
 
                 self.pkgrepo("diff --parsable -v -s {0} -s {1}".format(
                     self.rurl1, self.rurl3), exit=10)
                 output = json.loads(self.output)
                 # test2 in repo1 is the superset of test2 in repo2.
-                self.assert_(output["common_pubs"][1]["-"])
-                self.assert_(not output["common_pubs"][1]["+"])
-                self.assert_("common" in output["common_pubs"][1])
+                self.assertTrue(output["common_pubs"][1]["-"])
+                self.assertTrue(not output["common_pubs"][1]["+"])
+                self.assertTrue("common" in output["common_pubs"][1])
 
                 self.pkgsend_bulk(self.rurl3, (self.bar10, self.moo10))
                 self.pkgrepo("diff -s {0} -s {1}".format(self.rurl1,
                     self.rurl3), exit=10)
-                self.assert_("test1" in self.output)
-                self.assert_("test2" in self.output and "0 [0]" in \
+                self.assertTrue("test1" in self.output)
+                self.assertTrue("test2" in self.output and "0 [0]" in \
                     self.output)
                 self.pkgrepo("diff --parsable -s {0} -s {1}".format(self.rurl1,
                     self.rurl3), exit=10)
                 output = json.loads(self.output)
                 # test2 in repo1 is the subset of test2 in repo2.
-                self.assert_(output["table_data"][1][1]["packages"] == 0)
-                self.assert_(output["table_data"][1][1]["versions"] == 0)
+                self.assertTrue(output["table_data"][1][1]["packages"] == 0)
+                self.assertTrue(output["table_data"][1][1]["versions"] == 0)
 
                 self.pkgrepo("diff --parsable -v -s {0} -s {1}".format(
                     self.rurl1, self.rurl3), exit=10)
                 output = json.loads(self.output)
                 # test2 in repo1 is the superset of test2 in repo2.
-                self.assert_(not output["common_pubs"][1]["-"])
-                self.assert_(output["common_pubs"][1]["+"])
+                self.assertTrue(not output["common_pubs"][1]["-"])
+                self.assertTrue(output["common_pubs"][1]["+"])
 
                 self.pkgrepo("diff -s {0} -s {1}".format(self.rurl1,
                     self.rurl4), exit=10)
-                self.assert_("test2" in self.output)
-                self.assert_("test1" in self.output and "-" in \
+                self.assertTrue("test2" in self.output)
+                self.assertTrue("test1" in self.output and "-" in \
                     self.output and "0 [0]" in self.output)
                 self.pkgrepo("diff --parsable -s {0} -s {1}".format(self.rurl1,
                     self.rurl4), exit=10)
                 output = json.loads(self.output)
                 # test1 in repo4 conatins completely different fmris for the
                 # the one in repo1.
-                self.assert_(output["table_data"][0][3]["packages"] == 0)
-                self.assert_(output["table_data"][0][3]["versions"] == 0)
+                self.assertTrue(output["table_data"][0][3]["packages"] == 0)
+                self.assertTrue(output["table_data"][0][3]["versions"] == 0)
 
                 # Test clone repositories are exactly the same as the
                 # originals.
@@ -3861,7 +3861,7 @@ class TestPkgrepoMultiRepo(pkg5unittest.ManyDepotTestCase):
                 self.assertTrue(ret==0)
                 self.pkgrepo("diff -v --strict -s {0} -s {1}".format(
                     self.rurl4, self.rurl5))
-                self.assert_(not self.output)
+                self.assertTrue(not self.output)
 
 class TestPkgrepoHTTPS(pkg5unittest.HTTPSTestClass):
 
