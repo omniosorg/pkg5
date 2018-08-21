@@ -60,8 +60,8 @@ while (1)
 			{
 				$iosel->remove($client);
 				$iosel->remove($socket);
-				del $connection{$client};
-				del $connection{$socket};
+				delete $connection{$client};
+				delete $connection{$socket};
 				$client->close;
 				$socket->close;
 			}
