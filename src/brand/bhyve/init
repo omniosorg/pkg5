@@ -30,6 +30,7 @@ opts = {
     'vcpus':        '1',
     'ram':          '1G',
     'bootrom':      'BHYVE_RELEASE_CSM',
+    'bootorder':    'cd',
     'hostbridge':   'default',
     'diskif':       'virtio-blk',
     'netif':        'virtio-net-viona',
@@ -81,6 +82,12 @@ if opts['type'] == 'windows':
     # ... - The PCI-ISA bus aka lpc must be in slot 31
     logging.info('Adjusting LPC PCI slot for windows')
     LPC_SLOT        = 31
+
+# At present, moving the CDROM to after the hard disks is the only way we
+# have of changing the boot order. This will hopefully improve in the
+# future.
+if opts['bootorder'].startswith('c') and opts['type'] != 'windows':
+    CDROM_SLOT = 7
 
 args = ['/usr/sbin/bhyve']
 
@@ -192,6 +199,10 @@ while True:
     logging.info("Bhyve exited {0}".format(ret.returncode))
     logging.error("Error {0}".format(ret.stderr))
     logging.debug("Output {0}".format(ret.stdout))
+    # 0 - rebooted
+    # 1 - powered off
+    # 2 - halted
+    # 3 - triple fault
     if ret.returncode != 0: break
 
 # Vim hints
