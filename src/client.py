@@ -103,7 +103,7 @@ except KeyboardInterrupt:
         import sys
         sys.exit(1)
 
-CLIENT_API_VERSION = 82
+CLIENT_API_VERSION = 83
 PKG_CLIENT_NAME = "pkg"
 
 JUST_UNKNOWN = 0
@@ -281,12 +281,14 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False,
         adv_usage["search"] = _(
             "[-HIaflpr] [-o attribute ...] [-s repo_uri] query")
 
-        adv_usage["verify"] = _("[-Hqv] [pkg_fmri_pattern ...]")
+        adv_usage["verify"] = _("[-Hqv] [--parsable version] [--unpackaged]\n"
+            "            [--unpackaged-only] [pkg_fmri_pattern ...]")
         adv_usage["fix"] = _(
             "[-Hnvq] [--no-be-activate]\n"
             "            [--no-backup-be | --require-backup-be] [--backup-be-name name]\n"
             "            [--deny-new-be | --require-new-be] [--be-name name]\n"
-            "            [--accept] [--licenses] [pkg_fmri_pattern ...]")
+            "            [--accept] [--licenses] [--parsable version] [--unpackaged]\n"
+            "            [pkg_fmri_pattern ...]")
         adv_usage["revert"] = _(
             "[-nv] [--no-be-activate]\n"
             "            [--no-backup-be | --require-backup-be] [--backup-be-name name]\n"
@@ -1022,6 +1024,7 @@ def __display_parsable_plan(api_inst, parsable_version, child_images=None):
         mediators_changed = []
         editables_changed = []
         pkg_actuators = {}
+        item_messages = {}
         licenses = []
         if child_images is None:
                 child_images = []
@@ -1098,6 +1101,7 @@ def __display_parsable_plan(api_inst, parsable_version, child_images=None):
                             (str(dfmri), src_tup, dest_tup))
                         api_inst.set_plan_license_status(dfmri, dest_li.license,
                             displayed=True)
+                item_messages = plan.get_parsable_item_messages()
 
         ret = {
             "activate-be": be_activated,
@@ -1116,6 +1120,7 @@ def __display_parsable_plan(api_inst, parsable_version, child_images=None):
             "create-backup-be": backup_be_created,
             "create-new-be": new_be_created,
             "image-name": None,
+            "item-messages": item_messages,
             "licenses": sorted(licenses, key=lambda x: (x[0], x[1], x[2])),
             "release-notes": release_notes,
             "remove-packages": sorted(removed_fmris),
@@ -1175,16 +1180,15 @@ def display_plan(api_inst, child_image_plans, noexecute, omit_headers, op,
                 return
 
         if not quiet and parsable_version is None and \
-            api_inst.planned_nothingtodo(li_ignore_all=True):
-                if not quiet_plan:
-                        # nothing todo
-                        if op == PKG_OP_UPDATE:
-                                s = _("No updates available for this image.")
-                        else:
-                                s = _("No updates necessary for this image.")
-                        if api_inst.ischild():
-                                s += " ({0})".format(api_inst.get_linked_name())
-                        msg(s)
+            api_inst.planned_nothingtodo(li_ignore_all=True) and not quiet_plan:
+                # nothing todo
+                if op == PKG_OP_UPDATE:
+                        s = _("No updates available for this image.")
+                else:
+                        s = _("No updates necessary for this image.")
+                if api_inst.ischild():
+                        s += " ({0})".format(api_inst.get_linked_name())
+                msg(s)
 
                 if op != PKG_OP_FIX or not verbose:
                         # Even nothingtodo, but need to continue to display INFO
@@ -1209,32 +1213,106 @@ def display_plan(api_inst, child_image_plans, noexecute, omit_headers, op,
                 last_item_id = None
                 for item_id, msg_time, msg_type, msg_text in \
                     plan.gen_item_messages(ordered=True):
-
+                        ntd = api_inst.planned_nothingtodo(li_ignore_all=True)
                         if last_item_id is None or last_item_id != item_id:
                                 last_item_id = item_id
-                                if not noexecute and op == PKG_OP_FIX and \
+                                if op == PKG_OP_FIX and not noexecute and \
                                     msg_type == MSG_ERROR:
-                                        msg(_("Repairing: {0:50}").format(
-                                            item_id))
+                                        if ntd:
+                                                msg(_("Could not repair: {0:50}"
+                                                    ).format(item_id))
+                                        else:
+                                                msg(_("Repairing: {0:50}"
+                                                    ).format(item_id))
 
-                        if op == PKG_OP_FIX and not verbose and \
-                            msg_type == MSG_INFO:
-                                # If verbose is False, don't display any INFO
-                                # messages.
-                                continue
+                        if op == PKG_OP_FIX:
+                                if not verbose and msg_type == MSG_INFO:
+                                        # If verbose is False, don't display
+                                        # any INFO messages.
+                                        continue
 
-                        if not omit_headers:
-                                omit_headers = True
-                                msg(_("{pkg_name:70} {result:>7}").format(
-                                    pkg_name=_("PACKAGE"),
-                                    result=_("STATUS")))
+                                if not omit_headers:
+                                        omit_headers = True
+                                        msg(_("{pkg_name:70} {result:>7}").format(
+                                            pkg_name=_("PACKAGE"),
+                                            result=_("STATUS")))
 
                         msg(msg_text)
+
+def __print_verify_result(op, api_inst, plan, noexecute, omit_headers,
+    verbose, print_packaged=True):
+        did_print_something = False
+        if print_packaged:
+                last_item_id = None
+                ntd = api_inst.planned_nothingtodo(li_ignore_all=True)
+                for item_id, parent_id, msg_time, msg_level, msg_type, \
+                    msg_text in plan.gen_item_messages(ordered=True):
+                        if msg_type == MSG_UNPACKAGED:
+                                continue
+                        if parent_id is None and last_item_id != item_id:
+                                if op == PKG_OP_FIX and not noexecute and \
+                                    msg_level == MSG_ERROR:
+                                        if ntd:
+                                                msg(_("Could not repair: {0:50}"
+                                                    ).format(item_id))
+                                        else:
+                                                msg(_("Repairing: {0:50}"
+                                                    ).format(item_id))
+
+                        if op in [PKG_OP_FIX, PKG_OP_VERIFY]:
+                                if not verbose and msg_level == MSG_INFO:
+                                        # If verbose is False, don't display
+                                        # any INFO messages.
+                                        continue
+
+                                if not omit_headers:
+                                        omit_headers = True
+                                        msg(_("{pkg_name:70} {result:>7}"
+                                            ).format(pkg_name=_("PACKAGE"),
+                                            result=_("STATUS")))
+
+                        # Top level message.
+                        if not parent_id:
+                                msg(msg_text)
+                        elif item_id == "overlay_errors":
+                                msg(_("\t{0}").format(msg_text))
+                        elif last_item_id != item_id:
+                                # A new action id; we need to print it out and
+                                # then group its subsequent messages.
+                                msg(_("\t{0}\n\t\t{1}").format(item_id,
+                                    msg_text))
+                        else:
+                                msg(_("\t\t{0}").format(msg_text))
+                        last_item_id = item_id
+                        did_print_something = True
+        else:
+                if not omit_headers:
+                        msg(_("UNPACKAGED CONTENTS"))
+
+                # Print warning messages at the beginning.
+                for item_id, parent_id, msg_time, msg_level, msg_type, \
+                    msg_text in plan.gen_item_messages():
+                        if msg_type != MSG_UNPACKAGED:
+                                continue
+                        if msg_level == MSG_WARNING:
+                                msg(_("WARNING: {0}").format(msg_text))
+                # Print the rest of messages.
+                for item_id, parent_id, msg_time, msg_level, msg_type, \
+                    msg_text in plan.gen_item_messages(ordered=True):
+                        if msg_type != MSG_UNPACKAGED:
+                                continue
+                        if msg_level == MSG_INFO:
+                                msg(_("{0}:\n\t{1}").format(
+                                    item_id, msg_text))
+                        elif msg_level == MSG_ERROR:
+                                msg(_("ERROR: {0}").format(msg_text))
+                        did_print_something = True
+        return did_print_something
 
 def display_plan_cb(api_inst, child_image_plans=None, noexecute=False,
     omit_headers=False, op=None, parsable_version=None, quiet=False,
     quiet_plan=False, show_licenses=False, stage=None, verbose=None,
-    get_parsable_plan_cb=None, plan_only=False):
+    unpackaged=False, unpackaged_only=False, plan_only=False):
         """Callback function for displaying plan."""
 
         if plan_only:
@@ -1252,18 +1330,17 @@ def display_plan_cb(api_inst, child_image_plans=None, noexecute=False,
                 return
 
         if not quiet and parsable_version is None and \
-            api_inst.planned_nothingtodo(li_ignore_all=True):
-                if not quiet_plan:
-                        # nothing todo
-                        if op == PKG_OP_UPDATE:
-                                s = _("No updates available for this image.")
-                        else:
-                                s = _("No updates necessary for this image.")
-                        if api_inst.ischild():
-                                s += " ({0})".format(api_inst.get_linked_name())
-                        msg(s)
+            api_inst.planned_nothingtodo(li_ignore_all=True) and not quiet_plan:
+                # nothing todo
+                if op == PKG_OP_UPDATE:
+                        s = _("No updates available for this image.")
+                else:
+                        s = _("No updates necessary for this image.")
+                if api_inst.ischild():
+                        s += " ({0})".format(api_inst.get_linked_name())
+                msg(s)
 
-                if op != PKG_OP_FIX or not verbose:
+                if op not in [PKG_OP_FIX, PKG_OP_VERIFY] or not verbose:
                         # Even nothingtodo, but need to continue to display INFO
                         # message if verbose is True.
                         return
@@ -1274,9 +1351,9 @@ def display_plan_cb(api_inst, child_image_plans=None, noexecute=False,
         if not quiet and not quiet_plan:
                 __display_plan(api_inst, verbose, noexecute, op=op)
 
-        if parsable_version is not None and get_parsable_plan_cb:
-                parsable_plan = get_parsable_plan_cb(api_inst,
-                    parsable_version, child_image_plans)
+        if parsable_version is not None:
+                parsable_plan = plan.get_parsable_plan(parsable_version,
+                    child_image_plans, api_inst=api_inst)
                 logger.info(json.dumps(parsable_plan))
         elif not quiet:
                 if not quiet_plan:
@@ -1284,30 +1361,21 @@ def display_plan_cb(api_inst, child_image_plans=None, noexecute=False,
                         # output.
                         msg()
 
-                last_item_id = None
-                for item_id, msg_time, msg_type, msg_text in \
-                    plan.gen_item_messages(ordered=True):
+                # Message print for package verification result.
+                if not unpackaged_only:
+                        did_print = __print_verify_result(op, api_inst, plan,
+                            noexecute, omit_headers, verbose)
 
-                        if last_item_id is None or last_item_id != item_id:
-                                last_item_id = item_id
-                                if not noexecute and op == PKG_OP_FIX and \
-                                    msg_type == MSG_ERROR:
-                                        msg(_("Repairing: {0:50}").format(
-                                            item_id))
+                        # Print an extra line to separate output between
+                        # packaged and unpackaged content.
+                        if did_print and unpackaged and any(entry[4] ==
+                            MSG_UNPACKAGED for entry in
+                            plan.gen_item_messages()):
+                                msg("".join(["-"] * 80))
 
-                        if op == PKG_OP_FIX and not verbose and \
-                            msg_type == MSG_INFO:
-                                # If verbose is False, don't display any INFO
-                                # messages.
-                                continue
-
-                        if not omit_headers:
-                                omit_headers = True
-                                msg(_("{pkg_name:70} {result:>7}").format(
-                                    pkg_name=_("PACKAGE"),
-                                    result=_("STATUS")))
-
-                        msg(msg_text)
+                if unpackaged or unpackaged_only:
+                        __print_verify_result(op, api_inst, plan, noexecute,
+                            omit_headers, verbose, print_packaged=False)
 
 def __api_prepare_plan(operation, api_inst):
         """Prepare plan."""
@@ -1752,6 +1820,16 @@ def __api_plan_delete(api_inst):
         except OSError as e:
                 raise api_errors._convert_error(e)
 
+def _verify_exit_code(api_inst):
+        """Determine the exit code of pkg verify, which should be based on
+        whether we find errors."""
+
+        plan = api_inst.describe()
+        for item_id, msg_time, msg_type, msg_text in plan.gen_item_messages():
+                if msg_type == MSG_ERROR:
+                        return EXIT_OOPS
+        return EXIT_OK
+
 def __api_op(_op, _api_inst, _accept=False, _li_ignore=None, _noexecute=False,
     _omit_headers=False, _origins=None, _parsable_version=None, _quiet=False,
     _quiet_plan=False, _review_release_notes=False, _show_licenses=False,
@@ -1784,6 +1862,9 @@ def __api_op(_op, _api_inst, _accept=False, _li_ignore=None, _noexecute=False,
                         # consumer from creating a noop plan and then
                         # preparing and executing it.)
                         __api_plan_save(_api_inst)
+                # for pkg verify
+                if _op == PKG_OP_FIX and _noexecute and _quiet_plan:
+                        return _verify_exit_code(_api_inst)
                 if _api_inst.planned_nothingtodo():
                         return EXIT_NOP
                 if _noexecute or _stage == API_STAGE_PLAN:
@@ -2371,6 +2452,23 @@ def uninstall(op, api_inst, pargs,
 
         return __handle_client_json_api_output(out_json, op)
 
+def verify(op, api_inst, pargs, omit_headers, parsable_version, quiet, verbose,
+    unpackaged, unpackaged_only):
+        """Determine if installed packages match manifests."""
+
+        out_json = client_api._verify(op, api_inst, pargs, omit_headers,
+            parsable_version, quiet, verbose, unpackaged, unpackaged_only,
+            display_plan_cb=display_plan_cb, logger=logger)
+
+        # Print error messages.
+        if "errors" in out_json:
+                _generate_error_messages(out_json["status"],
+                    out_json["errors"], cmd=op)
+
+        # Since the verify output has been handled by display_plan_cb, only
+        # status code needs to be returned.
+        return out_json["status"]
+
 def revert(op, api_inst, pargs,
     backup_be, backup_be_name, be_activate, be_name, new_be, noexecute,
     parsable_version, quiet, tagged, verbose):
@@ -2399,30 +2497,20 @@ def rehydrate(op, api_inst, pargs, noexecute, publishers, quiet, verbose):
 
 def fix(op, api_inst, pargs, accept, backup_be, backup_be_name, be_activate,
     be_name, new_be, noexecute, omit_headers, parsable_version, quiet,
-    show_licenses, verbose):
+    show_licenses, verbose, unpackaged):
         """Fix packaging errors found in the image."""
 
-        return __api_op(op, api_inst, args=pargs, _accept=accept,
-            _noexecute=noexecute, _omit_headers=omit_headers, _quiet=quiet,
-            _show_licenses=show_licenses, _verbose=verbose, backup_be=backup_be,
-            backup_be_name=backup_be_name, be_activate=be_activate,
-            be_name=be_name, new_be=new_be, _parsable_version=parsable_version)
+        out_json = client_api._fix(op, api_inst, pargs, accept, backup_be,
+            backup_be_name, be_activate, be_name, new_be, noexecute,
+            omit_headers, parsable_version, quiet, show_licenses, verbose,
+            unpackaged, display_plan_cb=display_plan_cb, logger=logger)
 
-def verify(op, api_inst, pargs, omit_headers, parsable_version, quiet, verbose):
-        """Determine if installed packages match manifests."""
+        # Print error messages.
+        if "errors" in out_json:
+                _generate_error_messages(out_json["status"],
+                    out_json["errors"], cmd=op)
 
-        rval = __api_op(PKG_OP_FIX, api_inst, args=pargs, _noexecute=True,
-            _omit_headers=omit_headers, _quiet=quiet, _quiet_plan=True,
-            _verbose=verbose, _parsable_version=parsable_version)
-
-        if rval == EXIT_NOP:
-                # Nothing to fix.
-                return EXIT_OK
-        elif rval == EXIT_OK:
-                # Fixes to image required.
-                return EXIT_OOPS
-        else:
-                return rval
+        return out_json["status"]
 
 def list_mediators(op, api_inst, pargs, omit_headers, output_format,
     list_available):
@@ -5234,6 +5322,10 @@ opts_mapping = {
     "omit_headers" :      ("H",  ""),
 
     "update_index" :      ("",  "no-index"),
+
+    "unpackaged" :        ("",  "unpackaged"),
+
+    "unpackaged_only" :        ("",  "unpackaged-only"),
 
     "refresh_catalogs" :  ("",  "no-refresh"),
 
