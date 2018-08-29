@@ -693,13 +693,21 @@ def __display_plan(api_inst, verbose, noexecute, op=None):
                 # Warn the user since this isn't likely what they wanted.
                 if plan.new_be:
                         logger.warning(_("""\
-WARNING: The boot environment being modified is not the active one.  Changes
-made in the active BE will not be reflected on the next boot.
+
+******************************************************************************
+WARNING: The boot environment being modified is not the active one.
+         Changes made in the active BE will not be reflected on the next boot.
+******************************************************************************
+
 """))
                 else:
                         logger.warning(_("""\
-WARNING: The boot environment being modified is not the active one.  Changes
-made will not be reflected on the next boot.
+
+******************************************************************************
+WARNING: The boot environment being modified is not the active one.
+         Changes made will not be reflected on the next boot.
+******************************************************************************
+
 """))
 
         a, r, i, c = [], [], [], []
