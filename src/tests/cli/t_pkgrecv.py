@@ -56,6 +56,8 @@ from six.moves.urllib.request import url2pathname
 class TestPkgrecvMulti(pkg5unittest.ManyDepotTestCase):
         # Cleanup after every test.
         persistent_setup = False
+        # Tests in this suite use the read only data directory.
+        need_ro_data = True
 
         scheme10 = """
             open pkg:/scheme@1.0,5.11-0
@@ -154,6 +156,7 @@ class TestPkgrecvMulti(pkg5unittest.ManyDepotTestCase):
             add license tmp/copyright3 license=copyright
             add file tmp/bronzeA2 mode=0444 owner=root group=bin path=/A1/B2/C3/D4/E5/F6/bronzeA2
             add depend fmri=pkg:/amber@2.0 type=require
+            add file ro_data/elftest.so.1 mode=0755 owner=root group=bin path=bin/true
             close
         """
 
@@ -1243,9 +1246,9 @@ class TestPkgrecvMulti(pkg5unittest.ManyDepotTestCase):
                 self.pkgrecv(self.dpath1, "-d {0} -n -v \*".format(self.tempdir))
                 expected = """\
 Retrieving packages (dry-run) ...
-        Packages to add:        9
-      Files to retrieve:       17
-Estimated transfer size: 528.00 B
+        Packages to add:       9
+      Files to retrieve:      19
+Estimated transfer size: 3.17 kB
 """
                 self.assertTrue(expected in self.output, self.output)
                 for s in self.published:
@@ -1259,9 +1262,9 @@ Estimated transfer size: 528.00 B
                 self.pkgrecv(self.dpath1, "-a -d {0} -n -v \*".format(self.tempdir))
                 expected = """\
 Archiving packages (dry-run) ...
-        Packages to add:        9
-      Files to retrieve:       17
-Estimated transfer size: 528.00 B
+        Packages to add:       9
+      Files to retrieve:      19
+Estimated transfer size: 3.17 kB
 """
                 self.assertTrue(expected in self.output, self.output)
                 for s in self.published:
@@ -1274,9 +1277,9 @@ Estimated transfer size: 528.00 B
                    .format(self.tempdir))
                 expected = """\
 Retrieving packages (dry-run) ...
-        Packages to add:        9
-      Files to retrieve:       17
-Estimated transfer size: 528.00 B
+        Packages to add:       9
+      Files to retrieve:      19
+Estimated transfer size: 3.17 kB
 """
                 self.assertTrue(expected in self.output, self.output)
                 for s in self.published:
