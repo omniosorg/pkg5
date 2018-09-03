@@ -359,6 +359,8 @@ static PyMethodDef methods[] = {
 	{ "get_info", get_info, METH_VARARGS },
 	{ "get_dynamic", (PyCFunction)get_dynamic,
         METH_VARARGS | METH_KEYWORDS},
+	{ "get_hashes", (PyCFunction)get_dynamic,
+        METH_VARARGS | METH_KEYWORDS},
 	{ NULL, NULL }
 };
 
