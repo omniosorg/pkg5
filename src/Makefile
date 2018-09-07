@@ -77,8 +77,12 @@ clobber: $(SUBDIRS)
 # run pylint as part of the install target.
 # it's the best way to ensure things stay pylint clean.
 #
-install: $(SUBDIRS)
+install: $(SUBDIRS) install2 install3
+
+install2: $(SUBDIRS)
 	ISALIST=i386 CC=$(CC) $(PYTHON27) setup.py install
+
+install3:
 	CC=$(CC) $(PYTHON35) setup.py install
 
 lint:
@@ -109,8 +113,10 @@ packages: install
 		PATH=$(CODE_WS)/proto/root_$$(uname -p)/usr/bin:$$PATH \
 		CC=$(CC)
 
-test: install
+test: install test2 test3
+test2:
 	-pfexec $(PYTHON27) tests/run.py -j ${JOBS}
+test3:
 	-pfexec $(PYTHON35) tests/run.py -j ${JOBS}
 
 FRC:
