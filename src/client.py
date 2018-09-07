@@ -204,14 +204,14 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False,
             "            [--licenses] [--no-be-activate] [--no-index] [--no-refresh]\n"
             "            [--no-backup-be | --require-backup-be] [--backup-be-name name]\n"
             "            [--deny-new-be | --require-new-be] [--be-name name]\n"
-            "            [-R | -r [-z image_name ... | -Z image_name ...]]\n"
+            "            [-R | -r [-z zonename... | -Z zonename...]]\n"
             "            [--sync-actuators | --sync-actuators-timeout timeout]\n"
             "            [--reject pkg_fmri_pattern ... ] pkg_fmri_pattern ...")
         basic_usage["uninstall"] = _(
             "[-nvq] [-C n] [--ignore-missing] [--no-be-activate] [--no-index]\n"
             "            [--no-backup-be | --require-backup-be] [--backup-be-name]\n"
             "            [--deny-new-be | --require-new-be] [--be-name name]\n"
-            "            [-R | -r [-z image_name ... | -Z image_name ...]]\n"
+            "            [-R | -r [-z zonename... | -Z zonename...]]\n"
             "            [--sync-actuators | --sync-actuators-timeout timeout]\n"
             "            pkg_fmri_pattern ...")
         basic_usage["update"] = _(
@@ -219,14 +219,14 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False,
             "            [--licenses] [--no-be-activate] [--no-index] [--no-refresh]\n"
             "            [--no-backup-be | --require-backup-be] [--backup-be-name]\n"
             "            [--deny-new-be | --require-new-be] [--be-name name]\n"
-            "            [-R | -r [-z image_name ... | -Z image_name ...]]\n"
+            "            [-R | -r [-z zonename... | -Z zonename...]]\n"
             "            [--sync-actuators | --sync-actuators-timeout timeout]\n"
             "            [--reject pkg_fmri_pattern ...] [pkg_fmri_pattern ...]")
         basic_usage["apply-hot-fix"] = _(
             "[-nvq] [--no-be-activate]\n"
             "            [--no-backup-be | --require-backup-be] [--backup-be-name]\n"
             "            [--deny-new-be | --require-new-be] [--be-name name]\n"
-            "            [-R | -r [-z image_name ... | -Z image_name ...]]\n"
+            "            [-R | -r [-z zonename... | -Z zonename...]]\n"
             "            <path_or_uri> [pkg_fmri_pattern ...]")
         basic_usage["list"] = _(
             "[-Hafnqsuv] [-g path_or_uri ...] [--no-refresh]\n"
@@ -316,7 +316,7 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False,
             "            [--licenses] [--no-be-activate] [--no-index] [--no-refresh]\n"
             "            [--no-backup-be | --require-backup-be] [--backup-be-name name]\n"
             "            [--deny-new-be | --require-new-be] [--be-name name]\n"
-            "            [-R | -r [-z image_name ... | -Z image_name ...]]\n"
+            "            [-R | -r [-z zonename... | -Z zonename...]]\n"
             "            [--sync-actuators | --sync-actuators-timeout timeout]\n"
             "            [--reject pkg_fmri_pattern ... ]\n"
             "            <variant_spec>=<instance> ...")
@@ -326,7 +326,7 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False,
             "            [--licenses] [--no-be-activate] [--no-index] [--no-refresh]\n"
             "            [--no-backup-be | --require-backup-be] [--backup-be-name name]\n"
             "            [--deny-new-be | --require-new-be] [--be-name name]\n"
-            "            [-R | -r [-z image_name ... | -Z image_name ...]]\n"
+            "            [-R | -r [-z zonename... | -Z zonename...]]\n"
             "            [--sync-actuators | --sync-actuators-timeout timeout]\n"
             "            [--reject pkg_fmri_pattern ... ]\n"
             "            <facet_spec>=[True|False|None] ...")
@@ -362,7 +362,7 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False,
             "            [-m mirror_to_add|--add-mirror=mirror_to_add ...]\n"
             "            [-M mirror_to_remove|--remove-mirror=mirror_to_remove ...]\n"
             "            [-p repo_uri] [--enable] [--disable] [--no-refresh]\n"
-            "            [-R | -r [-z image_name ... | -Z image_name ...]]\n"
+            "            [-R | -r [-z zonename... | -Z zonename...]]\n"
             "            [--reset-uuid] [--non-sticky] [--sticky]\n"
             "            [--search-after=publisher]\n"
             "            [--search-before=publisher]\n"
@@ -3979,7 +3979,7 @@ def publisher_set(op, api_inst, pargs, ssl_key, ssl_cert, origin_uri,
             [-g|--add-origin origin to add] [-G|--remove-origin origin to
             remove] [-m|--add-mirror mirror to add] [-M|--remove-mirror mirror
             to remove] [-p repo_uri] [--enable] [--disable] [--no-refresh]
-            [-R | -r [-z image_name ... | -Z image_name ...]]
+            [-R | -r [-z zonename... | -Z zonename...]]
             [--sticky] [--non-sticky ] [--search-before=publisher]
             [--search-after=publisher]
             [--approve-ca-cert path to CA]
