@@ -831,7 +831,7 @@ def subcmd_info(conf, args):
                 notfound = set()
 
         def gen_listing():
-                for pfx in found:
+                for pfx in sorted(found):
                         pdata = pub_idx[pfx]
                         pkg_count = pdata.get("package-count", 0)
                         last_update = pdata.get("last-catalog-update", "")
@@ -935,7 +935,7 @@ def subcmd_list(conf, args):
 
         def gen_listing():
                 collect_attrs = out_format.startswith("json")
-                for pub in pub_data:
+                for pub in sorted(pub_data):
                         cat = pub.catalog
                         for f, states, attrs in cat.gen_packages(
                             collect_attrs=collect_attrs, matched=matched,
