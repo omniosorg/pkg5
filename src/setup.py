@@ -1074,11 +1074,11 @@ class build_func(_build):
 def get_git_version():
         try:
                 p = subprocess.Popen(
-                    ['git', 'show', '--format=%at', '--no-patch'],
+                    ['git', 'show', '--format=%h', '--no-patch'],
                     stdout = subprocess.PIPE)
                 return p.communicate()[0].strip()
         except OSError:
-                print("ERROR: unable to obtain mercurial/git version",
+                print("ERROR: unable to obtain git commit hash",
                     file=sys.stderr)
                 return "unknown"
 
