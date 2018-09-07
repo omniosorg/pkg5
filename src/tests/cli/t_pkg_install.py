@@ -8877,10 +8877,10 @@ class TestPkgInstallLicense(pkg5unittest.SingleDepotTestCase):
                 self.pkg("install --parsable=0 licensed@1.0")
                 self.assertEqualParsable(self.output,
                     add_packages=[self.plist[3], self.plist[0]], licenses=[
-                        [self.plist[3], None,
+                        [self.plist[3], [],
                             [self.plist[3], "copyright.baz", "copyright.baz",
                             False, False]],
-                        [self.plist[0], None,
+                        [self.plist[0], [],
                             [self.plist[0], "copyright.licensed",
                             "copyright.licensed", False, False]
                         ]])
@@ -8901,7 +8901,7 @@ class TestPkgInstallLicense(pkg5unittest.SingleDepotTestCase):
                 self.assertEqualParsable(self.output,
                     change_packages=[[self.plist[0], self.plist[1]]], licenses=[
                         [self.plist[1],
-                            None,
+                            [],
                             [self.plist[1], "license.licensed",
                             "license.licensed", False, False]],
                         [self.plist[1],
