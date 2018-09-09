@@ -25,6 +25,11 @@
 #
 
 import hashlib
+try:
+        import pkg.sha512_t
+        sha512_supported = True
+except ImportError:
+        sha512_supported = False
 
 # When running the test suite, we alter our behaviour depending on certain
 # debug flags.
@@ -77,7 +82,16 @@ LEGACY_CONTENT_HASH_ATTRS = ["elfhash"]
 LEGACY_CHAIN_ATTRS = ["chain"]
 LEGACY_CHAIN_CHASH_ATTRS = ["chain.chashes"]
 
-if DebugValues["hash"] == "sha1+sha256":
+if DebugValues["hash"] == "sha1+sha512_256" and sha512_supported:
+        # Simulate pkg(5) where SHA-1 and SHA-512/256 are used for publication
+        DEFAULT_HASH_ATTRS = ["hash", "pkg.hash.sha512_256"]
+        DEFAULT_CHASH_ATTRS = ["chash", "pkg.chash.sha512_256"]
+        DEFAULT_CONTENT_HASH_ATTRS = ["elfhash", "pkg.content-hash.sha512_256"]
+        DEFAULT_CHAIN_ATTRS = ["chain", "pkg.chain.sha512_256"]
+        DEFAULT_CHAIN_CHASH_ATTRS = ["chain.chashes",
+            "pkg.chain.chashes.sha512_256"]
+
+elif DebugValues["hash"] == "sha1+sha256":
         # Simulate pkg(5) where SHA-1 and SHA-256 are used for publication
         DEFAULT_HASH_ATTRS = ["hash", "pkg.hash.sha256"]
         DEFAULT_CHASH_ATTRS = ["chash", "pkg.chash.sha256"]
@@ -85,6 +99,14 @@ if DebugValues["hash"] == "sha1+sha256":
         DEFAULT_CHAIN_ATTRS = ["chain", "pkg.chain.sha256"]
         DEFAULT_CHAIN_CHASH_ATTRS = ["chain.chashes",
             "pkg.chain.chashes.sha256"]
+
+elif DebugValues["hash"] == "sha512_256" and sha512_supported:
+        # Simulate pkg(5) where SHA-1 is no longer used for publication
+        DEFAULT_HASH_ATTRS = ["pkg.hash.sha512_256"]
+        DEFAULT_CHASH_ATTRS = ["pkg.chash.sha512_256"]
+        DEFAULT_CONTENT_HASH_ATTRS = ["pkg.content-hash.sha512_256"]
+        DEFAULT_CHAIN_ATTRS = ["pkg.chain.sha512_256"]
+        DEFAULT_CHAIN_CHASH_ATTRS = ["pkg.chain.chashes.sha512_256"]
 
 elif DebugValues["hash"] == "sha256":
         # Simulate pkg(5) where SHA-1 is no longer used for publication
@@ -133,6 +155,9 @@ else:
             "pkg.hash.sha256": hashlib.sha256,
         }
 
+        if sha512_supported:
+                HASH_ALGS["pkg.hash.sha512_256"] = pkg.sha512_t.SHA512_t
+
 # A dictionary of the compressed hash attributes we know about.
 CHASH_ALGS = {}
 for key in HASH_ALGS:
@@ -173,12 +198,20 @@ for key in HASH_ALGS:
 if DebugValues["hash"] == "sha1":
         RANKED_HASH_ATTRS = ("hash")
 elif DebugValues["hash"] == "sha2":
-        RANKED_HASH_ATTRS = ("pkg.hash.sha256",)
+        if sha512_supported:
+                RANKED_HASH_ATTRS = ("pkg.hash.sha512_256",)
+        else:
+                RANKED_HASH_ATTRS = ("pkg.hash.sha256",)
 else:
         RANKED_HASH_ATTRS = (
             "pkg.hash.sha256",
             "hash",
         )
+
+        if sha512_supported:
+                RANKED_HASH_ATTRS = (
+                    "pkg.hash.sha512_256",
+                ) + RANKED_HASH_ATTRS
 
 RANKED_CHASH_ATTRS = tuple(key.replace("hash", "chash")
     for key in RANKED_HASH_ATTRS)

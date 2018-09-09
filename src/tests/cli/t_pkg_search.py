@@ -46,6 +46,12 @@ import pkg.fmri as fmri
 import pkg.indexer as indexer
 import pkg.portable as portable
 
+try:
+        import pkg.sha512_t as sha512_t
+        sha512_supported = True
+except ImportError:
+        sha512_supported = False
+
 class TestPkgSearchBasics(pkg5unittest.SingleDepotTestCase):
 
         example_pkg10 = """
@@ -1131,6 +1137,18 @@ class TestSearchMultiPublisher(pkg5unittest.ManyDepotTestCase):
                 that add sha256 hashes to the set of hashes we append to
                 actions at publication time."""
                 self.base_search_multi_hash("sha256", hashlib.sha256)
+
+        def test_search_multi_hash_2(self):
+                """Check that when searching a repository with multiple
+                hashes, all hash attributes are indexed and we can search
+                against all hash attributes.
+
+                This test depends on pkg.digest having DebugValue settings
+                that add sha512/256 hashes to the set of hashes we append to
+                actions at publication time."""
+                if sha512_supported:
+                        self.base_search_multi_hash("sha512_256",
+                            sha512_t.SHA512_t)
 
         def base_search_multi_hash(self, hash_alg, hash_fun):
                 # our 2nd depot gets the package published with multiple hash

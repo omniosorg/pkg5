@@ -49,6 +49,12 @@ import tempfile
 import time
 import unittest
 
+try:
+        import pkg.sha512_t
+        sha512_supported = True
+except ImportError:
+        sha512_supported = False
+
 class TestPkgRepo(pkg5unittest.SingleDepotTestCase):
         # Cleanup after every test.
         persistent_setup = False
@@ -1539,6 +1545,8 @@ publisher\tprefix\texample.net
                         self.assertTrue(not os.listdir(rstore.file_root))
 
                 hash_alg_list = ["sha256"]
+                if sha512_supported:
+                        hash_alg_list.append("sha512_256")
                 for hash_alg in hash_alg_list:
                         # Reset the src_repo for the rest of the test.
                         shutil.rmtree(src_repo)
@@ -2123,6 +2131,8 @@ test2	zoo		1.0	5.11	0	20110804T203458Z	pkg://test2/zoo@1.0,5.11-0:20110804T20345
                 # Check that when verifying content, we always use the most
                 # preferred hash.
                 hash_alg_list = ["sha256"]
+                if sha512_supported:
+                        hash_alg_list.append("sha512_256")
                 for hash_alg in hash_alg_list:
                         # Remove all existing packages first.
                         self.pkgrepo("-s {0} remove {1}".format(repo_path,

@@ -53,6 +53,12 @@ import pkg.portable as portable
 from pkg.client.debugvalues import DebugValues
 from pkg.pkggzip import PkgGzipFile
 
+try:
+        import pkg.sha512_t
+        sha512_supported = True
+except ImportError:
+        sha512_supported = False
+
 obsolete_pkg = """
     open obs@1.0,5.11-0
     add set name=pkg.obsolete value=true
@@ -531,6 +537,8 @@ class TestPkgSign(pkg5unittest.SingleDepotTestCase):
                 signature doesn't cause anything to break."""
 
                 self.base_multiple_signatures("sha256")
+                if sha512_supported:
+                        self.base_multiple_signatures("sha512_256")
 
         def test_no_empty_chain(self):
                 """Test that signing do not create empty chain"""
@@ -2473,6 +2481,8 @@ class TestPkgSign(pkg5unittest.SingleDepotTestCase):
                                 fh.write(l)
 
                 hash_alg_list = ["sha256"]
+                if sha512_supported:
+                        hash_alg_list.append("sha512_256")
                 for hash_alg in hash_alg_list:
                         # Rebuild the catalog so that hash verification for the
                         # manifest won't cause problems.
