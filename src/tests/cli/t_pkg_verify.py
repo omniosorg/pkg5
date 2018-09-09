@@ -79,7 +79,7 @@ class TestPkgVerify(pkg5unittest.SingleDepotTestCase):
         sysattr2 = """
             open sysattr2@1.0-0
             add dir mode=0755 owner=root group=bin path=/p2
-            add file bobcat mode=0555 owner=root group=bin sysattr=hidden sysattr=sensitive path=/p2/bobcat
+            add file bobcat mode=0555 owner=root group=bin sysattr=hidden sysattr=nodump path=/p2/bobcat
             close """
 
         misc_files = {
