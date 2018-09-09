@@ -668,7 +668,8 @@ unknown foo
                 """Verify that change-variant fails as expected when globbing
                 is used to refer to the variants."""
 
-                self.image_create(self.rurl)
+                variants = { "variant.icecream": "neapolitan" }
+                self.image_create(self.rurl, variants=variants)
                 self.pkg("install foo@2.0")
 
                 self.pkg("change-variant 'variant.unknown=strawberry'")
