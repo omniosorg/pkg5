@@ -401,7 +401,7 @@ close
 
         res_bug_983 = set([
             ("pkg:/SUNWgmake@3.81-0.89", "basename", "link path=usr/sfw/bin/gmake target=../../bin/gmake"),
-            ('pkg:/SUNWgmake@3.81-0.89', 'basename', 'file 038cc7a09940928aeac6966331a2f18bc40e7792 chash=a3e76bd1b97b715cddc93b2ad6502b41efa4d833 elfarch=i386 elfbits=32 elfhash=6975080bd79b8ccf8b6ba2e64a83ca67fac3e256 group=bin mode=0555 owner=root path=usr/bin/gmake pkg.csize=1358 pkg.size=3948'),
+            ('pkg:/SUNWgmake@3.81-0.89', 'basename', 'file 038cc7a09940928aeac6966331a2f18bc40e7792 chash=a3e76bd1b97b715cddc93b2ad6502b41efa4d833 elfarch=i386 elfbits=32 elfhash=083308992c921537fd757548964f89452234dd11 group=bin mode=0555 owner=root path=usr/bin/gmake pkg.csize=1358 pkg.size=3948'),
             ('pkg:/SUNWgmake@3.81-0.89', 'gmake - GNU make', 'set name=description value="gmake - GNU make"')
         ])
 
