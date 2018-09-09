@@ -1438,7 +1438,7 @@ path=dir-foo/subdir-foo/subdirfile-foo\n""".format(
                 'pgksend publish'."""
 
                 mfpath = os.path.join(self.test_root, "content-attrs.p5m")
-                with open(mfpath, "wb") as mf:
+                with open(mfpath, "w") as mf:
                         mf.write("""\
 set name=pkg.fmri value=pkg://test/content-attrs@1.0
 file elftest.so.1 mode=0755 owner=root group=bin path=bin/true pkg.size=ignored pkg.csize=ignored elfhash=ignored elfbits=ignored elfarch=ignored
