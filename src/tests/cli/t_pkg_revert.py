@@ -35,7 +35,7 @@ import pkg.misc as misc
 import sys
 
 try:
-        import pkg.sha512
+        import pkg.sha512_t
         sha512_supported = True
 except ImportError:
         sha512_supported = False
