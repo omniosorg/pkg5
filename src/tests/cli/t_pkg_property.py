@@ -22,6 +22,7 @@
 
 #
 # Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
 #
 
 from . import testutils
@@ -30,6 +31,7 @@ if __name__ == "__main__":
 import pkg5unittest
 
 import os
+import pkg.portable as portable
 import unittest
 
 
@@ -102,6 +104,53 @@ class TestPkgPropertyBasics(pkg5unittest.SingleDepotTestCase):
                     exit=1)
                 self.pkg("unset-property require-optional")
 
+        foo10 = """
+            open foo@1.0,5.11-0
+            add dir mode=0755 owner=root group=bin path=/lib
+            close """
+
+        foo11 = """
+            open foo@1.1,5.11-0
+            add dir mode=0755 owner=root group=bin path=/lib
+            close """
+
+        def test_pkg_property_keyfiles(self):
+                """key-files image property"""
+
+                def touch_file(p):
+                        if not os.path.exists(os.path.dirname(p)):
+                                os.makedirs(os.path.dirname(p))
+                        fh = open(p, "w")
+                        fh.write("")
+                        fh.close()
+
+                self.pkgsend_bulk(self.rurl, [self.foo10, self.foo11])
+
+                vanilla = self.get_img_file_path("lib/.vanilla")
+                pecan = self.get_img_file_path("lib/.pecan")
+
+                self.image_create(self.rurl)
+                self.pkg("install foo@1.0")
+
+                self.pkg("add-property-value key-files lib/.vanilla")
+                # Even adding a new keyfile property will fail as the
+                # image configuration cannot be loaded with a missing key-file.
+                self.pkg("add-property-value key-files lib/.pecan", exit=51)
+                touch_file(vanilla)
+                self.pkg("add-property-value key-files lib/.pecan")
+                touch_file(pecan)
+
+                self.pkg("property key-files")
+                self.assertTrue("vanilla" in self.output)
+
+                # pkg update should fail due to missing keyfile
+                portable.remove(vanilla)
+                self.pkg("update", exit=51)
+                self.assertTrue("Is everything mounted" in self.errout)
+
+                # and now succeed
+                touch_file(vanilla)
+                self.pkg("update")
 
 if __name__ == "__main__":
         unittest.main()
