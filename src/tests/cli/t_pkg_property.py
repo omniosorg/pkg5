@@ -31,6 +31,7 @@ if __name__ == "__main__":
 import pkg5unittest
 
 import os
+import errno
 import pkg.portable as portable
 import unittest
 
@@ -151,6 +152,77 @@ class TestPkgPropertyBasics(pkg5unittest.SingleDepotTestCase):
                 # and now succeed
                 touch_file(vanilla)
                 self.pkg("update")
+
+        def assert_files_exist(self, flist):
+                error = ""
+                for (path, exist) in flist:
+                        file_path = os.path.join(self.get_img_path(), path)
+                        try:
+                                self.assert_file_is_there(file_path,
+                                    negate=not exist)
+                        except AssertionError as e:
+                                error += "\n{0}".format(e)
+                if error:
+                        raise AssertionError(error)
+
+        def assert_file_is_there(self, path, negate=False):
+                """Verify that the specified path exists. If negate is
+                    true, then make sure the path doesn't exist"""
+
+                file_path = os.path.join(self.get_img_path(), str(path))
+
+                try:
+                        open(file_path).close()
+                except IOError as e:
+                        if e.errno == errno.ENOENT and negate:
+                                return
+                        self.assertTrue(False,
+                            "File {0} is missing".format(path))
+                # file is there
+                if negate:
+                        self.assertTrue(False,
+                            "File {0} should not exist".format(path))
+                return
+
+        xpkg = """
+    open xpkg@1.0,5.11-0
+    add dir mode=0755 owner=root group=bin path=/usr
+    add dir mode=0755 owner=root group=bin path=/usr/lib
+    add dir mode=0755 owner=root group=bin path=/usr/lib/fm
+    add dir mode=0755 owner=root group=bin path=/sbin
+    add file tmp/cat mode=0644 owner=sys group=sys path=/bambam
+    add file tmp/cat mode=0644 owner=sys group=sys path=/sbin/dino
+    add file tmp/cat mode=0644 owner=sys group=sys path=/usr/lib/libfred.so
+    add file tmp/cat mode=0644 owner=sys group=sys path=/usr/lib/libbarney.so
+    add file tmp/cat mode=0644 owner=sys group=sys path=/usr/lib/fm/wilma.xml
+    add file tmp/cat mode=0644 owner=sys group=sys path=/usr/lib/fm/betty.xml
+    close
+        """
+
+        misc_files = [ 'tmp/cat' ]
+
+        def test_pkg_property_excludes(self):
+                """exclude-patterns image property"""
+
+                self.make_misc_files(self.misc_files)
+
+                self.pkgsend_bulk(self.rurl, self.xpkg)
+
+                self.image_create(self.rurl)
+                self.pkg("add-property-value exclude-patterns 'usr/(?!lib/fm)'")
+                self.pkg("add-property-value exclude-patterns 'sbin/'")
+
+                self.pkg("install xpkg")
+
+                self.assert_files_exist((
+                    ("bambam", True),
+                    ("sbin/dino", False),
+                    ("usr/lib/libfred.so", False),
+                    ("usr/lib/libbarney.so", False),
+                    ("usr/lib/fm/wilma.xml", True),
+                    ("usr/lib/fm/betty.xml", True),
+                ))
+
 
 if __name__ == "__main__":
         unittest.main()
