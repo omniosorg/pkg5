@@ -22,6 +22,7 @@
 
 #
 # Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
 #
 
 from . import testutils
@@ -30,6 +31,8 @@ if __name__ == "__main__":
 import pkg5unittest
 
 import os
+import errno
+import pkg.portable as portable
 import unittest
 
 
@@ -101,6 +104,124 @@ class TestPkgPropertyBasics(pkg5unittest.SingleDepotTestCase):
                 self.pkg("unset-property require-optional", su_wrap=True,
                     exit=1)
                 self.pkg("unset-property require-optional")
+
+        foo10 = """
+            open foo@1.0,5.11-0
+            add dir mode=0755 owner=root group=bin path=/lib
+            close """
+
+        foo11 = """
+            open foo@1.1,5.11-0
+            add dir mode=0755 owner=root group=bin path=/lib
+            close """
+
+        def test_pkg_property_keyfiles(self):
+                """key-files image property"""
+
+                def touch_file(p):
+                        if not os.path.exists(os.path.dirname(p)):
+                                os.makedirs(os.path.dirname(p))
+                        fh = open(p, "w")
+                        fh.write("")
+                        fh.close()
+
+                self.pkgsend_bulk(self.rurl, [self.foo10, self.foo11])
+
+                vanilla = self.get_img_file_path("lib/.vanilla")
+                pecan = self.get_img_file_path("lib/.pecan")
+
+                self.image_create(self.rurl)
+                self.pkg("install foo@1.0")
+
+                self.pkg("add-property-value key-files lib/.vanilla")
+                # Even adding a new keyfile property will fail as the
+                # image configuration cannot be loaded with a missing key-file.
+                self.pkg("add-property-value key-files lib/.pecan", exit=51)
+                touch_file(vanilla)
+                self.pkg("add-property-value key-files lib/.pecan")
+                touch_file(pecan)
+
+                self.pkg("property key-files")
+                self.assertTrue("vanilla" in self.output)
+
+                # pkg update should fail due to missing keyfile
+                portable.remove(vanilla)
+                self.pkg("update", exit=51)
+                self.assertTrue("Is everything mounted" in self.errout)
+
+                # and now succeed
+                touch_file(vanilla)
+                self.pkg("update")
+
+        def assert_files_exist(self, flist):
+                error = ""
+                for (path, exist) in flist:
+                        file_path = os.path.join(self.get_img_path(), path)
+                        try:
+                                self.assert_file_is_there(file_path,
+                                    negate=not exist)
+                        except AssertionError as e:
+                                error += "\n{0}".format(e)
+                if error:
+                        raise AssertionError(error)
+
+        def assert_file_is_there(self, path, negate=False):
+                """Verify that the specified path exists. If negate is
+                    true, then make sure the path doesn't exist"""
+
+                file_path = os.path.join(self.get_img_path(), str(path))
+
+                try:
+                        open(file_path).close()
+                except IOError as e:
+                        if e.errno == errno.ENOENT and negate:
+                                return
+                        self.assertTrue(False,
+                            "File {0} is missing".format(path))
+                # file is there
+                if negate:
+                        self.assertTrue(False,
+                            "File {0} should not exist".format(path))
+                return
+
+        xpkg = """
+    open xpkg@1.0,5.11-0
+    add dir mode=0755 owner=root group=bin path=/usr
+    add dir mode=0755 owner=root group=bin path=/usr/lib
+    add dir mode=0755 owner=root group=bin path=/usr/lib/fm
+    add dir mode=0755 owner=root group=bin path=/sbin
+    add file tmp/cat mode=0644 owner=sys group=sys path=/bambam
+    add file tmp/cat mode=0644 owner=sys group=sys path=/sbin/dino
+    add file tmp/cat mode=0644 owner=sys group=sys path=/usr/lib/libfred.so
+    add file tmp/cat mode=0644 owner=sys group=sys path=/usr/lib/libbarney.so
+    add file tmp/cat mode=0644 owner=sys group=sys path=/usr/lib/fm/wilma.xml
+    add file tmp/cat mode=0644 owner=sys group=sys path=/usr/lib/fm/betty.xml
+    close
+        """
+
+        misc_files = [ 'tmp/cat' ]
+
+        def test_pkg_property_excludes(self):
+                """exclude-patterns image property"""
+
+                self.make_misc_files(self.misc_files)
+
+                self.pkgsend_bulk(self.rurl, self.xpkg)
+
+                self.image_create(self.rurl)
+                self.pkg("add-property-value exclude-patterns 'usr/(?!lib/fm)'")
+                self.pkg("add-property-value exclude-patterns 'sbin/'")
+
+                self.pkg("install xpkg")
+
+                self.assert_files_exist((
+                    ("bambam", True),
+                    ("sbin/dino", False),
+                    ("usr/lib/libfred.so", False),
+                    ("usr/lib/libbarney.so", False),
+                    ("usr/lib/fm/wilma.xml", True),
+                    ("usr/lib/fm/betty.xml", True),
+                ))
 
 
 if __name__ == "__main__":
