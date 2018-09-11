@@ -538,11 +538,17 @@ if __name__ == "__main__":
                 testlogfp.close()
 
         # Update baseline results and display mismatches (failures)
-        baseline.store()
-        if six.PY3:
-                baseline.reportfailures('failures.3')
+
+        if onlyval[0] != "":
+                # Do not overwrite failure file if running selected tests
+                failfile = None
+        elif six.PY3:
+                failfile = 'failures.3'
         else:
-                baseline.reportfailures()
+                failfile = 'failures'
+
+        baseline.store()
+        baseline.reportfailures(failfile)
 
         # Stop and save coverage data for API tests, and combine coverage data
         # from all processes.

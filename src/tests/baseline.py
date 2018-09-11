@@ -95,10 +95,12 @@ class BaseLine(object):
                                 print(self.sep2, file=stream)
                                 print("", file=stream)
                         op_baseline(sys.stderr)
-                        try:
-                                with open(file, 'w') as out:
-                                        op_baseline(out)
-                        except: pass
+                        if file != None:
+                                try:
+                                        with open(file, 'w') as out:
+                                                op_baseline(out)
+                                except:
+                                        pass
 
         def store(self):
                 """Store the result set."""
