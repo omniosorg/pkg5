@@ -33,8 +33,6 @@ PYLINT_FMRI = pkg:/library/python-2/pylint-27
 
 CODE_WS = $$(hg root 2>/dev/null || git rev-parse --show-toplevel)
 
-CC=/opt/gcc-4.4.4/bin/gcc
-
 all := TARGET = all
 install := TARGET = install
 packages := TARGET = install
