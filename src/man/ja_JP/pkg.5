@@ -749,7 +749,7 @@ file path=usr/lib/python2.6/vendor-packages/pkg/__init__.py \e
 .ad
 .sp .6
 .RS 4n
-このパッケージのインストールの前に、依存関係のターゲット (存在する場合) は変更されるイメージ上の指定された値以上である必要があります。\fBroot-image\fR 属性の値が \fBtrue\fR である場合、このパッケージをインストールするには、/ をルートとするイメージ上にターゲットが存在する必要があります。\fBroot-image\fR 属性の値が \fBtrue\fR で、\fBfmri\fR 属性の値が \fBpkg:/feature/firmware/\fR で始まる場合、\fBfmri\fR 値の残りの部分は、ファームウェアの依存関係を評価する \fB/usr/lib/fwenum\fR 内のコマンドとして扱われます。例については、「\fIPackaging and Delivering Software With the Image Packaging System in Oracle Solaris 11.2\fR」を参照してください。
+このパッケージのインストールの前に、依存関係のターゲット (存在する場合) は変更されるイメージ上の指定された値以上である必要があります。\fBroot-image\fR 属性の値が \fBtrue\fR である場合、このパッケージをインストールするには、/ をルートとするイメージ上にターゲットが存在する必要があります。\fBroot-image\fR 属性の値が \fBtrue\fR で、\fBfmri\fR 属性の値が \fBpkg:/feature/firmware/\fR で始まる場合、\fBfmri\fR 値の残りの部分は、ファームウェアの依存関係を評価する \fB/usr/lib/fwenum\fR 内のコマンドとして扱われます。例については、「\fIPackaging and Delivering Software With the Image Packaging System in OmniOS\fR」を参照してください。
 .RE
 
 .sp
@@ -1502,7 +1502,7 @@ file group=sys mode=0644 overlay=allow owner=root \e
 .RE
 .sp
 .LP
-カスタムのファセットタグと \fBvariant.debug.*\fR バリアントタグを作成できます。詳細については、「\fIPackaging and Delivering Software With the Image Packaging System in Oracle Solaris 11.2\fR」を参照してください。Oracle Solaris では、次のタグが一般に使用されます。
+カスタムのファセットタグと \fBvariant.debug.*\fR バリアントタグを作成できます。詳細については、「\fIPackaging and Delivering Software With the Image Packaging System in OmniOS\fR」を参照してください。Oracle Solaris では、次のタグが一般に使用されます。
 .sp
 
 .sp
@@ -1616,13 +1616,13 @@ _
 \fBpkg\fR(1), \fBpkgsend\fR(1), \fBpkg.depotd\fR(1M), \fBpkg.sysrepo\fR(1M), \fBsvcs\fR(1), \fBsvcadm\fR(1M)
 .sp
 .LP
-\fI『Adding and Updating Software in Oracle Solaris 11.2 』\fR
+\fI『Adding and Updating Software in OmniOS 』\fR
 .sp
 .LP
-\fI『Copying and Creating Package Repositories in Oracle Solaris 11.2 』\fR
+\fI『Copying and Creating Package Repositories in OmniOS 』\fR
 .sp
 .LP
-\fI『Packaging and Delivering Software With the Image Packaging System in Oracle Solaris 11.2 』\fR
+\fI『Packaging and Delivering Software With the Image Packaging System in OmniOS 』\fR
 .sp
 .LP
-\fBhttps://java.net/projects/ips/pages/Home\fR
+\fBhttps://github.com/omniosorg/pkg5\fR

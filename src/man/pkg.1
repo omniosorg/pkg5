@@ -2573,7 +2573,7 @@ Higher ranked publishers than this one can provide updates to packages originall
 .RS 4n
 Use the specified proxy URI to retrieve content for the specified origin (\fB-g\fR) or mirror (\fB-m\fR). The proxy value is stored as part of the publisher configuration, which means the system repository used by child images is automatically updated. This option cannot be used to set an authenticated proxy. The \fIproxy_to_use\fR value cannot have the form \fBprotocol://user:password@host\fR.
 .sp
-At run time, \fBhttp_proxy\fR or related environment variables override this proxy setting. See the "Environment" section of the \fBcurl\fR(1) man page for the list of accepted environment variable names. If you use an environment variable to set the proxy URI, you must also set the appropriate proxy property of the \fBsvc:/application/pkg/system-repository\fR SMF service to the same value. See "Specifying a Proxy" in \fIAdding and Updating Software in Oracle Solaris 11.2\fR.
+At run time, \fBhttp_proxy\fR or related environment variables override this proxy setting. See the "Environment" section of the \fBcurl\fR(1) man page for the list of accepted environment variable names. If you use an environment variable to set the proxy URI, you must also set the appropriate proxy property of the \fBsvc:/application/pkg/system-repository\fR SMF service to the same value. See "Specifying a Proxy" in \fIAdding and Updating Software in OmniOS\fR.
 .RE
 
 .sp
