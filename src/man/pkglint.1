@@ -1,6 +1,6 @@
 '\" te
 .\" Copyright (c) 2007, 2014, Oracle and/or its affiliates. All rights reserved.
-.TH pkglint 1 "29 Apr 2014" "SunOS 5.11" "User Commands"
+.TH pkglint 1 "10 Sep 2018" "SunOS 5.11" "User Commands"
 .SH NAME
 pkglint \- Image Packaging System package lint
 .SH SYNOPSIS
@@ -43,7 +43,7 @@ Subsequent invocations of \fBpkglint\fR can reuse the cache directory and can om
 More granular \fBpkg.linted\fR settings can be made using substrings of \fBpkglint\fR check names. For example, \fBpkg.linted.\fIcheck\fR.\fIid\fR\fR set to \fBTrue\fR bypasses all checks with the name \fB\fIcheck\fR.\fIid\fR\fR for the given manifest or action.
 .sp
 .LP
-The behavior of \fBpkglint\fR can be configured by specifying a\fBpkglintrc\fR file. By default, \fBpkglint\fR searches in \fB/usr/share/lib/pkg/pkglintrc\fR and \fB$HOME/.pkglintrc\fR for configuration options. Use the \fB-f\fR option to specify a different configuration file.
+The behavior of \fBpkglint\fR can be configured by specifying a \fBpkglintrc\fR file. By default, \fBpkglint\fR searches in \fB/usr/share/lib/pkg/pkglintrc\fR and \fB$HOME/.pkglintrc\fR for configuration options. Use the \fB-f\fR option to specify a different configuration file.
 .sp
 .LP
 During the lint run, any errors or warnings encountered are printed to \fBstderr\fR.
