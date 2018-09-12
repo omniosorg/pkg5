@@ -127,8 +127,8 @@ class TestFix(pkg5unittest.SingleDepotTestCase):
 
         sysattr_no_overlay = """
             open sysattr-no-overlay@1.0-0
-            add file amber1 mode=0555 owner=root group=bin sysattr=sensitive preserve=true path=amber1
-            add file amber2 mode=0555 owner=root group=bin sysattr=sensitive path=amber2
+            add file amber1 mode=0555 owner=root group=bin sysattr=archive preserve=true path=amber1
+            add file amber2 mode=0555 owner=root group=bin sysattr=archive path=amber2
             close"""
 
         sysattr_o = """
