@@ -118,17 +118,10 @@ class TestPkgPropertyBasics(pkg5unittest.SingleDepotTestCase):
         def test_pkg_property_keyfiles(self):
                 """key-files image property"""
 
-                def touch_file(p):
-                        if not os.path.exists(os.path.dirname(p)):
-                                os.makedirs(os.path.dirname(p))
-                        fh = open(p, "w")
-                        fh.write("")
-                        fh.close()
-
                 self.pkgsend_bulk(self.rurl, [self.foo10, self.foo11])
 
-                vanilla = self.get_img_file_path("lib/.vanilla")
-                pecan = self.get_img_file_path("lib/.pecan")
+                vanilla = "lib/.vanilla"
+                pecan = "lib/.pecan"
 
                 self.image_create(self.rurl)
                 self.pkg("install foo@1.0")
@@ -137,52 +130,21 @@ class TestPkgPropertyBasics(pkg5unittest.SingleDepotTestCase):
                 # Even adding a new keyfile property will fail as the
                 # image configuration cannot be loaded with a missing key-file.
                 self.pkg("add-property-value key-files lib/.pecan", exit=51)
-                touch_file(vanilla)
+                self.file_touch(vanilla)
                 self.pkg("add-property-value key-files lib/.pecan")
-                touch_file(pecan)
+                self.file_touch(pecan)
 
                 self.pkg("property key-files")
                 self.assertTrue("vanilla" in self.output)
 
                 # pkg update should fail due to missing keyfile
-                portable.remove(vanilla)
+                self.file_remove(vanilla)
                 self.pkg("update", exit=51)
                 self.assertTrue("Is everything mounted" in self.errout)
 
                 # and now succeed
-                touch_file(vanilla)
+                self.file_touch(vanilla)
                 self.pkg("update")
-
-        def assert_files_exist(self, flist):
-                error = ""
-                for (path, exist) in flist:
-                        file_path = os.path.join(self.get_img_path(), path)
-                        try:
-                                self.assert_file_is_there(file_path,
-                                    negate=not exist)
-                        except AssertionError as e:
-                                error += "\n{0}".format(e)
-                if error:
-                        raise AssertionError(error)
-
-        def assert_file_is_there(self, path, negate=False):
-                """Verify that the specified path exists. If negate is
-                    true, then make sure the path doesn't exist"""
-
-                file_path = os.path.join(self.get_img_path(), str(path))
-
-                try:
-                        open(file_path).close()
-                except IOError as e:
-                        if e.errno == errno.ENOENT and negate:
-                                return
-                        self.assertTrue(False,
-                            "File {0} is missing".format(path))
-                # file is there
-                if negate:
-                        self.assertTrue(False,
-                            "File {0} should not exist".format(path))
-                return
 
         xpkg = """
     open xpkg@1.0,5.11-0

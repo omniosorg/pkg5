@@ -3473,6 +3473,37 @@ class CliTestCase(Pkg5TestCase):
                 for p in paths:
                         self.file_doesnt_exist(p)
 
+        def assert_file_exists(self, path, negate=False):
+                """Verify that the specified path exists. If negate is
+                    true, then make sure the path doesn't exist"""
+
+                file_path = os.path.join(self.get_img_path(), str(path))
+
+                try:
+                        open(file_path).close()
+                except IOError as e:
+                        if e.errno == errno.ENOENT and negate:
+                                return
+                        self.assertTrue(False,
+                            "File {0} is missing".format(path))
+                # file is there
+                if negate:
+                        self.assertTrue(False,
+                            "File {0} should not exist".format(path))
+                return
+
+        def assert_files_exist(self, flist):
+                error = ""
+                for (path, exist) in flist:
+                        file_path = os.path.join(self.get_img_path(), path)
+                        try:
+                                self.assert_file_exists(file_path,
+                                    negate=not exist)
+                        except AssertionError as e:
+                                error += "\n{0}".format(e)
+                if error:
+                        raise AssertionError(error)
+
         def file_remove(self, path):
                 """Remove a file in the image."""
 
@@ -3529,6 +3560,18 @@ class CliTestCase(Pkg5TestCase):
                                     "of {1}".format(path, strings))
                 else:
                         f.close()
+
+        def file_create(self, path, string=None):
+                """Create a new file containing "string" """
+                file_path = self.get_img_file_path(path)
+                if not os.path.exists(os.path.dirname(file_path)):
+                        os.makedirs(os.path.dirname(file_path))
+                with open(file_path, "a") as f:
+                        if string: f.write("{0}".format(string))
+
+        def file_touch(self, path, times=None):
+                self.file_create(path)
+                os.utime(self.get_img_file_path(path), times)
 
         def file_append(self, path, string):
                 """Append a line to a file in the image."""

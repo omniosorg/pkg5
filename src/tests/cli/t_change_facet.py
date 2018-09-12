@@ -87,36 +87,6 @@ class TestPkgChangeFacet(pkg5unittest.SingleDepotTestCase):
                 self.plist_B = self.pkgsend_bulk(self.rurl,
                     [self.pkg_B1, self.pkg_B2])
 
-        def assert_files_exist(self, flist):
-                error = ""
-                for (path, exist) in flist:
-                        file_path = os.path.join(self.get_img_path(), path)
-                        try:
-                                self.assert_file_is_there(file_path,
-                                    negate=not exist)
-                        except AssertionError as e:
-                                error += "\n{0}".format(e)
-
-                if error:
-                        raise AssertionError(error)
-
-        def assert_file_is_there(self, path, negate=False):
-                """Verify that the specified path exists. If negate is true,
-                then make sure the path doesn't exist"""
-
-                file_path = os.path.join(self.get_img_path(), str(path))
-
-                try:
-                        open(file_path).close()
-                except IOError as e:
-                        if e.errno == errno.ENOENT and negate:
-                                return
-                        self.assertTrue(False, "File {0} is missing".format(path))
-                # file is there
-                if negate:
-                        self.assertTrue(False, "File {0} should not exist".format(path))
-                return
-
         def test_01_facets(self):
                 # create an image w/ locales set
                 ic_args = "";
@@ -136,16 +106,16 @@ class TestPkgChangeFacet(pkg5unittest.SingleDepotTestCase):
                 self.pkg("facet")
 
                 # make sure it delivers its files as appropriate
-                self.assert_file_is_there("0")
-                self.assert_file_is_there("1")
-                self.assert_file_is_there("2")
-                self.assert_file_is_there("3", negate=True)
-                self.assert_file_is_there("4", negate=True)
-                self.assert_file_is_there("5", negate=True)
-                self.assert_file_is_there("6", negate=True)
-                self.assert_file_is_there("7", negate=True)
-                self.assert_file_is_there("8")
-                self.assert_file_is_there("debug", negate=True)
+                self.assert_file_exists("0")
+                self.assert_file_exists("1")
+                self.assert_file_exists("2")
+                self.assert_file_exists("3", negate=True)
+                self.assert_file_exists("4", negate=True)
+                self.assert_file_exists("5", negate=True)
+                self.assert_file_exists("6", negate=True)
+                self.assert_file_exists("7", negate=True)
+                self.assert_file_exists("8")
+                self.assert_file_exists("debug", negate=True)
 
                 # Verify that effective value is shown for facets that are
                 # always implicity false such as debug / optional.
@@ -204,16 +174,16 @@ class TestPkgChangeFacet(pkg5unittest.SingleDepotTestCase):
                 self.pkg("verify")
                 self.pkg("facet")
 
-                self.assert_file_is_there("0")
-                self.assert_file_is_there("1")
-                self.assert_file_is_there("2")
-                self.assert_file_is_there("3", negate=True)
-                self.assert_file_is_there("4")
-                self.assert_file_is_there("5", negate=True)
-                self.assert_file_is_there("6", negate=True)
-                self.assert_file_is_there("7")
-                self.assert_file_is_there("8")
-                self.assert_file_is_there("debug", negate=True)
+                self.assert_file_exists("0")
+                self.assert_file_exists("1")
+                self.assert_file_exists("2")
+                self.assert_file_exists("3", negate=True)
+                self.assert_file_exists("4")
+                self.assert_file_exists("5", negate=True)
+                self.assert_file_exists("6", negate=True)
+                self.assert_file_exists("7")
+                self.assert_file_exists("8")
+                self.assert_file_exists("debug", negate=True)
 
                 # remove all the facets
                 self.pkg("change-facet --parsable=0 facet.locale*=None "
@@ -230,7 +200,7 @@ class TestPkgChangeFacet(pkg5unittest.SingleDepotTestCase):
                 self.pkg("verify")
 
                 for i in range(8):
-                        self.assert_file_is_there("{0:d}".format(i))
+                        self.assert_file_exists("{0:d}".format(i))
 
                 # zap all the locales
                 self.pkg("change-facet -v facet.locale*=False facet.locale.nl_ZA=None")
@@ -238,7 +208,7 @@ class TestPkgChangeFacet(pkg5unittest.SingleDepotTestCase):
                 self.pkg("facet")
 
                 for i in range(8):
-                        self.assert_file_is_there("{0:d}".format(i), negate=(i != 0))
+                        self.assert_file_exists("{0:d}".format(i), negate=(i != 0))
 
                 # Verify that effective value is shown for facets that are
                 # implicity false due to wildcards whether they're known to the
@@ -268,7 +238,7 @@ class TestPkgChangeFacet(pkg5unittest.SingleDepotTestCase):
                         ["facet.locale.fr_CA", True, None, 'local', False,
                             False]
                     ])
-                self.assert_file_is_there("4")
+                self.assert_file_exists("4")
 
                 # This test is merely here so that if the evaluation order is
                 # reversed for some reason that expected results are still seen.
@@ -283,7 +253,7 @@ class TestPkgChangeFacet(pkg5unittest.SingleDepotTestCase):
                         ["facet.locale.fr_CA", None, True, 'local', False,
                             False]
                     ])
-                self.assert_file_is_there("4")
+                self.assert_file_exists("4")
 
         def test_02_removing_facets(self):
                 self.image_create(self.rurl)
@@ -309,7 +279,7 @@ class TestPkgChangeFacet(pkg5unittest.SingleDepotTestCase):
                 # First, install faceted package.
                 self.pkg("install pkg_A")
                 for i in range(9):
-                        self.assert_file_is_there(i)
+                        self.assert_file_exists(i)
 
                 # Next, set general locale.*=False, but locale.fr=True.
                 self.pkg("change-facet 'locale.*=False' 'locale.fr=True'")
@@ -317,28 +287,28 @@ class TestPkgChangeFacet(pkg5unittest.SingleDepotTestCase):
                 # General 0 file, locale.fr file, and has slashes file should be
                 # there.
                 for i in (0, 1, 8):
-                        self.assert_file_is_there(i)
+                        self.assert_file_exists(i)
 
                 # No other locale files should be present.
                 for i in (2, 3, 4, 5, 6, 7):
-                        self.assert_file_is_there(i, negate=True)
+                        self.assert_file_exists(i, negate=True)
 
                 # Now set wombat=False and unset locale.fr.
                 self.pkg("change-facet -vv locale.fr=None wombat=False")
-                self.assert_file_is_there(0) # general 0 file exists
-                self.assert_file_is_there(1, negate=True) # locale.fr file gone
+                self.assert_file_exists(0) # general 0 file exists
+                self.assert_file_exists(1, negate=True) # locale.fr file gone
 
         def test_03_slashed_facets(self):
                 self.pkg_image_create(self.rurl)
                 self.pkg("install pkg_A")
                 self.pkg("verify")
 
-                self.assert_file_is_there("8")
+                self.assert_file_exists("8")
                 self.pkg("change-facet -v facet.has/some/slashes=False")
-                self.assert_file_is_there("8", negate=True)
+                self.assert_file_exists("8", negate=True)
                 self.pkg("verify")
                 self.pkg("change-facet -v facet.has/some/slashes=True")
-                self.assert_file_is_there("8")
+                self.assert_file_exists("8")
                 self.pkg("verify")
 
         def test_04_no_accidental_changes(self):
@@ -363,9 +333,9 @@ class TestPkgChangeFacet(pkg5unittest.SingleDepotTestCase):
                     "facet.locale.fr_FR\tFalse\tlocal\n")
                 self.assertEqualDiff(expected, self.output)
                 for i in [ 0, 3, 4, 5, 6, 7 ]:
-                        self.assert_file_is_there(str(i))
+                        self.assert_file_exists(str(i))
                 for i in [ 1, 2 ]:
-                        self.assert_file_is_there(str(i), negate=True)
+                        self.assert_file_exists(str(i), negate=True)
                 self.pkg("verify")
 
                 # update an image and make sure we don't accidentally change
@@ -377,9 +347,9 @@ class TestPkgChangeFacet(pkg5unittest.SingleDepotTestCase):
                     "facet.locale.fr_FR\tFalse\tlocal\n")
                 self.assertEqualDiff(expected, self.output)
                 for i in [ 0, 3, 4, 5, 6, 7 ]:
-                        self.assert_file_is_there(str(i))
+                        self.assert_file_exists(str(i))
                 for i in [ 1, 2 ]:
-                        self.assert_file_is_there(str(i), negate=True)
+                        self.assert_file_exists(str(i), negate=True)
                 self.pkg("verify")
 
         def test_05_reset_facet(self):
@@ -392,8 +362,8 @@ class TestPkgChangeFacet(pkg5unittest.SingleDepotTestCase):
                 self.pkg("facet -H")
                 self.assertEqualDiff("", self.output)
                 for i in range(8):
-                        self.assert_file_is_there(str(i))
-                self.assert_file_is_there("debug", negate=True)
+                        self.assert_file_exists(str(i))
+                self.assert_file_exists("debug", negate=True)
                 self.pkg("verify")
 
                 # set a facet on an image with no facets
@@ -404,9 +374,9 @@ class TestPkgChangeFacet(pkg5unittest.SingleDepotTestCase):
                     "facet.locale.fr\tFalse\tlocal\n")
                 self.assertEqualDiff(expected, output)
                 for i in [ 0, 2, 3, 4, 5, 6, 7 ]:
-                        self.assert_file_is_there(str(i))
+                        self.assert_file_exists(str(i))
                 for i in [ 1 ]:
-                        self.assert_file_is_there(str(i), negate=True)
+                        self.assert_file_exists(str(i), negate=True)
                 self.pkg("verify")
 
                 # set a facet on an image with existing facets
@@ -417,9 +387,9 @@ class TestPkgChangeFacet(pkg5unittest.SingleDepotTestCase):
                     "facet.locale.fr_FR\tFalse\tlocal\n")
                 self.assertEqualDiff(expected, self.output)
                 for i in [ 0, 3, 4, 5, 6, 7 ]:
-                        self.assert_file_is_there(str(i))
+                        self.assert_file_exists(str(i))
                 for i in [ 1, 2 ]:
-                        self.assert_file_is_there(str(i), negate=True)
+                        self.assert_file_exists(str(i), negate=True)
                 self.pkg("verify")
 
                 # clear a facet while setting a facet on an image with other
@@ -432,9 +402,9 @@ class TestPkgChangeFacet(pkg5unittest.SingleDepotTestCase):
                     "facet.locale.nl\tFalse\tlocal\n")
                 self.assertEqualDiff(expected, output)
                 for i in [ 0, 1, 3, 4, 6, 7 ]:
-                        self.assert_file_is_there(str(i))
+                        self.assert_file_exists(str(i))
                 for i in [ 2, 5 ]:
-                        self.assert_file_is_there(str(i), negate=True)
+                        self.assert_file_exists(str(i), negate=True)
                 self.pkg("verify")
 
                 # clear a facet on an image with other facets that aren't
@@ -446,9 +416,9 @@ class TestPkgChangeFacet(pkg5unittest.SingleDepotTestCase):
                     "facet.locale.fr_FR\tFalse\tlocal\n")
                 self.assertEqualDiff(expected, output)
                 for i in [ 0, 1, 3, 4, 5, 6, 7 ]:
-                        self.assert_file_is_there(str(i))
+                        self.assert_file_exists(str(i))
                 for i in [ 2 ]:
-                        self.assert_file_is_there(str(i), negate=True)
+                        self.assert_file_exists(str(i), negate=True)
                 self.pkg("verify")
 
                 # clear the only facet on an image
@@ -456,7 +426,7 @@ class TestPkgChangeFacet(pkg5unittest.SingleDepotTestCase):
                 self.pkg("facet -H -F tsv")
                 self.assertEqualDiff("", self.output)
                 for i in range(8):
-                        self.assert_file_is_there(str(i))
+                        self.assert_file_exists(str(i))
                 self.pkg("verify")
 
                 # verify debug content removed when debug facet reset
@@ -466,13 +436,13 @@ class TestPkgChangeFacet(pkg5unittest.SingleDepotTestCase):
                 expected = (
                     "facet.debug.foo\tTrue\tlocal\n")
                 self.assertEqualDiff(expected, output)
-                self.assert_file_is_there("debug")
+                self.assert_file_exists("debug")
 
                 self.pkg("change-facet -v debug.foo=None")
                 self.pkg("facet -H -F tsv")
                 output = self.reduceSpaces(self.output)
                 self.assertEqualDiff("", self.output)
-                self.assert_file_is_there("debug", negate=True)
+                self.assert_file_exists("debug", negate=True)
 
         def test_06_facet_all(self):
                 """Verify that the 'all' value for facets is handled as
