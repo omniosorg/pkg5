@@ -81,10 +81,11 @@ class BaseLine(object):
                 and their result.
                 """
                 lst = self.getfailures()
-                if lst:
-                        def op_baseline(stream):
-                                print("", file=stream)
-                                print(self.sep1, file=stream)
+
+                def op_baseline(stream):
+                        print("", file=stream)
+                        print(self.sep1, file=stream)
+                        if lst:
                                 print("BASELINE MISMATCH: The following "
                                     "results didn't match the baseline.",
                                     file=stream)
@@ -92,15 +93,18 @@ class BaseLine(object):
                                 for name, result in lst:
                                         print("{0}: {1}".format(name, result),
                                             file=stream)
-                                print(self.sep2, file=stream)
-                                print("", file=stream)
-                        op_baseline(sys.stderr)
-                        if file != None:
-                                try:
-                                        with open(file, 'w') as out:
-                                                op_baseline(out)
-                                except:
-                                        pass
+                        else:
+                                print("BASELINE MATCH", file=stream)
+                        print(self.sep1, file=stream)
+                        print("", file=stream)
+
+                op_baseline(sys.stderr)
+                if file != None:
+                        try:
+                                with open(file, 'w') as out:
+                                        op_baseline(out)
+                        except:
+                                pass
 
         def store(self):
                 """Store the result set."""
@@ -114,7 +118,7 @@ class BaseLine(object):
                         print("ERROR: storing baseline:", file=sys.stderr)
                         print("Failed to open {0}: {1}".format(
                             self.__filename, msg), file=sys.stderr)
-                        return 
+                        return
 
                 # Sort the results to make baseline diffs easier
                 results_sorted = list(self.__results.keys())
