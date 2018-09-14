@@ -159,11 +159,8 @@ class CatalogInterface(_Interface):
                         allowed.setdefault(pkg_name, [])
                         for v, entries in cat.entries_by_version(pkg_name,
                             info_needed=cat_info, pubs=pubs):
-                                for f, fa in (
-                                    (f, fa)
-                                    for f, md in entries
-                                    for fa in md.get("actions", misc.EmptyI)
-                                ):
+                                for f, md in entries:
+                                    for fa in md.get("actions", misc.EmptyI):
                                         if not fa.startswith("set"):
                                                 continue
 
@@ -180,7 +177,7 @@ class CatalogInterface(_Interface):
                                                 del a
                                                 break
                                         del a
-                                else:
+                                    else:
                                         allowed[pkg_name].append((f, sn))
 
                 sort_ver = itemgetter(0)
