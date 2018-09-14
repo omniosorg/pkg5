@@ -31,7 +31,7 @@ opts = {
     'ram':          '1G',
     'bootrom':      'BHYVE_RELEASE_CSM',
     'bootorder':    'cd',
-    'hostbridge':   'default',
+    'hostbridge':   'amd',
     'diskif':       'virtio-blk',
     'netif':        'virtio-net-viona',
     'type':         'generic',
