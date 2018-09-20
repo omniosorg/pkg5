@@ -46,7 +46,7 @@ CURBUILD.cmd      = \
 	$(PKG) -R / list -H osnet-incorporation | \
 		sed -e 's/.*-0\.\([^ .]*\).*/\1/'
 CURBUILD          = $(CURBUILD.cmd:sh)
-PKGVERS_BRANCH    = 0.$(BUILDNUM)
+PKGVERS_BRANCH    = $(BUILDNUM).0
 PKGVERS           = $(PKGVERS_COMPONENT),$(PKGVERS_BUILTON)-$(PKGVERS_BRANCH)
 ARCH              = $(TARGET_ARCH:-%=%)
 REV:sh            = date +%Y.%m.%d.%H.%M.%S
