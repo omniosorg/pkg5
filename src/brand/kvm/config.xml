@@ -22,6 +22,7 @@
 	<modname></modname>
 
 	<initname>/usr/lib/brand/kvm/init</initname>
+	<restartinit>false</restartinit>
 	<login_cmd />
 	<forcedlogin_cmd />
 	<user_cmd />
