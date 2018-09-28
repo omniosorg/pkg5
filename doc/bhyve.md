@@ -23,7 +23,7 @@ which will be created at `/path/to/zone/root/tmp/init.log`
 | console	| /dev/zconsole<sup>5</sup>	| options		| socket,/tmp/vm.com1,wait
 | disk<sup>1</sup>		| 			| path[,serial=<serno>] | tank/hdd/bhyve2,serial=1234
 | diskif	| virtio-blk		| virtio-blk,ahci-hd
-| hostbridge	| intel			| intel,amd,none
+| hostbridge	| i440fx		| i440fx,q35,amd,netapp,none
 | netif		| virtio-net-viona	| virtio-net-viona,e1000
 | ram		| 1G			| n(G\|M)		| 8G
 | type		| generic		| generic,windows

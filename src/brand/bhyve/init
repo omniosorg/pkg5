@@ -31,12 +31,26 @@ opts = {
     'ram':          '1G',
     'bootrom':      'BHYVE_RELEASE_CSM',
     'bootorder':    'cd',
-    'hostbridge':   'amd',
+    'hostbridge':   'i440fx',
     'diskif':       'virtio-blk',
     'netif':        'virtio-net-viona',
     'type':         'generic',
     'vnc':          'off',
     'console':      '/dev/zconsole',
+}
+
+aliases = {
+    'diskif': {
+        'virtio':       'virtio-blk',
+        'ahci':         'ahci-hd',
+    },
+    'netif': {
+        'virtio':       'virtio-net-viona',
+    },
+    'hostbridge': {
+        # Was wrongly used in some older scripts.
+        'intel':        'netapp',
+    },
 }
 
 HOSTBRIDGE_SLOT = 0
@@ -69,6 +83,12 @@ def opt(tag):
         opts[tag] = el.get('value').strip()
         logging.debug('Found custom {0} attribute - "{1}"'
             .format(tag, opts[tag]))
+        if tag in aliases:
+            try:
+                opts[tag] = aliases[tag][opts[tag]]
+                logging.debug('  Alias expanded to {0}'.format(opts[tag]))
+            except KeyError:
+                pass
     except:
         pass
 
@@ -114,12 +134,16 @@ args.extend(['-l', 'bootrom,{0}'.format(opts['bootrom'])])
 
 # Host bridge
 
-if opts['hostbridge'] == 'amd':
-    args.extend(['-s', '{0},amd_hostbridge'.format(HOSTBRIDGE_SLOT)])
-elif opts['hostbridge'] == 'none':
+if opts['hostbridge'] == 'none':
     pass
+elif opts['hostbridge'] == 'amd':
+    args.extend(['-s', '{0},amd_hostbridge'.format(HOSTBRIDGE_SLOT)])
+elif '=' in opts['hostbridge']:
+    args.extend(['-s', '{0},hostbridge,{1}'.format(
+        HOSTBRIDGE_SLOT, opts['hostbridge'])])
 else:
-    args.extend(['-s', '{0},hostbridge'.format(HOSTBRIDGE_SLOT)])
+    args.extend(['-s', '{0},hostbridge,model={1}'.format(
+        HOSTBRIDGE_SLOT, opts['hostbridge'])])
 
 # LPC
 
