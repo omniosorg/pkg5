@@ -38,6 +38,16 @@ opts = {
     'rtc':          'base=utc,driftfix=slew',
 }
 
+aliases = {
+    'diskif': {
+        'virtio':       'virtio',
+        'ahci':         'ahci',
+    },
+    'netif': {
+        'virtio':       'virtio-net-pci',
+    },
+}
+
 try:
     with open(uuidfile) as file:
         uuid = file.read().strip()
@@ -60,6 +70,12 @@ def opt(tag):
         opts[tag] = el.get('value').strip()
         logging.debug('Found custom {0} attribute - "{1}"'
             .format(tag, opts[tag]))
+        if tag in aliases:
+            try:
+                opts[tag] = aliases[tag][opts[tag]]
+                logging.debug('  Alias expanded to {0}'.format(opts[tag]))
+            except KeyError:
+                pass
     except:
         pass
 
