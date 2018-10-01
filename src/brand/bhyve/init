@@ -189,11 +189,11 @@ args.append(name)
 
 logging.info('Final arguments: {0}'.format(pformat(args)))
 
+if os.path.exists('/dev/vmm/{0}'.format(name)):
+    logging.info('Destroying old bhyve instance')
+    subprocess.run(['/usr/sbin/bhyvectl', '--vm={0}'.format(name), '--destroy'])
+
 while True:
-    if os.path.exists('/dev/vmm/{0}'.format(name)):
-        logging.info('Destroying old bhyve instance')
-        subprocess.run(['/usr/sbin/bhyvectl', '--vm={0}'.format(name),
-            '--destroy'])
     logging.info('Starting bhyve')
     ret = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     logging.info("Bhyve exited {0}".format(ret.returncode))
