@@ -111,6 +111,10 @@ if opts['bootorder'].startswith('c') and opts['type'] != 'windows':
 
 args = ['/usr/sbin/bhyve']
 
+if opts['type'] == 'openbsd':
+    logging.info('Ignoring unknown MSRs for OpenBSD')
+    args.append('-w')
+
 if uuid:
     args.extend(['-U', uuid])
 
