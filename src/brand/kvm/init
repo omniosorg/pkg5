@@ -178,6 +178,7 @@ elif opts['vnc'] == 'off':
 args.extend(['-vnc', opts['vnc']])
 
 logging.info('Final arguments: {0}'.format(pformat(args)))
+logging.info('{0}'.format(' '.join(args)))
 
 while True:
     logging.info('Starting kvm')

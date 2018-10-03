@@ -216,6 +216,7 @@ name = root.get('name')
 args.append(name)
 
 logging.info('Final arguments: {0}'.format(pformat(args)))
+logging.info('{0}'.format(' '.join(args)))
 
 if os.path.exists('/dev/vmm/{0}'.format(name)):
     logging.info('Destroying old bhyve instance')
