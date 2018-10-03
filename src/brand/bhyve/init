@@ -37,6 +37,7 @@ opts = {
     'type':         'generic',
     'vnc':          'off',
     'console':      '/dev/zconsole',
+    'extra':        '',
 }
 
 aliases = {
@@ -209,6 +210,11 @@ if len(opts['vnc']) and opts['vnc'] != 'off':
     args.extend(['-s', '{0}:1,xhci,tablet'.format(VNC_SLOT)])
 
 # Pass-through devices not yet implemented
+
+# Extra options
+
+if len(opts['extra']):
+    args.extend(opts['extra'].split(' '))
 
 # VM name
 

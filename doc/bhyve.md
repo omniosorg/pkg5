@@ -29,6 +29,7 @@ which will be created at `/path/to/zone/root/tmp/init.log`
 | type		| generic		| generic,windows,openbsd
 | vcpus		| 1			| [[cpus=]numcpus][,sockets=n][,cores=n][,threads=n]] | cpus=16,sockets=2,cores=4,threads=2
 | vnc<sup>4</sup>		| off			| off,on,options	| socket,/tmp/vm.vnc,w=1024,h=768,wait
+| extra		|			| extra arguments for hypervisor |
 
 #### Notes
 

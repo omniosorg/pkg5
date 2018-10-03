@@ -27,6 +27,7 @@ which will be created at `/path/to/zone/root/tmp/init.log`
 | type		| generic		| generic
 | vcpus		| 1			|  n			| 16
 | vnc<sup>4</sup>		| off			| off,on,options	| unix:/tmp/vm.vnc
+| extra		|			| extra arguments for hypervisor |
 
 #### Notes
 

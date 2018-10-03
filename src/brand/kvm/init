@@ -36,6 +36,7 @@ opts = {
     'cpu':          'qemu64',
     'bootorder':    'cd',
     'rtc':          'base=utc,driftfix=slew',
+    'extra':        '',
 }
 
 aliases = {
@@ -176,6 +177,11 @@ if opts['vnc'] == 'on':
 elif opts['vnc'] == 'off':
     opts['vnc'] = 'none'
 args.extend(['-vnc', opts['vnc']])
+
+# Extra options
+
+if len(opts['extra']):
+    args.extend(opts['extra'].split(' '))
 
 logging.info('Final arguments: {0}'.format(pformat(args)))
 logging.info('{0}'.format(' '.join(args)))
