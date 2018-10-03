@@ -1,5 +1,5 @@
 
-# KWM branded-zone support
+# KVM branded-zone support
 
 KVM branded zones are configured mainly via custom attributes in the zone
 configuration.
@@ -172,3 +172,4 @@ set type=string
 set value=tank/hdd/oi2,serial=1234
 end
 ```
+
