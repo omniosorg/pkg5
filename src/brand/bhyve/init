@@ -165,14 +165,13 @@ def diskpath(arg):
         return arg
     return '/dev/zvol/rdsk/{0}'.format(arg)
 
-try:
-    cdrom = root.find('./attr[@name="cdrom"]')
+i = 0
+for cdrom in root.findall('./attr[@name="cdrom"]'):
     args.extend([
-        '-s', '{0}:0,{1},{2}'
-            .format(CDROM_SLOT, 'ahci-cd', cdrom.get('value').strip())
+        '-s', '{0}:{1},{2},{3}'.format(CDROM_SLOT,
+            i, 'ahci-cd', cdrom.get('value').strip())
     ])
-except:
-    pass
+    i += 1
 
 try:
     bootdisk = root.find('./attr[@name="bootdisk"]')
