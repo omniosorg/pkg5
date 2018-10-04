@@ -37,6 +37,7 @@ opts = {
     'type':         'generic',
     'vnc':          'off',
     'console':      '/dev/zconsole',
+    'extra':        '',
 }
 
 aliases = {
@@ -111,6 +112,10 @@ if opts['bootorder'].startswith('c') and opts['type'] != 'windows':
 
 args = ['/usr/sbin/bhyve']
 
+if opts['type'] == 'openbsd':
+    logging.info('Ignoring unknown MSRs for OpenBSD')
+    args.append('-w')
+
 if uuid:
     args.extend(['-U', uuid])
 
@@ -160,14 +165,13 @@ def diskpath(arg):
         return arg
     return '/dev/zvol/rdsk/{0}'.format(arg)
 
-try:
-    cdrom = root.find('./attr[@name="cdrom"]')
+i = 0
+for cdrom in root.findall('./attr[@name="cdrom"]'):
     args.extend([
-        '-s', '{0}:0,{1},{2}'
-            .format(CDROM_SLOT, 'ahci-cd', cdrom.get('value').strip())
+        '-s', '{0}:{1},{2},{3}'.format(CDROM_SLOT,
+            i, 'ahci-cd', cdrom.get('value').strip())
     ])
-except:
-    pass
+    i += 1
 
 try:
     bootdisk = root.find('./attr[@name="bootdisk"]')
@@ -206,12 +210,18 @@ if len(opts['vnc']) and opts['vnc'] != 'off':
 
 # Pass-through devices not yet implemented
 
+# Extra options
+
+if len(opts['extra']):
+    args.extend(opts['extra'].split(' '))
+
 # VM name
 
 name = root.get('name')
 args.append(name)
 
 logging.info('Final arguments: {0}'.format(pformat(args)))
+logging.info('{0}'.format(' '.join(args)))
 
 if os.path.exists('/dev/vmm/{0}'.format(name)):
     logging.info('Destroying old bhyve instance')

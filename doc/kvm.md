@@ -1,5 +1,5 @@
 
-# KWM branded-zone support
+# KVM branded-zone support
 
 KVM branded zones are configured mainly via custom attributes in the zone
 configuration.
@@ -27,6 +27,7 @@ which will be created at `/path/to/zone/root/tmp/init.log`
 | type		| generic		| generic
 | vcpus		| 1			|  n			| 16
 | vnc<sup>4</sup>		| off			| off,on,options	| unix:/tmp/vm.vnc
+| extra		|			| extra arguments for hypervisor |
 
 #### Notes
 
@@ -172,3 +173,4 @@ set type=string
 set value=tank/hdd/oi2,serial=1234
 end
 ```
+
