@@ -68,6 +68,14 @@ mount_overlays()
 			touch $keyf
 			/bin/chmod S+vimmutable $keyf
 		fi
+		if ! egrep -s "^$ACTIVE_DS/$ds " $ZONEPATH/root/etc/vfstab; then
+			# Add the overlay to the zone vfstab. This ensures that
+			# it is properly mounted when mounting alternate
+			# BEs, such as when doing new-be pkg update.
+			cat <<- EOM >> $ZONEPATH/root/etc/vfstab
+				$ACTIVE_DS/$ds - /$mp zfs - no -
+			EOM
+		fi
 	done
 }
 
