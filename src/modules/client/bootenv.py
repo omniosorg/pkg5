@@ -340,7 +340,7 @@ class BootEnv(object):
                 # latest libbe.
                 rc = 0
 
-                beVals = be.beList()
+                beVals = be.beList(nosnaps=True)
                 if isinstance(beVals[0], int):
                         rc, beList = beVals
                 else:
