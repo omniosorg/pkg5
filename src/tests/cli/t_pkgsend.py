@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
 
 from . import testutils
 if __name__ == "__main__":
@@ -36,6 +36,7 @@ import shutil
 import stat
 import tempfile
 import unittest
+import six
 from six.moves import range
 from six.moves.urllib.error import HTTPError
 from six.moves.urllib.request import urlopen, Request, pathname2url
@@ -45,8 +46,17 @@ from pkg.actions import fromstr
 from pkg.digest import DEFAULT_HASH_FUNC
 import pkg.portable as portable
 
+try:
+        import pkg.sha512_t
+        sha512_supported = True
+except ImportError:
+        sha512_supported = False
+
+
 class TestPkgsendBasics(pkg5unittest.SingleDepotTestCase):
         persistent_setup = False
+        # Tests in this suite use the read only data directory.
+        need_ro_data = True
 
         def setUp(self):
                 # This test suite needs an actual depot.
@@ -1205,23 +1215,7 @@ dir path=foo/bar mode=0755 owner=root group=bin
                         # the expected name.
                         shutil.rmtree(rpath)
 
-        def test_22_publish(self):
-                """Verify that pkgsend publish works as expected."""
-
-                rootdir = self.test_root
-                dir_1 = os.path.join(rootdir, "dir_1")
-                dir_2 = os.path.join(rootdir, "dir_2")
-                os.mkdir(dir_1)
-                os.mkdir(dir_2)
-                open(os.path.join(dir_1, "A"), "w").close()
-                open(os.path.join(dir_2, "B"), "w").close()
-                mfpath = os.path.join(rootdir, "manifest_test")
-                with open(mfpath, "w") as mf:
-                        mf.write("""file NOHASH mode=0755 owner=root group=bin path=/A
-                            file NOHASH mode=0755 owner=root group=bin path=/B
-                            set name=pkg.fmri value=testmultipledirs@1.0,5.10
-                            """)
-
+        def __test_publish(self, dir_1, dir_2, mfpath):
                 dhurl = self.dc.get_depot_url()
                 # -s may be specified either as a global option or as a local
                 # option for the publish subcommand.
@@ -1243,6 +1237,44 @@ dir path=foo/bar mode=0755 owner=root group=bin
                 self.pkg("install testmultipledirs")
                 self.pkg("verify")
                 self.image_destroy()
+
+        def test_22_publish(self):
+                """Verify that pkgsend publish works as expected."""
+
+                rootdir = self.test_root
+                dir_1 = os.path.join(rootdir, "dir_1")
+                dir_2 = os.path.join(rootdir, "dir_2")
+                os.mkdir(dir_1)
+                os.mkdir(dir_2)
+                open(os.path.join(dir_1, "A"), "w").close()
+                open(os.path.join(dir_2, "B"), "w").close()
+                mfpath = os.path.join(rootdir, "manifest_test")
+                with open(mfpath, "w") as mf:
+                        mf.write("""file NOHASH mode=0755 owner=root group=bin path=/A
+                            file NOHASH mode=0755 owner=root group=bin path=/B
+                            set name=pkg.fmri value=testmultipledirs@1.0,5.10
+                            """)
+                self.__test_publish(dir_1, dir_2, mfpath)
+
+                # Test the publication of elf files.
+                elfmfpath = os.path.join(self.test_root, "elftest.p5m")
+                with open(elfmfpath, "w") as mf:
+                        mf.write("""\
+                            set name=pkg.fmri value=pkg://test/elftest@1.0
+                            file elftest.so.1 mode=0755 owner=root group=bin path=bin/true
+                            """)
+
+                self.pkgsend(self.dc.get_depot_url(),
+                    "publish -d {0} {1}".format(self.ro_data_root, elfmfpath))
+
+                # Verify that older logic for pkgsend publish works.
+                self.dc.stop()
+                self.dc.set_disable_ops(["manifest/1"])
+                self.dc.start()
+                self.__test_publish(dir_1, dir_2, mfpath)
+                self.pkgsend(self.dc.get_depot_url(),
+                    "publish -d {0} {1}".format(self.ro_data_root, elfmfpath))
+                self.dc.unset_disable_ops()
 
         def test_23_pkgsend_no_version(self):
                 """Verify that FMRI without version cannot be specified."""
@@ -1299,6 +1331,8 @@ dir path=/usr/bin/foo target=bar hash=payload-pathname""")
                 compute, other attributes are left alone."""
 
                 self.base_26_pkgsend_multihash("sha256")
+                if sha512_supported:
+                        self.base_26_pkgsend_multihash("sha512t_256")
 
         def base_26_pkgsend_multihash(self, hash_alg):
                 # we use a file:// URI rather than the repo URI so we don't have
@@ -1312,22 +1346,37 @@ dir path=/usr/bin/foo target=bar hash=payload-pathname""")
                 with open(mfpath, "w") as mf:
                         mf.write("""
 set name=pkg.fmri value=pkg:/multihash@1.0
-file {0} path=/foo owner=root group=sys mode=0644 pkg.hash.{1}=spaghetti \
-    pkg.hash.rot13=caesar
+file {0} path=/foo owner=root group=sys mode=0644 pkg.hash.rot13=caesar
 """.format(payload, hash_alg))
                 self.pkgsend("", "-s {0} publish {1}".format(furi, mfpath))
                 self.image_create(furi)
                 self.pkg("contents -rm multihash")
-                self.assertTrue("pkg.hash.{0}=spaghetti".format(hash_alg in self.output))
+                # The default case.
+                if sha512_supported:
+                        self.assertTrue("pkg.content-hash=file:sha512t_256"
+                            in self.output)
+                else:
+                        self.assertTrue("pkg.content-hash=file:sha256"
+                            in self.output)
 
+                # "sha1 + hash_alg" case.
                 self.pkgsend("", "-s {0} publish {1}".format(furi, mfpath),
                     debug_hash="sha1+{0}".format(hash_alg))
                 self.pkg("refresh")
 
                 self.pkg("contents -rm multihash")
-                self.assertTrue("pkg.hash.{0}=spaghetti".format(hash_alg)
-                    not in self.output)
+                self.assertTrue("pkg.content-hash=file:{0}".format(
+                    hash_alg in self.output))
                 self.assertTrue("pkg.hash.rot13=caesar" in self.output)
+
+                # hash_alg case.
+                self.pkgsend("", "-s {0} publish {1}".format(furi, mfpath),
+                    debug_hash="{0}".format(hash_alg))
+                self.pkg("refresh")
+
+                self.pkg("contents -rm multihash")
+                self.assertTrue("pkg.content-hash=file:{0}".format(
+                    hash_alg in self.output))
 
         def test_27_ownership(self):
                 """Test whether the ownership of the file will change if the
@@ -1397,6 +1446,55 @@ path=dir-foo/subdir-foo/subdirfile-foo\n""".format(
 
                 self.assertEqualDiff(self.reduceSpaces(expected),
                     self.reduceSpaces(actual))
+
+        def test_28_content_attrs(self):
+                """Ensure that content-related attributes are ignored for
+                'pgksend publish'."""
+
+                mfpath = os.path.join(self.test_root, "content-attrs.p5m")
+                with open(mfpath, "w") as mf:
+                        mf.write("""\
+set name=pkg.fmri value=pkg://test/content-attrs@1.0
+file elftest.so.1 mode=0755 owner=root group=bin path=bin/true pkg.size=ignored pkg.csize=ignored elfhash=ignored elfbits=ignored elfarch=ignored pkg.content-hash=ignored
+""")
+
+                # Verify pkgsend publish can be performed even though values for
+                # content-related attributes are invalid.  They should be
+                # forcibly dropped and added back.
+                ret, pfmri = self.pkgsend(self.dc.get_depot_url(),
+                    "publish -d {0} {1}".format(self.ro_data_root, mfpath))
+
+                # Now get the actual manifest and ensure all attributes were
+                # overwritten.
+                repo = self.dc.get_repo()
+                rmpath = repo.manifest(pfmri)
+                rm = manifest.Manifest()
+                rm.set_content(pathname=rmpath)
+                a = list(rm.gen_actions_by_type('file'))[0]
+
+                # These attributes should always match pre-determined values.
+                expected = {
+                    'elfarch': 'i386',
+                    'elfbits': '32',
+                    'group': 'bin',
+                    'mode': '0755',
+                    'owner': 'root',
+                    'path': 'bin/true',
+                    'pkg.csize': '1358',
+                    'pkg.size': '3948'
+                }
+                actual = dict(
+                    (k, v) for (k, v) in six.iteritems(a.attrs)
+                    if k in expected
+                )
+                self.assertEqualDiff(expected, actual)
+
+                # 'elfhash' and 'pkg.content-hash' can vary depending upon
+                # whether we've changed the content-hashing algorithms, so we
+                # only verify it exists and doesn't have a value of 'ignored'.
+                self.assertNotEqual(a.attrs['elfhash'], 'ignored')
+                self.assertNotEqual(a.attrs['pkg.content-hash'][0], 'ignored')
+
 
 class TestPkgsendHardlinks(pkg5unittest.CliTestCase):
 

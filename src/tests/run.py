@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2017, Oracle and/or its affiliates. All rights reserved.
 # Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
 #
 
@@ -60,11 +60,10 @@ import pkg5testenv
 import warnings
 cov = None
 
-def usage():
-        print("Usage: {0} [-ghptv] [-c format] [-b filename] "\
-            "[-o regexp]".format(sys.argv[0]), file=sys.stderr)
-        print("       {0} [-hptvx] [-c format] [-b filename] "\
-            "[-s regexp] [-o regexp]".format(sys.argv[0]), file=sys.stderr)
+def usage(exitcode=2):
+        print("Usage: {0} [-dfghlpqtvVx] [-a dir] [-b filename] [-c format]\n"\
+             "              [-j jobs] [-o regexp] [-s regexp]\n"\
+             "              [-z port] ".format(sys.argv[0]), file=sys.stderr)
         print("""\
    -a <dir>       Archive failed test cases to <dir>/$pid/$testcasename
    -b <filename>  Baseline filename
@@ -73,7 +72,7 @@ def usage():
    -f             Show fail/error information even when test is expected to fail
    -g             Generate result baseline
    -h             This help message
-   -j             Parallelism
+   -j <jobs>      Parallelism
    -l             Run tests against live system
    -o <regexp>    Run only tests that match regexp
    -p             Parseable output format
@@ -85,7 +84,7 @@ def usage():
    -x             Stop after the first baseline mismatch
    -z <port>      Lowest port the test suite should use
 """, file=sys.stderr)
-        sys.exit(2)
+        sys.exit(exitcode)
 
 if __name__ == "__main__":
         #
@@ -125,7 +124,7 @@ if __name__ == "__main__":
                     "verbose", "baseline-file", "only"])
         except getopt.GetoptError as e:
                 print("Illegal option -- {0}".format(e.opt), file=sys.stderr)
-                sys.exit(1)
+                usage(1)
 
         if six.PY3:
                 bfile = os.path.join(os.getcwd(), "baseline3.txt")
@@ -362,6 +361,7 @@ def find_tests(testdir, testpats, startatpat=False, output=OUTPUT_DOTS,
         for t in sorted(testclasses, key=__key, reverse=True):
                 if t.test_count():
                         suite_list.append(t)
+
         return suite_list
 
 def generate_coverage(cov_format, includes, omits, dest):
@@ -537,11 +537,17 @@ if __name__ == "__main__":
                 testlogfp.close()
 
         # Update baseline results and display mismatches (failures)
-        baseline.store()
-        if six.PY3:
-                baseline.reportfailures('failures.3')
+
+        if onlyval[0] != "":
+                # Do not overwrite failure file if running selected tests
+                failfile = None
+        elif six.PY3:
+                failfile = 'failures.3'
         else:
-                baseline.reportfailures()
+                failfile = 'failures'
+
+        baseline.store()
+        baseline.reportfailures(failfile)
 
         # Stop and save coverage data for API tests, and combine coverage data
         # from all processes.

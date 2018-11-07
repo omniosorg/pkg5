@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
 #
 
 PKG_CLIENT_NAME = "pkgrepo"
@@ -831,7 +831,7 @@ def subcmd_info(conf, args):
                 notfound = set()
 
         def gen_listing():
-                for pfx in found:
+                for pfx in sorted(found):
                         pdata = pub_idx[pfx]
                         pkg_count = pdata.get("package-count", 0)
                         last_update = pdata.get("last-catalog-update", "")
@@ -935,7 +935,7 @@ def subcmd_list(conf, args):
 
         def gen_listing():
                 collect_attrs = out_format.startswith("json")
-                for pub in pub_data:
+                for pub in sorted(pub_data):
                         cat = pub.catalog
                         for f, states, attrs in cat.gen_packages(
                             collect_attrs=collect_attrs, matched=matched,
@@ -2325,7 +2325,7 @@ def handle_errors(func, *args, **kwargs):
                 except (MemoryError, EnvironmentError) as __e:
                         if isinstance(__e, EnvironmentError) and \
                             __e.errno != errno.ENOMEM:
-                                raise
+                                raise apx._convert_error(__e)
                         error("\n" + misc.out_of_memory())
                         __ret = EXIT_OOPS
         except SystemExit as __e:
@@ -2364,6 +2364,7 @@ if __name__ == "__main__":
         misc.setlocale(locale.LC_ALL, "", error)
         gettext.install("pkg", "/usr/share/locale",
             codeset=locale.getpreferredencoding())
+        misc.set_fd_limits(printer=error)
 
         # Make all warnings be errors.
         warnings.simplefilter('error')

@@ -1,7 +1,7 @@
 '\" te
 .\" Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
 .\" Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
-.TH pkg 1 "19 Jun 2018" "SunOS 5.11" "User Commands"
+.TH pkg 1 "10 Sep 2018" "SunOS 5.11" "User Commands"
 .SH NAME
 pkg \- Image Packaging System retrieval client
 .SH SYNOPSIS
@@ -103,7 +103,7 @@ pkg \- Image Packaging System retrieval client
 
 .LP
 .nf
-/usr/bin/pkg verify [-Hqv] [--parsable \fIversion\fR]
+/usr/bin/pkg verify [-Hqv] [-p \fIpath\fR] [--parsable \fIversion\fR]
     [--unpackaged] [--unpackaged-only] [\fIpkg_fmri_pattern\fR ...]
 .fi
 
@@ -1096,7 +1096,15 @@ Display the license texts for the packages. This option can be combined with \fB
 .ad
 .sp .6
 .RS 4n
-Display the contents (action attributes) of all packages installed in the image. With no options, display the value of the \fBpath\fR attribute for actions installed in the current image, sorted alphabetically by attribute value. For information about actions and their attributes, see "Actions" in the \fBpkg\fR(5) man page. See also the list of pseudo attribute names below.
+Display the contents (action attributes) of all packages installed in the image. With no options, display the value of the \fBpath\fR attribute for actions installed in the current image, sorted alphabetically by attribute value.
+If the \fB-o\fR option is not specified, the key attributes, as described in
+\fBpkg\fR(5), of the related action name will be displayed instead.
+In addition, 'depend' actions will also include the 'type' attribute, and 'set' actions will include the 'value' attribute.
+.sp
+When more than one action name is specified, the default attributes are
+the set of all attributes, as described above, of all the specified actions.
+For information about actions and their attributes, see 'Actions' in the
+\fBpkg\fR(5) man page. See also the list of pseudo attribute names below.
 .sp
 .ne 2
 .mk
@@ -1517,7 +1525,7 @@ With the \fB-a\fR option (and by default), searching for \fBtoken\fR results in 
 .ne 2
 .mk
 .na
-\fBpkg verify\fR [\fB-Hqv\fR] [--parsable \fBversion\fR] [--unpackaged] [--unpackaged-only] [\fIpkg_fmri_pattern\fR ...]
+\fBpkg verify\fR [\fB-Hqv\fR] [-p \fIpath\fR] [--parsable \fIversion\fR] [--unpackaged] [--unpackaged-only] [\fIpkg_fmri_pattern\fR ...]
 .ad
 .sp .6
 .RS 4n
@@ -1530,7 +1538,7 @@ Validate the installation of all packages installed in the current image. If cur
 .ad
 .sp .6
 .RS 4n
-Validate the installation of only the specified packages installed in the current image.
+Validate the installation of only the specified packages installed in the current image. When used with \fB-p\fR, only the maching actions from the specified packages will be verified.
 .RE
 
 .sp
@@ -1542,6 +1550,23 @@ Validate the installation of only the specified packages installed in the curren
 .sp .6
 .RS 4n
 Omit the headers from the verification output.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB-p path\fR
+.ad
+.sp .6
+.RS 4n
+Validate individual files, links or directories by specifying the paths. Paths
+specified are assumed to be relative to the / of the image on which the verify
+is performed. If a directory or a link is specified, only the matching action
+for the directory or the link will be verified.
+.sp
+If no \fIpkg_fmri_pattern\fRs are provided when specifying paths, all matching
+actions from packages installed in the image will be verified.
 .RE
 
 .sp
@@ -1575,7 +1600,9 @@ Suppress progress messages and all other output during the requested operation.
 .ad
 .sp .6
 .RS 4n
-Report unpackaged contents in addition to general output.
+Report unpackaged contents in addition to general output. Current unpackaged
+contents includes unpackaged files and unpackaged directories. This option can
+be combined with \fB--parsable\fR.
 .RE
 
 .sp
@@ -1586,7 +1613,9 @@ Report unpackaged contents in addition to general output.
 .ad
 .sp .6
 .RS 4n
-Report only unpackaged contents.
+Report only unpackaged contents. This option excludes general verification
+output and only reports the unpackaged files and directories. This option can
+be combined with \fB--parsable\fR
 .RE
 
 .sp
@@ -2249,11 +2278,11 @@ Display detailed configuration for only the specified publishers. Additional inf
 .ne 2
 .mk
 .na
-\fB\fB-F\fR \fIformat\fR\fR
+\fB-F\fR \fIformat\fR
 .ad
 .sp .6
 .RS 4n
-Specify an alternative output format. For a description, see the \fBpkg mediator\fR command.
+Specify an alternative output format. The value of \fIformat\fR can only be \fItsv\fR (Tab Separated Values).
 .RE
 
 .sp
@@ -2458,7 +2487,10 @@ Enable the publisher.
 .ad
 .sp .6
 .RS 4n
-Add the specified URI or path as an origin for the given publisher. This should be the location of a package repository or archive.
+Add the specified URI or path as an origin for the given publisher. This should be the location of a package repository or archive. If combined with
+\fB--enable\fR or \fB--disable\fR, the origins will be enabled or disabled
+as specified. In this case, \fI*\fR can be used to enable or disable all
+origins.
 .RE
 
 .sp
@@ -2541,7 +2573,7 @@ Higher ranked publishers than this one can provide updates to packages originall
 .RS 4n
 Use the specified proxy URI to retrieve content for the specified origin (\fB-g\fR) or mirror (\fB-m\fR). The proxy value is stored as part of the publisher configuration, which means the system repository used by child images is automatically updated. This option cannot be used to set an authenticated proxy. The \fIproxy_to_use\fR value cannot have the form \fBprotocol://user:password@host\fR.
 .sp
-At run time, \fBhttp_proxy\fR or related environment variables override this proxy setting. See the "Environment" section of the \fBcurl\fR(1) man page for the list of accepted environment variable names. If you use an environment variable to set the proxy URI, you must also set the appropriate proxy property of the \fBsvc:/application/pkg/system-repository\fR SMF service to the same value. See "Specifying a Proxy" in \fIAdding and Updating Software in Oracle Solaris 11.2\fR.
+At run time, \fBhttp_proxy\fR or related environment variables override this proxy setting. See the "Environment" section of the \fBcurl\fR(1) man page for the list of accepted environment variable names. If you use an environment variable to set the proxy URI, you must also set the appropriate proxy property of the \fBsvc:/application/pkg/system-repository\fR SMF service to the same value. See "Specifying a Proxy" in \fIAdding and Updating Software in OmniOS\fR.
 .RE
 
 .sp
@@ -4173,7 +4205,7 @@ $ \fBpkg -R /tmp/test_image rehydrate -p test1\fR
 .sp
 
 .LP
-\fBExample 35 \fRApply a hot-fix directly from a web repository
+\fBExample 35\fR Apply a hot-fix directly from a web repository
 .sp
 .LP
 Apply a hot-fix from a package archive file hosted on a remote web server
@@ -4190,7 +4222,7 @@ $ \fBpkg apply-hot-fix --be-name=testbe \e\fR
 .sp
 
 .LP
-\fBExample 36 \fRSet up a template for automatic boot environment naming
+\fBExample 36\fR Set up a template for automatic boot environment naming
 .sp
 .LP
 The following will result in boot environments which include the release
@@ -4210,6 +4242,20 @@ token is not available:
 .in +2
 .nf
 $ \fBpkg set-property auto-be-name bloody_%D\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 37\fR Verify an Individual Path in an Image
+.sp
+.LP
+Verify an individual file at path \fI/usr/bin/ls\fR and display
+verbose result.
+.sp
+.in +2
+.nf
+$ \fBpkg verify -v -p /usr/bin/ls\fR
 .fi
 .in -2
 .sp

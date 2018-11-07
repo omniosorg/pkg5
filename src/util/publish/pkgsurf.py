@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
 #
 
 #
@@ -30,7 +30,7 @@
 # After determining the packages present in the target repo, pkgsurf tries to
 # find the associated version of each package in the reference repo. Packages
 # which can't be found in the reference are ignored (not reversioned). Only the
-# latest version of the reference packages are considered. 
+# latest version of the reference packages are considered.
 # We then compare the target and ref manifest for content changes. Any
 # difference in the manifests' actions is considered a content change unless
 # they differ in:
@@ -38,7 +38,7 @@
 #  - a set action whose name attribute is specified with -i/--ignore
 #  - a signature action (signature will change when FMRI changes)
 #  - a depend action (see below)
-#   
+#
 # Changes in depend actions are not considered a content change, however,
 # further analysis is required since the package can only be reversioned if the
 # dependency package didn't have a content change and its dependencies didn't
@@ -64,7 +64,7 @@
 # pkgsurf deletes and inserts manifests in place for the target repo. File data
 # does not need to be modified since we only operate on packages with no content
 # change. It runs a catalog rebuild as the last step to regain catalog integrity
-# within the repo. 
+# within the repo.
 
 import getopt
 import gettext
@@ -92,7 +92,7 @@ import pkg.portable as portable
 import pkg.server.repository as sr
 
 from pkg.client import global_settings
-from pkg.misc import emsg, msg, PipeError
+from pkg.misc import emsg, msg, PipeError, CMP_ALL, CMP_UNSIGNED
 
 PKG_CLIENT_NAME = "pkgsurf"
 
@@ -149,11 +149,11 @@ def usage(usage_error=None, cmd=None, retcode=pkgdefs.EXIT_BADOPT):
 
         emsg(_("""\
 Usage:
-        pkgsurf -s target_path -r ref_uri [-n] [-p publisher ...] [-i name ...]
-            [-c pattern ...]
+        pkgsurf -s target_path -r ref_uri [-n] [-p publisher ...]
+            [-i name ...] [-c pattern ...]
 
 Options:
-        -c pattern      Treat every package whose FMRI matches 'pattern' as 
+        -c pattern      Treat every package whose FMRI matches 'pattern' as
                         changed and do not reversion it. Can be specified
                         multiple times.
 
@@ -287,7 +287,8 @@ def get_dep_fmri_str(fmri_str, pkg, act, latest_ref_pkgs, reversioned_pkgs,
         action 'act' based on if the FMRI belongs to a reversioned package or
         not. 'fmri_str' contains the original FMRI string from the manifest to
         be adjusted. This has to be passed in separately since in case of
-        require-any dependencies an action can contain multiple FMRIs. """
+        require-any or group-any dependencies, an action can contain multiple
+        FMRIs. """
 
         dpfmri = fmri.PkgFmri(fmri_str)
 
@@ -297,7 +298,7 @@ def get_dep_fmri_str(fmri_str, pkg, act, latest_ref_pkgs, reversioned_pkgs,
 
         # Dep package hasn't been changed, no adjustment necessary.
         if dpfmri.get_pkg_stem() not in reversioned_pkgs:
-                return fmri_str                
+                return fmri_str
 
         # Find the dependency action of the reference package
         # and replace the current version with it.
@@ -349,7 +350,8 @@ def adjust_dep_action(pkg, act, latest_ref_pkgs, reversioned_pkgs, ref_xport):
         elif act.name != "depend":
                 return act
 
-        # Require-any deps are list so convert every dep FMRI into a list.
+        # require-any and group-any deps are a list so convert every dep FMRI
+        # into a list.
         fmris = act.attrlist("fmri")
 
         new_dep = []
@@ -378,7 +380,7 @@ def use_ref(a, deps, ignores):
         if a.name == "set" and "name" in a.attrs:
                 if a.attrs["name"] in ignores:
                         return True
-                # We ignore the pkg FMRI because this is what 
+                # We ignore the pkg FMRI because this is what
                 # will always change.
                 if a.attrs["name"] == "pkg.fmri":
                         return True
@@ -398,7 +400,8 @@ def use_ref(a, deps, ignores):
 
         return False
 
-def do_reversion(pub, ref_pub, target_repo, ref_xport, changes, ignores):
+def do_reversion(pub, ref_pub, target_repo, ref_xport, changes, ignores,
+    cmp_policy, ref_repo, ref, ref_xport_cfg):
         """Do the repo reversion.
         Return 'True' if repo got modified, 'False' otherwise."""
 
@@ -476,20 +479,21 @@ def do_reversion(pub, ref_pub, target_repo, ref_xport, changes, ignores):
 
                 # Diff target and ref manifest.
                 # action only in targ, action only in ref, common action
-                ta, ra, ca = manifest.Manifest.comm([dm, rm])
+                ta, ra, ca = manifest.Manifest.comm([dm, rm],
+                    cmp_policy=cmp_policy)
 
                 # Check for manifest changes.
                 if not all(use_ref(a, tdeps, ignores) for a in ta) \
                     or not all(use_ref(a, rdeps, ignores) for a in ra):
                         continue
 
-                # Both dep lists should be equally long in case deps have just 
+                # Both dep lists should be equally long in case deps have just
                 # changed. If not, it means a dep has been added or removed and
                 # that means content change.
                 if len(tdeps) != len(rdeps):
                         continue
 
-                # If len is not different we still have to make sure that 
+                # If len is not different we still have to make sure that
                 # entries have the same pkg stem. The test above just saves time
                 # in some cases.
                 if not all(td in rdeps for td in tdeps):
@@ -511,15 +515,15 @@ def do_reversion(pub, ref_pub, target_repo, ref_xport, changes, ignores):
                 """Determine if a package or any of its dependencies has
                 changed.
                 Function will check if a dependency had a content change. If it
-                only had a dependency change, analyze its dependencies 
+                only had a dependency change, analyze its dependencies
                 recursively. Only if the whole dependency chain didn't have any
-                content change it is safe to reversion the package. 
+                content change it is safe to reversion the package.
 
-                Note about circular dependencies: The function keeps track of 
+                Note about circular dependencies: The function keeps track of
                 pkgs it already processed by stuffing them into the set 'seen'.
-                However, 'seen' gets updated before the child dependencies of 
+                However, 'seen' gets updated before the child dependencies of
                 the current pkg are examined. This works if 'seen' is only used
-                for one dependency chain since the function immediately comes 
+                for one dependency chain since the function immediately comes
                 back with a True result if a pkg has changed further down the
                 tree. However, if 'seen' is re-used between runs, it will
                 return prematurely, likely returning wrong results. """
@@ -569,6 +573,9 @@ def do_reversion(pub, ref_pub, target_repo, ref_xport, changes, ignores):
                         reversioned_pkgs.add(p)
 
         status = []
+        if cmp_policy == CMP_UNSIGNED:
+                status.append((_("WARNING: Signature changes in file content "
+                    "ignored in resurfacing")))
         status.append((_("Packages to process:"), str(len(latest_pkgs))))
         status.append((_("New packages:"), str(new_p)))
         status.append((_("Unmodified packages:"), str(dups)))
@@ -628,6 +635,21 @@ def do_reversion(pub, ref_pub, target_repo, ref_xport, changes, ignores):
                         # for these packages because they will not depend on
                         # anything we'll reversion.
                         rmani = ref_xport.get_manifest(pfmri)
+
+                        if cmp_policy == CMP_UNSIGNED:
+                                # Files with different signed content hash
+                                # values can have equivalent unsigned content
+                                # hash. CMP_UNSIGNED relaxes comparison
+                                # constraints and allows this case to compare
+                                # as equal. The reversioned manifest may
+                                # reference file data that is not present in
+                                # the target repository, so ensure that any
+                                # missing file data is added to the target
+                                # repository.
+                                add_missing_files(target_repo, pub,
+                                    latest_pkgs[p], pfmri, rmani, ref, ref_repo,
+                                    ref_xport, ref_xport_cfg, ref_pub)
+
                         opath = target_repo.manifest(latest_pkgs[p], pub)
                         os.remove(opath)
                         path = target_repo.manifest(pfmri, pub)
@@ -641,7 +663,7 @@ def do_reversion(pub, ref_pub, target_repo, ref_xport, changes, ignores):
                                     err=str(e)))
                         continue
 
-                # For packages we don't reversion we have to check if they 
+                # For packages we don't reversion we have to check if they
                 # depend on a reversioned package.
                 # Since the version of this dependency might be removed from the
                 # repo, we have to adjust the dep version to the one of the
@@ -669,18 +691,69 @@ def do_reversion(pub, ref_pub, target_repo, ref_xport, changes, ignores):
 
         return True
 
+def add_missing_files(target_repo, pub, latest_pkg, pfmri, rmani, ref, ref_repo,
+    ref_xport, ref_xport_cfg, ref_pub):
+        """Add missing data from reference repository to target repository."""
+
+        tmani = get_manifest(target_repo, pub, latest_pkg)
+        trstore = target_repo.get_pub_rstore(pub)
+
+        thashes = frozenset(
+                ta.hash for ta in tmani.gen_actions() if ta.has_payload)
+        rhashes = frozenset(
+                ra.hash for ra in rmani.gen_actions() if ra.has_payload)
+        possible = rhashes - thashes
+
+        if ref.scheme == "file":
+                for h in possible:
+                        try:
+                                target_repo.file(h)
+                                continue
+                        except (sr.RepositoryUnsupportedOperationError,
+                            sr.RepositoryFileNotFoundError):
+                                pass
+
+                        try:
+                                trstore.copy_file(h, ref_repo.file(h))
+                        except (EnvironmentError,
+                            sr.RepositoryFileNotFoundError) as e:
+                                abort(err=_("Could not reversion file "
+                                    "{path}: {err}").format(path=h, err=str(e)))
+                return
+
+        pkgdir = ref_xport_cfg.get_pkg_dir(pfmri)
+        mfile = ref_xport.multi_file_ni(ref_pub, pkgdir)
+
+        downloaded = set()
+        for a in rmani.gen_actions():
+                if (a.has_payload and a.hash in possible and
+                    a.hash not in downloaded):
+                        try:
+                                target_repo.file(a.hash)
+                        except (sr.RepositoryUnsupportedOperationError,
+                            sr.RepositoryFileNotFoundError):
+                                downloaded.add(a.hash)
+                                mfile.add_action(a)
+        mfile.wait_files()
+
+        for h in downloaded:
+                src_path = os.path.join(pkgdir, h)
+                try:
+                        trstore.insert_file(h, src_path)
+                except (EnvironmentError,
+                    sr.RepositoryFileNotFoundError) as e:
+                        abort(err=_("Could not reversion file "
+                        "{path}: {err}").format(path=h, err=str(e)))
+
 def main_func():
 
         global temp_root, repo_modified, repo_finished, repo_uri, tracker
         global dry_run
 
-        misc.setlocale(locale.LC_ALL, "", error)
-        gettext.install("pkg", "/usr/share/locale",
-            codeset=locale.getpreferredencoding())
         global_settings.client_name = PKG_CLIENT_NAME
 
         try:
-                opts, pargs = getopt.getopt(sys.argv[1:], "?c:i:np:r:s:",
+                opts, pargs = getopt.getopt(sys.argv[1:], "?c:i:np:r:s:u",
                     ["help"])
         except getopt.GetoptError as e:
                 usage(_("illegal option -- {0}").format(e.opt))
@@ -691,6 +764,7 @@ def main_func():
         changes = set()
         ignores = set()
         publishers = set()
+        cmp_policy = CMP_ALL
         
         processed_pubs = 0
 
@@ -707,6 +781,8 @@ def main_func():
                         ref_repo_uri = misc.parse_uri(arg)
                 elif opt == "-s":
                         repo_uri = misc.parse_uri(arg)
+                elif opt == "-u":
+                        cmp_policy = CMP_UNSIGNED
                 elif opt == "-?" or opt == "--help":
                         usage(retcode=pkgdefs.EXIT_OK)
 
@@ -719,9 +795,20 @@ def main_func():
         if not ref_repo_uri:
                 usage(_("A reference repository must be provided."))
 
-        t = misc.config_temp_root()
-        temp_root = tempfile.mkdtemp(dir=t,
-            prefix=global_settings.client_name + "-")
+        target = publisher.RepositoryURI(misc.parse_uri(repo_uri))
+        if target.scheme != "file":
+                abort(err=_("Target repository must be filesystem-based."))
+        try:
+                target_repo = sr.Repository(read_only=dry_run,
+                    root=target.get_pathname())
+        except sr.RepositoryError as e:
+                abort(str(e))
+
+        # Use the tmp directory in target repo for efficient file rename since
+        # files are in the same file system.
+        temp_root = target_repo.temp_root
+        if not os.path.exists(temp_root):
+                os.makedirs(temp_root)
 
         ref_incoming_dir = tempfile.mkdtemp(dir=temp_root)
         ref_pkg_root = tempfile.mkdtemp(dir=temp_root)
@@ -732,14 +819,14 @@ def main_func():
         transport.setup_publisher(ref_repo_uri, "ref", ref_xport,
             ref_xport_cfg, remote_prefix=True)
 
-        target = publisher.RepositoryURI(misc.parse_uri(repo_uri))
-        if target.scheme != "file":
-                abort(err=_("Target repository must be filesystem-based."))
-        try:
-                target_repo = sr.Repository(read_only=dry_run,
-                    root=target.get_pathname())
-        except sr.RepositoryError as e:
-                abort(str(e))
+        ref_repo = None
+        ref = publisher.RepositoryURI(misc.parse_uri(ref_repo_uri))
+        if ref.scheme == "file":
+                try:
+                        ref_repo = sr.Repository(read_only=dry_run,
+                            root=ref.get_pathname())
+                except sr.RepositoryError as e:
+                        abort(str(e))
 
         tracker = get_tracker()
 
@@ -767,7 +854,7 @@ def main_func():
                 processed_pubs += 1
 
                 rev = do_reversion(pub, ref_pub, target_repo, ref_xport,
-                    changes, ignores)
+                    changes, ignores, cmp_policy, ref_repo, ref, ref_xport_cfg)
 
                 # Only rebuild catalog if anything got actually reversioned.
                 if rev and not dry_run:
@@ -788,6 +875,11 @@ def main_func():
 # so that we can more easily detect these in testing of the CLI commands.
 #
 if __name__ == "__main__":
+        misc.setlocale(locale.LC_ALL, "", error)
+        gettext.install("pkg", "/usr/share/locale",
+            codeset=locale.getpreferredencoding())
+        misc.set_fd_limits(printer=error)
+
         if six.PY3:
                 # disable ResourceWarning: unclosed file
                 warnings.filterwarnings("ignore", category=ResourceWarning)
@@ -804,6 +896,10 @@ if __name__ == "__main__":
         except (actions.ActionError, RuntimeError,
             api_errors.ApiException) as _e:
                 error(_e)
+                cleanup()
+                __ret = pkgdefs.EXIT_OOPS
+        except EnvironmentError as _e:
+                error(api_errors._convert_error(_e))
                 cleanup()
                 __ret = pkgdefs.EXIT_OOPS
         except SystemExit as _e:

@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2017, Oracle and/or its affiliates. All rights reserved.
 # Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
 #
 
@@ -99,6 +99,8 @@ try:
         from pkg.client.debugvalues import DebugValues
         from pkg.client.pkgdefs import *
         from pkg.misc import EmptyI, msg, emsg, PipeError
+        from pkg.client.plandesc import (OP_STAGE_PREP, OP_STAGE_EXEC,
+            OP_STAGE_PLAN)
 except KeyboardInterrupt:
         import sys
         sys.exit(1)
@@ -118,6 +120,15 @@ pkg_timer = pkg.misc.Timer("pkg client")
 valid_special_attrs = ["action.hash", "action.key", "action.name", "action.raw"]
 
 valid_special_prefixes = ["action."]
+
+default_attrs = {}
+for atype, aclass in six.iteritems(actions.types):
+        default_attrs[atype] = [aclass.key_attr]
+        if atype == "depend":
+                default_attrs[atype].insert(0, "type")
+        if atype == "set":
+                default_attrs[atype].append("value")
+
 _api_inst = None
 
 tmpdirs = []
@@ -195,14 +206,14 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False,
             "            [--licenses] [--no-be-activate] [--no-index] [--no-refresh]\n"
             "            [--no-backup-be | --require-backup-be] [--backup-be-name name]\n"
             "            [--deny-new-be | --require-new-be] [--be-name name]\n"
-            "            [-R | -r [-z image_name ... | -Z image_name ...]]\n"
+            "            [-R | -r [-z zonename... | -Z zonename...]]\n"
             "            [--sync-actuators | --sync-actuators-timeout timeout]\n"
             "            [--reject pkg_fmri_pattern ... ] pkg_fmri_pattern ...")
         basic_usage["uninstall"] = _(
             "[-nvq] [-C n] [--ignore-missing] [--no-be-activate] [--no-index]\n"
             "            [--no-backup-be | --require-backup-be] [--backup-be-name]\n"
             "            [--deny-new-be | --require-new-be] [--be-name name]\n"
-            "            [-R | -r [-z image_name ... | -Z image_name ...]]\n"
+            "            [-R | -r [-z zonename... | -Z zonename...]]\n"
             "            [--sync-actuators | --sync-actuators-timeout timeout]\n"
             "            pkg_fmri_pattern ...")
         basic_usage["update"] = _(
@@ -210,14 +221,14 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False,
             "            [--licenses] [--no-be-activate] [--no-index] [--no-refresh]\n"
             "            [--no-backup-be | --require-backup-be] [--backup-be-name]\n"
             "            [--deny-new-be | --require-new-be] [--be-name name]\n"
-            "            [-R | -r [-z image_name ... | -Z image_name ...]]\n"
+            "            [-R | -r [-z zonename... | -Z zonename...]]\n"
             "            [--sync-actuators | --sync-actuators-timeout timeout]\n"
             "            [--reject pkg_fmri_pattern ...] [pkg_fmri_pattern ...]")
         basic_usage["apply-hot-fix"] = _(
             "[-nvq] [--no-be-activate]\n"
             "            [--no-backup-be | --require-backup-be] [--backup-be-name]\n"
             "            [--deny-new-be | --require-new-be] [--be-name name]\n"
-            "            [-R | -r [-z image_name ... | -Z image_name ...]]\n"
+            "            [-R | -r [-z zonename... | -Z zonename...]]\n"
             "            <path_or_uri> [pkg_fmri_pattern ...]")
         basic_usage["list"] = _(
             "[-Hafnqsuv] [-g path_or_uri ...] [--no-refresh]\n"
@@ -281,8 +292,8 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False,
         adv_usage["search"] = _(
             "[-HIaflpr] [-o attribute ...] [-s repo_uri] query")
 
-        adv_usage["verify"] = _("[-Hqv] [--parsable version] [--unpackaged]\n"
-            "            [--unpackaged-only] [pkg_fmri_pattern ...]")
+        adv_usage["verify"] = _("[-Hqv] [-p path]... [--parsable version]\n"
+            "            [--unpackaged] [--unpackaged-only] [pkg_fmri_pattern ...]")
         adv_usage["fix"] = _(
             "[-Hnvq] [--no-be-activate]\n"
             "            [--no-backup-be | --require-backup-be] [--backup-be-name name]\n"
@@ -307,7 +318,7 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False,
             "            [--licenses] [--no-be-activate] [--no-index] [--no-refresh]\n"
             "            [--no-backup-be | --require-backup-be] [--backup-be-name name]\n"
             "            [--deny-new-be | --require-new-be] [--be-name name]\n"
-            "            [-R | -r [-z image_name ... | -Z image_name ...]]\n"
+            "            [-R | -r [-z zonename... | -Z zonename...]]\n"
             "            [--sync-actuators | --sync-actuators-timeout timeout]\n"
             "            [--reject pkg_fmri_pattern ... ]\n"
             "            <variant_spec>=<instance> ...")
@@ -317,7 +328,7 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False,
             "            [--licenses] [--no-be-activate] [--no-index] [--no-refresh]\n"
             "            [--no-backup-be | --require-backup-be] [--backup-be-name name]\n"
             "            [--deny-new-be | --require-new-be] [--be-name name]\n"
-            "            [-R | -r [-z image_name ... | -Z image_name ...]]\n"
+            "            [-R | -r [-z zonename... | -Z zonename...]]\n"
             "            [--sync-actuators | --sync-actuators-timeout timeout]\n"
             "            [--reject pkg_fmri_pattern ... ]\n"
             "            <facet_spec>=[True|False|None] ...")
@@ -353,7 +364,7 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False,
             "            [-m mirror_to_add|--add-mirror=mirror_to_add ...]\n"
             "            [-M mirror_to_remove|--remove-mirror=mirror_to_remove ...]\n"
             "            [-p repo_uri] [--enable] [--disable] [--no-refresh]\n"
-            "            [-R | -r [-z image_name ... | -Z image_name ...]]\n"
+            "            [-R | -r [-z zonename... | -Z zonename...]]\n"
             "            [--reset-uuid] [--non-sticky] [--sticky]\n"
             "            [--search-after=publisher]\n"
             "            [--search-before=publisher]\n"
@@ -1219,8 +1230,8 @@ def display_plan(api_inst, child_image_plans, noexecute, omit_headers, op,
                         msg()
 
                 last_item_id = None
-                for item_id, msg_time, msg_type, msg_text in \
-                    plan.gen_item_messages(ordered=True):
+                for item_id, parent_id, msg_time, msg_level, msg_type, \
+                    msg_text in plan.gen_item_messages(ordered=True):
                         ntd = api_inst.planned_nothingtodo(li_ignore_all=True)
                         if last_item_id is None or last_item_id != item_id:
                                 last_item_id = item_id
@@ -1282,15 +1293,15 @@ def __print_verify_result(op, api_inst, plan, noexecute, omit_headers,
                         # Top level message.
                         if not parent_id:
                                 msg(msg_text)
-                        elif item_id == "overlay_errors":
-                                msg(_("\t{0}").format(msg_text))
                         elif last_item_id != item_id:
                                 # A new action id; we need to print it out and
                                 # then group its subsequent messages.
-                                msg(_("\t{0}\n\t\t{1}").format(item_id,
-                                    msg_text))
+                                msg(_("\t{0}").format(item_id))
+                                if msg_text:
+                                        msg(_("\t\t{0}").format(msg_text))
                         else:
-                                msg(_("\t\t{0}").format(msg_text))
+                                if msg_text:
+                                        msg(_("\t\t{0}").format(msg_text))
                         last_item_id = item_id
                         did_print_something = True
         else:
@@ -1385,6 +1396,23 @@ def display_plan_cb(api_inst, child_image_plans=None, noexecute=False,
                         __print_verify_result(op, api_inst, plan, noexecute,
                             omit_headers, verbose, print_packaged=False)
 
+def __display_plan_messages(api_inst, stages=None):
+        """Print out any messages generated during the specified
+        stages."""
+        if not isinstance(stages, frozenset):
+                stages = frozenset([stages])
+        plan = api_inst.describe()
+        if not plan:
+                return
+        for item_id, parent_id, msg_time, msg_level, msg_type, msg_text in \
+            plan.gen_item_messages(ordered=True, stages=stages):
+                if msg_level == MSG_INFO:
+                        msg("\n" + _("{0}").format(msg_text))
+                elif msg_level == MSG_WARNING:
+                        emsg("\n" + _("WARNING: {0}").format(msg_text))
+                else:
+                        emsg("\n" + _("ERROR: {0}").format(msg_text))
+
 def __api_prepare_plan(operation, api_inst):
         """Prepare plan."""
 
@@ -1432,6 +1460,8 @@ def __api_prepare_plan(operation, api_inst):
                 error(_("\nAn unexpected error happened while preparing for "
                     "{0}:").format(operation))
                 raise
+        finally:
+                __display_plan_messages(api_inst, OP_STAGE_PREP)
         return EXIT_OK
 
 def __api_execute_plan(operation, api_inst):
@@ -1505,6 +1535,8 @@ def __api_execute_plan(operation, api_inst):
                         # Store original exception so that the real cause of
                         # failure can be raised if this fails.
                         exc_type, exc_value, exc_tb = sys.exc_info()
+
+                __display_plan_messages(api_inst, OP_STAGE_EXEC)
 
                 try:
                         salvaged = api_inst.describe().salvaged
@@ -1592,7 +1624,8 @@ pkg:/package/pkg' as a privileged user and then retry the {op}."""
         if e_type == api_errors.CatalogRefreshException:
                 display_catalog_failures(e)
                 return EXIT_OOPS
-        if e_type == api_errors.ConflictingActionErrors:
+        if e_type == api_errors.ConflictingActionErrors or \
+            e_type == api_errors.ImageBoundaryErrors:
                 if verbose:
                         __display_plan(api_inst, verbose, noexecute)
                 error("\n" + str(e), cmd=op)
@@ -1649,6 +1682,10 @@ pkg:/package/pkg' as a privileged user and then retry the {op}."""
                 # Prepend a newline because otherwise the exception will
                 # be printed on the same line as the spinner.
                 error("\n" + str(e), cmd=op)
+                return EXIT_OOPS
+        if isinstance(e, (api_errors.UnsupportedVariantGlobbing,
+            api_errors.InvalidVarcetNames)):
+                error(str(e), cmd=op)
                 return EXIT_OOPS
 
         # if we didn't deal with the exception above, pass it on.
@@ -1833,7 +1870,8 @@ def _verify_exit_code(api_inst):
         whether we find errors."""
 
         plan = api_inst.describe()
-        for item_id, msg_time, msg_type, msg_text in plan.gen_item_messages():
+        for item_id, parent_id, msg_time, msg_level, msg_type, msg_text in \
+            plan.gen_item_messages():
                 if msg_type == MSG_ERROR:
                         return EXIT_OOPS
         return EXIT_OK
@@ -2088,7 +2126,7 @@ def change_facet(op, api_inst, pargs,
             refresh_catalogs=refresh_catalogs, reject_list=reject_pats,
             update_index=update_index)
 
-def __handle_client_json_api_output(out_json, op):
+def __handle_client_json_api_output(out_json, op, api_inst):
         """This is the main client_json_api output handling function used for
         install, update and uninstall and so on."""
 
@@ -2098,6 +2136,12 @@ def __handle_client_json_api_output(out_json, op):
 
         if "data" in out_json and "release_notes_url" in out_json["data"]:
                 notes_block(out_json["data"]["release_notes_url"])
+
+        if "data" in out_json and "repo_status" in out_json["data"]:
+                display_repo_failures(out_json["data"]["repo_status"])
+
+        __display_plan_messages(api_inst, frozenset([OP_STAGE_PREP,
+            OP_STAGE_EXEC]))
         return out_json["status"]
 
 def _emit_error_general_cb(status, err, cmd=None, selected_type=[],
@@ -2209,7 +2253,7 @@ def exact_install(op, api_inst, pargs,
             quiet, refresh_catalogs, reject_pats, show_licenses, update_index,
             verbose, display_plan_cb=display_plan_cb, logger=logger)
 
-        return  __handle_client_json_api_output(out_json, op)
+        return  __handle_client_json_api_output(out_json, op, api_inst)
 
 def install(op, api_inst, pargs,
     accept, act_timeout, backup_be, backup_be_name, be_activate, be_name,
@@ -2226,7 +2270,7 @@ def install(op, api_inst, pargs,
             show_licenses, stage, update_index, verbose,
             display_plan_cb=display_plan_cb, logger=logger)
 
-        return  __handle_client_json_api_output(out_json, op)
+        return  __handle_client_json_api_output(out_json, op, api_inst)
 
 def update(op, api_inst, pargs, accept, act_timeout, backup_be, backup_be_name,
     be_activate, be_name, force, ignore_missing, li_ignore, li_erecurse,
@@ -2242,7 +2286,7 @@ def update(op, api_inst, pargs, accept, act_timeout, backup_be, backup_be_name,
             reject_pats, show_licenses, stage, update_index, verbose,
             display_plan_cb=display_plan_cb, logger=logger)
 
-        return __handle_client_json_api_output(out_json, op)
+        return __handle_client_json_api_output(out_json, op, api_inst)
 
 def apply_hot_fix(**args):
         """Attempt to install updates from specified hot-fix"""
@@ -2458,15 +2502,16 @@ def uninstall(op, api_inst, pargs,
             noexecute, parsable_version, quiet, stage, update_index, verbose,
             display_plan_cb=display_plan_cb, logger=logger)
 
-        return __handle_client_json_api_output(out_json, op)
+        return __handle_client_json_api_output(out_json, op, api_inst)
 
 def verify(op, api_inst, pargs, omit_headers, parsable_version, quiet, verbose,
-    unpackaged, unpackaged_only):
+    unpackaged, unpackaged_only, verify_paths):
         """Determine if installed packages match manifests."""
 
         out_json = client_api._verify(op, api_inst, pargs, omit_headers,
             parsable_version, quiet, verbose, unpackaged, unpackaged_only,
-            display_plan_cb=display_plan_cb, logger=logger)
+            display_plan_cb=display_plan_cb, logger=logger,
+            verify_paths=verify_paths)
 
         # Print error messages.
         if "errors" in out_json:
@@ -3538,6 +3583,18 @@ def list_contents(api_inst, args):
                         usage(_("-m and {0} may not be specified at the same "
                             "time").format(invalid.pop()), cmd=subcommand)
 
+        if action_types:
+                invalid_atype = [atype
+                    for atype in action_types
+                    if atype not in default_attrs]
+                if invalid_atype == action_types:
+                        usage(_("no valid action types specified"),
+                            cmd=subcommand)
+                elif invalid_atype:
+                        emsg(_("""\
+WARNING: invalid action types specified: {0}
+""".format(",".join(invalid_atype))))
+
         check_attrs(attrs, subcommand)
 
         api_inst.progresstracker.set_purpose(
@@ -3554,11 +3611,22 @@ def list_contents(api_inst, args):
         # sort order, then we fill in some defaults.
         #
         if not attrs:
-                # XXX Possibly have multiple exclusive attributes per column?
-                # If listing dependencies and files, you could have a path/fmri
-                # column which would list paths for files and fmris for
-                # dependencies.
-                attrs = ["path"]
+                if not action_types:
+                        # XXX Possibly have multiple exclusive attributes per
+                        # column? If listing dependencies and files, you could
+                        # have a path/fmri column which would list paths for
+                        # files and fmris for dependencies.
+                        attrs = ["path"]
+                else:
+                        # Choose default attrs based on specified action
+                        # types. A list is used here instead of a set is
+                        # because we want to maintain the order of the
+                        # attributes in which the users specify.
+                        for attr in itertools.chain.from_iterable(
+                            default_attrs.get(atype, EmptyI)
+                            for atype in action_types):
+                                    if attr not in attrs:
+                                            attrs.append(attr)
 
         if not sort_attrs and not display_raw:
                 # XXX reverse sorting
@@ -3700,9 +3768,34 @@ examining the catalogs:"""))
 def display_catalog_failures(cre, ignore_perms_failure=False):
         total = cre.total
         succeeded = cre.succeeded
+        partial = 0
+        refresh_errstr = ""
+
+        for pub, err in cre.failed:
+                if isinstance(err, api_errors.CatalogOriginRefreshException):
+                        if len(err.failed) < err.total:
+                                partial += 1
+
+                        refresh_errstr += _("\n{0}/{1} repositories for " \
+                            "publisher '{2}' could not be reached for " \
+                            "catalog refresh.\n").format(
+                            len(err.failed), err.total, pub)
+                        for o, e in err.failed:
+                                refresh_errstr += "\n"
+                                refresh_errstr += str(e)
+
+                        refresh_errstr += "\n"
+                else:
+                        refresh_errstr += "\n   \n" + str(err)
+
+
+        partial_str = ":"
+        if partial:
+                partial_str = _(" ({0} partial):").format(str(partial))
 
         txt = _("pkg: {succeeded}/{total} catalogs successfully "
-            "updated:").format(succeeded=succeeded, total=total)
+            "updated{partial}").format(succeeded=succeeded, total=total,
+            partial=partial_str)
         if cre.failed:
                 # This ensures that the text gets printed before the errors.
                 logger.error(txt)
@@ -3720,16 +3813,48 @@ def display_catalog_failures(cre, ignore_perms_failure=False):
         if cre.failed and ignore_perms_failure:
                 # Consider those that failed to have succeeded and add them
                 # to the actual successful total.
-                return succeeded + len(cre.failed)
+                return succeeded + partial + len(cre.failed)
 
-        for pub, err in cre.failed:
-                logger.error("   ")
-                logger.error(str(err))
+        logger.error(refresh_errstr)
 
         if cre.errmessage:
                 logger.error(cre.errmessage)
 
-        return succeeded
+        return succeeded + partial
+
+
+def display_repo_failures(fail_dict):
+
+        outstr = """
+
+WARNING: Errors were encountered when attempting to retrieve package
+catalog information. Packages added to the affected publisher repositories since
+the last retrieval may not be available.
+
+"""
+        for pub in fail_dict:
+                failed = fail_dict[pub]
+
+                if failed is None or not "errors" in failed:
+                        # This pub did not have any repo problems, ignore.
+                        continue
+
+                assert type(failed) == dict
+                total = failed["total"]
+                if int(total) == 1:
+                        repo_str = _("repository")
+                else:
+                        repo_str = _("{0} of {1} repositories").format(
+                            len(failed["errors"]), total)
+
+                outstr += _("Errors were encountered when attempting to " \
+                    "contact {0} for publisher '{1}'.\n").format(repo_str, pub)
+                for err in failed["errors"]:
+                        outstr += "\n"
+                        outstr += str(err)
+                outstr += "\n"
+
+        msg(outstr)
 
 def __refresh(api_inst, pubs, full_refresh=False):
         """Private helper method for refreshing publisher data."""
@@ -3738,7 +3863,7 @@ def __refresh(api_inst, pubs, full_refresh=False):
                 # The user explicitly requested this refresh, so set the
                 # refresh to occur immediately.
                 api_inst.refresh(full_refresh=full_refresh,
-                    immediate=True, pubs=pubs)
+                    ignore_unreachable=False, immediate=True, pubs=pubs)
         except api_errors.ImageFormatUpdateNeeded as e:
                 format_update_error(e)
                 return EXIT_OOPS
@@ -3870,16 +3995,17 @@ def _set_pub_error_wrap(func, pfx, raise_errors, *args, **kwargs):
 
 def publisher_set(op, api_inst, pargs, ssl_key, ssl_cert, origin_uri,
     reset_uuid, add_mirrors, remove_mirrors, add_origins, remove_origins,
-    refresh_allowed, disable, sticky, search_before, search_after,
-    search_first, approved_ca_certs, revoked_ca_certs, unset_ca_certs,
-    set_props, add_prop_values, remove_prop_values, unset_props, repo_uri,
-    proxy_uri, li_erecurse, verbose):
+    enable_origins, disable_origins, refresh_allowed, disable, sticky,
+    search_before, search_after, search_first, approved_ca_certs,
+    revoked_ca_certs, unset_ca_certs, set_props, add_prop_values,
+    remove_prop_values, unset_props, repo_uri, proxy_uri,
+    li_erecurse, verbose):
         """pkg set-publisher [-Pedv] [-k ssl_key] [-c ssl_cert] [--reset-uuid]
             [-O|--origin_uri origin to set]
             [-g|--add-origin origin to add] [-G|--remove-origin origin to
             remove] [-m|--add-mirror mirror to add] [-M|--remove-mirror mirror
             to remove] [-p repo_uri] [--enable] [--disable] [--no-refresh]
-            [-R | -r [-z image_name ... | -Z image_name ...]]
+            [-R | -r [-z zonename... | -Z zonename...]]
             [--sticky] [--non-sticky ] [--search-before=publisher]
             [--search-after=publisher]
             [--approve-ca-cert path to CA]
@@ -3897,10 +4023,11 @@ def publisher_set(op, api_inst, pargs, ssl_key, ssl_cert, origin_uri,
 
         out_json = client_api._publisher_set(op, api_inst, pargs, ssl_key,
             ssl_cert, origin_uri, reset_uuid, add_mirrors, remove_mirrors,
-            add_origins, remove_origins, refresh_allowed, disable, sticky,
-            search_before, search_after, search_first, approved_ca_certs,
-            revoked_ca_certs, unset_ca_certs, set_props, add_prop_values,
-            remove_prop_values, unset_props, repo_uri, proxy_uri)
+            add_origins, remove_origins, enable_origins, disable_origins,
+            refresh_allowed, disable, sticky, search_before, search_after,
+            search_first, approved_ca_certs, revoked_ca_certs, unset_ca_certs,
+            set_props, add_prop_values, remove_prop_values, unset_props,
+            repo_uri, proxy_uri)
 
         errors = None
         if "errors" in out_json:
@@ -4025,6 +4152,8 @@ def publisher_list(op, api_inst, pargs, omit_headers, preferred_only,
                                 for od in pub["origins"]:
                                         msg(_("           Origin URI:"),
                                             od["Origin URI"])
+                                        msg(_("           Origin Status:"),
+                                            od["Status"])
                                         if "Proxy" in od:
                                                 msg(_("                Proxy:"),
                                                     ", ".join(od["Proxy"]))
@@ -4034,6 +4163,8 @@ def publisher_list(op, api_inst, pargs, omit_headers, preferred_only,
                                 for md in pub["mirrors"]:
                                         msg(_("           Mirror URI:"),
                                             md["Mirror URI"])
+                                        msg(_("           Mirror Status:"),
+                                            md["Status"])
                                         if "Proxy" in md:
                                                 msg(_("                Proxy:"),
                                                     ", ".join(md["Proxy"]))
@@ -5396,6 +5527,8 @@ opts_mapping = {
     "remove_mirrors":         ("M", "remove-mirror"),
     "add_origins":            ("g", "add-origin"),
     "remove_origins":         ("G", "remove-origin"),
+    "enable_origins":         ("", "enable-origins"),
+    "disable_origins":        ("", "disable-origins"),
     "refresh_allowed":        ("", "no-refresh"),
     "enable":                 ("e", "enable"),
     "disable":                ("d", "disable"),
@@ -5415,7 +5548,8 @@ opts_mapping = {
     "info_local":             ("l", ""),
     "info_remote":            ("r", ""),
     "display_license":        ("", "license"),
-    "publisher_a":            ("a", "")
+    "publisher_a":            ("a", ""),
+    "verify_paths":           ("p", "")
 }
 
 #
@@ -5992,6 +6126,7 @@ if __name__ == "__main__":
         misc.setlocale(locale.LC_ALL, "", error)
         gettext.install("pkg", "/usr/share/locale",
             codeset=locale.getpreferredencoding())
+        misc.set_fd_limits(printer=error)
 
         # Make all warnings be errors.
         import warnings

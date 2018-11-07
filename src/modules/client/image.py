@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2017, Oracle and/or its affiliates. All rights reserved.
 # Copyright 2017 OmniOS Community Edition (OmniOSce) Association.
 #
 
@@ -210,9 +210,13 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                 self._usersbyname = {}
                 self._groupsbyname = {}
 
-                # Set of pkg stems being avoided
+                # Set of pkg stems being avoided per configuration.
                 self.__avoid_set = None
                 self.__avoid_set_altered = False
+
+                # Set of pkg stems being avoided by solver due to dependency
+                # constraints (not administrative action).
+                self.__implicit_avoid_set = None
 
                 # set of pkg stems subject to group
                 # dependency but removed because obsolete
@@ -1556,7 +1560,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
 
                 if refresh_allowed:
                         self.refresh_publishers(progtrack=progtrack,
-                            full_refresh=True)
+                            full_refresh=True, ignore_unreachable=False)
                 else:
                         # initialize empty catalogs on disk
                         self.__rebuild_image_catalogs(progtrack=progtrack)
@@ -2133,7 +2137,8 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                                 self.transport.valid_publisher_test(pub)
                                 pub.validate_config()
                                 self.refresh_publishers(pubs=[pub],
-                                    progtrack=progtrack)
+                                    progtrack=progtrack,
+                                    ignore_unreachable=False)
                         except Exception as e:
                                 # Remove the newly added publisher since
                                 # it is invalid or the retrieval failed.
@@ -2215,7 +2220,47 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                 # Only after success should the configuration be saved.
                 self.save_config()
 
-        def verify(self, fmri, progresstracker, **kwargs):
+        def __process_verify(self, act, path, path_only, fmri, excludes,
+            vardrate_excludes, progresstracker, verifypaths=None,
+            overlaypaths=None, **kwargs):
+                errors = []
+                warnings = []
+                info = []
+                if act.include_this(excludes, publisher=fmri.publisher):
+                        if not path_only:
+                                errors, warnings, info = act.verify(
+                                    self, pfmri=fmri, **kwargs)
+                        elif path in verifypaths or path in overlaypaths:
+                                if path in verifypaths:
+                                        progresstracker.plan_add_progress(
+                                            progresstracker.PLAN_PKG_VERIFY)
+
+                                errors, warnings, info = act.verify(
+                                    self, pfmri=fmri, **kwargs)
+                                # It's safe to immediately discard this
+                                # match as only one action can deliver a
+                                # path with overlay=allow and only one with
+                                # overlay=true.
+                                overlaypaths.discard(path)
+                                if act.attrs.get("overlay") == "allow":
+                                        overlaypaths.add(path)
+                                verifypaths.discard(path)
+                elif act.include_this(vardrate_excludes,
+                    publisher=fmri.publisher) and not act.refcountable:
+                        # Verify that file that is faceted out does not
+                        # exist. Exclude actions which may be delivered
+                        # from multiple packages.
+                        if path is not None and os.path.exists(os.path.join(
+                            self.root, path)):
+                                errors.append(_("File should not exist"))
+                else:
+                        # Action that is not applicable to image variant
+                        # or has been dehydrated.
+                        return None, None, None, True
+                return errors, warnings, info, False
+
+        def verify(self, fmri, progresstracker, verifypaths=None,
+            overlaypaths=None, single_act=None, **kwargs):
                 """Generator that returns a tuple of the form (action, errors,
                 warnings, info) if there are any error, warning, or other
                 messages about an action contained within the specified
@@ -2227,8 +2272,46 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
 
                 'progresstracker' is a ProgressTracker object.
 
+                'verifypaths' is the set of paths to verify.
+
+                'overlaypaths' is the set of overlaying path to verify.
+
+                'single_act' is the only action of the specified fmri to
+                 verify.
+
                 'kwargs' is a dict of additional keyword arguments to be passed
                 to each action verification routine."""
+
+                path_only = bool(verifypaths or overlaypaths)
+                # pkg verify only looks at actions that have not been dehydrated.
+                excludes = self.list_excludes()
+                vardrate_excludes = [self.cfg.variants.allow_action]
+                dehydrate = self.cfg.get_property("property", "dehydrated")
+                if dehydrate:
+                        func = self.get_dehydrated_exclude_func(dehydrate)
+                        excludes.append(func)
+                        vardrate_excludes.append(func)
+
+                # If single_act is set, only that action will be processed.
+                if single_act:
+                        overlay = None
+                        if single_act.attrs.get("overlay") == "allow":
+                                overlay = "overlaid"
+                        elif single_act.attrs.get("overlay") == "true":
+                                overlay = "overlaying"
+                        progresstracker.plan_add_progress(
+                            progresstracker.PLAN_PKG_VERIFY, nitems=0)
+                        path = single_act.attrs.get("path")
+                        errors, warnings, info, ignore = \
+                            self.__process_verify(single_act,
+                                path, path_only, fmri,
+                                excludes, vardrate_excludes,
+                                progresstracker, verifypaths=verifypaths,
+                                overlaypaths=overlaypaths, **kwargs)
+                        if (errors or warnings or info) and not ignore:
+                                yield single_act, errors, \
+                                    warnings, info, overlay
+                        return
 
                 try:
                         pub = self.get_publisher(prefix=fmri.publisher)
@@ -2241,8 +2324,10 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                         sig_pol = self.signature_policy.combine(
                             pub.signature_policy)
 
-                progresstracker.plan_add_progress(
-                    progresstracker.PLAN_PKG_VERIFY)
+                if not path_only:
+                        progresstracker.plan_add_progress(
+                            progresstracker.PLAN_PKG_VERIFY)
+
                 manf = self.get_manifest(fmri, ignore_excludes=True)
                 sigs = list(manf.gen_actions_by_type("signature",
                     excludes=self.list_excludes()))
@@ -2259,12 +2344,10 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                                         "check-certificate-revocation"))
                         except apx.SigningException as e:
                                 e.pfmri = fmri
-                                yield e.sig, [e], [], []
+                                yield e.sig, [e], [], [], None
                         except apx.InvalidResourceLocation as e:
-                                yield None, [e], [], []
+                                yield None, [e], [], [], None
 
-                progresstracker.plan_add_progress(
-                    progresstracker.PLAN_PKG_VERIFY, nitems=0)
                 def mediation_allowed(act):
                         """Helper function to determine if the mediation
                         delivered by a link is allowed.  If it is, then
@@ -2291,18 +2374,22 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                         return med_version == cfg_med_version and \
                             med.mediator_impl_matches(med_impl, cfg_med_impl)
 
-                # pkg verify only looks at actions that have not been dehydrated.
-                excludes = self.list_excludes()
-                vardrate_excludes = [self.cfg.variants.allow_action]
-                dehydrate = self.cfg.get_property("property", "dehydrated")
-                if dehydrate:
-                        func = self.get_dehydrated_exclude_func(dehydrate)
-                        excludes.append(func)
-                        vardrate_excludes.append(func)
-
                 for act in manf.gen_actions():
+                        path = act.attrs.get("path")
+                        # Defer verification on actions with 'overlay'
+                        # attribute = 'allow'.
+                        if not path_only:
+                                if act.attrs.get("overlay") == "true":
+                                        yield act, [], [], [], "overlaying"
+                                        continue
+                                elif act.attrs.get("overlay"):
+                                        yield act, [], [], [], "overlaid"
+                                        continue
+
+
                         progresstracker.plan_add_progress(
                             progresstracker.PLAN_PKG_VERIFY, nitems=0)
+
                         if (act.name == "link" or
                             act.name == "hardlink") and \
                             not mediation_allowed(act):
@@ -2310,29 +2397,13 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                                 # mediation, so shouldn't be verified.
                                 continue
 
-                        errors = []
-                        warnings = []
-                        info = []
-                        if act.include_this(excludes, publisher=fmri.publisher):
-                                errors, warnings, info = act.verify(
-                                    self, pfmri=fmri, **kwargs)
-                        elif act.include_this(vardrate_excludes,
-                            publisher=fmri.publisher) and not act.refcountable:
-                                # Verify that file that is faceted out does not
-                                # exist. Exclude actions which may be delivered
-                                # from multiple packages.
-                                path = act.attrs.get("path", None)
-                                if path is not None and os.path.exists(
-                                    os.path.join(self.root, path)):
-                                        errors.append(
-                                            _("File should not exist"))
-                        else:
-                                # Action that is not applicable to image variant
-                                # or has been dehydrated.
-                                continue
-
-                        if errors or warnings or info:
-                                yield act, errors, warnings, info
+                        errors, warnings, info, ignore = self.__process_verify(
+                            act, path, path_only, fmri, excludes,
+                            vardrate_excludes, progresstracker,
+                            verifypaths=verifypaths, overlaypaths=overlaypaths,
+                            **kwargs)
+                        if (errors or warnings or info) and not ignore:
+                                yield act, errors, warnings, info, None
 
         def image_config_update(self, new_variants, new_facets, new_mediators):
                 """update variants in image config"""
@@ -3246,6 +3317,20 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                                         elif snver is not None:
                                                 states.add(
                                                     pkgdefs.PKG_STATE_UPGRADABLE)
+                                        # Check if the package is frozen.
+                                        if stem in frozen_pkgs:
+                                                f_ver = frozen_pkgs[stem].version
+                                                if f_ver == ver or \
+                                                    pkg.version.Version(ver
+                                                    ).is_successor(f_ver,
+                                                    constraint=
+                                                    pkg.version.CONSTRAINT_AUTO):
+                                                        states.add(
+                                                            pkgdefs.PKG_STATE_FROZEN)
+                                        else:
+                                                states.discard(
+                                                    pkgdefs.PKG_STATE_FROZEN)
+
                                         mdata["states"] = list(states)
 
                                 # Add entries.
@@ -3276,7 +3361,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                 self.history.log_operation_end()
 
         def refresh_publishers(self, full_refresh=False, immediate=False,
-            pubs=None, progtrack=None):
+            pubs=None, progtrack=None, ignore_unreachable=True):
                 """Refreshes the metadata (e.g. catalog) for one or more
                 publishers.  Callers are responsible for locking the image.
 
@@ -3293,7 +3378,13 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
 
                 'pubs' is a list of publisher prefixes or publisher objects
                 to refresh.  Passing an empty list or using the default value
-                implies all publishers."""
+                implies all publishers.
+
+                'ignore_unreachable' is an optional boolean value indicating
+                whether unreachable repositories should be ignored. If True,
+                errors contacting this repository are stored in the transport
+                but no exception is raised, allowing an operation to continue
+                if an unneeded repository is not online."""
 
                 if self.version < 3:
                         raise apx.ImageFormatUpdateNeeded(self.root)
@@ -3355,9 +3446,16 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                         total += 1
                         progtrack.refresh_start_pub(pub)
                         try:
-                                if pub.refresh(full_refresh=full_refresh,
-                                    immediate=immediate, progtrack=progtrack):
+                                changed, e = pub.refresh(
+                                    full_refresh=full_refresh,
+                                    immediate=immediate, progtrack=progtrack)
+                                if changed:
                                         updated = True
+
+                                if not ignore_unreachable and e:
+                                        failed.append((pub, e))
+                                        continue
+
                         except apx.PermissionsException as e:
                                 failed.append((pub, e))
                                 # No point in continuing since no data can
@@ -3374,6 +3472,9 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
 
                 if updated:
                         self.__rebuild_image_catalogs(progtrack=progtrack)
+                        # Ensure any configuration or metadata changes made
+                        # during refresh are reflected in on-disk state.
+                        self.save_config()
                 else:
                         self.__end_state_update()
 
@@ -3978,13 +4079,51 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                         sdir.replace(self.root, "", 1)
                 return sdir
 
-        def recover(self, local_spath, full_dest_path):
+        def recover(self, local_spath, full_dest_path, dest_path, old_path):
                 """Called when recovering directory contents to implement
-                "salvage-from" directive... full_dest_path must exist."""
-                source_path = os.path.normpath(os.path.join(self.root, local_spath))
+                "salvage-from" directive... full_dest_path must exist.
+                dest_path is the image-relative location where we salvage to,
+                old_path is original image-relative directory that delivered
+                the files we're now recovering.
+
+                When recovering directories where the salvage-from string is
+                a substring of the previously packaged directory, attempt
+                to restore as much of the old directory structure as possible
+                by comparing the salvage-from value with the previously
+                packaged directory.
+
+                For example, say we had user-content in /var/user/myuser/.ssh,
+                but have stopped delivering that dir, replacing it with a new
+                directory /var/.migrate/user which specifies
+                salvage-from=var/user.
+
+                The intent of the package author, was to have the
+                /var/.migrate/user directory get the unpackaged 'myuser/.ssh'
+                directory created as part of the salvaging operation, giving
+                them /var/.migrate/user/myuser/.ssh
+                and not to just end up with
+                /var/.migrate/user/<contents of .ssh dir from myuser>
+                """
+
+                source_path = os.path.normpath(
+                    os.path.join(self.root, local_spath))
+                if dest_path != old_path and old_path.startswith(
+                    dest_path + os.path.sep):
+                        # this is here so that when salvaging the contents
+                        # of a previously packaged directory, we attempt to
+                        # restore as much of the old directory structure as
+                        # possible.
+                        spath = os.path.relpath(old_path, dest_path)
+                        full_dest_path = os.path.join(full_dest_path, spath)
+                        try:
+                                os.makedirs(full_dest_path)
+                        except OSError as e:
+                                if e.errno != errno.EEXIST:
+                                        raise e
+
                 for file_name in os.listdir(source_path):
                         misc.move(os.path.join(source_path, file_name),
-                            os.path.join(full_dest_path, file_name))
+                            full_dest_path)
 
         def temporary_dir(self):
                 """Create a temp directory under the image directory for various
@@ -4522,14 +4661,14 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                 progtrack.plan_all_done()
 
         def make_fix_plan(self, op, progtrack, check_cancel, noexecute, args,
-            unpackaged=False, unpackaged_only=False):
+            unpackaged=False, unpackaged_only=False, verify_paths=EmptyI):
                 """Create an image plan to fix the image. Note: verify shares
                 the same routine."""
 
                 progtrack.plan_all_start()
                 self.__make_plan_common(op, progtrack, check_cancel, noexecute,
                     args=args, unpackaged=unpackaged,
-                    unpackaged_only=unpackaged_only)
+                    unpackaged_only=unpackaged_only, verify_paths=verify_paths)
                 progtrack.plan_all_done()
 
         def make_noop_plan(self, op, progtrack, check_cancel,
@@ -4656,16 +4795,19 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
 
                 return img.imageplan.nothingtodo()
 
-        # avoid set implementation uses simplejson to store a
-        # set of pkg_stems being avoided, and a set of tracked
-        # stems that are obsolete.
+        # avoid set implementation uses simplejson to store a set of pkg_stems
+        # being avoided (explicitly or implicitly), and a set of tracked stems
+        # that are obsolete.
         #
-        # format is (version, dict((pkg stem, "avoid" or "obsolete"))
+        # format is (version, dict((pkg stem, "avoid", "implicit-avoid" or
+        # "obsolete"))
 
         __AVOID_SET_VERSION = 1
 
-        def avoid_set_get(self):
+        def avoid_set_get(self, implicit=False):
                 """Return copy of avoid set"""
+                if implicit:
+                        return self.__implicit_avoid_set.copy()
                 return self.__avoid_set.copy()
 
         def obsolete_set_get(self):
@@ -4676,6 +4818,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                 """Load avoid set fron image state directory"""
                 state_file = os.path.join(self._statedir, "avoid_set")
                 self.__avoid_set = set()
+                self.__implicit_avoid_set = set()
                 self.__group_obsolete = set()
                 if os.path.isfile(state_file):
                         try:
@@ -4684,7 +4827,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                         except EnvironmentError as e:
                                  raise apx._convert_error(e)
                         except ValueError as e:
-                                 salvaged_path = self.salvage(state_file, 
+                                 salvaged_path = self.salvage(state_file,
                                      full_path=True)
                                  logger.warning("Corrupted avoid list - salvaging"
                                      " file {state_file} in {salvaged_path}"
@@ -4695,21 +4838,29 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                         for stem in d:
                                 if d[stem] == "avoid":
                                         self.__avoid_set.add(stem)
+                                elif d[stem] == "implicit-avoid":
+                                        self.__implicit_avoid_set.add(stem)
                                 elif d[stem] == "obsolete":
                                         self.__group_obsolete.add(stem)
                                 else:
                                         logger.warning("Corrupted avoid list - ignoring")
                                         self.__avoid_set = set()
+                                        self.__implicit_avoid_set = set()
                                         self.__group_obsolete = set()
                                         self.__avoid_set_altered = True
                 else:
                         self.__avoid_set_altered = True
 
-        def _avoid_set_save(self, new_set=None, obsolete=None):
+        def _avoid_set_save(self, new_set=None, implicit_avoid=None,
+            obsolete=None):
                 """Store avoid set to image state directory"""
                 if new_set is not None:
                         self.__avoid_set_altered = True
                         self.__avoid_set = new_set
+
+                if implicit_avoid is not None:
+                        self.__avoid_set_altered = True
+                        self.__implicit_avoid_set = implicit_avoid
 
                 if obsolete is not None:
                         self.__group_obsolete = obsolete
@@ -4724,6 +4875,10 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                 tf = open(tmp_file, "w")
 
                 d = dict((a, "avoid") for a in self.__avoid_set)
+                d.update(
+                    (a, "implicit-avoid")
+                    for a in self.__implicit_avoid_set
+                )
                 d.update((a, "obsolete") for a in self.__group_obsolete)
 
                 try:

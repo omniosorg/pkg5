@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
 #
 
 
@@ -551,9 +551,33 @@ def __prepare_json(status, op=None, schema=None, data=None, errors=None):
 def _collect_catalog_failures(cre, ignore_perms_failure=False, errors=None):
         total = cre.total
         succeeded = cre.succeeded
+        partial = 0
+        refresh_errstr = ""
+
+        for pub, err in cre.failed:
+                if isinstance(err, api_errors.CatalogOriginRefreshException):
+                        if len(err.failed) < err.total:
+                                partial += 1
+
+                        refresh_errstr += _("\n{0}/{1} repositories for "
+                            "publisher '{2}' could not be refreshed.\n").format(
+                            len(err.failed), err.total, pub)
+                        for o, e in err.failed:
+                                refresh_errstr += "\n"
+                                refresh_errstr += str(e)
+                        refresh_errstr += "\n"
+                else:
+                        refresh_errstr += "\n\n" + str(err)
+
+
+        partial_str = ":"
+        if partial:
+                partial_str = _(" ({0} partial):").format(str(partial))
 
         txt = _("pkg: {succeeded}/{total} catalogs successfully "
-            "updated:").format(succeeded=succeeded, total=total)
+            "updated{partial}").format(succeeded=succeeded, total=total,
+            partial=partial_str)
+
         if errors != None:
                 if cre.failed:
                         error = {"reason": txt, "errtype": "catalog_refresh"}
@@ -572,13 +596,13 @@ def _collect_catalog_failures(cre, ignore_perms_failure=False, errors=None):
         if cre.failed and ignore_perms_failure:
                 # Consider those that failed to have succeeded and add them
                 # to the actual successful total.
-                return succeeded + len(cre.failed)
+                return succeeded + partial + len(cre.failed)
 
-        for pub, err in cre.failed:
-                if errors != None:
-                        error = {"reason": str(err),
-                            "errtype": "catalog_refresh_failed"}
-                        errors.append(error)
+
+        if errors != None:
+                error = {"reason": str(refresh_errstr),
+                    "errtype": "catalog_refresh"}
+                errors.append(error)
 
         if cre.errmessage:
                 if errors != None:
@@ -586,7 +610,7 @@ def _collect_catalog_failures(cre, ignore_perms_failure=False, errors=None):
                             "errtype": "catalog_refresh"}
                         errors.append(error)
 
-        return succeeded
+        return succeeded + partial
 
 def _list_inventory(op, api_inst, pargs,
     li_parent_sync, list_all, list_installed_newest, list_newest,
@@ -626,7 +650,7 @@ def _list_inventory(op, api_inst, pargs,
                 # invalid as a result of publisher information
                 # changing (such as an origin uri, etc.).
                 try:
-                        api_inst.refresh()
+                        api_inst.refresh(ignore_unreachable=False)
                 except api_errors.PermissionsException:
                         # Ignore permission exceptions with the
                         # assumption that an unprivileged user is
@@ -1072,22 +1096,14 @@ pkg:/package/pkg' as a privileged user and then retry the {op}."""
                     ).format(**locals())}
                 errors_json.append(error)
                 return __prepare_json(EXIT_OOPS, errors=errors_json)
-        if e_type == api_errors.NonLeafPackageException:
-                _error_json("\n" + str(e), cmd=op, errors_json=errors_json)
-                return __prepare_json(EXIT_OOPS, errors=errors_json)
         if e_type == api_errors.CatalogRefreshException:
                 _collect_catalog_failures(e, errors=errors_json)
                 return __prepare_json(EXIT_OOPS, errors=errors_json)
-        if e_type == api_errors.ConflictingActionErrors:
+        if e_type == api_errors.ConflictingActionErrors or \
+            e_type == api_errors.ImageBoundaryErrors:
                 if verbose and display_plan_cb:
                         display_plan_cb(api_inst, verbose=verbose,
                             noexecute=noexecute, plan_only=True)
-                _error_json("\n" + str(e), cmd=op, errors_json=errors_json)
-                return __prepare_json(EXIT_OOPS, errors=errors_json)
-        if e_type in (api_errors.InvalidPlanError,
-            api_errors.ReadOnlyFileSystemException,
-            api_errors.ActionExecutionError,
-            api_errors.InvalidPackageErrors):
                 _error_json("\n" + str(e), cmd=op, errors_json=errors_json)
                 return __prepare_json(EXIT_OOPS, errors=errors_json)
         if e_type == api_errors.ImageFormatUpdateNeeded:
@@ -1125,17 +1141,17 @@ pkg:/package/pkg' as a privileged user and then retry the {op}."""
             api_errors.UnknownErrors,
             api_errors.PermissionsException,
             api_errors.InvalidPropertyValue,
-            api_errors.InvalidResourceLocation)):
-                # Prepend a newline because otherwise the exception will
-                # be printed on the same line as the spinner.
-                _error_json("\n" + str(e), cmd=op, errors_json=errors_json)
-                return __prepare_json(EXIT_OOPS, errors=errors_json)
-        if e_type == fmri.IllegalFmri:
-                # Prepend a newline because otherwise the exception will
-                # be printed on the same line as the spinner.
-                _error_json("\n" + str(e), cmd=op, errors_json=errors_json)
-                return __prepare_json(EXIT_OOPS, errors=errors_json)
-        if isinstance(e, api_errors.SigningException):
+            api_errors.InvalidResourceLocation,
+            api_errors.UnsupportedVariantGlobbing,
+            fmri.IllegalFmri,
+            api_errors.SigningException,
+            api_errors.NonLeafPackageException,
+            api_errors.ReadOnlyFileSystemException,
+            api_errors.InvalidPlanError,
+            api_errors.ActionExecutionError,
+            api_errors.InvalidPackageErrors,
+            api_errors.ImageBoundaryErrors,
+            api_errors.InvalidVarcetNames)):
                 # Prepend a newline because otherwise the exception will
                 # be printed on the same line as the spinner.
                 _error_json("\n" + str(e), cmd=op, errors_json=errors_json)
@@ -1149,7 +1165,7 @@ def __api_plan(_op, _api_inst, _accept=False, _li_ignore=None, _noexecute=False,
     _omit_headers=False, _origins=None, _parsable_version=None, _quiet=False,
     _quiet_plan=False, _review_release_notes=False, _show_licenses=False,
     _stage=API_STAGE_DEFAULT, _verbose=0, display_plan_cb=None, logger=None,
-    _unpackaged=False, _unpackaged_only=False, **kwargs):
+    _unpackaged=False, _unpackaged_only=False, _verify_paths=EmptyI, **kwargs):
 
         # All the api interface functions that we invoke have some
         # common arguments.  Set those up now.
@@ -1159,6 +1175,7 @@ def __api_plan(_op, _api_inst, _accept=False, _li_ignore=None, _noexecute=False,
         if _op == PKG_OP_VERIFY:
                 kwargs["unpackaged"] = _unpackaged
                 kwargs["unpackaged_only"] = _unpackaged_only
+                kwargs["verify_paths"] = _verify_paths
         elif _op == PKG_OP_FIX:
                 kwargs["unpackaged"] = _unpackaged
 
@@ -1360,7 +1377,7 @@ def __api_op(_op, _api_inst, _accept=False, _li_ignore=None, _noexecute=False,
     _origins=None, _parsable_version=None, _quiet=False, _quiet_plan=False,
     _review_release_notes=False, _show_licenses=False,
     _stage=API_STAGE_DEFAULT, _verbose=0,
-    _unpackaged=False, _unpackaged_only=False,
+    _unpackaged=False, _unpackaged_only=False, _verify_paths=EmptyI,
     display_plan_cb=None, logger=None,
     **kwargs):
         """Do something that involves the api.
@@ -1381,7 +1398,13 @@ def __api_op(_op, _api_inst, _accept=False, _li_ignore=None, _noexecute=False,
                     _show_licenses=_show_licenses, _stage=_stage,
                     _verbose=_verbose, _quiet_plan=_quiet_plan,
                     _unpackaged=_unpackaged, _unpackaged_only=_unpackaged_only,
-                    display_plan_cb=display_plan_cb, logger=logger, **kwargs)
+                    _verify_paths=_verify_paths, display_plan_cb=display_plan_cb,
+                    logger=logger, **kwargs)
+
+                if "_failures" in _api_inst._img.transport.repo_status:
+                        ret.setdefault("data", {}).update(
+                            {"repo_status":
+                            _api_inst._img.transport.repo_status})
 
                 if ret["status"] != EXIT_OK:
                         return ret
@@ -1402,9 +1425,9 @@ def __api_op(_op, _api_inst, _accept=False, _li_ignore=None, _noexecute=False,
                         exit_code = __verify_exit_status(_api_inst)
                         return __prepare_json(exit_code, data=data)
                 if _api_inst.planned_nothingtodo():
-                        return __prepare_json(EXIT_NOP)
+                        return __prepare_json(EXIT_NOP, data=data)
                 if _noexecute or _stage == API_STAGE_PLAN:
-                        return __prepare_json(EXIT_OK)
+                        return __prepare_json(EXIT_OK, data=data)
         else:
                 assert _stage in [API_STAGE_PREPARE, API_STAGE_EXECUTE]
                 __api_plan_load(_api_inst, _stage, _origins, logger=logger)
@@ -1418,7 +1441,7 @@ def __api_op(_op, _api_inst, _accept=False, _li_ignore=None, _noexecute=False,
                 if ret["status"] != EXIT_OK:
                         return ret
                 if _stage == API_STAGE_PREPARE:
-                        return __prepare_json(EXIT_OK)
+                        return __prepare_json(EXIT_OK, data=data)
 
         ret = __api_execute_plan(_op, _api_inst)
         pkg_timer.record("executing", logger=logger)
@@ -1576,10 +1599,11 @@ def _uninstall(op, api_inst, pargs,
 
 def _publisher_set(op, api_inst, pargs, ssl_key, ssl_cert, origin_uri,
     reset_uuid, add_mirrors, remove_mirrors, add_origins, remove_origins,
-    refresh_allowed, disable, sticky, search_before, search_after,
-    search_first, approved_ca_certs, revoked_ca_certs, unset_ca_certs,
-    set_props, add_prop_values, remove_prop_values, unset_props, repo_uri,
-    proxy_uri, verbose=None, li_erecurse=None):
+    enable_origins, disable_origins, refresh_allowed, disable, sticky,
+    search_before, search_after, search_first, approved_ca_certs,
+    revoked_ca_certs, unset_ca_certs, set_props, add_prop_values,
+    remove_prop_values, unset_props, repo_uri, proxy_uri,
+    verbose=None, li_erecurse=None):
         """Function to set publisher."""
 
         name = None
@@ -1604,7 +1628,9 @@ def _publisher_set(op, api_inst, pargs, ssl_key, ssl_cert, origin_uri,
                     api_inst, name, disable=disable, sticky=sticky,
                     origin_uri=origin_uri, add_mirrors=add_mirrors,
                     remove_mirrors=remove_mirrors, add_origins=add_origins,
-                    remove_origins=remove_origins, ssl_cert=ssl_cert,
+                    remove_origins=remove_origins,
+                    enable_origins=enable_origins,
+                    disable_origins=disable_origins, ssl_cert=ssl_cert,
                     ssl_key=ssl_key, search_before=search_before,
                     search_after=search_after, search_first=search_first,
                     reset_uuid=reset_uuid, refresh_allowed=refresh_allowed,
@@ -1616,8 +1642,7 @@ def _publisher_set(op, api_inst, pargs, ssl_key, ssl_cert, origin_uri,
 
                 if "errors" in ret_json:
                         for err in ret_json["errors"]:
-                                _error_json(err["reason"], cmd=op,
-                                    errors_json=errors_json)
+                                errors_json.append(err)
                 return __prepare_json(ret_json["status"], errors=errors_json)
 
         # Automatic configuration via -p case.
@@ -2043,11 +2068,20 @@ def _publisher_list(op, api_inst, pargs, omit_headers, preferred_only,
                         for uri in sorted(origins):
                                 # XXX get the real origin status
                                 set_value(field_data["type"], _("origin"))
-                                set_value(field_data["status"], _("online"))
                                 set_value(field_data["proxy"], "-")
                                 set_value(field_data["proxied"], "F")
 
                                 set_value(field_data["uri"], uri)
+                                if uri.disabled:
+                                        set_value(field_data["enabled"],
+                                            _("false"))
+                                        set_value(field_data["status"],
+                                            _("disabled"))
+                                else:
+                                        set_value(field_data["enabled"],
+                                            _("true"))
+                                        set_value(field_data["status"],
+                                            _("online"))
 
                                 if uri.proxies:
                                         set_value(field_data["proxied"], _("T"))
@@ -2077,6 +2111,8 @@ def _publisher_list(op, api_inst, pargs, omit_headers, preferred_only,
                         for uri in mirrors:
                                 # XXX get the real mirror status
                                 set_value(field_data["type"], _("mirror"))
+                                # We do not currently deal with mirrors. So
+                                # they are always online.
                                 set_value(field_data["status"], _("online"))
                                 set_value(field_data["proxy"], "-")
                                 set_value(field_data["proxied"], _("F"))
@@ -2152,6 +2188,10 @@ def _publisher_list(op, api_inst, pargs, omit_headers, preferred_only,
                         origins_data = []
                         for uri in r.origins:
                                 origin_data = {"Origin URI": str(uri)}
+                                if uri.disabled:
+                                        origin_data["Status"] = _("Disabled")
+                                else:
+                                        origin_data["Status"] = _("Online")
                                 if uri.proxies:
                                         origin_data["Proxy"] = \
                                             [str(p.uri) for p in uri.proxies]
@@ -2163,6 +2203,7 @@ def _publisher_list(op, api_inst, pargs, omit_headers, preferred_only,
                         mirrors_data = []
                         for uri in r.mirrors:
                                 mirror_data = {"Mirror URI": str(uri)}
+                                mirror_data["Status"] = _("Online")
                                 if uri.proxies:
                                         mirror_data["Proxy"] = \
                                             [str(p.uri) for p in uri.proxies]
@@ -2443,7 +2484,7 @@ examining the catalogs:\n""")
         return __prepare_json(err, errors=errors_json, data=data)
 
 def _verify(op, api_inst, pargs, omit_headers, parsable_version, quiet, verbose,
-    unpackaged, unpackaged_only, display_plan_cb=None, logger=None):
+    unpackaged, unpackaged_only, verify_paths, display_plan_cb=None, logger=None):
         """Determine if installed packages match manifests."""
 
         errors_json = []
@@ -2457,7 +2498,8 @@ def _verify(op, api_inst, pargs, omit_headers, parsable_version, quiet, verbose,
             _omit_headers=omit_headers, _quiet=quiet, _quiet_plan=True,
             _verbose=verbose, _parsable_version=parsable_version,
             _unpackaged=unpackaged, _unpackaged_only=unpackaged_only,
-            display_plan_cb=display_plan_cb, logger=logger)
+            _verify_paths=verify_paths, display_plan_cb=display_plan_cb,
+            logger=logger)
 
 def _fix(op, api_inst, pargs, accept, backup_be, backup_be_name, be_activate,
     be_name, new_be, noexecute, omit_headers, parsable_version, quiet,
@@ -2533,12 +2575,10 @@ def _set_pub_error_wrap(func, pfx, raise_errors, *args, **kwargs):
                 for entry in raise_errors:
                         if isinstance(e, entry):
                                 raise
-                txt = _("Could not refresh the catalog for {0}\n").format(
-                    pfx)
-                for pub, err in e.failed:
-                        txt += "   \n{0}".format(err)
-                errors_json.append({"reason": txt})
+                succeeded = _collect_catalog_failures(e,
+                    ignore_perms_failure=True, errors=errors_json)
                 return __prepare_json(EXIT_OOPS, errors=errors_json)
+
         except api_errors.InvalidDepotResponseException as e:
                 for entry in raise_errors:
                         if isinstance(e, entry):
@@ -2573,7 +2613,8 @@ def _set_pub_error_wrap(func, pfx, raise_errors, *args, **kwargs):
 
 def _add_update_pub(api_inst, prefix, pub=None, disable=None, sticky=None,
     origin_uri=None, add_mirrors=EmptyI, remove_mirrors=EmptyI,
-    add_origins=EmptyI, remove_origins=EmptyI, ssl_cert=None, ssl_key=None,
+    add_origins=EmptyI, remove_origins=EmptyI, enable_origins=EmptyI,
+    disable_origins=EmptyI, ssl_cert=None, ssl_key=None,
     search_before=None, search_after=None, search_first=False,
     reset_uuid=None, refresh_allowed=False,
     set_props=EmptyI, add_prop_values=EmptyI,
@@ -2593,7 +2634,8 @@ def _add_update_pub(api_inst, prefix, pub=None, disable=None, sticky=None,
                 except api_errors.UnknownPublisher as e:
                         if not origin_uri and not add_origins and \
                             (remove_origins or remove_mirrors or
-                            remove_prop_values or add_mirrors):
+                            remove_prop_values or add_mirrors or
+                            enable_origins or disable_origins):
                                 errors_json.append({"reason": str(e)})
                                 return __prepare_json(EXIT_OOPS,
                                     errors=errors_json)
@@ -2613,10 +2655,6 @@ def _add_update_pub(api_inst, prefix, pub=None, disable=None, sticky=None,
                         # configuration.
                         repo = publisher.Repository()
                         pub.repository = repo
-
-        if disable is not None:
-                # Set disabled property only if provided.
-                pub.disabled = disable
 
         if sticky is not None:
                 # Set stickiness only if provided
@@ -2667,7 +2705,44 @@ def _add_update_pub(api_inst, prefix, pub=None, disable=None, sticky=None,
 
                 for u in add:
                         uri = publisher.RepositoryURI(u, proxies=proxies)
-                        getattr(repo, "add_{0}".format(etype))(uri)
+                        try:
+                                getattr(repo, "add_{0}".format(etype)
+                                    )(uri)
+                        except (api_errors.DuplicateSyspubOrigin,
+                            api_errors.DuplicateRepositoryOrigin):
+                                # If this exception occurs, we know the
+                                # origin already exists. Then if it is
+                                # combined with --enable or --disable,
+                                # we turn it into an update task for the
+                                # origin. Otherwise, raise the exception
+                                # again.
+                                if not (disable_origins or enable_origins):
+                                        raise
+
+        if disable is not None:
+                # Set disabled property only if provided.
+                # If "*" in enable or disable origins list or disable without
+                # enable or disable origins specified, then it is a publisher
+                # level disable.
+                if not (enable_origins or disable_origins):
+                        pub.disabled = disable
+                else:
+                        if disable_origins:
+                                if "*" in disable_origins:
+                                        for o in repo.origins:
+                                                o.disabled = True
+                                else:
+                                        for diso in disable_origins:
+                                                ori = repo.get_origin(diso)
+                                                ori.disabled = True
+                        if enable_origins:
+                                if "*" in enable_origins:
+                                        for o in repo.origins:
+                                                o.disabled = False
+                                else:
+                                        for eno in enable_origins:
+                                                ori = repo.get_origin(eno)
+                                                ori.disabled = False
 
         # None is checked for here so that a client can unset a ssl_cert or
         # ssl_key by using -k "" or -c "".

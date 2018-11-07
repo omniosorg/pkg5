@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2017, Oracle and/or its affiliates. All rights reserved.
 #
 
 from __future__ import print_function
@@ -175,10 +175,7 @@ Options:
         --raw           Retrieve and store the raw package data in a set of
                         directory structures by stem and version at the location
                         specified by -d.  May only be used with filesystem-
-                        based destinations.  This can be used with pkgsend(1)
-                        include to conveniently modify and republish packages,
-                        perhaps by correcting file contents or providing
-                        additional package metadata.
+                        based destinations.
 
         --key src_key   Specify a client SSL key file to use for pkg retrieval.
 
@@ -239,7 +236,7 @@ def get_tracker():
         progresstracker.set_major_phase(progresstracker.PHASE_UTILITY)
         return progresstracker
 
-def get_manifest(pfmri, xport_cfg, contents=False):
+def get_manifest(pfmri, xport_cfg, validate=False):
 
         m = None
         pkgdir = xport_cfg.get_pkg_dir(pfmri)
@@ -256,8 +253,16 @@ def get_manifest(pfmri, xport_cfg, contents=False):
                         abort(err=_("Unable to parse manifest '{mpath}' for "
                             "package '{pfmri}'").format(**locals()))
 
-        if contents:
-                return m.tostr_unsorted()
+        if validate:
+                errors = []
+                for a in m.gen_actions():
+                        try:
+                                a.validate(fmri=pfmri)
+                        except Exception as e:
+                                errors.append(e)
+                if errors:
+                        raise apx.InvalidPackageErrors(errors)
+
         return m
 
 def expand_fmri(pfmri, constraint=version.CONSTRAINT_AUTO):
@@ -313,8 +318,10 @@ def get_sizes(mfst):
         sendb = 0
         sendcb = 0
 
+        hashes = set()
         for a in mfst.gen_actions():
-                if a.has_payload:
+                if a.has_payload and a.hash not in hashes:
+                        hashes.add(a.hash)
                         getb += get_pkg_otw_size(a)
                         getf += 1
                         sendb += int(a.attrs.get("pkg.size", 0))
@@ -328,9 +335,11 @@ def add_hashes_to_multi(mfst, multi):
         """Takes a manifest and a multi object and adds the hashes to the multi
         object."""
 
+        hashes = set()
         for a in mfst.gen_actions():
-                if a.has_payload:
+                if a.has_payload and a.hash not in hashes:
                         multi.add_action(a)
+                        hashes.add(a.hash)
 
 def prune(fmri_list, all_versions, all_timestamps):
         """Returns a filtered version of fmri_list based on the provided
@@ -409,9 +418,6 @@ def main_func():
         verbose = False
 
         temp_root = misc.config_temp_root()
-
-        gettext.install("pkg", "/usr/share/locale",
-            codeset=locale.getpreferredencoding())
 
         # set process limits for memory consumption to 8GB
         misc.set_memory_limit(8 * 1024 * 1024 * 1024)
@@ -813,7 +819,7 @@ def archive_pkgs(pargs, target, list_newest, all_versions, all_timestamps,
                 good_matches = []
                 for f in matches:
                         try:
-                                m = get_manifest(f, xport_cfg)
+                                m = get_manifest(f, xport_cfg, validate=True)
                         except apx.InvalidPackageErrors as e:
                                 invalid_manifests.extend(e.errors)
                                 continue
@@ -946,9 +952,8 @@ def archive_pkgs(pargs, target, list_newest, all_versions, all_timestamps,
         cleanup()
 
         if invalid_manifests:
-                error(_("The following errors were encountered.  The packages "
-                    "listed were not\nreceived.\n{0}").format(
-                    "\n".join(str(im) for im in invalid_manifests)))
+                error(_("One or more packages could not be retrieved:\n\n{0}").
+                    format("\n".join(str(im) for im in invalid_manifests)))
         if invalid_manifests and total_processed:
                 return pkgdefs.EXIT_PARTIAL
         if invalid_manifests:
@@ -1160,7 +1165,7 @@ def clone_repo(pargs, target, list_newest, all_versions, all_timestamps,
                 tracker.manifest_fetch_start(len(to_add))
                 for f, i in to_add:
                         try:
-                                m = get_manifest(f, xport_cfg)
+                                m = get_manifest(f, xport_cfg, validate=True)
                         except apx.InvalidPackageErrors as e:
                                 invalid_manifests.extend(e.errors)
                                 continue
@@ -1244,8 +1249,8 @@ def clone_repo(pargs, target, list_newest, all_versions, all_timestamps,
                     src_pub.prefix)
 
         if invalid_manifests:
-                error(_("The following packages could not be retrieved:\n{0}").format(
-                    "\n".join(str(im) for im in invalid_manifests)))
+                error(_("One or more packages could not be retrieved:\n\n{0}").
+                    format("\n".join(str(im) for im in invalid_manifests)))
 
         ret = 0
         # Run pkgrepo verify to check repo.
@@ -1432,7 +1437,7 @@ def transfer_pkgs(pargs, target, list_newest, all_versions, all_timestamps,
                 while matches:
                         f = matches.pop()
                         try:
-                                m = get_manifest(f, xport_cfg)
+                                m = get_manifest(f, xport_cfg, validate=True)
                         except apx.InvalidPackageErrors as e:
                                 invalid_manifests.extend(e.errors)
                                 continue
@@ -1511,12 +1516,11 @@ def transfer_pkgs(pargs, target, list_newest, all_versions, all_timestamps,
                                 # mogrify is done.
                                 nm = m
 
-                        getb, getf, sendb, sendcb = get_sizes(nm)
+                        getb, getf = get_sizes(nm)[:2]
                         if republish:
-                                # For now, normal republication always uses
-                                # uncompressed data as already compressed data
-                                # is not supported for publication.
-                                send_bytes += sendb
+                                send_bytes += dest_xport.get_transfer_size(
+                                    new_targ_pubs[nf.publisher],
+                                    nm.gen_actions())
 
                         # Store a mapping between new fmri and new manifest for
                         # future use.
@@ -1567,7 +1571,14 @@ def transfer_pkgs(pargs, target, list_newest, all_versions, all_timestamps,
                         continue
 
                 processed = 0
+                uploads = set()
                 pkgs_to_get = sorted(pkgs_to_get)
+                hashes = set()
+                if republish and pkgs_to_get:
+                        # If files can be transferred compressed, keep them
+                        # compressed in the source.
+                        keep_compressed, hashes = dest_xport.get_transfer_info(
+                            new_targ_pubs[pkgs_to_get[0].publisher])
                 for nf in pkgs_to_get:
                         tracker.republish_start_pkg(nf)
                         # Processing republish.
@@ -1622,13 +1633,28 @@ def transfer_pkgs(pargs, target, list_newest, all_versions, all_timestamps,
                                                 # added to the manifest.
                                                 continue
 
+                                        fname = None
+                                        fhash = None
                                         if a.has_payload:
+                                                fhash = a.hash
                                                 fname = os.path.join(pkgdir,
-                                                    a.hash)
+                                                    fhash)
 
                                                 a.data = lambda: open(fname,
                                                     "rb")
-                                        t.add(a)
+
+                                        if fhash in hashes and \
+                                            fhash not in uploads:
+                                                # If the payload will be
+                                                # transferred and not have been
+                                                # uploaded, upload it...
+                                                t.add(a, exact=True, path=fname)
+                                                uploads.add(fhash)
+                                        else:
+                                                # ...otherwise, just add the
+                                                # action to the transaction.
+                                                t.add(a, exact=True)
+
                                         if a.name == "signature" and \
                                             not do_mog:
                                                 # We always store content in the
@@ -1638,7 +1664,11 @@ def transfer_pkgs(pargs, target, list_newest, all_versions, all_timestamps,
                                                     least_preferred=True):
                                                         fname = os.path.join(
                                                             pkgdir, fp)
-                                                        t.add_file(fname)
+                                                        if keep_compressed:
+                                                                t.add_file(fname,
+                                                                    basename=fp)
+                                                        else:
+                                                                t.add_file(fname)
                                 # Always defer catalog update.
                                 t.close(add_to_catalog=False)
                         except trans.TransactionError as e:
@@ -1682,9 +1712,8 @@ def transfer_pkgs(pargs, target, list_newest, all_versions, all_timestamps,
         # Dump all temporary data.
         cleanup()
         if invalid_manifests:
-                error(_("The following errors were encountered.  The packages "
-                    "listed were not\nreceived.\n{0}").format(
-                    "\n".join(str(im) for im in invalid_manifests)))
+                error(_("One or more packages could not be retrieved:\n\n{0}").
+                    format("\n".join(str(im) for im in invalid_manifests)))
         if invalid_manifests and total_processed:
                 return pkgdefs.EXIT_PARTIAL
         if invalid_manifests:
@@ -1692,6 +1721,10 @@ def transfer_pkgs(pargs, target, list_newest, all_versions, all_timestamps,
         return pkgdefs.EXIT_OK
 
 if __name__ == "__main__":
+        misc.setlocale(locale.LC_ALL, "", error)
+        gettext.install("pkg", "/usr/share/locale",
+            codeset=locale.getpreferredencoding())
+        misc.set_fd_limits(printer=error)
 
         # Make all warnings be errors.
         warnings.simplefilter('error')
@@ -1734,7 +1767,9 @@ if __name__ == "__main__":
                 raise _e
         except EnvironmentError as _e:
                 if _e.errno != errno.ENOSPC and _e.errno != errno.EDQUOT:
-                        raise
+                        error(str(apx._convert_error(_e)))
+                        __ret = 1
+                        sys.exit(__ret)
 
                 txt = "\n"
                 if _e.errno == errno.EDQUOT:

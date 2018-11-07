@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
 #
 
 """
@@ -43,16 +43,18 @@ are also defined here:
 # standard python classes
 import collections
 import copy
+import itertools
 import operator
 import os
 import select
 import simplejson as json
-import six
 
 # Redefining built-in 'reduce', 'zip'; pylint: disable=W0622
-# import-error: six.moves; pylint: disable=F0401
+# Imports from package six are not grouped: pylint: disable=C0412
 from functools import reduce
 from six.moves import zip
+
+import six
 
 # pkg classes
 import pkg.actions
@@ -127,7 +129,7 @@ PATH_PUBS      = os.path.join(__DATA_DIR, "linked_ppubs")
 
 #
 # we define PATH_TRANSFORM_NONE as a tuple instead of just None because this
-# will prevent it from being accidently serialized to json.
+# will prevent it from being accidentally serialized to json.
 #
 PATH_TRANSFORM_NONE = ("/", "/")
 
@@ -550,7 +552,7 @@ class LinkedImage(object):
                 new properties, updates them, and resets any cached state
                 that is affected by property values."""
 
-                if props == None:
+                if props is None:
                         props = dict()
                 elif props:
                         self.__verify_props(props)
@@ -647,9 +649,16 @@ class LinkedImage(object):
                 props[PROP_PATH] = path
                 props[PROP_CURRENT_PATH] = current_path
                 props[PROP_PATH_TRANSFORM] = path_transform
-                if PROP_PARENT_PATH in props:
-                        props[PROP_CURRENT_PARENT_PATH] = path_transform_apply(
-                            props[PROP_PARENT_PATH], path_transform)
+                parent_path = props.get(PROP_PARENT_PATH)
+                if not parent_path:
+                        return
+
+                if not path_transform_applicable(parent_path, path_transform):
+                        props[PROP_CURRENT_PARENT_PATH] = parent_path
+                        return
+
+                props[PROP_CURRENT_PARENT_PATH] = path_transform_apply(
+                    parent_path, path_transform)
 
         def __set_current_path(self, props, update=False):
                 """Given a set of linked image properties, the image paths
@@ -982,7 +991,7 @@ class LinkedImage(object):
 
                 # compare in-memory and on-disk properties
                 li_ondisk_props = self.__load_ondisk_props(tmp=False)
-                if li_ondisk_props == None:
+                if li_ondisk_props is None:
                         li_ondisk_props = dict()
                 li_inmemory_props = rm_dict_ent(self.__props,
                     temporal_props)
@@ -1053,7 +1062,7 @@ class LinkedImage(object):
                 pubs = get_pubs(self.__img)
                 ppubs = self.__ppubs
 
-                if ppubs == None:
+                if ppubs is None:
                         # parent publisher data is missing, press on and hope
                         # for the best.
                         return
@@ -1225,7 +1234,7 @@ class LinkedImage(object):
                 Always returns a copy of the properties in case the caller
                 tries to update them."""
 
-                if lin == None:
+                if lin is None:
                         # If we're not linked we'll return an empty
                         # dictionary.  That's ok.
                         return self.__props.copy()
@@ -1327,7 +1336,7 @@ class LinkedImage(object):
                 # sort by linked image name
                 li_children = sorted(li_children, key=operator.itemgetter(0))
 
-                if li_ignore == None:
+                if li_ignore is None:
                         # don't ignore any children
                         return li_children
 
@@ -1396,9 +1405,9 @@ class LinkedImage(object):
 
                 assert type(lin) == LinkedImageName
                 assert type(path) == str
-                assert props == None or type(props) == dict, \
+                assert props is None or type(props) == dict, \
                     "type(props) == {0}".format(type(props))
-                if props == None:
+                if props is None:
                         props = dict()
 
                 lip = self.__plugins[lin.lin_type]
@@ -1412,7 +1421,7 @@ class LinkedImage(object):
 
                 # Path must be an absolute path.
                 if not os.path.isabs(path):
-                        raise apx.LinkedImageException(parent_path_notabs=path)
+                        raise apx.LinkedImageException(parent_bad_notabs=path)
 
                 # we don't bother to cleanup the path to the parent image here
                 # because when we allocate an Image object for the parent
@@ -1494,23 +1503,24 @@ class LinkedImage(object):
                 assert self.ischild()
 
                 cat = self.__img.get_catalog(self.__img.IMG_CATALOG_INSTALLED)
-                excludes = [ self.__img.cfg.variants.allow_action ]
+                excludes = self.__img.list_excludes()
 
                 sync_fmris = []
-
                 for fmri in cat.fmris():
                         # get parent dependencies from the catalog
-                        parent_deps = [
-                            a
+                        for f in itertools.chain.from_iterable(
+                            a.attrlist("fmri")
                             for a in cat.get_entry_actions(fmri,
                                 [pkg.catalog.Catalog.DEPENDENCY],
                                 excludes=excludes)
-                            if a.name == "depend" and \
+                            if a.name == "depend" and
                                 a.attrs["type"] == "parent"
-                        ]
-
-                        if parent_deps:
-                                sync_fmris.append(fmri)
+                        ):
+                                if f == pkg.actions.depend.DEPEND_SELF:
+                                        sync_fmris.append((fmri, fmri))
+                                else:
+                                        sync_fmris.append((fmri,
+                                            pkg.fmri.PkgFmri(f)))
 
                 if not sync_fmris:
                         # No packages to sync
@@ -1522,14 +1532,23 @@ class LinkedImage(object):
                         for fmri in self.parent_fmris()
                 ])
 
-                for fmri in sync_fmris:
+                for (pkg_fmri, fmri) in sync_fmris:
                         if fmri.pkg_name not in ppkgs_dict:
                                 return False
-                        pfmri = ppkgs_dict[fmri.pkg_name]
-                        if fmri.version != pfmri.version and \
-                            not pfmri.version.is_successor(fmri.version,
-                                pkg.version.CONSTRAINT_AUTO):
-                                return False
+                        # This intentionally mirrors the logic in
+                        # __trim_nonmatching_parents1 in pkg_solver.py.
+                        pf = ppkgs_dict[fmri.pkg_name]
+                        if pf.version == fmri.version:
+                                # parent dependency is satisfied, which applies
+                                # to both DEPEND_SELF and other cases
+                                continue
+                        elif (pkg_fmri != fmri and
+                            pf.version.is_successor(fmri.version,
+                                pkg.version.CONSTRAINT_NONE)):
+                                # *not* DEPEND_SELF; parent dependency is
+                                # satisfied
+                                continue
+                        return False
                 return True
 
         def audit_self(self, latest_md=True):
@@ -1699,10 +1718,7 @@ class LinkedImage(object):
                 # Unused variable 'be_uuid'; pylint: disable=W0612
                 (be_name, be_uuid) = bootenv.BootEnv.get_be_name(self.__root)
                 # pylint: enable=W0612
-                if be_name:
-                        img_is_clonable = True
-                else:
-                        img_is_clonable = False
+                img_is_clonable = bool(be_name)
 
                 # If the parent image is clonable then the new child image
                 # must be nested within the parents filesystem namespace.
@@ -1817,9 +1833,9 @@ class LinkedImage(object):
 
                 assert type(lin) == LinkedImageName
                 assert type(path) == str
-                assert props == None or type(props) == dict, \
+                assert props is None or type(props) == dict, \
                     "type(props) == {0}".format(type(props))
-                if props == None:
+                if props is None:
                         props = dict()
 
                 lip = self.__plugins[lin.lin_type]
@@ -2420,7 +2436,7 @@ class LinkedImage(object):
                         assert pd.children_ignored != [] or \
                             pd.children_planned == pd.children_nop == []
 
-                        # there shouldn't be any overloap between sets of
+                        # there shouldn't be any overlap between sets of
                         # children in the plan
                         assert not (set(pd.children_planned) &
                             set(pd.children_nop))
@@ -2515,7 +2531,7 @@ class LinkedImage(object):
 
                 if api_op == pkgdefs.API_OP_SYNC:
                         pkg_op_irecurse = pkgdefs.PKG_OP_SYNC
-                        # If we are doing an explict sync, we do have to make
+                        # If we are doing an explicit sync, we do have to make
                         # sure we actually recurse into the child and sync
                         # metadata.
                         ignore_syncmd_nop = True
@@ -3464,6 +3480,19 @@ def get_inheritable_facets(img, pd=None):
         ])
 
         #
+        # For performance reasons see if we can limit ourselves to using the
+        # installed catalog.  If this is a non-image modifying operation then
+        # the installed catalog should be sufficient.  If this is an image
+        # modifying operation that is installing new packages, then we'll need
+        # to use the known catalog (which should already have been initialized
+        # and used during the image planning operation) to lookup information
+        # about the packages being installed.
+        #
+        cat = img.get_catalog(img.IMG_CATALOG_INSTALLED)
+        if not ppkgs <= frozenset(cat.fmris()):
+                cat = img.get_catalog(img.IMG_CATALOG_KNOWN)
+
+        #
         # iterate through all installed (or planned) package incorporation
         # dependency actions and find those that are affected by image facets.
         #
@@ -3472,7 +3501,6 @@ def get_inheritable_facets(img, pd=None):
         # no effect on other actions within that package.)
         #
         faceted_deps = dict()
-        cat = img.get_catalog(img.IMG_CATALOG_KNOWN)
         for pfmri in ppkgs:
                 for act in cat.get_entry_actions(pfmri, [cat.DEPENDENCY]):
                         # we're only interested in incorporate dependencies
@@ -3581,7 +3609,8 @@ def save_data(path, data, root="/", catch_exception=True):
 
         try:
                 if not ar.ar_exists(root, path_dir):
-                        ar.ar_mkdir(root, path_dir, misc.PKG_DIR_MODE)
+                        ar.ar_mkdir(root, path_dir, misc.PKG_DIR_MODE,
+                            exists_is_ok=True) # parallel zone create race
 
                 # write the output to a temporary file
                 fd = ar.ar_open(root, pathtmp, os.O_WRONLY,
@@ -3692,32 +3721,32 @@ def _rterr(li=None, lic=None, lin=None, path=None, err=None,
         assert not (li and lic)
         assert not ((lin or path) and li)
         assert not ((lin or path) and lic)
-        assert path == None or type(path) == str
+        assert path is None or type(path) == str
 
         if bad_cp:
-                assert err == None
+                assert err is None
                 err = "Invalid linked content policy: {0}".format(bad_cp)
         elif bad_iup:
-                assert err == None
+                assert err is None
                 err = "Invalid linked image update policy: {0}".format(bad_iup)
         elif bad_lin_type:
-                assert err == None
+                assert err is None
                 err = "Invalid linked image type: {0}".format(bad_lin_type)
         elif bad_prop:
-                assert err == None
+                assert err is None
                 err = "Invalid linked property value: {0}={1}".format(*bad_prop)
         elif missing_props:
-                assert err == None
+                assert err is None
                 err = "Missing required linked properties: {0}".format(
                     ", ".join(missing_props))
         elif multiple_transforms:
-                assert err == None
+                assert err is None
                 err = "Multiple plugins reported different path transforms:"
                 for plugin, transform in multiple_transforms:
                         err += "\n\t{0} = {1} -> {2}".format(plugin,
                             transform[0], transform[1])
         elif saved_temporal_props:
-                assert err == None
+                assert err is None
                 err = "Found saved temporal linked properties: {0}".format(
                     ", ".join(saved_temporal_props))
         else:

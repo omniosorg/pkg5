@@ -20,7 +20,8 @@
  */
 
 /*
- *  Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ *  Copyright (c) 2009, 2017, Oracle and/or its affiliates. All rights reserved.
+ *  Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
  */
 
 #include <libelf.h>
@@ -256,86 +257,13 @@ getheaderinfo(int fd)
 }
 
 /*
- * For ELF nontriviality: Need to turn an ELF object into a unique hash.
- *
- * From Eric Saxe's investigations, we see that the following sections can
- * generally be ignored:
- *
- *    .SUNW_signature, .comment, .SUNW_dof, .debug, .plt, .rela.bss,
- *    .rela.plt, .line, .note
- *
- * Conversely, the following sections are generally significant:
- *
- *    .rodata.str1.8, .rodata.str1.1, .rodata, .data1, .data, .text
- *
- * Accordingly, we will hash on the latter group of sections to determine our
- * ELF hash.
- */
-static int
-hashsection(char *name)
-{
-	if (strcmp(name, ".SUNW_signature") == 0 ||
-	    strcmp(name, ".comment") == 0 ||
-	    strcmp(name, ".SUNW_dof") == 0 ||
-	    strcmp(name, ".debug") == 0 ||
-	    strcmp(name, ".plt") == 0 ||
-	    strcmp(name, ".rela.bss") == 0 ||
-	    strcmp(name, ".rela.plt") == 0 ||
-	    strcmp(name, ".line") == 0 ||
-	    strcmp(name, ".note") == 0 ||
-	    strcmp(name, ".compcom") == 0)
-		return (0);
-
-	return (1);
-}
-
-/*
- * Reads a section in 64k increments, adding it to the hash.
- */
-static int
-readhash(int fd, SHA1_CTX *shc, SHA256_CTX *shc2, off_t offset, off_t size,
-    int sha1, int sha256)
-{
-	off_t n;
-	char hashbuf[64 * 1024];
-	ssize_t rbytes;
-
-	if (!size)
-		return (0);
-
-	if (lseek(fd, offset, SEEK_SET) == -1) {
-		PyErr_SetFromErrno(PyExc_IOError);
-		return (-1);
-	}
-
-	do {
-		n = MIN(size, sizeof (hashbuf));
-		if ((rbytes = read(fd, hashbuf, n)) == -1) {
-			PyErr_SetFromErrno(PyExc_IOError);
-			return (-1);
-		}
-                if (sha1 > 0) {
-		        SHA1Update(shc, hashbuf, rbytes);
-                }
-                if (sha256 > 0) {
-                        SHA256Update(shc2, hashbuf, rbytes);
-                }
-		size -= rbytes;
-	} while (size != 0);
-
-	return (0);
-}
-
-/*
  * getdynamic - returns a struct filled with the
  * information we want from an ELF file.  Returns NULL
  * if it can't find everything (eg. not ELF file, wrong
  * class of ELF file).
- * If sha1 is > 0, we produce an SHA1 hash as part of the returned dictionary.
- * If sha256 is > 0, we include an SHA2 256 hash in the returned dictionary.
  */
 dyninfo_t *
-getdynamic(int fd, int sha1, int sha256)
+getdynamic(int fd)
 {
 	Elf		*elf = NULL;
 	Elf_Scn		*scn = NULL;
@@ -349,12 +277,11 @@ getdynamic(int fd, int sha1, int sha256)
 	size_t		vernum = 0, verdefnum = 0;
 	int		t = 0, num_dyn = 0, dynstr = -1;
 
-	SHA1_CTX	shc;
-        SHA256_CTX      shc2;
 	dyninfo_t	*dyn = NULL;
 
 	liblist_t	*deps = NULL;
 	off_t		rpath = 0, runpath = 0, def = 0;
+	char		*obj_type = NULL;
 
 	/* Verneed */
 	int a = 0;
@@ -382,14 +309,7 @@ getdynamic(int fd, int sha1, int sha256)
 		goto bad;
 	}
 
-	/* get useful sections */
-        if (sha1 > 0) {
-                SHA1Init(&shc);
-        }
-        if (sha256 > 0) {
-                SHA256Init(&shc2);
-        }
-	while ((scn = elf_nextscn(elf, scn))) {
+	while ((scn = elf_nextscn(elf, scn)) != NULL) {
 		if (gelf_getshdr(scn, &shdr) != &shdr) {
 			PyErr_SetString(ElfError, elf_errmsg(-1));
 			goto bad;
@@ -398,36 +318,6 @@ getdynamic(int fd, int sha1, int sha256)
 		if (!(name = elf_strptr(elf, sh_str, shdr.sh_name))) {
 			PyErr_SetString(ElfError, elf_errmsg(-1));
 			goto bad;
-		}
-
-		if (hashsection(name) && (sha1 > 0 || sha256 > 0)) {
-			if (shdr.sh_type == SHT_NOBITS) {
-				/*
-				 * We can't just push shdr.sh_size into
-				 * SHA1Update(), as its raw bytes will be
-				 * different on x86 than they are on sparc.
-				 * Convert to network byte-order first.
-				 */
-				uint64_t n = shdr.sh_size;
-				uint64_t mask = 0xffffffff00000000ULL;
-				uint32_t top = htonl((uint32_t)((n & mask) >> 32));
-				uint32_t bot = htonl((uint32_t)n);
-                                if (sha1 > 0) {
-				        SHA1Update(&shc, &top, sizeof (top));
-                                        SHA1Update(&shc, &bot, sizeof (bot));
-                                }
-                                if (sha256 > 0) {
-                                        SHA256Update(&shc2, &top, sizeof (top));
-                                        SHA256Update(&shc2, &bot, sizeof (bot));
-                                }
-			} else {
-				int hash;
-                                hash = readhash(fd, &shc, &shc2, shdr.sh_offset,
-				    shdr.sh_size, sha1, sha256);
-
-				if (hash == -1)
-					goto bad;
-			}
 		}
 
 		switch (shdr.sh_type) {
@@ -503,6 +393,18 @@ getdynamic(int fd, int sha1, int sha256)
 			if (gd.d_un.d_val & DF_P1_DEFERRED) {
 				t++;
 			}
+		case DT_FLAGS_1:
+#ifdef DF_1_PIE
+			if (gd.d_un.d_val & DF_1_PIE) {
+				obj_type = "pie";
+			}
+#endif
+#ifdef DF_1_KMOD
+			if (gd.d_un.d_val & DF_1_KMOD) {
+				obj_type = "kmod";
+			}
+#endif
+			break;
 		}
 	}
 
@@ -541,12 +443,16 @@ getdynamic(int fd, int sha1, int sha256)
 			if (ea)
 				cp += ea->vna_next;
 			ea = (GElf_Vernaux*)cp;
-			if (liblist_add(veraux, ea->vna_name) == NULL)
+			if (liblist_add(veraux, ea->vna_name) == NULL) {
+				liblist_free(veraux);
 				goto bad;
+			}
 		}
 
-		if (liblist_add(vers, ev->vn_file) == NULL)
+		if (liblist_add(vers, ev->vn_file) == NULL) {
+			liblist_free(veraux);
 			goto bad;
+		}
 		vers->tail->verlist = veraux;
 
 		cp = buf;
@@ -604,12 +510,7 @@ getdynamic(int fd, int sha1, int sha256)
 	dyn->deps = deps;
 	dyn->def = def;
 	dyn->vers = verdef;
-        if (sha1 > 0) {
-	        SHA1Final(dyn->hash, &shc);
-        }
-        if (sha256 > 0) {
-                SHA256Final(dyn->hash256, &shc2);
-        }
+	dyn->obj_type = obj_type;
 	return (dyn);
 
 bad:
@@ -632,3 +533,267 @@ dyninfo_free(dyninfo_t *dyn)
 	(void) elf_end(dyn->elf);
 	free(dyn);
 }
+
+/*
+ * For ELF nontriviality: Need to turn an ELF object into a unique hash.
+ *
+ * From Eric Saxe's investigations, we see that the following sections can
+ * generally be ignored:
+ *
+ *    .SUNW_signature, .comment, .SUNW_dof, .debug, .plt, .rela.bss,
+ *    .rela.plt, .line, .note
+ *
+ * Conversely, the following sections are generally significant:
+ *
+ *    .rodata.str1.8, .rodata.str1.1, .rodata, .data1, .data, .text
+ *
+ * Accordingly, we will hash on the latter group of sections to determine our
+ * ELF hash.
+ */
+static int
+hashsection(char *name)
+{
+	if (strcmp(name, ".SUNW_signature") == 0 ||
+	    strcmp(name, ".comment") == 0 ||
+	    strcmp(name, ".SUNW_dof") == 0 ||
+	    strcmp(name, ".debug") == 0 ||
+	    strcmp(name, ".plt") == 0 ||
+	    strcmp(name, ".rela.bss") == 0 ||
+	    strcmp(name, ".rela.plt") == 0 ||
+	    strcmp(name, ".line") == 0 ||
+	    strcmp(name, ".note") == 0 ||
+	    strcmp(name, ".compcom") == 0)
+		return (0);
+
+	return (1);
+}
+
+#define	MODE_HASH1	0x1
+#define MODE_HASH256	0x2
+#define MODE_HASH512	0x4
+
+typedef struct hash_data {
+	SHA1_CTX	shc1;
+	SHA256_CTX	shc256;
+	SHA2_CTX	shc512;
+	int		mode;
+} hash_data_t;
+
+/*
+ * Reads a section in 64k increments, adding it to the hash.
+ */
+static int
+readhash(int fd, off_t offset, off_t size, hash_data_t *hdata)
+{
+	off_t n;
+	char hashbuf[64 * 1024];
+	ssize_t rbytes;
+
+	if (!size)
+		return (0);
+
+	if (lseek(fd, offset, SEEK_SET) == -1) {
+		PyErr_SetFromErrno(PyExc_IOError);
+		return (-1);
+	}
+
+	do {
+		n = MIN(size, sizeof (hashbuf));
+		if ((rbytes = read(fd, hashbuf, n)) == -1) {
+			PyErr_SetFromErrno(PyExc_IOError);
+			return (-1);
+		}
+		if (hdata->mode & MODE_HASH1)
+		        SHA1Update(&hdata->shc1, hashbuf, rbytes);
+		if (hdata->mode & MODE_HASH256)
+		        SHA256Update(&hdata->shc256, hashbuf, rbytes);
+		if (hdata->mode & MODE_HASH512)
+		        SHA2Update(&hdata->shc512, hashbuf, rbytes);
+		size -= rbytes;
+	} while (size != 0);
+
+	return (0);
+}
+
+/*
+* gethashes - returns a pointer to a struct filled with the hex
+ * digests of hashes computed from an ELF file.
+ *
+ * On error, will set Python error and return NULL.
+ *
+ * On success, the caller is responsible for freeing the returned
+ * buffer. For the following input parameters, that structure will
+ * contain:
+ *
+ * input    : return structure member
+ * -------------------------------------------------------------------
+ * doelf > 0: generate hex digest of legacy SHA1 hash in .elfhash
+ *
+ * do256 > 0: generate hex digests of SHA-256 hashes of signed content
+ *            in .hash_sha256 and unsigned content in .uhash_sha256
+ *
+ * do512 > 0: generate hex digests of SHA-512/256 hashes of signed
+ *            content in .hash_sha512t_256 and unsigned content in
+ *            .uhash_sha512t_256
+ *
+ * The SHA-256 and SHA-512/256 hex digest strings are each prefaced
+ * with strings describing how the content was extracted from the Elf
+ * object, and which hashing algorithm was used on that content:
+ *
+ *	      gelf:sha256:hexdigest
+ *	      gelf:sha512t_256:hexdigest
+ *	      gelf.unsigned:sha256:hexdigest
+ *	      gelf.unsigned:sha512t_256:hexdigest
+ *
+ * If any of the functions used to extract that data and generate
+ * these hashes changes, those prefixes must also be changed.
+ */
+hashinfo_t *
+gethashes(int fd, int doelf, int do256, int do512)
+{
+	hashinfo_t	*hashes = NULL;
+	Elf		*elf = NULL;
+	Elf_Scn		*scn = NULL;
+	GElf_Shdr	shdr;
+	size_t		sh_str = 0;
+	char		*name = NULL;
+	unsigned char	rawhash[SHA512_256_DIGEST_LENGTH];
+	char		hexchars[17] = "0123456789abcdef";
+	uint64_t	mask = 0xffffffff00000000ULL;
+	hash_data_t	hdata;
+	int		i;
+
+	if (elf_version(EV_CURRENT) == EV_NONE ||
+	    (elf = elf_begin(fd, ELF_C_READ, NULL)) == NULL) {
+		PyErr_SetString(ElfError, elf_errmsg(-1));
+		return (NULL);
+	}
+
+	if (elf_kind(elf) != ELF_K_ELF || !elf_getshstrndx(elf, &sh_str)) {
+		PyErr_SetString(ElfError, elf_errmsg(-1));
+		goto err;
+	}
+
+	hdata.mode = 0;
+        if (doelf > 0) {
+                SHA1Init(&hdata.shc1);
+		hdata.mode |= MODE_HASH1;
+	}
+        if (do256 > 0) {
+                SHA256Init(&hdata.shc256);
+		hdata.mode |= MODE_HASH256;
+	}
+        if (do512 > 0) {
+                SHA2Init(SHA512_256, &hdata.shc512);
+		hdata.mode |= MODE_HASH512;
+	}
+
+	while ((scn = elf_nextscn(elf, scn)) != NULL) {
+		if (gelf_getshdr(scn, &shdr) != &shdr) {
+			PyErr_SetString(ElfError, elf_errmsg(-1));
+			goto err;
+		}
+
+		if (!(name = elf_strptr(elf, sh_str, shdr.sh_name))) {
+			PyErr_SetString(ElfError, elf_errmsg(-1));
+			goto err;
+		}
+
+		if (!hashsection(name))
+			continue;
+
+		if (shdr.sh_type == SHT_NOBITS) {
+			/*
+			 * We can't just push shdr.sh_size into
+			 * SHAXUpdate(), as its raw bytes will be
+			 * different on x86 than they are on sparc.
+			 * Convert to network byte-order first.
+			 */
+			uint64_t n = shdr.sh_size;
+			uint32_t top = htonl((uint32_t)((n & mask) >> 32));
+			uint32_t bot = htonl((uint32_t)n);
+			if (hdata.mode & MODE_HASH1) {
+				SHA1Update(&hdata.shc1, &top, sizeof (top));
+				SHA1Update(&hdata.shc1, &bot, sizeof (bot));
+			}
+			if (hdata.mode & MODE_HASH256) {
+				SHA256Update(&hdata.shc256, &top, sizeof (top));
+				SHA256Update(&hdata.shc256, &bot, sizeof (bot));
+			}
+			if (hdata.mode & MODE_HASH512) {
+				SHA2Update(&hdata.shc512, &top, sizeof (top));
+				SHA2Update(&hdata.shc512, &bot, sizeof (bot));
+			}
+		} else {
+			if (readhash(fd, shdr.sh_offset, shdr.sh_size,
+			    &hdata) == -1)
+				goto err;
+		}
+	}
+
+	if ((hashes = calloc(1, sizeof (hashinfo_t))) == NULL) {
+		(void) PyErr_NoMemory();
+		return (NULL);
+	}
+
+#define PUTHASH(chars) \
+	do { \
+		for (i = 0; i < (chars); i++) { \
+			*hp++ = hexchars[(rawhash[i] & 0xf0) >> 4]; \
+			*hp++ = hexchars[rawhash[i] & 0x0f]; \
+		} \
+ 		*hp = '\0'; \
+	} while (0)
+
+	if (hdata.mode & MODE_HASH1) {
+		char *hp = &hashes->elfhash[0];
+
+	        SHA1Final(rawhash, &hdata.shc1);
+		PUTHASH(SHA1_DIGEST_LENGTH);
+	}
+
+	if (hdata.mode & MODE_HASH256) {
+		char *hp = &hashes->hash_sha256[12];
+
+ 		SHA256Final(&rawhash[0], &hdata.shc256);
+ 		(void) snprintf(hashes->hash_sha256, 13, "gelf:sha256:");
+
+		PUTHASH(SHA256_DIGEST_LENGTH);
+
+		/*
+		 * Upstream includes .SUNW_SIGNATURE sections in the signed
+		 * hashes, and not in the unsigned. We currently use the same
+		 * hash for each.
+		 */
+		(void) snprintf(hashes->uhash_sha256, 22,
+		    "gelf.unsigned:sha256:");
+		strlcat(&hashes->uhash_sha256[21], &hashes->hash_sha256[12],
+		    sizeof (hashes->hash_sha256));
+	}
+
+	if (hdata.mode & MODE_HASH512) {
+		char *hp = &hashes->hash_sha512t_256[17];
+
+ 		SHA2Final(&rawhash[0], &hdata.shc512);
+		(void) snprintf(hashes->hash_sha512t_256, 18,
+		    "gelf:sha512t_256:");
+
+		PUTHASH(SHA512_256_DIGEST_LENGTH);
+
+		/*
+		 * Upstream includes .SUNW_SIGNATURE sections in the signed
+		 * hashes, and not in the unsigned. We currently use the same
+		 * hash for each.
+		 */
+		(void) snprintf(hashes->uhash_sha512t_256, 27,
+		    "gelf.unsigned:sha512t_256:");
+		strlcat(&hashes->uhash_sha512t_256[26],
+		    &hashes->hash_sha512t_256[17],
+		    sizeof (hashes->hash_sha512t_256));
+	}
+
+err:
+	(void) elf_end(elf);
+	return (hashes);
+}
+

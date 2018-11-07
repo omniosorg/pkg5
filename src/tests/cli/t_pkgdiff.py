@@ -74,15 +74,65 @@ class TestPkgRepo(pkg5unittest.SingleDepotTestCase):
             file tmp/empty mode=0555 owner=root group=bin path=/etc/empty
             file tmp/truck1 mode=0444 owner=root group=bin path=/etc/trailer"""
 
+        #
+        # etc/hosts: file action.hash changes, other attrs don't change
+        # they are considered as different
+        #
+        # etc/motd: file action.hash and chash change,
+        # they are considered as different
+        #
+        # etc/passwd: file action.hash doesn't change, file content-hash changes
+        # they are considered as different
+        #
+        # etc/remote: file action.hash changes, file content-hash doesn't change
+        # this case is special, since file content-hash is preferred over
+        # action.hash, they are considered as the same
+        #
+        # bin/true: file action.hash and gelf content-hash don't change,
+        # file content-hash changes.
+        # they are consider as different in the case of CMP_ALL, the same in the
+        # case of CMP_UNSIGNED.
+        #
+        # bin/ls: file action.hash and gelf content-hash change,
+        # file content-hash doesn't change
+        # they are consider as different
+        #
+        # bin/cat: file action.hash, file content-hash and gelf signed
+        # content-hash change, gelf unsigned content-hash doesn't change
+        # they are consider as different in the case of CMP_ALL, the same in
+        # the case of CMP_UNSIGNED.
+        #
+        # bin/false: additional pkg.content-hash attributes are added in the
+        # newer version
+        # they are considered as different in the case of CMP_ALL, the same in
+        # the case of CMP_UNSIGNED because the preferred unsinged hash match.
+        #
         hashed10 = """
             set name=pkg.fmri value=hashed@1.0:20130804T203459Z
             license 6aba708bd383553aa84bba4fefe8495239927767 chash=60c3aa47dce2ba0132efdace8d3b88b6589767f4 license=lic_OTN
-            file 4ab5de3107a63f5cf454485f720cac025f1b7002 chash=dc03afd488e3b3e4c4993d2403d7e15603b0a391 path=etc/motd"""
+            file abcd path=etc/hosts
+            file 4ab5de3107a63f5cf454485f720cac025f1b7002 chash=dc03afd488e3b3e4c4993d2403d7e15603b0a391 path=etc/motd
+            file nohash pkg.content-hash=file:sha512t_256:abcd path=etc/passwd
+            file abcd pkg.content-hash=file:sha512t_256:efgh path=etc/remote
+            file abcd elfarch=i386 elfbits=32 elfhash=efgh path=bin/true pkg.content-hash=gelf:sha512t_256:wxyz pkg.content-hash=gelf.unsigned:sha512t_256:wxyz pkg.content-hash=file:sha512t_256:ijkl
+            file foo elfarch=i386 elfbits=32 elfhash=abcd path=bin/ls pkg.content-hash=gelf:sha512t_256:abcd pkg.content-hash=gelf.unsigned:sha512t_256:abcd pkg.content-hash=file:sha512t_256:wxyz
+            file foo elfarch=i386 elfbits=32 chash=foo elfhash=abcd path=bin/cat pkg.content-hash=gelf:sha512t_256:abcd pkg.content-hash=gelf.unsigned:sha512t_256:efgh pkg.content-hash=file:sha512t_256:ijkl
+            file nohash elfarch=i386 elfbits=64 elfhash=abcd path=bin/false pkg.content-hash=gelf:sha512t_256:abcd pkg.content-hash=gelf.unsigned:sha512t_256:abcd
+            """
 
         hashed20 = """
             set name=pkg.fmri value=hashed@2.0:20130904T203001Z
             license 7ab6de3107a63f5cf454485f720cac025f1b7001 chash=cc05afd488e3b3e4c4993d2403d7e15603b0a398 license=lic_OTN
-            file 3aba408bd383553aa84bba4fefe8495239927763 chash=f0c2aa47dce2ba0132efdace8d3b88b6589767f3 path=etc/motd"""
+            file efgh path=etc/hosts
+            file 3aba408bd383553aa84bba4fefe8495239927763 chash=f0c2aa47dce2ba0132efdace8d3b88b6589767f3 path=etc/motd
+            file nohash pkg.content-hash=file:sha512t_256:efgh path=etc/passwd
+            file wxyz pkg.content-hash=file:sha512t_256:efgh path=etc/remote
+            file abcd elfarch=i386 elfbits=32 elfhash=efgh path=bin/true pkg.content-hash=gelf:sha512t_256:wxyz pkg.content-hash=gelf.unsigned:sha512t_256:wxyz pkg.content-hash=file:sha512t_256:mnop
+            file bar elfarch=i386 elfbits=32 elfhash=abcd path=bin/ls pkg.content-hash=gelf:sha512t_256:efgh pkg.content-hash=gelf.unsigned:sha512t_256:efgh pkg.content-hash=file:sha512t_256:wxyz
+            file bar elfarch=i386 elfbits=32 chash=bar elfhash=abcd path=bin/cat pkg.content-hash=gelf:sha512t_256:mnop pkg.content-hash=gelf.unsigned:sha512t_256:efgh pkg.content-hash=file:sha512t_256:qrst
+            file nohash elfarch=i386 elfbits=64 elfhash=abcd path=bin/false pkg.content-hash=gelf:sha512t_256:abcd pkg.content-hash=gelf.unsigned:sha512t_256:abcd pkg.content-hash=gelf:sha3_384:wxyz pkg.content-hash=gelf.unsigned:sha3_384:wxyz
+            """
+
 
         def setUp(self):
                 pkg5unittest.SingleDepotTestCase.setUp(self)
@@ -211,11 +261,59 @@ class TestPkgRepo(pkg5unittest.SingleDepotTestCase):
                 self.pkgdiff(" ".join(("-t file", self.hashed10_p5m,
                     self.hashed20_p5m)), exit=1)
                 expected = """\
+file path=bin/cat elfarch=i386 elfbits=32 elfhash=abcd
+ - foo
+ + bar
+ - chash=foo
+ + chash=bar
+ - pkg.content-hash=file:sha512t_256:ijkl pkg.content-hash=gelf:sha512t_256:abcd
+ + pkg.content-hash=file:sha512t_256:qrst pkg.content-hash=gelf:sha512t_256:mnop
+file path=bin/false elfarch=i386 elfbits=64 elfhash=abcd
+ + pkg.content-hash=gelf.unsigned:sha3_384:wxyz pkg.content-hash=gelf:sha3_384:wxyz
+file path=bin/ls elfarch=i386 elfbits=32 elfhash=abcd
+ - foo
+ + bar
+ - pkg.content-hash=gelf.unsigned:sha512t_256:abcd pkg.content-hash=gelf:sha512t_256:abcd
+ + pkg.content-hash=gelf.unsigned:sha512t_256:efgh pkg.content-hash=gelf:sha512t_256:efgh
+file path=bin/true elfarch=i386 elfbits=32 elfhash=efgh
+ - pkg.content-hash=file:sha512t_256:ijkl
+ + pkg.content-hash=file:sha512t_256:mnop
+file path=etc/hosts 
+ - abcd
+ + efgh
 file path=etc/motd 
  - 4ab5de3107a63f5cf454485f720cac025f1b7002
  + 3aba408bd383553aa84bba4fefe8495239927763
  - chash=dc03afd488e3b3e4c4993d2403d7e15603b0a391
  + chash=f0c2aa47dce2ba0132efdace8d3b88b6589767f3
+file path=etc/passwd 
+ - pkg.content-hash=file:sha512t_256:abcd
+ + pkg.content-hash=file:sha512t_256:efgh
+"""
+                actual = self.reduceSpaces(self.output)
+                self.assertEqualDiff(expected, actual)
+
+                # Verify that only the unsigned value will be compared if it
+                # exists in the action when '-u' option is enabled.
+                self.pkgdiff(" ".join(("-t file -u", self.hashed10_p5m,
+                    self.hashed20_p5m)), exit=1)
+                expected = """\
+file path=bin/ls elfarch=i386 elfbits=32 elfhash=abcd
+ - foo
+ + bar
+ - pkg.content-hash=gelf.unsigned:sha512t_256:abcd pkg.content-hash=gelf:sha512t_256:abcd
+ + pkg.content-hash=gelf.unsigned:sha512t_256:efgh pkg.content-hash=gelf:sha512t_256:efgh
+file path=etc/hosts 
+ - abcd
+ + efgh
+file path=etc/motd 
+ - 4ab5de3107a63f5cf454485f720cac025f1b7002
+ + 3aba408bd383553aa84bba4fefe8495239927763
+ - chash=dc03afd488e3b3e4c4993d2403d7e15603b0a391
+ + chash=f0c2aa47dce2ba0132efdace8d3b88b6589767f3
+file path=etc/passwd 
+ - pkg.content-hash=file:sha512t_256:abcd
+ + pkg.content-hash=file:sha512t_256:efgh
 """
                 actual = self.reduceSpaces(self.output)
                 self.assertEqualDiff(expected, actual)
@@ -224,6 +322,15 @@ file path=etc/motd
                 self.pkgdiff(" ".join(("-t file -o hash", self.hashed10_p5m,
                     self.hashed20_p5m)), exit=1)
                 expected = """\
+file path=bin/cat elfarch=i386 elfbits=32 elfhash=abcd
+ - foo
+ + bar
+file path=bin/ls elfarch=i386 elfbits=32 elfhash=abcd
+ - foo
+ + bar
+file path=etc/hosts 
+ - abcd
+ + efgh
 file path=etc/motd 
  - 4ab5de3107a63f5cf454485f720cac025f1b7002
  + 3aba408bd383553aa84bba4fefe8495239927763
@@ -232,7 +339,8 @@ file path=etc/motd
                 self.assertEqualDiff(expected, actual)
 
                 # Again, ignoring hash attributes (should find no differences).
-                self.pkgdiff(" ".join(("-t file -i hash -i chash",
+                self.pkgdiff(" ".join(("-t file -i hash -i chash -i elfhash "
+                    "-i pkg.content-hash",
                     self.hashed10_p5m, self.hashed20_p5m)), exit=0)
 
                 # Verify differences found for license actions between 2.0 and 1.0;

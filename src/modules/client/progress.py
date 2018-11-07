@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2017, Oracle and/or its affiliates. All rights reserved.
 #
 
 #
@@ -36,12 +36,14 @@ import itertools
 import math
 import sys
 import simplejson as json
-import six
 import time
+from collections import deque
 from functools import wraps
+
 # Redefining built-in 'range'; pylint: disable=W0622
-# import-error: six.moves; pylint: disable=F0401
 from six.moves import range
+
+import six
 
 import pkg.client.pkgdefs as pkgdefs
 import pkg.client.publisher as publisher
@@ -51,8 +53,6 @@ import pkg.misc as misc
 from pkg.client import global_settings
 from pkg.client import printengine
 logger = global_settings.logger
-
-from collections import deque
 
 class ProgressTrackerException(Exception):
         """Thrown if a ProgressTracker determines that it can't be instantiated.
@@ -230,10 +230,8 @@ class SpeedEstimator(object):
                 # used ctrl-z and then resumed; disable the estimate until we
                 # build up more data.
                 #
-                if len(self.__deque) < 10 or timelapse < (self.INTERVAL / 20.0):
-                        self.__noestimate = True
-                else:
-                        self.__noestimate = False
+                self.__noestimate = bool(len(self.__deque) < 10 or
+                    timelapse < (self.INTERVAL / 20.0))
 
                 curspeed = self.__intervalbytes / timelapse
 
@@ -1040,7 +1038,6 @@ class ProgressTracker(ProgressTrackerFrontend, ProgressTrackerBackend):
         def reset_download(self):
                 # Attribute defined outside __init__; pylint: disable=W0201
                 self.dl_mode = None
-                self.dl_caching = 0
                 self.dl_estimator = None
 
                 self.dl_pkgs = GoalTrackerItem(_("Download packages"))
@@ -1418,11 +1415,8 @@ class ProgressTracker(ProgressTrackerFrontend, ProgressTrackerBackend):
                         self.dl_files.items += nfiles
 
                 if cachehit:
-                        # attr defined outside __init__; pylint: disable=W0201
-                        self.dl_caching += 1
                         self.dl_estimator.goalbytes -= nbytes
                 else:
-                        self.dl_caching = 0 # pylint: disable=W0201
                         self.dl_estimator.newdata(nbytes)
 
                 if self.dl_bytes.goalitems != 0:
@@ -2404,7 +2398,7 @@ class RADProgressTracker(CommandLineProgressTracker):
                 # adjusts the output based on the major phase.
                 #
                 goalitems = self.mfst_fetch.goalitems
-                if goalitems == None:
+                if goalitems is None:
                         goalitems = 0
                 prog_json = {self.O_PHASE: self._phase_prefix(),
                     self.O_MESSAGE: _("Fetching manifests"),
@@ -2983,29 +2977,17 @@ class FancyUNIXProgressTracker(ProgressTracker):
 
                 if outspec.last:
                         pkg_name = _("Completed")
+                        speed = self.dl_estimator.get_final_speed()
                 else:
                         pkg_name = self.dl_pkgs.curinfo.get_name()
+                        speed = self.dl_estimator.get_speed_estimate()
                 if len(pkg_name) > 34:
                         pkg_name = "..." + pkg_name[-30:]
-
-                if outspec.last:
-                        speedstr = self.dl_estimator.format_speed(
-                            self.dl_estimator.get_final_speed())
-                        if speedstr is None:
-                                speedstr = "--"
+                # show speed if greater than 0, otherwise "--"
+                if speed is not None and speed > 0:
+                        speedstr = self.dl_estimator.format_speed(speed)
                 else:
-                        #
-                        # if we see 10 items in a row come out of the cache,
-                        # show the "cache" moniker in the speed column until we
-                        # see a non-cache download.
-                        #
-                        if self.dl_caching > 10:
-                                speedstr = "cache"
-                        else:
-                                speedstr = self.dl_estimator.format_speed(
-                                    self.dl_estimator.get_speed_estimate())
-                                if speedstr is None:
-                                        speedstr = "--"
+                        speedstr = "--"
 
                 # Use floats unless it makes the field too wide
                 mbstr = format_pair("{0:.1f}", self.dl_bytes.items,
@@ -3192,7 +3174,7 @@ def test_progress_tracker(t, gofast=False):
 
         print("Use ctrl-c to skip sections")
 
-        if gofast == False:
+        if not gofast:
                 fast = 1.0
         else:
                 fast = 0.10

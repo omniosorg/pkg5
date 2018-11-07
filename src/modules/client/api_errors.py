@@ -294,6 +294,19 @@ class PlanLicenseErrors(PlanPrepareException):
                 return output
 
 
+class InvalidVarcetNames(PlanPrepareException):
+        """Used to indicate that image plan evaluation or execution failed due
+        to illegal characters in variant/facet names."""
+
+        def __init__(self, invalid_names):
+                PlanPrepareException.__init__(self)
+                self.names = invalid_names
+
+        def __str__(self):
+                return _(", ".join(self.names) + " are not valid variant/facet "
+                    "names; variant/facet names cannot contain whitespace.")
+
+
 class ActuatorException(ApiException):
         def __init__(self, e):
                 ApiException.__init__(self)
@@ -878,6 +891,134 @@ class InconsistentActionAttributeError(ConflictingActionError):
 
                 return s
 
+
+class ImageBoundaryError(ApiException):
+        """Used to indicate that a file is delivered to image dir"""
+
+        GENERIC    = "generic"     # generic image boundary violation
+        OUTSIDE_BE = "outside_be"  # deliver items outside boot environment
+        RESERVED   = "reserved"    # deliver items to reserved dirs
+
+        def __init__(self, fmri, actions=None):
+                """fmri is the package fmri
+                actions should be a dictionary of which key is the
+                error type and value is a list of actions"""
+
+                ApiException.__init__(self)
+                self.fmri = fmri
+                generic = _("The following items are outside the boundaries "
+                    "of the target image:\n\n")
+                outside_be = _("The following items are delivered outside "
+                    "the target boot environment:\n\n")
+                reserved = _("The following items are delivered to "
+                    "reserved directories:\n\n")
+
+                self.message = {
+                    self.GENERIC: generic,
+                    self.OUTSIDE_BE: outside_be,
+                    self.RESERVED: reserved
+                }
+
+                if actions:
+                        self.actions = actions
+                else:
+                        self.actions = {}
+
+        def append_error(self, action, err_type=GENERIC):
+                """This function is used to append errors in the error
+                dictionary"""
+
+                if action:
+                        self.actions.setdefault(err_type, []).append(action)
+
+        def isEmpty(self):
+                """Return whether error dictionary is empty"""
+
+                return len(self.actions) == 0
+
+        def __str__(self):
+                error_list = [self.GENERIC, self.OUTSIDE_BE, self.RESERVED]
+                s = ""
+                for err_type in error_list:
+                        if not err_type in self.actions:
+                                continue
+                        if self.actions[err_type]:
+                                if err_type == self.GENERIC:
+                                        s += ("The package {0} delivers items"
+                                            " outside the boundaries of"
+                                            " the target image and can not be"
+                                            " installed.\n\n").format(self.fmri)
+                                elif err_type == self.OUTSIDE_BE:
+                                        s += ("The package {0} delivers items"
+                                            " outside the target boot"
+                                            " environment and can not be"
+                                            " installed.\n\n").format(self.fmri)
+                                else:
+                                        s += ("The package {0} delivers items"
+                                            " to reserved directories and can"
+                                            " not be installed.\n\n").format(self.fmri) 
+                                s += self.message[err_type]
+                        for action in self.actions[err_type]:
+                                s += ("      {0} {1}\n").format(
+                                    action.name, action.attrs["path"])
+                return s
+
+
+class ImageBoundaryErrors(ApiException):
+        """A container for multiple ImageBoundaryError exception objects
+        that can be raised as a single exception."""
+
+        def __init__(self, errors):
+                ApiException.__init__(self)
+                self.__errors = errors
+
+                generic = _("The following packages deliver items outside "
+                    "the boundaries of the target image and can not be "
+                    "installed:\n\n")
+                outside_be = _("The following packages deliver items outside "
+                    "the target boot environment and can not be "
+                    "installed:\n\n")
+                reserved = _("The following packages deliver items to reserved "
+                    "directories and can not be installed:\n\n")
+
+                self.message = {
+                    ImageBoundaryError.GENERIC: generic,
+                    ImageBoundaryError.OUTSIDE_BE: outside_be,
+                    ImageBoundaryError.RESERVED: reserved
+                }
+
+        def __str__(self):
+                if len(self.__errors) <= 1:
+                        return "\n".join([str(err) for err in self.__errors])
+
+                s = ""
+                for err_type in self.message:
+                        cur_errs = []
+                        for err in self.__errors:
+                                # If err does not contain this error type
+                                # we just ignore this.
+                                if not err_type in err.actions or \
+                                    not err.actions[err_type]:
+                                            continue
+                                cur_errs.append(err)
+
+                        if not cur_errs:
+                                continue
+
+                        if len(cur_errs) == 1:
+                                s += str(cur_errs[0]) + "\n"
+                                continue
+
+                        s += self.message[err_type]
+                        for err in cur_errs:
+                                s += ("    {0}\n").format(err.fmri)
+                                for action in err.actions[err_type]:
+                                        s += ("      {0} {1}\n").format(
+                                            action.name, action.attrs["path"])
+                                s += "\n"
+                return s
+
+
 def list_to_lang(l):
         """Takes a list of items and puts them into a string, with commas in
         between items, and an "and" between the last two items.  Special cases
@@ -975,6 +1116,14 @@ class ActionExecutionError(ApiException):
 
                 # If we only have one of the two, no need for the colon.
                 return "{0}{1}".format(errno, details)
+
+
+class CatalogOriginRefreshException(ApiException):
+        def __init__(self, failed, total, errmessage=None):
+                ApiException.__init__(self)
+                self.failed = failed
+                self.total = total
+                self.errmessage = errmessage
 
 
 class CatalogRefreshException(ApiException):
@@ -1414,6 +1563,7 @@ class NonLeafPackageException(ApiException):
                 )
                 return s
 
+
 def _str_autofix(self):
 
         if getattr(self, "_autofix_pkgs", []):
@@ -1425,6 +1575,7 @@ def _str_autofix(self):
                         "repository or remove the\npackages in the list above.")
                 return s
         return ""
+
 
 class InvalidDepotResponseException(ApiException):
         """Raised when the depot doesn't have versions of operations
@@ -1445,6 +1596,7 @@ class InvalidDepotResponseException(ApiException):
                 s += _str_autofix(self)
 
                 return s
+
 
 class DataError(ApiException):
         """Base exception class used for all data related errors."""
@@ -2955,10 +3107,9 @@ class LinkedImageException(ApiException):
                         err = _("The following subprocess returned an "
                             "unexpected exit code of {rv:d}:\n    {cmd}").format(
                             rv=rv, cmd=cmd)
-                        if not errout:
-                                return
-                        err += _("\nAnd generated the following error "
-                            "message:\n{errout}".format(errout=errout))
+                        if errout:
+                                err += _("\nAnd generated the following error "
+                                    "message:\n{errout}".format(errout=errout))
 
                 if cmd_output_invalid is not None:
                         (cmd, output) = cmd_output_invalid
@@ -3342,6 +3493,11 @@ class PkgUnicodeDecodeError(UnicodeDecodeError):
                 return "{0}. You passed in {1!r} {2}".format(s, self.obj,
                     type(self.obj))
 
+class UnsupportedVariantGlobbing(ApiException):
+        """Used to indicate that globbing for variant is not supported."""
+
+        def __str__(self):
+                return _("Globbing is not supported for variants.")
 
 # Vim hints
-# vim:ts=8:sw=8:et:fdm=marker
+# vim:ts=4:sw=4:et:fdm=marker

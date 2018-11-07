@@ -1,8 +1,8 @@
 '\" te
-.\" Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
+.\" Copyright (c) 2009, 2017, Oracle and/or its affiliates. All rights reserved.
 .\" Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
 .\" Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
-.TH pkg 5 "27 Jul 2018" "SunOS 5.11" "Standards, Environments, and Macros"
+.TH pkg 5 "10 Sep 2018" "SunOS 5.11" "Standards, Environments, and Macros"
 .SH NAME
 pkg \- Image Packaging System
 .SH DESCRIPTION
@@ -83,6 +83,31 @@ The attributes listed below are not an exhaustive set. In fact, the attributes t
 .sp
 .LP
 Some attributes cause additional operations to be executed outside of the packaging context. These attributes are documented in the "Actuators" section below.
+.sp
+.LP
+Actions that are installed to a path must not deliver content to any of
+the following paths:
+.sp
+.in +6
+.nf
+\fI/system/volatile\fR
+\fI/tmp\fR
+\fI/var/share\fR
+\fI/var/tmp\fR
+.fi
+.in -6
+.sp
+Additionallly, the following directories are reserved for use by the system
+and should also not be used by actions:
+.sp
+.in +6
+.nf
+\fI/var/pkg\fR
+.fi
+.in -6
+
+.rt
+
 .SS "File Actions"
 .sp
 .LP
@@ -286,6 +311,31 @@ The file delivered by the action overwrites any other action that has specified 
 .RE
 
 Changes to the installed file are preserved based on the value of the \fBpreserve\fR attribute of the overlaying file. On removal, the contents of the file are preserved if the action being overlaid is still installed, regardless of whether the \fBpreserve\fR attribute was specified. Only one action can overlay another, and the \fBmode\fR, \fBowner\fR, and \fBgroup\fR attributes must match.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBoverlay-attributes\fR
+.ad
+.sp .6
+.RS 4n
+Specifies whether image-modifying operations such as install, update, etc.
+should report errors when an overlaying action has a different \fBowner\fR,
+\fBgroup\fR, \fBmode\fR or \fBsysattr\fR from its overlaid action.
+\fBoverlay-attributes\fR is usually used in actions with \fBoverlay\fR equal to
+\fBallow\fR or \fBdeny\fR. When the value of \fBoverlay-attributes\fR for
+either overlaying action or overlaid action is \fBdeny\fR, an error will be
+gen- erated during image-modifying operations.  Also verification opera- tions
+will generate an error on those mismatched attributes: \fBowner\fR, \fBgroup\fR
+and \fBmode\fR if \fBoverlay\fR is equal to \fBdeny\fR for a pair of overlaid
+and overlaying action. Otherwise, an info message will be generated on the
+above mismatched attributes for the pair.  Regardless of the value of
+\fBoverlay-attributes\fR, mismatched attributes when comparing the on-disk
+attributes of a file to its packaged version will always be reported as errors.
+.sp
+
 .RE
 
 .sp
@@ -690,7 +740,13 @@ The following attributes are recognized:
 .ad
 .sp .6
 .RS 4n
-The FMRI representing the dependent package. This is the \fBdependency\fR action's key attribute. The \fBfmri\fR value must not include the publisher. The package name is assumed to be complete. Dependencies of type \fBrequire-any\fR can have multiple \fBfmri\fR attributes. A version is optional on the \fBfmri\fR value, though for some types of dependencies, an \fBfmri\fR with no version has no meaning.
+The FMRI representing the dependent package. This is the \fBdependency\fR
+action's key attribute. The \fBfmri\fR value must not include the publisher.
+The package name is assumed to be complete. Dependencies of type
+\fBgroup-any\fR and \fBrequire-any\fR can have multiple \fBfmri\fR attributes.
+A version is optional on the \fBfmri\fR value, though for some types of
+dependencies, an \fBfmri\fR with no version has no meaning or the version is
+ignored.
 .RE
 
 .sp
@@ -754,7 +810,21 @@ The dependency is optional, but the version of the dependent package is constrai
 .ad
 .sp .6
 .RS 4n
-Any one of multiple dependent packages as specified by multiple \fBfmri\fR attributes can satisfy the dependency, following the same rules as the \fBrequire\fR dependency type.
+Any one of the packages specified by multiple \fBfmri\fR attributes can satisfy the dependency, following the same rules as the \fBrequire\fR dependency type.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBgroup-any\fR\fR
+.ad
+.sp .6
+.RS 4n
+Any one of multiple dependent packages as specified by multiple
+\fBfmri\fR attributes can satisfy the dependency, following the
+same rules as the \fBgroup\fR dependency type with the exception
+that non-obsolete package stems are preferred over obsolete ones.
 .RE
 
 .sp

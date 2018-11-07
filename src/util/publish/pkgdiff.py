@@ -39,11 +39,12 @@ import pkg.variant as variant
 import pkg.client.api_errors as apx
 import pkg.manifest as manifest
 import pkg.misc as misc
-from pkg.misc import PipeError
+from pkg.misc import PipeError, CMP_UNSIGNED, CMP_ALL
 from collections import defaultdict
 from itertools import product
+from pkg.client.pkgdefs import EXIT_OK, EXIT_OOPS, EXIT_BADOPT, EXIT_PARTIAL
 
-def usage(errmsg="", exitcode=2):
+def usage(errmsg="", exitcode=EXIT_BADOPT):
         """Emit a usage message and optionally prefix it with a more specific
         error message.  Causes program to exit."""
 
@@ -57,7 +58,7 @@ Usage:
             [-v name=value]... (file1 | -) (file2 | -)"""))
         sys.exit(exitcode)
 
-def error(text, exitcode=3):
+def error(text, exitcode=EXIT_PARTIAL):
         """Emit an error message prefixed by the command name """
 
         print("pkgdiff: {0}".format(text), file=sys.stderr)
@@ -66,16 +67,15 @@ def error(text, exitcode=3):
                 sys.exit(exitcode)
 
 def main_func():
-        gettext.install("pkg", "/usr/share/locale",
-            codeset=locale.getpreferredencoding())
 
         ignoreattrs = []
         onlyattrs = []
         onlytypes = []
         varattrs = defaultdict(set)
+        cmp_policy = CMP_ALL
 
         try:
-                opts, pargs = getopt.getopt(sys.argv[1:], "i:o:t:v:?", ["help"])
+                opts, pargs = getopt.getopt(sys.argv[1:], "i:o:t:uv:?", ["help"])
                 for opt, arg in opts:
                         if opt == "-i":
                                 ignoreattrs.append(arg)
@@ -83,6 +83,8 @@ def main_func():
                                 onlyattrs.append(arg)
                         elif opt == "-t":
                                 onlytypes.extend(arg.split(","))
+                        elif opt == "-u":
+                                cmp_policy = CMP_UNSIGNED
                         elif opt == "-v":
                                 args = arg.split("=")
                                 if len(args) != 2:
@@ -92,7 +94,7 @@ def main_func():
                                         args[0] = "variant." + args[0]
                                 varattrs[args[0]].add(args[1])
                         elif opt in ("--help", "-?"):
-                                usage(exitcode=0)
+                                usage(exitcode=EXIT_OK)
 
         except getopt.GetoptError as e:
                 usage(_("illegal global option -- {0}").format(e.opt))
@@ -219,7 +221,8 @@ def main_func():
                                         return False
                         return True
 
-                a, c, r = manifest2.difference(manifest1, [allow], [allow])
+                a, c, r = manifest2.difference(manifest1, [allow], [allow],
+                    cmp_policy=cmp_policy)
                 diffs += a
                 diffs += c
                 diffs += r
@@ -228,7 +231,7 @@ def main_func():
         real_diffs = [
             (a, b)
             for a, b in diffs
-            if a is None or b is None or a.different(b)
+            if a is None or b is None or a.different(b, cmp_policy=cmp_policy)
         ]
 
         if not real_diffs:
@@ -359,13 +362,18 @@ def main_func():
         return int(different)
 
 if __name__ == "__main__":
+        misc.setlocale(locale.LC_ALL, "", error)
+        gettext.install("pkg", "/usr/share/locale",
+            codeset=locale.getpreferredencoding())
+        misc.set_fd_limits(printer=error)
+
         if six.PY3:
                 # disable ResourceWarning: unclosed file
                 warnings.filterwarnings("ignore", category=ResourceWarning)
         try:
                 exit_code = main_func()
         except (PipeError, KeyboardInterrupt):
-                exit_code = 1
+                exit_code = EXIT_OOPS
         except SystemExit as __e:
                 exit_code = __e
         except Exception as __e:

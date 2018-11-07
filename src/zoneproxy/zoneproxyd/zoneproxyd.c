@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  */
 
 /*
@@ -66,6 +66,7 @@
 #include <fcntl.h>
 #include <libcontract.h>
 #include <libscf.h>
+#include <libzonecfg.h>
 #include <limits.h>
 #include <netdb.h>
 #include <port.h>
@@ -92,6 +93,7 @@
 #include <sys/sysmacros.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/brand.h>
 
 #define	PROXY_THREAD_DEFAULT		8
 #define	PROXY_THREAD_MAX		20
@@ -214,14 +216,15 @@ static int close_on_exec(int);
 static struct proxy_config *config_alloc(void);
 static void config_free(struct proxy_config *);
 static int config_read(struct proxy_config *);
-static int contract_abandon_id(ctid_t);
-static int contract_latest(ctid_t *);
-static int contract_open(ctid_t, const char *, const char *, int);
+static int ips_contract_abandon_id(ctid_t);
+static int ips_contract_latest(ctid_t *);
+static int ips_contract_open(ctid_t, const char *, const char *, int);
 static void daemonize_ready(char);
 static int daemonize_start(void);
 static int do_fattach(int, char *, boolean_t);
 static void drop_privs(void);
 static void escalate_privs(void);
+static boolean_t __is_native_zone(zoneid_t zid);
 static void fattach_all_zones(boolean_t);
 static void free_proxy_listener(struct proxy_listener *);
 static void free_proxy_pair(struct proxy_pair *);
@@ -1025,7 +1028,7 @@ init_template(void)
  * Contract stuff for zone_enter()
  */
 static int
-contract_latest(ctid_t *id)
+ips_contract_latest(ctid_t *id)
 {
 	int cfd, r;
 	ct_stathdl_t st;
@@ -1067,7 +1070,7 @@ close_on_exec(int fd)
 }
 
 static int
-contract_open(ctid_t ctid, const char *type, const char *file, int oflag)
+ips_contract_open(ctid_t ctid, const char *type, const char *file, int oflag)
 {
 	char path[PATH_MAX];
 	int n, fd;
@@ -1097,11 +1100,11 @@ contract_open(ctid_t ctid, const char *type, const char *file, int oflag)
 }
 
 static int
-contract_abandon_id(ctid_t ctid)
+ips_contract_abandon_id(ctid_t ctid)
 {
 	int fd, err;
 
-	fd = contract_open(ctid, "all", "ctl", O_WRONLY);
+	fd = ips_contract_open(ctid, "all", "ctl", O_WRONLY);
 	if (fd == -1)
 		return (errno);
 
@@ -1189,14 +1192,14 @@ __zpd_fattach_zone(zoneid_t zid, int door, boolean_t detach_only)
 		}
 		_exit(do_fattach(door, path, detach_only));
 	}
-	if (contract_latest(&ct) == -1)
+	if (ips_contract_latest(&ct) == -1)
 		ct = -1;
 	(void) ct_tmpl_clear(tmpl_fd);
 	if (close(tmpl_fd) < 0) {
 		perror("close");
 		exit(EXIT_FAILURE);
 	}
-	(void) contract_abandon_id(ct);
+	(void) ips_contract_abandon_id(ct);
 	while (waitpid(pid, &stat, 0) != pid)
 		;
 	if (WIFEXITED(stat) && WEXITSTATUS(stat) == 0) {
@@ -1226,6 +1229,35 @@ zpd_fattach_zone(zoneid_t zid, int door, boolean_t detach_only)
 	(void) mutex_unlock(&g_attach_zone_lock);
 }
 
+static boolean_t
+__is_native_zone(zoneid_t zid)
+{
+	char brand[MAXNAMELEN];
+	int i;
+	/*
+	 * Upstream considers native "solaris", "solaris-oci", "sn1", "labeled".
+	 * We use own list (note, it doesn't include "ipkg")
+	 */
+	const char *name_list[] = { "lipkg", "sparse", "sn1", "labeled" };
+	uint_t nbrands = sizeof (name_list) / sizeof (const char *);
+	char zonename[ZONENAME_MAX];
+	/* global zones have a NULL brand, but can be detected by zid. */
+	if (zid == 0) {
+	        return (B_TRUE);
+	}
+
+	if (getzonenamebyid(zid, zonename, sizeof(zonename))!= -1) {
+		if( zone_get_brand(zonename, brand, sizeof(brand)) == Z_OK) {
+			for (i = 0; i < nbrands; i++) {
+			        if (strcmp(brand, name_list[i]) == 0) {
+			                return (B_TRUE);
+			        }
+			}
+		}
+	}
+	return (B_FALSE);
+}
+
 static void
 fattach_all_zones(boolean_t detach_only)
 {
@@ -1245,8 +1277,11 @@ again:
 		free(zids);
 		goto again;
     }
-	for (i = 0; i < nzids; i++)
-		zpd_fattach_zone(zids[i], g_door, detach_only);
+	for (i = 0; i < nzids; i++) {
+		if (__is_native_zone(zids[i]) == B_TRUE) {
+			zpd_fattach_zone(zids[i], g_door, detach_only);
+		}
+	}
 	free(zids);
 }
 

@@ -174,7 +174,7 @@ root::0:
 sys::3:root
 adm::4:root
 """,
-            "tmp/license.txt": """
+            "foo/license.txt": """
 This is a license.
 """,
         }
@@ -326,7 +326,7 @@ This is a license.
 
                     add group groupname=muppets
                     add user username=Kermit group=adm home-dir=/export/home/Kermit
-                    add license license="Foo" path=tmp/license.txt must-display=True must-accept=True
+                    add license license="Foo" path=foo/license.txt must-display=True must-accept=True
                     close\n"""
                 p_all.append(p_data)
 
@@ -1110,9 +1110,12 @@ packages known:
                         assert len(linked) == li_count
 
                         #
-                        # an empty /etc/zones directory will cause the zone
-                        # commands to fail which will cause linked image
-                        # operations to fail.
+                        # Fail the zone list operation by making a fake zoneadm.
+                        #
+                        DebugValues["bin_zoneadm"] = "/bin/false"
+                        #
+                        # Setup the following directory in order to trigger the
+                        # zone list operation.
                         #
                         os.mkdir(os.path.join(self.img_path(), "etc/zones"),
                             0o755)

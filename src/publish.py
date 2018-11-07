@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 from __future__ import print_function
@@ -35,6 +35,8 @@ import sys
 import traceback
 import warnings
 import errno
+from pkg.client.pkgdefs import EXIT_OOPS, EXIT_OK, EXIT_PARTIAL, EXIT_BADOPT
+
 if sys.version_info[:2] >= (3, 4):
         from importlib import reload
 else:
@@ -54,6 +56,17 @@ from pkg.client import global_settings
 from pkg.client.debugvalues import DebugValues
 
 nopub_actions = [ "unknown" ]
+
+# These attributes should always be stripped from input manifests for 'publish';
+# they will be re-calculated during publication.
+strip_attrs = [
+    "elfarch",
+    "elfbits",
+    "elfhash",
+    "pkg.content-hash",
+    "pkg.csize",
+    "pkg.size",
+]
 
 def error(text, cmd=None):
         """Emit an error message prefixed by the command name """
@@ -77,7 +90,7 @@ def error(text, cmd=None):
         # program name on all platforms.
         emsg(ws + pkg_cmd + text_nows)
 
-def usage(usage_error=None, cmd=None, retcode=2):
+def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT):
         """Emit a usage message and optionally prefix it with a more specific
         error message.  Causes program to exit."""
 
@@ -175,8 +188,8 @@ def trans_create_repository(repo_uri, args):
                     "values using the --set-property option."))
         except trans.TransactionError as e:
                 error(e, cmd="create-repository")
-                return 1
-        return 0
+                return EXIT_OOPS
+        return EXIT_OK
 
 def trans_open(repo_uri, args):
         """DEPRECATED"""
@@ -206,7 +219,7 @@ def trans_open(repo_uri, args):
         else:
                 msg(t.open())
 
-        return 0
+        return EXIT_OK
 
 def trans_append(repo_uri, args):
         """DEPRECATED"""
@@ -236,7 +249,7 @@ def trans_append(repo_uri, args):
         else:
                 msg(t.append())
 
-        return 0
+        return EXIT_OK
 
 def trans_close(repo_uri, args):
         """DEPRECATED"""
@@ -270,7 +283,7 @@ def trans_close(repo_uri, args):
         for val in (pkg_state, pkg_fmri):
                 if val is not None:
                         msg(val)
-        return 0
+        return EXIT_OK
 
 def trans_add(repo_uri, args):
         """DEPRECATED"""
@@ -289,13 +302,13 @@ def trans_add(repo_uri, args):
         if action.name in nopub_actions:
                 error(_("invalid action for publication: {0}").format(action),
                     cmd="add")
-                return 1
+                return EXIT_OOPS
 
         xport, pub = setup_transport_and_pubs(repo_uri)
         t = trans.Transaction(repo_uri, trans_id=trans_id, xport=xport,
             pub=pub)
         t.add(action)
-        return 0
+        return EXIT_OK
 
 def trans_publish(repo_uri, fargs):
         """Publish packages in a single step using provided manifest data and
@@ -341,7 +354,7 @@ def trans_publish(repo_uri, fargs):
                         filelist = [(f, open(f)) for f in pargs]
                 except IOError as e:
                         error(e, cmd="publish")
-                        return 1
+                        return EXIT_OOPS
 
         lines = ""      # giant string of all input files concatenated together
         linecnts = []   # tuples of starting line number, ending line number
@@ -352,7 +365,7 @@ def trans_publish(repo_uri, fargs):
                         data = f.read()
                 except IOError as e:
                         error(e, cmd="publish")
-                        return 1
+                        return EXIT_OOPS
                 lines += data
                 linecnt = len(data.splitlines())
                 linecnts.append((linecounter, linecounter + linecnt))
@@ -377,7 +390,7 @@ def trans_publish(repo_uri, fargs):
                 error(_("File {filename} line {lineno}: {err}").format(
                     filename=filename, lineno=lineno, err=e),
                     cmd="publish")
-                return 1
+                return EXIT_OOPS
 
         try:
                 pfmri = pkg.fmri.PkgFmri(m["pkg.fmri"])
@@ -386,14 +399,14 @@ def trans_publish(repo_uri, fargs):
                         error(_("The pkg.fmri attribute '{0}' in the package "
                             "manifest must include a version.").format(pfmri),
                             cmd="publish")
-                        return 1
+                        return EXIT_OOPS
                 if not DebugValues["allow-timestamp"]:
                         # If not debugging, timestamps are ignored.
                         pfmri.version.timestr = None
                 pkg_name = pfmri.get_fmri()
         except KeyError:
                 error(_("Manifest does not set pkg.fmri"))
-                return 1
+                return EXIT_OOPS
 
         xport, pub = setup_transport_and_pubs(repo_uri, ssl_key=key,
             ssl_cert=cert)
@@ -426,16 +439,17 @@ def trans_publish(repo_uri, fargs):
                 if a.name == "set" and a.attrs["name"] in ["pkg.fmri", "fmri"]:
                         continue
                 elif a.has_payload:
-                        # Don't trust values provided; forcibly discard these.
-                        a.attrs.pop("pkg.size", None)
-                        a.attrs.pop("pkg.csize", None)
+                        # Forcibly discard content-related attributes to prevent
+                        # errors when reusing manifests with different content.
+                        for attr in strip_attrs:
+                                a.attrs.pop(attr, None)
                         path = pkg.actions.set_action_data(a.hash, a,
                             basedirs=basedirs, bundles=bundles)[0]
                 elif a.name in nopub_actions:
                         error(_("invalid action for publication: {0}").format(
                             action), cmd="publish")
                         t.close(abandon=True)
-                        return 1
+                        return EXIT_OOPS
                 if a.name == "file":
                         basename = os.path.basename(a.attrs["path"])
                         for pattern in timestamp_files:
@@ -459,7 +473,7 @@ def trans_publish(repo_uri, fargs):
         for val in (pkg_state, pkg_fmri):
                 if val is not None:
                         msg(val)
-        return 0
+        return EXIT_OK
 
 def trans_include(repo_uri, fargs, transaction=None):
         """DEPRECATED"""
@@ -494,7 +508,7 @@ def trans_include(repo_uri, fargs, transaction=None):
                         filelist = [(f, open(f)) for f in pargs]
                 except IOError as e:
                         error(e, cmd="include")
-                        return 1
+                        return EXIT_OOPS
 
         lines = []      # giant string of all input files concatenated together
         linecnts = []   # tuples of starting line number, ending line number
@@ -505,7 +519,7 @@ def trans_include(repo_uri, fargs, transaction=None):
                         data = f.read()
                 except IOError as e:
                         error(e, cmd="include")
-                        return 1
+                        return EXIT_OOPS
                 lines.append(data)
                 linecnt = len(data.splitlines())
                 linecnts.append((linecounter, linecounter + linecnt))
@@ -529,7 +543,7 @@ def trans_include(repo_uri, fargs, transaction=None):
                 error(_("File {filename} line {lineno}: {err}").format(
                     filename=filename, lineno=lineno, err=e),
                     cmd="include")
-                return 1
+                return EXIT_OOPS
 
         invalid_action = False
 
@@ -557,9 +571,9 @@ def trans_include(repo_uri, fargs, transaction=None):
                         t.add(a)
 
         if invalid_action:
-                return 3
+                return EXIT_PARTIAL
         else:
-                return 0
+                return EXIT_OK
 
 def gen_actions(files, timestamp_files, target_files, minimal=False, visitors=[],
     use_default_owner=True):
@@ -621,7 +635,7 @@ def trans_import(repo_uri, args, visitors=[]):
         xport, pub = setup_transport_and_pubs(repo_uri)
         t = trans.Transaction(repo_uri, trans_id=trans_id, xport=xport, pub=pub)
 
-        ret = 0
+        ret = EXIT_OK
         abandon = False
         try:
                 for action, err in gen_actions(pargs, timestamp_files,
@@ -635,19 +649,19 @@ def trans_import(repo_uri, args, visitors=[]):
                                         t.add(action)
         except TypeError as e:
                 error(e, cmd="import")
-                return 1
+                return EXIT_OOPS
         except EnvironmentError as e:
                 if e.errno == errno.ENOENT:
                         error("{0}: '{1}'".format(e.args[1], e.filename),
                             cmd="import")
-                        return 1
+                        return EXIT_OOPS
                 else:
                         raise
 
         for visitor in visitors:
                 if visitor.errors:
                         abandon = True
-                        ret = 1
+                        ret = EXIT_OOPS
         if abandon:
                 error("Abandoning transaction due to errors.")
                 t.close(abandon=True)
@@ -684,16 +698,16 @@ def trans_generate(args, visitors=[]):
                         print(action)
         except TypeError as e:
                 error(e, cmd="generate")
-                return 1
+                return EXIT_OOPS
         except EnvironmentError as e:
                 if e.errno == errno.ENOENT:
                         error("{0}: '{1}'".format(e.args[1], e.filename),
                             cmd="generate")
-                        return 1
+                        return EXIT_OOPS
                 else:
                         raise
 
-        return 0
+        return EXIT_OK
 
 def trans_refresh_index(repo_uri, args):
         """DEPRECATED"""
@@ -708,8 +722,8 @@ def trans_refresh_index(repo_uri, args):
                     pub=pub).refresh_index()
         except trans.TransactionError as e:
                 error(e, cmd="refresh-index")
-                return 1
-        return 0
+                return EXIT_OOPS
+        return EXIT_OK
 
 def setup_transport_and_pubs(repo_uri, remote=True, ssl_key=None,
     ssl_cert=None):
@@ -725,8 +739,6 @@ def setup_transport_and_pubs(repo_uri, remote=True, ssl_key=None,
         return xport, targ_pub
 
 def main_func():
-        gettext.install("pkg", "/usr/share/locale",
-            codeset=locale.getpreferredencoding())
 
         repo_uri = os.getenv("PKG_REPO", None)
 
@@ -776,7 +788,7 @@ def main_func():
                     "using -s."), cmd=subcommand)
 
         visitors = [SolarisBundleVisitor()]
-        ret = 0
+        ret = EXIT_OK
         try:
                 if subcommand == "create-repository":
                         ret = trans_create_repository(repo_uri, pargs)
@@ -816,10 +828,10 @@ def main_func():
                                         print("")
                                         printed_space = True
                                 error(err, cmd=subcommand)
-                                ret = 1
+                                ret = EXIT_OOPS
         except pkg.bundle.InvalidBundleException as e:
                 error(e, cmd=subcommand)
-                ret = 1
+                ret = EXIT_OOPS
         except getopt.GetoptError as e:
                 usage(_("illegal {cmd} option -- {opt}").format(
                     cmd=subcommand, opt=e.opt))
@@ -831,6 +843,10 @@ def main_func():
 # so that we can more easily detect these in testing of the CLI commands.
 #
 if __name__ == "__main__":
+        misc.setlocale(locale.LC_ALL, "", error)
+        gettext.install("pkg", "/usr/share/locale",
+            codeset=locale.getpreferredencoding())
+        misc.set_fd_limits(printer=error)
 
         # Make all warnings be errors.
         warnings.simplefilter('error')
@@ -843,7 +859,7 @@ if __name__ == "__main__":
         except (PipeError, KeyboardInterrupt):
                 # We don't want to display any messages here to prevent
                 # possible further broken pipe (EPIPE) errors.
-                __ret = 1
+                __ret = EXIT_OOPS
         except (pkg.actions.ActionError, trans.TransactionError,
             EnvironmentError, RuntimeError, pkg.fmri.FmriError,
             apx.ApiException) as _e:
@@ -854,10 +870,10 @@ if __name__ == "__main__":
                         # Only print message if failure wasn't due to
                         # broken pipe (EPIPE) error.
                         print("pkgsend: {0}".format(_e), file=sys.stderr)
-                __ret = 1
+                __ret = EXIT_OOPS
         except MemoryError:
                 error("\n" + misc.out_of_memory())
-                __ret = 1
+                __ret = EXIT_OOPS
         except SystemExit as _e:
                 raise _e
         except:

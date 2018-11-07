@@ -20,7 +20,8 @@
  */
 
 /*
- *  Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ *  Copyright (c) 2008, 2017, Oracle and/or its affiliates. All rights reserved.
+ *  Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
  */
 
 #ifndef _ELFEXTRACT_H
@@ -42,15 +43,42 @@ typedef struct dyninfo {
 	off_t		runpath;	/* offset in table of the runpath  */
 	off_t		def;		/* offset in table of the vdefname */
 	off_t		dynstr;		/* string table			   */
+	char		*obj_type;	/* type of the object */
 	liblist_t 	*deps;		/* dependency list (also contains  */
 					/* 	offsets)		   */
 	liblist_t 	*vers;		/* version provided list (also	   */
 					/* 	contains offsets)	   */
-	unsigned char	hash[20];	/* SHA1 Hash of significant segs.  */
-     	unsigned char	hash256[32];	/* SHA2 Hash of significant segs.  */
-
 	Elf		*elf;		/* elf data -- must be freed	   */
 } dyninfo_t;
+
+typedef struct hashinfo {
+	/* Legacy SHA1 hash of subset of sections */
+	char	elfhash[41];
+
+	/*
+	 * SHA-256 hash of data from selected ELF segments
+	 * Upstream uses gelf_sign_range(ELF_SR_SIGNED_INTERPRET)
+	 */
+     	char	hash_sha256[77];
+
+	/*
+	 * SHA-256 hash of data from selected ELF segments
+	 * Upstream uses gelf_sign_range(ELF_SR_INTERPRET)
+	 */
+	char	uhash_sha256[86];
+
+	/*
+	 * SHA-512/256 hash of data from selected ELF segments
+	 * Upstream uses gelf_sign_range(ELF_SR_SIGNED_INTERPRET)
+	 */
+	char	hash_sha512t_256[82];
+
+	/*
+	 * SHA-512/256 hash of data from selected ELF segments
+	 * Upstream uses gelf_sign_range(ELF_SR_INTERPRET)
+	 */
+	char	uhash_sha512t_256[91];
+} hashinfo_t;
 
 typedef struct hdrinfo {
 	int type;			/* e_type		*/
@@ -62,7 +90,8 @@ typedef struct hdrinfo {
 
 extern int iself(int fd);
 extern int iself32(int fd);
-extern dyninfo_t *getdynamic(int fd, int sha1, int sha256);
+extern dyninfo_t *getdynamic(int fd);
+extern hashinfo_t *gethashes(int fd, int elfhash, int sha2_256, int sha2_512);
 extern void dyninfo_free(dyninfo_t *dyn);
 extern hdrinfo_t *getheaderinfo(int fd);
 

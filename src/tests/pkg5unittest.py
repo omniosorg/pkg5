@@ -1,3 +1,4 @@
+#
 # CDDL HEADER START
 #
 # The contents of this file are subject to the terms of the
@@ -18,7 +19,7 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2017, Oracle and/or its affiliates. All rights reserved.
 
 #
 # Define the basic classes that all test cases are inherited from.
@@ -39,7 +40,9 @@ import copy
 import difflib
 import errno
 import gettext
+import grp
 import hashlib
+import locale
 import logging
 import multiprocessing
 import os
@@ -274,6 +277,8 @@ if __name__ == "__main__":
                 if not g_proto_readable:
                         self.assertProtoReadable()
                         g_proto_readable = True
+
+                locale.setlocale(locale.LC_ALL, 'C')
 
         @property
         def methodName(self):
@@ -2724,7 +2729,7 @@ class CliTestCase(Pkg5TestCase):
 
                 # debug_hash lets us choose the type of hash attributes that
                 # should be added to this package on publication. Valid values
-                # are: sha1, sha256, sha1+sha256, sha512_256, sha1+sha512_256
+                # are: sha1, sha256, sha1+sha256, sha512t_256, sha1+sha512t_256
                 if debug_hash:
                         args.append("-D hash={0}".format(debug_hash))
 
@@ -3131,7 +3136,7 @@ class CliTestCase(Pkg5TestCase):
                 self.assertEqual(expected, actual)
 
         def validate_html_file(self, fname, exit=0, comment="",
-            options="-utf8 -quiet", drop_prop_attrs=False):
+            options="--doctype strict -utf8 -quiet", drop_prop_attrs=False):
                 """ Run a html file specified by fname through a html validator
                     (tidy). The drop_prop_attrs parameter can be used to ignore
                     proprietary attributes which would otherwise make tidy fail.
@@ -3391,15 +3396,38 @@ class CliTestCase(Pkg5TestCase):
                 file_path = os.path.join(self.get_img_path(), path)
                 os.chmod(file_path, mode)
 
-        def file_exists(self, path):
+        def file_chown(self, path, owner=None, group=None):
+                """Change the ownership of a file in the image."""
+
+                file_path = os.path.join(self.get_img_path(), path)
+                uid = pwd.getpwnam(owner).pw_uid
+                gid = grp.getgrnam(group).gr_gid
+                os.chown(file_path, uid, gid)
+
+        def file_exists(self, path, mode=None, owner=None, group=None):
                 """Assert the existence of a file in the image."""
 
                 file_path = os.path.join(self.get_img_path(), path)
-                if not os.path.isfile(file_path):
-                        self.assertTrue(False, "File {0} does not exist".format(path))
+                try:
+                        st = os.stat(file_path)
+                except OSError as e:
+                        if e.errno == errno.ENOENT:
+                                self.assertTrue(False,
+                                    "File {0} does not exist".format(path))
+                        else:
+                                raise
+                if mode is not None:
+                        self.assertEqual(mode, stat.S_IMODE(st.st_mode))
+                if owner is not None:
+                        uid = pwd.getpwnam(owner).pw_uid
+                        self.assertEqual(uid, st.st_uid)
+                if group is not None:
+                        gid = grp.getgrnam(group).gr_gid
+                        self.assertEqual(gid, st.st_gid)
 
         def dir_exists(self, path, mode=None, owner=None, group=None):
                 """Assert the existence of a directory in the image."""
+
                 dir_path = os.path.join(self.get_img_path(), path)
                 try:
                         st = os.stat(dir_path)
@@ -3412,9 +3440,11 @@ class CliTestCase(Pkg5TestCase):
                 if mode is not None:
                         self.assertEqual(mode, stat.S_IMODE(st.st_mode))
                 if owner is not None:
-                        self.assertEqual(owner, st.st_uid)
+                        uid = pwd.getpwnam(owner).pw_uid
+                        self.assertEqual(uid, st.st_uid)
                 if group is not None:
-                        self.assertEqual(group, st.st_gid)
+                        gid = grp.getgrnam(group).gr_gid
+                        self.assertEqual(gid, st.st_gid)
 
         def file_doesnt_exist(self, path):
                 """Assert the non-existence of a file in the image."""
@@ -3443,14 +3473,55 @@ class CliTestCase(Pkg5TestCase):
                 for p in paths:
                         self.file_doesnt_exist(p)
 
+        def assert_file_exists(self, path, negate=False):
+                """Verify that the specified path exists. If negate is
+                    true, then make sure the path doesn't exist"""
+
+                file_path = os.path.join(self.get_img_path(), str(path))
+
+                try:
+                        open(file_path).close()
+                except IOError as e:
+                        if e.errno == errno.ENOENT and negate:
+                                return
+                        self.assertTrue(False,
+                            "File {0} is missing".format(path))
+                # file is there
+                if negate:
+                        self.assertTrue(False,
+                            "File {0} should not exist".format(path))
+                return
+
+        def assert_files_exist(self, flist):
+                error = ""
+                for (path, exist) in flist:
+                        file_path = os.path.join(self.get_img_path(), path)
+                        try:
+                                self.assert_file_exists(file_path,
+                                    negate=not exist)
+                        except AssertionError as e:
+                                error += "\n{0}".format(e)
+                if error:
+                        raise AssertionError(error)
+
         def file_remove(self, path):
                 """Remove a file in the image."""
 
                 file_path = os.path.join(self.get_img_path(), path)
                 portable.remove(file_path)
 
-        def file_contains(self, path, string, appearances=1):
-                """Assert the existence of a string in a file in the image."""
+        def file_contains(self, path, strings, appearances=1):
+                """Assert the existence of strings provided in a file in the
+                image. The counting of appearances is line based. Repeated
+                string on the same line will be count once."""
+
+                if isinstance(strings, six.string_types):
+                        strings = [strings]
+
+                # Initialize a dict for counting appearances.
+                sdict = {}
+                for s in strings:
+                        sdict[s] = appearances
 
                 file_path = os.path.join(self.get_img_path(), path)
                 try:
@@ -3458,32 +3529,49 @@ class CliTestCase(Pkg5TestCase):
                 except:
                         self.assertTrue(False,
                             "File {0} does not exist or contain {1}".format(
-                            path, string))
+                            path, strings))
 
                 for line in f:
-                        if string in line:
-                                appearances -= 1
-                                if appearances == 0:
-                                        f.close()
-                                        break
+                        for k in sdict:
+                                if k in line:
+                                        sdict[k] -= 1
+                        # If all counts become < 0, we know we have found all
+                        # occurrences for all strings.
+                        if all(v <= 0 for v in sdict.values()):
+                                f.close()
+                                break
                 else:
                         f.close()
-                        self.assertTrue(False, "File {0} does not contain {1}".format(
-                            path, string))
+                        self.assertTrue(False, "File {0} does not contain {1} "
+                            "{2}".format(path, appearances, strings))
 
-        def file_doesnt_contain(self, path, string):
-                """Assert the non-existence of a string in a file in the
-                image."""
+        def file_doesnt_contain(self, path, strings):
+                """Assert the non-existence of strings in a file in the image.
+                """
+                if isinstance(strings, six.string_types):
+                        strings = [strings]
 
                 file_path = os.path.join(self.get_img_path(), path)
                 f = open(file_path)
                 for line in f:
-                        if string in line:
+                        if any(s in line for s in strings):
                                 f.close()
-                                self.assertTrue(False, "File {0} contains {1}".format(
-                                    path, string))
+                                self.assertTrue(False, "File {0} contains any "
+                                    "of {1}".format(path, strings))
                 else:
                         f.close()
+
+        def file_create(self, path, string=None):
+                """Create a new file containing "string" """
+                file_path = self.get_img_file_path(path)
+                if not os.path.exists(os.path.dirname(file_path)):
+                        os.makedirs(os.path.dirname(file_path))
+                with open(file_path, "a") as f:
+                        if string: f.write("{0}".format(string))
+
+        def file_touch(self, path, times=None):
+                self.file_create(path)
+                os.utime(self.get_img_file_path(path), times)
 
         def file_append(self, path, string):
                 """Append a line to a file in the image."""

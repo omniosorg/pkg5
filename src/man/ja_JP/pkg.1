@@ -2342,7 +2342,7 @@ URI を指定された発行元のミラーとして追加します。
 .RS 4n
 指定したプロキシ URI を使用して、指定した起点 (\fB-g\fR) またはミラー (\fB-m\fR) のコンテンツを取得します。プロキシ値は、パブリッシャーの構成の一部として格納されます。つまり、子イメージが使用するシステムリポジトリは自動的に更新されます。このオプションを使用して認証済みプロキシを設定することはできません。\fIproxy_to_use\fR の値を \fBprotocol://user:password@host\fR の形式にすることはできません。
 .sp
-実行時には、\fB$http_proxy\fR または関連する環境変数がこのプロキシ設定をオーバーライドします。受け入れられる環境変数名のリストについては、\fBcurl\fR(1) のマニュアルページの「環境」セクションを参照してください。環境変数を使用してプロキシ URI を設定する場合は、\fBsvc:/application/pkg/system-repository\fR SMF サービスの該当するプロキシプロパティーも同じ値に設定する必要があります。\fIOracle Solaris 11.2 でのソフトウェアの追加と更新に関するドキュメント\fRの、プロキシの指定に関する説明を参照してください。
+実行時には、\fB$http_proxy\fR または関連する環境変数がこのプロキシ設定をオーバーライドします。受け入れられる環境変数名のリストについては、\fBcurl\fR(1) のマニュアルページの「環境」セクションを参照してください。環境変数を使用してプロキシ URI を設定する場合は、\fBsvc:/application/pkg/system-repository\fR SMF サービスの該当するプロキシプロパティーも同じ値に設定する必要があります。\fIOmniOS でのソフトウェアの追加と更新に関するドキュメント\fRの、プロキシの指定に関する説明を参照してください。
 .RE
 
 .sp
@@ -4012,7 +4012,7 @@ _
 \fBpkgsend\fR(1), \fBbeadm\fR(1M), \fBpkg.depotd\fR(1M), \fBpkg.sysrepo\fR(1M), \fBglob\fR(3C), \fBpkg\fR(5)
 .sp
 .LP
-\fI『Adding and Updating Software in Oracle Solaris 11.2 』\fR
+\fI『Adding and Updating Software in OmniOS 』\fR
 .sp
 .LP
-\fBhttps://java.net/projects/ips/pages/Home\fR
+\fBhttps://github.com/omniosorg/pkg5\fR

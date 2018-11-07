@@ -19,6 +19,7 @@
 # CDDL HEADER END
 #
 # Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
 # Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
 # Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
 #
@@ -80,9 +81,11 @@ ALL_MANIFESTS:sh  = \
 	exit 0
 $(PUBLISHALL)MANIFESTS      = $(ALL_MANIFESTS)
 PKGCMDENV         = \
-	PATH=$(PKGROOT)/usr/bin:/usr/sbin:/usr/bin
+	PATH=$(PKGROOT)/usr/bin:/usr/sbin:/usr/bin \
+	PYTHONPATH=$(PKGROOT)/usr/lib/python2.7/vendor-packages
 PKG               = $(PKGCMDENV) pkg
 PKGDEPEND         = $(PKGCMDENV) pkgdepend
+PKGDIFF           = $(PKGCMDENV) pkgdiff
 PKGFMT            = $(PKGCMDENV) pkgfmt
 PKGLINT           = $(PKGCMDENV) pkglint
 PKGMOGRIFY        = $(PKGCMDENV) pkgmogrify
@@ -133,10 +136,6 @@ clobber: clean
 
 pkgfmt:
 	$(PKGFMT) -c manifests/*.p5m
-
-# Pass SVr4 package production off to its own makefile
-svr4:
-	$(MAKE) -f Makefile.svr4 _svr4
 
 $(PDIR):
 	mkdir -p $@
@@ -189,7 +188,7 @@ $(PDIR)/%.pub: $(PDIR)/.resolved $(PKGREPOTGT)
 # Compare the proto area with the package manifests; if they've got different
 # filesets, complain
 check: $(PDIR)/protomanifest $(PDIR)/pkgmanifest
-	pkgdiff $(PDIR)/protomanifest $(PDIR)/pkgmanifest
+	$(PKGDIFF) $(PDIR)/protomanifest $(PDIR)/pkgmanifest
 
 # We either lint against a reference repository, provided in
 # $(PKGLINT_REF_REPO) or just with the repository we built.

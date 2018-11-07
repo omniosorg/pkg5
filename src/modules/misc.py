@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2007, 2015, 2017, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2017, Oracle and/or its affiliates. All rights reserved.
 # Copyright 2014, OmniTI Computer Consulting, Inc. All rights reserved.
 
 """
@@ -45,7 +45,6 @@ import resource
 import shutil
 import signal
 import simplejson as json
-import six
 import socket
 import struct
 import sys
@@ -55,24 +54,23 @@ import traceback
 import urllib
 import zlib
 
+# ungrouped-imports: pylint: disable=C0412
 from binascii import hexlify, unhexlify
 from collections import defaultdict
 from io import BytesIO
 from operator import itemgetter
-# Pylint seems to be panic about six even if it is installed. Instead of using
-# 'disable' here, a better way is to use ignore-modules in pylintrc, but
-# it has an issue that is not fixed until recently. See pylint/issues/#223.
-# import-error; pylint: disable=F0401
-# no-name-in-module; pylint: disable=E0611
+
+from stat import S_IFMT, S_IMODE, S_IRGRP, S_IROTH, S_IRUSR, S_IRWXU, \
+    S_ISBLK, S_ISCHR, S_ISDIR, S_ISFIFO, S_ISLNK, S_ISREG, S_ISSOCK, \
+    S_IWUSR, S_IXGRP, S_IXOTH
+
 # Redefining built-in 'range'; pylint: disable=W0622
 # Module 'urllib' has no 'parse' member; pylint: disable=E1101
 from six.moves import range, zip_longest
 from six.moves.urllib.parse import urlsplit, urlparse, urlunparse
 from six.moves.urllib.request import pathname2url, url2pathname
 
-from stat import S_IFMT, S_IMODE, S_IRGRP, S_IROTH, S_IRUSR, S_IRWXU, \
-    S_ISBLK, S_ISCHR, S_ISDIR, S_ISFIFO, S_ISLNK, S_ISREG, S_ISSOCK, \
-    S_IWUSR, S_IXGRP, S_IXOTH
+import six
 
 import pkg.client.api_errors as api_errors
 import pkg.portable as portable
@@ -83,6 +81,7 @@ from pkg.client import global_settings
 from pkg.client.debugvalues import DebugValues
 from pkg.client.imagetypes import img_type_names, IMG_NONE
 from pkg.pkggzip import PkgGzipFile
+from pkg.client.pkgdefs import EXIT_OOPS
 
 # Default path where the temporary directories will be created.
 DEFAULT_TEMP_PATH = "/var/tmp"
@@ -98,6 +97,10 @@ SIGNATURE_POLICY = "signature-policy"
 BUG_URI_CLI = "https://defect.opensolaris.org/bz/enter_bug.cgi?product=pkg&component=cli"
 BUG_URI_GUI = "https://defect.opensolaris.org/bz/enter_bug.cgi?product=pkg&component=gui"
 # pylint: enable=C0301
+
+# Comparison types
+CMP_UNSIGNED = 0
+CMP_ALL = 1
 
 # Traceback message.
 def get_traceback_message():
@@ -227,6 +230,7 @@ def move(src, dst):
         try:
                 os.rename(src, dst)
         except EnvironmentError as e:
+                # Access to protected member; pylint: disable=W0212
                 s = os.lstat(src)
 
                 if e.errno == errno.EXDEV:
@@ -246,7 +250,7 @@ def move(src, dst):
                         raise shutil.Error("Destination path '{0}' already "
                             "exists".format(dst))
                 else:
-                        raise
+                        raise api_errors._convert_error(e)
 
 def expanddirs(dirs):
         """given a set of directories, return expanded set that includes
@@ -597,7 +601,7 @@ def get_data_digest(data, length=None, return_content=False,
         paragraph.
         """
 
-        bufsz = 128 * 1024
+        bufsz = PKG_FILE_BUFSIZ
         closefobj = False
         if isinstance(data, six.string_types):
                 f = open(data, "rb", bufsz)
@@ -617,7 +621,12 @@ def get_data_digest(data, length=None, return_content=False,
                         assert False, "get_data_digest without hash_attrs/algs"
                 hash_results = {}
                 for attr in hash_attrs:
-                        hash_results[attr] = hash_algs[attr]()
+                        # "pkg.content-hash" is provided by default and doesn't
+                        # indicate the hash_alg to be used, so when we want to
+                        # calculate the content hash, we'll specify the
+                        # hash_attrs explicitly, such as "file:sha512t_256".
+                        if attr != "pkg.content-hash":
+                                hash_results[attr] = hash_algs[attr]()
 
         # Read the data in chunks and compute the SHA hashes as the data comes
         # in.  A large read on some platforms (e.g. Windows XP) may fail.
@@ -631,8 +640,9 @@ def get_data_digest(data, length=None, return_content=False,
                 else:
                         # update each hash with this data
                         for attr in hash_attrs:
-                                hash_results[attr].update(
-                                    data) # pylint: disable=E1101
+                                if attr != "pkg.content-hash":
+                                        hash_results[attr].update(
+                                            data) # pylint: disable=E1101
 
                 l = len(data)
                 if l == 0:
@@ -651,11 +661,55 @@ def get_data_digest(data, length=None, return_content=False,
                 hash_results[attr] = hash_results[attr].hexdigest()
         return hash_results, content.read()
 
-def compute_compressed_attrs(fname, file_path, data, size, compress_dir,
-    bufsz=64*1024, chash_attrs=None, chash_algs=None):
+
+class _GZWriteWrapper(object):
+        """Used by compute_compressed_attrs to calculate data size and compute
+        hashes as the data is written instead of having to read the written data
+        again later."""
+
+        def __init__(self, path, chashes):
+                """If path is None, the data will be discarded immediately after
+                computing size and hashes."""
+
+                if path:
+                        self._ofile = open(path, "wb")
+                else:
+                        self._ofile = None
+                self._chashes = chashes
+                self._size = 0
+
+        def close(self):
+                """Close the file."""
+                if self._ofile:
+                        self._ofile.close()
+                        self._ofile = None
+
+        def flush(self):
+                """Flush the file."""
+                if self._ofile:
+                        self._ofile.flush()
+
+        @property
+        def size(self):
+                """Return the size of the file."""
+                return self._size
+
+        def write(self, data):
+                """Write data to the file and compute the hashes of the data."""
+                if self._ofile:
+                        self._ofile.write(data)
+                self._size += len(data)
+                for chash_attr in self._chashes:
+                        self._chashes[chash_attr].update(
+                            data) # pylint: disable=E1101
+
+
+def compute_compressed_attrs(fname, file_path=None, data=None, size=None,
+    compress_dir=None, bufsz=64*1024, chash_attrs=None, chash_algs=None):
         """Returns the size and one or more hashes of the compressed data.  If
         the file located at file_path doesn't exist or isn't gzipped, it creates
-        a file in compress_dir named fname.
+        a file in compress_dir named fname.  If compress_dir is None, the
+        attributes are calculated but no data will be written.
 
         'chash_attrs' is a list of the chash attributes we should compute, with
         'chash_algs' being a dictionary that maps the attribute names to the
@@ -666,6 +720,18 @@ def compute_compressed_attrs(fname, file_path, data, size, compress_dir,
                 chash_attrs = digest.DEFAULT_CHASH_ATTRS
         if chash_algs is None:
                 chash_algs = digest.CHASH_ALGS
+
+        chashes = {}
+        for chash_attr in chash_attrs:
+                # "pkg.content-hash" is provided by default and doesn't
+                # indicate the hash_alg to be used, so when we want to
+                # calculate the content hash, we'll specify the
+                # hash_attrs explicitly, such as "gzip:sha512t_256".
+                if chash_attr == "pkg.content-hash":
+                        chashes[chash_attr] = chash_algs["{0}:{1}".format(
+                            digest.EXTRACT_GZIP, digest.PREFERRED_HASH)]()
+                else:
+                        chashes[chash_attr] = chash_algs[chash_attr]()
 
         #
         # This check prevents compressing a file which is already compressed.
@@ -684,45 +750,73 @@ def compute_compressed_attrs(fname, file_path, data, size, compress_dir,
                         opath = file_path
 
         if fileneeded:
-                opath = os.path.join(compress_dir, fname)
-                ofile = PkgGzipFile(opath, "wb")
+                if compress_dir:
+                        opath = os.path.join(compress_dir, fname)
+                else:
+                        opath = None
 
-                nbuf = size // bufsz
+                fobj = _GZWriteWrapper(opath, chashes)
+                ofile = PkgGzipFile(mode="wb", fileobj=fobj)
 
-                for n in range(0, nbuf):
-                        l = n * bufsz
-                        h = (n + 1) * bufsz
-                        ofile.write(data[l:h])
+                if isinstance(data, (six.string_types, bytes)):
+                        # caller passed data in string
+                        nbuf = size // bufsz
+                        for n in range(0, nbuf):
+                                l = n * bufsz
+                                h = (n + 1) * bufsz
+                                ofile.write(data[l:h])
 
-                m = nbuf * bufsz
-                ofile.write(data[m:])
+                        m = nbuf * bufsz
+                        ofile.write(data[m:])
+                elif data:
+                        # assume caller passed file-like object
+                        if bufsz > size:
+                                bufsz = size
+
+                        while True:
+                                chunk = data.read(bufsz)
+                                if not chunk:
+                                        break
+                                ofile.write(chunk)
+
                 ofile.close()
-
-        data = None
-
-        # Now that the file has been compressed, determine its
-        # size.
-        fs = os.stat(opath)
-        csize = str(fs.st_size)
+                fobj.close()
+                csize = str(fobj.size)
+                for attr in chashes:
+                        if attr == "pkg.content-hash":
+                                chashes[attr] = "{0}:{1}:{2}".format(
+                                    digest.EXTRACT_GZIP, digest.PREFERRED_HASH,
+                                    chashes[attr].hexdigest())
+                        else:
+                                chashes[attr] = chashes[attr].hexdigest()
+                return csize, chashes
 
         # Compute the SHA hash of the compressed file.  In order for this to
         # work correctly, we have to use the PkgGzipFile class.  It omits
         # filename and timestamp information from the gzip header, allowing us
         # to generate deterministic hashes for different files with identical
         # content.
-        cfile = open(opath, "rb")
-        chashes = {}
-        for chash_attr in chash_attrs:
-                chashes[chash_attr] = chash_algs[chash_attr]()
-        while True:
-                cdata = cfile.read(bufsz)
-                # cdata is bytes
-                if cdata == b"":
-                        break
-                for chash_attr in chashes:
-                        chashes[chash_attr].update(
-                            cdata) # pylint: disable=E1101
-        cfile.close()
+        fs = os.stat(opath)
+        csize = str(fs.st_size)
+        with open(opath, "rb") as cfile:
+                while True:
+                        cdata = cfile.read(bufsz)
+                        # cdata is bytes
+                        if cdata == b"":
+                                break
+                        for chash_attr in chashes:
+                                chashes[chash_attr].update(
+                                    cdata) # pylint: disable=E1101
+
+        # The returned dictionary can now be populated with the hexdigests
+        # instead of the hash objects themselves.
+        for attr in chashes:
+                if attr == "pkg.content-hash":
+                        chashes[attr] = "{0}:{1}:{2}".format(
+                                digest.EXTRACT_GZIP, digest.PREFERRED_HASH,
+                                chashes[attr].hexdigest())
+                else:
+                        chashes[attr] = chashes[attr].hexdigest()
         return csize, chashes
 
 class ProcFS(object):
@@ -971,7 +1065,7 @@ class ImmutableDict(dict):
         def __setitem__(self, item, value):
                 self.__oops()
 
-        def __delitem__(self, item, value):
+        def __delitem__(self, item):
                 self.__oops()
 
         def pop(self, item, default=None):
@@ -1921,6 +2015,8 @@ def json_encode(name, data, desc, commonize=None, je_state=None):
 
                 data = { "json_state": data, "json_objects": obj_cache2 }
 
+                # Value 'DebugValues' is unsubscriptable;
+                # pylint: disable=E1136
                 if DebugValues["plandesc_validate"]:
                         json_validate(name, data)
 
@@ -2530,6 +2626,8 @@ class AsyncCall(object):
                 # Catch "Exception"; pylint: disable=W0703
 
                 try:
+                        # Value 'DebugValues' is unsubscriptable;
+                        # pylint: disable=E1136
                         if DebugValues["async_thread_error"]:
                                 raise Exception("async_thread_error")
 
@@ -2550,6 +2648,8 @@ class AsyncCall(object):
                         self.e = self.__e
                         self.e.e = e
                         try:
+                                # Value 'DebugValues' is unsubscriptable;
+                                # pylint: disable=E1136
                                 if DebugValues["async_thread_error"]:
                                         raise Exception("async_thread_error")
                                 self.e.tb = traceback.format_exc()
@@ -2771,6 +2871,8 @@ def list_actions_by_attrs(actionlist, attrs, show_all=False,
                                 a = ""
                         line.append(a)
 
+                # Too many boolean expressions in if statement;
+                # pylint: disable=R0916
                 if (line and [l for l in line if str(l) != ""] or show_all) \
                     and (not remove_consec_dup_lines or last_line is None or
                     last_line != line):
@@ -3028,5 +3130,29 @@ if six.PY2:
 else:
         force_str = force_text
 
+FILE_DESCRIPTOR_LIMIT = 4096
+
+def set_fd_limits(printer=None):
+        """Set the open file descriptor soft limit."""
+        if printer is None:
+                printer = emsg
+        try:
+                (soft, hard) = resource.getrlimit(resource.RLIMIT_NOFILE)
+                soft = max(hard, FILE_DESCRIPTOR_LIMIT)
+                resource.setrlimit(resource.RLIMIT_NOFILE, (soft, hard))
+        except (OSError, ValueError) as e:
+                printer(_("unable to set open file limit to {0}; please "
+                    "increase the open file limit using 'ulimit -n'"
+                    " and try the requested operation again: {1}")\
+                    .format(soft, e))
+                sys.exit(EXIT_OOPS)
+
+_varcetname_re = re.compile(r"\s")
+
+def valid_varcet_name(name):
+        """Check if the variant/facet name is valid. A valid variant/facet
+        name cannot contain whitespace"""
+        return _varcetname_re.search(name) is None
+
 # Vim hints
-# vim:ts=8:sw=8:et:fdm=marker
+# vim:ts=4:sw=4:et:fdm=marker

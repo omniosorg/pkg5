@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2017, Oracle and/or its affiliates. All rights reserved.
 #
 
 """This module provides the supported, documented interface for clients to
@@ -63,21 +63,18 @@ import glob
 import os
 import shutil
 import simplejson as json
-import six
 import sys
 import tempfile
 import threading
 import time
 import re as relib
 from functools import cmp_to_key
-# Pylint seems to be panic about six even if it is installed. Instead of using
-# 'disable' here, a better way is to use ignore-modules in pylintrc, but
-# it has an issue that is not fixed until recently. See pylint/issues/#223.
-# import-error; pylint: disable=F0401
-# no-name-in-module; pylint: disable=E0611
+
 from six.moves.urllib.parse import unquote
 
 import pkg.actions as actions
+import six
+
 import pkg.catalog as catalog
 import pkg.client.api_errors as apx
 import pkg.client.bootenv as bootenv
@@ -355,7 +352,7 @@ class ImageInterface(object):
                 if global_settings.client_name is None:
                         global_settings.client_name = pkg_client_name
 
-                if cmdpath == None:
+                if cmdpath is None:
                         cmdpath = misc.api_cmdpath()
                 self.cmdpath = cmdpath
 
@@ -597,7 +594,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                 before the exception is passed on.
                 """
 
-                if log_op_end == None:
+                if log_op_end is None:
                         log_op_end = []
 
                 # we always explicitly handle apx.ExpiringCertificate
@@ -800,7 +797,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                 try:
                         # This can raise if, for example, we're aborting
                         # because we have a PipeError and we can no longer
-                        # write.  So supress problems here.
+                        # write.  So suppress problems here.
                         if self.__progresstracker:
                                 self.__progresstracker.flush()
                 except:
@@ -1430,7 +1427,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
 
                 # sanity checks
                 assert _op in api_op_values
-                assert _ad_kwargs == None or \
+                assert _ad_kwargs is None or \
                     _op in [API_OP_ATTACH, API_OP_DETACH]
                 assert _ad_kwargs != None or \
                     _op not in [API_OP_ATTACH, API_OP_DETACH]
@@ -1592,6 +1589,8 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                 self._img.imageplan.update_index = _update_index
                 self.__plan_common_finish()
 
+                # Value 'DebugValues' is unsubscriptable;
+                # pylint: disable=E1136
                 if DebugValues["plandesc_validate"]:
                         # save, load, and get a new json copy of the plan,
                         # then compare that new copy against our current one.
@@ -2036,7 +2035,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                 'gen_plan_sync' functions for an explanation of their usage
                 and effects."""
 
-                if li_props == None:
+                if li_props is None:
                         li_props = dict()
 
                 op = API_OP_ATTACH
@@ -2229,10 +2228,24 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                 if not variants and facets is None:
                         raise ValueError("Nothing to do")
 
+                invalid_names = []
                 if variants:
                         op = API_OP_CHANGE_VARIANT
+                        # Check whether '*' or '?' is in the input. Currently,
+                        # change-variant does not accept globbing. Also check
+                        # for whitespaces.
+                        for variant in variants:
+                                if "*" in variant or "?" in variant:
+                                        raise apx.UnsupportedVariantGlobbing()
+                                if not misc.valid_varcet_name(variant):
+                                        invalid_names.append(variant)
                 else:
                         op = API_OP_CHANGE_FACET
+                        for facet in facets:
+                                if not misc.valid_varcet_name(facet):
+                                        invalid_names.append(facet)
+                if invalid_names:
+                        raise apx.InvalidVarcetNames(invalid_names)
 
                 return self.__plan_op(op, _act_timeout=act_timeout,
                     _backup_be=backup_be, _backup_be_name=backup_be_name,
@@ -2319,7 +2332,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                     publishers=publishers)
 
         def gen_plan_verify(self, args, noexecute=True, unpackaged=False,
-            unpackaged_only=False):
+            unpackaged_only=False, verify_paths=misc.EmptyI):
                 """This is a generator function that yields a PlanDescription
                 object.
 
@@ -2333,8 +2346,9 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
 
                 op = API_OP_VERIFY
                 return self.__plan_op(op, args=args, _noexecute=noexecute,
-                    _refresh_catalogs=False, _update_index=False,
-                    unpackaged=unpackaged, unpackaged_only=unpackaged_only)
+                    _refresh_catalogs=False, _update_index=False, _new_be=None,
+                    unpackaged=unpackaged, unpackaged_only=unpackaged_only,
+                    verify_paths=verify_paths)
 
         def gen_plan_fix(self, args, backup_be=None, backup_be_name=None,
             be_activate=True, be_name=None, new_be=None, noexecute=True,
@@ -2845,7 +2859,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                                 be = bootenv.BootEnvNull(self._img)
                         self._img.bootenv = be
 
-                        if self.__new_be == False and \
+                        if not self.__new_be and \
                             self._img.imageplan.reboot_needed() and \
                             self._img.is_liveroot():
                                 e = apx.RebootNeededOnLiveImageException()
@@ -2854,7 +2868,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
 
                         # Before proceeding, create a backup boot environment if
                         # requested.
-                        if self.__backup_be == True:
+                        if self.__backup_be:
                                 try:
                                         be.create_backup_be(
                                             be_name=self.__backup_be_name)
@@ -2871,7 +2885,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
 
                         # After (possibly) creating backup be, determine if
                         # operation should execute on a clone of current BE.
-                        if self.__new_be == True:
+                        if self.__new_be:
                                 try:
                                         be.init_image_recovery(self._img,
                                             self.__be_name)
@@ -2907,7 +2921,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                                 if not self._img.linked.nothingtodo():
                                         self._img.linked.syncmd()
                         except RuntimeError as e:
-                                if self.__new_be == True:
+                                if self.__new_be:
                                         be.restore_image()
                                 else:
                                         be.restore_install_uninstall()
@@ -2934,7 +2948,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                                 raise error
 
                         except Exception as e:
-                                if self.__new_be == True:
+                                if self.__new_be:
                                         be.restore_image()
                                 else:
                                         be.restore_install_uninstall()
@@ -2947,7 +2961,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                                 exc_type, exc_value, exc_traceback = \
                                     sys.exc_info()
 
-                                if self.__new_be == True:
+                                if self.__new_be:
                                         be.restore_image()
                                 else:
                                         be.restore_install_uninstall()
@@ -2970,7 +2984,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
 
         def __finished_execution(self, be):
                 if self._img.imageplan.state != plandesc.EXECUTED_OK:
-                        if self.__new_be == True:
+                        if self.__new_be:
                                 be.restore_image()
                         else:
                                 be.restore_install_uninstall()
@@ -2985,7 +2999,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                     self.__new_be:
                         be.update_boot_archive()
 
-                if self.__new_be == True:
+                if self.__new_be:
 
                         # Remove any temporary hot-fix source origins from
                         # the cloned BE.
@@ -3049,7 +3063,8 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                 finally:
                         self._activity_lock.release()
 
-        def refresh(self, full_refresh=False, pubs=None, immediate=False):
+        def refresh(self, full_refresh=False, pubs=None, immediate=False,
+            ignore_unreachable=True):
                 """Refreshes the metadata (e.g. catalog) for one or more
                 publishers.
 
@@ -3068,6 +3083,12 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                 interval period recorded in the image configuration has been
                 exceeded.
 
+                'ignore_unreachable' is an optional boolean value indicating
+                whether unreachable repositories should be ignored. If True,
+                errors contacting this repository are stored in the transport
+                but no exception is raised, allowing an operation to continue
+                if an unneeded repository is not online.
+
                 Currently returns an image object, allowing existing code to
                 work while the rest of the API is put into place."""
 
@@ -3077,7 +3098,9 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                         self._img.lock()
                         try:
                                 self.__refresh(full_refresh=full_refresh,
-                                    pubs=pubs, immediate=immediate)
+                                    pubs=pubs,
+                                    ignore_unreachable=ignore_unreachable,
+                                    immediate=immediate)
                                 return self._img
                         finally:
                                 self._img.unlock()
@@ -3095,11 +3118,13 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                                 pass
                         self._activity_lock.release()
 
-        def __refresh(self, full_refresh=False, pubs=None, immediate=False):
+        def __refresh(self, full_refresh=False, pubs=None, immediate=False,
+            ignore_unreachable=True):
                 """Private refresh method; caller responsible for locking and
                 cleanup."""
 
                 self._img.refresh_publishers(full_refresh=full_refresh,
+                    ignore_unreachable=ignore_unreachable,
                     immediate=immediate, pubs=pubs,
                     progtrack=self.__progresstracker)
 
@@ -3403,6 +3428,8 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
 
                 pkg_repos = {}
                 pkg_pub_map = {}
+                # Too many nested blocks;
+                # pylint: disable=R0101
                 try:
                         progtrack.refresh_start(len(pubs), full_refresh=False)
                         failed = []
@@ -3659,7 +3686,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                                                 rids = tuple(sorted(
                                                     pkg_pub_map[pub][stem][ver]))
 
-                                                if not rids in rid_map:
+                                                if rids not in rid_map:
                                                         # Create a publisher and
                                                         # repository for this
                                                         # unique set of origins.
@@ -4007,6 +4034,8 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
 
                         pubs = sorted(pubs, key=pub_key)
 
+                # Too many nested blocks;
+                # pylint: disable=R0101
                 ranked_stems = {}
                 for t, entry, actions in pkg_cat.entry_actions(cat_info,
                     cb=filter_cb, excludes=excludes, last=use_last,
@@ -4590,7 +4619,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                 if self.__can_be_canceled == status:
                         return
 
-                if status == True:
+                if status:
                         # Callers must hold activity lock for operations
                         # that they will make cancelable.
                         assert self._activity_lock._is_owned()
@@ -4631,6 +4660,8 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                 self.__alt_sources = {}
 
                 self._img.cleanup_downloads()
+                # Cache transport statistics about problematic repo sources
+                repo_status = self._img.transport.repo_status
                 self._img.transport.shutdown()
 
                 # Recreate the image object using the path the api
@@ -4640,6 +4671,8 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                     user_provided_dir=True,
                     cmdpath=self.cmdpath)
                 self._img.blocking_locks = self.__blocking_locks
+
+                self._img.transport.repo_status = repo_status
 
                 lin = None
                 if self._img.linked.ischild():
@@ -5243,12 +5276,12 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                 def origins_changed(oldr, newr):
                         old_origins = set([
                             (o.uri, o.ssl_cert,
-                                o.ssl_key, tuple(sorted(o.proxies)))
+                                o.ssl_key, tuple(sorted(o.proxies)), o.disabled)
                             for o in oldr.origins
                         ])
                         new_origins = set([
                             (o.uri, o.ssl_cert,
-                                o.ssl_key, tuple(sorted(o.proxies)))
+                                o.ssl_key, tuple(sorted(o.proxies)), o.disabled)
                             for o in newr.origins
                         ])
                         return (new_origins - old_origins), \
@@ -5374,13 +5407,15 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
 
                                 # Validate all new origins against publisher
                                 # configuration.
-                                for uri, ssl_cert, ssl_key, proxies in validate:
+                                for uri, ssl_cert, ssl_key, proxies, disabled \
+                                    in validate:
                                         repo = publisher.RepositoryURI(uri,
                                             ssl_cert=ssl_cert, ssl_key=ssl_key,
-                                            proxies=proxies)
+                                            proxies=proxies, disabled=disabled)
                                         pub.validate_config(repo)
 
-                                self.__refresh(pubs=[pub], immediate=True)
+                                self.__refresh(pubs=[pub], immediate=True,
+                                    ignore_unreachable=False)
                         elif refresh_catalog:
                                 # Something has changed (such as a repository
                                 # origin) for the publisher, so a refresh should

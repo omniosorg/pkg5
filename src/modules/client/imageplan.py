@@ -21,8 +21,7 @@
 #
 
 #
-# Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
-# Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
+# Copyright (c) 2007, 2017, Oracle and/or its affiliates. All rights reserved.
 #
 
 from __future__ import print_function
@@ -67,6 +66,7 @@ import pkg.fmri
 import pkg.manifest as manifest
 import pkg.misc as misc
 import pkg.mediator as med
+import pkg.portable as portable
 import pkg.search_errors as se
 import pkg.version
 
@@ -75,6 +75,44 @@ from pkg.client.plandesc import _ActionPlan
 from pkg.mediator import mediator_impl_matches
 from pkg.client.pkgdefs import (PKG_OP_DEHYDRATE, PKG_OP_REHYDRATE, MSG_ERROR,
     MSG_WARNING, MSG_INFO, MSG_GENERAL, MSG_UNPACKAGED, PKG_OP_VERIFY)
+
+
+def _reorder_hardlinks(hardlinks):
+        """Re-order the list of hardlinks to handle hard links whose
+        target is another hard link."""
+
+        reordered = []
+
+        # Capture the paths for all given hardlinks.
+        paths = [hardlink.dst.attrs["path"] for hardlink in hardlinks]
+
+        def add_targets(path, hardlinks, reordered):
+                """Find those hardlinks whose target is path."""
+
+                srcs = [l for l in hardlinks
+                    if l.dst.get_target_path() == path]
+                for hardlink in srcs:
+                        hardlinks.remove(hardlink)
+                        reordered.append(hardlink)
+                        # ... process hardlinks whose dst is _this_ hardlink.
+                        add_targets(hardlink.dst.attrs["path"], hardlinks,
+                            reordered)
+
+        # Find hardlinks whose dst is _not_ another hardlink.
+        unchained = [l for l in hardlinks
+            if l.dst.get_target_path() not in paths]
+        for hardlink in unchained:
+                hardlinks.remove(hardlink)
+                reordered.append(hardlink)
+                # ... process hardlinks whose target is _this_ hardlink.
+                add_targets(hardlink.dst.attrs["path"], hardlinks,
+                    reordered)
+
+        # Append remaining hardlinks (likely circular or otherwise broken).
+        reordered.extend(hardlinks)
+
+        return reordered
+
 
 class ImagePlan(object):
         """ImagePlan object contains the plan for changing the image...
@@ -109,9 +147,10 @@ class ImagePlan(object):
                 self.__target_update_count  = 0
                 self.__target_removal_count = 0
 
-                self.__directories = None  # implement ref counting
-                self.__symlinks = None     # for dirs and links and
-                self.__hardlinks = None    # hardlinks
+                self.__directories = None     # implement ref counting
+                self.__cur_directories = None # for image boundary check
+                self.__symlinks = None        # for dirs and links and
+                self.__hardlinks = None       # hardlinks
                 self.__licenses = None
                 self.__legacy = None
                 self.__cached_actions = {}
@@ -155,8 +194,8 @@ class ImagePlan(object):
                         s = s + "\nActuators:\n{0}\n".format(self.pd._actuators)
 
                 if self.__old_excludes != self.__new_excludes:
-                        s = s + "\nVariants/Facet changes:\n {0} -> {1}\n".format(
-                            self.__old_excludes, self.__new_excludes)
+                        s += "\nVariants/Facet changes:\n {0}".format(
+                            "\n".join(self.pd.get_varcets()))
 
                 if self.pd._mediators_change:
                         s = s + "\nMediator changes:\n {0}".format(
@@ -174,6 +213,7 @@ class ImagePlan(object):
 
                 # make sure we init this even if we don't call solver
                 self.pd._new_avoid_obs = (self.image.avoid_set_get(),
+                    self.image.avoid_set_get(implicit=True),
                     self.image.obsolete_set_get())
 
                 if self.pd.state == plandesc.UNEVALUATED:
@@ -422,6 +462,13 @@ class ImagePlan(object):
                 # have the solver try to satisfy parent dependencies.
                 ignore_inst_parent_deps = False
 
+                # In some error cases, significant recursion may be required,
+                # and the default (1000) is not enough.  In testing, this was
+                # found to be sufficient for the solver's needs.
+                prlimit = sys.getrecursionlimit()
+                if prlimit < 3000:
+                        sys.setrecursionlimit(3000)
+
                 try:
                         return solver_cb(ignore_inst_parent_deps)
                 except api_errors.PlanCreationException as e:
@@ -447,6 +494,9 @@ class ImagePlan(object):
                         # out of sync.
                         ignore_inst_parent_deps = True
                         return solver_cb(ignore_inst_parent_deps)
+                finally:
+                        # restore original recursion limit
+                        sys.setrecursionlimit(prlimit)
 
         def __add_actuator(self, trigger_fmri, trigger_op, exec_op, values,
             solver_inst, installed_dict):
@@ -464,8 +514,10 @@ class ImagePlan(object):
                 pub_ranks = self.image.get_publisher_ranks()
 
                 matched_vals, unmatched = self.__match_user_fmris(
-                    self.image, values, self.MATCH_INST_STEMS, pub_ranks=pub_ranks,
-                    installed_pkgs=installed_dict, raise_not_installed=False)
+                    self.image, values, self.MATCH_INST_STEMS,
+                    pub_ranks=pub_ranks, installed_pkgs=installed_dict,
+                    raise_not_installed=False,
+                    default_matcher=pkg.fmri.exact_name_match)
 
                 triggered_fmris = set()
                 for m in matched_vals.values():
@@ -524,9 +576,9 @@ class ImagePlan(object):
                                 continue
                         yield (exec_op, f)
 
-        def __set_pkg_actuators(self, fmris, op, solver_inst):
-                """Check the manifests for the pkgs specified by 'fmris' and add
-                them to the solver instance specified by 'solver_inst'. 'op'
+        def __set_pkg_actuators(self, patterns, op, solver_inst):
+                """Check the manifests for the pkgs specified by 'patterns' and
+                add them to the solver instance specified by 'solver_inst'. 'op'
                 defines the trigger operation which called this function."""
 
                 trigger_entries = {}
@@ -541,9 +593,12 @@ class ImagePlan(object):
                 pub_ranks = self.image.get_publisher_ranks()
 
                 # Match only on installed stems. This makes sure no new pkgs
-                # will get installed when an update is specified.
+                # will get installed when an update is specified.  Note that
+                # this allows trailing matches (i.e. 'ambiguous') matches that
+                # may result in failure as the list of patterns are assumed to
+                # be from user input.
                 matched_vals, unmatched = self.__match_user_fmris(
-                    self.image, fmris, self.MATCH_INST_VERSIONS,
+                    self.image, patterns, self.MATCH_INST_VERSIONS,
                     pub_ranks=pub_ranks, installed_pkgs=installed_dict,
                     raise_not_installed=False)
 
@@ -651,8 +706,10 @@ class ImagePlan(object):
                             self.image.linked.parent_fmris(),
                             self.__progtrack)
 
-                        if reject_set:
-                                self.__set_pkg_actuators(reject_set,
+                        if reject_list:
+                                # use reject_list, not reject_set, to preserve
+                                # input intent (e.g. 'pkg:/', '/' prefixes).
+                                self.__set_pkg_actuators(reject_list,
                                     pkgdefs.PKG_OP_UNINSTALL, solver)
 
                         # run solver
@@ -668,8 +725,7 @@ class ImagePlan(object):
                                 ignore_inst_parent_deps=\
                                     ignore_inst_parent_deps,
                                 exact_install=exact_install,
-                                installed_dict_tmp=installed_dict_tmp,
-                                insync=self.image.linked.insync)
+                                installed_dict_tmp=installed_dict_tmp)
 
                         return solver, new_vector, new_avoid_obs
 
@@ -1315,8 +1371,10 @@ class ImagePlan(object):
                             self.image.linked.parent_fmris(),
                             self.__progtrack)
 
-                        if reject_set:
-                                self.__set_pkg_actuators(reject_set,
+                        if reject_list:
+                                # use reject_list, not reject_set, to preserve
+                                # input intent (e.g. 'pkg:/', '/' prefixes).
+                                self.__set_pkg_actuators(reject_list,
                                     pkgdefs.PKG_OP_UNINSTALL, solver)
 
                         # run solver
@@ -1329,8 +1387,7 @@ class ImagePlan(object):
                                         reject_set=reject_set,
                                         trim_proposed_installed=False,
                                         ignore_inst_parent_deps=\
-                                            ignore_inst_parent_deps,
-                                        insync=self.image.linked.insync)
+                                            ignore_inst_parent_deps)
                         else:
                                 # Updating all installed packages requires a
                                 # different solution path.
@@ -1477,9 +1534,11 @@ class ImagePlan(object):
                         needs_change = []
                         pt.plan_add_progress(pt.PLAN_PKGPLAN, nitems=0)
                         for act in revert_dict[(f, m)]:
-                                # delete preserve attribute to both find and
-                                # enable replacement of modified editable files.
+                                # delete preserve and preserve-version
+                                # attributes to both find and enable
+                                # replacement of modified editable files.
                                 act.attrs.pop("preserve", None)
+                                act.attrs.pop("preserve-version", None)
                                 act.verify(self.image, forever=True)
                                 if act.replace_required == True:
                                         needs_change.append(act)
@@ -1595,10 +1654,10 @@ class ImagePlan(object):
                             mode=mode, owner="root",
                             group="bin", path=pubpath)
 
-        def __get_overlaying_fmri(self, img, act, pfmri):
+        def __get_overlaying(self, img, act, pfmri):
                 """Given an action with attribute overlay=allow, if there is an
                 overlaying action installed in the image, return the overlaying
-                package's name."""
+                package's FMRI and the action."""
 
                 for f in img.gen_installed_pkgs():
                         if f == pfmri:
@@ -1610,23 +1669,43 @@ class ImagePlan(object):
                         if matching:
                                 # Only one action can overlay another, so we
                                 # know we've found a match at this point.
-                                return f.get_pkg_stem(anarchy=True)
+                                return f, matching[0]
+                return None, None
 
-        def __process_verify_result(self, args, img, act, errors, pfmri):
-                """Look further to see if we can include more details in the
-                verify result."""
-
-                if not args or act.name != "file" or \
-                    not act.attrs.get("overlay") == "allow":
-                        # No further processing required.
-                        return False
-
-                # We found errors and this is a file that can be overlaid.
-                overlaying = self.__get_overlaying_fmri(img, act, pfmri)
-                if overlaying:
-                        errors.add(_("verify or fix overlaying package: "
-                            "{0}").format(overlaying))
-                return True
+        def __process_verify_result(self, act, pfmri, pt,
+            verifypaths=None, overlaypaths=None, ovlying_fmri=None,
+            ovlying_act=None, skip_ovlying=False, ovly_entries=None):
+                """Process delayed actions."""
+                if not ovlying_act and not skip_ovlying:
+                        # Find the overlaying fmri/action.
+                        ovlying_fmri, ovlying_act = self.__get_overlaying(
+                            self.image, act, pfmri)
+                # If overlaying action is found, we use the overlaying action
+                # for verification.
+                if ovlying_act:
+                        # Update overlaying entries with the newly found
+                        # overlaying action.
+                        if ovly_entries:
+                                ovlying_path = ovlying_act.attrs.get("path")
+                                if ovlying_path in ovly_entries:
+                                        ovly_entries[ovlying_path].append(
+                                            (ovlying_fmri, ovlying_act,
+                                            "overlaying"))
+                        for oing_act, errors, warnings, pinfo, is_overlaid in \
+                            self.image.verify(pfmri, pt,
+                            verifypaths=verifypaths, overlaypaths=overlaypaths,
+                            single_act=ovlying_act, verbose=True,
+                            forever=True):
+                                return oing_act, errors, warnings, pinfo, \
+                                    ovlying_fmri
+                else:
+                        for olaid_act, errors, warnings, pinfo, is_overlaid \
+                            in self.image.verify(pfmri, pt,
+                            verifypaths=verifypaths, overlaypaths=overlaypaths,
+                            single_act=act, verbose=True, forever=True):
+                                return olaid_act, errors, warnings, pinfo, \
+                                    None
+                return act, [], [], [], None
 
         def __is_active_liveroot_be(self, img):
                 """Check if an image is in an active live be."""
@@ -1647,55 +1726,50 @@ class ImagePlan(object):
         def __alt_image_root_with_new_be(self, dup_be_name, orig_img_root):
                 img_root = orig_img_root
                 mntpoint = None
+                if not dup_be_name:
+                        dup_be_name = "duplicate_livebe_for_verify"
                 isalbe, src_be_name = self.__is_active_liveroot_be(self.image)
-                if isalbe:
-                        try:
-                                bootenv.BootEnv.cleanup_be(dup_be_name)
-                                temp_root = misc.config_temp_root()
-                                mntpoint = tempfile.mkdtemp(dir=temp_root,
-                                    prefix="pkg-verify" + "-")
-                                bootenv.BootEnv.copy_be(src_be_name,
-                                    dup_be_name)
-                                bootenv.BootEnv.mount_be(dup_be_name, mntpoint)
-                                img_root = mntpoint
-                        except Exception as e:
-                                did_create = False
-                                be_list = bootenv.BootEnv.get_be_list()
-                                for elem in be_list:
-                                        if "orig_be_name" in elem and \
-                                            dup_be_name == \
-                                            elem["orig_be_name"]:
-                                                did_create = True
-                                                break
-                                warn = _("Cannot create or mount a copy of " \
-                                    "current be. Reporting unpackaged " \
-                                    "content aganist current live image.")
-                                timestamp = misc.time_to_timestamp(time.time())
-                                if did_create:
-                                        try:
-                                                if img_root != mntpoint:
-                                                        bootenv.BootEnv.mount_be(
-                                                            dup_be_name,
-                                                            mntpoint)
-                                                        img_root = mntpoint
-                                        except Exception as e:
-                                                # If we could not mount be,
-                                                # fallback.
-                                                self.pd.add_item_message(
-                                                    "warnings", timestamp,
-                                                    MSG_WARNING, warn,
-                                                    msg_type=MSG_UNPACKAGED,
-                                                    parent="unpackaged")
-                                else:
-                                        # If we could not create be,
-                                        # fallback.
-                                        self.pd.add_item_message(
-                                            "warnings", timestamp, MSG_WARNING,
-                                            warn, msg_type=MSG_UNPACKAGED,
-                                            parent="unpackaged")
+                if not isalbe:
+                        return img_root, mntpoint
+
+                try:
+                        bootenv.BootEnv.cleanup_be(dup_be_name)
+                        temp_root = misc.config_temp_root()
+                        mntpoint = tempfile.mkdtemp(dir=temp_root,
+                            prefix="pkg-verify" + "-")
+                        bootenv.BootEnv.copy_be(src_be_name, dup_be_name)
+                        bootenv.BootEnv.mount_be(dup_be_name, mntpoint)
+                        img_root = mntpoint
+                except Exception as e:
+                        did_create = dup_be_name in \
+                            bootenv.BootEnv.get_be_names()
+                        warn = _("Cannot create or mount a copy of current be. "
+                            "Reporting unpackaged content aganist current live "
+                            "image.")
+                        fallback = False
+                        timestamp = misc.time_to_timestamp(time.time())
+                        if did_create:
+                                try:
+                                        if img_root != mntpoint:
+                                                bootenv.BootEnv.mount_be(
+                                                    dup_be_name, mntpoint)
+                                                img_root = mntpoint
+                                except Exception as e:
+                                        # Cannot mount be, fallback.
+                                        fallback = True
+                        else:
+                                # Cannot create be, fallback.
+                                fallback = True
+
+                        if fallback:
+                                shutil.rmtree(mntpoint, ignore_errors=True)
+                                self.pd.add_item_message("warnings", timestamp,
+                                    MSG_WARNING, warn, msg_type=MSG_UNPACKAGED,
+                                    parent="unpackaged")
                 return img_root, mntpoint
 
-        def __process_unpackaged(self, proposed_fmris, pt=None):
+        def __process_unpackaged(self, proposed_fmris, pt=None,
+            dup_be_name="duplicate_livebe_for_verify"):
                 allentries = {}
                 img_root = self.image.get_root()
 
@@ -1724,7 +1798,6 @@ class ImagePlan(object):
                             msg_type=MSG_UNPACKAGED, parent="unpackaged")
 
                 orig_img_root = img_root
-                dup_be_name = "duplicate_livebe_for_verify"
                 img_root, mntpoint = self.__alt_image_root_with_new_be(
                     dup_be_name, orig_img_root)
 
@@ -1770,10 +1843,340 @@ class ImagePlan(object):
                                             _("Unpackaged file"),
                                             msg_type=MSG_UNPACKAGED,
                                             parent="unpackaged")
-                # Clean up the BE used for verify.
-                bootenv.BootEnv.cleanup_be(dup_be_name)
 
-        def plan_fix(self, args, unpackaged=False, unpackaged_only=False):
+        def __process_msgs(self, entries, pfmri, msg_level, result, needs_fix,
+            repairs):
+                """Generate plan message for verify result."""
+
+                timestamp = misc.time_to_timestamp(time.time())
+                ffmri = str(pfmri)
+                self.pd.add_item_message(ffmri, timestamp,
+                    msg_level, _("{pkg_name:70} {result:>7}").format(
+                    pkg_name=pfmri.get_pkg_stem(),
+                    result=result))
+                timestamp = misc.time_to_timestamp(time.time())
+
+                for act, errors, warnings, info, oing_fmri in entries:
+                        if act:
+                                item_id = act.distinguished_name()
+                                if oing_fmri:
+                                    item_id += ' (from {0})'.format(
+                                        oing_fmri.get_pkg_stem(anarchy=True))
+                                parent = ffmri
+                        else:
+                                item_id = ffmri
+                                parent = None
+                        for x in errors:
+                                self.pd.add_item_message(item_id,
+                                    timestamp, MSG_ERROR,
+                                    _("ERROR: {0}").format(x),
+                                    parent=parent)
+                        for x in warnings:
+                                self.pd.add_item_message(item_id,
+                                    timestamp, MSG_WARNING,
+                                    _("WARNING: {0}").format(x),
+                                    parent=parent)
+                        for x in info:
+                                self.pd.add_item_message(item_id,
+                                    timestamp, MSG_INFO,
+                                    _("{0}").format(x),
+                                    parent=parent)
+
+                if needs_fix:
+                    # Eliminate policy-based entries with no repair
+                    # action.
+                    for x in needs_fix:
+                        if x[0] in repairs:
+                            if x[1] is not None:
+                                repairs[x[0]].append(
+                                    x[1])
+                        else:
+                            if x[1] is None:
+                                repairs[x[0]] = []
+                            else:
+                                repairs[x[0]] = [x[1]]
+
+        def __get_overlaying_act_from_cache(self, path, overlay_entries):
+                """Get overlaying action from overlay_entries cache."""
+
+                for e in overlay_entries[path]:
+                        if e[2] == 'overlaying':
+                                return e[0], e[1]
+                return None, None
+
+        def __add_to_processed(self, oing_fmri, overlay, def_pkgs, pfmri, act,
+            errors, warnings, pinfo):
+                """Add newly processed actions results into cache."""
+
+                # If found overlaying package.
+                if oing_fmri:
+                        # If the action is an overlaid one, attach the
+                        # overlaying fmri for msg print.
+                        if overlay == "overlaid":
+                            def_pkgs[
+                                pfmri].append((act, errors, warnings, pinfo,
+                                oing_fmri))
+                        # The overlaying action is itself.
+                        else:
+                            def_pkgs[
+                                pfmri].append((act, errors, warnings, pinfo,
+                                None))
+                else:
+                        def_pkgs[
+                            pfmri].append((act, errors, warnings, pinfo,
+                            None))
+
+        def __process_per_overlay_action(self, args, pfmri, entry,
+            def_pkgs, verifypaths, overlaypaths, overlay_entries, pt):
+                """Process per overlay action."""
+
+                act = entry[0]
+                overlay = entry[1]
+                path = act.attrs.get("path")
+                # Try the overlay_entries cache first.
+                oing_fmri, oing_act = \
+                    self.__get_overlaying_act_from_cache(
+                        path, overlay_entries)
+                # If found, process it directly.
+                if oing_act:
+                    act, errors, warnings, pinfo, \
+                    oing_fmri = \
+                        self.__process_verify_result(
+                            act, pfmri, pt,
+                            verifypaths=verifypaths,
+                            overlaypaths=overlaypaths,
+                            ovlying_fmri=oing_fmri,
+                            ovlying_act=oing_act)
+                elif args:
+                        # Not all fmris were processed, we need to find the
+                        # overlaying action.
+                        #
+                        # Also need to collect newly found overlaying
+                        # actions into overlay_entries if any.
+                        act, errors, warnings, pinfo, oing_fmri = \
+                            self.__process_verify_result(
+                            act, pfmri, pt,
+                            verifypaths=verifypaths,
+                            overlaypaths=overlaypaths,
+                            ovly_entries=overlay_entries)
+                else:
+                        # All fmris were processed, if the cache didn't contain
+                        # the action, that means no overlaying action.
+                        #
+                        # We need to skip overlaying action finding, since we
+                        # already know no overlaying action in the cache.
+                        act, errors, warnings, pinfo, oing_fmri = \
+                            self.__process_verify_result(
+                            act, pfmri, pt,
+                            verifypaths=verifypaths,
+                            overlaypaths=overlaypaths,
+                            skip_ovlying=True)
+                self.__add_to_processed(oing_fmri, overlay, def_pkgs, pfmri,
+                    act, errors, warnings, pinfo)
+
+        def __check_attr_mismatch_between_actions(self, overlaid, overlaying):
+                """Check attribute mismatch between overlaying and overlaid
+                 actions."""
+
+                overlaid_act = overlaid[1]
+                overlaying_act = overlaying[1]
+                o_attr_overlaid = overlaid_act.attrs.get("overlay-attributes")
+                o_attr_overlaying = overlaying_act.attrs.get(
+                    "overlay-attributes")
+                owner_overlaid = overlaid_act.attrs["owner"]
+                owner_overlaying = overlaying_act.attrs["owner"]
+                mode_overlaid = overlaid_act.attrs["mode"]
+                mode_overlaying = overlaying_act.attrs["mode"]
+                group_overlaid = overlaid_act.attrs["group"]
+                group_overlaying = overlaying_act.attrs["group"]
+
+                msgs = []
+                if owner_overlaid != owner_overlaying:
+                        msgs.append(_("owner: {0} does not match overlaid "
+                            "package owner: {1}").format(owner_overlaying,
+                            owner_overlaid))
+                if mode_overlaid != mode_overlaying:
+                        msgs.append(_("mode: {0} does not match overlaid "
+                            "package mode: {1}").format(mode_overlaying,
+                            mode_overlaid))
+                if group_overlaid != group_overlaying:
+                        msgs.append(_("group: {0} does not match overlaid "
+                            "package group: {1}").format(group_overlaying,
+                            group_overlaid))
+                if not msgs:
+                        return
+
+                item_id = str(overlaying[0])
+                act_id = overlaid_act.distinguished_name()
+                msg_level = MSG_INFO
+                result = "OK"
+
+                if o_attr_overlaid == "deny" or o_attr_overlaying == "deny":
+                        msg_level = MSG_ERROR
+
+                # Check if there is already an FMRI-level message;
+                # update it or add a new one if necessary.
+                item_msgs = self.pd.get_parsable_item_messages()
+                added_msgs = None
+                if item_id in item_msgs and "messages" in item_msgs[item_id]:
+                        added_msgs = item_msgs[item_id]["messages"]
+                add_msg = False
+                if added_msgs:
+                        if (added_msgs[0]["msg_level"] == MSG_INFO and
+                            msg_level == MSG_ERROR):
+                                # Empty the current message list.
+                                added_msgs[:] = []
+                                add_msg = True
+                else:
+                        add_msg = True
+
+                timestamp = misc.time_to_timestamp(time.time())
+                if add_msg:
+                        self.pd.add_item_message(item_id, timestamp, msg_level,
+                            _("{pkg_name:70} {result:>7}").format(
+                            pkg_name=overlaying[0].get_pkg_stem(),
+                            result=result))
+                self.pd.add_item_message(act_id, timestamp, msg_level,
+                    _("Overlaid package: {0}").format(
+                    overlaid[0].get_pkg_stem()), parent=item_id)
+
+                for msg in msgs:
+                        if msg_level == MSG_ERROR:
+                                imsg = _("ERROR: {0}").format(msg)
+                        else:
+                                imsg = msg
+                        self.pd.add_item_message(act_id, timestamp, msg_level,
+                            imsg, parent=item_id)
+
+        def __verify_fmris(self, repairs, args, proposed_fmris, pt, verifypaths,
+            overlaypaths):
+                """Verify FRMIs."""
+
+                path_only = bool(verifypaths or overlaypaths)
+                overlay_entries = {}
+                def_pkgs = {}  # deferred packages
+                def_acts = {}  # deferred actions
+                for pfmri in proposed_fmris:
+                        entries = []
+                        needs_fix = []
+                        result = "OK"
+                        failed = False
+                        msg_level = MSG_INFO
+
+                        # Since every entry returned by verify might not be
+                        # something needing repair, the relevant information
+                        # for each package must be accumulated first to find
+                        # an overall success/failure result and then the
+                        # related messages output for it.
+                        verify_path_count = len(verifypaths)
+                        overlay_path_count = len(overlaypaths)
+                        for act, errors, warnings, pinfo, overlay in \
+                            self.image.verify(pfmri, pt,
+                            verifypaths=verifypaths,
+                            overlaypaths=overlaypaths, verbose=True,
+                            forever=True):
+                                if not path_only and overlay:
+                                        path = act.attrs.get("path")
+                                        if path not in overlay_entries:
+                                            overlay_entries[path] = []
+                                        overlay_entries[path].append(
+                                            (pfmri, act, overlay))
+
+                                        if pfmri not in def_acts:
+                                            def_acts[pfmri] = []
+                                        def_acts[pfmri].append((act, overlay))
+                                else:
+                                        entries.append((act, errors, warnings,
+                                            pinfo, None))
+                                # Try to determine the package's status and
+                                # message type. This is subject to change if
+                                # the package contains overlay actions.
+                                if errors:
+                                        failed = True
+                                        result = "ERROR"
+                                        msg_level = MSG_ERROR
+                                        # Some errors are based on policy (e.g.
+                                        # signature policy) and not a specific
+                                        # action, so act may be None.
+                                        needs_fix.append((pfmri, act))
+                                elif not failed and warnings:
+                                        result = "WARNING"
+                                        msg_level = MSG_WARNING
+
+                        # Defer final processing of package if verification was
+                        # deferred for any of its actions.
+                        if pfmri in def_acts:
+                                def_pkgs[pfmri] = entries
+                                continue
+
+                        if (path_only and verify_path_count == len(verifypaths)
+                            and overlay_path_count == len(overlaypaths)):
+                                # When verifying paths, omit packages without any
+                                # matches from output.
+                                continue
+                        self.__process_msgs(entries, pfmri, msg_level, result,
+                            needs_fix, repairs)
+                        if path_only and not overlaypaths and not verifypaths:
+                                return
+
+                # No need to proceed for path only case.
+                if path_only:
+                        return
+
+                # Process deferred actions.
+                for pfmri, entries in def_acts.items():
+                        for entry in entries:
+                                self.__process_per_overlay_action(args, pfmri,
+                                    entry, def_pkgs, verifypaths,
+                                    overlaypaths, overlay_entries, pt)
+
+                # Generate messages for all processed packages with overlay
+                # actions.
+                for pfmri, entries in def_pkgs.items():
+                        failed = False
+                        result = "OK"
+                        msg_level = MSG_INFO
+                        needs_fix = []
+                        for act, errors, warnings, pinfo, oing_fmri in entries:
+                                # Try to determine the package's status and
+                                # message type.
+                                if errors:
+                                        failed = True
+                                        result = "ERROR"
+                                        msg_level = MSG_ERROR
+                                        if oing_fmri:
+                                                # Only append overlaying action
+                                                # if not all packages are
+                                                # verified. Otherwise, the
+                                                # overlaying action will be
+                                                # append later.
+                                                if args:
+                                                        needs_fix.append((
+                                                            oing_fmri, act))
+                                        else:
+                                                needs_fix.append((pfmri, act))
+                                elif not failed and warnings:
+                                        result = "WARNING"
+                                        msg_level = MSG_WARNING
+
+                        self.__process_msgs(entries, pfmri, msg_level, result,
+                            needs_fix, repairs)
+
+                # Generate overlay-specific messages.
+                for path, entries in overlay_entries.items():
+                        overlaid = None
+                        overlaying = None
+                        for e in entries:
+                                if e[2] == "overlaid":
+                                        overlaid = e
+                                elif e[2] == "overlaying":
+                                        overlaying = e
+                        if overlaid and overlaying:
+                                self.__check_attr_mismatch_between_actions(
+                                    overlaid, overlaying)
+
+        def plan_fix(self, args, unpackaged=False, unpackaged_only=False,
+                verify_paths=misc.EmptyI):
                 """Determine the changes needed to fix the image."""
 
                 self.__plan_op()
@@ -1793,17 +2196,27 @@ class ImagePlan(object):
                             for f in each
                         ]))
                 else:
-                        proposed_fixes = [
-                            f
-                            for f in self.image.gen_installed_pkgs(ordered=True)
-                        ]
+                        # No FMRIs specified, verify all packages
+                        proposed_fixes = list(self.image.gen_installed_pkgs(
+                            ordered=True))
 
-                if proposed_fixes:
+                repairs = {}
+                overlaypaths = set()
+                verifypaths = set(a.lstrip(os.path.sep) for a in verify_paths)
+
+                if not verify_paths:
                         pt.plan_start(pt.PLAN_PKG_VERIFY, goal=len(proposed_fixes))
+
                         # Verify unpackaged contents.
                         if unpackaged or unpackaged_only:
-                                self.__process_unpackaged(proposed_fixes,
-                                    pt=pt)
+                                dup_be_name = "duplicate_livebe_for_verify"
+                                try:
+                                        self.__process_unpackaged(
+                                            proposed_fixes, pt=pt,
+                                            dup_be_name=dup_be_name)
+                                finally:
+                                        # Clean up the BE used for verify.
+                                        bootenv.BootEnv.cleanup_be(dup_be_name)
                                 pt.plan_done(pt.PLAN_PKG_VERIFY)
                                 if unpackaged_only:
                                         self.__finish_plan(plandesc.EVALUATED_PKGS)
@@ -1812,88 +2225,38 @@ class ImagePlan(object):
                                 # contents.
                                 pt.plan_start(pt.PLAN_PKG_VERIFY, goal=len(
                                     proposed_fixes))
+                        self.__verify_fmris(repairs, args, proposed_fixes, pt,
+                            verifypaths, overlaypaths)
+                else:
+                        pt.plan_start(pt.PLAN_PKG_VERIFY, goal=len(verifypaths))
 
-                repairs = []
+                        self.__verify_fmris(repairs, args, proposed_fixes, pt,
+                            verifypaths, overlaypaths)
 
-                for pfmri in proposed_fixes:
-                        entries = []
-                        needs_fix = []
-                        result = "OK"
-                        failed = False
-                        msg_level = MSG_INFO
-                        ffmri = str(pfmri)
-
-                        # Since every entry returned by verify might not be
-                        # something needing repair, the relevant information
-                        # for each package must be accumulated first to find
-                        # an overall success/failure result and then the
-                        # related messages output for it.
-                        process_overlay = False
-                        errs = set()
-                        for act, errors, warnings, pinfo in self.image.verify(
-                            pfmri, pt, verbose=True, forever=True):
-                                # determine the package's status and message
-                                # type
-                                if errors:
-                                        failed = True
-                                        result = "ERROR"
-                                        msg_level = MSG_ERROR
-                                        # Some errors are based on policy (e.g.
-                                        # signature policy) and not a specific
-                                        # action, so act may be None.
-                                        needs_fix.append(act)
-                                        if act and not process_overlay:
-                                                process_overlay = \
-                                                    self.__process_verify_result(
-                                                    args, self.image, act, errs,
-                                                    pfmri)
-                                elif not failed and warnings:
-                                        result = "WARNING"
-                                        msg_level = MSG_WARNING
-
-                                entries.append((act, errors, warnings, pinfo))
                         timestamp = misc.time_to_timestamp(time.time())
-                        self.pd.add_item_message(ffmri, timestamp,
-                            msg_level, _("{pkg_name:70} {result:>7}").format(
-                            pkg_name=pfmri.get_pkg_stem(),
-                            result=result))
-                        timestamp = misc.time_to_timestamp(time.time())
-                        for e in errs:
-                                self.pd.add_item_message("overlay_errors",
-                                    timestamp, msg_level, e, parent=ffmri)
+                        for path_not_found in verifypaths:
+                                pt.plan_add_progress(pt.PLAN_PKG_VERIFY)
+                                self.pd.add_item_message("path not found",
+                                    timestamp, MSG_WARNING,
+                                    _("{path} is not found in the image").format(
+                                        path=path_not_found))
 
-                        for act, errors, warnings, info in entries:
-                                if act:
-                                        item_id = act.distinguished_name()
-                                        parent = ffmri
-                                else:
-                                        item_id = ffmri
-                                        parent = None
-                                for x in errors:
-                                        self.pd.add_item_message(item_id,
-                                            timestamp, MSG_ERROR,
-                                            _("ERROR: {0}").format(x),
-                                            parent=parent)
-                                for x in warnings:
-                                        self.pd.add_item_message(item_id,
-                                            timestamp, MSG_WARNING,
-                                            _("WARNING: {0}").format(x),
-                                            parent=parent)
-                                for x in info:
-                                        self.pd.add_item_message(item_id,
-                                            timestamp, MSG_INFO,
-                                            _("{0}").format(x),
-                                            parent=parent)
+                        if args and overlaypaths:
+                                # Only perform verification for the rest of packages
+                                # if FMRIs are provided and there are actions with
+                                # overlay=allow found in those FMRIs. In the second
+                                # pass, only look for actions with overlay=true.
+                                pfixes = set(proposed_fixes)
+                                path_fmri = [
+                                    f
+                                    for f in self.image.gen_installed_pkgs(
+                                        ordered=True)
+                                        if f not in pfixes
+                                ]
+                                self.__verify_fmris(repairs, args, path_fmri, pt,
+                                    set(), overlaypaths)
 
-                        if not needs_fix:
-                                continue
-
-                        # Eliminate policy-based entries with no repair action.
-                        needs_fix = [x for x in needs_fix if x is not None]
-                        repairs.append((pfmri, needs_fix))
-                if proposed_fixes:
-                        pt.plan_done(pt.PLAN_PKG_VERIFY)
-
+                pt.plan_done(pt.PLAN_PKG_VERIFY)
                 # If no repairs, finish the plan.
                 if not repairs:
                         self.__finish_plan(plandesc.EVALUATED_PKGS)
@@ -1901,7 +2264,7 @@ class ImagePlan(object):
 
                 # Repair anything we failed to verify.
                 pt.plan_start(pt.PLAN_PKG_FIX, goal=len(repairs))
-                for fmri, actions in repairs:
+                for fmri, actions in repairs.items():
                         pt.plan_add_progress(pt.PLAN_PKG_FIX)
                         # Need to get all variants otherwise evaluating the
                         # pkgplan will fail in signature verification.
@@ -1998,6 +2361,12 @@ class ImagePlan(object):
                                 assert p.origin_manifest
                                 yield p.origin_fmri, p.origin_manifest
 
+        def gen_cur_installed_actions_bytype(self, atype, implicit_dirs=False):
+                """Generates actions of type 'atype' from the packages in the
+                current image."""
+                return self.__gen_star_actions_bytype(atype,
+                    self.image.gen_installed_pkgs, implicit_dirs=implicit_dirs)
+
         def gen_new_installed_actions_bytype(self, atype, implicit_dirs=False):
                 """Generates actions of type 'atype' from the packages in the
                 future image."""
@@ -2086,6 +2455,18 @@ class ImagePlan(object):
                                         if d not in dirs:
                                                 yield da(path=d,
                                                     implicit="true"), pfmri
+
+        def __get_cur_directories(self):
+                """ return set of all directories in current image """
+
+                if self.__cur_directories == None:
+                        dirs = set((
+                            os.path.normpath(d[0].attrs["path"])
+                            for d in self.gen_cur_installed_actions_bytype("dir",
+                                implicit_dirs=True)
+                        ))
+                        self.__cur_directories = dirs
+                return self.__cur_directories
 
         def __get_directories(self):
                 """ return set of all directories in target image """
@@ -2267,8 +2648,24 @@ class ImagePlan(object):
                         if overlayable and overlay:
                                 # Found both an overlayable action and the
                                 # action that overlays it.
+                                ignore = ["preserve"]
+                                # If neither overlay nor overlayable action
+                                # has "deny" set in "overlay-attributes"
+                                if ("deny" not in overlay.attrlist(
+                                    "overlay-attributes") and "deny" not in
+                                    overlayable.attrlist(
+                                    "overlay-attributes")):
+                                        ignore.extend(["owner", "group",
+                                            "mode", "sysattr"])
+                                # Need to verify mismatched attributes between
+                                # overlaying action and overlaid action in
+                                # testsuite.
+                                elif DebugValues[
+                                    "broken-conflicting-action-handling"]:
+                                        ignore.extend(["owner", "group",
+                                            "mode", "sysattr"])
                                 errors = ImagePlan.__find_inconsistent_attrs(
-                                    actions, ignore=["preserve"])
+                                    actions, ignore=ignore)
                                 if errors:
                                         # overlay is not permitted if unique
                                         # attributes (except 'preserve') are
@@ -4010,6 +4407,162 @@ class ImagePlan(object):
                 self.pd._new_mediators = prop_mediators
                 # Link mediation is complete.
 
+        def __check_reserved(self, action):
+                """Check whether files are delivered to var/pkg or
+                .org.opensolaris.pkg"""
+
+                if not "path" in action.attrs:
+                        return True
+
+                dirs = ["cache", "gui_cache", "history", "license",
+                    "linked", "lost+found", "publisher", "ssl", "state"
+                ]
+
+                # Also check whether files are delivered to other
+                # reserved directories besides var/pkg
+                if portable.osname == "sunos":
+                        reserved_dirs = ["var/tmp", "var/share", "tmp", "system/volatile"]
+                else:
+                        reserved_dirs = []
+
+                files = ["pkg5.image", "lock"]
+                path = action.get_installed_path(self.image.root)
+                dir_path = path + "/"
+
+                for d in dirs:
+                        dir_p = os.path.join(self.image.imgdir, d) + "/"
+                        if dir_path.startswith(dir_p):
+                                return False
+
+                for d in reserved_dirs:
+                        dir_p = os.path.join(self.image.root, d) + "/"
+                        # can package these directories but not deliver anything to them
+                        if dir_path.startswith(dir_p) and dir_path != dir_p:
+                                return False
+
+                for f in files:
+                        fname = os.path.join(self.image.imgdir, f)
+                        if path == fname:
+                                return False
+                return True
+
+        def __check_be_boundary(self, action, excluded_list, cur_dirs):
+                """Check whether the package is installed within its
+                own boot environment"""
+	
+                # We only consider dir action.
+                if not action.name == "dir":
+                        return True
+
+                path = action.get_installed_path(self.image.root)
+                # Check whether the dir is already installed.
+                if path in cur_dirs:
+                        return True
+
+                # Extend the path in format /path1/path2/
+                path = path + "/"
+
+                # If the path is already outside current boot
+                # environment.
+                if not path.startswith(self.image.root):
+                        return False
+
+                for excluded_path in excluded_list:
+                        if path.startswith(excluded_path):
+                                return False
+                return True
+
+        def __parse_mnttab(self):
+                """Parse the mnttab in /etc/mnttab and return
+                a sorted exclude list """
+
+                # we can't do this on os other than solaris
+                if portable.osname != "sunos":
+                        return
+
+                excluded_list = []
+
+                # We assume the mnttab should exist
+                # Otherwise, we should pass this check.
+                try:
+                        mnttab_path = "/etc/mnttab"
+                        if DebugValues["simulate_mnttab"]:
+                                mnttab_path = DebugValues["simulate_mnttab"]
+
+                        with open(mnttab_path) as mnttab:
+                                lines = mnttab.readlines()
+
+                        boot_dataset = ""
+                        for line in lines:
+                                # Line has format:
+                                # path mntpoint fs_format device size
+                                special, mount_point, fstype, options, time = \
+                                    line.split("\t") 
+
+                                path = os.path.normpath(mount_point)
+                                if not path:
+                                        continue
+                                if path.startswith("//"):
+                                        path = path[1:]
+
+                                if path == self.image.root:
+                                        boot_dataset = \
+                                            os.path.normpath(special) + "/"
+                                        continue
+
+                                # Extend the path in format
+                                # /path1/path2/
+                                dataset_path = os.path.normpath(special) + "/"
+                                path += "/"
+                                # Only paths from a dataset inside the
+                                # image root need to be excluded as all
+                                # actions are installed as an absolute
+                                # path. we turn all relative paths into an
+                                # absolute path, and we explicitly check that
+                                # paths are inside the image.
+                                if path.startswith(self.image.root):
+                                        excluded_list.append((dataset_path, path))
+                except:
+                        pass
+
+                excluded = []
+                # Remove subdirectories of boot dataset
+                for entry in excluded_list:
+                        # If it is our current boot environment
+                        if not entry[0].startswith(boot_dataset):
+                                excluded.append(entry[1])
+
+                if not excluded:
+                        return excluded
+
+                # Sort the list of paths lexically so we can eliminate all but
+                # the top level of each excluded directory tree.  As an example,
+                # opt/excluded
+                # opt/excluded/foo
+                # opt/excluded/foo/bar
+                # opt/excluded/barz
+                # .......
+                # becomes this
+                # opt/excluded
+                # This significantly reduces the number of paths that need to be
+                # checked against when determining whether an item is delivered
+                # within the boundaries of the image and boot environment.
+                excluded.sort()
+                new_list = []
+                # Compress the exclude list
+                pre_path = excluded[0]
+                new_list.append(pre_path)
+                for excluded_path in excluded:
+                        # Remove duplicate
+                        if excluded_path == pre_path:
+                                continue
+                        # If the the path is under pre_path
+                        if excluded_path.startswith(pre_path):
+                                continue
+                        pre_path = excluded_path
+                        new_list.append(pre_path)
+                return new_list
+
         def __merge_actions(self):
                 """Given a set of fmri changes and their associated pkg plan,
                 merge all the resultant actions for the packages being
@@ -4138,7 +4691,14 @@ class ImagePlan(object):
                                     _ActionPlan(p, src, dest))
 
                 self.pd.install_actions = []
+                errs = []
+                excluded_list = self.__parse_mnttab()
+                cur_dirs = self.__get_cur_directories()
                 for p in self.pd.pkg_plans:
+                        pfmri = None
+                        if p.destination_fmri:
+                                pfmri = p.destination_fmri.get_fmri()
+                        err_actions = api_errors.ImageBoundaryError(pfmri)
                         pt.plan_add_progress(pt.PLAN_ACTION_MERGE)
                         for src, dest in p.gen_install_actions():
                                 if DebugValues["actions"]:
@@ -4149,8 +4709,26 @@ class ImagePlan(object):
                                 elif dest.name == "group":
                                         self.pd.added_groups[dest.attrs[
                                             "groupname"]] = p.destination_fmri
+                                # Check whether files are delivered outside
+                                # boot environment.
+                                if not self.__check_be_boundary(dest,
+                                    excluded_list, cur_dirs):
+                                        err_actions.append_error(
+                                            action=dest,
+                                            err_type=api_errors.ImageBoundaryError.\
+                                            OUTSIDE_BE)
+                                elif not self.__check_reserved(dest):
+                                        err_actions.append_error(
+                                            action=dest,
+                                            err_type=api_errors.ImageBoundaryError.\
+                                            RESERVED)
                                 self.pd.install_actions.append(
                                     _ActionPlan(p, src, dest))
+                        if not err_actions.isEmpty():
+                                errs.append(err_actions)
+
+                if errs:
+                        raise api_errors.ImageBoundaryErrors(errs)
 
                 # In case a removed user or group was added back...
                 for entry in self.pd.added_groups.keys():
@@ -4292,6 +4870,7 @@ class ImagePlan(object):
 
                 # reduce memory consumption
                 self.__directories = None
+                self.__cur_directories = None
                 self.__symlinks = None
                 self.__hardlinks = None
                 self.__licenses = None
@@ -4546,6 +5125,22 @@ class ImagePlan(object):
                 self.pd.removal_actions.sort(key=remsort, reverse=True)
                 self.pd.update_actions.sort(key=addsort)
                 self.pd.install_actions.sort(key=addsort)
+
+                # find the first and last hardlink in the install_actions
+                fhl = lhl = -1
+                for i, ap in enumerate(self.pd.install_actions):
+                        if ap.dst.name == "hardlink":
+                                if fhl == -1:
+                                        fhl = i
+                                lhl = i
+                        elif fhl != -1:
+                                break
+
+                # now reorder the hardlinks to respect inter-dependencies
+                if fhl != -1:
+                        hardlinks = self.pd.install_actions[fhl:lhl + 1]
+                        hardlinks = _reorder_hardlinks(hardlinks)
+                        self.pd.install_actions[fhl:lhl + 1] = hardlinks
 
                 # cleanup pkg_plan objects which don't actually contain any
                 # changes and add any new ones to list of changes
@@ -5307,7 +5902,8 @@ class ImagePlan(object):
         @staticmethod
         def __match_user_fmris(image, patterns, match_type,
             pub_ranks=misc.EmptyDict, installed_pkgs=misc.EmptyDict,
-            raise_not_installed=True, reject_set=misc.EmptyI):
+            raise_not_installed=True, reject_set=misc.EmptyI,
+            default_matcher=None):
                 """Given a user-specified list of patterns, return a dictionary
                 of matching fmris:
 
@@ -5338,7 +5934,12 @@ class ImagePlan(object):
 
                 Note that patterns starting w/ pkg:/ require an exact match;
                 patterns containing '*' will using fnmatch rules; the default
-                trailing match rules are used for remaining patterns.
+                trailing match rules are used for remaining patterns unless
+                'default_matcher' is specified.
+
+                'default_matcher' is an optional pkg.fmri.match_* method to
+                determine which matching rules should be applied to patterns
+                that do not use wildcards or start with 'pkg:/' or '/'.
 
                 Exactly duplicated patterns are ignored.
 
@@ -5409,6 +6010,8 @@ class ImagePlan(object):
                                 elif pat_stem.startswith("pkg:/") or \
                                     pat_stem.startswith("/"):
                                         matcher = pkg.fmri.exact_name_match
+                                elif default_matcher:
+                                        matcher = default_matcher
                                 else:
                                         matcher = pkg.fmri.fmri_match
 

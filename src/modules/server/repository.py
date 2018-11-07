@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2017, Oracle and/or its affiliates. All rights reserved.
 
 from __future__ import print_function
 
@@ -1240,7 +1240,7 @@ class _RepoStore(object):
                 finally:
                         self.__unlock_rstore()
 
-        def add_file(self, trans_id, data, size=None):
+        def add_file(self, trans_id, data, basename=None, size=None):
                 """Adds a file to an in-flight transaction.
 
                 'trans_id' is the identifier of a transaction that
@@ -1248,6 +1248,8 @@ class _RepoStore(object):
 
                 'data' is the string object containing the payload of the
                 file to add.
+
+                'basename' is the basename of the file.
 
                 'size' is an optional integer value indicating the size of
                 the provided payload.
@@ -1262,7 +1264,31 @@ class _RepoStore(object):
 
                 t = self.__get_transaction(trans_id)
                 try:
-                        t.add_file(data, size)
+                        t.add_file(data, basename, size)
+                except trans.TransactionError as e:
+                        raise RepositoryError(e)
+                return
+
+        def add_manifest(self, trans_id, data):
+                """Adds a manifest to an in-flight transaction.
+
+                'trans_id' is the identifier of a transaction that
+                the manifest should be added to.
+
+                'data' is the string object containing the payload of the
+                manifest to add.
+                """
+
+                if self.mirror:
+                        raise RepositoryMirrorError()
+                if self.read_only:
+                        raise RepositoryReadOnlyError()
+                if not self.trans_root:
+                        raise RepositoryUnsupportedOperationError()
+
+                t = self.__get_transaction(trans_id)
+                try:
+                        t.add_manifest(data)
                 except trans.TransactionError as e:
                         raise RepositoryError(e)
                 return
@@ -1407,6 +1433,36 @@ class _RepoStore(object):
                 except (apx.CatalogError,
                     trans.TransactionError) as e:
                         raise RepositoryError(e)
+
+        def insert_file(self, fhash, src_path):
+                """Add the content at "src_path" to the files under the name
+                "hashval". Returns the path to the inserted file."""
+
+                if not self.file_root:
+                        raise RepositoryUnsupportedOperationError()
+
+                if fhash is None:
+                        raise RepositoryFileNotFoundError(fhash)
+
+                fp = self.cache_store.insert(fhash, src_path)
+                if fp is not None:
+                        return fp
+                raise RepositoryFileNotFoundError(fhash)
+
+        def copy_file(self, fhash, src_path):
+                """Copy the content at "src_path" to the files under the name
+                "hashval".  Returns the path to the copied file."""
+
+                if not self.file_root:
+                        raise RepositoryUnsupportedOperationError()
+
+                if fhash is None:
+                        raise RepositoryFileNotFoundError(fhash)
+
+                fp = self.cache_store.copy(fhash, src_path)
+                if fp is not None:
+                        return fp
+                raise RepositoryFileNotFoundError(fhash)
 
         def file(self, fhash):
                 """Returns the absolute pathname of the file specified by the
@@ -1969,7 +2025,7 @@ class _RepoStore(object):
                 # if we're looking at a path to a file hash, and we have a pfmri
                 # we'd like to print the 'path' attribute as well as its
                 # location within the repository.
-                hsh = reason.get("hash")
+                hsh = reason.get("fname")
                 pfmri = reason.get("pkg")
                 if hsh and pfmri:
                         m = self._get_manifest(pfmri)
@@ -1996,8 +2052,8 @@ class _RepoStore(object):
                         message = _("Corrupt manifest.")
                         reason["err"] = _("Use pkglint(1) for more details.")
                 elif error == REPO_VERIFY_NOFILE:
-                        message = _("Missing file: {0}").format(reason["hash"])
-                        del reason["hash"]
+                        message = _("Missing file: {0}").format(reason["fname"])
+                        del reason["fname"]
                 elif error == REPO_VERIFY_BADGZIP:
                         message = _("Corrupted gzip file.")
                 elif error in [REPO_VERIFY_PERM, REPO_VERIFY_MFPERM]:
@@ -2389,11 +2445,16 @@ class _RepoStore(object):
 
                                         err = self.__verify_perm(path, pfmri, h)
                                         if err:
+                                                # For backward compatibility,
+                                                # store the SHA1 file name for
+                                                # file retrieval.
+                                                err[2]["fname"] = fname
                                                 errors.append(err)
                                                 continue
                                         err = self.__verify_hash(path, pfmri, h,
                                             alg=alg)
                                         if err:
+                                                err[2]["fname"] = fname
                                                 errors.append(err)
                                 for err in errors:
                                         yield self.__build_verify_error(*err)
@@ -3650,12 +3711,20 @@ class Repository(object):
                                 continue
                         rstore.add_content(refresh_index=refresh_index)
 
-        def add_file(self, trans_id, data, size=None):
+        def add_file(self, trans_id, data, basename=None, size=None):
                 """Adds a file to a transaction with the specified Transaction
                 ID."""
 
                 rstore = self.get_trans_rstore(trans_id)
-                return rstore.add_file(trans_id, data=data, size=size)
+                return rstore.add_file(trans_id, data=data, basename=basename,
+                    size=size)
+
+        def add_manifest(self, trans_id, data):
+                """Adds a manifest to a transaction with the specified
+                Transaction ID."""
+
+                rstore = self.get_trans_rstore(trans_id)
+                return rstore.add_manifest(trans_id, data=data)
 
         def rebuild(self, build_catalog=True, build_index=False, pub=None):
                 """Rebuilds the repository catalog and search indexes using the
@@ -4240,6 +4309,7 @@ class Repository(object):
         root = property(lambda self: self.__root)
         rstores = property(lambda self: self.__rstores.values())
         writable_root = property(lambda self: self.__writable_root)
+        temp_root = property(lambda self: self.__tmp_root)
 
 
 class RepositoryConfig(object):

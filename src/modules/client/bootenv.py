@@ -38,16 +38,11 @@ import pkg.pkgsubprocess as subprocess
 # Since pkg(1) may be installed without libbe installed
 # check for libbe and import it if it exists.
 try:
-        # First try importing using the new name (b172+)...
-        import libbe as be
+        import libbe_py as be
 except ImportError:
-        try:
-                # ...then try importing using the old name (pre 172).
-                import libbe_py as be
-        except ImportError:
-                # All recovery actions are disabled when libbe can't be
-                # imported.
-                pass
+        # All recovery actions are disabled when libbe can't be
+        # imported.
+        pass
 
 class BootEnv(object):
 
@@ -335,16 +330,8 @@ class BootEnv(object):
                 # module before the environment is sanitized.
                 if "PKG_NO_LIVE_ROOT" in os.environ:
                         return BootEnvNull.get_be_list()
-                # Check for the old beList() API since pkg(1) can be
-                # back published and live on a system without the 
-                # latest libbe.
-                rc = 0
 
-                beVals = be.beList()
-                if isinstance(beVals[0], int):
-                        rc, beList = beVals
-                else:
-                        beList = beVals
+                rc, beList = be.beList(nosnaps=True)
                 if not beList or rc != 0:
                         if raise_error:
                                 # Happens e.g. in zones (for now) or live CD
@@ -353,6 +340,13 @@ class BootEnv(object):
                         beList = []
 
                 return beList
+
+        @staticmethod
+        def get_be_names():
+                """Return a list of BE names."""
+                return [
+                    be.name for be in BootEnv.get_be_list() if be.name
+                ]
 
         @staticmethod
         def get_be_name(path):
@@ -792,6 +786,10 @@ class BootEnvNull(object):
 
         @staticmethod
         def get_be_list():
+                return []
+
+        @staticmethod
+        def get_be_names():
                 return []
 
         @staticmethod

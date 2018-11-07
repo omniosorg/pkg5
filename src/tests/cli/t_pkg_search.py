@@ -46,6 +46,12 @@ import pkg.fmri as fmri
 import pkg.indexer as indexer
 import pkg.portable as portable
 
+try:
+        import pkg.sha512_t as sha512_t
+        sha512_supported = True
+except ImportError:
+        sha512_supported = False
+
 class TestPkgSearchBasics(pkg5unittest.SingleDepotTestCase):
 
         example_pkg10 = """
@@ -299,6 +305,7 @@ adm:NP:6445::::::
         res_remote_file = set([
             'path       file      bin/example_path          pkg:/example_pkg@1.0-0\n',
             'b40981aab75932c5b2f555f50769d878e44913d7 file      bin/example_path          pkg:/example_pkg@1.0-0\n',
+            "pkg.content-hash file   ['file:sha512t_256:8e3b2cea6dc6c4954cf8205bff833ead1f2eb3d4850525544cde0242c971452d', 'gzip:sha512t_256:8846fa174b11c8241080d58796509ef3f86f1dba119f318d32e5ca1b2be33f91'] pkg:/example_pkg@1.0-0\n",
             'hash                                     file   bin/example_path pkg:/example_pkg@1.0-0\n'
         ]) | res_remote_path
 
@@ -313,6 +320,7 @@ adm:NP:6445::::::
              'path       file      bin/example_path          pkg:/example_pkg@1.0-0\n',
              'basename   file      bin/example_path          pkg:/example_pkg@1.0-0\n',
              'b40981aab75932c5b2f555f50769d878e44913d7 file      bin/example_path          pkg:/example_pkg@1.0-0\n',
+             "pkg.content-hash file   ['file:sha512t_256:8e3b2cea6dc6c4954cf8205bff833ead1f2eb3d4850525544cde0242c971452d', 'gzip:sha512t_256:8846fa174b11c8241080d58796509ef3f86f1dba119f318d32e5ca1b2be33f91'] pkg:/example_pkg@1.0-0\n",
              'hash                                     file   bin/example_path pkg:/example_pkg@1.0-0\n'
         ])
 
@@ -326,7 +334,7 @@ adm:NP:6445::::::
             "file bin/example_path example_pkg " \
             "pkg:/example_pkg@1.0-0 bin/example_path " \
             "basename 0555 root bin " \
-            "file b40981aab75932c5b2f555f50769d878e44913d7 chash=6a4299897fca0c4d0d18870da29a0dc7ae23b79c group=bin mode=0555 owner=root path=bin/example_path pkg.csize=25 pkg.size=5\n"
+            "file b40981aab75932c5b2f555f50769d878e44913d7 chash=6a4299897fca0c4d0d18870da29a0dc7ae23b79c group=bin mode=0555 owner=root path=bin/example_path pkg.content-hash=file:sha512t_256:8e3b2cea6dc6c4954cf8205bff833ead1f2eb3d4850525544cde0242c971452d pkg.content-hash=gzip:sha512t_256:8846fa174b11c8241080d58796509ef3f86f1dba119f318d32e5ca1b2be33f91 pkg.csize=25 pkg.size=5\n"
 
         o_results = o_results_no_pub.rstrip() + " test\n"
 
@@ -1132,6 +1140,18 @@ class TestSearchMultiPublisher(pkg5unittest.ManyDepotTestCase):
                 actions at publication time."""
                 self.base_search_multi_hash("sha256", hashlib.sha256)
 
+        def test_search_multi_hash_2(self):
+                """Check that when searching a repository with multiple
+                hashes, all hash attributes are indexed and we can search
+                against all hash attributes.
+
+                This test depends on pkg.digest having DebugValue settings
+                that add sha512/256 hashes to the set of hashes we append to
+                actions at publication time."""
+                if sha512_supported:
+                        self.base_search_multi_hash("sha512t_256",
+                            sha512_t.SHA512_t)
+
         def base_search_multi_hash(self, hash_alg, hash_fun):
                 # our 2nd depot gets the package published with multiple hash
                 # attributes, but served from a single-hash-aware depot
@@ -1145,10 +1165,12 @@ class TestSearchMultiPublisher(pkg5unittest.ManyDepotTestCase):
                 # manually calculate the hashes, in case of bugs in
                 # pkg.misc.get_data_digest
                 sha1_hash = hashlib.sha1(b"magic").hexdigest()
-                sha2_hash = hash_fun(b"magic").hexdigest()
+                sha2_hash = "*" + hash_fun(b"magic").hexdigest()
 
                 self.pkg("search {0}".format(sha1_hash))
                 self.pkg("search {0}".format(sha2_hash))
+                # Test that the correct hash algorithm is being used.
+                self.pkg("search *{0}*".format(hash_alg))
 
                 # Check that we're matching on the correct index.
                 # For sha1 hashes, our the 'index' returned is actually the
@@ -1162,7 +1184,7 @@ class TestSearchMultiPublisher(pkg5unittest.ManyDepotTestCase):
 
                 self.pkg("search -H -o search.match_type {0}".format(sha2_hash))
                 self.assertEqualDiff(
-                    self.reduceSpaces(self.output), "pkg.hash.{0}\n".format(hash_alg))
+                    self.reduceSpaces(self.output), "pkg.content-hash\n")
 
                 # check that both searches match the same action
                 self.pkg("search -o action.raw {0}".format(sha1_hash))
@@ -1172,13 +1194,24 @@ class TestSearchMultiPublisher(pkg5unittest.ManyDepotTestCase):
                 sha2_action = self.reduceSpaces(self.output)
                 self.assertEqualDiff(sha1_action, sha2_action)
 
-                # check that the same searches in the non-multihash-aware
-                # repository only return a result for the sha-1 hash
-                # (which checks that we're only setting multiple hashes
-                # on actions when hash=sha1+sha256 or hash=sha1+sha512_256
-                # is set)
-                self.pkg("search -s {0} {1}".format(self.durl1, sha1_hash))
-                self.pkg("search -s {0} {1}".format(self.durl1, sha2_hash), exit=1)
+        def test_search_indices(self):
+                """Ensure that search indices are generated properly when
+                a new hash is enabled."""
+
+                # Publish a package which only contains SHA-1 hashes.
+                self.pkgsend_bulk(self.durl1, self.same_pub2)
+                # Enable SHA-2 hashes in the other repository.
+                self.dcs[2].stop()
+                self.dcs[2].set_debug_feature("hash=sha1+sha256")
+                self.dcs[2].start()
+                # pkgrecv the published package which only contains SHA-1
+                # hashes to a repository which enables SHA-2 hashes.
+                self.pkgrecv(self.durl1, "-d {0} {1}".format(self.durl2,
+                    "same_pub2@1.1"))
+                self.pkgrepo("-s {0} refresh".format(self.durl2))
+                # Ensure no error log entry exists.
+                self.file_doesnt_contain(self.dcs[2].get_logpath(),
+                    "missing the expected attribute")
 
         def test_search_ignore_publisher_with_no_origin(self):
             """ Check that if pkg search will ignore the publisher with no

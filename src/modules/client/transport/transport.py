@@ -33,6 +33,7 @@ import simplejson as json
 import six
 import tempfile
 import zlib
+from collections import defaultdict
 from functools import cmp_to_key
 from io import BytesIO
 from six.moves import http_client, range
@@ -85,6 +86,9 @@ class TransportCfg(object):
 
                 self.pkg_pub_map = None
                 self.alt_pubs = None
+                # An integer that indicates the maximum times to check if a
+                # file needs to be uploaded for the transport.
+                self.max_transfer_checks = 20
 
         def add_cache(self, path, layout=None, pub=None, readonly=True):
                 """Adds the directory specified by 'path' as a location to read
@@ -518,7 +522,6 @@ class GenericTransportCfg(TransportCfg):
         user_agent = property(__get_user_agent,
             doc="A string that identifies the user agent for the transport.")
 
-
 class LockedTransport(object):
         """A decorator class that wraps transport functions, calling
         their lock and unlock methods.  Due to implementation differences
@@ -565,6 +568,7 @@ class Transport(object):
                 self.__engine = None
                 self.__cadir = None
                 self.__portal_test_executed = False
+                self.__version_check_executed = False
                 self.__repo_cache = None
                 self.__dynamic_mirrors = []
                 self._lock = nrlock.NRLock()
@@ -572,6 +576,9 @@ class Transport(object):
                 self.stats = tstats.RepoChooser()
                 self.repo_status = {}
                 self.__tmp_crls = {}
+                # Used to record those actions that will have their payload
+                # transferred.
+                self.__hashes = defaultdict(set)
                 # Used to record those CRLs which are unreachable during the
                 # current operation.
                 self.__bad_crls = set()
@@ -655,9 +662,9 @@ class Transport(object):
                 if not self.__engine:
                         self.__setup()
 
-                # If captive portal test hasn't been executed, run it
-                # prior to this operation.
-                self._captive_portal_test(ccancel=ccancel, alt_repo=alt_repo)
+                # If version check hasn't been executed, run it prior to this
+                # operation.
+                self._version_check_all(ccancel=ccancel, alt_repo=alt_repo)
 
                 # For search, prefer remote sources if available.  This allows
                 # consumers to configure both a file-based and network-based set
@@ -768,9 +775,9 @@ class Transport(object):
                 if not self.__engine:
                         self.__setup()
 
-                # If captive portal test hasn't been executed, run it
-                # prior to this operation.
-                self._captive_portal_test(ccancel=ccancel, alt_repo=alt_repo)
+                # If version check hasn't been executed, run it prior to this
+                # operation.
+                self._version_check_all(ccancel=ccancel, alt_repo=alt_repo)
 
                 for d, retries in self.__gen_repo(pub, retry_count,
                     origin_only=True, alt_repo=alt_repo):
@@ -927,9 +934,9 @@ class Transport(object):
                 if not self.__engine:
                         self.__setup()
 
-                # If captive portal test hasn't been executed, run it
-                # prior to this operation.
-                self._captive_portal_test(ccancel=ccancel, alt_repo=alt_repo)
+                # If version check hasn't been executed, run it prior to this
+                # operation.
+                self._version_check_all(ccancel=ccancel, alt_repo=alt_repo)
 
                 # Check if the download_dir exists.  If it doesn't, create
                 # the directories.
@@ -1150,8 +1157,8 @@ class Transport(object):
 
                         repouri_key = d.get_repouri_key()
                         repostats = self.stats[repouri_key]
-                        if repostats.content_errors and retries > 1:
-                            header = d.build_refetch_header(header)
+                        header = Transport.__get_request_header(header,
+                            repostats, retries, d)
                         try:
                                 return d.get_datastream(fhash, v, header,
                                     ccancel=ccancel, pub=pub)
@@ -1360,6 +1367,29 @@ class Transport(object):
                 raise failures
 
         @LockedTransport()
+        def get_compressed_attrs(self, fhash, pub=None, trans_id=None,
+            hashes=True):
+                """Given a fhash, returns a tuple of (csize, chashes) where
+                'csize' is the size of the file in the repository and 'chashes'
+                is a dictionary containing any hashes of the compressed data
+                known by the repository.  If the repository cannot provide the
+                hash information or 'hashes' is False, chashes will be an empty
+                dictionary.  If the repository does not have the file, a tuple
+                of (None, None) will be returned instead."""
+
+                failures = tx.TransportFailures()
+                # If the operation fails, it doesn't matter as it won't cause a
+                # correctness issue, and it could be the repository simply
+                # doesn't have the file, so don't try more than once.
+                retry_count = 1
+                header = self.__build_header(uuid=self.__get_uuid(pub))
+
+                for d, retries in self.__gen_repo(pub, retry_count,
+                    origin_only=True, single_repository=True):
+                        return d.get_compressed_attrs(fhash, header,
+                            pub=pub, trans_id=trans_id, hashes=hashes)
+
+        @LockedTransport()
         def get_manifest(self, fmri, excludes=misc.EmptyI, intent=None,
             ccancel=None, pub=None, content_only=False, alt_repo=None):
                 """Given a fmri, and optional excludes, return a manifest
@@ -1389,9 +1419,9 @@ class Transport(object):
                 if not self.__engine:
                         self.__setup()
 
-                # If captive portal test hasn't been executed, run it
-                # prior to this operation.
-                self._captive_portal_test(ccancel=ccancel, alt_repo=alt_repo)
+                # If version check hasn't been executed, run it prior to this
+                # operation.
+                self._version_check_all(ccancel=ccancel, alt_repo=alt_repo)
 
                 # Check if the download_dir exists.  If it doesn't create
                 # the directories.
@@ -1489,11 +1519,10 @@ class Transport(object):
                 if not self.__engine:
                         self.__setup()
 
-                # If captive portal test hasn't been executed, run it
-                # prior to this operation.
+                # If version check hasn't been executed, run it prior to this
+                # operation.
                 try:
-                        self._captive_portal_test(ccancel=ccancel,
-                            alt_repo=alt_repo)
+                        self._version_check_all(ccancel=ccancel, alt_repo=alt_repo)
                 except apx.InvalidDepotResponseException:
                         return
 
@@ -1984,9 +2013,9 @@ class Transport(object):
                 if not self.__engine:
                         self.__setup()
 
-                # If captive portal test hasn't been executed, run it
-                # prior to this operation.
-                self._captive_portal_test(ccancel=mfile.get_ccancel(),
+                # If version check hasn't been executed, run it prior to this
+                # operation.
+                self._version_check_all(ccancel=mfile.get_ccancel(),
                     alt_repo=mfile.get_alt_repo())
 
                 # Check if the download_dir exists.  If it doesn't create
@@ -2216,9 +2245,9 @@ class Transport(object):
                 if not self.__engine:
                         self.__setup()
 
-                # If captive portal test hasn't been executed, run it
-                # prior to this operation.
-                self._captive_portal_test(ccancel=ccancel, alt_repo=alt_repo)
+                # If version check hasn't been executed, run it prior to this
+                # operation.
+                self._version_check_all(ccancel=ccancel, alt_repo=alt_repo)
 
                 for d, retries in self.__gen_repo(pub, retry_count,
                     origin_only=True, alt_repo=alt_repo):
@@ -2538,27 +2567,14 @@ class Transport(object):
 
                 return True
 
-        def captive_portal_test(self, ccancel=None):
-                """A captive portal forces a HTTP client on a network
-                to see a special web page, usually for authentication
-                purposes.  (http://en.wikipedia.org/wiki/Captive_portal)."""
+        def _version_check_all(self, alt_repo=None, ccancel=None):
+                # Retrieve version info for all publishers to fill version info
+                # and test if repositories are responding.
 
-                self._lock.acquire()
-                try:
-                        self._captive_portal_test(ccancel=ccancel)
-                finally:
-                        self._lock.release()
-
-        def _captive_portal_test(self, ccancel=None, alt_repo=None):
-                """Implementation of captive_portal_test."""
-
-                fail = tx.TransportFailures()
-
-                if self.__portal_test_executed:
+                if self.__version_check_executed:
                         return
 
-                self.__portal_test_executed = True
-                vd = None
+                self.__version_check_executed = True
 
                 pubs = [pub for pub in self.cfg.gen_publishers()]
                 if not pubs and alt_repo:
@@ -2568,41 +2584,61 @@ class Transport(object):
                         pubs = [publisher.Publisher("temporary",
                             repository=alt_repo)]
 
+                fail = tx.TransportFailures()
                 for pub in pubs:
-                        try:
-                                vd = self._get_versions(pub, ccancel=ccancel,
-                                    alt_repo=alt_repo)
-                        except tx.TransportException as ex:
-                                # Encountered a transport error while
-                                # trying to contact this publisher.
-                                # Pick another publisher instead.
-                                if isinstance(ex, tx.TransportFailures):
-                                        fail.extend(ex.exceptions)
-                                else:
-                                        fail.append(ex)
+                        if pub.prefix in self.repo_status:
+                                # This publisher has already been tested, ignore
                                 continue
-                        except apx.CanceledException:
-                                self.__portal_test_executed = False
-                                raise
+                        for origin in pub.repository.origins:
+                                p = copy.copy(pub)
+                                p.repository.origins = [origin]
+                                try:
+                                        self._version_check(p, ccancel=ccancel)
+                                except apx.InvalidDepotResponseException as e:
+                                        # If there is a network connection issue
+                                        # with this repo ignore here. It will
+                                        # get recorded in self.repo_status. 
+                                        pass
 
-                        if self._valid_versions_test(vd):
-                                return
+        def version_check(self, pub, ccancel=None):
+                """Retrieve version info from publisher and fill internal
+                version caches. If we encounter problems contacting the repo,
+                store that information for later."""
+                self._lock.acquire()
+                try:
+                        self._version_check(pub, ccancel=ccancel)
+                finally:
+                        self._lock.release()
+
+        def _version_check(self, pub, ccancel=None):
+                """Implementation of version check."""
+
+                fail = tx.TransportFailures()
+                vd = None
+
+                if "total" in self.repo_status.setdefault(pub.prefix, {}):
+                        self.repo_status[pub.prefix]["total"] += 1
+                else:
+                        self.repo_status[pub.prefix]["total"] = 1
+
+                try:
+                        vd = self._get_versions(pub, ccancel=ccancel)
+                except tx.TransportException as ex:
+                        if isinstance(ex, tx.TransportFailures):
+                                fail.extend(ex.exceptions)
                         else:
-                                fail.append(tx.PkgProtoError(pub.prefix,
-                                    "version", 0,
-                                    "Invalid content in response"))
-                                continue
+                                fail.append(ex)
+                except apx.CanceledException:
+                        raise
 
-                if not vd:
-                        # We got all the way through the list of publishers but
-                        # encountered transport errors in every case.  This is
-                        # likely a network configuration problem.  Report our
-                        # inability to contact a server.
-                        estr = "Unable to contact any configured publishers." \
-                            "\nThis is likely a network configuration problem."
-                        if fail:
-                                estr += "\n{0}".format(fail)
-                        raise apx.InvalidDepotResponseException(None, estr)
+                if not vd or not self._valid_versions_test(vd):
+                        exc = apx.InvalidDepotResponseException(
+                            pub.repository.origins[0].uri, fail)
+                        # Publisher names can't start with _ so this is safe.
+                        self.repo_status["_failures"] = None
+                        self.repo_status[pub.prefix].setdefault(
+                            "errors", set([])).add(exc)
+                        raise exc
 
         @staticmethod
         def _valid_versions_test(versdict):
@@ -2794,7 +2830,7 @@ class Transport(object):
                         # i.e. if we have attributes:
                         # chain="a.a b.b c.c"
                         # chain.chash="aa bb cc" \
-                        #   pkg.chain.chash.sha256="AA BB CC"
+                        #   pkg.chain.chashes.sha512t_256="AA BB CC"
                         #
                         # and we're looking at file "b.b" then we must compare
                         # our computed value against the "BB" chash.
@@ -2900,10 +2936,11 @@ class Transport(object):
                 raise failures
 
         @LockedTransport()
-        def publish_add_file(self, pub, pth, trans_id=None):
+        def publish_add_file(self, pub, pth, trans_id=None, basename=None,
+            progtrack=None):
                 """Perform the 'add_file' publication operation to the publisher
-                supplied in pub.  The caller should include the action in the
-                action argument. The transaction-id is passed in trans_id."""
+                supplied in pub.  The caller should include the path in the
+                pth argument. The transaction-id is passed in trans_id."""
 
                 failures = tx.TransportFailures()
                 retry_count = global_settings.PKG_CLIENT_MAX_TIMEOUT
@@ -2919,6 +2956,41 @@ class Transport(object):
                     versions=[1]):
                         try:
                                 d.publish_add_file(pth, header=header,
+                                    trans_id=trans_id, basename=basename,
+                                    progtrack=progtrack)
+                                return
+                        except tx.ExcessiveTransientFailure as ex:
+                                # If an endpoint experienced so many failures
+                                # that we just gave up, grab the list of
+                                # failures that it contains
+                                failures.extend(ex.failures)
+                        except tx.TransportException as e:
+                                if e.retryable:
+                                        failures.append(e)
+                                else:
+                                        raise
+
+                raise failures
+
+        @LockedTransport()
+        def publish_add_manifest(self, pub, pth, trans_id=None):
+                """Perform the 'add_manifest' publication operation to the publisher
+                supplied in pub.  The caller should include the path in the
+                pth argument. The transaction-id is passed in trans_id."""
+
+                failures = tx.TransportFailures()
+                retry_count = global_settings.PKG_CLIENT_MAX_TIMEOUT
+                header = self.__build_header(uuid=self.__get_uuid(pub))
+
+                # Call setup if the transport isn't configured or was shutdown.
+                if not self.__engine:
+                        self.__setup()
+
+                for d, retries, v in self.__gen_repo(pub, retry_count,
+                    origin_only=True, single_repository=True,
+                    operation="manifest", versions=[1]):
+                        try:
+                                d.publish_add_manifest(pth, header=header,
                                     trans_id=trans_id)
                                 return
                         except tx.ExcessiveTransientFailure as ex:
@@ -3280,6 +3352,73 @@ class Transport(object):
                         if turi not in self.__repo_cache:
                                 return False
                 return True
+
+        def supports_version(self, pub, op, verlist):
+                """Returns version-id of highest supported version.
+                If the version is not supported, or no data is available,
+                -1 is returned instead."""
+
+                retry_count = global_settings.PKG_CLIENT_MAX_TIMEOUT
+
+                # Call setup if transport isn't configured, or was shutdown.
+                if not self.__engine:
+                        self.__setup()
+
+                # For backward compatibility, we pass version 0 to __gen_repo
+                # so that unsupported operation exception won't be raised if
+                # higher version is not supported, such as manifest/1.
+                for d, retries, v in self.__gen_repo(pub, retry_count,
+                    origin_only=True, single_repository=True,
+                    operation=op, versions=[0]):
+                        return d.supports_version(op, verlist)
+
+        def get_transfer_info(self, pub):
+                """Return a tuple of (compressed, hashes) where 'compressed'
+                indicates whether files can be transferred compressed and
+                'hashes', the set of hashes of those actions that will have
+                their payload transferred."""
+
+                compressed = self.supports_version(pub, 'manifest', [1]) > -1
+                return compressed, self.__hashes[pub]
+
+        def get_transfer_size(self, pub, actions):
+                """Return estimated transfer size given a list of actions that
+                will have their payload transferred."""
+
+                for d, retries in self.__gen_repo(pub, 1,
+                    origin_only=True, single_repository=True):
+                        scheme, netloc, path, params, query, fragment = \
+                            urlparse(d._url, "http", allow_fragments=0)
+                        break
+
+                local = scheme == "file"
+                sendb = 0
+                uploaded = 0
+                support = self.supports_version(pub, "manifest", [1]) > -1
+                for a in actions:
+                        if not a.has_payload:
+                                continue
+                        if not support:
+                                sendb += int(a.attrs.get("pkg.size", 0))
+                                continue
+                        if a.hash not in self.__hashes[pub]:
+                                if (local or uploaded <
+                                     self.cfg.max_transfer_checks):
+                                        # If the repository is local
+                                        # (filesystem-based) or less than
+                                        # max_transfer_checks, call
+                                        # get_compressed_attrs()...
+                                        has_file, dummy = \
+                                            self.get_compressed_attrs(
+                                            a.hash, pub=pub, hashes=False)
+                                        if has_file:
+                                                continue
+                                # If server doesn't have file, assume it will be
+                                # uploaded.
+                                sendb += int(a.attrs.get("pkg.csize", 0))
+                                self.__hashes[pub].add(a.hash)
+                                uploaded += 1
+                return sendb
 
 
 class MultiXfr(object):

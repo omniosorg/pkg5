@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2017, Oracle and/or its affiliates. All rights reserved.
 #
 
 """module describing a generic packaging object
@@ -49,7 +49,7 @@ import pkg.portable as portable
 import pkg.variant as variant
 
 from . import _common
-from pkg.misc import EmptyDict, force_str
+from pkg.misc import EmptyDict, CMP_ALL, CMP_UNSIGNED
 
 # Directories must precede all filesystem object actions; hardlinks must follow
 # all filesystem object actions (except links).  Note that user and group
@@ -432,25 +432,109 @@ class Action(object):
         def __ge__(self, other):
                 return self == other or self > other
 
-        def different(self, other, cmp_hash=True):
+        def different(self, other, pkgplan=None, cmp_policy=None):
                 """Returns True if other represents a non-ignorable change from
-                self.
+                self.  By default, this means two actions are different if any
+                of their attributes are different.
 
-                By default, this means two actions are different if any of their
-                attributes are different.  Subclasses should override this
-                behavior when appropriate.
+                When cmp_policy is CMP_UNSIGNED, check the unsigned versions
+                of hashes instead of signed versions of hashes on both actions.
+                This prevents comparing all hash attributes as simple value
+                comparisons, and instead compares only non-hash attributes,
+                then tests the most preferred hash for equivalence.  When
+                cmp_policy is CMP_ALL, compare using all attributes.
                 """
 
-                # We could ignore key_attr, or possibly assert that it's the
-                # same.
+                if self.has_payload != other.has_payload:
+                        # Comparing different action types.
+                        return True
+
                 sattrs = self.attrs
                 oattrs = other.attrs
-                sset = set(six.iterkeys(sattrs))
-                oset = set(six.iterkeys(oattrs))
+
+                # Are all attributes identical? Most actions don't change, so
+                # a simple equality comparison should be sufficient.
+                if sattrs == oattrs:
+                        if self.has_payload:
+                                # If payload present, must also compare some
+                                # object attributes.
+                                if self.hash == other.hash:
+                                        return False
+                        else:
+                                return False
+
+                # If action has payload, perform hash comparison first. For
+                # actions with a payload, hash attributes usually change, but
+                # other attributes do not.
+                hash_type = digest.HASH
+                if self.has_payload:
+                        if "elfarch" in self.attrs and "elfarch" in other.attrs:
+                                # If both actions are for elf files, determine
+                                # if we should compare based on elf content
+                                # hash.
+                                if cmp_policy == CMP_UNSIGNED and not pkgplan:
+                                        # If caller requested unsigned
+                                        # comparison, and no policy is
+                                        # available, compare based on elf
+                                        # content hash.
+                                        hash_type = digest.HASH_GELF
+                                elif pkgplan:
+                                        # Avoid circular import.
+                                        from pkg.client.imageconfig \
+                                                import CONTENT_UPDATE_POLICY
+
+                                        if pkgplan.image.cfg.get_policy_str(
+                                            CONTENT_UPDATE_POLICY) == \
+                                            "when-required":
+                                                # If policy is available and
+                                                # allows it, then compare based
+                                                # on elf content hash.
+                                                hash_type = digest.HASH_GELF
+
+                        # digest.get_common_preferred_hash() tries to return the
+                        # most preferred hash attribute and falls back to
+                        # returning the action.hash values if there are no other
+                        # common hash attributes, and will throw an
+                        # AttributeError if one or the other actions don't have
+                        # an action.hash attribute.
+                        try:
+                                hash_attr, shash, ohash, hash_func = \
+                                    digest.get_common_preferred_hash(
+                                        self, other, hash_type=hash_type,
+                                        cmp_policy=cmp_policy)
+                                if shash != ohash:
+                                        return True
+                                # If there's no common preferred hash, we have
+                                # to treat these actions as different.
+                                if shash is None and ohash is None:
+                                        return True
+                        except AttributeError:
+                                # If action.hash is set on exactly one of self
+                                # and other, then we're trying to compare
+                                # actions of disparate subclasses.
+                                if hasattr(self, "hash") ^ hasattr(other,
+                                    "hash"):
+                                        raise AssertionError(
+                                            "attempt to compare a "
+                                            "{0} action to a {1} action".format(
+                                            self.name, other.name))
+
+                if self.has_payload and cmp_policy != CMP_ALL:
+                        sset = frozenset(
+                            a for a in sattrs if not digest.is_hash_attr(a))
+                        oset = frozenset(
+                            a for a in oattrs if not digest.is_hash_attr(a))
+                else:
+                        sset = frozenset(sattrs)
+                        oset = frozenset(oattrs)
+
+                # If hashes were equal or not applicable, then compare remaining
+                # attributes.
                 if sset.symmetric_difference(oset):
                         return True
 
-                for a, x in six.iteritems(sattrs):
+                for a in sset:
+                        x = sattrs[a]
                         y = oattrs[a]
                         if x != y:
                                 if len(x) == len(y) and \
@@ -459,25 +543,6 @@ class Action(object):
                                                 return True
                                 else:
                                         return True
-
-                if cmp_hash:
-                        shash = ohash = None
-                        try:
-                                attr, shash, ohash, hfunc = \
-                                    digest.get_common_preferred_hash(
-                                    self, other)
-                                if shash != ohash:
-                                        return True
-                                # If there's no common preferred hash, we have
-                                # to treat these actions as different
-                                if shash is None and ohash is None:
-                                        return True
-                        except AttributeError:
-                                if shash or ohash:
-                                        raise AssertionError("attempt to "
-                                            "compare a {0} action to a {1} "
-                                            "action").format(self.name,
-                                            other.name)
 
                 return False
 
@@ -695,6 +760,9 @@ class Action(object):
                         # keep file action overlay attributes
                         if self.name == "file" and key == "overlay":
                                 continue
+                        # keep file action overlay-attributes attributes
+                        if self.name == "file" and key == "overlay-attributes":
+                                continue
                         # keep specified keys
                         if key in preserve.get(self.name, []):
                                 continue
@@ -757,8 +825,8 @@ class Action(object):
                                     "value must be of the form '644', "
                                     "'0644', or '04755'.")))
                         elif isinstance(raw_mode, list):
-                                errors.append("mode", _("mode may only be "
-                                    "specified once"))
+                                errors.append(("mode", _("mode may only be "
+                                    "specified once")))
                         else:
                                 errors.append(("mode", _("'{0}' is not a valid "
                                     "mode; value must be of the form '644', "

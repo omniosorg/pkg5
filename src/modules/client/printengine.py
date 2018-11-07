@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
 #
 
 """This module implements PrintEngine (abstract), POSIXPrintEngine and
@@ -33,10 +33,11 @@ import errno
 import logging
 import os
 import re
-import six
 import termios
 import time
 from abc import ABCMeta, abstractmethod
+
+import six
 
 from pkg.misc import PipeError, force_str
 
@@ -345,7 +346,6 @@ def test_posix_printengine(output_file, ttymode):
         pe.cprint("This should be on the next line (with no nl's intervening).")
         # just test that it works
         pe.isslow()
-
 
 # Vim hints
 # vim:ts=8:sw=8:et:fdm=marker

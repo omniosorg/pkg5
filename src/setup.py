@@ -413,6 +413,9 @@ userattrd_files = ['util/misc/user_attr.d/package:pkg']
 pkg_locales = \
     'ar ca cs de es fr he hu id it ja ko nl pl pt_BR ru sk sv zh_CN zh_HK zh_TW'.split()
 
+sha512_t_srcs = [
+        'cffi_src/_sha512_t.c'
+        ]
 sysattr_srcs = [
         'cffi_src/_sysattr.c'
         ]
@@ -625,6 +628,12 @@ class clint_func(Command):
                             ['-I' + self.escape(get_python_inc())] + \
                             ["{0}{1}".format("-l", k) for k in sysattr_libraries] + \
                             sysattr_srcs
+                        sha512_tcmd = lint + lint_flags + \
+                            ['-D_FILE_OFFSET_BITS=64'] + \
+                            ["{0}{1}".format("-I", k) for k in include_dirs] + \
+                            ['-I' + self.escape(get_python_inc())] + \
+                            ["{0}{1}".format("-l", k) for k in sha512_t_libraries] + \
+                            sha512_t_srcs
 
                         print(" ".join(archcmd))
                         os.system(" ".join(archcmd))
@@ -642,6 +651,8 @@ class clint_func(Command):
                         os.system(" ".join(syscallatcmd))
                         print(" ".join(sysattrcmd))
                         os.system(" ".join(sysattrcmd))
+                        print(" ".join(sha512_tcmd))
+                        os.system(" ".join(sha512_tcmd))
 
 
 # Runs both C and Python lint
@@ -1074,11 +1085,11 @@ class build_func(_build):
 def get_git_version():
         try:
                 p = subprocess.Popen(
-                    ['git', 'show', '--format=%at', '--no-patch'],
+                    ['git', 'show', '--format=%h', '--no-patch'],
                     stdout = subprocess.PIPE)
                 return p.communicate()[0].strip()
         except OSError:
-                print("ERROR: unable to obtain mercurial/git version",
+                print("ERROR: unable to obtain git commit hash",
                     file=sys.stderr)
                 return "unknown"
 
@@ -1103,6 +1114,8 @@ def syntax_check(filename):
                             line, col or "unknown", fname, code)
 
                 raise DistutilsError(res)
+        finally:
+                os.remove(tmp_file)
 
 # On Solaris, ld inserts the full argument to the -o option into the symbol
 # table.  This means that the resulting object will be different depending on
@@ -1576,6 +1589,7 @@ ext_modules = [
         ]
 elf_libraries = None
 sysattr_libraries = None
+sha512_t_libraries = None
 data_files = web_files
 cmdclasses = {
         'install': install_func,
@@ -1668,6 +1682,7 @@ if osname == 'sunos' or osname == "linux":
         if osname == 'sunos':
             elf_libraries += [ 'md' ]
             sysattr_libraries = [ 'nvpair' ]
+            sha512_t_libraries = [ 'md' ]
             ext_modules += [
                     Extension(
                             '_arch',
@@ -1701,6 +1716,16 @@ if osname == 'sunos' or osname == "linux":
                             sysattr_srcs,
                             include_dirs = include_dirs,
                             libraries = sysattr_libraries,
+                            extra_compile_args = compile_args,
+                            extra_link_args = link_args,
+                            define_macros = [('_FILE_OFFSET_BITS', '64')],
+                            build_64 = True
+                            ),
+                    Extension(
+                            '_sha512_t',
+                            sha512_t_srcs,
+                            include_dirs = include_dirs,
+                            libraries = sha512_t_libraries,
                             extra_compile_args = compile_args,
                             extra_link_args = link_args,
                             define_macros = [('_FILE_OFFSET_BITS', '64')],

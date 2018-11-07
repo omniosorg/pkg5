@@ -20,7 +20,7 @@
 # CDDL HEADER END
 
 #
-# Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
 #
 
 from __future__ import print_function
@@ -52,9 +52,11 @@ try:
         from functools import reduce
         from pkg.misc import PipeError, emsg, msg
         from six.moves.urllib.parse import quote
+        from pkg.client.pkgdefs import (EXIT_OK, EXIT_OOPS, EXIT_BADOPT,
+            EXIT_PARTIAL)
 except KeyboardInterrupt:
         import sys
-        sys.exit(1)
+        sys.exit(EXIT_OOPS)
 
 class PkgmergeException(Exception):
         """An exception raised if something goes wrong during the merging
@@ -140,7 +142,7 @@ Environment:
 
         sys.exit(exitcode)
 
-def error(text, exitcode=1):
+def error(text, exitcode=EXIT_OOPS):
         """Emit an error message prefixed by the command name """
 
         emsg("pkgmerge: {0}".format(text))
@@ -412,13 +414,9 @@ def main_func():
                                     patterns=processdict[entry]))
                                 continue
 
-                # we're ready to merge
-                if not dry_run:
-                        target_pub = transport.setup_publisher(dest_repo,
-                            pub.prefix, dest_xport, dest_xport_cfg,
-                            remote_prefix=True)
-                else:
-                        target_pub = None
+                target_pub = transport.setup_publisher(dest_repo,
+                    pub.prefix, dest_xport, dest_xport_cfg,
+                    remote_prefix=True)
 
                 tracker.republish_set_goal(len(processdict), 0, 0)
                 # republish packages for this publisher. If we encounter any
@@ -454,9 +452,9 @@ def main_func():
         for message in errors:
                 error(message, exitcode=None)
         if errors:
-                exit(1)
+                exit(EXIT_OOPS)
 
-        return 0
+        return EXIT_OK
 
 def republish_packages(pub, target_pub, processdict, source_list, variant_list,
         variants, tracker, xport, dest_repo, dest_xport, pkg_tmpdir,
@@ -504,12 +502,10 @@ def republish_packages(pub, target_pub, processdict, source_list, variant_list,
                 # Determine total bytes to send for this package; this must be
                 # done using the manifest since retrievals are coalesced based
                 # on hash, but sends are not.
-                sendbytes = sum(
-                    int(a.attrs.get("pkg.size", 0))
-                    for a in man.gen_actions()
-                )
-
                 f = man.fmri
+                target_pub.prefix = f.publisher
+                sendbytes = dest_xport.get_transfer_size(target_pub,
+                    man.gen_actions())
 
                 tracker.republish_start_pkg(f, getbytes=getbytes,
                     sendbytes=sendbytes)
@@ -518,8 +514,6 @@ def republish_packages(pub, target_pub, processdict, source_list, variant_list,
                         # Dry-run; attempt a merge of everything but don't
                         # write any data or publish packages.
                         continue
-
-                target_pub.prefix = f.publisher
 
                 # Retrieve package data from each package source.
                 for i, uri in enumerate(source_list):
@@ -976,6 +970,7 @@ if __name__ == "__main__":
         misc.setlocale(locale.LC_ALL, "", error)
         gettext.install("pkg", "/usr/share/locale",
             codeset=locale.getpreferredencoding())
+        misc.set_fd_limits(printer=error)
 
         # Make all warnings be errors.
         import warnings
@@ -988,11 +983,14 @@ if __name__ == "__main__":
         except (pkg.actions.ActionError, trans.TransactionError,
             RuntimeError, pkg.fmri.FmriError, apx.ApiException) as __e:
                 print("pkgmerge: {0}".format(__e), file=sys.stderr)
-                __ret = 1
+                __ret = EXIT_OOPS
         except (PipeError, KeyboardInterrupt):
-                __ret = 1
+                __ret = EXIT_OOPS
         except SystemExit as __e:
                 raise __e
+        except EnvironmentError as __e:
+                error(str(apx._convert_error(__e)))
+                __ret = EXIT_OOPS
         except Exception as __e:
                 traceback.print_exc()
                 error(misc.get_traceback_message(), exitcode=None)

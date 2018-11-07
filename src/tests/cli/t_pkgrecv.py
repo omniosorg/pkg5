@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
 from . import testutils
@@ -49,13 +49,22 @@ import time
 import unittest
 import zlib
 
+from pkg.actions import fromstr
 from pkg.digest import DEFAULT_HASH_FUNC
 from six.moves.urllib.parse import urlparse
 from six.moves.urllib.request import url2pathname
 
+try:
+        import pkg.sha512_t
+        sha512_supported = True
+except ImportError:
+        sha512_supported = False
+
 class TestPkgrecvMulti(pkg5unittest.ManyDepotTestCase):
         # Cleanup after every test.
         persistent_setup = False
+        # Tests in this suite use the read only data directory.
+        need_ro_data = True
 
         scheme10 = """
             open pkg:/scheme@1.0,5.11-0
@@ -154,12 +163,23 @@ class TestPkgrecvMulti(pkg5unittest.ManyDepotTestCase):
             add license tmp/copyright3 license=copyright
             add file tmp/bronzeA2 mode=0444 owner=root group=bin path=/A1/B2/C3/D4/E5/F6/bronzeA2
             add depend fmri=pkg:/amber@2.0 type=require
+            add file ro_data/elftest.so.1 mode=0755 owner=root group=bin path=bin/true
+            close
+        """
+
+        # /etc/bronze1 is purposefully delivered by this package to verify that
+        # pkgrecv can have an identical file being present in multiple packages
+        # with different publishers.
+        samefile10 = """
+            open pkg://pub1/samefile@1.0,5.11-0
+            add file tmp/bronze1 mode=0444 owner=root group=bin path=/etc/bronze1
+            add file tmp/foo mode=0444 owner=root group=bin path=/etc/foo
             close
         """
 
         misc_files = [ "tmp/bronzeA1",  "tmp/bronzeA2", "tmp/bronze1",
             "tmp/bronze2", "tmp/copyright2", "tmp/copyright3", "tmp/libc.so.1",
-            "tmp/sh", "tmp/extrafile"]
+            "tmp/sh", "tmp/extrafile", "tmp/foo"]
 
         def setUp(self):
                 """ Start six depots.
@@ -1016,9 +1036,8 @@ class TestPkgrecvMulti(pkg5unittest.ManyDepotTestCase):
                         return len(self.output.splitlines())
 
                 def __check_errout(pfmri):
-                        s1 = "invalid action in package {0}".format(pfmri)
-                        s2 = "Malformed action in package '{0}'".format(pfmri)
-                        self.assertTrue(s1 in self.errout or s2 in self.errout,
+                        s1 = "in package '{0}'".format(pfmri)
+                        self.assertTrue(s1 in self.errout,
                             "{0} not in error".format(pfmri))
 
                 def __empty_repo(uri, arg_string):
@@ -1188,7 +1207,10 @@ class TestPkgrecvMulti(pkg5unittest.ManyDepotTestCase):
                 """Tests that we can recv to and from repositories with
                 multi-hash support, interoperating with repositories without
                 multi-hash support."""
-                self.base_12_multihash("sha256")
+                if sha512_supported:
+                        self.base_12_multihash("sha256")
+                else:
+                        self.base_12_multihash("sha512t_256")
 
         def base_12_multihash(self, hash_alg):
                 f = fmri.PkgFmri(self.published[3], None)
@@ -1199,7 +1221,8 @@ class TestPkgrecvMulti(pkg5unittest.ManyDepotTestCase):
                 # First, recv the package and verify it has no extended hashes
                 self.pkgrecv(self.durl1, "-d {0} {1}".format(self.durl3, f))
                 self.pkg("contents -g {0} -m {1}".format(self.durl3, f))
-                self.assertTrue("pkg.hash.{0}".format(hash_alg not in self.output))
+                self.assertTrue("pkg.content-hash=file:{0}".format(hash_alg)
+                    not in self.output)
 
                 # Now stop and start the repository as multi-hash aware, and
                 # recv it again, making sure that we do not get multiple hashes
@@ -1209,24 +1232,29 @@ class TestPkgrecvMulti(pkg5unittest.ManyDepotTestCase):
                 self.dcs[3].start()
                 self.pkgrecv(self.durl1, "-d {0} {1}".format(self.durl3, f))
                 self.pkg("contents -g {0} -m {1}".format(self.durl3, f))
-                self.assertTrue("pkg.hash.{0}".format(hash_alg not in self.output))
+                self.assertTrue("pkg.content-hash=file:{0}".format(hash_alg)
+                    not in self.output)
 
                 # Now check the reverse - that a package with multiple hashes
                 # can be received into a repository that is not multi-hash aware
                 b = "bronze@1.0,5.11-0"
-                self.pkgsend_bulk(self.durl3, self.bronze10)
+                self.pkgsend_bulk(self.durl3, self.bronze10,
+                    debug_hash="sha1+{0}".format(hash_alg))
                 self.pkg("contents -g {0} -m {1}".format(self.durl3, b))
-                self.assertTrue("pkg.hash.{0}".format(hash_alg in self.output))
+                self.assertTrue("pkg.content-hash=file:{0}".format(hash_alg)
+                    in self.output)
                 self.pkgrecv(self.durl3, "-d {0} {1}".format(self.durl4, b))
                 self.pkg("contents -g {0} -m {1}".format(self.durl4, b))
-                self.assertTrue("pkg.hash.{0}".format(hash_alg in self.output))
+                self.assertTrue("pkg.content-hash=file:{0}".format(hash_alg)
+                    in self.output)
 
                 # Ensure that we can recv multi-hash packages into p5p files
                 p5p_path = os.path.join(self.test_root,
                     "multi-hash-{0}.p5p".format(hash_alg))
                 self.pkgrecv(self.durl3, "-ad {0} {1}".format(p5p_path, b))
                 self.pkg("contents -g {0} -m {1}".format(p5p_path, b))
-                self.assertTrue("pkg.hash.{0}".format(hash_alg in self.output))
+                self.assertTrue("pkg.content-hash=file:{0}".format(hash_alg)
+                    in self.output)
 
                 # Finally, stop and start our scratch repository to clear the
                 # debug feature. If this doesn't happen because we've failed
@@ -1243,9 +1271,9 @@ class TestPkgrecvMulti(pkg5unittest.ManyDepotTestCase):
                 self.pkgrecv(self.dpath1, "-d {0} -n -v \*".format(self.tempdir))
                 expected = """\
 Retrieving packages (dry-run) ...
-        Packages to add:        9
-      Files to retrieve:       17
-Estimated transfer size: 528.00 B
+        Packages to add:       9
+      Files to retrieve:      19
+Estimated transfer size: 3.17 kB
 """
                 self.assertTrue(expected in self.output, self.output)
                 for s in self.published:
@@ -1259,9 +1287,9 @@ Estimated transfer size: 528.00 B
                 self.pkgrecv(self.dpath1, "-a -d {0} -n -v \*".format(self.tempdir))
                 expected = """\
 Archiving packages (dry-run) ...
-        Packages to add:        9
-      Files to retrieve:       17
-Estimated transfer size: 528.00 B
+        Packages to add:       9
+      Files to retrieve:      19
+Estimated transfer size: 3.17 kB
 """
                 self.assertTrue(expected in self.output, self.output)
                 for s in self.published:
@@ -1274,9 +1302,9 @@ Estimated transfer size: 528.00 B
                    .format(self.tempdir))
                 expected = """\
 Retrieving packages (dry-run) ...
-        Packages to add:        9
-      Files to retrieve:       17
-Estimated transfer size: 528.00 B
+        Packages to add:       9
+      Files to retrieve:      19
+Estimated transfer size: 3.17 kB
 """
                 self.assertTrue(expected in self.output, self.output)
                 for s in self.published:
@@ -1414,6 +1442,105 @@ Estimated transfer size: 528.00 B
                 self.assertTrue("signature" not in ma)
                 self.pkgrepo("verify -s {0} --disable dependency"
                     .format(self.dpath6))
+
+        def test_15_content_attrs(self):
+                """Ensure that relevant content-related attributes will not be
+                modified by pkgrecv.  This is important if changes are made to
+                how some attributes are calculated in the future and
+                modifications would invalidate signatures."""
+
+                mfpath = os.path.join(self.test_root, "content-attrs.p5m")
+                with open(mfpath, "w") as mf:
+                        mf.write("""\
+set name=pkg.fmri value=pkg://test/content-attrs@1.0
+file elftest.so.1 mode=0755 owner=root group=bin path=bin/true
+""")
+
+                # Create a repository and publish sample package.
+                rpath = tempfile.mkdtemp(dir=self.test_root)
+                self.create_repo(rpath)
+                ret, pfmri = self.pkgsend(rpath,
+                    "publish -d {0} {1}".format(self.ro_data_root, mfpath))
+                self.pkgrepo("list -s {0}".format(rpath))
+
+                # Now get the actual manifest and get current elfhash value.
+                orepo = repo.Repository(root=rpath)
+                rmpath = orepo.manifest(pfmri)
+                rm = manifest.Manifest()
+                rm.set_content(pathname=rmpath)
+                ract = list(rm.gen_actions_by_type('file'))[0]
+                oelfhash = ract.attrs["elfhash"]
+                # 'pkg.content-hash' values contains signed and unsigned value,
+                # we just need to extract one of them.
+                ocontenthash = ract.attrs["pkg.content-hash"][0]
+
+                # Create a new repository and pkgrecv package to that one so
+                # that we can safely modify it in place.
+                nrpath = tempfile.mkdtemp(dir=self.test_root)
+                self.create_repo(nrpath)
+                self.pkgrecv(rpath, "-d {0} \*".format(nrpath))
+                nrepo = repo.Repository(root=nrpath)
+                nmpath = nrepo.manifest(pfmri)
+                nm = manifest.Manifest()
+                nmcontent = rm.tostr_unsorted().replace(
+                    "elfhash=", "elfhash=42.")
+                nmcontent = nmcontent.replace(
+                    "pkg.content-hash=", "pkg.content-hash=42.")
+                nm.set_content(nmcontent)
+                nm.store(nmpath)
+                # Modifying the manifest requires a catalog rebuild.
+                self.pkgrepo("rebuild --no-index -s {0}".format(nrpath))
+
+                # Now create another repository and pkgrecv package *without*
+                # using --clone to that one and verify that elfhash remains
+                # unchanged from previous repository version.
+                trpath = tempfile.mkdtemp(dir=self.test_root)
+                self.create_repo(trpath)
+                self.pkgrecv(nrpath, "-d {0} \*".format(trpath))
+                trepo = repo.Repository(root=trpath)
+                tmpath = trepo.manifest(pfmri)
+                tm = manifest.Manifest()
+                tm.set_content(pathname=tmpath)
+                tact = list(tm.gen_actions_by_type('file'))[0]
+                self.assertEqual("42." + oelfhash, tact.attrs["elfhash"])
+                self.assertEqual("42." + ocontenthash,
+                    tact.attrs["pkg.content-hash"][0])
+
+                # Do the same thing again, but use --clone this time.
+                trpath = tempfile.mkdtemp(dir=self.test_root)
+                self.create_repo(trpath)
+                self.pkgrecv(nrpath, "--clone -d {0} -p \*".format(trpath))
+                trepo = repo.Repository(root=trpath)
+                tmpath = trepo.manifest(pfmri)
+                tm = manifest.Manifest()
+                tm.set_content(pathname=tmpath)
+                tact = list(tm.gen_actions_by_type('file'))[0]
+                self.assertEqual("42." + oelfhash, tact.attrs["elfhash"])
+                self.assertEqual("42." + ocontenthash,
+                    tact.attrs["pkg.content-hash"][0])
+
+        def test_16_recv_old_republish(self):
+                """Verify that older logic of republication in pkgrecv works."""
+
+                f = fmri.PkgFmri(self.published[3], None)
+
+                self.dcs[2].stop()
+                self.dcs[2].set_disable_ops(["manifest/1"])
+                self.dcs[2].start()
+
+                self.pkgrecv(self.durl1, "-d {0} {1}".format(self.durl2, f))
+                self.dcs[2].unset_disable_ops()
+
+        def test_17_multiple_publishers(self):
+                """"Verify that pkgrecv handles multiple publishers as
+                expected."""
+
+                # Publish a package under the publisher 'pub1'.
+                self.pkgsend_bulk(self.durl1, (self.samefile10))
+                # All other packages has been published under the publisher
+                # 'test1', so retrieving all packages will involve multiple
+                # publishers.
+                self.pkgrecv(self.durl1, "-d {0} '*'".format(self.durl2))
 
 class TestPkgrecvHTTPS(pkg5unittest.HTTPSTestClass):
 

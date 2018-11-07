@@ -65,6 +65,10 @@ PREEXECUTED_ERROR = 5 # whoops
 EXECUTED_OK       = 6 # finished execution
 EXECUTED_ERROR    = 7 # failed
 
+OP_STAGE_PLAN     = 0
+OP_STAGE_PREP     = 1
+OP_STAGE_EXEC     = 2
+
 class _ActionPlan(collections.namedtuple("_ActionPlan", "p src dst")):
         """A named tuple used to keep track of all the actions that will be
         executed during an image-modifying procecure."""
@@ -114,7 +118,8 @@ class PlanDescription(object):
                 }
             },
             "_fmri_changes": [ ( pkg.fmri.PkgFmri, pkg.fmri.PkgFmri ) ],
-            "_new_avoid_obs": ( set(), set() ),
+            # avoid, implicit-avoid, obsolete
+            "_new_avoid_obs": ( set(), set(), set() ),
             "_new_mediators": collections.defaultdict(set, {
                 str: {
                     "version": pkg.version.Version,
@@ -175,7 +180,7 @@ class PlanDescription(object):
                 self._masked_facet_change = False
                 self._new_mediators = collections.defaultdict(set)
                 self._mediators_change = False
-                self._new_avoid_obs = (set(), set())
+                self._new_avoid_obs = (set(), set(), set())
                 self._fmri_changes = [] # install  (None, fmri)
                                         # remove   (oldfmri, None)
                                         # update   (oldfmri, newfmri|oldfmri)
@@ -417,8 +422,8 @@ class PlanDescription(object):
                                     "version-source")
                         return mimpl, mver, mimpl_source, mver_source
 
-                for m in sorted(set(list(self._new_mediators.keys()) +
-                    list(self._cfg_mediators.keys()))):
+                for m in sorted(set(self._new_mediators) |
+                    set(self._cfg_mediators)):
                         orig_impl, orig_ver, orig_impl_source, \
                             orig_ver_source = get_mediation(
                                 self._cfg_mediators, m)
@@ -527,6 +532,8 @@ class PlanDescription(object):
                 #    dict[(<facet, src>)] = (<value>, <masked>)
                 old_facets = dict([
                     ((f, src), (v, masked))
+                    # not-an-iterable self._old_facets;
+                    # pylint: disable=E1133
                     for f in self._old_facets
                     # W0212 Access to a protected member
                     # pylint: disable=W0212
@@ -534,6 +541,8 @@ class PlanDescription(object):
                 ])
                 new_facets = dict([
                     ((f, src), (v, masked))
+                    # not-an-iterable self._new_facets;
+                    # pylint: disable=E1133
                     for f in self._new_facets
                     # W0212 Access to a protected member
                     # pylint: disable=W0212
@@ -794,7 +803,7 @@ class PlanDescription(object):
 
                         for dfmri, src_li, dest_li, dummy_acc, dummy_disp in \
                             self.get_licenses():
-                                src_tup = None
+                                src_tup = ()
                                 if src_li:
                                         li_txt = pkg.misc.decode(
                                             src_li.get_text())
@@ -802,7 +811,7 @@ class PlanDescription(object):
                                             src_li.license, li_txt,
                                             src_li.must_accept,
                                             src_li.must_display)
-                                dest_tup = None
+                                dest_tup = ()
                                 if dest_li:
                                         li_txt = pkg.misc.decode(
                                             dest_li.get_text())
@@ -840,7 +849,8 @@ class PlanDescription(object):
                     "create-new-be": new_be_created,
                     "image-name": None,
                     "item-messages": self.get_parsable_item_messages(),
-                    "licenses": sorted(licenses, key=lambda x: x[0]),
+                    "licenses": sorted(licenses,
+                        key=lambda x: (x[0], x[1], x[2])),
                     "release-notes": release_notes,
                     "remove-packages": sorted(removed_fmris),
                     "space-available": space_available,
@@ -863,6 +873,12 @@ class PlanDescription(object):
                 else:
                         item_key = item_id
                         sub_item = "messages"
+                if self.state >= PREEXECUTED_OK:
+                        msg_stage = OP_STAGE_EXEC
+                elif self.state >= EVALUATED_OK:
+                        msg_stage = OP_STAGE_PREP
+                else:
+                        msg_stage = OP_STAGE_PLAN
                 # First level messaging looks like:
                 # {"item_id": {"messages": [msg_payload ...]}}
                 # Second level messaging looks like:
@@ -870,7 +886,8 @@ class PlanDescription(object):
                 msg_payload = {"msg_time": msg_time,
                                "msg_level": msg_level,
                                "msg_type": msg_type,
-                               "msg_text": msg_text}
+                               "msg_text": msg_text,
+                               "msg_stage": msg_stage}
                 self._item_msgs[item_key].setdefault(sub_item,
                     []).append(msg_payload)
 
@@ -891,58 +908,66 @@ class PlanDescription(object):
                 return [msg["msg_time"], msg["msg_level"], msg["msg_type"],
                     msg["msg_text"]]
 
-        def gen_item_messages(self, ordered=False):
+        def __gen_ordered_msg(self, stages):
+                """Generate ordered messages."""
+                ordered_list = []
+                for item_id in self._item_msgs:
+                        # To make the first level messages come
+                        # relatively earlier.
+                        if "messages" in self._item_msgs[item_id]:
+                                for msg in self._item_msgs[item_id]["messages"]:
+                                        if (stages is not None and
+                                            msg["msg_stage"] not in stages):
+                                                continue
+                                        ordered_list.append([item_id, None] + \
+                                            PlanDescription. \
+                                                    __msg_dict2list(msg))
+                        for si, si_list in six.iteritems(
+                            self._item_msgs[item_id]):
+                                if si == "messages":
+                                        continue
+                                for msg in si_list:
+                                        if (stages is not None and
+                                            msg["msg_stage"] not in stages):
+                                                continue
+                                        ordered_list.append([si, item_id] + \
+                                            PlanDescription. \
+                                                    __msg_dict2list(msg))
+                for entry in sorted(ordered_list, key=operator.itemgetter(2)):
+                        yield entry
+
+        def __gen_unordered_msg(self, stages):
+                """Generate unordered messages."""
+                for item_id in self._item_msgs:
+                        for si, si_list in six.iteritems(
+                            self._item_msgs[item_id]):
+                                if si == "messages":
+                                        iid = item_id
+                                        pid = None
+                                else:
+                                        iid = si
+                                        pid = item_id
+                                for mp in si_list:
+                                        if (stages is not None and
+                                            mp["msg_stage"] not in stages):
+                                                continue
+                                        yield([iid, pid] + \
+                                            PlanDescription.__msg_dict2list(mp))
+
+        def gen_item_messages(self, ordered=False, stages=None):
                 """Return all item messages.
 
                 'ordered' is an optional boolean value that indicates that
                 item messages will be sorted by msg_time. If False, item
-                messages will be in an arbitrary order."""
+                messages will be in an arbitrary order.
+
+                'stages' is an optional list or set of the stages of messages
+                to return."""
 
                 if ordered:
-                        ordered_list = []
-                        for item_id in self._item_msgs:
-                                # To make the first level messages come
-                                # relatively earlier.
-                                if "messages" in self._item_msgs[item_id]:
-                                        for msg in self._item_msgs[item_id
-                                            ]["messages"]:
-                                                ordered_list.append([item_id,
-                                                    None] +
-                                                    PlanDescription. \
-                                                    __msg_dict2list(msg))
-                                for si, si_list in six.iteritems(
-                                    self._item_msgs[item_id]):
-                                        if si == "messages":
-                                                continue
-                                        for msg in si_list:
-                                                ordered_list.append(
-                                                    [si, item_id] +
-                                                    PlanDescription. \
-                                                    __msg_dict2list(msg))
-                        ordered_list = sorted(ordered_list,
-                            key=operator.itemgetter(2))
-                        for item_id, parent_id, msg_time, msg_level, \
-                            msg_type, msg_text in ordered_list:
-                                yield (item_id, parent_id, msg_time,
-                                    msg_level, msg_type, msg_text)
+                        return self.__gen_ordered_msg(stages)
                 else:
-                        for item_id in self._item_msgs:
-                                for si, si_list in six.iteritems(
-                                    self._item_msgs[item_id]):
-                                        if si == "messages":
-                                                for mp in si_list:
-                                                        yield (item_id, None,
-                                                            mp["msg_time"],
-                                                            mp["msg_level"],
-                                                            mp["msg_type"],
-                                                            mp["msg_text"])
-                                                continue
-                                        for mp in si_list:
-                                                yield (si, item_id,
-                                                    mp["msg_time"],
-                                                    mp["msg_level"],
-                                                    mp["msg_type"],
-                                                    mp["msg_text"])
+                        return self.__gen_unordered_msg(stages)
 
         def set_actuator_timeout(self, timeout):
                 """Set timeout for synchronous actuators."""

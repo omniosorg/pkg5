@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2017, Oracle and/or its affiliates. All rights reserved.
 #
 
 """module describing a file packaging object
@@ -37,6 +37,7 @@ import stat
 import tempfile
 import types
 import zlib
+import time
 
 from . import _common
 import pkg.actions
@@ -44,7 +45,9 @@ import pkg.client.api_errors as api_errors
 import pkg.digest as digest
 import pkg.misc as misc
 import pkg.portable as portable
+import pkg.version as version
 
+from pkg.client.pkgdefs import MSG_WARNING
 from pkg.client.api_errors import ActionExecutionError
 from pkg.client.debugvalues import DebugValues
 
@@ -302,6 +305,8 @@ class FileAction(generic.Action):
                 # Handle system attributes.
                 sattr = self.attrs.get("sysattr")
                 if sattr:
+                        if isinstance(sattr, list):
+                                sattr = ",".join(sattr)
                         sattrs = sattr.split(",")
                         if len(sattrs) == 1 and \
                             sattrs[0] not in portable.get_sysattr_dict():
@@ -315,16 +320,25 @@ class FileAction(generic.Action):
                         except OSError as e:
                                 if e.errno != errno.EINVAL:
                                         raise
-                                raise ActionExecutionError(self,
-                                    details=_("System attributes are not "
-                                    "supported on the target filesystem."))
+                                warn = _("System attributes are not supported "
+                                    "on the target image filesystem; 'sysattr'"
+                                    " ignored for {0}").format(
+                                        self.attrs["path"])
+                                pkgplan.image.imageplan.pd.add_item_message(
+                                    pkgplan.destination_fmri,
+                                    misc.time_to_timestamp(time.time()),
+                                    MSG_WARNING, warn)
                         except ValueError as e:
-                                raise ActionExecutionError(self,
-                                    details=_("Could not set system attributes "
+                                warn = _("Could not set system attributes for {path}"
                                     "'{attrlist}': {err}").format(
                                         attrlist=sattr,
-                                        err=e
-                                   ))
+                                        err=e,
+                                        path=self.attrs["path"]
+                                    )
+                                pkgplan.image.imageplan.pd.add_item_message(
+                                    pkgplan.destination_fmri,
+                                    misc.time_to_timestamp(time.time()),
+                                    MSG_WARNING, warn)
 
         def verify(self, img, **args):
                 """Returns a tuple of lists of the form (errors, warnings,
@@ -358,9 +372,11 @@ class FileAction(generic.Action):
                         info.append("Warning: package may contain bobcat!  "
                             "(http://xkcd.com/325/)")
 
-                if "preserve" not in self.attrs and \
-                    "timestamp" in self.attrs and lstat.st_mtime != \
-                    misc.timestamp_to_time(self.attrs["timestamp"]):
+                preserve = self.attrs.get("preserve")
+
+                if (preserve is None and
+                    "timestamp" in self.attrs and lstat.st_mtime !=
+                    misc.timestamp_to_time(self.attrs["timestamp"])):
                         errors.append(_("Timestamp: {found} should be "
                             "{expected}").format(
                             found=misc.time_to_timestamp(lstat.st_mtime),
@@ -368,26 +384,24 @@ class FileAction(generic.Action):
 
                 # avoid checking pkg.size if we have any content-hashes present;
                 # different size files may have the same content-hash
-                if "preserve" not in self.attrs and \
-                    "pkg.size" in self.attrs and    \
-                    not set(digest.RANKED_CONTENT_HASH_ATTRS).intersection(
+                pkg_size = int(self.attrs.get("pkg.size", 0))
+                if preserve is None and pkg_size > 0 and \
+                    not set(digest.DEFAULT_GELF_HASH_ATTRS).intersection(
                     set(self.attrs.keys())) and \
-                    lstat.st_size != int(self.attrs["pkg.size"]):
+                    lstat.st_size != pkg_size:
                         errors.append(_("Size: {found:d} bytes should be "
                             "{expected:d}").format(found=lstat.st_size,
-                            expected=int(self.attrs["pkg.size"])))
+                            expected=pkg_size))
 
-                if "preserve" in self.attrs:
-                        if args["verbose"] == False or lstat is None:
-                                return errors, warnings, info
+                if (preserve is not None and args["verbose"] == False or
+                    lstat is None):
+                        return errors, warnings, info
 
                 if args["forever"] != True:
                         return errors, warnings, info
 
                 #
-                # Check file contents. At the moment, the only content-hash
-                # supported in pkg(5) is for ELF files, so this will need work
-                # when additional content-hashes are added.
+                # Check file contents.
                 #
                 try:
                         # This is a generic mechanism, but only used for libc on
@@ -397,10 +411,11 @@ class FileAction(generic.Action):
                         is_mtpt = self.attrs.get("mountpoint", "").lower() == "true"
                         elfhash = None
                         elferror = None
-                        ehash_attr, elfhash_val, hash_func = \
+                        elf_hash_attr, elf_hash_val, \
+                            elf_hash_func = \
                             digest.get_preferred_hash(self,
-                                hash_type=pkg.digest.CONTENT_HASH)
-                        if ehash_attr and haveelf and not is_mtpt:
+                                hash_type=pkg.digest.HASH_GELF)
+                        if elf_hash_attr and haveelf and not is_mtpt:
                                 #
                                 # It's possible for the elf module to
                                 # throw while computing the hash,
@@ -408,35 +423,46 @@ class FileAction(generic.Action):
                                 # corrupted or truncated.
                                 #
                                 try:
-                                        # Annoying that we have to hardcode this
-                                        if ehash_attr == \
-                                            "pkg.content-hash.sha256":
-                                                get_sha256 = True
-                                                get_sha1 = False
+                                        # On path, only calculate the
+                                        # content hash that matches
+                                        # the preferred one on the
+                                        # action
+                                        get_elfhash = \
+                                            elf_hash_attr == "elfhash"
+                                        get_sha256 = (not get_elfhash and
+                                            elf_hash_func ==
+                                            digest.GELF_HASH_ALGS["gelf:sha256"])
+                                        get_sha512t_256 = (not get_elfhash and
+                                            elf_hash_func ==
+                                            digest.GELF_HASH_ALGS["gelf:sha512t_256"])
+                                        elfhash = elf.get_hashes(
+                                            path, elfhash=get_elfhash,
+                                            sha256=get_sha256,
+                                            sha512t_256=get_sha512t_256
+                                        )[elf_hash_attr]
+
+                                        if get_elfhash:
+                                                elfhash = [elfhash]
                                         else:
-                                                get_sha256 = False
-                                                get_sha1 = True
-                                        elfhash = elf.get_dynamic(path,
-                                            sha1=get_sha1,
-                                            sha256=get_sha256)[ehash_attr]
+                                                elfhash = list(digest.ContentHash(elfhash).values())
                                 except RuntimeError as e:
                                         errors.append(
                                             "ELF content hash: {0}".format(e))
 
-                                if elfhash is not None and \
-                                    elfhash != elfhash_val:
+                                if (elfhash is not None and
+                                     elf_hash_val != elfhash[0]):
                                         elferror = _("ELF content hash: "
                                             "{found} "
                                             "should be {expected}").format(
-                                            found=elfhash,
-                                            expected=elfhash_val)
+                                            found=elfhash[0],
+                                            expected=elf_hash_val)
 
-                        # If we failed to compute the content hash, or the
-                        # content hash failed to verify, try the file hash.
-                        # If the content hash fails to match but the file hash
-                        # matches, it indicates that the content hash algorithm
-                        # changed, since obviously the file hash is a superset
-                        # of the content hash.
+                        # If we failed to compute the "gelf:" content hash, or
+                        # the content hash failed to verify, try the "file:"
+                        # hash. If the content hash fails to match but the file
+                        # hash matches, it indicates that the content hash
+                        # algorithm changed, since obviously the file hash is a
+                        # superset of the content hash.
                         if (elfhash is None or elferror) and not is_mtpt:
                                 hash_attr, hash_val, hash_func = \
                                     digest.get_preferred_hash(self)
@@ -444,7 +470,7 @@ class FileAction(generic.Action):
                                     hash_func=hash_func)
                                 if sha_hash != hash_val:
                                         # Prefer the content hash error message.
-                                        if "preserve" in self.attrs:
+                                        if preserve is not None:
                                                 info.append(_(
                                                     "editable file has "
                                                     "been changed"))
@@ -467,6 +493,8 @@ class FileAction(generic.Action):
                         # set on the file.
                         sattr = self.attrs.get("sysattr", None)
                         if sattr:
+                                if isinstance(sattr, list):
+                                        sattr = ",".join(sattr)
                                 sattrs = sattr.split(",")
                                 if len(sattrs) == 1 and \
                                     sattrs[0] not in portable.get_sysattr_dict():
@@ -494,6 +522,51 @@ class FileAction(generic.Action):
 
                 return errors, warnings, info
 
+        def __check_preserve_version(self, orig):
+                """Any action that can have a 'preserve' attribute should also
+                be able to have a 'preserve-version' attribute (that
+                represents a simple package FMRI release version; no
+                timestamp, etc., just 'X.n.n...').
+
+                In the absence of a 'preserve-version' attribute, '0' will be
+                assumed.
+
+                When performing downgrades, if the installed editable file has
+                been modified (compared to the proposed packaged version), the
+                behavior will be as follows:
+
+                if the installed action's 'preserve-version' is greater than
+                the proposed 'preserve-version', the installed file will be
+                renamed with '.update' and the proposed file will be
+                installed.
+
+                if the installed action's 'preserve-version' is equal to or
+                less than the proposed 'preserve-version', the installed file
+                content will not be modified."""
+
+                orig_preserve_ver = version.Version("0")
+                preserve_ver = version.Version("0")
+
+                try:
+                        ver = orig.attrs["preserve-version"]
+                        orig_preserve_ver = version.Version(ver)
+                except KeyError:
+                        pass
+
+                try:
+                        ver = self.attrs["preserve-version"]
+                        preserve_ver = version.Version(ver)
+                except KeyError:
+                        pass
+
+                if orig_preserve_ver > preserve_ver:
+                        # .old is intentionally avoided here to prevent
+                        # accidental collisions with the normal install
+                        # process.
+                        return "renameold.update"
+
+                return True
+
         def _check_preserve(self, orig, pkgplan, orig_path=None):
                 """Return the type of preservation needed for this action.
 
@@ -514,6 +587,7 @@ class FileAction(generic.Action):
                 except KeyError:
                         return
 
+                # Should ultimately be conditioned on file type
                 if "elfhash" in self.attrs:
                         # Don't allow preserve logic to be applied to elf files;
                         # if we ever stop tagging elf binaries with this
@@ -587,17 +661,20 @@ class FileAction(generic.Action):
                                 # the version on disk is different than what
                                 # was originally delivered, and if so, preserve
                                 # it.
-                                if is_file:
-                                        ihash, cdata = misc.get_data_digest(
-                                            final_path,
-                                            hash_func=orig_hash_func)
-                                        if ihash != orig_hash_val:
-                                                # .old is intentionally avoided
-                                                # here to prevent accidental
-                                                # collisions with the normal
-                                                # install process.
-                                                return "renameold.update"
-                                return False
+                                if not is_file:
+                                        return False
+
+                                preserve_version = self.__check_preserve_version(orig)
+                                if not preserve_version:
+                                        return False
+
+                                ihash, cdata = misc.get_data_digest(
+                                    final_path,
+                                    hash_func=orig_hash_func)
+                                if ihash != orig_hash_val:
+                                        return preserve_version
+
+                                return True
 
                 if (orig and orig_path):
                         # Comparison will be based on a file being moved.
@@ -638,43 +715,35 @@ class FileAction(generic.Action):
                 # import goes here to prevent circular import
                 from pkg.client.imageconfig import CONTENT_UPDATE_POLICY
 
-                use_content_hash = pkgplan.image.cfg.get_policy_str(
+                use_content_hash = orig and pkgplan.image.cfg.get_policy_str(
                     CONTENT_UPDATE_POLICY) == "when-required"
 
-                # If content update policy allows it, check for the presence of
-                # a simple elfhash attribute, and if that's present, look for
-                # the common preferred elfhash.  For now, this is sufficient,
-                # but when additional content types are supported (and we stop
-                # publishing SHA-1 hashes) more work will be needed to compute
-                # 'bothelf'.
-                bothelf = use_content_hash and orig and \
-                    "elfhash" in orig.attrs and "elfhash" in self.attrs
-                if bothelf:
-                        common_elf_attr, common_elfhash, common_orig_elfhash, \
-                            common_elf_func = \
-                            digest.get_common_preferred_hash(self, orig,
-                            hash_type=digest.CONTENT_HASH)
+                # If content update policy allows it, check for a common
+                # preferred content hash.
+                if use_content_hash:
+                        content_hash_attr, content_hash_val, \
+                        orig_content_hash_val, content_hash_func = \
+                            digest.get_common_preferred_hash(
+                                self, orig, hash_type=digest.HASH_GELF)
 
-                common_hash_attr, common_hash_val, \
-                    common_orig_hash_val, common_hash_func = \
+                hash_attr, hash_val, orig_hash_val, hash_func = \
                     digest.get_common_preferred_hash(self, orig)
 
                 if not orig:
                         changed_hash = True
-                elif orig and (common_orig_hash_val is None or
-                    common_hash_val is None):
+                elif orig and (orig_hash_val is None or
+                    hash_val is None):
                         # we have no common hash so we have to treat this as a
                         # changed action
                         changed_hash = True
                 else:
-                        changed_hash = common_hash_val != common_orig_hash_val
+                        changed_hash = hash_val != orig_hash_val
 
-                if (changed_hash and (not bothelf or
-                    common_orig_elfhash != common_elfhash)):
+                if (changed_hash and
+                    (not use_content_hash or
+                     content_hash_val != orig_content_hash_val)):
                         if ("preserve" not in self.attrs or
-                            not pkgplan.origin_fmri or
-                            (pkgplan.destination_fmri.version <
-                            pkgplan.origin_fmri.version)):
+                            not pkgplan.origin_fmri):
                                 return True
                 elif orig:
                         # It's possible that the file content hasn't changed
@@ -776,17 +845,6 @@ class FileAction(generic.Action):
                                         # Ignore failure to reset parent mode.
                                         pass
 
-        def different(self, other, cmp_hash=True):
-                # Override the generic different() method to ignore the file
-                # hash for ELF files and compare the ELF hash instead.
-                # XXX This should be modularized and controlled by policy and
-                # needs work once additional content-type hashes are added.
-
-                # One of these isn't an ELF file, so call the generic method
-                if "elfhash" in self.attrs and "elfhash" in other.attrs:
-                        cmp_hash = False
-                return generic.Action.different(self, other, cmp_hash=cmp_hash)
-
         def generate_indices(self):
                 """Generates the indices needed by the search dictionary.  See
                 generic.py for a more detailed explanation."""
@@ -806,11 +864,11 @@ class FileAction(generic.Action):
                     ("file", "path", os.path.sep + self.attrs["path"], None)
                 ]
                 for attr in digest.DEFAULT_HASH_ATTRS:
-                        # we already have an index entry for self.hash
-                        if attr == "hash":
-                                continue
-                        hash = self.attrs[attr]
-                        index_list.append(("file", attr, hash, None))
+                        # We already have an index entry for self.hash;
+                        # we only want hash attributes other than "hash".
+                        hash = self.attrs.get(attr)
+                        if attr != "hash" and hash is not None:
+                                index_list.append(("file", attr, hash, None))
                 return index_list
 
         def save_file(self, image, full_path):
@@ -864,8 +922,37 @@ class FileAction(generic.Action):
                     numeric_attrs=("pkg.csize", "pkg.size"), raise_errors=False,
                     required_attrs=("owner", "group"), single_attrs=("chash",
                     "preserve", "overlay", "elfarch", "elfbits", "elfhash",
-                    "original_name"))
+                    "original_name", "preserve-version"))
                 errors.extend(self._validate_fsobj_common())
+
+                preserve = self.attrs.get("preserve")
+                preserve_version = self.attrs.get("preserve-version")
+
+                if preserve_version:
+                        if not preserve:
+                                errors.append(("preserve-version",
+                                    _("preserve must be 'true' if a "
+                                    "preserve-version is specified")))
+
+                        (release, build_release, branch, timestr), ignored = \
+                            version.Version.split(str(preserve_version))
+                        if not release:
+                                errors.append(("preserve-version",
+                                    _("preserve-version must specify "
+                                      "the release")))
+                        if build_release != "":
+                                errors.append(("preserve-version",
+                                    _("preserve-version must specify "
+                                      "the release")))
+                        if branch:
+                                errors.append(("preserve-version",
+                                    _("preserve-version must not specify "
+                                      "the branch")))
+                        if timestr:
+                                errors.append(("preserve-version",
+                                    _("preserve-version must not specify "
+                                      "the timestamp")))
+
                 if errors:
                         raise pkg.actions.InvalidActionAttributesError(self,
                             errors, fmri=fmri)

@@ -158,13 +158,16 @@ class RepositoryURI(object):
         __ssl_key = None
         __trailing_slash = None
         __uri = None
+        __disabled = False
+        __system = False
 
         # Used to store the id of the original object this one was copied
         # from during __copy__.
         _source_object_id = None
 
         def __init__(self, uri, priority=None, ssl_cert=None, ssl_key=None,
-            trailing_slash=True, proxy=None, system=False, proxies=None):
+            trailing_slash=True, proxy=None, system=False, proxies=None,
+            disabled=False):
 
 
                 # Must set first.
@@ -181,6 +184,7 @@ class RepositoryURI(object):
                 self.uri = uri
                 self.ssl_cert = ssl_cert
                 self.ssl_key = ssl_key
+                self.disabled = disabled
                 # The proxy parameter is deprecated and remains for backwards
                 # compatibity, for now.  If we get given both, then we must
                 # complain - this error is for internal use only.
@@ -199,7 +203,8 @@ class RepositoryURI(object):
                 uri = RepositoryURI(self.__uri, priority=self.__priority,
                     ssl_cert=self.__ssl_cert, ssl_key=self.__ssl_key,
                     trailing_slash=self.__trailing_slash,
-                    proxies=self.__proxies, system=self.system)
+                    proxies=self.__proxies, system=self.system,
+                    disabled=self.__disabled)
                 uri._source_object_id = id(self)
                 return uri
 
@@ -238,6 +243,28 @@ class RepositoryURI(object):
 
         def __ge__(self, other):
                 return self == other or self > other
+
+        def __set_disabled(self, disable):
+                if self.system:
+                        raise api_errors.ModifyingSyspubException(_("Cannot "
+                            "enable or disable origin(s) for a system "
+                            "publisher"))
+                if not isinstance(disable, bool):
+                        raise api_errors.BadRepositoryAttributeValue(
+                            "disabled", value=disable)
+                if not disable:
+                        self.__disabled = False
+                else:
+                        self.__disabled = True
+
+        def __set_system(self, system):
+                if not isinstance(system, bool):
+                        raise api_errors.BadRepositoryAttributeValue(
+                            "system", value=system)
+                if not system:
+                        self.__system = False
+                else:
+                        self.__system = True
 
         def __set_priority(self, value):
                 if value is not None:
@@ -415,6 +442,10 @@ class RepositoryURI(object):
                         return url2pathname(path)
                 return ""
 
+        disabled = property(lambda self: self.__disabled, __set_disabled, None,
+            "A boolean value indicating whether this repository URI should be "
+            "used for packaging operations.")
+
         ssl_cert = property(lambda self: self.__ssl_cert, __set_ssl_cert, None,
             "The absolute pathname of a PEM-encoded SSL certificate file.")
 
@@ -435,6 +466,10 @@ class RepositoryURI(object):
             "A list of proxies that can be used to access this repository."
             "At runtime, a $http_proxy environment variable might override this."
             )
+
+        system = property(lambda self: self.__system, __set_system, None,
+            "A boolean value indicating whether this repository URI is for"
+            "a system repository.")
 
         @property
         def scheme(self):
@@ -1719,18 +1754,21 @@ pkg unset-publisher {0}
                 if not os.path.exists(self.__origin_root):
                         return
                 for origin in self.repository.origins:
-                        yield origin, self.__get_origin_path(origin)
+                        if not origin.disabled:
+                                yield origin, self.__get_origin_path(origin)
 
         def __rebuild_catalog(self):
                 """Private helper function that builds publisher catalog based
                 on catalog from each origin."""
 
-                # First, remove catalogs for any origins that no longer exist.
+                # First, remove catalogs for any origins that no longer exist or
+                # are disabled.
                 # We must interoperate with older clients, so force the use of
                 # sha-1 here.
                 ohashes = [
                     hashlib.sha1(misc.force_bytes(o.uri)).hexdigest()
                     for o in self.repository.origins
+                    if not o.disabled
                 ]
 
                 removals = False
@@ -1743,8 +1781,8 @@ pkg unset-publisher {0}
                                 # Discard anything that isn't an origin.
                                 pass
 
-                        # An origin was removed, so publisher should inform
-                        # image to force image catalog rebuild.
+                        # An origin was removed or disabled, so publisher should
+                        # inform image to force image catalog rebuild.
                         removals = True
 
                         # Not an origin or origin no longer exists; either way,
@@ -1758,10 +1796,12 @@ pkg unset-publisher {0}
                                 raise api_errors._convert_error(e)
 
                 # if the catalog already exists on disk, is empty, and if
-                # no origins are configured, we're done.
+                # no origins are configured or all origins are disabled, we're
+                # done.
                 if self.catalog.exists and \
                     self.catalog.package_count == 0 and \
-                    len(self.repository.origins) == 0:
+                    (not self.repository.origins
+                    or all(o.disabled for o in self.repository.origins)):
                         return removals
 
                 # Discard existing catalog.
@@ -2184,6 +2224,13 @@ pkg unset-publisher {0}
                                     e.filename)
                         raise
 
+                # Make a test contact to the repo to see if it is responding.
+                # We need to pass in a publisher object which only has one
+                # origin so create one from our current publisher.
+                test_pub = copy.copy(self)
+                test_pub.repository = repo
+                self.transport.version_check(test_pub)
+
                 # Ensure that the temporary directory gets removed regardless
                 # of success or failure.
                 try:
@@ -2201,7 +2248,7 @@ pkg unset-publisher {0}
                         shutil.rmtree(tempdir, True)
 
         def __refresh(self, full_refresh, immediate, mismatched=False,
-            progtrack=None, include_updates=False):
+	    progtrack=None, include_updates=False, ignore_errors=False):
                 """The method to handle the overall refresh process.  It
                 determines if a refresh is actually needed, and then calls
                 the first version-specific refresh method in the chain."""
@@ -2230,19 +2277,26 @@ pkg unset-publisher {0}
                         # If catalog is on disk, check if refresh is necessary.
                         if not immediate and not self.needs_refresh:
                                 # No refresh needed.
-                                return False
+                                return False, None
 
                 any_changed = False
                 any_refreshed = False
+                failed = []
+                total = 0
                 for origin, opath in self.__gen_origin_paths():
-                        changed, refreshed = self.__refresh_origin(opath,
-                            full_refresh, immediate, mismatched, origin,
-                            progtrack=progtrack,
-                            include_updates=include_updates)
-                        if changed:
-                                any_changed = True
-                        if refreshed:
-                                any_refreshed = True
+                        total += 1
+                        try:
+                                changed, refreshed = self.__refresh_origin(
+                                    opath, full_refresh, immediate, mismatched,
+                                    origin, progtrack=progtrack,
+                                    include_updates=include_updates)
+                        except api_errors.InvalidDepotResponseException as e:
+                                failed.append((origin, e))
+                        else:
+                                if changed:
+                                        any_changed = True
+                                if refreshed:
+                                        any_refreshed = True
 
                 if any_refreshed:
                         # Update refresh time.
@@ -2253,13 +2307,20 @@ pkg unset-publisher {0}
                 if self.__rebuild_catalog():
                         any_changed = True
 
-                return any_changed
+                errors = None
+                if failed:
+                        errors = api_errors.CatalogOriginRefreshException(
+                            failed, total)
+
+                return any_changed, errors
 
         def refresh(self, full_refresh=False, immediate=False, progtrack=None,
             include_updates=False):
-                """Refreshes the publisher's metadata, returning a boolean
-                value indicating whether any updates to the publisher's
-                metadata occurred.
+                """Refreshes the publisher's metadata, returning a tuple
+                containing a boolean value indicating whether any updates to the 
+                publisher's metadata occurred and an error object, which is
+                either a CatalogOriginRefreshException containing all the failed
+                origins for this publisher or None.
 
                 'full_refresh' is an optional boolean value indicating whether
                 a full retrieval of publisher metadata (e.g. catalogs) or only
