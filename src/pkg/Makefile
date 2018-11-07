@@ -81,7 +81,8 @@ ALL_MANIFESTS:sh  = \
 	exit 0
 $(PUBLISHALL)MANIFESTS      = $(ALL_MANIFESTS)
 PKGCMDENV         = \
-	PATH=$(PKGROOT)/usr/bin:/usr/sbin:/usr/bin
+	PATH=$(PKGROOT)/usr/bin:/usr/sbin:/usr/bin \
+	PYTHONPATH=$(PKGROOT)/usr/lib/python2.7/vendor-packages
 PKG               = $(PKGCMDENV) pkg
 PKGDEPEND         = $(PKGCMDENV) pkgdepend
 PKGDIFF           = $(PKGCMDENV) pkgdiff
