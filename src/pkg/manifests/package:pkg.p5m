@@ -23,37 +23,25 @@
 # Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
 #
 set name=pkg.fmri value=pkg:/package/pkg@$(PKGVERS)
-set name=pkg.summary value="Image Packaging System"
+set name=pkg.summary value="Image Packaging System - pkg(5)"
 set name=pkg.description \
     value="The Image Packaging System (IPS), or pkg(5), is the software delivery system used on OmniOS."
 set name=variant.arch value=$(ARCH)
 dir  path=$(PYDIR)
 dir  path=$(PYDIRVP)
 dir  path=$(PYDIRVP)/pkg
-file path=$(PYDIRVP)/pkg-0.1-py2.7.egg-info
-dir  path=$(PYDIRVP)/pkg/64
-file path=$(PYDIRVP)/pkg/64/_arch.so
-file path=$(PYDIRVP)/pkg/64/_pspawn.so
-file path=$(PYDIRVP)/pkg/64/_sha512_t.so
-file path=$(PYDIRVP)/pkg/64/_sysattr.so
-file path=$(PYDIRVP)/pkg/64/_syscallat.so
-file path=$(PYDIRVP)/pkg/64/_varcet.so
-file path=$(PYDIRVP)/pkg/64/elf.so
-file path=$(PYDIRVP)/pkg/64/solver.so
+file path=$(PYDIRVP)/pkg-0.1-py3.5.egg-info
 file path=$(PYDIRVP)/pkg/__init__.py
-file path=$(PYDIRVP)/pkg/_arch.so
-file path=$(PYDIRVP)/pkg/_pspawn.so
-file path=$(PYDIRVP)/pkg/_sha512_t.so
-file path=$(PYDIRVP)/pkg/_sysattr.so
-file path=$(PYDIRVP)/pkg/_syscallat.so
-file path=$(PYDIRVP)/pkg/_varcet.so
+file path=$(PYDIRVP)/pkg/_arch.cpython-35m.so
+file path=$(PYDIRVP)/pkg/_pspawn.cpython-35m.so
+file path=$(PYDIRVP)/pkg/_sha512_t.cpython-35m.so
+file path=$(PYDIRVP)/pkg/_sysattr.cpython-35m.so
+file path=$(PYDIRVP)/pkg/_syscallat.cpython-35m.so
+file path=$(PYDIRVP)/pkg/_varcet.cpython-35m.so
 dir  path=$(PYDIRVP)/pkg/actions
-dir  path=$(PYDIRVP)/pkg/actions/64
-file path=$(PYDIRVP)/pkg/actions/64/_actions.so
-file path=$(PYDIRVP)/pkg/actions/64/_common.so
 file path=$(PYDIRVP)/pkg/actions/__init__.py
-file path=$(PYDIRVP)/pkg/actions/_actions.so
-file path=$(PYDIRVP)/pkg/actions/_common.so
+file path=$(PYDIRVP)/pkg/actions/_actions.cpython-35m.so
+file path=$(PYDIRVP)/pkg/actions/_common.cpython-35m.so
 file path=$(PYDIRVP)/pkg/actions/attribute.py
 file path=$(PYDIRVP)/pkg/actions/depend.py
 file path=$(PYDIRVP)/pkg/actions/directory.py
@@ -85,8 +73,7 @@ file path=$(PYDIRVP)/pkg/client/__init__.py
 file path=$(PYDIRVP)/pkg/client/actuator.py
 file path=$(PYDIRVP)/pkg/client/api.py
 file path=$(PYDIRVP)/pkg/client/api_errors.py
-file path=$(PYDIRVP)/pkg/client/bootenv.py \
-    pkg.depend.bypass-generate=.*libbe.*
+file path=$(PYDIRVP)/pkg/client/bootenv.py pkg.depend.bypass-generate=.*libbe.*
 file path=$(PYDIRVP)/pkg/client/client_api.py
 file path=$(PYDIRVP)/pkg/client/debugvalues.py
 file path=$(PYDIRVP)/pkg/client/firmware.py
@@ -121,13 +108,14 @@ file path=$(PYDIRVP)/pkg/client/transport/fileobj.py
 file path=$(PYDIRVP)/pkg/client/transport/mdetect.py
 file path=$(PYDIRVP)/pkg/client/transport/repo.py
 file path=$(PYDIRVP)/pkg/client/transport/stats.py
-file path=$(PYDIRVP)/pkg/client/transport/transport.py
+file path=$(PYDIRVP)/pkg/client/transport/transport.py \
+    pkg.depend.bypass-generate=.*
 file path=$(PYDIRVP)/pkg/config.py
 file path=$(PYDIRVP)/pkg/cpiofile.py
 file path=$(PYDIRVP)/pkg/dependency.py
 file path=$(PYDIRVP)/pkg/depotcontroller.py
 file path=$(PYDIRVP)/pkg/digest.py
-file path=$(PYDIRVP)/pkg/elf.so
+file path=$(PYDIRVP)/pkg/elf.cpython-35m.so
 file path=$(PYDIRVP)/pkg/facet.py
 dir  path=$(PYDIRVP)/pkg/file_layout
 file path=$(PYDIRVP)/pkg/file_layout/__init__.py
@@ -136,7 +124,7 @@ file path=$(PYDIRVP)/pkg/file_layout/layout.py
 dir  path=$(PYDIRVP)/pkg/flavor
 file path=$(PYDIRVP)/pkg/flavor/__init__.py
 file path=$(PYDIRVP)/pkg/flavor/base.py
-file path=$(PYDIRVP)/pkg/flavor/depthlimitedmf.py pkg.depend.bypass-generate=.*
+file path=$(PYDIRVP)/pkg/flavor/depthlimitedmf.py
 file path=$(PYDIRVP)/pkg/flavor/elf.py
 file path=$(PYDIRVP)/pkg/flavor/hardlink.py
 file path=$(PYDIRVP)/pkg/flavor/python.py
@@ -195,7 +183,7 @@ file path=$(PYDIRVP)/pkg/server/repository.py pkg.depend.bypass-generate=.*
 file path=$(PYDIRVP)/pkg/server/transaction.py
 file path=$(PYDIRVP)/pkg/sha512_t.py
 file path=$(PYDIRVP)/pkg/smf.py
-file path=$(PYDIRVP)/pkg/solver.so
+file path=$(PYDIRVP)/pkg/solver.cpython-35m.so
 file path=$(PYDIRVP)/pkg/sysattr.py
 file path=$(PYDIRVP)/pkg/syscallat.py
 file path=$(PYDIRVP)/pkg/sysvpkg.py
@@ -265,48 +253,10 @@ file path=usr/share/lib/pkg/web/_themes/omniti.com/en/head_end.shtml
 file path=usr/share/lib/pkg/web/_themes/omniti.com/en/header.shtml
 file path=usr/share/lib/pkg/web/_themes/omniti.com/feed-icon-14x14.png
 file path=usr/share/lib/pkg/web/_themes/omniti.com/logo_ban0.png
-dir  path=usr/share/lib/pkg/web/_themes/opensolaris.com
-dir  path=usr/share/lib/pkg/web/_themes/opensolaris.com/en
-file path=usr/share/lib/pkg/web/_themes/opensolaris.com/en/base.css
-file path=usr/share/lib/pkg/web/_themes/opensolaris.com/en/body_end.shtml
-file path=usr/share/lib/pkg/web/_themes/opensolaris.com/en/footer.shtml
-file path=usr/share/lib/pkg/web/_themes/opensolaris.com/en/head_end.shtml
-file path=usr/share/lib/pkg/web/_themes/opensolaris.com/en/header.shtml
-dir  path=usr/share/lib/pkg/web/_themes/opensolaris.org
-dir  path=usr/share/lib/pkg/web/_themes/opensolaris.org/en
-file path=usr/share/lib/pkg/web/_themes/opensolaris.org/en/base.css
-file path=usr/share/lib/pkg/web/_themes/opensolaris.org/en/body_end.shtml
-file path=usr/share/lib/pkg/web/_themes/opensolaris.org/en/footer.shtml
-file path=usr/share/lib/pkg/web/_themes/opensolaris.org/en/head_end.shtml
-file path=usr/share/lib/pkg/web/_themes/opensolaris.org/en/header.shtml
-file path=usr/share/lib/pkg/web/_themes/opensolaris.org/feed-icon-14x14.png
-dir  path=usr/share/lib/pkg/web/_themes/oracle.com
-file path=usr/share/lib/pkg/web/_themes/oracle.com/breadcrumb-center.png
-file path=usr/share/lib/pkg/web/_themes/oracle.com/breadcrumb-left.png
-file path=usr/share/lib/pkg/web/_themes/oracle.com/breadcrumb-right.png
-dir  path=usr/share/lib/pkg/web/_themes/oracle.com/en
-file path=usr/share/lib/pkg/web/_themes/oracle.com/en/base.css
-file path=usr/share/lib/pkg/web/_themes/oracle.com/en/body_end.shtml
-file path=usr/share/lib/pkg/web/_themes/oracle.com/en/footer.shtml
-file path=usr/share/lib/pkg/web/_themes/oracle.com/en/head_end.shtml
-file path=usr/share/lib/pkg/web/_themes/oracle.com/en/header.shtml
-file path=usr/share/lib/pkg/web/_themes/oracle.com/feed-icon-14x14.png
-file path=usr/share/lib/pkg/web/_themes/oracle.com/mosaic-homebutton.png
-file path=usr/share/lib/pkg/web/_themes/oracle.com/navigation-item-background.png
-file path=usr/share/lib/pkg/web/_themes/oracle.com/navigation-last-button-cap.png
-file path=usr/share/lib/pkg/web/_themes/oracle.com/oralogo_small.gif
-file path=usr/share/lib/pkg/web/_themes/oracle.com/separator.png
 file path=usr/share/lib/pkg/web/_themes/p5i-link.png
 file path=usr/share/lib/pkg/web/_themes/pkg-block-icon.png
 file path=usr/share/lib/pkg/web/_themes/pkg-block-logo.png
 file path=usr/share/lib/pkg/web/_themes/pkg-block-logo.svg
-dir  path=usr/share/lib/pkg/web/_themes/sun.com
-dir  path=usr/share/lib/pkg/web/_themes/sun.com/en
-file path=usr/share/lib/pkg/web/_themes/sun.com/en/base.css
-file path=usr/share/lib/pkg/web/_themes/sun.com/en/body_end.shtml
-file path=usr/share/lib/pkg/web/_themes/sun.com/en/footer.shtml
-file path=usr/share/lib/pkg/web/_themes/sun.com/en/head_end.shtml
-file path=usr/share/lib/pkg/web/_themes/sun.com/en/header.shtml
 file path=usr/share/lib/pkg/web/_themes/yui-reset-font-grids_base-min.css
 file path=usr/share/lib/pkg/web/config.shtml
 dir  path=usr/share/lib/pkg/web/en
@@ -444,8 +394,10 @@ file path=usr/share/pkg/transforms/locale
 file path=usr/share/pkg/transforms/smf-manifests
 dir  path=var/cache/pkg/mirror
 dir  path=var/log/pkg/mirror
+#
 # The six compatibility layers cause detection problems for pkgdepend
 <transform file -> default pkg.depend.bypass-generate .*six.*>
+#
 # pkgdepend doesn't understand the relative import syntax "from .x import y",
 # so we have to bypass generating dependencies on those files.
 <transform file path=$(PYDIRVP)/pkg/actions -> \
@@ -462,10 +414,13 @@ license lic_gustaebel license="MIT (Lars Gustaebel)" \
     com.oracle.info.description="portions of the tarfile module from Python 2.4" \
     com.oracle.info.name=tarfile com.oracle.info.tpno=17819 \
     com.oracle.info.version=2.4
+#
 license lic_minisat license="MIT (MiniSAT)" \
     com.oracle.info.description="MiniSAT 1.14.1" com.oracle.info.name=MiniSAT \
     com.oracle.info.tpno=17867 com.oracle.info.version=1.14.1
 license cr_Oracle license=cr_Oracle
+license lic_CDDL license=CDDL
 # CFFI import is done in C code, so it isn't picked up by pkgdepend
-depend type=require fmri=library/python-2/cffi-27
+depend type=require fmri=library/python-3/cffi-35
+depend type=require fmri=library/python-3/prettytable-35
 depend type=require fmri=web/ca-bundle

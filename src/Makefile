@@ -25,11 +25,7 @@
 # Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
 #
 
-PYTHON27 = /usr/bin/python2.7
-PYTHON35 = /usr/bin/python3.5
-
-# Should match python version above.
-PYLINT_FMRI = pkg:/library/python-2/pylint-27
+PYTHON3 = /usr/bin/python3.5
 
 CODE_WS = $$(hg root 2>/dev/null || git rev-parse --show-toplevel)
 
@@ -63,39 +59,30 @@ SUBDIRS=brand zoneproxy tsol util/mkcert
 all: $(SUBDIRS)
 	mkdir -p $(CODE_WS)/proto/build_i386/lib.solaris-2.11-i86pc-2.6/pkg/64
 	mkdir -p $(CODE_WS)/proto/build_i386/lib.solaris-2.11-i86pc-2.6/pkg/actions/64
-	ISALIST=i386 $(PYTHON27) setup.py build
+	$(PYTHON3) setup.py build
 
 clean: $(SUBDIRS)
-	$(PYTHON27) setup.py clean
+	$(PYTHON3) setup.py clean
 	@cd pkg; pwd; make clean
 
 clobber: $(SUBDIRS)
-	$(PYTHON27) setup.py clobber
+	$(PYTHON3) setup.py clobber
 	@cd pkg; pwd; make clobber
 
-#
-# run pylint as part of the install target.
-# it's the best way to ensure things stay pylint clean.
-#
-install: $(SUBDIRS) install2 install3
-
-install2: $(SUBDIRS)
-	ISALIST=i386 CC=$(CC) $(PYTHON27) setup.py install
-
-install3:
-	CC=$(CC) $(PYTHON35) setup.py install
+install: $(SUBDIRS)
+	CC=$(CC) $(PYTHON3) setup.py install
 
 lint:
-	CC=$(CC) $(PYTHON27) setup.py lint
+	CC=$(CC) $(PYTHON3) setup.py lint
 	@cd zoneproxy; pwd; make lint
 
 clint:
-	CC=$(CC) $(PYTHON27) setup.py clint
+	CC=$(CC) $(PYTHON3) setup.py clint
 	@cd zoneproxy; pwd; make lint
 
 pylint: install
-	PYLINT_VER=$(PYLINT_VER_CMD:sh) $(PYTHON27) setup.py pylint
-	PYLINT_VER=$(PYLINT_VER_CMD:sh) $(PYTHON27) setup.py pylint_py3k
+	PYLINT_VER=$(PYLINT_VER_CMD:sh) $(PYTHON3) setup.py pylint
+	PYLINT_VER=$(PYLINT_VER_CMD:sh) $(PYTHON3) setup.py pylint_py3k
 
 pep8:
 	$(PEP8) --statistics --count `cat tests/pep8-whitelist.txt`
@@ -113,10 +100,7 @@ packages: install
 		PATH=$(CODE_WS)/proto/root_$$(uname -p)/usr/bin:$$PATH \
 		CC=$(CC)
 
-test: install test2 test3
-test2:
-	-pfexec $(PYTHON27) tests/run.py -j ${JOBS}
-test3:
+test: install
 	-pfexec $(PYTHON35) tests/run.py -j ${JOBS}
 
 FRC:

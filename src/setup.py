@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python3.5
 #
 # CDDL HEADER START
 #
@@ -106,16 +106,10 @@ cffi_dir = os.path.normpath(os.path.join(pwd, "cffi_src"))
 
 # Extract Python minor version.
 py_version = '.'.join(platform.python_version_tuple()[:2])
-assert py_version in ('2.7', '3.5')
+assert py_version in ('3.5')
 py_install_dir = 'usr/lib/python' + py_version + '/vendor-packages'
 
-py64_executable = None
-#Python 3 is always 64 bit and located in /usr/bin.
-if float(py_version) < 3 and osname == 'sunos':
-        if arch == 'sparc':
-                py64_executable = '/usr/bin/sparcv9/python' + py_version
-        elif arch == 'i386':
-                py64_executable = '/usr/bin/amd64/python' + py_version
+py64_executable = '/usr/bin/python' + py_version
 
 scripts_dir = 'usr/bin'
 lib_dir = 'usr/lib'
@@ -718,11 +712,6 @@ class install_func(_install):
                                 else:
                                         file_util.copy_file(src, dest, update=1)
 
-                # XXX Uncomment it when we need to deliver python 3.x version
-                # of modules.
-                # Don't install the scripts for python 3.5
-                if py_version == '3.5':
-                        return
                 for d, files in six.iteritems(scripts[osname]):
                         for (srcname, dstname) in files:
                                 dst_dir = util.change_root(self.root_dir, d)
@@ -826,10 +815,15 @@ def _copy_file_contents(src, dst, buffer_size=16*1024):
         python files as they are installed."""
 
         # Look for shebang line to replace with arch-specific Python executable.
-        shebang_re = re.compile('^#!.*python[0-9]\.[0-9]')
-        first_buf = True
+        shebang_re = re.compile('^#!.*/python[0-9][.0-9]*$')
 
-        with open(src, "rb") as sfp:
+        if not src.endswith(".py"):
+                shutil.copyfile(src, dst)
+                return
+
+        do_shebang = True
+
+        with open(src, "r") as sfp:
                 try:
                         os.unlink(dst)
                 except EnvironmentError as e:
@@ -837,24 +831,19 @@ def _copy_file_contents(src, dst, buffer_size=16*1024):
                                 raise DistutilsFileError("could not delete "
                                     "'{0}': {1}".format(dst, e))
 
-                with open(dst, "wb") as dfp:
+                with open(dst, "w") as dfp:
                         while True:
                                 buf = sfp.read(buffer_size)
                                 if not buf:
                                         break
-                                if src.endswith(".py"):
-                                        if not first_buf or not py64_executable:
-                                                dfp.write(buf)
-                                                continue
-
+                                if do_shebang:
                                         fl = buf[:buf.find(os.linesep) + 1]
-                                        sb_match = shebang_re.search(fl)
-                                        if sb_match:
+                                        if shebang_re.search(fl):
                                                 buf = shebang_re.sub(
                                                     "#!" + py64_executable,
                                                     buf)
+                                        do_shebang = False
                                 dfp.write(buf)
-                                first_buf = False
 
 # Make file_util use our version of _copy_file_contents
 file_util._copy_file_contents = _copy_file_contents
@@ -1744,8 +1733,6 @@ setup(cmdclass = cmdclasses,
     ext_package = 'pkg',
     ext_modules = ext_modules,
     classifiers = [
-        'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.5',
     ]

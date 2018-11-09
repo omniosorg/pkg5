@@ -51,7 +51,7 @@ static inline void   veci_push   (veci* v, int e)
         v->cap = newsize; }
     v->ptr[v->size++] = e;
 }
-static inline void *veci_dup(veci *new, veci *old) 
+static inline void veci_dup(veci *new, veci *old)
 {
   *new = *old;
   new->ptr = (int*)memcpy(malloc(sizeof(int)*new->cap), old->ptr, sizeof(int)*new->cap);
@@ -83,7 +83,7 @@ static inline void   vecp_push   (vecp* v, void* e)
         v->cap = newsize; }
     v->ptr[v->size++] = e;
 }
-static inline void *vecp_dup(vecp *new, vecp *old) 
+static inline void vecp_dup(vecp *new, vecp *old)
 {
   *new = *old;
   new->ptr = (void**)memcpy(malloc(sizeof(void*)*new->cap), old->ptr, sizeof(int)*new->cap);

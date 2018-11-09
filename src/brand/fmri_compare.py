@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python3.5
 #
 # CDDL HEADER START
 #
@@ -29,7 +29,7 @@ import pkg.fmri
 import sys
 
 def usage():
-        print >> sys.stderr, "usage: %s <fmri1> <fmri2>" % sys.argv[0]
+        print("usage: %s <fmri1> <fmri2>".format(sys.argv[0]), file=sys.stderr)
         sys.exit(2)
 
 if len(sys.argv) != 3:
@@ -38,12 +38,13 @@ if len(sys.argv) != 3:
 try:
         x = pkg.fmri.PkgFmri(sys.argv[1])
         y = pkg.fmri.PkgFmri(sys.argv[2])
-except pkg.fmri.FmriError, e:
+except pkg.fmri.FmriError as e:
         print ("error: %s" % str(e) , file=sys.stderr)
         sys.exit(1)
 
 if not x.is_same_pkg(y):
-        print ("error: can only compare two versions of the same package.", file=sys.stderr)
+        print ("error: can only compare two versions of the same package.",
+            file=sys.stderr)
         sys.exit(1)
 
 if x < y:
