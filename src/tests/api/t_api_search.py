@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #
 # CDDL HEADER START
 #
@@ -56,7 +56,7 @@ class TestApiSearchBasics(pkg5unittest.SingleDepotTestCase):
             open example_pkg@1.0,5.11-0
             add dir mode=0755 owner=root group=bin path=/bin
             add dir mode=0755 owner=root group=bin path=/bin/example_dir
-            add dir mode=0755 owner=root group=bin path=/usr/lib/python2.7/vendor-packages/OpenSSL
+            add dir mode=0755 owner=root group=bin path=/usr/lib/python3.5/vendor-packages/OpenSSL
             add file tmp/example_file mode=0555 owner=root group=bin path=/bin/example_path
             add link path=/bin/exlink target=/bin/example_path mediator=example mediator-version=7.0 mediator-implementation=unladen-swallow
             add set name=com.sun.service.incorporated_changes value="6556919 6627937"
@@ -185,7 +185,7 @@ close
         ])
 
         res_remote_openssl = set([
-            ("pkg:/example_pkg@1.0-0", "basename", "dir group=bin mode=0755 owner=root path=usr/lib/python2.7/vendor-packages/OpenSSL")
+            ("pkg:/example_pkg@1.0-0", "basename", "dir group=bin mode=0755 owner=root path=usr/lib/python3.5/vendor-packages/OpenSSL")
         ])
 
         res_remote_bug_id = set([

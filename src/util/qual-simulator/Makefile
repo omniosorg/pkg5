@@ -23,7 +23,7 @@
 #
 
 run: stats.py
-	python2.7 scenario.py
+	python3.5 scenario.py
 
 stats.py:
 	cp ../../modules/client/transport/stats.py .

@@ -39,12 +39,14 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 // Just like 'assert()' but expression will be evaluated in the release version as well.
 static inline void check(int expr) { assert(expr); }
 
+#if 0
 static void printlits(lit* begin, lit* end)
 {
     int i;
     for (i = 0; i < end - begin; i++)
         printf(L_LIT" ",L_lit(begin[i]));
 }
+#endif
 
 //=================================================================================================
 // Random numbers:

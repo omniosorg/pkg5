@@ -26,7 +26,7 @@ setlocal
 set CMDSCRIPT=depot.py
 set MY_HOME=%~dp0
 set MY_IPS_BASE=%MY_HOME%\..\..
-set PYTHONPATH=%PYTHONPATH%;%MY_IPS_BASE%\usr\lib\python2.7\vendor-packages
+set PYTHONPATH=%PYTHONPATH%;%MY_IPS_BASE%\usr\lib\python3.5\vendor-packages
 set MY_BASE=%MY_HOME%\..\..\..
 set PATH=%MY_BASE%\python;%PATH%
 set PYTHONUNBUFFERED=yes

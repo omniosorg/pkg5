@@ -554,11 +554,6 @@ PyMethodDef msat_methods[] = {
 };
 
 
-static PyMethodDef no_module_methods[] = {
-	{NULL} /* Sentinel */
-};
-
-#if PY_MAJOR_VERSION >= 3
 static struct PyModuleDef solvermodule ={
 	PyModuleDef_HEAD_INIT,
 	"solver",
@@ -566,7 +561,6 @@ static struct PyModuleDef solvermodule ={
 	-1,
 	msat_methods
 };
-#endif
 
 static PyObject *
 moduleinit(void)
@@ -575,27 +569,15 @@ moduleinit(void)
 
 	if (PyType_Ready(&minisat_solvertype) < 0)
 		return NULL;
-#if PY_MAJOR_VERSION >= 3
 	m = PyModule_Create(&solvermodule);
-#else
-	m = Py_InitModule3("solver", no_module_methods,
-	    "MINISAT SAT solver module");
-#endif
 	Py_INCREF(&minisat_solvertype);
 	PyModule_AddObject(m, "msat_solver", (PyObject*) &minisat_solvertype);
 	return m;
 }
 
-#if PY_MAJOR_VERSION >= 3
 PyMODINIT_FUNC
 PyInit_solver(void)
 {
 	return moduleinit();
 }
-#else
-PyMODINIT_FUNC
-initsolver(void)
-{
-	moduleinit();
-}
-#endif
+

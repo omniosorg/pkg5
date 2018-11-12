@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3.5
 #
 # CDDL HEADER START
 #
@@ -51,7 +51,7 @@ class PythonModuleMissingPath(base.DependencyAnalysisError):
 
 class PythonMismatchedVersion(base.DependencyAnalysisError):
         """Exception that is raised when a module is installed into a path
-        associated with a known version of python (/usr/lib/python2.7 for
+        associated with a known version of python (/usr/lib/python3.5 for
         example) but has a different version of python specified in its
         #! line (#!/usr/bin/python3.4 for example)."""
 
