@@ -1417,7 +1417,7 @@ def __remove_extraneous_conditionals(deps, omitted_req_any):
                     include_scheme=False)
 
         def path_id_attrget(d):
-                return d[0].attrs.get(path_id_prefix, None)
+                return d[0].attrs.get(path_id_prefix, '')
 
         req_dict = {}
         for target, group in itertools.groupby(sorted(
