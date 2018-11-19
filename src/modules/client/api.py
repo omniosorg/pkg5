@@ -706,7 +706,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                 release = date = None
                 # Check to see if release/name is being updated
                 for src, dest in self._img.imageplan.plan_desc:
-                        if dest.get_name() != 'release/name':
+                        if not dest or dest.get_name() != 'release/name':
                                 continue
                         # It is, extract attributes
                         for a in self._img.imageplan.pd.update_actions:
