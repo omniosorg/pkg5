@@ -88,7 +88,7 @@
 			<method_credential
                             user='pkg5srv'
                             group='pkg5srv'
-                            privileges='basic,!file_link_any,!proc_info,!proc_session'
+                            privileges='basic,!file_link_any,!proc_info,!proc_session,net_privaddr'
 			/>
 		</method_context>
 	</exec_method>
