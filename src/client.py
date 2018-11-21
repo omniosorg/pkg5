@@ -2321,7 +2321,7 @@ def apply_hot_fix(**args):
                     for entry in out_json["data"] ]
         else:
                 error("Could not retrieve installed package list.")
-                return
+                return EXIT_OOPS
 
         ######################################################################
         # Find hot-fix archive
@@ -2386,6 +2386,7 @@ def apply_hot_fix(**args):
         pub_data = xport.get_publisherdata(xpub)
 
         updatelist = []
+        prefix = None
         for p in pub_data:
                 # Refresh publisher data
                 p.repository = xpub.repository
@@ -2393,6 +2394,10 @@ def apply_hot_fix(**args):
                 tmpdirs.append(p.meta_root)
                 p.transport = xport
                 p.refresh(True, True)
+                if prefix and p.prefix != prefix:
+                        error("Hot-fix contains packages from multiple publishers")
+                        return EXIT_OOPS
+                prefix = p.prefix
 
                 cat = p.catalog
                 for f, states, attrs in cat.gen_packages(pubs=[p.prefix],
@@ -2430,7 +2435,7 @@ def apply_hot_fix(**args):
         pubargs['api_inst'] = args['api_inst']
         pubargs['op'] = 'set-publisher'
         pubargs['add_origins'] = set([origin])
-        pubargs['pargs'] = ['omnios']
+        pubargs['pargs'] = [prefix]
 
         pubargs['ssl_key'] = None
         pubargs['unset_ca_certs'] = []
