@@ -2413,9 +2413,14 @@ def apply_hot_fix(**args):
                         msg("    {0} will be updated.".format(pkg))
                 msg("")
 
+        op = 'update'
         if len(updatelist) < 1:
-                error("None of the packages in this hot-fix are installed.")
-                return
+                if not args['pargs']:
+                        error("None of the packages in this hot-fix are installed.")
+                        return EXIT_OOPS
+                op = 'install'
+        else:
+                args['pargs'] = updatelist
 
         ######################################################################
         # Add the hot-fix archive to the publisher
@@ -2468,11 +2473,8 @@ def apply_hot_fix(**args):
         ######################################################################
         # Pass off to pkg update
 
-        args['op'] = 'update'
+        args['op'] = op
         args['origins'] = set([])
-
-        if not args['pargs']:
-                args['pargs'] = updatelist
 
         # These are options for update which are not exposed for apply-hot-fix
         # Set to default values for this transaction, except for 'force' which
@@ -2487,10 +2489,14 @@ def apply_hot_fix(**args):
         args['stage'] = 'default'
         args['li_parent_sync'] = True
         args['show_licenses'] = False
-        args['ignore_missing'] = False
-        args['force'] = True
+        if op == 'update':
+                args['force'] = True
+                args['ignore_missing'] = False
 
-        return update(**args)
+        if op == 'install':
+                return install(**args)
+        else:
+                return update(**args)
 
 def uninstall(op, api_inst, pargs,
     act_timeout, backup_be, backup_be_name, be_activate, be_name,
