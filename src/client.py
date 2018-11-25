@@ -2321,7 +2321,7 @@ def apply_hot_fix(**args):
                     for entry in out_json["data"] ]
         else:
                 error("Could not retrieve installed package list.")
-                return
+                return EXIT_OOPS
 
         ######################################################################
         # Find hot-fix archive
@@ -2351,8 +2351,8 @@ def apply_hot_fix(**args):
                                 hdl.setopt(pycurl.NOPROGRESS, False)
                         try:
                                 hdl.perform()
-                        except pycurl.error as error:
-                                errno, errstr = error
+                        except pycurl.error as err:
+                                errno, errstr = err
                                 msg("An error occurred: {0}".format(errstr))
                                 return
 
@@ -2386,6 +2386,7 @@ def apply_hot_fix(**args):
         pub_data = xport.get_publisherdata(xpub)
 
         updatelist = []
+        prefix = None
         for p in pub_data:
                 # Refresh publisher data
                 p.repository = xpub.repository
@@ -2393,6 +2394,10 @@ def apply_hot_fix(**args):
                 tmpdirs.append(p.meta_root)
                 p.transport = xport
                 p.refresh(True, True)
+                if prefix and p.prefix != prefix:
+                        error("Hot-fix contains packages from multiple publishers")
+                        return EXIT_OOPS
+                prefix = p.prefix
 
                 cat = p.catalog
                 for f, states, attrs in cat.gen_packages(pubs=[p.prefix],
@@ -2413,9 +2418,14 @@ def apply_hot_fix(**args):
                         msg("    {0} will be updated.".format(pkg))
                 msg("")
 
+        op = 'update'
         if len(updatelist) < 1:
-                error("None of the packages in this hot-fix are installed.")
-                return
+                if not args['pargs']:
+                        error("None of the packages in this hot-fix are installed.")
+                        return EXIT_OOPS
+                op = 'install'
+        else:
+                args['pargs'] = updatelist
 
         ######################################################################
         # Add the hot-fix archive to the publisher
@@ -2425,7 +2435,7 @@ def apply_hot_fix(**args):
         pubargs['api_inst'] = args['api_inst']
         pubargs['op'] = 'set-publisher'
         pubargs['add_origins'] = set([origin])
-        pubargs['pargs'] = ['omnios']
+        pubargs['pargs'] = [prefix]
 
         pubargs['ssl_key'] = None
         pubargs['unset_ca_certs'] = []
@@ -2447,6 +2457,8 @@ def apply_hot_fix(**args):
         pubargs['proxy_uri'] = None
         pubargs['origin_uri'] = None
         pubargs['remove_origins'] = set([])
+        pubargs['enable_origins'] = set([])
+        pubargs['disable_origins'] = set([])
         pubargs['repo_uri'] = None
         pubargs['unset_props'] = set([])
         pubargs['verbose'] = args['verbose']
@@ -2466,11 +2478,8 @@ def apply_hot_fix(**args):
         ######################################################################
         # Pass off to pkg update
 
-        args['op'] = 'update'
+        args['op'] = op
         args['origins'] = set([])
-
-        if not args['pargs']:
-                args['pargs'] = updatelist
 
         # These are options for update which are not exposed for apply-hot-fix
         # Set to default values for this transaction, except for 'force' which
@@ -2485,10 +2494,14 @@ def apply_hot_fix(**args):
         args['stage'] = 'default'
         args['li_parent_sync'] = True
         args['show_licenses'] = False
-        args['ignore_missing'] = False
-        args['force'] = True
+        if op == 'update':
+                args['force'] = True
+                args['ignore_missing'] = False
 
-        return update(**args)
+        if op == 'install':
+                return install(**args)
+        else:
+                return update(**args)
 
 def uninstall(op, api_inst, pargs,
     act_timeout, backup_be, backup_be_name, be_activate, be_name,
@@ -4045,7 +4058,8 @@ def publisher_set(op, api_inst, pargs, ssl_key, ssl_cert, origin_uri,
                         li_json = client_api._publisher_set(op, li_api,
                             pargs, ssl_key, ssl_cert, origin_uri, reset_uuid,
                             add_mirrors, remove_mirrors, add_origins,
-                            remove_origins, refresh_allowed, disable, sticky,
+                            remove_origins, enable_origins, disable_origins,
+                            refresh_allowed, disable, sticky,
                             search_before, search_after, search_first,
                             approved_ca_certs, revoked_ca_certs, unset_ca_certs,
                             set_props, add_prop_values, remove_prop_values,
