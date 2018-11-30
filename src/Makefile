@@ -53,6 +53,7 @@ PYLINT_VER_CMD = PYTHONPATH= /usr/bin/pkg info $(PYLINT_FMRI) | \
 
 PEP8 = /usr/bin/pep8
 JOBS = 8
+CC = /opt/gcc-4.4.4/bin/gcc
 
 SUBDIRS=brand zoneproxy tsol util/mkcert
 

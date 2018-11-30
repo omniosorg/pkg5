@@ -1076,7 +1076,8 @@ def get_git_version():
                 p = subprocess.Popen(
                     ['git', 'show', '--format=%h', '--no-patch'],
                     stdout = subprocess.PIPE)
-                return p.communicate()[0].strip()
+                return p.communicate()[0].strip().decode('utf-8', 'strict')
+
         except OSError:
                 print("ERROR: unable to obtain git commit hash",
                     file=sys.stderr)
