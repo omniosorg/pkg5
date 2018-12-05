@@ -15,14 +15,32 @@
 
 # Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
 
-import logging, os, subprocess, sys, time
+import logging, os, subprocess, sys, time, re, getopt
 import xml.etree.ElementTree as etree
 from pprint import pprint, pformat
 
-logging.basicConfig(filename='/tmp/init.log', filemode='w', level=logging.DEBUG)
-
 zonexml = '/etc/zone.xml'
 uuidfile = '/etc/uuid'
+testmode = False
+
+try:
+    opts, args = getopt.getopt(sys.argv[1:], "tx:u:")
+except getopt.GetoptError:
+    print("init [-t] [-x <xml file>] [-u <uuid file>]")
+    sys.exit(2)
+for opt, arg in opts:
+    if opt == '-t':
+        testmode = True
+    elif opt == '-x':
+        zonexml = arg
+    elif opt == '-u':
+        uuidfile = arg
+
+if testmode:
+    logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+else:
+    logging.basicConfig(filename='/tmp/init.log', filemode='w',
+        level=logging.DEBUG)
 
 # Default values
 opts = {
@@ -113,38 +131,71 @@ def diskpath(arg):
         return arg
     return '/dev/zvol/rdsk/{0}'.format(arg)
 
-def add_disk(path, boot=False):
+def add_disk(path, boot=False, intf=None, media='disk', index=-1):
     global args
+
+    if not intf:
+        intf = opts['diskif']
+
+    if index < 0:
+        index = add_disk.index
+        add_disk.index += 1
+        logging.debug('BUMP INDEX')
+
     str = (
-        'file={0},if={1},media=disk,index={2},cache=none'
-            .format(diskpath(path), opts['diskif'], add_disk.index)
+        'file={0},if={1},media={2},index={3},cache=none'
+            .format(diskpath(path), intf, media, index)
     )
     if ',serial=' not in str:
-        str += ',serial={0}'.format(add_disk.index)
+        str += ',serial={0}'.format(index)
     if boot:
         str += ',boot=on'
     args.extend(['-drive', str])
-    add_disk.index += 1
 add_disk.index = 0
 
 try:
     cdrom = root.find('./attr[@name="cdrom"]')
-    args.extend([
-        '-drive',
-        'file={0},if=ide,media=cdrom,index=0,serial=0,cache=none'
-            .format(cdrom.get('value').strip())
-    ])
+    add_disk(cdrom.get('value').strip(), boot=False, intf='ide', media='cdrom')
 except:
     pass
+
+# If the disks are not using IDE, then reset their index as there is no need
+# to leave room for the CDROM.
+if opts['diskif'] != 'ide':
+    add_disk.index = 0
 
 try:
     bootdisk = root.find('./attr[@name="bootdisk"]')
-    add_disk(bootdisk.get('value').strip(), True)
+    add_disk(bootdisk.get('value').strip(), boot=True)
 except:
     pass
 
+# Look for disk attributes. These may be just "disk" or "diskN" to specify
+# the slot into which the disk should be placed. zonecfg does not allow the
+# addition of multiple attributes with the same name but manual edits to the
+# zone's XML file may have been made and so multiple disk attributes are
+# supported.
+disklist = {}
+for disk in root.findall('./attr[@name]'):
+    m = re.search(r'^disk(\d+)$', disk.get('name').strip())
+    if not m: continue
+    k = int(m.group(1))
+    if k in disklist or k < add_disk.index:
+        logging.error(
+            'Disk {} appears more than once in configuration'.format(k))
+        sys.exit(1)
+    disklist[k] = disk.get('value').strip()
+
+# Now insert plain "disk" tags into the list, using available slots in order
+avail = sorted(set(range(add_disk.index + 1, 100))
+    .difference(sorted(disklist.keys())))
 for disk in root.findall('./attr[@name="disk"]'):
-    add_disk(disk.get('value').strip())
+    disklist[avail.pop(0)] = disk.get('value').strip()
+
+logging.debug('Disk list: \n{}'.format(pformat(disklist)))
+
+for i, v in disklist.items():
+    add_disk(v, index=i)
 
 # Network
 
@@ -185,6 +236,9 @@ if len(opts['extra']):
 
 logging.info('Final arguments: {0}'.format(pformat(args)))
 logging.info('{0}'.format(' '.join(args)))
+
+if testmode:
+    sys.exit(0)
 
 while True:
     logging.info('Starting kvm')
