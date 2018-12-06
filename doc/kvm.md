@@ -17,22 +17,24 @@ which will be created at `/path/to/zone/root/tmp/init.log`
 | ---		| ---			| ---			| ---
 | bootdisk<sup>1</sup>	| 			| path[,serial=<serno>] | tank/hdd/kvm1
 | bootorder	| cd			| \[c\]\[d\]\[n\]
-| cdrom<sup>3</sup>		|			| path to ISO		  | /data/iso/FreeBSD-11.1-RELEASE-amd64-bootonly.iso
+| cdrom<sup>4</sup>		|			| path to ISO		  | /data/iso/FreeBSD-11.1-RELEASE-amd64-bootonly.iso
 | cpu		| qemu64		|
-| console	| pipe,id=console0,path=/dev/zconsole<sup>5</sup>	| options		|
+| console	| pipe,id=console0,path=/dev/zconsole<sup>6</sup>	| options		|
 | disk<sup>1</sup>		| 			| path[,serial=<serno>] | tank/hdd/kvm2,serial=1234
+| diskN<sup>2</sup>		| 			| path[,serial=<serno>] | tank/hdd/kvm2,serial=1234
 | diskif	| virtio		| virtio,ahci
 | netif		| virtio-net-pci	| virtio-net-pci,e1000
 | ram		| 1G			| n(G\|M)		| 8G
 | type		| generic		| generic
 | vcpus		| 1			|  n			| 16
-| vnc<sup>4</sup>		| off			| off,on,options	| unix:/tmp/vm.vnc
+| vnc<sup>5</sup>		| off			| off,on,options	| unix:/tmp/vm.vnc
 | extra		|			| extra arguments for hypervisor |
 
 #### Notes
 
 <ol>
 <li>You will also need to pass the underlying disk device through to the zone via a <i>device</i> entry, see the example below;</li>
+<li>Use diskN to specify the slot into which the disk will be placed. A plain <i>disk</i> tag will be put in the lowest available slot.</li>
 <li>Available firmware files can be found in <i>/usr/share/kvm/firmware/</i>;</li>
 <li>The ISO file needs passing through to the zone via a lofs mount, see the example below;</li>
 <li>Setting vnc to <i>on</i> is the same as setting it to <i>unix=/tmp/vm.vnc</i>.</li>
@@ -105,7 +107,7 @@ attr:
         type: string
         value: tank/hdd/oi1
 attr:
-        name: disk
+        name: disk1
         type: string
         value: tank/hdd/oi2,serial=1234
 ```
@@ -168,7 +170,7 @@ set type=string
 set value=tank/hdd/oi1
 end
 add attr
-set name=disk
+set name=disk1
 set type=string
 set value=tank/hdd/oi2,serial=1234
 end
