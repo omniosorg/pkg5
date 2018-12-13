@@ -231,8 +231,8 @@ logging.debug('Disk list: \n{}'.format(pformat(disklist)))
 
 for i, v in disklist.items():
     args.extend([
-        '-s', '{0}:{1},{2},{3}'.format(DISK_SLOT,
-            i, opts['diskif'], v)
+        '-s', '{0}:{1},{2},{3}'.format(DISK_SLOT, i, opts['diskif'],
+        diskpath(v))
     ])
 
 # Network
