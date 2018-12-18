@@ -127,7 +127,7 @@ args.extend([
 # Disks
 
 def diskpath(arg):
-    if arg.startswith('/dev/zvol/rdsk'):
+    if arg.startswith('/'):
         return arg
     return '/dev/zvol/rdsk/{0}'.format(arg)
 
