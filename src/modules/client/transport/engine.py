@@ -807,6 +807,9 @@ class CurlTransportEngine(TransportEngine):
                 hdl.setopt(pycurl.MAXREDIRS,
                     global_settings.PKG_CLIENT_MAX_REDIRECT)
 
+                # Use HTTP/1.1
+                hdl.setopt(pycurl.HTTP_VERSION, pycurl.CURL_HTTP_VERSION_1_1)
+
                 # Store the proxy in the handle so it can be used to retrieve
                 # transport statistics later.
                 hdl.proxy = None
