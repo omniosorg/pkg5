@@ -29,6 +29,7 @@ if __name__ == "__main__":
 import pkg5unittest
 
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -1104,6 +1105,15 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_path}
 file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
 """.format(**paths)
 
+        def glfilter(self, s):
+                return set([x for x in s if not re.match(r'usr/gcc/\d/', x)])
+
+        def tpfilter(self, s):
+                _p, _d = s
+                _d = tuple([x for x in _d
+                    if not re.match(r'^usr/gcc/\d/lib$', x)])
+                return (_p, _d)
+
         def setUp(self):
                 pkg5unittest.Pkg5TestCase.setUp(self)
 
@@ -1277,8 +1287,8 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                 self.assertTrue(d.is_error())
                 self.assertTrue(d.dep_vars.is_satisfied())
                 self.assertEqual(d.base_names[0], "libc.so.1")
-                self.assertEqual(set(d.run_paths), set(["lib",
-                    "usr/lib"]))
+                self.assertEqual(self.glfilter(set(d.run_paths)),
+                    set(["lib", "usr/lib"]))
 
                 # Check that internal dependencies are as expected.
                 ds, es, ws, ms, pkg_attrs = dependencies.list_implicit_deps(t_path,
@@ -1293,7 +1303,7 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                             self.paths["ksh_path"]):
                                 self.assertEqual(d.action.attrs["path"],
                                     self.paths["script_path"])
-                        elif d.dep_key() == self.__path_to_key(
+                        elif self.tpfilter(d.dep_key()) == self.__path_to_key(
                             self.paths["libc_path"]):
                                 self.assertEqual(d.action.attrs["path"],
                                     self.paths["ksh_path"])
@@ -1316,9 +1326,9 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                         self.assertTrue(d.is_error())
                         self.assertTrue(d.dep_vars.is_satisfied())
                         self.assertEqual(d.base_names[0], "libc.so.1")
-                        self.assertEqual(set(d.run_paths),
+                        self.assertEqual(self.glfilter(set(d.run_paths)),
                             set(["lib", "usr/lib"]))
-                        self.assertEqual(d.dep_key(),
+                        self.assertEqual(self.tpfilter(d.dep_key()),
                             self.__path_to_key(self.paths["libc_path"]))
                         self.assertEqual(
                                 d.action.attrs["path"],
@@ -1349,9 +1359,9 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                         self.assertTrue(d.is_error())
                         self.assertTrue(d.dep_vars.is_satisfied())
                         self.assertEqual(d.base_names[0], "libc.so.1")
-                        self.assertEqual(set(d.run_paths),
+                        self.assertEqual(self.glfilter(set(d.run_paths)),
                             set(["lib", "usr/lib"]))
-                        self.assertEqual(d.dep_key(),
+                        self.assertEqual(self.tpfilter(d.dep_key()),
                             self.__path_to_key(self.paths["libc_path"]))
                         self.assertEqual(d.action.attrs["path"],
                             self.paths["curses_path"])
@@ -1700,7 +1710,7 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                                     d.dep_vars.sat_set)
                                 self.assertEqual(expected_not_sat,
                                     d.dep_vars.not_sat_set)
-                        elif d.dep_key() == self.__path_to_key(
+                        elif self.tpfilter(d.dep_key()) == self.__path_to_key(
                             self.paths["libc_path"]):
                                 self.assertEqual(
                                     d.action.attrs["path"],
@@ -1739,7 +1749,8 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                 self.assertEqual(expected_sat, d.dep_vars.sat_set)
                 self.assertEqual(expected_not_sat, d.dep_vars.not_sat_set)
                 self.assertEqual(d.base_names[0], "libc.so.1")
-                self.assertEqual(set(d.run_paths), set(["lib", "usr/lib"]))
+                self.assertEqual(self.glfilter(set(d.run_paths)),
+                    set(["lib", "usr/lib"]))
 
                 # Check that internal dependencies are as expected.
                 ds, es, ws, ms, pkg_attrs = dependencies.list_implicit_deps(t_path,
@@ -1765,7 +1776,7 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                             self.paths["ksh_path"]):
                                 self.assertEqual(d.action.attrs["path"],
                                     self.paths["script_path"])
-                        elif d.dep_key() == self.__path_to_key(
+                        elif self.tpfilter(d.dep_key()) == self.__path_to_key(
                             self.paths["libc_path"]):
                                 self.assertEqual(d.action.attrs["path"],
                                     self.paths["ksh_path"])
@@ -1803,7 +1814,7 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                                     d.dep_vars.sat_set)
                                 self.assertEqual(expected_not_sat,
                                     d.dep_vars.not_sat_set)
-                        elif d.dep_key() == self.__path_to_key(
+                        elif self.tpfilter(d.dep_key()) == self.__path_to_key(
                             self.paths["libc_path"]):
                                 self.assertEqual(d.action.attrs["path"],
                                     self.paths["ksh_path"])
@@ -1847,7 +1858,8 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                 self.assertEqualDiff(expected_not_sat, d.dep_vars.not_sat_set)
 
                 self.assertEqual(d.base_names[0], "libc.so.1")
-                self.assertEqual(set(d.run_paths), set(["lib", "usr/lib"]))
+                self.assertEqual(self.glfilter(set(d.run_paths)),
+                    set(["lib", "usr/lib"]))
 
                 # Check that internal dependencies are as expected.
                 ds, es, ws, ms, pkg_attrs = dependencies.list_implicit_deps(t_path,
@@ -1876,7 +1888,7 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                             self.paths["ksh_path"]):
                                 self.assertEqual(d.action.attrs["path"],
                                     self.paths["script_path"])
-                        elif d.dep_key() == self.__path_to_key(
+                        elif self.tpfilter(d.dep_key()) == self.__path_to_key(
                             self.paths["libc_path"]):
                                 self.assertEqual(d.action.attrs["path"],
                                     self.paths["ksh_path"])
