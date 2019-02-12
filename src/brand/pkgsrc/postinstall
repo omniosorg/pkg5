@@ -1,0 +1,71 @@
+#!/bin/ksh -p
+
+# {{{ CDDL HEADER
+#
+# This file and its contents are supplied under the terms of the
+# Common Development and Distribution License ("CDDL"), version 1.0.
+# You may only use this file in accordance with the terms of version
+# 1.0 of the CDDL.
+#
+# A full copy of the text of the CDDL should have accompanied this
+# source. A copy of the CDDL is also available via the Internet at
+# http://www.illumos.org/license/CDDL.
+# }}}
+
+# Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
+
+. /usr/lib/brand/sparse/common.ksh
+
+ZONEROOT="${1?zoneroot}"
+
+mirror=https://mirrors.omniosce.org/pkgsrc
+strap=bootstrap.tar.gz
+cachestrap=/var/tmp/$strap
+
+# Download bootstrap checksum each time in case of corruption or if the
+# upstream version has changed.
+curl -so $ZONEROOT/$strap.sha256 $mirror/$strap.sha256 \
+    || exit $ZONE_SUBPROC_NOTCOMPLETE
+strapsum="`cat $ZONEROOT/$strap.sha256`"
+
+if [ -f $cachestrap ]; then
+	sum="`digest -a sha256 $cachestrap`"
+	[ "$sum" = "$strapsum" ] || rm -f $cachestrap
+fi
+
+if [ ! -f $cachestrap ]; then
+	echo "Downloading pkgsrc bootstrap..."
+	curl -o $cachestrap.$$ $mirror/$strap || exit $ZONE_SUBPROC_NOTCOMPLETE
+	mv $cachestrap.$$ $cachestrap || exit $ZONE_SUBPROC_NOTCOMPLETE
+fi
+
+sum="`digest -a sha256 $cachestrap`"
+if [ "$sum" != "$strapsum" ]; then
+	echo "Download checksum mismatch."
+	exit $ZONE_SUBPOROC_NOTCOMPLETE
+fi
+rm -f $ZONEROOT/$strap.sha256
+
+echo "Installing pkgsrc bootstrap..."
+
+tar zxpf $cachestrap -C $ZONEROOT || exit $ZONE_SUBPROC_NOTCOMPLETE
+
+# Set up paths
+
+sed -i~ '
+	/^#*PATH=/c\
+PATH=/usr/bin:/opt/local/bin
+	/^#*SUPATH=/c\
+SUPATH=/usr/sbin:/sbin:/opt/local/sbin:/usr/bin:/opt/local/bin
+' $ZONEROOT/etc/default/login $ZONEROOT/etc/default/su
+
+# Set up security update cron job
+
+cat << EOM >> $ZONEROOT/var/spool/cron/crontabs/root
+0 5 * * * /opt/local/sbin/pkg_admin fetch-pkg-vulnerabilities >/dev/null 2>&1
+EOM
+
+exit $ZONE_SUBPROC_OK
+
+# Vim hints
+# vim:ts=4:sw=4:et:fdm=marker

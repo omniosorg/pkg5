@@ -21,6 +21,7 @@
 
 #
 # Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
 #
 
 . /usr/lib/brand/ipkg/common.ksh
@@ -51,6 +52,7 @@ ALTROOT=$5
 if [ $cmd -eq 0 ]; then
 	# Mount active dataset on the root.
 	mount_active_ds
+	config_network
 fi
 
 exit $ZONE_SUBPROC_OK

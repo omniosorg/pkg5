@@ -501,3 +501,33 @@ pkg_err_check() {
 	typeset res=$?
 	(( $res != 0 && $res != 4 )) && fail_fatal "$1"
 }
+
+#
+# Retrieve an attribute from the zone configuration
+#
+zone_attr() {
+	zonecfg -z "$ZONENAME" info attr name=$1 \
+	    | nawk '$1 == "value:" {print $2}'
+}
+
+#
+# Configure network parameters based on zone configuration
+#
+config_network() {
+	typeset domain="`zone_attr dns-domain`"
+	typeset resolvers="`zone_attr resolvers`"
+
+	if [ -n "$domain" -o -n "$resolvers" ]; then
+		(
+			echo "# Auto-generated from zone configuration"
+			[ -n "$domain" ] && echo "domain $domain"
+			_IFS=$IFS; IFS=,; for r in $resolvers; do
+				echo "nameserver $r"
+			done
+			IFS=$_IFS
+		) > $ZONEPATH/root/etc/resolv.conf
+		egrep -s 'files +dns' $ZONEPATH/root/etc/nsswitch.conf \
+		    || cp $ZONEPATH/root/etc/nsswitch.{dns,conf}
+	fi
+}
+

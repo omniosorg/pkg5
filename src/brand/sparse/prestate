@@ -13,7 +13,7 @@
 #
 # }}}
 
-# Copyright 2017 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
 
 . /usr/lib/brand/sparse/common.ksh
 
@@ -36,6 +36,7 @@ case $cmd in
 	umount_overlays
 	umount_active_ds
 	mount_active_ds
+	config_network
 	# Mount overlays at system boot so that everything is available for
 	# patching.
 	[ $state = 99 ] && mount_overlays

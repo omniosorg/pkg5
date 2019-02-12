@@ -22,7 +22,7 @@
 #
 # Copyright (c) 2007, 2011, Oracle and/or its affiliates. All rights reserved.
 # Copyright (c) 2015, OmniTI Computer Consulting, Inc. All rights reserved.
-# Copyright 2017 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
 #
 
 #
@@ -219,6 +219,10 @@ printf "$m_done\n"
 
 # Set blank password
 sed -i -e 's%^root::%root:$5$kr1VgdIt$OUiUAyZCDogH/uaxH71rMeQxvpDEY2yX.x0ZQRnmeb9:%' $ZONEROOT/etc/shadow
+
+if [ -x /usr/lib/brand/$ZONEBRAND/postinstall ]; then
+	/usr/lib/brand/$ZONEBRAND/postinstall $ZONEROOT
+fi
 
 printf "$m_complete\n\n" ${SECONDS}
 
