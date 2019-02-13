@@ -21,6 +21,7 @@
 
 #
 # Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
 #
 
 unset LD_LIBRARY_PATH
@@ -511,9 +512,68 @@ zone_attr() {
 }
 
 #
+# Retrieve a list of on-demand VNICs configured on the zone along with their
+# configuration parameters.
+#
+demand_vnics() {
+	zonecfg -z "$ZONENAME" info net | nawk '
+		function outp()	{
+					if (!shared && global != "-")
+						printf("%s %s %s %s\n",
+						    phys, global, mac, vlan)
+				}
+		/^net:/		{
+					outp()
+					phys = global = mac = vlan = "-"
+					shared = 0
+				}
+		/global-nic:/	{ global = $2 }
+		/physical:/	{ phys = $2 }
+		/mac-addr:/	{ mac = $2 }
+		/vlan-id:/	{ vlan = $2 }
+		/\taddress:/	{ shared = 1 }
+		END		{ outp() }
+	'
+}
+
+#
 # Configure network parameters based on zone configuration
 #
 config_network() {
+
+	################################################################
+	# On-demand VNICs
+
+	demand_vnics | while read nic global mac vlan; do
+		[ -n "$global" -a "$global" != "-" ] || continue
+		if dladm show-vnic -p -o LINK $nic >/dev/null 2>&1; then
+			# VNIC already exists
+			continue
+		fi
+		#echo "Creating VNIC $nic/$global (mac: $mac, vlan: $vlan)"
+
+		opt=
+		[ "$mac" != "-" ] && opt+=" -m $mac"
+		[ "$vlan" != "-" -a "$vlan" != "0" ] && opt+=" -v $vlan"
+		dladm create-vnic -l $global $opt $nic \
+		    || exit $ZONE_SUBPROC_FATAL
+
+		if [ "$mac" = "-" ]; then
+			# Record the assigned MAC address in the zone config
+			mac=`dladm show-vnic -p -o MACADDRESS $nic`
+			[ -n "$mac" ] && zonecfg -z $ZONENAME \
+			    "select net physical=$nic; " \
+			    "set mac-addr=$mac; " \
+			    "end; exit"
+		fi
+
+	done
+
+	################################################################
+	# DNS configuration files within the zone.
+	#  /etc/resolv.conf
+	#  /etc/nsswitch.conf
+
 	typeset domain="`zone_attr dns-domain`"
 	typeset resolvers="`zone_attr resolvers`"
 
@@ -529,5 +589,20 @@ config_network() {
 		egrep -s 'files +dns' $ZONEPATH/root/etc/nsswitch.conf \
 		    || cp $ZONEPATH/root/etc/nsswitch.{dns,conf}
 	fi
+}
+
+#
+# Unconfigure network parameters based on zone configuration
+#
+unconfig_network() {
+
+	################################################################
+	# On-demand VNICs
+
+	demand_vnics | while read nic global mac vlan; do
+		[ -n "$global" -a "$global" != "-" ] || continue
+		#echo "Removing VNIC $nic/$global"
+		dladm delete-vnic $nic
+	done
 }
 

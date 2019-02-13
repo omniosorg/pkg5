@@ -13,7 +13,7 @@
 #
 # }}}
 
-# Copyright 2017 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
 
 . /usr/lib/brand/sparse/common.ksh
 
@@ -37,6 +37,7 @@ case $cmd in
 	# Re-mount overlays to support patching while zone is down
 	find_active_ds
 	mount_overlays
+	unconfig_network
 	;;
 esac
 

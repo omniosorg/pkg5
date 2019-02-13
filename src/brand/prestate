@@ -48,11 +48,17 @@ state=$3
 cmd=$4
 ALTROOT=$5
 
-# If we're not readying the zone, then just return.
-if [ $cmd -eq 0 ]; then
+case $cmd in
+    0)
+	# Going to ready state
 	# Mount active dataset on the root.
 	mount_active_ds
 	config_network
-fi
+	;;
+
+    1)
+	# Pre-boot
+	;;
+esac
 
 exit $ZONE_SUBPROC_OK
