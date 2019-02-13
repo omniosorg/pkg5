@@ -22,6 +22,7 @@
 
 #
 # Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
 #
 
 . /usr/lib/brand/ipkg/common.ksh
@@ -48,8 +49,8 @@ state=$3
 cmd=$4
 ALTROOT=$5
 
-# If we're not halting the zone, then just return.
-if [ $cmd -eq 4 ]; then
+case $cmd in
+    4)		# Halting
 	is_brand_labeled
 	if (( $? == 0 )); then
 		# Leave the active dataset mounted after halting (this might be
@@ -60,6 +61,8 @@ if [ $cmd -eq 4 ]; then
 		zoneroot="$ZONEPATH/root"
 		umount $zoneroot || printf "$f_zfs_unmount" "$zoneroot"
 	fi
-fi
+	unconfig_network
+	;;
+esac
 
 exit $ZONE_SUBPROC_OK
