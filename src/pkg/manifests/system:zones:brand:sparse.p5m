@@ -29,6 +29,9 @@ set name=pkg.description \
 set name=info.classification \
     value=org.opensolaris.category.2008:System/Packaging
 set name=variant.arch value=$(ARCH)
+dir  path=etc
+dir  path=etc/zones
+file path=etc/zones/OMNIsparse.xml
 dir  path=usr/lib
 dir  path=usr/lib/brand
 dir  path=usr/lib/brand/sparse
