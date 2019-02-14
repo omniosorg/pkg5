@@ -61,6 +61,7 @@ ROOTFILES = \
 	$(ROOTETCBRAND)/smf_disable.conf \
 	$(ROOTETCZONES)/OMNIlipkg.xml \
 	$(ROOTETCZONES)/SUNWipkg.xml \
+	$(ROOTETCZONES)/OMNIipkg.xml \
 	\
 	$(ROOTBRANDPKG)/attach \
 	$(ROOTBRANDPKG)/clone \
@@ -78,6 +79,7 @@ ROOTFILES = \
 	$(ROOTBRANDPKG)/system-unconfigure \
 	$(ROOTBRANDPKG)/uninstall \
 	\
+	$(ROOTETCZONES)/OMNIsparse.xml \
 	$(SPARSEBRANDPKG)/attach \
 	$(SPARSEBRANDPKG)/clone \
 	$(SPARSEBRANDPKG)/common.ksh \
@@ -91,11 +93,13 @@ ROOTFILES = \
 	$(SPARSEBRANDPKG)/uninstall \
 	$(SPARSEBRANDPKG)/verifyadm \
 	\
+	$(ROOTETCZONES)/OMNIpkgsrc.xml \
 	$(PKGSRCBRANDPKG)/config.xml \
 	$(PKGSRCBRANDPKG)/platform.xml \
 	$(PKGSRCBRANDPKG)/postinstall \
 	$(PKGSRCBRANDPKG)/profile.xml \
 	\
+	$(ROOTETCZONES)/OMNIbhyve.xml \
 	$(BHYVEBRANDPKG)/config.xml \
 	$(BHYVEBRANDPKG)/platform.xml \
 	$(BHYVEBRANDPKG)/init \
@@ -103,6 +107,7 @@ ROOTFILES = \
 	$(BHYVEBRANDPKG)/socat \
 	$(BHYVEBRANDPKG)/support \
 	\
+	$(ROOTETCZONES)/OMNIkvm.xml \
 	$(KVMBRANDPKG)/config.xml \
 	$(KVMBRANDPKG)/platform.xml \
 	$(KVMBRANDPKG)/init \
@@ -145,6 +150,9 @@ $(ROOTETCBRAND)/%: $(ROOTETCBRAND) %
 
 $(ROOTETCZONES)/%: $(ROOTETCZONES) %
 	rm -f $@; $(INSTALL) -f $(ROOTETCZONES) -m 0444 $<
+
+$(ROOTETCZONES)/OMNIipkg.xml: $(ROOTETCZONES)
+	rm -f $@; ln -s SUNWipkg.xml $@
 
 $(ROOTBRANDPKG)/%: $(ROOTBRANDPKG) %
 	rm -f $@; $(INSTALL) -f $(ROOTBRANDPKG) -m 0444 $<

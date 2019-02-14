@@ -37,6 +37,7 @@ file path=etc/brand/ipkg/pkgrm.conf mode=0644 \
 file path=etc/brand/ipkg/smf_disable.conf mode=0644 \
     original_name=SUNWipkg-brand:etc/brand/ipkg/smf_disable.conf preserve=true
 dir  path=etc/zones
+link path=etc/zones/OMNIipkg.xml target=SUNWipkg.xml
 file path=etc/zones/SUNWipkg.xml
 dir  path=usr
 dir  path=usr/lib
