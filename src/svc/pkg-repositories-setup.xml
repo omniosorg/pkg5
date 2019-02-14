@@ -20,6 +20,7 @@
 	CDDL HEADER END
 
 	Copyright (c) 2013, Oracle and/or its affiliates.  All rights reserved.
+	Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
 
 	NOTE:  This service manifest is not editable; its contents will
 	be overwritten by package or patch operations, including
@@ -36,17 +37,13 @@
 	type='service'
 	version='1'>
 
-	<!-- This SMF service creates a dataset
-	 <rpool>/VARSHARE/pkg/repositories and assigns zfs delegations
-	to allow 'pkg5srv' to create,mount and snapshot datasets within
-	<rpool>/VARSHARE/pkg
+	<!--
+		This SMF service creates a dataset and assigns zfs delegations
+		to allow 'pkg5srv' to create, mount and snapshot datasets within
 	-->
 
 	<create_default_instance enabled='false' />
 
-        <!--
-          Wait for all local filesystems to be mounted.
-        -->
         <dependency name='filesystem-local'
             grouping='require_all'
             restart_on='none'
@@ -58,7 +55,7 @@
         <exec_method
                 type='method'
                 name='start'
-                exec='/lib/svc/method/svc-pkg-repositories-setup start'
+                exec='/lib/svc/method/svc-pkg-repositories-setup %m'
                 timeout_seconds='60'>
 	</exec_method>
 
@@ -66,20 +63,27 @@
                 type='method'
                 name='stop'
                 exec=':true'
-                timeout_seconds='60'>		
+                timeout_seconds='60'>
 	</exec_method>
 
 	<property_group name='startd' type='framework'>
-		<propval name='duration' type='astring'
-			value='transient' />
+		<propval name='duration' type='astring' value='transient' />
 	</property_group>
 
-        
+	<property_group name='config' type='application'>
+		<propval name='dataset' type='astring'
+		    value='pkg-repositories'/>
+		<propval name='mountpoint' type='astring'
+		    value='/var/share/pkg/repositories'/>
+	</property_group>
+
 	<stability value='Evolving' />
 
         <template>
                 <common_name>
-                    <loctext xml:lang='C'>IPS rpool/VARSHARE/pkg creation</loctext>
+                    <loctext xml:lang='C'>
+			IPS dataset creation
+		    </loctext>
                 </common_name>
         </template>
 

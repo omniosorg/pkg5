@@ -45,19 +45,25 @@ SVCPROP=/usr/bin/svcprop
 #
 function check_failure {
 
-	typeset RESULT=$1
-	typeset ERR_MSG=$2
-	typeset FMRI=$3
-	typeset MODE=$4
+	typeset RESULT="$1"
+	typeset ERR_MSG="$2"
+	typeset FMRI="$3"
+	typeset MODE="$4"
 
 	if [ $RESULT -ne 0 ] ; then
 		echo "Error: $ERR_MSG"
-		if [ "$MODE" = "degrade" ] ; then
+		case $MODE in
+		    degrade)
 			echo "Moving service $FMRI to maintenance mode."
 			$SVCADM mark maintenance $FMRI
-		elif [ "$MODE" = "exit" ] ; then
+			;;
+		    exit)
 			exit 1
-		fi
+			;;
+		    fatal)
+			exit $SMF_EXIT_ERR_FATAL
+			;;
+		esac
 	fi
 	return $RESULT
 }
