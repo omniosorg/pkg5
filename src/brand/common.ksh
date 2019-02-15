@@ -519,18 +519,22 @@ demand_vnics() {
 	zonecfg -z "$ZONENAME" info net | nawk '
 		function outp()	{
 					if (!shared && global != "-")
-						printf("%s %s %s %s\n",
-						    phys, global, mac, vlan)
+						printf("%s %s %s %s %s\n",
+						    phys, global, mac, vlan,
+						    addr)
 				}
 		/^net:/		{
 					outp()
-					phys = global = mac = vlan = "-"
+					phys = global = mac = vlan = addr = "-"
 					shared = 0
 				}
-		/global-nic:/	{ global = $2 }
-		/physical:/	{ phys = $2 }
-		/mac-addr:/	{ mac = $2 }
-		/vlan-id:/	{ vlan = $2 }
+		/global-nic:/		{ global = $2 }
+		/physical:/		{ phys = $2 }
+		/mac-addr:/		{ mac = $2 }
+		/vlan-id:/		{ vlan = $2 }
+		/allowed-address:/	{ addr = $2 }
+		# If an address attribute is specified, this is a shared IP
+		# zone.
 		/\taddress:/	{ shared = 1 }
 		END		{ outp() }
 	'
@@ -544,8 +548,21 @@ config_network() {
 	################################################################
 	# On-demand VNICs
 
-	demand_vnics | while read nic global mac vlan; do
+	demand_vnics | while read nic global mac vlan addr; do
 		[ -n "$global" -a "$global" != "-" ] || continue
+		if [ "$global" = "auto" ]; then
+			if [ "$addr" = "-" ]; then
+				echo "Cannot use 'auto' global NIC"\
+				   "without allowed-address."
+				exit $ZONE_SUBPROC_FATAL
+			fi
+			global="`route get "$addr" | nawk '
+			    / interface:/ {print $2; exit}'`"
+			if [ -z "$global" ]; then
+				echo "Could not determine global-nic for $nic"
+				exit $ZONE_SUBPROC_FATAL
+			fi
+		fi
 		if dladm show-vnic -p -o LINK $nic >/dev/null 2>&1; then
 			# VNIC already exists
 			continue
@@ -555,8 +572,10 @@ config_network() {
 		opt=
 		[ "$mac" != "-" ] && opt+=" -m $mac"
 		[ "$vlan" != "-" -a "$vlan" != "0" ] && opt+=" -v $vlan"
-		dladm create-vnic -l $global $opt $nic \
-		    || exit $ZONE_SUBPROC_FATAL
+		if ! dladm create-vnic -l $global $opt $nic; then
+			echo "Could not create VNIC $nic/$global"
+			exit $ZONE_SUBPROC_FATAL
+		fi
 
 		if [ "$mac" = "-" ]; then
 			# Record the assigned MAC address in the zone config
@@ -566,7 +585,6 @@ config_network() {
 			    "set mac-addr=$mac; " \
 			    "end; exit"
 		fi
-
 	done
 
 	################################################################
@@ -599,10 +617,10 @@ unconfig_network() {
 	################################################################
 	# On-demand VNICs
 
-	demand_vnics | while read nic global mac vlan; do
+	demand_vnics | while read nic global mac vlan addr; do
 		[ -n "$global" -a "$global" != "-" ] || continue
 		#echo "Removing VNIC $nic/$global"
-		dladm delete-vnic $nic
+		dladm delete-vnic $nic || echo "Could not delete VNIC $nic"
 	done
 }
 
