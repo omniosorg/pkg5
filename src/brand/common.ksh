@@ -556,7 +556,7 @@ config_network() {
 				   "without allowed-address."
 				exit $ZONE_SUBPROC_FATAL
 			fi
-			global="`route get "$addr" | nawk '
+			global="`route -n get "$addr" | nawk '
 			    / interface:/ {print $2; exit}'`"
 			if [ -z "$global" ]; then
 				echo "Could not determine global-nic for $nic"
