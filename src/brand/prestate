@@ -53,7 +53,8 @@ case $cmd in
 	# Going to ready state
 	# Mount active dataset on the root.
 	mount_active_ds
-	config_network
+	# Only configure the network if the zone is actually heading for boot
+	[ "$state" != 99 ] && config_network
 	;;
 
     1)

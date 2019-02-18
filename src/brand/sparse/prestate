@@ -36,10 +36,14 @@ case $cmd in
 	umount_overlays
 	umount_active_ds
 	mount_active_ds
-	config_network
-	# Mount overlays at system boot so that everything is available for
-	# patching.
-	[ $state = 99 ] && mount_overlays
+	if [ "$state" = 99 ]; then
+		# System boot but zone not set to auto boot.
+		# Mount overlays so that everything is available for patching.
+		mount_overlays
+	else
+		# Configure the network if the zone is actually heading for boot
+		config_network
+	fi
 	;;
     1)
 	# Pre-boot
