@@ -572,7 +572,7 @@ config_network() {
 		opt=
 		[ "$mac" != "-" ] && opt+=" -m $mac"
 		[ "$vlan" != "-" -a "$vlan" != "0" ] && opt+=" -v $vlan"
-		if ! dladm create-vnic -t -l $global $opt $nic; then
+		if ! dladm create-vnic -l $global $opt $nic; then
 			echo "Could not create VNIC $nic/$global"
 			exit $ZONE_SUBPROC_FATAL
 		fi
