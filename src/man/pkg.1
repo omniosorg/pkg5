@@ -1,7 +1,7 @@
 '\" te
 .\" Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
-.\" Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
-.TH pkg 1 "10 Sep 2018" "SunOS 5.11" "User Commands"
+.\" Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
+.TH pkg 1 "28 Feb 2019" "illumos" "User Commands"
 .SH NAME
 pkg \- Image Packaging System retrieval client
 .SH SYNOPSIS
@@ -3218,7 +3218,7 @@ this property. The template can contain the following tokens; see the
 .ad
 .sp .6
 .RS 4n
-The date of the update being installed - \fIYYYY.MM.DD\R
+The publication date of the update being installed - \fIYYYY.MM.DD\R
 .RE
 
 .sp
@@ -3229,7 +3229,7 @@ The date of the update being installed - \fIYYYY.MM.DD\R
 .ad
 .sp .6
 .RS 4n
-The date of the update being installed - \fIYYYYMMDD\R
+The publication date of the update being installed - \fIYYYYMMDD\R
 .RE
 
 .sp
@@ -3241,6 +3241,20 @@ The date of the update being installed - \fIYYYYMMDD\R
 .sp .6
 .RS 4n
 The release being installed, without the leading \fIr\fR - e.g. \fB151026c\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBtime:<format>\fR
+.ad
+.sp .6
+.RS 4n
+The current date and time in the format specified. \fIformat\fR is a
+\fBstrftime\fR(3C)-compatible string such as \fBomnios-%Y.%m.%d\fR.
+It is not advised to use hyphens for separating components as the trailing
+component may be confused with a boot environment revision number.
 .RE
 
 .sp
@@ -4236,8 +4250,20 @@ $ \fBpkg set-property auto-be-name omnios_r%r_%D\fR
 .sp
 
 .LP
+To use the current date and time, use the \fItime:\fR prefix and a format
+string:
+.sp
+.in +2
+.nf
+$ \fBpkg set-property auto-be-name time:omnios_%Y%m%d\fR
+.fi
+.in -2
+.sp
+
+.LP
 For bloody releases, the release name does not change and so the \fI%r\fR
-token is not available:
+token is not available. The %D token can be used to include the release date
+in the BE name:
 .sp
 .in +2
 .nf

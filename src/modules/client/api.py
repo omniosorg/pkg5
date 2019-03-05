@@ -22,6 +22,7 @@
 
 #
 # Copyright (c) 2008, 2017, Oracle and/or its affiliates. All rights reserved.
+# Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
 #
 
 """This module provides the supported, documented interface for clients to
@@ -136,6 +137,8 @@ RESULT_FAILED_ACTUATOR = history.RESULT_FAILED_ACTUATOR
 RESULT_FAILED_OUTOFMEMORY = history.RESULT_FAILED_OUTOFMEMORY
 RESULT_CONFLICTING_ACTIONS = history.RESULT_CONFLICTING_ACTIONS
 RESULT_FAILED_UNKNOWN = history.RESULT_FAILED_UNKNOWN
+
+AUTO_BE_NAME_TIME_PREFIX = "time:"
 
 # Globals.
 logger = global_settings.logger
@@ -703,41 +706,52 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                 if not be_template or len(be_template) == 0:
                         return
 
-                release = date = None
-                # Check to see if release/name is being updated
-                for src, dest in self._img.imageplan.plan_desc:
-                        if not dest or dest.get_name() != 'release/name':
-                                continue
-                        # It is, extract attributes
-                        for a in self._img.imageplan.pd.update_actions:
-                                if not isinstance(a.dst,
-                                    actions.attribute.AttributeAction):
+                if be_template.startswith(AUTO_BE_NAME_TIME_PREFIX):
+                        try:
+                                be_template = time.strftime(
+                                    be_template[len(AUTO_BE_NAME_TIME_PREFIX):])
+                        except:
+                                return
+                else:
+                        release = date = None
+                        # Check to see if release/name is being updated
+                        for src, dest in self._img.imageplan.plan_desc:
+                                if (not dest or
+                                    dest.get_name() != 'release/name'):
                                         continue
-                                name = a.dst.attrs['name']
-                                if name == 'ooce.release':
-                                        release = a.dst.attrs['value']
-                                elif name == 'ooce.release.build':
-                                        date = a.dst.attrs['value']
-                                if release and date:
-                                        break
-                        break
+                                # It is, extract attributes
+                                for a in self._img.imageplan.pd.update_actions:
+                                        if not isinstance(a.dst,
+                                            actions.attribute.AttributeAction):
+                                                continue
+                                        name = a.dst.attrs['name']
+                                        if name == 'ooce.release':
+                                                release = a.dst.attrs['value']
+                                        elif name == 'ooce.release.build':
+                                                date = a.dst.attrs['value']
+                                        if release and date:
+                                                break
+                                break
 
-                if not release and not date:
-                        # No variables changed in this update
-                        return
+                        if not release and not date:
+                                # No variables changed in this update
+                                return
 
-                if '%r' in be_template and not release:
+                        if '%r' in be_template and not release:
+                                return
+                        if '%d' in be_template and not date:
+                                return
+                        if '%D' in be_template and not date:
+                                return
+                        if release:
+                                be_template = be_template.replace('%r', release)
+                        if date:
+                                be_template = be_template.replace('%d', date)
+                                be_template = be_template.replace('%D',
+                                    date.replace('.', ''))
+
+                if not be_template or len(be_template) == 0:
                         return
-                if '%d' in be_template and not date:
-                        return
-                if '%D' in be_template and not date:
-                        return
-                if release:
-                        be_template = be_template.replace('%r', release)
-                if date:
-                        be_template = be_template.replace('%d', date)
-                        be_template = be_template.replace('%D',
-                            date.replace('.', ''))
 
                 be = bootenv.BootEnv(self._img)
                 self.__be_name = be.get_new_be_name(new_bename=be_template)
