@@ -21,6 +21,7 @@
 
 /*
  * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
  */
 
 /*
@@ -38,16 +39,23 @@ set_invalid_action_error(const char *name, PyObject *action,
 	PyObject *exc = NULL;
 	PyObject *val = NULL;
 	PyObject *pkg_actions = NULL;
+	PyObject *sys = NULL;
+	PyObject *sys_modules = NULL;
 
-	/*
-	 * TODO: unknown issue: importing pkg.actions can fail in Python 3, see
-	 * one test case in api/t_action.py`test_action_errors.
-	 */
-	if ((pkg_actions = PyImport_ImportModule("pkg.actions")) == NULL) {
+	if ((sys = PyImport_ImportModule("sys")) == NULL)
+		return;
+
+	if ((sys_modules = PyObject_GetAttrString(sys, "modules")) == NULL)
+		return;
+
+	if ((pkg_actions = PyDict_GetItemString(sys_modules, "pkg.actions"))
+	    == NULL) {
 		/* No exception is set */
-		PyErr_SetString(PyExc_KeyError, "pkg.actions");
+		PyErr_SetString(PyExc_KeyError, "siae.pkg.actions");
+		Py_DECREF(sys_modules);
 		return;
 	}
+	Py_DECREF(sys_modules);
 
 	/*
 	 * Obtain a reference to the action exception type so that SetObject can
@@ -300,7 +308,7 @@ moduleinit(void)
 
 	if ((pkg_actions = PyImport_ImportModule("pkg.actions")) == NULL) {
 		/* No exception is set */
-		PyErr_SetString(PyExc_KeyError, "pkg.actions");
+		PyErr_SetString(PyExc_KeyError, "_common.pkg.actions");
 		return (NULL);
 	}
 
