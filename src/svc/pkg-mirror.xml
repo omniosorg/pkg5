@@ -19,7 +19,9 @@
 
 	CDDL HEADER END
 
-	Copyright (c) 2013, 2014, Oracle and/or its affiliates.  All rights reserved.
+	Copyright (c) 2013, 2014, Oracle and/or its affiliates.
+	All rights reserved.
+	Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
 
 	NOTE:  This service manifest is not editable; its contents will
 	be overwritten by package or patch operations, including
@@ -35,6 +37,8 @@
 	name='application/pkg/mirror'
 	type='service'
 	version='1'>
+
+	<create_default_instance enabled="false" />
 
         <!--
           Wait for network interfaces to be initialized.
@@ -71,9 +75,8 @@
         </dependency>
 
 	<!--
-	  Wait until the service which creates the
-	  <rpool>/VARSHARE/pkg/repositories container dataset to come
-	  online.
+	  Wait until the service which creates the default parent dataset to
+	  come online.
 	-->
 	<dependency name='varshare-repositories'
 	    grouping='require_all'
@@ -86,7 +89,7 @@
         <exec_method
                 type='method'
                 name='start'
-                exec='/lib/svc/method/svc-pkg-mirror start'
+                exec='/lib/svc/method/svc-pkg-mirror %m'
                 timeout_seconds='60'>
 		<method_context>
 			<method_credential
@@ -97,7 +100,7 @@
         <exec_method
                 type='method'
                 name='stop'
-                exec='/lib/svc/method/svc-pkg-mirror stop'
+                exec='/lib/svc/method/svc-pkg-mirror %m'
                 timeout_seconds='60'>
 		<method_context>
 			<method_credential
@@ -111,14 +114,13 @@
 	<exec_method
                 type='method'
                 name='refresh'
-                exec='/lib/svc/method/svc-pkg-mirror refresh'
+                exec='/lib/svc/method/svc-pkg-mirror %m'
                 timeout_seconds='0'>
 		<method_context>
 			<method_credential
 				user='pkg5srv' group='pkg5srv' />
 		</method_context>
 	</exec_method>
-
 
 	<property_group name='general' type='framework'>
         	<propval name='action_authorization' type='astring'
@@ -130,36 +132,28 @@
         </property_group>
 
 	<property_group name='startd' type='framework'>
-		<propval name='duration' type='astring'
-			value='transient' />
+		<propval name='duration' type='astring' value='transient' />
 	</property_group>
 
         <property_group name='config' type='application'>
                 <stability value='Evolving' />
 
-		<!-- The local repository we pkgrecv to. By default,
-		if we the parent directory is at the top-level of a
-		zfs dataset, we attempt to create a new dataset for the
-		repository. For this to happen, 'pkg5srv' must have
-		appropriate zfs delegations on that dataset, eg.
-
-		# zfs allow pkg5srv create,mount,snapshot <dataset>
-
-		In the default configuration, a dataset is created by
-		svc:/application/pkg/varshare-repositories which we
-		have a dependency on.
-		-->
+		<!-- The local repository directory to which we pkgrecv.
+		This property can be an absolute or relative path. If
+		relative then it is created under the dataset created by
+		svc:/application/pkg/repositories-setup (on which this
+		service has a dependency).  -->
                 <propval name='repository' type='astring'
-			value='/var/share/pkg/repositories/openindiana' />
+		    value='omnios' />
 
-                <!-- A partial crontab(1) entry defining how often we
+                <!--A partial crontab(1) entry defining how often we
 		update the repository. We allow the special value
 		'random' in the 3rd (day of the month) field in order
 		to even the load on busy repository servers. This gets
 		replaced when the service is first started with a random
 		day in the range 1-28. -->
                 <propval name='crontab_period' type='astring'
-			value='30 2 random * *' />
+			value='30 2 * * *' />
 
 		<!-- The reference image we use to pull publisher,
 		origin, proxy and ssl key/cert information from -->
@@ -170,7 +164,7 @@
 		'config/ref_image' which we receive from.
 		 -->
 		<propval name='publishers' type='astring'
-			value='openindiana.org,hipster-encumbered' />
+			value='omnios' />
 
 		<!-- The cache_dir used for the -c option to pkgrecv(1M)
 		-->
@@ -186,37 +180,6 @@
         	        value='solaris.smf.manage.pkg-mirror' />
         </property_group>
 
-        <!-- To work around an SMF bug, we create a default instance
-	containing the 'config' property group, specifiying the
-	authorizations we need to allow clients to modify values in it.
-	User-created instances should create this pg with the same
-	'value_authorization' property.
-
-	Without setting these authorizations, user-created instances
-	that use the "random" keyword in the crontab_period will never
-	have that value persistently replaced, and so each time the
-	service starts, the cron job will fire on a different date.
-	-->
-        <instance name="default" enabled="false">
-                <property_group name='config' type='application'>
-                <stability value='Evolving' />
-                <propval name='repository' type='astring'
-			value='/var/share/pkg/repositories/openindiana' />
-                <propval name='crontab_period' type='astring'
-			value='30 2 * * *' />
-                <propval name='ref_image' type='astring' value='/' />
-		<propval name='publishers' type='astring'
-			value='openindiana.org,hipster-encumbered' />
-                <propval name='cache_dir' type='astring'
-                        value='/var/cache/pkg/mirror' />
-                <propval name='debug' type='boolean' value='false' />
-
-		<propval
-                	name='value_authorization'
-	                type='astring'
-        	        value='solaris.smf.manage.pkg-mirror' />
-                </property_group>
-        </instance>
 	<stability value='Evolving' />
 
         <template>

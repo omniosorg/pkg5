@@ -20,6 +20,7 @@
 # CDDL HEADER END
 #
 # Copyright (c) 2013, 2016, Oracle and/or its affiliates.  All rights reserved.
+# Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
 #
 
 # Load SMF constants and functions
@@ -30,73 +31,54 @@
 CHOWN=/usr/bin/chown
 ZFS=/usr/sbin/zfs
 
-result=$SMF_EXIT_ERR_FATAL
+dataset="`svcprop -p config/dataset $SMF_FMRI`"
+[ -n "$dataset" ] || dataset=pkg-repositories
+
+mp="`svcprop -p config/mountpoint $SMF_FMRI`"
+[ -n "$mp" ] || mp=/var/share/pkg/repositories
 
 case "$1" in
 'start')
-	# check if we already have a mounted /var/share/pkg/repositories
-	readmnttab /var/share/pkg/repositories < /etc/mnttab
-	if [ "$fstype" = zfs ] ; then
-		exit $SMF_EXIT_OK
-	else
-		readmnttab / < /etc/mnttab
-		if [ "$fstype" = zfs ] ; then
-			#
-			# $special gets set by readmnttab in
-			# /lib/svc/share/fs_include.sh
-			#
-			be=$special
-			#rpool=$(print $be | cut -d / -f1)			
-			# we use now baseds, as OI does not provide a "fake" rpool for a zone
-			# we need to store our VARSHARE under <zoneroot>/ROOT/VARSHARE
-			baseds=$(/usr/bin/dirname $be)
-		else
-			# we're on a LiveCD, so exit immediately.
-			exit $SMF_EXIT_OK
-		fi
+	# check if we already have a mounted dataset
+	readmnttab $mp < /etc/mnttab
+	[ "$fstype" = zfs ] && exit $SMF_EXIT_OK
 
-		DS="$baseds/VARSHARE/pkg/repositories"
+	# Only continue if the system has a ZFS root
+	readmnttab / < /etc/mnttab
+	[ "$fstype" = zfs ] || exit $SMF_EXIT_OK
 
-		# If the dataset exists, we mount it along with any child
-		# datasets, then exit.
-		$ZFS list "$DS" > /dev/null 2>&1
-		if [ $? -eq 0 ] ; then
-			child_fs_mount=0
-			for child in $($ZFS list -H -r -t filesystem \
-			    -o name "$DS"); do
-				$ZFS mount "$child"
-				child_fs_mount=$(( $child_fs_mount + $? ))
-			done
-			if [ $child_fs_mount -eq 0 ] ; then
-				exit $SMF_EXIT_OK
-			else
-				check_failure 1 \
-				    "Unable to mount child datasets of $DS" \
-				    $SMF_FMRI exit
-			fi
-		fi
+	# readmnttab has populated 'special'
+	be=$special
+	pool=${special%%/*}
 
-		# Otherwise, we need to create the dataset, taking care to set
-		# canmount=noauto, to allow multiple bootable rpools to coexist
-		# on the same system.
-		$ZFS create -p $DS
-		check_failure $? "Unable to create $DS" $SMF_FMRI exit
-
-		for fs in "$baseds/VARSHARE/pkg" \
-		    "$baseds/VARSHARE/pkg/repositories" ; do
-			$ZFS set canmount=noauto $fs
+	# If the dataset exists, mount it along with any child datasets,
+	# then exit.
+	if $ZFS list "$pool/$dataset" >/dev/null 2>&1; then
+		child_fs_mount=0
+		for child in \
+		    `$ZFS list -H -r -t filesystem -o name "$pool/$dataset"`
+		do
+			$ZFS mount "$child"
+			((child_fs_mount += $?))
 		done
-
-		$ZFS allow pkg5srv create,mount,canmount,snapshot "$DS"
-		check_failure $? \
-		    "Unable to delegate ZFS permissions on $DS" \
-		    $SMF_FMRI exit
-
-		$CHOWN pkg5srv:pkg5srv /var/share/pkg/repositories
-		check_failure $? \
-		    "Unable to chown /var/share/pkg/repositories" \
-		    $SMF_FMRI exit
+		[ "$child_fs_mount" -eq 0 ] && exit $SMF_EXIT_OK
+		echo "Unable to mount child datasets of $pool/$dataset"
+		exit $SMF_EXIT_ERR_FATAL
 	fi
+
+	# Otherwise, create the dataset, and delegate permissions to the user.
+	$ZFS create -o mountpoint="$mp" "$pool/$dataset"
+	check_failure $? "Unable to create $pool/$dataset" $SMF_FMRI fatal
+
+	$ZFS allow pkg5srv create,mount,canmount,snapshot "$pool/$dataset"
+	check_failure $? \
+	    "Unable to delegate ZFS permissions on $pool/$dataset" \
+	    $SMF_FMRI fatal
+
+	$CHOWN pkg5srv:pkg5srv "$mp"
+	check_failure $? \
+	    "Unable to chown $mp" \
+	    $SMF_FMRI fatal
 	;;
 esac
 

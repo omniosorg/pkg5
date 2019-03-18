@@ -20,6 +20,7 @@
 # CDDL HEADER END
 #
 # Copyright (c) 2013, 2015, Oracle and/or its affiliates.  All rights reserved.
+# Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
 #
 
 #
@@ -75,6 +76,10 @@ WC=/usr/bin/wc
 ZFS=/usr/sbin/zfs
 
 SVCNAME=svc:/application/pkg/mirror
+RSVCNAME=svc:/application/pkg/repositories-setup
+
+reporoot="`svcprop -p config/mountpoint $RSVCNAME`"
+[ -n "$reporoot" ] || reporoot=/var/share/pkg/repositories
 
 #
 # Since we deal with '*' values in crontab fields, we never want
@@ -100,7 +105,7 @@ function check_duplicate_repos {
 	# if the unique list of repositories is not the same as the
 	# list of repositories, then we have duplicates.
 	#
-	if [ "$ALL_REPOS" != "$REPOS" ]; then		
+	if [ "$ALL_REPOS" != "$REPOS" ]; then
 		return 1
 	fi
 	return 0
@@ -139,7 +144,7 @@ function add_date_jitter {
 		}'
 
 	check_failure $? "invalid value for config/crontab_period." \
-	    $SMF_FMRI exit
+	    $SMF_FMRI fatal
 
 	RAND=$(( ($RANDOM % 27) + 1 ))
 	new_schedule=$(echo "$schedule" | $SED -e "s/random/$RAND/1")
@@ -167,9 +172,10 @@ function smf_schedule_updates {
 
 	check_duplicate_repos
 	check_failure $? "Two or more instances of $SVCNAME contain the
-same 'config/repository' value, which is not supported." $SMF_FMRI exit
+same 'config/repository' value, which is not supported." $SMF_FMRI fatal
 	typeset -f schedule=$(add_date_jitter | $SED -e 's/\\//g')
 	typeset repo=$($SVCPROP -p config/repository $SMF_FMRI)
+	[[ "$repo" == /* ]] || repo="$reporoot/$repo"
 
 	SAVED_IFS="$IFS"
 	IFS=,
@@ -187,22 +193,18 @@ same 'config/repository' value, which is not supported." $SMF_FMRI exit
 			#
 			DS="$special/$repo_base"
 
-			#
-			# We set canmount=noauto so that multiple bootable
-			# rpools can coexist on the same system.
-			#
-			$ZFS create -o canmount=noauto "$DS"
+			$ZFS create "$DS"
 			check_failure $? \
 			    "unable to create zfs dataset $DS" \
-			    $SMF_FMRI degrade
+			    $SMF_FMRI fatal
 			$ZFS mount "$DS"
 			check_failure $? \
 			    "unable to mount zfs dataset $DS" \
-			    $SMF_FMRI degrade
+			    $SMF_FMRI fatal
 		fi
 		$PKGREPO create "$repo"
 		check_failure $? "unable to create repository" \
-		    $SMF_FMRI degrade
+		    $SMF_FMRI fatal
 	fi
 	set_default_publisher "$repo" ${publishers[0]}
 	add_cronjob $SMF_FMRI "$schedule" \
@@ -242,7 +244,7 @@ function set_default_publisher {
 # 'pkgrecv_from_origin' for each publisher configured in the SMF
 # instance.
 #
-# Usage: 
+# Usage:
 #     update_repository <smf fmri>
 #
 function update_repository {
@@ -253,18 +255,20 @@ function update_repository {
 
 	if [ -f $lockfile ]; then
 		pid=$(<$lockfile)
-		check_failure 1 "A mirror operation was already running
+		echo "A mirror operation was already running
  under process $pid when the cron job fired. Remove $lockfile to
  override, or check the SMF property 'config/crontab_period' to ensure
- cron schedules don't overlap." $SMF_FMRI degrade
+ cron schedules don't overlap."
+		echo $SMF_EXIT_FATAL
 		return 1
 	fi
 	# write our pid into the lock file
 	echo $$ > $lockfile
-	check_failure $? "unable to create lockfile" $SMF_FMRI degrade
+	check_failure $? "unable to create lockfile" $SMF_FMRI fatal
 
-	typeset repo=$($SVCPROP -p config/repository $SMF_FMRI \
-	    | $SED -e 's/\\//g')
+	typeset repo=$($SVCPROP -p config/repository $SMF_FMRI)
+	[[ "$repo" == /* ]] || repo="$reporoot/$repo"
+	repo=$(echo $repo | $SED -e 's/\\//g')
 	typeset cachedir=$($SVCPROP -p config/cache_dir $SMF_FMRI \
 	    | $SED -e 's/\\//g')
 	typeset ref_image=$($SVCPROP -p config/ref_image $SMF_FMRI\
@@ -363,7 +367,7 @@ configured for publisher $pub"
 		    "$https_proxy" "$clone" "$pub"
 		check_failure $? \
 		    "unable to update repository $repo" $SMF_FMRI \
-		    degrade
+		    fatal
 		if [ $? -ne 0 ]; then
 			$RM $lockfile
 			return 1
@@ -427,7 +431,7 @@ function pkgrecv_from_origin {
 		key="--key $key"
 		cert="--cert $cert"
 	fi
-	
+
 	set -f
 	if [ -n "$clone" ]; then
 		cmd="$PKGRECV -s $origin -d "$repo" -p $publisher \
@@ -498,7 +502,7 @@ case "$1" in
 #	packages that were received during that run of the cron job.
 #
 # /var/log/pkg/mirror/mirror.<instance>.run.<pid>
-# 	This is a temporary log file, which should contain very little
+#	This is a temporary log file, which should contain very little
 #       output - it exists to capture all other output from the service
 #	If 'config/debug' is set, then this file will also include the
 #       full pkgrecv(1) command that is executed.

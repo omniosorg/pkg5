@@ -78,7 +78,7 @@
 		<exec_method
 			type='method'
 			name='start'
-			exec='/lib/svc/method/svc-pkg-sysrepo start'
+			exec='/lib/svc/method/svc-pkg-sysrepo %m'
 			timeout_seconds='60'>
 			<method_context>
 				<method_credential user='pkg5srv'
@@ -91,7 +91,7 @@
 		<exec_method
 			type='method'
 			name='stop'
-			exec='/lib/svc/method/svc-pkg-sysrepo stop'
+			exec='/lib/svc/method/svc-pkg-sysrepo %m'
 			timeout_seconds='60' >
 			<method_context>
 				<method_credential user='pkg5srv'
@@ -104,7 +104,7 @@
 		<exec_method
 			type='method'
 			name='refresh'
-			exec='/lib/svc/method/svc-pkg-sysrepo refresh'
+			exec='/lib/svc/method/svc-pkg-sysrepo %m'
 			timeout_seconds='60' >
 			<method_context>
              			<method_credential user='pkg5srv'
