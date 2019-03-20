@@ -18,8 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
-# Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
 # Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
 # Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
 #
@@ -80,17 +79,23 @@ ALL_MANIFESTS:sh  = \
 	print *.p5m | sed -e 's/:/\\:/g'; \
 	exit 0
 $(PUBLISHALL)MANIFESTS      = $(ALL_MANIFESTS)
+
+# PKGCMDENV needs to specify the interpreter explicitly since the shebang
+# lines include -Es which suppresses the use of non-default environments.
+PYTHON3		  = python3.5
+PYDIR		  = usr/lib/$(PYTHON3)
+PYDIRVP		  = $(PYDIR)/vendor-packages
 PKGCMDENV         = \
 	PATH=$(PKGROOT)/usr/bin:/usr/sbin:/usr/bin \
-	PYTHONPATH=$(PKGROOT)/usr/lib/python3.5/vendor-packages
-PKG               = $(PKGCMDENV) pkg
-PKGDEPEND         = $(PKGCMDENV) pkgdepend
-PKGDIFF           = $(PKGCMDENV) pkgdiff
-PKGFMT            = $(PKGCMDENV) pkgfmt
-PKGLINT           = $(PKGCMDENV) pkglint
-PKGMOGRIFY        = $(PKGCMDENV) pkgmogrify
-PKGREPO           = $(PKGCMDENV) pkgrepo
-PKGSEND           = $(PKGCMDENV) pkgsend
+	PYTHONPATH=$(PKGROOT)/$(PYDIRVP) $(PYTHON3) $(PKGROOT)/usr/bin/
+PKG               = $(PKGCMDENV)/pkg
+PKGDEPEND         = $(PKGCMDENV)/pkgdepend
+PKGDIFF           = $(PKGCMDENV)/pkgdiff
+PKGFMT            = $(PKGCMDENV)/pkgfmt
+PKGLINT           = $(PKGCMDENV)/pkglint
+PKGMOGRIFY        = $(PKGCMDENV)/pkgmogrify
+PKGREPO           = $(PKGCMDENV)/pkgrepo
+PKGSEND           = $(PKGCMDENV)/pkgsend
 MOGRIFESTS        = $(MANIFESTS:%.p5m=$(PDIR)/%.mog)
 ALL_MOGRIFESTS    = $(ALL_MANIFESTS:%.p5m=$(PDIR)/%.mog)
 PUBLIFESTS        = $(MANIFESTS:%.p5m=$(PDIR)/%.pub)
@@ -116,8 +121,8 @@ PKGMOG_DEFVALS    = \
 	PKGVERS_BRANCH=$(PKGVERS_BRANCH) \
 	PKGVERS=$(PKGVERS) \
 	REV=$(REV) \
-	PYDIR=usr/lib/python3.5 \
-	PYDIRVP=usr/lib/python3.5/vendor-packages \
+	PYDIR=$(PYDIR) \
+	PYDIRVP=$(PYDIRVP) \
 	CHANGESET=$(CHANGESET) \
 	PKGPUBLISHER_LOCALIZABLE=$(PKGPUBLISHER_LOCALIZABLE)
 PKGMOG_DEFINES    = $(PKGMOG_DEFVALS:%=-D %)

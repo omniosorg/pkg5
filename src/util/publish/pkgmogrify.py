@@ -1,4 +1,4 @@
-#!/usr/bin/python3.5
+#!/usr/bin/python3.5 -Es
 #
 # CDDL HEADER START
 #
@@ -20,10 +20,11 @@
 # CDDL HEADER END
 
 #
-# Copyright (c) 2009, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2019, Oracle and/or its affiliates. All rights reserved.
 #
 
 from __future__ import print_function
+import pkg.no_site_packages
 import getopt
 import gettext
 import locale

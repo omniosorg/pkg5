@@ -1,4 +1,4 @@
-#!/usr/bin/python3.5
+#!/usr/bin/python3.5 -Es
 #
 # CDDL HEADER START
 #
@@ -21,8 +21,9 @@
 #
 
 #
-# Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
 #
+import pkg.no_site_packages
 
 PKG_CLIENT_NAME = "pkgrepo"
 

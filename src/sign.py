@@ -1,4 +1,4 @@
-#!/usr/bin/python3.5
+#!/usr/bin/python3.5 -Es
 #
 # CDDL HEADER START
 #
@@ -21,10 +21,11 @@
 #
 
 #
-# Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
 # Copyright 2017 OmniOS Community Edition (OmniOSce) Association.
 #
 
+import pkg.no_site_packages
 import getopt
 import gettext
 import hashlib
