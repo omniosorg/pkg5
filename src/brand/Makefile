@@ -22,7 +22,7 @@
 #
 # Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
 # Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
-# Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
 #
 
 MACH:sh = uname -p
@@ -35,12 +35,14 @@ ROOTETCZONES = $(ROOT)/etc/zones
 ROOTETCBRAND = $(ROOT)/etc/brand/ipkg
 ROOTUSRLIB = $(ROOT)/usr/lib
 ROOTBRAND = $(ROOTUSRLIB)/brand
+SHAREDBRANDPKG = $(ROOTBRAND)/shared
 ROOTBRANDPKG = $(ROOTBRAND)/ipkg
 LINKBRANDPKG = $(ROOTBRAND)/lipkg
 SPARSEBRANDPKG = $(ROOTBRAND)/sparse
 PKGSRCBRANDPKG = $(ROOTBRAND)/pkgsrc
 BHYVEBRANDPKG = $(ROOTBRAND)/bhyve
 KVMBRANDPKG = $(ROOTBRAND)/kvm
+ILLUMOSBRANDPKG = $(ROOTBRAND)/illumos
 
 ROOTDIRS = \
 	$(ROOT) \
@@ -49,12 +51,14 @@ ROOTDIRS = \
 	$(ROOTETCZONES) \
 	$(ROOTUSRLIB) \
 	$(ROOTBRAND) \
+	$(SHAREDBRANDPKG) \
 	$(ROOTBRANDPKG) \
 	$(LINKBRANDPKG) \
 	$(SPARSEBRANDPKG) \
 	$(PKGSRCBRANDPKG) \
 	$(BHYVEBRANDPKG) \
-	$(KVMBRANDPKG)
+	$(KVMBRANDPKG) \
+	$(ILLUMOSBRANDPKG)
 
 ROOTFILES = \
 	$(ROOTETCBRAND)/pkgrm.conf \
@@ -62,6 +66,8 @@ ROOTFILES = \
 	$(ROOTETCZONES)/OMNIlipkg.xml \
 	$(ROOTETCZONES)/SUNWipkg.xml \
 	$(ROOTETCZONES)/OMNIipkg.xml \
+	\
+	$(SHAREDBRANDPKG)/state.ksh \
 	\
 	$(ROOTBRANDPKG)/attach \
 	$(ROOTBRANDPKG)/clone \
@@ -111,7 +117,15 @@ ROOTFILES = \
 	$(KVMBRANDPKG)/config.xml \
 	$(KVMBRANDPKG)/platform.xml \
 	$(KVMBRANDPKG)/init \
-	$(KVMBRANDPKG)/support
+	$(KVMBRANDPKG)/support \
+	\
+	$(ROOTETCZONES)/OMNIillumos.xml \
+	$(ILLUMOSBRANDPKG)/config.xml \
+	$(ILLUMOSBRANDPKG)/createzone \
+	$(ILLUMOSBRANDPKG)/platform.xml \
+	$(ILLUMOSBRANDPKG)/poststate \
+	$(ILLUMOSBRANDPKG)/prestate \
+	$(ILLUMOSBRANDPKG)/uninstall
 
 BIN = \
 	support \
@@ -139,10 +153,10 @@ clobber: clean
 
 install: $(ROOTFILES)
 
-
 $(ROOT) $(ROOTETC) $(ROOTETCBRAND) $(ROOTETCZONES) $(ROOTUSRLIB) \
-	$(ROOTBRAND) $(ROOTBRANDPKG) $(LINKBRANDPKG) \
-	$(SPARSEBRANDPKG) $(PKGSRCBRANDPKG) $(BHYVEBRANDPKG) $(KVMBRANDPKG):
+	$(ROOTBRAND) $(SHAREDBRANDPKG) $(ROOTBRANDPKG) $(LINKBRANDPKG) \
+	$(ILLUMOSBRANDPKG) $(SPARSEBRANDPKG) $(PKGSRCBRANDPKG) \
+	$(BHYVEBRANDPKG) $(KVMBRANDPKG):
 	mkdir -p $@
 
 $(ROOTETCBRAND)/%: $(ROOTETCBRAND) %
@@ -156,6 +170,9 @@ $(ROOTETCZONES)/OMNIipkg.xml: $(ROOTETCZONES)
 
 $(ROOTBRANDPKG)/%: $(ROOTBRANDPKG) %
 	rm -f $@; $(INSTALL) -f $(ROOTBRANDPKG) -m 0444 $<
+
+$(SHAREDBRANDPKG)/%: $(SHAREDBRANDPKG) shared/%
+	rm -f $@; $(INSTALL) -f $(SHAREDBRANDPKG) -m 0444 $<
 
 $(SPARSEBRANDPKG)/%: $(SPARSEBRANDPKG) sparse/%
 	rm -f $@; $(INSTALL) -f $(SPARSEBRANDPKG) -m 0444 $<
@@ -171,4 +188,7 @@ $(BHYVEBRANDPKG)/%: $(BHYVEBRANDPKG) bhyve/%
 
 $(KVMBRANDPKG)/%: $(KVMBRANDPKG) kvm/%
 	rm -f $@; $(INSTALL) -f $(KVMBRANDPKG) -m 0444 $<
+
+$(ILLUMOSBRANDPKG)/%: $(ILLUMOSBRANDPKG) illumos/%
+	rm -f $@; $(INSTALL) -f $(ILLUMOSBRANDPKG) -m 0444 $<
 

@@ -1,0 +1,122 @@
+#!/bin/ksh -p
+#
+# This file and its contents are supplied under the terms of the
+# Common Development and Distribution License ("CDDL"), version 1.0.
+# You may only use this file in accordance with the terms of version
+# 1.0 of the CDDL.
+#
+# A full copy of the text of the CDDL should have accompanied this
+# source.  A copy of the CDDL is also available via the Internet at
+# http://www.illumos.org/license/CDDL.
+#
+# Copyright 2016 Joyent, Inc.  All rights reserved.
+# Copyright 2016 OmniTI Computer Consulting, Inc.  All rights reserved.
+# Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
+#
+
+PATH=/bin:/usr/bin:/usr/sbin
+export PATH
+
+. /usr/lib/brand/ipkg/common.ksh
+
+SEEDFILE=
+SEEDTYPE=
+
+function usage
+{
+	[ -n "$*" ] && echo "$*" && echo
+	cat << EOM
+Available options are:
+	-s <dataset>		Name of an existing ZFS dataset to clone
+	-s <absolute-pathname>	Path to ZFS send stream or gzip thereof
+	-t <absolute-pathname>	Path to tar archive or gzip thereof
+EOM
+	exit $ZONE_SUBPROC_USAGE
+}
+
+while getopts "R:s:t:z:" opt; do
+	case "$opt" in
+		R)	ZONEPATH="$OPTARG" ;;
+		z)	ZONENAME="$OPTARG" ;;
+		s)	SEEDFILE="$OPTARG"
+			[ -f "$SEEDFILE" ] && SEEDTYPE=zfsrecv || SEEDTYPE=zfs
+			;;
+		t)	SEEDFILE="$OPTARG"; SEEDTYPE=tar ;;
+		*)	usage ;;
+	esac
+done
+shift OPTIND-1
+
+[ -n "$ZONENAME" ] || usage 'No zone name supplied.'
+[ -n "$ZONEPATH" ] || usage 'No zone path supplied.'
+[ -n "$SEEDTYPE" ] || usage 'The installation source must be specified.'
+
+get_zonepath_ds $ZONEPATH
+ZONEROOT="$ZONEPATH/root"
+ZONEROOT_DS="$ZONEPATH_DS/root"
+
+case $SEEDTYPE in
+    zfs)
+	echo "Installing zone from ZFS filesystem $SEEDFILE"
+	outstr=`zfs list -Ht filesystem -o name "$SEEDFILE" 2>/dev/null`
+	if [ "$outstr" = "$SEEDFILE" ]; then
+		# We have a zfs filesystem name.
+		# Snapshot it using today's date/time
+		snapname=`date -u "+%Y-%m-%d:%H:%M:%S"`
+		SEEDFILE+="@$snapname"
+		if ! zfs snapshot "$SEEDFILE"; then
+			echo "ZFS snapshot ($SEEDFILE@$snapname) failed ($?)."
+			exit $ZONE_SUBPROC_FATAL
+		fi
+	fi
+
+	outstr=`zfs list -Ht snapshot -o name "$SEEDFILE" 2>/dev/null`
+	if [ "$outstr" = "$SEEDFILE" ]; then
+		# Snapshot name found
+		echo "Cloning from snapshot $SEEDFILE"
+		if ! zfs clone "$SEEDFILE" $ZONEROOT_DS; then
+		    echo "ZFS clone ($SEEDFILE to $ZONEROOT_DS) failed ($?)."
+		    exit $ZONE_SUBPROC_FAIL
+		fi
+	else
+		usage "Cannot find ZFS source $SEEDFILE"
+	fi
+	;;
+
+    zfsrecv)
+	echo "Installing zone from ZFS stream $SEEDFILE"
+	type=`file -b "$SEEDFILE" | awk '{print $1}'`
+	case "$type" in
+	    ZFS)	filter=cat ;;
+	    gzip)	filter='gzip -dc' ;;
+	    bzip2)	filter='bzip2 -dc' ;;
+	    xz)		filter='xz -dc' ;;
+	    *)
+		usage "Seed file $SEEDFILE not in supported format ($type)"
+		;;
+	esac
+	$filter "$SEEDFILE" | zfs recv -F $ZONEROOT_DS
+	if [ $? -ne 0 ]; then
+		echo "Zfs receive command failed ($?)."
+		exit $ZONE_SUBPROC_FATAL
+	fi
+	;;
+
+    tar)
+	[ ! -f "$SEEDFILE" ] && usage "No such file, '$SEEDFILE'"
+	echo "Installing zone from tar file $SEEDFILE"
+	set -e
+	cd $ZONEPATH
+	zfs create $ZONEROOT_DS
+	chmod 0755 root
+	chgrp sys root
+	# GNU tar will automatically uncompress most formats
+	gtar -C root xf "$SEEDFILE"
+	;;
+esac
+
+[ ! -d $ZONEROOT/dev ] && \
+    mkdir -m 0755 $ZONEROOT/dev && chgrp sys $ZONEROOT/dev
+
+exit $ZONE_SUBPROC_OK
+

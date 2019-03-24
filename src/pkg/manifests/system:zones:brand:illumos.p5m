@@ -1,0 +1,33 @@
+# {{{ CDDL HEADER
+#
+# This file and its contents are supplied under the terms of the
+# Common Development and Distribution License ("CDDL"), version 1.0.
+# You may only use this file in accordance with the terms of version
+# 1.0 of the CDDL.
+#
+# A full copy of the text of the CDDL should have accompanied this
+# source. A copy of the CDDL is also available via the Internet at
+# http://www.illumos.org/license/CDDL.
+# }}}
+#
+# Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
+#
+
+set name=pkg.fmri value=pkg:/system/zones/brand/illumos@$(PKGVERS)
+set name=pkg.summary value="Image Packaging System branded zone - illumos zones"
+set name=pkg.description value="A branded zone for running a generic illumos distribution"
+set name=variant.arch value=$(ARCH)
+dir  path=etc
+dir  path=etc/zones
+file path=etc/zones/OMNIillumos.xml
+dir  path=usr/lib
+dir  path=usr/lib/brand
+dir  path=usr/lib/brand/illumos
+file path=usr/lib/brand/illumos/config.xml mode=0644
+file path=usr/lib/brand/illumos/createzone mode=0755
+file path=usr/lib/brand/illumos/platform.xml mode=0644
+file path=usr/lib/brand/illumos/poststate mode=0755
+file path=usr/lib/brand/illumos/prestate mode=0755
+file path=usr/lib/brand/illumos/uninstall mode=0755
+license cr_Oracle license=cr_Oracle
+depend type=require fmri=system/zones/brand/ipkg@$(PKGVERS)

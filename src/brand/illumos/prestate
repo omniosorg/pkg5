@@ -11,10 +11,8 @@
 
 # Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
 
-. /usr/lib/brand/sparse/common.ksh
+. /usr/lib/brand/ipkg/common.ksh
 . /usr/lib/brand/shared/state.ksh
-
-[ $sparsedebug -eq 1 ] && printf " PRESTATE $*"
 
 ZONENAME="$1"
 ZONEPATH="$2"
@@ -24,24 +22,7 @@ ALTROOT="$5"
 
 case $cmd in
     $ZONE_STATE_CMD_READY)
-	# When this script returns, the active zone dataset must be mounted
-	# ready for boot, but the overlays must not be since zoneadm will
-	# check for any mounted child filesystems and abort if found.
-
-	find_active_ds
-	umount_overlays
-	umount_active_ds
-	mount_active_ds
-	if [ "$state" = $ZONE_STATE_SYSBOOT ]; then
-		# System boot but zone not set to auto boot.
-		# Mount overlays so that everything is available for patching.
-		mount_overlays
-	else
-		# Configure the network if the zone is actually heading for boot
-		config_network
-	fi
-	;;
-    $ZONE_STATE_CMD_BOOT)
+	config_network
 	;;
 esac
 
