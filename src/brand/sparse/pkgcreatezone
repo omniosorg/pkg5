@@ -154,7 +154,8 @@ pkglist="$entire_fmri"
 # and not constrained to IPS images of type 'full'
 lc_pkg contents -H -a type=optional -o fmri,variant.opensolaris.imagetype \
     $entire_fmri | nawk '$2 != "full" { print $1 }' | while read pkg; do
-        lc_pkg list -q $pkg && pkglist="$pkglist $pkg"
+        pkg=${pkg%%@*}
+        lc_pkg list -q $pkg && pkglist+=" $pkg"
 done
 
 # For packages which have a cross-zone version dependency, ensure that the

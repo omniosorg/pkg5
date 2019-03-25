@@ -256,7 +256,8 @@ if [[ -n $entire_fmri ]]; then
 	    -o fmri,variant.opensolaris.zone $entire_fmri \
 	    | nawk '$2 != "global" { print $1 }' \
 	    | while read pkg; do
-		$PKG list -q $pkg && pkglist="$pkglist $pkg"
+		pkg=${pkg%%@*}
+		$PKG list -q $pkg && pkglist+=" $pkg"
 	done
 else
 	# If no entire was found, then add a small default set of packages.
