@@ -11,29 +11,13 @@
 
 # Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
 
-. /usr/lib/brand/sparse/common.ksh
-. /usr/lib/brand/shared/state.ksh
-
-[ $sparsedebug -eq 1 ] && printf "POSTSTATE $*"
-
 ZONENAME="$1"
 ZONEPATH="$2"
-state="$3"
-cmd="$4"
-ALTROOT="$5"
 
-case $cmd in
-    $ZONE_STATE_CMD_READY)
-	# At this point, the overlay should be mounted ready for boot.
-	find_active_ds
-	mount_overlays
-	;;
-    $ZONE_STATE_CMD_HALT)
-	# Re-mount overlays to support patching while zone is down
-	find_active_ds
-	mount_overlays
-	unconfig_network
-	;;
-esac
+ZONEPATH_DS=`zfs list -t filesystem -o name,mountpoint | \
+    nawk -v zonepath=$ZONEPATH '$2 == zonepath { print $1 }'`
+if [ -n "$ZONEPATH_DS" ]; then
+	zfs destroy -r $ZONEPATH_DS || exit $ZONE_SUBPROC_FATAL
+fi
 
 exit $ZONE_SUBPROC_OK
