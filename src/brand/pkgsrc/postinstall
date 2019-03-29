@@ -54,7 +54,7 @@ tar zxpf $cachestrap -C $ZONEROOT || exit $ZONE_SUBPROC_NOTCOMPLETE
 
 sed -i~ '
 	/^#*PATH=/c\
-PATH=/usr/bin:/opt/local/bin
+PATH=/usr/bin:/usr/sbin:/sbin:/opt/local/bin:/opt/local/sbin:/usr/gnu/bin
 	/^#*SUPATH=/c\
 SUPATH=/usr/sbin:/sbin:/opt/local/sbin:/usr/bin:/opt/local/bin
 ' $ZONEROOT/etc/default/login $ZONEROOT/etc/default/su
