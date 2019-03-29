@@ -211,14 +211,30 @@ for f in root.findall('./network[@physical]'):
     ifname = f.get('physical').strip()
     mac = get_mac(ifname)
     if not len(mac): continue
+
+    if opts['netif'] == 'e1000':
+        # -net nic,vlan=0,name=net0,model=e1000,macaddr=00:..
+        args.extend([
+            '-net',
+            'nic,vlan={2},name=net{2},model={0},macaddr={1}'
+                .format(opts['netif'], mac, vlan),
+        ])
+    else:
+    # -device <dev>,mac=00:.,tx=timer,x-txtimer=200000,x-txburst=128,vlan=0
+        args.extend([
+            '-device',
+            '{0},mac={1},tx=timer,x-txtimer=200000,x-txburst=128,vlan={2}'
+                .format(opts['netif'], mac, vlan),
+        ])
+
+
+    # -net vnic,vlan=0,name=net0,ifname=vnic22
     args.extend([
-        '-device',
-        '{0},mac={1},tx=timer,x-txtimer=200000,x-txburst=128,vlan={2}'
-            .format(opts['netif'], mac, vlan),
         '-net',
         'vnic,vlan={0},name=net{0},ifname={1}'
             .format(vlan, ifname)
     ])
+
     vlan += 1
 
 # VNC
