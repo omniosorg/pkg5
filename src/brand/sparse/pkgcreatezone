@@ -221,6 +221,9 @@ printf "$m_done\n"
 # Set blank password
 sed -i -e 's%^root::%root:$5$kr1VgdIt$OUiUAyZCDogH/uaxH71rMeQxvpDEY2yX.x0ZQRnmeb9:%' $ZONEROOT/etc/shadow
 
+# Copy the default paths from the global zone
+cp /etc/default/{login,su} $ZONEROOT/etc/default/
+
 if [ -x /usr/lib/brand/$ZONEBRAND/postinstall ]; then
 	/usr/lib/brand/$ZONEBRAND/postinstall $ZONEROOT
 fi
