@@ -27,6 +27,7 @@ case $cmd in
 	# At this point, the overlay should be mounted ready for boot.
 	find_active_ds
 	mount_overlays
+	setup_fw
 	;;
     $ZONE_STATE_CMD_HALT)
 	# Re-mount overlays to support patching while zone is down

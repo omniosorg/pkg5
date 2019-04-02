@@ -50,6 +50,9 @@ cmd=$4
 ALTROOT=$5
 
 case $cmd in
+    0)		# Ready
+	setup_fw
+	;;
     4)		# Halting
 	is_brand_labeled
 	if (( $? == 0 )); then
