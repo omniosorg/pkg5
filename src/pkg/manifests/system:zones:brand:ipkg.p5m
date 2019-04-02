@@ -29,6 +29,7 @@ set name=pkg.description \
 set name=info.classification \
     value=org.opensolaris.category.2008:System/Packaging
 set name=variant.arch value=$(ARCH)
+set name=variant.opensolaris.zone value=global value=nonglobal
 dir  path=etc
 dir  path=etc/brand
 dir  path=etc/brand/ipkg
@@ -58,6 +59,10 @@ file path=usr/lib/brand/ipkg/smf_disable.lst
 file path=usr/lib/brand/ipkg/support mode=0755
 file path=usr/lib/brand/ipkg/system-unconfigure mode=0755
 file path=usr/lib/brand/ipkg/uninstall mode=0755
+dir  path=usr/lib/brand/lx owner=root group=bin mode=0755 \
+    variant.opensolaris.zone=global
+file path=usr/lib/brand/lx/poststate mode=0755 variant.opensolaris.zone=global
+file path=usr/lib/brand/lx/prestate mode=0755 variant.opensolaris.zone=global
 dir  path=usr/lib/brand/shared group=sys
 file path=usr/lib/brand/shared/state.ksh
 legacy pkg=SUNWipkg-brand version=0.0.0
