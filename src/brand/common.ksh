@@ -142,7 +142,7 @@ sanity_check() {
 		vlog "$sanity_fail_vers" "$image_vers"
 		fatal "$install_fail" "$ZONENAME"
 	fi
-	
+
 	vlog "$sanity_ok"
 }
 
@@ -540,6 +540,16 @@ demand_vnics() {
 	'
 }
 
+log() {
+	echo "$*"
+	logger -p daemon.err "zone $ZONENAME $*"
+}
+
+log_and_exit() {
+	log "$@"
+	exit $ZONE_SUBPROC_FATAL
+}
+
 #
 # Configure network parameters based on zone configuration
 #
@@ -552,15 +562,14 @@ config_network() {
 		[ -n "$global" -a "$global" != "-" ] || continue
 		if [ "$global" = "auto" ]; then
 			if [ "$addr" = "-" ]; then
-				echo "Cannot use 'auto' global NIC"\
+				log_and_exit "Cannot use 'auto' global NIC"\
 				   "without allowed-address."
-				exit $ZONE_SUBPROC_FATAL
 			fi
 			global="`route -n get "$addr" | nawk '
 			    / interface:/ {print $2; exit}'`"
 			if [ -z "$global" ]; then
-				echo "Could not determine global-nic for $nic"
-				exit $ZONE_SUBPROC_FATAL
+				log_and_exit \
+				    "Could not determine global-nic for $nic"
 			fi
 		fi
 		if dladm show-vnic -p -o LINK $nic >/dev/null 2>&1; then
@@ -573,8 +582,7 @@ config_network() {
 		[ "$mac" != "-" ] && opt+=" -m $mac"
 		[ "$vlan" != "-" -a "$vlan" != "0" ] && opt+=" -v $vlan"
 		if ! dladm create-vnic -l $global $opt $nic; then
-			echo "Could not create VNIC $nic/$global"
-			exit $ZONE_SUBPROC_FATAL
+			log_and_exit "Could not create VNIC $nic/$global"
 		fi
 
 		if [ "$mac" = "-" ]; then
@@ -620,7 +628,47 @@ unconfig_network() {
 	demand_vnics | while read nic global mac vlan addr; do
 		[ -n "$global" -a "$global" != "-" ] || continue
 		#echo "Removing VNIC $nic/$global"
-		dladm delete-vnic $nic || echo "Could not delete VNIC $nic"
+		dladm delete-vnic $nic || log "Could not delete VNIC $nic"
 	done
+}
+
+# Set up GZ-managed firewall rules for the zone
+setup_fw() {
+	if [ -f $ZONEPATH/etc/ipf.conf ]; then
+		ipf_conf=$ZONEPATH/etc/ipf.conf
+		ipf6_conf=$ZONEPATH/etc/ipf6.conf
+		ipnat_conf=$ZONEPATH/etc/ipnat.conf
+	elif [ -f $ZONEPATH/config/ipf.conf ]; then
+		# Joyent SmartOS uses config/
+		ipf_conf=$ZONEPATH/config/ipf.conf
+		ipf6_conf=$ZONEPATH/config/ipf6.conf
+		ipnat_conf=$ZONEPATH/config/ipnat.conf
+	else
+		return
+	fi
+
+	#log "Enabling zone firewall ($ipf_conf)"
+	ipf -GE $ZONENAME || log_and_exit "error enabling ipf"
+
+	# Flush
+	ipf -GFa $ZONENAME || log_and_exit "error flushing ipf (IPv4)"
+	ipf -6GFa $ZONENAME || log_and_exit "error flushing ipf (IPv6)"
+	ipnat -CF -G $ZONENAME >/dev/null 2>&1 || \
+	    log_and_exit "error flushing ipnat"
+
+	# IPv4
+	ipf -Gf $ipf_conf $ZONENAME || \
+	    log_and_exit "error loading ipf config for IPv4"
+
+	# IPv6
+	[ -f $ipf6_conf ] && ! ipf -6Gf $ipf6_conf $ZONENAME && \
+	    log_and_exit "error loading ipf config for IPv6"
+
+	# NAT
+	[ -f $ipnat_conf ] && ! ipnat -G $ZONENAME -f $ipnat_conf && \
+	    log_and_exit "error loading ipnat config"
+
+	ipf -Gy $ZONENAME >/dev/null 2>&1 || \
+	    log_and_exit "error syncing ipf interfaces"
 }
 
