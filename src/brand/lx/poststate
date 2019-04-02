@@ -24,9 +24,6 @@ case $cmd in
     $ZONE_STATE_CMD_READY)
 	setup_fw
 	;;
-    $ZONE_STATE_CMD_HALT)
-	unconfig_network
-	;;
 esac
 
 exit $ZONE_SUBPROC_OK
