@@ -1,4 +1,18 @@
-#!/bin/ksh
+#!/bin/ksh -p
+#
+# This file and its contents are supplied under the terms of the
+# Common Development and Distribution License ("CDDL"), version 1.0.
+# You may only use this file in accordance with the terms of version
+# 1.0 of the CDDL.
+#
+# A full copy of the text of the CDDL should have accompanied this
+# source. A copy of the CDDL is also available via the Internet at
+# http://www.illumos.org/license/CDDL.
+
+# Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
+
+. /usr/lib/brand/shared/state.ksh
+. /usr/lib/brand/ipkg/common.ksh
 
 cmd="${1:?cmd}"
 zone="${2:?zone}"
@@ -27,6 +41,11 @@ case $cmd in
 	esac
 	;;
     poststate)
+	if [ "$2" = $ZONE_STATE_CMD_READY ]; then
+		ZONEPATH="$root"
+		ZONENAME="$zone"
+		setup_fw
+	fi
 	;;
 esac
 
