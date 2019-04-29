@@ -1,5 +1,5 @@
 '\" te
-.\" Copyright (c) 2007, 2014, Oracle and/or its affiliates. All rights reserved.
+.\" Copyright (c) 2007, 2019, Oracle and/or its affiliates. All rights reserved.
 .TH pkglint 1 "10 Sep 2018" "SunOS 5.11" "User Commands"
 .SH NAME
 pkglint \- Image Packaging System package lint
@@ -7,7 +7,7 @@ pkglint \- Image Packaging System package lint
 .LP
 .nf
 /usr/bin/pkglint [-c \fIcache_dir\fR] [-r \fIrepo_uri\fR]... [-p \fIregexp\fR]
-    [-f \fIconfig_file\fR] [-b \fIbuild_no\fR] [-v]
+    [-e \fIextension_path\fR] [-f \fIconfig_file\fR] [-b \fIbuild_no\fR] [-v]
     [-l \fIlint_uri\fR]... | \fImanifest\fR ...
 .fi
 
@@ -114,6 +114,18 @@ List the known and excluded lint checks and then exit. Display the short name an
 .ne 2
 .mk
 .na
+\fB-e\fR \fIextension_path\fR
+.ad
+.sp .6
+.RS 4n
+Directory to add to the Python search path when loading \fBpkglint\fR
+extensions.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
 \fB\fB-f\fR \fIconfig_file\fR\fR
 .ad
 .sp .6
@@ -191,6 +203,21 @@ If \fBTrue\fR, perform checks that might only make sense for published packages.
 .sp .6
 .RS 4n
 The plugin mechanism of \fBpkglint\fR allows for additional lint modules to be added at runtime. Any key that starts with \fBpkglint.ext.\fR takes a value that must be a fully-specified Python module. See the "Developers" section for more information.
+The \fIextension_path\fR option specifies additional directory locations to
+search when loading extensions.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBextension_path\fR
+.ad
+.sp .6
+.RS 4n
+A list of directories, separated by ':', to search for extension modules. If
+the \fI-e\fR flag is specified on the command line, it is added higher in
+the search order than this configuration file option.
 .RE
 
 .sp
