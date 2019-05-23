@@ -21,6 +21,7 @@
 ##
 ## Copyright 2008, 2010 Oracle and/or its affiliates. All rights reserved.
 ## Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
+## Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
 ##
 <%!
         import re
@@ -47,7 +48,7 @@
                 scheme, netloc, path, params, query, fragment = \
                     urlparse(request.url(), allow_fragments=0)
 
-                match = re.match("(?:.*[.])?(opensolaris.(?:com|org)|omniti.com|omniosce.org|sun.com|oracle.com)", netloc)
+                match = re.match("(?:.*[.])?(omnios(?:ce)?\.org|omniti\.com)", netloc)
                 if match:
                         web_config["theme"] = match.group(1)
                 else:
