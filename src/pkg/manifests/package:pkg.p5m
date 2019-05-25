@@ -253,12 +253,23 @@ file path=usr/share/lib/pkg/web/_themes/omniti.com/en/head_end.shtml
 file path=usr/share/lib/pkg/web/_themes/omniti.com/en/header.shtml
 file path=usr/share/lib/pkg/web/_themes/omniti.com/feed-icon-14x14.png
 file path=usr/share/lib/pkg/web/_themes/omniti.com/logo_ban0.png
+dir path=usr/share/lib/pkg/web/_themes/omniosce.org
+dir path=usr/share/lib/pkg/web/_themes/omniosce.org/en
+file path=usr/share/lib/pkg/web/_themes/omniosce.org/en/head_end.shtml
+file path=usr/share/lib/pkg/web/_themes/omniosce.org/en/base.css
+file path=usr/share/lib/pkg/web/_themes/omniosce.org/en/body_end.shtml
+file path=usr/share/lib/pkg/web/_themes/omniosce.org/en/header.shtml
+file path=usr/share/lib/pkg/web/_themes/omniosce.org/en/footer.shtml
+file path=usr/share/lib/pkg/web/_themes/omniosce.org/feed-icon-14x14.png
+file path=usr/share/lib/pkg/web/_themes/omniosce.org/logo_ban0.png
+file path=usr/share/lib/pkg/web/_themes/omniosce.org/logo_ban0.svg
+link path=usr/share/lib/pkg/web/_themes/omnios.org target=omniosce.org
 file path=usr/share/lib/pkg/web/_themes/p5i-link.png
 file path=usr/share/lib/pkg/web/_themes/pkg-block-icon.png
 file path=usr/share/lib/pkg/web/_themes/pkg-block-logo.png
 file path=usr/share/lib/pkg/web/_themes/pkg-block-logo.svg
 file path=usr/share/lib/pkg/web/_themes/yui-reset-font-grids_base-min.css
-file path=usr/share/lib/pkg/web/config.shtml
+file path=usr/share/lib/pkg/web/config.shtml preserve=true
 dir  path=usr/share/lib/pkg/web/en
 file path=usr/share/lib/pkg/web/en/advanced_search.shtml
 file path=usr/share/lib/pkg/web/en/base.shtml

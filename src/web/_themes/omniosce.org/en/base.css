@@ -41,12 +41,12 @@ div.global-nav div.lang-sel {
         margin: 4px 0;
         font-size: 85%;
 }
-div.masthead {  
+div.masthead {
         background: transparent url(../logo_ban0.svg) no-repeat;	
         border-bottom: none;	
         clear: both;
         display: block;
-        height: 125px;	
+        height: 140px;	
         margin-top: -15px;	
         padding-bottom: 2px;
 }
@@ -82,9 +82,9 @@ div.masthead div.menu ul li a:visited {
         color: #999;	
         display: inline-block;
         font-weight: bold;
-        list-style: none;      
+        list-style: none;
         padding: 0 10px 0 10px;
-        margin-top: 140px; 
+        margin-top: 140px;
         height: 40px;
         text-decoration: none;
         letter-spacing: .05em;
@@ -127,7 +127,7 @@ div#bd {
         width: 730px;
 }
 .section-title {
-		padding-bottom: 10px; 
+		padding-bottom: 10px;
 }
 ul.tips li {
         margin-bottom: 10px;
@@ -174,7 +174,7 @@ div#ft .page-container {
 }
 div#ft .footer-line {
 	text-align: right;
-        border-top: 1px solid #666666; 
+        border-top: 1px solid #666666;
 }
 
 /* Catalog and Search Styles */
@@ -189,7 +189,7 @@ form.search table td {
         border: none;
 }
 form.search a {
-        font-size: 77%; 
+        font-size: 77%;
         vertical-align: top;
 }
 form.search span.tip {
