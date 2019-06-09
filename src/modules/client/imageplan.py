@@ -152,6 +152,7 @@ class ImagePlan(object):
                 self.__cur_directories = None # for image boundary check
                 self.__symlinks = None        # for dirs and links and
                 self.__hardlinks = None       # hardlinks
+                self.__exclude_re = None
                 self.__licenses = None
                 self.__legacy = None
                 self.__cached_actions = {}
@@ -4457,10 +4458,26 @@ class ImagePlan(object):
                                 return False
                 return True
 
+        def __check_excluded(self, path):
+                if self.__exclude_re is None:
+                        img_exclude = self.image.get_property(
+                            imageconfig.EXCLUDE_PATTERNS)
+                        if len(img_exclude):
+                                exclude_regex = "^(?:" + (
+                                    "|".join(img_exclude)) + ")"
+                                if DebugValues["exclude"]:
+                                        print("Exclude Regex:", exclude_regex)
+                                self.__exclude_re = relib.compile(exclude_regex)
+                        else:
+                                self.__exclude_re = ''
+
+                if self.__exclude_re == '': return False
+                return self.__exclude_re.search(path)
+
         def __check_be_boundary(self, action, excluded_list, cur_dirs):
                 """Check whether the package is installed within its
                 own boot environment"""
-	
+
                 # We only consider dir action.
                 if not action.name == "dir":
                         return True
@@ -4468,6 +4485,11 @@ class ImagePlan(object):
                 path = action.get_installed_path(self.image.root)
                 # Check whether the dir is already installed.
                 if path in cur_dirs:
+                        return True
+
+                # If the path is in the zone's set of exclusions, then
+                # this is fine.
+                if self.__check_excluded(path[1:]):
                         return True
 
                 # Extend the path in format /path1/path2/
@@ -4603,19 +4625,6 @@ class ImagePlan(object):
                                 self.__target_install_count += 1
                         elif pp.origin_fmri:
                                 self.__target_removal_count += 1
-
-                # If the image has an exclude-patterns property, build a
-                # regular expression to describe the targets that should
-                # be pruned from the plan actions.
-                img_exclude = self.image.get_property(
-                    imageconfig.EXCLUDE_PATTERNS)
-                if len(img_exclude):
-                        exclude_regex = "^(?:" + ("|".join(img_exclude)) + ")"
-                        if DebugValues["exclude"]:
-                                print("Exclude Regex:", exclude_regex)
-                        exclude_re = relib.compile(exclude_regex)
-                else:
-                        exclude_re = None
 
                 # we now have a workable set of pkgplans to add/upgrade/remove
                 # now combine all actions together to create a synthetic single
@@ -4796,7 +4805,7 @@ class ImagePlan(object):
                                         inst_links = self.__get_symlinks()
                                 else:
                                         inst_links = self.__get_hardlinks()
-                                if exclude_re and exclude_re.search(lpath):
+                                if self.__check_excluded(lpath):
                                         if DebugValues["exclude"]:
                                                 print("!Removal:", lpath)
                                         remove = False
@@ -4841,8 +4850,8 @@ class ImagePlan(object):
                         elif ap.src.name == "legacy" and \
                             ap.src.attrs["pkg"] in self.__get_legacy():
                                 remove = False
-                        elif exclude_re and "path" in ap.src.attrs and \
-                            exclude_re.search(ap.src.attrs["path"]):
+                        elif "path" in ap.src.attrs and \
+                            self.__check_excluded(ap.src.attrs["path"]):
                                 if DebugValues["exclude"]:
                                         print("!Remove", ap.src.attrs["path"])
                                 remove = False
@@ -4916,8 +4925,8 @@ class ImagePlan(object):
                                 continue
                         pt.plan_add_progress(pt.PLAN_ACTION_CONSOLIDATE)
 
-                        if exclude_re and "path" in ap.dst.attrs and \
-                            exclude_re.search(ap.dst.attrs["path"]):
+                        if "path" in ap.dst.attrs and \
+                            self.__check_excluded(ap.dst.attrs["path"]):
                                 if DebugValues["exclude"]:
                                         print("!Install", ap.dst.attrs["path"])
                                 pp_needs_trimming.add(ap.p)
@@ -5040,16 +5049,18 @@ class ImagePlan(object):
 
                 # Cull any update actions that are excluded by the exclusion
                 # patterns configured in the image.
-                if exclude_re:
+                if self.__exclude_re:
                         for i, ap in enumerate(self.pd.update_actions):
                                 if ap is None:
                                         continue
                                 path = None
                                 if ("path" in ap.src.attrs and
-                                    exclude_re.search(ap.src.attrs["path"])):
+                                    self.__check_excluded(
+                                    ap.src.attrs["path"])):
                                         path = ap.src.attrs["path"]
                                 elif ("path" in ap.dst.attrs and
-                                    exclude_re.search(ap.dst.attrs["path"])):
+                                    self.__check_excluded(
+                                    ap.dst.attrs["path"])):
                                         path = ap.dst.attrs["path"]
                                 if path:
                                         if DebugValues["exclude"]:
