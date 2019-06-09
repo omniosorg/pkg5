@@ -4530,7 +4530,7 @@ class ImagePlan(object):
                                 # Line has format:
                                 # path mntpoint fs_format device size
                                 special, mount_point, fstype, options, time = \
-                                    line.split("\t") 
+                                    line.split("\t")
 
                                 path = os.path.normpath(mount_point)
                                 if not path:
@@ -4562,7 +4562,8 @@ class ImagePlan(object):
                 # Remove subdirectories of boot dataset
                 for entry in excluded_list:
                         # If it is our current boot environment
-                        if not entry[0].startswith(boot_dataset):
+                        if not entry[0].startswith(boot_dataset) \
+                            and entry[0] != entry[1]:
                                 excluded.append(entry[1])
 
                 if not excluded:
