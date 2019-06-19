@@ -21,6 +21,7 @@
 
 #
 # Copyright (c) 2009, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
 #
 
 from __future__ import print_function
@@ -90,6 +91,7 @@ FMT_V2 = "v2"
 opt_unwrap = False
 opt_check = False
 opt_diffs = False
+opt_strip = False
 opt_format = FMT_V2
 orig_opt_format = None
 
@@ -103,7 +105,7 @@ def usage(errmsg="", exitcode=EXIT_BADOPT):
         # -f is intentionally undocumented.
         print(_("""\
 Usage:
-        pkgfmt [-cdu] [file1] ... """), file=sys.stderr)
+        pkgfmt [-cdsu] [file1] ... """), file=sys.stderr)
 
         sys.exit(exitcode)
 
@@ -315,6 +317,7 @@ def write_line(line, fileobj):
         out = line[1] + act.name
 
         sattrs = act.attrs
+
         ahash = None
         try:
                 ahash = act.hash
@@ -329,6 +332,11 @@ def write_line(line, fileobj):
         except AttributeError:
                 # No hash to stash.
                 pass
+
+        if opt_strip:
+                sattrs = dict((k, v) for k, v in six.iteritems(sattrs)
+                     if not k.startswith('pkg.depend.') and
+                        not k.startswith('pkg.debug'))
 
         # high order bits in sorting
         def kvord(a):
@@ -513,6 +521,10 @@ def write_line(line, fileobj):
         if comments:
                 print(comments, file=fileobj)
 
+        if (opt_strip and act.name == 'set' and
+            act.attrs['name'].startswith('pkg.debug')):
+                return
+
         if opt_format == FMT_V2:
                 # Force 'dir' actions to use four spaces at beginning of lines
                 # so they line up with other filesystem actions such as file,
@@ -524,6 +536,7 @@ def main_func():
         global opt_unwrap
         global opt_check
         global opt_diffs
+        global opt_strip
         global opt_format
         global orig_opt_format
 
@@ -536,7 +549,7 @@ def main_func():
         opt_set = set()
 
         try:
-                opts, pargs = getopt.getopt(sys.argv[1:], "cdf:u?", ["help"])
+                opts, pargs = getopt.getopt(sys.argv[1:], "cdf:su?", ["help"])
                 for opt, arg in opts:
                         opt_set.add(opt)
                         if opt == "-c":
@@ -545,6 +558,8 @@ def main_func():
                                 opt_diffs = True
                         elif opt == "-f":
                                 opt_format = orig_opt_format = arg
+                        elif opt == "-s":
+                                opt_strip = True
                         elif opt == "-u":
                                 opt_unwrap = True
                         elif opt in ("--help", "-?"):
@@ -555,7 +570,6 @@ def main_func():
                 usage(_("only one of [cdu] may be specified"))
         if opt_format not in (FMT_V1, FMT_V2):
                 usage(_("unsupported format '{0}'").format(opt_format))
-
 
         def difference(in_file):
                 whole_f1 = in_file.readlines()

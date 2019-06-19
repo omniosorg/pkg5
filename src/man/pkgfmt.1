@@ -1,12 +1,13 @@
 '\" te
 .\" Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
-.TH pkgfmt 1 "21 May 2013" "SunOS 5.11" "User Commands"
+.\" Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
+.TH pkgfmt 1 "19 Jun 2019" "SunOS 5.11" "User Commands"
 .SH NAME
 pkgfmt \- format a package manifest
 .SH SYNOPSIS
 .LP
 .nf
-/usr/bin/pkgfmt [-c|-d|-u] [\fIpackage-manifest-file\fR]
+/usr/bin/pkgfmt [-c|-d|-s|-u] [\fIpackage-manifest-file\fR]
 .fi
 
 .SH DESCRIPTION
@@ -19,6 +20,9 @@ If no arguments are given, \fBpkgfmt\fR reads \fBstdin\fR until EOF, and then wr
 .sp
 .LP
 \fBpkgfmt\fR with the \fB-c\fR option checks whether the manifests are formatted in \fBpkgfmt\fR style. The \fB-d\fR option displays the differences if the file is not properly formatted.
+.sp
+.LP
+\fBpkgfmr\fR with the \fB-s\fR option removes additional diagnostic attributes from actions that are not required in a published manifest.
 .SH OPTIONS
 .sp
 .LP
@@ -27,14 +31,14 @@ The following options are supported:
 .ne 2
 .mk
 .na
-\fB\fB-?\fR\fR
+\fB-?\fR
 .ad
 .br
 .na
-\fB\fB--help\fR\fR
+\fB--help\fR
 .ad
 .RS 10n
-.rt  
+.rt
 Display a usage message.
 .RE
 
@@ -42,10 +46,10 @@ Display a usage message.
 .ne 2
 .mk
 .na
-\fB\fB-c\fR\fR
+\fB-c\fR
 .ad
 .RS 10n
-.rt  
+.rt
 Check whether the manifest is formatted in the \fBpkgfmt\fR style.
 .RE
 
@@ -53,10 +57,10 @@ Check whether the manifest is formatted in the \fBpkgfmt\fR style.
 .ne 2
 .mk
 .na
-\fB\fB-d\fR\fR
+\fB-d\fR
 .ad
 .RS 10n
-.rt  
+.rt
 Display manifest differences from the formatted version in unified form.
 .RE
 
@@ -64,10 +68,21 @@ Display manifest differences from the formatted version in unified form.
 .ne 2
 .mk
 .na
-\fB\fB-u\fR\fR
+\fB-s\fR
 .ad
 .RS 10n
-.rt  
+.rt
+Remove unecessary diagnostic attributes from manifest actions.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB-u\fR
+.ad
+.RS 10n
+.rt
 Do not wrap lines at 80 characters. This option is useful for applying traditional text processing tools to package manifests.
 .RE
 
@@ -79,10 +94,10 @@ The following exit values are returned:
 .ne 2
 .mk
 .na
-\fB\fB0\fR\fR
+\fB0\fR
 .ad
 .RS 6n
-.rt  
+.rt
 Command succeeded.
 .RE
 
@@ -90,10 +105,10 @@ Command succeeded.
 .ne 2
 .mk
 .na
-\fB\fB1\fR\fR
+\fB1\fR
 .ad
 .RS 6n
-.rt  
+.rt
 The \fB-c\fR or \fB-d\fR options were specified, and one or more manifests are not in \fBpkgfmt\fR normal form, or an error occurred.
 .RE
 
@@ -101,10 +116,10 @@ The \fB-c\fR or \fB-d\fR options were specified, and one or more manifests are n
 .ne 2
 .mk
 .na
-\fB\fB2\fR\fR
+\fB2\fR
 .ad
 .RS 6n
-.rt  
+.rt
 Invalid command line options were specified.
 .RE
 
@@ -112,10 +127,10 @@ Invalid command line options were specified.
 .ne 2
 .mk
 .na
-\fB\fB99\fR\fR
+\fB99\fR
 .ad
 .RS 6n
-.rt  
+.rt
 An unanticipated exception occurred.
 .RE
 
@@ -128,8 +143,8 @@ See \fBattributes\fR(5) for descriptions of the following attributes:
 .sp
 .TS
 tab() box;
-cw(2.75i) |cw(2.75i) 
-lw(2.75i) |lw(2.75i) 
+cw(2.75i) |cw(2.75i)
+lw(2.75i) |lw(2.75i)
 .
 ATTRIBUTE TYPEATTRIBUTE VALUE
 _
