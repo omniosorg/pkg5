@@ -178,6 +178,7 @@ $(PDIR)/.resolved: $(DEPENDED)
 
 # The main publication rule
 $(PDIR)/%.pub: $(PDIR)/.resolved $(PKGREPOTGT)
+	$(PKGFMT) -s $(@:%.pub=%.dep.res)
 	$(PKGSEND) -s $(PKGREPOLOC) publish -d $(PKGROOT) \
 		-d license_files -T \*.py --fmri-in-manifest $(PKGSEND_OPTS) \
 		$(@:%.pub=%.dep.res)
