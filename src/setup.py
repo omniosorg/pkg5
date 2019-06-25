@@ -1,4 +1,4 @@
-#!/usr/bin/python3.5
+#!/usr/bin/python3.5 -Es
 #
 # CDDL HEADER START
 #
@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
 # Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
 #
 
@@ -313,6 +313,7 @@ packages = [
         'pkg.file_layout',
         'pkg.flavor',
         'pkg.lint',
+        'pkg.no_site_packages',
         'pkg.portable',
         'pkg.publish',
         'pkg.server'
