@@ -1,0 +1,14 @@
+
+-----------------------------------------------------------------------------
+
+The pkg5 components have been updated to the latest upstream solaris-ips
+as of:
+
+commit 1a73fae0c500a2e6c8ecde364d37819f2dbbc9a6
+Author: Darren J Moffat <Darren.Moffat@Oracle.COM>
+Date:   Wed Mar 20 14:10:03 2019 +0000
+
+    29453498 pkg should ignore Python ENV and not import from site-packages
+
+-----------------------------------------------------------------------------
+

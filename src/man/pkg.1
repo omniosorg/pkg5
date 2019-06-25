@@ -1,7 +1,7 @@
 '\" te
 .\" Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
 .\" Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
-.TH pkg 1 "28 Feb 2019" "illumos" "User Commands"
+.TH pkg 1 "24 Jun 2019" "illumos" "User Commands"
 .SH NAME
 pkg \- Image Packaging System retrieval client
 .SH SYNOPSIS
@@ -3189,6 +3189,9 @@ For all other options, see the \fBinstall\fR command above.
 .RE
 
 .SH IMAGE PROPERTIES
+.sp
+.LP
+Daemons or other programs that need to know the time an image was last modified can consult the time stamp on the file \fB/var/pkg/modified\fR. The time stamp on \fB/var/pkg/modified\fR is updated every time an operation occurs that modifies the image. Use the \fBpkg history\fR command to display information about the change at that time.
 .sp
 .LP
 The following properties define characteristics of the image. These properties store information about the purpose, content, and behavior of the image. To view the current values of these properties in the image, use the \fBpkg property\fR command. To modify the values of these properties, use the \fBpkg set-property\fR and \fBpkg unset-property\fR commands.

@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2007, 2017, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2019, Oracle and/or its affiliates. All rights reserved.
 # Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
 #
 
@@ -1684,7 +1684,7 @@ pkg:/package/pkg' as a privileged user and then retry the {op}."""
                 error("\n" + str(e), cmd=op)
                 return EXIT_OOPS
         if isinstance(e, (api_errors.UnsupportedVariantGlobbing,
-            api_errors.InvalidVarcetNames)):
+            api_errors.InvalidVarcetNames, api_errors.UnsupportedFacetChange)):
                 error(str(e), cmd=op)
                 return EXIT_OOPS
 
@@ -4166,7 +4166,7 @@ def publisher_list(op, api_inst, pargs, omit_headers, preferred_only,
                                 for od in pub["origins"]:
                                         msg(_("           Origin URI:"),
                                             od["Origin URI"])
-                                        msg(_("           Origin Status:"),
+                                        msg(_("        Origin Status:"),
                                             od["Status"])
                                         if "Proxy" in od:
                                                 msg(_("                Proxy:"),
@@ -5641,7 +5641,7 @@ valid_opt_values = {
     "output_format":        ["default", "tsv", "json", "json-formatted"]
 }
 
-# These tables are an addendum to the the pkg_op_opts/opts_* lists in
+# These tables are an addendum to the pkg_op_opts/opts_* lists in
 # modules/client/options.py. They contain all the options for functions which
 # are not represented in options.py but go through common option processing.
 # This list should get shortened and eventually removed by moving more/all
