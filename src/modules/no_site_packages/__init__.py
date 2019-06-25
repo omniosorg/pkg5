@@ -21,6 +21,7 @@
 
 #
 # Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
+# Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
 #
 
 """Remove site-packages directories from sys.path.
@@ -31,7 +32,11 @@ in the system site-packages area."""
 import sys
 
 if sys.platform == "sunos5":
-    from site import getsitepackages as getsitepackages
+        from site import getsitepackages, getusersitepackages
 
-    pkglist = getsitepackages()
-    sys.path = [ d for d in sys.path if d not in pkglist ]
+        pkglist = getsitepackages()
+        pkglist.append(getusersitepackages())
+        sys.path = [ d for d in sys.path if d not in pkglist]
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker
