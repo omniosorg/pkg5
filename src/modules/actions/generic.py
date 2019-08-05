@@ -1037,10 +1037,10 @@ class Action(object):
                             expected_id=group))
 
                 if mode is not None and stat.S_IMODE(lstat.st_mode) != mode:
-                        errors.append(_("Mode: {found} should be "
-                            "{expected}").format(
-                            found=oct(stat.S_IMODE(lstat.st_mode)),
-                            expected=oct(mode)))
+                        errors.append(_("Mode: {found:o} should be "
+                            "{expected:o}").format(
+                            found=stat.S_IMODE(lstat.st_mode),
+                            expected=mode))
                 return lstat, errors, warnings, info, abort
 
         def needsdata(self, orig, pkgplan):
