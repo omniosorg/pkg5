@@ -508,7 +508,6 @@ dir owner=root path=fm group=bin mode=0755 facet.multi=true \\
                 ]
 
                 facet_expected = [
-                    "fm",
                     "vdo",
                     "vo",
                     "opt/dir with spaces in value",
