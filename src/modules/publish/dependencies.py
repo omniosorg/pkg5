@@ -1490,12 +1490,23 @@ def combine(deps, pkg_vars, pkg_fmri, pkg_name):
                 in pkg.manifest notices."""
 
                 # d is a tuple containing two items.  d[0] is the action.  d[1]
-
                 # is the VariantCombination for this action.  The
                 # VariantCombination isn't useful for our grouping needs.
+
+                # If we try to sort elements, containing on 'group-any' or
+                # 'require-any' dependency and elements, containing multiple
+                # dependencies, sort will try to compare string and list of
+                # strings. So, convert string to list.
+                type = d[0].attrs.get("type", "")
+                key_value = d[0].attrs.get(d[0].key_attr, id(d[0]))
+
+                if type == 'require-any' or type == 'group-any':
+                    if isinstance(key_value, str):
+                        key_value = [ key_value ]
+
                 return d[0].name, d[0].attrs.get("type", None), \
                     d[0].attrs.get("predicate", None), \
-                    d[0].attrs.get(d[0].key_attr, id(d[0]))
+                    key_value
 
         def add_vars(d, d_vars, pkg_vars):
                 """Add the variants 'd_vars' to the dependency 'd', after
