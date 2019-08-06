@@ -423,7 +423,7 @@ def list_implicit_deps_for_manifest(mfst, proto_dirs, pkg_vars, dyn_tok_conv,
                 for k, v in six.iteritems(pvars):
                         if k not in pkg_vars or not v.issubset(pkg_vars[k]):
                                 warnings.append(UndeclaredVariantWarning(
-                                    pvars, pkg_vars.copy(), a.attrs["path"]))
+                                    pvars, pkg_vars.copy(), a.attrs.get(a.key_attr, id(a))))
                                 var_dict.setdefault(k, set()).update(v)
         pkg_vars.merge_unknown(var_dict)
 
