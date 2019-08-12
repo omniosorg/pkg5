@@ -239,9 +239,12 @@ for i, v in disklist.items():
 
 i = 0
 for f in root.findall('./network[@physical]'):
+    mask = f.find("./net-attr[@name='feature_mask']")
+    feature_mask = mask.get('value') if mask is not None else 0
     args.extend([
-        '-s', '{0}:{1},{2},{3}'
-            .format(NET_SLOT, i, opts['netif'], f.get('physical').strip())
+        '-s', '{0}:{1},{2},{3},feature_mask={4}'
+            .format(NET_SLOT, i, opts['netif'], f.get('physical').strip(),
+            feature_mask)
     ])
     i += 1
 
