@@ -751,6 +751,11 @@ test\t3\tonline\t{0}Z
 
         def test_03_info(self):
                 """Verify pkgrepo info works as expected."""
+                def sort_lines(text):
+                        """Sort lines in text"""
+                        arr = text.split('\n')
+                        arr.sort()
+                        return "\n".join(arr)
 
                 # Verify command without a repository exits.
                 self.pkgrepo("info", exit=2)
@@ -823,7 +828,7 @@ test\t2\tonline\t2011-08-04T20:34:58Z
 test\t2\tonline\t2011-08-04T20:34:58Z
 test1\t1\tonline\t2011-08-04T20:34:58Z
 """
-                self.assertEqualDiff(expected, self.output)
+                self.assertEqualDiff(sort_lines(expected), sort_lines(self.output))
                 shutil.rmtree(repo_path)
 
                 # Create a repository and verify http-based repository access.

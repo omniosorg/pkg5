@@ -20,7 +20,7 @@
  */
 
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
  * Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
  */
 
@@ -132,6 +132,17 @@ _allow_facet(PyObject *self, PyObject *args, PyObject *kwargs)
 prep_ret:
 		if (facet_ret != NULL) {
 			char *vs = PyUnicode_AsUTF8(value);
+			if (vs == NULL) {
+				/*
+				 * value is not a string; probably a list, so
+				 * don't allow the action since older clients
+				 * would fail anyway.
+				 */
+				PyErr_Clear();
+				all_ret = Py_False;
+				break;
+			}
+
 			if (strcmp(vs, "all") == 0) {
 				/*
 				 * If facet == 'all' and is False, then no more
@@ -198,10 +209,22 @@ _allow_variant(PyObject *self, PyObject *args, PyObject *kwargs)
 	while (PyDict_Next(act_attrs, &pos, &attr, &value)) {
 		char *as = PyUnicode_AsUTF8(attr);
 		if (strncmp(as, "variant.", 8) == 0) {
-			PyObject *sysv = PyDict_GetItem(vars, attr);
 			char *av = PyUnicode_AsUTF8(value);
 			char *sysav = NULL;
+			PyObject *sysv = NULL;
 
+			if (av == NULL) {
+				/*
+				 * value is not a string; probably a list, so
+				 * don't allow the action since older clients
+				 * would fail anyway.
+				 */
+				PyErr_Clear();
+				Py_DECREF(act_attrs);
+				Py_RETURN_FALSE;
+			}
+
+			sysv = PyDict_GetItem(vars, attr);
 			if (sysv == NULL) {
 				/*
 				 * If system variant value doesn't exist, then
