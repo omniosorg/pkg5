@@ -4472,6 +4472,8 @@ class ImagePlan(object):
                                 self.__exclude_re = ''
 
                 if self.__exclude_re == '': return False
+                if path.startswith(self.image.root[1:]):
+                        path = path[len(self.image.root):]
                 return self.__exclude_re.search(path)
 
         def __check_be_boundary(self, action, excluded_list, cur_dirs):
