@@ -5052,23 +5052,22 @@ class ImagePlan(object):
 
                 # Cull any update actions that are excluded by the exclusion
                 # patterns configured in the image.
-                if self.__exclude_re:
-                        for i, ap in enumerate(self.pd.update_actions):
-                                if ap is None:
-                                        continue
-                                path = None
-                                if ("path" in ap.src.attrs and
-                                    self.__check_excluded(
-                                    ap.src.attrs["path"])):
-                                        path = ap.src.attrs["path"]
-                                elif ("path" in ap.dst.attrs and
-                                    self.__check_excluded(
-                                    ap.dst.attrs["path"])):
-                                        path = ap.dst.attrs["path"]
-                                if path:
-                                        if DebugValues["exclude"]:
-                                                print("!Update", path)
-                                        self.pd.update_actions[i] = None
+                for i, ap in enumerate(self.pd.update_actions):
+                        if ap is None:
+                                continue
+                        path = None
+                        if ("path" in ap.src.attrs and
+                            self.__check_excluded(
+                            ap.src.attrs["path"])):
+                                path = ap.src.attrs["path"]
+                        elif ("path" in ap.dst.attrs and
+                            self.__check_excluded(
+                            ap.dst.attrs["path"])):
+                                path = ap.dst.attrs["path"]
+                        if path:
+                                if DebugValues["exclude"]:
+                                        print("!Update", path)
+                                self.pd.update_actions[i] = None
 
                 pt.plan_done(pt.PLAN_ACTION_CONSOLIDATE)
                 pt.plan_start(pt.PLAN_ACTION_MEDIATION)
