@@ -5056,11 +5056,11 @@ class ImagePlan(object):
                         if ap is None:
                                 continue
                         path = None
-                        if ("path" in ap.src.attrs and
+                        if (ap.src and "path" in ap.src.attrs and
                             self.__check_excluded(
                             ap.src.attrs["path"])):
                                 path = ap.src.attrs["path"]
-                        elif ("path" in ap.dst.attrs and
+                        elif (ap.dst and "path" in ap.dst.attrs and
                             self.__check_excluded(
                             ap.dst.attrs["path"])):
                                 path = ap.dst.attrs["path"]
