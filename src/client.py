@@ -82,6 +82,7 @@ try:
         import pycurl
         import atexit
         import shutil
+        from six.moves.urllib.parse import urlparse, unquote
 
         import pkg
         import pkg.actions as actions
@@ -2342,7 +2343,8 @@ def apply_hot_fix(**args):
         # Find hot-fix archive
 
         if origin.startswith("file:///"):
-                shutil.copy2(origin[7:], tmp_pth)
+                filepath = urlparse(origin, "file", allow_fragments=0)[2]
+                shutil.copy2(unquote(filepath), tmp_pth)
                 origin = misc.parse_uri(tmp_pth, cwd=orig_cwd)
         elif origin.startswith("http://") or origin.startswith("https://"):
                 # Download file to temporary area
