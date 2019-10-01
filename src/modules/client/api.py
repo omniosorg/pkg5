@@ -1252,6 +1252,11 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                 contains the pkg(5) packaging system and a newer version
                 of the pkg(5) packaging system is installable."""
 
+                # Skip this check on OmniOS. If, in the future, we need
+                # to deliver an update to pkg(5) which will make it essential
+                # to have the latest in advance, we will adjust this.
+                return
+
                 if not self.solaris_image():
                         return
 
