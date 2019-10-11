@@ -97,7 +97,7 @@ pythonify_2dliblist_cb(libnode_t *n, void *info, void *info2)
 		goto out;
 	}
 
-	if ((ent = Py_BuildValue("[s,O]", str, pverlist)) == NULL) {
+	if ((ent = Py_BuildValue("[s,O,K]", str, pverlist, n->flags)) == NULL) {
 		goto out;
 	}
 	rval = PyList_Append(pdep, ent);
@@ -548,6 +548,8 @@ moduleinit(void)
 	if (ElfError == NULL) {
 		return (NULL);
 	}
+
+	PyModule_AddIntConstant(m, "DYNFLAG_LAZY", DYNFLAG_LAZY);
 
 	Py_INCREF(ElfError);
 	PyModule_AddObject(m, "ElfError", ElfError);

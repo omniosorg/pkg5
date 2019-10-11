@@ -81,6 +81,7 @@ liblist_add(liblist_t *lst, off_t off)
 
 	n->nameoff = off;
 	n->verlist = NULL;
+	n->flags = 0;
 	n->next = NULL;
 
 	if (!lst->head) {

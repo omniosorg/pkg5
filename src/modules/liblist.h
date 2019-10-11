@@ -35,10 +35,13 @@ extern "C" {
 struct libnode;
 struct liblist;
 
+#define DYNFLAG_LAZY	0x1
+
 typedef struct libnode {
 	off_t		nameoff;	/* offset of name of this node in */
 					/* a particular name table	  */
 	struct liblist	*verlist;	/* version string list head	  */
+	uint64_t	flags;
 	struct libnode	*next;		/* next node			  */
 } libnode_t;
 

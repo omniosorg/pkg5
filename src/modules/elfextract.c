@@ -38,6 +38,7 @@
 #include <string.h>
 #include <netinet/in.h>
 #include <inttypes.h>
+#include <stdbool.h>
 #if defined(__SVR4) && defined(__sun)
 /* Solaris has built-in SHA-1 and SHA-2 library interfaces */
 #include <sha1.h>
@@ -276,10 +277,12 @@ getdynamic(int fd)
 	size_t		sh_str = 0;
 	size_t		vernum = 0, verdefnum = 0;
 	int		t = 0, num_dyn = 0, dynstr = -1;
+	bool		lazy = false;
 
 	dyninfo_t	*dyn = NULL;
 
 	liblist_t	*deps = NULL;
+	libnode_t	*node;
 	off_t		rpath = 0, runpath = 0, def = 0;
 	char		*obj_type = NULL;
 
@@ -380,8 +383,11 @@ getdynamic(int fd)
 		case DT_NEEDED:
 		case DT_FILTER:
 		case DT_SUNW_FILTER:
-			if (liblist_add(deps, gd.d_un.d_val) == NULL)
+			if ((node = liblist_add(deps, gd.d_un.d_val)) == NULL)
 				goto bad;
+			if (lazy)
+				node->flags |= DYNFLAG_LAZY;
+			lazy = false;
 			break;
 		case DT_RPATH:
 			rpath = gd.d_un.d_val;
@@ -392,6 +398,9 @@ getdynamic(int fd)
 		case DT_POSFLAG_1:
 			if (gd.d_un.d_val & DF_P1_DEFERRED) {
 				t++;
+			}
+			if (gd.d_un.d_val & DF_P1_LAZYLOAD) {
+				lazy = true;
 			}
 		case DT_FLAGS_1:
 #ifdef DF_1_PIE
