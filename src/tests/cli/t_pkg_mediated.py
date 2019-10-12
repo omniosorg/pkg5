@@ -198,8 +198,8 @@ class TestPkgMediated(pkg5unittest.SingleDepotTestCase):
             close
             open pkg://test/runtime/python-unladen-swallow-35@3.5.0
             add set name=pkg.summary value="Example python versioned implementation package"
-            add file tmp/foopyus path=/usr/bin/python3.5-unladen-swallow owner=root group=bin mode=0555
-            add link path=/usr/bin/python target=python3.5-unladen-swallow mediator=python mediator-version=3.5 mediator-implementation=unladen-swallow@3.5
+            add file tmp/foopyus path=/usr/bin/python3.7-unladen-swallow owner=root group=bin mode=0555
+            add link path=/usr/bin/python target=python3.7-unladen-swallow mediator=python mediator-version=3.5 mediator-implementation=unladen-swallow@3.5
             close """
 
         pkg_multi_python = """
@@ -951,7 +951,7 @@ python\tlocal\t2.7\tlocal\t\t
                 self.pkg("verify")
                 self.pkg("set-mediator -vvv "
                     "-V '' -I unladen-swallow@3.5 python")
-                check_target(gen_python_links(), "python3.5-unladen-swallow")
+                check_target(gen_python_links(), "python3.7-unladen-swallow")
                 self.__assert_mediation_matches("""\
 python\tsystem\t3.5\tlocal\tunladen-swallow@3.5\t
 """)
@@ -960,7 +960,7 @@ python\tsystem\t3.5\tlocal\tunladen-swallow@3.5\t
                 # Set mediation to unladen-swallow and verify
                 # unladen-swallow@3.5 remains selected.
                 self.pkg("set-mediator -vvv -I unladen-swallow python")
-                check_target(gen_python_links(), "python3.5-unladen-swallow")
+                check_target(gen_python_links(), "python3.7-unladen-swallow")
                 self.__assert_mediation_matches("""\
 python\tsystem\t3.5\tlocal\tunladen-swallow\t3.5
 """)

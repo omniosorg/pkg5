@@ -46,9 +46,9 @@ DDP = base.Dependency.DEPEND_DEBUG_PREFIX
 
 if six.PY2:
         py_ver_default = "2.7"
-        py_ver_other = "3.5"
+        py_ver_other = "3.7"
 else:
-        py_ver_default = "3.5"
+        py_ver_default = "3.7"
         py_ver_other = "2.7"
 
 class TestPkgdepBasics(pkg5unittest.SingleDepotTestCase):
@@ -547,7 +547,7 @@ from pkg.misc import EmptyI
 """
 
         python3_so_text = """\
-#!/usr/bin/python3.5
+#!/usr/bin/python3.7
 
 import zlib
 """
@@ -666,7 +666,7 @@ depend fmri=pkg:/satisfying_manf type=require variant.foo=baz
                 discovered.
                 """
 
-                v3 = ver.startswith("3.") and "35m"
+                v3 = ver.startswith("3.") and "37m"
 
                 vp = self.get_ver_paths(ver, proto_area)
                 self.debug("ver_paths is {0}".format(vp))
@@ -783,7 +783,7 @@ depend fmri={dummy_fmri} {pfx}.file=python{bin_ver} {pfx}.path=usr/bin {pfx}.rea
                     include_os=include_os)
 
         if six.PY2:
-                # in this case, py_ver_default = "2.7", py_ver_other = "3.5"
+                # in this case, py_ver_default = "2.7", py_ver_other = "3.7"
                 pyver_resolve_dep_manf = """
 file NOHASH group=bin mode=0444 owner=root path=usr/lib/python{py_ver}/vendor-packages/pkg/indexer.py
 file NOHASH group=bin mode=0444 owner=root path=usr/lib/python{py_ver}/vendor-packages/pkg/__init__.py
@@ -792,7 +792,7 @@ file NOHASH group=bin mode=0444 owner=root path=usr/lib/python{py_ver}/vendor-pa
 file NOHASH group=bin mode=0755 owner=root path=usr/bin/python
 """
         else:
-                # py_ver_default = "3.5", py_ver_other = "2.7"
+                # py_ver_default = "3.7", py_ver_other = "2.7"
                 pyver_resolve_dep_manf = """
 file NOHASH group=bin mode=0444 owner=root path=usr/lib/python{py_ver}/vendor-packages/pkg/indexer.py
 file NOHASH group=bin mode=0444 owner=root path=usr/lib/python{py_ver}/vendor-packages/pkg/__init__.py
@@ -805,7 +805,7 @@ file NOHASH group=bin mode=0755 owner=root path=usr/bin/python
                 """Generate the expected results when resolving a manifest which
                 contains a file with a non-default version of python."""
 
-                v3 = py_ver_other.startswith("3.") and "35m"
+                v3 = py_ver_other.startswith("3.") and "37m"
                 patterns = (
                     "{0}.py", "{0}.pyc", "{0}.pyo",
                     "{0}.so", "64/{0}.so",
@@ -3105,9 +3105,9 @@ depend fmri=pkg:/a@0,5.11-1 type=conditional
 
                 # Create a python 3.x file that imports a native module.
                 tp = self.make_manifest(
-                    self.pyver_test_manf_1.format(py_ver="3.5"))
+                    self.pyver_test_manf_1.format(py_ver="3.7"))
                 fp = "usr/lib/python{0}/vendor-packages/pkg/" \
-                    "client/indexer.py".format("3.5")
+                    "client/indexer.py".format("3.7")
                 self.make_proto_text_file(fp, self.python3_so_text)
 
                 # Run generate
@@ -3125,7 +3125,7 @@ depend fmri=pkg:/a@0,5.11-1 type=conditional
                         for l in self.output.strip().splitlines()
                     )
                     if a.attrs.get(pfx + ".reason") == fp and
-                        "64/zlib.cpython-35m.so" in a.attrs[pfx + ".file"]
+                        "64/zlib.cpython-37m.so" in a.attrs[pfx + ".file"]
                 ]
                 self.assertTrue(len(acts) == 1)
 

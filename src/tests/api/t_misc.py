@@ -159,7 +159,7 @@ except MemoryError:
                 with open(tmpfile, 'w') as f:
                         f.write(waste_mem_py)
 
-                res = int(subprocess.check_output(['python3.5', tmpfile]))
+                res = int(subprocess.check_output(['python3.7', tmpfile]))
                 # convert from kB to bytes
                 res *= 1024
 
@@ -173,7 +173,7 @@ except MemoryError:
 
                 # test if env var works
                 os.environ["PKG_CLIENT_MAX_PROCESS_SIZE"] = str(mem_cap * 2)
-                res = int(subprocess.check_output(['python3.5', tmpfile]))
+                res = int(subprocess.check_output(['python3.7', tmpfile]))
                 res *= 1024
 
                 self.debug("mem_cap:   " + str(mem_cap * 2))
@@ -190,7 +190,7 @@ except MemoryError:
 
                 # test if invalid env var is handled correctly
                 os.environ["PKG_CLIENT_MAX_PROCESS_SIZE"] = "octopus"
-                res = int(subprocess.check_output(['python3.5', tmpfile]))
+                res = int(subprocess.check_output(['python3.7', tmpfile]))
                 res *= 1024
 
                 self.debug("mem_cap:   " + str(mem_cap))

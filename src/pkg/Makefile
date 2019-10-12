@@ -82,7 +82,7 @@ $(PUBLISHALL)MANIFESTS      = $(ALL_MANIFESTS)
 
 # PKGCMDENV needs to specify the interpreter explicitly since the shebang
 # lines include -Es which suppresses the use of non-default environments.
-PYTHON3		  = python3.5
+PYTHON3		  = python3.7
 PYDIR		  = usr/lib/$(PYTHON3)
 PYDIRVP		  = $(PYDIR)/vendor-packages
 PKGCMDENV         = \

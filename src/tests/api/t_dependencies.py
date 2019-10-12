@@ -70,7 +70,7 @@ class TestDependencyAnalyzer(pkg5unittest.Pkg5TestCase):
             "script_path": "lib/svc/method/svc-pkg-depot",
             "syslog_path": "var/log/syslog",
             "py_mod_path": "usr/lib/python2.7/vendor-packages/cProfile.py",
-            "py_mod_path35": "usr/lib/python3.5/vendor-packages/cProfile.py"
+            "py_mod_path35": "usr/lib/python3.7/vendor-packages/cProfile.py"
         }
 
         smf_paths = {
@@ -1579,7 +1579,7 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                 we try to import __main__"""
 
                 t_path = self.make_manifest(self.python_mod_manf)
-                self.make_python_test_files(3.5)
+                self.make_python_test_files(3.7)
                 self.make_python_test_files(2.7)
 
                 ds, es, ws, ms, pkg_attrs = dependencies.list_implicit_deps(t_path,
@@ -1670,7 +1670,7 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                 syntax error doesn't cause a traceback."""
 
                 t_path = self.make_manifest(self.python_mod_manf)
-                self.make_broken_python_test_file(3.5)
+                self.make_broken_python_test_file(3.7)
                 self.make_broken_python_test_file(2.7)
                 ds, es, ws, ms, pkg_attrs = dependencies.list_implicit_deps(t_path,
                     [self.proto_dir], {}, [], convert=False)
@@ -1930,7 +1930,7 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                 str(elf.UnsupportedDynamicToken("/proto_path", "/install",
                     "run_path", "tok"))
                 str(py.PythonModuleMissingPath("foo", "bar"))
-                str(py.PythonMismatchedVersion("2.7", "3.5", "foo", "bar"))
+                str(py.PythonMismatchedVersion("2.7", "3.7", "foo", "bar"))
                 str(py.PythonSubprocessError(2, "foo", "bar"))
                 str(py.PythonSubprocessBadLine("cmd", ["l1", "l2"]))
                 mi = dlmf.ModuleInfo("name", ["/d1", "/d2"])

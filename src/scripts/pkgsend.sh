@@ -55,11 +55,11 @@ my_base=`cd ${my_home}/../../..; pwd`
 my_ips_base=`cd ${my_home}/../..; pwd`
 LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${my_ips_base}/usr/lib
 PYTHONHOME=${my_base}/python
-PYTHONPATH=${PYTHONPATH}:${my_ips_base}/usr/lib/python3.5/vendor-packages
+PYTHONPATH=${PYTHONPATH}:${my_ips_base}/usr/lib/python3.7/vendor-packages
 PKG_HOME=${my_ips_base}/usr
 export LD_LIBRARY_PATH PYTHONHOME PYTHONPATH PKG_HOME
-if [ -x ${my_base}/python/bin/python3.5 ] ; then
-  PYEXE=${my_base}/python/bin/python3.5
+if [ -x ${my_base}/python/bin/python3.7 ] ; then
+  PYEXE=${my_base}/python/bin/python3.7
 else
   PYEXE=`which python`
   unset PYTHONHOME
