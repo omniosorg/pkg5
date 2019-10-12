@@ -213,7 +213,7 @@ class DepotHTTP(_Depot):
                 # Determine available operations and disable as requested.
                 self.vops = {}
                 for name, func in inspect.getmembers(self, inspect.ismethod):
-                        m = re.match("(.*)_(\d+)", name)
+                        m = re.match(r"(.*)_(\d+)", name)
 
                         if not m:
                                 continue

@@ -43,7 +43,7 @@ defaults = {
     "pkglint.ext.opensolaris": "pkg.lint.opensolaris",
     "pkglint.ext.pkglint_actions": "pkg.lint.pkglint_action",
     "pkglint.ext.pkglint_manifests": "pkg.lint.pkglint_manifest",
-    "pkglint.exclude": None,
+    "pkglint.exclude": "None",
     "version.pattern": "*,5.11-0."
     }
 

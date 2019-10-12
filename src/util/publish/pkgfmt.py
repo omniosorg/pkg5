@@ -146,12 +146,12 @@ def read_line(f):
                 # but force standard leading space formatting.
                 if line.endswith("\\"):
                         accumulate += line[:-1]
-                        wrap_accumulate += re.sub("^\s+", "    ",
+                        wrap_accumulate += re.sub(r"^\s+", "    ",
                             wrap_line.rstrip(" \t"))
                         continue
                 elif accumulate:
                         line = accumulate + line
-                        wrap_line = wrap_accumulate + re.sub("^\s+", "    ",
+                        wrap_line = wrap_accumulate + re.sub(r"^\s+", "    ",
                             wrap_line)
                         accumulate = ""
                         wrap_accumulate = ""
@@ -530,7 +530,7 @@ def write_line(line, fileobj):
                 # Force 'dir' actions to use four spaces at beginning of lines
                 # so they line up with other filesystem actions such as file,
                 # link, etc.
-                output = re.sub("^dir ", "dir  ", output)
+                output = re.sub(r"^dir ", "dir  ", output)
         print(output, file=fileobj)
 
 def main_func():

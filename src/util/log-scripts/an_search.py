@@ -49,7 +49,7 @@ search_by_lang = {}
 search_by_success = {}
 search_by_failure = {}
 
-pkg_pat = re.compile("/search/(?P<mversion>\d+)/(?P<keywords>.*)")
+pkg_pat = re.compile(r"/search/(?P<mversion>\d+)/(?P<keywords>.*)")
 
 def emit_search_report(summary_file, searchtype, label, results):
         print("<pre>")

@@ -50,7 +50,7 @@ manifest_by_raw_agent = {}
 manifest_by_pkg = {}
 manifest_by_ver_pkg = {}
 
-pkg_pat = re.compile("/manifest/(?P<mversion>\d+)/(?P<stem>[^@]*)@(?P<version>.*)")
+pkg_pat = re.compile(r"/manifest/(?P<mversion>\d+)/(?P<stem>[^@]*)@(?P<version>.*)")
 
 def report_manifest_by_arch():
         print("<pre>")

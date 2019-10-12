@@ -305,7 +305,7 @@ class TestPkgCompositePublishers(pkg5unittest.ManyDepotTestCase):
                 output = self.reduceSpaces(self.output)
                 self.assertEqualDiff(expected, output)
 
-                self.pkg("set-publisher -G \* -g {0} test".format(self.all_arc))
+                self.pkg("set-publisher -G \\* -g {0} test".format(self.all_arc))
                 self.pkg("set-publisher -G {0} -g {1} -g {2} test2".format(
                     self.quux_arc, self.all_arc, self.all_rurl))
                 self.pkg("list -afH -g {0} -g {1}".format(self.all_arc,
@@ -357,9 +357,9 @@ class TestPkgCompositePublishers(pkg5unittest.ManyDepotTestCase):
                     self.signed_arc, self.incorp_arc, self.quux_arc,
                     self.foo_rurl))
 
-                self.pkg("set-publisher -G \* -g {0} -g {1} test".format(
+                self.pkg("set-publisher -G \\* -g {0} -g {1} test".format(
                     self.all_arc, self.all_rurl))
-                self.pkg("set-publisher -G \* -g {0} -g {1} test2".format(
+                self.pkg("set-publisher -G \\* -g {0} -g {1} test2".format(
                     self.all_arc, self.all_rurl))
                 self.pkg("info -r foo@1.0 incorp@2.0 signed@1.0 quux@1.0")
 
@@ -418,9 +418,9 @@ Last Install Time: {pkg_install}
                     self.foo_rurl))
                 self.pkg("contents -r foo@1.0 incorp@1.0 signed@1.0 quux@0.1")
 
-                self.pkg("set-publisher -G \* -g {0} -g {1} test".format(
+                self.pkg("set-publisher -G \\* -g {0} -g {1} test".format(
                     self.all_arc, self.all_rurl))
-                self.pkg("set-publisher -G \* -g {0} -g {1} test2".format(
+                self.pkg("set-publisher -G \\* -g {0} -g {1} test2".format(
                     self.all_arc, self.all_rurl))
                 self.pkg("contents -r foo@1.0 incorp@2.0 signed@1.0 quux@1.0")
 
@@ -449,7 +449,7 @@ Last Install Time: {pkg_install}
                     self.signed_arc))
                 self.pkg("install signed")
                 self.pkg("list foo signed")
-                self.pkg("uninstall \*")
+                self.pkg("uninstall \\*")
 
                 # Verify publisher can be removed.
                 self.pkg("unset-publisher test")
@@ -471,7 +471,7 @@ Last Install Time: {pkg_install}
 
                 # Verify that removing all packages and the signed archive as
                 # a source leaves only foo known.
-                self.pkg("uninstall \*")
+                self.pkg("uninstall \\*")
                 self.pkg("set-publisher -G {0} test".format(self.signed_arc))
                 self.pkg("list -aH")
                 expected = "foo 1.0 ---\n"

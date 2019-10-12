@@ -93,8 +93,8 @@ for repo_prefix in repo_prefixes:
                 context.write(
                     "RewriteRule ^/{root}{repo_prefix}manifest/0/.*$ "
                     "%{{THE_REQUEST}} [NE,C]\n".format(**locals()))
-                context.write("RewriteRule ^GET\ "
-                    "/{root}{repo_prefix}manifest/0/([^@]+)@([^\ ]+)(\ HTTP/1.1)$ "
+                context.write("RewriteRule ^GET\\ "
+                    "/{root}{repo_prefix}manifest/0/([^@]+)@([^\\ ]+)(\\ HTTP/1.1)$ "
                     "/{root}{repo_prefix}{pub}/publisher/{pub}/pkg/$1/$2 [NE,PT,C]\n"
                    .format(**locals()))
                 context.write(
@@ -183,8 +183,8 @@ for repo_prefix in repo_prefixes:
             "RewriteRule ^/{root}{repo_prefix}{pub}/manifest/0/.*$ "
             "%{{THE_REQUEST}} [NE,C]\n".format(**locals()))
 
-        context.write("RewriteRule ^GET\ "
-            "/{root}{repo_prefix}{pub}/manifest/0/([^@]+)@([^\ ]+)(\ HTTP/1.1)$ "
+        context.write("RewriteRule ^GET\\ "
+            "/{root}{repo_prefix}{pub}/manifest/0/([^@]+)@([^\\ ]+)(\\ HTTP/1.1)$ "
             "/{root}{repo_prefix}{pub}/publisher/{pub}/pkg/$1/$2 [NE,PT,C]\n"
            .format(**locals()))
         context.write(

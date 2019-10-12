@@ -45,7 +45,7 @@ hosts = {}
 
 def process(l):
         """Process one Apache common log line."""
-        ex = "([\d\.]*) - - \[([^\]]*)\] \"([A-Z]*) (.*) HTTP/1\..\" (\d\d\d) (\d*)"
+        ex = r"([\d\.]*) - - \[([^\]]*)\] \"([A-Z]*) (.*) HTTP/1\..\" (\d\d\d) (\d*)"
         m = re.match(ex, l)
 
         totals["dl"] += int(m.group(6))

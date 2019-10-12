@@ -101,10 +101,7 @@ try:
         import pkg.portable as portable
         import pkg.version as version
 
-        if sys.version_info[:2] >= (3, 4):
-                from importlib import reload
-        else:
-                from imp import reload
+        from importlib import reload
         from pkg.client import global_settings
         from pkg.client.api import (IMG_TYPE_ENTIRE, IMG_TYPE_PARTIAL,
             IMG_TYPE_USER, RESULT_CANCELED, RESULT_FAILED_BAD_REQUEST,
@@ -1841,9 +1838,9 @@ def __api_plan_save(api_inst):
                 # cleanup any old style imageplan save files
                 for f in os.listdir(api_inst.img_plandir):
                         path = os.path.join(api_inst.img_plandir, f)
-                        if re.search("^actions\.[0-9]+\.json$", f):
+                        if re.search(r"^actions\.[0-9]+\.json$", f):
                                 os.unlink(path)
-                        if re.search("^pkgs\.[0-9]+\.json$", f):
+                        if re.search(r"^pkgs\.[0-9]+\.json$", f):
                                 os.unlink(path)
         except OSError as e:
                 raise api_errors._convert_error(e)

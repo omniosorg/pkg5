@@ -126,7 +126,7 @@ class TestMisc(pkg5unittest.Pkg5TestCase):
                 # of the cap. This may seem high but in an environment with
                 # several GiB available, a few hundred megabytes is sufficient
                 # to prove that the memory cap works.
-                mem_tol = 85
+                mem_tol = 185
 
                 waste_mem_py = """
 import os

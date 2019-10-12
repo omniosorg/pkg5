@@ -150,7 +150,7 @@ class TestPkgHistory(pkg5unittest.ManyDepotTestCase):
                 self.pkg("history -H")
                 o = self.output
                 self.assertTrue(
-                    re.search("START\s+", o.splitlines()[0]) == None)
+                    re.search(r"START\s+", o.splitlines()[0]) == None)
 
                 # Only the operation is listed in short format.
                 for op in operations:
@@ -285,7 +285,7 @@ class TestPkgHistory(pkg5unittest.ManyDepotTestCase):
                 self.pkg("history -H")
                 o = self.output
                 self.assertTrue(
-                    re.search("START\s+", o.splitlines()[0]) == None)
+                    re.search(r"START\s+", o.splitlines()[0]) == None)
 
                 # Only the operation is listed in short format.
                 for op in operations:

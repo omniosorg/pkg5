@@ -65,7 +65,7 @@ import textwrap
 import traceback
 import warnings
 import itertools
-from imp import reload
+from importlib import reload
 
 from pkg.client import global_settings
 from pkg.client.debugvalues import DebugValues

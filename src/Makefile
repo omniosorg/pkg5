@@ -102,6 +102,6 @@ packages: install
 		CC=$(CC)
 
 test: install
-	-pfexec $(PYTHON35) tests/run.py -j ${JOBS}
+	-pfexec $(PYTHON3) tests/run.py -j ${JOBS}
 
 FRC:

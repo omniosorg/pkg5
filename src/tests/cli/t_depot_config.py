@@ -175,7 +175,7 @@ for service in $SERVICE_PROPS ; do
         echo $service | sed -e 's/%/ /g' | \
             read fmri state inst_root readonly standalone writable_root
         # create a hashable version of the FMRI
-        fmri=$(echo $fmri | sed -e 's/\///g' -e 's/://g')
+        fmri=$(echo $fmri | sed -e 's/\\///g' -e 's/://g')
         prop_state[$fmri]=$state
         prop_inst_root[$fmri]=$inst_root
         prop_readonly[$fmri]=$readonly
@@ -184,7 +184,7 @@ for service in $SERVICE_PROPS ; do
 done
 
 
-FMRI=$(echo $4 | sed -e 's/\///g' -e 's/://g')
+FMRI=$(echo $4 | sed -e 's/\\///g' -e 's/://g')
 case $3 in
         "pkg/inst_root")
                 echo ${{prop_inst_root[$FMRI]}}

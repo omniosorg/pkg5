@@ -414,7 +414,7 @@ class Transaction(object):
                 the corresponding package, and its current state in the catalog.
                 """
                 def split_trans_id(tid):
-                        m = re.match("(\d+)_(.*)", tid)
+                        m = re.match(r"(\d+)_(.*)", tid)
                         return m.group(1), unquote(m.group(2))
 
                 trans_id = self.get_basename()

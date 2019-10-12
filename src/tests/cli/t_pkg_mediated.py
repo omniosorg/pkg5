@@ -400,7 +400,7 @@ mta\tlocal\t1.0\tsystem\t\t
 
                 # Now install some packages to test the ability to list
                 # available mediations.
-                self.pkg("install -vvv \*/python\* \*perl\* \*vi\*")
+                self.pkg("install -vvv \\*/python\\* \\*perl\\* \\*vi\\*")
 
                 # Test listing all available mediations.
                 self.__assert_available_mediation_matches("""\
@@ -642,7 +642,7 @@ mta\tsystem\t\tlocal\tnosuchmta\t
 """)
 
                 # Now uninstall all packages.
-                self.pkg("uninstall -vvv \*")
+                self.pkg("uninstall -vvv \\*")
                 self.pkg("verify")
                 check_not_exists(gen_mta_links())
                 self.__assert_mediation_matches("""\
@@ -667,7 +667,7 @@ mta\tsystem\t\tsystem\tpostfix\t
                 # Now uninstall all packages, then reinstall them and verify
                 # that postfix was selected for initial install (since user did
                 # not explicitly set a mediation) and that verify passes.
-                self.pkg("uninstall \*")
+                self.pkg("uninstall \\*")
                 self.pkg("install -vvv sendmail@1 postfix@1")
                 check_target(gen_mta_links(), "postfix")
                 self.pkg("verify")
@@ -705,7 +705,7 @@ mta\tsystem\t\tsystem\tpostfix\t
                 # verify that postfix was selected, then remove postfix and
                 # verify sendmail is selected (since the user didn't explicitly
                 # set a mediation).
-                self.pkg("uninstall \*")
+                self.pkg("uninstall \\*")
                 self.pkg("install -vvv postfix@1 sendmail@1")
                 check_target(gen_mta_links(), "postfix")
                 self.pkg("verify")
@@ -849,7 +849,7 @@ mta\tsite\t\tsite\tpostfix\t
 perl\tsystem\t5.10.0\tsystem\t\t
 """)
                 self.pkg("verify")
-                self.pkg("uninstall -vvv \*")
+                self.pkg("uninstall -vvv \\*")
                 self.pkg("verify")
 
                 # Install python and python-unladen-swallow at the same time,
@@ -1006,7 +1006,7 @@ python\tsystem\t3.4\tlocal\tunladen-swallow@\t
                 # package that has multiple version mediations works as
                 # expected.
                 self.pkg("unset-mediator -I python")
-                self.pkg("uninstall \*")
+                self.pkg("uninstall \\*")
 
                 # Install apache-php52; verify that php 5.2.5 is selected.
                 self.pkg("install -vvv apache-php52")
@@ -1033,7 +1033,7 @@ php\tlocal\t5.2\tsystem\t\t
                 # Remove all packages; then verify that installing a single
                 # package that has multiple mediation implementations works as
                 # expected.
-                self.pkg("uninstall \*")
+                self.pkg("uninstall \\*")
                 self.pkg("unset-mediator -V php")
 
                 # Install multi-impl-python; verify that unladen swallow is NOT
@@ -1063,7 +1063,7 @@ python\tsystem\t\tlocal\tunladen-swallow\t
                 # Remove all packages; then verify that installing a single
                 # package that has multiple mediation and version
                 # implementations works as expected.
-                self.pkg("uninstall \*")
+                self.pkg("uninstall \\*")
                 self.pkg("unset-mediator -I python")
                 self.pkg("install -vvv multi-impl-ver-python")
 
@@ -1190,7 +1190,7 @@ vi\tsite\t\tsite\tvim\t
                 # Uninstall all packages; then verify that a single package
                 # containing multiple varianted, mediated hardlinks works as
                 # expected.
-                self.pkg("uninstall \*")
+                self.pkg("uninstall \\*")
 
                 foo_path = get_link_path("usr", "bin", "foo")
                 foo_1_nd_path = get_link_path("usr", "bin", "foo-1-nd")

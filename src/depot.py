@@ -80,10 +80,7 @@ import sys
 import tempfile
 import portend
 
-if sys.version_info[:2] >= (3, 4):
-        from importlib import reload
-else:
-        from imp import reload
+from importlib import reload
 from six.moves.urllib.parse import urlparse, urlunparse
 
 try:

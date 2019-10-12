@@ -456,7 +456,7 @@ class ServerCatalog(object):
                         return
 
                 afile = open(apath, "r")
-                attrre = re.compile('^S ([^:]*): (.*)')
+                attrre = re.compile(r'^S ([^:]*): (.*)')
 
                 for entry in afile:
                         m = attrre.match(entry)

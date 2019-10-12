@@ -32,7 +32,7 @@ import pkg5unittest
 
 import errno
 import hashlib
-import imp
+import importlib.util
 import os
 import os.path
 import pkg.p5p
@@ -1012,10 +1012,11 @@ class TestP5pWsgi(pkg5unittest.SingleDepotTestCase):
                 # lives outside our normal search path
                 mod_name = "sysrepo_p5p"
                 src_name = "{0}.py".format(mod_name)
-                sysrepo_p5p_file = open(os.path.join(self.sysrepo_template_dir,
-                    src_name))
-                self.sysrepo_p5p = imp.load_module(mod_name, sysrepo_p5p_file,
-                    src_name, ("py", "r", imp.PY_SOURCE))
+                spec = importlib.util.spec_from_file_location(mod_name,
+                    os.path.join(self.sysrepo_template_dir, src_name))
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
+                self.sysrepo_p5p = module
 
                 # now create a simple p5p file that we can use in our tests
                 self.make_misc_files(self.misc_files)

@@ -1489,7 +1489,7 @@ class PkgActionChecker(base.ActionChecker):
                             pkg=manifest.fmri),
                             msgid="{0}{1}.1".format(self.name, pkglint_id))
 
-                if not re.match("[a-z].*", username):
+                if not re.match(r"[a-z].*", username):
                         engine.warning(
                             _("Username {name} in {pkg} does not have an "
                             "initial lower-case alphabetical "
@@ -1499,7 +1499,7 @@ class PkgActionChecker(base.ActionChecker):
                             msgid="{0}{1}.2".format(self.name, pkglint_id))
 
                 if len(username)> 0 and not \
-                    re.match("^[a-z]([a-zA-Z0-9._-])*$", username):
+                    re.match(r"^[a-z]([a-zA-Z0-9._-])*$", username):
                         engine.warning(
                             _("Username {name} in {pkg} is discouraged - see "
                             "passwd(4)").format(
@@ -1630,7 +1630,7 @@ class PkgActionChecker(base.ActionChecker):
 
                 lint_id = "{}{}".format(self.name, pkglint_id)
                 path = action.attrs["path"]
-                if re.search("\\.so\\.?[0-9\\.]*$", path):
+                if re.search(r"\.so\.?[0-9\.]*$", path):
                         # we allow libraries to be delivered as 32-bit
                         return
                 report_errors = engine.get_param("{}.report_errors".format(

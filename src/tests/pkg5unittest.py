@@ -70,10 +70,7 @@ import traceback
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
-if sys.version_info[:2] >= (3, 4):
-        from importlib import reload
-else:
-        from imp import reload
+from importlib import reload
 from six.moves import configparser, http_client
 from six.moves.urllib.error import HTTPError, URLError
 from six.moves.urllib.parse import urljoin
@@ -4094,7 +4091,7 @@ DocumentRoot "/"
 # The following lines prevent .htaccess and .htpasswd files from being
 # viewed by Web clients.
 #
-<FilesMatch "^\.ht">
+<FilesMatch "^\\.ht">
     Order allow,deny
     Deny from all
     Satisfy All

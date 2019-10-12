@@ -832,7 +832,7 @@ close
                 # Test for bug 15284, \ not being treated as an escape character
                 # for : as well as testing that \: when used with field queries
                 # works as expected.
-                svc_name = "svc\:/milestone/multi-user-server\:default"
+                svc_name = "svc\\:/milestone/multi-user-server\\:default"
                 self._search_op(api_obj, True,
                     svc_name,
                     self.res_smf_svc)
@@ -863,7 +863,7 @@ close
                     svc_name, svc_name),
                     self.res_smf_svc)
                 # Test that a single escaped colon doesn't cause a traceback.
-                self._search_op(api_obj, True, "\:", set())
+                self._search_op(api_obj, True, "\\:", set())
 
                 # Test that doing a search restricted to dir actions works
                 # correctly.  This is a test for bug 17645.
@@ -1027,7 +1027,7 @@ close
                 # Test for bug 15284, \ not being treated as an escape character
                 # for : as well as testing that \: when used with field queries
                 # works as expected.
-                svc_name = "svc\:/milestone/multi-user-server\:default"
+                svc_name = "svc\\:/milestone/multi-user-server\\:default"
                 self._search_op(api_obj, False,
                     svc_name,
                     self.res_smf_svc)
@@ -1058,7 +1058,7 @@ close
                     svc_name, svc_name),
                     self.res_smf_svc)
                 # Test that a single escaped colon doesn't cause a traceback.
-                self._search_op(api_obj, True, "\:", set())
+                self._search_op(api_obj, True, "\\:", set())
 
         def _run_local_tests(self, api_obj):
                 outfile = os.path.join(self.testdata_dir, "res")

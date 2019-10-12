@@ -83,7 +83,7 @@ class TestPkgModified(pkg5unittest.SingleDepotTestCase):
                     ("contents", 1),
                     ("history", 0),
                     ("info", 1),
-                    ("info -r \*", 0),
+                    ("info -r \\*", 0),
                     ("list", 1),
                     ("mediator", 0),
                     ("property", 0),

@@ -322,7 +322,7 @@ feed       description      ""
 feed       icon             web/_themes/pkg-block-icon.png
 feed       id               ""
 feed       logo             web/_themes/pkg-block-logo.png
-feed       name             package\ repository\ feed
+feed       name             package\\ repository\\ feed
 feed       window           24
 publisher  alias            ""
 publisher  prefix           test
@@ -333,7 +333,7 @@ repository legal_uris       ()
 repository maintainer       ""
 repository maintainer_url   ""
 repository mirrors          ()
-repository name             package\ repository
+repository name             package\\ repository
 repository origins          ()
 repository refresh_seconds  14400
 repository registration_uri ""
@@ -351,7 +351,7 @@ feed\tdescription\t""
 feed\ticon\tweb/_themes/pkg-block-icon.png
 feed\tid\t""
 feed\tlogo\tweb/_themes/pkg-block-logo.png
-feed\tname\tpackage\ repository\ feed
+feed\tname\tpackage\\ repository\\ feed
 feed\twindow\t24
 publisher\talias\t""
 publisher\tprefix\ttest
@@ -362,7 +362,7 @@ repository\tlegal_uris\t()
 repository\tmaintainer\t""
 repository\tmaintainer_url\t""
 repository\tmirrors\t()
-repository\tname\tpackage\ repository
+repository\tname\tpackage\\ repository
 repository\torigins\t()
 repository\trefresh_seconds\t14400
 repository\tregistration_uri\t""
@@ -496,7 +496,7 @@ test      repository collection-type  core
 test      repository description      
 test      repository legal-uris       ()
 test      repository mirrors          ()
-test      repository name             package\ repository
+test      repository name             package\\ repository
 test      repository origins          ()
 test      repository refresh-seconds  7200
 test      repository registration-uri ""
@@ -515,7 +515,7 @@ test\trepository\tcollection-type\tcore
 test\trepository\tdescription\t
 test\trepository\tlegal-uris\t()
 test\trepository\tmirrors\t()
-test\trepository\tname\tpackage\ repository
+test\trepository\tname\tpackage\\ repository
 test\trepository\torigins\t()
 test\trepository\trefresh-seconds\t7200
 test\trepository\tregistration-uri\t""
@@ -609,7 +609,7 @@ test\trepository\tcollection-type\tcore
 test\trepository\tdescription\t
 test\trepository\tlegal-uris\t()
 test\trepository\tmirrors\t()
-test\trepository\tname\tpackage\ repository
+test\trepository\tname\tpackage\\ repository
 test\trepository\torigins\t(http://pkg-eu-2.opensolaris.org/dev/ http://pkg.opensolaris.org/dev/)
 test\trepository\trefresh-seconds\t7200
 test\trepository\tregistration-uri\t""
@@ -651,7 +651,7 @@ test\trepository\tcollection-type\tcore
 test\trepository\tdescription\t
 test\trepository\tlegal-uris\t()
 test\trepository\tmirrors\t()
-test\trepository\tname\tpackage\ repository
+test\trepository\tname\tpackage\\ repository
 test\trepository\torigins\t(http://pkg-eu-2.opensolaris.org/dev/ http://pkg.opensolaris.org/dev/)
 test\trepository\trefresh-seconds\t7200
 test\trepository\tregistration-uri\t""
@@ -2282,7 +2282,7 @@ test2	zoo		1.0	5.11	0	20110804T203458Z	pkg://test2/zoo@1.0,5.11-0:20110804T20345
 
                 # publish a single package and break it
                 fmris = self.pkgsend_bulk(repo_path, (self.tree10))
-                self.pkgsign(repo_path, "\*")
+                self.pkgsign(repo_path, "\\*")
                 self.pkgrepo("-s {0} verify".format(repo_path))
                 bad_path = self.__inject_badsig(fmris[0])
                 self.pkgrepo("-s {0} verify".format(repo_path), exit=1)
@@ -2293,7 +2293,7 @@ test2	zoo		1.0	5.11	0	20110804T203458Z	pkg://test2/zoo@1.0,5.11-0:20110804T20345
 
                 # now sign with a key, cert and chain cert and check we fail
                 # to verify
-                self.pkgsign_simple(repo_path, "\*")
+                self.pkgsign_simple(repo_path, "\\*")
                 self.pkgrepo("-s {0} verify".format(repo_path), exit=1)
                 self.assertTrue("ERROR: Bad signature." in self.output)
 
@@ -2336,7 +2336,7 @@ test2	zoo		1.0	5.11	0	20110804T203458Z	pkg://test2/zoo@1.0,5.11-0:20110804T20345
                           "ch5_ta1_cert.pem")
                     )
 
-                self.pkgsign(repo_path, "{0} \*".format(sign_args))
+                self.pkgsign(repo_path, "{0} \\*".format(sign_args))
                 self.pkgrepo("-s {0} verify".format(repo_path))
 
                 bad_paths = self.__inject_badchain(fmris[0])
@@ -3151,7 +3151,7 @@ test2	zoo		1.0	5.11	0	20110804T203458Z	pkg://test2/zoo@1.0,5.11-0:20110804T20345
 
                 repo_path = self.dc.get_repodir()
                 fmris = self.pkgsend_bulk(repo_path, (self.tree10))
-                self.pkgsign(repo_path, "\*")
+                self.pkgsign(repo_path, "\\*")
 
                 self.pkgrepo("-s {0} fix".format(repo_path))
 

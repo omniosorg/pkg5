@@ -443,16 +443,16 @@ class UserattrFile(CfgFile):
     def splitline(self, line):
         """ return tokenized line, with attribute column a dictionary
             w/ lists for values"""
-        cols = re.split("(?<=[^\\\\]):", line) #match non-escaped :
+        cols = re.split(r"(?<=[^\\]):", line) #match non-escaped :
 
         if len(cols) != len(self.column_names):
             return cols
 
-        attributes=re.split("(?<=[^\\\\]);", cols[4]) # match non escaped ;
+        attributes=re.split(r"(?<=[^\\]);", cols[4]) # match non escaped ;
 
         d = {}
         for attr in attributes:
-            a = re.split("(?<=[^\\\\])=", attr)
+            a = re.split(r"(?<=[^\\])=", attr)
             d[a[0]] = a[1].split(",")
         cols[4] = d
         return cols

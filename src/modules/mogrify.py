@@ -337,7 +337,7 @@ def substitute_values(msg, action, matches, pkg_attrs, filename=None, lineno=Non
 
         newmsg = ""
         prevend = 0
-        for i in re.finditer("%\((.+?)\)|%\{(.+?)\}", msg):
+        for i in re.finditer(r"%\((.+?)\)|%\{(.+?)\}", msg):
                 m = i.string[slice(*i.span())]
                 assert m[1] in "({"
                 if m[1] == "(":

@@ -38,10 +38,7 @@ import warnings
 import errno
 from pkg.client.pkgdefs import EXIT_OOPS, EXIT_OK, EXIT_PARTIAL, EXIT_BADOPT
 
-if sys.version_info[:2] >= (3, 4):
-        from importlib import reload
-else:
-        from imp import reload
+from importlib import reload
 
 import pkg.actions
 import pkg.bundle

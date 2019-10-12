@@ -39,11 +39,11 @@ import config
 from six.moves.urllib.request import urlopen
 
 # Apache combined log pattern
-comb_log_pat = re.compile("(?P<ip>[\d\.]*) - - \[(?P<date>[^:]*):(?P<time>\S*) (?P<tz>[^\]]*)\] \"(?P<op>GET|POST|HEAD|\S*) (?P<uri>\S*) HTTP/(?P<httpver>[^\"]*)\" (?P<response>\d*) (?P<subcode>\d*|-) \"(?P<refer>[^\"]*)\" \"(?P<agent>[^\"]*)\" \"(?P<uuid>[^\"]*)\" \"(?P<intent>[^\"]*)\"")
+comb_log_pat = re.compile(r"(?P<ip>[\d\.]*) - - \[(?P<date>[^:]*):(?P<time>\S*) (?P<tz>[^\]]*)\] \"(?P<op>GET|POST|HEAD|\S*) (?P<uri>\S*) HTTP/(?P<httpver>[^\"]*)\" (?P<response>\d*) (?P<subcode>\d*|-) \"(?P<refer>[^\"]*)\" \"(?P<agent>[^\"]*)\" \"(?P<uuid>[^\"]*)\" \"(?P<intent>[^\"]*)\"")
 
 # Agent field log patterns
-browser_agent_pat = re.compile(".*X11; U; SunOS (?P<arch>[^;]*); (?P<lang>[^;]*)")
-pkg_agent_pat = re.compile("pkg/(?P<pversion>\S*) \((?P<pos>\S*) (?P<arch>[^;]*); (?P<uname>\S*) (?P<build>[^;]*); (?P<imagetype>[^)]*)\)")
+browser_agent_pat = re.compile(r".*X11; U; SunOS (?P<arch>[^;]*); (?P<lang>[^;]*)")
+pkg_agent_pat = re.compile(r"pkg/(?P<pversion>\S*) \((?P<pos>\S*) (?P<arch>[^;]*); (?P<uname>\S*) (?P<build>[^;]*); (?P<imagetype>[^)]*)\)")
 
 host_cache = {}
 host_props = {}

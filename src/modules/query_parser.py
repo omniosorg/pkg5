@@ -1024,7 +1024,7 @@ class TermQuery(object):
 
         __dict_locks = {}
 
-        has_non_wildcard_character = re.compile('.*[^\*\?].*')
+        has_non_wildcard_character = re.compile(r'.*[^\*\?].*')
 
         fmris = None
 

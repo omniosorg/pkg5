@@ -27,7 +27,7 @@ import platform
 import re
 
 def get_canonical_os_type():
-        """ 
+        """
         Return a standardized, lower case version of the "type" of OS family.
         """
         if os.name == 'posix':
@@ -43,9 +43,9 @@ def get_canonical_os_type():
 def get_canonical_os_name():
         """
         Return a standardized, lower case version of the name of the OS.  This is
-        useful to avoid the ambiguity of OS marketing names.  
+        useful to avoid the ambiguity of OS marketing names.
         """
-        
+
         psl = platform.system().lower()
         if psl in ['sunos', 'darwin', 'windows', 'aix']:
                 return psl
@@ -66,9 +66,9 @@ def get_os_release():
         """
         Return a standardized, sanitized version string, consisting of a
         dot-separated list of integers representing the release version of
-        this OS. 
+        this OS.
         """
-        
+
         ostype = get_canonical_os_type()
         release = None
         if ostype == 'unix':
@@ -81,9 +81,7 @@ def get_os_release():
                 release = platform.release()
 
         # force release into a dot-separated list of integers
-        return '.'.join((re.sub('[^0-9]', ' ', release)).split())
-
-
+        return '.'.join((re.sub(r'[^0-9]', ' ', release)).split())
 
 # Vim hints
 # vim:ts=8:sw=8:et:fdm=marker

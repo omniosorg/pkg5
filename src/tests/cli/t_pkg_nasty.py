@@ -322,7 +322,7 @@ class TestNastyTempPub(TestPkgNasty):
                 self.pkg("set-property signature-policy require-signatures")
 
                 # test list with temporary publisher
-                cmd = "list -a -g {0} \*".format(self.durl)
+                cmd = "list -a -g {0} \\*".format(self.durl)
                 self._trythis(cmd,
                     lambda: self.pkg(cmd, env_arg=env, exit=[0, 1]))
 
@@ -334,7 +334,7 @@ class TestNastyTempPub(TestPkgNasty):
                 # clean out dl'd mfsts
                 self._rm_mfsts()
                 # test info with temporary publisher
-                cmd = "info -g {0} \*".format(self.durl)
+                cmd = "info -g {0} \\*".format(self.durl)
                 self._trythis(cmd,
                     lambda: self.pkg(cmd, env_arg=env, exit=[0, 1]))
 

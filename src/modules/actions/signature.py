@@ -24,9 +24,11 @@
 # Copyright (c) 2009, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
+import abc
 import hashlib
 import os
 import shutil
+import sys
 import tempfile
 
 from cryptography.exceptions import InvalidSignature
@@ -181,7 +183,16 @@ class SignatureAction(generic.Action):
                 """Get the cryptopgraphy Hash() class based on the OpenSSL
                 algorithm name."""
 
-                for h in hashes.HashAlgorithm._abc_registry:
+                if sys.version_info[:2] >= (3, 7):
+                        registry = [
+                            ref()
+                            for ref in abc._get_dump(hashes.HashAlgorithm)[0]
+                            if ref()
+                        ]
+                else:
+                        registry = hashes.HashAlgorithm._abc_registry
+
+                for h in registry:
                         if h.name == name:
                                 return h
 

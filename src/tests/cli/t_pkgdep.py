@@ -1412,7 +1412,7 @@ SYMBOL_SCOPE {
                 self.pkgdepend_generate("-d {0} -z foo bar".format(proto), exit=2)
                 self.pkgdepend_generate("-d {0} no_such_file_should_exist".format(
                     proto), exit=2)
-                self.pkgdepend_generate("-\?")
+                self.pkgdepend_generate("-\\?")
                 self.pkgdepend_generate("--help")
                 tp = self.make_manifest(self.test_manf_1)
                 self.pkgdepend_generate("-d {0} {1}".format(proto, tp),

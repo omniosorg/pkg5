@@ -35,15 +35,11 @@ import shutil
 import sys
 import tempfile
 import traceback
-if sys.version_info[:2] >= (3, 4):
-        from importlib import reload
-else:
-        from imp import reload
+from importlib import reload
 
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
-from imp import reload
 
 import pkg
 import pkg.actions as actions

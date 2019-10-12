@@ -48,7 +48,7 @@
                 scheme, netloc, path, params, query, fragment = \
                     urlparse(request.url(), allow_fragments=0)
 
-                match = re.match("(?:.*[.])?(omnios(?:ce)?\.org|omniti\.com)", netloc)
+                match = re.match(r"(?:.*[.])?(omnios(?:ce)?\.org)", netloc)
                 if match:
                         web_config["theme"] = match.group(1)
                 else:

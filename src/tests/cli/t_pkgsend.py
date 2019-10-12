@@ -29,6 +29,7 @@ import pkg5unittest
 
 import grp
 import os
+import errno
 import pkg.fmri as fmri
 import pkg.manifest as manifest
 import pwd
@@ -697,7 +698,7 @@ file 6a1ae3def902f5612a43f0c0836fe05bc4f237cf chash=be9c91959ec782acb0f081bf4bf1
                                 try:
                                         os.makedirs(os.path.join(pkgroot, dirname))
                                 except OSError as err: # in case the dir exists already
-                                        if err.errno != os.errno.EEXIST:
+                                        if err.errno != errno.EEXIST:
                                                 raise
                                 fpath = os.path.join(pkgroot, entry)
                                 f = open(fpath, "w")
@@ -713,7 +714,7 @@ file 6a1ae3def902f5612a43f0c0836fe05bc4f237cf chash=be9c91959ec782acb0f081bf4bf1
                                 try:
                                         os.makedirs(os.path.join(pkgroot, entry), mode)
                                 except OSError as err:
-                                        if err.errno != os.errno.EEXIST:
+                                        if err.errno != errno.EEXIST:
                                                 raise
 
                 pkginfopath = os.path.join(pkgroot, "pkginfo")

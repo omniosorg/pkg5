@@ -856,7 +856,7 @@ class TestPkgrecvMulti(pkg5unittest.ManyDepotTestCase):
 
                 # Now attempt to receive from a repository to a package archive.
                 arc_path = os.path.join(self.test_root, "test.p5p")
-                self.pkgrecv(self.durl3, "-a -d {0} \*".format(arc_path))
+                self.pkgrecv(self.durl3, "-a -d {0} \\*".format(arc_path))
 
                 #
                 # Verify that the archive can be opened and the expected
@@ -919,7 +919,7 @@ class TestPkgrecvMulti(pkg5unittest.ManyDepotTestCase):
                 # Verify that pkgrecv gracefully fails if archive already
                 # exists.
                 #
-                self.pkgrecv(arc_path, "-d {0} \*".format(arc2_path), exit=1)
+                self.pkgrecv(arc_path, "-d {0} \\*".format(arc2_path), exit=1)
 
                 #
                 # Verify that packages can be received from an archive to
@@ -948,7 +948,7 @@ class TestPkgrecvMulti(pkg5unittest.ManyDepotTestCase):
                 # Attempt a dry-run to receive a package archive.
                 # We should not have the archive created in this case.
                 arc_path = os.path.join(self.test_root, "dry-run.p5p")
-                self.pkgrecv(self.durl3, "-n -a -d {0} \*".format(arc_path))
+                self.pkgrecv(self.durl3, "-n -a -d {0} \\*".format(arc_path))
                 self.assertFalse(os.path.exists(arc_path))
 
                 #
@@ -1013,7 +1013,7 @@ class TestPkgrecvMulti(pkg5unittest.ManyDepotTestCase):
                 self.assertEqualDiff(expected, os.listdir(rpth))
 
                 arc_path = os.path.join(self.test_root, "test.p5p")
-                self.pkgrecv(self.durl1, "-a -n -d {0} \*".format(arc_path))
+                self.pkgrecv(self.durl1, "-a -n -d {0} \\*".format(arc_path))
                 self.assertTrue(not os.path.exists(arc_path))
 
                 # --raw actually populates the destination with manifests even
@@ -1268,7 +1268,7 @@ class TestPkgrecvMulti(pkg5unittest.ManyDepotTestCase):
 
                 # Now attempt to receive from a repository.
                 self.pkgrepo("create {0}".format(self.tempdir))
-                self.pkgrecv(self.dpath1, "-d {0} -n -v \*".format(self.tempdir))
+                self.pkgrecv(self.dpath1, "-d {0} -n -v \\*".format(self.tempdir))
                 expected = """\
 Retrieving packages (dry-run) ...
         Packages to add:       9
@@ -1284,7 +1284,7 @@ Estimated transfer size: 3.17 kB
                 shutil.rmtree(self.tempdir)
 
                 # Now attempt to receive from a repository to a package archive.
-                self.pkgrecv(self.dpath1, "-a -d {0} -n -v \*".format(self.tempdir))
+                self.pkgrecv(self.dpath1, "-a -d {0} -n -v \\*".format(self.tempdir))
                 expected = """\
 Archiving packages (dry-run) ...
         Packages to add:       9
@@ -1298,7 +1298,7 @@ Estimated transfer size: 3.17 kB
 
                 # Now attempt to clone a repository.
                 self.pkgrepo("create {0}".format(self.tempdir))
-                self.pkgrecv(self.dpath1, "--clone -d {0} -p \* -n -v" \
+                self.pkgrecv(self.dpath1, "--clone -d {0} -p \\* -n -v" \
                    .format(self.tempdir))
                 expected = """\
 Retrieving packages (dry-run) ...
@@ -1313,13 +1313,13 @@ Estimated transfer size: 3.17 kB
 
                 # Verify mogrify works by retrieving mogrified pkgs from the
                 # new target catalog.
-                self.pkgrecv(self.dpath1, "--mog-file {0} -d {1} -v \*".format(
+                self.pkgrecv(self.dpath1, "--mog-file {0} -d {1} -v \\*".format(
                     self.transforms["pub_change"], self.tempdir))
                 self.assertTrue("target catalog 'testpub'" in self.output)
                 self.pkgrepo("verify -s {0}".format(self.tempdir))
 
                 # Test that output is correct if -n is not specified.
-                self.pkgrecv(self.dpath1, "-d {0} -v \*".format(self.tempdir))
+                self.pkgrecv(self.dpath1, "-d {0} -v \\*".format(self.tempdir))
                 self.assertTrue("dry-run" not in self.output)
 
         def test_14_mog_manifest(self):
@@ -1478,7 +1478,7 @@ file elftest.so.1 mode=0755 owner=root group=bin path=bin/true
                 # that we can safely modify it in place.
                 nrpath = tempfile.mkdtemp(dir=self.test_root)
                 self.create_repo(nrpath)
-                self.pkgrecv(rpath, "-d {0} \*".format(nrpath))
+                self.pkgrecv(rpath, "-d {0} \\*".format(nrpath))
                 nrepo = repo.Repository(root=nrpath)
                 nmpath = nrepo.manifest(pfmri)
                 nm = manifest.Manifest()
@@ -1496,7 +1496,7 @@ file elftest.so.1 mode=0755 owner=root group=bin path=bin/true
                 # unchanged from previous repository version.
                 trpath = tempfile.mkdtemp(dir=self.test_root)
                 self.create_repo(trpath)
-                self.pkgrecv(nrpath, "-d {0} \*".format(trpath))
+                self.pkgrecv(nrpath, "-d {0} \\*".format(trpath))
                 trepo = repo.Repository(root=trpath)
                 tmpath = trepo.manifest(pfmri)
                 tm = manifest.Manifest()
@@ -1509,7 +1509,7 @@ file elftest.so.1 mode=0755 owner=root group=bin path=bin/true
                 # Do the same thing again, but use --clone this time.
                 trpath = tempfile.mkdtemp(dir=self.test_root)
                 self.create_repo(trpath)
-                self.pkgrecv(nrpath, "--clone -d {0} -p \*".format(trpath))
+                self.pkgrecv(nrpath, "--clone -d {0} -p \\*".format(trpath))
                 trepo = repo.Repository(root=trpath)
                 tmpath = trepo.manifest(pfmri)
                 tm = manifest.Manifest()

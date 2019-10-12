@@ -556,7 +556,7 @@ variant.opensolaris.zone\t{2}
                     "variant.foobar=false", exit=0)
                 # Variant names contain space, should raise an exception
                 self.pkg("change-variant --no-refresh "
-                    "variant.foo\ bar=false variant.bar\ foo=false", exit=1)
+                    "variant.foo\\ bar=false variant.bar\\ foo=false", exit=1)
                 self.assertTrue("variant.foo bar" and "variant.bar foo"
                     in self.errout)
 

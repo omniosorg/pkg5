@@ -816,7 +816,7 @@ def _copy_file_contents(src, dst, buffer_size=16*1024):
         python files as they are installed."""
 
         # Look for shebang line to replace with arch-specific Python executable.
-        shebang_re = re.compile('^#!.*/python[0-9][.0-9]*$')
+        shebang_re = re.compile(r'^#!.*/python[0-9][.0-9]*$')
 
         if not src.endswith(".py"):
                 shutil.copyfile(src, dst)
