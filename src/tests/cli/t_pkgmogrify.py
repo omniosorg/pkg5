@@ -475,7 +475,7 @@ file NOHASH path=kernel/drv/common2 reboot-needed=true
 
                 source_file = os.path.join(self.test_root, "source_file2")
 
-                expect = "^test of \"{0}\" ... or is it\?$"
+                expect = r'^test of "{0}" ... or is it\?$'
                 fmri = "wombat/heaven@1.0,5.11-0.101"
 
                 # Simple %() replacement

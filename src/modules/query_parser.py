@@ -1,4 +1,4 @@
-#!/usr/bin/python3.5
+#!/usr/bin/python3.7
 #
 # CDDL HEADER START
 #
@@ -1024,7 +1024,7 @@ class TermQuery(object):
 
         __dict_locks = {}
 
-        has_non_wildcard_character = re.compile('.*[^\*\?].*')
+        has_non_wildcard_character = re.compile(r'.*[^\*\?].*')
 
         fmris = None
 

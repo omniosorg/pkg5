@@ -1239,8 +1239,8 @@ class TestDepotOutput(pkg5unittest.SingleDepotTestCase):
                         # msgs.
                         with open(err_path, "r") as read_err:
                                 msgs = read_err.readlines()
-                        self.assertRegexp(msgs[-1], "\[[\w:/]+\]  Request "
-                            "failed")
+                        self.assertRegexp(msgs[-1],
+                            r"\[[\w:/]+\]  Request failed")
                 except:
                         self.__depot_daemon_stop(depot_handle)
                         raise

@@ -116,7 +116,7 @@ class TestPkgVariants(pkg5unittest.SingleDepotTestCase):
 
                 self.image_create(self.rurl,
                     variants={ "variant.mumble": "false" })
-                self.pkg("install \*")
+                self.pkg("install \\*")
                 self.pkg("info mumble-true", exit=1)
                 self.pkg("info mumble-false")
 

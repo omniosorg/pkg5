@@ -47,7 +47,7 @@ filelist_totals = {}
 filelist_totals["kilobytes"] = 0
 filelist_totals["bytes"] = 0
 
-pkg_pat = re.compile("/filelist/(?P<mversion>\d+)/(?P<trailing>.*)")
+pkg_pat = re.compile(r"/filelist/(?P<mversion>\d+)/(?P<trailing>.*)")
 
 # old-division; pylint: disable=W1619
 def report_filelist_by_bytes():

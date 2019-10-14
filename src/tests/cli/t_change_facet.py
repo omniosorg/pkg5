@@ -618,7 +618,7 @@ class TestPkgChangeFacet(pkg5unittest.SingleDepotTestCase):
 
                 self.image_create(self.rurl)
                 self.pkg("change-facet --no-refresh "
-                    "facet.foo\ bar=false", exit=1)
+                    "facet.foo\\ bar=false", exit=1)
                 self.assertTrue("facet.foo bar" in self.errout)
 
 

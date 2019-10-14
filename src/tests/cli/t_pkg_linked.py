@@ -5115,10 +5115,10 @@ case $OPT in
                 ;;
 esac
 done
-PKG_GZR=$(echo "$PKG_GZR" | sed 's-:-\\\:-g')
+PKG_GZR=$(echo "$PKG_GZR" | sed 's-:-\\\\:-g')
 cat <<-EOF
 0:global:running:$PKG_GZR::solaris:shared:-:none:
--:z1:installed:$PKG_GZR/ngzzone_path_with_a\:colon::solaris:excl:-::
+-:z1:installed:$PKG_GZR/ngzzone_path_with_a\\:colon::solaris:excl:-::
 EOF
 exit 0""".strip("\n")
 

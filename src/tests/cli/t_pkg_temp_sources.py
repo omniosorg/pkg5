@@ -415,7 +415,7 @@ class TestPkgTempSources(pkg5unittest.ManyDepotTestCase):
                 self.assertEqualDiff(expected, output)
 
                 # Uninstall all packages and verify there are no known packages.
-                self.pkg("uninstall \*")
+                self.pkg("uninstall \\*")
                 self.pkg("list -af", exit=1)
 
                 # Cleanup.
@@ -436,7 +436,7 @@ class TestPkgTempSources(pkg5unittest.ManyDepotTestCase):
 
                 # Verify graceful failure for an empty source alone or in
                 # combination with another temporary source.
-                self.pkg("info -g {0} \*".format(self.empty_arc), exit=1)
+                self.pkg("info -g {0} \\*".format(self.empty_arc), exit=1)
                 self.pkg("info -g {0} -g {1} foo".format(self.empty_arc,
                     self.foo_arc), exit=1)
 
@@ -481,7 +481,7 @@ Packaging Date: {pkg_date}
 
                 # Verify info output for a multiple package temporary source
                 # as an unprivileged user.
-                self.pkg("info -g {0} \*".format(self.all_arc), su_wrap=True)
+                self.pkg("info -g {0} \\*".format(self.all_arc), su_wrap=True)
                 expected = """\
           Name: foo
        Summary: Example package foo.
@@ -588,8 +588,8 @@ Last Install Time: {pkg_install}
                 self.assertEqualDiff(expected, self.output)
 
                 # Uninstall all packages and verify there are no known packages.
-                self.pkg("uninstall \*")
-                self.pkg("info -r \*", exit=1)
+                self.pkg("uninstall \\*")
+                self.pkg("info -r \\*", exit=1)
 
                 # Verify that --license works as expected with -g.
                 self.pkg("info -g {0} --license licensed@1.0".format(
@@ -616,7 +616,7 @@ Last Install Time: {pkg_install}
 
                 # Verify graceful failure for an empty source alone or in
                 # combination with another temporary source.
-                self.pkg("contents -g {0} \*".format(self.empty_arc), exit=1)
+                self.pkg("contents -g {0} \\*".format(self.empty_arc), exit=1)
                 self.pkg("contents -g {0} -g {1} foo".format(self.empty_arc,
                     self.foo_arc), exit=1)
 
@@ -689,8 +689,8 @@ link path=usr/local/bin/soft-foo target=usr/bin/foo
                 self.pkg("contents foo")
 
                 # Uninstall all packages and verify there are no known packages.
-                self.pkg("uninstall \*")
-                self.pkg("contents -r \*", exit=1)
+                self.pkg("uninstall \\*")
+                self.pkg("contents -r \\*", exit=1)
 
                 # Cleanup.
                 self.image_destroy()
@@ -771,7 +771,7 @@ test
 
                 # Verify that removing all packages leaves no packages known
                 # even though publisher remains configured.
-                self.pkg("uninstall \*")
+                self.pkg("uninstall \\*")
                 self.pkg("list -af", exit=1)
 
                 # Verify publisher can be removed.
@@ -791,7 +791,7 @@ test
                 self.pkg("list foo signed")
 
                 # Verify that removing all packages leaves only foo known.
-                self.pkg("uninstall \*")
+                self.pkg("uninstall \\*")
                 self.pkg("list -aH")
                 expected = "foo 1.0 ---\n"
                 output = self.reduceSpaces(self.output)

@@ -1,4 +1,4 @@
-#!/usr/bin/python3.5
+#!/usr/bin/python3.7
 #
 # CDDL HEADER START
 #
@@ -189,7 +189,7 @@ class UpdateLog(object):
                 # Now re-write npkgs and Last-Modified in attributes file
                 afile = open(os.path.normpath(os.path.join(path, "attrs")),
                     "r")
-                attrre = re.compile('^S ([^:]*): (.*)')
+                attrre = re.compile(r'^S ([^:]*): (.*)')
 
                 for entry in afile:
                         m = attrre.match(entry)

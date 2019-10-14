@@ -20,7 +20,7 @@
 #
 # Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
 # Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
-# Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
 #
 set name=pkg.fmri value=pkg:/package/pkg@$(PKGVERS)
 set name=pkg.summary value="Image Packaging System - pkg(5)"
@@ -30,18 +30,18 @@ set name=variant.arch value=$(ARCH)
 dir  path=$(PYDIR)
 dir  path=$(PYDIRVP)
 dir  path=$(PYDIRVP)/pkg
-file path=$(PYDIRVP)/pkg-0.1-py3.5.egg-info
+file path=$(PYDIRVP)/pkg-0.1-py3.7.egg-info
 file path=$(PYDIRVP)/pkg/__init__.py
-file path=$(PYDIRVP)/pkg/_arch.cpython-35m.so
-file path=$(PYDIRVP)/pkg/_pspawn.cpython-35m.so
-file path=$(PYDIRVP)/pkg/_sha512_t.cpython-35m.so
-file path=$(PYDIRVP)/pkg/_sysattr.cpython-35m.so
-file path=$(PYDIRVP)/pkg/_syscallat.cpython-35m.so
-file path=$(PYDIRVP)/pkg/_varcet.cpython-35m.so
+file path=$(PYDIRVP)/pkg/_arch.cpython-37m.so
+file path=$(PYDIRVP)/pkg/_pspawn.cpython-37m.so
+file path=$(PYDIRVP)/pkg/_sha512_t.cpython-37m.so
+file path=$(PYDIRVP)/pkg/_sysattr.cpython-37m.so
+file path=$(PYDIRVP)/pkg/_syscallat.cpython-37m.so
+file path=$(PYDIRVP)/pkg/_varcet.cpython-37m.so
 dir  path=$(PYDIRVP)/pkg/actions
 file path=$(PYDIRVP)/pkg/actions/__init__.py
-file path=$(PYDIRVP)/pkg/actions/_actions.cpython-35m.so
-file path=$(PYDIRVP)/pkg/actions/_common.cpython-35m.so
+file path=$(PYDIRVP)/pkg/actions/_actions.cpython-37m.so
+file path=$(PYDIRVP)/pkg/actions/_common.cpython-37m.so
 file path=$(PYDIRVP)/pkg/actions/attribute.py
 file path=$(PYDIRVP)/pkg/actions/depend.py
 file path=$(PYDIRVP)/pkg/actions/directory.py
@@ -115,7 +115,7 @@ file path=$(PYDIRVP)/pkg/cpiofile.py
 file path=$(PYDIRVP)/pkg/dependency.py
 file path=$(PYDIRVP)/pkg/depotcontroller.py
 file path=$(PYDIRVP)/pkg/digest.py
-file path=$(PYDIRVP)/pkg/elf.cpython-35m.so
+file path=$(PYDIRVP)/pkg/elf.cpython-37m.so
 file path=$(PYDIRVP)/pkg/facet.py
 dir  path=$(PYDIRVP)/pkg/file_layout
 file path=$(PYDIRVP)/pkg/file_layout/__init__.py
@@ -185,7 +185,7 @@ file path=$(PYDIRVP)/pkg/server/repository.py pkg.depend.bypass-generate=.*
 file path=$(PYDIRVP)/pkg/server/transaction.py
 file path=$(PYDIRVP)/pkg/sha512_t.py
 file path=$(PYDIRVP)/pkg/smf.py
-file path=$(PYDIRVP)/pkg/solver.cpython-35m.so
+file path=$(PYDIRVP)/pkg/solver.cpython-37m.so
 file path=$(PYDIRVP)/pkg/sysattr.py
 file path=$(PYDIRVP)/pkg/syscallat.py
 file path=$(PYDIRVP)/pkg/sysvpkg.py

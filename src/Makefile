@@ -22,10 +22,10 @@
 #
 # Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
 # Copyright 2016, OmniTI Computer Consulting, Inc. All rights reserved.
-# Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
 #
 
-PYTHON3 = /usr/bin/python3.5
+PYTHON3 = /usr/bin/python3.7
 
 CODE_WS = $$(hg root 2>/dev/null || git rev-parse --show-toplevel)
 
@@ -102,6 +102,6 @@ packages: install
 		CC=$(CC)
 
 test: install
-	-pfexec $(PYTHON35) tests/run.py -j ${JOBS}
+	-pfexec $(PYTHON3) tests/run.py -j ${JOBS}
 
 FRC:

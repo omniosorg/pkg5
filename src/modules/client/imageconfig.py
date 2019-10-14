@@ -1,4 +1,4 @@
-#!/usr/bin/python3.5
+#!/usr/bin/python3.7
 #
 # CDDL HEADER START
 #
@@ -213,21 +213,21 @@ class ImageConfig(cfg.FileConfig):
                         value_map=_val_map_none),
                 ]),
                 cfg.PropertySection("facet", properties=[
-                    cfg.PropertyTemplate("^facet\..*", prop_type=cfg.PropBool),
+                    cfg.PropertyTemplate(r"^facet\..*", prop_type=cfg.PropBool),
                 ]),
                 cfg.PropertySection("inherited_facet", properties=[
-                    cfg.PropertyTemplate("^facet\..*", prop_type=cfg.PropBool),
+                    cfg.PropertyTemplate(r"^facet\..*", prop_type=cfg.PropBool),
                 ]),
                 cfg.PropertySection("mediators", properties=[
-                    cfg.PropertyTemplate("^[A-Za-z0-9\-]+\.implementation$"),
-                    cfg.PropertyTemplate("^[A-Za-z0-9\-]+\.implementation-version$",
+                    cfg.PropertyTemplate(r"^[A-Za-z0-9\-]+\.implementation$"),
+                    cfg.PropertyTemplate(r"^[A-Za-z0-9\-]+\.implementation-version$",
                         prop_type=cfg.PropVersion),
-                    cfg.PropertyTemplate("^[A-Za-z0-9\-]+\.implementation-source$",
+                    cfg.PropertyTemplate(r"^[A-Za-z0-9\-]+\.implementation-source$",
                         prop_type=cfg.PropDefined, allowed=["site", "vendor",
                         "local", "system"], default="local"),
-                    cfg.PropertyTemplate("^[A-Za-z0-9\-]+\.version$",
+                    cfg.PropertyTemplate(r"^[A-Za-z0-9\-]+\.version$",
                         prop_type=cfg.PropVersion),
-                    cfg.PropertyTemplate("^[A-Za-z0-9\-]+\.version-source$",
+                    cfg.PropertyTemplate(r"^[A-Za-z0-9\-]+\.version-source$",
                         prop_type=cfg.PropDefined, allowed=["site", "vendor",
                         "local", "system"], default="local"),
                 ]),

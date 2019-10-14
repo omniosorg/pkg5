@@ -1,4 +1,4 @@
-#!/usr/bin/python3.5
+#!/usr/bin/python3.7
 #
 # CDDL HEADER START
 #
@@ -127,7 +127,7 @@ class FileManager(object):
                 self.root = root
                 self.readonly = readonly
                 if layouts is not None:
-                        if not isinstance(layouts, collections.Iterable):
+                        if not isinstance(layouts, collections.abc.Iterable):
                                 layouts = [layouts]
                         self.layouts = layouts
                 else:

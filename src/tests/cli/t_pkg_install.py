@@ -4141,7 +4141,7 @@ adm
                 self.assertTrue(not os.path.exists(foo1_path))
                 self.assertTrue(os.path.isfile(foo2_path))
                 self.assertTrue(os.path.isfile(bronze1_path))
-                self.pkg("uninstall --parsable=0 \*")
+                self.pkg("uninstall --parsable=0 \\*")
 
                 # Update across the rename boundary, then truncate each of the
                 # preserved files.  They should remain empty even though one is
@@ -4159,7 +4159,7 @@ adm
                 self.assertEqual(os.stat(foo2_path).st_size, 0)
                 self.assertTrue(os.path.isfile(bronze1_path))
                 self.assertEqual(os.stat(bronze1_path).st_size, 0)
-                self.pkg("uninstall --parsable=0 \*")
+                self.pkg("uninstall --parsable=0 \\*")
                 self._assertEditables(
                     removed=['bronze1', 'foo2'],
                 )
@@ -4177,7 +4177,7 @@ adm
                 self.assertTrue(not os.path.exists(foo1_path))
                 self.assertTrue(os.path.isfile(foo2_path))
                 self.assertTrue(not os.path.exists(bronze1_path))
-                self.pkg("uninstall --parsable=0 \*")
+                self.pkg("uninstall --parsable=0 \\*")
 
                 # Ensure directory is empty before testing.
                 api_inst = self.get_img_api_obj()
@@ -5480,7 +5480,7 @@ adm:NP:6445::::::
 
         only_driver10 = """
             open only_driver@1.0,5.11-0
-            add driver name=zerg devlink="type=ddi_pseudo;name=zerg\\t\D"
+            add driver name=zerg devlink="type=ddi_pseudo;name=zerg\\t\\D"
             close """
 
         only_group10 = """
@@ -5690,16 +5690,16 @@ adm:NP:6445::::::
 
                 self.devlink10 = """
                     open devlinktest@1.0,5.11-0
-                    add driver name=zerg devlink="type=ddi_pseudo;name=zerg\\t\D"
-                    add driver name=borg devlink="type=ddi_pseudo;name=borg\\t\D" devlink="type=ddi_pseudo;name=warg\\t\D"
+                    add driver name=zerg devlink="type=ddi_pseudo;name=zerg\\t\\D"
+                    add driver name=borg devlink="type=ddi_pseudo;name=borg\\t\\D" devlink="type=ddi_pseudo;name=warg\\t\\D"
                     add depend type=require fmri=devicebase
                     close
                 """
 
                 self.devlink20 = """
                     open devlinktest@2.0,5.11-0
-                    add driver name=zerg devlink="type=ddi_pseudo;name=zerg2\\t\D" devlink="type=ddi_pseudo;name=zorg\\t\D"
-                    add driver name=borg devlink="type=ddi_pseudo;name=borg\\t\D" devlink="type=ddi_pseudo;name=zork\\t\D"
+                    add driver name=zerg devlink="type=ddi_pseudo;name=zerg2\\t\\D" devlink="type=ddi_pseudo;name=zorg\\t\\D"
+                    add driver name=borg devlink="type=ddi_pseudo;name=borg\\t\\D" devlink="type=ddi_pseudo;name=zork\\t\\D"
                     add depend type=require fmri=devicebase
                     close
                 """
@@ -6537,7 +6537,7 @@ adm:NP:6445::::::
                         dlf.close()
 
                 def assertContents(dllines, contents):
-                        actual = re.findall("name=([^\t;]*)",
+                        actual = re.findall(r"name=([^\t;]*)",
                             "\n".join(dllines), re.M)
                         self.assertTrue(set(actual) == set(contents))
 
@@ -6576,7 +6576,7 @@ adm:NP:6445::::::
                 dllines = readfile()
                 for i, line in enumerate(dllines):
                         if line.find("zerg") != -1:
-                                dllines[i] = "type=ddi_pseudo;name=zippy\t\D\n"
+                                dllines[i] = "type=ddi_pseudo;name=zippy\t\\D\n"
                 writefile(dllines)
 
                 # Upgrade
@@ -6604,7 +6604,7 @@ adm:NP:6445::::::
                 dllines = readfile()
                 for i, line in enumerate(dllines):
                         if line.find("zerg") != -1:
-                                dllines[i] = "type=ddi_pseudo;name=zippy\t\D\n"
+                                dllines[i] = "type=ddi_pseudo;name=zippy\t\\D\n"
                 writefile(dllines)
 
                 # Remove
@@ -6620,7 +6620,7 @@ adm:NP:6445::::::
                 assertContents(dllines, ["zippy"])
 
                 # Null out the "zippy" entry, but add the "zerg" entry
-                writefile(["type=ddi_pseudo;name=zerg\t\D\n"])
+                writefile(["type=ddi_pseudo;name=zerg\t\\D\n"])
 
                 # Install ... again
                 self.pkg("install devlinktest@1.0")
@@ -6631,7 +6631,7 @@ adm:NP:6445::::::
                 assertContents(dllines, ["zerg", "borg", "warg"])
 
                 # Now for the same test on upgrade
-                dllines.append("type=ddi_pseudo;name=zorg\t\D\n")
+                dllines.append("type=ddi_pseudo;name=zorg\t\\D\n")
                 writefile(dllines)
 
                 self.pkg("{0} devlinktest@2.0".format(install_cmd))
@@ -6703,7 +6703,7 @@ adm:NP:6445::::::
 
                 self.image_create(self.rurl)
 
-                name_pat = re.compile("^\s+open\s+(\S+)\@.*$")
+                name_pat = re.compile(r"^\s+open\s+(\S+)\@.*$")
 
                 def __manually_check_deps(name, install=True, exit=0):
                         cmd = ["install", "--no-refresh"]
@@ -6858,7 +6858,7 @@ adm:NP:6445::::::
                 self.assertTrue(not os.path.exists(pi3), "pkginfo.3 exists")
 
                 # Start over, but this time "break" the hardlinks.
-                self.pkg("uninstall -vvv \*")
+                self.pkg("uninstall -vvv \\*")
                 self.pkg("install csu1@1 csu2@1 csu3@1")
                 shutil.copy(pi, pi2)
                 shutil.copy(pi, pi3)
@@ -12550,7 +12550,7 @@ class TestPkgInstallExplicitInstall(pkg5unittest.SingleDepotTestCase):
                 self.set_image(1)
                 self.pkg("install -nv A@1.0-0.1.1.0", exit=1)
                 self.set_image(0)
-                self.pkg("uninstall -v \*")
+                self.pkg("uninstall -v \\*")
 
                 # Verify that a package that depends on a parent-constrained
                 # package that is also marked with pkg.depend.explicit-install
@@ -12573,7 +12573,7 @@ class TestPkgInstallExplicitInstall(pkg5unittest.SingleDepotTestCase):
                 self.set_image(1)
                 self.pkg("install -nv B@1.0-0.1.1.0")
                 self.set_image(0)
-                self.pkg("uninstall -v \*")
+                self.pkg("uninstall -v \\*")
 
                 # Install a parent-constrained package that requires a package
                 # marked with pkg.depend.explicit-install that is *not*
@@ -12585,7 +12585,7 @@ class TestPkgInstallExplicitInstall(pkg5unittest.SingleDepotTestCase):
                 self.set_image(1)
                 self.pkg("install -nv D@1.0-0.1.1.0", exit=1)
                 self.set_image(0)
-                self.pkg("uninstall -r \*")
+                self.pkg("uninstall -r \\*")
 
         def test_04_linked_upgrade(self):
                 """Ensure pkg.depend.explicit-install works as expected for
