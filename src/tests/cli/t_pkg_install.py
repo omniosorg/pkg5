@@ -4631,8 +4631,8 @@ adm
 
                 # Verify that a file removed for an action marked with
                 # preserve=abandon can be reverted.
-                self.pkg("revert testme")
-                self.file_contains("testme", "preserve1")
+                #self.pkg("revert testme")
+                #self.file_contains("testme", "preserve1")
 
         def test_file_preserve_install_only(self):
                 """Verify that preserve=install-only works as expected."""
