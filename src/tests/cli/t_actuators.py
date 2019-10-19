@@ -782,10 +782,8 @@ class TestPkgReleaseNotes(pkg5unittest.SingleDepotTestCase):
                 with open(field, encoding="utf-8") as f:
                         release_note = force_text(f.read())
 
-                # Note the package name is prepended to the release note
-                # and so it needs to be added here.
-                concatted = "\npkg://test/hovercraft\n" + self.multi_unicode
-                assert concatted == release_note
+                assert self.multi_unicode == release_note
+
                 self.pkg("uninstall '*'")
 
 
