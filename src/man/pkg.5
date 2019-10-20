@@ -1,8 +1,8 @@
 '\" te
-.\" Copyright (c) 2009, 2017, Oracle and/or its affiliates. All rights reserved.
+.\" Copyright (c) 2009, 2019, Oracle and/or its affiliates. All rights reserved.
 .\" Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
 .\" Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
-.TH pkg 5 "10 Sep 2018" "SunOS 5.11" "Standards, Environments, and Macros"
+.TH pkg 5 "08 Aug 2019" "SunOS 5.11" "Standards, Environments, and Macros"
 .SH NAME
 pkg \- Image Packaging System
 .SH DESCRIPTION
@@ -216,6 +216,7 @@ When a package is upgraded, if a \fBfile\fR action delivered by the upgraded ver
 .ie t \(bu
 .el o
 If the file delivered by the upgraded version of the package has a \fBpreserve\fR value of \fBabandon\fR or \fBinstall-only\fR in the upgraded package, the new file will not be installed and the existing file will not be modified.
+If the file delivered by the package has a \fBpreserve\fR value of \fBabondon\fR then any attempt to revert the file will not restore the file. Any \fBrevert-tag\fR associated with the file will be ignored.
 .RE
 .RS +4
 .TP

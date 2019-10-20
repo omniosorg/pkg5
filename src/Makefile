@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2019, Oracle and/or its affiliates. All rights reserved.
 # Copyright 2016, OmniTI Computer Consulting, Inc. All rights reserved.
 # Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
 #
@@ -37,7 +37,7 @@ clobber := TARGET = clobber
 lint := TARGET = lint
 clint := TARGET = clint
 pylint := TARGET = pylint
-pep8 := TARGET = pep8
+check := TARGET = check
 test := TARGET = test
 test-verbose := TARGET = test-verbose
 test-generate := TARGET = test-generate
@@ -51,9 +51,9 @@ PYLINT_VER_CMD = PYTHONPATH= /usr/bin/pkg info $(PYLINT_FMRI) | \
 		 /usr/bin/grep Version | /usr/bin/awk -F: '{print $$2}' | \
 		 /usr/bin/sed -e 's/ //g'
 
-PEP8 = /usr/bin/pep8
 JOBS = 8
 CC = gcc
+PYCODESTYLE = /usr/bin/pycodestyle
 
 SUBDIRS=brand zoneproxy tsol util/mkcert
 
@@ -85,8 +85,8 @@ pylint: install
 	PYLINT_VER=$(PYLINT_VER_CMD:sh) $(PYTHON3) setup.py pylint
 	PYLINT_VER=$(PYLINT_VER_CMD:sh) $(PYTHON3) setup.py pylint_py3k
 
-pep8:
-	$(PEP8) --statistics --count `cat tests/pep8-whitelist.txt`
+check:
+	$(PYCODESTYLE) --statistics --count `cat tests/pycodestyle-whitelist.txt`
 
 #
 # This rule propagates the current make target through all of the
@@ -95,7 +95,6 @@ pep8:
 $(SUBDIRS): FRC
 	@cd $@; pwd; $(MAKE) $(TARGET) CC=$(CC)
 
-# Use the bits we just built to create the packages. - #XXX pep8
 packages: install
 	@cd pkg; pwd; $(MAKE) $(TARGET) check \
 		PATH=$(CODE_WS)/proto/root_$$(uname -p)/usr/bin:$$PATH \

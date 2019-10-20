@@ -3508,8 +3508,8 @@ class UnsupportedFacetChange(ApiException):
             self.value = value
 
         def __str__(self):
-                return _("Changing '{facet}' to '{value}' "
-                        "is not supported.".format(facet=facet, value=value))
+                return _("Changing '{facet}' to '{value}' is not supported.".
+                         format(facet=self.facet, value=self.value))
 
 # Vim hints
 # vim:ts=4:sw=4:et:fdm=marker

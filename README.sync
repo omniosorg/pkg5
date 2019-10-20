@@ -4,11 +4,11 @@
 The pkg5 components have been updated to the latest upstream solaris-ips
 as of:
 
-commit 1a73fae0c500a2e6c8ecde364d37819f2dbbc9a6
+commit f3a7e2aed98f30448e8fbcfc22b81885087765cd
 Author: Darren J Moffat <Darren.Moffat@Oracle.COM>
-Date:   Wed Mar 20 14:10:03 2019 +0000
+Date:   Thu Aug 22 14:46:25 2019 +0100
 
-    29453498 pkg should ignore Python ENV and not import from site-packages
+    30216688 invalid facet change message not displayed
 
 -----------------------------------------------------------------------------
 
