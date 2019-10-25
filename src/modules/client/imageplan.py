@@ -2788,11 +2788,15 @@ class ImagePlan(object):
                         # appended for each action in this fixup pkgplan to
                         # the list of related actions.
                         for action in install:
-                                self.pd.update_actions.append(
-                                    _ActionPlan(pp, None, action))
+                                if not self.__check_excluded(
+                                    action.attrs['path']):
+                                        self.pd.update_actions.append(
+                                            _ActionPlan(pp, None, action))
                         for action in remove:
-                                self.pd.removal_actions.append(
-                                    _ActionPlan(pp, action, None))
+                                if not self.__check_excluded(
+                                    action.attrs['path']):
+                                        self.pd.removal_actions.append(
+                                            _ActionPlan(pp, action, None))
 
                 # Don't process this particular set of fixups again.
                 self.__fixups = {}
@@ -4459,8 +4463,11 @@ class ImagePlan(object):
                                 self.__exclude_re = ''
 
                 if self.__exclude_re == '': return False
-                if path.startswith(self.image.root[1:]):
+                if (self.image.root != '/' and
+                    path.startswith(self.image.root[1:])):
                         path = path[len(self.image.root):]
+                if DebugValues["exclude"]:
+                        print("Checking exclude:", path)
                 return self.__exclude_re.search(path)
 
         def __merge_actions(self):
