@@ -29,7 +29,7 @@ file path=usr/lib/brand/bhyve/init mode=0755 pkg.depend.bypass-generate=.*
 file path=usr/lib/brand/bhyve/platform.xml mode=0644
 file path=usr/lib/brand/bhyve/socat mode=0755 pkg.depend.bypass-generate=.*
 file path=usr/lib/brand/bhyve/support mode=0755
-depend type=require fmri=runtime/python-35
+depend type=require fmri=runtime/python-37
 depend type=require fmri=system/bhyve
 depend type=require fmri=system/zones/brand/ipkg@$(PKGVERS)
 depend type=require fmri=system/zones/brand/sparse@$(PKGVERS)
