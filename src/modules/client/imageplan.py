@@ -2788,15 +2788,17 @@ class ImagePlan(object):
                         # appended for each action in this fixup pkgplan to
                         # the list of related actions.
                         for action in install:
-                                if not self.__check_excluded(
-                                    action.attrs['path']):
-                                        self.pd.update_actions.append(
-                                            _ActionPlan(pp, None, action))
+                                if 'path' in action.attrs and \
+                                    self.__check_excluded(action.attrs['path']):
+                                        continue
+                                self.pd.update_actions.append(
+                                    _ActionPlan(pp, None, action))
                         for action in remove:
-                                if not self.__check_excluded(
-                                    action.attrs['path']):
-                                        self.pd.removal_actions.append(
-                                            _ActionPlan(pp, action, None))
+                                if 'path' in action.attrs and \
+                                    self.__check_excluded(action.attrs['path']):
+                                        continue
+                                self.pd.removal_actions.append(
+                                    _ActionPlan(pp, action, None))
 
                 # Don't process this particular set of fixups again.
                 self.__fixups = {}
