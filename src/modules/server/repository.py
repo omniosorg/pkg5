@@ -2518,7 +2518,7 @@ class _RepoStore(object):
                                             x509.load_pem_x509_certificate(
                                                 f.read(), default_backend())
                                 except ValueError as e:
-                                        pass
+                                        continue
 
                         # Note that while we store certs by their subject
                         # hashes, we use our own hashing since cryptography has
