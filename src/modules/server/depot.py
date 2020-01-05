@@ -44,6 +44,7 @@ import atexit
 import ast
 import errno
 import inspect
+import io
 import itertools
 import math
 import os
@@ -1344,10 +1345,10 @@ class DepotHTTP(_Depot):
                 pub, name, ver = pfmri.tuple()
                 summary = m.get("pkg.summary", m.get("description", ""))
 
-                lsummary = cStringIO()
+                lsummary = io.BytesIO()
                 for i, entry in enumerate(m.gen_actions_by_type("license")):
                         if i > 0:
-                                lsummary.write("\n")
+                                lsummary.write(b"\n")
                         try:
                                 lpath = self.repo.file(entry.hash, pub=pub)
                         except srepo.RepositoryFileNotFoundError:
@@ -1383,7 +1384,7 @@ License:
 {10}
 """.format(name, summary, pub, version, ver.build_release,
     ver.branch, ver.get_timestamp().strftime("%c"), misc.bytes_to_str(size),
-    misc.bytes_to_str(csize), pfmri, lsummary.read())
+    misc.bytes_to_str(csize), pfmri, misc.force_str(lsummary.read()))
 
         @cherrypy.tools.response_headers(headers=[(
             "Content-Type", p5i.MIME_TYPE)])
