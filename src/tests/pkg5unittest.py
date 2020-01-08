@@ -838,7 +838,7 @@ if __name__ == "__main__":
                 outpath = os.path.join(self.test_root, outputfile)
                 compilers = ["$CC", "/usr/bin/gcc", "gcc"]
                 for compiler in compilers:
-                        cmd = [compiler, "-o", outpath]
+                        cmd = [compiler, "-m32", "-o", outpath]
                         cmd.extend(opts)
                         cmd.append(c_path)
                         try:
