@@ -259,8 +259,7 @@ class BootEnv(object):
         @staticmethod
         def copy_be(src_be_name, dst_be_name):
                 ret, be_name_clone, not_used = be.beCopy(
-                    dst_bename=dst_be_name,
-                    src_bename=src_be_name)
+                    dst_be_name, src_be_name)
                 if ret != 0:
                         raise api_errors.UnableToCopyBE()
 
@@ -295,7 +294,7 @@ class BootEnv(object):
 
         @staticmethod
         def mount_be(be_name, mntpt, include_bpool=False):
-                return be.beMount(be_name, mntpt, include_bpool=include_bpool)
+                return be.beMount(be_name, mntpt)
 
         @staticmethod
         def unmount_be(be_name, force=False):
