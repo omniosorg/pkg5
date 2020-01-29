@@ -42,6 +42,7 @@ import pkg.misc
 from functools import reduce
 
 from pkg.client import global_settings
+from pkg.client.debugvalues import DebugValues
 from pkg.misc import expanddirs, get_pkg_otw_size, EmptyI
 
 logger = global_settings.logger
@@ -586,6 +587,8 @@ class PkgPlan(object):
 
         def execute_install(self, src, dest):
                 """ perform action for installation of package"""
+                if DebugValues["actions"]:
+                        print("execute_install: {} -> {}".format(src, dest))
                 self._executed = True
                 try:
                         dest.install(self, src)
@@ -602,6 +605,8 @@ class PkgPlan(object):
 
         def execute_update(self, src, dest):
                 """ handle action updates"""
+                if DebugValues["actions"]:
+                        print("execute_update: {} -> {}".format(src, dest))
                 self._executed = True
                 try:
                         dest.install(self, src)
@@ -618,6 +623,8 @@ class PkgPlan(object):
 
         def execute_removal(self, src, dest):
                 """ handle action removals"""
+                if DebugValues["actions"]:
+                        print("execute_removal: {}".format(src))
                 self._executed = True
                 try:
                         src.remove(self)

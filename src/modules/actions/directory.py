@@ -221,7 +221,11 @@ class DirectoryAction(generic.Action):
                 try:
                         os.rmdir(path)
                 except OSError as e:
-                        if e.errno == errno.ENOENT:
+                        if e.errno == errno.EINVAL and path == '/':
+                                # This is ok, illumos will return EINVAL
+                                # for attempts to remove /
+                                pass
+                        elif e.errno == errno.ENOENT:
                                 pass
                         elif e.errno in (errno.EEXIST, errno.ENOTEMPTY):
                                 # Cannot remove directory since it's
