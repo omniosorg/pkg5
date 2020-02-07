@@ -943,8 +943,6 @@ class LintEngine(object):
                                         # dest_repo.origins is not None here
                                         # after invoking api.image_create()
                                         # in _create_image().
-                                        if not dest_repo.has_origin(repo_uri):
-                                                add_origins = [repo_uri]
 
                                         if src_repo:
                                                 # Add unknown origins but avoid
@@ -956,11 +954,13 @@ class LintEngine(object):
                                                         dest_repo.origins
                                                 ]
 
+                                        if not dest_repo.has_origin(repo_uri):
+                                                add_origins.append(repo_uri)
+
                                         for u in add_origins:
                                                 dest_repo.add_origin(u)
 
-                                        api_inst.update_publisher(dest_pub,
-                                            refresh_allowed=False)
+                                        api_inst.update_publisher(dest_pub)
                                 else:
                                         if not src_repo:
                                                 # Repository configuration info
