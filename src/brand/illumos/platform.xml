@@ -35,6 +35,7 @@
 	<mount special="mnttab" directory="/etc/mnttab" type="mntfs" />
 	<mount special="objfs" directory="/system/object" type="objfs" />
 	<mount special="swap" directory="/etc/svc/volatile" type="tmpfs" />
+	<mount special="sharefs" directory="/etc/dfs/sharetab" type="sharefs" />
 
 	<!-- Devices to create under /dev -->
 	<device match="arp" />
