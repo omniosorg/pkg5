@@ -22,6 +22,7 @@
 
 #
 # Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 #
 
 from __future__ import division
@@ -52,7 +53,6 @@ import random
 import re
 import shutil
 import six
-import simplejson as json
 import socket
 import tarfile
 import tempfile
@@ -74,6 +74,7 @@ import pkg
 import pkg.actions as actions
 import pkg.config as cfg
 import pkg.fmri as fmri
+import pkg.json as json
 import pkg.indexer as indexer
 import pkg.manifest as manifest
 import pkg.misc as misc

@@ -20,7 +20,7 @@
 #
 # Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
 # Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
-# Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 #
 set name=pkg.fmri value=pkg:/package/pkg@$(PKGVERS)
 set name=pkg.summary value="Image Packaging System - pkg(5)"
@@ -132,6 +132,7 @@ file path=$(PYDIRVP)/pkg/flavor/script.py
 file path=$(PYDIRVP)/pkg/flavor/smf_manifest.py
 file path=$(PYDIRVP)/pkg/fmri.py
 file path=$(PYDIRVP)/pkg/indexer.py
+file path=$(PYDIRVP)/pkg/json.py
 dir  path=$(PYDIRVP)/pkg/lint
 file path=$(PYDIRVP)/pkg/lint/__init__.py
 file path=$(PYDIRVP)/pkg/lint/base.py
