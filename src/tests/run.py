@@ -22,15 +22,16 @@
 
 #
 # Copyright (c) 2008, 2017, Oracle and/or its affiliates. All rights reserved.
-# Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 #
 
 from __future__ import print_function
-import simplejson as json
 import multiprocessing
 import os
 import sys
 from functools import reduce
+
+import pkg.json as json
 
 # We need cwd to be the same dir as our program.
 if os.path.dirname(__file__) != "" and \

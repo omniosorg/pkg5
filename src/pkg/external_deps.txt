@@ -12,7 +12,7 @@
     pkg:/library/python-3/pybonjour-37
     pkg:/library/python-3/pycurl-37
     pkg:/library/python-3/pyopenssl-37
-    pkg:/library/python-3/simplejson-37
+    pkg:/library/python-3/rapidjson-37
     pkg:/library/python-3/six-37
     #
     pkg:/SUNWcs

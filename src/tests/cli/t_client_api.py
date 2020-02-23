@@ -22,6 +22,7 @@
 
 #
 # Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 #
 
 from . import testutils
@@ -32,7 +33,7 @@ import pkg5unittest
 import os
 import pkg.client.client_api as cli_api
 import pkg.client.progress as progress
-import simplejson as json
+import pkg.json as json
 import jsonschema
 
 from pkg.client import global_settings
