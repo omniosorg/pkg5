@@ -251,8 +251,8 @@ class SysrepoP5p(object):
                             pub=pub)
                         with open(os.path.join(cat_dir, "catalog.attrs"),
                             "rb") as catalog_attrs:
-                                json = json.load(catalog_attrs)
-                                for part in json["parts"]:
+                                ret_json = json.load(catalog_attrs)
+                                for part in ret_json["parts"]:
                                         self.p5p.extract_catalog1(part, cat_dir,
                                             pub=pub)
 
