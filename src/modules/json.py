@@ -22,6 +22,7 @@ json module abstraction for the packaging system.
 # Standard version
 
 from rapidjson import loads, load, dumps, dump, JSONDecodeError
+from jsonschema import validate, ValidationError
 
 ############################################################################
 # Debug/profiling version

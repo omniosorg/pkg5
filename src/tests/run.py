@@ -27,11 +27,10 @@
 
 from __future__ import print_function
 import multiprocessing
+import json as stdlibjson
 import os
 import sys
 from functools import reduce
-
-import pkg.json as json
 
 # We need cwd to be the same dir as our program.
 if os.path.dirname(__file__) != "" and \
@@ -451,7 +450,7 @@ if __name__ == "__main__":
         timing_history = os.path.join(os.getcwd(), ".timing_history.txt")
         if os.path.exists(timing_history):
                 with open(timing_history, "r") as fh:
-                        ver, time_estimates = json.load(fh)
+                        ver, time_estimates = stdlibjson.load(fh)
 
         api_suite = find_tests("api", onlyval, startattest, output,
             time_estimates)
