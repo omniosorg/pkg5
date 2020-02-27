@@ -560,7 +560,8 @@ def list_inventory(op, api_inst, pargs,
             [("frozen", "f")],
             [
                 ("obsolete", "o"),
-                ("renamed", "r")
+                ("renamed", "r"),
+                ("legacy", "l")
             ],
         ]
 
