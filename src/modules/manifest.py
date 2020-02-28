@@ -1077,7 +1077,7 @@ class Manifest(object):
                 # together has to be solved somewhere else, though.)
                 if pathname:
                         try:
-                                with open(pathname, "r") as mfile:
+                                with open(pathname, "r", encoding='UTF-8') as mfile:
                                         content = mfile.read()
                         except EnvironmentError as e:
                                 raise apx._convert_error(e)
