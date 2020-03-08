@@ -21,7 +21,7 @@
 ##
 ## Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 ## Use is subject to license terms.
-## Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
+## Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 ##
 <%!
 	import datetime
@@ -29,5 +29,5 @@
 %>\
 <%page args="g_vars"/>\
 <div class="page-container">
-        <div class="footer-line">Copyright &copy; ${now.year} OmniOS Community Edition. All rights reserved.</div>
+        <div class="footer-line">Copyright &copy; ${now.year} OmniOS Community Edition (OmniOSce) Association.</div>
 </div>
