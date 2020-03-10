@@ -22,8 +22,8 @@
 
 #
 # Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 #
-#ident	"%Z%%M%	%I%	%E% SMI"
 
 import gzip
 
@@ -37,7 +37,7 @@ class PkgGzipFile(gzip.GzipFile):
             fileobj=None):
 
                gzip.GzipFile.__init__(self, filename, mode, compresslevel,
-                    fileobj) 
+                    fileobj)
 
         #
         # This is a gzip header conforming to RFC1952.  The first two bytes
@@ -50,7 +50,7 @@ class PkgGzipFile(gzip.GzipFile):
         # "unknown").
         magic = b"\037\213\010\000\000\000\000\000\002\377"
 
-        def _write_gzip_header(self):
+        def _write_gzip_header(self, compresslevel=None):
                 self.fileobj.write(self.magic)
 
         @staticmethod
