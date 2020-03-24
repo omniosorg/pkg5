@@ -22,6 +22,7 @@
 
 #
 # Copyright (c) 2015, 2019, Oracle and/or its affiliates. All rights reserved.
+# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 #
 
 from __future__ import unicode_literals, print_function
@@ -170,9 +171,14 @@ def posix_spawnp(filename, args, fileactions=None, env=None):
     spawn_env = []
     if env:
         for arg in env:
-            if six.PY3 and isinstance(arg, six.string_types):
-                arg = arg.encode()
-            spawn_env.append(ffi.new("char []", arg))
+            try:
+                if six.PY3 and isinstance(arg, six.string_types):
+                    arg = arg.encode()
+                spawn_env.append(ffi.new("char []", arg))
+            except:
+                # If an environment variable cannot be added for any reason,
+                # just continue. (Most likely is UnicodeEncodeError)
+                pass
     spawn_env.append(ffi.NULL)
 
     # setup file actions, if passed by caller
