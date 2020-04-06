@@ -1,8 +1,8 @@
 '\" te
-.\" Copyright (c) 2009, 2019, Oracle and/or its affiliates. All rights reserved.
+.\" Copyright (c) 2009, 2020, Oracle and/or its affiliates. All rights reserved.
 .\" Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
 .\" Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
-.TH pkg 5 "08 Aug 2019" "OmniOS" "Standards, Environments, and Macros"
+.TH pkg 5 "24 May 2020" "OmniOS" "Standards, Environments, and Macros"
 .SH NAME
 pkg \- Image Packaging System
 .SH DESCRIPTION
@@ -1237,6 +1237,11 @@ The unique name of the user
 .sp .6
 .RS 4n
 The encrypted password of the user. Default value is \fB*LK*\fR. See \fBshadow\fR(4).
+The special value \fBUP\fR can be used to indicate that the \fBpasswd\fR(1)
+command may be used to set a login password for the user/role account.  When
+the value of \fBUP\fR is listed in the manifest a \fBpkg verify\fR will not
+report an unexpected change and \fBpkg fix\fR will not change the value back to
+that of the manifest.
 .RE
 
 .sp
