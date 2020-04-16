@@ -22,7 +22,7 @@
 #
 # Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
 # Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
-# Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 #
 
 MACH:sh = uname -p
@@ -69,7 +69,9 @@ ROOTFILES = \
 	$(ROOTETCZONES)/SUNWipkg.xml \
 	$(ROOTETCZONES)/OMNIipkg.xml \
 	\
+	$(SHAREDBRANDPKG)/firewall.ksh \
 	$(SHAREDBRANDPKG)/state.ksh \
+	$(SHAREDBRANDPKG)/vnic.ksh \
 	\
 	$(ROOTBRANDPKG)/attach \
 	$(ROOTBRANDPKG)/clone \

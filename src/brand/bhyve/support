@@ -9,21 +9,23 @@
 # source. A copy of the CDDL is also available via the Internet at
 # http://www.illumos.org/license/CDDL.
 
-# Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 
+. /usr/lib/brand/shared/common.ksh
 . /usr/lib/brand/shared/state.ksh
-. /usr/lib/brand/ipkg/common.ksh
+. /usr/lib/brand/shared/firewall.ksh
+. /usr/lib/brand/shared/vnic.ksh
 
 cmd="${1:?cmd}"
-zone="${2:?zone}"
-root="${3:?root}"
+ZONENAME="${2:?zonename}"
+ZONEPATH="${3:?zonepath}"
 shift 3
 
 bhyve_shutdown()
 {
 	typeset delay=${1:-60}
-	pkill -z "$zone" bhyve
-	while [ $delay -gt 0 ] && pgrep -z "$zone" bhyve >/dev/null; do
+	pkill -z "$ZONENAME" bhyve
+	while [ $delay -gt 0 ] && pgrep -z "$ZONENAME" bhyve >/dev/null; do
 		((delay = delay - 1))
 		sleep 1
 	done
@@ -35,19 +37,26 @@ case $cmd in
 	;;
     prestate)
 	case $1:$2 in
-	    4:4) # halting (even as part of rebooting)
+	    *:$ZONE_STATE_CMD_READY)
+		config_vnics
+		;;
+	    $ZONE_STATE_RUNNING:$ZONE_STATE_CMD_HALT)
+		# halting (even as part of rebooting)
 		bhyve_shutdown 60
 		;;
 	esac
 	;;
     poststate)
-	if [ "$2" = $ZONE_STATE_CMD_READY ]; then
-		ZONEPATH="$root"
-		ZONENAME="$zone"
-		setup_fw
-	fi
+	case $1:$2 in
+	    *:$ZONE_STATE_CMD_READY)
+		setup_firewall
+		;;
+	    *:$ZONE_STATE_CMD_HALT)
+		unconfig_vnics
+		;;
+	esac
 	;;
 esac
 
-exit 0
+exit $ZONE_SUBPROC_OK
 
