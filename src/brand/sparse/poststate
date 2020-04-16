@@ -9,7 +9,7 @@
 # source. A copy of the CDDL is also available via the Internet at
 # http://www.illumos.org/license/CDDL.
 
-# Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 
 . /usr/lib/brand/sparse/common.ksh
 . /usr/lib/brand/shared/state.ksh
@@ -27,7 +27,7 @@ case $cmd in
 	# At this point, the overlay should be mounted ready for boot.
 	find_active_ds
 	mount_overlays
-	setup_fw
+	setup_firewall
 	;;
     $ZONE_STATE_CMD_HALT)
 	# Re-mount overlays to support patching while zone is down

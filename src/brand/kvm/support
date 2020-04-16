@@ -1,15 +1,30 @@
 #!/bin/ksh
+#
+# This file and its contents are supplied under the terms of the
+# Common Development and Distribution License ("CDDL"), version 1.0.
+# You may only use this file in accordance with the terms of version
+# 1.0 of the CDDL.
+#
+# A full copy of the text of the CDDL should have accompanied this
+# source. A copy of the CDDL is also available via the Internet at
+# http://www.illumos.org/license/CDDL.
+
+# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+
+. /usr/lib/brand/shared/common.ksh
+. /usr/lib/brand/shared/state.ksh
+. /usr/lib/brand/shared/vnic.ksh
 
 cmd="${1:?cmd}"
-zone="${2:?zone}"
-root="${3:?root}"
+ZONENAME="${2:?zonename}"
+ZONEPATH="${3:?zonepath}"
 shift 3
 
 qemu_shutdown()
 {
 	typeset delay=${1:-60}
-	echo system_powerdown | nc -U "$root/root/tmp/vm.monitor" >/dev/null
-	while [ $delay -gt 0 ] && pgrep -z "$zone" qemu >/dev/null; do
+	echo system_powerdown | nc -U "$ZONEPATH/root/tmp/vm.monitor" >/dev/null
+	while [ $delay -gt 0 ] && pgrep -z "$ZONENAME" qemu >/dev/null; do
 		((delay = delay - 1))
 		sleep 1
 	done
@@ -21,14 +36,23 @@ case $cmd in
 	;;
     prestate)
 	case $1:$2 in
-	    4:4) # halting (even as part of rebooting)
+	    *:$ZONE_STATE_CMD_READY)
+		config_vnics
+		;;
+	    $ZONE_STATE_RUNNING:$ZONE_STATE_CMD_HALT)
+		# halting (even as part of rebooting)
 		qemu_shutdown 60
 		;;
 	esac
 	;;
     poststate)
+        case $1:$2 in
+            *:$ZONE_STATE_CMD_HALT)
+                unconfig_vnics
+                ;;
+        esac
 	;;
 esac
 
-exit 0
+exit $ZONE_SUBPROC_OK
 
