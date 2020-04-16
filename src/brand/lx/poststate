@@ -9,10 +9,12 @@
 # source. A copy of the CDDL is also available via the Internet at
 # http://www.illumos.org/license/CDDL.
 
-# Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 
-. /usr/lib/brand/ipkg/common.ksh
+. /usr/lib/brand/shared/common.ksh
 . /usr/lib/brand/shared/state.ksh
+. /usr/lib/brand/shared/firewall.ksh
+. /usr/lib/brand/shared/vnic.ksh
 
 ZONENAME="$1"
 ZONEPATH="$2"
@@ -22,7 +24,10 @@ ALTROOT="$5"
 
 case $cmd in
     $ZONE_STATE_CMD_READY)
-	setup_fw
+	setup_firewall
+	;;
+    $ZONE_STATE_CMD_HALT)
+	unconfig_vnics
 	;;
 esac
 
