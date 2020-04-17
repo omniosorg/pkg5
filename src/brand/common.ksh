@@ -1,27 +1,17 @@
 #
-# CDDL HEADER START
+# This file and its contents are supplied under the terms of the
+# Common Development and Distribution License ("CDDL"), version 1.0.
+# You may only use this file in accordance with the terms of version
+# 1.0 of the CDDL.
 #
-# The contents of this file are subject to the terms of the
-# Common Development and Distribution License (the "License").
-# You may not use this file except in compliance with the License.
-#
-# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
-# or http://www.opensolaris.org/os/licensing.
-# See the License for the specific language governing permissions
-# and limitations under the License.
-#
-# When distributing Covered Code, include this CDDL HEADER in each
-# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
-# If applicable, add the following below this CDDL HEADER, with the
-# fields enclosed by brackets "[]" replaced with your own identifying
-# information: Portions Copyright [yyyy] [name of copyright owner]
-#
-# CDDL HEADER END
+# A full copy of the text of the CDDL should have accompanied this
+# source. A copy of the CDDL is also available via the Internet at
+# http://www.illumos.org/license/CDDL.
 #
 
 #
 # Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
-# Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 #
 
 unset LD_LIBRARY_PATH
@@ -29,6 +19,8 @@ PATH=/usr/bin:/usr/sbin
 export PATH
 
 . /usr/lib/brand/shared/common.ksh
+. /usr/lib/brand/shared/firewall.ksh
+. /usr/lib/brand/shared/vnic.ksh
 
 PROP_PARENT="org.opensolaris.libbe:parentbe"
 PROP_ACTIVE="org.opensolaris.libbe:active"
@@ -506,94 +498,20 @@ pkg_err_check() {
 #
 # Retrieve an attribute from the zone configuration
 #
-zone_attr() {
+function zone_attr {
 	zonecfg -z "$ZONENAME" info attr name=$1 \
 	    | nawk '$1 == "value:" {print $2}'
 }
 
 #
-# Retrieve a list of on-demand VNICs configured on the zone along with their
-# configuration parameters.
-#
-demand_vnics() {
-	zonecfg -z "$ZONENAME" info net | nawk '
-		function outp()	{
-					if (!shared && global != "-")
-						printf("%s %s %s %s %s\n",
-						    phys, global, mac, vlan,
-						    addr)
-				}
-		/^net:/		{
-					outp()
-					phys = global = mac = vlan = addr = "-"
-					shared = 0
-				}
-		/global-nic:/		{ global = $2 }
-		/physical:/		{ phys = $2 }
-		/mac-addr:/		{ mac = $2 }
-		/vlan-id:/		{ vlan = $2 }
-		/allowed-address:/	{ addr = $2 }
-		# If an address attribute is specified, this is a shared IP
-		# zone.
-		/\taddress:/	{ shared = 1 }
-		END		{ outp() }
-	'
-}
-
-log() {
-	echo "$*"
-	logger -p daemon.err "zone $ZONENAME $*"
-}
-
-log_and_exit() {
-	log "$@"
-	exit $ZONE_SUBPROC_FATAL
-}
-
-#
 # Configure network parameters based on zone configuration
 #
-config_network() {
+function config_network {
 
 	################################################################
 	# On-demand VNICs
 
-	demand_vnics | while read nic global mac vlan addr; do
-		[ -n "$global" -a "$global" != "-" ] || continue
-		if [ "$global" = "auto" ]; then
-			if [ "$addr" = "-" ]; then
-				log_and_exit "Cannot use 'auto' global NIC"\
-				   "without allowed-address."
-			fi
-			global="`route -n get "$addr" | nawk '
-			    / interface:/ {print $2; exit}'`"
-			if [ -z "$global" ]; then
-				log_and_exit \
-				    "Could not determine global-nic for $nic"
-			fi
-		fi
-		if dladm show-vnic -p -o LINK $nic >/dev/null 2>&1; then
-			# VNIC already exists
-			continue
-		fi
-		#echo "Creating VNIC $nic/$global (mac: $mac, vlan: $vlan)"
-
-		opt=
-		[ "$mac" != "-" ] && opt+=" -m $mac"
-		[ "$vlan" != "-" -a "$vlan" != "0" ] && opt+=" -v $vlan"
-		if ! dladm create-vnic -l $global $opt $nic; then
-			log_and_exit "Could not create VNIC $nic/$global"
-		fi
-
-		if [ "$mac" = "-" ]; then
-			# Record the assigned MAC address in the zone config
-			mac=`dladm show-vnic -p -o MACADDRESS $nic`
-			[ -n "$mac" ] && zonecfg -z $ZONENAME \
-			    "select net physical=$nic; " \
-			    "set mac-addr=$mac; " \
-			    "end; exit"
-		fi
-	done
+	config_vnics
 
 	################################################################
 	# DNS configuration files within the zone.
@@ -620,55 +538,7 @@ config_network() {
 #
 # Unconfigure network parameters based on zone configuration
 #
-unconfig_network() {
-
-	################################################################
-	# On-demand VNICs
-
-	demand_vnics | while read nic global mac vlan addr; do
-		[ -n "$global" -a "$global" != "-" ] || continue
-		#echo "Removing VNIC $nic/$global"
-		dladm delete-vnic $nic || log "Could not delete VNIC $nic"
-	done
-}
-
-# Set up GZ-managed firewall rules for the zone
-setup_fw() {
-	if [ -f $ZONEPATH/etc/ipf.conf ]; then
-		ipf_conf=$ZONEPATH/etc/ipf.conf
-		ipf6_conf=$ZONEPATH/etc/ipf6.conf
-		ipnat_conf=$ZONEPATH/etc/ipnat.conf
-	elif [ -f $ZONEPATH/config/ipf.conf ]; then
-		# Joyent SmartOS uses config/
-		ipf_conf=$ZONEPATH/config/ipf.conf
-		ipf6_conf=$ZONEPATH/config/ipf6.conf
-		ipnat_conf=$ZONEPATH/config/ipnat.conf
-	else
-		return
-	fi
-
-	#log "Enabling zone firewall ($ipf_conf)"
-	ipf -GE $ZONENAME || log_and_exit "error enabling ipf"
-
-	# Flush
-	ipf -GFa $ZONENAME || log_and_exit "error flushing ipf (IPv4)"
-	ipf -6GFa $ZONENAME || log_and_exit "error flushing ipf (IPv6)"
-	ipnat -CF -G $ZONENAME >/dev/null 2>&1 || \
-	    log_and_exit "error flushing ipnat"
-
-	# IPv4
-	ipf -Gf $ipf_conf $ZONENAME || \
-	    log_and_exit "error loading ipf config for IPv4"
-
-	# IPv6
-	[ -f $ipf6_conf ] && ! ipf -6Gf $ipf6_conf $ZONENAME && \
-	    log_and_exit "error loading ipf config for IPv6"
-
-	# NAT
-	[ -f $ipnat_conf ] && ! ipnat -G $ZONENAME -f $ipnat_conf && \
-	    log_and_exit "error loading ipnat config"
-
-	ipf -Gy $ZONENAME >/dev/null 2>&1 || \
-	    log_and_exit "error syncing ipf interfaces"
+function unconfig_network {
+	unconfig_vnics
 }
 

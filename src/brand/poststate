@@ -1,47 +1,22 @@
 #!/bin/ksh -p
 #
-# CDDL HEADER START
+# This file and its contents are supplied under the terms of the
+# Common Development and Distribution License ("CDDL"), version 1.0.
+# You may only use this file in accordance with the terms of version
+# 1.0 of the CDDL.
 #
-# The contents of this file are subject to the terms of the
-# Common Development and Distribution License (the "License").
-# You may not use this file except in compliance with the License.
-#
-# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
-# or http://www.opensolaris.org/os/licensing.
-# See the License for the specific language governing permissions
-# and limitations under the License.
-#
-# When distributing Covered Code, include this CDDL HEADER in each
-# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
-# If applicable, add the following below this CDDL HEADER, with the
-# fields enclosed by brackets "[]" replaced with your own identifying
-# information: Portions Copyright [yyyy] [name of copyright owner]
-#
-# CDDL HEADER END
+# A full copy of the text of the CDDL should have accompanied this
+# source. A copy of the CDDL is also available via the Internet at
+# http://www.illumos.org/license/CDDL.
 #
 
 #
 # Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
-# Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 #
 
 . /usr/lib/brand/ipkg/common.ksh
-
-# States
-# ZONE_STATE_CONFIGURED           0 (never see)
-# ZONE_STATE_INCOMPLETE           1 (never see)
-# ZONE_STATE_INSTALLED            2
-# ZONE_STATE_READY                3
-# ZONE_STATE_RUNNING              4
-# ZONE_STATE_SHUTTING_DOWN        5
-# ZONE_STATE_DOWN                 6
-# ZONE_STATE_MOUNTED              7
-
-# cmd
-#
-# ready			0
-# boot			1
-# halt			4
+. /usr/lib/brand/shared/state.ksh
 
 ZONENAME=$1
 ZONEPATH=$2
@@ -50,10 +25,10 @@ cmd=$4
 ALTROOT=$5
 
 case $cmd in
-    0)		# Ready
-	setup_fw
+    $ZONE_STATE_CMD_READY)
+	setup_firewall
 	;;
-    4)		# Halting
+    $ZONE_STATE_CMD_HALT)
 	is_brand_labeled
 	if (( $? == 0 )); then
 		# Leave the active dataset mounted after halting (this might be
