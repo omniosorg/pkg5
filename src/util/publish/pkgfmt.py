@@ -655,9 +655,20 @@ def main_func():
                                                 continue
 
                                 ret = 1
-                                error(_("{0} is not in pkgfmt form; run pkgfmt "
-                                    "on file without -c or -d to reformat "
-                                    "manifest in place").format(fname), exitcode=None)
+                                if orig_opt_format:
+                                        error(_(
+                                            "{0} is not in pkgfmt {1} form; "
+                                            "run `pkgfmt -f {1}` on the file "
+                                            "to reformat the manifest "
+                                            "in-place")
+                                            .format(fname, opt_format),
+                                            exitcode=None)
+                                else:
+                                        error(_("{0} is not in pkgfmt form; "
+                                            "run pkgfmt on the file without "
+                                            "-c or -d to reformat the manifest "
+                                            "in-place") .format(fname),
+                                            exitcode=None)
                                 continue
                         elif opt_diffs:
                                 # Display differences (explicit 'end' needed to
