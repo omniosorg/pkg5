@@ -1,28 +1,84 @@
 '\" te
 .\" Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
-.\" Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
-.TH pkgfmt 1 "19 Jun 2019" "SunOS 5.11" "User Commands"
+.\" Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+.TH pkgfmt 1 "24 Apr 2020" "OmniOS" "User Commands"
 .SH NAME
 pkgfmt \- format a package manifest
 .SH SYNOPSIS
 .LP
 .nf
-/usr/bin/pkgfmt [-c|-d|-s|-u] [\fIpackage-manifest-file\fR]
+/usr/bin/pkgfmt [-c|-d|-s|-u] [-f \fIv1|v2\fR] [\fIpackage-manifest-file\fR]
 .fi
 
 .SH DESCRIPTION
 .sp
 .LP
-\fBpkgfmt\fR without the \fB-c\fR or \fB-d\fR options formats a package manifest in a consistent manner, including wrapping lines at 80 characters, sorting actions by type, and sorting attributes. Lines that do not parse into actions (such as macros, comments, or transforms) do not appear in sorted order.
+\fBpkgfmt\fR without the \fB-c\fR or \fB-d\fR options formats a package
+manifest in a consistent manner, including wrapping lines at 80 characters,
+sorting lines by attributes. There are two different output formats - \fBv1\fR
+and \fBv2\fR - which have different sorting characteristics and are described
+below.
+The default output format is \fBv2\fR.
+Lines that do not parse into actions (such as macros, comments, or transforms)
+do not appear in sorted order.
 .sp
 .LP
-If no arguments are given, \fBpkgfmt\fR reads \fBstdin\fR until EOF, and then writes the formatted manifest to \fBstdout\fR. Any manifests specified on the command line are formatted in place.
+If no arguments are given, \fBpkgfmt\fR reads \fBstdin\fR until EOF, and then
+writes the formatted manifest to \fBstdout\fR. Any manifests specified on the
+command line are formatted in place.
 .sp
 .LP
-\fBpkgfmt\fR with the \fB-c\fR option checks whether the manifests are formatted in \fBpkgfmt\fR style. The \fB-d\fR option displays the differences if the file is not properly formatted.
+\fBpkgfmt\fR with the \fB-c\fR option checks whether the manifests are
+formatted in \fBpkgfmt\fR style. The \fB-d\fR option displays the differences
+if the file is not properly formatted.
 .sp
 .LP
-\fBpkgfmr\fR with the \fB-s\fR option removes additional diagnostic attributes from actions that are not required in a published manifest.
+\fBpkgfmt\fR with the \fB-s\fR option removes additional diagnostic attributes
+from actions that are not required in a published manifest.
+
+.SH OUTPUT FORMATS
+\fBpkgfmt\fR supports two different output formats selectable with the \fB-f\fR
+option. The default format is \fBv2\fR.
+
+.sp
+.ne 2
+.mk
+.na
+\fBv1\fR
+.ad
+.RS 10n
+.rt
+The \fBv1\fR format places \fIset\fR actions first, \fIdepend\fR actions last
+and all other actions in between, sorted alphabetically. Actions are
+secondarily sorted by their primary attribute.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBv2\fR
+.ad
+.RS 10n
+.rt
+The \fBv2\fR format groups actions together into different sections. The
+resulting action order is:
+.sp
+.RS 4n
+1. \fIset\fR actions
+.br
+2. all other actions, sorted by key attribute
+.br
+3. \fIdriver\fR, \fIgroup\fR and \fIuser\fR actions
+.br
+4. \fIlegacy\fR and \fIlicense\fR actions
+.br
+5. \fIdepend\fR actions.
+.RE
+.sp
+In particular, this format groups \fIfile\fR, \fIdir\fR, \fIlink\fR and
+\fIhardlink\fR actions together by path which can aid readability.
+
 .SH OPTIONS
 .sp
 .LP
@@ -31,11 +87,7 @@ The following options are supported:
 .ne 2
 .mk
 .na
-\fB-?\fR
-.ad
-.br
-.na
-\fB--help\fR
+\fB-h\fR | \fB--help\fR | \fB-?\fR
 .ad
 .RS 10n
 .rt
@@ -62,6 +114,17 @@ Check whether the manifest is formatted in the \fBpkgfmt\fR style.
 .RS 10n
 .rt
 Display manifest differences from the formatted version in unified form.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB-f\fR \fIv1|v2\fR
+.ad
+.RS 10n
+.rt
+Specify the desired output format.
 .RE
 
 .sp

@@ -21,7 +21,7 @@
 
 #
 # Copyright (c) 2009, 2019, Oracle and/or its affiliates. All rights reserved.
-# Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 #
 
 from __future__ import print_function
@@ -103,10 +103,9 @@ def usage(errmsg="", exitcode=EXIT_BADOPT):
         if errmsg:
                 error(errmsg)
 
-        # -f is intentionally undocumented.
         print(_("""\
 Usage:
-        pkgfmt [-cdsu] [file1] ... """), file=sys.stderr)
+        pkgfmt [-cdsu] [-f v1|v2] [file1] ... """), file=sys.stderr)
 
         sys.exit(exitcode)
 
@@ -541,7 +540,6 @@ def main_func():
         global opt_format
         global orig_opt_format
 
-        # Purposefully undocumented; just like -f.
         env_format = os.environ.get("PKGFMT_OUTPUT")
         if env_format:
                 opt_format = orig_opt_format = env_format
@@ -550,7 +548,7 @@ def main_func():
         opt_set = set()
 
         try:
-                opts, pargs = getopt.getopt(sys.argv[1:], "cdf:su?", ["help"])
+                opts, pargs = getopt.getopt(sys.argv[1:], "cdf:su?h", ["help"])
                 for opt, arg in opts:
                         opt_set.add(opt)
                         if opt == "-c":
@@ -563,10 +561,13 @@ def main_func():
                                 opt_strip = True
                         elif opt == "-u":
                                 opt_unwrap = True
-                        elif opt in ("--help", "-?"):
+                        elif opt in ("-h", "--help", "-?"):
                                 usage(exitcode=EXIT_OK)
         except getopt.GetoptError as e:
-                usage(_("illegal global option -- {0}").format(e.opt))
+                if e.opt == 'f':
+                        usage(exitcode=EXIT_BADOPT)
+                else:
+                        usage(_("illegal global option -- {0}").format(e.opt))
         if len(opt_set - set(["-f"])) > 1:
                 usage(_("only one of [cdu] may be specified"))
         if opt_format not in (FMT_V1, FMT_V2):
@@ -654,9 +655,20 @@ def main_func():
                                                 continue
 
                                 ret = 1
-                                error(_("{0} is not in pkgfmt form; run pkgfmt "
-                                    "on file without -c or -d to reformat "
-                                    "manifest in place").format(fname), exitcode=None)
+                                if orig_opt_format:
+                                        error(_(
+                                            "{0} is not in pkgfmt {1} form; "
+                                            "run `pkgfmt -f {1}` on the file "
+                                            "to reformat the manifest "
+                                            "in-place")
+                                            .format(fname, opt_format),
+                                            exitcode=None)
+                                else:
+                                        error(_("{0} is not in pkgfmt form; "
+                                            "run pkgfmt on the file without "
+                                            "-c or -d to reformat the manifest "
+                                            "in-place") .format(fname),
+                                            exitcode=None)
                                 continue
                         elif opt_diffs:
                                 # Display differences (explicit 'end' needed to
