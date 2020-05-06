@@ -13,7 +13,7 @@
 #
 
 BRAND = lipkg
-FILES =
+FILES = config.xml platform.xml
 
 BRANDDIR = $(ROOTBRAND)/$(BRAND)
 BRANDFILES = $(FILES:%=$(BRANDDIR)/%)
