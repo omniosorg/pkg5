@@ -12,17 +12,11 @@
 # Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 #
 
-all := TARGET = all
-clean := TARGET = clean
-clobber := TARGET = clobber
-install := TARGET = install
+BRAND = shared
+FILES = firewall.ksh state.ksh vnic.ksh
 
-SUBDIRS = shared etc ipkg lipkg sparse pkgsrc lx illumos kvm bhyve
+BRANDDIR = $(ROOTBRAND)/$(BRAND)
+BRANDFILES = $(FILES:%=$(BRANDDIR)/%)
 
-all clean clobber install: $(SUBDIRS)
-
-$(SUBDIRS): FRC
-	@cd $@; pwd; $(MAKE) $(TARGET)
-
-FRC:
+include ../Makefile.common
 

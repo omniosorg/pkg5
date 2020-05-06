@@ -12,17 +12,22 @@
 # Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 #
 
-all := TARGET = all
-clean := TARGET = clean
-clobber := TARGET = clobber
-install := TARGET = install
+FILES = \
+	OMNIbhyve.xml \
+	OMNIillumos.xml \
+	OMNIkvm.xml \
+	OMNIipkg.xml \
+	OMNIlipkg.xml \
+	OMNIpkgsrc.xml \
+	OMNIsparse.xml \
+	SUNWipkg.xml
 
-SUBDIRS = shared etc ipkg lipkg sparse pkgsrc lx illumos kvm bhyve
+BRANDDIR = $(ROOTETCZONES)
+BRANDFILES = $(FILES:%=$(ROOTETCZONES)/%)
 
-all clean clobber install: $(SUBDIRS)
+include ../Makefile.common
 
-$(SUBDIRS): FRC
-	@cd $@; pwd; $(MAKE) $(TARGET)
+$(ROOTETCZONES)/OMNIipkg.xml:
+	rm -f $@; ln -s SUNWipkg.xml $@
 
-FRC:
 

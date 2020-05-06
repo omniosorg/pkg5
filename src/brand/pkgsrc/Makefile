@@ -12,17 +12,14 @@
 # Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 #
 
-all := TARGET = all
-clean := TARGET = clean
-clobber := TARGET = clobber
-install := TARGET = install
+BRAND = pkgsrc
+FILES = config.xml platform.xml postinstall profile.xml
 
-SUBDIRS = shared etc ipkg lipkg sparse pkgsrc lx illumos kvm bhyve
+BRANDDIR = $(ROOTBRAND)/$(BRAND)
+BRANDFILES = $(FILES:%=$(BRANDDIR)/%)
 
-all clean clobber install: $(SUBDIRS)
+include ../Makefile.common
 
-$(SUBDIRS): FRC
-	@cd $@; pwd; $(MAKE) $(TARGET)
-
-FRC:
+$(BRANDDIR)/profile.xml: $(BRANDDIR)
+	rm -f $@; ln -s ../sparse/profile.xml $@
 
