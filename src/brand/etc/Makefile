@@ -16,6 +16,7 @@ FILES = \
 	OMNIbhyve.xml \
 	OMNIillumos.xml \
 	OMNIkvm.xml \
+	OMNIlx.xml OMNIlx26.xml \
 	OMNIipkg.xml \
 	OMNIlipkg.xml \
 	OMNIpkgsrc.xml \
@@ -29,5 +30,4 @@ include ../Makefile.common
 
 $(ROOTETCZONES)/OMNIipkg.xml:
 	rm -f $@; ln -s SUNWipkg.xml $@
-
 

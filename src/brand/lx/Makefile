@@ -13,7 +13,7 @@
 #
 
 BRAND = lx
-FILES = prestate poststate
+FILES = config.xml platform.xml prestate poststate
 
 BRANDDIR = $(ROOTBRAND)/$(BRAND)
 BRANDFILES = $(FILES:%=$(BRANDDIR)/%)
