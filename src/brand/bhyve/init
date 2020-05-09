@@ -13,7 +13,7 @@
 #
 # }}}
 
-# Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 
 import logging, os, subprocess, sys, time, re, getopt
 import xml.etree.ElementTree as etree
@@ -79,7 +79,10 @@ CDROM_SLOT      = 3
 BOOTDISK_SLOT   = 4
 DISK_SLOT       = 5
 NET_SLOT        = 6
+CDROM_SLOT2     = 7
+DISK_SLOT2      = 8
 VNC_SLOT        = 30
+LPC_SLOT_WIN    = 31
 
 try:
     with open(uuidfile) as file:
@@ -95,6 +98,8 @@ except:
     sys.exit(1)
 root = cfg.getroot()
 logging.info('Parsed {0}'.format(zonexml))
+
+##############################################################################
 
 def opt(tag):
     global opts, root
@@ -112,6 +117,43 @@ def opt(tag):
     except:
         pass
 
+def diskpath(arg):
+    if arg.startswith('/dev'):
+        return arg
+    return '/dev/zvol/rdsk/{0}'.format(arg)
+
+# Look for attributes of the form <type> or <type>N and generate a list.
+def build_devlist(type, maxval):
+    devlist = {}
+    for dev in root.findall('./attr[@name]'):
+        m = re.search(rf'^{type}(\d+)$', dev.get('name').strip())
+        if not m: continue
+        k = int(m.group(1))
+        if k in devlist:
+            logging.error(
+                '{}{} appears more than once in configuration'.format(type, k))
+            sys.exit(1)
+        if (k > maxval):
+            logging.error('{}{} slot out of range'.format(type, k))
+            sys.exit(1)
+        devlist[k] = dev.get('value').strip()
+
+    # Now insert plain <type> tags into the list, using available slots in order
+    avail = sorted(set(range(0, maxval)).difference(sorted(devlist.keys())))
+    for dev in root.findall(f'./attr[@name="{type}"]'):
+        try:
+            k = avail.pop(0)
+        except IndexError:
+            logging.error('{}: no more available slots'.format(type))
+            sys.exit(1)
+        devlist[k] = dev.get('value').strip()
+
+    logging.debug('{} list: \n{}'.format(type, pformat(devlist)))
+
+    return devlist
+
+##############################################################################
+
 for tag in opts.keys():
     opt(tag)
 
@@ -121,13 +163,13 @@ if opts['type'] == 'windows':
     # ... - AHCI devices must be in slots 3/4/5/6
     # ... - The PCI-ISA bus aka lpc must be in slot 31
     logging.info('Adjusting LPC PCI slot for windows')
-    LPC_SLOT        = 31
+    LPC_SLOT        = LPC_SLOT_WIN
 
 # At present, moving the CDROM to after the hard disks is the only way we
 # have of changing the boot order. This will hopefully improve in the
 # future.
 if opts['bootorder'].startswith('c') and opts['type'] != 'windows':
-    CDROM_SLOT = 7
+    CDROM_SLOT = CDROM_SLOT2
 
 args = ['/usr/sbin/bhyve']
 
@@ -177,22 +219,12 @@ args.extend(['-s', '{0},lpc'.format(LPC_SLOT)])
 
 args.extend(['-l', 'com1,' + opts['console']])
 
-# Disks
-
-def diskpath(arg):
-    if arg.startswith('/dev/zvol/rdsk'):
-        return arg
-    return '/dev/zvol/rdsk/{0}'.format(arg)
-
 # CDROM
 
-i = 0
-for cdrom in root.findall('./attr[@name="cdrom"]'):
+for i, v in build_devlist('cdrom', 10).items():
     args.extend([
-        '-s', '{0}:{1},{2},{3}'.format(CDROM_SLOT,
-            i, 'ahci-cd', cdrom.get('value').strip())
+        '-s', '{0}:{1},{2},{3}'.format(CDROM_SLOT, i, 'ahci-cd', v)
     ])
-    i += 1
 
 # Bootdisk
 
@@ -206,35 +238,17 @@ except:
     pass
 
 # Additional Disks
-
-# Look for disk attributes. These may be just "disk" or "diskN" to specify
-# the slot into which the disk should be placed. zonecfg does not allow the
-# addition of multiple attributes with the same name but manual edits to the
-# zone's XML file may have been made and so multiple disk attributes are
-# supported.
-disklist = {}
-for disk in root.findall('./attr[@name]'):
-    m = re.search(r'^disk(\d+)$', disk.get('name').strip())
-    if not m: continue
-    k = int(m.group(1))
-    if k in disklist:
-        logging.error(
-            'Disk {} appears more than once in configuration'.format(k))
-        sys.exit(1)
-    disklist[k] = disk.get('value').strip()
-
-# Now insert plain "disk" tags into the list, using available slots in order
-avail = sorted(set(range(0, 100)).difference(sorted(disklist.keys())))
-for disk in root.findall('./attr[@name="disk"]'):
-    disklist[avail.pop(0)] = disk.get('value').strip()
-
-logging.debug('Disk list: \n{}'.format(pformat(disklist)))
-
-for i, v in disklist.items():
-    args.extend([
-        '-s', '{0}:{1},{2},{3}'.format(DISK_SLOT, i, opts['diskif'],
-        diskpath(v))
-    ])
+for i, v in build_devlist('disk', 20).items():
+    if i < 10:
+        args.extend([
+            '-s', '{0}:{1},{2},{3}'.format(DISK_SLOT, i, opts['diskif'],
+            diskpath(v))
+        ])
+    else:
+        args.extend([
+            '-s', '{0}:{1},{2},{3}'.format(DISK_SLOT2, i - 10, opts['diskif'],
+            diskpath(v))
+        ])
 
 # Network
 

@@ -1,0 +1,38 @@
+#
+# This file and its contents are supplied under the terms of the
+# Common Development and Distribution License ("CDDL"), version 1.0.
+# You may only use this file in accordance with the terms of version
+# 1.0 of the CDDL.
+#
+# A full copy of the text of the CDDL should have accompanied this
+# source. A copy of the CDDL is also available via the Internet at
+# http://www.illumos.org/license/CDDL.
+
+#
+# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+#
+
+set name=pkg.fmri value=pkg:/system/zones/brand/lx/platform@$(PKGVERS)
+set name=pkg.summary value="Linux branded zone, additional components"
+set name=pkg.description \
+    value="A branded zone whose software is managed using the Image Packaging System"
+set name=info.classification \
+    value=org.opensolaris.category.2008:System/Packaging
+set name=variant.arch value=$(ARCH)
+set name=variant.opensolaris.zone value=global value=nonglobal
+dir  path=etc/zones
+file path=etc/zones/OMNIlx.xml mode=0444
+file path=etc/zones/OMNIlx26.xml mode=0444
+dir  path=usr
+dir  path=usr/lib
+dir  path=usr/lib/brand
+dir  path=usr/lib/brand/lx owner=root group=bin mode=0755 \
+    variant.opensolaris.zone=global
+file path=usr/lib/brand/lx/config.xml mode=0444 variant.opensolaris.zone=global
+file path=usr/lib/brand/lx/platform.xml mode=0444 \
+    variant.opensolaris.zone=global
+file path=usr/lib/brand/lx/poststate mode=0755 variant.opensolaris.zone=global
+file path=usr/lib/brand/lx/prestate mode=0755 variant.opensolaris.zone=global
+license lic_CDDL license=lic_CDDL
+depend type=require fmri=system/zones
+depend type=require fmri=system/zones/brand/ipkg
