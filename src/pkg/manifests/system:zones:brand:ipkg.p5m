@@ -60,8 +60,11 @@ file path=usr/lib/brand/ipkg/smf_disable.lst
 file path=usr/lib/brand/ipkg/support mode=0755
 file path=usr/lib/brand/ipkg/system-unconfigure mode=0755
 file path=usr/lib/brand/ipkg/uninstall mode=0755
-file path=usr/lib/brand/ipkg/config.xml mode=0444
-file path=usr/lib/brand/ipkg/platform.xml mode=0444
+# The following two items are also in stock illumos-gate. In order to
+# continue supporting onu to stock gate, these are faceted so that the
+# onu script can disable the lines in advance.
+file path=usr/lib/brand/ipkg/config.xml mode=0444 facet.onu.ooceonly=true
+file path=usr/lib/brand/ipkg/platform.xml mode=0444 facet.onu.ooceonly=true
 dir  path=usr/lib/brand/shared group=sys
 file path=usr/lib/brand/shared/firewall.ksh
 file path=usr/lib/brand/shared/state.ksh
