@@ -39,7 +39,7 @@ for opt, arg in opts:
 if testmode:
     logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 else:
-    logging.basicConfig(filename='/tmp/init.log', filemode='w',
+    logging.basicConfig(filename='/tmp/init.log', filemode='a',
         level=logging.DEBUG)
 
 # Default values
@@ -270,7 +270,7 @@ while True:
     logging.info("KVM exited {0}".format(ret.returncode))
     logging.error("Error {0}".format(ret.stderr))
     logging.debug("Output {0}".format(ret.stdout))
-    if ret.returncode != 0: break
+    if ret.returncode == 0: break
 
 # Vim hints
 # vim:ts=4:sw=4:et:fdm=marker
