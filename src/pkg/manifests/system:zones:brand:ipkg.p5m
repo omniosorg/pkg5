@@ -67,6 +67,7 @@ file path=usr/lib/brand/ipkg/config.xml mode=0444 facet.onu.ooceonly=true
 file path=usr/lib/brand/ipkg/platform.xml mode=0444 facet.onu.ooceonly=true
 dir  path=usr/lib/brand/shared group=sys
 file path=usr/lib/brand/shared/firewall.ksh
+file path=usr/lib/brand/shared/log.ksh
 file path=usr/lib/brand/shared/state.ksh
 file path=usr/lib/brand/shared/vnic.ksh
 legacy pkg=SUNWipkg-brand version=0.0.0
