@@ -39,7 +39,7 @@ for opt, arg in opts:
 if testmode:
     logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 else:
-    logging.basicConfig(filename='/tmp/init.log', filemode='w',
+    logging.basicConfig(filename='/tmp/init.log', filemode='a',
         level=logging.DEBUG)
 
 # Default values
