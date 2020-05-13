@@ -11,6 +11,11 @@
 
 # Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 
+[ -n "$_ZONE_LIB_VNIC" ] && return
+_ZONE_LIB_VNIC=1
+
+. /usr/lib/brand/shared/log.ksh
+
 #
 # Retrieve a list of on-demand VNICs configured on the zone along with their
 # configuration parameters.
@@ -64,7 +69,7 @@ function config_vnics {
 			# VNIC already exists
 			continue
 		fi
-		#echo "Creating VNIC $nic/$global (mac: $mac, vlan: $vlan)"
+		log "Creating VNIC $nic/$global (mac: $mac, vlan: $vlan)"
 
 		opt=
 		[ "$mac" != "-" ] && opt+=" -m $mac"
@@ -91,7 +96,7 @@ function config_vnics {
 function unconfig_vnics {
 	demand_vnics | while read nic global mac vlan addr; do
 		[ -n "$global" -a "$global" != "-" ] || continue
-		#echo "Removing VNIC $nic/$global"
+		log "Removing VNIC $nic/$global"
 		dladm delete-vnic $nic || log "Could not delete VNIC $nic"
 	done
 }

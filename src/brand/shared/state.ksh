@@ -9,6 +9,9 @@
 # http://www.illumos.org/license/CDDL.
 #
 
+[ -n "$_ZONE_LIB_STATE" ] && return
+_ZONE_LIB_STATE=1
+
 ZONE_STATE_CONFIGURED=0	# never see
 ZONE_STATE_INCOMPLETE=1	# never see
 ZONE_STATE_INSTALLED=2

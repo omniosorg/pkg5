@@ -11,6 +11,11 @@
 
 # Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 
+[ -n "$_ZONE_LIB_FIREWALL" ] && return
+_ZONE_LIB_FIREWALL=1
+
+. /usr/lib/brand/shared/log.ksh
+
 # Set up GZ-managed firewall rules for the zone
 function setup_firewall {
 	if [ -f $ZONEPATH/etc/ipf.conf ]; then
@@ -26,7 +31,7 @@ function setup_firewall {
 		return
 	fi
 
-	#log "Enabling zone firewall ($ipf_conf)"
+	log "Enabling zone firewall ($ipf_conf)"
 	ipf -GE $ZONENAME || fail_fatal "error enabling ipf"
 
 	# Flush
