@@ -5659,7 +5659,7 @@ valid_opt_values = {
 # This list should get shortened and eventually removed by moving more/all
 # functions out of client.py.
 
-def opts_cb_remote(api_inst, opts, opts_new):
+def opts_cb_remote(op, api_inst, opts, opts_new):
         options.opts_cb_fd("ctlfd", api_inst, opts, opts_new)
         options.opts_cb_fd("progfd", api_inst, opts, opts_new)
 
@@ -5673,7 +5673,7 @@ opts_remote = [
     ("progfd",               None),
 ]
 
-def opts_cb_varcet(api_inst, opts, opts_new):
+def opts_cb_varcet(op, api_inst, opts, opts_new):
         if opts_new["list_all_items"] and opts_new["list_installed"]:
                 raise api_errors.InvalidOptionError(
                     api_errors.InvalidOptionError.INCOMPAT,
