@@ -2632,6 +2632,237 @@ class TestPkgLinkedRecurse(TestPkgLinked):
                 self._pkg([2], "list network", rv=EXIT_OOPS)
 
 
+class TestPkgLinkedPropertyRecurse(TestPkgLinked):
+        """Test default recursion via the 'default-recurse' image property
+           This also implicitly tests the -R option"""
+
+        def _recursive_pkg(self, op, args, **kwargs):
+                """Run recursive pkg operation, compare results."""
+
+                def output_cb(output):
+                        self.assertEqualParsable(output, **kwargs)
+                self._pkg([0], "{0} --parsable=0 {1}".format(op, args),
+                    output_cb=output_cb)
+
+        def test_recursive_install(self):
+                """Test pkg install
+                   Even with the property set, this should not recurse"""
+
+                # create parent (0), push child (1, 2)
+                self._imgs_create(3)
+                self._attach_child(0, [1, 2])
+
+                self._pkg([0], "set-property default-recurse True")
+
+                # Install - expect changes only in the parent. Install is not
+                # recursive by default even in the presence of the
+                # default-recurse property
+                self._recursive_pkg("install", self.foo1_list[0],
+                    add_packages=[self.foo1_list[0]],
+                    child_images=[{
+                        "image_name": "system:img1",
+                        "add_packages": []
+                    },{
+                        "image_name": "system:img2",
+                        "add_packages": []
+                    }
+                ])
+
+                # Install recursively, it's already in the parent so expect
+                # changes in the children only.
+                self._recursive_pkg("install -r", self.foo1_list[0],
+                    add_packages=[],
+                    child_images=[{
+                        "image_name": "system:img1",
+                        "add_packages": [self.foo1_list[0]]
+                    },{
+                        "image_name": "system:img2",
+                        "add_packages": [self.foo1_list[0]]
+                    }
+                ])
+
+                # uninstall package which is present in parent and child
+                # Only the parent should be affected
+                self._recursive_pkg("uninstall", self.foo1_list[0],
+                    remove_packages=[self.foo1_list[0]],
+                    child_images=[{
+                        "image_name": "system:img1",
+                        "remove_packages": []
+                    },{
+                        "image_name": "system:img2",
+                        "remove_packages": []
+                    }
+                ])
+
+        def test_recursive_update(self):
+                """Test recursive update"""
+
+                # create parent (0), push child (1)
+                self._imgs_create(2)
+                self._attach_child(0, [1])
+
+                self._pkg([0], "set-property default-recurse True")
+
+                # install some packages to update
+                self._pkg([0, 1], "install {0}".format(self.foo1_list[0]))
+
+                # update package which is present in parent and child
+                self._recursive_pkg("update", self.foo1_list[3],
+                    change_packages=[[self.foo1_list[0], self.foo1_list[3]]],
+                    child_images=[{
+                        "image_name": "system:img1",
+                        "change_packages": [[
+                            self.foo1_list[0],
+                            self.foo1_list[3]
+                        ]]
+                    }
+                ])
+
+                # downgrade child, leave parent alone, try again
+                self._pkg([1], "update {0}".format(self.foo1_list[0]))
+                self._recursive_pkg("update", self.foo1_list[3],
+                    change_packages=[],
+                    child_images=[{
+                        "image_name": "system:img1",
+                        "change_packages": [[
+                            self.foo1_list[0],
+                            self.foo1_list[3]
+                        ]]
+                    }
+                ])
+
+                # downgrade parent, leave child alone, try again
+                self._pkg([0], "update -R {0}".format(self.foo1_list[0]))
+                self._recursive_pkg("update", self.foo1_list[3],
+                    change_packages=[[self.foo1_list[0], self.foo1_list[3]]],
+                    child_images=[{
+                        "image_name": "system:img1",
+                        "change_packages": []
+                    }
+                ])
+
+        def test_recursive_variant(self):
+                """Test recursive change-variant"""
+
+                # create parent (0), push child (1)
+                self._imgs_create(2)
+                self._attach_child(0, [1])
+
+                self._pkg([0], "set-property default-recurse True")
+
+                # install some packages
+                self._pkg([0, 1], "install {0}".format(self.foo1_list[0]))
+
+                # change variant in parent and child
+                self._recursive_pkg("change-variant", "variant.foo=baz",
+                    change_variants=[["variant.foo", "baz"]],
+                    affect_packages=[self.foo1_list[0]],
+                    child_images=[{
+                        "image_name": "system:img1",
+                        "change_variants": [["variant.foo", "baz"]],
+                        "affect_packages": [self.foo1_list[0]]
+                    }
+                ])
+
+                # revert variant in child, leave parent alone, try again
+                self._pkg([1], "change-variant -v variant.foo=bar")
+                self._recursive_pkg("change-variant", "variant.foo=baz",
+                    change_variants=[],
+                    affect_packages=[],
+                    child_images=[{
+                        "image_name": "system:img1",
+                        "change_variants": [["variant.foo", "baz"]],
+                        "affect_packages": [self.foo1_list[0]]
+                    }
+                ])
+
+                # revert variant in parent, leave child alone, try again
+                self._pkg([0], "change-variant -R -v variant.foo=bar")
+
+                self._pkg([0], "audit-linked -a")
+                self._recursive_pkg("change-variant", "variant.foo=baz",
+                    change_variants=[["variant.foo", "baz"]],
+                    affect_packages=[self.foo1_list[0]],
+                )
+
+        def test_recursive_facet(self):
+                """Test recursive change-facet"""
+
+                # create parent (0), push child (1)
+                self._imgs_create(2)
+                self._attach_child(0, [1])
+
+                self._pkg([0], "set-property default-recurse True")
+
+                # set facet in parent and child
+                self._recursive_pkg("change-facet", "facet.foo=True",
+                    change_facets=[["facet.foo", True, None, "local", False,
+                        False]],
+                    child_images=[{
+                        "image_name": "system:img1",
+                        "change_facets": [["facet.foo", True, None, "local",
+                            False, False]],
+                    }
+                ])
+
+                # change facet in child, leave parent alone, try again
+                self._pkg([1], "change-facet -v facet.foo=False")
+                self._recursive_pkg("change-facet", "facet.foo=True",
+                    change_facets=[],
+                    child_images=[{
+                        "image_name": "system:img1",
+                        "change_facets": [["facet.foo", True, False, "local",
+                            False, False]],
+                    }
+                ])
+
+                # remove facet in child, leave parent alone, try again
+                self._pkg([1], "change-facet -v facet.foo=None")
+                self._recursive_pkg("change-facet", "facet.foo=True",
+                    change_facets=[],
+                    child_images=[{
+                        "image_name": "system:img1",
+                        "change_facets": [["facet.foo", True, None, "local",
+                            False, False]],
+                    }
+                ])
+
+                # change facet in parent, leave child alone, try again
+                self._pkg([0], "change-facet -R -v facet.foo=False")
+                self._recursive_pkg("change-facet", "facet.foo=True",
+                    change_facets=[["facet.foo", True, False, "local",
+                        False, False]],
+                )
+
+                # remove facet in parent, leave child alone, try again
+                self._pkg([0], "change-facet -R -v facet.foo=None")
+                self._recursive_pkg("change-facet", "facet.foo=True",
+                    change_facets=[["facet.foo", True, None, "local",
+                        False, False]],
+                )
+
+                # change facet in parent and child
+                self._recursive_pkg("change-facet", "facet.foo=False",
+                    change_facets=[["facet.foo", False, True, "local",
+                        False, False]],
+                    child_images=[{
+                        "image_name": "system:img1",
+                        "change_facets": [["facet.foo", False, True, "local",
+                            False, False]],
+                    }
+                ])
+
+                # remove facet in parent and child
+                self._recursive_pkg("change-facet", "facet.foo=None",
+                    change_facets=[["facet.foo", None, False, "local",
+                            False, False]],
+                    child_images=[{
+                        "image_name": "system:img1",
+                        "change_facets": [["facet.foo", None, False, "local",
+                            False, False]],
+                    }
+                ])
+
 class TestPkgLinkedIncorpDowngrade(TestPkgLinked):
         """Test that incorporated pkgs can be downgraded if incorporation is
         updated."""
