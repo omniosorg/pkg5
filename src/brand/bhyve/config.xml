@@ -32,7 +32,7 @@
 	<boot />
 	<sysboot />
 	<halt />
-	<shutdown>/usr/lib/brand/bhyve/support shutdown %z %R</shutdown>
+	<shutdown>/usr/lib/brand/bhyve/support shutdown %z</shutdown>
 	<verify_cfg />
 	<verify_adm />
 	<postclone />

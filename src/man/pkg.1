@@ -1,7 +1,7 @@
 '\" te
 .\" Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
-.\" Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
-.TH pkg 1 "24 Jun 2019" "illumos" "User Commands"
+.\" Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+.TH pkg 1 "19 May 2020" "illumos" "User Commands"
 .SH NAME
 pkg \- Image Packaging System retrieval client
 .SH SYNOPSIS
@@ -18,7 +18,7 @@ pkg \- Image Packaging System retrieval client
 .LP
 .nf
 /usr/bin/pkg install [-nvq] [-C \fIn\fR] [-g \fIpath_or_uri\fR]...
-    [-R | -r [[-z \fIzonename\fR]... | [-Z \fIzonename\fR]... ]]
+    [-r [[-z \fIzonename\fR]... | [-Z \fIzonename\fR]... ]]
     [--accept] [--licenses] [--no-index] [--no-refresh]
     [--no-be-activate]
     [--no-backup-be | --require-backup-be]
@@ -43,7 +43,7 @@ pkg \- Image Packaging System retrieval client
 .LP
 .nf
 /usr/bin/pkg uninstall [-nvq] [-C \fIn\fR]
-    [-R | -r [[-z \fIzonename\fR]... | [-Z \fIzonename\fR]... ]]
+    [-r [[-z \fIzonename\fR]... | [-Z \fIzonename\fR]... ]]
     [--ignore-missing] [--no-index] [--no-be-activate]
     [--no-backup-be | --require-backup-be]
     [--backup-be-name \fIname\fR]
@@ -242,7 +242,7 @@ pkg \- Image Packaging System retrieval client
     [-G \fIorigin_to_remove\fR | --remove-origin \fIorigin_to_remove\fR]...
     [-m \fImirror_to_add\fR | --add-mirror \fImirror_to_add\fR]...
     [-M \fImirror_to_remove\fR | --remove-mirror \fImirror_to_remove\fR]...
-    [-R | -r [[-z \fIzonename\fR]... | [-Z \fIzonename\fR]... ]]
+    [-r [[-z \fIzonename\fR]... | [-Z \fIzonename\fR]... ]]
     [--disable] [--enable] [--no-refresh] [--reset-uuid]
     [--non-sticky] [--sticky] [--search-after \fIpublisher\fR]
     [--search-before \fIpublisher\fR] [--search-first]
@@ -432,7 +432,7 @@ Force a full retrieval of all publisher metadata, instead of attempting an incre
 .ne 2
 .mk
 .na
-\fBpkg install\fR [\fB-nvq\fR] [\fB-C\fR \fIn\fR] [\fB-g\fR \fIpath_or_uri\fR]... [\fB-R\fR | \fB-r\fR [[\fB-z\fR \fIzonename\fR]... | [\fB-Z\fR \fIzonename\fR]... ]] [\fB--accept\fR] [\fB--licenses\fR] [\fB--no-index\fR] [\fB--no-refresh\fR] [\fB--no-be-activate\fR] [\fB--no-backup-be\fR | \fB--require-backup-be\fR] [\fB--backup-be-name\fR \fIname\fR] [\fB--deny-new-be\fR | \fB--require-new-be\fR] [\fB--be-name\fR \fIname\fR] [\fB--reject\fR \fIpkg_fmri_pattern\fR]... [\fB--sync-actuators\fR | \fB--sync-actuators-timeout\fR \fItimeout\fR] \fIpkg_fmri_pattern\fR ...\fR
+\fBpkg install\fR [\fB-nvq\fR] [\fB-C\fR \fIn\fR] [\fB-g\fR \fIpath_or_uri\fR]... [\fB-r\fR [[\fB-z\fR \fIzonename\fR]... | [\fB-Z\fR \fIzonename\fR]... ]] [\fB--accept\fR] [\fB--licenses\fR] [\fB--no-index\fR] [\fB--no-refresh\fR] [\fB--no-be-activate\fR] [\fB--no-backup-be\fR | \fB--require-backup-be\fR] [\fB--backup-be-name\fR \fIname\fR] [\fB--deny-new-be\fR | \fB--require-new-be\fR] [\fB--be-name\fR \fIname\fR] [\fB--reject\fR \fIpkg_fmri_pattern\fR]... [\fB--sync-actuators\fR | \fB--sync-actuators-timeout\fR \fItimeout\fR] \fIpkg_fmri_pattern\fR ...\fR
 .ad
 .sp .6
 .RS 4n
@@ -457,7 +457,7 @@ If a package is on the avoid list, installing it removes it from that list.
 .ad
 .sp .6
 .RS 4n
-Specify the number of child images to update in parallel. When recursing into child images (usually installed \fBlipkg\fR branded non-global zones), update at most \fIn\fR child images in parallel. The default number of child images to update in parallel is 1. If \fIn\fR is 0 or a negative number, all child images are updated in parallel. See also \fBPKG_CONCURRENCY\fR in the "Environment Variables" section and \fBrecursion-concurrency\fR in the "Image Properties" section.
+Specify the number of child images to update in parallel. When recursing into child images (usually installed \fBlipkg\fR, \fBparse\fR or \fBpkgsrc\fR branded non-global zones), update at most \fIn\fR child images in parallel. The default number of child images to update in parallel is 1. If \fIn\fR is 0 or a negative number, all child images are updated in parallel. See also \fBPKG_CONCURRENCY\fR in the "Environment Variables" section and \fBrecursion-concurrency\fR in the "Image Properties" section.
 .RE
 
 .sp
@@ -503,18 +503,16 @@ Hide progress messages during the requested operation.
 .ad
 .sp .6
 .RS 4n
-Run this operation in the global zone and also in all installed \fBlipkg\fR branded non-global zones. The effect on the non-global zone is similar to logging into each non-global zone and running the command directly. Without this option, when you run \fBpkg\fR commands in the global zone, non-global zones are modified only to the extent required to keep them compatible with the global zone. With this option, the \fBpkg\fR operation is applied to all installed non-global zones except as limited by the \fB-z\fR and \fB-Z\fR options. Zones that are excluded by the \fB-z\fR and \fB-Z\fR options might still be modified if updates are required to keep them in sync with the global zone. Recursion can be enabled by default for an image via the \fBdefault-recurse\fR package property; if this is set then it is not necessary to specify the \fB-r\fR option manually however the \fB-R\fR option can be specified to temporarily override recursion, see below.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB\fB-R\fR\fR
-.ad
-.sp .6
-.RS 4n
-Disable recursion into \fBlipkg\fR branded non-global zones. This option can be used to override the default policy set on the image, refer to \fBdefault-recurse\fR in the "Package Properties" section. Even with this option, when you run \fBpkg\fR commands in the global zone, non-global zones are modified to the extent required to keep them compatible with the global zone.
+Run this operation in the global zone and also in all installed linked
+non-global zones. The effect on the non-global zone is similar to
+logging into each non-global zone and running the command directly. Without
+this option, when you run \fBpkg\fR commands in the global zone, non-global
+zones are modified only to the extent required to keep them compatible with the
+global zone. With this option, the \fBpkg\fR operation is applied to all
+installed non-global zones except as limited by the \fB-z\fR and \fB-Z\fR
+options. Zones that are excluded by the \fB-z\fR and \fB-Z\fR options might
+still be modified if updates are required to keep them in sync with the global
+zone.
 .RE
 
 .sp
@@ -731,7 +729,7 @@ For descriptions of options, see the \fBinstall\fR command above.
 .ne 2
 .mk
 .na
-\fBpkg uninstall\fR [\fB-nvq\fR] [\fB-C\fR \fIn\fR] [\fB-R\fR | \fB-r\fR [[\fB-z\fR \fIzonename\fR]... | [\fB-Z\fR \fIzonename\fR]... ]] [\fB--ignore-missing\fR] [\fB--no-index\fR] [\fB--no-be-activate\fR] [\fB--no-backup-be\fR | \fB--require-backup-be\fR] [\fB--backup-be-name\fR \fIname\fR] [\fB--deny-new-be\fR | \fB--require-new-be\fR] [\fB--be-name\fR \fIname\fR] [\fB--sync-actuators\fR | \fB--sync-actuators-timeout\fR \fItimeout\fR] \fIpkg_fmri_pattern\fR ...\fR
+\fBpkg uninstall\fR [\fB-nvq\fR] [\fB-C\fR \fIn\fR] [\fB-r\fR [[\fB-z\fR \fIzonename\fR]... | [\fB-Z\fR \fIzonename\fR]... ]] [\fB--ignore-missing\fR] [\fB--no-index\fR] [\fB--no-be-activate\fR] [\fB--no-backup-be\fR | \fB--require-backup-be\fR] [\fB--backup-be-name\fR \fIname\fR] [\fB--deny-new-be\fR | \fB--require-new-be\fR] [\fB--be-name\fR \fIname\fR] [\fB--sync-actuators\fR | \fB--sync-actuators-timeout\fR \fItimeout\fR] \fIpkg_fmri_pattern\fR ...\fR
 .ad
 .sp .6
 .RS 4n
@@ -782,6 +780,12 @@ Versions older or newer than what is already installed can be specified to perfo
 Any preserved configuration files that are part of packages to be downgraded and that have been changed since the original version was installed are renamed using the extension \fB\&.update\fR. For more information about how the package system determines which files to preserve, and how these files are preserved during package upgrades, see "File Actions" in the \fBpkg\fR(5) man page.
 .sp
 If more than one \fIpkg_fmri_pattern\fR is specified, and if any of the specified packages cannot be updated in this image, then none of the specified packages will be updated.
+.sp
+Recursion can be enabled by default for updates to an image via the
+\fBdefault-recurse\fR package property; if this is set then it is not necessary
+to specify the \fB-r\fR option manually however the \fB-R\fR option can be
+specified to temporarily override recursion, see below.
+
 .RE
 
 .sp
@@ -804,6 +808,21 @@ Do not execute the client up-to-date check when updating all installed packages.
 .sp .6
 .RS 4n
 Ignore packages that are not installed. Using this option prevents \fBpkg update\fR from failing when attempting to update a package that is not currently installed.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB-R\fR
+.ad
+.sp .6
+.RS 4n
+Disable recursion into linked non-global zones. This option can be used to
+override the default policy set on the image, refer to \fBdefault-recurse\fR in
+the "Package Properties" section. Even with this option, when you run
+\fBpkg update\fR commands in the global zone, non-global zones are modified to
+the extent required to keep them compatible with the global zone.
 .RE
 
 For all other options, see the \fBinstall\fR command above.
@@ -2383,18 +2402,9 @@ Remove the URI from the list of mirrors for the given publisher. The special val
 .ad
 .sp .6
 .RS 4n
-Run this operation in the global zone and also in all installed \fBlipkg\fR branded non-global zones. The effect on the non-global zone is similar to logging into each non-global zone and running the command directly. Without this option, when you run \fBpkg\fR commands in the global zone, non-global zones are modified only to the extent required to keep them compatible with the global zone. With this option, the \fBpkg\fR operation is applied to all installed non-global zones except as limited by the \fB-z\fR and \fB-Z\fR options. Zones that are excluded by the \fB-z\fR and \fB-Z\fR options might still be modified if updates are required to keep them in sync with the global zone. Recursion can be enabled by default for an image via the \fBdefault-recurse\fR package property; if this is set then it is not necessary to specify the \fB-r\fR option manually however the \fB-R\fR option can be specified to temporarily override recursion, see below.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB\fB-R\fR\fR
-.ad
-.sp .6
-.RS 4n
-Disable recursion into \fBlipkg\fR branded non-global zones. This option can be used to override the default policy set on the image, refer to \fBdefault-recurse\fR in the "Package Properties" section. Even with this option, when you run \fBpkg\fR commands in the global zone, non-global zones are modified to the extent required to keep them compatible with the global zone.
+Run this operation in the global zone and also in all installed linked
+non-global zones. The effect on the non-global zone is similar to logging into
+each non-global zone and running the command directly.
 .RE
 
 .sp
@@ -3404,7 +3414,9 @@ Default value: \fBalways\fR
 .ad
 .sp .6
 .RS 4n
-(boolean) If set to \fBTrue\fR, the package client will default to recursing into child \fBlipkg\fR images as if the \fB-r\fR option had been provided. This behaviour can be overriden via the \fB-R\fR option.
+(boolean) If set to \fBTrue\fR, the package client will default to recursing
+into child images for \fBpkg update\fR operations, as if the \fB-r\fR option
+had been provided. This behaviour can be overriden via the \fB-R\fR option.
 
 .sp
 Default value: \fBFalse\fR
@@ -4363,7 +4375,7 @@ Default value: 5
 .RS 4n
 The number of child images to update in parallel. Ignored if the \fB-C\fR option is specified.
 .sp
-When recursing into child images (usually installed \fBlipkg\fR branded non-global zones), update at most \fB$PKG_CONCURRENCY\fR child images in parallel. If \fB$PKG_CONCURRENCY\fR is 0 or a negative number, all child images are updated in parallel.
+When recursing into child images (usually installed \fBlipkg\fR, \fBsparse\fR or \fBpkgsrc\fR branded non-global zones), update at most \fB$PKG_CONCURRENCY\fR child images in parallel. If \fB$PKG_CONCURRENCY\fR is 0 or a negative number, all child images are updated in parallel.
 .sp
 Default value: 1
 .RE

@@ -15,24 +15,30 @@
 . /usr/lib/brand/shared/state.ksh
 . /usr/lib/brand/shared/vnic.ksh
 
-cmd="${1:?cmd}"
-ZONENAME="${2:?zonename}"
-ZONEPATH="${3:?zonepath}"
-shift 3
-
 qemu_shutdown()
 {
 	typeset delay=${1:-60}
-	echo system_powerdown | nc -U "$ZONEPATH/root/tmp/vm.monitor" >/dev/null
+	echo system_powerdown | \
+	    nc -U "$ZONEPATH/${ZONEPATH:+root/}tmp/vm.monitor" >/dev/null
 	while [ $delay -gt 0 ] && pgrep -z "$ZONENAME" qemu >/dev/null; do
 		((delay = delay - 1))
 		sleep 1
 	done
 }
 
+cmd="${1:?cmd}"
+ZONENAME="${2:?zonename}"
+ZONEPATH=
+if [ $cmd != shutdown ]; then
+	ZONEPATH="$3"
+	# shutdown is run inside the zone context and does not need a path
+	[ -z "$ZONEPATH" ] && fatal "No zonepath provided"
+	shift 3
+fi
+
 case $cmd in
     shutdown)
-	qemu_shutdown 0
+	qemu_shutdown 60
 	;;
     prestate)
 	case $1:$2 in
@@ -41,7 +47,7 @@ case $cmd in
 		;;
 	    $ZONE_STATE_RUNNING:$ZONE_STATE_CMD_HALT)
 		# halting (even as part of rebooting)
-		qemu_shutdown 60
+		qemu_shutdown 0
 		;;
 	esac
 	;;

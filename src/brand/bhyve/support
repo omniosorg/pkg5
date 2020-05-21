@@ -16,11 +16,6 @@
 . /usr/lib/brand/shared/firewall.ksh
 . /usr/lib/brand/shared/vnic.ksh
 
-cmd="${1:?cmd}"
-ZONENAME="${2:?zonename}"
-ZONEPATH="${3:?zonepath}"
-shift 3
-
 bhyve_shutdown()
 {
 	typeset delay=${1:-60}
@@ -31,9 +26,19 @@ bhyve_shutdown()
 	done
 }
 
+cmd="${1:?cmd}"
+ZONENAME="${2:?zonename}"
+ZONEPATH=
+if [ $cmd != shutdown ]; then
+        ZONEPATH="$3"
+        # shutdown is run inside the zone context and does not need a path
+        [ -z "$ZONEPATH" ] && fatal "No zonepath provided"
+        shift 3
+fi
+
 case $cmd in
     shutdown)
-	bhyve_shutdown 0
+	bhyve_shutdown 60
 	;;
     prestate)
 	case $1:$2 in
@@ -42,7 +47,7 @@ case $cmd in
 		;;
 	    $ZONE_STATE_RUNNING:$ZONE_STATE_CMD_HALT)
 		# halting (even as part of rebooting)
-		bhyve_shutdown 60
+		bhyve_shutdown 0
 		;;
 	esac
 	;;
