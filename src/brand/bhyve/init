@@ -71,6 +71,10 @@ aliases = {
         # Was wrongly used in some older scripts.
         'intel':        'netapp',
     },
+    'vnc': {
+        'on':   'unix=/tmp/vm.vnc',
+        'wait': 'wait,unix=/tmp/vm.vnc',
+    },
 }
 
 HOSTBRIDGE_SLOT = 0
@@ -259,8 +263,6 @@ for f in root.findall('./network[@physical]'):
 # VNC
 
 if len(opts['vnc']) and opts['vnc'] != 'off':
-    if opts['vnc'] == 'on':
-        opts['vnc'] = 'unix=/tmp/vm.vnc'
     args.extend(['-s', '{0}:0,fbuf,vga=off,{1}'.format(VNC_SLOT, opts['vnc'])])
     if not len(opts['xhci']) or opts['xhci'] != 'off':
         args.extend(['-s', '{0}:1,xhci,tablet'.format(VNC_SLOT)])
