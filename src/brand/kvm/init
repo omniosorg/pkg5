@@ -65,6 +65,10 @@ aliases = {
     'netif': {
         'virtio':       'virtio-net-pci',
     },
+    'vnc': {
+        'on':           'unix:/tmp/vm.vnc',
+        'off':          'none',
+    }
 }
 
 try:
@@ -239,10 +243,6 @@ for f in root.findall('./network[@physical]'):
 
 # VNC
 
-if opts['vnc'] == 'on':
-    opts['vnc'] = 'unix:/tmp/vm.vnc'
-elif opts['vnc'] == 'off':
-    opts['vnc'] = 'none'
 args.extend(['-vnc', opts['vnc']])
 
 # Extra options
