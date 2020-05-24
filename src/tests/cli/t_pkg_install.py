@@ -2866,7 +2866,6 @@ class TestPkgInstallUpgrade(_TestHelper, pkg5unittest.SingleDepotTestCase):
 
         release_name = """
             open release/name@1.0
-            add set name=com.oracle.info.suggested_bename value=livetest
             add file tmp/liveroot1 path=/etc/liveroot mode=644 owner=root group=sys reboot-needed=true
             close
         """
@@ -3720,11 +3719,18 @@ adm
                 self.image_create(self.rurl)
 
                 # Verify the name of the boot environment is printed
-                # on install.
+                # on install. The installation will fail because creating
+                # a BE name is not permitted on a non-live root and
+                # simulate_live_root does not override that.
                 self.pkg("--debug simulate_live_root={0} install "
-                    " release/name@1.0".format(
-                    self.get_img_path()))
+                    " --be-name=livetest release/name@1.0".format(
+                    self.get_img_path()), exit=1)
                 self.assertTrue("environment: livetest" in self.output)
+
+                # Install the package (no new BE)
+                self.pkg("--debug simulate_live_root={0} install "
+                    "release/name@1.0".format(
+                    self.get_img_path()))
 
                 # Ensure that the uninstall case prints a create
                 # boot environment message. The command will fail due
