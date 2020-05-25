@@ -4,11 +4,12 @@
 The pkg5 components have been updated to the latest upstream solaris-ips
 as of:
 
-commit f3a7e2aed98f30448e8fbcfc22b81885087765cd
-Author: Darren J Moffat <Darren.Moffat@Oracle.COM>
-Date:   Thu Aug 22 14:46:25 2019 +0100
+commit b67dc1b1fe403322dd180b6bca302a16a2aad3d0
+Author: Peter Dennis <peter.dennis@oracle.com>
+Date:   Tue May 5 19:07:57 2020 +0100
 
-    30216688 invalid facet change message not displayed
+    31244860 pkgsurf should allow not locking the reference repo
+    31288050 drivers aliases without numbers cause pkgfmt to die
 
 -----------------------------------------------------------------------------
 
