@@ -100,7 +100,7 @@ extern char *pkg_string_from_arch(int arch);
 extern char *pkg_string_from_data(int data);
 extern char *pkg_string_from_osabi(int osabi);
 
-PyObject *ElfError;
+extern PyObject *ElfError;
 
 #ifdef	__cplusplus
 }

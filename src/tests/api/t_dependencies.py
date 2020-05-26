@@ -1106,12 +1106,12 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
 """.format(**paths)
 
         def glfilter(self, s):
-                return set([x for x in s if not re.match(r'usr/gcc/\d/', x)])
+                return set([x for x in s if not re.match(r'usr/gcc/\d+/', x)])
 
         def tpfilter(self, s):
                 _p, _d = s
                 _d = tuple([x for x in _d
-                    if not re.match(r'^usr/gcc/\d/lib$', x)])
+                    if not re.match(r'^usr/gcc/\d+/lib$', x)])
                 return (_p, _d)
 
         def setUp(self):

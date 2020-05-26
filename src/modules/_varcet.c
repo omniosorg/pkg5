@@ -75,7 +75,7 @@ _allow_facet(PyObject *self, PyObject *args, PyObject *kwargs)
 	Py_DECREF(res);
 
 	while (PyDict_Next(act_attrs, &fpos, &attr, &value)) {
-		char *as = PyUnicode_AsUTF8(attr);
+		const char *as = PyUnicode_AsUTF8(attr);
 		if (strncmp(as, "facet.", 6) != 0)
 			continue;
 
@@ -131,7 +131,7 @@ _allow_facet(PyObject *self, PyObject *args, PyObject *kwargs)
 
 prep_ret:
 		if (facet_ret != NULL) {
-			char *vs = PyUnicode_AsUTF8(value);
+			const char *vs = PyUnicode_AsUTF8(value);
 			if (vs == NULL) {
 				/*
 				 * value is not a string; probably a list, so
@@ -207,10 +207,10 @@ _allow_variant(PyObject *self, PyObject *args, PyObject *kwargs)
 		return (NULL);
 
 	while (PyDict_Next(act_attrs, &pos, &attr, &value)) {
-		char *as = PyUnicode_AsUTF8(attr);
+		const char *as = PyUnicode_AsUTF8(attr);
 		if (strncmp(as, "variant.", 8) == 0) {
-			char *av = PyUnicode_AsUTF8(value);
-			char *sysav = NULL;
+			const char *av = PyUnicode_AsUTF8(value);
+			const char *sysav = NULL;
 			PyObject *sysv = NULL;
 
 			if (av == NULL) {

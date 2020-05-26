@@ -1572,7 +1572,7 @@ ext_modules = [
                 'solver',
                 solver_srcs,
                 include_dirs = include_dirs + ["."],
-                extra_compile_args = compile_args,
+                extra_compile_args = compile_args + ["-fno-strict-aliasing"],
                 extra_link_args = link_args + solver_link_args,
                 define_macros = [('_FILE_OFFSET_BITS', '64')],
                 build_64 = True

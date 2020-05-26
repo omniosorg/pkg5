@@ -124,10 +124,10 @@ file NOHASH group=bin mode=0755 owner=root path=foo/bar.py
         else:
                 py_path = []
 
-        glre = re.compile(r'\bpkg\.\S+path=usr/gcc/\d/lib(/libc\.so\.1)? +')
+        glre = re.compile(r'\bpkg\.\S+path=usr/gcc/\d+/lib(/libc\.so\.1)? +')
 
         def glfilter(self, s):
-                return set([x for x in s if not re.match(r'usr/gcc/\d/', x)])
+                return set([x for x in s if not re.match(r'usr/gcc/\d+/', x)])
 
         def get_ver_paths(self, ver, proto):
                 """To determine what the correct results should be for several
