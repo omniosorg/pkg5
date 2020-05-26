@@ -203,7 +203,7 @@ def process_elf_dependencies(action, pkg_vars, dyn_tok_conv, run_paths,
             (installed_path.startswith("platform") and \
             installed_path.split("/")[2] == "kernel"):
                 if rp and (len(rp) > 1 or
-                    not re.match(r'^/usr/gcc/\d/lib$', rp[0])):
+                    not re.match(r'^/usr/gcc/\d+/lib$', rp[0])):
                         raise RuntimeError("RUNPATH set for kernel module "
                             "({0}): {1}".format(installed_path, rp))
                 # Add this platform to the search path.

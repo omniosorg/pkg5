@@ -58,6 +58,8 @@
 #include <liblist.h>
 #include <elfextract.h>
 
+PyObject *ElfError;
+
 char *
 pkg_string_from_type(int type)
 {
@@ -276,7 +278,8 @@ getdynamic(int fd)
 	char		*name = NULL;
 	size_t		sh_str = 0;
 	size_t		vernum = 0, verdefnum = 0;
-	int		t = 0, num_dyn = 0, dynstr = -1;
+	int		dynstr = -1;
+	uint_t		t = 0, num_dyn = 0;
 	bool		lazy = false;
 
 	dyninfo_t	*dyn = NULL;
@@ -607,7 +610,7 @@ readhash(int fd, off_t offset, off_t size, hash_data_t *hdata)
 	}
 
 	do {
-		n = MIN(size, sizeof (hashbuf));
+		n = MIN(size, (off_t)sizeof (hashbuf));
 		if ((rbytes = read(fd, hashbuf, n)) == -1) {
 			PyErr_SetFromErrno(PyExc_IOError);
 			return (-1);

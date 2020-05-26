@@ -91,7 +91,7 @@ _generic_init_common(PyObject *action, PyObject *data, PyObject *attrs)
 	PyObject *key_aname = NULL;
 	PyObject *key_attr = NULL;
 	PyObject *path_attr = NULL;
-	char *path = NULL;
+	const char *path = NULL;
 	char invalid_path = 0;
 
 	/*
@@ -134,7 +134,7 @@ _generic_init_common(PyObject *action, PyObject *data, PyObject *attrs)
 
 	if ((key_attr = PyDict_GetItem(attrs, key_aname)) == NULL) {
 		PyObject *aname = PyObject_GetAttrString(action, "name");
-		char *ns = PyUnicode_AsUTF8(aname);
+		const char *ns = PyUnicode_AsUTF8(aname);
 
 		/*
 		 * set actions allow an alternate value form, so
@@ -157,7 +157,7 @@ _generic_init_common(PyObject *action, PyObject *data, PyObject *attrs)
 
 	if (PyList_CheckExact(key_attr)) {
 		PyObject *aname = PyObject_GetAttrString(action, "name");
-		char *ns = PyUnicode_AsUTF8(aname);
+		const char *ns = PyUnicode_AsUTF8(aname);
 		int multi_error = 0;
 
 		if (strcmp(ns, "depend") != 0) {
@@ -174,7 +174,7 @@ _generic_init_common(PyObject *action, PyObject *data, PyObject *attrs)
 			 */
 			PyObject *dt = PyDict_GetItemString(attrs, "type");
 			if (dt != NULL) {
-				char *ts = PyUnicode_AsUTF8(dt);
+				const char *ts = PyUnicode_AsUTF8(dt);
 				if (ts == NULL) {
 					PyObject *type_aname =
 					    PyUnicode_FromStringAndSize("type",
