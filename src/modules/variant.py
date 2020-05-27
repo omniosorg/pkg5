@@ -466,10 +466,10 @@ class VariantCombinations(object):
                         for variant_name in sorted(self.__simpl_template,
                             reverse=True):
                                 def exclude_name(item):
-                                        return [
+                                        return sorted([
                                             (k, v) for k, v in item
                                             if k != variant_name
-                                        ]
+                                        ])
                                 # For sanity, instead of modifying rel_set on
                                 # the fly, a new working set is created to which
                                 # members or collapsed members of rel_set are
@@ -535,9 +535,26 @@ class VariantCombinations(object):
                                 rel_set = new_rel_set
                 return rel_set
 
+        def ppsort(self, k):
+                return str(sorted(k))
+
+        def pretty_print_set(self, prefix, print_set):
+                ret = ""
+                for ss in sorted(print_set, key=self.ppsort):
+                        ret += "    {}:\n".format(prefix)
+                        for s in sorted(ss):
+                                ret += "        ... {}\n".format(s)
+                return ret
+
+        def pretty_print(self):
+                return ("VariantCombinations:\n" +
+                    self.pretty_print_set("+++", self.sat_set) +
+                    self.pretty_print_set("!!!", self.not_sat_set))
+
         def __repr__(self):
-                return "VC Sat:{0} Unsat:{1}".format(sorted(self.__sat_set),
-                    sorted(self.__not_sat_set))
+                return "VC Sat:{0} Unsat:{1}".format(
+                    sorted(self.__sat_set, key=self.ppsort),
+                    sorted(self.__not_sat_set, key=self.ppsort))
 
 # Vim hints
 # vim:ts=8:sw=8:et:fdm=marker
