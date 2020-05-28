@@ -181,9 +181,10 @@ def add_disk(path, boot=False, intf=None, media='disk', index=-1):
     elif index > add_disk.index:
         add_disk.index = index
 
+    if media == "disk": path = diskpath(path)
     str = (
         'file={0},if={1},media={2},index={3},cache=none'
-            .format(diskpath(path), intf, media, index)
+            .format(path, intf, media, index)
     )
     if ',serial=' not in str:
         str += ',serial={}{}'.format(media, index)
