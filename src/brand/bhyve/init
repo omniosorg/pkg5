@@ -189,7 +189,8 @@ if opts['acpi'] == 'on':
 
 args.extend([
     '-H',
-    '-B', '1,product=OmniOS HVM',
+    '-B', '1,manufacturer={},product={},version={},serial={},sku={},family={}'
+        .format('OmniOS', 'OmniOS HVM', '1.0', uuid, '001', 'Virtual Machine'),
     '-c', opts['vcpus'],
     '-m', opts['ram'],
 ])
