@@ -314,7 +314,8 @@ class Action(object):
                                     "=".join((k, quote_attr_value(lmt)))
                                     for lmt in v
                                 ])
-                        elif " " in v or "'" in v or "\"" in v or v == "":
+                        # Quote values containing whitespaces or macros
+                        elif " " in v or "'" in v or "\"" in v or v == "" or "$(" in v:
                                 if "\"" not in v:
                                         out += " " + k + "=\"" + v + "\""
                                 elif "'" not in v:
@@ -352,7 +353,7 @@ class Action(object):
                         out += " " + self.hash
 
                 def q(s):
-                        if " " in s or "'" in s or "\"" in s or s == "":
+                        if " " in s or "'" in s or "\"" in s or s == "" or "$(" in s:
                                 if "\"" not in s:
                                         return '"{0}"'.format(s)
                                 elif "'" not in s:
@@ -375,7 +376,7 @@ class Action(object):
                                 out += " " + " ".join([
                                     "{0}={1}".format(k, q(lmt)) for lmt in sorted(v)
                                 ])
-                        elif " " in v or "'" in v or "\"" in v or v == "":
+                        elif " " in v or "'" in v or "\"" in v or v == "" or "$(" in v:
                                 if "\"" not in v:
                                         out += " " + k + "=\"" + v + "\""
                                 elif "'" not in v:
