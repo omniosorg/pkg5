@@ -976,7 +976,7 @@ if __name__ == "__main__":
 
         for ci in cf:
                 print("cpioinfo is:", ci)
-                print("  mode:", oct(ci.mode))
+                print("  mode: {:04o}".format(ci.mode))
                 print("  uid:", ci.uid)
                 print("  gid:", ci.gid)
                 print("  mtime:", ci.mtime, "({0})".format(
