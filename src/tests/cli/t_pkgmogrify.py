@@ -51,10 +51,10 @@ dir group=bin mode=0755 owner=root path=usr/X11/bin
 dir group=bin mode=0755 owner=root path=usr/X11/include
 dir group=bin mode=0755 owner=root path=usr/X11/include/X11
 # dependencies
-depend fmri=SUNWfontconfig@2.7.1-$(BUILDID) type=require
-depend fmri=SUNWfreetype2@2.3.9-$(BUILDID) type=require
-depend fmri=SUNWlibms@0.5.11-$(BUILDID) type=require
-$(i386_ONLY)depend fmri=SUNWxorg-mesa@7.4.4-$(BUILDID) type=require
+depend fmri="SUNWfontconfig@2.7.1-$(BUILDID)" type=require
+depend fmri="SUNWfreetype2@2.3.9-$(BUILDID)" type=require
+depend fmri="SUNWlibms@0.5.11-$(BUILDID)" type=require
+$(i386_ONLY)depend fmri="SUNWxorg-mesa@7.4.4-$(BUILDID)" type=require
 file NOHASH elfarch=i386 elfbits=32 group=bin mode=0755 \
 owner=root path=usr/X11/bin/xkbprint
 file NOHASH group=bin mode=0755 owner=root path=usr/X11/bin/Xserver
