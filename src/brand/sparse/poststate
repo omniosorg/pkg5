@@ -12,7 +12,7 @@
 # Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 
 . /usr/lib/brand/sparse/common.ksh
-. /usr/lib/brand/shared/state.ksh
+. /usr/lib/brand/shared/vars.ksh
 
 [ $sparsedebug -eq 1 ] && printf "POSTSTATE $*"
 

@@ -31,6 +31,8 @@ export PATH
 . /usr/lib/brand/shared/common.ksh
 . /usr/lib/brand/shared/firewall.ksh
 . /usr/lib/brand/shared/vnic.ksh
+. /usr/lib/brand/shared/util.ksh
+. /usr/lib/brand/shared/log.ksh
 
 PROP_PARENT="org.opensolaris.libbe:parentbe"
 PROP_ACTIVE="org.opensolaris.libbe:active"
@@ -506,15 +508,8 @@ pkg_err_check() {
 }
 
 #
-# Retrieve an attribute from the zone configuration
-#
-function zone_attr {
-	zonecfg -z "$ZONENAME" info attr name=$1 \
-	    | nawk '$1 == "value:" {print $2}'
-}
-
-#
 # Configure network parameters based on zone configuration
+# - ipkg/native zone types
 #
 function config_network {
 
@@ -528,8 +523,8 @@ function config_network {
 	#  /etc/resolv.conf
 	#  /etc/nsswitch.conf
 
-	typeset domain="`zone_attr dns-domain`"
-	typeset resolvers="`zone_attr resolvers`"
+	typeset domain="`zone_attr $ZONENAME dns-domain`"
+	typeset resolvers="`zone_attr $ZONENAME resolvers`"
 
 	if [ -n "$domain" -o -n "$resolvers" ]; then
 		(

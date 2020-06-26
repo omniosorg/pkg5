@@ -12,7 +12,7 @@
 # Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 
 . /usr/lib/brand/shared/common.ksh
-. /usr/lib/brand/shared/state.ksh
+. /usr/lib/brand/shared/vars.ksh
 . /usr/lib/brand/shared/vnic.ksh
 . /usr/lib/brand/shared/log.ksh
 

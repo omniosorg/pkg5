@@ -46,6 +46,7 @@
 	<verify_adm></verify_adm>
 	<postclone></postclone>
 	<postinstall></postinstall>
+	<uninstall>/usr/lib/brand/lx/lx_uninstall %z %R</uninstall>
 	<prestatechange>/usr/lib/brand/lx/prestate %z %R</prestatechange>
 	<poststatechange>/usr/lib/brand/lx/poststate %z %R</poststatechange>
 

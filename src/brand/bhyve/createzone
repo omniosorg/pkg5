@@ -39,8 +39,7 @@ if [ -z "$ZONEPATH" -o -z "$ZONENAME" ]; then
 fi
 
 ZONEROOT=$ZONEPATH/root
-# Populates ZONEPATH_DS
-get_zonepath_ds $ZONEPATH
+ZONEPATH_DS=`zonepath_to_ds_chk $ZONEPATH`
 
 # Populate initial structure
 (
