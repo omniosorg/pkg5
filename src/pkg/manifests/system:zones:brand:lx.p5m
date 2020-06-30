@@ -29,10 +29,12 @@ dir  path=usr/lib/brand
 dir  path=usr/lib/brand/lx owner=root group=bin mode=0755 \
     variant.opensolaris.zone=global
 file path=usr/lib/brand/lx/config.xml mode=0444 variant.opensolaris.zone=global
+file path=usr/lib/brand/lx/lx_install mode=0555 variant.opensolaris.zone=global
+file path=usr/lib/brand/lx/lx_uninstall mode=0555 variant.opensolaris.zone=global
 file path=usr/lib/brand/lx/platform.xml mode=0444 \
     variant.opensolaris.zone=global
-file path=usr/lib/brand/lx/poststate mode=0755 variant.opensolaris.zone=global
-file path=usr/lib/brand/lx/prestate mode=0755 variant.opensolaris.zone=global
+file path=usr/lib/brand/lx/poststate mode=0555 variant.opensolaris.zone=global
+file path=usr/lib/brand/lx/prestate mode=0555 variant.opensolaris.zone=global
 license lic_CDDL license=lic_CDDL
 depend type=require fmri=system/zones
 depend type=require fmri=system/zones/brand/ipkg

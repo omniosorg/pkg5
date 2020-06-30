@@ -13,7 +13,7 @@
 #
 
 BRAND = kvm
-FILES = config.xml init platform.xml support
+FILES = config.xml init platform.xml support uninstall
 
 BRANDDIR = $(ROOTBRAND)/$(BRAND)
 BRANDFILES = $(FILES:%=$(BRANDDIR)/%)

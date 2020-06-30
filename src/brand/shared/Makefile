@@ -13,7 +13,8 @@
 #
 
 BRAND = shared
-FILES = firewall.ksh log.ksh state.ksh vnic.ksh
+SFILES = firewall image log util vars vnic
+FILES = $(SFILES:%=%.ksh)
 
 BRANDDIR = $(ROOTBRAND)/$(BRAND)
 BRANDFILES = $(FILES:%=$(BRANDDIR)/%)

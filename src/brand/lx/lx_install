@@ -49,7 +49,16 @@ shift OPTIND-1
 [ -n "$ZONEPATH" ] || usage 'No zone path supplied.'
 [ -n "$SEEDSRC" ] || usage 'The installation source must be specified.'
 
-seed_zone "$ZONENAME" "$ZONEPATH" "$SEEDSRC"
+seed_zone --norootds "$ZONENAME" "$ZONEPATH" "$SEEDSRC"
+
+# Set explicit permissions on the zone root
+chmod 0755 "$ZONEPATH/root"
+chgrp sys "$ZONEPATH/root"
+
+# One Joyent-ism we need to clean up.
+rmdir $ZONEPATH/cores
+# And one we should probably adopt.
+ds=`zonepath_to_ds $ZONEPATH`
+[ -n "$ds" ] && zfs set devices=off "$ds"
 
 exit $ZONE_SUBPROC_OK
-

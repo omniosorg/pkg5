@@ -40,7 +40,7 @@
 	<attach />
 	<detach />
 	<clone />
-	<uninstall />
+	<uninstall>/usr/lib/brand/bhyve/uninstall %z %R</uninstall>
 	<prestatechange>/usr/lib/brand/bhyve/support prestate %z %R</prestatechange>
 	<poststatechange>/usr/lib/brand/bhyve/support poststate %z %R</poststatechange>
 	<query />

@@ -14,9 +14,16 @@
 [ -n "$_ZONE_LIB_LOG" ] && return
 _ZONE_LIB_LOG=1
 
+. /usr/lib/brand/shared/vars.ksh
+
 function setuplog {
 	[ -n "$LOGFILE" ] && return
-	LOGFILE="$ZONEPATH/${ZONEPATH:+root/}tmp/zone.log"
+	if [ -n "$ZONEPATH" ]; then
+		mkdir -p "$ZONEPATH/log"
+		LOGFILE="$ZONEPATH/log/zone.log"
+	else
+		LOGFILE="/tmp/zone.log"
+	fi
 	touch "$LOGFILE"
 	chown root:root "$LOGFILE"
 	chmod 600 "$LOGFILE"
@@ -38,10 +45,14 @@ function log {
         printf "[`date`] $fmt\n" "$@" >&2
 }
 
+function elog {
+	OPT_V=1 log "$@"
+}
+
 function error {
         typeset fmt="$1"; shift
 
-	log "ERROR: $fmt" "$@"
+	OPT_V=1 log "ERROR: $fmt" "$@" >> /dev/stderr
 }
 
 function fatal {
