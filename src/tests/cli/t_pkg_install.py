@@ -23,6 +23,7 @@
 
 #
 # Copyright (c) 2008, 2018, Oracle and/or its affiliates. All rights reserved.
+# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 #
 
 from . import testutils
@@ -6741,7 +6742,6 @@ adm:NP:6445::::::
                 self.assertTrue(not os.path.exists(pi2), "pkginfo.2 exists")
                 self.assertTrue(not os.path.exists(pi3), "pkginfo.3 exists")
 
-
 class TestDependencies(pkg5unittest.SingleDepotTestCase):
         # Only start/stop the depot once (instead of for every test)
         persistent_setup = True
@@ -6847,6 +6847,12 @@ class TestDependencies(pkg5unittest.SingleDepotTestCase):
         pkg70 = """
             open pkg7@1.0,5.11-0
             add depend type=conditional predicate=pkg:/pkg2@1.1 fmri=pkg:/pkg6@1.1
+            close
+        """
+
+        pkg71 = """
+            open pkg7@1.1,5.11-0
+            add depend type=conditional predicate=pkg:/pkg2@1.1 fmri=pkg:/nonsuch
             close
         """
 
@@ -7181,7 +7187,8 @@ class TestDependencies(pkg5unittest.SingleDepotTestCase):
                 self.pkgsend_bulk(self.rurl, (self.pkg10, self.pkg20,
                     self.pkg11, self.pkg21, self.pkg30, self.pkg40, self.pkg50,
                     self.pkg505, self.pkg51, self.pkg60, self.pkg61,
-                    self.bug_18653, self.pkg70, self.pkg80, self.pkg81,
+                    self.bug_18653,
+                    self.pkg70, self.pkg71, self.pkg80, self.pkg81,
                     self.pkg90, self.pkg91, self.bug_7394_incorp, self.pkg100,
                     self.pkg101, self.pkg102, self.pkg110, self.pkg111,
                     self.pkg121, self.pkg122, self.pkg123, self.pkg132,
@@ -7516,6 +7523,69 @@ class TestDependencies(pkg5unittest.SingleDepotTestCase):
                 # a conditional for a consequent that cannot be installed can be
                 # removed.
                 self.pkg("uninstall -v entire")
+
+        def test_cond_depend_nonexist(self):
+
+                # pkg7@1.0 has conditional - install pkg6@1.1 if pkg2@1.1
+                # pkg7@1.1 has conditional on non-existent package if pkg2@1.1
+
+                self.image_create(self.rurl)
+
+                # installing pkg7@1.1 should work since the conditional
+                # requirement is predicated on pkg2, which is not installed
+                self.pkg('install pkg7@1.1')
+                self.pkg("uninstall '*'")
+
+                self.pkg("install pkg7@1.0 pkg2@1.0")
+                self.pkg("verify")
+                self.pkg("list pkg7@1.0 pkg2@1.0")
+                # pkg6 should not be installed
+                self.pkg("list pkg6", exit=1)
+
+                # upgrading to pkg7@1.1 should work fine since the non-existent
+                # package is only required if pkg2 is at 1.1 or above
+                self.pkg("update pkg7@1.1")
+                self.pkg("verify")
+                self.pkg("list pkg7@1.1")
+
+                # Installing pkg2@1.1 should fail as the conditionally required
+                # package does not exist
+                self.pkg("install pkg2@1.1", exit=1, assert_solution=False)
+
+        def test_cond_depend_uninstall(self):
+
+                # pkg7@1.0 has conditional - install pkg6@1.1 if pkg2@1.1
+
+                self.image_create(self.rurl)
+                self.pkg("install pkg7@1.0 pkg2@1.1")
+                self.pkg("list pkg6@1.1 pkg2@1.1 pkg7@1.0")
+                self.pkg("verify")
+
+                # It should not be possible to uninstall pkg6@1.1
+                self.pkg("uninstall pkg6@1.1", exit=1)
+
+                # Uninstall pkg2 and then pkg6 should become uninstallable
+                self.pkg("uninstall pkg2")
+                self.pkg("uninstall pkg6")
+
+                # Install pkg2 again (which will trigger pkg6)
+                self.pkg("install pkg2@1.1")
+                self.pkg("list pkg6@1.1 pkg2@1.1 pkg7@1.0")
+
+                # uninstall both together
+                self.pkg("uninstall pkg2 pkg6")
+
+                # Try unversioned pkg2
+                self.pkg("install -v pkg2")
+                self.pkg("list pkg6@1.1 pkg2@1.1 pkg7@1.0")
+
+                # Downgrade pkg2 and pkg6 should become uninstallable
+                self.pkg("update pkg2@1.0")
+                self.pkg("uninstall pkg6")
+
+                # Upgrade pkg2 again and pkg6 should be re-installed
+                self.pkg("update pkg2")
+                self.pkg("list pkg6@1.1 pkg2@1.1 pkg7@1.0")
 
         def test_conditional_dependencies_exact_install(self):
                 """Get conditional dependencies working."""
