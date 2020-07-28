@@ -2219,11 +2219,31 @@ class PkgSolver(object):
                             dependency_action.attrs["predicate"])
                         conditional, nonmatching = self.__comb_newer_fmris(
                             cond_fmri, dotrim, obsolete_ok=obsolete_ok)
+
                         # Required is only really helpful for solver error
                         # messaging.  The only time we know that this dependency
                         # is required is when the predicate package must be part
                         # of the solution.
                         if cond_fmri.pkg_name not in self.__req_pkg_names:
+                                required = False
+
+                        proposed = (
+                            proposed_dict[cond_fmri.pkg_name]
+                            if proposed_dict and
+                            cond_fmri.pkg_name in proposed_dict
+                            else []
+                        )
+
+                        # If the predicate is not installed and not in the
+                        # proposed set, then the dependant package is not
+                        # required.
+                        installed = False
+                        for f in conditional:
+                                if (f in proposed or
+                                    f in self.__installed_fmris -
+                                    self.__removal_fmris):
+                                        installed = True
+                        if not installed:
                                 required = False
 
                         matching, nonmatching = \
