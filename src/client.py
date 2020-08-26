@@ -3517,7 +3517,7 @@ def display_contents_results(actionlist, attrs, sort_attrs, display_headers):
                                 except (ValueError, TypeError):
                                         return 0
                 else:
-                        key_extract = lambda x: x[sortidx]
+                        key_extract = lambda x: str(x[sortidx])
                 line_gen = sorted(lines, key=key_extract)
         else:
                 line_gen = lines
