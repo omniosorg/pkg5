@@ -4,12 +4,12 @@
 The pkg5 components have been updated to the latest upstream solaris-ips
 as of:
 
-commit b67dc1b1fe403322dd180b6bca302a16a2aad3d0
-Author: Peter Dennis <peter.dennis@oracle.com>
-Date:   Tue May 5 19:07:57 2020 +0100
+commit cce38af36fad586a4df8e6a70572b3b3cb8c7a62
+Author: Chandana R <chandana.r@oracle.com>
+Date:   Thu Aug 27 01:40:52 2020 -0700
 
-    31244860 pkgsurf should allow not locking the reference repo
-    31288050 drivers aliases without numbers cause pkgfmt to die
+    25476921 TestFactoredManifest.test_get_directories failed in b116 nightly
+
 
 -----------------------------------------------------------------------------
 
