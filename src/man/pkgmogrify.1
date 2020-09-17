@@ -44,11 +44,11 @@ The following options are supported:
 .ne 2
 .mk
 .na
-\fB\fB-?\fR\fR
+\fB-?\fR
 .ad
 .br
 .na
-\fB\fB--help\fR\fR
+\fB--help\fR
 .ad
 .sp .6
 .RS 4n
@@ -59,7 +59,7 @@ Display a usage message.
 .ne 2
 .mk
 .na
-\fB\fB-D\fR \fImacro\fR=\fIvalue\fR\fR
+\fB-D\fR \fImacro\fR=\fIvalue\fR
 .ad
 .sp .6
 .RS 4n
@@ -98,7 +98,7 @@ These macros should be set to the desired value on the command line. There are n
 .ne 2
 .mk
 .na
-\fB\fB-I\fR \fIincludedir\fR\fR
+\fB-I\fR \fIincludedir\fR
 .ad
 .sp .6
 .RS 4n
@@ -109,7 +109,7 @@ Add the specified directory to the search path, both for files specified on the 
 .ne 2
 .mk
 .na
-\fB\fB-O\fR \fIoutputfile\fR\fR
+\fB-O\fR \fIoutputfile\fR
 .ad
 .sp .6
 .RS 4n
@@ -120,7 +120,7 @@ Write manifest output to the specified file. The file is not written if an error
 .ne 2
 .mk
 .na
-\fB\fB-P\fR \fIprintfile\fR\fR
+\fB-P\fR \fIprintfile\fR
 .ad
 .sp .6
 .RS 4n
@@ -131,7 +131,7 @@ Write output resulting from transform directive print operations to the specifie
 .ne 2
 .mk
 .na
-\fB\fB-i\fR\fR
+\fB-i\fR
 .ad
 .sp .6
 .RS 4n
@@ -142,7 +142,7 @@ Ignore include directives in files. Only files specified on the command line (or
 .ne 2
 .mk
 .na
-\fB\fB-v\fR\fR
+\fB-v\fR
 .ad
 .sp .6
 .RS 4n
@@ -202,10 +202,10 @@ The following operations are available:
 .ne 2
 .mk
 .na
-\fB\fBadd\fR\fR
+\fBadd\fR
 .ad
 .RS 11n
-.rt  
+.rt
 Add a value to an attribute. This operation takes two arguments. The first argument is the name of the attribute, and the second is the value.
 .RE
 
@@ -213,10 +213,10 @@ Add a value to an attribute. This operation takes two arguments. The first argum
 .ne 2
 .mk
 .na
-\fB\fBdefault\fR\fR
+\fBdefault\fR
 .ad
 .RS 11n
-.rt  
+.rt
 Set the value of an attribute if it doesn't already exist. This operation takes the same two arguments as the \fBadd\fR operation.
 .RE
 
@@ -224,10 +224,10 @@ Set the value of an attribute if it doesn't already exist. This operation takes 
 .ne 2
 .mk
 .na
-\fB\fBdelete\fR\fR
+\fBdelete\fR
 .ad
 .RS 11n
-.rt  
+.rt
 Remove attribute values. This operation takes two arguments. The first argument is the name of the attribute. The second argument is a regular expression to match the attribute values deleted. Unlike the regular expression used to match an action, this expression is unanchored.
 .RE
 
@@ -235,10 +235,10 @@ Remove attribute values. This operation takes two arguments. The first argument 
 .ne 2
 .mk
 .na
-\fB\fBdrop\fR\fR
+\fBdrop\fR
 .ad
 .RS 11n
-.rt  
+.rt
 Discards this action.
 .RE
 
@@ -246,10 +246,10 @@ Discards this action.
 .ne 2
 .mk
 .na
-\fB\fBedit\fR\fR
+\fBedit\fR
 .ad
 .RS 11n
-.rt  
+.rt
 Modifies an attribute of the action. This operation takes three arguments. The first argument is the name of the attribute, and the second is a regular expression matching the attribute value. The third argument is the replacement string substituted for the portion of the value matched by the regular expression. Unlike the regular expression used to match an action, this expression is unanchored. Normal regular expression backreferences, of the form \fB\e1\fR, \fB\e2\fR, and so on, are available in the replacement string if groups are defined in the regular expression.
 .RE
 
@@ -257,10 +257,10 @@ Modifies an attribute of the action. This operation takes three arguments. The f
 .ne 2
 .mk
 .na
-\fB\fBemit\fR\fR
+\fBemit\fR
 .ad
 .RS 11n
-.rt  
+.rt
 Emit a line to the manifest output stream. This must be a valid action string, empty (resulting in a blank line), or a comment (a \fB#\fR followed by arbitrary text).
 .RE
 
@@ -268,10 +268,10 @@ Emit a line to the manifest output stream. This must be a valid action string, e
 .ne 2
 .mk
 .na
-\fB\fBexit\fR\fR
+\fBexit\fR
 .ad
 .RS 11n
-.rt  
+.rt
 Terminate manifest processing. No manifest is output and no \fBprint\fR operations are applied. If one argument is given, it must be an integer, and it is used as the exit code. The default is 0. If two arguments are given, the first is the exit code, and the second is a message to be printed to \fBstderr\fR.
 .RE
 
@@ -279,10 +279,10 @@ Terminate manifest processing. No manifest is output and no \fBprint\fR operatio
 .ne 2
 .mk
 .na
-\fB\fBprint\fR\fR
+\fBprint\fR
 .ad
 .RS 11n
-.rt  
+.rt
 Print a message to the output file specified with \fB-P\fR.
 .RE
 
@@ -290,10 +290,10 @@ Print a message to the output file specified with \fB-P\fR.
 .ne 2
 .mk
 .na
-\fB\fBset\fR\fR
+\fBset\fR
 .ad
 .RS 11n
-.rt  
+.rt
 Set the value of an attribute. This operation takes the same two arguments as the \fBadd\fR operation.
 .RE
 
@@ -544,10 +544,10 @@ The following exit values are returned:
 .ne 2
 .mk
 .na
-\fB\fB0\fR\fR
+\fB0\fR
 .ad
 .RS 6n
-.rt  
+.rt
 Everything worked.
 .RE
 
@@ -555,10 +555,10 @@ Everything worked.
 .ne 2
 .mk
 .na
-\fB\fB1\fR\fR
+\fB1\fR
 .ad
 .RS 6n
-.rt  
+.rt
 Something bad but anticipated happened.
 .RE
 
@@ -566,10 +566,10 @@ Something bad but anticipated happened.
 .ne 2
 .mk
 .na
-\fB\fB2\fR\fR
+\fB2\fR
 .ad
 .RS 6n
-.rt  
+.rt
 Invalid command line options were specified.
 .RE
 
@@ -577,10 +577,10 @@ Invalid command line options were specified.
 .ne 2
 .mk
 .na
-\fB\fB99\fR\fR
+\fB99\fR
 .ad
 .RS 6n
-.rt  
+.rt
 Unexpected processing error.
 .RE
 
@@ -589,7 +589,7 @@ Unexpected processing error.
 .ne 2
 .mk
 .na
-\fB\fB/usr/share/pkg/transforms\fR\fR
+\fB/usr/share/pkg/transforms\fR
 .ad
 .sp .6
 .RS 4n
@@ -605,8 +605,8 @@ See \fBattributes\fR(5) for descriptions of the following attributes:
 .sp
 .TS
 tab() box;
-cw(2.75i) |cw(2.75i) 
-lw(2.75i) |lw(2.75i) 
+cw(2.75i) |cw(2.75i)
+lw(2.75i) |lw(2.75i)
 .
 ATTRIBUTE TYPEATTRIBUTE VALUE
 _

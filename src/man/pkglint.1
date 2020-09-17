@@ -55,11 +55,11 @@ The following options are supported:
 .ne 2
 .mk
 .na
-\fB\fB-h\fR\fR
+\fB-h\fR
 .ad
 .br
 .na
-\fB\fB--help\fR\fR
+\fB--help\fR
 .ad
 .sp .6
 .RS 4n
@@ -70,7 +70,7 @@ Display a usage message.
 .ne 2
 .mk
 .na
-\fB\fB-b\fR \fIbuild_no\fR\fR
+\fB-b\fR \fIbuild_no\fR
 .ad
 .sp .6
 .RS 4n
@@ -81,7 +81,7 @@ Specify a build number used to narrow the list of packages used during linting f
 .ne 2
 .mk
 .na
-\fB\fB-c\fR \fIcache_dir\fR\fR
+\fB-c\fR \fIcache_dir\fR
 .ad
 .sp .6
 .RS 4n
@@ -92,7 +92,7 @@ Specify a local directory used for caching package metadata from the lint and re
 .ne 2
 .mk
 .na
-\fB\fB-l\fR \fIlint_uri\fR\fR
+\fB-l\fR \fIlint_uri\fR
 .ad
 .sp .6
 .RS 4n
@@ -103,7 +103,7 @@ Specify a URI representing the location of the lint repository. Both HTTP and fi
 .ne 2
 .mk
 .na
-\fB\fB-L\fR\fR
+\fB-L\fR
 .ad
 .sp .6
 .RS 4n
@@ -126,7 +126,7 @@ extensions.
 .ne 2
 .mk
 .na
-\fB\fB-f\fR \fIconfig_file\fR\fR
+\fB-f\fR \fIconfig_file\fR
 .ad
 .sp .6
 .RS 4n
@@ -137,7 +137,7 @@ Configure the \fBpkglint\fR session using the \fIconfig_file\fR configuration fi
 .ne 2
 .mk
 .na
-\fB\fB-p\fR \fIregexp\fR\fR
+\fB-p\fR \fIregexp\fR
 .ad
 .sp .6
 .RS 4n
@@ -148,7 +148,7 @@ Specify a regular expression used to narrow the list of packages to be checked f
 .ne 2
 .mk
 .na
-\fB\fB-r\fR \fIrepo_uri\fR\fR
+\fB-r\fR \fIrepo_uri\fR
 .ad
 .sp .6
 .RS 4n
@@ -159,7 +159,7 @@ Specify a URI representing the location of the reference repository. If you spec
 .ne 2
 .mk
 .na
-\fB\fB-v\fR\fR
+\fB-v\fR
 .ad
 .sp .6
 .RS 4n
@@ -174,7 +174,7 @@ The \fBpkglintrc\fR configuration file takes the following key/value arguments:
 .ne 2
 .mk
 .na
-\fB\fBlog_level\fR\fR
+\fBlog_level\fR
 .ad
 .sp .6
 .RS 4n
@@ -187,7 +187,7 @@ Log levels in order of least to most severe are \fBDEBUG\fR, \fBINFO\fR, \fBWARN
 .ne 2
 .mk
 .na
-\fB\fBdo_pub_checks\fR\fR
+\fBdo_pub_checks\fR
 .ad
 .sp .6
 .RS 4n
@@ -224,7 +224,7 @@ the search order than this configuration file option.
 .ne 2
 .mk
 .na
-\fB\fBpkglint.exclude\fR\fR
+\fBpkglint.exclude\fR
 .ad
 .sp .6
 .RS 4n
@@ -235,7 +235,7 @@ A space-separated list of fully specified Python modules, classes, or function n
 .ne 2
 .mk
 .na
-\fB\fBuse_progress_tracker\fR\fR
+\fBuse_progress_tracker\fR
 .ad
 .sp .6
 .RS 4n
@@ -246,7 +246,7 @@ If \fBTrue\fR, use a progress tracker when iterating over manifests during lint 
 .ne 2
 .mk
 .na
-\fB\fBversion.pattern\fR\fR
+\fBversion.pattern\fR
 .ad
 .sp .6
 .RS 4n
@@ -354,10 +354,10 @@ The following exit values are returned:
 .ne 2
 .mk
 .na
-\fB\fB0\fR\fR
+\fB0\fR
 .ad
 .RS 6n
-.rt  
+.rt
 Command succeeded.
 .RE
 
@@ -365,10 +365,10 @@ Command succeeded.
 .ne 2
 .mk
 .na
-\fB\fB1\fR\fR
+\fB1\fR
 .ad
 .RS 6n
-.rt  
+.rt
 One or more package manifests contain lint errors.
 .RE
 
@@ -376,10 +376,10 @@ One or more package manifests contain lint errors.
 .ne 2
 .mk
 .na
-\fB\fB2\fR\fR
+\fB2\fR
 .ad
 .RS 6n
-.rt  
+.rt
 An error occurred that is not a lint error in a manifest. For example, an invalid command line option might have been specified.
 .RE
 
@@ -387,10 +387,10 @@ An error occurred that is not a lint error in a manifest. For example, an invali
 .ne 2
 .mk
 .na
-\fB\fB99\fR\fR
+\fB99\fR
 .ad
 .RS 6n
-.rt  
+.rt
 An unanticipated exception occurred.
 .RE
 
@@ -403,8 +403,8 @@ See \fBattributes\fR(5) for descriptions of the following attributes:
 .sp
 .TS
 tab() box;
-cw(2.75i) |cw(2.75i) 
-lw(2.75i) |lw(2.75i) 
+cw(2.75i) |cw(2.75i)
+lw(2.75i) |lw(2.75i)
 .
 ATTRIBUTE TYPEATTRIBUTE VALUE
 _

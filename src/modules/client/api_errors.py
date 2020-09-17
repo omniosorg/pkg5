@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2020, Oracle and/or its affiliates.
 # Copyright 2017 OmniOS Community Edition (OmniOSce) Association.
 #
 
@@ -2323,8 +2323,12 @@ class UntrustedSelfSignedCert(CertificateException):
         self-signed certificate."""
 
         def __str__(self):
-                return _("Chain was rooted in an untrusted self-signed "
-                    "certificate.\n") + CertificateException.__str__(self)
+                return _("The signing certificate chain is rooted in a " + \
+                    "certificate not present in the trust-anchor-directory.\n" + \
+                    "See the image properties section of pkg(1).\n") + \
+                    "Certificate  Subject:" + \
+                    self.cert.subject.rfc4514_string() + "\n" + \
+                    CertificateException.__str__(self)
 
 
 class BrokenChain(CertificateException):
@@ -2951,6 +2955,8 @@ class LinkedImageException(ApiException):
             self_not_child=None,
             unparsable_output=None):
 
+                from pkg.misc import force_str
+
                 self.attach_bad_prop = attach_bad_prop
                 self.attach_bad_prop_value = attach_bad_prop_value
                 self.attach_child_notsup = attach_child_notsup
@@ -3110,7 +3116,7 @@ class LinkedImageException(ApiException):
                         if errout:
                                 err += _("\nAnd generated the following error "
                                     "message:\n{errout}".format(
-                                    errout=errout.decode()))
+                                    errout=force_str(errout)))
 
                 if cmd_output_invalid is not None:
                         (cmd, output) = cmd_output_invalid
@@ -3207,7 +3213,7 @@ return value of {exitrv:d} and generated the following output:
                                     lin=lin,
                                     op=op,
                                     exitrv=exitrv,
-                                    errout=errout.decode(),
+                                    errout=force_str(errout),
                                )
                         else:
                                 err = _("""
@@ -3222,7 +3228,7 @@ The child generated the following output:
                                 ).format(
                                     lin=lin,
                                     op=op,
-                                    errout=errout.decode(),
+                                    errout=force_str(errout),
                                     e=e,
                                )
 
@@ -3251,7 +3257,7 @@ The child generated the following output:
                                     lin=lin,
                                     op=op,
                                     e=e,
-                                    errout=errout.decode(),
+                                    errout=force_str(errout),
                                )
 
                 # set default error return value

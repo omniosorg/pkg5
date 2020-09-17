@@ -560,7 +560,8 @@ def list_inventory(op, api_inst, pargs,
             [("frozen", "f")],
             [
                 ("obsolete", "o"),
-                ("renamed", "r")
+                ("renamed", "r"),
+                ("legacy", "l")
             ],
         ]
 
@@ -4207,7 +4208,7 @@ def publisher_list(op, api_inst, pargs, omit_headers, preferred_only,
                         msg(_("      Catalog Updated:"),
                             pub["Catalog Updated"])
                         display_signing_certs(pub)
-                        msg(_("              Enabled:"),
+                        msg(_("    Publisher enabled:"),
                             _(pub["enabled"]))
 
                         if "Properties" not in pub:

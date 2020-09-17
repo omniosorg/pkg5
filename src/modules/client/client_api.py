@@ -679,6 +679,7 @@ def _list_inventory(op, api_inst, pargs,
             [(api.PackageInfo.FROZEN, "frozen")],
             [
                 (api.PackageInfo.OBSOLETE, "obsolete"),
+                (api.PackageInfo.LEGACY, "legacy"),
                 (api.PackageInfo.RENAMED, "renamed")
             ],
         ]
@@ -2350,6 +2351,9 @@ def _info(op, api_inst, pargs, display_license, info_local, info_remote,
                         lparen = True
                 elif api.PackageInfo.RENAMED in pi.states:
                         state += " ({0}".format(_("Renamed"))
+                        lparen = True
+                elif api.PackageInfo.LEGACY in pi.states:
+                        state += " ({0}".format(_("Legacy"))
                         lparen = True
                 if api.PackageInfo.FROZEN in pi.states:
                         if lparen:

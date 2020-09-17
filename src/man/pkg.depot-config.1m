@@ -80,7 +80,7 @@ The following options are supported:
 .ne 2
 .mk
 .na
-\fB\fB-d\fR \fIprefix\fR=\fIrepository_dir\fR\fR
+\fB-d\fR \fIprefix\fR=\fIrepository_dir\fR
 .ad
 .sp .6
 .RS 4n
@@ -91,7 +91,7 @@ Specify the path to a \fBpkg\fR(5) file repository to use. The \fIprefix\fR is u
 .ne 2
 .mk
 .na
-\fB\fB-S\fR\fR
+\fB-S\fR
 .ad
 .sp .6
 .RS 4n
@@ -102,7 +102,7 @@ Query the system for repositories to use. The \fB-S\fR option causes \fBpkg.depo
 .ne 2
 .mk
 .na
-\fB\fB-r\fR \fIruntime_dir\fR\fR
+\fB-r\fR \fIruntime_dir\fR
 .ad
 .sp .6
 .RS 4n
@@ -113,7 +113,7 @@ Specify the default output directory for configuration files. This directory can
 .ne 2
 .mk
 .na
-\fB\fB-c\fR \fIcache_dir\fR\fR
+\fB-c\fR \fIcache_dir\fR
 .ad
 .sp .6
 .RS 4n
@@ -124,7 +124,7 @@ Specify the directory where the depot stores its cache. If the \fB-A\fR option i
 .ne 2
 .mk
 .na
-\fB\fB-s\fR \fIcache_size\fR\fR
+\fB-s\fR \fIcache_size\fR
 .ad
 .sp .6
 .RS 4n
@@ -135,7 +135,7 @@ Specify the maximum cache size for the depot. The \fIcache_size\fR value is an i
 .ne 2
 .mk
 .na
-\fB\fB-p\fR \fIport\fR\fR
+\fB-p\fR \fIport\fR
 .ad
 .sp .6
 .RS 4n
@@ -146,7 +146,7 @@ Specify the port number that the depot will listen to. The default value of \fIp
 .ne 2
 .mk
 .na
-\fB\fB-h\fR \fIhostname\fR\fR
+\fB-h\fR \fIhostname\fR
 .ad
 .sp .6
 .RS 4n
@@ -157,7 +157,7 @@ Specify the host name to use as the argument to the Apache \fBServerName\fR dire
 .ne 2
 .mk
 .na
-\fB\fB-l\fR \fIlogs_dir\fR\fR
+\fB-l\fR \fIlogs_dir\fR
 .ad
 .sp .6
 .RS 4n
@@ -168,7 +168,7 @@ Specify the directory where the depot stores log files. The default value of \fI
 .ne 2
 .mk
 .na
-\fB\fB-T\fR \fItemplate_dir\fR\fR
+\fB-T\fR \fItemplate_dir\fR
 .ad
 .sp .6
 .RS 4n
@@ -190,7 +190,7 @@ Refresh any search indices maintained by the depot when \fBpkgrepo refresh\fR is
 .ne 2
 .mk
 .na
-\fB\fB-t\fR \fIserver_type\fR\fR
+\fB-t\fR \fIserver_type\fR
 .ad
 .sp .6
 .RS 4n
@@ -212,7 +212,7 @@ Produce a partial configuration that enables a web server to serve basic \fBpkg\
 .ne 2
 .mk
 .na
-\fB\fB-P\fR \fIserver_prefix\fR\fR
+\fB-P\fR \fIserver_prefix\fR
 .ad
 .sp .6
 .RS 4n
@@ -234,7 +234,7 @@ Enable the HTTPS service. This option cannot be used with the \fB-F\fR or \fB-P\
 .ne 2
 .mk
 .na
-\fB\fB--cert\fR \fIserver_cert_file\fR\fR
+\fB--cert\fR \fIserver_cert_file\fR
 .ad
 .sp .6
 .RS 4n
@@ -245,7 +245,7 @@ Specify the location of the server certificate file. This option can only be use
 .ne 2
 .mk
 .na
-\fB\fB--key\fR \fIserver_key_file\fR\fR
+\fB--key\fR \fIserver_key_file\fR
 .ad
 .sp .6
 .RS 4n
@@ -256,7 +256,7 @@ Specify the location of the server key file. This option can only be used with t
 .ne 2
 .mk
 .na
-\fB\fB--cert-key-dir\fR \fIcert_key_directory\fR\fR
+\fB--cert-key-dir\fR \fIcert_key_directory\fR
 .ad
 .sp .6
 .RS 4n
@@ -267,7 +267,7 @@ Specify the directory where the automatically generated certificates and keys sh
 .ne 2
 .mk
 .na
-\fB\fB--ca-cert\fR \fIssl_ca_cert_file\fR\fR
+\fB--ca-cert\fR \fIssl_ca_cert_file\fR
 .ad
 .sp .6
 .RS 4n
@@ -278,7 +278,7 @@ Specify the location of the top CA certificate file. This option can only be use
 .ne 2
 .mk
 .na
-\fB\fB--ca-key\fR \fIssl_ca_key_file\fR\fR
+\fB--ca-key\fR \fIssl_ca_key_file\fR
 .ad
 .sp .6
 .RS 4n
@@ -289,7 +289,7 @@ Specify the location of the top CA key file. This option can only be used with t
 .ne 2
 .mk
 .na
-\fB\fB--cert-chain\fR \fIssl_cert_chain_file\fR\fR
+\fB--cert-chain\fR \fIssl_cert_chain_file\fR
 .ad
 .sp .6
 .RS 4n
@@ -300,7 +300,7 @@ This option can only be used with the \fB--https\fR option. This option is requi
 .ne 2
 .mk
 .na
-\fB\fB--smf-fmri\fR \fIsmf_pkg_depot_fmri\fR\fR
+\fB--smf-fmri\fR \fIsmf_pkg_depot_fmri\fR
 .ad
 .sp .6
 .RS 4n
@@ -378,10 +378,10 @@ The following exit values are returned:
 .ne 2
 .mk
 .na
-\fB\fB0\fR\fR
+\fB0\fR
 .ad
 .RS 13n
-.rt  
+.rt
 Command succeeded.
 .RE
 
@@ -389,10 +389,10 @@ Command succeeded.
 .ne 2
 .mk
 .na
-\fB\fB1\fR\fR
+\fB1\fR
 .ad
 .RS 13n
-.rt  
+.rt
 Command failed.
 .RE
 
@@ -400,10 +400,10 @@ Command failed.
 .ne 2
 .mk
 .na
-\fB\fB2\fR\fR
+\fB2\fR
 .ad
 .RS 13n
-.rt  
+.rt
 Invalid command line options were specified.
 .RE
 
@@ -416,8 +416,8 @@ See \fBattributes\fR(5) for descriptions of the following attributes:
 .sp
 .TS
 tab() box;
-cw(2.75i) |cw(2.75i) 
-lw(2.75i) |lw(2.75i) 
+cw(2.75i) |cw(2.75i)
+lw(2.75i) |lw(2.75i)
 .
 ATTRIBUTE TYPEATTRIBUTE VALUE
 _

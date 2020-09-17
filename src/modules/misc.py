@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2007, 2017, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2020, Oracle and/or its affiliates.
 # Copyright 2014, OmniTI Computer Consulting, Inc. All rights reserved.
 # Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 
@@ -58,6 +58,7 @@ import zlib
 from binascii import hexlify, unhexlify
 from collections import defaultdict
 from io import BytesIO
+from io import StringIO
 from operator import itemgetter
 
 from stat import S_IFMT, S_IMODE, S_IRGRP, S_IROTH, S_IRUSR, S_IRWXU, \
@@ -212,7 +213,8 @@ def copytree(src, dst):
                 elif S_IFMT(s.st_mode) == 0xe000: # event ports
                         pass
                 else:
-                        print("unknown file type:", oct(S_IFMT(s.st_mode)))
+                        print("unknown file type:{:04o}".format(
+                            S_IFMT(s.st_mode)))
 
         os.chmod(dst, S_IMODE(src_stat.st_mode))
         os.chown(dst, src_stat.st_uid, src_stat.st_gid)
@@ -425,6 +427,12 @@ def gunzip_from_stream(gz, outfile, hash_func=None, hash_funcs=None,
                 shasum = hash_func()
         dcobj = zlib.decompressobj(-zlib.MAX_WBITS)
 
+        def writeout(buf):
+               if isinstance(outfile, StringIO):
+                     outfile.write(ubuf.decode())
+               else:
+                     outfile.write(ubuf)
+
         while True:
                 buf = gz.read(64 * 1024)
                 if buf == b"":
@@ -436,7 +444,7 @@ def gunzip_from_stream(gz, outfile, hash_func=None, hash_funcs=None,
                                         sha.update(ubuf)
                         else:
                                 shasum.update(ubuf) # pylint: disable=E1101
-                        outfile.write(ubuf)
+                        writeout(ubuf)
                         break
                 ubuf = dcobj.decompress(buf)
                 if ignore_hash:
@@ -446,7 +454,7 @@ def gunzip_from_stream(gz, outfile, hash_func=None, hash_funcs=None,
                                 sha.update(ubuf)
                 else:
                         shasum.update(ubuf) # pylint: disable=E1101
-                outfile.write(ubuf)
+                writeout(ubuf)
 
         if ignore_hash:
                 return
@@ -2986,8 +2994,9 @@ else:
         force_str = force_bytes
 
 def open_image_file(root, path, flag, mode=None):
-        """Safely open files that ensures that the path we'are accessing resides
-        within a specified image root.
+        """Open 'path' ensuring that we don't follow a symlink which may lead
+        outside of the specified image.
+        When it is a symlink open path relative to root.
 
         'root' is a directory that the path must reside in.
         """

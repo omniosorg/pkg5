@@ -22,7 +22,7 @@
 #
 
 #
-# Copyright (c) 2008, 2018, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2020, Oracle and/or its affiliates.
 # Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 #
 
@@ -11597,7 +11597,7 @@ adm
                 # ugly, too, but we do need to make sure that the two problems
                 # become one.
                 self.pkg("verify", exit=1)
-                verify_type_re = "File Type: '(.*?)' should be '(.*?)'"
+                verify_type_re = "file type: '(.*?)' should be '(.*?)'"
                 matches = re.findall(verify_type_re, self.output)
                 # We make sure that what got reported is correct -- two actions
                 # of different types in conflict with whatever actually got laid

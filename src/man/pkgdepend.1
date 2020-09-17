@@ -42,7 +42,7 @@ Several components of delivered files are used as sources of dependency informat
 \fBELF\fR
 .ad
 .RS 14n
-.rt  
+.rt
 ELF headers in delivered files are analyzed for dependency information, with the \fB-k\fR and \fB-D\fR options modifying the information obtained. For more details on ELF dependencies, see \fBldd\fR and the \fILinker and Libraries Guide\fR.
 .RE
 
@@ -53,7 +53,7 @@ ELF headers in delivered files are analyzed for dependency information, with the
 \fBScripts\fR
 .ad
 .RS 14n
-.rt  
+.rt
 Shell scripts that contain \fB#!\fR lines referencing an interpreter result in a dependency on the package that delivers that interpreter.
 .RE
 
@@ -64,7 +64,7 @@ Shell scripts that contain \fB#!\fR lines referencing an interpreter result in a
 \fBPython\fR
 .ad
 .RS 14n
-.rt  
+.rt
 Python scripts are first analyzed as scripts. In addition, any imports the script declares might also serve as sources of dependency information.
 .RE
 
@@ -75,7 +75,7 @@ Python scripts are first analyzed as scripts. In addition, any imports the scrip
 \fBHard links\fR
 .ad
 .RS 14n
-.rt  
+.rt
 Hard links in manifests result in a dependency on the package that delivers the link target.
 .RE
 
@@ -86,7 +86,7 @@ Hard links in manifests result in a dependency on the package that delivers the 
 \fBSMF\fR
 .ad
 .RS 14n
-.rt  
+.rt
 Delivered SMF service manifests that include \fBrequire_all\fR dependencies result in dependencies on the packages that deliver the SMF manifests that provide those FMRIs.
 .RE
 
@@ -98,11 +98,11 @@ The following options are supported:
 .ne 2
 .mk
 .na
-\fB\fB-?\fR\fR
+\fB-?\fR
 .ad
 .br
 .na
-\fB\fB--help\fR\fR
+\fB--help\fR
 .ad
 .sp .6
 .RS 4n
@@ -113,7 +113,7 @@ Display a usage message.
 .ne 2
 .mk
 .na
-\fB\fB-R\fR \fIdir\fR\fR
+\fB-R\fR \fIdir\fR
 .ad
 .sp .6
 .RS 4n
@@ -128,7 +128,7 @@ The following subcommands are supported:
 .ne 2
 .mk
 .na
-\fB\fBpkgdepend generate\fR [\fB-IMm\fR] \fB-d\fR \fIdir\fR [\fB-d\fR \fIdir\fR] [\fB-D\fR \fIname\fR=\fIvalue\fR] [\fB-k\fR \fIpath\fR] \fImanifest_file\fR\fR
+\fBpkgdepend generate\fR [\fB-IMm\fR] \fB-d\fR \fIdir\fR [\fB-d\fR \fIdir\fR] [\fB-D\fR \fIname\fR=\fIvalue\fR] [\fB-k\fR \fIpath\fR] \fImanifest_file\fR
 .ad
 .sp .6
 .RS 4n
@@ -137,7 +137,7 @@ Produce the dependencies on files of the manifest specified by \fImanifest_file\
 .ne 2
 .mk
 .na
-\fB\fB-I\fR\fR
+\fB-I\fR
 .ad
 .sp .6
 .RS 4n
@@ -148,7 +148,7 @@ Show the dependencies that are satisfied within \fImanifest_file\fR. Do not use 
 .ne 2
 .mk
 .na
-\fB\fB-M\fR\fR
+\fB-M\fR
 .ad
 .sp .6
 .RS 4n
@@ -159,7 +159,7 @@ Display a list of file types that could not be analyzed.
 .ne 2
 .mk
 .na
-\fB\fB-m\fR\fR
+\fB-m\fR
 .ad
 .sp .6
 .RS 4n
@@ -170,7 +170,7 @@ Repeat the original manifest with any discovered dependencies added after.
 .ne 2
 .mk
 .na
-\fB\fB-d\fR \fIdir\fR\fR
+\fB-d\fR \fIdir\fR
 .ad
 .sp .6
 .RS 4n
@@ -181,7 +181,7 @@ Add \fIdir\fR to a list of directories to search for the manifest's files.
 .ne 2
 .mk
 .na
-\fB\fB-D\fR \fIname\fR=\fIvalue\fR\fR
+\fB-D\fR \fIname\fR=\fIvalue\fR
 .ad
 .sp .6
 .RS 4n
@@ -192,7 +192,7 @@ Add the \fIvalue\fR as a way to expand the token \fIname\fR in run paths for ELF
 .ne 2
 .mk
 .na
-\fB\fB-k\fR \fIpath\fR\fR
+\fB-k\fR \fIpath\fR
 .ad
 .sp .6
 .RS 4n
@@ -231,7 +231,7 @@ Transform dependencies on files into dependencies on the packages that deliver t
 .ne 2
 .mk
 .na
-\fB\fB-e\fR \fIexternal_package_file\fR\fR
+\fB-e\fR \fIexternal_package_file\fR
 .ad
 .sp .6
 .RS 4n
@@ -242,7 +242,7 @@ Only resolve against packages from the system whose names match a pattern in \fI
 .ne 2
 .mk
 .na
-\fB\fB-E\fR\fR
+\fB-E\fR
 .ad
 .sp .6
 .RS 4n
@@ -255,7 +255,7 @@ If \fB-e\fR is not specified, show the external dependencies of the resolved pac
 .ne 2
 .mk
 .na
-\fB\fB-m\fR\fR
+\fB-m\fR
 .ad
 .sp .6
 .RS 4n
@@ -266,7 +266,7 @@ Repeat the manifest, with any dependencies produced by the \fBgenerate\fR step r
 .ne 2
 .mk
 .na
-\fB\fB-o\fR\fR
+\fB-o\fR
 .ad
 .sp .6
 .RS 4n
@@ -277,7 +277,7 @@ Write the results to standard output. This option is intended for human consumpt
 .ne 2
 .mk
 .na
-\fB\fB-d\fR \fIoutput_dir\fR\fR
+\fB-d\fR \fIoutput_dir\fR
 .ad
 .sp .6
 .RS 4n
@@ -288,7 +288,7 @@ Write the resolved dependencies for each manifest provided in a separate file in
 .ne 2
 .mk
 .na
-\fB\fB-s\fR \fIsuffix\fR\fR
+\fB-s\fR \fIsuffix\fR
 .ad
 .sp .6
 .RS 4n
@@ -299,7 +299,7 @@ For each output file, append \fIsuffix\fR to the base name of the file that was 
 .ne 2
 .mk
 .na
-\fB\fB-S\fR\fR
+\fB-S\fR
 .ad
 .sp .6
 .RS 4n
@@ -310,7 +310,7 @@ Only resolve against the manifests given on the command line and not against the
 .ne 2
 .mk
 .na
-\fB\fB-v\fR\fR
+\fB-v\fR
 .ad
 .sp .6
 .RS 4n
@@ -438,10 +438,10 @@ $ \fBpkgdepend generate -d proto manifest.py\fR
 .ne 2
 .mk
 .na
-\fB\fBPKG_IMAGE\fR\fR
+\fBPKG_IMAGE\fR
 .ad
 .RS 13n
-.rt  
+.rt
 Specifies the directory that contains the image to use for package operations. This value is ignored if \fB-R\fR is specified.
 .RE
 
@@ -453,10 +453,10 @@ The following exit values are returned:
 .ne 2
 .mk
 .na
-\fB\fB0\fR\fR
+\fB0\fR
 .ad
 .RS 6n
-.rt  
+.rt
 Everything worked.
 .RE
 
@@ -464,10 +464,10 @@ Everything worked.
 .ne 2
 .mk
 .na
-\fB\fB1\fR\fR
+\fB1\fR
 .ad
 .RS 6n
-.rt  
+.rt
 An error occurred.
 .RE
 
@@ -475,10 +475,10 @@ An error occurred.
 .ne 2
 .mk
 .na
-\fB\fB2\fR\fR
+\fB2\fR
 .ad
 .RS 6n
-.rt  
+.rt
 Invalid command line options were specified.
 .RE
 
@@ -486,10 +486,10 @@ Invalid command line options were specified.
 .ne 2
 .mk
 .na
-\fB\fB99\fR\fR
+\fB99\fR
 .ad
 .RS 6n
-.rt  
+.rt
 An unanticipated exception occurred.
 .RE
 
@@ -502,8 +502,8 @@ See \fBattributes\fR(5) for descriptions of the following attributes:
 .sp
 .TS
 tab() box;
-cw(2.75i) |cw(2.75i) 
-lw(2.75i) |lw(2.75i) 
+cw(2.75i) |cw(2.75i)
+lw(2.75i) |lw(2.75i)
 .
 ATTRIBUTE TYPEATTRIBUTE VALUE
 _
