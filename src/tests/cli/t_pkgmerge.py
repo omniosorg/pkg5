@@ -271,6 +271,22 @@ class TestUtilMerge(pkg5unittest.ManyDepotTestCase):
             close
         """
 
+        depend_reqs_any = """
+            open dependreqany@1.0
+            add dir path=opt/dir/sparc owner=root group=bin mode=755 variant.arch=sparc
+            add depend type=require-any fmri=appdep@1.0 fmri=appdep2@1.0
+            add depend type=require-any fmri=appdep@1.0 fmri=appdep3@1.0
+            close
+        """
+
+        depend_reqx_any = """
+            open dependreqany@1.0
+            add dir path=opt/dir/amd64 owner=root group=bin mode=755 variant.arch=i386
+            add depend type=require-any fmri=appdep@1.0 fmri=appdep2@1.0
+            add depend type=require-any fmri=appdep@1.0 fmri=appdep3@1.0
+            close
+        """
+
         misc_files = [ "tmp/bronzeA1",  "tmp/bronzeA2", "tmp/bronze1",
             "tmp/bronze2", "tmp/copyright2", "tmp/copyright3", "tmp/libc.so.1",
             "tmp/sh", "tmp/scheme", "tmp/sparc-only", "tmp/sparc1", "tmp/sparc2",
@@ -419,10 +435,10 @@ class TestUtilMerge(pkg5unittest.ManyDepotTestCase):
                 # publish the depend packages
                 self.published_deps = self.pkgsend_bulk(self.rurl18,
                     (self.depend_conds, self.depend_same_conds,
-                     self.depend_reqs))
+                     self.depend_reqs, self.depend_reqs_any))
                 self.published_depx = self.pkgsend_bulk(self.rurl19,
                     (self.depend_condx, self.depend_same_condx,
-                     self.depend_reqx))
+                     self.depend_reqx, self.depend_reqx_any))
 
         def test_0_options(self):
                 """Verify that pkgmerge gracefully fails when given bad option
@@ -1421,6 +1437,12 @@ set name=variant.arch value=PPC value=ARM\
                      "-d {0} dependreq".format(repodir)
              ]))
 
+             self.pkgmerge(" ".join([
+                     "-s arch=sparc,{0}".format(self.rurl18),
+                     "-s arch=i386,{0}".format(self.rurl19),
+                     "-d {0} dependreqany".format(repodir)
+             ]))
+
              repo = self.get_repo(repodir)
              cat = repo.get_catalog(pub="os.org")
 
@@ -1447,7 +1469,15 @@ dir group=bin mode=755 owner=root path=opt/dir/amd64 variant.arch=i386
 dir group=bin mode=755 owner=root path=opt/dir/sparc variant.arch=sparc
 set name=pkg.fmri value={0}
 set name=variant.arch value=sparc value=i386\
-""".format(self.published_depx[2]) # pkg://os.org/dependreq@1.0
+""".format(self.published_depx[2]), # pkg://os.org/dependreq@1.0
+                "dependreqany": """\
+depend fmri=appdep@1.0 fmri=appdep2@1.0 type=require-any
+depend fmri=appdep@1.0 fmri=appdep3@1.0 type=require-any
+dir group=bin mode=755 owner=root path=opt/dir/amd64 variant.arch=i386
+dir group=bin mode=755 owner=root path=opt/dir/sparc variant.arch=sparc
+set name=pkg.fmri value={0}
+set name=variant.arch value=sparc value=i386\
+""".format(self.published_depx[3]) # pkg://os.org/dependreqany@1.0
                 }
 
              # Verify the merge has worked and that real
@@ -1459,7 +1489,7 @@ set name=variant.arch value=sparc value=i386\
                      expected = merged_expected[f.pkg_name]
                      self.assertEqualDiff(expected, actual)
              shutil.rmtree(repodir)
-  
+
         def get_manifest(self, repodir, pubs=["os.org"]):
                 repository = self.get_repo(repodir)
                 actual = ""
