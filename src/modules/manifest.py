@@ -22,6 +22,7 @@
 
 #
 # Copyright (c) 2007, 2017, Oracle and/or its affiliates. All rights reserved.
+# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 #
 
 from __future__ import print_function
@@ -311,7 +312,8 @@ class Manifest(object):
                                                 ktype = a.attrs.\
                                                     get("predicate")
                                             key = {"{0}->{1}".format(
-                                                key_val[0], ktype)}
+                                                ','.join(sorted(key_val)),
+                                               ktype)}
                                         else:
                                             key = set(key_val)
 
