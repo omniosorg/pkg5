@@ -41,7 +41,6 @@ p2ving=$(gettext        "Postprocessing: This may take a while...")
 p2v_prog=$(gettext      "   Postprocess: ")
 p2v_done=$(gettext      "        Result: Postprocessing complete.")
 p2v_fail=$(gettext      "        Result: Postprocessing failed.")
-m_postnote3=$(gettext "              Make any other adjustments, such as disabling SMF services\n              that are no longer needed.")
 
 media_missing=\
 $(gettext "%s: you must specify an installation source using '-a' or '-d'.")
@@ -229,8 +228,5 @@ is_brand_labeled
 log ""
 log "$m_complete" ${SECONDS}
 printf "$install_log\n" "$ZONEROOT/var/log/$ZONENAME.install$$.log"
-printf "$m_postnote\n"
-printf "$m_postnote2\n"
-printf "$m_postnote3\n"
 
 exit $ZONE_SUBPROC_OK
