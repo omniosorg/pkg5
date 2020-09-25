@@ -375,8 +375,7 @@ fi
 
 printf "$m_complete\n\n" ${SECONDS}
 if (( $brand_labeled == 0 )); then
-	printf "$m_postnote\n"
-	printf "$m_postnote2\n"
+	:
 else
 	# Umount the dataset on the root.
 	umount $ZONEROOT || printf "$f_zfs_unmount" "$ZONEPATH/root"

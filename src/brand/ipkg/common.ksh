@@ -69,8 +69,6 @@ e_badunmount=$(gettext "Zone unmount failed")
 e_exitfail=$(gettext "Postprocessing failed.")
 
 m_complete=$(gettext    "        Done: Installation completed in %s seconds.")
-m_postnote=$(gettext    "  Next Steps: Boot the zone, then log into the zone console (zlogin -C)")
-m_postnote2=$(gettext "              to complete the configuration process.")
 
 lc_pkg() {
 	[ "$1" = "-v" ] && shift && echo "PKG: $@" 1>&2
