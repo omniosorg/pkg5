@@ -22,6 +22,7 @@
 
 #
 # Copyright (c) 2007, 2017, Oracle and/or its affiliates. All rights reserved.
+# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 #
 
 """Provides the interfaces and exceptions needed to determine which packages
@@ -839,10 +840,8 @@ class PkgSolver(object):
                             "unable to compute solution."))
                         info.append(_("Dependency analysis is unable to "
                             "determine exact cause."))
-                        info.append(_("Try specifying expected results to "
+                        info.append(_("Try running with -vv to "
                             "obtain more detailed error messages."))
-                        info.append(_("Include specific version of packages "
-                            "you wish installed."))
                 exp.no_solution = incs + info
 
                 # Value 'DebugValues' is unsubscriptable;
@@ -1449,7 +1448,7 @@ class PkgSolver(object):
                 else:
                         info.append(_("Dependency analysis is unable to "
                             "determine the cause."))
-                        info.append(_("Try specifying expected versions to "
+                        info.append(_("Try running with -vv to "
                             "obtain more detailed error messages."))
 
                 self.__raise_solution_error(no_solution=info)
