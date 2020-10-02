@@ -75,6 +75,14 @@ aliases = {
         'on':   'unix=/tmp/vm.vnc',
         'wait': 'wait,unix=/tmp/vm.vnc',
     },
+    'bootrom': {
+        # These old firmware files were present before r151035. Provide aliases
+        # for backwards compatibility.
+        'BHYVE_DEBUG-2.70':         'BHYVE_DEBUG',
+        'BHYVE_DEBUG_CSM-2.40':     'BHYVE_DEBUG_CSM',
+        'BHYVE_RELEASE-2.70':       'BHYVE_RELEASE',
+        'BHYVE_RELEASE_CSM-2.40':   'BHYVE_RELEASE_CSM',
+    }
 }
 
 HOSTBRIDGE_SLOT = 0
