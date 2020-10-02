@@ -467,6 +467,15 @@ class NoTestImageUpdate(pkg5unittest.ManyDepotTestCase):
                 # of osnet-incorporation is not possible.
                 self.pkg("update -nv osnet-incorporation", exit=4)
 
+                # With -vv, the message should always show the reason for
+                # the upgrade not being possible.
+                self.pkg("update -nvv", exit=1, assert_solution=False)
+                self.assertTrue("This version is excluded" in self.errout)
+                self.pkg("update -nvv osnet-incorporation@latest", exit=1)
+                self.assertTrue("This version is excluded" in self.errout)
+                self.pkg("update -nvv osnet-incorporation", exit=1)
+                self.assertTrue("This version is excluded" in self.errout)
+
                 # A pkg update (with no arguments) should not fail if we are a
                 # linked image child because we're likely constrained by our
                 # parent dependencies.
