@@ -308,6 +308,10 @@ logging.info('{0}'.format(' '.join(args)))
 if testmode:
     sys.exit(0)
 
+if not os.path.exists('/dev/vmmctl'):
+    logging.info('No kernel support for bhyve')
+    sys.exit(0)
+
 if os.path.exists('/dev/vmm/{0}'.format(name)):
     logging.info('Destroying old bhyve instance')
     subprocess.run(['/usr/sbin/bhyvectl', '--vm={0}'.format(name), '--destroy'])
@@ -322,6 +326,7 @@ while True:
     # 1 - powered off
     # 2 - halted
     # 3 - triple fault
+    # 4 - other error
     if ret.returncode != 0: break
 
 # Vim hints
