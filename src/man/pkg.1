@@ -3143,7 +3143,13 @@ Set the specified variant to the indicated value. See "Facets and Variants" in t
 .ad
 .sp .6
 .RS 4n
-Remove all non-editable packaged files and packaged hardlinks from the image specified by the \fB-R\fR option to create a fully dehydrated image. A non-editable packaged file is a file delivered by the currently installed version of a package that has no \fBpreserve\fR or \fBoverlay\fR attribute, or has a \fBdehydrated\fR value of \fBFalse\fR. A packaged hardlink is a hardlink delivered by the currently installed version of a package.
+Remove all non-editable packaged files and packaged hardlinks from the image
+specified by the \fB-R\fR option to create a fully dehydrated image. A
+non-editable packaged file is a file delivered by the currently installed
+version of a package that has no \fBpreserve\fR or \fBoverlay\fR attribute, and
+does not have a \fBdehydrate\fR attribute set to \fBfalse\fR.
+A packaged hardlink is a hardlink delivered by the currently installed version
+of a package.
 .sp
 The \fBpkg dehydrate\fR command only operates on an alternate root. Use the \fB-R\fR option to specify the alternate root. If the alternate root belongs to a boot environment, dehydration will render it unbootable.
 .sp
