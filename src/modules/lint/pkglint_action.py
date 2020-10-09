@@ -1268,7 +1268,7 @@ class PkgActionChecker(base.ActionChecker):
         def unknown(self, action, manifest, engine, pkglint_id="004"):
                 """We should never have actions called 'unknown'."""
 
-                if action.name is "unknown":
+                if action.name == "unknown":
                         engine.error(_("unknown action found in {0}").format(
                             manifest.fmri),
                             msgid="{0}{1}".format(self.name, pkglint_id))
@@ -1425,7 +1425,7 @@ class PkgActionChecker(base.ActionChecker):
         def license(self, action, manifest, engine, pkglint_id="007"):
                 """License actions should not have path attributes."""
 
-                if action.name is "license" and "path" in action.attrs:
+                if action.name == "license" and "path" in action.attrs:
                         engine.error(
                             _("license action in {pkg} has a path attribute, "
                             "{path}").format(
@@ -1481,7 +1481,7 @@ class PkgActionChecker(base.ActionChecker):
         def username_format(self, action, manifest, engine, pkglint_id="010"):
                 """Checks username length, and format."""
 
-                if action.name is not "user":
+                if action.name != "user":
                         return
 
                 username = action.attrs["username"]

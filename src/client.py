@@ -434,7 +434,7 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False,
 
         def print_cmds(cmd_list, cmd_dic):
                 for cmd in cmd_list:
-                        if cmd is "":
+                        if cmd == "":
                                 logger.error("")
                         else:
                                 if cmd not in cmd_dic:
@@ -445,7 +445,7 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False,
                                             "Unable to find usage str for "
                                             "{0}".format(cmd))
                                 use_txt = cmd_dic[cmd]
-                                if use_txt is not "":
+                                if use_txt != "":
                                         logger.error(
                                             "        pkg {cmd} "
                                             "{use_txt}".format(**locals()))

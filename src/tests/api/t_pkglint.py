@@ -21,6 +21,7 @@
 #
 
 # Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 
 from . import testutils
 if __name__ == "__main__":
@@ -48,7 +49,7 @@ logger = logging.getLogger("pkglint")
 if not logger.handlers:
         logger.setLevel(logging.WARNING)
         ch = logging.StreamHandler()
-        formatter = logging.Formatter(log_fmt_string)
+        formatter = logging.Formatter(log_fmt_string, style='{')
         ch.setFormatter(formatter)
         ch.setLevel(logging.WARNING)
         logger.addHandler(ch)

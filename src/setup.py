@@ -21,6 +21,7 @@
 #
 # Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
 # Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
+# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 #
 
 from __future__ import print_function
@@ -106,7 +107,7 @@ cffi_dir = os.path.normpath(os.path.join(pwd, "cffi_src"))
 
 # Extract Python minor version.
 py_version = '.'.join(platform.python_version_tuple()[:2])
-assert py_version in ('3.7')
+assert py_version in ('3.7', '3.9')
 py_install_dir = 'usr/lib/python' + py_version + '/vendor-packages'
 
 py64_executable = '/usr/bin/python' + py_version
@@ -1736,7 +1737,6 @@ setup(cmdclass = cmdclasses,
     ext_modules = ext_modules,
     classifiers = [
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.7',
     ]
 )
 

@@ -21,9 +21,10 @@
 
 /*
  * Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
- * Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
+ * Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
  */
 
+#define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
 #include <stdbool.h>
@@ -144,8 +145,8 @@ fromstr(PyObject *self, PyObject *args, PyObject *kwdict)
 	char *hashstr = NULL;
 	char *keystr = NULL;
 	int *slashmap = NULL;
-	int strl, typestrl;
-	int i, ks, vs, keysize;
+	Py_ssize_t i, strl, typestrl;
+	int ks, vs, keysize;
 	int smlen = 0, smpos = 0;
 	int hash_allowed;
 	bool concat = false;
