@@ -2306,10 +2306,6 @@ def update(op, api_inst, pargs, accept, act_timeout, backup_be, backup_be_name,
                     list_newest=True, list_upgradable=True,
                     origins=set([]), quiet=True, refresh_catalogs=False);
 
-                if "data" not in packages:
-                        error("Could not retrieve package list.")
-                        return EXIT_OOPS
-
                 msg("Retrieving list of packages to update...")
 
                 updates = client_api._list_inventory(op='list',
@@ -2318,26 +2314,25 @@ def update(op, api_inst, pargs, accept, act_timeout, backup_be, backup_be_name,
                     list_newest=False, list_upgradable=True,
                     origins=set([]), quiet=True, refresh_catalogs=False);
 
-                if "data" not in updates:
-                        error("Could not retrieve list of packages to update.")
-                        return EXIT_OOPS
+                if "data" in updates and "data" in packages:
 
-                # Build dictionary of packages to the latest version
-                latestver = {
-                        'pkg://{0}/{1}'.format(e['pub'], e['pkg']) :
-                        e['version']
-                        for e in packages['data']
-                }
+                        # Build dictionary of packages to the latest version
+                        latestver = {
+                                'pkg://{0}/{1}'.format(e['pub'], e['pkg']) :
+                                e['version']
+                                for e in packages['data']
+                        }
 
-                # Build list of packages to update
-                updatelist = [ 'pkg://{0}/{1}'.format(e['pub'], e['pkg'])
-                        for e in updates['data'] ]
+                        # Build list of packages to update
+                        updatelist = [ 'pkg://{0}/{1}'.format(
+                            e['pub'], e['pkg'])
+                                for e in updates['data'] ]
 
-                pargs = [
-                        '{}@{}'.format(u, latestver[u])
-                        for u in updatelist
-                        if u in latestver
-                ]
+                        pargs = [
+                                '{}@{}'.format(u, latestver[u])
+                                for u in updatelist
+                                if u in latestver
+                        ]
 
         out_json = client_api._update(op, api_inst, pargs, accept, act_timeout,
             backup_be, backup_be_name, be_activate, be_name, force,
