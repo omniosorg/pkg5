@@ -317,19 +317,22 @@ def valid_pub_prefix(prefix):
 
 def valid_pub_url(url, proxy=False):
         """Verify that the publisher URL contains only valid characters.
-        If 'proxy' is set to True, some checks are relaxed."""
+        """
 
         if not url:
                 return False
 
         # First split the URL and check if the scheme is one we support
-        o = urlsplit(url)
+        o = urlparse(url)
 
-        if not o[0] in _valid_proto:
+        if not o.scheme in _valid_proto:
                 return False
 
-        if o[0] == "file":
-                path = urlparse(url, "file", allow_fragments=0)[2]
+        if not proxy and (o.username is not None or o.password is not None):
+                return False
+
+        if o.scheme == "file":
+                path = urlparse(url, allow_fragments=False).path
                 path = url2pathname(path)
                 if not os.path.abspath(path):
                         return False
@@ -337,25 +340,13 @@ def valid_pub_url(url, proxy=False):
                 return True
 
         # Next verify that the network location is valid
-        if six.PY3:
-                host = urllib.parse.splitport(o[1])[0]
-        else:
-                host = urllib.splitport(o[1])[0]
-
-        if proxy:
-                # We may have authentication details in the proxy URI, which
-                # we must ignore when checking for hostname validity.
-                host_parts = host.split("@")
-                if len(host_parts) == 2:
-                        host = host[1]
-
-        if not host or _invalid_host_chars.match(host):
+        host = '[{}]'.format(o.hostname) \
+            if o.hostname and ':' in o.hostname else o.hostname
+        if (not host or _invalid_host_chars.match(host)
+            or not _hostname_re.match(host)):
                 return False
 
-        if _hostname_re.match(host):
-                return True
-
-        return False
+        return True
 
 def gunzip_from_stream(gz, outfile, hash_func=None, hash_funcs=None,
     ignore_hash=False):

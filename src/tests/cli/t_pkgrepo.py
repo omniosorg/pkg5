@@ -1980,7 +1980,7 @@ test2	zoo		1.0	5.11	0	20110804T203458Z	pkg://test2/zoo@1.0,5.11-0:20110804T20345
                         with open(corrupt_path, "wb") as corrupt:
                                 if valid_gzip:
                                         gz = pkg.pkggzip.PkgGzipFile(
-                                            fileobj=corrupt)
+                                            fileobj=corrupt, mode="wb")
                                         gz.write(other.read())
                                         gz.close()
                                 else:
@@ -1995,7 +1995,7 @@ test2	zoo		1.0	5.11	0	20110804T203458Z	pkg://test2/zoo@1.0,5.11-0:20110804T20345
                 with open(fixed_path, "rb") as fixed:
                         with open(fpath, "wb") as broken:
                                 gz = pkg.pkggzip.PkgGzipFile(
-                                    fileobj=broken)
+                                    fileobj=broken, mode="wb")
                                 gz.write(fixed.read())
                                 gz.close()
 
@@ -2105,7 +2105,7 @@ test2	zoo		1.0	5.11	0	20110804T203458Z	pkg://test2/zoo@1.0,5.11-0:20110804T20345
                                 else:
                                         with open(cpath, "wb") as badfile:
                                                 gz = pkg.pkggzip.PkgGzipFile(
-                                                    fileobj=badfile)
+                                                    fileobj=badfile, mode="wb")
                                                 gz.write(b"noodles")
                                                 gz.close()
                                 bad_paths.append(cpath)

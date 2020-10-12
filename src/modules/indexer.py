@@ -22,6 +22,7 @@
 
 #
 # Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 #
 
 import errno
@@ -848,7 +849,7 @@ class Indexer(object):
                 finally:
                         for d in self._data_dict.values():
                                 d.close_file_handle()
-                assert res is not 0
+                assert res != 0
                 return res
 
         def rebuild_index_from_scratch(self, fmris, tmp_index_dir=None):

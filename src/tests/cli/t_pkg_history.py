@@ -406,7 +406,7 @@ class TestPkgHistory(pkg5unittest.ManyDepotTestCase):
                 comma_events = ""
                 expected_count = 0
 
-                for ts in random.sample(keys, 3):
+                for ts in random.sample(list(keys), 3):
                         if not comma_events:
                                 comma_events = ts
                         else:

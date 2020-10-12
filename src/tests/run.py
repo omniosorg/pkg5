@@ -33,10 +33,11 @@ import sys
 from functools import reduce
 
 # We need cwd to be the same dir as our program.
-if os.path.dirname(__file__) != "" and \
-    os.path.dirname(__file__) != ".":
+
+pdir = os.path.dirname(__file__)
+if pdir != "" and pdir != "." and pdir != os.getcwd():
         os.putenv('PYEXE', sys.executable)
-        os.chdir(os.path.dirname(__file__))
+        os.chdir(pdir)
         import subprocess
         cmd = [sys.executable, "run.py"]
         cmd.extend(sys.argv[1:]) # Skip argv[0]
