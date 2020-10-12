@@ -31,7 +31,7 @@ link path=usr/lib/brand/kvm/socat target=../bhyve/socat
 file path=usr/lib/brand/kvm/support mode=0555
 file path=usr/lib/brand/kvm/uninstall mode=0555
 license lic_CDDL license=lic_CDDL
+depend type=require fmri=driver/virtualization/kvm
 depend type=require fmri=network/netcat
 depend type=require fmri=system/kvm
-depend type=require fmri=driver/virtualization/kvm
 depend type=require fmri=system/zones/brand/bhyve@$(PKGVERS)
