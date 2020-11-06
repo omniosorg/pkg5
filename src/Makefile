@@ -22,85 +22,57 @@
 #
 # Copyright (c) 2007, 2019, Oracle and/or its affiliates. All rights reserved.
 # Copyright 2016, OmniTI Computer Consulting, Inc. All rights reserved.
-# Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 #
 
-PYTHON3 = /usr/bin/python3.7
+PYVERSIONS = 3.7 3.9
+PYTESTS = $(PYVERSIONS:%=runtest/%)
 
-CODE_WS = $$(hg root 2>/dev/null || git rev-parse --show-toplevel)
+CODE_WS = $$(git rev-parse --show-toplevel)
 
 all := TARGET = all
+build := TARGET = build
 install := TARGET = install
-packages := TARGET = install
 clean := TARGET = clean
 clobber := TARGET = clobber
-lint := TARGET = lint
-clint := TARGET = clint
-pylint := TARGET = pylint
-check := TARGET = check
+packages := TARGET = install
 test := TARGET = test
-test-verbose := TARGET = test-verbose
-test-generate := TARGET = test-generate
-
-#
-# clear PYTHONPATH when invoking /usr/bin/pkg (we don't want to load any
-# pkg python modules from this workspace since they may be out of sync
-# with the pkg modules in the root filesystem).
-#
-PYLINT_VER_CMD = PYTHONPATH= /usr/bin/pkg info $(PYLINT_FMRI) | \
-		 /usr/bin/grep Version | /usr/bin/awk -F: '{print $$2}' | \
-		 /usr/bin/sed -e 's/ //g'
 
 JOBS = 8
 CC = gcc
-PYCODESTYLE = /usr/bin/pycodestyle
 
 SUBDIRS=brand zoneproxy tsol util/mkcert
 
-all: $(SUBDIRS)
-	mkdir -p $(CODE_WS)/proto/build_i386/lib.solaris-2.11-i86pc-2.6/pkg/64
-	mkdir -p $(CODE_WS)/proto/build_i386/lib.solaris-2.11-i86pc-2.6/pkg/actions/64
-	$(PYTHON3) setup.py build
+all: $(SUBDIRS) build
 
-clean: $(SUBDIRS)
-	$(PYTHON3) setup.py clean
+build: $(PYVERSIONS)
+
+install: $(SUBDIRS) $(PYVERSIONS)
+
+clean: $(SUBDIRS) $(PYVERSIONS)
 	@cd pkg; pwd; make clean
 
-clobber: $(SUBDIRS)
-	$(PYTHON3) setup.py clobber
+clobber: $(SUBDIRS) $(PYVERSONS)
 	@cd pkg; pwd; make clobber
-
-install: $(SUBDIRS)
-	CC=$(CC) $(PYTHON3) setup.py install
-
-lint:
-	CC=$(CC) $(PYTHON3) setup.py lint
-	@cd zoneproxy; pwd; make lint
-
-clint:
-	CC=$(CC) $(PYTHON3) setup.py clint
-	@cd zoneproxy; pwd; make lint
-
-pylint: install
-	PYLINT_VER=$(PYLINT_VER_CMD:sh) $(PYTHON3) setup.py pylint
-	PYLINT_VER=$(PYLINT_VER_CMD:sh) $(PYTHON3) setup.py pylint_py3k
-
-check:
-	$(PYCODESTYLE) --statistics --count `cat tests/pycodestyle-whitelist.txt`
-
-#
-# This rule propagates the current make target through all of the
-# subdirectories in $SUBDIRS.
-#
-$(SUBDIRS): FRC
-	@cd $@; pwd; $(MAKE) $(TARGET) CC=$(CC)
 
 packages: install
 	@cd pkg; pwd; $(MAKE) $(TARGET) check \
 		PATH=$(CODE_WS)/proto/root_$$(uname -p)/usr/bin:$$PATH \
 		CC=$(CC)
 
-test: install
-	-pfexec $(PYTHON3) tests/run.py -j ${JOBS}
+test: install .WAIT $(PYTESTS)
+
+$(SUBDIRS): FRC
+	@cd $@; pwd; $(MAKE) $(TARGET) CC=$(CC)
+
+$(PYVERSIONS): FRC
+	python$@ setup.py $(TARGET)
+
+$(PYTESTS): FRC
+	-pfexec python$(@F) tests/run.py -j $(JOBS)
+	-pfexec cp tests/failures.3 tests/failures.3.$(@F)
 
 FRC:
+
+.NO_PARALLEL: $(PYVERSIONS) $(PYTESTS)
+

@@ -22,6 +22,18 @@
 # Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
 # Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 #
+#
+# The six compatibility layers cause detection problems for pkgdepend
+<transform file -> default pkg.depend.bypass-generate .*six.*>
+#
+# pkgdepend doesn't understand the relative import syntax "from .x import y",
+# so we have to bypass generating dependencies on those files.
+<transform file path=$(PYDIRVP)/pkg/actions -> \
+    set pkg.depend.bypass-generate .*>
+<transform file path=$(PYDIRVP)/pkg/portable -> \
+    set pkg.depend.bypass-generate .*>
+<transform file path=$(PYDIRVP)/pkg/client/linkedimage/(?:system|zone).py -> \
+    set pkg.depend.bypass-generate .*>
 set name=pkg.fmri value=pkg:/package/pkg@$(PKGVERS)
 set name=pkg.summary value="Image Packaging System - pkg(5)"
 set name=pkg.description \
@@ -247,6 +259,17 @@ file path=usr/share/lib/pkg/web/_themes/default/en/footer.shtml
 file path=usr/share/lib/pkg/web/_themes/default/en/head_end.shtml
 file path=usr/share/lib/pkg/web/_themes/default/en/header.shtml
 file path=usr/share/lib/pkg/web/_themes/default/feed-icon-14x14.png
+link path=usr/share/lib/pkg/web/_themes/omnios.org target=omniosce.org
+dir  path=usr/share/lib/pkg/web/_themes/omniosce.org
+dir  path=usr/share/lib/pkg/web/_themes/omniosce.org/en
+file path=usr/share/lib/pkg/web/_themes/omniosce.org/en/base.css
+file path=usr/share/lib/pkg/web/_themes/omniosce.org/en/body_end.shtml
+file path=usr/share/lib/pkg/web/_themes/omniosce.org/en/footer.shtml
+file path=usr/share/lib/pkg/web/_themes/omniosce.org/en/head_end.shtml
+file path=usr/share/lib/pkg/web/_themes/omniosce.org/en/header.shtml
+file path=usr/share/lib/pkg/web/_themes/omniosce.org/feed-icon-14x14.png
+file path=usr/share/lib/pkg/web/_themes/omniosce.org/logo_ban0.png
+file path=usr/share/lib/pkg/web/_themes/omniosce.org/logo_ban0.svg
 dir  path=usr/share/lib/pkg/web/_themes/omniti.com
 dir  path=usr/share/lib/pkg/web/_themes/omniti.com/en
 file path=usr/share/lib/pkg/web/_themes/omniti.com/en/base.css
@@ -256,17 +279,6 @@ file path=usr/share/lib/pkg/web/_themes/omniti.com/en/head_end.shtml
 file path=usr/share/lib/pkg/web/_themes/omniti.com/en/header.shtml
 file path=usr/share/lib/pkg/web/_themes/omniti.com/feed-icon-14x14.png
 file path=usr/share/lib/pkg/web/_themes/omniti.com/logo_ban0.png
-dir path=usr/share/lib/pkg/web/_themes/omniosce.org
-dir path=usr/share/lib/pkg/web/_themes/omniosce.org/en
-file path=usr/share/lib/pkg/web/_themes/omniosce.org/en/head_end.shtml
-file path=usr/share/lib/pkg/web/_themes/omniosce.org/en/base.css
-file path=usr/share/lib/pkg/web/_themes/omniosce.org/en/body_end.shtml
-file path=usr/share/lib/pkg/web/_themes/omniosce.org/en/header.shtml
-file path=usr/share/lib/pkg/web/_themes/omniosce.org/en/footer.shtml
-file path=usr/share/lib/pkg/web/_themes/omniosce.org/feed-icon-14x14.png
-file path=usr/share/lib/pkg/web/_themes/omniosce.org/logo_ban0.png
-file path=usr/share/lib/pkg/web/_themes/omniosce.org/logo_ban0.svg
-link path=usr/share/lib/pkg/web/_themes/omnios.org target=omniosce.org
 file path=usr/share/lib/pkg/web/_themes/p5i-link.png
 file path=usr/share/lib/pkg/web/_themes/pkg-block-icon.png
 file path=usr/share/lib/pkg/web/_themes/pkg-block-logo.png
@@ -409,21 +421,10 @@ file path=usr/share/pkg/transforms/smf-manifests
 dir  path=var/cache/pkg/mirror
 dir  path=var/log/pkg/mirror
 #
-# The six compatibility layers cause detection problems for pkgdepend
-<transform file -> default pkg.depend.bypass-generate .*six.*>
-#
-# pkgdepend doesn't understand the relative import syntax "from .x import y",
-# so we have to bypass generating dependencies on those files.
-<transform file path=$(PYDIRVP)/pkg/actions -> \
-    set pkg.depend.bypass-generate .*>
-<transform file path=$(PYDIRVP)/pkg/portable -> \
-    set pkg.depend.bypass-generate .*>
-<transform file path=$(PYDIRVP)/pkg/client/linkedimage/(?:system|zone).py -> \
-    set pkg.depend.bypass-generate .*>
-#
 group groupname=pkg5srv gid=97
 user username=pkg5srv gcos-field="pkg(5) server UID" group=pkg5srv password=NP \
     uid=97
+license lic_CDDL license=CDDL
 license lic_gustaebel license="MIT (Lars Gustaebel)" \
     com.oracle.info.description="portions of the tarfile module from Python 2.4" \
     com.oracle.info.name=tarfile com.oracle.info.tpno=17819 \
@@ -433,7 +434,6 @@ license lic_minisat license="MIT (MiniSAT)" \
     com.oracle.info.description="MiniSAT 1.14.1" com.oracle.info.name=MiniSAT \
     com.oracle.info.tpno=17867 com.oracle.info.version=1.14.1
 license cr_Oracle license=cr_Oracle
-license lic_CDDL license=CDDL
 # CFFI import is done in C code, so it isn't picked up by pkgdepend
 depend type=require fmri=library/python-3/cffi-37
 depend type=require fmri=library/python-3/prettytable-37
