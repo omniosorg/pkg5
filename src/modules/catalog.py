@@ -1688,7 +1688,10 @@ class Catalog(object):
                                 if Catalog.DEPENDENCY in info_needed:
                                         yield a
                         elif Catalog.SUMMARY in info_needed and a.name == "set":
-                                if attr_name in ("fmri", "pkg.fmri"):
+                                if attr_name in ("fmri", "pkg.fmri",
+                                    "publisher") or attr_name.startswith((
+                                    "info.source-url", "pkg.debug",
+                                    "pkg.linted")):
                                         continue
 
                                 comps = attr_name.split(":")
@@ -2108,6 +2111,12 @@ class Catalog(object):
                                         continue
                                 elif name in ("fmri", "pkg.fmri"):
                                         # Redundant in the case of the catalog.
+                                        continue
+
+                                if name in ("fmri", "pkg.fmri",
+                                    "publisher") or name.startswith((
+                                    "info.source-url", "pkg.debug",
+                                    "pkg.linted")):
                                         continue
 
                                 # All other set actions go to the summary
