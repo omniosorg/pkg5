@@ -1162,6 +1162,52 @@ class TestEmptyCatalog(pkg5unittest.Pkg5TestCase):
                 ]
                 self.assertEqual(returned, [])
 
+class TestCatalogueFormats(pkg5unittest.Pkg5TestCase):
+
+        def test_catalogue_formats(self):
+                # Create catalogue
+                c = catalog.Catalog(meta_root=self.test_root)
+                c.save()
+
+                f = fmri.PkgFmri("pkg:/test@1.0,5.11-1:20070101T120000Z")
+                f.set_publisher("opensolaris.org")
+                m = manifest.Manifest()
+                m.set_content(
+                    "set name=pkg.fmri value={}\n"
+                    "set name=pkg.summary value=\"Testing \u2212 package\"\n"
+                    .format(f), signatures=True)
+                # Expected signature for ascii encoding
+                asig = '7bbaa64f40ac015c0fb08b17cef62568854a5928'
+                # Expected signature for UTF-8
+                bsig = 'af21a62d87bbd223eb09e228737b7d985af590d8'
+
+                c.add_package(f, manifest=m)
+                c.save(fmt='ascii')
+
+                self.assertEqual(c.signatures['catalog.summary.C'],
+                    {'sha-1': asig})
+                self.assertEqual(c._attrs.features, [])
+
+                # Check that the catalogue can be loaded and verified
+
+                cc = catalog.Catalog(meta_root=self.test_root)
+                self.assertEqual(cc.signatures['catalog.summary.C'],
+                    {'sha-1': asig})
+
+                # Confirm that saving the catalogue changes the hashes to the
+                # UTF-8 one.
+                c.save()
+
+                self.assertEqual(c.signatures['catalog.summary.C'],
+                    {'sha-1': bsig})
+                self.assertEqual(c._attrs.features, ['ooce:utf8'])
+
+                # Check that the catalogue can be loaded and verified
+
+                cc = catalog.Catalog(meta_root=self.test_root)
+                self.assertEqual(cc.signatures['catalog.summary.C'],
+                    {'sha-1': bsig})
+
 
 class TestCorruptCatalog(pkg5unittest.Pkg5TestCase):
         """Tests against various forms of corrupted catalogs."""
