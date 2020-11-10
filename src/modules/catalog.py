@@ -57,16 +57,9 @@ class _JSONWriter(object):
         """Private helper class used to serialize catalog data and generate
         signatures."""
 
-        def __init__(self, data, single_pass=False, pathname=None, sign=True):
+        def __init__(self, data, pathname=None, sign=True):
                 self.__data = data
                 self.__fileobj = None
-
-                # Determines whether data is encoded in a single pass (uses
-                # more memory) or iteratively.
-                self.__single_pass = single_pass
-
-                # Default to a 32K buffer.
-                self.__bufsz = 32 * 1024
 
                 # catalog signatures *must* use sha-1 only since clients
                 # compare entire dictionaries against the reported hash from
@@ -87,23 +80,8 @@ class _JSONWriter(object):
                 if not pathname:
                         return
 
-                # Call statvfs to find optimal blocksize for destination.
-                dest_dir = os.path.dirname(self.pathname)
                 try:
-                        destvfs = os.statvfs(dest_dir)
-                        # Set the file buffer size to the blocksize of our
-                        # filesystem.
-                        self.__bufsz = destvfs.f_bsize
-                except EnvironmentError as e:
-                        if e.errno == errno.EACCES:
-                                raise api_errors.PermissionsException(
-                                    e.filename)
-                except AttributeError as e:
-                        # os.statvfs is not available on some platforms.
-                        pass
-
-                try:
-                        tfile = open(pathname, "wb", self.__bufsz)
+                        tfile = open(pathname, "wb")
                 except EnvironmentError as e:
                         if e.errno == errno.EACCES:
                                 raise api_errors.PermissionsException(
@@ -127,8 +105,7 @@ class _JSONWriter(object):
 
                 json.dump(obj=obj, stream=fp, skipkeys=skipkeys,
                     ensure_ascii=ensure_ascii, allow_nan=allow_nan,
-                    indent=indent, default=default, chunk_size=self.__bufsz,
-                    **kw)
+                    indent=indent, default=default, **kw)
 
         def save(self):
                 """Serializes and stores the provided data in JSON format."""
@@ -170,7 +147,7 @@ class _JSONWriter(object):
                     hash_func=hashlib.sha1)[0]
 
                 # Open the JSON file so that the signature data can be added.
-                with open(self.pathname, "rb+", self.__bufsz) as sfile:
+                with open(self.pathname, "rb+") as sfile:
                         # The last bytes should be "}\n", which is where the
                         # signature data structure needs to be appended.
                         sfile.seek(-2, os.SEEK_END)
@@ -178,7 +155,8 @@ class _JSONWriter(object):
                         # Add the signature data and close.
                         sfoffset = sfile.tell()
                         if sfoffset > 1:
-                                # Catalog is not empty, so a separator is needed.
+                                # Catalog is not empty, so a separator is
+                                # needed.
                                 sfile.write(b",")
                         sfile.write(b'"_SIGNATURE":')
                         self._dump(self.signatures(), sfile)
@@ -335,20 +313,13 @@ class CatalogPartBase(object):
                         return None
                 return os.path.join(self.meta_root, self.name)
 
-        def save(self, data, single_pass=False):
+        def save(self, data):
                 """Serialize and store the transformed catalog part's 'data' in
                 a file using the pathname <self.meta_root>/<self.name>.
 
-                'data' must be a dict.
+                'data' must be a dict."""
 
-                'single_pass' is an optional boolean indicating whether the data
-                should be serialized in a single pass.  This is significantly
-                faster, but requires that the entire set of data be serialized
-                in-memory instead of iteratively writing it to the target
-                storage object."""
-
-                f = _JSONWriter(data, single_pass=single_pass,
-                    pathname=self.pathname, sign=self.sign)
+                f = _JSONWriter(data, pathname=self.pathname, sign=self.sign)
                 f.save()
 
                 # Update in-memory copy to reflect stored data.
@@ -796,15 +767,9 @@ class CatalogPart(CatalogPartBase):
                 self.last_modified = op_time
                 self.signatures = {}
 
-        def save(self, single_pass=False):
+        def save(self):
                 """Transform and store the catalog part's data in a file using
-                the pathname <self.meta_root>/<self.name>.
-
-                'single_pass' is an optional boolean indicating whether the data
-                should be serialized in a single pass.  This is significantly
-                faster, but requires that the entire set of data be serialized
-                in-memory instead of iteratively writing it to the target
-                storage object."""
+                the pathname <self.meta_root>/<self.name>."""
 
                 if not self.meta_root:
                         # Assume this is in-memory only.
@@ -813,7 +778,7 @@ class CatalogPart(CatalogPartBase):
                 # Ensure content is loaded before attempting save.
                 self.load()
 
-                CatalogPartBase.save(self, self.__data, single_pass=single_pass)
+                CatalogPartBase.save(self, self.__data)
 
         def sort(self, pfmris=None, pubs=None):
                 """Re-sorts the contents of the CatalogPart such that version
@@ -1277,7 +1242,7 @@ class CatalogAttrs(CatalogPartBase):
                 # Ensure content is loaded before attempting save.
                 self.load()
 
-                CatalogPartBase.save(self, self.__transform(), single_pass=True)
+                CatalogPartBase.save(self, self.__transform())
 
         def validate(self, signatures=None, require_signatures=False):
                 """Verifies whether the signatures for the contents of the
