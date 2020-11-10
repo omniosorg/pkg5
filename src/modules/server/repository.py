@@ -383,7 +383,7 @@ class _RepoStore(object):
 
         def __init__(self, allow_invalid=False, file_layout=None,
             file_root=None, log_obj=None, mirror=False, pub=None,
-            read_only=False, root=None,
+            read_only=False, root=None, catalogue_format='utf8',
             sort_file_max_size=indexer.SORT_FILE_MAX_SIZE, writable_root=None):
                 """Prepare the repository for use."""
 
@@ -400,6 +400,7 @@ class _RepoStore(object):
                 self.__sort_file_max_size = sort_file_max_size
                 self.__tmp_root = None
                 self.__writable_root = None
+                self.__catalogue_format = catalogue_format
                 self.cache_store = None
                 self.catalog_version = -1
                 self.manifest_root = None
@@ -1093,7 +1094,7 @@ class _RepoStore(object):
                 self.__set_catalog_root(tmp_cat_root)
                 if lm:
                         self.catalog.last_modified = lm
-                self.catalog.save()
+                self.catalog.save(fmt=self.__catalogue_format)
 
                 orig_cat_root = None
                 if os.path.exists(old_cat_root):
@@ -2881,6 +2882,10 @@ class Repository(object):
 
                 # Setup repository stores.
                 def_pub = self.cfg.get_property("publisher", "prefix")
+                try:
+                        fmt = self.cfg.get_property("repository", "format")
+                except:
+                        fmt = 'ascii'
                 if self.version == 4:
                         # For repository versions 4+, there is a repository
                         # store for the top-level file root (and it must
@@ -2890,7 +2895,8 @@ class Repository(object):
                                 froot = os.path.join(self.root, "file")
                         rstore = _RepoStore(file_layout=layout.V1Layout(),
                             file_root=froot, log_obj=self.log_obj,
-                            mirror=self.mirror, read_only=self.read_only)
+                            mirror=self.mirror, read_only=self.read_only,
+                            catalogue_format=fmt)
                         self.__rstores[rstore.publisher] = rstore
 
                         # ...and then one for each publisher if any are known.
@@ -2915,7 +2921,8 @@ class Repository(object):
                             mirror=self.mirror,
                             read_only=self.read_only,
                             root=self.root,
-                            writable_root=self.writable_root)
+                            writable_root=self.writable_root,
+                            catalogue_format=fmt)
                         self.__rstores[rstore.publisher] = rstore
 
                 if not self.root:
@@ -3077,12 +3084,17 @@ class Repository(object):
                         # might use a mix of layouts.
                         file_layout = layout.V1Layout()
 
+                try:
+                        fmt = self.cfg.get_property("repository", "format")
+                except:
+                        fmt = 'ascii'
+
                 rstore = _RepoStore(allow_invalid=allow_invalid,
                     file_layout=file_layout, file_root=froot,
                     log_obj=self.log_obj, mirror=self.mirror, pub=pub,
                     read_only=self.read_only, root=root,
                     sort_file_max_size=self.__sort_file_max_size,
-                    writable_root=writ_root)
+                    writable_root=writ_root, catalogue_format=fmt)
                 self.__rstores[pub] = rstore
                 return rstore
 

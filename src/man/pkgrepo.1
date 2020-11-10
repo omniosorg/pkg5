@@ -728,6 +728,21 @@ A URI that represents the location of a document (such as a web page) that provi
 .ne 2
 .mk
 .na
+\fBrepository/format\fR
+.ad
+.sp .6
+.RS 4n
+The format used for storing catalogue files. The default value is \fIascii\fR
+which is the legacy format and should not be changed unless the repository
+will be accessed solely by updated clients. The other available value is
+\fIutf8\fR which allows clients to parse the catalogues faster and with less
+memory overhead.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
 \fBrepository/legal_uris\fR
 .ad
 .sp .6
