@@ -1,4 +1,4 @@
-#!/usr/bin/python3.7
+#!/usr/bin/python3.9
 #
 # Copyright (C) 2002 Lars Gustaebel <lars@gustaebel.de>
 # All rights reserved.

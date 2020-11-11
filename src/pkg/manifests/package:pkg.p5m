@@ -438,3 +438,10 @@ license cr_Oracle license=cr_Oracle
 depend type=require fmri=library/python-3/cffi-37
 depend type=require fmri=library/python-3/prettytable-37
 depend type=require fmri=web/ca-bundle
+# These usually come in as dependencies of the install/beadm package, but
+# during the transition to python 3.9, we need to ensure we have both
+# (and since we have a specific dependency on the python libbe module,
+#  it's probably a good idea anyway)
+depend type=require fmri=system/library/python/libbe-37
+depend type=require fmri=system/library/python/libbe-39
+
