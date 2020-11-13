@@ -1164,6 +1164,25 @@ class TestEmptyCatalog(pkg5unittest.Pkg5TestCase):
 
 class TestCatalogueFormats(pkg5unittest.Pkg5TestCase):
 
+        def test_catalogue_ascii_hex(self):
+                # Check that an ascii-encoded unicode point containing hex
+                # digits is properly encoded. simplejson uses lower case
+                # hex digits and the switch to rapidjson started using
+                # upper-case. This test confirms that the JSON serialiser
+                # is using lower case (or the checksum will not match)
+                c = catalog.Catalog(meta_root=self.test_root)
+                f = fmri.PkgFmri("pkg:/test@1.0,5.11-1:20070101T120000Z")
+                f.set_publisher("opensolaris.org")
+                m = manifest.Manifest()
+                m.set_content(
+                    "set name=pkg.fmri value={}\n"
+                    "set name=pkg.summary value=\"Jon K\u00F6gl\"\n"
+                    .format(f), signatures=True)
+                c.add_package(f, manifest=m)
+                c.save(fmt='ascii')
+                self.assertEqual(c.signatures['catalog.summary.C'],
+                    {'sha-1': '4991afea14ad5e4c990a05a3d3f287eacc62f37c'})
+
         def test_catalogue_formats(self):
                 # Create catalogue
                 c = catalog.Catalog(meta_root=self.test_root)
