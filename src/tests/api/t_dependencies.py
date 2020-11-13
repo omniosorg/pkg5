@@ -70,7 +70,7 @@ class TestDependencyAnalyzer(pkg5unittest.Pkg5TestCase):
             "script_path": "lib/svc/method/svc-pkg-depot",
             "syslog_path": "var/log/syslog",
             "py_mod_path": "usr/lib/python2.7/vendor-packages/cProfile.py",
-            "py_mod_path35": "usr/lib/python3.7/vendor-packages/cProfile.py"
+            "py_mod_path39": "usr/lib/python3.9/vendor-packages/cProfile.py"
         }
 
         smf_paths = {
@@ -138,7 +138,7 @@ file NOHASH group=bin mode=0755 owner=root path={pkg_path}
 
         python_mod_manf = """ \
 file NOHASH group=bin mode=0755 owner=root path={py_mod_path}
-file NOHASH group=bin mode=0755 owner=root path={py_mod_path35}
+file NOHASH group=bin mode=0755 owner=root path={py_mod_path39}
 """.format(**paths)
 
         relative_ext_depender_manf = """ \
