@@ -182,6 +182,10 @@ class _JSONWriter(object):
                 for l in iterable:
                         self.__sha_1.update(l)
 
+        def __str__(self):
+                if self.pathname:
+                        return 'JSONWriter to {}'.format(self.pathname)
+                return 'JSONWriter to memory'
 
 class CatalogPartBase(object):
         """A CatalogPartBase object is an abstract class containing core
