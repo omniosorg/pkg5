@@ -1384,7 +1384,8 @@ License:
 {10}
 """.format(name, summary, pub, version, ver.build_release,
     ver.branch, ver.get_timestamp().strftime("%c"), misc.bytes_to_str(size),
-    misc.bytes_to_str(csize), pfmri, misc.force_str(lsummary.read()))
+    misc.bytes_to_str(csize), pfmri, misc.force_str(lsummary.read(),
+    errors='replace'))
 
         @cherrypy.tools.response_headers(headers=[(
             "Content-Type", p5i.MIME_TYPE)])
