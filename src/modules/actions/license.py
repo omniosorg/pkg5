@@ -209,7 +209,8 @@ class LicenseAction(generic.Action):
                                     length=length, return_content=True,
                                     hash_func=hash_func)
                                 if chash == hash_attr_val:
-                                        return misc.force_str(txt)
+                                        return misc.force_str(txt,
+                                            errors='replace')
                 except EnvironmentError as e:
                         if e.errno != errno.ENOENT:
                                 raise
