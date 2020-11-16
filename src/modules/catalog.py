@@ -53,20 +53,15 @@ import pkg.version
 
 from pkg.misc import EmptyDict, EmptyI
 
+FEATURE_UTF8 = 'ooce:utf8'
+
 class _JSONWriter(object):
         """Private helper class used to serialize catalog data and generate
         signatures."""
 
-        def __init__(self, data, single_pass=False, pathname=None, sign=True):
+        def __init__(self, data, pathname=None, sign=True):
                 self.__data = data
                 self.__fileobj = None
-
-                # Determines whether data is encoded in a single pass (uses
-                # more memory) or iteratively.
-                self.__single_pass = single_pass
-
-                # Default to a 32K buffer.
-                self.__bufsz = 32 * 1024
 
                 # catalog signatures *must* use sha-1 only since clients
                 # compare entire dictionaries against the reported hash from
@@ -87,23 +82,8 @@ class _JSONWriter(object):
                 if not pathname:
                         return
 
-                # Call statvfs to find optimal blocksize for destination.
-                dest_dir = os.path.dirname(self.pathname)
                 try:
-                        destvfs = os.statvfs(dest_dir)
-                        # Set the file buffer size to the blocksize of our
-                        # filesystem.
-                        self.__bufsz = destvfs.f_bsize
-                except EnvironmentError as e:
-                        if e.errno == errno.EACCES:
-                                raise api_errors.PermissionsException(
-                                    e.filename)
-                except AttributeError as e:
-                        # os.statvfs is not available on some platforms.
-                        pass
-
-                try:
-                        tfile = open(pathname, "wb", self.__bufsz)
+                        tfile = open(pathname, "wb")
                 except EnvironmentError as e:
                         if e.errno == errno.EACCES:
                                 raise api_errors.PermissionsException(
@@ -122,13 +102,16 @@ class _JSONWriter(object):
                         return {}
                 return { "sha-1": self.__sha_1_value }
 
+        def _feature(self, feature):
+                return ('_FEATURE' in self.__data
+                    and feature in self.__data['_FEATURE'])
+
         def _dump(self, obj, fp, skipkeys=False, ensure_ascii=True,
             allow_nan=True, indent=None, default=None, **kw):
 
-                json.dump(obj=obj, stream=fp, skipkeys=skipkeys,
-                    ensure_ascii=ensure_ascii, allow_nan=allow_nan,
-                    indent=indent, default=default, chunk_size=self.__bufsz,
-                    **kw)
+                if not self._feature(FEATURE_UTF8):
+                        kw['ensure_ascii'] = True
+                json.dump(obj=obj, stream=fp, indent=None, **kw)
 
         def save(self):
                 """Serializes and stores the provided data in JSON format."""
@@ -170,7 +153,7 @@ class _JSONWriter(object):
                     hash_func=hashlib.sha1)[0]
 
                 # Open the JSON file so that the signature data can be added.
-                with open(self.pathname, "rb+", self.__bufsz) as sfile:
+                with open(self.pathname, "rb+") as sfile:
                         # The last bytes should be "}\n", which is where the
                         # signature data structure needs to be appended.
                         sfile.seek(-2, os.SEEK_END)
@@ -178,7 +161,8 @@ class _JSONWriter(object):
                         # Add the signature data and close.
                         sfoffset = sfile.tell()
                         if sfoffset > 1:
-                                # Catalog is not empty, so a separator is needed.
+                                # Catalog is not empty, so a separator is
+                                # needed.
                                 sfile.write(b",")
                         sfile.write(b'"_SIGNATURE":')
                         self._dump(self.signatures(), sfile)
@@ -198,6 +182,10 @@ class _JSONWriter(object):
                 for l in iterable:
                         self.__sha_1.update(l)
 
+        def __str__(self):
+                if self.pathname:
+                        return 'JSONWriter to {}'.format(self.pathname)
+                return 'JSONWriter to memory'
 
 class CatalogPartBase(object):
         """A CatalogPartBase object is an abstract class containing core
@@ -212,6 +200,7 @@ class CatalogPartBase(object):
         name = None
         sign = True
         signatures = None
+        features = None
 
         def __init__(self, name, meta_root=None, sign=True):
                 """Initializes a CatalogPartBase object."""
@@ -223,6 +212,7 @@ class CatalogPartBase(object):
                 self.name = name
                 self.sign = sign
                 self.signatures = {}
+                self.features = []
 
                 if not self.meta_root or not self.exists:
                         # Operations shouldn't attempt to load the part data
@@ -279,6 +269,7 @@ class CatalogPartBase(object):
                                                     e.filename)
                                         raise
                 self.signatures = {}
+                self.features = []
                 self.loaded = False
                 self.last_modified = None
 
@@ -319,11 +310,14 @@ class CatalogPartBase(object):
                         # Not a valid catalog file.
                         raise api_errors.InvalidCatalogFile(location)
 
+                fobj.close()
+
                 self.loaded = True
                 # Signature data, if present, should be removed from the struct
                 # on load and then stored in the signatures object property.
                 self.signatures = struct.pop("_SIGNATURE", {})
-                fobj.close()
+                if "_FEATURE" in struct:
+                        self.features = struct["_FEATURE"]
                 return struct
 
         @property
@@ -335,20 +329,13 @@ class CatalogPartBase(object):
                         return None
                 return os.path.join(self.meta_root, self.name)
 
-        def save(self, data, single_pass=False):
+        def save(self, data):
                 """Serialize and store the transformed catalog part's 'data' in
                 a file using the pathname <self.meta_root>/<self.name>.
 
-                'data' must be a dict.
+                'data' must be a dict."""
 
-                'single_pass' is an optional boolean indicating whether the data
-                should be serialized in a single pass.  This is significantly
-                faster, but requires that the entire set of data be serialized
-                in-memory instead of iteratively writing it to the target
-                storage object."""
-
-                f = _JSONWriter(data, single_pass=single_pass,
-                    pathname=self.pathname, sign=self.sign)
+                f = _JSONWriter(data, pathname=self.pathname, sign=self.sign)
                 f.save()
 
                 # Update in-memory copy to reflect stored data.
@@ -371,6 +358,17 @@ class CatalogPartBase(object):
                         mtime = calendar.timegm(
                             self.last_modified.utctimetuple())
                         os.utime(self.pathname, (mtime, mtime))
+
+        def set_feature(self, feature, state):
+                if state:
+                        if feature not in self.features:
+                                self.features.append(feature)
+                else:
+                        if feature in self.features:
+                                self.features.remove(feature)
+
+        def feature(self, feature):
+                return feature in self.features
 
         meta_root = property(__get_meta_root, __set_meta_root)
 
@@ -796,15 +794,9 @@ class CatalogPart(CatalogPartBase):
                 self.last_modified = op_time
                 self.signatures = {}
 
-        def save(self, single_pass=False):
+        def save(self):
                 """Transform and store the catalog part's data in a file using
-                the pathname <self.meta_root>/<self.name>.
-
-                'single_pass' is an optional boolean indicating whether the data
-                should be serialized in a single pass.  This is significantly
-                faster, but requires that the entire set of data be serialized
-                in-memory instead of iteratively writing it to the target
-                storage object."""
+                the pathname <self.meta_root>/<self.name>."""
 
                 if not self.meta_root:
                         # Assume this is in-memory only.
@@ -813,7 +805,9 @@ class CatalogPart(CatalogPartBase):
                 # Ensure content is loaded before attempting save.
                 self.load()
 
-                CatalogPartBase.save(self, self.__data, single_pass=single_pass)
+                if len(self.features):
+                        self.__data['_FEATURE'] = self.features
+                CatalogPartBase.save(self, self.__data)
 
         def sort(self, pfmris=None, pubs=None):
                 """Re-sorts the contents of the CatalogPart such that version
@@ -1040,6 +1034,8 @@ class CatalogUpdate(CatalogPartBase):
                 # Ensure content is loaded before attempting save.
                 self.load()
 
+                if len(self.features):
+                        self.__data['_FEATURE'] = self.features
                 CatalogPartBase.save(self, self.__data)
 
         def updates(self):
@@ -1277,7 +1273,9 @@ class CatalogAttrs(CatalogPartBase):
                 # Ensure content is loaded before attempting save.
                 self.load()
 
-                CatalogPartBase.save(self, self.__transform(), single_pass=True)
+                if len(self.features):
+                        self.__data['_FEATURE'] = self.features
+                CatalogPartBase.save(self, self.__transform())
 
         def validate(self, signatures=None, require_signatures=False):
                 """Verifies whether the signatures for the contents of the
@@ -1688,7 +1686,10 @@ class Catalog(object):
                                 if Catalog.DEPENDENCY in info_needed:
                                         yield a
                         elif Catalog.SUMMARY in info_needed and a.name == "set":
-                                if attr_name in ("fmri", "pkg.fmri"):
+                                if attr_name in ("fmri", "pkg.fmri",
+                                    "publisher") or attr_name.startswith((
+                                    "info.source-url", "pkg.debug",
+                                    "pkg.linted")):
                                         continue
 
                                 comps = attr_name.split(":")
@@ -1871,13 +1872,15 @@ class Catalog(object):
                                 error = e
                         yield (pat, error, npat, matcher)
 
-        def __save(self):
+        def __save(self, fmt='utf8'):
                 """Private save function.  Caller is responsible for locking
                 the catalog."""
 
                 attrs = self._attrs
                 if self.log_updates:
                         for name, ulog in six.iteritems(self.__updates):
+                                ulog.load()
+                                ulog.set_feature(FEATURE_UTF8, fmt == 'utf8')
                                 ulog.save()
 
                                 # Replace the existing signature data
@@ -1899,9 +1902,9 @@ class Catalog(object):
                         # it increases memory usage substantially (30MB at
                         # current for /dev).  No significant difference is
                         # detectable for other parts though.
-                        single_pass = name in (self.__BASE_PART,
-                            self.__DEPS_PART)
-                        part.save(single_pass=single_pass)
+                        part.load()
+                        part.set_feature(FEATURE_UTF8, fmt == 'utf8')
+                        part.save()
 
                         # Now replace the existing signature data with
                         # the new signature data.
@@ -1912,6 +1915,8 @@ class Catalog(object):
                                 entry["signature-{0}".format(n)] = v
 
                 # Finally, save the catalog attributes.
+                attrs.load()
+                attrs.set_feature(FEATURE_UTF8, fmt == 'utf8')
                 attrs.save()
 
         def __set_batch_mode(self, value):
@@ -2108,6 +2113,12 @@ class Catalog(object):
                                         continue
                                 elif name in ("fmri", "pkg.fmri"):
                                         # Redundant in the case of the catalog.
+                                        continue
+
+                                if name in ("fmri", "pkg.fmri",
+                                    "publisher") or name.startswith((
+                                    "info.source-url", "pkg.debug",
+                                    "pkg.linted")):
                                         continue
 
                                 # All other set actions go to the summary
@@ -3672,12 +3683,12 @@ class Catalog(object):
                 finally:
                         self.__unlock_catalog()
 
-        def save(self):
+        def save(self, fmt='utf8'):
                 """Finalize current state and save to file if possible."""
 
                 self.__lock_catalog()
                 try:
-                        self.__save()
+                        self.__save(fmt)
                 finally:
                         self.__unlock_catalog()
 
