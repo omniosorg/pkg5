@@ -25,7 +25,8 @@
 # Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 #
 
-PYVERSIONS = 3.7 3.9
+# Whitespace separated list of versions to build and test
+PYVERSIONS = 3.9
 PYTESTS = $(PYVERSIONS:%=runtest/%)
 
 CODE_WS = $$(git rev-parse --show-toplevel)
