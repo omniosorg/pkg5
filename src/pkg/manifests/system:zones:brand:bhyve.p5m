@@ -31,7 +31,6 @@ file path=usr/lib/brand/bhyve/socat mode=0555 pkg.depend.bypass-generate=.*
 file path=usr/lib/brand/bhyve/support mode=0555
 file path=usr/lib/brand/bhyve/uninstall mode=0555
 license lic_CDDL license=lic_CDDL
-depend type=require fmri=runtime/python-37
 depend type=require fmri=system/bhyve
 depend type=require fmri=system/zones/brand/ipkg@$(PKGVERS)
 depend type=require fmri=system/zones/brand/sparse@$(PKGVERS)
