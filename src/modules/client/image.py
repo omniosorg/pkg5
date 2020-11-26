@@ -41,6 +41,7 @@ import stat
 import sys
 import tempfile
 import time
+import re as relib
 
 from contextlib import contextmanager
 from cryptography import x509
@@ -726,6 +727,23 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                 # This ensures all old transport configuration is thrown away.
                 self.transport = transport.Transport(
                     transport.ImageTransportCfg(self))
+
+        def hotfix_origin_cleanup(self):
+                """Remove any temporary hot-fix source origins"""
+
+                changed = False
+
+                for pub in self.cfg.publishers.values():
+                        if not pub.repository:
+                                continue
+
+                        for o in pub.repository.origins:
+                                if relib.search('/pkg_hfa_.*p5p/$', o.uri):
+                                        pub.repository.remove_origin(o)
+                                        changed = True
+
+                if changed:
+                        self.save_config()
 
         def mkdirs(self, root=None, version=None):
                 """Create any missing parts of the image's directory structure.
