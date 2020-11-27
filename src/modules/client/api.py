@@ -68,7 +68,6 @@ import sys
 import tempfile
 import threading
 import time
-import re as relib
 from functools import cmp_to_key
 
 from six.moves.urllib.parse import unquote
@@ -3022,20 +3021,9 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                     self.__new_be:
                         be.update_boot_archive()
 
+                self._img.hotfix_origin_cleanup()
+
                 if self.__new_be:
-
-                        # Remove any temporary hot-fix source origins from
-                        # the cloned BE.
-                        for pub in self._img.cfg.publishers.values():
-                                if not pub.repository:
-                                        continue
-
-                                for o in pub.repository.origins:
-                                        if relib.search(
-                                            '/pkg_hfa_.*p5p/$', o.uri):
-                                                pub.repository.remove_origin(o)
-                                                self._img.save_config()
-
                         be.activate_image(set_active=self.__be_activate)
                 else:
                         be.activate_install_uninstall()
