@@ -22,6 +22,7 @@
 
 #
 # Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 #
 
 from . import testutils
@@ -996,6 +997,45 @@ packages known:
                 # no pub check during detach
                 for c in [1, 2, 3, 4]:
                         self._api_detach(api_objs[c])
+
+        def test_linked_hfo_cleanup(self):
+                """test linked hotfix origin cleanup."""
+
+                api_objs = self._imgs_create(2, refresh_allowed=False)
+
+                # Attach p2c, 0 -> 1
+                api_objs[0].attach_linked_child(
+                    lin=self.i_lin[1], li_path=self.i_path[1],
+                    refresh_catalogs=False)
+
+                for i in range(2):
+                        api_objs[i].reset()
+
+                api_objs[0].hotfix_origin_cleanup()
+
+                hfurl = 'file:///pkg_hfa_test.p5p'
+                repouri = publisher.RepositoryURI(self.rurl2)
+                hfuri = publisher.RepositoryURI(hfurl)
+
+                repo = publisher.Repository(origins=[repouri, hfuri])
+                po = publisher.Publisher(self.pub2, repository=repo)
+
+                api_objs[0].add_publisher(po, refresh_allowed=False)
+                api_objs[1].add_publisher(po, refresh_allowed=False)
+
+                for i in range(2):
+                        pub = api_objs[i].get_publisher(prefix='lolcat')
+                        origins = [ o.uri.rstrip('/')
+                            for o in pub.repository.origins ]
+                        self.assertEqual(sorted(origins), [hfurl, self.rurl2])
+
+                api_objs[0].hotfix_origin_cleanup()
+
+                for i in range(2):
+                        pub = api_objs[i].get_publisher(prefix='lolcat')
+                        origins = [ o.uri.rstrip('/')
+                            for o in pub.repository.origins ]
+                        self.assertEqual(origins, [self.rurl2])
 
         def test_solver_err_aggregation(self):
                 """Verify that when the solver reports errors on packages that
