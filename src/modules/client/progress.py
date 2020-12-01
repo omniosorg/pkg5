@@ -2167,9 +2167,14 @@ class CommandLineProgressTracker(ProgressTracker):
                         self.__generic_start(
                             _("Linked image publisher check ..."))
                         return
+                elif self.linked_pkg_op == pkgdefs.PKG_OP_HOTFIX_CLEANUP:
+                        self.__generic_start(
+                            _("Cleaning up hot-fix origins ..."))
+                        return
 
         def _li_recurse_end_output(self):
-                if self.linked_pkg_op == pkgdefs.PKG_OP_PUBCHECK:
+                if self.linked_pkg_op in [pkgdefs.PKG_OP_PUBCHECK,
+                    pkgdefs.PKG_OP_HOTFIX_CLEANUP]:
                         self.__generic_done()
                         return
                 self._pe.cprint(self._phase_prefix() +
@@ -2198,7 +2203,8 @@ class CommandLineProgressTracker(ProgressTracker):
                 self.__li_dump_output(stderr)
 
         def _li_recurse_status_output(self, done):
-                if self.linked_pkg_op == pkgdefs.PKG_OP_PUBCHECK:
+                if self.linked_pkg_op in [pkgdefs.PKG_OP_PUBCHECK,
+                    pkgdefs.PKG_OPT_HOTFIX_CLEANUP]:
                         return
 
                 running = " ".join([str(i) for i in self.linked_running])
@@ -2210,7 +2216,8 @@ class CommandLineProgressTracker(ProgressTracker):
                 self._pe.cprint(self._phase_prefix() + msg)
 
         def _li_recurse_progress_output(self, lin):
-                if self.linked_pkg_op == pkgdefs.PKG_OP_PUBCHECK:
+                if self.linked_pkg_op in [pkgdefs.PKG_OP_PUBCHECK,
+                    pkgdefs.PKG_OPT_HOTFIX_CLEANUP]:
                         return
 
         def _reversion(self, pfmri, outspec):
@@ -2560,9 +2567,14 @@ class RADProgressTracker(CommandLineProgressTracker):
                         self.__generic_start(
                             _("Linked image publisher check ..."))
                         return
+                elif self.linked_pkg_op == pkgdefs.PKG_OP_HOTFIX_CLEANUP:
+                        self.__generic_start(
+                            _("Cleaning up hot-fix origins ..."))
+                        return
 
         def _li_recurse_end_output(self):
-                if self.linked_pkg_op == pkgdefs.PKG_OP_PUBCHECK:
+                if self.linked_pkg_op in [pkgdefs.PKG_OP_PUBCHECK,
+                    pkgdefs.PKG_OPT_HOTFIX_CLEANUP]:
                         self.__generic_done()
                         return
                 prog_json = self.__prep_prog_json(
@@ -2585,7 +2597,8 @@ class RADProgressTracker(CommandLineProgressTracker):
                 self.__handle_prog_output(prog_json)
 
         def _li_recurse_status_output(self, done):
-                if self.linked_pkg_op == pkgdefs.PKG_OP_PUBCHECK:
+                if self.linked_pkg_op in [pkgdefs.PKG_OP_PUBCHECK,
+                    pkgdefs.PKG_OPT_HOTFIX_CLEANUP]:
                         return
 
                 prog_json = {self.O_PHASE: self._phase_prefix(),
@@ -2599,7 +2612,8 @@ class RADProgressTracker(CommandLineProgressTracker):
                 self.__handle_prog_output(prog_json)
 
         def _li_recurse_progress_output(self, lin):
-                if self.linked_pkg_op == pkgdefs.PKG_OP_PUBCHECK:
+                if self.linked_pkg_op in [pkgdefs.PKG_OP_PUBCHECK,
+                    pkgdefs.PKG_OPT_HOTFIX_CLEANUP]:
                         return
 
         def _reversion(self, pfmri, outspec):
@@ -3093,9 +3107,14 @@ class FancyUNIXProgressTracker(ProgressTracker):
                         self.__generic_start(
                             _("Linked image publisher check"))
                         return
+                elif self.linked_pkg_op == pkgdefs.PKG_OP_HOTFIX_CLEANUP:
+                        self.__generic_start(
+                            _("Cleaning up hot-fix origins ..."))
+                        return
 
         def _li_recurse_end_output(self):
-                if self.linked_pkg_op == pkgdefs.PKG_OP_PUBCHECK:
+                if self.linked_pkg_op in [pkgdefs.PKG_OP_PUBCHECK,
+                    pkgdefs.PKG_OP_HOTFIX_CLEANUP]:
                         return
                 msg = _("{phasename} linked: {numdone} done").format(
                     phasename=self.li_phase_names[self.major_phase],
@@ -3128,7 +3147,8 @@ class FancyUNIXProgressTracker(ProgressTracker):
                 self.__li_dump_output(stderr)
 
         def _li_recurse_status_output(self, done):
-                if self.linked_pkg_op == pkgdefs.PKG_OP_PUBCHECK:
+                if self.linked_pkg_op in [pkgdefs.PKG_OP_PUBCHECK,
+                    pkgdefs.PKG_OP_HOTFIX_CLEANUP]:
                         return
 
                 assert self.major_phase in self.li_phase_names, self.major_phase
@@ -3146,7 +3166,8 @@ class FancyUNIXProgressTracker(ProgressTracker):
                     itertools.repeat(0, len(self.linked_running)))
 
         def _li_recurse_progress_output(self, lin):
-                if self.linked_pkg_op == pkgdefs.PKG_OP_PUBCHECK:
+                if self.linked_pkg_op in [pkgdefs.PKG_OP_PUBCHECK,
+                    pkgdefs.PKG_OP_HOTFIX_CLEANUP]:
                         return
                 if not self._ptimer.time_to_print():
                         return

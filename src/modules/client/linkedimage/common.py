@@ -2150,7 +2150,8 @@ class LinkedImage(object):
                         pkg_op = _lic_op_vectors[0][0]
 
                         if pkg_op in [ pkgdefs.PKG_OP_AUDIT_LINKED,
-                            pkgdefs.PKG_OP_PUBCHECK ]:
+                            pkgdefs.PKG_OP_PUBCHECK,
+                            pkgdefs.PKG_OP_HOTFIX_CLEANUP ]:
                                 # These operations are cheap so ideally we'd
                                 # like to use full parallelism.  But if the user
                                 # specified a concurrency limit we should
@@ -2406,6 +2407,23 @@ class LinkedImage(object):
 
                 # raise an exception if one or more children failed the
                 # publisher check.
+                _li_rvdict_raise_exceptions(rvdict)
+
+        def api_recurse_hfo_cleanup(self, progtrack):
+                """Do a recursive hot-fix origin cleanup"""
+
+                # get a list of of children to recurse into.
+                lic_list = list(self.__lic_dict.values())
+
+                rvdict = {}
+                list(self.__children_op(
+                    _pkg_op=pkgdefs.PKG_OP_HOTFIX_CLEANUP,
+                    _lic_list=lic_list,
+                    _rvdict=rvdict,
+                    _progtrack=progtrack,
+                    _failfast=False))
+
+                # raise an exception if one or more children failed
                 _li_rvdict_raise_exceptions(rvdict)
 
         def __api_recurse(self, stage, progtrack):
@@ -3233,6 +3251,13 @@ class LinkedImageChild(object):
                 self.__pkg_remote.setup(self.child_path,
                     pkgdefs.PKG_OP_PUBCHECK)
 
+        def __child_setup_hfo_cleanup(self, _pmd):
+                """Prepare to a clean up any stale hotfix origins."""
+
+                # set up recursion into the child image
+                self.__pkg_remote.setup(self.child_path,
+                    pkgdefs.PKG_OP_HOTFIX_CLEANUP)
+
         def __child_setup_audit(self, _pmd):
                 """Prepare to a child image to see if it's in sync with its
                 constraints."""
@@ -3274,6 +3299,8 @@ class LinkedImageChild(object):
                         self.__child_setup_detach(_progtrack, **kwargs)
                 elif _pkg_op == pkgdefs.PKG_OP_PUBCHECK:
                         self.__child_setup_pubcheck(_pmd, **kwargs)
+                elif _pkg_op == pkgdefs.PKG_OP_HOTFIX_CLEANUP:
+                        self.__child_setup_hfo_cleanup(_pmd, **kwargs)
                 elif _pkg_op == pkgdefs.PKG_OP_SYNC:
                         self.__child_setup_sync(_pmd, _progtrack,
                             _ignore_syncmd_nop, _syncmd_tmp, **kwargs)
