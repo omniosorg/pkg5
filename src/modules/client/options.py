@@ -21,7 +21,7 @@
 #
 
 # Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
-# Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 
 import os
 
@@ -1339,6 +1339,7 @@ pkg_op_opts = {
     pkgdefs.PKG_OP_UNSET_PUBLISHER: [],
     pkgdefs.PKG_OP_UPDATE         : opts_update,
     pkgdefs.PKG_OP_APPLY_HOT_FIX  : opts_apply_hot_fix,
+    pkgdefs.PKG_OP_HOTFIX_CLEANUP : [],
     pkgdefs.PKG_OP_VERIFY         : opts_verify
 }
 
