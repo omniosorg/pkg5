@@ -1705,6 +1705,21 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                 # check that linked image pubs are in sync
                 self.__linked_pubcheck()
 
+        @_LockedCancelable()
+        def hotfix_origin_cleanup(self):
+
+                # grab image lock. Cleanup is handled by the decorator.
+                self._img.lock(allow_unprivileged=False)
+
+                # prepare for recursion
+                self._img.linked.api_recurse_init()
+
+                # clean up the image
+                self._img.hotfix_origin_cleanup()
+
+                # clean up children
+                self._img.linked.api_recurse_hfo_cleanup(self.__progresstracker)
+
         def planned_nothingtodo(self, li_ignore_all=False):
                 """Once an operation has been planned check if there is
                 something todo.
