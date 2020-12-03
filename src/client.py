@@ -421,6 +421,7 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False,
         priv_usage["audit-linked"] = _(
             "[-H] [-a|-l <li-name>] [--no-parent-sync]")
         priv_usage["pubcheck-linked"] = ""
+        priv_usage["clean-up-hot-fix"] = ""
         priv_usage["sync-linked"] = _(
             "[-nvq] [-C n] [--accept] [--licenses] [--no-index]\n"
             "            [--no-refresh] [--no-parent-sync] [--no-pkg-updates]\n"
@@ -1973,7 +1974,8 @@ class RemoteDispatch(object):
                     PKG_OP_INSTALL,
                     PKG_OP_CHANGE_FACET,
                     PKG_OP_CHANGE_VARIANT,
-                    PKG_OP_UNINSTALL
+                    PKG_OP_UNINSTALL,
+                    PKG_OP_HOTFIX_CLEANUP
                 ]
                 if op not in op_supported:
                         raise Exception(
@@ -2349,6 +2351,10 @@ def apply_hot_fix(**args):
         if not args['pargs']:
                usage(_("Source URL or file must be specified"), cmd=args['op'])
 
+        err = hotfix_cleanup(op=None, api_inst=args['api_inst'], pargs=None)
+        if err != EXIT_OK:
+                return err
+
         origin = misc.parse_uri(args['pargs'].pop(0), cwd=orig_cwd)
 
         if args['verbose']:
@@ -2525,12 +2531,9 @@ def apply_hot_fix(**args):
                 if rel == "child"
         ])
 
-        cleanup_pubargs = pubargs.copy()
-        cleanup_pubargs['remove_origins'] = pubargs['add_origins']
-        cleanup_pubargs['add_origins'] = set([])
-
         publisher_set(**pubargs)
-        atexit.register(publisher_set, **cleanup_pubargs)
+        atexit.register(hotfix_cleanup, op=None, api_inst=args['api_inst'],
+            pargs=None)
 
         ######################################################################
         # Pass off to pkg update
@@ -4625,6 +4628,21 @@ def pubcheck_linked(op, api_inst, pargs):
 
         return EXIT_OK
 
+def hotfix_cleanup(op, api_inst, pargs):
+        try:
+                api_inst.hotfix_origin_cleanup()
+        except api_errors.ImageLockedError as e:
+                error(e)
+                return EXIT_LOCKED
+        except api_errors.ImageMissingKeyFile as e:
+                error(e)
+                return EXIT_EACCESS
+        except api_errors.UnprivilegedUserError as e:
+                error(e)
+                return EXIT_OOPS
+
+        return EXIT_OK
+
 def __parse_linked_props(args, op):
         """"Parse linked image property options that were specified on the
         command line into a dictionary.  Make sure duplicate properties were
@@ -5661,6 +5679,7 @@ cmds = {
     "property"              : [property_list],
     "property-linked"       : [list_property_linked],
     "pubcheck-linked"       : [pubcheck_linked, 0],
+    "clean-up-hot-fix"      : [hotfix_cleanup, 0],
     "publisher"             : [publisher_list],
     "purge-history"         : [history_purge],
     "rebuild-index"         : [rebuild_index],
@@ -5687,6 +5706,13 @@ cmds = {
     "variant"               : [list_variant],
     "verify"                : [verify],
     "version"               : [None],
+}
+
+aliases = {
+    "image-update"          : "update",
+    "apply-hotfix"          : "apply-hot-fix",
+    "cleanup-hotfix"        : "clean-up-hot-fix",
+    "cleanup-hot-fix"       : "clean-up-hot-fix",
 }
 
 # Option value dictionary which pre-defines the valid values for
@@ -5825,8 +5851,8 @@ def main_func():
         subcommand = None
         if pargs:
                 subcommand = pargs.pop(0)
-                # 'image-update' is an alias for 'update' for compatibility.
-                subcommand = subcommand.replace("image-update", "update")
+                if subcommand in aliases:
+                        subcommand = aliases[subcommand]
                 if subcommand == "help":
                         if pargs:
                                 sub = pargs.pop(0)
