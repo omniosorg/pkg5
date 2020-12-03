@@ -22,6 +22,7 @@
 
 #
 # Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 #
 
 """
@@ -71,6 +72,7 @@ PKG_OP_UNINSTALL       = "uninstall"
 PKG_OP_UNSET_PUBLISHER = "unset-publisher"
 PKG_OP_UPDATE          = "update"
 PKG_OP_APPLY_HOT_FIX   = "apply-hot-fix"
+PKG_OP_HOTFIX_CLEANUP  = "clean-up-hot-fix"
 PKG_OP_VERIFY          = "verify"
 pkg_op_values          = frozenset([
     PKG_OP_ATTACH,
@@ -98,7 +100,8 @@ pkg_op_values          = frozenset([
     PKG_OP_UNSET_PUBLISHER,
     PKG_OP_UPDATE,
     PKG_OP_APPLY_HOT_FIX,
-    PKG_OP_VERIFY
+    PKG_OP_HOTFIX_CLEANUP,
+    PKG_OP_VERIFY,
 ])
 
 API_OP_ATTACH         = "attach-linked"
