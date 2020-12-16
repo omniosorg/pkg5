@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2020, Oracle and/or its affiliates.
 # Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 #
 
@@ -1177,7 +1177,7 @@ class Transport(object):
 
         @LockedTransport()
         def get_content(self, pub, fhash, fmri=None, ccancel=None,
-            hash_func=None):
+            hash_func=None, errors="strict"):
                 """Given a fhash, return the uncompressed content content from
                 the remote object.  This is similar to get_datastream, except
                 that the transport handles retrieving and decompressing the
@@ -1187,6 +1187,10 @@ class Transport(object):
                 should be specified for optimal transport performance.
 
                 'hash_func' is the hash function that was used to compute fhash.
+
+                'errors' allows us to deal with UTF-8 encoding issues. This
+                really only makes sense to use when showing the content of
+                a license or release-note, all other cases should use 'strict'
                 """
 
                 retry_count = global_settings.PKG_CLIENT_MAX_TIMEOUT
@@ -1243,7 +1247,7 @@ class Transport(object):
                                 s.close()
 
                                 # we want str internally
-                                return misc.force_str(content)
+                                return misc.force_str(content, errors=errors)
 
                         except tx.ExcessiveTransientFailure as e:
                                 # If an endpoint experienced so many failures
