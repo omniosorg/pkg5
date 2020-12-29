@@ -2204,7 +2204,7 @@ class CommandLineProgressTracker(ProgressTracker):
 
         def _li_recurse_status_output(self, done):
                 if self.linked_pkg_op in [pkgdefs.PKG_OP_PUBCHECK,
-                    pkgdefs.PKG_OPT_HOTFIX_CLEANUP]:
+                    pkgdefs.PKG_OP_HOTFIX_CLEANUP]:
                         return
 
                 running = " ".join([str(i) for i in self.linked_running])
@@ -2217,7 +2217,7 @@ class CommandLineProgressTracker(ProgressTracker):
 
         def _li_recurse_progress_output(self, lin):
                 if self.linked_pkg_op in [pkgdefs.PKG_OP_PUBCHECK,
-                    pkgdefs.PKG_OPT_HOTFIX_CLEANUP]:
+                    pkgdefs.PKG_OP_HOTFIX_CLEANUP]:
                         return
 
         def _reversion(self, pfmri, outspec):
@@ -2574,7 +2574,7 @@ class RADProgressTracker(CommandLineProgressTracker):
 
         def _li_recurse_end_output(self):
                 if self.linked_pkg_op in [pkgdefs.PKG_OP_PUBCHECK,
-                    pkgdefs.PKG_OPT_HOTFIX_CLEANUP]:
+                    pkgdefs.PKG_OP_HOTFIX_CLEANUP]:
                         self.__generic_done()
                         return
                 prog_json = self.__prep_prog_json(
@@ -2598,7 +2598,7 @@ class RADProgressTracker(CommandLineProgressTracker):
 
         def _li_recurse_status_output(self, done):
                 if self.linked_pkg_op in [pkgdefs.PKG_OP_PUBCHECK,
-                    pkgdefs.PKG_OPT_HOTFIX_CLEANUP]:
+                    pkgdefs.PKG_OP_HOTFIX_CLEANUP]:
                         return
 
                 prog_json = {self.O_PHASE: self._phase_prefix(),
@@ -2613,7 +2613,7 @@ class RADProgressTracker(CommandLineProgressTracker):
 
         def _li_recurse_progress_output(self, lin):
                 if self.linked_pkg_op in [pkgdefs.PKG_OP_PUBCHECK,
-                    pkgdefs.PKG_OPT_HOTFIX_CLEANUP]:
+                    pkgdefs.PKG_OP_HOTFIX_CLEANUP]:
                         return
 
         def _reversion(self, pfmri, outspec):
