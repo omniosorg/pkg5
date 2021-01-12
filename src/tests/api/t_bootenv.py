@@ -33,7 +33,7 @@ import sys
 import pkg.client.bootenv as bootenv
 
 class TestBootEnv(pkg5unittest.Pkg5TestCase):
-                
+
         def test_api_consistency(self):
                 """Make sure every public method in BootEnv exists in
                 BootEnvNull and the other way around.
@@ -81,6 +81,7 @@ class TestBootEnv(pkg5unittest.Pkg5TestCase):
                 self.assertTrue(
                     isinstance(bootenv.BootEnv.get_uuid_be_dic(), dict))
                 bootenv.BootEnv.get_activated_be_name()
+                bootenv.BootEnv.get_activated_be_name(bootnext=True)
                 bootenv.BootEnv.get_active_be_name()
                 # This assumes that a1b2c3d4e5f6g7h8i9j0 is highly unlikely to
                 # be an existing BE on the system.

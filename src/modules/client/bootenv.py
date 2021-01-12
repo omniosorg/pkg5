@@ -21,6 +21,7 @@
 #
 
 # Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
 
 import errno
 import os
@@ -384,9 +385,13 @@ class BootEnv(object):
                 return uuid_bes
 
         @staticmethod
-        def get_activated_be_name():
+        def get_activated_be_name(bootnext=False):
+                """Gets the name of the currently activated boot environment.
+                If 'bootnext' is true, then also consider temporary (bootnext)
+                activations """
                 try:
                         beList = BootEnv.get_be_list()
+                        name = None
 
                         for be in beList:
                                 # don't look at active but unbootable BEs.
@@ -394,8 +399,16 @@ class BootEnv(object):
                                 # associated with other global zone BEs.)
                                 if be.get("active_unbootable", False):
                                         continue
-                                if be.get("active_boot") and be.get("global_active", True):
+                                if not be.get("global_active", True):
+                                        continue
+                                if (bootnext and
+                                    be.get("active_nextboot", False)):
                                         return be.get("orig_be_name")
+                                if be.get("active_boot"):
+                                        name = be.get("orig_be_name")
+                                        if not bootnext:
+                                                break
+                        return name
                 except AttributeError:
                         raise api_errors.BENamingNotSupported(be_name)
 
@@ -506,16 +519,24 @@ class BootEnv(object):
                         If were operating on a non-live BE then
                         destroy the snapshot.
 
-                'set_active' is an optional boolean indicating that the new
+                'set_active' is an optional argument indicating whether the new
                 BE (if created) should be set as the active one on next boot.
+                If 'set_active' is set to the string 'bootnext' then the
+                a temporary one-time activation will be performed.
                 """
 
                 def activate_live_be():
-                        if set_active and \
-                            be.beActivate(self.be_name_clone) != 0:
-                                logger.error(_("pkg: unable to activate "
-                                    "{0}").format(self.be_name_clone))
-                                return
+                        if set_active:
+                                if set_active == "bootnext":
+                                        ret = be.beActivate(self.be_name_clone,
+                                            temporary=1)
+                                else:
+                                        ret = be.beActivate(self.be_name_clone)
+                                if ret != 0:
+                                        logger.error(
+                                            _("pkg: unable to activate "
+                                            "{0}").format(self.be_name_clone))
+                                        return
 
                         # Consider the last operation a success, and log it as
                         # ending here so that it will be recorded in the new
@@ -800,7 +821,7 @@ class BootEnvNull(object):
                 return misc.EmptyDict
 
         @staticmethod
-        def get_activated_be_name():
+        def get_activated_be_name(bootnext=False):
                 pass
 
         @staticmethod

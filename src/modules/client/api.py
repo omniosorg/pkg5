@@ -23,7 +23,7 @@
 #
 # Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
 # Copyright (c) 2008, 2020, Oracle and/or its affiliates. All rights reserved.
-# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
 #
 
 """This module provides the supported, documented interface for clients to
@@ -489,7 +489,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                         be_name, be_uuid = bootenv.BootEnv.get_be_name(
                             self._img.root)
                         return be_name == \
-                            bootenv.BootEnv.get_activated_be_name()
+                            bootenv.BootEnv.get_activated_be_name(bootnext=True)
                 except apx.BEException:
                         # If boot environment logic isn't supported, return
                         # False.  This is necessary for user images and for
@@ -1290,7 +1290,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                 arg_types = {
                     # arg name              type                   nullable
                     "_act_timeout":         (int,                  False),
-                    "_be_activate":         (bool,                 False),
+                    "_be_activate":         ('activate',           False),
                     "_be_name":             (six.string_types,     True),
                     "_backup_be":           (bool,                 True),
                     "_backup_be_name":      (six.string_types,     True),
@@ -1336,7 +1336,10 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                                 except TypeError:
                                         raise AssertionError("{0} is not an "
                                             "iterable".format(a))
-
+                        elif a_type == 'activate':
+                                assert isinstance(args[a], bool) or (
+                                    isinstance(args[a], str) and
+                                    args[a] == 'bootnext')
                         else:
                                 assert (args[a] is None or
                                     isinstance(args[a], a_type)), "{0} is " \
