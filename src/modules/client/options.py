@@ -31,7 +31,8 @@ import pkg.misc as misc
 
 from pkg.client.api_errors import InvalidOptionError, LinkedImageException
 from pkg.client import global_settings
-from pkg.client.imageconfig import DEFAULT_RECURSE, DEFAULT_CONCURRENCY
+from pkg.client.imageconfig import DEFAULT_RECURSE, DEFAULT_CONCURRENCY, \
+    TEMP_BE_ACTIVATION
 
 _orig_cwd = None
 
@@ -43,6 +44,7 @@ ATTACH_PARENT         = "attach_parent"
 BACKUP_BE             = "backup_be"
 BACKUP_BE_NAME        = "backup_be_name"
 BE_ACTIVATE           = "be_activate"
+BE_TEMP_ACTIVATE      = "be_temp_activate"
 BE_NAME               = "be_name"
 CONCURRENCY           = "concurrency"
 DENY_NEW_BE           = "deny_new_be"
@@ -345,6 +347,15 @@ def opts_table_cb_beopts(op, api_inst, opts, opts_new):
         if (opts[BE_NAME] or opts[REQUIRE_NEW_BE]) and opts[DENY_NEW_BE]:
                 raise InvalidOptionError(InvalidOptionError.INCOMPAT,
                     [REQUIRE_NEW_BE, DENY_NEW_BE])
+
+        # update BE_ACTIVATE based on BE_TEMP_ACTIVATE
+        if opts[BE_TEMP_ACTIVATE] and not opts[BE_ACTIVATE]:
+                raise InvalidOptionError(InvalidOptionError.INCOMPAT,
+                    [BE_ACTIVATE, BE_TEMP_ACTIVATE])
+        if opts[BE_ACTIVATE] and (opts[BE_TEMP_ACTIVATE] or
+            api_inst.img.get_property(TEMP_BE_ACTIVATION)):
+                opts_new[BE_ACTIVATE] = 'bootnext'
+        del opts_new[BE_TEMP_ACTIVATE]
 
         # create a new key called BACKUP_BE in the options array
         if opts[REQUIRE_NEW_BE] or opts[BE_NAME]:
@@ -978,6 +989,7 @@ opts_table_beopts = [
     (DENY_NEW_BE,        False, [], {"type": "boolean"}),
     (NO_BACKUP_BE,       False, [], {"type": "boolean"}),
     (BE_ACTIVATE,        True,  [], {"type": "boolean"}),
+    (BE_TEMP_ACTIVATE,   False, [], {"type": "boolean"}),
     (REQUIRE_BACKUP_BE,  False, [], {"type": "boolean"}),
     (REQUIRE_NEW_BE,     False, [], {"type": "boolean"}),
 ]

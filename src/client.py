@@ -22,7 +22,7 @@
 
 #
 # Copyright (c) 2007, 2019, Oracle and/or its affiliates. All rights reserved.
-# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
 #
 
 #
@@ -214,34 +214,36 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False,
         basic_cmds = ["refresh", "install", "uninstall", "update",
             "apply-hot-fix", "list", "version"]
 
-        basic_usage["install"] = _(
-            "[-nvq] [-C n] [-g path_or_uri ...] [--accept]\n"
-            "            [--licenses] [--no-be-activate] [--no-index] [--no-refresh]\n"
+        beopts = (
+            "            [--no-be-activate] [--temp-be-activate]\n"
             "            [--no-backup-be | --require-backup-be] [--backup-be-name name]\n"
             "            [--deny-new-be | --require-new-be] [--be-name name]\n"
+        )
+
+        recurseopts = (
             "            [-R | -r [-z zonename... | -Z zonename...]]\n"
+        )
+
+        basic_usage["install"] = _(
+            "[-nvq] [-C n] [-g path_or_uri ...]\n"
+            "            [--no-index] [--no-refresh] [--licenses] [--accept]\n"
+            + beopts + recurseopts +
             "            [--sync-actuators | --sync-actuators-timeout timeout]\n"
             "            [--reject pkg_fmri_pattern ... ] pkg_fmri_pattern ...")
         basic_usage["uninstall"] = _(
-            "[-nvq] [-C n] [--ignore-missing] [--no-be-activate] [--no-index]\n"
-            "            [--no-backup-be | --require-backup-be] [--backup-be-name]\n"
-            "            [--deny-new-be | --require-new-be] [--be-name name]\n"
-            "            [-R | -r [-z zonename... | -Z zonename...]]\n"
+            "[-nvq] [-C n] [--ignore-missing] [--no-index]\n"
+            + beopts + recurseopts +
             "            [--sync-actuators | --sync-actuators-timeout timeout]\n"
             "            pkg_fmri_pattern ...")
         basic_usage["update"] = _(
-            "[-fnvq] [-C n] [-g path_or_uri ...] [--accept] [--ignore-missing]\n"
-            "            [--licenses] [--no-be-activate] [--no-index] [--no-refresh]\n"
-            "            [--no-backup-be | --require-backup-be] [--backup-be-name]\n"
-            "            [--deny-new-be | --require-new-be] [--be-name name]\n"
-            "            [-R | -r [-z zonename... | -Z zonename...]]\n"
+            "[-fnvq] [-C n] [-g path_or_uri ...] [--ignore-missing]\n"
+            "            [--no-index] [--no-refresh] [--licenses] [--accept]\n"
+            + beopts + recurseopts +
             "            [--sync-actuators | --sync-actuators-timeout timeout]\n"
             "            [--reject pkg_fmri_pattern ...] [pkg_fmri_pattern ...]")
         basic_usage["apply-hot-fix"] = _(
-            "[-nvq] [--no-be-activate]\n"
-            "            [--no-backup-be | --require-backup-be] [--backup-be-name]\n"
-            "            [--deny-new-be | --require-new-be] [--be-name name]\n"
-            "            [-R | -r [-z zonename... | -Z zonename...]]\n"
+            "[-nvq]\n"
+            + beopts + recurseopts +
             "            <path_or_uri> [pkg_fmri_pattern ...]")
         basic_usage["list"] = _(
             "[-Hafnqsuv] [-g path_or_uri ...] [--no-refresh]\n"
@@ -308,15 +310,13 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False,
         adv_usage["verify"] = _("[-Hqv] [-p path]... [--parsable version]\n"
             "            [--unpackaged] [--unpackaged-only] [pkg_fmri_pattern ...]")
         adv_usage["fix"] = _(
-            "[-Hnvq] [--no-be-activate]\n"
-            "            [--no-backup-be | --require-backup-be] [--backup-be-name name]\n"
-            "            [--deny-new-be | --require-new-be] [--be-name name]\n"
+            "[-Hnvq]\n"
+            + beopts +
             "            [--accept] [--licenses] [--parsable version] [--unpackaged]\n"
             "            [pkg_fmri_pattern ...]")
         adv_usage["revert"] = _(
-            "[-nv] [--no-be-activate]\n"
-            "            [--no-backup-be | --require-backup-be] [--backup-be-name name]\n"
-            "            [--deny-new-be | --require-new-be] [--be-name name]\n"
+            "[-nv]\n"
+            + beopts +
             "            (--tagged tag-name ... | path-to-file ...)")
 
         adv_usage["image-create"] = _(
@@ -328,20 +328,16 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False,
             "            [(-p|--publisher) [<name>=]<repo_uri>] dir")
         adv_usage["change-variant"] = _(
             "[-nvq] [-C n] [-g path_or_uri ...] [--accept]\n"
-            "            [--licenses] [--no-be-activate] [--no-index] [--no-refresh]\n"
-            "            [--no-backup-be | --require-backup-be] [--backup-be-name name]\n"
-            "            [--deny-new-be | --require-new-be] [--be-name name]\n"
-            "            [-R | -r [-z zonename... | -Z zonename...]]\n"
+            "            [--licenses] [--no-index] [--no-refresh]\n"
+            + beopts + recurseopts +
             "            [--sync-actuators | --sync-actuators-timeout timeout]\n"
             "            [--reject pkg_fmri_pattern ... ]\n"
             "            <variant_spec>=<instance> ...")
 
         adv_usage["change-facet"] = _(
             "[-nvq] [-C n] [-g path_or_uri ...] [--accept]\n"
-            "            [--licenses] [--no-be-activate] [--no-index] [--no-refresh]\n"
-            "            [--no-backup-be | --require-backup-be] [--backup-be-name name]\n"
-            "            [--deny-new-be | --require-new-be] [--be-name name]\n"
-            "            [-R | -r [-z zonename... | -Z zonename...]]\n"
+            "            [--licenses] [--no-index] [--no-refresh]\n"
+            + beopts + recurseopts +
             "            [--sync-actuators | --sync-actuators-timeout timeout]\n"
             "            [--reject pkg_fmri_pattern ... ]\n"
             "            <facet_spec>=[True|False|None] ...")
@@ -349,13 +345,11 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False,
         adv_usage["mediator"] = _("[-aH] [-F format] [<mediator> ...]")
         adv_usage["set-mediator"] = _(
             "[-nv] [-I <implementation>]\n"
-            "            [-V <version>] [--no-be-activate]\n"
-            "            [--no-backup-be | --require-backup-be] [--backup-be-name name]\n"
-            "            [--deny-new-be | --require-new-be] [--be-name name]\n"
+            "            [-V <version>]\n"
+            + beopts +
             "            <mediator> ...")
-        adv_usage["unset-mediator"] = _("[-nvIV] [--no-be-activate]\n"
-            "            [--no-backup-be | --require-backup-be] [--backup-be-name]\n"
-            "            [--deny-new-be | --require-new-be] [--be-name name]\n"
+        adv_usage["unset-mediator"] = _("[-nvIV]\n"
+            + beopts +
             "            <mediator> ...")
 
         adv_usage["variant"] = _("[-Haiv] [-F format] [<variant_pattern> ...]")
@@ -377,7 +371,7 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False,
             "            [-m mirror_to_add|--add-mirror=mirror_to_add ...]\n"
             "            [-M mirror_to_remove|--remove-mirror=mirror_to_remove ...]\n"
             "            [-p repo_uri] [--enable] [--disable] [--no-refresh]\n"
-            "            [-R | -r [-z zonename... | -Z zonename...]]\n"
+            + recurseopts +
             "            [--reset-uuid] [--non-sticky] [--sticky]\n"
             "            [--search-after=publisher]\n"
             "            [--search-before=publisher]\n"
@@ -399,9 +393,8 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False,
         adv_usage["rebuild-index"] = ""
         adv_usage["update-format"] = ""
         adv_usage["exact-install"] = _("[-nvq] [-C n] [-g path_or_uri ...] [--accept]\n"
-            "            [--licenses] [--no-be-activate] [--no-index] [--no-refresh]\n"
-            "            [--no-backup-be | --require-backup-be] [--backup-be-name name]\n"
-            "            [--deny-new-be | --require-new-be] [--be-name name]\n"
+            "            [--licenses] [--no-index] [--no-refresh]\n"
+            + beopts +
             "            [--reject pkg_fmri_pattern ... ] pkg_fmri_pattern ...")
         adv_usage["dehydrate"] = _("[-nvq] [-p publisher ...]")
         adv_usage["rehydrate"] = _("[-nvq] [-p publisher ...]")
@@ -795,7 +788,9 @@ WARNING: The boot environment being modified is not the active one.
 
                         if plan.new_be:
                                 status.append((_("Activate boot environment:"),
-                                    bool_str(plan.activate_be)))
+                                    'Next boot only'
+                                    if plan.activate_be == 'bootnext'
+                                    else bool_str(plan.activate_be)))
                         # plan.be_name can be undefined in the uninstall case
                         # so test it before trying to print it out.
                         if plan.be_name:
@@ -5507,6 +5502,7 @@ opts_mapping = {
     "deny_new_be" :       ("",  "deny-new-be"),
     "no_backup_be" :      ("",  "no-backup-be"),
     "be_activate" :       ("",  "no-be-activate"),
+    "be_temp_activate" :  ("",  "temp-be-activate"),
     "require_backup_be" : ("",  "require-backup-be"),
     "require_new_be" :    ("",  "require-new-be"),
 

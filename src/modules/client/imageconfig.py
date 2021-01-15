@@ -22,6 +22,7 @@
 
 #
 # Copyright (c) 2007, 2017, Oracle and/or its affiliates. All rights reserved.
+# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
 #
 
 import collections
@@ -56,6 +57,7 @@ from pkg.client.transport.exception import TransportFailures
 # should use the constants defined here.
 
 BE_POLICY = "be-policy"
+TEMP_BE_ACTIVATION = "temp-be-activation"
 CONTENT_UPDATE_POLICY = "content-update-policy"
 FLUSH_CONTENT_CACHE = "flush-content-cache-on-success"
 MIRROR_DISCOVERY = "mirror-discovery"
@@ -78,6 +80,7 @@ default_policies = {
     SIGNATURE_POLICY: sigpolicy.DEFAULT_POLICY,
     USE_SYSTEM_REPO: False,
     DEFAULT_RECURSE: False,
+    TEMP_BE_ACTIVATION: False,
 }
 
 default_policy_map = {
@@ -211,6 +214,8 @@ class ImageConfig(cfg.FileConfig):
                     cfg.Property(AUTO_BE_NAME,
                         default=default_properties[AUTO_BE_NAME],
                         value_map=_val_map_none),
+                    cfg.PropBool(TEMP_BE_ACTIVATION,
+                        default=default_policies[TEMP_BE_ACTIVATION]),
                 ]),
                 cfg.PropertySection("facet", properties=[
                     cfg.PropertyTemplate(r"^facet\..*", prop_type=cfg.PropBool),
