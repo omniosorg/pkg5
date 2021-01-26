@@ -4,11 +4,11 @@
 The pkg5 components have been updated to the latest upstream solaris-ips
 as of:
 
-commit ace09ba9bbf223ded678f1e32ccdab7a3a354f25
+commit 5f4b5baf6a8b099ee611a9d701bab2b3c899d330
 Author: Peter Dennis <peter.dennis@oracle.com>
-Date:   Wed Oct 21 16:28:34 2020 +0100
+Date:   Fri Jan 8 16:24:31 2021 +0000
 
-    31762523 pkg update entire@latest fails due to constraint from package neither installed nor required
+    31756462 pkg gate code is not clean with gcc 10
 
 -----------------------------------------------------------------------------
 
