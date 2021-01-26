@@ -199,7 +199,7 @@ if [[ -n $entire_fmri ]]; then
 	printf "$m_incorp\n"
 	lc_pkg list $list_origin -af pkg://$publisher/$entire_fmri \
 		> /dev/null 2>&1
-	if [[ $? -ne 0 ]]; then
+	if (( $? != 0 )); then
 		fail_fatal "$f_no_entire_in_pref" $entire_fmri $publisher
 	fi
 fi
@@ -219,7 +219,7 @@ if [[ -n $install_archive || -n $source_dir ]]; then
 	    $unconfig_zone $preserve_zone
 	ii_result=$?
 
-	if (( $ii_result != 0 )); then
+	if (( ii_result != 0 )); then
 		exit $ZONE_SUBPROC_NOTCOMPLETE
 	fi
 	exit $ZONE_SUBPROC_OK
@@ -287,7 +287,8 @@ done
 #
 # Get packages for TX zones if appropriate.
 #
-(( $brand_labeled == 1 )) && pkglist="$pkglist pkg:/system/trusted/trusted-nonglobal"
+(( brand_labeled == 1 )) \
+    && pkglist="$pkglist pkg:/system/trusted/trusted-nonglobal"
 
 #
 # Add in any extra packages requested by the user.
@@ -359,7 +360,7 @@ cp /etc/default/{login,su} $ZONEROOT/etc/default/
 # packages are installed in the zone.  Set up links in the zone to the
 # global zone files -- this will provide default versions from the global
 # zone, which can be modified by the zone, breaking the link.
-if (( $brand_labeled == 1 )); then
+if (( brand_labeled == 1 )); then
 	cd /etc/gconf
 	for i in $(find .); do
 		if [ ! -e $ZONEROOT/etc/gconf/$i ]; then
@@ -374,7 +375,7 @@ if (( $brand_labeled == 1 )); then
 fi
 
 printf "$m_complete\n\n" ${SECONDS}
-if (( $brand_labeled == 0 )); then
+if (( brand_labeled == 0 )); then
 	:
 else
 	# Umount the dataset on the root.

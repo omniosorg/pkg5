@@ -39,7 +39,7 @@ f_zfs_clone=$(gettext "Unable to clone zone's %s ZFS dataset.")
 # Clean up on failure
 trap_exit()
 {
-	if (( $ZONE_IS_MOUNTED != 0 )); then
+	if (( ZONE_IS_MOUNTED != 0 )); then
 		error "$v_unmount"
 		zoneadm -z $ZONENAME unmount
 	fi

@@ -40,7 +40,7 @@ EXIT_CODE=1
 # Clean up on failure
 trap_exit()
 {
-	if (( $ZONE_IS_MOUNTED != 0 )); then
+	if (( ZONE_IS_MOUNTED != 0 )); then
 		error "$v_unmount"
 		zoneadm -z $ZONENAME unmount
 	fi
@@ -65,7 +65,7 @@ fix_net()
 			OLD_HOSTNET="$i"
 		fi
 	done
-	if (( $NETIF_CNT != 1 )); then
+	if (( NETIF_CNT != 1 )); then
 		vlog "$v_nonetfix"
 		return
 	fi
@@ -458,7 +458,7 @@ ZONE_IS_MOUNTED=0
 
 is_brand_labeled
 brand_labeled=$?
-if (( $brand_labeled == 1 )); then
+if (( brand_labeled == 1 )); then
 	# The labeled brand needs to mount the zone's root dataset back onto
 	# ZONEROOT so we can finish processing.
 	mount_active_ds
@@ -483,7 +483,7 @@ log "$v_updatedone"
 
 [[ -n $OPT_U ]] && unconfigure_zone
 
-(( $brand_labeled == 1 )) && mount_active_ds
+(( brand_labeled == 1 )) && mount_active_ds
 
 trap - EXIT
 vlog "$v_exitgood"

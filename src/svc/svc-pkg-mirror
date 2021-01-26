@@ -435,11 +435,11 @@ function pkgrecv_from_origin {
 
 	set -f
 	if [ -n "$clone" ]; then
-		cmd="$PKGRECV -s $origin -d "$repo" -p $publisher \
+		cmd="$PKGRECV -s $origin -d \"$repo\" -p $publisher \
 		    $key $cert --clone"
 	else
-		cmd="$PKGRECV -s $origin -c "$cachedir"/$instance \
-		    -d "$repo" -m all-timestamps $key $cert *"
+		cmd="$PKGRECV -s $origin -c $cachedir/$instance \
+		    -d \"$repo\" -m all-timestamps $key $cert *"
 	fi
 
 	# show the command we're running
