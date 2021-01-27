@@ -152,7 +152,7 @@ if [ -n "$CURRENT_GZBE" ]; then
 			continue
 
 		fs_all[$fs_all_c]=$fs
-		(( fs_all_c = $fs_all_c + 1 ))
+		(( fs_all_c = fs_all_c + 1 ))
 	done
 fi
 

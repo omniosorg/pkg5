@@ -37,7 +37,7 @@ case "$1" in
 	# retrieve the pkg_root property. If the variable is left empty
 	# pkg_root is /
 	pkg_root=$(svcprop -p pkg/pkg_root $SMF_FMRI)
-	if [[ $? -ne 0 ]]; then
+	if (( $? != 0 )); then
 		echo "service property pkg/pkg_root not defined for" \
 		    "service: $SMF_FMRI"
 		exit $SMF_EXIT_ERR_CONFIG
@@ -45,7 +45,7 @@ case "$1" in
 
 	# make sure pkg_root ends with a /
 	echo $pkg_root | grep /$ >/dev/null
-	if [[ $? -ne 0 ]]; then
+	if (( $? != 0 )); then
 		pkg_root="${pkg_root}/"
 	fi
 
@@ -132,7 +132,7 @@ case "$1" in
 	# kill to take effect.  As time runs out, try a more aggressive kill.
 	#
 	SVC_TIMEOUT=`svcprop -p stop/timeout_seconds $SMF_FMRI`
-	if [[ $? -ne 0 ]]; then
+	if (( $? != 0 )); then
 		echo "service property stop/timeout_seconds not defined" \
 		    "for service: $SMF_FMRI"
 		exit $SMF_EXIT_ERR_CONFIG
@@ -146,12 +146,12 @@ case "$1" in
 	# first kill and then a second, we must ensure that at least 8 seconds
 	# of slop is left in reserve.  To be paranoid, we go for 10.
 	#
-	((POLITE=$SVC_TIMEOUT - 10))
-	if [[ $POLITE -gt 0 ]]; then
+	(( POLITE = SVC_TIMEOUT - 10 ))
+	if (( POLITE > 0 )); then
 		smf_kill_contract $2 TERM 1 $POLITE
 		ret=$?
 		# '2' indicates timeout with non-empty contract.
-		if [[ $ret -eq 2 ]]; then
+		if (( ret == 2 )); then
 			echo "Gentle contract kill timed out after" \
 			    "$POLITE seconds, trying SIGKILL." >&2
 			#
@@ -159,7 +159,7 @@ case "$1" in
 			# take a minimum of 5 seconds to complete.
 			#
 			smf_kill_contract $2 KILL 1 1
-			if [[ $ret -ne 0 ]]; then
+			if (( ret != 0 )); then
 				exit $SMF_EXIT_ERR_FATAL
 			fi
 		fi

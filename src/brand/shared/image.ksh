@@ -44,10 +44,10 @@ function seed_zone {
 	# $seedsrc will be a path to a file, ZFS dataset or ZFS snapshot
 	# Determine which it is.
 	if [ ! -f "$seedsrc" ]; then
-		[[ "$seedsrc" = /* ]] && \
+		[[ "$seedsrc" == /* ]] && \
 		    fatal "Source file '%s' not found" "$seedsrc"
 		seedtype=zfs
-		if [[ "$seedsrc" = *@* ]]; then
+		if [[ "$seedsrc" == *@* ]]; then
 			p=`zfs list -Ht snapshot -o name "$seedsrc" 2>/dev/null`
 			[ "$p" = "$seedsrc" ] || \
 			    fatal "Could not find ZFS snapshot %s" "$seedsrc"

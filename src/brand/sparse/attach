@@ -341,17 +341,18 @@ install_image "$inst_type" "$install_media"
 #
 VARIANT=variant.opensolaris.zone
 variant=$(lc_pkg -R $ZONEROOT variant -H $VARIANT)
-[[ $? -ne 0 ]] && fatal "$f_sanity_variant" $VARIANT
+(( $? != 0 )) && fatal "$f_sanity_variant" $VARIANT
 
 echo $variant | IFS=" " read variantname variantval
-[[ $? -ne 0 ]] && fatal "$f_sanity_variant"
+(( $? != 0 )) && fatal "$f_sanity_variant"
 
 # Check that we got the output we expect...
 # XXX new pkg5 output is slightly different, ignore this check for now
 #[[ $variantname = "$VARIANT" ]] || fatal "$f_sanity_variant" $VARIANT
 
 # Check that the variant is non-global, else fail
-[[ $variantval = "nonglobal" ]] || fatal "$f_sanity_global" $VARIANT $variantval
+[[ $variantval == "nonglobal" ]] \
+    || fatal "$f_sanity_global" $VARIANT $variantval
 
 #
 # Try to find the "entire" incorporation's FMRI in the gz.

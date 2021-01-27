@@ -35,7 +35,7 @@ f_badsource=$(gettext "Error: specified snapshot is invalid for this source zone
 # Clean up on failure
 trap_exit()
 {
-	if (( $ZONE_IS_MOUNTED != 0 )); then
+	if (( ZONE_IS_MOUNTED != 0 )); then
 		error "$v_unmount"
 		zoneadm -z $ZONENAME unmount
 	fi

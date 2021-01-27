@@ -62,13 +62,13 @@ trap_exit()
 	# umount any mounted file systems
 	[[ -n "$fstmpfile" ]] && umnt_fs
 
-	if (( $zone_is_mounted != 0 )); then
+	if (( zone_is_mounted != 0 )); then
 		error "$v_unmount"
 		zoneadm -z $ZONENAME unmount
 		zone_is_mounted=0
 	fi
 
-	if (( $EXIT_CODE != $ZONE_SUBPROC_OK )); then
+	if (( EXIT_CODE != ZONE_SUBPROC_OK )); then
 		/usr/lib/brand/ipkg/uninstall $ZONENAME $ZONEPATH -F
 	fi
 
@@ -201,7 +201,7 @@ vlog "running: p2v $verbose_mode $unconfig_zone $ZONENAME $ZONEPATH"
 p2v_result=$?
 exec 2>>$LOGFILE
 
-if (( $p2v_result != 0 )); then
+if (( p2v_result != 0 )); then
 	log "$p2v_fail"
 	log ""
 	log "$install_fail"
