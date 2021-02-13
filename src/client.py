@@ -156,7 +156,7 @@ def cleanup():
                 os.unlink(f)
 
 def notes_block(release_url=None):
-        url = "https://omniosce.org/"
+        url = "https://omnios.org/"
         if release_url is None:
                 release_url = misc.get_release_notes_url()
         msg("\n" + "-" * 79)
