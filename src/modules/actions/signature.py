@@ -22,15 +22,16 @@
 
 #
 # Copyright (c) 2009, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
 #
 
-import abc
 import hashlib
 import os
 import shutil
 import sys
 import tempfile
 
+from cryptography import __version__ as _cver
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization, hashes
@@ -44,6 +45,20 @@ import pkg.misc as misc
 
 valid_hash_algs = ("sha256", "sha384", "sha512")
 valid_sig_algs = ("rsa",)
+
+if list(map(int, _cver.split('.'))) >= [3, 4, 0]:
+        # In cryptography 3.4, the hash classes moved to subclasses of
+        # hashes.hashAlgorithm
+        hash_registry = hashes.HashAlgorithm.__subclasses__()
+else:
+        # For cryptography < 3.4.0
+        import abc
+
+        hash_registry = [
+            ref()
+            for ref in abc._get_dump(hashes.HashAlgorithm)[0]
+            if ref()
+        ]
 
 class SignatureAction(generic.Action):
         """Class representing the signature-type packaging object."""
@@ -166,7 +181,7 @@ class SignatureAction(generic.Action):
                         for attr in list(cattrs.keys()):
                                 if not cattrs[attr]:
                                         cattrs.pop(attr, None)
- 
+
                 if chain_hshes:
                         # These attributes are stored as a single value with
                         # spaces in it rather than multiple values to ensure
@@ -182,17 +197,9 @@ class SignatureAction(generic.Action):
         def __get_hash_by_name(self, name):
                 """Get the cryptopgraphy Hash() class based on the OpenSSL
                 algorithm name."""
+                global hash_registry
 
-                if sys.version_info[:2] >= (3, 7):
-                        registry = [
-                            ref()
-                            for ref in abc._get_dump(hashes.HashAlgorithm)[0]
-                            if ref()
-                        ]
-                else:
-                        registry = hashes.HashAlgorithm._abc_registry
-
-                for h in registry:
+                for h in hash_registry:
                         if h.name == name:
                                 return h
 
