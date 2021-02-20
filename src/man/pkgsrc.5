@@ -1,0 +1,106 @@
+.\"
+.\" This file and its contents are supplied under the terms of the
+.\" Common Development and Distribution License ("CDDL"), version 1.0.
+.\" You may only use this file in accordance with the terms of version
+.\" 1.0 of the CDDL.
+.\"
+.\" A full copy of the text of the CDDL should have accompanied this
+.\" source.  A copy of the CDDL is also available via the Internet at
+.\" http://www.illumos.org/license/CDDL.
+.\"
+.\" Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
+.\"
+.Dd March 25, 2019
+.Dt PKGSRC 5
+.Os
+.Sh NAME
+.Nm pkgsrc
+.Nd zone brand for running a reduced copy of OmniOS alongside Joyent's pkgsrc
+repository
+.Sh DESCRIPTION
+The
+.Em pkgsrc
+brand
+uses the
+.Xr brands 5
+framework to provide an environment for running a small copy of Omnios, with
+system software packages linked to those installed in the global zone.
+.Pp
+A
+.Em pkgsrc
+zone is a
+.Xr sparse 5
+zone which is pre-configured to use Joyent's binary package repository.
+This provides access to over 20,000 ready-built packages ready to install and
+use.
+Within a pkgsrc zone, use the pkgin command to manage these packages which
+are all installed under the
+.Pa /opt/local
+directory.
+Like
+.Xr ipkg 5
+zones,
+.Em pkgsrc
+zones can have multiple boot environments, created either locally within the
+zone or managed automatically from the global zone as BEs are
+created/destroyed there.
+.Pp
+Given their small size, low overhead and ease of maintenance, it is common to
+use pkgsrc zones for running individual services such as an NTP, DHCP or DNS
+server.
+.Sh CONFIGURATION
+Persistent network configuration (including DNS resolver information) can be
+configured using
+.Xr zonecfg 1m .
+An example
+.Em lipkg
+zone configured with VNIC "vnic0" using a static IP address is below:
+.sp
+.Bd -literal -offset indent
+create -t pkgsrc
+set zonepath=/zones/testzone
+set autoboot=true
+add net
+    set physical=vnic0
+    set allowed-address=192.168.0.2/24
+    set defrouter=192.168.0.1
+    set global-nic=auto
+end
+add attr
+    set name=dns-domain
+    set type=string
+    set value=example.com
+end
+add attr
+    set name=resolvers
+    set type=string
+    set value=192.168.12.1,192.168.13.1
+end
+.Ed
+.sp
+.Sh LIMITATIONS
+Within a
+.Em pkgsrc
+zone, the
+.Pa /usr ,
+.Pa /lib
+and
+.Pa /sbin
+directories are read-only.
+.Pp
+.Em pkgsrc
+zone boot environments are linked to the global zone boot environment under
+which they were created.
+This means that rolling back the global zone to a previous boot environment
+will also roll back the zone.
+For this reason, zone data which should be shared across boot environments
+should be allocated to a dedicated dataset.
+.Sh SEE ALSO
+.Xr zfs 1m ,
+.Xr zoneadm 1m ,
+.Xr zonecfg 1m ,
+.Xr brands 5 ,
+.Xr ipkg 5 ,
+.Xr privileges 5 ,
+.Xr resource_controls 5 ,
+.Xr zones 5

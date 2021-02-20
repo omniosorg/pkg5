@@ -1,0 +1,90 @@
+.\"
+.\" This file and its contents are supplied under the terms of the
+.\" Common Development and Distribution License ("CDDL"), version 1.0.
+.\" You may only use this file in accordance with the terms of version
+.\" 1.0 of the CDDL.
+.\"
+.\" A full copy of the text of the CDDL should have accompanied this
+.\" source.  A copy of the CDDL is also available via the Internet at
+.\" http://www.illumos.org/license/CDDL.
+.\"
+.\" Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
+.\"
+.Dd March 25, 2019
+.Dt IPKG 5
+.Os
+.Sh NAME
+.Nm ipkg
+.Nd zone brand for running a full copy of OmniOS
+.Sh DESCRIPTION
+The
+.Em ipkg
+brand
+uses the
+.Xr brands 5
+framework to provide an environment for running a full copy of Omnios, with
+independently managed software.
+For routine patching, ipkg zones must be upgraded separately but core packages
+such as the system libraries should be kept close to the version installed in
+the global zone.
+.Pp
+If a package update in the global zone requires the creation of a new boot
+environment (BE), then each ipkg zone will also get a new BE that will be
+switched to when the global zone is restarted into its new BE.
+.Pp
+When performing major version upgrades, ipkg zones must be detached first and
+then re-attached later; re-attach will trigger a full software update to bring
+the zone back into sync with the global zone.
+.Pp
+.Em ipkg
+zones are useful for some situations, but have generally been superseded by
+.Xr lipkg 5
+zones which automatically keep core system packages synchronised with the
+global zone.
+.Sh CONFIGURATION
+Persistent network configuration (including DNS resolver information) can be
+configured using
+.Xr zonecfg 1m .
+An example
+.Em ipkg
+zone configured with VNIC "vnic0" using a static IP address is below:
+.sp
+.Bd -literal -offset indent
+create -t ipkg
+set zonepath=/zones/testzone
+set autoboot=true
+add net
+    set physical=vnic0
+    set allowed-address=192.168.0.2/24
+    set defrouter=192.168.0.1
+    set global-nic=auto
+end
+add attr
+    set name=dns-domain
+    set type=string
+    set value=example.com
+end
+add attr
+    set name=resolvers
+    set type=string
+    set value=192.168.12.1,192.168.13.1
+end
+.Ed
+.sp
+.Sh LIMITATIONS
+.Em ipkg
+zone boot environments are linked to the global zone boot environment under
+which they were created.
+This means that rolling back the global zone to a previous boot environment
+will also roll back the zone.
+For this reason, zone data which should be shared across boot environments
+should be allocated to a dedicated dataset.
+.Sh SEE ALSO
+.Xr zfs 1m ,
+.Xr zoneadm 1m ,
+.Xr zonecfg 1m ,
+.Xr brands 5 ,
+.Xr lipkg 5 ,
+.Xr privileges 5 ,
+.Xr resource_controls 5 ,
+.Xr zones 5
