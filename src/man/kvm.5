@@ -1,0 +1,247 @@
+.\"
+.\" This file and its contents are supplied under the terms of the
+.\" Common Development and Distribution License ("CDDL"), version 1.0.
+.\" You may only use this file in accordance with the terms of version
+.\" 1.0 of the CDDL.
+.\"
+.\" A full copy of the text of the CDDL should have accompanied this
+.\" source.  A copy of the CDDL is also available via the Internet at
+.\" http://www.illumos.org/license/CDDL.
+.\"
+.\" Copyright 2016, Joyent, Inc.
+.\" Copyright 2016, OmniTI Computer Consulting, Inc. All Rights Reserved.
+.\" Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
+.\"
+.Dd February 19, 2021
+.Dt KVM 5
+.Os
+.Sh NAME
+.Nm kvm
+.Nd zone brand for running a virtual machine instance under the KVM hypervisor
+.Sh DESCRIPTION
+A
+.Em kvm
+branded zone
+uses the
+.Xr brands 5
+framework to provide an environment for running a virtual machine under the
+KVM hypervisor.
+.Sh CONFIGURATION
+.Nm
+zones are configured mostly via custom attributes in the zone configuration.
+.Pp
+Supported attributes are:
+.Bl -tag -width Ds
+.It Sy bootdisk Ar path Ns Op , Ns serial Ns = Ns Ar serial
+.Pp
+Specifies a ZFS volume dataset name which will be attached to
+the guest as the boot disk.
+Additional disks can be specified using the
+.Sy disk
+attribute, see below.
+.Pp
+If the optional serial number is not provided, one will be automatically
+generated from the disk index.
+The ZFS volume must also be mapped into the zone using a
+.Sy device
+block as shown in the example below.
+.Pp
+A suitable ZFS volume can be created using the
+.Ql zfs create -V
+command, for example:
+.Pp
+.Dl zfs create -V 30G rpool/bootdisk2
+.It Sy cdrom Ns Oo Ar N Oc Ar path
+.Pp
+Specifies the path to one or more CD/DVD image
+.Pq Pa .iso
+files that will be inserted into virtual CD/DVD drive(s) in the guest.
+To specify multiple image files, create multiple attributes with different
+values of
+.Ar N ,
+starting with 0.
+If only a single CD image is required,
+.Ar N
+can be omitted.
+.Pp
+Each image file must also be mapped into the zone using an
+.Sy fs
+block, as shown in the example below.
+.It Sy console Ar options
+.Pp
+This parameter configures where the guest's console device is presented.
+The default value is
+.Pa pipe,id=console0,path=/dev/zconsole
+which means that the guest's console can be accessed via:
+.Pp
+.Dl zlogin -C <zone>
+.It Sy disk Ns Oo Ar N Oc Ar dataset Ns Op , Ns serial Ns = Ns Ar serial
+.Pp
+Specifies one or more ZFS volume dataset names which will be attached to
+the guest as disks.
+To attach multiple disks, create multiple attributes with different values of
+.Ar N .
+In that case, the disk will be presented on target
+.Ar N .
+If only a single disk is required,
+.Ar N
+can be omitted.
+The disks specified via the
+.Sy disk
+attribute are in addition to the system boot disk, which is specified using
+.Sy bootdisk .
+.Pp
+If the optional serial number is not provided, one will be automatically
+generated from the disk index.
+Each ZFS volume must also be mapped into the zone using a
+.Sy device
+block as shown in the example below.
+.It Sy diskif Ar type
+.Pp
+Specifies the type of interface to which the disks will be attached.
+Available options are:
+.Bl -bullet
+.It
+.Sy ahci
+.It
+.Sy virtio Pq default
+.El
+.It Sy netif Ar type
+.Pp
+Specifies the type of network interface that will be used for the interfaces
+presented to the guest.
+Available options are:
+.Bl -bullet
+.It
+.Sy virtio-net-pci Pq default
+.It
+.Sy e1000
+.El
+.It Sy ram Ar size Ns Op KMGT
+.Pp
+Specify the guest's physical memory size.
+The
+.Ar size
+argument may be suffixed with one of
+.Ar K ,
+.Ar M ,
+.Ar G
+or
+.Ar T
+to indicate a multiple of kibibytes, mebibytes, gibibytes or tebibytes.
+If no suffix is given, the value is assumed to be in mebibytes.
+.Pp
+The default value, if this attribute is not specified, is
+.Sy 1G .
+.It Sy type Ar type
+.Pp
+Specifies the type of the virtual machine.
+This needs to be set for some guest operating systems so that things are
+set up as they expect.
+For most guests, this can be left unset.
+Supported values are:
+.Bl -bullet
+.It
+.Sy generic Pq default
+.It
+.Sy openbsd
+.It
+.Sy windows
+.El
+.It Sy vcpus Ar number
+.Pp
+Specify the number of guest virtual CPUs.
+The default value is
+.Sy 1 .
+.It Xo Sy vnc
+.Sm off
+.Ar on
+|
+.Ar off
+|
+.Ar options
+.Xc
+.Sm on
+.Pp
+This parameter controls whether a virtual frambuffer is attached to the
+guest and made available via VNC.
+Available options are:
+.Bl -tag -width Ds
+.It Sy on
+An alias for
+.Sy unix:/tmp/vm.vnc
+which creates the VNC socket within
+.Pa /tmp
+inside the zone.
+.It Sy off
+Disable the framebuffer.
+This is the same as omitting the
+.Sy vnc
+attribute.
+.It Sy unix Ns : Ns Ar path
+Sets up a VNC server on a UNIX socket at the specified
+.Ar path .
+Note that this path is relative to the zone root.
+.El
+.It Sy extra Ar options
+.Pp
+Any extra
+.Ar options
+to be passed directly to the
+.Nm
+hypervisor.
+.Sh EXAMPLE
+An example
+.Em kvm
+zone is shown below:
+.sp
+.Bd -literal -offset indent
+create -t kvm
+set zonepath=/zones/kvm
+add net
+    set allowed-address=10.0.0.112/24
+    set physical=vm0
+end
+add device
+    set match=/dev/zvol/rdsk/rpool/kvm0
+end
+add attr
+    set name=ram
+    set type=string
+    set value=2G
+end
+add attr
+    set name=vcpus
+    set type=string
+    set value=8
+end
+add attr
+    set name=bootdisk
+    set type=string
+    set value=rpool/kvm0
+end
+add fs
+    set dir=/rpool/iso/debian-9.4.0-amd64-netinst.iso
+    set special=/rpool/iso/debian-9.4.0-amd64-netinst.iso
+    set type=lofs
+    add options ro
+    add options nodevices
+end
+add attr
+    set name=cdrom
+    set type=string
+    set value=/rpool/iso/debian-9.4.0-amd64-netinst.iso
+end
+.Ed
+.sp
+.Sh SEE ALSO
+.Xr mdb 1 ,
+.Xr proc 1 ,
+.Xr dtrace 1m ,
+.Xr zfs 1m ,
+.Xr zoneadm 1m ,
+.Xr zonecfg 1m ,
+.Xr brands 5 ,
+.Xr privileges 5 ,
+.Xr resource_controls 5 ,
+.Xr zones 5

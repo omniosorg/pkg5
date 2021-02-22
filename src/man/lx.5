@@ -1,0 +1,180 @@
+.\"
+.\" This file and its contents are supplied under the terms of the
+.\" Common Development and Distribution License ("CDDL"), version 1.0.
+.\" You may only use this file in accordance with the terms of version
+.\" 1.0 of the CDDL.
+.\"
+.\" A full copy of the text of the CDDL should have accompanied this
+.\" source.  A copy of the CDDL is also available via the Internet at
+.\" http://www.illumos.org/license/CDDL.
+.\"
+.\" Copyright 2016, Joyent, Inc.
+.\" Copyright 2016, OmniTI Computer Consulting, Inc. All Rights Reserved.
+.\" Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+.\"
+.Dd April 4, 2020
+.Dt LX 5
+.Os
+.Sh NAME
+.Nm lx
+.Nd zone brand for running a GNU/Linux user-level environment
+.Sh DESCRIPTION
+The
+.Em lx
+brand
+uses the
+.Xr brands 5
+framework to provide an environment for running binary applications built
+for GNU/Linux.
+User-level code, including an entire Linux distribution, can run inside the
+zone.
+Both 32-bit and 64-bit applications are supported.
+The majority of Linux system calls are provided, along with emulation for a
+variety of Linux file systems, such as
+.Em proc ,
+.Em cgroup
+and
+.Em sysfs .
+.Pp
+The
+.Em /proc
+file system within the zone is a subset of a full Linux
+.Em /proc .
+Most kernel-level tuning applied to
+.Em /proc
+is unavailable or ignored.
+Some tuning can be performed, but only to reduce the overall limits that have
+been specified on the zone's configuration.
+That is, within the zone there is no way to increase the resource limits set
+on the zone itself.
+.Pp
+The zone must be installed using one of:  an absolute pathname of a
+.Xr zfs 1m
+send stream of a dataset which contains an image of the software to be run in
+the zone, a name of a
+.Xr zfs 1m
+dataset to be cloned or snapshot to be promoted, or the absolute pathname of a
+.Xr tar 1
+file or gzipped tar file.
+.Pp
+Examples:
+.Bd -literal -offset indent
+zoneadm -z myzone install -x nodataset
+zoneadm -z myzone install -s /path/to/sendstream.zfs
+zoneadm -z myzone install -s name/of/dataset-to-clone
+zoneadm -z myzone install -s name/of/snapshot-to@promote
+zoneadm -z myzone install -t /path/to/tarball.tgz
+.Ed
+.Pp
+Applications provided by the base OmniOS operating system are also available
+within the zone under the
+.Em /native
+mount point.
+This allows the use of various native tools such as
+.Xr dtrace 1m ,
+.Xr mdb 1 ,
+or the
+.Xr proc 1
+tools on GNU/Linux applications.
+However, not every native tool will work properly within an
+.Em lx
+zone.
+.Sh CONFIGURATION
+In addition to the standard configuration options provided by the
+.Xr zones 5
+framework, the following additional attributes are available for
+.Em lx
+zones.
+These are defined as string attributes at the top level of the zone
+configuration (see the example below).
+.Bl -tag -width 15
+.It Cm dns-domain
+The DNS domain name for the zone, used to configure name resolution within the
+linux environment.
+.It Cm ipv6
+Enable IPV6 within the zone,
+.Ar true
+or
+.Ar false
+(defaults to
+.Ar true ) .
+.It Cm kernel-version
+Specify the Linux version that the zone is emulating.
+This is a string value that is used in various places, including the output of
+the
+.Nm uname
+command and the contents of
+.Pa /proc/version .
+.It Cm resolvers
+A comma-delimited list of DNS resolver IP addresses, used to configure name
+resolution within the linux environment.
+.El
+.Sh EXAMPLES
+An example
+.Em lx
+zone configured with VNIC "lx1" using a static IP address is below:
+.sp
+.Bd -literal -offset indent
+create -t lx
+set zonepath=/zones/lx1
+set autoboot=true
+add net
+    set physical=lx1
+    set allowed-address=192.168.0.2/24
+    set defrouter=192.168.0.1
+    set global-nic=auto
+end
+add attr
+    set name=dns-domain
+    set type=string
+    set value=example.com
+end
+add attr
+    set name=resolvers
+    set type=string
+    set value=192.168.12.1,192.168.13.1
+end
+add attr
+    set name=kernel-version
+    set type=string
+    set value=4.3.0
+end
+.Ed
+.sp
+.Sh LIMITATIONS
+The brand only supports the exclusive IP stack zone configuration.
+.Pp
+Most modern GNU/Linux application software runs on
+.Em lx ,
+but because there are some system calls or file systems which are not currently
+implemented, it's possible that an application won't run.
+This does not preclude the application running in the future as the
+.Em lx
+brand adds new capabilities.
+.Pp
+As there is only the single illumos kernel running on the system, there
+is no support for any Linux kernel-level modules.
+That is, there is no support for add-on drivers or any other modules that are
+part of the Linux kernel itself.
+If that is required, a full virtual machine should be used instead of
+an
+.Em lx
+branded zone.
+.Pp
+Any core files produced within the zone are in the native illumos format.
+.Pp
+As with any zone, the normal security mechanisms and privileges apply.
+Thus, certain operations (for example, changing the system time), will not be
+allowed unless the zone has been configured with the appropriate additional
+privileges.
+.Sh SEE ALSO
+.Xr mdb 1 ,
+.Xr proc 1 ,
+.Xr dtrace 1m ,
+.Xr zfs 1m ,
+.Xr zoneadm 1m ,
+.Xr zonecfg 1m ,
+.Xr brands 5 ,
+.Xr privileges 5 ,
+.Xr resource_controls 5 ,
+.Xr zones 5

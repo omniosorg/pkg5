@@ -259,9 +259,16 @@ man1m_files = [
         'man/pkg.sysrepo.1m'
         ]
 man5_files = [
-        'man/pkg.5'
+        'man/bhyve.5',
+        'man/illumos.5',
+        'man/ipkg.5',
+        'man/kvm.5',
+        'man/lipkg.5',
+        'man/lx.5',
+        'man/pkgsrc.5',
+        'man/pkg.5',
+        'man/sparse.5',
         ]
-
 man1_ja_files = [
         'man/ja_JP/pkg.1',
         'man/ja_JP/pkgdepend.1',

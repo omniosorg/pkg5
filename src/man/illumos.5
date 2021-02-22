@@ -1,0 +1,96 @@
+.\"
+.\" This file and its contents are supplied under the terms of the
+.\" Common Development and Distribution License ("CDDL"), version 1.0.
+.\" You may only use this file in accordance with the terms of version
+.\" 1.0 of the CDDL.
+.\"
+.\" A full copy of the text of the CDDL should have accompanied this
+.\" source.  A copy of the CDDL is also available via the Internet at
+.\" http://www.illumos.org/license/CDDL.
+.\"
+.\" Copyright 2016, Joyent, Inc.
+.\" Copyright 2016, OmniTI Computer Consulting, Inc. All Rights Reserved.
+.\" Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
+.\"
+.Dd March 25, 2019
+.Dt ILLUMOS 5
+.Os
+.Sh NAME
+.Nm illumos
+.Nd zone brand for running an independant illumos distribution.
+.Sh DESCRIPTION
+An
+.Em illumos
+branded zone
+uses the
+.Xr brands 5
+framework to provide an environment for running a generic illumos system.
+.Pp
+Subject to the constraints imposed by the shared kernel, it can be used to run
+a foreign version of OmniOS userland or even a different illumos distribution.
+.Pp
+The zone must be installed using one of:  an absolute pathname of a
+.Xr zfs 1m
+send stream of a dataset which contains an image of the software to be run in
+the zone, a name of a
+.Xr zfs 1m
+dataset to be cloned or snapshot to be promoted, or the absolute pathname of a
+.Xr tar 1
+file or gzipped tar file.
+.Pp
+Examples:
+.Bd -literal -offset indent
+zoneadm -z myzone install -x nodataset
+zoneadm -z myzone install -s /path/to/sendstream.zfs
+zoneadm -z myzone install -s name/of/dataset-to-clone
+zoneadm -z myzone install -s name/of/snapshot-to@promote
+zoneadm -z myzone install -t /path/to/tarball.tgz
+.Ed
+.Sh CONFIGURATION
+Persistent network configuration (including DNS resolver information) can be
+configured using
+.Xr zonecfg 1m .
+An example
+.Em illumos
+zone configured with VNIC "vnic0" using a static IP address is below:
+.sp
+.Bd -literal -offset indent
+create -t illumos
+set zonepath=/zones/testzone
+set autoboot=true
+add net
+    set physical=vnic0
+    set allowed-address=192.168.0.2/24
+    set defrouter=192.168.0.1
+    set global-nic=auto
+end
+add attr
+    set name=dns-domain
+    set type=string
+    set value=example.com
+end
+add attr
+    set name=resolvers
+    set type=string
+    set value=192.168.12.1,192.168.13.1
+end
+.Ed
+.sp
+.Sh LIMITATIONS
+As there is only the single illumos kernel running on the system, not all
+foreign distributions will run correctly.
+If necessary, a full virtual machine can be used instead of
+an
+.Em illumos
+branded zone.
+.Sh SEE ALSO
+.Xr mdb 1 ,
+.Xr proc 1 ,
+.Xr dtrace 1m ,
+.Xr zfs 1m ,
+.Xr zoneadm 1m ,
+.Xr zonecfg 1m ,
+.Xr brands 5 ,
+.Xr privileges 5 ,
+.Xr resource_controls 5 ,
+.Xr zones 5

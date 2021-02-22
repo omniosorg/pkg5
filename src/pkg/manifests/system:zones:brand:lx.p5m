@@ -9,7 +9,7 @@
 # http://www.illumos.org/license/CDDL.
 
 #
-# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
 #
 
 set name=pkg.fmri value=pkg:/system/zones/brand/lx/platform@$(PKGVERS)
@@ -36,6 +36,8 @@ file path=usr/lib/brand/lx/platform.xml mode=0444 \
     variant.opensolaris.zone=global
 file path=usr/lib/brand/lx/poststate mode=0555 variant.opensolaris.zone=global
 file path=usr/lib/brand/lx/prestate mode=0555 variant.opensolaris.zone=global
+dir  path=usr/share/man/man5
+file path=usr/share/man/man5/lx.5
 license lic_CDDL license=lic_CDDL
 depend type=require fmri=system/zones
 depend type=require fmri=system/zones/brand/ipkg
