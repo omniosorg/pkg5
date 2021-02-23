@@ -45,7 +45,7 @@ to have
 .Nm
 generate ACPI tables for the guest
 .Pq default: Ar off .
-.It Sy bootdisk Ar path Ns Op , Ns serial Ns = Ns Ar serial
+.It Sy bootdisk Ar path Ns Op , Ns Cm serial Ns = Ns Ar serial
 .Pp
 Specifies a ZFS volume dataset name which will be attached to
 the guest as the boot disk.
@@ -121,7 +121,7 @@ Other supported values include
 which places a UNIX domain socket at
 .Ql <path>
 through which the console can be accessed.
-.It Sy disk Ns Oo Ar N Oc Ar dataset Ns Op , Ns serial Ns = Ns Ar serial
+.It Sy disk Ns Oo Ar N Oc Ar dataset Ns Op , Ns Cm serial Ns = Ns Ar serial
 .Pp
 Specifies one or more ZFS volume dataset names which will be attached to
 the guest as disks.
@@ -184,7 +184,7 @@ Available options are:
 .It
 .Sy e1000
 .El
-.It Sy ram Ar size Ns Op KMGT
+.It Sy ram Ar size Ns Op Cm KMGT
 .Pp
 Specify the guest's physical memory size.
 The
@@ -247,10 +247,10 @@ Supported values are:
 .El
 .It Xo Sy vcpus
 .Sm off
-.Oo cpus = Oc Ar numcpus
-.Oo ,sockets = Ar s Oc
-.Oo ,cores = Ar c Oc
-.Oo ,threads = Ar t Oc
+.Oo Cm cpus = Oc Ar numcpus
+.Oo Cm ,sockets = Ar s Oc
+.Oo Cm ,cores = Ar c Oc
+.Oo Cm ,threads = Ar t Oc
 .Xc
 .Sm on
 .Pp
