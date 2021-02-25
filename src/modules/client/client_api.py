@@ -2437,10 +2437,14 @@ def _info(op, api_inst, pargs, display_license, info_local, info_remote,
                     "info.source-url": _("Source URL")
                 }
 
-
                 for key in addl_attr_list:
                         if key in pi.attrs:
                                 __append_attr_lists(addl_attr_list[key],
+                                    pi.get_attr_values(key))
+
+                for key in pi.attrs:
+                        if key.startswith('info.source-url.'):
+                                __append_attr_lists(addl_attr_list[key[:15]],
                                     pi.get_attr_values(key))
 
                 if "package_attrs" not in data:
