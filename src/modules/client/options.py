@@ -21,7 +21,7 @@
 #
 
 # Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
-# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
 
 import os
 
@@ -70,6 +70,8 @@ LIST_ALL              = "list_all"
 LIST_INSTALLED_NEWEST = "list_installed_newest"
 LIST_NEWEST           = "list_newest"
 LIST_UPGRADABLE       = "list_upgradable"
+LIST_REMOVABLE        = "list_removable"
+LIST_ALL_REMOVABLE    = "list_all_removable"
 MED_IMPLEMENTATION    = "med_implementation"
 MED_VERSION           = "med_version"
 NEW_BE                = "new_be"
@@ -782,9 +784,17 @@ def opts_table_cb_md_only(op, api_inst, opts, opts_new):
                     [arg1, REJECT_PATS])
 
 def opts_cb_list(op, api_inst, opts, opts_new):
+
+        if opts_new[LIST_ALL_REMOVABLE]:
+                opts_new[LIST_REMOVABLE] = True
+
         if opts_new[ORIGINS] and opts_new[LIST_UPGRADABLE]:
                 raise InvalidOptionError(InvalidOptionError.INCOMPAT,
                     [ORIGINS, LIST_UPGRADABLE])
+
+        if opts_new[ORIGINS] and opts_new[LIST_REMOVABLE]:
+                raise InvalidOptionError(InvalidOptionError.INCOMPAT,
+                    [ORIGINS, LIST_REMOVABLE])
 
         if opts_new[ORIGINS] and not opts_new[LIST_NEWEST]:
                 # Use of -g implies -a unless -n is provided.
@@ -801,6 +811,14 @@ def opts_cb_list(op, api_inst, opts, opts_new):
         if opts_new[LIST_INSTALLED_NEWEST] and opts_new[LIST_UPGRADABLE]:
                 raise InvalidOptionError(InvalidOptionError.INCOMPAT,
                     [LIST_INSTALLED_NEWEST, LIST_UPGRADABLE])
+
+        if opts_new[LIST_INSTALLED_NEWEST] and opts_new[LIST_REMOVABLE]:
+                raise InvalidOptionError(InvalidOptionError.INCOMPAT,
+                    [LIST_INSTALLED_NEWEST, LIST_REMOVABLE])
+
+        if opts_new[LIST_UPGRADABLE] and opts_new[LIST_REMOVABLE]:
+                raise InvalidOptionError(InvalidOptionError.INCOMPAT,
+                    [LIST_UPGRADABLE, LIST_REMOVABLE])
 
         if opts_new[SUMMARY] and opts_new[VERBOSE]:
                 raise InvalidOptionError(InvalidOptionError.INCOMPAT,
@@ -1297,6 +1315,8 @@ opts_list_inventory = \
     (LIST_NEWEST,           False, [], {"type": "boolean"}),
     (SUMMARY,               False, [], {"type": "boolean"}),
     (LIST_UPGRADABLE,       False, [], {"type": "boolean"}),
+    (LIST_REMOVABLE,        False, [], {"type": "boolean"}),
+    (LIST_ALL_REMOVABLE,    False, [], {"type": "boolean"}),
 ]
 
 opts_dehydrate = \

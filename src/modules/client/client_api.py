@@ -22,7 +22,7 @@
 
 #
 # Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
-# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
 #
 
 
@@ -633,6 +633,8 @@ def _list_inventory(op, api_inst, pargs,
                 pkg_list = api.ImageInterface.LIST_NEWEST
         elif list_upgradable:
                 pkg_list = api.ImageInterface.LIST_UPGRADABLE
+        elif 'list_removable' in other_opts and other_opts['list_removable']:
+                pkg_list = api.ImageInterface.LIST_REMOVABLE
 
         # Each pattern in pats can be a partial or full FMRI, so
         # extract the individual components.  These patterns are
@@ -645,7 +647,8 @@ def _list_inventory(op, api_inst, pargs,
                 return __prepare_json(EXIT_OOPS, errors=errors_json)
 
         api_inst.log_operation_start(op)
-        if pkg_list != api_inst.LIST_INSTALLED and refresh_catalogs:
+        if (pkg_list not in [api_inst.LIST_INSTALLED, api_inst.LIST_REMOVABLE]
+            and refresh_catalogs):
                 # If the user requested packages other than those
                 # installed, ensure that a refresh is performed if
                 # needed since the catalog may be out of date or
@@ -676,7 +679,10 @@ def _list_inventory(op, api_inst, pargs,
 
         state_map = [
             [(api.PackageInfo.INSTALLED, "installed")],
-            [(api.PackageInfo.FROZEN, "frozen")],
+            [
+                (api.PackageInfo.FROZEN, "frozen"),
+                (api.PackageInfo.OPTIONAL, "optional")
+            ],
             [
                 (api.PackageInfo.OBSOLETE, "obsolete"),
                 (api.PackageInfo.LEGACY, "legacy"),
@@ -738,6 +744,14 @@ def _list_inventory(op, api_inst, pargs,
                                                 err = {"reason":
                                                     _("no packages are "
                                                     "installed")}
+                                        errors_json.append(err)
+                                api_inst.log_operation_end(
+                                    result=RESULT_NOTHING_TO_DO)
+                        elif pkg_list == api_inst.LIST_REMOVABLE:
+                                if not quiet:
+                                        err = {"reason":
+                                            _("no installed packages "
+                                            "are removable")}
                                         errors_json.append(err)
                                 api_inst.log_operation_end(
                                     result=RESULT_NOTHING_TO_DO)

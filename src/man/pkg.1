@@ -149,7 +149,7 @@
 .Pp
 .Nm
 .Cm list
-.Op Fl Hafnqsuv
+.Op Fl HafnqRrsuv
 .Oo Fl g Ar path_or_uri Oc Ns ...
 .Op Fl \-no-refresh
 .br
@@ -1229,7 +1229,7 @@ command above.
 .Pp
 .Nm
 .Cm list
-.Op Fl Hafnqsuv
+.Op Fl HafnqRrsuv
 .Oo Fl g Ar path_or_uri Oc Ns ...
 .Op Fl \-no-refresh
 .br
@@ -1270,6 +1270,14 @@ An
 in the
 .Sy F
 column shows that the package is frozen.
+With the
+.Fl R
+flag, an
+.Sy S
+in the
+.Sy F
+column shows that a package is removable but is part of the default system
+software.
 .It
 An
 .Sy o
@@ -1332,6 +1340,19 @@ Display the newest versions of all known packages, regardless of installed
 state.
 .It Fl q
 Do not list any packages, but return failure if a fatal error occurs.
+.It Fl r
+List installed packages that are removable (i.e. those that have no dependants).
+.It Fl R
+List installed packages that are removable, like the
+.Fl r
+option above.
+However,
+.Fl R
+also lists removable system packages, identifying them with a
+.Sy S
+in the
+.Sy F
+flags column.
 .It Fl s
 Display a one-line short-form giving the package name and summary.
 This option can be used with

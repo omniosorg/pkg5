@@ -22,7 +22,7 @@
 
 #
 # Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
-# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
 #
 
 """
@@ -193,6 +193,11 @@ PKG_STATE_FROZEN = 11
 
 # This state indicates that this package is in legacy namespace.
 PKG_STATE_LEGACY = 12
+
+# This is a transient state used in the list of orphaned packages, indicating
+# that there is an 'optional' dependency on this package. This state must not
+# be written to disk.
+PKG_STATE_OPTIONAL = 98
 
 # This is a transitory state used for temporary package sources to
 # indicate that the package entry should be removed if it does not

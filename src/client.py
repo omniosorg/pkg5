@@ -246,7 +246,7 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False,
             + beopts + recurseopts +
             "            <path_or_uri> [pkg_fmri_pattern ...]")
         basic_usage["list"] = _(
-            "[-Hafnqsuv] [-g path_or_uri ...] [--no-refresh]\n"
+            "[-HafnqRrsuv] [-g path_or_uri ...] [--no-refresh]\n"
             "            [pkg_fmri_pattern ...]")
         basic_usage["refresh"] = _("[-q] [--full] [publisher ...]")
         basic_usage["version"] = ""
@@ -539,7 +539,7 @@ def get_fmri_args(api_inst, pargs, cmd=None):
 def list_inventory(op, api_inst, pargs,
     li_parent_sync, list_all, list_installed_newest, list_newest,
     list_upgradable, omit_headers, origins, quiet, refresh_catalogs, summary,
-    verbose):
+    list_removable, list_all_removable, verbose):
         """List packages."""
 
         if verbose:
@@ -550,8 +550,13 @@ def list_inventory(op, api_inst, pargs,
                 fmt_str = "{0:49} {1:26} {2}"
 
         state_map = [
-            [("installed", "i")],
-            [("frozen", "f")],
+            [
+                ("installed", "i")
+            ],
+            [
+                ("frozen", "f"),
+                ("optional", "S")
+            ],
             [
                 ("obsolete", "o"),
                 ("renamed", "r"),
@@ -566,7 +571,8 @@ def list_inventory(op, api_inst, pargs,
         # getting json output.
         out_json = client_api._list_inventory(op, api_inst, pargs,
             li_parent_sync, list_all, list_installed_newest, list_newest,
-            list_upgradable, origins, quiet, refresh_catalogs)
+            list_upgradable, origins, quiet, refresh_catalogs,
+            list_removable=list_removable)
 
         errors = None
         if "errors" in out_json:
@@ -578,6 +584,10 @@ def list_inventory(op, api_inst, pargs,
                 data = out_json["data"]
                 for entry in data:
                         if quiet:
+                                continue
+
+                        if (list_removable and not list_all_removable and
+                            'optional' in entry['states']):
                                 continue
 
                         if not omit_headers:
@@ -5594,6 +5604,8 @@ opts_mapping = {
     "list_newest" :           ("n",  ""),
     "summary" :               ("s",  ""),
     "list_upgradable" :       ("u",  ""),
+    "list_removable" :        ("r",  ""),
+    "list_all_removable" :    ("R",  ""),
 
     "ctlfd" :                 ("",  "ctlfd"),
     "progfd" :                ("",  "progfd"),
