@@ -12,19 +12,19 @@
 # http://www.illumos.org/license/CDDL.
 # }}}
 
-# Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
 
 . /usr/lib/brand/sparse/common.ksh
 
 ZONEROOT="${1?zoneroot}"
 
-mirror=https://mirrors.omniosce.org/pkgsrc
+mirror=https://mirrors.omnios.org/pkgsrc
 strap=bootstrap.tar.gz
 cachestrap=/var/tmp/$strap
 
 # Download bootstrap checksum each time in case of corruption or if the
 # upstream version has changed.
-curl -so $ZONEROOT/$strap.sha256 $mirror/$strap.sha256 \
+curl -Lso $ZONEROOT/$strap.sha256 $mirror/$strap.sha256 \
     || exit $ZONE_SUBPROC_NOTCOMPLETE
 strapsum="`cat $ZONEROOT/$strap.sha256`"
 
@@ -35,7 +35,7 @@ fi
 
 if [ ! -f $cachestrap ]; then
 	echo "Downloading pkgsrc bootstrap..."
-	curl -o $cachestrap.$$ $mirror/$strap || exit $ZONE_SUBPROC_NOTCOMPLETE
+	curl -Lo $cachestrap.$$ $mirror/$strap || exit $ZONE_SUBPROC_NOTCOMPLETE
 	mv $cachestrap.$$ $cachestrap || exit $ZONE_SUBPROC_NOTCOMPLETE
 fi
 
