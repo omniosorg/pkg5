@@ -22,6 +22,7 @@
 
 #
 # Copyright (c) 2008, 2020, Oracle and/or its affiliates. All rights reserved.
+# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
 #
 
 from . import testutils
@@ -87,6 +88,22 @@ class TestPkgList(pkg5unittest.ManyDepotTestCase):
             add set name=pkg.obsolete value=true
             close """
 
+        cowley11 = """
+            open cowley@1.1,5.11-0
+            add set name=pkg.summary value="Cowley pkg"
+            close """
+
+        fenix10 = """
+            open fenix@1.0,5.11-0
+            add depend type=require fmri=cowley
+            close """
+
+        dragon10 = """
+            open dragon@1.0,5.11-0
+            add depend type=optional fmri=cowley
+            close """
+
+
         def __check_qoutput(self, errout=False):
                 self.assertEqualDiff(self.output, "")
                 if errout:
@@ -104,7 +121,8 @@ class TestPkgList(pkg5unittest.ManyDepotTestCase):
                 self.pkgsend_bulk(self.rurl1, (self.foo1, self.foo10,
                     self.foo11, self.foo12, self.foo121, self.food12,
                     self.hierfoo10, self.renamed10, self.legacy10,
-                    self.obsolete10))
+                    self.obsolete10, self.fenix10, self.cowley11,
+                    self.dragon10))
 
                 # Ensure that the second repo's packages have exactly the same
                 # timestamps as those in the first ... by copying the repo over.
@@ -143,8 +161,14 @@ class TestPkgList(pkg5unittest.ManyDepotTestCase):
                 expected."""
 
                 self.pkg("list -aH")
-                expected = \
-                    ("foo 1.2.1-0 ---\n"
+                expected = (
+                    "cowley 1.1-0 ---\n"
+                    "cowley (test2) 1.1-0 ---\n"
+                    "dragon 1.0-0 ---\n"
+                    "dragon (test2) 1.0-0 ---\n"
+                    "fenix 1.0-0 ---\n"
+                    "fenix (test2) 1.0-0 ---\n"
+                    "foo 1.2.1-0 ---\n"
                     "foo (test2) 1.2.1-0 ---\n"
                     "food 1.2-0 ---\n"
                     "food (test2) 1.2-0 ---\n"
@@ -155,7 +179,8 @@ class TestPkgList(pkg5unittest.ManyDepotTestCase):
                     "obsolete 1.0-0 --o\n"
                     "obsolete (test2) 1.0-0 --o\n"
                     "renamed 1.0-0 --r\n"
-                    "renamed (test2) 1.0-0 --r\n")
+                    "renamed (test2) 1.0-0 --r\n"
+                )
                 output = self.reduceSpaces(self.output)
                 self.assertEqualDiff(expected, output)
 
@@ -164,8 +189,14 @@ class TestPkgList(pkg5unittest.ManyDepotTestCase):
                 self.__check_qoutput(errout=False)
 
                 self.pkg("list -afH")
-                expected = \
-                    ("foo 1.2.1-0 ---\n"
+                expected = (
+                    "cowley 1.1-0 ---\n"
+                    "cowley (test2) 1.1-0 ---\n"
+                    "dragon 1.0-0 ---\n"
+                    "dragon (test2) 1.0-0 ---\n"
+                    "fenix 1.0-0 ---\n"
+                    "fenix (test2) 1.0-0 ---\n"
+                    "foo 1.2.1-0 ---\n"
                     "foo 1.2-0 ---\n"
                     "foo 1.1-0 ---\n"
                     "foo 1.0-0 ---\n"
@@ -184,7 +215,8 @@ class TestPkgList(pkg5unittest.ManyDepotTestCase):
                     "obsolete 1.0-0 --o\n"
                     "obsolete (test2) 1.0-0 --o\n"
                     "renamed 1.0-0 --r\n"
-                    "renamed (test2) 1.0-0 --r\n")
+                    "renamed (test2) 1.0-0 --r\n"
+                )
                 output = self.reduceSpaces(self.output)
                 self.assertEqualDiff(expected, output)
 
@@ -436,7 +468,7 @@ class TestPkgList(pkg5unittest.ManyDepotTestCase):
                 # that it will be seen as needing refresh.
                 api_inst = self.get_img_api_obj()
                 pub = api_inst.get_publisher("test1")
-                
+
                 file_path = os.path.join(pub.meta_root, "last_refreshed")
                 tmp_file = os.path.join(pub.meta_root, "test_symlink")
                 os.remove(file_path)
@@ -445,7 +477,7 @@ class TestPkgList(pkg5unittest.ManyDepotTestCase):
                 fo = open(tmp_file, 'wb+')
                 fo.close()
                 os.symlink(tmp_file, file_path)
-                
+
                 # Verify that both pkg install and refresh generate an error
                 # if the last_refreshed file is a symlink.
                 self.pkg("install newpkg@1.0", su_wrap=False, exit=1)
@@ -705,6 +737,63 @@ class TestPkgList(pkg5unittest.ManyDepotTestCase):
                 # Should not print anything if using -q.
                 self.pkg("list -Hqu foo", exit=1)
                 self.__check_qoutput(errout=False)
+
+        def test_16b_removable(self):
+                """Verify that pkg list -r works as expected."""
+
+                self.image_create(self.rurl1)
+                self.pkg("install -v /foo@1.0 fenix")
+
+                # foo, fenix and cowley should be installed
+                # (fenix depends on cowley)
+                self.pkg("list -H")
+                expected = \
+                    "cowley           1.1-0 i--\n" \
+                    "fenix            1.0-0 i--\n" \
+                    "foo              1.0-0 i--\n"
+                output = self.reduceSpaces(self.output)
+                expected = self.reduceSpaces(expected)
+                self.assertEqualDiff(expected, output)
+
+                # foo and fenix should be listed as removable
+                self.pkg("list -Hr")
+                expected = \
+                    "fenix            1.0-0 i--\n" \
+                    "foo              1.0-0 i--\n"
+                output = self.reduceSpaces(self.output)
+                expected = self.reduceSpaces(expected)
+                self.assertEqualDiff(expected, output)
+
+                # uninstalling fenix should make cowley removable
+                self.pkg("uninstall fenix")
+                self.pkg("list -Hr")
+                expected = \
+                    "cowley           1.1-0 i--\n" \
+                    "foo              1.0-0 i--\n"
+                output = self.reduceSpaces(self.output)
+                expected = self.reduceSpaces(expected)
+                self.assertEqualDiff(expected, output)
+
+                # install 'dragon', which optionally requires 'cowley'
+                # Now foo and dragon should be removable
+                self.pkg("install /dragon")
+                self.pkg("list -Hr")
+                expected = \
+                    "dragon           1.0-0 i--\n" \
+                    "foo              1.0-0 i--\n"
+                output = self.reduceSpaces(self.output)
+                expected = self.reduceSpaces(expected)
+                self.assertEqualDiff(expected, output)
+
+                # with -R, cowley should show up too, but flagged as 'system'
+                self.pkg("list -HR")
+                expected = \
+                    "cowley           1.1-0 iS-\n" \
+                    "dragon           1.0-0 i--\n" \
+                    "foo              1.0-0 i--\n"
+                output = self.reduceSpaces(self.output)
+                expected = self.reduceSpaces(expected)
+                self.assertEqualDiff(expected, output)
 
         def test_17_verbose(self):
                 """Verify that pkg list -v works as expected."""

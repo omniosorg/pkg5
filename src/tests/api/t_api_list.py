@@ -22,6 +22,7 @@
 
 #
 # Copyright (c) 2009, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
 #
 
 from . import testutils
@@ -69,6 +70,8 @@ class TestApiList(pkg5unittest.ManyDepotTestCase):
             "qux@1.0",
             "zoo@1.0",
             "zoo@2.0",
+            "zzfenix@1.0",
+            "zzcowley@1.1",
         ]
 
         def __tuple_order(self, a, b):
@@ -91,7 +94,8 @@ class TestApiList(pkg5unittest.ManyDepotTestCase):
                         return [var]
                 elif stem in ("entire", "bat/bar", "obsolete"):
                         return
-                elif stem in ("corge", "grault", "qux", "quux"):
+                elif stem in ("corge", "grault", "qux", "quux",
+                    "zzfenix", "zzcowley"):
                         return [var, opvar]
                 elif stem == "zoo" and ver.startswith("1.0"):
                         return [var]
@@ -233,6 +237,9 @@ add set name=pkg.description value="{desc}"
                                     "value=true\n"
                                 pkg_data += "add depend type=require " \
                                     "fmri=quux\n"
+                        elif stem == "zzfenix":
+                                pkg_data += "add depend type=require " \
+                                    "fmri=zzcowley\n"
 
                         pkg_data += "close\n"
 
@@ -470,14 +477,22 @@ add set name=pkg.description value="{desc}"
                     self.__get_exp_pub_entry("test1", 19, "zoo", "1.0,5.11"),
                     self.__get_exp_pub_entry("test2", 20, "zoo", "2.0,5.11"),
                     self.__get_exp_pub_entry("test2", 19, "zoo", "1.0,5.11"),
+                    self.__get_exp_pub_entry("test1", 21, "zzcowley",
+                        "1.1,5.11"),
+                    self.__get_exp_pub_entry("test2", 21, "zzcowley",
+                        "1.1,5.11"),
+                    self.__get_exp_pub_entry("test1", 22, "zzfenix",
+                        "1.0,5.11"),
+                    self.__get_exp_pub_entry("test2", 22, "zzfenix",
+                        "1.0,5.11"),
                 ]
                 self.assertEqualDiff(expected, returned)
-                self.assertEqual(len(returned), 42)
+                self.assertEqual(len(returned), 46)
 
                 # Next, check no variants case (which has to be done
                 # programatically).
                 self.__test_list(api.ImageInterface.LIST_ALL, api_obj=api_obj,
-                    num_expected=34, variants=False)
+                    num_expected=38, variants=False)
 
         def test_list_02_newest(self):
                 """Verify the sort order and content of a list excluding
@@ -485,7 +500,7 @@ add set name=pkg.description value="{desc}"
                 the newest versions of each package for each publisher."""
 
                 self.__test_list(api.ImageInterface.LIST_NEWEST,
-                    num_expected=18, variants=False)
+                    num_expected=22, variants=False)
 
                 # Verify that LIST_NEWEST will allow version-specific
                 # patterns such that the newest version allowed by the
@@ -566,7 +581,7 @@ add set name=pkg.description value="{desc}"
                     ([
                         ("", "food")
                     ], 2),
-                    ([], 18) # Only packages with no category assigned.
+                    ([], 22) # Only packages with no category assigned.
                 ]
 
                 for combo, expected in combos:
@@ -578,16 +593,16 @@ add set name=pkg.description value="{desc}"
                 various publisher and variant combinations."""
 
                 combos = [
-                    (["test1", "test2"], 34, False),
-                    (["test1", "test2"], 42, True),
-                    (["test2"], 17, False),
-                    (["test2"], 21, True),
-                    (["test1"], 17, False),
-                    (["test1"], 21, True),
+                    (["test1", "test2"], 38, False),
+                    (["test1", "test2"], 46, True),
+                    (["test2"], 19, False),
+                    (["test2"], 23, True),
+                    (["test1"], 19, False),
+                    (["test1"], 23, True),
                     (["test3"], 0, False),
                     (["test3"], 0, True),
-                    ([], 34, False),
-                    ([], 42, True)
+                    ([], 38, False),
+                    ([], 46, True)
                 ]
 
                 for combo, expected, variants in combos:
@@ -664,9 +679,17 @@ add set name=pkg.description value="{desc}"
                         installed=False),
                     self.__get_exp_pub_entry("test2", 19, "zoo", "1.0,5.11",
                         installed=False),
+                    self.__get_exp_pub_entry("test1", 21, "zzcowley",
+                        "1.1,5.11", installed=False),
+                    self.__get_exp_pub_entry("test2", 21, "zzcowley",
+                        "1.1,5.11", installed=False),
+                    self.__get_exp_pub_entry("test1", 22, "zzfenix",
+                        "1.0,5.11", installed=False),
+                    self.__get_exp_pub_entry("test2", 22, "zzfenix",
+                        "1.0,5.11", installed=False),
                 ]
 
-                self.assertEqual(len(returned), 12)
+                self.assertEqual(len(returned), 16)
                 self.assertEqualDiff(expected, returned)
 
                 # Re-test, including variants.
@@ -700,6 +723,14 @@ add set name=pkg.description value="{desc}"
                         installed=False),
                     self.__get_exp_pub_entry("test2", 20, "zoo", "2.0,5.11",
                         installed=False),
+                    self.__get_exp_pub_entry("test1", 21, "zzcowley",
+                        "1.1,5.11", installed=False),
+                    self.__get_exp_pub_entry("test2", 21, "zzcowley",
+                        "1.1,5.11", installed=False),
+                    self.__get_exp_pub_entry("test1", 22, "zzfenix",
+                        "1.0,5.11", installed=False),
+                    self.__get_exp_pub_entry("test2", 22, "zzfenix",
+                        "1.0,5.11", installed=False),
                 ]
                 self.assertEqualDiff(expected, returned)
 
@@ -716,6 +747,10 @@ add set name=pkg.description value="{desc}"
                     self.__get_exp_pub_entry("test2", 15, "obsolete",
                         "1.0,5.11"),
                     self.__get_exp_pub_entry("test2", 19, "zoo",
+                        "1.0,5.11"),
+                    self.__get_exp_pub_entry("test2", 21, "zzcowley",
+                        "1.1,5.11"),
+                    self.__get_exp_pub_entry("test2", 22, "zzfenix",
                         "1.0,5.11"),
                 ]
                 self.assertEqualDiff(expected, returned)
@@ -747,6 +782,14 @@ add set name=pkg.description value="{desc}"
                     self.__get_exp_pub_entry("test1", 19, "zoo",
                         "1.0,5.11"),
                     self.__get_exp_pub_entry("test2", 19, "zoo",
+                        "1.0,5.11"),
+                    self.__get_exp_pub_entry("test1", 21, "zzcowley",
+                        "1.1,5.11"),
+                    self.__get_exp_pub_entry("test2", 21, "zzcowley",
+                        "1.1,5.11"),
+                    self.__get_exp_pub_entry("test1", 22, "zzfenix",
+                        "1.0,5.11"),
+                    self.__get_exp_pub_entry("test2", 22, "zzfenix",
                         "1.0,5.11"),
                 ]
                 self.assertEqualDiff(expected, returned)
@@ -784,6 +827,14 @@ add set name=pkg.description value="{desc}"
                     self.__get_exp_pub_entry("test1", 16, "quux", "1.0,5.11"),
                     self.__get_exp_pub_entry("test1", 19, "zoo", "1.0,5.11"),
                     self.__get_exp_pub_entry("test2", 19, "zoo", "1.0,5.11"),
+                    self.__get_exp_pub_entry("test1", 21, "zzcowley",
+                        "1.1,5.11"),
+                    self.__get_exp_pub_entry("test2", 21, "zzcowley",
+                        "1.1,5.11"),
+                    self.__get_exp_pub_entry("test1", 22, "zzfenix",
+                        "1.0,5.11"),
+                    self.__get_exp_pub_entry("test2", 22, "zzfenix",
+                        "1.0,5.11"),
                 ]
                 self.assertEqualDiff(expected, returned)
 
@@ -823,6 +874,14 @@ add set name=pkg.description value="{desc}"
                     self.__get_exp_pub_entry("test2", 18, "qux", "1.0,5.11"),
                     self.__get_exp_pub_entry("test1", 19, "zoo", "1.0,5.11"),
                     self.__get_exp_pub_entry("test2", 19, "zoo", "1.0,5.11"),
+                    self.__get_exp_pub_entry("test1", 21, "zzcowley",
+                        "1.1,5.11"),
+                    self.__get_exp_pub_entry("test2", 21, "zzcowley",
+                        "1.1,5.11"),
+                    self.__get_exp_pub_entry("test1", 22, "zzfenix",
+                        "1.0,5.11"),
+                    self.__get_exp_pub_entry("test2", 22, "zzfenix",
+                        "1.0,5.11"),
                 ]
                 self.assertEqualDiff(expected, returned)
 
@@ -858,6 +917,14 @@ add set name=pkg.description value="{desc}"
                     self.__get_exp_pub_entry("test2", 18, "qux", "1.0,5.11"),
                     self.__get_exp_pub_entry("test1", 20, "zoo", "2.0,5.11"),
                     self.__get_exp_pub_entry("test2", 20, "zoo", "2.0,5.11"),
+                    self.__get_exp_pub_entry("test1", 21, "zzcowley",
+                        "1.1,5.11"),
+                    self.__get_exp_pub_entry("test2", 21, "zzcowley",
+                        "1.1,5.11"),
+                    self.__get_exp_pub_entry("test1", 22, "zzfenix",
+                        "1.0,5.11"),
+                    self.__get_exp_pub_entry("test2", 22, "zzfenix",
+                        "1.0,5.11"),
                 ]
                 self.assertEqualDiff(expected, returned)
 
@@ -948,6 +1015,14 @@ add set name=pkg.description value="{desc}"
                         installed=True),
                     self.__get_exp_pub_entry("test1", 19, "zoo", "1.0,5.11"),
                     self.__get_exp_pub_entry("test2", 19, "zoo", "1.0,5.11"),
+                    self.__get_exp_pub_entry("test1", 21, "zzcowley",
+                        "1.1,5.11"),
+                    self.__get_exp_pub_entry("test2", 21, "zzcowley",
+                        "1.1,5.11"),
+                    self.__get_exp_pub_entry("test1", 22, "zzfenix",
+                        "1.0,5.11"),
+                    self.__get_exp_pub_entry("test2", 22, "zzfenix",
+                        "1.0,5.11"),
                 ]
                 self.assertEqualDiff(expected, returned)
 
@@ -1003,6 +1078,14 @@ add set name=pkg.description value="{desc}"
                         installed=True),
                     self.__get_exp_pub_entry("test1", 19, "zoo", "1.0,5.11"),
                     self.__get_exp_pub_entry("test2", 19, "zoo", "1.0,5.11"),
+                    self.__get_exp_pub_entry("test1", 21, "zzcowley",
+                        "1.1,5.11"),
+                    self.__get_exp_pub_entry("test2", 21, "zzcowley",
+                        "1.1,5.11"),
+                    self.__get_exp_pub_entry("test1", 22, "zzfenix",
+                        "1.0,5.11"),
+                    self.__get_exp_pub_entry("test2", 22, "zzfenix",
+                        "1.0,5.11"),
                 ]
                 self.assertEqualDiff(expected, returned)
 
@@ -1051,6 +1134,14 @@ add set name=pkg.description value="{desc}"
                     self.__get_exp_pub_entry("test1", 16, "quux", "1.0,5.11"),
                     self.__get_exp_pub_entry("test1", 19, "zoo", "1.0,5.11"),
                     self.__get_exp_pub_entry("test2", 19, "zoo", "1.0,5.11"),
+                    self.__get_exp_pub_entry("test1", 21, "zzcowley",
+                        "1.1,5.11"),
+                    self.__get_exp_pub_entry("test2", 21, "zzcowley",
+                        "1.1,5.11"),
+                    self.__get_exp_pub_entry("test1", 22, "zzfenix",
+                        "1.0,5.11"),
+                    self.__get_exp_pub_entry("test2", 22, "zzfenix",
+                        "1.0,5.11"),
                 ]
                 self.assertEqualDiff(expected, returned)
 
@@ -1090,6 +1181,10 @@ add set name=pkg.description value="{desc}"
                         "1.0,5.11"),
                     self.__get_exp_pub_entry("test1", 16, "quux", "1.0,5.11"),
                     self.__get_exp_pub_entry("test1", 19, "zoo", "1.0,5.11"),
+                    self.__get_exp_pub_entry("test1", 21, "zzcowley",
+                        "1.1,5.11"),
+                    self.__get_exp_pub_entry("test1", 22, "zzfenix",
+                        "1.0,5.11"),
                 ]
                 self.assertEqualDiff(expected, returned)
 
@@ -1111,6 +1206,10 @@ add set name=pkg.description value="{desc}"
                         "1.0,5.11"),
                     self.__get_exp_pub_entry("test2", 16, "quux", "1.0,5.11"),
                     self.__get_exp_pub_entry("test2", 19, "zoo", "1.0,5.11"),
+                    self.__get_exp_pub_entry("test2", 21, "zzcowley",
+                        "1.1,5.11"),
+                    self.__get_exp_pub_entry("test2", 22, "zzfenix",
+                        "1.0,5.11"),
                 ]
                 self.assertEqualDiff(expected, returned)
 
@@ -1143,6 +1242,14 @@ add set name=pkg.description value="{desc}"
                     self.__get_exp_pub_entry("test2", 16, "quux", "1.0,5.11"),
                     self.__get_exp_pub_entry("test1", 19, "zoo", "1.0,5.11"),
                     self.__get_exp_pub_entry("test2", 19, "zoo", "1.0,5.11"),
+                    self.__get_exp_pub_entry("test1", 21, "zzcowley",
+                        "1.1,5.11"),
+                    self.__get_exp_pub_entry("test2", 21, "zzcowley",
+                        "1.1,5.11"),
+                    self.__get_exp_pub_entry("test1", 22, "zzfenix",
+                        "1.0,5.11"),
+                    self.__get_exp_pub_entry("test2", 22, "zzfenix",
+                        "1.0,5.11"),
                 ]
                 self.assertEqualDiff(expected, returned)
 
@@ -1178,6 +1285,14 @@ add set name=pkg.description value="{desc}"
                     self.__get_exp_pub_entry("test2", 16, "quux", "1.0,5.11"),
                     self.__get_exp_pub_entry("test1", 19, "zoo", "1.0,5.11"),
                     self.__get_exp_pub_entry("test2", 19, "zoo", "1.0,5.11"),
+                    self.__get_exp_pub_entry("test1", 21, "zzcowley",
+                        "1.1,5.11"),
+                    self.__get_exp_pub_entry("test2", 21, "zzcowley",
+                        "1.1,5.11"),
+                    self.__get_exp_pub_entry("test1", 22, "zzfenix",
+                        "1.0,5.11"),
+                    self.__get_exp_pub_entry("test2", 22, "zzfenix",
+                        "1.0,5.11"),
                 ]
                 self.assertEqualDiff(expected, returned)
 
@@ -1208,6 +1323,14 @@ add set name=pkg.description value="{desc}"
                     self.__get_exp_pub_entry("test1", 16, "quux", "1.0,5.11"),
                     self.__get_exp_pub_entry("test1", 19, "zoo", "1.0,5.11"),
                     self.__get_exp_pub_entry("test2", 19, "zoo", "1.0,5.11"),
+                    self.__get_exp_pub_entry("test1", 21, "zzcowley",
+                        "1.1,5.11"),
+                    self.__get_exp_pub_entry("test2", 21, "zzcowley",
+                        "1.1,5.11"),
+                    self.__get_exp_pub_entry("test1", 22, "zzfenix",
+                        "1.0,5.11"),
+                    self.__get_exp_pub_entry("test2", 22, "zzfenix",
+                        "1.0,5.11"),
                 ]
                 self.assertEqualDiff(expected, returned)
 
@@ -1264,6 +1387,65 @@ add set name=pkg.description value="{desc}"
                 # Reset image state for following tests.
                 self.pkg("set-publisher -G '*' -g " + self.rurl1 + " test1")
                 self.pkg("set-publisher -p " + self.rurl2)
+                for pd in api_obj.gen_plan_uninstall(["*"]):
+                        continue
+                api_obj.prepare()
+                api_obj.execute_plan()
+                api_obj.reset()
+
+        def test_list_06b_removable(self):
+                """Verify the sort order and content of a list containing
+                only removable packages and combinations thereof."""
+
+                api_obj = self.get_img_api_obj()
+
+                # Verify no installed packages case.
+                returned = self.__get_returned(api_obj.LIST_REMOVABLE,
+                    api_obj=api_obj)
+                self.assertEqual(len(returned), 0)
+
+                # Test results after installing packages and only listing the
+                # installed, removable packages.
+                #
+                # qux was renamed to quux
+                # zzfenix depends on zzcowley
+                af = self.__get_pub_entry("test1", 3, "apple",
+                    "1.2.0,5.11-0")[0]
+                for pd in api_obj.gen_plan_install(
+                    [af.get_fmri(), "zzfenix", "qux"]):
+                        continue
+                api_obj.prepare()
+                api_obj.execute_plan()
+                api_obj.reset()
+
+                # Verify what is installed.
+                returned = self.__get_returned(api_obj.LIST_INSTALLED,
+                    api_obj=api_obj)
+                self.assertEqual(len(returned), 4)
+
+                expected = [
+                    self.__get_exp_pub_entry("test1", 3, "apple",
+                        "1.2.0,5.11-0", installed=True),
+                    self.__get_exp_pub_entry("test1", 16, "quux", "1.0,5.11",
+                        installed=True),
+                    self.__get_exp_pub_entry("test1", 21, "zzcowley",
+                        "1.1,5.11", installed=True),
+                    self.__get_exp_pub_entry("test1", 22, "zzfenix", "1.0,5.11",
+                        installed=True),
+                ]
+                self.assertEqualDiff(expected, returned)
+
+                # Verify the results for LIST_REMOVABLE.
+                returned = self.__get_returned(api_obj.LIST_REMOVABLE,
+                    api_obj=api_obj)
+
+                # zzcowley is not removable
+                expected.pop(2)
+
+                self.assertEqual(len(returned), 3)
+                self.assertEqualDiff(expected, returned)
+
+                # Reset image state for following tests.
                 for pd in api_obj.gen_plan_uninstall(["*"]):
                         continue
                 api_obj.prepare()

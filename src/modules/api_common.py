@@ -22,6 +22,7 @@
 
 #
 # Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
 #
 # Visible changes to classes here require an update to
 # doc/client_api_versions.txt and/or doc/server_api_versions.txt.
@@ -124,6 +125,7 @@ class PackageInfo(object):
         LEGACY = pkgdefs.PKG_STATE_LEGACY
         UNSUPPORTED = pkgdefs.PKG_STATE_UNSUPPORTED
         FROZEN = pkgdefs.PKG_STATE_FROZEN
+        OPTIONAL = pkgdefs.PKG_STATE_OPTIONAL
 
         __NUM_PROPS = 13
         IDENTITY, SUMMARY, CATEGORIES, STATE, SIZE, LICENSES, LINKS, \

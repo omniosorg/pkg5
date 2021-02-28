@@ -282,6 +282,7 @@ class ImageInterface(object):
         LIST_INSTALLED_NEWEST = 2
         LIST_NEWEST = 3
         LIST_UPGRADABLE = 4
+        LIST_REMOVABLE = 5
 
         MATCH_EXACT = 0
         MATCH_FMRI = 1
@@ -3807,6 +3808,9 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                         LIST_UPGRADABLE
                                 Packages that are installed and upgradable.
 
+                        LIST_REMOVABLE
+                                Packages that have no dependants
+
                 'cats' is an optional list of package category tuples of the
                 form (scheme, cat) to restrict the results to.  If a package
                 is assigned to any of the given categories, it will be
@@ -3855,6 +3859,33 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                     raise_unmatched=raise_unmatched, ranked=ranked, repos=repos,
                     return_fmris=return_fmris, variants=variants)
 
+
+        def __get_pkg_refcounts(self, pkg_cat, excludes, pubs):
+                pkg_ref = set()
+                pkg_optref = set()
+
+                cat_info = frozenset([pkg_cat.DEPENDENCY])
+
+                for pfmri, actions in pkg_cat.actions(cat_info,
+                    excludes=excludes, pubs=pubs):
+                        for a in actions:
+                                # Always keep packages with an install-hold
+                                if (a.name == 'set' and a.attrs['name'] ==
+                                    'pkg.depend.install-hold'):
+                                        pkg_ref.add(pfmri.pkg_name)
+                                        continue
+                                if a.name != 'depend': continue
+                                for f in a.attrlist('fmri'):
+                                        tgt = fmri.PkgFmri(f)
+                                        if a.attrs['type'] in [
+                                            'require',
+                                            'conditional'
+                                            ]:
+                                                pkg_ref.add(tgt.pkg_name)
+                                        if a.attrs['type'] == 'optional':
+                                                pkg_optref.add(tgt.pkg_name)
+                return pkg_ref, pkg_optref
+
         def __get_pkg_list(self, pkg_list, cats=None, collect_attrs=False,
             inst_cat=None, known_cat=None, patterns=misc.EmptyI,
             pubs=misc.EmptyI, raise_unmatched=False, ranked=False, repos=None,
@@ -3866,6 +3897,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                 function."""
 
                 installed = inst_newest = newest = upgradable = False
+                removable = False
                 if pkg_list == self.LIST_INSTALLED:
                         installed = True
                 elif pkg_list == self.LIST_INSTALLED_NEWEST:
@@ -3874,6 +3906,8 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                         newest = True
                 elif pkg_list == self.LIST_UPGRADABLE:
                         upgradable = True
+                elif pkg_list == self.LIST_REMOVABLE:
+                        removable = True
 
                 # Each pattern in patterns can be a partial or full FMRI, so
                 # extract the individual components for use in filtering.
@@ -3932,7 +3966,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                         pub_ranks = inc_stems = inc_vers = inst_stems = \
                             ren_stems = ren_inst_stems = misc.EmptyDict
 
-                if installed or upgradable:
+                if installed or upgradable or removable:
                         if inst_cat:
                                 pkg_cat = inst_cat
                         else:
@@ -3967,6 +4001,8 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                         if upgradable:
                                 # If package is marked upgradable, return it.
                                 return pkgu
+                        elif removable:
+                                return not stem in pkg_ref
                         elif pkgi:
                                 # Nothing more to do here.
                                 return True
@@ -4031,12 +4067,16 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                         return True
 
                 filter_cb = None
-                if inst_newest or upgradable:
+                if inst_newest or upgradable or removable:
                         # Filtering needs to be applied.
                         filter_cb = check_state
 
                 excludes = self._img.list_excludes()
                 img_variants = self._img.get_variants()
+
+                if removable:
+                        pkg_ref, pkg_optref = self.__get_pkg_refcounts(
+                            pkg_cat, excludes, pubs)
 
                 matched_pats = set()
                 pkg_matching_pats = None
@@ -4337,6 +4377,9 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                                         # Package doesn't match specified
                                         # category criteria.
                                         continue
+
+                        if removable and stem in pkg_optref:
+                                states.append(pkgdefs.PKG_STATE_OPTIONAL)
 
                         # Return the requested package data.
                         if not unsupported:
