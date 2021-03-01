@@ -839,11 +839,34 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                         self._activity_lock.release()
                 return True
 
+        def flag_pkgs(self, fmri_strings, flag, value):
+                if flag == 'manual':
+                        state = PackageInfo.MANUAL
+                else:
+                        raise apx.InvalidOptionErrors('Unknown flag')
+
+                pfmris = []
+                for pfmri, _, _, _, _ in self.get_pkg_list(
+                    pkg_list=self.LIST_INSTALLED, patterns=fmri_strings,
+                    raise_unmatched=True, return_fmris=True):
+                        pfmris.append(pfmri)
+
+                self._acquire_activity_lock()
+
+                try:
+                        self._img.flag_pkgs(pfmris=pfmris,
+                            state=state, value=value,
+                            progtrack=self.__progresstracker)
+                finally:
+                        self._activity_lock.release()
+                return True
+
         def gen_available_mediators(self):
-                """A generator function that yields tuples of the form (mediator,
-                mediations), where mediator is the name of the provided mediation
-                and mediations is a list of dictionaries of possible mediations
-                to set, provided by installed packages, of the form:
+                """A generator function that yields tuples of the form
+                   (mediator, mediations), where mediator is the name of the
+                   provided mediation and mediations is a list of dictionaries
+                   of possible mediations to set, provided by installed
+                   packages, of the form:
 
                    {
                        mediator-name: {

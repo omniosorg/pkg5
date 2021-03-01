@@ -150,6 +150,7 @@ class TestPkgList(pkg5unittest.ManyDepotTestCase):
                 self.pkg("list -@", exit=2)
                 self.pkg("list -v -s", exit=2)
                 self.pkg("list -a -u", exit=2)
+                self.pkg("list -a -r", exit=2)
                 self.pkg("list -g pkg://test1/ -u", exit=2)
 
                 # Should only print fatal errors when using -q.
@@ -385,7 +386,7 @@ class TestPkgList(pkg5unittest.ManyDepotTestCase):
                 self.pkg("list -aHf /foo@1.0")
                 expected = \
                     "foo 1.0-0 ---\n" + \
-                    "foo (test2) 1.0-0 i--\n"
+                    "foo (test2) 1.0-0 im-\n"
                 output = self.reduceSpaces(self.output)
                 self.assertEqualDiff(expected, output)
                 self.pkg("set-publisher -O {0} test2".format(self.rurl2))
@@ -398,7 +399,7 @@ class TestPkgList(pkg5unittest.ManyDepotTestCase):
                 self.pkg("list -aHf /foo@1.0")
                 expected = \
                     "foo 1.0-0 ---\n" + \
-                    "foo (test2) 1.0-0 i--\n"
+                    "foo (test2) 1.0-0 im-\n"
                 output = self.reduceSpaces(self.output)
                 self.assertEqualDiff(expected, output)
                 self.pkg("set-publisher -O {0} test2".format(self.rurl2))
@@ -712,7 +713,7 @@ class TestPkgList(pkg5unittest.ManyDepotTestCase):
                 # 'foo' should be listed since 1.2.1 is available.
                 self.pkg("list -H")
                 expected = \
-                    "foo              1.0-0 i--\n"
+                    "foo              1.0-0 im-\n"
                 output = self.reduceSpaces(self.output)
                 expected = self.reduceSpaces(expected)
                 self.assertEqualDiff(expected, output)
@@ -749,8 +750,8 @@ class TestPkgList(pkg5unittest.ManyDepotTestCase):
                 self.pkg("list -H")
                 expected = \
                     "cowley           1.1-0 i--\n" \
-                    "fenix            1.0-0 i--\n" \
-                    "foo              1.0-0 i--\n"
+                    "fenix            1.0-0 im-\n" \
+                    "foo              1.0-0 im-\n"
                 output = self.reduceSpaces(self.output)
                 expected = self.reduceSpaces(expected)
                 self.assertEqualDiff(expected, output)
@@ -758,8 +759,8 @@ class TestPkgList(pkg5unittest.ManyDepotTestCase):
                 # foo and fenix should be listed as removable
                 self.pkg("list -Hr")
                 expected = \
-                    "fenix            1.0-0 i--\n" \
-                    "foo              1.0-0 i--\n"
+                    "fenix            1.0-0 im-\n" \
+                    "foo              1.0-0 im-\n"
                 output = self.reduceSpaces(self.output)
                 expected = self.reduceSpaces(expected)
                 self.assertEqualDiff(expected, output)
@@ -769,7 +770,7 @@ class TestPkgList(pkg5unittest.ManyDepotTestCase):
                 self.pkg("list -Hr")
                 expected = \
                     "cowley           1.1-0 i--\n" \
-                    "foo              1.0-0 i--\n"
+                    "foo              1.0-0 im-\n"
                 output = self.reduceSpaces(self.output)
                 expected = self.reduceSpaces(expected)
                 self.assertEqualDiff(expected, output)
@@ -779,8 +780,8 @@ class TestPkgList(pkg5unittest.ManyDepotTestCase):
                 self.pkg("install /dragon")
                 self.pkg("list -Hr")
                 expected = \
-                    "dragon           1.0-0 i--\n" \
-                    "foo              1.0-0 i--\n"
+                    "dragon           1.0-0 im-\n" \
+                    "foo              1.0-0 im-\n"
                 output = self.reduceSpaces(self.output)
                 expected = self.reduceSpaces(expected)
                 self.assertEqualDiff(expected, output)
@@ -789,8 +790,52 @@ class TestPkgList(pkg5unittest.ManyDepotTestCase):
                 self.pkg("list -HR")
                 expected = \
                     "cowley           1.1-0 iS-\n" \
-                    "dragon           1.0-0 i--\n" \
-                    "foo              1.0-0 i--\n"
+                    "dragon           1.0-0 im-\n" \
+                    "foo              1.0-0 im-\n"
+                output = self.reduceSpaces(self.output)
+                expected = self.reduceSpaces(expected)
+                self.assertEqualDiff(expected, output)
+
+        def test_16c_manual(self):
+                """Verify that pkg list -m works as expected."""
+
+                self.image_create(self.rurl1)
+                self.pkg("install -v /foo@1.0 fenix")
+
+                # foo, fenix and cowley should be installed
+                # (fenix depends on cowley)
+                self.pkg("list -H")
+                expected = \
+                    "cowley           1.1-0 i--\n" \
+                    "fenix            1.0-0 im-\n" \
+                    "foo              1.0-0 im-\n"
+                output = self.reduceSpaces(self.output)
+                expected = self.reduceSpaces(expected)
+                self.assertEqualDiff(expected, output)
+
+                # -m should remove cowley from the list
+                self.pkg("list -Hm")
+                expected = \
+                    "fenix            1.0-0 im-\n" \
+                    "foo              1.0-0 im-\n"
+                output = self.reduceSpaces(self.output)
+                expected = self.reduceSpaces(expected)
+                self.assertEqualDiff(expected, output)
+
+                # -M should only show cowley
+                self.pkg("list -HM")
+                expected = \
+                    "cowley           1.1-0 i--\n"
+                output = self.reduceSpaces(self.output)
+                expected = self.reduceSpaces(expected)
+                self.assertEqualDiff(expected, output)
+
+                # Uninstalling a package should remove its m flag
+                self.pkg("uninstall fenix")
+
+                self.pkg("list -Ha fenix")
+                expected = \
+                    "fenix            1.0-0 ---\n"
                 output = self.reduceSpaces(self.output)
                 expected = self.reduceSpaces(expected)
                 self.assertEqualDiff(expected, output)
@@ -804,7 +849,7 @@ class TestPkgList(pkg5unittest.ManyDepotTestCase):
                 self.pkg("list -Hv newpkg")
                 output = self.reduceSpaces(self.output)
                 expected = fmri.PkgFmri(plist[0]).get_fmri(
-                    include_build=False) + " i--\n"
+                    include_build=False) + " im-\n"
                 self.assertEqualDiff(expected, output)
 
 

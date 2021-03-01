@@ -22,7 +22,7 @@
 
 #
 # Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
-# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
 #
 
 from . import testutils
@@ -166,7 +166,7 @@ providing a version at which to freeze them.
                 self.assertEqualDiff("1.0", tmp[1])
                 self.assertTrue("None" in self.output)
                 self.pkg("info foo")
-                self.assertTrue("(Frozen)" in self.output)
+                self.assertTrue("(Frozen," in self.output)
 
                 # Test that unfreezing a package allows it to move.
                 self.pkg("unfreeze foo")

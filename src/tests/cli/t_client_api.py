@@ -22,7 +22,7 @@
 
 #
 # Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
-# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
 #
 
 from . import testutils
@@ -785,7 +785,7 @@ class TestClientApi(pkg5unittest.ManyDepotTestCase):
                 self.assertTrue("errors" not in retjson)
                 self.assertTrue(len(retjson["data"]["package_attrs"]) == 1)
                 self.assertTrue(retjson["data"]["package_attrs"][0][2][1][0] \
-                    == "Installed")
+                    == "Installed (Manually installed)")
                 self.assertTrue(retjson["status"] == 0)
 
                 pkgs = []

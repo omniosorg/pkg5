@@ -72,6 +72,8 @@ LIST_NEWEST           = "list_newest"
 LIST_UPGRADABLE       = "list_upgradable"
 LIST_REMOVABLE        = "list_removable"
 LIST_ALL_REMOVABLE    = "list_all_removable"
+LIST_MANUAL           = "list_manual"
+LIST_NOT_MANUAL       = "list_not_manual"
 MED_IMPLEMENTATION    = "med_implementation"
 MED_VERSION           = "med_version"
 NEW_BE                = "new_be"
@@ -820,6 +822,10 @@ def opts_cb_list(op, api_inst, opts, opts_new):
                 raise InvalidOptionError(InvalidOptionError.INCOMPAT,
                     [LIST_UPGRADABLE, LIST_REMOVABLE])
 
+        if opts_new[LIST_MANUAL] and opts_new[LIST_NOT_MANUAL]:
+                raise InvalidOptionError(InvalidOptionError.INCOMPAT,
+                    [LIST_MANUAL, LIST_NOT_MANUAL])
+
         if opts_new[SUMMARY] and opts_new[VERBOSE]:
                 raise InvalidOptionError(InvalidOptionError.INCOMPAT,
                     [SUMMARY, VERBOSE])
@@ -1317,6 +1323,8 @@ opts_list_inventory = \
     (LIST_UPGRADABLE,       False, [], {"type": "boolean"}),
     (LIST_REMOVABLE,        False, [], {"type": "boolean"}),
     (LIST_ALL_REMOVABLE,    False, [], {"type": "boolean"}),
+    (LIST_MANUAL,           False, [], {"type": "boolean"}),
+    (LIST_NOT_MANUAL,       False, [], {"type": "boolean"}),
 ]
 
 opts_dehydrate = \
@@ -1379,6 +1387,7 @@ pkg_op_opts = {
     pkgdefs.PKG_OP_UNSET_PUBLISHER: None,
     pkgdefs.PKG_OP_UPDATE         : opts_update,
     pkgdefs.PKG_OP_APPLY_HOT_FIX  : opts_apply_hot_fix,
+    pkgdefs.PKG_OP_AUTOREMOVE     : opts_uninstall,
     pkgdefs.PKG_OP_HOTFIX_CLEANUP : [],
     pkgdefs.PKG_OP_VERIFY         : opts_verify
 }

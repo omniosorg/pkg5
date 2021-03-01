@@ -1,6 +1,6 @@
 .\" Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
 .\" Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
-.Dd February 26, 2021
+.Dd March 3, 2021
 .Dt PKG 1
 .Os OmniOS
 .Sh NAME
@@ -74,7 +74,7 @@
 .Op Fl nvq
 .Op Fl C Ar n
 .br
-.Oo Fl R | Fl r
+.Oo Fl r
 .Oo Oo Fl z Ar zonename Oc Ns ... | Oo Fl Z Ar zonename Oc Ns ... Oc
 .Oc
 .br
@@ -145,11 +145,32 @@
 .br
 .Ar path_or_uri
 .Op Ar pkg_fmri_pattern No ...
+.\" autoremove
+.Pp
+.Nm
+.Cm autoremove
+.Op Fl nvq
+.Op Fl C Ar n
+.br
+.Oo Fl r
+.Oo Oo Fl z Ar zonename Oc Ns ... | Oo Fl Z Ar zonename Oc Ns ... Oc
+.Oc
+.br
+.Op Fl \-ignore-missing
+.Op Fl \-no-index
+.br
+.Op Fl \-no-be-activate | Fl \-temp-be-activate
+.Op Fl \-no-backup-be | Fl \-require-backup-be
+.Op Fl \-backup-be-name Ar name
+.Op Fl \-deny-new-be | Fl \-require-new-be
+.Op Fl \-be-name Ar name
+.br
+.Op Fl \-sync-actuators | Fl \-sync-actuators-timeout Ar timeout
 .\" list
 .Pp
 .Nm
 .Cm list
-.Op Fl HafnqRrsuv
+.Op Fl HafMmnqRrsuv
 .Oo Fl g Ar path_or_uri Oc Ns ...
 .Op Fl \-no-refresh
 .br
@@ -347,6 +368,12 @@
 .Nm
 .Cm unfreeze
 .Op Fl n
+.Op Ar pkg_fmri_pattern No ...
+.\" flag
+.Pp
+.Nm
+.Cm flag
+.Op Fl mM
 .Op Ar pkg_fmri_pattern No ...
 .\" property
 .Pp
@@ -1003,7 +1030,7 @@ sub-command above.
 .Op Fl nvq
 .Op Fl C Ar n
 .br
-.Oo Fl R | Fl r
+.Oo Fl r
 .Oo Oo Fl z Ar zonename Oc Ns ... | Oo Fl Z Ar zonename Oc Ns ... Oc
 .Oc
 .br
@@ -1225,11 +1252,47 @@ For all other options, see the
 .Cm install
 command above.
 .Ed
+.\" autoremove
+.Pp
+.Nm
+.Cm autoremove
+.Op Fl nvq
+.Op Fl C Ar n
+.br
+.Oo Fl r
+.Oo Oo Fl z Ar zonename Oc Ns ... | Oo Fl Z Ar zonename Oc Ns ... Oc
+.Oc
+.br
+.Op Fl \-ignore-missing
+.Op Fl \-no-index
+.br
+.Op Fl \-no-be-activate | Fl \-temp-be-activate
+.Op Fl \-no-backup-be | Fl \-require-backup-be
+.Op Fl \-backup-be-name Ar name
+.Op Fl \-deny-new-be | Fl \-require-new-be
+.Op Fl \-be-name Ar name
+.br
+.Op Fl \-sync-actuators | Fl \-sync-actuators-timeout Ar timeout
+.Bd -ragged -offset Ds
+Automatically uninstall any packages which have no dependants and were not
+installed manually.
+The list of packages to be removed is the same as the list shown in the
+output of
+.Nm Cm list Fl rM .
+.Pp
+Packages are marked as manually installed if they were given as arguments to a
+.Nm Cm install
+command, or if they were flagged as manually installed using the
+.Nm Cm flag Fl m
+command.
+Packages marked in this way are ignored by
+.Cm autoremove .
+.Ed
 .\" list
 .Pp
 .Nm
 .Cm list
-.Op Fl HafnqRrsuv
+.Op Fl HafMmnqRrsuv
 .Oo Fl g Ar path_or_uri Oc Ns ...
 .Op Fl \-no-refresh
 .br
@@ -1244,7 +1307,7 @@ The usual output is in three columns:
 .Bd -literal -offset indent-two
 NAME (PUBLISHER)                    VERSION           IFO
 entire                              11-151037.0       i--
-ooce/developer/cmake (extra.omnios) 3.19.5-151037.0   i--
+ooce/developer/cmake (extra.omnios) 3.19.5-151037.0   im-
 .Ed
 .Bd -ragged -offset Ds
 The first column contains the name of the package.
@@ -1257,44 +1320,33 @@ See the
 man page for information about release and branch versions and about variants.
 .Pp
 The last column contains a set of flags that show the status of the package:
-.Bl -bullet -width Ds -offset indent
-.It
-An
-.Sy i
-in the
-.Sy I
-column shows that the package is installed.
-.It
-An
-.Sy f
-in the
-.Sy F
-column shows that the package is frozen.
-With the
-.Fl R
-flag, an
-.Sy S
-in the
-.Sy F
-column shows that a package is removable but is part of the default system
-software.
-.It
-An
-.Sy o
-in the
-.Sy O
-column shows that the package is obsolete.
-An
-.Sy r
-in the
-.Sy O
-column shows that the package has been renamed (a form of obsoletion).
-An
-.Sy l
-in the
-.Sy O
-column shows that the package is legacy, meaning that it will be removed in the
-future.
+.Bl -tag -offset Ds
+.It \&In the Sy I No column.
+.Bl -tag -offset Ds
+.It Sy i
+The package is installed
+.El
+.It \&In the Sy F No column.
+.Bl -tag -offset Ds
+.It Sy f
+The package is frozen.
+.It Sy m
+The package was manually installed.
+.It Sy S
+.Pq with the Fl R No flag
+The package is removable but is part of the default system software set.
+.El
+.It \&In the Sy O No column.
+.Bl -tag -offset Ds
+.It Sy o
+The package is obsolete.
+.It Sy r
+The package has been renamed (a form of obsoletion).
+.It Sy l
+The package is
+.Em legacy
+and will be removed in a future release.
+.El
 .El
 .Bl -tag -width Ds
 .It Ar pkg_fmri_pattern
@@ -1335,6 +1387,22 @@ implies
 if
 .Fl n
 is not specified.
+.It Fl M
+Show only packages which were automatically
+.Pq rather than manually
+installed.
+That is, those which are part of the default system or were installed
+automatically as dependencies of another package.
+.Pp
+This can be usefully combined with
+.Fl r
+to show automatically installed packages which can likely be removed.
+.It Fl m
+Show only packages which were manually installed.
+That is, those which were explicitly provided as arguments to a
+.Nm Cm install
+command, or were flagged using
+.Nm Cm flag Fl m .
 .It Fl n
 Display the newest versions of all known packages, regardless of installed
 state.
@@ -2412,6 +2480,25 @@ Any versions provided are ignored.
 .It Fl n
 Perform a trial run of the unfreeze operation, displaying the list of packages
 that would be unfrozen without unfreezing any packages.
+.El
+.Ed
+.\" flag
+.Pp
+.Nm
+.Cm flag
+.Op Fl mM
+.Op Ar pkg_fmri_pattern No ...
+.Bd -ragged -offset Ds
+Set or unset flags on installed packages as specified by the options shown
+below.
+.Bl -tag -width Ds
+.It Ar pkg_fmri_pattern
+Set or unset the flag on the specified installed packages.
+Any versions provided are ignored.
+.It Sy Fl m
+Flag the package as manually installed.
+.It Sy Fl M
+Remove the manually installed flag from the package.
 .El
 .Ed
 .\" property

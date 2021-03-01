@@ -679,10 +679,9 @@ def _list_inventory(op, api_inst, pargs,
 
         state_map = [
             [(api.PackageInfo.INSTALLED, "installed")],
-            [
-                (api.PackageInfo.FROZEN, "frozen"),
-                (api.PackageInfo.OPTIONAL, "optional")
-            ],
+            [(api.PackageInfo.FROZEN, "frozen")],
+            [(api.PackageInfo.OPTIONAL, "optional")],
+            [(api.PackageInfo.MANUAL, "manual")],
             [
                 (api.PackageInfo.OBSOLETE, "obsolete"),
                 (api.PackageInfo.LEGACY, "legacy"),
@@ -2359,25 +2358,21 @@ def _info(op, api_inst, pargs, display_license, info_local, info_remote,
                 else:
                         state = _("Not installed")
 
+                states = []
                 lparen = False
                 if api.PackageInfo.OBSOLETE in pi.states:
-                        state += " ({0}".format(_("Obsolete"))
-                        lparen = True
+                        states.append(_("Obsolete"))
                 elif api.PackageInfo.RENAMED in pi.states:
-                        state += " ({0}".format(_("Renamed"))
-                        lparen = True
+                        states.append(_("Renamed"))
                 elif api.PackageInfo.LEGACY in pi.states:
-                        state += " ({0}".format(_("Legacy"))
-                        lparen = True
+                        states.append(_("Legacy"))
                 if api.PackageInfo.FROZEN in pi.states:
-                        if lparen:
-                                state += ", {0})".format(_("Frozen"))
-                        else:
-                                state += " ({0})".format(_("Frozen"))
-                elif lparen:
-                        state += ")"
+                        states.append(_("Frozen"))
+                if api.PackageInfo.MANUAL in pi.states:
+                        states.append(_("Manually installed"))
+                if len(states):
+                        state += ' ({})'.format(', '.join(states))
 
-                # XXX-Consider using Python's 2.7 collections.OrderedDict
                 attr_list = []
                 seen = {}
 

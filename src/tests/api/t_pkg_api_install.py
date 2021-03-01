@@ -22,6 +22,7 @@
 
 #
 # Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
 #
 
 from . import testutils
@@ -1071,6 +1072,42 @@ class TestPkgApiInstall(pkg5unittest.SingleDepotTestCase):
                 self._api_update(api_obj, [])
                 self.pkg("list foo@1.1", exit=1)
                 self.pkg("list foo@1.2")
+
+        def test_flag_basics_1(self):
+                """Test that the package flag API works"""
+
+                plist = self.pkgsend_bulk(self.rurl, [self.foo10, self.bar10])
+                api_obj = self.image_create(self.rurl)
+
+                self.pkg("install foo bar")
+
+                expected = self.reduceSpaces(
+                    "bar    1.0-0    im-\n"
+                    "foo    1.0-0    im-\n"
+                )
+                self.pkg("list -H")
+                output = self.reduceSpaces(self.output)
+                self.assertEqualDiff(expected, output)
+
+                api_obj.flag_pkgs(["foo"], flag="manual", value=False)
+
+                expected = self.reduceSpaces(
+                    "bar    1.0-0    im-\n"
+                    "foo    1.0-0    i--\n"
+                )
+                self.pkg("list -H")
+                output = self.reduceSpaces(self.output)
+                self.assertEqualDiff(expected, output)
+
+                api_obj.flag_pkgs(["*"], flag="manual", value=True)
+
+                expected = self.reduceSpaces(
+                    "bar    1.0-0    im-\n"
+                    "foo    1.0-0    im-\n"
+                )
+                self.pkg("list -H")
+                output = self.reduceSpaces(self.output)
+                self.assertEqualDiff(expected, output)
 
         def test_pkg_mancache(self):
                 """Verify that client manifest cache is managed as expected."""

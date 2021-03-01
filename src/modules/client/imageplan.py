@@ -22,7 +22,7 @@
 
 #
 # Copyright (c) 2007, 2020, Oracle and/or its affiliates.
-# Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
 #
 
 from __future__ import print_function
@@ -4019,7 +4019,6 @@ class ImagePlan(object):
 
                 # No longer needed.
                 del enabled_publishers
-                self.__match_inst = {}
                 self.__match_rm = {}
                 self.__match_update = {}
 
@@ -5455,7 +5454,10 @@ class ImagePlan(object):
 
                                 # save package state
                                 self.image.update_pkg_installed_state(
-                                    executed_pp, self.__progtrack)
+                                    executed_pp, self.__progtrack,
+                                    self.__match_inst.keys())
+                                # no longer needed
+                                self.__match_inst = {}
 
                                 # write out variant changes to the image config
                                 if self.pd._varcets_change or \
