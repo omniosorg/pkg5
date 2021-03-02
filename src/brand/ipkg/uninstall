@@ -144,7 +144,7 @@ if [ -n "$CURRENT_GZBE" ]; then
 	    while IFS="	" read uid fs; do
 
 		# only look at filesystems directly below $ZONEPATH_RDS
-		[[ "$fs" != ~()($ZONEPATH_RDS/+([^/])) ]] &&
+		[[ "$fs" != $ZONEPATH_RDS/+([^/]) ]] &&
 			continue
 
 		# match by PROP_PARENT uuid
