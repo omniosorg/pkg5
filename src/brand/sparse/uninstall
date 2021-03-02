@@ -145,7 +145,7 @@ if [ -n "$CURRENT_GZBE" ]; then
 	    while IFS="	" read uid fs; do
 
 		# only look at filesystems directly below $ZONEPATH_RDS
-		[[ "$fs" != ~()($ZONEPATH_RDS/+([^/])) ]] &&
+		[[ "$fs" != $ZONEPATH_RDS/+([^/]) ]] &&
 			continue
 
 		# match by PROP_PARENT uuid
@@ -153,7 +153,7 @@ if [ -n "$CURRENT_GZBE" ]; then
 			continue
 
 		fs_all[$fs_all_c]=$fs
-		(( fs_all_c = fs_all_c + 1 ))
+		(( fs_all_c += 1 ))
 	done
 fi
 
@@ -169,7 +169,7 @@ fi
 
 # Can only do this if there is only one active top-level filesystem.
 if [ "$fs_all_c" -ne 1 ]; then
-	print "`gettext 'Error: Found $fs_all_c top-level filesystems.'`"
+	print `gettext "Error: Found $fs_all_c top-level filesystems."`
 	print "  ${fs_all[@]}"
 	exit $ZONE_SUBPROC_FATAL
 fi
