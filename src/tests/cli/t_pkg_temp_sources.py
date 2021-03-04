@@ -22,6 +22,7 @@
 
 #
 # Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
 #
 
 from . import testutils
@@ -368,7 +369,7 @@ class TestPkgTempSources(pkg5unittest.ManyDepotTestCase):
                 # output.
                 self.pkg("install -g {0} incorp@1.0".format(self.incorp_arc))
                 self.pkg("list -H")
-                expected = "incorp (test) 1.0 i--\n"
+                expected = "incorp (test) 1.0 im-\n"
                 output = self.reduceSpaces(self.output)
                 self.assertEqualDiff(expected, output)
 
@@ -570,7 +571,7 @@ Packaging Date: {signed10_pkg_date}
                 expected = """\
              Name: foo
           Summary: Example package foo.
-            State: Installed
+            State: Installed (Manually installed)
         Publisher: test
           Version: 1.0
            Branch: None
@@ -585,6 +586,7 @@ Last Install Time: {pkg_install}
                 # Verify that when showing package info from archive that
                 # package shows as installed if it matches the installed one.
                 self.pkg("info -g {0} foo".format(self.foo_arc))
+                expected = expected.replace(' (Manually installed)', '')
                 self.assertEqualDiff(expected, self.output)
 
                 # Uninstall all packages and verify there are no known packages.

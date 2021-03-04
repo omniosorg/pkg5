@@ -212,7 +212,7 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False,
         priv_usage = {}
 
         basic_cmds = ["refresh", "install", "uninstall", "update",
-            "apply-hot-fix", "list", "version"]
+            "apply-hot-fix", "autoremove", "list", "version"]
 
         beopts = (
             "            [--no-be-activate] [--temp-be-activate]\n"
@@ -224,15 +224,21 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False,
             "            [-R | -r [-z zonename... | -Z zonename...]]\n"
         )
 
+        # For those operations that do not recurse by default, even with
+        # the default-recurse image property set to true, -R makes no sense
+        recurseoptsnoR = (
+            "            [-r [-z zonename... | -Z zonename...]]\n"
+        )
+
         basic_usage["install"] = _(
             "[-nvq] [-C n] [-g path_or_uri ...]\n"
             "            [--no-index] [--no-refresh] [--licenses] [--accept]\n"
-            + beopts + recurseopts +
+            + beopts + recurseoptsnoR +
             "            [--sync-actuators | --sync-actuators-timeout timeout]\n"
             "            [--reject pkg_fmri_pattern ... ] pkg_fmri_pattern ...")
         basic_usage["uninstall"] = _(
             "[-nvq] [-C n] [--ignore-missing] [--no-index]\n"
-            + beopts + recurseopts +
+            + beopts + recurseoptsnoR +
             "            [--sync-actuators | --sync-actuators-timeout timeout]\n"
             "            pkg_fmri_pattern ...")
         basic_usage["update"] = _(
@@ -245,8 +251,15 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False,
             "[-nvq]\n"
             + beopts + recurseopts +
             "            <path_or_uri> [pkg_fmri_pattern ...]")
+
+        basic_usage["autoremove"] = _(
+            "[-nvq] [-C n] [--ignore-missing] [--no-index]\n"
+            + beopts + recurseoptsnoR +
+            "            [--sync-actuators | --sync-actuators-timeout timeout]"
+        )
+
         basic_usage["list"] = _(
-            "[-HafnqRrsuv] [-g path_or_uri ...] [--no-refresh]\n"
+            "[-HafMmnqRrsuv] [-g path_or_uri ...] [--no-refresh]\n"
             "            [pkg_fmri_pattern ...]")
         basic_usage["refresh"] = _("[-q] [--full] [publisher ...]")
         basic_usage["version"] = ""
@@ -295,7 +308,9 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False,
             "exact-install",
             "",
             "dehydrate",
-            "rehydrate"
+            "rehydrate",
+            "",
+            "flag",
         ]
 
         adv_usage["info"] = \
@@ -398,6 +413,7 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False,
             "            [--reject pkg_fmri_pattern ... ] pkg_fmri_pattern ...")
         adv_usage["dehydrate"] = _("[-nvq] [-p publisher ...]")
         adv_usage["rehydrate"] = _("[-nvq] [-p publisher ...]")
+        adv_usage["flag"] = _("[-mM] [pkg_fmri_pattern ...]")
 
         priv_usage["remote"] = _(
             "--ctlfd=file_descriptor --progfd=file_descriptor")
@@ -501,7 +517,8 @@ Usage:    pkg [options] command [cmd_options] [operands]"""))
 Package Information  : list           search         info      contents
 Package Transitions  : update         install        uninstall
                        history        exact-install  apply-hot-fix
-Package Maintenance  : verify         fix            revert
+                       autoremove
+Package Maintenance  : verify         fix            revert    flag
 Publishers           : publisher      set-publisher  unset-publisher
 Package Configuration: mediator       set-mediator   unset-mediator
                        facet          change-facet
@@ -539,7 +556,7 @@ def get_fmri_args(api_inst, pargs, cmd=None):
 def list_inventory(op, api_inst, pargs,
     li_parent_sync, list_all, list_installed_newest, list_newest,
     list_upgradable, omit_headers, origins, quiet, refresh_catalogs, summary,
-    list_removable, list_all_removable, verbose):
+    list_removable, list_all_removable, list_manual, list_not_manual, verbose):
         """List packages."""
 
         if verbose:
@@ -555,7 +572,8 @@ def list_inventory(op, api_inst, pargs,
             ],
             [
                 ("frozen", "f"),
-                ("optional", "S")
+                ("optional", "S"),
+                ("manual", "m")
             ],
             [
                 ("obsolete", "o"),
@@ -588,6 +606,12 @@ def list_inventory(op, api_inst, pargs,
 
                         if (list_removable and not list_all_removable and
                             'optional' in entry['states']):
+                                continue
+
+                        if list_manual and 'manual' not in entry['states']:
+                                continue
+
+                        if list_not_manual and 'manual' in entry['states']:
                                 continue
 
                         if not omit_headers:
@@ -2378,7 +2402,7 @@ def apply_hot_fix(**args):
         if args['verbose']:
                 msg("Retrieving installed package list...")
 
-        out_json = client_api._list_inventory(op='list',
+        out_json = client_api._list_inventory(op=PKG_OP_LIST,
             api_inst=args['api_inst'], pargs='', li_parent_sync=False,
             list_all=False, list_installed_newest=False, list_newest=False,
             list_upgradable=False, origins=set([]), quiet=True,
@@ -2577,6 +2601,52 @@ def uninstall(op, api_inst, pargs,
         """Attempt to take package specified to DELETED state."""
 
         out_json = client_api._uninstall(op, api_inst, pargs,
+            act_timeout, backup_be, backup_be_name, be_activate, be_name,
+            ignore_missing, li_ignore, li_erecurse, li_parent_sync, new_be,
+            noexecute, parsable_version, quiet, stage, update_index, verbose,
+            display_plan_cb=display_plan_cb, logger=logger)
+
+        return __handle_client_json_api_output(out_json, op, api_inst)
+
+def autoremove(op, api_inst, pargs,
+    act_timeout, backup_be, backup_be_name, be_activate, be_name,
+    ignore_missing, li_ignore, li_erecurse, li_parent_sync, new_be, noexecute,
+    parsable_version, quiet, stage, update_index, verbose):
+        """Attempt to take automatically installed packages to DELETED state."""
+
+        if len(pargs):
+                usage(usage_error=_("No packages can be specified."),
+                    cmd="autoremove")
+
+        # Build pargs from the list of orphaned packages that were not
+        # manually installed.
+
+        out_json = client_api._list_inventory(PKG_OP_LIST, api_inst, [],
+            li_parent_sync=False, list_all=False,
+            list_installed_newest=False, list_newest=False,
+            list_upgradable=False, origins=[], quiet=quiet,
+            refresh_catalogs=False, list_removable=True)
+
+        errors = None
+        if "errors" in out_json:
+                _generate_error_messages(out_json["status"],
+                    out_json["errors"])
+                return out_json["status"]
+
+        if "data" in out_json:
+                for entry in out_json["data"]:
+                        if 'optional' in entry['states']:
+                                continue
+                        if 'manual' in entry['states']:
+                                continue
+
+                        pargs.append(entry["pkg"]);
+
+        if not pargs:
+                msg(_("No removable packages for this image."))
+                return EXIT_NOP
+
+        out_json = client_api._uninstall(PKG_OP_UNINSTALL, api_inst, pargs,
             act_timeout, backup_be, backup_be_name, be_activate, be_name,
             ignore_missing, li_ignore, li_erecurse, li_parent_sync, new_be,
             noexecute, parsable_version, quiet, stage, update_index, verbose,
@@ -3373,6 +3443,34 @@ def search(api_inst, args):
         elif good_res:
                 retcode = EXIT_OK
         return retcode
+
+def flag(api_inst, args):
+        """Flag/unflag installed packages in the local image.
+        """
+
+        opts, pargs = getopt.getopt(args, "Mm")
+        flag = None
+        for opt, arg in opts:
+                if opt == "-M":
+                        flag = 'manual'
+                        value = False
+                if opt == "-m":
+                        flag = 'manual'
+                        value = True
+
+        if not flag:
+                usage(usage_error="One of -m or -M must be provided.",
+                    cmd="flag")
+
+        if not len(pargs):
+                usage(usage_error=_("At least one package to update must be "
+                    "provided."), cmd="flag")
+
+        try:
+                api_inst.flag_pkgs(pargs, flag=flag, value=value)
+                return EXIT_OK
+        except:
+                return __api_plan_exception("flag", False, 0, api_inst)
 
 def info(op, api_inst, pargs, display_license, info_local, info_remote,
     origins, quiet):
@@ -5606,6 +5704,8 @@ opts_mapping = {
     "list_upgradable" :       ("u",  ""),
     "list_removable" :        ("r",  ""),
     "list_all_removable" :    ("R",  ""),
+    "list_manual" :           ("m",  ""),
+    "list_not_manual" :       ("M",  ""),
 
     "ctlfd" :                 ("",  "ctlfd"),
     "progfd" :                ("",  "progfd"),
@@ -5675,6 +5775,7 @@ cmds = {
     "dehydrate"             : [dehydrate],
     "exact-install"         : [exact_install],
     "facet"                 : [list_facet],
+    "flag"                  : [flag],
     "fix"                   : [fix],
     "freeze"                : [freeze],
     "help"                  : [None],
@@ -5712,6 +5813,7 @@ cmds = {
     "unset-publisher"       : [publisher_unset],
     "update"                : [update],
     "apply-hot-fix"         : [apply_hot_fix],
+    "autoremove"            : [autoremove],
     "update-format"         : [update_format],
     "variant"               : [list_variant],
     "verify"                : [verify],

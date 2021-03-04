@@ -22,7 +22,7 @@
 
 #
 # Copyright (c) 2007, 2020, Oracle and/or its affiliates. All rights reserved.
-# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
 #
 
 import atexit
@@ -2573,7 +2573,81 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
 
                 return m
 
-        def update_pkg_installed_state(self, pkg_pairs, progtrack):
+        def __catalog_save(self, cats, pfmris, progtrack):
+
+                # Temporarily redirect the catalogs to a different location,
+                # so that if the save is interrupted, the image won't be left
+                # with invalid state, and then save them.
+                tmp_state_root = self.temporary_dir()
+
+                try:
+                        for cat, name in cats:
+                                cpath = os.path.join(tmp_state_root, name)
+
+                                # Must copy the old catalog data to the new
+                                # destination as only changed files will be
+                                # written.
+                                progtrack.job_add_progress(
+                                    progtrack.JOB_IMAGE_STATE)
+                                misc.copytree(cat.meta_root, cpath)
+                                progtrack.job_add_progress(
+                                    progtrack.JOB_IMAGE_STATE)
+                                cat.meta_root = cpath
+                                cat.finalize(pfmris=pfmris)
+                                progtrack.job_add_progress(
+                                    progtrack.JOB_IMAGE_STATE)
+                                cat.save()
+                                progtrack.job_add_progress(
+                                    progtrack.JOB_IMAGE_STATE)
+
+                        del cat, name
+                        self.__init_catalogs()
+                        progtrack.job_add_progress(progtrack.JOB_IMAGE_STATE)
+
+                        # copy any other state files from current state
+                        # dir into new state dir.
+                        for p in os.listdir(self._statedir):
+                                progtrack.job_add_progress(
+                                            progtrack.JOB_IMAGE_STATE)
+                                fp = os.path.join(self._statedir, p)
+                                if os.path.isfile(fp):
+                                        portable.copyfile(fp,
+                                            os.path.join(tmp_state_root, p))
+
+                        # Next, preserve the old installed state dir, rename the
+                        # new one into place, and then remove the old one.
+                        orig_state_root = self.salvage(self._statedir,
+                            full_path=True)
+                        portable.rename(tmp_state_root, self._statedir)
+
+                        progtrack.job_add_progress(progtrack.JOB_IMAGE_STATE)
+                        shutil.rmtree(orig_state_root, True)
+
+                        progtrack.job_add_progress(progtrack.JOB_IMAGE_STATE)
+                except EnvironmentError as e:
+                        # shutil.Error can contains a tuple of lists of errors.
+                        # Some of the error entries may be a tuple others will
+                        # be a string due to poor error handling in shutil.
+                        if isinstance(e, shutil.Error) and \
+                            type(e.args[0]) == list:
+                                msg = ""
+                                for elist in e.args:
+                                        for entry in elist:
+                                                if type(entry) == tuple:
+                                                        msg += "{0}\n".format(
+                                                            entry[-1])
+                                                else:
+                                                        msg += "{0}\n".format(
+                                                            entry)
+                                raise apx.UnknownErrors(msg)
+                        raise apx._convert_error(e)
+                finally:
+                        # Regardless of success, the following must happen.
+                        self.__init_catalogs()
+                        if os.path.exists(tmp_state_root):
+                                shutil.rmtree(tmp_state_root, True)
+
+        def update_pkg_installed_state(self, pkg_pairs, progtrack, origin):
                 """Sets the recorded installed state of each package pair in
                 'pkg_pairs'.  'pkg_pair' should be an iterable of tuples of
                 the format (added, removed) where 'removed' is the FMRI of the
@@ -2590,12 +2664,15 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
 
                 added = set()
                 removed = set()
+                manual = set()
                 updated = {}
                 for add_pkg, rem_pkg in pkg_pairs:
                         if add_pkg == rem_pkg:
                                 continue
                         if add_pkg:
                                 added.add(add_pkg)
+                                if add_pkg in origin:
+                                        manual.add(add_pkg)
                         if rem_pkg:
                                 removed.add(rem_pkg)
                         if add_pkg and rem_pkg:
@@ -2604,6 +2681,12 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                                     "metadata", {}))
 
                 combo = added.union(removed)
+
+                # If PKG_AUTOINSTALL is set in the environment, don't mark
+                # the installed packages as 'manually installed'. This is
+                # used by Kayak when creating the initial ZFS send stream.
+                if "PKG_AUTOINSTALL" in os.environ:
+                        manual = set()
 
                 progtrack.job_start(progtrack.JOB_STATE_DB)
                 # 'Updating package state database'
@@ -2615,11 +2698,14 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                         if pfmri in removed:
                                 icat.remove_package(pfmri)
                                 states.discard(pkgdefs.PKG_STATE_INSTALLED)
+                                states.discard(pkgdefs.PKG_STATE_MANUAL)
                                 mdata.pop("last-install", None)
                                 mdata.pop("last-update", None)
 
                         if pfmri in added:
                                 states.add(pkgdefs.PKG_STATE_INSTALLED)
+                                if pfmri in manual:
+                                        states.add(pkgdefs.PKG_STATE_MANUAL)
                                 cur_time = pkg.catalog.now_to_basic_ts()
                                 if pfmri in updated:
                                         last_install = updated[pfmri].get(
@@ -2632,6 +2718,11 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                                         else:
                                                 mdata["last-install"] = \
                                                     cur_time
+                                        ostates = set(updated[pfmri]
+                                            .get("states", set()))
+                                        if pkgdefs.PKG_STATE_MANUAL in ostates:
+                                                states.add(
+                                                    pkgdefs.PKG_STATE_MANUAL)
                                 else:
                                         mdata["last-install"] = cur_time
                                 if pkgdefs.PKG_STATE_ALT_SOURCE in states:
@@ -2753,78 +2844,10 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
 
                 progtrack.job_start(progtrack.JOB_IMAGE_STATE)
 
-                # Temporarily redirect the catalogs to a different location,
-                # so that if the save is interrupted, the image won't be left
-                # with invalid state, and then save them.
-                tmp_state_root = self.temporary_dir()
-
-                try:
-                        for cat, name in ((kcat, self.IMG_CATALOG_KNOWN),
-                            (icat, self.IMG_CATALOG_INSTALLED)):
-                                cpath = os.path.join(tmp_state_root, name)
-
-                                # Must copy the old catalog data to the new
-                                # destination as only changed files will be
-                                # written.
-                                progtrack.job_add_progress(
-                                    progtrack.JOB_IMAGE_STATE)
-                                misc.copytree(cat.meta_root, cpath)
-                                progtrack.job_add_progress(
-                                    progtrack.JOB_IMAGE_STATE)
-                                cat.meta_root = cpath
-                                cat.finalize(pfmris=added)
-                                progtrack.job_add_progress(
-                                    progtrack.JOB_IMAGE_STATE)
-                                cat.save()
-                                progtrack.job_add_progress(
-                                    progtrack.JOB_IMAGE_STATE)
-
-                        del cat, name
-                        self.__init_catalogs()
-                        progtrack.job_add_progress(progtrack.JOB_IMAGE_STATE)
-
-                        # copy any other state files from current state
-                        # dir into new state dir.
-                        for p in os.listdir(self._statedir):
-                                progtrack.job_add_progress(
-                                    progtrack.JOB_IMAGE_STATE)
-                                fp = os.path.join(self._statedir, p)
-                                if os.path.isfile(fp):
-                                        portable.copyfile(fp,
-                                            os.path.join(tmp_state_root, p))
-
-                        # Next, preserve the old installed state dir, rename the
-                        # new one into place, and then remove the old one.
-                        orig_state_root = self.salvage(self._statedir,
-                            full_path=True)
-                        portable.rename(tmp_state_root, self._statedir)
-
-                        progtrack.job_add_progress(progtrack.JOB_IMAGE_STATE)
-                        shutil.rmtree(orig_state_root, True)
-
-                        progtrack.job_add_progress(progtrack.JOB_IMAGE_STATE)
-                except EnvironmentError as e:
-                        # shutil.Error can contains a tuple of lists of errors.
-                        # Some of the error entries may be a tuple others will
-                        # be a string due to poor error handling in shutil.
-                        if isinstance(e, shutil.Error) and \
-                            type(e.args[0]) == list:
-                                msg = ""
-                                for elist in e.args:
-                                        for entry in elist:
-                                                if type(entry) == tuple:
-                                                        msg += "{0}\n".format(
-                                                            entry[-1])
-                                                else:
-                                                        msg += "{0}\n".format(
-                                                            entry)
-                                raise apx.UnknownErrors(msg)
-                        raise apx._convert_error(e)
-                finally:
-                        # Regardless of success, the following must happen.
-                        self.__init_catalogs()
-                        if os.path.exists(tmp_state_root):
-                                shutil.rmtree(tmp_state_root, True)
+                self.__catalog_save(
+                    [(kcat, self.IMG_CATALOG_KNOWN),
+                     (icat, self.IMG_CATALOG_INSTALLED)],
+                    added, progtrack)
 
                 progtrack.job_done(progtrack.JOB_IMAGE_STATE)
 
@@ -3234,6 +3257,12 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                                         for key in ["last-install", "last-update"]:
                                             if key in md:
                                                 entry["metadata"][key] = md[key]
+                                        # Preserve the manual installation
+                                        # flag, if present in the old metadata
+                                        ostates = set(md.get("states", set()))
+                                        if pkgdefs.PKG_STATE_MANUAL in ostates:
+                                                states.append(
+                                                    pkgdefs.PKG_STATE_MANUAL)
 
                                 nver, snver = newest.get(stem, (None, None))
                                 if snver is not None and ver != snver:
@@ -4280,6 +4309,72 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                         onames = mnames
 
                 return olist, onames
+
+        def flag_pkgs(self, pfmris, state, value, progtrack):
+                """Sets/unsets a state flag for packages installed in
+                   the image."""
+
+                if self.version < self.CURRENT_VERSION:
+                        raise apx.ImageFormatUpdateNeeded(self.root)
+
+                # Only the 'manual' flag can be set or unset via this
+                # method.
+                if state not in [pkgdefs.PKG_STATE_MANUAL]:
+                        raise apx.ImagePkgStateError(pfmri, state)
+
+                if not progtrack:
+                        progtrack = progress.NullProgressTracker()
+
+                with self.locked_op("state"):
+
+                        icat = self.get_catalog(self.IMG_CATALOG_INSTALLED)
+                        kcat = self.get_catalog(self.IMG_CATALOG_KNOWN)
+
+                        progtrack.job_start(progtrack.JOB_STATE_DB)
+
+                        changed = set()
+
+                        for pfmri in pfmris:
+
+                                entry = kcat.get_entry(pfmri)
+                                mdata = entry.get("metadata", {})
+                                states = set(mdata.get("states", set()))
+
+                                if pkgdefs.PKG_STATE_INSTALLED not in states:
+                                        raise apx.ImagePkgStateError(pfmri,
+                                            states)
+
+                                progtrack.job_add_progress(
+                                    progtrack.JOB_STATE_DB)
+
+                                if value and state not in states:
+                                        states.add(state)
+                                        changed.add(pfmri)
+                                elif not value and state in states:
+                                        states.discard(state)
+                                        changed.add(pfmri)
+                                else:
+                                        continue
+
+                                # Catalog format only supports lists.
+                                mdata["states"] = list(states)
+
+                                # Now record the package state.
+                                kcat.update_entry(mdata, pfmri=pfmri)
+                                icat.update_entry(mdata, pfmri=pfmri)
+
+                        progtrack.job_done(progtrack.JOB_STATE_DB)
+
+                        if len(changed):
+                                progtrack.job_start(progtrack.JOB_IMAGE_STATE)
+                                self.__catalog_save([
+                                    (kcat, self.IMG_CATALOG_KNOWN),
+                                    (icat, self.IMG_CATALOG_INSTALLED)
+                                    ], changed, progtrack)
+                                progtrack.job_done(progtrack.JOB_IMAGE_STATE)
+
+                        print('{} package{} updated.'.format(
+                            len(changed), "s" if len(changed) != 1 else ""))
 
         def avoid_pkgs(self, pat_list, progtrack, check_cancel):
                 """Avoid the specified packages... use pattern matching on

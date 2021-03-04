@@ -55,6 +55,7 @@ PKG_OP_DEHYDRATE       = "dehydrate"
 PKG_OP_DETACH          = "detach-linked"
 PKG_OP_EXACT_INSTALL   = "exact-install"
 PKG_OP_FIX             = "fix"
+PKG_OP_FLAG            = "flag"
 PKG_OP_INFO            = "info"
 PKG_OP_INSTALL         = "install"
 PKG_OP_LIST            = "list"
@@ -72,6 +73,7 @@ PKG_OP_UNINSTALL       = "uninstall"
 PKG_OP_UNSET_PUBLISHER = "unset-publisher"
 PKG_OP_UPDATE          = "update"
 PKG_OP_APPLY_HOT_FIX   = "apply-hot-fix"
+PKG_OP_AUTOREMOVE      = "autoremove"
 PKG_OP_HOTFIX_CLEANUP  = "clean-up-hot-fix"
 PKG_OP_VERIFY          = "verify"
 pkg_op_values          = frozenset([
@@ -83,6 +85,7 @@ pkg_op_values          = frozenset([
     PKG_OP_DETACH,
     PKG_OP_EXACT_INSTALL,
     PKG_OP_FIX,
+    PKG_OP_FLAG,
     PKG_OP_INFO,
     PKG_OP_INSTALL,
     PKG_OP_LIST,
@@ -100,6 +103,7 @@ pkg_op_values          = frozenset([
     PKG_OP_UNSET_PUBLISHER,
     PKG_OP_UPDATE,
     PKG_OP_APPLY_HOT_FIX,
+    PKG_OP_AUTOREMOVE,
     PKG_OP_HOTFIX_CLEANUP,
     PKG_OP_VERIFY,
 ])
@@ -193,6 +197,9 @@ PKG_STATE_FROZEN = 11
 
 # This state indicates that this package is in legacy namespace.
 PKG_STATE_LEGACY = 12
+
+# This state indicates that this package was manually installed
+PKG_STATE_MANUAL = 13
 
 # This is a transient state used in the list of orphaned packages, indicating
 # that there is an 'optional' dependency on this package. This state must not

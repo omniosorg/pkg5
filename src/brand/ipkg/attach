@@ -23,7 +23,7 @@
 #
 # Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 # Copyright 2015, OmniTI Computer Consulting, Inc. All rights reserved.
-# Copyright 2017 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
 #
 
 . /usr/lib/brand/ipkg/common.ksh
@@ -109,6 +109,7 @@ trap trap_exit EXIT
 
 #set -o xtrace
 
+export PKG_AUTOINSTALL=1
 PKG="/usr/bin/pkg"
 KEYDIR=/var/pkg/ssl
 

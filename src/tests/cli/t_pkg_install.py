@@ -23,7 +23,7 @@
 
 #
 # Copyright (c) 2008, 2020, Oracle and/or its affiliates.
-# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
 #
 
 from . import testutils
@@ -1278,7 +1278,7 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
                 self.pkg("install b2", exit=1)
                 # this should pass because var/pkg/config is not reserved
                 self.pkg("install b3", exit=0)
-                
+
                 if portable.osname != "sunos":
                         return
                 self.pkg("install b4", exit=1)
@@ -12371,8 +12371,8 @@ class TestPkgInstallExplicitInstall(pkg5unittest.SingleDepotTestCase):
                 self.pkg("list -H")
                 expected = \
                     "A    1.0-0.1    i--\n" \
-                    "group    1.0-0    i--\n" \
-                    "incorp    1.0-0    i--\n"
+                    "group    1.0-0    im-\n" \
+                    "incorp    1.0-0    im-\n"
                 output = self.reduceSpaces(self.output)
                 expected = self.reduceSpaces(expected)
                 self.assertEqualDiff(expected, output)
@@ -12393,7 +12393,7 @@ class TestPkgInstallExplicitInstall(pkg5unittest.SingleDepotTestCase):
                 self.pkg("exact-install -v idr")
                 self.pkg("list -H")
                 expected = \
-                    "idr    1.0-0.1.1.0    i--\n"
+                    "idr    1.0-0.1.1.0    im-\n"
                 output = self.reduceSpaces(self.output)
                 expected = self.reduceSpaces(expected)
                 self.assertEqualDiff(expected, output)
@@ -12403,8 +12403,8 @@ class TestPkgInstallExplicitInstall(pkg5unittest.SingleDepotTestCase):
                 self.pkg("list -H")
                 expected = \
                     "A    1.0-0.1.1.0    i--\n" \
-                    "group    1.0-0    i--\n" \
-                    "idr    1.0-0.1.1.0    i--\n"
+                    "group    1.0-0    im-\n" \
+                    "idr    1.0-0.1.1.0    im-\n"
                 output = self.reduceSpaces(self.output)
                 expected = self.reduceSpaces(expected)
                 self.assertEqualDiff(expected, output)
@@ -12415,7 +12415,7 @@ class TestPkgInstallExplicitInstall(pkg5unittest.SingleDepotTestCase):
                 self.pkg("install -v idr")
                 self.pkg("list -H")
                 expected = \
-                    "idr    1.0-0.1.1.0    i--\n"
+                    "idr    1.0-0.1.1.0    im-\n"
                 output = self.reduceSpaces(self.output)
                 expected = self.reduceSpaces(expected)
                 self.assertEqualDiff(expected, output)
@@ -12425,8 +12425,8 @@ class TestPkgInstallExplicitInstall(pkg5unittest.SingleDepotTestCase):
                 self.pkg("list -H")
                 expected = \
                     "A    1.0-0.1.1.0    i--\n" \
-                    "group    1.0-0    i--\n" \
-                    "idr    1.0-0.1.1.0    i--\n"
+                    "group    1.0-0    im-\n" \
+                    "idr    1.0-0.1.1.0    im-\n"
                 output = self.reduceSpaces(self.output)
                 expected = self.reduceSpaces(expected)
                 self.assertEqualDiff(expected, output)
@@ -12439,9 +12439,9 @@ class TestPkgInstallExplicitInstall(pkg5unittest.SingleDepotTestCase):
                 self.pkg("list -H")
                 expected = \
                     "A    1.0-0.1.1.1    i--\n" \
-                    "group    1.0-0    i--\n" \
+                    "group    1.0-0    im-\n" \
                     "idr    1.0-0.1.1.1    i--\n" \
-                    "incorp    1.0-0    i--\n"
+                    "incorp    1.0-0    im-\n"
                 output = self.reduceSpaces(self.output)
                 expected = self.reduceSpaces(expected)
                 self.assertEqualDiff(expected, output)
@@ -12453,9 +12453,9 @@ class TestPkgInstallExplicitInstall(pkg5unittest.SingleDepotTestCase):
                 self.pkg("list -H")
                 expected = \
                     "A    1.0-0.1.1.2    i--\n" \
-                    "group    1.0-0    i--\n" \
+                    "group    1.0-0    im-\n" \
                     "idr    1.0-0.1.1.2    i--\n" \
-                    "incorp    1.0-0    i--\n"
+                    "incorp    1.0-0    im-\n"
                 output = self.reduceSpaces(self.output)
                 expected = self.reduceSpaces(expected)
                 self.assertEqualDiff(expected, output)
@@ -12467,7 +12467,7 @@ class TestPkgInstallExplicitInstall(pkg5unittest.SingleDepotTestCase):
                 self.pkg("verify")
                 self.pkg("list -H")
                 expected = \
-                    "C1    1.0    i--\n" \
+                    "C1    1.0    im-\n" \
                     "C2    1.0    i--\n" \
                     "C3    1.0-0.1    i--\n"
                 output = self.reduceSpaces(self.output)
@@ -12479,8 +12479,8 @@ class TestPkgInstallExplicitInstall(pkg5unittest.SingleDepotTestCase):
                 self.pkg("verify")
                 self.pkg("list -H")
                 expected = \
-                    "C1    1.0    i--\n" \
-                    "C2    2.0    i--\n" \
+                    "C1    1.0    im-\n" \
+                    "C2    2.0    im-\n" \
                     "C3    1.0-0.1    i--\n"
                 output = self.reduceSpaces(self.output)
                 expected = self.reduceSpaces(expected)
@@ -12506,8 +12506,8 @@ class TestPkgInstallExplicitInstall(pkg5unittest.SingleDepotTestCase):
                 self.pkg("list -H")
                 expected = \
                     "A    1.0-0.1    i--\n" \
-                    "group    1.0-0    i--\n" \
-                    "incorp    1.0-0    i--\n"
+                    "group    1.0-0    im-\n" \
+                    "incorp    1.0-0    im-\n"
                 output = self.reduceSpaces(self.output)
                 expected = self.reduceSpaces(expected)
                 self.assertEqualDiff(expected, output)
@@ -12517,7 +12517,7 @@ class TestPkgInstallExplicitInstall(pkg5unittest.SingleDepotTestCase):
                 self.pkg("list -H")
                 expected = \
                     "A    1.0-0.1    i--\n" \
-                    "group    1.0-0    i--\n"
+                    "group    1.0-0    im-\n"
                 output = self.reduceSpaces(self.output)
                 expected = self.reduceSpaces(expected)
                 self.assertEqualDiff(expected, output)
@@ -12532,7 +12532,7 @@ class TestPkgInstallExplicitInstall(pkg5unittest.SingleDepotTestCase):
                 self.pkg("list -H")
                 expected = \
                     "A    1.0-0.1.1.0    i--\n" \
-                    "idr    1.0-0.1.1.0    i--\n"
+                    "idr    1.0-0.1.1.0    im-\n"
                 output = self.reduceSpaces(self.output)
                 expected = self.reduceSpaces(expected)
                 self.assertEqualDiff(expected, output)
@@ -12544,7 +12544,7 @@ class TestPkgInstallExplicitInstall(pkg5unittest.SingleDepotTestCase):
                 self.pkg("list -H")
                 expected = \
                     "A    1.0-0.1.1.2    i--\n" \
-                    "idr    1.0-0.1.1.2    i--\n"
+                    "idr    1.0-0.1.1.2    im-\n"
                 output = self.reduceSpaces(self.output)
                 expected = self.reduceSpaces(expected)
                 self.assertEqualDiff(expected, output)
@@ -12670,6 +12670,32 @@ class TestPkgInstallExplicitInstall(pkg5unittest.SingleDepotTestCase):
                 self.pkg("list downgrade@1.0.1", exit=1)
                 self.pkg("list downgrade@1.0 incorpDG1@1.0")
 
+        def test_06_refresh_manual(self):
+                self.image_create(self.rurl, prefix="")
+                self.pkgsend_bulk(self.rurl, self.pkgs3)
+
+                # Test that a refresh and a full refresh do not remove the
+                # 'manual' flag from an installed package.
+
+                self.pkg("install -v idr")
+
+                expected = \
+                    "idr    1.0-0.1.1.2    im-\n"
+                expected = self.reduceSpaces(expected)
+
+                self.pkg("list -H")
+                output = self.reduceSpaces(self.output)
+                self.assertEqualDiff(expected, output)
+
+                self.pkg("refresh")
+                self.pkg("list -H")
+                output = self.reduceSpaces(self.output)
+                self.assertEqualDiff(expected, output)
+
+                self.pkg("refresh --full")
+                self.pkg("list -H")
+                output = self.reduceSpaces(self.output)
+                self.assertEqualDiff(expected, output)
 
 class TestPkgOSDowngrade(pkg5unittest.ManyDepotTestCase):
         persistent_setup = True

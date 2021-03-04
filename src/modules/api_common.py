@@ -126,6 +126,7 @@ class PackageInfo(object):
         UNSUPPORTED = pkgdefs.PKG_STATE_UNSUPPORTED
         FROZEN = pkgdefs.PKG_STATE_FROZEN
         OPTIONAL = pkgdefs.PKG_STATE_OPTIONAL
+        MANUAL = pkgdefs.PKG_STATE_MANUAL
 
         __NUM_PROPS = 13
         IDENTITY, SUMMARY, CATEGORIES, STATE, SIZE, LICENSES, LINKS, \

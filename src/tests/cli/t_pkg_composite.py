@@ -21,6 +21,7 @@
 #
 
 # Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
 
 
 from . import testutils
@@ -319,9 +320,9 @@ class TestPkgCompositePublishers(pkg5unittest.ManyDepotTestCase):
                 self.pkg("list -H")
                 expected = \
                     ("foo (test) 1.0 i--\n"
-                    "incorp (test) 1.0 i--\n"
-                    "quux (test2) 0.1-0.1 i--\n"
-                    "signed (test) 1.0 i--\n")
+                    "incorp (test) 1.0 im-\n"
+                    "quux (test2) 0.1-0.1 im-\n"
+                    "signed (test) 1.0 im-\n")
 
                 output = self.reduceSpaces(self.output)
                 self.assertEqualDiff(expected, output)
@@ -377,7 +378,7 @@ class TestPkgCompositePublishers(pkg5unittest.ManyDepotTestCase):
                 expected = """\
              Name: foo
           Summary: Example package foo.
-            State: Installed
+            State: Installed (Manually installed)
         Publisher: test
           Version: 1.0
            Branch: None
