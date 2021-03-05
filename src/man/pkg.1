@@ -1,6 +1,6 @@
 .\" Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
 .\" Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
-.Dd March 3, 2021
+.Dd March 5, 2021
 .Dt PKG 1
 .Os OmniOS
 .Sh NAME
@@ -23,6 +23,7 @@
 .Pp
 .Nm
 .Cm install
+.Bk -words
 .Op Fl nvq
 .Op Fl C Ar n
 .Oo Fl g Ar path_or_uri Oc Ns ...
@@ -44,11 +45,14 @@
 .br
 .Oo Fl \-reject Ar pkg_fmri_pattern Oc Ns ...
 .Op Fl \-sync-actuators | Fl \-sync-actuators-timeout Ar timeout
+.Ek
+.br
 .Ar pkg_fmri_pattern No ...
 .\" exact-install
 .Pp
 .Nm
 .Cm exact-install
+.Bk -words
 .Op Fl nvq
 .Op Fl C Ar n
 .Oo Fl g Ar path_or_uri Oc Ns ...
@@ -65,12 +69,14 @@
 .Op Fl \-be-name Ar name
 .br
 .Oo Fl \-reject Ar pkg_fmri_pattern Oc Ns ...
+.Ek
 .br
 .Ar pkg_fmri_pattern No ...
 .\" uninstall
 .Pp
 .Nm
 .Cm uninstall
+.Bk -words
 .Op Fl nvq
 .Op Fl C Ar n
 .br
@@ -88,12 +94,14 @@
 .Op Fl \-be-name Ar name
 .br
 .Op Fl \-sync-actuators | Fl \-sync-actuators-timeout Ar timeout
+.Ek
 .br
 .Ar pkg_fmri_pattern No ...
 .\" update
 .Pp
 .Nm
 .Cm update
+.Bk -words
 .Op Fl fnvq
 .Op Fl C Ar n
 .Oo Fl g Ar path_or_uri Oc Ns ...
@@ -117,12 +125,14 @@
 .Oo Fl \-reject Ar pkg_fmri_pattern Oc Ns ...
 .br
 .Op Fl \-sync-actuators | Fl \-sync-actuators-timeout Ar timeout
+.Ek
 .br
 .Op Ar pkg_fmri_pattern No ...
 .\" apply-hot-fix
 .Pp
 .Nm
 .Cm apply-hot-fix
+.Bk -words
 .Op Fl nvq
 .Op Fl C Ar n
 .Oo Fl g Ar path_or_uri Oc Ns ...
@@ -142,6 +152,7 @@
 .Op Fl \-backup-be-name Ar name
 .Op Fl \-deny-new-be | Fl \-require-new-be
 .Op Fl \-be-name Ar name
+.Ek
 .br
 .Ar path_or_uri
 .Op Ar pkg_fmri_pattern No ...
@@ -149,6 +160,7 @@
 .Pp
 .Nm
 .Cm autoremove
+.Bk -words
 .Op Fl nvq
 .Op Fl C Ar n
 .br
@@ -164,60 +176,72 @@
 .Op Fl \-backup-be-name Ar name
 .Op Fl \-deny-new-be | Fl \-require-new-be
 .Op Fl \-be-name Ar name
+.Ek
 .br
 .Op Fl \-sync-actuators | Fl \-sync-actuators-timeout Ar timeout
 .\" list
 .Pp
 .Nm
 .Cm list
+.Bk -words
 .Op Fl HafMmnqRrsuv
 .Oo Fl g Ar path_or_uri Oc Ns ...
 .Op Fl \-no-refresh
+.Ek
 .br
 .Op Ar pkg_fmri_pattern No ...
 .\" info
 .Pp
 .Nm
 .Cm info
+.Bk -words
 .Op Fl lqr
 .Oo Fl g Ar path_or_uri Oc Ns ...
 .Op Fl \-license
+.Ek
 .br
 .Op Ar pkg_fmri_pattern No ...
 .\" contents
 .Pp
 .Nm
 .Cm contents
+.Bk -words
 .Op Fl Hmr
 .Oo Fl a Ar attribute Ns = Ns Ar pattern Oc Ns ...
 .Oo Fl g Ar path_or_uri Oc Ns ...
 .Oo Fl o Ar attribute Ns Oo , Ns Ar attribute Oc Ns ... Oc Ns ...
 .Op Fl s Ar sort_key
 .Oo Fl t Ar action_name Ns Oo , Ns Ar action_name Oc Ns ... Oc Ns ...
+.Ek
 .br
 .Op Ar pkg_fmri_pattern No ...
 .\" search
 .Pp
 .Nm
 .Cm search
+.Bk -words
 .Op Fl HIaflpr
 .Oo Fl o Ar attribute Ns Oo , Ns Ar attribute Oc Ns ... Oc Ns ...
 .Op Fl s Ar repo_uri
+.Ek
 .Ar query
 .\" verify
 .Pp
 .Nm
 .Cm verify
+.Bk -words
 .Op Fl Hqv
 .Op Fl p Ar path
 .Op Fl \-parsable Ar version
 .Op Fl \-unpackaged | Fl \-unpackaged-only
+.Ek
 .br
 .Op Ar pkg_fmri_pattern No ...
 .\" fix
 .Pp
 .Nm
 .Cm fix
+.Bk -words
 .Op Fl nvq
 .Op Fl \-accept
 .Op Fl \-licenses
@@ -230,12 +254,14 @@
 .br
 .Op Fl \-parsable Ar version
 .Op Fl \-unpackaged
+.Ek
 .br
 .Op Ar pkg_fmri_pattern No ...
 .\" revert
 .Pp
 .Nm
 .Cm revert
+.Bk -words
 .Op Fl nv
 .br
 .Op Fl \-no-be-activate | Fl \-temp-be-activate
@@ -243,6 +269,7 @@
 .Op Fl \-backup-be-name Ar name
 .Op Fl \-deny-new-be | Fl \-require-new-be
 .Op Fl \-be-name Ar name
+.Ek
 .br
 .Pq Fl \-tagged Ar tag_name No ... | Ar path_to_file No ...
 .\" mediator
@@ -256,6 +283,7 @@
 .Pp
 .Nm
 .Cm set-mediator
+.Bk -words
 .Op Fl nv
 .Op Fl I Ar implementation
 .Op Fl V Ar version
@@ -265,12 +293,14 @@
 .Op Fl \-backup-be-name Ar name
 .Op Fl \-deny-new-be | Fl \-require-new-be
 .Op Fl \-be-name Ar name
+.Ek
 .br
 .Ar mediator No ...
 .\" unset-mediator
 .Pp
 .Nm
 .Cm unset-mediator
+.Bk -words
 .Op Fl nvIV
 .br
 .Op Fl \-no-be-activate | Fl \-temp-be-activate
@@ -278,6 +308,7 @@
 .Op Fl \-backup-be-name Ar name
 .Op Fl \-deny-new-be | Fl \-require-new-be
 .Op Fl \-be-name Ar name
+.Ek
 .br
 .Ar mediator No ...
 .\" variant
@@ -291,6 +322,7 @@
 .Pp
 .Nm
 .Cm change-variant
+.Bk -words
 .Op Fl nvq
 .Op Fl C Ar n
 .Oo Fl g Ar path_or_uri Oc Ns ...
@@ -309,6 +341,7 @@
 .Op Fl \-be-name Ar name
 .br
 .Op Fl \-sync-actuators | Fl \-sync-actuators-timeout Ar timeout
+.Ek
 .br
 .Ar variant_name Ns = Ns Ar value No ...
 .\" facet
@@ -322,6 +355,7 @@
 .Pp
 .Nm
 .Cm change-facet
+.Bk -words
 .Op Fl nvq
 .Op Fl C Ar n
 .Oo Fl g Ar path_or_uri Oc Ns ...
@@ -345,6 +379,7 @@
 .Sm off
 .Pq Cm True | Cm False | Cm None
 .Sm on
+.Ek
 .No ...
 .\" avoid
 .Pp
@@ -405,13 +440,16 @@
 .Pp
 .Nm
 .Cm publisher
+.Bk -words
 .Op Fl HPn
 .Op Fl F Ar format
 .Op Ar publisher No ...
+.Ek
 .\" set-publisher
 .Pp
 .Nm
 .Cm set-publisher
+.Bk -words
 .Op Fl Pedv
 .Op Fl c Ar ssl_cert
 .Op Fl k Ar ssl_key
@@ -442,12 +480,14 @@
 .Op Fl \-remove-property-value Ar name_of_property Ns = Ns Ar value_to_remove
 .Op Fl \-unset-property Ar name_of_property_to_delete
 .Op Fl \-proxy Ar proxy_to_use
+.Ek
 .br
 .Ar publisher
 .\" set-publisher -p
 .Pp
 .Nm
 .Cm set-publisher
+.Bk -words
 .Fl p Ar repo_uri
 .Op Fl Ped
 .Op Fl c Ar ssl_cert
@@ -465,6 +505,7 @@
 .Op Fl \-remove-property-value Ar name_of_property Ns = Ns Ar value_to_remove
 .Op Fl \-unset-property Ar name_of_property_to_delete
 .Op Fl \-proxy Ar proxy_to_use
+.Ek
 .br
 .Ar publisher
 .\" unset-publisher
@@ -476,12 +517,14 @@
 .Pp
 .Nm
 .Cm history
+.Bk -words
 .Op Fl HNl
 .Op Fl n Ar number
 .Oo Fl o Ar column Ns Oo , Ns Ar column Oc Ns ... Oc Ns ...
 .Oo Fl t Ar time | Ar time Ns - Ns Ar time Ns
 .Oo , Ns Ar time | Ar time Ns - Ns Ar time
 .Oc Ns ... Oc Ns ...
+.Ek
 .\" purge-history
 .Pp
 .Nm
@@ -506,6 +549,7 @@
 .Pp
 .Nm
 .Cm image-create
+.Bk -words
 .Op Fl FPUfz
 .Op Fl \-force
 .br
@@ -524,6 +568,7 @@
 .Oo
 .Pq Fl p | Fl \-publisher
 .Oo Ar name Ns = Oc Ns Ar repo_uri Oc
+.Ek
 .br
 .Ar dir
 .\" dehydrate
@@ -627,6 +672,7 @@ regular basis.
 .Pp
 .Nm
 .Cm install
+.Bk -words
 .Op Fl nvq
 .Op Fl C Ar n
 .Oo Fl g Ar path_or_uri Oc Ns ...
@@ -648,6 +694,8 @@ regular basis.
 .br
 .Oo Fl \-reject Ar pkg_fmri_pattern Oc Ns ...
 .Op Fl \-sync-actuators | Fl \-sync-actuators-timeout Ar timeout
+.Ek
+.br
 .Ar pkg_fmri_pattern No ...
 .Bd -ragged -offset Ds
 Install and update the specified packages to the newest version that match
@@ -948,6 +996,7 @@ will continue operation and exit with return code 8.
 .Pp
 .Nm
 .Cm exact-install
+.Bk -words
 .Op Fl nvq
 .Op Fl C Ar n
 .Oo Fl g Ar path_or_uri Oc Ns ...
@@ -964,6 +1013,7 @@ will continue operation and exit with return code 8.
 .Op Fl \-be-name Ar name
 .br
 .Oo Fl \-reject Ar pkg_fmri_pattern Oc Ns ...
+.Ek
 .br
 .Ar pkg_fmri_pattern No ...
 .Bd -ragged -offset Ds
@@ -1027,6 +1077,7 @@ sub-command above.
 .Pp
 .Nm
 .Cm uninstall
+.Bk -words
 .Op Fl nvq
 .Op Fl C Ar n
 .br
@@ -1044,6 +1095,7 @@ sub-command above.
 .Op Fl \-be-name Ar name
 .br
 .Op Fl \-sync-actuators | Fl \-sync-actuators-timeout Ar timeout
+.Ek
 .br
 .Ar pkg_fmri_pattern No ...
 .Bd -ragged -offset Ds
@@ -1081,6 +1133,7 @@ command above.
 .Pp
 .Nm
 .Cm update
+.Bk -words
 .Op Fl fnvq
 .Op Fl C Ar n
 .Oo Fl g Ar path_or_uri Oc Ns ...
@@ -1104,6 +1157,7 @@ command above.
 .Oo Fl \-reject Ar pkg_fmri_pattern Oc Ns ...
 .br
 .Op Fl \-sync-actuators | Fl \-sync-actuators-timeout Ar timeout
+.Ek
 .br
 .Op Ar pkg_fmri_pattern No ...
 .Bd -ragged -offset Ds
@@ -1199,6 +1253,7 @@ command above.
 .Pp
 .Nm
 .Cm apply-hot-fix
+.Bk -words
 .Op Fl nvq
 .Op Fl C Ar n
 .Oo Fl g Ar path_or_uri Oc Ns ...
@@ -1218,6 +1273,7 @@ command above.
 .Op Fl \-backup-be-name Ar name
 .Op Fl \-deny-new-be | Fl \-require-new-be
 .Op Fl \-be-name Ar name
+.Ek
 .br
 .Ar path_or_uri
 .Op Ar pkg_fmri_pattern No ...
@@ -1256,6 +1312,7 @@ command above.
 .Pp
 .Nm
 .Cm autoremove
+.Bk -words
 .Op Fl nvq
 .Op Fl C Ar n
 .br
@@ -1271,6 +1328,7 @@ command above.
 .Op Fl \-backup-be-name Ar name
 .Op Fl \-deny-new-be | Fl \-require-new-be
 .Op Fl \-be-name Ar name
+.Ek
 .br
 .Op Fl \-sync-actuators | Fl \-sync-actuators-timeout Ar timeout
 .Bd -ragged -offset Ds
@@ -1292,9 +1350,11 @@ Packages marked in this way are ignored by
 .Pp
 .Nm
 .Cm list
+.Bk -words
 .Op Fl HafMmnqRrsuv
 .Oo Fl g Ar path_or_uri Oc Ns ...
 .Op Fl \-no-refresh
+.Ek
 .br
 .Op Ar pkg_fmri_pattern No ...
 .Bd -ragged -offset Ds
@@ -1320,14 +1380,14 @@ See the
 man page for information about release and branch versions and about variants.
 .Pp
 The last column contains a set of flags that show the status of the package:
-.Bl -tag -offset Ds
+.Bl -tag -offset Ds -width Ds
 .It \&In the Sy I No column.
-.Bl -tag -offset Ds
+.Bl -tag -offset Ds -width Ds
 .It Sy i
 The package is installed
 .El
 .It \&In the Sy F No column.
-.Bl -tag -offset Ds
+.Bl -tag -offset Ds -width Ds
 .It Sy f
 The package is frozen.
 .It Sy m
@@ -1337,7 +1397,7 @@ The package was manually installed.
 The package is removable but is part of the default system software set.
 .El
 .It \&In the Sy O No column.
-.Bl -tag -offset Ds
+.Bl -tag -offset Ds -width Ds
 .It Sy o
 The package is obsolete.
 .It Sy r
@@ -1449,10 +1509,11 @@ retrieve the newest list of available packages.
 .Pp
 .Nm
 .Cm info
+.Bk -words
 .Op Fl lqr
 .Oo Fl g Ar path_or_uri Oc Ns ...
 .Op Fl \-license
-.br
+.Ek
 .Op Ar pkg_fmri_pattern No ...
 .Bd -ragged -offset Ds
 Display information about all packages installed in the current image in a
@@ -1502,14 +1563,15 @@ not have licenses.
 .Pp
 .Nm
 .Cm contents
+.Bk -words
 .Op Fl Hmr
 .Oo Fl a Ar attribute Ns = Ns Ar pattern Oc Ns ...
 .Oo Fl g Ar path_or_uri Oc Ns ...
 .Oo Fl o Ar attribute Ns Oo , Ns Ar attribute Oc Ns ... Oc Ns ...
 .Op Fl s Ar sort_key
 .Oo Fl t Ar action_name Ns Oo , Ns Ar action_name Oc Ns ... Oc Ns ...
-.br
 .Op Ar pkg_fmri_pattern No ...
+.Ek
 .Bd -ragged -offset Ds
 Display the contents (action attributes) of all packages installed in the
 image.
@@ -1668,9 +1730,11 @@ naturally formulated in one than in the other.
 .Pp
 .Nm
 .Cm search
+.Bk -words
 .Op Fl HIaflpr
 .Oo Fl o Ar attribute Ns Oo , Ns Ar attribute Oc Ns ... Oc Ns ...
 .Op Fl s Ar repo_uri
+.Ek
 .Ar query
 .Bd -ragged -offset Ds
 Search for actions that match
@@ -1941,11 +2005,12 @@ results in a list of packages that contain actions that match
 .Pp
 .Nm
 .Cm verify
+.Bk -words
 .Op Fl Hqv
 .Op Fl p Ar path
 .Op Fl \-parsable Ar version
 .Op Fl \-unpackaged | Fl \-unpackaged-only
-.br
+.Ek
 .Op Ar pkg_fmri_pattern No ...
 .Bd -ragged -offset Ds
 Validate the installation of all packages installed in the current image.
@@ -2003,6 +2068,7 @@ Include informational messages regarding packages.
 .Pp
 .Nm
 .Cm fix
+.Bk -words
 .Op Fl nvq
 .Op Fl \-accept
 .Op Fl \-licenses
@@ -2015,8 +2081,8 @@ Include informational messages regarding packages.
 .br
 .Op Fl \-parsable Ar version
 .Op Fl \-unpackaged
-.br
 .Op Ar pkg_fmri_pattern No ...
+.Ek
 .Bd -ragged -offset Ds
 Fix any errors reported by
 .Nm
@@ -2054,6 +2120,7 @@ command above.
 .Pp
 .Nm
 .Cm revert
+.Bk -words
 .Op Fl nv
 .br
 .Op Fl \-no-be-activate | Fl \-temp-be-activate
@@ -2062,6 +2129,7 @@ command above.
 .Op Fl \-deny-new-be | Fl \-require-new-be
 .Op Fl \-be-name Ar name
 .br
+.Ek
 .Pq Fl \-tagged Ar tag_name No ... | Ar path_to_file No ...
 .Bd -ragged -offset Ds
 Revert files delivered by packages to their as-delivered condition.
@@ -2096,9 +2164,11 @@ command above.
 .Pp
 .Nm
 .Cm mediator
+.Bk -words
 .Op Fl aH
 .Op Fl F Ar format
 .Op Ar mediator No ...
+.Ek
 .Bd -ragged -offset Ds
 Display the current selected version and/or implementation of all mediators.
 .Bl -tag -width Ds
@@ -2127,6 +2197,7 @@ List the mediations that can be set for currently installed packages.
 .Pp
 .Nm
 .Cm set-mediator
+.Bk -words
 .Op Fl nv
 .Op Fl I Ar implementation
 .Op Fl V Ar version
@@ -2136,8 +2207,8 @@ List the mediations that can be set for currently installed packages.
 .Op Fl \-backup-be-name Ar name
 .Op Fl \-deny-new-be | Fl \-require-new-be
 .Op Fl \-be-name Ar name
-.br
 .Ar mediator No ...
+.Ek
 .Bd -ragged -offset Ds
 set the version and/or implementation for the specified mediators in the
 current image.
@@ -2161,6 +2232,7 @@ command above.
 .Pp
 .Nm
 .Cm unset-mediator
+.Bk -words
 .Op Fl nvIV
 .br
 .Op Fl \-no-be-activate | Fl \-temp-be-activate
@@ -2168,8 +2240,8 @@ command above.
 .Op Fl \-backup-be-name Ar name
 .Op Fl \-deny-new-be | Fl \-require-new-be
 .Op Fl \-be-name Ar name
-.br
 .Ar mediator No ...
+.Ek
 .Bd -ragged -offset Ds
 Revert the version and/or implementation of the specified mediators to the
 system default.
@@ -2237,6 +2309,7 @@ options.
 .Pp
 .Nm
 .Cm change-variant
+.Bk -words
 .Op Fl nvq
 .Op Fl C Ar n
 .Oo Fl g Ar path_or_uri Oc Ns ...
@@ -2255,6 +2328,7 @@ options.
 .Op Fl \-be-name Ar name
 .br
 .Op Fl \-sync-actuators | Fl \-sync-actuators-timeout Ar timeout
+.Ek
 .br
 .Ar variant_name Ns = Ns Ar value No ...
 .Bd -ragged -offset Ds
@@ -2328,6 +2402,7 @@ command) that are hidden by an inherited facet with the same name.
 .Pp
 .Nm
 .Cm change-facet
+.Bk -words
 .Op Fl nvq
 .Op Fl C Ar n
 .Oo Fl g Ar path_or_uri Oc Ns ...
@@ -2351,6 +2426,7 @@ command) that are hidden by an inherited facet with the same name.
 .Sm off
 .Pq Cm True | Cm False | Cm None
 .Sm on
+.Ek
 .No ...
 .Bd -ragged -offset Ds
 Change the values of the specified facets set in the current image.
@@ -2495,9 +2571,9 @@ below.
 .It Ar pkg_fmri_pattern
 Set or unset the flag on the specified installed packages.
 Any versions provided are ignored.
-.It Sy Fl m
+.It Fl m
 Flag the package as manually installed.
-.It Sy Fl M
+.It Fl M
 Remove the manually installed flag from the package.
 .El
 .Ed
@@ -2608,6 +2684,7 @@ Display only enabled publishers.
 .Pp
 .Nm
 .Cm set-publisher
+.Bk -words
 .Op Fl Pedv
 .Op Fl c Ar ssl_cert
 .Op Fl k Ar ssl_key
@@ -2638,6 +2715,7 @@ Display only enabled publishers.
 .Op Fl \-remove-property-value Ar name_of_property Ns = Ns Ar value_to_remove
 .Op Fl \-unset-property Ar name_of_property_to_delete
 .Op Fl \-proxy Ar proxy_to_use
+.Ek
 .br
 .Ar publisher
 .Bd -ragged -offset Ds
@@ -2800,6 +2878,7 @@ Issue verbose progress messages during the requested operation.
 .Pp
 .Nm
 .Cm set-publisher
+.Bk -words
 .Fl p Ar repo_uri
 .Op Fl Ped
 .Op Fl c Ar ssl_cert
@@ -2817,6 +2896,7 @@ Issue verbose progress messages during the requested operation.
 .Op Fl \-remove-property-value Ar name_of_property Ns = Ns Ar value_to_remove
 .Op Fl \-unset-property Ar name_of_property_to_delete
 .Op Fl \-proxy Ar proxy_to_use
+.Ek
 .br
 .Ar publisher
 .Bd -ragged -offset Ds
@@ -2876,12 +2956,14 @@ Remove the configuration associated with the specified publisher or publishers.
 .Pp
 .Nm
 .Cm history
+.Bk -words
 .Op Fl HNl
 .Op Fl n Ar number
 .Oo Fl o Ar column Ns Oo , Ns Ar column Oc Ns ... Oc Ns ...
 .Oo Fl t Ar time | Ar time Ns - Ns Ar time Ns
 .Oo , Ns Ar time | Ar time Ns - Ns Ar time
 .Oc Ns ... Oc Ns ...
+.Ek
 .Bd -ragged -offset Ds
 Display the command history of the applicable image.
 Display the start time of the operation, the name of the operation
@@ -3058,6 +3140,7 @@ Display a usage message.
 .Pp
 .Nm
 .Cm image-create
+.Bk -words
 .Op Fl FPUfz
 .Op Fl \-force
 .br
@@ -3076,8 +3159,8 @@ Display a usage message.
 .Oo
 .Pq Fl p | Fl \-publisher
 .Oo Ar name Ns = Oc Ns Ar repo_uri Oc
-.br
 .Ar dir
+.Ek
 .Bd -ragged -offset Ds
 At the location given by
 .Ar dir ,
