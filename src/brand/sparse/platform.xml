@@ -86,6 +86,7 @@
 	<device match="rlofi" />
 	<device match="rmt" />
 	<device match="sad/user" />
+	<device match="signalfd" />
 	<device match="smbsrv" />
 	<device match="svvslo0" />
 	<device match="svvslo1" />
