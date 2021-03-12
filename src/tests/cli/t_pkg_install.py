@@ -518,6 +518,14 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
                                 cache_dirs.extend(os.listdir(path))
                 self.assertNotEqual(cache_dirs, [])
 
+                # Verify that "pkg clean" flushes the cache
+                self.pkg("clean")
+                cache_dirs = []
+                for path, readonly, pub, layout in img_inst.get_cachedirs():
+                        if os.path.exists(path):
+                                cache_dirs.extend(os.listdir(path))
+                self.assertEqual(cache_dirs, [])
+
                 self.pkg("list foo@1.1")
                 self.pkg("list foo@1.0", exit=1)
                 self.pkg("list foo@1")

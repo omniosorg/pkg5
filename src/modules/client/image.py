@@ -4071,18 +4071,23 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
 
                 shutil.rmtree(self._incoming_cache_dir, True)
 
-        def cleanup_cached_content(self, progtrack=None):
+        def cleanup_cached_content(self, progtrack=None, force=False,
+            verbose=False):
                 """Delete the directory that stores all of our cached
                 downloaded content.  This may take a while for a large
                 directory hierarchy.  Don't clean up caches if the
                 user overrode the underlying setting using PKG_CACHEDIR or
                 PKG_CACHEROOT. """
 
-                if not self.cfg.get_policy(imageconfig.FLUSH_CONTENT_CACHE):
+                if (not force and
+                    not self.cfg.get_policy(imageconfig.FLUSH_CONTENT_CACHE)):
                         return
 
                 cdirs = []
                 for path, readonly, pub, layout in self.get_cachedirs():
+                        if verbose:
+                                print('Checking cache directory {} ({})'
+                                    .format(path, pub))
                         if readonly or (self.__user_cache_dir and
                             path.startswith(self.__user_cache_dir)):
                                 continue

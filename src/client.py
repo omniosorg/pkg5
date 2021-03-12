@@ -311,6 +311,7 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False,
             "rehydrate",
             "",
             "flag",
+            "clean",
         ]
 
         adv_usage["info"] = \
@@ -414,6 +415,7 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False,
         adv_usage["dehydrate"] = _("[-nvq] [-p publisher ...]")
         adv_usage["rehydrate"] = _("[-nvq] [-p publisher ...]")
         adv_usage["flag"] = _("[-mM] [pkg_fmri_pattern ...]")
+        adv_usage["clean"] = "[-v]"
 
         priv_usage["remote"] = _(
             "--ctlfd=file_descriptor --progfd=file_descriptor")
@@ -527,7 +529,7 @@ Image Constraints    : avoid          unavoid        freeze    unfreeze
 Image Configuration  : refresh        rebuild-index  purge-history
                        property       set-property   add-property-value
                        unset-property remove-property-value
-Miscellaneous        : image-create   dehydrate      rehydrate
+Miscellaneous        : image-create   dehydrate      rehydrate     clean
 For more info, run: pkg help <command>"""))
         sys.exit(retcode)
 
@@ -2653,6 +2655,18 @@ def autoremove(op, api_inst, pargs,
             display_plan_cb=display_plan_cb, logger=logger)
 
         return __handle_client_json_api_output(out_json, op, api_inst)
+
+def clean_image(api_inst, args):
+        opts, pargs = getopt.getopt(args, "v")
+        verbose = False
+        for opt, arg in opts:
+                if opt == "-v":
+                        verbose = True
+        try:
+                api_inst.cleanup_cached_content(verbose=verbose)
+                return EXIT_OK
+        except:
+                return __api_plan_exception("clean", False, 0, api_inst)
 
 def verify(op, api_inst, pargs, omit_headers, parsable_version, quiet, verbose,
     unpackaged, unpackaged_only, verify_paths):
@@ -5769,6 +5783,7 @@ cmds = {
     "audit-linked"          : [audit_linked, 0],
     "change-facet"          : [change_facet],
     "change-variant"        : [change_variant],
+    "clean"                 : [clean_image],
     "contents"              : [list_contents],
     "copy-publishers-from"  : [copy_publishers_from, 1],
     "detach-linked"         : [detach_linked, 0],
@@ -5825,6 +5840,7 @@ aliases = {
     "apply-hotfix"          : "apply-hot-fix",
     "cleanup-hotfix"        : "clean-up-hot-fix",
     "cleanup-hot-fix"       : "clean-up-hot-fix",
+    "cleanup"               : "clean",
 }
 
 # Option value dictionary which pre-defines the valid values for

@@ -1184,6 +1184,17 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
 
                 return self._img.get_frozen_list()
 
+        def cleanup_cached_content(self, verbose=False):
+                """Clean up any cached content."""
+
+                self._acquire_activity_lock()
+                try:
+                        return self._img.cleanup_cached_content(
+                            progtrack=self.__progresstracker, force=True,
+                            verbose=verbose)
+                finally:
+                        self._activity_lock.release()
+
         def __plan_common_exception(self, log_op_end_all=False):
                 """Deal with exceptions that can occur while planning an
                 operation.  Any exceptions generated here are passed
