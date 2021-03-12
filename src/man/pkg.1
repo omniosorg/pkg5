@@ -1,6 +1,6 @@
 .\" Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
 .\" Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
-.Dd March 5, 2021
+.Dd March 12, 2021
 .Dt PKG 1
 .Os OmniOS
 .Sh NAME
@@ -410,6 +410,11 @@
 .Cm flag
 .Op Fl mM
 .Op Ar pkg_fmri_pattern No ...
+.\" clean
+.Pp
+.Nm
+.Cm clean
+.Op Fl v
 .\" property
 .Pp
 .Nm
@@ -2577,6 +2582,24 @@ Flag the package as manually installed.
 Remove the manually installed flag from the package.
 .El
 .Ed
+.\" clean
+.Pp
+.Nm
+.Cm clean
+.Op Fl v
+.Bd -ragged -offset Ds
+Clean the downloaded package content cache.
+To automatically clear the content cache after each successful image-modifying
+operation, see
+.Sy flush-content-cache-on-success
+in
+.Sx IMAGE PROPERTIES
+below.
+.Bl -tag -width Ds
+.It Fl v
+Produce verbose output.
+.El
+.Ed
 .\" property
 .Pp
 .Nm
@@ -3552,7 +3575,7 @@ Default value:
 .It Cm flush-content-cache-on-success
 .Pq boolean
 If this is set to
-.Sy True m
+.Sy True ,
 the package client removes the files in its content-cache when image-modifying
 operations complete successfully.
 For operations that create a boot environment, the content will be removed from
@@ -3561,6 +3584,12 @@ both the source and destination boot environment.
 This property can be used to keep the content-cache small on systems with
 limited disk space.
 This property can cause operations to take longer to complete.
+.Pp
+Even when set to
+.Sy False ,
+the content cache can be manually cleaned up as required by running the
+.Nm Cm clean
+command.
 .Pp
 Default value:
 .Sy True
