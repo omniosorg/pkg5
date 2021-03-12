@@ -320,6 +320,23 @@ Multiple options can be provided, separated by commas.
 See also
 .Sy xhci
 below.
+.Pp
+The
+.Nm
+brand also ships a mini socat utility that can be used to connect the socket to
+a TCP port.
+The utility can be invoked like so:
+.Bd -literal -offset indent
+/usr/lib/brand/bhyve/socat \e
+        /zones/bhyve/root/tmp/vm.vnc 5905
+.Ed
+.Pp
+If you prefer, you can also use the real socat utility that's shipped in core:
+.Bd -literal -offset indent
+/usr/bin/socat \e
+        TCP-LISTEN:5905,bind=127.0.0.1,reuseaddr,fork \e
+        UNIX-CONNECT:/zones/bhyve/root/tmp/vm.vnc
+.Ed
 .It Sy extra Ar options
 .Pp
 Any extra
@@ -341,7 +358,7 @@ Note that this option currently needs to be disabled for
 .Sy illumos
 guests.
 .El
-.Sh EXAMPLE
+.Sh EXAMPLES
 An example
 .Nm
 zone is shown below:
