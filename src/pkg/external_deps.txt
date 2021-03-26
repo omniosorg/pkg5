@@ -22,6 +22,7 @@
     pkg:/package/svr4
     pkg:/service/network/dns/mdns
     pkg:/shell/bash
+    pkg:/shell/ksh93
     pkg:/system/header
     pkg:/system/library
     pkg:/system/library/dbus
