@@ -1415,6 +1415,20 @@ class TestActionExecutionErrors(pkg5unittest.SingleDepotTestCase):
                 self.assertRaises(api_errors.ActionExecutionError,
                     self.__do_install, api_obj, [filesub10_pfmri])
 
+        def test_01_file_parent(self):
+
+                api_obj = self.image_create(self.rurl)
+
+                # File's parent directory replaced with a file
+                self.__do_install(api_obj, ['filesub', 'dir'])
+                dirpath = os.path.join(self.get_img_path(), "dir")
+                filepath = os.path.join(dirpath, "file")
+                os.unlink(filepath)
+                os.rmdir(dirpath)
+                open(dirpath, "wb").close()
+                self.assertRaises(api_errors.ActionExecutionError,
+                    self.__do_uninstall, api_obj, ['filesub'])
+
         def test_02_link(self):
                 """Verify that link install and removal works as expected when
                 link is already present before install or has been replaced
