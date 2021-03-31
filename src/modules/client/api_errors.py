@@ -1087,12 +1087,17 @@ class ActionExecutionError(ApiException):
                         use_errno = not details
                 self.use_errno = use_errno
 
+        @property
+        def errno(self):
+                if self.error and hasattr(self.error, "errno"):
+                        return self.error.errno
+                return None
+
         def __str__(self):
                 errno = ""
-                if self.use_errno and self.error and \
-                    hasattr(self.error, "errno"):
-                        errno = "[errno {0:d}: {1}]".format(self.error.errno,
-                            os.strerror(self.error.errno))
+                if self.use_errno and self.errno is not None:
+                        errno = "[errno {0:d}: {1}]".format(self.errno,
+                            os.strerror(self.errno))
 
                 details = self.details or ""
 
