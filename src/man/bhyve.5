@@ -12,7 +12,7 @@
 .\" Copyright 2016, OmniTI Computer Consulting, Inc. All Rights Reserved.
 .\" Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
 .\"
-.Dd February 19, 2021
+.Dd April 02, 2021
 .Dt BHYVE 5
 .Os OmniOS
 .Sh NAME
@@ -200,6 +200,20 @@ If no suffix is given, the value is assumed to be in mebibytes.
 .Pp
 The default value, if this attribute is not specified, is
 .Sy 256M .
+.It Xo Sy rng
+.Sm off
+.Ar on
+|
+.Ar off
+.Xc
+.Sm on
+.Pp
+Set to
+.Ar on
+to attach a virtio random number generator
+.Pq RNG
+to the guest
+.Pq default: Ar off .
 .It Sy ppt Ns Ar N Ar on Ns | Ns Ar off
 .Pp
 Pass through a PCI device to the guest.
@@ -229,7 +243,9 @@ The binding can be achieved using
 .Xr update_drv 1M
 or by adding an entry to the
 .Pa /etc/ppt_aliases
-file and rebooting.
+file
+.Pq in the same format as Pa /etc/driver_aliases
+and rebooting.
 .It Sy type Ar type
 .Pp
 Specifies the type of the virtual machine.
