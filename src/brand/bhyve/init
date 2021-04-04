@@ -45,19 +45,20 @@ else:
 # Default values
 opts = {
     'acpi':         'on',
-    'vcpus':        '1',
-    'ram':          '1G',
-    'bootrom':      'BHYVE_RELEASE_CSM',
     'bootorder':    'cd',
-    'hostbridge':   'i440fx',
+    'bootrom':      'BHYVE_RELEASE_CSM',
+    'console':      '/dev/zconsole',
     'diskif':       'virtio-blk',
+    'extra':        '',
+    'hostbridge':   'i440fx',
     'netif':        'virtio-net-viona',
+    'ram':          '1G',
+    'rng':          'off',
     'type':         'generic',
+    'vcpus':        '1',
     'vga':          'off',
     'vnc':          'off',
     'xhci':         '',
-    'console':      '/dev/zconsole',
-    'extra':        '',
 }
 
 aliases = {
@@ -95,6 +96,7 @@ NET_SLOT        = 6
 CDROM_SLOT2     = 7
 DISK_SLOT2      = 8
 PPT_SLOT        = 9
+RNG_SLOT        = 10
 VNC_SLOT        = 30
 LPC_SLOT_WIN    = 31
 
@@ -305,6 +307,10 @@ for dev in root.findall('./attr[@name]'):
     args.extend(['-s', '{0}:{1},passthru,/dev/ppt{1}'.format(
         PPT_SLOT, k)])
     ppt += 1
+
+# RNG
+if opts['rng'] == 'on':
+    args.extend(['-s', '{0}:0,virtio-rnd'.format(RNG_SLOT)])
 
 # Extra options
 
