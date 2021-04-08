@@ -21,8 +21,8 @@
 #
 
 #
-# Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
 # Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
+# Copyright (c) 2015, 2021, Oracle and/or its affiliates.
 #
 
 
@@ -966,6 +966,9 @@ def __api_prepare_plan(operation, api_inst):
                 _format_update_error(e, errors_json=errors_json)
                 return __prepare_json(EXIT_OOPS, errors=errors_json)
         except api_errors.ImageInsufficentSpace as e:
+                _error_json(str(e), errors_json=errors_json)
+                return __prepare_json(EXIT_OOPS, errors=errors_json)
+        except api_errors.LinkedImageException as e:
                 _error_json(str(e), errors_json=errors_json)
                 return __prepare_json(EXIT_OOPS, errors=errors_json)
         except KeyboardInterrupt:
