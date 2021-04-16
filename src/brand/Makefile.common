@@ -22,12 +22,14 @@
 #
 # Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
 # Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
-# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
 #
 
 MACH:sh = uname -p
 
 INSTALL = /usr/sbin/install
+CTFCONVERT = /opt/onbld/bin/i386/ctfconvert
+STRIP = /usr/bin/strip
 
 ROOT = ../../../proto/root_${MACH}
 ROOTETC = $(ROOT)/etc
@@ -35,6 +37,10 @@ ROOTETCZONES = $(ROOT)/etc/zones
 ROOTETCBRAND = $(ROOT)/etc/brand
 ROOTUSRLIB = $(ROOT)/usr/lib
 ROOTBRAND = $(ROOTUSRLIB)/brand
+
+CFLAGS = -gdwarf-2 -gstrict-dwarf -Werror -Wall
+CTFCONVERT_BIN = $(CTFCONVERT) -l pkg5
+POST_PROCESS = $(CTFCONVERT_BIN) $@; $(STRIP) -x $@
 
 ROOTDIRS = \
 	$(ROOT) \

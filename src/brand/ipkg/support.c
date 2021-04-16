@@ -45,7 +45,6 @@
 #include <libzonecfg.h>
 
 static void usage_err(void) __NORETURN;
-static void usage(char *msg, ...) __NORETURN;
 
 static char *bname = NULL;
 
@@ -85,8 +84,6 @@ static int
 do_verify(char *xmlfile)
 {
 	zone_dochandle_t	handle;
-	struct zone_fstab	fstab;
-	struct zone_dstab	dstab;
 
 	if ((handle = zonecfg_init_handle()) == NULL)
 		err(gettext("internal libzonecfg.so.1 error"), 0);
