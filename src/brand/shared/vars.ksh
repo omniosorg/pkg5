@@ -14,6 +14,9 @@
 [ -n "$_ZONE_LIB_VARS" ] && return
 _ZONE_LIB_VARS=1
 
+PROP_PARENT="org.opensolaris.libbe:parentbe"
+PROP_ACTIVE="org.opensolaris.libbe:active"
+
 ZONE_STATE_CONFIGURED=0	# never see
 ZONE_STATE_INCOMPLETE=1	# never see
 ZONE_STATE_INSTALLED=2

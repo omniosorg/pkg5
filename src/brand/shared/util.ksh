@@ -9,7 +9,7 @@
 # source. A copy of the CDDL is also available via the Internet at
 # http://www.illumos.org/license/CDDL.
 #
-# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
 
 [ -n "$_ZONE_LIB_UTIL" ] && return
 _ZONE_LIB_UTIL=1
@@ -50,5 +50,9 @@ function zone_attr {
 
 	zonecfg -z "$zone" info attr name=$attr \
 	    | nawk '$1 == "value:" {print $2}'
+}
+
+get_gzbe_uuid() {
+	beadm list -H | /usr/bin/nawk -F';' '$3 ~ "N" { print $2 }'
 }
 

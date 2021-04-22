@@ -9,7 +9,7 @@
 # source. A copy of the CDDL is also available via the Internet at
 # http://www.illumos.org/license/CDDL.
 
-# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
 
 . /usr/lib/brand/ipkg/common.ksh
 . /usr/lib/brand/shared/vars.ksh
@@ -20,8 +20,16 @@ state="$3"
 cmd="$4"
 ALTROOT="$5"
 
+typeset ds=`zonepath_to_ds_chk $ZONEPATH`
+gzuuid=`zfs get -pH -o value org.opensolaris.libbe:uuid $ds/ROOT 2>/dev/null`
+[ "$gzuuid" = "-" ] && gzuuid=
+function get_current_gzbe { CURRENT_GZBE="$gzuuid"; }
+
 case $cmd in
     $ZONE_STATE_CMD_READY)
+	# Old-style illumos zones (without BE support) do not have a
+	# UUID or active dataset.
+	[ -n "$gzuuid" ] && mount_active_ds
 	config_network
 	;;
 esac

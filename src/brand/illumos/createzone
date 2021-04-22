@@ -11,7 +11,7 @@
 #
 # Copyright 2016 Joyent, Inc.  All rights reserved.
 # Copyright 2016 OmniTI Computer Consulting, Inc.  All rights reserved.
-# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
 #
 
 PATH=/usr/bin:/usr/sbin:$PATH
@@ -20,6 +20,7 @@ export PATH
 . /usr/lib/brand/shared/common.ksh
 . /usr/lib/brand/shared/log.ksh
 . /usr/lib/brand/shared/image.ksh
+. /usr/lib/brand/shared/vars.ksh
 
 function usage
 {
@@ -49,7 +50,16 @@ shift OPTIND-1
 [ -n "$ZONEPATH" ] || usage 'No zone path supplied.'
 [ -n "$SEEDSRC" ] || usage 'The installation source must be specified.'
 
-seed_zone "$ZONENAME" "$ZONEPATH" "$SEEDSRC"
+seed_zone --withbe=illumos "$ZONENAME" "$ZONEPATH" "$SEEDSRC"
+
+# This zone's boot environments need to be fully independant of the global
+# zone's boot environments.
+# Generate a new UUID to assign as the parent BE, and store it on the ROOT
+# dataset too for use during zone boot.
+typeset zoneds=`zonepath_to_ds_chk "$ZONEPATH"`
+typeset uuid=`uuidgen`
+zfs set org.opensolaris.libbe:uuid=$uuid $zoneds/ROOT
+zfs set $PROP_PARENT=$uuid $zoneds/ROOT/illumos
 
 exit $ZONE_SUBPROC_OK
 
