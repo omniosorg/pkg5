@@ -11,19 +11,22 @@
 #
 # Copyright 2016 Joyent, Inc.  All rights reserved.
 # Copyright 2016 OmniTI Computer Consulting, Inc.  All rights reserved.
-# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
 
 [ -n "$_ZONE_LIB_IMAGE" ] && return
 _ZONE_LIB_IMAGE=1
 
 . /usr/lib/brand/shared/util.ksh
 . /usr/lib/brand/shared/log.ksh
+. /usr/lib/brand/shared/vars.ksh
 
 function seed_zone {
 	typeset -i mkroot=1
-	while getopts "R(norootds)" opt; do
+	typeset bename=
+	while getopts "R(norootds)B:(withbe)" opt; do
 		case $opt in
 		    R)	mkroot=0 ;;
+		    B)	bename="$OPTARG" ;;
 		esac
 	done
 	shift OPTIND-1
@@ -37,7 +40,15 @@ function seed_zone {
 
 	typeset zroot="$zonepath/root"
 	typeset zrootds="$zoneds"
-	[ "$mkroot" -eq 1 ] && zrootds+="/root"
+	if [ -n "$bename" ]; then
+		zrootds+=/ROOT
+		zfs create -o mountpoint=legacy -o zoned=on $zrootds \
+		    || fatal "Could not create $zrootds"
+		zrootds+=/$bename
+		mkroot=1
+	elif ((mkroot == 1)); then
+		zrootds+="/root"
+	fi
 
 	typeset p
 
@@ -143,19 +154,33 @@ function seed_zone {
 	    tar)
 		elog "Installing zone from tar file %s" "$seedsrc"
 		set -e
-		cd "$zonepath"
-		if [ "$mkroot" -eq 1 ]; then
-			zfs create "$zrootds"
-		else
-			mkdir root
+		if ((mkroot == 1)); then
+			zfs create "$zrootds" \
+			    || fatal "Cannot create $zrootds"
 		fi
-		chmod 0755 root
-		chgrp sys root
-		$filter "$seedsrc" | gtar -C root -xf -
+		[ -d $zroot ] || mkdir $zroot
+		if [ -n "$bename" ]; then
+			mount -F zfs $zrootds $zroot \
+			    || fatal "Could not mount $zrootds on $zroot"
+		fi
+		chmod 0755 $zroot
+		chgrp sys $zroot
+		$filter "$seedsrc" | gtar -C $zroot -xf -
+		if [ -n "$bename" ]; then
+			umount $zroot
+		fi
 		;;
 	esac
 
-	if [ ! -d "$zroot/dev" ]; then
+	[ -d $zroot ] || mkdir $zroot
+
+	if [ -n "$bename" ]; then
+		typeset gzuuid=`get_gzbe_uuid`
+		[ -n "$gzuuid" ] || fatal "Could not get GZ BE UUID"
+		zfs set $PROP_ACTIVE=on $zrootds
+		zfs set $PROP_PARENT=$gzuuid $zrootds
+		zfs set canmount=noauto $zrootds
+	elif [ ! -d "$zroot/dev" ]; then
 		mkdir -m 0755 "$zroot/dev"
 		chgrp sys "$zroot/dev"
 	fi
