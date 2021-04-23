@@ -9,11 +9,11 @@
 # http://www.illumos.org/license/CDDL.
 
 #
-# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
 #
 
 BRAND = illumos
-FILES = config.xml createzone platform.xml poststate prestate uninstall
+FILES = config.xml createzone platform.xml poststate prestate query uninstall
 
 BRANDDIR = $(ROOTBRAND)/$(BRAND)
 BRANDFILES = $(FILES:%=$(BRANDDIR)/%)
