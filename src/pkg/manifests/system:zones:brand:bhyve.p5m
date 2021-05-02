@@ -23,9 +23,10 @@ file path=etc/zones/OMNIbhyve.xml
 dir  path=usr/lib
 dir  path=usr/lib/brand
 dir  path=usr/lib/brand/bhyve
+file path=usr/lib/brand/bhyve/boot mode=0555 pkg.depend.bypass-generate=.*
 file path=usr/lib/brand/bhyve/config.xml mode=0444
 file path=usr/lib/brand/bhyve/createzone mode=0555
-file path=usr/lib/brand/bhyve/init mode=0555 pkg.depend.bypass-generate=.*
+file path=usr/lib/brand/bhyve/init mode=0555
 file path=usr/lib/brand/bhyve/platform.xml mode=0444
 file path=usr/lib/brand/bhyve/socat mode=0555 pkg.depend.bypass-generate=.*
 file path=usr/lib/brand/bhyve/support mode=0555
