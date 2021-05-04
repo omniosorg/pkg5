@@ -3440,10 +3440,10 @@ section for some suggested values.
 .It Cm %d
 The publication date of the update being installed -
 .Sy YYYY.MM.DD
-.It Cm \%D
+.It Cm %D
 The publication date of the update being installed -
 .Sy IYYYYMMDD
-.It Cm \%r
+.It Cm %r
 The release being installed, without the leading
 .Sy r -
 e.g.
@@ -4189,7 +4189,7 @@ For bloody releases, the release name does not change and so the
 .Sy %r
 token is not available.
 The
-.Sy \%D
+.Sy %D
 token can be used to include the release date in the BE name:
 .Bd -literal
     $ pkg set-property auto-be-name bloody_%D
