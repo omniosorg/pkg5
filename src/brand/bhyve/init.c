@@ -17,9 +17,12 @@
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <unistd.h>
 #include <libzfs.h>
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
 #include <zone.h>
+#include <sys/fcntl.h>
 
 static libzfs_handle_t *g_zfs;
 
@@ -105,6 +108,36 @@ setup_descriptors(void)
 	(void) setvbuf(stderr, NULL, _IONBF, 0);
 }
 
+static void
+setup_environment(void)
+{
+	FILE *fp;
+	char *line = NULL, *cp;
+	size_t linecap = 0;
+
+	if ((fp = fopen("/etc/bhyve.env", "r")) == NULL)
+		return;
+
+	while (getline(&line, &linecap, fp) > 0) {
+		if (*line == '#' || *line == '\n')
+			continue;
+		if ((cp = strchr(line, '\n')) != NULL)
+			*cp = '\0';
+		if ((cp = strchr(line, '=')) == NULL) {
+			fprintf(stderr, "Bad env line %s\n", line);
+			continue;
+		}
+		*cp++ = '\0';
+		if (setenv(line, cp, 1) == 0)
+			printf("setenv %s=%s\n", line, cp);
+		else
+			fprintf(stderr, "Failed to setenv %s=%s\n", line, cp);
+	}
+
+	free(line);
+	fclose(fp);
+}
+
 int
 main(int argc, char **argv)
 {
@@ -121,6 +154,7 @@ main(int argc, char **argv)
 
 	setup_descriptors();
 	mount_datasets();
+	setup_environment();
 
 	if (asprintf(&args[0], "bhyve-%s", zonename) == -1)
 		args[0] = "bhyve";
