@@ -298,7 +298,7 @@ args.extend(['-l', 'com1,{0}'.format(opts['console'])])
 
 for i, v in build_devlist('cdrom', 10).items():
     args.extend([
-        '-s', '{0}:{1},{2},{3}'.format(CDROM_SLOT, i, 'ahci-cd', v)
+        '-s', '{0}:{1},{2},{3},ro'.format(CDROM_SLOT, i, 'ahci-cd', v)
     ])
 
 # Bootdisk
