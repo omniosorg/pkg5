@@ -33,6 +33,7 @@ opts = {
     'extra':        None,
     'hostbridge':   'i440fx',
     'netif':        'virtio-net-viona',
+    'priv.debug':   None,
     'ram':          '1G',
     'rng':          'off',
     'type':         'generic',
@@ -372,6 +373,10 @@ for dev in xmlroot.findall('./attr[@name]'):
 
 if opts['rng'] == 'on':
     args.extend(['-s', '{0}:0,virtio-rnd'.format(RNG_SLOT)])
+
+# priv.debug
+if opts['priv.debug'] == 'on':
+    args.extend(['-o', 'privileges.debug=true'])
 
 # Extra options
 
