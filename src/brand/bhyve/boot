@@ -33,6 +33,7 @@ opts = {
     'extra':        None,
     'hostbridge':   'i440fx',
     'netif':        'virtio-net-viona',
+    'priv.debug':   None,
     'ram':          '1G',
     'rng':          'off',
     'type':         'generic',
@@ -298,7 +299,7 @@ args.extend(['-l', 'com1,{0}'.format(opts['console'])])
 
 for i, v in build_devlist('cdrom', 10).items():
     args.extend([
-        '-s', '{0}:{1},{2},{3}'.format(CDROM_SLOT, i, 'ahci-cd', v)
+        '-s', '{0}:{1},{2},{3},ro'.format(CDROM_SLOT, i, 'ahci-cd', v)
     ])
 
 # Bootdisk
@@ -372,6 +373,10 @@ for dev in xmlroot.findall('./attr[@name]'):
 
 if opts['rng'] == 'on':
     args.extend(['-s', '{0}:0,virtio-rnd'.format(RNG_SLOT)])
+
+# priv.debug
+if opts['priv.debug'] == 'on':
+    args.extend(['-o', 'privileges.debug=true'])
 
 # Extra options
 

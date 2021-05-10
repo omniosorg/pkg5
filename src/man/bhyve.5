@@ -219,6 +219,12 @@ to attach a virtio random number generator
 .Pq RNG
 to the guest
 .Pq default: Ar off .
+.It Sy priv.debug Ar on Ns | Ns Ar off
+Set to
+.Ar on
+to enable debugging for privilege management.
+The debug messages will appear in the zone's
+.Pa /tmp/init.log .
 .It Sy ppt Ns Ar N Ar on Ns | Ns Ar off
 .Pp
 Pass through a PCI device to the guest.
