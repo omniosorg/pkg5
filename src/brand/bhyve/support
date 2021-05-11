@@ -9,7 +9,7 @@
 # source. A copy of the CDDL is also available via the Internet at
 # http://www.illumos.org/license/CDDL.
 
-# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
 
 . /usr/lib/brand/shared/common.ksh
 . /usr/lib/brand/shared/vars.ksh
@@ -19,10 +19,10 @@
 
 bhyve_shutdown()
 {
-	typeset delay=${1:-60}
+	typeset -i delay="${1:-60}"
 	log "Killing bhyve process - %d" $delay
 	pkill -z "$ZONENAME" bhyve
-	while [ $delay -gt 0 ] && pgrep -z "$ZONENAME" bhyve >/dev/null; do
+	while (( delay > 0 )) && pgrep -z "$ZONENAME" bhyve >/dev/null; do
 		log "Waiting for bhyve to exit"
 		((delay = delay - 1))
 		sleep 1
@@ -30,21 +30,17 @@ bhyve_shutdown()
 	log "bhyve shutdown done"
 }
 
-cmd="${1:?cmd}"
-ZONENAME="${2:?zonename}"
-ZONEPATH=
-if [ $cmd != shutdown ]; then
-        ZONEPATH="$3"
-        # shutdown is run inside the zone context and does not need a path
-        [ -z "$ZONEPATH" ] && fatal "No zonepath provided"
-        shift 3
-fi
+cmd="${1:?cmd}"; shift
+ZONENAME="${1:?zonename}"; shift
+[ -n "$1" ] && { ZONEPATH="$1"; shift; }
+# shutdown is run inside the zone context and does not need a path
+[ $cmd != shutdown -a -z "$ZONEPATH" ] && fatal "No zonepath provided"
 
 log "BHYVE support z=%s p=%s c=%s %s:%s" "$ZONENAME" "$ZONEPATH" "$cmd" $*
 
 case $cmd in
     shutdown)
-	bhyve_shutdown 60
+	bhyve_shutdown 300
 	;;
     prestate)
 	case $1:$2 in
