@@ -145,6 +145,10 @@ if not testmode and not os.path.isdir(zoneroot):
     fatal(f'Could not find zone root {zoneroot}')
 
 if not testmode:
+    try:
+        os.unlink(f'{zoneroot}/tmp/init.log')
+    except:
+        pass
     logging.basicConfig(filename=f'{zonepath}/log/zone.log', filemode='a',
         level=logging.DEBUG, force=True)
 
