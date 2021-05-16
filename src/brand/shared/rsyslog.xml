@@ -1,0 +1,9 @@
+<?xml version='1.0'?>
+<!DOCTYPE service_bundle SYSTEM '/usr/share/lib/xml/dtd/service_bundle.dtd.1'>
+<service_bundle type='profile' name='site'
+    xmlns:xi='http://www.w3.org/2003/XInclude'>
+  <service name='system/system-log' version='1' type='service'>
+    <instance name='default' enabled='false'/>
+    <instance name='rsyslog' enabled='true'/>
+  </service>
+</service_bundle>
