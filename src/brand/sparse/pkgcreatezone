@@ -217,6 +217,15 @@ cp $ZONEROOT/lib/svc/seed/nonglobal.db $repfile
 chmod 0600 $repfile
 chown root:sys $repfile
 
+#
+# If the global zone is using the rsyslog service, enable that in the zone
+# too.
+#
+if [ "`svcprop -p general/enabled system-log:rsyslog`" = true ]; then
+	. /usr/lib/brand/shared/rsyslog.ksh
+	activate_rsyslog $ZONEROOT
+fi
+
 printf "$m_done\n"
 
 # Set blank password
