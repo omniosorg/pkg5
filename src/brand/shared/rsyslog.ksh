@@ -7,17 +7,21 @@
 # A full copy of the text of the CDDL should have accompanied this
 # source. A copy of the CDDL is also available via the Internet at
 # http://www.illumos.org/license/CDDL.
-
 #
+
 # Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
-#
 
-BRAND = shared
-SFILES = firewall image log rsyslog util vars vnic
-FILES = $(SFILES:%=%.ksh) rsyslog.xml
+[ -n "$_ZONE_LIB_RSYSLOG" ] && return
+_ZONE_LIB_RSYSLOG=1
 
-BRANDDIR = $(ROOTBRAND)/$(BRAND)
-BRANDFILES = $(FILES:%=$(BRANDDIR)/%)
+function activate_rsyslog {
+	typeset altroot=${1?altroot}
 
-include ../Makefile.common
+	cp /usr/lib/brand/shared/rsyslog.xml \
+	    $altroot/etc/svc/profile/site/rsyslog.xml
+
+	sed -i '
+		s^/var/run/syslog.pid^/var/run/rsyslogd.pid^
+	' $altroot/etc/logadm.conf
+}
 
