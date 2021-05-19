@@ -301,7 +301,7 @@ args.extend(['-l', 'com1,{0}'.format(opts['console'])])
 
 # CDROM
 
-for i, v in build_devlist('cdrom', 10).items():
+for i, v in build_devlist('cdrom', 8).items():
     args.extend([
         '-s', '{0}:{1},{2},{3},ro'.format(CDROM_SLOT, i, 'ahci-cd', v)
     ])
@@ -319,15 +319,15 @@ except:
 
 # Additional Disks
 
-for i, v in build_devlist('disk', 20).items():
-    if i < 10:
+for i, v in build_devlist('disk', 16).items():
+    if i < 8:
         args.extend([
             '-s', '{0}:{1},{2},{3}'.format(DISK_SLOT, i, opts['diskif'],
             diskpath(v))
         ])
     else:
         args.extend([
-            '-s', '{0}:{1},{2},{3}'.format(DISK_SLOT2, i - 10, opts['diskif'],
+            '-s', '{0}:{1},{2},{3}'.format(DISK_SLOT2, i - 8, opts['diskif'],
             diskpath(v))
         ])
 
