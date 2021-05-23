@@ -50,6 +50,8 @@
 	<poststatechange>/usr/lib/brand/bhyve/support poststate %z %R</poststatechange>
 	<query />
 
+	<security-flags>aslr,forbidnullmap,noexecstack</security-flags>
+
 	<privilege set="default" name="net_rawaccess" ip-type="exclusive" />
 	<privilege set="default" name="proc_clock_highres" />
 	<privilege set="default" name="sys_admin" />
