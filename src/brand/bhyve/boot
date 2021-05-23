@@ -336,14 +336,15 @@ for i, v in build_devlist('disk', 16).items():
 i = 0
 for f in xmlroot.findall('./network[@physical]'):
     ifname = f.get('physical').strip()
-    mask = f.find("./net-attr[@name='feature_mask']")
-    netif = f.find("./net-attr[@name='netif']")
 
+    netif = opts['netif']
     net_extra = ''
-    netif = netif.get('value') if netif is not None else opts['netif']
-
-    if mask:
-        net_extra += ',feature_mask={}'.format(mask.get('value'))
+    for a in f.findall('./net-attr[@name]'):
+        k, v = a.get('name'), a.get('value')
+        if k == "netif":
+            netif = v
+        else:
+            net_extra += ',{}={}'.format(k, v)
 
     args.extend([
         '-s', '{0}:{1},{2},{3}{4}'
