@@ -9,14 +9,23 @@
 # http://www.illumos.org/license/CDDL.
 
 #
-# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
 #
 
 BRAND = bhyve
-FILES = config.xml createzone init platform.xml socat support uninstall
+FILES = boot config.xml createzone init platform.xml socat support uninstall
+BINS = init
 
 BRANDDIR = $(ROOTBRAND)/$(BRAND)
 BRANDFILES = $(FILES:%=$(BRANDDIR)/%)
+
+LDLIBS += -lzfs
+
+all: $(BINS)
+
+init: init.c
+	$(LINK.c) -o $@ $@.c $(LDLIBS)
+	$(POST_PROCESS)
 
 include ../Makefile.common
 

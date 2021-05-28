@@ -180,10 +180,15 @@ presented to the guest.
 Available options are:
 .Bl -bullet
 .It
-.Sy virtio-net-viona Pq default
+.Sy virtio-net-viona Pq accelerated virtio interface, default
+.It
+.Sy virtio-net Pq legacy virtio interface
 .It
 .Sy e1000
 .El
+.Pp
+Note that only the accelerated virtio interface supports filtering using the
+zone firewall.
 .It Sy ram Ar size Ns Op Cm KMGT
 .Pp
 Specify the guest's physical memory size.
@@ -214,6 +219,12 @@ to attach a virtio random number generator
 .Pq RNG
 to the guest
 .Pq default: Ar off .
+.It Sy priv.debug Ar on Ns | Ns Ar off
+Set to
+.Ar on
+to enable debugging for privilege management.
+The debug messages will appear in the zone's
+.Pa /tmp/init.log .
 .It Sy ppt Ns Ar N Ar on Ns | Ns Ar off
 .Pp
 Pass through a PCI device to the guest.
@@ -261,6 +272,11 @@ Supported values are:
 .It
 .Sy windows
 .El
+.It Sy uuid Ar uuid
+.Pp
+Specifies the unique identifier for the virtual machine.
+If this attribute is not set, a random UUID will be generated when the zone
+is first installed.
 .It Xo Sy vcpus
 .Sm off
 .Oo Cm cpus = Oc Ar numcpus

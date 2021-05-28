@@ -195,7 +195,7 @@ def generate(args):
                         msg(l.rstrip())
                 fh.close()
 
-        for d in sorted(ds):
+        for d in sorted(ds, key=str):
                 msg(d)
 
         for key, value in six.iteritems(pkg_attrs):
