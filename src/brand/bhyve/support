@@ -23,7 +23,7 @@ bhyve_shutdown()
 	log "Killing bhyve process - %d" $delay
 	pkill -z "$ZONENAME" bhyve
 	while (( delay > 0 )) && pgrep -z "$ZONENAME" bhyve >/dev/null; do
-		log "Waiting for bhyve to exit"
+		((delay % 30 == 0)) && log "Waiting for bhyve to exit"
 		((delay = delay - 1))
 		sleep 1
 	done
@@ -50,7 +50,7 @@ case $cmd in
 		;;
 	    $ZONE_STATE_RUNNING:$ZONE_STATE_CMD_HALT)
 		# halting (even as part of rebooting)
-		bhyve_shutdown 0
+		bhyve_shutdown 1800
 		;;
 	esac
 	;;
