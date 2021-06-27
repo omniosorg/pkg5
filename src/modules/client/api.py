@@ -21,9 +21,8 @@
 #
 
 #
-# Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
-# Copyright (c) 2008, 2020, Oracle and/or its affiliates. All rights reserved.
 # Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
+# Copyright (c) 2008, 2021, Oracle and/or its affiliates.
 #
 
 """This module provides the supported, documented interface for clients to
@@ -135,6 +134,7 @@ RESULT_FAILED_STORAGE = history.RESULT_FAILED_STORAGE
 RESULT_FAILED_TRANSPORT = history.RESULT_FAILED_TRANSPORT
 RESULT_FAILED_ACTUATOR = history.RESULT_FAILED_ACTUATOR
 RESULT_FAILED_OUTOFMEMORY = history.RESULT_FAILED_OUTOFMEMORY
+RESULT_FAILED_DISKSPACE = history.RESULT_FAILED_DISKSPACE
 RESULT_CONFLICTING_ACTIONS = history.RESULT_CONFLICTING_ACTIONS
 RESULT_FAILED_UNKNOWN = history.RESULT_FAILED_UNKNOWN
 

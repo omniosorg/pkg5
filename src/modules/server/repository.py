@@ -19,10 +19,8 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2008, 2017, Oracle and/or its affiliates. All rights reserved.
 # Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
-
-from __future__ import print_function
+# Copyright (c) 2008, 2021, Oracle and/or its affiliates.
 
 import codecs
 import datetime
@@ -1816,8 +1814,8 @@ class _RepoStore(object):
                                 fpath = self.cache_store.lookup(h)
                                 if fpath is not None:
                                         portable.remove(fpath)
-                                        progtrack.job_add_progress(
-                                            progtrack.JOB_REPO_RM_FILES)
+                                progtrack.job_add_progress(
+                                        progtrack.JOB_REPO_RM_FILES)
                         progtrack.job_done(progtrack.JOB_REPO_RM_FILES)
 
                         # Finally, tidy up repository structure by discarding
@@ -2171,7 +2169,7 @@ class _RepoStore(object):
                                 return (REPO_VERIFY_BADHASH, path,
                                     {"actual": actual, "hash": h,
                                     "pkg": pfmri})
-                except (ValueError, zlib.error) as e:
+                except (ValueError, EOFError, zlib.error) as e:
                         return (REPO_VERIFY_BADGZIP, path,
                             {"hash": h, "pkg": pfmri})
                 except IOError as e:

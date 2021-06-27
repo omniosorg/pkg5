@@ -21,8 +21,8 @@
 #
 
 #
-# Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
 # Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright (c) 2010, 2021, Oracle and/or its affiliates.
 #
 
 from . import testutils
@@ -1592,6 +1592,15 @@ publisher\tprefix\texample.net
                                 if not rstore.publisher:
                                         continue
                                 self.assertTrue(not os.listdir(rstore.file_root))
+
+                # Verify that removing a package does not fail if some files are
+                # already removed/missing.
+                repo_path = self.dc.get_repodir()
+                published = self.pkgsend_bulk(repo_path, (self.tree10))
+                missing_file = self.__inject_nofile("tmp/truck1")
+                tree = fmri.PkgFmri(published[0])
+
+                self.pkgrepo("remove -s {0} tree".format(repo_path))
 
                 # Cleanup.
                 shutil.rmtree(src_repo)
@@ -3167,6 +3176,26 @@ test2	zoo		1.0	5.11	0	20110804T203458Z	pkg://test2/zoo@1.0,5.11-0:20110804T20345
                 self.pkgrepo("-s {0} verify".format(repo_path))
                 if file_created:
                         os.remove(cert_path)
+
+        def __inject_truncate_file(self, path):
+                fpath = self.__get_file_path(path)
+                self.cmdline_run("/usr/bin/truncate --size 5 {path}".format(
+                    path=fpath), coverage=False)
+                return fpath
+
+        def test_verify_truncated_file(self):
+                """Test that verify handles the case of truncated files."""
+
+                repo_path = self.dc.get_repodir()
+
+                # publish a single package and truncate a file in it
+                fmris = self.pkgsend_bulk(repo_path, (self.tree10))
+                truncate_file = self.__inject_truncate_file("tmp/truck1")
+
+                self.pkgrepo("-s {0} verify".format(repo_path), exit=1)
+                self.assertTrue(truncate_file in self.output)
+                self.assertTrue(
+                    self.output.count("ERROR: Corrupted gzip file") == 1)                
 
         def __get_fhashes(self, repodir, pub):
                 """Returns a list of file hashes for the publisher

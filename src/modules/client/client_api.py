@@ -21,8 +21,8 @@
 #
 
 #
-# Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
 # Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
+# Copyright (c) 2015, 2021, Oracle and/or its affiliates.
 #
 
 
@@ -966,6 +966,9 @@ def __api_prepare_plan(operation, api_inst):
                 _format_update_error(e, errors_json=errors_json)
                 return __prepare_json(EXIT_OOPS, errors=errors_json)
         except api_errors.ImageInsufficentSpace as e:
+                _error_json(str(e), errors_json=errors_json)
+                return __prepare_json(EXIT_OOPS, errors=errors_json)
+        except api_errors.LinkedImageException as e:
                 _error_json(str(e), errors_json=errors_json)
                 return __prepare_json(EXIT_OOPS, errors=errors_json)
         except KeyboardInterrupt:
@@ -2688,6 +2691,8 @@ def _add_update_pub(api_inst, prefix, pub=None, disable=None, sticky=None,
         if origin_uri:
                 # For compatibility with old -O behaviour, treat -O as a wipe
                 # of existing origins and add the new one.
+
+                origin_uri = misc.parse_uri(origin_uri, cwd=_get_orig_cwd())
 
                 # Only use existing cert information if the new URI uses
                 # https for transport.

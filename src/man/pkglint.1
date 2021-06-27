@@ -256,7 +256,7 @@ A version pattern, used when specifying a build number to lint against (\fB-b\fR
 .SH DEVELOPERS
 .sp
 .LP
-To extend the set of checks performed by \fBpkglint\fR, subclass \fBpkg.lint.base.Checker\fR and its subclasses, \fBManifestChecker\fR, \fBActionChecker\fR, and \fBContentChecker\fR. Add the Python module name that contains those classes to a new \fBpkglint.ext.\fR key in the configuration file.
+To extend the set of checks performed by \fBpkglint\fR, subclass \fBpkg.lint.base.Checker\fR and its subclasses, \fBManifestChecker\fR and \fBActionChecker\fR. Add the Python module name that contains those classes to a new \fBpkglint.ext.\fR key in the configuration file.
 .sp
 .LP
 Instances of those new subclasses are created by \fBpkglint\fR on startup. Methods inside each subclass with the special keyword argument \fBpkglint_id\fR are invoked during the course of the lint session. Those methods should have the same signature as the corresponding \fBcheck()\fR method in the super class. Methods should also be assigned a \fBpkglint_desc\fR attribute, which is used as the description printed by \fBpkglint -L\fR.
