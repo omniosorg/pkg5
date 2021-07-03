@@ -27,8 +27,9 @@ import os
 import sys
 
 # Set the path so that modules can be found
-path_to_parent = os.path.join(os.path.dirname(__file__), "..")
-sys.path.insert(0, path_to_parent)
+path_to_parent = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if path_to_parent not in sys.path:
+        sys.path.insert(0, path_to_parent)
 
 import pkg5testenv
 
