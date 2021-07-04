@@ -370,8 +370,8 @@ for dev in xmlroot.findall('./attr[@name]'):
     k = int(m.group(1))
     if ppt == 0:
         args.append('-S')
-    args.extend(['-s', '{0}:{1},passthru,/dev/ppt{1}'.format(
-        PPT_SLOT, k)])
+    args.extend(['-s', '{0}:{1},passthru,/dev/ppt{2}'.format(
+        PPT_SLOT, ppt, k)])
     ppt += 1
 
 # RNG
