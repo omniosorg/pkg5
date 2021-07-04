@@ -827,12 +827,18 @@ class TestDepotOutput(pkg5unittest.SingleDepotTestCase):
                 # Make sure the PKGDEPOT_CONTROLLER is not set in the newenv.
                 newenv = os.environ.copy()
                 newenv.pop("PKGDEPOT_CONTROLLER", None)
-                cmdargs = "/usr/bin/ctrun -o noorphan {0} {1}/usr/lib/pkg.depotd " \
-                    "-p {2} -d {3} --content-root {4}/usr/share/lib/pkg " \
-                    "--readonly </dev/null --log-access={5} " \
-                    "--log-errors={6}".format(sys.executable,
-                    pkg5unittest.g_pkg_path, self.next_free_port, repopath,
-                    pkg5unittest.g_pkg_path, out_path, err_path)
+
+                cmdargs = [
+                    '/usr/bin/ctrun', '-o', 'noorphan',
+                    sys.executable,
+                    f'{pkg5unittest.g_pkg_path}/usr/lib/pkg.depotd',
+                    '-p', str(self.next_free_port),
+                    '-d', repopath,
+                    '--content-root',
+                        f'{pkg5unittest.g_pkg_path}/usr/share/lib/pkg',
+                    '--readonly',
+                    f'--log-access={out_path}',
+                    f'--log-errors={err_path}']
 
                 curport = self.next_free_port
                 self.next_free_port += 1
@@ -840,7 +846,7 @@ class TestDepotOutput(pkg5unittest.SingleDepotTestCase):
                 # Start a depot daemon process.
                 try:
                         depot_handle = subprocess.Popen(cmdargs, env=newenv,
-                            shell=True)
+                            stdin=subprocess.DEVNULL)
 
                         self.assertTrue(depot_handle != None, msg="Could not "
                             "start depot")
@@ -888,14 +894,23 @@ class TestDepotOutput(pkg5unittest.SingleDepotTestCase):
                 """Helper function: stop the depot daemon process by sending
                 signal to its handle."""
 
+                if not depot_handle:
+                        return
+
                 # Terminate the depot daemon. If failed, kill it.
                 try:
-                        if depot_handle:
+                        i = 0
+                        while i < 30:
                                 depot_handle.terminate()
+                                if depot_handle.returncode is not None:
+                                        break
+                                time.sleep(0.1)
+                                i += 1
+                        if depot_handle.returncode is None:
+                                depot_handle.kill()
                 except:
                         try:
-                                if depot_handle:
-                                        depot_handle.kill()
+                                depot_handle.kill()
                         except:
                                 pass
 

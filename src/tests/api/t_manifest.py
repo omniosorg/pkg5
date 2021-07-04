@@ -23,6 +23,11 @@
 
 # Copyright (c) 2008, 2017, Oracle and/or its affiliates. All rights reserved.
 
+from . import testutils
+if __name__ == "__main__":
+        testutils.setup_environment("../../../proto")
+import pkg5unittest
+
 import unittest
 import tempfile
 import os
@@ -41,11 +46,6 @@ import pkg.misc as misc
 import pkg.portable as portable
 import pkg.facet as facet
 import pkg.variant as variant
-
-# Set the path so that modules above can be found
-path_to_parent = os.path.join(os.path.dirname(__file__), "..")
-sys.path.insert(0, path_to_parent)
-import pkg5unittest
 
 class TestManifest(pkg5unittest.Pkg5TestCase):
 

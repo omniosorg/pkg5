@@ -591,6 +591,23 @@ if __name__ == "__main__":
                         os.chown(".coverage", uid, gid)
                 except EnvironmentError:
                         pass
+
+        # The tree likely contains python cache objects owned by root, if a
+        # true test run was performed. Adjust the ownership to match the
+        # test directory so they can be easily removed.
+        try:
+                uid, gid = os.stat(".")[4:6]
+                for dir in ['.', '../../proto']:
+                        for root, dirs, files in os.walk(dir):
+                                if os.path.basename(root) != '__pycache__':
+                                        continue
+                                os.chown(root, uid, gid);
+                                for name in [*dirs, *files]:
+                                        os.chown(os.path.join(root, name),
+                                            uid, gid)
+        except EnvironmentError:
+                pass
+
         sys.exit(exitval)
 
 # Vim hints
