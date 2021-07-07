@@ -225,7 +225,7 @@ Set to
 to enable debugging for privilege management.
 The debug messages will appear in the zone's
 .Pa /tmp/init.log .
-.It Sy ppt Ns Ar N Ar on Ns | Ns Ar off
+.It Sy ppt Ns Ar N Cm on Ns | Ns Cm off Ns | Ns Cm slot Ns Ar S
 .Pp
 Pass through a PCI device to the guest.
 Available devices for pass-through can be viewed with
@@ -233,10 +233,20 @@ Available devices for pass-through can be viewed with
 .Ar N
 must match the number of the desired device.
 Set to
-.Ar on
+.Cm on
 to enable pass-through, and to
-.Ar off
-to disable it.
+.Cm off
+to disable it, or use
+.Cm slot Ns Ar S
+as described below.
+.Pp
+Pass-through devices are presented to the guest in numerical order by default.
+An explicit order can be forced by setting the attribute value to
+.Cm slot Ns Ar S
+.Pq Ar S No between 0 and 7
+in which case the device will be placed into slot
+.Ar S ,
+and any other devices will be added in numerical order around it.
 .Pp
 The
 .Pa /dev/ppt Ns Ar N
