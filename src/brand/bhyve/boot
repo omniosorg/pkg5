@@ -183,35 +183,34 @@ def diskpath(arg):
         return arg
     return '/dev/zvol/rdsk/{0}'.format(arg)
 
-# Look for attributes of the form <type> or <type>N and generate a list.
-def build_devlist(type, maxval):
+# Look for attributes of the form <type>N (and <type> if plain is True) and
+# generate a list.
+def build_devlist(type, maxval, plain=True):
     devlist = {}
     for dev in xmlroot.findall('./attr[@name]'):
         m = re.search(rf'^{type}(\d+)$', dev.get('name').strip())
         if not m: continue
         k = int(m.group(1))
         if k in devlist:
-            logging.error(
-                '{}{} appears more than once in configuration'.format(type, k))
-            sys.exit(1)
-        if (k > maxval):
-            logging.error('{}{} slot out of range'.format(type, k))
-            sys.exit(1)
+            fatal(f'{type}{k} appears more than once in configuration')
+        if (k >= maxval):
+            fatal(f'{type}{k} slot out of range')
         devlist[k] = dev.get('value').strip()
 
-    # Now insert plain <type> tags into the list, using available slots in order
-    avail = sorted(set(range(0, maxval)).difference(sorted(devlist.keys())))
-    for dev in xmlroot.findall(f'./attr[@name="{type}"]'):
-        try:
-            k = avail.pop(0)
-        except IndexError:
-            logging.error('{}: no more available slots'.format(type))
-            sys.exit(1)
-        devlist[k] = dev.get('value').strip()
+    if plain:
+        # Now insert plain <type> tags into the list, using available slots in
+        # order
+        avail = sorted(set(range(0, maxval)).difference(sorted(devlist.keys())))
+        for dev in xmlroot.findall(f'./attr[@name="{type}"]'):
+            try:
+                k = avail.pop(0)
+            except IndexError:
+                fatal('{type}: no more available slots')
+            devlist[k] = dev.get('value').strip()
 
     logging.debug('{} list: \n{}'.format(type, pformat(devlist)))
 
-    return devlist
+    return sorted(devlist.items())
 
 ##############################################################################
 
@@ -301,7 +300,7 @@ args.extend(['-l', 'com1,{0}'.format(opts['console'])])
 
 # CDROM
 
-for i, v in build_devlist('cdrom', 8).items():
+for i, v in build_devlist('cdrom', 8):
     args.extend([
         '-s', '{0}:{1},{2},{3},ro'.format(CDROM_SLOT, i, 'ahci-cd', v)
     ])
@@ -319,7 +318,7 @@ except:
 
 # Additional Disks
 
-for i, v in build_devlist('disk', 16).items():
+for i, v in build_devlist('disk', 16):
     if i < 8:
         args.extend([
             '-s', '{0}:{1},{2},{3}'.format(DISK_SLOT, i, opts['diskif'],
@@ -360,19 +359,37 @@ if opts['vnc'] and opts['vnc'] != 'off':
     if not opts['xhci'] or opts['xhci'] != 'off':
         args.extend(['-s', '{0}:1,xhci,tablet'.format(VNC_SLOT)])
 
-# Pass-through devices
+# PPT - PCI Pass-through devices
 
-ppt = 0
-for dev in xmlroot.findall('./attr[@name]'):
-    m = re.search(r'^ppt(\d+)$', dev.get('name').strip())
+pptlist = build_devlist('ppt', 8, False)
+pptassign = {}
+
+# Build the PPT list in two passes looking for devices with a specifically
+# assigned slot first, and then fitting any others into the gaps.
+for i, v in pptlist:
+    m = re.search(rf'^slot(\d+)$', v)
     if not m: continue
-    if dev.get('value').strip() != 'on': continue
-    k = int(m.group(1))
-    if ppt == 0:
-        args.append('-S')
-    args.extend(['-s', '{0}:{1},passthru,/dev/ppt{1}'.format(
-        PPT_SLOT, k)])
-    ppt += 1
+    slot = int(m.group(1))
+    if slot in pptassign:
+        fatal(f'ppt slot {slot} appears more than once')
+    if slot < 0 or slot > 7:
+        fatal(f'ppt slot {slot} out of range (0-7)')
+    pptassign[slot] = f'ppt{i}'
+
+pptavail = sorted(set(range(0, 7)).difference(sorted(pptassign.keys())))
+for i, v in pptlist:
+    if v != 'on': continue
+    try:
+        slot = pptavail.pop(0)
+    except IndexError:
+        fatal('ppt: no more available slots')
+    pptassign[slot] = f'ppt{i}'
+
+if len(pptassign) > 0:
+    args.append('-S')
+    for i, v in sorted(pptassign.items()):
+        args.extend(['-s', '{0}:{1},passthru,/dev/{2}'.format(
+            PPT_SLOT, i, v)])
 
 # RNG
 
