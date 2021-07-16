@@ -967,24 +967,27 @@ class Action(object):
                                 return "Unknown (0x{0:x})".format(ftype)
 
                 mode = owner = group = None
-                if "mode" in self.attrs:
-                        mode = int(self.attrs["mode"], 8)
-                if "owner" in self.attrs:
-                        owner = self.attrs["owner"]
-                        try:
-                                owner = img.get_user_by_name(owner)
-                        except KeyError:
-                                errors.append(_("owner: {0} is unknown").format(
-                                    owner))
-                                owner = None
-                if "group" in self.attrs:
-                        group = self.attrs["group"]
-                        try:
-                                group = img.get_group_by_name(group)
-                        except KeyError:
-                                errors.append(_("group: {0} is unknown ").format(
-                                    group))
-                                group = None
+                if ftype != stat.S_IFLNK:
+                        if "mode" in self.attrs:
+                                mode = int(self.attrs["mode"], 8)
+                        if "owner" in self.attrs:
+                                owner = self.attrs["owner"]
+                                try:
+                                        owner = img.get_user_by_name(owner)
+                                except KeyError:
+                                        errors.append(
+                                            _("owner: {0} is unknown").format(
+                                            owner))
+                                        owner = None
+                        if "group" in self.attrs:
+                                group = self.attrs["group"]
+                                try:
+                                        group = img.get_group_by_name(group)
+                                except KeyError:
+                                        errors.append(
+                                            _("group: {0} is unknown ").format(
+                                            group))
+                                        group = None
 
                 path = self.get_installed_path(img.get_root())
 
