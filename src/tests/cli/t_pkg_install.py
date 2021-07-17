@@ -3051,6 +3051,29 @@ class TestPkgInstallUpgrade(_TestHelper, pkg5unittest.SingleDepotTestCase):
             close
         """
 
+        preslink = """
+            open preslink@0.0
+            close
+            open preslink@1.0
+            add file tmp/preserve1 path=test1 mode=0444 owner=root group=root
+            add file tmp/preserve1 path=test2 mode=0444 owner=root group=root
+            add link path=testlink target=test1 preserve=true
+            add link path=link target=test1
+            close
+            open preslink@2.0
+            add file tmp/preserve1 path=test1 mode=0644 owner=root group=root
+            add file tmp/preserve1 path=test2 mode=0444 owner=root group=root
+            add link path=testlink target=test1 preserve=true
+            add link path=link target=test1
+            close
+            open preslink@3.0
+            add file tmp/preserve1 path=test1 mode=0644 owner=root group=root
+            add file tmp/preserve1 path=test2 mode=0444 owner=root group=root
+            add link path=testlink target=test2 preserve=true
+            add link path=link target=test2
+            close
+        """
+
         renpreserve = """
             open orig_pkg@1.0
             add file tmp/preserve1 path=foo1 mode=0644 owner=root group=root preserve=true
@@ -4943,6 +4966,94 @@ adm
 
                 self.pkg("uninstall --parsable=0 preserve_version")
                 self.pkg("uninstall --parsable=0 pres_ver_overlay")
+
+        def test_link_preserve_true(self):
+                """Verify that preserve=true for a link works as expected."""
+
+                self.pkgsend_bulk(self.rurl, self.preslink)
+                self.image_create(self.rurl)
+
+                # Install the package
+                self.pkg("install --parsable=0 preslink@1")
+                #self.image_walk()
+                self.link_exists("testlink", target="test1")
+                self.link_exists("link", target="test1")
+                self.pkg("verify preslink")
+
+                # Check that if no changes are made to the installed link
+                # which has preserve=true, then it will be updated on package
+                # update when its target changes.
+                self.pkg("update --parsable=0 preslink@3")
+                self.link_exists("testlink", target="test2")
+
+                self.pkg("uninstall --parsable=0 preslink")
+                self.pkg("install --parsable=0 preslink@1")
+
+                # Remove the link and test that an upgrade does not restore it
+                # where the link action has not changed in the package.
+                self.file_remove("testlink")
+                self.pkg("update --parsable=0 preslink@2")
+                self.file_doesnt_exist("testlink")
+                # that a verify succeeds
+                self.pkg("verify preslink")
+                # and that a fix does not restore the link
+                # (exit status 4 is nothing-to-do)
+                self.pkg("fix preslink", exit=4)
+                self.file_doesnt_exist("testlink")
+
+                # and where the link action has changed
+                self.file_remove("link")
+                self.pkg("update --parsable=0 preslink@3")
+                self.file_doesnt_exist("testlink")
+                # but 'link' should have come back
+                self.link_exists("link", target="test2")
+                # that a verify succeeds
+                self.pkg("verify preslink")
+                # and that a fix does not restore the link
+                self.pkg("fix preslink", exit=4)
+                self.file_doesnt_exist("testlink")
+
+                self.pkg("uninstall preslink")
+
+                # Test that a preserved link which has been changed is not
+                # replaced during upgrade
+                self.pkg("install preslink@1")
+                # Change the link
+                self.file_remove("testlink")
+                os.symlink(f'bobcat', f'{self.get_img_path()}/testlink')
+                self.link_exists("testlink", target="bobcat")
+                # a verify should still succeed
+                self.pkg("verify preslink")
+                # and a fix should not restore the link
+                self.pkg("fix preslink", exit=4)
+                self.link_exists("testlink", target="bobcat")
+
+                # Upgrade to a package with the same link action
+                self.pkg("update --parsable=0 preslink@2")
+                self.link_exists("testlink", target="bobcat")
+                # that a verify succeeds
+                self.pkg("verify preslink")
+                # and that a fix does not restore the link
+                self.pkg("fix preslink", exit=4)
+                self.link_exists("testlink", target="bobcat")
+
+                # and to one which changes the action
+                self.file_remove("link")
+                os.symlink(f'bobcat', f'{self.get_img_path()}/link')
+                self.link_exists("link", target="bobcat")
+                self.pkg("update --parsable=0 preslink@3")
+                self.link_exists("testlink", target="bobcat")
+                self.link_exists("link", target="test2")
+                # that a verify succeeds
+                self.pkg("verify preslink")
+                # and that a fix does not restore the link
+                self.pkg("fix preslink", exit=4)
+                self.link_exists("testlink", target="bobcat")
+
+                # verify that an uninstall removes the link
+                self.pkg("uninstall --parsable=0 preslink")
+                self.file_doesnt_exist("testlink")
+                self.file_doesnt_exist("link")
 
         def test_directory_salvage(self):
                 """Make sure basic directory salvage works as expected"""

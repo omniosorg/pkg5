@@ -2,7 +2,7 @@
 .\" Copyright (c) 2009, 2020, Oracle and/or its affiliates. All rights reserved.
 .\" Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
 .\" Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
-.Dd February 26, 2021
+.Dd july 17, 2021
 .Dt PKG 5
 .Os OmniOS
 .Sh NAME
@@ -793,6 +793,15 @@ action's key attribute.
 .It Sy target
 The target of the symbolic link.
 The file system object to which the link resolves.
+.It Sy preserve
+Specifies when and how links are preserved during package operations.
+.Pp
+When a package is modified, if a link delivered by the package has a
+.Sy preserve
+attribute set to
+.Sy true
+and that link has been removed or modified in the image, then the packaged
+link will not be installed.
 .It Sy mediator
 Specifies the entry in the mediation namespace shared by all path names
 participating in a given mediation group
