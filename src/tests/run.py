@@ -305,7 +305,9 @@ def find_tests(testdir, testpats, startatpat=False, output=OUTPUT_DOTS,
                         # have Apache-backed repos or depots
                         if cname in ['TestSysrepo', 'TestHTTPS',
                             'TestBasicSysrepoCli', 'TestDetailedSysrepoCli',
-                            'TestHttpDepot', 'TestHttpsDepot']:
+                            'TestHttpDepot', 'TestHttpsDepot',
+                            'TestPkgInstallApache', 'TestPkgrecvHTTPS',
+                            'TestPkgrepoHTTPS', 'TestPkgsendHTTPS']:
                                 continue
 
                         for attrname in dir(classobj):
