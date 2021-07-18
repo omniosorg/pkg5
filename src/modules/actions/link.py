@@ -63,6 +63,17 @@ class LinkAction(generic.Action):
                 # Don't allow installation through symlinks.
                 self.fsobj_checkpath(pkgplan, path)
 
+                if orig and self.attrs.get('preserve', None) == 'true':
+                        # Preserved links are not installed if this is an
+                        # update (orig set) and:
+                        # - the link has been removed
+                        if not os.path.lexists(path):
+                                return
+                        # - the link has been changed
+                        atarget = os.readlink(path)
+                        if atarget != orig.attrs.get('target', None):
+                                return
+
                 if not os.path.exists(os.path.dirname(path)):
                         self.makedirs(os.path.dirname(path),
                             mode=misc.PKG_DIR_MODE,
@@ -81,6 +92,16 @@ class LinkAction(generic.Action):
 
                 target = self.attrs["target"]
                 path = self.get_installed_path(img.get_root())
+                preserve = self.attrs.get('preserve', None)
+
+                # It's acceptable for links with preserve=true to be
+                # missing.
+                if preserve == 'true':
+                        try:
+                                os.lstat(path)
+                        except OSError as e:
+                                if e.errno == errno.ENOENT:
+                                        return [], [], []
 
                 lstat, errors, warnings, info, abort = \
                     self.verify_fsobj_common(img, stat.S_IFLNK)
@@ -89,12 +110,15 @@ class LinkAction(generic.Action):
                         assert errors
                         return errors, warnings, info
 
-                atarget = os.readlink(path)
+                # It's acceptable for links with preserve=true to point
+                # elsewhere.
+                if preserve != 'true':
+                        atarget = os.readlink(path)
 
-                if target != atarget:
-                        errors.append(_("Target: '{found}' should be "
-                            "'{expected}'").format(found=atarget,
-                            expected=target))
+                        if target != atarget:
+                                errors.append(_("Target: '{found}' should be "
+                                    "'{expected}'").format(found=atarget,
+                                    expected=target))
                 return errors, warnings, info
 
         def remove(self, pkgplan):

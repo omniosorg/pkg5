@@ -92,6 +92,16 @@ class TestPkgVerify(pkg5unittest.SingleDepotTestCase):
             add file bobcat mode=0555 owner=root group=bin sysattr=hidden sysattr=nodump path=/p2/bobcat
             close """
 
+        link10 = """
+            open link@1.0,5.11-0:20160229T095441Z
+            add dir mode=0755 owner=root group=sys path=/usr
+            add dir mode=0755 owner=root group=bin path=/usr/bin
+            add file bobcat mode=0644 owner=root group=bin path=/usr/bin/bobcat
+            add link path=/usr/bin/bobcat_link target=/usr/bin/bobcat
+            add link path=/usr/bin/bobcat_owner target=/usr/bin/bobcat owner=bin group=bin mode=0111
+            close
+            """
+
         misc_files = {
            "bobcat": "",
            "dricon_da": """zigit "pci8086,1234"\n""",
@@ -474,6 +484,37 @@ class TestPkgVerify(pkg5unittest.SingleDepotTestCase):
                 self.pkgsign_simple(self.dc.get_repodir(), "foo")
 
                 self.pkg_verify("", exit=1)
+
+        def test_links(self):
+
+                self.pkgsend_bulk(self.rurl, self.link10)
+
+                self.image_create(self.rurl)
+
+                self.pkg("install link")
+                self.pkg_verify("link")
+
+                dpath = os.path.join(self.get_img_path(), "usr", "bin");
+                fpath = os.path.join(dpath, "bobcat")
+                lpath = os.path.join(dpath, "bobcat_link")
+                opath = os.path.join(dpath, "bobcat_owner")
+
+                # Change attributes of the symlink target
+                os.chown(fpath, 100, 2)
+                os.chmod(fpath, 0o664)
+
+                # Ownership of links themselves
+                os.lchown(lpath, 100, 2);
+                os.lchown(opath, 100, 2);
+
+                self.pkg_verify("-v -p /usr/bin/bobcat_link")
+                self.pkg_verify("-v -p /usr/bin/bobcat_owner")
+
+                # Remove the link
+                portable.remove(lpath);
+
+                self.pkg_verify("-v -p /usr/bin/bobcat_link", exit=1)
+                self.assertTrue("ERROR: missing: symbolic link" in self.output)
 
         def test_sysattrs(self):
                 """Test that system attributes are verified correctly."""

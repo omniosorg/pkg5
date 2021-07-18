@@ -2538,6 +2538,26 @@ class CliTestCase(Pkg5TestCase):
                                 self.fs.remove(path)
                         shutil.rmtree(img_path)
 
+        def image_walk(self, img_path=None, subdir=None):
+                if img_path is None:
+                        img_path = self.img_path()
+                if subdir is not None:
+                        img_path += subdir
+                print(f'>>>>> walking {img_path}')
+                for dirpath, dirnames, fnames in os.walk(img_path):
+                        rd = dirpath[len(img_path):]
+                        if rd.startswith('/var/pkg/cache'): continue
+                        for f in fnames:
+                                path = os.path.join(dirpath, f)
+                                st = os.lstat(path)
+                                if stat.S_ISLNK(st.st_mode):
+                                        t = os.readlink(path)
+                                        print(f' l {rd}/{f} -> {t}')
+                                else:
+                                        print(f' f {rd}/{f}')
+                        for d in dirnames:
+                                print(f' d {rd}/{d}')
+
         def pkg(self, command, exit=0, comment="", prefix="", su_wrap=None,
             out=False, stderr=False, cmd_path=None, use_img_root=True,
             debug_smf=True, env_arg=None, coverage=True, handle=False,
@@ -3447,6 +3467,25 @@ class CliTestCase(Pkg5TestCase):
                 if group is not None:
                         gid = grp.getgrnam(group).gr_gid
                         self.assertEqual(gid, st.st_gid)
+
+        def link_exists(self, path, target=None):
+                """Assert the existence of a link in the image."""
+
+                file_path = os.path.join(self.get_img_path(), path)
+                try:
+                        st = os.lstat(file_path)
+                except OSError as e:
+                        if e.errno == errno.ENOENT:
+                                self.assertTrue(False,
+                                    "Link {0} does not exist".format(path))
+                        else:
+                                raise
+                self.assertTrue(stat.S_ISLNK(st.st_mode),
+                    f'{path} is not a link')
+                if target is not None:
+                        atarget = os.readlink(file_path)
+                        self.assertTrue(target == atarget,
+                            f'link target is {atarget} should be {target}')
 
         def file_doesnt_exist(self, path):
                 """Assert the non-existence of a file in the image."""
