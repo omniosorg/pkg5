@@ -345,7 +345,8 @@ class BootEnv(object):
         def get_be_names():
                 """Return a list of BE names."""
                 return [
-                    be.name for be in BootEnv.get_be_list() if be.name
+                    be['orig_be_name'] for be in BootEnv.get_be_list()
+                        if 'orig_be_name' in be
                 ]
 
         @staticmethod
