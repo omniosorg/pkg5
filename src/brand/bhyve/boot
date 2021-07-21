@@ -212,6 +212,9 @@ def build_devlist(type, maxval, plain=True):
 
     return sorted(devlist.items())
 
+def bool(s):
+    return s in ['true', 'yes', 'on', '1']
+
 ##############################################################################
 
 for tag in opts.keys():
@@ -333,6 +336,7 @@ for i, v in build_devlist('disk', 16):
 # Network
 
 i = 0
+promisc_filtered_nics = {}
 for f in xmlroot.findall('./network[@physical]'):
     ifname = f.get('physical').strip()
 
@@ -343,6 +347,8 @@ for f in xmlroot.findall('./network[@physical]'):
         if k == "netif":
             netif = v
         else:
+            if k == "promiscphys":
+                promisc_filtered_nics[ifname] = 'off' if bool(v) else 'on'
             net_extra += ',{}={}'.format(k, v)
 
     args.extend([
@@ -350,6 +356,18 @@ for f in xmlroot.findall('./network[@physical]'):
         .format(NET_SLOT, i, netif, ifname, net_extra)
     ])
     i += 1
+
+for nic, promisc in promisc_filtered_nics.items():
+    dladm_args = [
+        '/usr/sbin/dladm', 'set-linkprop',
+        '-p', f'promisc-filtered={promisc}',
+        nic,
+    ]
+
+    logging.debug(f'Setting promisc-filtered for {nic} to {promisc}')
+    p = subprocess.run(dladm_args, capture_output=True, text=True)
+    if p.returncode > 0:
+        fatal(f'Could set promisc-filtered for {nic}: {p.stderr}')
 
 # VNC
 
