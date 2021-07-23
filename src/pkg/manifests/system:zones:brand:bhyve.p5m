@@ -37,3 +37,7 @@ license lic_CDDL license=lic_CDDL
 depend type=require fmri=system/bhyve
 depend type=require fmri=system/zones/brand/ipkg@$(PKGVERS)
 depend type=require fmri=system/zones/brand/sparse@$(PKGVERS)
+# The bhyve brand needs at least the following version of system/zones
+# to support the attributes to control zone init behaviour and
+# security flags.
+depend type=require fmri=system/zones@$(PKGVERS):20210530T143222Z
