@@ -384,6 +384,22 @@ set name=pkg.summary value="Core Solaris Kernel"
 license license="Foo" path=usr/share/lib/legalese.txt
 """
 
+expected_failures["license-duplicate.mf"] = ["pkglint.dupaction016.1"]
+broken_manifests["license-duplicate.mf"] = \
+"""
+#
+# We deliver two license actions with the same license
+#
+set name=variant.arch value=i386 value=sparc
+set name=pkg.fmri value=pkg://opensolaris.org/system/kernel@0.5.11,5.11-0.141:20100603T215050Z
+set name=pkg.description value="core kernel software for a specific instruction-set architecture"
+set name=org.opensolaris.consolidation value=osnet
+set name=info.classification value=org.opensolaris.category.2008:System/Core
+set name=pkg.summary value="Core Solaris Kernel"
+license usr/share/lib/legalese.txt license="Foo"
+license usr/foo/file license="Foo"
+"""
+
 expected_failures["dup-no-vars.mf"] = ["pkglint.dupaction001.1"]
 broken_manifests["dup-no-vars.mf"] = \
 """
@@ -820,21 +836,6 @@ user gcos-field="pkg(5) server UID" group=pkg5srv uid=98 username=1pkg5srv
 user gcos-field="pkg(5) server UID" group=pkg5srv uid=99 username=pkg5srv_giant_pacific_octopus_arm
 user gcos-field="pkg(5) server UID" group=pkg5srv uid=100 username=pkg5s:v
 user gcos-field="pkg(5) server UID" group=pkg5srv uid=101 username=pkg5-_.
-"""
-
-expected_failures["license-has-path.mf"] = ["pkglint.action007"]
-broken_manifests["license-has-path.mf"] = \
-"""
-#
-# We deliver a license action that also specifies a path
-#
-set name=variant.arch value=i386 value=sparc
-set name=pkg.fmri value=pkg://opensolaris.org/system/kernel@0.5.11,5.11-0.141:20100603T215050Z
-set name=pkg.description value="core kernel software for a specific instruction-set architecture"
-set name=org.opensolaris.consolidation value=osnet
-set name=info.classification value=org.opensolaris.category.2008:System/Core
-set name=pkg.summary value="Core Solaris Kernel"
-license license="Foo" path=usr/share/lib/legalese.txt
 """
 
 # We actually emit 10 messages here in testing, 3 for the legitmate errors,
