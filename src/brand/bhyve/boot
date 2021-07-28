@@ -33,7 +33,7 @@ opts = {
     'extra':        None,
     'hostbridge':   'i440fx',
     'netif':        'virtio-net-viona',
-    'priv.debug':   None,
+    'priv.debug':   'off',
     'ram':          '1G',
     'rng':          'off',
     'type':         'generic',
@@ -41,7 +41,7 @@ opts = {
     'vcpus':        '1',
     'vga':          'off',
     'vnc':          'off',
-    'xhci':         None,
+    'xhci':         'on',
 }
 
 aliases = {
@@ -212,8 +212,14 @@ def build_devlist(type, maxval, plain=True):
 
     return sorted(devlist.items())
 
-def bool(s):
-    return s in ['true', 'yes', 'on', '1']
+def boolv(s, var, ignore=False):
+    if s in ['true', 'yes', 'on', '1']:
+        return True
+    if s in ['false', 'no', 'off', '0']:
+        return False
+    if not ignore:
+        fatal(f'Invalid value {s} for boolean variable {var}')
+    return None
 
 ##############################################################################
 
@@ -267,7 +273,7 @@ if uuid:
     args.extend(['-U', uuid])
 
 # The ACPI option has no effect with illumos bhyve
-#if opts['acpi'] == 'on':
+#if boolv(opts['acpi'], 'acpi'):
 #    args.append('-A')
 
 args.extend([
@@ -348,7 +354,9 @@ for f in xmlroot.findall('./network[@physical]'):
             netif = v
         else:
             if k == "promiscphys":
-                promisc_filtered_nics[ifname] = 'off' if bool(v) else 'on'
+                promisc_filtered_nics[ifname] = 'off' if boolv(v, k) else 'on'
+            elif k in ['promiscrxonly', 'promiscsap', 'promiscmulti']:
+                boolv(v, k)  # Value check
             net_extra += ',{}={}'.format(k, v)
 
     args.extend([
@@ -371,10 +379,13 @@ for nic, promisc in promisc_filtered_nics.items():
 
 # VNC
 
-if opts['vnc'] and opts['vnc'] != 'off':
+v = boolv(opts['vnc'], 'vnc', ignore=True)
+if v is not False:
+    if v is True:
+        opts['vnc'] = 'on'
     args.extend(['-s', '{0}:0,fbuf,vga={1},{2}'.format(
         VNC_SLOT, opts['vga'], opts['vnc'])])
-    if not opts['xhci'] or opts['xhci'] != 'off':
+    if boolv(opts['xhci'], 'xhci'):
         args.extend(['-s', '{0}:1,xhci,tablet'.format(VNC_SLOT)])
 
 # PPT - PCI Pass-through devices
@@ -396,7 +407,7 @@ for i, v in pptlist:
 
 pptavail = sorted(set(range(0, 7)).difference(sorted(pptassign.keys())))
 for i, v in pptlist:
-    if v != 'on': continue
+    if not boolv(v, f'ppt{i}', ignore=True): continue
     try:
         slot = pptavail.pop(0)
     except IndexError:
@@ -411,11 +422,11 @@ if len(pptassign) > 0:
 
 # RNG
 
-if opts['rng'] == 'on':
+if boolv(opts['rng'], 'rng'):
     args.extend(['-s', '{0}:0,virtio-rnd'.format(RNG_SLOT)])
 
 # priv.debug
-if opts['priv.debug'] == 'on':
+if boolv(opts['priv.debug'], 'priv.debug'):
     args.extend(['-o', 'privileges.debug=true'])
 
 # Extra options
