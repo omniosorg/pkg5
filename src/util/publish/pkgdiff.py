@@ -79,7 +79,15 @@ def main_func():
                 opts, pargs = getopt.getopt(sys.argv[1:], "i:o:t:uv:?", ["help"])
                 for opt, arg in opts:
                         if opt == "-i":
+                                ignoreattrs.append('timestamp')
                                 ignoreattrs.append(arg)
+                                if arg == 'hash':
+                                        ignoreattrs.extend([
+                                            'chash', 'pkg.content-hash',
+                                            'elfhash', 'timestamp'])
+                                if arg == 'size':
+                                        ignoreattrs.extend([
+                                            'pkg.csize', 'pkg.size'])
                         elif opt == "-o":
                                 onlyattrs.append(arg)
                         elif opt == "-t":

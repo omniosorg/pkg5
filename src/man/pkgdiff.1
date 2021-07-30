@@ -1,218 +1,131 @@
 '\" te
 .\" Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
-.TH pkgdiff 1 "26 Feb 2013" "OmniOS" "User Commands"
-.SH NAME
-pkgdiff \- compare package manifests
-.SH SYNOPSIS
-.LP
-.nf
-/usr/bin/pkgdiff [-i \fIattribute\fR]... [-o \fIattribute\fR]
-    [-t \fIaction_name\fR[,\fIaction_name\fR]...]...
-    [-v \fIname\fR=\fIvalue\fR]... (\fIfile1\fR | -) (\fIfile2\fR | -)
-.fi
-
-.SH DESCRIPTION
-.sp
-.LP
-\fBpkgdiff\fR compares two package manifests and reports differences. One of the manifests can be read from \fBstdin\fR by specifying \fB-\fR in place of the file name. \fBpkgdiff\fR sorts each manifest and action into a consistent order before comparison.
-.sp
-.LP
+.\" Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
+.Dd July 29, 2021
+.Dt PKGDIFF 1
+.Os
+.Sh NAME
+.Nm pkgdiff
+.Nd compare package manifests
+.Sh SYNOPSIS
+.Nm
+.Oo Fl i Ar attribute Oc Ns \&...
+.Oo Fl o Ar attribute Oc Ns \&...
+.Oo Fl t Ar action_name Ns Oo \&, Ns Ar action_name Oc Ns \&... Oc Ns \&...
+.Oo Fl v Ar name Ns \&= Ns Ar value Oc Ns \&...
+.Ar file1 file2
+.Sh DESCRIPTION
+.Nm
+compares two package manifests and reports differences.
+One of the manifests can be read from
+.Dv stdin
+by specifying
+.Sy -
+in place of the file name.
+.Nm
+sorts each manifest and action into a consistent order before comparison.
+.Pp
 Output is in the following form:
-.sp
-.ne 2
-.mk
-.na
-\fB+ \fIcomplete_action\fR\fR
-.ad
-.sp .6
-.RS 4n
-This action is in \fIfile2\fR but not in \fIfile1\fR.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB- \fIcomplete_action\fR\fR
-.ad
-.sp .6
-.RS 4n
-This action is in \fIfile1\fR but not in \fIfile2\fR.
-.RE
-
-.sp
-.in +2
-.nf
-\fIactionname\fR \fIkeyvalue\fR [\fIvariant values, if any\fR]
-.fi
-.in -2
-
-.sp
-.ne 2
-.mk
-.na
-\fB- \fIattribute1\fR=\fIvalue1\fR\fR
-.ad
-.sp .6
-.RS 4n
-This \fIattribute\fR,\fIvalue\fR is in \fIfile1\fR but not in \fIfile2\fR.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB+ \fIattribute2\fR=\fIvalue2\fR\fR
-.ad
-.sp .6
-.RS 4n
-This \fIattribute\fR,\fIvalue\fR is in \fIfile2\fR but not in \fIfile1\fR.
-.RE
-
-.sp
-.LP
-Actions with different variants but the same type and key attribute value are treated as separate actions for purposes of comparison. Thus, actions that change attributes are shown in their complete form rather than as attribute changes.
-.SH OPTIONS
-.sp
-.LP
+.Bl -tag -width Ds
+.It Sy \&+ Ar complete_action
+This action is in
+.Ar file2
+but not in
+.Ar file1 .
+.It Sy \&- Ar complete_action
+This action is in
+.Ar file1
+but not in
+.Ar file2 .
+.It Sy \&- Ar attribute1 Ns = Ns Ar value1
+This
+.Ar attribute Ns \&, Ns Ar value
+is in
+.Ar file1
+but not in
+.Ar file2 .
+.It Sy \&+ Ar attribute2 Ns = Ns Ar value2
+This
+.Ar attribute Ns \&, Ns Ar value
+is in
+.Ar file2
+but not in
+.Ar file1 .
+.El
+.Pp
+Actions with different variants but the same type and key attribute value are
+treated as separate actions for purposes of comparison.
+Thus, actions that change attributes are shown in their complete form rather
+than as attribute changes.
+.Sh OPTIONS
 The following options are supported:
-.sp
-.ne 2
-.mk
-.na
-\fB--help\fR
-.ad
-.sp .6
-.RS 4n
+.Bl -tag -width Ds
+.It Fl \&-help
 Display a usage message.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-i\fR \fIattribute\fR
-.ad
-.sp .6
-.RS 4n
-Ignore \fIattribute\fR if present during comparisons. File hash values can be ignored with \fB-i\fR \fIhash\fR. This option cannot be used with the \fB-o\fR option. This option can be specified multiple times.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-o\fR \fIattribute\fR
-.ad
-.sp .6
-.RS 4n
-Only report differences in \fIattribute\fR. This option cannot be used with the \fB-i\fR option. This option elides any action changes that do not affect \fIattribute\fR on an action.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB\fB-t\fR \fIaction_name\fR[,\fIaction_name\fR]...\fR
-.ad
-.sp .6
-.RS 4n
-Only compare the specified actions. Multiple actions can be specified in a comma-separated list. The value of \fIaction_name\fR is one of the actions listed in "Actions" in the \fBpkg\fR(5) man page. For example, the following values could be specified for \fIaction_name\fR: \fBfile\fR, \fBdir\fR, \fBdriver\fR, \fBdepend\fR, \fBset\fR. This option can be specified multiple times.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-v\fR \fIname\fR=\fIvalue\fR
-.ad
-.sp .6
-.RS 4n
-Only compute differences for this variant value. For example, only compute differences for \fBarch=sparc\fR. This variant tag is removed for all actions before comparison. Only one value can be specified per variant. This option can be specified multiple times for different variants.
-.RE
-
-.SH EXIT STATUS
-.sp
-.LP
-The following exit values are returned:
-.sp
-.ne 2
-.mk
-.na
-\fB0\fR
-.ad
-.RS 6n
-.rt
+.It Fl i Ar attribute
+Ignore
+.Ar attribute
+if present during comparisons.
+Ignoring the
+.Cm hash
+attribute will also ignore any other hash attribute and, similarly, ignoring
+.Cm size
+will ignore all sizes.
+Ignoring any attribute with this option will automatically also ignore the
+.Cm timestamp
+attribute.
+This option cannot be used with the
+.Fl o
+option.
+This option can be specified multiple times.
+.It Fl o Ar attribute
+Only report differences in
+.Ar attribute .
+This option cannot be used with the
+.Fl i
+option.
+This option elides any action changes that do not affect
+.Ar attribute
+on an action.
+This option can be specified multiple times.
+.It Fl t Ar action_name Ns Oo \&, Ns Ar action_name Oc Ns \&...
+Only compare the specified actions.
+Multiple actions can be specified in a comma-separated list.
+The value of
+.Ar action_name
+is one of the actions listed in "Actions" in the
+.Xr pkg 5
+man page.
+For example, the following values could be specified for
+.Ar action_name :
+.Cm file ,
+.Cm dir ,
+.Cm driver ,
+.Cm depend ,
+.Cm set .
+This option can be specified multiple times.
+.It Fl v Ar name Ns = Ns Ar value
+Only compute differences for this variant value.
+For example, only compute differences for
+.Cm arch=sparc .
+This variant tag is removed for all actions before comparison.
+Only one value can be specified per variant.
+This option can be specified multiple times for different variants.
+.El
+.Sh EXIT STATUS
+.Bl -tag -width Ds
+.It Sy 0
 No differences were found.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB1\fR
-.ad
-.RS 6n
-.rt
+.It Sy 1
 Differences were found.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB2\fR
-.ad
-.RS 6n
-.rt
+.It Sy 2
 Invalid command line options were specified.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB3\fR
-.ad
-.RS 6n
-.rt
+.It Sy 3
 An error occurred.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB99\fR
-.ad
-.RS 6n
-.rt
+.It Sy 99
 An unanticipated exception occurred.
-.RE
-
-.SH ATTRIBUTES
-.sp
-.LP
-See \fBattributes\fR(5) for descriptions of the following attributes:
-.sp
-
-.sp
-.TS
-tab() box;
-cw(2.75i) |cw(2.75i)
-lw(2.75i) |lw(2.75i)
-.
-ATTRIBUTE TYPEATTRIBUTE VALUE
-_
-Availability\fBpackage/pkg\fR
-_
-Interface StabilityUncommitted
-.TE
-
-.SH SEE ALSO
-.sp
-.LP
-\fBpkg\fR(5)
-.sp
-.LP
-\fBhttps://github.com/omniosorg/pkg5\fR
+.El
+.Sh SEE ALSO
+.Xr pkg 5
+.Pp
+.Lk https://github.com/omniosorg/pkg5
