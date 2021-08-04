@@ -22,11 +22,11 @@
 #
 # Copyright (c) 2007, 2019, Oracle and/or its affiliates. All rights reserved.
 # Copyright 2016, OmniTI Computer Consulting, Inc. All rights reserved.
-# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
 #
 
 # Whitespace separated list of versions to build and test
-PYVERSIONS = 3.9
+PYVERSIONS = 3.9 3.10
 PYTESTS = $(PYVERSIONS:%=runtest/%)
 
 CODE_WS = $$(git rev-parse --show-toplevel)
