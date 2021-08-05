@@ -22,6 +22,7 @@
 
 #
 # Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
 #
 
 # Some pkg(5) specific lint manifest checks
@@ -485,6 +486,41 @@ class PkgManifestChecker(base.ManifestChecker):
 
         duplicate_sets.pkglint_desc = _(
             "Packages should not have duplicate 'set' actions.")
+
+        def duplicate_licenses(self, manifest, engine, pkglint_id="016"):
+                """Checks for duplicate license actions."""
+                seen_licenses = {}
+                dup_msg = _("duplicate license actions on {names} in {pkg}")
+                duplicates = []
+                lint_id = "{0}{1}".format(self.name, pkglint_id)
+                for action in manifest.gen_actions_by_type("license"):
+                        if engine.linted(action=action, manifest=manifest,
+                            lint_id=lint_id):
+                                continue
+                        lic = action.attrs['license']
+                        if lic not in seen_licenses:
+                                seen_licenses[lic] = [action]
+                        else:
+                                seen_licenses[lic].append(action)
+
+                for key in seen_licenses:
+                        actions = seen_licenses[key]
+                        if len(actions) > 1:
+                                conflict_vars, conflict_actions = \
+                                    self.conflicting_variants(actions,
+                                        manifest.get_all_variants())
+                                if conflict_actions:
+                                        duplicates.append(key)
+
+                if duplicates:
+                        dlist = sorted((str(d) for d in duplicates))
+                        engine.error(dup_set_msg.format(
+                            names=" ".join(dlist),
+                            pkg=manifest.fmri),
+                            msgid=lint_id)
+
+        duplicate_licenses.pkglint_desc = _(
+            "Packages should not have duplicate 'license' actions.")
 
         def linted(self, manifest, engine, pkglint_id="007"):
                 """Logs an INFO message with the key/value pairs of all
