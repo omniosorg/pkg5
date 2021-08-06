@@ -85,9 +85,6 @@ class PkgDupActionChecker(base.ActionChecker):
                 self.ref_legacy_pkgs = {}
                 self.lint_legacy_pkgs = {}
 
-                self.lint_licenses = {}
-                self.processed_licenses = {}
-
                 self.processed_paths = {}
                 self.processed_drivers = {}
                 self.processed_paths = {}
@@ -225,8 +222,6 @@ class PkgDupActionChecker(base.ActionChecker):
                             atype="group")
                         seed_dict(manifest, "gid", self.lint_gids,
                             atype="group")
-                        seed_dict(manifest, "license", self.lint_licenses,
-                            atype="license")
 
                 dup_dictionaries = [(self.lint_paths, self.ref_paths),
                     (self.lint_legacy_pkgs, self.ref_legacy_pkgs),
@@ -308,16 +303,6 @@ class PkgDupActionChecker(base.ActionChecker):
 
         duplicate_legacy.pkglint_desc = _(
             "Legacy package names should be unique.")
-
-        def duplicate_licenses(self, action, manifest, engine,
-            pkglint_id="016"):
-                """Checks for duplicate licenses."""
-
-                self.dup_attr_check(["license"], "license", self.lint_licenses,
-                    self.processed_licenses, action, engine,
-                    manifest.get_all_variants(), msgid=pkglint_id)
-
-        duplicate_licenses.pkglint_desc = _("licenses should be unique.")
 
         def duplicate_refcount_path_attrs(self, action, manifest, engine,
             pkglint_id="007"):

@@ -2836,6 +2836,27 @@ dir group=sys mode=0755 owner=root path=etc
 dir group=sys mode=0755 owner=root path=etc
 """
 
+        lint_license_mf = {}
+        lint_license_mf["pkg1.mf"] = """
+set name=variant.arch value=i386 value=sparc
+set name=pkg.fmri value=pkg://opensolaris.org/pkg1@0.5.11,5.11-0.141:20100603T215050Z
+set name=info.classification value=org.opensolaris.category.2008:System/Core
+set name=org.opensolaris.consolidation value=osnet
+set name=pkg.description value="license test pkg1"
+set name=pkg.summary value="license test"
+license usr/share/lib/legalese.txt license="Foo"
+"""
+
+        lint_license_mf["pkg2.mf"] = """
+set name=variant.arch value=i386 value=sparc
+set name=pkg.fmri value=pkg://opensolaris.org/pkg2@0.5.11,5.11-0.141:20100603T215050Z
+set name=info.classification value=org.opensolaris.category.2008:System/Core
+set name=org.opensolaris.consolidation value=osnet
+set name=pkg.description value="license test pkg2"
+set name=pkg.summary value="license test"
+license usr/foo/file license="Foo"
+"""
+
         def setUp(self):
 
                 pkg5unittest.ManyDepotTestCase.setUp(self,
@@ -3289,6 +3310,34 @@ dir group=sys mode=0755 owner=root path=etc
                     "Expected pkglint.dupaction001.1, got {0}".format(
                     lint_logger.ids[0]))
 
+        def test_license_pkg_dup(self):
+                """This test checks that license actions across packages do not
+                have to be unique. """
+
+                paths = self.make_misc_files(self.lint_license_mf)
+                paths.sort()
+                rcfile = os.path.join(self.test_root, "pkglintrc")
+
+                pkg1 = os.path.join(self.test_root, "pkg1.mf")
+                pkg2 = os.path.join(self.test_root, "pkg2.mf")
+
+                lint_logger = TestLogFormatter()
+
+                manifests = read_manifests([pkg1, pkg2], lint_logger)
+                lint_engine = engine.LintEngine(lint_logger, use_tracker=False,
+                    config_file=rcfile)
+                lint_engine.setup(cache=self.cache_dir,
+                    ref_uris=[self.ref_uri], lint_manifests=manifests)
+                lint_engine.execute()
+                lint_engine.teardown(clear_cache=True)
+
+                lint_msgs = []
+                for msg in lint_logger.messages:
+                        lint_msgs.append(msg)
+
+                self.assertTrue(lint_msgs == [],
+                    "Unexpected errors from duplicate licenses: {}"
+                    .format("\n".join(lint_msgs)))
 
 class TestVolatileLintEngineDepot(pkg5unittest.ManyDepotTestCase):
         """Tests that exercise reference vs. lint repository checks and tests
