@@ -12,6 +12,7 @@
     pkg:/library/python-3/pybonjour-39
     pkg:/library/python-3/pycurl-39
     pkg:/library/python-3/pyopenssl-39
+    pkg:/library/python-3/pyyaml-39
     pkg:/library/python-3/rapidjson-39
     pkg:/library/python-3/six-39
     #

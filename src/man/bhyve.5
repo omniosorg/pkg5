@@ -12,7 +12,7 @@
 .\" Copyright 2016, OmniTI Computer Consulting, Inc. All Rights Reserved.
 .\" Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
 .\"
-.Dd April 02, 2021
+.Dd August 13, 2021
 .Dt BHYVE 5
 .Os OmniOS
 .Sh NAME
@@ -39,12 +39,7 @@ Supported attributes are:
 .Xc
 .Sm on
 .Pp
-Set to
-.Ar on
-to have
-.Nm
-generate ACPI tables for the guest
-.Pq default: Ar off .
+This is a legacy option that no longer has any effect.
 .It Sy bootdisk Ar path Ns Op , Ns Cm serial Ns = Ns Ar serial
 .Pp
 Specifies a ZFS volume dataset name which will be attached to
@@ -107,6 +102,44 @@ can be omitted.
 Each image file must also be mapped into the zone using an
 .Sy fs
 block, as shown in the example below.
+.It Xo Sy cloud-init
+.Sm off
+.Ar on
+|
+.Ar off
+|
+.Ar filename
+|
+.Ar URL
+.Xc
+.Sm on
+.Pp
+When this option is enabled, and set to
+.Ar on
+or a
+.Ar filename ,
+the guest will be booted with a small CD image attached that provides
+configuration data that
+.Sy cloud-init
+can use to automatically configure the guest operating system.
+When a file is provided, this is used directly for the provided
+.Pa user-data .
+If any network interfaces are configured with an
+.Sy allowed-address
+property, then that address will be provided along with the configuration
+data.
+See also the
+.Sy dns-domain ,
+.Sy password ,
+.Sy resolvers
+and
+.Sy sshkey
+options.
+.Pp
+If a
+.Ar URL
+is provided, then that is passed to the guest system as the source of the
+full meta-data.
 .It Sy console Ar options
 .Pp
 This parameter configures where the guest's console device is presented.
@@ -154,6 +187,19 @@ Available options are:
 .It
 .Sy virtio-blk Pq default
 .El
+.It Sy dns-domain Ar domainname
+.Pp
+The DNS domain name for the guest.
+Included in the data passed to the guest when the
+.Sy cloud-init
+option is enabled.
+.It Sy extra Ar options
+.Pp
+Any extra
+.Ar options
+to be passed directly to the
+.Nm
+hypervisor.
 .It Sy hostbridge Ar type
 .Pp
 Specifies the type of emulated system host bridge that will be presented to
@@ -189,36 +235,27 @@ Available options are:
 .Pp
 Note that only the accelerated virtio interface supports filtering using the
 zone firewall.
-.It Sy ram Ar size Ns Op Cm KMGT
-.Pp
-Specify the guest's physical memory size.
-The
-.Ar size
-argument may be suffixed with one of
-.Ar K ,
-.Ar M ,
-.Ar G
-or
-.Ar T
-to indicate a multiple of kibibytes, mebibytes, gibibytes or tebibytes.
-If no suffix is given, the value is assumed to be in mebibytes.
-.Pp
-The default value, if this attribute is not specified, is
-.Sy 256M .
-.It Xo Sy rng
+.It Xo Sy password
 .Sm off
-.Ar on
+.Ar string
 |
-.Ar off
+.Ar hash
+|
+.Ar filename
 .Xc
 .Sm on
 .Pp
-Set to
-.Ar on
-to attach a virtio random number generator
-.Pq RNG
-to the guest
-.Pq default: Ar off .
+When the
+.Sy cloud-init
+option is enabled, the provided
+.Ar password
+will be passed to the guest which can use it to set the password for the
+default user.
+Depending on the guest, this may be the root user or a distribution-dependant
+initial user.
+.Ar password
+can be provided as a fixed string, a pre-computed hash or a path to a file
+that contains the desired password or password hash.
 .It Sy priv.debug Ar on Ns | Ns Ar off
 Set to
 .Ar on
@@ -261,12 +298,65 @@ driver and added to the
 file, after which it will be visible in the output of
 .Ql pptadm list -a .
 The binding can be achieved using
-.Xr update_drv 1M
+.Xr update_drv 1m
 or by adding an entry to the
 .Pa /etc/ppt_aliases
 file
 .Pq in the same format as Pa /etc/driver_aliases
 and rebooting.
+.It Sy ram Ar size Ns Op Cm KMGT
+.Pp
+Specify the guest's physical memory size.
+The
+.Ar size
+argument may be suffixed with one of
+.Ar K ,
+.Ar M ,
+.Ar G
+or
+.Ar T
+to indicate a multiple of kibibytes, mebibytes, gibibytes or tebibytes.
+If no suffix is given, the value is assumed to be in mebibytes.
+.Pp
+The default value, if this attribute is not specified, is
+.Sy 256M .
+.It Sy resolvers Ar resolver Ns Oo \&, Ns Ar resolver Ns \&... Oc
+.Pp
+A comma-delimited list of DNS resolver IP addresses.
+These are included in the data passed to the guest when the
+.Sy cloud-init
+option is enabled.
+.It Xo Sy rng
+.Sm off
+.Ar on
+|
+.Ar off
+.Xc
+.Sm on
+.Pp
+Set to
+.Ar on
+to attach a virtio random number generator
+.Pq RNG
+to the guest
+.Pq default: Ar off .
+.It Xo Sy sshkey
+.Sm off
+.Ar string
+|
+.Ar filename
+.Xc
+.Sm on
+.Pp
+When the
+.Sy cloud-init
+option is enabled, the provided
+.Ar sshkey
+will be passed to the guest which can use it to set the authorised SSH keys
+for the default user and/or the root user.
+.Ar sshkey
+can be provided as a fixed string or a path to a file that contains the desired
+public key.
 .It Sy type Ar type
 .Pp
 Specifies the type of the virtual machine.
@@ -379,13 +469,6 @@ If you prefer, you can also use the real socat utility that's shipped in core:
         TCP-LISTEN:5905,bind=127.0.0.1,reuseaddr,fork \e
         UNIX-CONNECT:/zones/bhyve/root/tmp/vm.vnc
 .Ed
-.It Sy extra Ar options
-.Pp
-Any extra
-.Ar options
-to be passed directly to the
-.Nm
-hypervisor.
 .It Xo Sy xhci
 .Sm off
 .Ar on
@@ -446,6 +529,7 @@ end
 .Sh SEE ALSO
 .Xr mdb 1 ,
 .Xr proc 1 ,
+.Xr bhyve 1m ,
 .Xr dtrace 1m ,
 .Xr zfs 1m ,
 .Xr zoneadm 1m ,
