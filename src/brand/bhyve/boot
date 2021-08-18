@@ -168,6 +168,15 @@ logging.info(f'Zone name: {name}')
 
 ##############################################################################
 
+def boolv(s, var, ignore=False):
+    if s in ['true', 'yes', 'on', '1']:
+        return True
+    if s in ['false', 'no', 'off', '0']:
+        return False
+    if not ignore:
+        fatal(f'Invalid value {s} for boolean variable {var}')
+    return None
+
 def parseopt(tag):
     global opts, xmlroot
     try:
@@ -176,9 +185,12 @@ def parseopt(tag):
         logging.debug('Found custom {0} attribute - "{1}"'
             .format(tag, opts[tag]))
         if tag in aliases:
+            val = opts[tag]
+            if (bt := boolv(val, tag, ignore=True)) is not None:
+                val = 'on' if bt else 'off'
             try:
-                opts[tag] = aliases[tag][opts[tag]]
-                logging.debug('  expanded to {0}'.format(opts[tag]))
+                opts[tag] = aliases[tag][val]
+                logging.debug('  Alias expanded to {0}'.format(opts[tag]))
             except KeyError:
                 pass
     except:
@@ -223,15 +235,6 @@ def build_devlist(type, maxval, plain=True):
     logging.debug('{} list: \n{}'.format(type, pformat(devlist)))
 
     return sorted(devlist.items())
-
-def boolv(s, var, ignore=False):
-    if s in ['true', 'yes', 'on', '1']:
-        return True
-    if s in ['false', 'no', 'off', '0']:
-        return False
-    if not ignore:
-        fatal(f'Invalid value {s} for boolean variable {var}')
-    return None
 
 def build_cloudinit_image(uuid, src):
     logging.info('Generating cloud-init data')
