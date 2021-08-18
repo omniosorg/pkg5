@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/python3.9
 
 # {{{ CDDL HEADER
 #
@@ -15,7 +15,17 @@
 
 # Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
 
-import logging, os, subprocess, sys, tempfile, time, re, getopt, ucred
+import getopt
+import logging
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+import time
+import ucred
+import yaml
 import xml.etree.ElementTree as etree
 from pprint import pprint, pformat
 
@@ -28,12 +38,13 @@ opts = {
     'acpi':         'on',
     'bootorder':    'cd',
     'bootrom':      'BHYVE_RELEASE_CSM',
+    'cloud-init':   'off',
     'console':      '/dev/zconsole',
     'diskif':       'virtio-blk',
     'extra':        None,
     'hostbridge':   'i440fx',
     'netif':        'virtio-net-viona',
-    'priv.debug':   None,
+    'priv.debug':   'off',
     'ram':          '1G',
     'rng':          'off',
     'type':         'generic',
@@ -41,7 +52,7 @@ opts = {
     'vcpus':        '1',
     'vga':          'off',
     'vnc':          'off',
-    'xhci':         None,
+    'xhci':         'on',
 }
 
 aliases = {
@@ -80,6 +91,7 @@ CDROM_SLOT2     = 7
 DISK_SLOT2      = 8
 PPT_SLOT        = 9
 RNG_SLOT        = 10
+CINIT_SLOT      = 29
 VNC_SLOT        = 30
 LPC_SLOT_WIN    = 31
 
@@ -156,6 +168,15 @@ logging.info(f'Zone name: {name}')
 
 ##############################################################################
 
+def boolv(s, var, ignore=False):
+    if s in ['true', 'yes', 'on', '1']:
+        return True
+    if s in ['false', 'no', 'off', '0']:
+        return False
+    if not ignore:
+        fatal(f'Invalid value {s} for boolean variable {var}')
+    return None
+
 def parseopt(tag):
     global opts, xmlroot
     try:
@@ -164,9 +185,12 @@ def parseopt(tag):
         logging.debug('Found custom {0} attribute - "{1}"'
             .format(tag, opts[tag]))
         if tag in aliases:
+            val = opts[tag]
+            if (bt := boolv(val, tag, ignore=True)) is not None:
+                val = 'on' if bt else 'off'
             try:
-                opts[tag] = aliases[tag][opts[tag]]
-                logging.debug('  expanded to {0}'.format(opts[tag]))
+                opts[tag] = aliases[tag][val]
+                logging.debug('  Alias expanded to {0}'.format(opts[tag]))
             except KeyError:
                 pass
     except:
@@ -212,6 +236,138 @@ def build_devlist(type, maxval, plain=True):
 
     return sorted(devlist.items())
 
+def build_cloudinit_image(uuid, src):
+    logging.info('Generating cloud-init data')
+
+    #### Metadata
+
+    meta_data = {
+        'instance-id':      uuid,
+        'local-hostname':   name,
+    }
+
+    #### Userdata
+
+    user_data = {
+        'hostname':         name,
+        'disable_root':     False,
+    }
+
+    def file_or_string(f):
+        if os.path.isabs(f) and os.path.isfile(f):
+            try:
+                with open(f) as fh:
+                    f = fh.read()
+            except Exception as e:
+                fatal(f'Could not read from {f}: {e}')
+        return f.strip()
+
+    if (v := xmlroot.find('./attr[@name="password"]')) is not None:
+        user_data['password'] = file_or_string(v.get('value'))
+        user_data['chpasswd'] = { 'expire': False }
+        user_data['ssh-pwauth'] = True
+
+    if (v := xmlroot.find('./attr[@name="sshkey"]')) is not None:
+        v = file_or_string(v.get('value'))
+        user_data['ssh_authorized_keys'] = [v]
+        user_data['users'] = [
+            'default',
+            {'name': 'root', 'ssh_authorized_keys': [v]}
+        ]
+
+    #### Network
+
+    network_data = {}
+
+    addresses = xmlroot.findall('./network[@allowed-address]')
+    if addresses is not None:
+        nsdone = False
+        network_data['version'] = 2
+        network_data['ethernets'] = {}
+
+        for a in addresses:
+            vnic = a.get('physical')
+            addr = a.get('allowed-address')
+            rtr = a.get('defrouter')
+
+            p = subprocess.run([ '/usr/sbin/dladm',
+                'show-vnic', '-p', '-o', 'MACADDRESS', vnic ],
+                capture_output=True, text=True)
+            if p.returncode != 0:
+                logging.warning(f'Could not find MAC address for VNIC {vnic}')
+                continue
+            mac = p.stdout.strip()
+            mac = ':'.join(l.zfill(2) for l in mac.split(':'))
+
+            data = {
+                'match':        { 'macaddress': mac },
+                'set-name':     vnic,
+                'addresses':    [addr],
+            }
+            if rtr:
+                data['gateway4'] = rtr
+
+            if not nsdone:
+                domain = xmlroot.find('./attr[@name="dns-domain"]')
+                resolvers = xmlroot.find('./attr[@name="resolvers"]')
+                if resolvers is not None or domain is not None:
+                    nsdata = {}
+                    if domain is not None:
+                        nsdata['search'] = domain.get('value').strip()
+                    if resolvers is not None:
+                        nsdata['addresses'] = \
+                            resolvers.get('value').strip().split(',')
+                    data['nameservers'] = nsdata
+                nsdone = True
+
+            network_data['ethernets'][vnic] = data
+
+    logging.debug('Metadata:\n' + yaml.dump(meta_data))
+    logging.debug('Userdata:\n' + yaml.dump(user_data))
+    logging.debug('Netdata:\n' + yaml.dump(network_data))
+
+    if testmode:
+        return
+
+    dir = tempfile.mkdtemp(dir=f'{zoneroot}', prefix='cloud-init.')
+
+    with open(f'{dir}/meta-data', 'w') as fh:
+        yaml.dump(meta_data, fh)
+
+    if os.path.isabs(src) and os.path.isfile(src):
+        logger.info(f'Using supplied cloud-init user-data file from {src}')
+        shutil.copyfile(src, f'{dir}/user-data')
+    else:
+        with open(f'{dir}/user-data', 'w') as fh:
+            fh.write('#cloud-config\n')
+            yaml.dump(user_data, fh)
+
+    if network_data:
+        with open(f'{dir}/network-config', 'w') as fh:
+            yaml.dump(network_data, fh)
+
+    #### Build image
+
+    cidir = f'{zoneroot}/cloud-init'
+    seed = f'{zoneroot}/cloud-init.iso'
+    if os.path.exists(cidir):
+        shutil.rmtree(cidir)
+    os.rename(dir, cidir)
+    logging.info('Building cloud-init ISO image')
+    try:
+        subprocess.run([
+            '/usr/bin/mkisofs',
+            '-full-iso9660-filenames',
+            '-untranslated-filenames',
+            '-rock',
+            '-volid', 'CIDATA',
+            '-o', seed,
+            cidir
+        ], capture_output=False)
+        os.chmod(seed, mode=0o644)
+    except Exception as e:
+        fatal(f'Could not create cloud-init ISO image: {e}')
+
 ##############################################################################
 
 for tag in opts.keys():
@@ -256,6 +412,18 @@ logging.debug(f'Final uuid: {uuid}')
 
 args = ['/usr/sbin/bhyve']
 
+ser = uuid
+
+if boolv(opts['cloud-init'], 'cloud-init', ignore=True) is not False:
+    if opts['cloud-init'].startswith(('http://', 'https://')):
+        ser = 'ds=nocloud-net;s={};i={}'.format(opts['cloud-init'], uuid)
+    else:
+        build_cloudinit_image(uuid, opts['cloud-init'])
+        ser = f'ds=nocloud;i={uuid}'
+        args.extend([
+            '-s', '{0}:0,ahci-cd,/cloud-init.iso,ro'.format(CINIT_SLOT)
+        ])
+
 if opts['type'] == 'openbsd':
     logging.info('Ignoring unknown MSRs for OpenBSD')
     args.append('-w')
@@ -264,13 +432,13 @@ if uuid:
     args.extend(['-U', uuid])
 
 # The ACPI option has no effect with illumos bhyve
-#if opts['acpi'] == 'on':
+#if boolv(opts['acpi'], 'acpi'):
 #    args.append('-A')
 
 args.extend([
     '-H',
     '-B', '1,manufacturer={},product={},version={},serial={},sku={},family={}'
-        .format('OmniOS', 'OmniOS HVM', '1.0', uuid, '001', 'Virtual Machine'),
+        .format('OmniOS', 'OmniOS HVM', '1.0', ser, '001', 'Virtual Machine'),
     '-c', opts['vcpus'],
     '-m', opts['ram'],
 ])
@@ -333,6 +501,7 @@ for i, v in build_devlist('disk', 16):
 # Network
 
 i = 0
+promisc_filtered_nics = {}
 for f in xmlroot.findall('./network[@physical]'):
     ifname = f.get('physical').strip()
 
@@ -343,6 +512,10 @@ for f in xmlroot.findall('./network[@physical]'):
         if k == "netif":
             netif = v
         else:
+            if k == "promiscphys":
+                promisc_filtered_nics[ifname] = 'off' if boolv(v, k) else 'on'
+            elif k in ['promiscrxonly', 'promiscsap', 'promiscmulti']:
+                boolv(v, k)  # Value check
             net_extra += ',{}={}'.format(k, v)
 
     args.extend([
@@ -351,12 +524,27 @@ for f in xmlroot.findall('./network[@physical]'):
     ])
     i += 1
 
+for nic, promisc in promisc_filtered_nics.items():
+    dladm_args = [
+        '/usr/sbin/dladm', 'set-linkprop',
+        '-p', f'promisc-filtered={promisc}',
+        nic,
+    ]
+
+    logging.debug(f'Setting promisc-filtered for {nic} to {promisc}')
+    p = subprocess.run(dladm_args, capture_output=True, text=True)
+    if p.returncode > 0:
+        fatal(f'Could set promisc-filtered for {nic}: {p.stderr}')
+
 # VNC
 
-if opts['vnc'] and opts['vnc'] != 'off':
+v = boolv(opts['vnc'], 'vnc', ignore=True)
+if v is not False:
+    if v is True:
+        opts['vnc'] = 'on'
     args.extend(['-s', '{0}:0,fbuf,vga={1},{2}'.format(
         VNC_SLOT, opts['vga'], opts['vnc'])])
-    if not opts['xhci'] or opts['xhci'] != 'off':
+    if boolv(opts['xhci'], 'xhci'):
         args.extend(['-s', '{0}:1,xhci,tablet'.format(VNC_SLOT)])
 
 # PPT - PCI Pass-through devices
@@ -378,7 +566,7 @@ for i, v in pptlist:
 
 pptavail = sorted(set(range(0, 7)).difference(sorted(pptassign.keys())))
 for i, v in pptlist:
-    if v != 'on': continue
+    if not boolv(v, f'ppt{i}', ignore=True): continue
     try:
         slot = pptavail.pop(0)
     except IndexError:
@@ -393,11 +581,11 @@ if len(pptassign) > 0:
 
 # RNG
 
-if opts['rng'] == 'on':
+if boolv(opts['rng'], 'rng'):
     args.extend(['-s', '{0}:0,virtio-rnd'.format(RNG_SLOT)])
 
 # priv.debug
-if opts['priv.debug'] == 'on':
+if boolv(opts['priv.debug'], 'priv.debug'):
     args.extend(['-o', 'privileges.debug=true'])
 
 # Extra options

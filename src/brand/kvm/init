@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/python3.9
 
 # {{{ CDDL HEADER
 #
@@ -13,7 +13,7 @@
 #
 # }}}
 
-# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
 
 import logging, os, subprocess, sys, time, re, getopt
 import xml.etree.ElementTree as etree
@@ -88,6 +88,20 @@ logging.info('Parsed {0}'.format(zonexml))
 
 ##############################################################################
 
+def fatal(msg):
+    logging.error(msg)
+    print(msg, file=sys.stderr)
+    sys.exit(1)
+
+def boolv(s, var, ignore=False):
+    if s in ['true', 'yes', 'on', '1']:
+        return True
+    if s in ['false', 'no', 'off', '0']:
+        return False
+    if not ignore:
+        fatal(f'Invalid value {s} for boolean variable {var}')
+    return None
+
 def opt(tag):
     global opts, root
     try:
@@ -96,8 +110,11 @@ def opt(tag):
         logging.debug('Found custom {0} attribute - "{1}"'
             .format(tag, opts[tag]))
         if tag in aliases:
+            val = opts[tag]
+            if (bt := boolv(val, tag, ignore=True)) is not None:
+                val = 'on' if bt else 'off'
             try:
-                opts[tag] = aliases[tag][opts[tag]]
+                opts[tag] = aliases[tag][val]
                 logging.debug('  Alias expanded to {0}'.format(opts[tag]))
             except KeyError:
                 pass
