@@ -490,7 +490,7 @@ class PkgManifestChecker(base.ManifestChecker):
         def duplicate_licenses(self, manifest, engine, pkglint_id="016"):
                 """Checks for duplicate license actions."""
                 seen_licenses = {}
-                dup_msg = _("duplicate license actions on {names} in {pkg}")
+                dup_lic_msg = _("duplicate license actions on {names} in {pkg}")
                 duplicates = []
                 lint_id = "{0}{1}".format(self.name, pkglint_id)
                 for action in manifest.gen_actions_by_type("license"):
@@ -514,7 +514,7 @@ class PkgManifestChecker(base.ManifestChecker):
 
                 if duplicates:
                         dlist = sorted((str(d) for d in duplicates))
-                        engine.error(dup_set_msg.format(
+                        engine.error(dup_lic_msg.format(
                             names=" ".join(dlist),
                             pkg=manifest.fmri),
                             msgid=lint_id)

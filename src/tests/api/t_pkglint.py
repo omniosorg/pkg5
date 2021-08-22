@@ -384,7 +384,7 @@ set name=pkg.summary value="Core Solaris Kernel"
 license license="Foo" path=usr/share/lib/legalese.txt
 """
 
-expected_failures["license-duplicate.mf"] = ["pkglint.dupaction016.1"]
+expected_failures["license-duplicate.mf"] = ["pkglint.manifest016"]
 broken_manifests["license-duplicate.mf"] = \
 """
 #
