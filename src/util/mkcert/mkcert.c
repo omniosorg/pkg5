@@ -55,10 +55,16 @@ main(int argc, char **argv)
 	BIO *bio_err;
 	X509 *x509 = NULL;
 	EVP_PKEY *pkey = NULL;
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+	const RSA *rsa = NULL;
+#else
 	RSA *rsa = NULL;
+#endif
 	FILE *fp = NULL;
 
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
 	CRYPTO_mem_ctrl(CRYPTO_MEM_CHECK_ON);
+#endif
 
 	bio_err = BIO_new_fp(stderr, BIO_NOCLOSE);
 
