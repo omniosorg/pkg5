@@ -20,11 +20,13 @@
 #
 
 #
-# Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2021, Oracle and/or its affiliates.
 #
 
 syntax: glob
 
 src/man/*.txt
+src/pkg/external_deps.txt
+src/tests/bandit-baseline.json
 src/tests/baseline.txt
 doc/*
