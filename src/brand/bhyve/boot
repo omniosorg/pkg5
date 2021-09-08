@@ -313,7 +313,7 @@ def build_cloudinit_image(uuid, src):
                 if resolvers is not None or domain is not None:
                     nsdata = {}
                     if domain is not None:
-                        nsdata['search'] = domain.get('value').strip()
+                        nsdata['search'] = [domain.get('value').strip()]
                     if resolvers is not None:
                         nsdata['addresses'] = \
                             resolvers.get('value').strip().split(',')
