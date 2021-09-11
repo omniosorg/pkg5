@@ -395,6 +395,30 @@ must equal the product of the other parameters.
 .Pp
 The maximum supported number of virtual CPUs is
 .Sy 32 .
+.It Xo
+.Sy virtfs Ns Op Ar N
+.Sm off
+.Ar sharename \&,
+.Ar path
+.Op Cm ,ro
+.Sm on
+.Xc
+.Pp
+Share a filesystem to the guest using Virtio 9p (VirtFS).
+The specified
+.Ar path
+is presented over PCI as a share named
+.Ar sharename .
+The optional
+.Cm ro
+option configures the share as read-only.
+The filesystem path being shared must also be mapped into the zone, using
+either a delegated dataset or a loopback
+.Pq lofs
+mount.
+See the
+.Sx EXAMPLES
+section below.
 .It Sy vga Ar off Ns | Ns Ar on Ns | Ns Ar io
 .Pp
 Specify the type of VGA emulation to use when the framebuffer and VNC server
@@ -535,7 +559,52 @@ add attr
     set value=/rpool/iso/debian-9.4.0-amd64-netinst.iso
 end
 .Ed
-.sp
+.Pp
+The following example shows how to share a delegated dataset called
+.Pa rpool/datavol
+to a guest using VirtFS.
+This assumes that the mountpoint attribute on
+.Pa rpool/datavol
+is set to
+.Pa /datavol .
+This could have been done, for example, by creating the dataset with:
+.Pp
+.Dl zfs create -o mountpoint=/datavol -o zoned=on rpool/datavol
+.Pp
+Setting the
+.Sy mountpoint
+and
+.Sy zoned
+attributes at the same time prevents the filesystem from ever being mounted in
+the global zone.
+.Bd -literal -offset indent
+add dataset
+    set name=rpool/datavol
+end
+add attr
+    set name=virtfs0
+    set type=string
+    set value=datavol,/datavol
+end
+.Ed
+.Pp
+and to share the global zone filesystem
+.Pa /data/websites
+read-only to the guest, add:
+.Bd -literal -offset indent
+add fs
+    set dir="/data/websites"
+    set special="/data/websites"
+    set type="lofs"
+    add options ro
+    add options nodevices
+end
+add attr
+    set name=virtfs1
+    set type=string
+    set value=websites,/data/websites,ro
+end
+.Ed
 .Sh SEE ALSO
 .Xr mdb 1 ,
 .Xr proc 1 ,
