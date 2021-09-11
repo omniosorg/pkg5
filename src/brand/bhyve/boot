@@ -313,7 +313,7 @@ def build_cloudinit_image(uuid, src):
                 if resolvers is not None or domain is not None:
                     nsdata = {}
                     if domain is not None:
-                        nsdata['search'] = domain.get('value').strip()
+                        nsdata['search'] = [domain.get('value').strip()]
                     if resolvers is not None:
                         nsdata['addresses'] = \
                             resolvers.get('value').strip().split(',')
@@ -335,7 +335,7 @@ def build_cloudinit_image(uuid, src):
         yaml.dump(meta_data, fh)
 
     if os.path.isabs(src) and os.path.isfile(src):
-        logger.info(f'Using supplied cloud-init user-data file from {src}')
+        logging.info(f'Using supplied cloud-init user-data file from {src}')
         shutil.copyfile(src, f'{dir}/user-data')
     else:
         with open(f'{dir}/user-data', 'w') as fh:
