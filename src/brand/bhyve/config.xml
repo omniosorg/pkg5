@@ -56,6 +56,7 @@
 	<privilege set="default" name="proc_clock_highres" />
 	<privilege set="default" name="sys_admin" />
 	<privilege set="default" name="sys_mount" />
+
 	<!--
 		The following privilege is given to allow reading backing
 		files (for example .iso images) whose permission bits or ACL
@@ -65,6 +66,20 @@
 		be able to read it.
 	-->
 	<privilege set="default" name="file_dac_read" />
+
+	<!--
+		The following privileges are necessary for virtio-9p. The
+		first for read-only mounts (dac_read is also necessary but
+		asserted above), and the remainder for read-write.
+	-->
+	<privilege set="default" name="file_dac_read" />
+	<privilege set="default" name="file_dac_search" />
+	<privilege set="default" name="file_chown" />
+	<privilege set="default" name="file_chown_self" />
+	<privilege set="default" name="file_write" />
+	<privilege set="default" name="file_dac_write" />
+	<privilege set="default" name="file_owner" />
+	<privilege set="default" name="file_link_any" />
 
 	<privilege set="prohibited" name="dtrace_kernel" />
 	<privilege set="prohibited" name="proc_zone" />
