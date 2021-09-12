@@ -12,7 +12,7 @@
 .\" Copyright 2016, OmniTI Computer Consulting, Inc. All Rights Reserved.
 .\" Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
 .\"
-.Dd August 13, 2021
+.Dd September 11, 2021
 .Dt BHYVE 5
 .Os OmniOS
 .Sh NAME
@@ -415,6 +415,8 @@ result in I/O port queries and fail to boot if I/O decode is disabled.
 .Sm off
 .Ar on
 |
+.Ar wait
+|
 .Ar off
 |
 .Ar options
@@ -431,6 +433,12 @@ An alias for
 which creates the VNC socket within
 .Pa /tmp
 inside the zone.
+.It Sy wait
+An alias for
+.Sy wait,unix=/tmp/vm.vnc
+which is identical to
+.Sy on
+except that the zone boot is halted until a VNC connection is established.
 .It Sy off
 Disable the framebuffer.
 This is the same as omitting the
@@ -440,12 +448,14 @@ attribute.
 Sets up a VNC server on a UNIX socket at the specified
 .Ar path .
 Note that this path is relative to the zone root.
-.It Sy w
+.It Sy w Ns = Ns Ar pixels
 Specifies the horizontal screen resolution
 .Pq default: 1024, max: 1920
-.It Sy h
+.It Sy h Ns = Ns Ar pixels
 Specifies the vertical screen resolution
 .Pq default: 768, max: 1200
+.It Sy wait
+Pause boot until a VNC connection is established.
 .El
 .Pp
 Multiple options can be provided, separated by commas.
