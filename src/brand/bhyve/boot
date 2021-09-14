@@ -91,6 +91,7 @@ CDROM_SLOT2     = 7
 DISK_SLOT2      = 8
 PPT_SLOT        = 9
 RNG_SLOT        = 10
+VIRTFS_SLOT     = 11
 CINIT_SLOT      = 29
 VNC_SLOT        = 30
 LPC_SLOT_WIN    = 31
@@ -207,13 +208,16 @@ def diskpath(arg):
         return arg
     return '/dev/zvol/rdsk/{0}'.format(arg)
 
+def findattr(rex):
+    for dev in xmlroot.findall('./attr[@name]'):
+        if m := re.search(rex, dev.get('name').strip()):
+            yield dev, m
+
 # Look for attributes of the form <type>N (and <type> if plain is True) and
 # generate a list.
 def build_devlist(type, maxval, plain=True):
     devlist = {}
-    for dev in xmlroot.findall('./attr[@name]'):
-        m = re.search(rf'^{type}(\d+)$', dev.get('name').strip())
-        if not m: continue
+    for dev, m in findattr(rf'^{type}(\d+)$'):
         k = int(m.group(1))
         if k in devlist:
             fatal(f'{type}{k} appears more than once in configuration')
@@ -578,6 +582,21 @@ if len(pptassign) > 0:
     for i, v in sorted(pptassign.items()):
         args.extend(['-s', '{0}:{1},passthru,/dev/{2}'.format(
             PPT_SLOT, i, v)])
+
+# virtio-9p devices
+
+for i, v in build_devlist('virtfs', 8):
+    # Expect <sharename>,<path>[,ro]
+    arr = v.split(',')
+    vfsopts = ''
+    if len(arr) == 3:
+        if arr[2] != 'ro':
+            fatal(f'Unknown virtfs attribute {arr[2]}')
+        vfsopts = ',ro'
+    elif len(arr) != 2:
+        fatal(f'Bad virtfs specification: {v}')
+    args.extend(['-s', '{0}:{1},virtio-9p,{2}={3}{4}'.format(
+        VIRTFS_SLOT, i, arr[0], arr[1], vfsopts)])
 
 # RNG
 
