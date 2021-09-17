@@ -204,7 +204,7 @@ def writecfg(fh, arg):
         fh.write(f'{arg}\n')
 
 def diskpath(arg):
-    if arg.startswith('/dev'):
+    if arg.startswith('/'):
         return arg
     return '/dev/zvol/rdsk/{0}'.format(arg)
 
