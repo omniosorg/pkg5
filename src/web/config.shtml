@@ -21,15 +21,13 @@
 ##
 ## Copyright 2008, 2010 Oracle and/or its affiliates. All rights reserved.
 ## Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
-## Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
+## Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
 ##
 <%!
         import re
         from six.moves.urllib.parse import urlparse
 %>\
 <%page args="g_vars"/>\
-## Please note that the opensolaris.org and sun.com themes can not be used
-## unless authorized by Sun Microsystems, Inc.
 <%
         web_config = g_vars["web_config"]
 

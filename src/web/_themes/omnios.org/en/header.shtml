@@ -19,22 +19,28 @@
 ##
 ## CDDL HEADER END
 ##
-## Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+## Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 ## Use is subject to license terms.
 ##
-<%page args="g_vars"/>\
+<%page args="g_vars, title, crumbs, gmenu_items"/>\
 <div class="page-container">
-        <div class="footer-line"></div>
-	<!--
-        <a class="logo" href="http://www.sun.com/"></a>
-        <span class="notice">Copyright &copy; 2009 Sun Microsystems, Inc.</span>
-        <div class="footer-nav">
-                <a href="http://www.opensolaris.org/os/tou/">Terms of Use</a> |
-                <a href="http://www.sun.com/privacy/">Privacy</a> |
-                <a href="http://www.opensolaris.org/os/trademark/">Trademarks</a> |
-                <a href="http://www.opensolaris.org/os/copyrights/">Copyright Policy</a> |
-                <a href="http://www.opensolaris.org/os/site_guidelines/">Site Guidelines</a> |
-                <a href="http://opensolaris.org/os/about/help/">Help</a>
+        <div class="masthead">
+                <div class="content">
+                        <div class="menu">
+                                <ul>
+% for link, text in gmenu_items:
+                                        <li><a href="${link}">${text}</a></li>
+% endfor
+                                </ul>
+                        </div>
+                </div>
         </div>
-	-->
+        <div class="breadcrumbs">
+% for link, text in crumbs:
+        <a href="${link}">${text}</a> &gt;
+% endfor
+        </div>
+        <div class="page-title">
+                <h1>${title}</h1>
+        </div>
 </div>
