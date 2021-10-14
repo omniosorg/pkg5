@@ -791,6 +791,9 @@ class CurlTransportEngine(TransportEngine):
                 # Set nosignal, so timeouts don't crash client
                 hdl.setopt(pycurl.NOSIGNAL, 1)
 
+                if DebugValues.get("curlverbose", False):
+                        hdl.setopt(pycurl.VERBOSE, 1)
+
                 # Set connect timeout.  Its value is defined in global_settings.
                 hdl.setopt(pycurl.CONNECTTIMEOUT,
                     global_settings.PKG_CLIENT_CONNECT_TIMEOUT)
