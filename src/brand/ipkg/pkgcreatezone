@@ -330,7 +330,8 @@ chown root:sys $repfile
 # If the global zone is using the rsyslog service, enable that in the zone
 # too.
 #
-if [ "`svcprop -p general/enabled system-log:rsyslog`" = true ]; then
+if [ "`svcprop -p general/enabled system-log:rsyslog 2>/dev/null`" = true ]
+then
 	. /usr/lib/brand/shared/rsyslog.ksh
 	activate_rsyslog $ZONEROOT
 fi
