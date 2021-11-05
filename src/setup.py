@@ -394,8 +394,7 @@ sysrepo_files = [
         ]
 sysrepo_log_stubs = [
         'util/apache2/sysrepo/logs/access_log',
-        'util/apache2/sysrepo/logs/error_log',
-        'util/apache2/sysrepo/logs/rewrite.log',
+        'util/apache2/sysrepo/logs/error_log'
         ]
 depot_files = [
         'util/apache2/depot/depot.conf.mako',
@@ -405,8 +404,7 @@ depot_files = [
         ]
 depot_log_stubs = [
         'util/apache2/depot/logs/access_log',
-        'util/apache2/depot/logs/error_log',
-        'util/apache2/depot/logs/rewrite.log',
+        'util/apache2/depot/logs/error_log'
         ]
 ignored_deps_files = []
 
