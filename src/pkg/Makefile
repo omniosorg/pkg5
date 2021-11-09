@@ -20,7 +20,7 @@
 #
 # Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
 # Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
-# Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
 #
 
 PKGVERS_COMPONENT = 0.5.11
@@ -80,14 +80,19 @@ ALL_MANIFESTS:sh  = \
 	exit 0
 $(PUBLISHALL)MANIFESTS      = $(ALL_MANIFESTS)
 
+PYTHON3           = python3.10
+PYVERS            = $(PYTHON3:python%=%)
+PYDEDOT.cmd       = echo $(PYVERS) | tr -d .
+PYPKGVERS         = -$(PYDEDOT.cmd:sh)
+PYDIR             = usr/lib/$(PYTHON3)
+PYDIRVP           = $(PYDIR)/vendor-packages
+
 # PKGCMDENV needs to specify the interpreter explicitly since the shebang
 # lines include -Es which suppresses the use of non-default environments.
-PYTHON3		  = python3.9
-PYDIR		  = usr/lib/$(PYTHON3)
-PYDIRVP		  = $(PYDIR)/vendor-packages
 PKGCMDENV         = \
 	PATH=$(PKGROOT)/usr/bin:/usr/sbin:/usr/bin \
 	PYTHONPATH=$(PKGROOT)/$(PYDIRVP) $(PYTHON3) $(PKGROOT)/usr/bin/
+
 PKG               = $(PKGCMDENV)/pkg
 PKGDEPEND         = $(PKGCMDENV)/pkgdepend
 PKGDIFF           = $(PKGCMDENV)/pkgdiff
@@ -102,7 +107,7 @@ PUBLIFESTS        = $(MANIFESTS:%.p5m=$(PDIR)/%.pub)
 DEPENDED          = $(MANIFESTS:%.p5m=$(PDIR)/%.dep)
 INCORP            = consolidation\:ips\:ips-incorporation
 
-PM_TRANSFORMS     = defaults pynext
+PM_TRANSFORMS     = defaults
 
 i386_DEFINES      = \
 	i386_ONLY=''    \
@@ -123,6 +128,8 @@ PKGMOG_DEFVALS    = \
 	REV=$(REV) \
 	PYDIR=$(PYDIR) \
 	PYDIRVP=$(PYDIRVP) \
+	PYVERS=$(PYVERS) \
+	PYPKGVERS=$(PYPKGVERS) \
 	CHANGESET=$(CHANGESET) \
 	PKGPUBLISHER_LOCALIZABLE=$(PKGPUBLISHER_LOCALIZABLE)
 PKGMOG_DEFINES    = $(PKGMOG_DEFVALS:%=-D %)

@@ -31,6 +31,7 @@ import pkg5unittest
 
 import errno
 import os
+import platform
 import sys
 import shutil
 import tempfile
@@ -63,8 +64,9 @@ class TestFileManager(pkg5unittest.CliTestCase):
 
         def update_file_layout(self, dir_path, exit=0):
                 """ Run the script from the util directory."""
-                cmdline = "{0}/update_file_layout.py {1}".format(path_to_pub_util,
-                    dir_path)
+                py_version = '.'.join(platform.python_version_tuple()[:2])
+                cmdline = "python{2} {0}/update_file_layout.py {1}".format(
+                    path_to_pub_util, dir_path, py_version)
                 self.cmdline_run(cmdline, exit=exit)
 
         def test_1(self):

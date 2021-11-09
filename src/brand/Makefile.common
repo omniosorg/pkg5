@@ -25,7 +25,9 @@
 # Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
 #
 
+PYVER = 3.10
 MACH:sh = uname -p
+SHELL= /usr/bin/ksh93
 
 INSTALL = /usr/sbin/install
 CTFCONVERT = /opt/onbld/bin/i386/ctfconvert
@@ -64,4 +66,17 @@ $(ROOTDIRS) $(BRANDDIR):
 
 $(BRANDDIR)/%: $(BRANDDIR) %
 	rm -f $@; $(INSTALL) -f $(BRANDDIR) -m 0444 $<
+
+PRE_HASH=	pre\#
+HASH=		$(PRE_HASH:pre\%=%)
+
+INS.py= \
+	{ \
+		print "$(HASH)!/usr/bin/python$(PYVER) -Es"; \
+		sed 1d $<; \
+	} > $@; \
+	chmod 755 $@
+
+%: %.py
+	$(INS.py)
 

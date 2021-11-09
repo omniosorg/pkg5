@@ -9,14 +9,17 @@
 # http://www.illumos.org/license/CDDL.
 
 #
-# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
 #
 
 BRAND = kvm
 FILES = config.xml init platform.xml support uninstall
+BINS = init
 
 BRANDDIR = $(ROOTBRAND)/$(BRAND)
 BRANDFILES = $(FILES:%=$(BRANDDIR)/%)
+
+all: $(BINS)
 
 include ../Makefile.common
 

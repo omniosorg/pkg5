@@ -14,7 +14,7 @@
 
 BRAND = bhyve
 FILES = boot config.xml createzone init platform.xml socat support uninstall
-BINS = init
+BINS = init boot
 
 BRANDDIR = $(ROOTBRAND)/$(BRAND)
 BRANDFILES = $(FILES:%=$(BRANDDIR)/%)

@@ -20,7 +20,7 @@
 #
 # Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
 # Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
-# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
 #
 #
 # The six compatibility layers cause detection problems for pkgdepend
@@ -42,18 +42,18 @@ set name=variant.arch value=$(ARCH)
 dir  path=$(PYDIR)
 dir  path=$(PYDIRVP)
 dir  path=$(PYDIRVP)/pkg
-file path=$(PYDIRVP)/pkg-0.1-py3.9.egg-info
+file path=$(PYDIRVP)/pkg-0.1-py$(PYVERS).egg-info
 file path=$(PYDIRVP)/pkg/__init__.py
-file path=$(PYDIRVP)/pkg/_arch.cpython-39.so
-file path=$(PYDIRVP)/pkg/_pspawn.cpython-39.so
-file path=$(PYDIRVP)/pkg/_sha512_t.cpython-39.so
-file path=$(PYDIRVP)/pkg/_sysattr.cpython-39.so
-file path=$(PYDIRVP)/pkg/_syscallat.cpython-39.so
-file path=$(PYDIRVP)/pkg/_varcet.cpython-39.so
+file path=$(PYDIRVP)/pkg/_arch.cpython$(PYPKGVERS).so
+file path=$(PYDIRVP)/pkg/_pspawn.cpython$(PYPKGVERS).so
+file path=$(PYDIRVP)/pkg/_sha512_t.cpython$(PYPKGVERS).so
+file path=$(PYDIRVP)/pkg/_sysattr.cpython$(PYPKGVERS).so
+file path=$(PYDIRVP)/pkg/_syscallat.cpython$(PYPKGVERS).so
+file path=$(PYDIRVP)/pkg/_varcet.cpython$(PYPKGVERS).so
 dir  path=$(PYDIRVP)/pkg/actions
 file path=$(PYDIRVP)/pkg/actions/__init__.py
-file path=$(PYDIRVP)/pkg/actions/_actions.cpython-39.so
-file path=$(PYDIRVP)/pkg/actions/_common.cpython-39.so
+file path=$(PYDIRVP)/pkg/actions/_actions.cpython$(PYPKGVERS).so
+file path=$(PYDIRVP)/pkg/actions/_common.cpython$(PYPKGVERS).so
 file path=$(PYDIRVP)/pkg/actions/attribute.py
 file path=$(PYDIRVP)/pkg/actions/depend.py
 file path=$(PYDIRVP)/pkg/actions/directory.py
@@ -127,7 +127,7 @@ file path=$(PYDIRVP)/pkg/cpiofile.py
 file path=$(PYDIRVP)/pkg/dependency.py
 file path=$(PYDIRVP)/pkg/depotcontroller.py
 file path=$(PYDIRVP)/pkg/digest.py
-file path=$(PYDIRVP)/pkg/elf.cpython-39.so
+file path=$(PYDIRVP)/pkg/elf.cpython$(PYPKGVERS).so
 file path=$(PYDIRVP)/pkg/facet.py
 dir  path=$(PYDIRVP)/pkg/file_layout
 file path=$(PYDIRVP)/pkg/file_layout/__init__.py
@@ -198,7 +198,7 @@ file path=$(PYDIRVP)/pkg/server/repository.py pkg.depend.bypass-generate=.*
 file path=$(PYDIRVP)/pkg/server/transaction.py
 file path=$(PYDIRVP)/pkg/sha512_t.py
 file path=$(PYDIRVP)/pkg/smf.py
-file path=$(PYDIRVP)/pkg/solver.cpython-39.so
+file path=$(PYDIRVP)/pkg/solver.cpython$(PYPKGVERS).so
 file path=$(PYDIRVP)/pkg/sysattr.py
 file path=$(PYDIRVP)/pkg/syscallat.py
 file path=$(PYDIRVP)/pkg/sysvpkg.py
@@ -426,8 +426,8 @@ license lic_minisat license="MIT (MiniSAT)" \
     com.oracle.info.tpno=17867 com.oracle.info.version=1.14.1
 license cr_Oracle license=cr_Oracle
 # CFFI import is done in C code, so it isn't picked up by pkgdepend
-depend type=require fmri=library/python-3/cffi-39
-depend type=require fmri=library/python-3/prettytable-39
-depend type=require fmri=system/library/python/libbe-39
+depend type=require fmri=library/python-3/cffi$(PYPKGVERS)
+depend type=require fmri=library/python-3/prettytable$(PYPKGVERS)
+depend type=require fmri=system/library/python/libbe$(PYPKGVERS)
 depend type=require fmri=web/ca-bundle
 

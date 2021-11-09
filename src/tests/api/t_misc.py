@@ -31,6 +31,7 @@ import pkg5unittest
 
 import ctypes
 import os
+import platform
 import shutil
 import stat
 import subprocess
@@ -159,7 +160,9 @@ except MemoryError:
                 with open(tmpfile, 'w') as f:
                         f.write(waste_mem_py)
 
-                res = int(subprocess.check_output(['python3.9', tmpfile]))
+                pyv = '.'.join(platform.python_version_tuple()[:2])
+
+                res = int(subprocess.check_output([f'python{pyv}', tmpfile]))
                 # convert from kB to bytes
                 res *= 1024
 
@@ -173,7 +176,7 @@ except MemoryError:
 
                 # test if env var works
                 os.environ["PKG_CLIENT_MAX_PROCESS_SIZE"] = str(mem_cap * 2)
-                res = int(subprocess.check_output(['python3.9', tmpfile]))
+                res = int(subprocess.check_output([f'python{pyv}', tmpfile]))
                 res *= 1024
 
                 self.debug("mem_cap:   " + str(mem_cap * 2))
@@ -190,7 +193,7 @@ except MemoryError:
 
                 # test if invalid env var is handled correctly
                 os.environ["PKG_CLIENT_MAX_PROCESS_SIZE"] = "octopus"
-                res = int(subprocess.check_output(['python3.9', tmpfile]))
+                res = int(subprocess.check_output([f'python{pyv}', tmpfile]))
                 res *= 1024
 
                 self.debug("mem_cap:   " + str(mem_cap))

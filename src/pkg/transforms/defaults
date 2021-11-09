@@ -21,6 +21,7 @@
 # Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
 # Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
 # Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
+# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
 #
 
 # Set some specific permissions
@@ -58,21 +59,29 @@
 # Don't bother specifying each .py file.  Allow individual actions to
 # override this by setting pkg.tmp.autopyc to false.
 <transform file path=.*\.py$ -> default pkg.tmp.autopyc true>
-<transform file hardlink pkg.tmp.autopyc=true path=usr/lib/python2\.(.*)\.py$ -> default pkg.tmp.pyversion 2.X>
-<transform file hardlink pkg.tmp.autopyc=true path=usr/lib/python3\.(.*)/.*\.py$ -> default pkg.tmp.pyversion 3.%<1>>
+
+<transform file hardlink pkg.tmp.autopyc=true \
+    path=usr/lib/python2\.(.*)\.py$ -> default pkg.tmp.pyversion 2.X>
+<transform file hardlink pkg.tmp.autopyc=true \
+    path=usr/lib/python3\.(.*)/.*\.py$ -> default pkg.tmp.pyversion 3.%<1>>
 
 <transform file pkg.tmp.pyversion=2\.X -> emit file path=%(path)c>
-<transform hardlink pkg.tmp.pyversion=2\.X -> emit hardlink path=%(path)c target=%(target)c>
+<transform hardlink pkg.tmp.pyversion=2\.X \
+    -> emit hardlink path=%(path)c target=%(target)c>
 
-<transform file pkg.tmp.pyversion=3\.([0-9])(.*) path=.*/(.*)\.py$ -> emit file path=/usr/lib/python3.%<1>%<2>/__pycache__/%<3>.cpython-3%<1>.pyc>
-<transform file pkg.tmp.pyversion=3\.([0-9])(.*) path=.*/(.*)\.py$ -> emit dir path=/usr/lib/python3.%<1>%<2>/__pycache__>
-<transform hardlink pkg.tmp.pyversion=3\.(.*) -> emit hardlink path=%(path)c target=%(target)c>
+<transform file pkg.tmp.pyversion=3\.([0-9]+)(.*) path=.*/(.*)\.py$ -> emit \
+    file path=/usr/lib/python3.%<1>%<2>/__pycache__/%<3>.cpython-3%<1>.pyc>
+<transform file pkg.tmp.pyversion=3\.([0-9]+)(.*) path=.*/(.*)\.py$ -> emit \
+    dir path=/usr/lib/python3.%<1>%<2>/__pycache__>
+<transform hardlink pkg.tmp.pyversion=3\.(.*) -> emit \
+    hardlink path=%(path)c target=%(target)c>
 
 <transform file pkg.tmp.autopyc=.* -> delete pkg.tmp.autopyc .*>
 <transform pkg.tmp.pyversion=.* -> delete pkg.tmp.pyversion .*>
 
 # Add actuators
-<transform file path=(var|lib)/svc/manifest/.*\.xml -> add restart_fmri svc:/system/manifest-import:default>
+<transform file path=(var|lib)/svc/manifest/.*\.xml \
+    -> add restart_fmri svc:/system/manifest-import:default>
 
 # Add locale facets
 <transform dir file \
