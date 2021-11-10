@@ -20,7 +20,13 @@
   pkg.depend.bypass-generate=%(pkg.depend.bypass-generate;notfound='notfound')>
 
 <transform path=TBD -> delete pkg.depend.bypass-generate notfound>
-<transform path=TBD -> edit path 39 310>
-<transform path=TBD -> edit path 3.9 3.10>
+
+#<transform path=TBD -> edit path 39 310>
+#<transform path=TBD -> edit path 3.9 3.10>
+
+# Deliver 3.9 modules alongside the 3.10 ones (temporary, during migration)
+<transform path=TBD -> edit path 310 39>
+<transform path=TBD -> edit path 3.10 3.9>
+
 <transform path=TBD -> edit path TBD ''>
 
