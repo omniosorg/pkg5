@@ -1,4 +1,4 @@
-#!/usr/bin/python3.9 -Es
+#!/usr/bin/python3 -Es
 #
 # CDDL HEADER START
 #
@@ -107,7 +107,7 @@ cffi_dir = os.path.normpath(os.path.join(pwd, "cffi_src"))
 
 # Extract Python minor version.
 py_version = '.'.join(platform.python_version_tuple()[:2])
-assert py_version in ('3.9', '3.10')
+assert py_version in ('3.10', '3.9')
 py_install_dir = 'usr/lib/python' + py_version + '/vendor-packages'
 
 py64_executable = '/usr/bin/python' + py_version

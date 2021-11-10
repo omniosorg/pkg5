@@ -26,7 +26,8 @@
 #
 
 # Whitespace separated list of versions to build and test
-PYVERSIONS = 3.9 3.10
+# The version listed first will end up in the command shebang lines
+PYVERSIONS = 3.10 3.9
 PYTESTS = $(PYVERSIONS:%=runtest/%)
 
 CODE_WS = $$(git rev-parse --show-toplevel)

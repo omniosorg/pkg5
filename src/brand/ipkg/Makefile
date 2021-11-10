@@ -34,10 +34,6 @@ support: support.c
 	$(LINK.c) -o $@ $@.c $(LDLIBS)
 	$(POST_PROCESS)
 
-fmri_compare: fmri_compare.py
-	cp $@.py $@
-	chmod 755 $@
-
 $(ETCDIR):
 	mkdir -p $(@)
 
