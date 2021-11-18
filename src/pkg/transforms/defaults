@@ -101,4 +101,4 @@
 set name=org.opensolaris.consolidation value=ips
 set name=variant.opensolaris.zone value=global value=nonglobal
 
-# vim: ft=pkg5manifest
+# vim: ft=p5m

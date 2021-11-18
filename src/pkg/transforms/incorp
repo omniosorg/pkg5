@@ -54,4 +54,4 @@
 # Exclude localizable file package which is internal
 <transform depend fmri=/$(PKGPUBLISHER_LOCALIZABLE)/ -> drop>
 
-# vim: ft=pkg5manifest
+# vim: ft=p5m
