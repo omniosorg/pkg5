@@ -31,4 +31,4 @@
 <transform dir -> print dir path=%(path)>
 <transform set file dir depend license user group driver legacy signature -> drop>
 
-# vim: ft=pkg5manifest
+# vim: ft=p5m

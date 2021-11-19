@@ -24,4 +24,4 @@
 # Mark all set actions coming from the incorporation manifest as keepers.
 <transform set -> default pkg.debug.keepme true>
 
-# vim: ft=pkg5manifest
+# vim: ft=p5m
