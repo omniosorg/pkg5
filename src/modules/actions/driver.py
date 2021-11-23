@@ -295,7 +295,7 @@ from {imgroot}/etc/driver_aliases.".format(**errdict))
                         os.chown(datp, st.st_uid, st.st_gid)
                         os.rename(datp, dap)
 
-                # In the case where the the packaging system thinks the driver
+                # In the case where the packaging system thinks the driver
                 # is installed and the driver database doesn't, do a fresh
                 # install instead of an update.  If the system thinks the driver
                 # is installed but the packaging has no previous knowledge of

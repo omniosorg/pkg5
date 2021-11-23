@@ -115,7 +115,7 @@ class ElfDependency(base.PublishingDependency):
 
 def expand_variables(paths, dyn_tok_conv):
         """Replace dynamic tokens, such as $PLATFORM, in the paths in the
-        paramter 'paths' with the values for that token provided in the
+        parameter 'paths' with the values for that token provided in the
         dictionary 'dyn_tok_conv.'
         """
 

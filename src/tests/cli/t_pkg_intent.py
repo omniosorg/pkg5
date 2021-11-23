@@ -205,7 +205,7 @@ class TestPkgIntent(pkg5unittest.SingleDepotTestCase):
                 }))
 
         def test_2_upgrade(self):
-                """Verify the the install of a single package, and then an
+                """Verify the install of a single package, and then an
                 upgrade (install of newer version) of that package sends the
                 expected intent information."""
 

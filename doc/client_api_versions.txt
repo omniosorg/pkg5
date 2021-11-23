@@ -560,7 +560,7 @@ Incompatible with clients using versions 0-51:
             add_cert, get_certs_by_name, get_crl, check_extensions
         * check_critical was removed.
         * verify_chain had an additional, optional, argument added to it.  The
-          usages paramter defines what uses the certificate needs to allow.
+          usages parameter defines what uses the certificate needs to allow.
           If this parameter isn't set, then it's assumed that the certificate
           should be able to be used for all known uses.
         * The following constants were added to be used as values to the usages
@@ -1352,7 +1352,7 @@ Version 0:
                 """Returns true if the API is in a cancelable state."""
 
         def reset(self):
-                """Resets the API back the the initial state. Note:
+                """Resets the API back to the initial state. Note:
                 this does not necessarily return the disk to its initial state
                 since the indexes or download cache may have been changed by
                 the prepare method."""

@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2021, Oracle and/or its affiliates.
 # Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 #
 
@@ -759,7 +759,7 @@ class PkgDupActionChecker(base.ActionChecker):
                 """Given a list of file actions that all deliver to the same
                 path, return that list minus any actions that are attempting to
                 use overlays. Also return a list of tuples containing any
-                overlay-related errors encountered, in the the format:
+                overlay-related errors encountered, in the format:
 
                     [ (<error msg>, <id>), ... ]
 
@@ -1286,7 +1286,7 @@ class PkgActionChecker(base.ActionChecker):
                 noisy if all dependencies are intentionally not present in the
                 repository being linted or referenced.
 
-                The pkglint paramter pkglint.action005.1.missing-deps can be
+                The pkglint paramater pkglint.action005.1.missing-deps can be
                 used to declare which fmris we know could be missing, and for
                 which we should not emit a warning message if those manifests
                 are not available.
@@ -1620,7 +1620,7 @@ class PkgActionChecker(base.ActionChecker):
                 """ELF files should be delivered as 64-bit objects, other
                 than libraries.
 
-                The pkglint paramter pkglint.action0014.report_type can change
+                The pkglint paramater pkglint.action0014.report_type can change
                 whether this check issues errors or warnings. The value of
                 this parameter should be "error" or "warning". Any other value
                 defaults to "warning"

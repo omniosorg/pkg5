@@ -3444,7 +3444,7 @@ class Catalog(object):
                 """Returns a list of the catalog files needed to update
                 the existing catalog parts, based on the contents of the
                 catalog.attrs file in the directory indicated by 'path'.
-                A value of None will be returned if the the catalog has
+                A value of None will be returned if the catalog has
                 not been modified, while an empty list will be returned
                 if no catalog parts need to be updated, but the catalog
                 itself has changed."""

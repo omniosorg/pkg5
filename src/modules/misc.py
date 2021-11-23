@@ -304,7 +304,7 @@ def valid_pub_prefix(prefix):
         if not prefix:
                 return False
 
-        # This is a workaround for the the hostname_re being slow when
+        # This is a workaround for the hostname_re being slow when
         # it comes to finding invalid characters in the prefix string.
         if _invalid_host_chars.match(prefix):
                 # prefix bad chars

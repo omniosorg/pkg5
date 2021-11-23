@@ -1572,7 +1572,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                 # Now everything is ready for publisher configuration.
                 # Since multiple publishers are allowed, they are all
                 # added at once without any publisher data retrieval.
-                # A single retrieval is then performed afterward, if
+                # A single retrieval is then performed afterwards, if
                 # allowed, to minimize the amount of work the client
                 # needs to perform.
                 for p in pubs:
@@ -2103,7 +2103,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
 
         def destroy(self):
                 """Destroys the image; image object should not be used
-                afterward."""
+                afterwards."""
 
                 if not self.imgdir or not os.path.exists(self.imgdir):
                         return

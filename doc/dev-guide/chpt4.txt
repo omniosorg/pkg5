@@ -333,7 +333,7 @@ discussed in *Chapter 1*, and is used throughout the packaging of the OS
 itself.
 
 Oracle Solaris ships with a set of |pkgmogrify| transforms that were used to
-package the the operating system, in ``/usr/share/pkg/transforms``.  These
+package the operating system, in ``/usr/share/pkg/transforms``.  These
 transforms are discussed in more detail in *Chapter 8*.
 
 The file called ``documentation`` contains the transforms that are closest to

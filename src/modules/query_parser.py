@@ -452,7 +452,7 @@ class Query(object):
                 RETURN_ACTIONS and determines whether the query is expected to
                 return packages or actions to the querier.
 
-                The "num_to_return" paramter is the maximum number of results to
+                The "num_to_return" parameter is the maximum number of results to
                 return.
 
                 The "start_point" parameter is the number of results to skip

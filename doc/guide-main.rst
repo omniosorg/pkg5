@@ -296,7 +296,7 @@ include
     at the specified level or higher.
 
 ``origin``
-    A origin dependency states that the the package mentioned by
+    A origin dependency states that the package mentioned by
     the ``fmri`` attribute must be at the specified level or higher (if present)
     prior to installation of the containing package.  If the attribute ``root-image``
     is present and has the value ``true``, the image that is checked is the

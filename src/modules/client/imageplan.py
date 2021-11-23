@@ -5424,7 +5424,7 @@ class ImagePlan(object):
                                 self.pd.removal_actions = []
 
                                 # execute installs; if action throws a retry
-                                # exception try it again afterward.
+                                # exception try it again afterwards.
                                 retries = []
                                 for p, src, dest in self.pd.install_actions:
                                         try:

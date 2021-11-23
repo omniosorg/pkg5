@@ -310,7 +310,7 @@ class TermQuery(qp.TermQuery):
                 The "manifest_func" parameter is a function which maps fmris to
                 the path to their manifests.
 
-                The "excludes" paramter is a list of variants defined in the
+                The "excludes" parameter is a list of variants defined in the
                 image."""
 
                 assert self._data_main_dict.get_file_handle() is not None

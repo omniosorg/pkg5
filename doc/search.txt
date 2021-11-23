@@ -44,7 +44,7 @@ SEARCH
 
    Search reserves the $ROOT/index directory for its use on both the client
    and the server. It also creates a TMP directory inside index which it stores
-   indexes in until it's ready to migrate them to the the proper directory.
+   indexes in until it's ready to migrate them to the proper directory.
 
    indexer.py contains detailed information about the files used to store the
    index and their formats. 

@@ -3608,7 +3608,7 @@ depend fmri=pkg:/D@2.0 type=require variant.num=one
                     expected_conditionals, expected_require_any,
                     expected_require, 5)
 
-                # Now check the the variants are set correctly on all the
+                # Now check the variants are set correctly on all the
                 # dependencies.
                 for d in deps:
                         if d.attrs["type"] in ("conditional", "require-any"):
@@ -3668,7 +3668,7 @@ depend fmri=pkg:/F@2.0 type=require variant.num=one
                     expected_conditionals, expected_require_any,
                     expected_require, 8)
 
-                # Now check the the variants are set correctly on all the
+                # Now check the variants are set correctly on all the
                 # dependencies.
                 for d in deps:
                         if d.attrs["type"] in ("conditional", "require-any"):
@@ -3734,7 +3734,7 @@ depend fmri=pkg:/G@2.0 type=require variant.num=two
                     expected_conditionals, expected_require_any,
                     expected_require, 6)
 
-                # Now check the the variants are set correctly on all the
+                # Now check the variants are set correctly on all the
                 # dependencies.
                 for d in deps:
                         if d.attrs["fmri"] in \
@@ -3799,7 +3799,7 @@ depend fmri=pkg:/D@2.0 type=require variant.num=one
                     expected_conditionals, expected_require_any,
                     expected_require, 7)
 
-                # Now check the the variants are set correctly on all the
+                # Now check the variants are set correctly on all the
                 # dependencies.
                 for d in deps:
                         if d.attrs["fmri"] in ("pkg:/C@1.0", "pkg:/E@1.0"):
@@ -3880,7 +3880,7 @@ depend fmri=pkg:/D@2.0 type=require
                     expected_conditionals, expected_require_any,
                     expected_require, 5)
 
-                # Now check the the variants are set correctly on all the
+                # Now check the variants are set correctly on all the
                 # dependencies.
                 for d in deps:
                         if d.attrs["fmri"] in ("pkg:/C@1.0", "pkg:/E@1.0"):
