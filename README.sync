@@ -4,11 +4,11 @@
 The pkg5 components have been updated to the latest upstream solaris-ips
 as of:
 
-commit f12c97a83b26f222ff75820f5e4e8694ca8ad219
-Author: Peter Dennis <peter.dennis@oracle.com>
-Date:   Tue Jun 22 14:12:54 2021 +0100
+commit dc798e4a23b735fa814734f33ed3ae1a72a83a47
+Author: Chandana R <chandana.r@oracle.com>
+Date:   Sun Nov 14 22:04:15 2021 -0800
 
-    32998686 pkg fix fails to fix binary files replaced with text
+    32458925 deliver python 3.9 modules for pkg
 
 -----------------------------------------------------------------------------
 

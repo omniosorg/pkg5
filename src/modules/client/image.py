@@ -460,6 +460,9 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                         elif e.errno == errno.EROFS:
                                 exc = apx.ReadOnlyFileSystemException(
                                     e.filename)
+                        elif e.errno in (errno.ENOSPC, errno.EDQUOT):
+                                # Failed due to space constraint
+                                raise e
                         else:
                                 self.__lock.release()
                                 raise

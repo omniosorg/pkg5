@@ -27,7 +27,7 @@ if [ "$cmd" = "uninstall" ]; then
 	# When uninstalling, the overlays need unmounting or zoneadm
 	# will abort with an error. If the user subsequently chooses to
 	# stop the uninstall operation, or if one of the pre-checks fails
-	# the the zone will be left in a state with the root mounted but
+	# the zone will be left in a state with the root mounted but
 	# not the overlays until the zone is next booted. pkg(5) will spot
 	# this through the key-files attribute and refuse to perform
 	# operations on the image.

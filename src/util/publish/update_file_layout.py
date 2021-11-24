@@ -66,7 +66,7 @@ def error(text, cmd=None):
 
 def main_func():
         if len(sys.argv) != 2:
-                emsg(_("pkg.migrate takes a single directory as a paramter."))
+                emsg(_("pkg.migrate takes a single directory as a parameter."))
                 return 2
         
         dir_loc = os.path.abspath(sys.argv[1])

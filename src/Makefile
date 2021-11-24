@@ -28,7 +28,9 @@
 # Whitespace separated list of versions to build and test
 # The version listed first will end up in the command shebang lines
 PYVERSIONS = 3.10 3.9
+
 PYTESTS = $(PYVERSIONS:%=runtest/%)
+TESTRESULTS = $(PYVERSIONS:%=testresults/%)
 
 CODE_WS = $$(git rev-parse --show-toplevel)
 
@@ -59,10 +61,10 @@ clobber: $(SUBDIRS) $(PYVERSONS)
 
 packages: install
 	@cd pkg; pwd; $(MAKE) $(TARGET) check \
-		PATH=$(CODE_WS)/proto/root_$$(uname -p)/usr/bin:$$PATH \
-		CC=$(CC)
+	    PATH=$(CODE_WS)/proto/root_$$(uname -p)/usr/bin:$$PATH \
+	    CC=$(CC)
 
-test: install .WAIT $(PYTESTS)
+test: install .WAIT $(PYTESTS) $(TESTRESULTS)
 
 $(SUBDIRS): FRC
 	@cd $@; pwd; $(MAKE) $(TARGET) CC=$(CC)
@@ -73,6 +75,11 @@ $(PYVERSIONS): FRC
 $(PYTESTS): FRC
 	-pfexec python$(@F) tests/run.py -j $(JOBS)
 	-pfexec cp tests/failures.3 tests/failures.3.$(@F)
+
+$(TESTRESULTS): $(PYTESTS)
+	@echo
+	@echo ">>> Test results for Python $(@F)"
+	@cat tests/failures.3.$(@F)
 
 FRC:
 
