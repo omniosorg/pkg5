@@ -359,7 +359,7 @@ def build_cloudinit_image(uuid, src):
     os.rename(dir, cidir)
     logging.info('Building cloud-init ISO image')
     try:
-        subprocess.run([
+        ret = subprocess.run([
             '/usr/bin/mkisofs',
             '-full-iso9660-filenames',
             '-untranslated-filenames',
@@ -367,7 +367,9 @@ def build_cloudinit_image(uuid, src):
             '-volid', 'CIDATA',
             '-o', seed,
             cidir
-        ], capture_output=False)
+        ], text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        for l in ret.stdout.splitlines():
+            logging.info(l)
         os.chmod(seed, mode=0o644)
     except Exception as e:
         fatal(f'Could not create cloud-init ISO image: {e}')
