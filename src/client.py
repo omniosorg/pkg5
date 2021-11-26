@@ -2429,7 +2429,11 @@ def apply_hot_fix(**args):
 
         if origin.startswith("file:///"):
                 filepath = urlparse(origin, "file", allow_fragments=0)[2]
-                shutil.copy2(unquote(filepath), tmp_pth)
+                try:
+                        shutil.copy2(unquote(filepath), tmp_pth)
+                except Exception as e:
+                        error(e)
+                        return EXIT_OOPS
                 origin = misc.parse_uri(tmp_pth, cwd=orig_cwd)
         elif origin.startswith("http://") or origin.startswith("https://") or \
             origin.startswith("ftp://"):
