@@ -37,25 +37,26 @@ FBUF_SIZE       = 16 * MiB
 
 # Default values
 opts = {
-    'acpi':         'on',
-    'bootorder':    'cd',
-    'bootrom':      'BHYVE_RELEASE_CSM',
-    'cloud-init':   'off',
-    'console':      '/dev/zconsole',
-    'diskif':       'virtio-blk',
-    'extra':        None,
-    'hostbridge':   'i440fx',
-    'memreserve':   'off',
-    'netif':        'virtio-net-viona',
-    'priv.debug':   'off',
-    'ram':          '1G',
-    'rng':          'off',
-    'type':         'generic',
-    'uuid':         None,
-    'vcpus':        '1',
-    'vga':          'off',
-    'vnc':          'off',
-    'xhci':         'on',
+    'acpi':             'on',
+    'bootorder':        'cd',
+    'bootrom':          'BHYVE_RELEASE_CSM',
+    'cloud-init':       'off',
+    'console':          '/dev/zconsole',
+    'debug.persist':    'off',
+    'diskif':           'virtio-blk',
+    'extra':            None,
+    'hostbridge':       'i440fx',
+    'memreserve':       'off',
+    'netif':            'virtio-net-viona',
+    'priv.debug':       'off',
+    'ram':              '1G',
+    'rng':              'off',
+    'type':             'generic',
+    'uuid':             None,
+    'vcpus':            '1',
+    'vga':              'off',
+    'vnc':              'off',
+    'xhci':             'on',
 }
 
 aliases = {
@@ -711,6 +712,10 @@ if boolv(opts['rng'], 'rng'):
 # priv.debug
 if boolv(opts['priv.debug'], 'priv.debug'):
     args.extend(['-o', 'privileges.debug=true'])
+
+# debug.persist
+if boolv(opts['debug.persist'], 'debug.persist'):
+    args.extend(['-o', 'debug.persist=true'])
 
 # memreserve
 if boolv(opts['memreserve'], 'memreserve'):

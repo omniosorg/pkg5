@@ -154,6 +154,12 @@ Other supported values include
 which places a UNIX domain socket at
 .Ql <path>
 through which the console can be accessed.
+.It Sy debug.persist Ar on Ns | Ns Ar off
+A debugging option that causes the zone to keep running after the VM terminates.
+This can be used, for example, to allow a terminated VM to be inspected with the
+.Fl b
+option of
+.Xr mdb 1 .
 .It Sy disk Ns Oo Ar N Oc Ar dataset Ns Op , Ns Cm serial Ns = Ns Ar serial
 .Pp
 Specifies one or more ZFS volume dataset names which will be attached to
