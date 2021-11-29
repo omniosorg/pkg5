@@ -57,6 +57,7 @@ import locale
 import logging
 import os
 import operator
+import re
 import shlex
 import shutil
 import six
@@ -173,7 +174,7 @@ Subcommands:
      pkgrepo refresh [-p publisher ...] -s repo_uri_or_path [--key ssl_key ...
          --cert ssl_cert ...] [--no-catalog] [--no-index]
 
-     pkgrepo remove [-n] [-p publisher ...] -s repo_uri_or_path
+     pkgrepo remove [-n] [-p publisher ...] [-d YYYYMMDD] -s repo_uri_or_path
          pkg_fmri_pattern ...
 
      pkgrepo set [-p publisher ...] -s repo_uri_or_path
@@ -217,9 +218,10 @@ def parse_uri(uri):
 def subcmd_remove(conf, args):
         subcommand = "remove"
 
-        opts, pargs = getopt.getopt(args, "np:s:")
+        opts, pargs = getopt.getopt(args, "np:s:d:")
 
         dry_run = False
+        dfilter = False
         pubs = set()
         for opt, arg in opts:
                 if opt == "-n":
@@ -228,10 +230,15 @@ def subcmd_remove(conf, args):
                         pubs.add(arg)
                 elif opt == "-s":
                         conf["repo_uri"] = parse_uri(arg)
+                elif opt == "-d":
+                        dfilter = arg
 
         if not pargs:
                 usage(_("At least one package pattern must be provided."),
                     cmd=subcommand)
+
+        if dfilter and not re.match(r'\d{8}$', dfilter):
+                usage(_("Date filter must be YYYYMMDD"), cmd=subcommand)
 
         # Get repository object.
         if not conf.get("repo_uri", None):
@@ -252,7 +259,10 @@ def subcmd_remove(conf, args):
         if dry_run:
                 # Don't make any changes; display list of packages to be
                 # removed and exit.
-                packages = set(f for m in matching.values() for f in m)
+                packages = set(
+                    f for m in matching.values() for f in m
+                    if not dfilter or f.version.timestr.startswith(dfilter)
+                )
                 count = len(packages)
                 plist = "\n".join("\t{0}".format(
                     p.get_fmri(include_build=False))
@@ -265,7 +275,9 @@ def subcmd_remove(conf, args):
         packages = collections.defaultdict(list)
         for m in matching.values():
                 for f in m:
-                        packages[f.publisher].append(f)
+                        if (not dfilter or
+                            f.version.timestr.startswith(dfilter)):
+                                packages[f.publisher].append(f)
 
         for pub in packages:
                 logger.info(

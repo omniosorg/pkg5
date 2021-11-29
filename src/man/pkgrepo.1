@@ -1,1304 +1,895 @@
 '\" te
 .\" Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
 .\" Copyright (c) 2015, OmniTI Computer Consulting, Inc. All rights reserved.
-.\" Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
-.TH pkgrepo 1 "27 Jul 2018" "OmniOS" "User Commands"
-.SH NAME
-pkgrepo \- Image Packaging System repository management utility
-.SH SYNOPSIS
-.LP
-.nf
-/usr/bin/pkgrepo create [--version \fIver\fR] \fIuri_or_path\fR
-.fi
-
-.LP
-.nf
-/usr/bin/pkgrepo add-publisher -s \fIrepo_uri_or_path\fR
-    \fIpublisher\fR ...
-.fi
-
-.LP
-.nf
-/usr/bin/pkgrepo remove-publisher [-n] [--synchronous]
-    -s \fIrepo_uri_or_path\fR \fIpublisher\fR ...
-.fi
-
-.LP
-.nf
-/usr/bin/pkgrepo get [-F \fIformat\fR] [-H] [-p \fIpublisher\fR]...
-    -s \fIrepo_uri_or_path\fR [--key \fIssl_key\fR --cert \fIssl_cert\fR]...
-    [\fIsection/property\fR ...]
-.fi
-
-.LP
-.nf
-/usr/bin/pkgrepo info [-F \fIformat\fR] [-H] [-p \fIpublisher\fR]...
-    -s \fIrepo_uri_or_path\fR [--key \fIssl_key\fR --cert \fIssl_cert\fR]...
-.fi
-
-.LP
-.nf
-/usr/bin/pkgrepo list [-F \fIformat\fR] [-H] [-p \fIpublisher\fR]...
-    -s \fIrepo_uri_or_path\fR [--key \fIssl_key\fR --cert \fIssl_cert\fR]...
-    [\fIpkg_fmri_pattern\fR ...]
-.fi
-
-.LP
-.nf
-/usr/bin/pkgrepo contents [-m]
-    [-t \fIaction_name\fR[,\fIaction_name\fR]...]... -s \fIrepo_uri_or_path\fR
-    [--key \fIssl_key\fR --cert \fIssl_cert\fR]... [\fIpkg_fmri_pattern\fR...]
-.fi
-
-.LP
-.nf
-/usr/bin/pkgrepo rebuild [-p \fIpublisher\fR]...
-    -s \fIrepo_uri_or_path\fR [--key \fIssl_key\fR --cert \fIssl_cert\fR]...
-    [--no-catalog] [--no-index]
-.fi
-
-.LP
-.nf
-/usr/bin/pkgrepo refresh [-p \fIpublisher\fR]...
-    -s \fIrepo_uri_or_path\fR [--key \fIssl_key\fR --cert \fIssl_cert\fR]...
-    [--no-catalog] [--no-index]
-.fi
-
-.LP
-.nf
-/usr/bin/pkgrepo remove [-n] [-p \fIpublisher\fR]...
-    -s \fIrepo_uri_or_path\fR \fIpkg_fmri_pattern\fR ...
-.fi
-
-.LP
-.nf
-/usr/bin/pkgrepo set [-p \fIpublisher\fR]... -s \fIrepo_uri_or_path\fR
-    \fIsection/property\fR=[\fIvalue\fR] ...
-.fi
-
-.LP
-.nf
-/usr/bin/pkgrepo set [-p \fIpublisher\fR]... -s \fIrepo_uri_or_path\fR
-    \fIsection/property\fR=([\fIvalue\fR]) ...
-.fi
-
-.LP
-.nf
-/usr/bin/pkgrepo verify [-p \fIpublisher\fR]...
-    -s \fIrepo_uri_or_path\fR
-.fi
-
-.LP
-.nf
-/usr/bin/pkgrepo fix [-v] [-p \fIpublisher\fR]...
-    -s \fIrepo_uri_or_path\fR
-.fi
-
-.LP
-.nf
-/usr/bin/pkgrepo diff [-vq] [--strict] [--parsable] [-p \fIpublisher\fR]...
-    -s \fIfirst_repo_uri_or_path\fR
-    [--key \fIssl_key\fR --cert \fIssl_cert\fR]...
-    -s \fIsecond_repo_uri_or_path\fR
-    [--key \fIssl_key\fR --cert \fIssl_cert\fR]...
-.fi
-
-.LP
-.nf
-/usr/bin/pkgrepo help
-.fi
-
-.LP
-.nf
-/usr/bin/pkgrepo version
-.fi
-
-.SH DESCRIPTION
-.sp
-.LP
-\fBpkgrepo\fR provides the ability to create and manage \fBpkg\fR(5) package repositories. Package repositories are a predefined set of directories and files that permit the storage and retrieval of package data by \fBpkg\fR and publication clients such as \fBpkgsend\fR or \fBpkgrecv\fR. In addition, when network-based access to a package repository is needed, \fBpkg.depotd\fR can provide clients access to the repository to store and/or retrieve package data.
-.SH OPTIONS
-.sp
-.LP
-The following options are supported:
-.sp
-.ne 2
-.mk
-.na
-\fB-?\fR
-.ad
-.br
-.na
-\fB--help\fR
-.ad
-.sp .6
-.RS 4n
+.\" Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
+.Dd November 29, 2021
+.Dt PKGREPO 1
+.Os
+.Sh NAME
+.Nm pkgrepo
+.Nd Image Packaging System repository management utility
+.Sh SYNOPSIS
+.\" create
+.Nm Cm create
+.Op Fl \&-version Ar ver
+.Ar uri_or_path
+.\" add-publisher
+.Nm Cm add-publisher
+.Fl s Ar repo_uri_or_path Ar publisher No \&...
+.\" remove-publisher
+.Nm Cm remove-publisher
+.Op Fl n
+.Op Fl \&-synchronous
+.Fl s Ar repo_uri_or_path
+.Ar publisher No \&...
+.\" get
+.Nm Cm get
+.Op Fl F Ar format
+.Op Fl H
+.Oo Fl p Ar publisher Oc Ns \&...
+.Fl s Ar repo_uri_or_path
+.Op Fl \&-key Ar ssl_key Fl \&-cert Ar ssl_cert
+.Op Ar section/property No \&...
+.\" info
+.Nm Cm info
+.Op Fl F Ar format
+.Op Fl H
+.Oo Fl p Ar publisher Oc Ns \&...
+.Fl s Ar repo_uri_or_path
+.Op Fl \&-key Ar ssl_key Fl \&-cert Ar ssl_cert
+.\" list
+.Nm Cm list
+.Op Fl F Ar format
+.Op Fl H
+.Oo Fl p Ar publisher Oc Ns \&...
+.Fl s Ar repo_uri_or_path
+.Op Fl \&-key Ar ssl_key Fl \&-cert Ar ssl_cert
+.Op Ar pkg_fmri_pattern No \&...
+.\" contents
+.Nm Cm contents
+.Op Fl m
+.Oo Fl t Ar action_name Ns Oo Cm \&, Ns Ar action_name Oc Ns \&... Oc \&...
+.Fl s Ar repo_uri_or_path
+.Op Fl \&-key Ar ssl_key Fl \&-cert Ar ssl_cert
+.Op Ar pkg_fmri_pattern No \&...
+.\" rebuild
+.Nm Cm rebuild
+.Oo Fl p Ar publisher Oc Ns \&...
+.Fl s Ar repo_uri_or_path
+.Op Fl \&-key Ar ssl_key Fl \&-cert Ar ssl_cert
+.Op Fl \&-no-catalog
+.Op Fl \&-no-index
+.\" refresh
+.Nm Cm refresh
+.Oo Fl p Ar publisher Oc Ns \&...
+.Fl s Ar repo_uri_or_path
+.Op Fl \&-key Ar ssl_key Fl \&-cert Ar ssl_cert
+.Op Fl \&-no-catalog
+.Op Fl \&-no-index
+.\" remove
+.Nm Cm remove
+.Op Fl n
+.Op Fl d Ar YYYYMMDD
+.Oo Fl p Ar publisher Oc Ns \&...
+.Fl s Ar repo_uri_or_path
+.Ar pkg_fmri_pattern \&...
+.\" set
+.Nm Cm set
+.Oo Fl p Ar publisher Oc Ns \&...
+.Fl s Ar repo_uri_or_path
+.Ar section/property Ns Cm \&= Ns Cm \&( Ns Oo value Oc Ns Cm \&) No \&...
+.\" verify
+.Nm Cm verify
+.Oo Fl p Ar publisher Oc Ns \&...
+.Fl s Ar repo_uri_or_path
+.\" fix
+.Nm Cm fix
+.Op Fl v
+.Oo Fl p Ar publisher Oc Ns \&...
+.Fl s Ar repo_uri_or_path
+.\" diff
+.Nm Cm diff
+.Op Fl vq
+.Op Fl \&-strict
+.Op Fl \&-parsable
+.Oo Fl p Ar publisher Oc Ns \&...
+.Fl s Ar first_repo_uri_or_path
+.Op Fl \&-key Ar ssl_key Fl \&-cert Ar ssl_cert
+.Fl s Ar second_repo_uri_or_path
+.Op Fl \&-key Ar ssl_key Fl \&-cert Ar ssl_cert
+.\" help
+.Nm Cm help
+.\" version
+.Nm Cm version
+.Sh DESCRIPTION
+.Nm
+provides the ability to create and manage
+.Xr pkg 5
+package repositories.
+Package repositories are a predefined set of directories and files that permit
+the storage and retrieval of package data by
+.Xr pkg 1
+and publication clients such as
+.Xr pkgsend 1
+or
+.Xr pkgrecv 1 .
+In addition, when network-based access to a package repository is needed,
+.Xr pkg.depotd 1M
+can provide clients access to the repository to store and/or retrieve package
+data.
+.Sh OPTIONS
+The following global options are supported:
+.Bl -tag -width Ar
+.It Fl ? | Fl \-help
 Display a usage message.
-.RE
-
-.SH SUB-COMMANDS
-.sp
-.LP
-The following subcommands are supported:
-.sp
-.ne 2
-.mk
-.na
-\fBpkgrepo create\fR [\fB--version\fR \fIver\fR] \fIuri_or_path\fR
-.ad
-.sp .6
-.RS 4n
-Create a \fBpkg\fR(5) repository at the specified location.
-.sp
-This subcommand can be used only with file system based repositories.
-.sp
-.ne 2
-.mk
-.na
-\fB--version\fR
-.ad
-.sp .6
-.RS 4n
-Create a repository in a format compatible with the specified version. By default, version 4 repositories are created. Supported versions are:
-.sp
-.ne 2
-.mk
-.na
-\fB3\fR
-.ad
-.RS 5n
-.rt
-Supports storage of packages for a single publisher, catalog version 1, and search version 1.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB4\fR
-.ad
-.RS 5n
-.rt
-Supports storage of packages for multiple publishers, catalog version 1, and search version 1.
-.RE
-
-.RE
-
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB\fBpkgrepo add-publisher\fR \fB-s\fR \fIrepo_uri_or_path\fR \fIpublisher\fR ...\fR
-.ad
-.sp .6
-.RS 4n
-Add the specified publishers to the repository. The new publishers have no packages or content.
-.sp
-This subcommand can be used only with version 4 file system based repositories.
-.sp
-.ne 2
-.mk
-.na
-\fB-s\fR \fIrepo_uri_or_path\fR
-.ad
-.sp .6
-.RS 4n
+.El
+.\"
+.Sh SUB-COMMANDS
+.\" create
+.Nm Cm create
+.Op Fl \&-version Ar ver
+.Ar uri_or_path
+.Bd -ragged -offset Ds
+Create a
+.Xr pkg 5
+repository at the specified location.
+.Pp
+This sub-command can only be used with filesystem-based repositories.
+.Bl -tag -width Ar
+.It Fl \&-version
+Create a repository in a format compatible with the specified version.
+By default, version 4 repositories are created.
+Supported versions are:
+.Bl -tag -width x
+.It Sy 3
+Supports storage of packages for a single publisher, catalog version 1, and
+search version 1.
+.It Sy 4
+Supports storage of packages for multiple publishers, catalog version 1, and
+search version 1.
+.El
+.El
+.Ed
+.Pp
+.\" add-publisher
+.Nm Cm add-publisher
+.Fl s Ar repo_uri_or_path Ar publisher No \&...
+.Bd -ragged -offset Ds
+Add the specified publishers to the repository.
+The new publishers have no packages or content.
+.Pp
+This sub-command can only be used with version 4 filesystem-based repositories.
+.Bl -tag -width Ar
+.It Fl s Ar repo_uri_or_path
 Operate on the repository located at the given URI or file system path.
-.RE
-
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB\fBpkgrepo remove-publisher\fR [\fB-n\fR] [\fB--synchronous\fR] \fB-s\fR \fIrepo_uri_or_path\fR \fIpublisher\fR ...\fR
-.ad
-.sp .6
-.RS 4n
-Remove the specified publishers from the repository. Remove all packages and all other data for the specified publishers.
-.sp
-If the default publisher is removed, and only one publisher remains in the repository, that remaining publisher becomes the default. The \fBpublisher/prefix\fR property of the repository is set to that remaining publisher.
-.sp
-If the default publisher is removed, and multiple publishers remain in the repository, or if the last publisher is removed from the repository, the \fBpublisher/prefix\fR property is unset.
-.sp
-This subcommand can be used only with version 4 file system based repositories.
-.sp
-.ne 2
-.mk
-.na
-\fB-n\fR
-.ad
-.sp .6
-.RS 4n
-Perform a trial run of the operation with no publisher changes made. The number of packages to be removed for each publisher is displayed before exiting.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-s\fR \fIrepo_uri_or_path\fR
-.ad
-.sp .6
-.RS 4n
+.El
+.Ed
+.Pp
+.\" remove-publisher
+.Nm Cm remove-publisher
+.Op Fl n
+.Op Fl \&-synchronous
+.Fl s Ar repo_uri_or_path
+.Ar publisher No \&...
+.Bd -ragged -offset Ds
+Remove the specified publishers from the repository.
+Remove all packages and all other data for the specified publishers.
+.Pp
+If the default publisher is removed, and only one publisher remains in the
+repository, that remaining publisher becomes the default.
+The publisher/prefix property of the repository is set to that remaining
+publisher.
+.Pp
+If the default publisher is removed, and multiple publishers remain in the
+repository, or if the last publisher is removed from the repository, the
+publisher/prefix property is unset.
+.Pp
+This sub-command can only be used with version 4 filesystem-based repositories.
+.Bl -tag -width Ar
+.It Fl n
+Perform a trial run of the operation with no publisher changes made.
+The number of packages to be removed for each publisher is displayed before
+exiting.
+.It Fl s Ar repo_uri_or_path
 Operate on the repository located at the given URI or file system path.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB--synchronous\fR
-.ad
-.sp .6
-.RS 4n
-Wait for the operation to complete before returning. If this option is not specified, the command returns immediately while the publisher is removed asynchronously in the background.
-.RE
-
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB\fBpkgrepo get\fR [\fB-F\fR \fIformat\fR] [\fB-H\fR] [\fB-p\fR \fIpublisher\fR]... \fB-s\fR \fIrepo_uri_or_path\fR [\fB--key\fR \fIssl_key\fR \fB--cert\fR \fIssl_cert\fR]... [\fIsection/property\fR ...]\fR
-.ad
-.sp .6
-.RS 4n
+.It Fl \&-synchronous
+Wait for the operation to complete before returning.
+If this option is not specified, the command returns immediately while the
+publisher is removed asynchronously in the background.
+.El
+.Ed
+.Pp
+.\" get
+.Nm Cm get
+.Op Fl F Ar format
+.Op Fl H
+.Oo Fl p Ar publisher Oc Ns \&...
+.Fl s Ar repo_uri_or_path
+.Op Fl \&-key Ar ssl_key Fl \&-cert Ar ssl_cert
+.Op Ar section/property No \&...
+.Bd -ragged -offset Ds
 Display the property information for the repository or its publishers.
-.sp
-By default, each property and its value are printed on separate lines. Empty ASCII string values are represented by a pair of double quotation marks (\fB""\fR). The following Bourne shell metacharacters, and newline, space, and tab, in ASCII string values must be escaped by backslash characters (\fB\e\fR):
-.sp
-.in +2
-.nf
-; & ( ) | ^ < > \e " ' `
-.fi
-.in -2
-
-See the "Examples" section for examples displaying publisher and repository properties.
-.sp
-For a list of properties and the purpose and value of each property, see the \fBset\fR subcommand below.
-.sp
-.ne 2
-.mk
-.na
-\fB-F\fR \fIformat\fR
-.ad
-.sp .6
-.RS 4n
-Specify an alternative output format. The value of \fIformat\fR can be \fBtsv\fR (Tab Separated Values), \fBjson\fR (JavaScript Object Notation as a single line), or \fBjson-formatted\fR (JavaScript Object Notation, formatted for readability).
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-H\fR
-.ad
-.sp .6
-.RS 4n
+.Pp
+By default, each property and its value are printed on separate lines.
+Empty ASCII string values are represented by a pair of double quotation marks
+.Pq Dq .
+The following Bourne shell metacharacters, and newline, space, and tab, in
+ASCII string values must be escaped by backslash characters
+.Pq Sy \e
+.Pp
+\&; \&& \&( \&) \&| \&^ \&< \&> \e \&" \&' \&`
+.Pp
+See the
+.Sx Examples
+section for examples displaying publisher and repository properties.
+.Pp
+For a list of properties and the purpose and value of each property, see the
+.Cm set
+subcommand below.
+.Bl -tag -width Ar
+.It Fl F Ar format
+Specify an alternative output format.
+The value of format can be
+.Cm tsv
+.Pq Tab Separated Values ,
+.Cm json
+.Pq JavaScript Object Notation as a single line ,
+or
+.Cm json-formatted
+.Pq JavaScript Object Notation, formatted for readability .
+.It Fl H
 Omit the headers from the listing.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-p\fR \fIpublisher\fR
-.ad
-.sp .6
-.RS 4n
-Display the property information for the given publisher. The special value \fBall\fR displays the properties for all publishers. This option can be specified multiple times.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-s\fR \fIrepo_uri_or_path\fR
-.ad
-.sp .6
-.RS 4n
+.It Fl p Ar publisher
+Display the property information for the given publisher.
+The special value
+.Cm all
+displays the properties for all publishers.
+This option can be specified multiple times.
+.It Fl s Ar repo_uri_or_path
 Operate on the repository located at the given URI or file system path.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB--key\fR \fIssl_key\fR \fB--cert\fR \fIssl_cert\fR
-.ad
-.sp .6
-.RS 4n
-Use the \fB--key\fR option to specify a client SSL key file to use for package retrieval from an HTTPS repository. Use the \fB--cert\fR option to specify a client SSL certificate file to use for package retrieval from an HTTPS repository. This option pair can be specified multiple times.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB\fIsection/property\fR\fR
-.ad
-.sp .6
-.RS 4n
-Display values for only the specified properties, such as \fBpublisher/prefix\fR or \fBrepository/version\fR. See the \fBset\fR subcommand for a complete list of properties.
-.RE
-
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB\fBpkgrepo info\fR [\fB-F\fR \fIformat\fR] [\fB-H\fR] [\fB-p\fR \fIpublisher\fR]... \fB-s\fR \fIrepo_uri_or_path\fR [\fB--key\fR \fIssl_key\fR \fB--cert\fR \fIssl_cert\fR]...\fR
-.ad
-.sp .6
-.RS 4n
-Display a listing of the package publishers known by the repository. The listing includes the number of packages for each publisher, when the publisher's package data was last updated, and the status of the publisher's package data (such as whether it is currently being processed).
-.sp
-.ne 2
-.mk
-.na
-\fB-p\fR \fIpublisher\fR
-.ad
-.sp .6
-.RS 4n
-Only display the data for the given publisher. If not provided, the data for all publishers is displayed. This option can be specified multiple times.
-.RE
-
-For descriptions of all other options, see the \fBpkgrepo get\fR command above.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB\fBpkgrepo list\fR [\fB-F\fR \fIformat\fR] [\fB-H\fR] [\fB-p\fR \fIpublisher\fR]... \fB-s\fR \fIrepo_uri_or_path\fR [\fB--key\fR \fIssl_key\fR \fB--cert\fR \fIssl_cert\fR]... [\fIpkg_fmri_pattern\fR ...]\fR
-.ad
-.sp .6
-.RS 4n
-List the packages in the \fIrepo_uri_or_path\fR repository that match the specified \fIpkg_fmri_pattern\fR patterns. If no patterns are specified, all packages in the repository are listed. The \fIpkg_fmri_pattern\fR pattern can include the \fB?\fR and \fB*\fR characters as \fBglob\fR(3C)-style wildcards to match one or more packages.
-.sp
-In the default output, the first column contains the name of the publisher of the package. The second column contains the name of the package. The third column is a flag that shows the status of the package. A value of \fBo\fR in the status column indicates the package is obsolete. A value of \fBr\fR in the status column indicates the package has been renamed, which is a form of obsoletion.
-A value of \fBl\fR in the status column indicates that the package is legacy,
-meaning that it will be removed in the future.
-The fourth column contains the release and branch versions of the package. See \fBpkg\fR(5) for information about release and branch versions.
-.sp
-.ne 2
-.mk
-.na
-\fB-p\fR \fIpublisher\fR
-.ad
-.sp .6
-.RS 4n
-Only display the packages for the given publisher. If not provided, the packages for all publishers are listed. This option can be specified multiple times.
-.RE
-
-For descriptions of all other options, see the \fBpkgrepo get\fR command above.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB\fBpkgrepo contents\fR [\fB-m\fR [\fB-t\fR \fIaction_name\fR[,\fIaction_name\fR]...]... \fB-s\fR \fIrepo_uri_or_path\fR [\fB--key\fR \fIssl_key\fR \fB--cert\fR \fIssl_cert\fR]... [\fIpkg_fmri_pattern\fR...]\fR
-.ad
-.sp .6
-.RS 4n
-List all packages in the \fIrepo_uri_or_path\fR repository. If \fIpkg_fmri_pattern\fR is specified, display the contents (action attributes) of all matching packages in the repository.
-.sp
-.ne 2
-.mk
-.na
-\fB-m\fR
-.ad
-.sp .6
-.RS 4n
+.It Fl \&-key Ar ssl_key Fl \&-cert Ar ssl_cert
+Use the
+.Fl \&-key
+option to specify a client SSL key file to use for package retrieval from an
+HTTPS repository.
+Use the
+.Fl \&-cert
+option to specify a client SSL certificate file to use for package retrieval
+from an HTTPS repository.
+This option pair can be specified multiple times.
+.It Ar section/property
+Display values for only the specified properties, such as
+.Cm publisher/prefix
+or
+.Cm repository/version .
+See the
+.Cm set
+subcommand for a complete list of properties.
+.El
+.Ed
+.Pp
+.\" info
+.Nm Cm info
+.Op Fl F Ar format
+.Op Fl H
+.Oo Fl p Ar publisher Oc Ns \&...
+.Fl s Ar repo_uri_or_path
+.Op Fl \&-key Ar ssl_key Fl \&-cert Ar ssl_cert
+.Bd -ragged -offset Ds
+Display a listing of the package publishers known by the repository.
+The listing includes the number of packages for each
+publisher, when the publisher's package data was last updated, and
+the status of the publisher's package data
+.Pq such as whether it is currently being processed .
+.Bl -tag -width Ar
+.It Fl p Ar publisher
+Only display the data for the given publisher.
+If not provided, the data for all publishers is displayed.
+This option can be specified multiple times.
+.El
+.Pp
+For descriptions of all other options, see the
+.Nm Cm get
+get command above.
+.Ed
+.Pp
+.\" list
+.Nm Cm list
+.Op Fl F Ar format
+.Op Fl H
+.Oo Fl p Ar publisher Oc Ns \&...
+.Fl s Ar repo_uri_or_path
+.Op Fl \&-key Ar ssl_key Fl \&-cert Ar ssl_cert
+.Op Ar pkg_fmri_pattern No \&...
+.Bd -ragged -offset Ds
+List the packages in the repo_uri_or_path repository that match the
+specified
+.Ar pkg_fmri_pattern patterns .
+If no patterns are specified, all packages in the repository are listed.
+The
+.Ar pkg_fmri_pattern
+pattern can include the \&? and \&* characters as
+.Xr glob 3C
+wildcards to match one or more packages.
+.Pp
+In the default output, the first column contains the name of the
+publisher of the package.
+The second column contains the name of the package.
+The third column is a flag that shows the status of the package.
+A value of o in the status column indicates the package is obsolete.
+A value of r in the status column indicates the package has been renamed, which
+is a form of obsoletion.
+A value of l in the status column indicates that the package is legacy, meaning
+that it will be removed in the future.
+The fourth column contains the release and branch versions of the package.
+See
+.Xr pkg 5 for information about release and branch versions.
+.Bl -tag -width Ar
+.It Fl p Ar publisher
+Only display the data for the given publisher.
+If not provided, the data for all publishers is displayed.
+This option can be specified multiple times.
+.El
+.Pp
+For descriptions of all other options, see the
+.Nm Cm get
+get command above.
+.Ed
+.Pp
+.\" contents
+.Nm Cm contents
+.Op Fl m
+.Oo Fl t Ar action_name Ns Oo Cm \&, Ns Ar action_name Oc Ns \&... Oc \&...
+.Fl s Ar repo_uri_or_path
+.Op Fl \&-key Ar ssl_key Fl \&-cert Ar ssl_cert
+.Op Ar pkg_fmri_pattern No \&...
+.Bd -ragged -offset Ds
+List all packages in the
+.Ar repo_uri_or_path repository .
+If
+.Ar pkg_fmri_pattern
+is specified, display the contents
+.Pq action attributes
+of all matching packages in the repository.
+.Bl -tag -width Ar
+.It Fl m
 Display all attributes of actions in the specified packages.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-t\fR \fIaction_name\fR
-.ad
-.sp .6
-.RS 4n
-Display only the specified actions in the specified packages. The \fB-t\fR option can be specified multiple times, or multiple actions can be specified as the argument to one \fB-t\fR option by separating the action names with commas. The value of \fIaction_name\fR is one of the actions listed in  "Actions" in the \fBpkg\fR(5) man page, such as \fBfile\fR, \fBdir\fR, \fBdriver\fR, \fBdepend\fR, or \fBset\fR.
-.RE
-
-For descriptions of all other options, see the \fBpkgrepo get\fR command above.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB\fBpkgrepo rebuild\fR [\fB-p\fR \fIpublisher\fR]... \fB-s\fR \fIrepo_uri_or_path\fR [\fB--key\fR \fIssl_key\fR \fB--cert\fR \fIssl_cert\fR]... [\fB--no-catalog\fR] [\fB--no-index\fR]\fR
-.ad
-.sp .6
-.RS 4n
-Discard all catalog, search, and other cached information found in the repository, and then recreate it based on the current contents of the repository.
-.sp
-.ne 2
-.mk
-.na
-\fB-p\fR \fIpublisher\fR
-.ad
-.sp .6
-.RS 4n
-Perform the operation only for the given publisher. If not provided, or if the special value \fBall\fR is specified, the operation is performed for all publishers. This option can be specified multiple times.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB--no-catalog\fR
-.ad
-.sp .6
-.RS 4n
+.It Fl t Ar action_name
+Display only the specified actions in the specified packages.
+The
+.Fl t
+option can be specified multiple times, or multiple actions can be specified as
+the argument to one
+.Fl t
+option by separating the action names with commas.
+The value of action_name is one of the actions listed in
+.Em Actions
+in the
+.Xr pkg 5
+man page, such as
+.Cm file , Cm dir , Cm driver , Cm depend ,
+or
+.Cm set .
+.El
+.Pp
+For descriptions of all other options, see the
+.Nm Cm get
+get command above.
+.Ed
+.Pp
+.\" rebuild
+.Nm Cm rebuild
+.Oo Fl p Ar publisher Oc Ns \&...
+.Fl s Ar repo_uri_or_path
+.Op Fl \&-key Ar ssl_key Fl \&-cert Ar ssl_cert
+.Op Fl \&-no-catalog
+.Op Fl \&-no-index
+.Bd -ragged -offset Ds
+Discard all catalog, search, and other cached information found in the
+repository, and then recreate it based on the current contents of the
+repository.
+.Bl -tag -width Ar
+.It Fl p Ar publisher
+Perform the operation only for the given publisher.
+If not provided, or if the special value
+.Cm all
+is specified, the operation is performed for all publishers.
+This option can be specified multiple times.
+.It Fl \&-no-catalog
 Do not rebuild package data.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB--no-index\fR
-.ad
-.sp .6
-.RS 4n
-Do not rebuild search indexes.
-.RE
-
-For descriptions of all other options, see the \fBpkgrepo get\fR command above.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB\fBpkgrepo refresh\fR [\fB-p\fR \fIpublisher\fR]... \fB-s\fR \fIrepo_uri_or_path\fR [\fB--key\fR \fIssl_key\fR \fB--cert\fR \fIssl_cert\fR]... [\fB--no-catalog\fR] [\fB--no-index\fR]\fR
-.ad
-.sp .6
-.RS 4n
-Catalog any new packages found in the repository and update all search indexes. This is intended for use with deferred publication (\fB--no-catalog\fR or \fB--no-index\fR options of \fBpkgsend\fR).
-.sp
-.ne 2
-.mk
-.na
-\fB-p\fR \fIpublisher\fR
-.ad
-.sp .6
-.RS 4n
-Perform the operation only for the given publisher. If not provided, or if the special value \fBall\fR is specified, the operation is performed for all publishers. This option can be specified multiple times.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB--no-catalog\fR
-.ad
-.sp .6
-.RS 4n
+.It Fl \&-no-index
+Do not rebuild search indices.
+.El
+.Pp
+For descriptions of all other options, see the
+.Nm Cm get
+get command above.
+.Ed
+.Pp
+.\" refresh
+.Nm Cm refresh
+.Oo Fl p Ar publisher Oc Ns \&...
+.Fl s Ar repo_uri_or_path
+.Op Fl \&-key Ar ssl_key Fl \&-cert Ar ssl_cert
+.Op Fl \&-no-catalog
+.Op Fl \&-no-index
+.Bd -ragged -offset Ds
+Catalogue any new packages found in the repository and update all search
+indices.
+This is intended for use with deferred publication
+.Po
+.Fl \&-no-catalog
+or
+.Fl \&-no-index
+options of
+.Xr pkgsend 1
+.Pc .
+.Bl -tag -width Ar
+.It Fl p Ar publisher
+Perform the operation only for the given publisher.
+If not provided, or if the special value
+.Cm all
+is specified, the operation is performed for all publishers.
+This option can be specified multiple times.
+.It Fl \&-no-catalog
 Do not add any new packages.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB--no-index\fR
-.ad
-.sp .6
-.RS 4n
-Do not update search indexes.
-.RE
-
-For descriptions of all other options, see the \fBpkgrepo get\fR command above.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB\fBpkgrepo remove\fR [\fB-n\fR] [\fB-p\fR \fIpublisher\fR]... \fB-s\fR \fIrepo_uri_or_path\fR \fIpkg_fmri_pattern\fR ...\fR
-.ad
-.sp .6
-.RS 4n
-Remove packages that match the specified \fIpkg_fmri_pattern\fR pattern from the repository, including any files they reference that are not in use by any other package. The \fIpkg_fmri_pattern\fR pattern can include the \fB?\fR and \fB*\fR characters as \fBglob\fR(3C)-style wildcards to match one or more packages.
-.LP
-Note -
-.sp
-.RS 2
-All search index data for related publishers is removed.
-.RE
+.It Fl \&-no-index
+Do not update search indices.
+.El
+.Pp
+For descriptions of all other options, see the
+.Nm Cm get
+get command above.
+.Ed
+.Pp
+.\" remove
+.Nm Cm remove
+.Op Fl n
+.Op Fl d Ar YYYYMMDD
+.Oo Fl p Ar publisher Oc Ns \&...
+.Fl s Ar repo_uri_or_path
+.Ar pkg_fmri_pattern \&...
+.Bd -ragged -offset Ds
+Remove packages that match the specified
+.Ar pkg_fmri_pattern
+pattern from the repository, including any files they reference that are
+not in use by any other package.
+The
+.Ar pkg_fmri_pattern
+pattern can include the \&? and \&* characters as
+.Xr glob 3C
+wildcards to match one or more packages.
+.Pp
+Note; all search index data for related publishers is removed.
 This subcommand can be used only with file system based repositories.
-.LP
-Caution -
-.sp
-.RS 2
-This operation is not reversible and should not be used while other clients are accessing the repository since it might cause them to fail during retrieval operations.
-.RE
-.sp
-.ne 2
-.mk
-.na
-\fB-n\fR
-.ad
-.sp .6
-.RS 4n
-Perform a trial run of the operation with no package changes made. A list of the packages to be removed is displayed before exiting.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-p\fR \fIpublisher\fR
-.ad
-.sp .6
-.RS 4n
-Only remove matching packages for the given publisher. If not provided, any matching packages are removed for all publishers. This option can be specified multiple times.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-s\fR \fIrepo_uri_or_path\fR
-.ad
-.sp .6
-.RS 4n
+.Pp
+Caution; this operation is not reversible and should not be used while other
+clients are accessing the repository since it might cause them to fail during
+retrieval operations.
+.Bl -tag -width Ar
+.It Fl d Ar YYYYMMDD
+Filter the list of packages to be removed to those which have the provided
+.Ar YYYYMMDD
+date as part of their full package version.
+.It Fl n
+Perform a trial run of the operation with no package changes made.
+A list of the packages to be removed is displayed before exiting.
+.It Fl p
+Only remove matching packages for the given publisher.
+If not provided, any matching packages are removed for all publishers.
+This option can be specified multiple times.
+.It Fl s Ar repo_uri_or_path
 Operate on the repository located at the given URI or file system path.
-.RE
-
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB\fBpkgrepo set\fR [\fB-p\fR \fIpublisher\fR]... \fB-s\fR \fIrepo_uri_or_path\fR \fIsection/property\fR=[\fIvalue\fR] ...\fR
-.ad
-.br
-.na
-\fB\fBpkgrepo set\fR [\fB-p\fR \fIpublisher\fR]... \fB-s\fR \fIrepo_uri_or_path\fR \fIsection/property\fR=([\fIvalue\fR]) ...\fR
-.ad
-.sp .6
-.RS 4n
+.El
+.Ed
+.Pp
+.\" set
+.Nm Cm set
+.Oo Fl p Ar publisher Oc Ns \&...
+.Fl s Ar repo_uri_or_path
+.Ar section/property Ns Cm \&= Ns Cm \&( Ns Oo value Oc Ns Cm \&) No \&...
+.Bd -ragged -offset Ds
 Set the value of the specified properties for the repository or publisher.
-.sp
+.Pp
 This subcommand can be used only with file system based repositories.
-.sp
-.ne 2
-.mk
-.na
-\fB-p\fR \fIpublisher\fR
-.ad
-.sp .6
-.RS 4n
-Only set property data for the given publisher. If the publisher does not already exist, it is added. The special value \fBall\fR can be used to set the property for all publishers.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-s\fR \fIrepo_uri_or_path\fR
-.ad
-.sp .6
-.RS 4n
+.Bl -tag -width Ar
+.It Fl p Ar publisher
+Perform the operation only for the given publisher.
+If not provided, or if the special value
+.Cm all
+is specified, the operation is performed for all publishers.
+.It Fl s Ar repo_uri_or_path
 Operate on the repository located at the given URI or file system path.
-.RE
-
+.El
+.Pp
 Properties and values can be specified using one of the following forms:
-.sp
-.ne 2
-.mk
-.na
-\fB\fIsection\fR/\fIproperty\fR=\fR
-.ad
-.sp .6
-.RS 4n
+.Bl -tag -width Ar
+.It Ar section Ns \&/ Ns Ar property Ns Cm =
 Clear the property value.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB\fIsection\fR/\fIproperty\fR=\fIvalue\fR\fR
-.ad
-.sp .6
-.RS 4n
+.It Ar section Ns \&/ Ns Ar property Ns Cm = Ns Ar value
 Replace the property value with the given value.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB\fIsection\fR/\fIproperty\fR=(\fIvalue1\fR \fIvalue2\fR \fIvalueN\fR)\fR
-.ad
-.sp .6
-.RS 4n
+.It Ar section Ns \&/ Ns Ar property Ns Cm = Ns \&( Ns Ar value1 Ar valueN \&)
 Replace the property value with the list of values.
-.RE
-
-For repository versions 3 and 4, the following properties can be set for the repository:
-.sp
-.ne 2
-.mk
-.na
-\fBpublisher/prefix\fR
-.ad
-.sp .6
-.RS 4n
-A string that represents the name of the default publisher. The first character must be a-z, A-Z, or 0-9. The remainder of the string can only contain the characters 0-9, -, ., a-z, and A-Z. This value indicates the publisher that should be used when more than one publisher's packages are present, or when packages are published to the repository and a publisher is not specified.
-.RE
-
-For repository versions 3 and 4, the following properties can be set for individual publishers in the repository. Use the \fB-p\fR option to specify at least one publisher when you set these properties:
-.sp
-.ne 2
-.mk
-.na
-\fBpublisher/alias\fR
-.ad
-.sp .6
-.RS 4n
-A string that represents the default alias that clients should use when adding a publisher using the repository's configuration data. The first character must be a-z, A-Z, or 0-9. The remainder of the string can only contain the characters 0-9, -, ., a-z, and A-Z.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fBrepository/check-certificate-revocation\fR
-.ad
-.sp .6
-.RS 4n
-A boolean to check whether a certificate has been revoked. When this property is set to \fBTrue\fR, the \fBpkgrepo verify\fR and \fBpkgrepo fix\fR commands attempt to contact any CRL distribution points in the certificates used for signature verification to determine whether the certificate has been revoked since being issued. The default value is \fBFalse\fR. This property is only used by the \fBverify\fR and \fBfix\fR subcommands to validate the contents of the repository. This property does not affect client settings. This value should be the same as the corresponding \fBpkg\fR(1) property value.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fBrepository/collection_type\fR
-.ad
-.sp .6
-.RS 4n
-Can have the value \fBcore\fR or \fBsupplemental\fR, indicating the type of packages offered in this repository.
-.sp
-The \fBcore\fR type indicates that the repository contains all of the dependencies declared by packages in the repository. The \fBcore\fR type is primarily used for operating system repositories.
-.sp
-The \fBsupplemental\fR type indicates that the repository contains packages that rely on or are intended to be used with packages located in another repository.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fBrepository/description\fR
-.ad
-.sp .6
-.RS 4n
-A paragraph of plain text that describes the purpose and contents of the repository.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fBrepository/detailed_url\fR
-.ad
-.sp .6
-.RS 4n
-A URI that represents the location of a document (such as a web page) that provides additional information about the repository.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fBrepository/format\fR
-.ad
-.sp .6
-.RS 4n
-The format used for storing catalogue files. The default value is \fIascii\fR
-which is the legacy format and should not be changed unless the repository
-will be accessed solely by updated clients. The other available value is
-\fIutf8\fR which allows clients to parse the catalogues faster and with less
-memory overhead.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fBrepository/legal_uris\fR
-.ad
-.sp .6
-.RS 4n
-A list of locations (URIs) for documents that provide additional legal information about the repository.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fBrepository/mirrors\fR
-.ad
-.sp .6
-.RS 4n
-A list of locations (URIs) of repositories that contain a copy of the repository's package content but not the package metadata.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fBrepository/name\fR
-.ad
-.sp .6
-.RS 4n
+.El
+.Pp
+For repository versions 3 and 4, the following properties can be set for the
+repository:
+.Bl -tag -width Ar
+.It Cm publisher/prefix
+A string that represents the name of the default publisher.
+The first character must be a-z, A-Z, or 0-9.
+The remainder of the string can only contain the characters 0-9, -, ., a-z, and
+A-Z.
+This value indicates the publisher that should be used when more than one
+publisher's packages are present, or when packages are published to the
+repository and a publisher is not specified.
+.El
+.Pp
+For repository versions 3 and 4, the following properties can be set for
+individual publishers in the repository.
+Use the
+.Fl p
+option to specify at least one publisher when you set these properties:
+.Bl -tag -width Ar
+.It Cm publisher/alias
+A string that represents the default alias that clients should use when adding
+a publisher using the repository's configuration data.
+The first character must be a-z, A-Z, or 0-9.
+The remainder of the string can only contain the characters 0-9, -, ., a-z, and
+A-Z.
+.It Cm repository/check-certificate-revocation
+A boolean to check whether a certificate has been revoked.
+When this property is set to True, the
+.Nm Cm verify
+and
+.Nm Cm fix
+commands attempt to contact any CRL distribution points in the certificates
+used for signature verification to determine whether the certificate has been
+revoked since being issued.
+The default value is False.
+This property is only used by the verify and fix subcommands to validate the
+contents of the repository.
+This property does not affect client settings.
+This value should be the same as the corresponding
+.Xr pkg 1
+property value.
+.It Cm repository/collection_type
+Can have the value core or supplemental, indicating the type of packages
+offered in this repository.
+.Pp
+The core type indicates that the repository contains all of the dependencies
+declared by packages in the repository.
+The core type is primarily used for operating system repositories.
+.Pp
+The supplemental type indicates that the repository contains packages that rely
+on or are intended to be used with packages located in another repository.
+.It Cm repository/description
+A paragraph of plain text that describes the purpose and contents of the
+repository.
+.It Cm repository/detailed_url
+A URI that represents the location of a document
+.Pq such as a web page
+that provides additional information about the repository.
+.It Cm repository/format
+The format used for storing catalogue files.
+The default value is
+.Cm ascii
+which is the legacy format and should not be changed unless the repository will
+be accessed solely by updated clients.
+The other available value is
+.Cm utf8
+which allows clients to parse the catalogues faster and with less memory
+overhead.
+.It Cm repository/legal_uris
+A list of locations
+.Pq URIs
+for documents that provide additional legal information about the repository.
+.It Cm repository/mirrors
+A list of locations
+.Pq URIs
+of repositories that contain a copy of the repository's package content but not
+the package metadata.
+.It Cm repository/name
 A plain text string that contains the name of the repository.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fBrepository/origins\fR
-.ad
-.sp .6
-.RS 4n
-A list of locations (URIs) of repositories that contain a complete copy of the repository's package metadata and content.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fBrepository/refresh_seconds\fR
-.ad
-.sp .6
-.RS 4n
-An integer value that represents the number of seconds clients should wait before checking the repository for updated package data after each update check.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fBrepository/registration_uri\fR
-.ad
-.sp .6
-.RS 4n
-A URI that represents the location of a resource that must be used to obtain credentials for access to the repository. A registration web page is one example.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fBrepository/related_uris\fR
-.ad
-.sp .6
-.RS 4n
-A list of locations (URIs) of repositories that contain packages that users might be interested in.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fBrepository/signature-required-names\fR
-.ad
-.sp .6
-.RS 4n
-A list of names that must be seen as common names of certificates while validating the signatures of a package. This property is only used by the \fBverify\fR and \fBfix\fR subcommands to validate the contents of the repository. This property does not affect client settings. These values should be the same as the corresponding \fBpkg\fR(1) property values.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fBrepository/trust-anchor-directory\fR
-.ad
-.sp .6
-.RS 4n
-The absolute path name of the directory that contains the trust anchors for packages in this repository. If not specified, \fB/etc/certs/CA/\fR is used. This property is only used by the \fBverify\fR and \fBfix\fR subcommands to validate the contents of the repository. This property does not affect client settings. This value should be the same as the corresponding \fBpkg\fR(1) property value.
-.RE
-
-Properties not documented here, but listed in the output of the \fBget\fR subcommand, are reserved for internal use and should not be set.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fBpkgrepo verify\fR [\fB-p\fR \fIpublisher\fR]... \fB-s\fR \fIrepo_uri_or_path\fR
-.ad
-.sp .6
-.RS 4n
-Verify that the following attributes of the package repository contents are correct:
-.RS +4
-.TP
-.ie t \(bu
-.el o
+.It Cm repository/origins
+A list of locations
+.Pq URIs
+of repositories that contain a complete copy of the repository's package
+metadata and content.
+.It Cm repository/refresh_seconds
+An integer value that represents the number of seconds clients should wait
+before checking the repository for updated package data after each update
+check.
+.It Cm repository/registration_uri
+A URI that represents the location of a resource that must be used to obtain
+credentials for access to the repository.
+A registration web page is one example.
+.It Cm repository/related_uris
+A list of locations
+.Pq URIs
+of repositories that contain packages that users might be interested in.
+.It Cm repository/signature-required-names
+A list of names that must be seen as common names of certificates while
+validating the signatures of a package.
+This property is only used by the verify and fix subcommands to validate the
+contents of the repository.
+This property does not affect client settings.
+These values should be the same as the corresponding
+.Xr pkg 1 property values.
+.It Cm repository/trust-anchor-directory
+The absolute path name of the directory that contains the trust anchors for
+packages in this repository.
+If not specified,
+.Pq /etc/ssl/pkg/
+is used.
+This property is only used by the verify and fix subcommands to validate the
+contents of the repository.
+This property does not affect client settings.
+This value should be the same as the corresponding
+.Xr pkg 1
+property value.
+.El
+.Pp
+Properties not documented here, but listed in the output of the
+.Cm get
+subcommand, are reserved for internal use and should not be set.
+.Ed
+.Pp
+.\" verify
+.Nm Cm verify
+.Oo Fl p Ar publisher Oc Ns \&...
+.Fl s Ar repo_uri_or_path
+.Bd -ragged -offset Ds
+Verify that the following attributes of the package repository contents are
+correct:
+.Bl -bullet -width Ds -offset xxxx
+.It
 File checksums
-.RE
-.RS +4
-.TP
-.ie t \(bu
-.el o
+.It
 File permissions
-.sp
-The path leading to the repository is also checked to ensure that the \fBpkg5srv\fR user can read the repository contents. This check can be necessary for repositories that are made available using the \fBsvc:/application/pkg/server\fR service, or using the \fBsvc:/application/pkg/system-repository\fR service when the system has non-global zones.
-.RE
-.RS +4
-.TP
-.ie t \(bu
-.el o
+.It
+The path leading to the repository is also checked to ensure that the pkg5srv
+user can read the repository contents.
+This check can be necessary for repositories that are made available using the
+svc:/application/pkg/server service, or using the
+svc:/application/pkg/system-repository service when the system has non-global
+zones.
+.It
 Package manifest permissions
-.RE
-.RS +4
-.TP
-.ie t \(bu
-.el o
+.It
 Package manifest content
-.RE
-.RS +4
-.TP
-.ie t \(bu
-.el o
+.It
 Package signatures
-.sp
-Package manifest signatures are calculated based on the values of the \fBrepository/signature-required-names\fR, \fBrepository/trust-anchor-directory\fR, and \fBrepository/check-certificate-revocation\fR properties.
-.RE
-Errors are emitted to \fBstdout\fR. The \fBpkgrepo\fR command exits with a non-zero return code if any errors are emitted.
-.sp
+.Pp
+Package manifest signatures are calculated based on the
+values of the
+.Cm repository/signature-required-names ,
+.Cm repository/trust-anchor-directory ,
+and
+.Cm repository/check-certificate-revocation
+properties.
+.El
+.Pp
+Errors are emitted to stdout.
+The command exits with a non-zero return code if any errors are emitted.
+.Pp
 This subcommand can be used only with version 4 file system based repositories.
-.sp
-.ne 2
-.mk
-.na
-\fB-p\fR \fIpublisher\fR
-.ad
-.sp .6
-.RS 4n
-Perform the operation only for the specified publisher. If no publisher is specified, or if the special value \fBall\fR is specified, the operation is performed for all publishers. This option can be specified multiple times.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-s\fR \fIrepo_uri_or_path\fR
-.ad
-.sp .6
-.RS 4n
+.Bl -tag -width Ar
+.It Fl p Ar publisher
+Perform the operation only for the given publisher.
+If not provided, or if the special value
+.Cm all
+is specified, the operation is performed for all publishers.
+This option can be specified multiple times.
+.It Fl s Ar repo_uri_or_path
 Operate on the repository located at the given URI or file system path.
-.RE
-
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fBpkgrepo fix\fR [\fB-v\fR] [\fB-p\fR \fIpublisher\fR]... \fB-s\fR \fIrepo_uri_or_path\fR
-.ad
-.sp .6
-.RS 4n
-Fix the contents of a repository by first verifying the repository, and then moving any invalid repository contents into a quarantine directory within the repository.
-.sp
-If repository errors are found, a repository rebuild is automatically performed. If any errors are found, a message is emitted to \fBstdout\fR showing which packages must be re-imported using \fBpkgsend\fR(1) or \fBpkgrecv\fR(1) in order to restore the repository contents.
-.sp
+.El
+.Ed
+.Pp
+.\" fix
+.Nm Cm fix
+.Op Fl v
+.Oo Fl p Ar publisher Oc Ns \&...
+.Fl s Ar repo_uri_or_path
+.Bd -ragged -offset Ds
+Fix the contents of a repository by first verifying the repository, and then
+moving any invalid repository contents into a quarantine directory within the
+repository.
+.Pp
+If repository errors are found, a repository rebuild is automatically
+performed.
+If any errors are found, a message is emitted to stdout showing which packages
+must be re-imported using
+.Xr pkgsend 1 or
+.Xr pkgrecv 1 in order to restore the repository contents.
+.Pp
 This subcommand can be used only with version 4 file system based repositories.
-.sp
-.ne 2
-.mk
-.na
-\fB-v\fR
-.ad
-.sp .6
-.RS 4n
+.Bl -tag -width Ar
+.It Fl v
 Include output detailing the errors found during repository verification.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-p\fR \fIpublisher\fR
-.ad
-.sp .6
-.RS 4n
-Perform the operation only for the specified publisher. If no publisher is specified, or if the special value \fBall\fR is specified, the operation is performed for all publishers. This option can be specified multiple times.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-s\fR \fIrepo_uri_or_path\fR
-.ad
-.sp .6
-.RS 4n
+.It Fl p Ar publisher
+Perform the operation only for the given publisher.
+If not provided, or if the special value
+.Cm all
+is specified, the operation is performed for all publishers.
+This option can be specified multiple times.
+.It Fl s Ar repo_uri_or_path
 Operate on the repository located at the given URI or file system path.
-.RE
-
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fBpkgrepo diff\fR [\fB-vq\fR] [\fB--strict\fR] [\fB--parsable\fR] [\fB-p\fR publisher]... \fB-s\fR first_repo_uri_or_path... [\fB--key\fR ssl_key \fB-cert\fR ssl_cert]... \fB-s\fR second_repo_uri_or_path... [\fB--key\fR ssl_key \fB-cert\fR ssl_cert]...
-.ad
-.sp .6
-.RS 4n
+.El
+.Ed
+.Pp
+.\" diff
+.Nm Cm diff
+.Op Fl vq
+.Op Fl \&-strict
+.Op Fl \&-parsable
+.Oo Fl p Ar publisher Oc Ns \&...
+.Fl s Ar first_repo_uri_or_path
+.Op Fl \&-key Ar ssl_key Fl \&-cert Ar ssl_cert
+.Fl s Ar second_repo_uri_or_path
+.Op Fl \&-key Ar ssl_key Fl \&-cert Ar ssl_cert
+.Bd -ragged -offset Ds
 Compare two repositories and show the differences.
-.sp
-A \fB-\fR symbol in the beginning of an output line indicates the item was
-found only in the first repository, while a \fB+\fR symbol indicates the item
-was found only in the second repository. No symbol at the start of a line
-means that it is a common item.
-
-.sp
-.ne 2
-.mk
-.na
-\fB-v\fR
-.ad
-.sp .6
-.RS 4n
+.Pp
+A
+.Sy \&-
+symbol in the beginning of an output line indicates the item was found only in
+the first repository, while a
+.Sy \&+
+symbol indicates the item was found only in the second repository.
+No symbol at the start of a line means that it is a common item.
+.Bl -tag -width Ar
+.It Fl v
 Include output detailing the comparison including per-fmri output.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB--strict\fR
-.ad
-.sp .6
-.RS 4n
-Compare catalog last modified time stamp. This is useful to determine whether
-one repository is an exact clone of another.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB--parsable\fR
-.ad
-.sp .6
-.RS 4n
+.It Fl \&-strict
+Compare catalog last modified time stamp.
+This is useful to determine whether one repository is an exact clone of another.
+.It Fl \&-parsable
 Generate parsable output in JSON format.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-p\fR \fIpublisher\fR
-.ad
-.sp .6
-.RS 4n
-Perform the operation only for the specified publisher. If no publisher is specified, or if the special value \fBall\fR is specified, the operation is performed for all publishers. This option can be specified multiple times.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-s\fR \fIrepo_uri_or_path\fR
-.ad
-.sp .6
-.RS 4n
+.It Fl p Ar publisher
+Perform the operation only for the given publisher.
+If not provided, or if the special value
+.Cm all
+is specified, the operation is performed for all publishers.
+This option can be specified multiple times.
+.It Fl s Ar repo_uri_or_path
 Operate on the repository located at the given URI or file system path.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB--key\fR \fIssl_key\fR \fB--cert\fR \fIssl_cert\fR
-.ad
-.sp .6
-.RS 4n
-Use the \fB--key\fR option to specify a client SSL key file to use for package retrieval from an HTTPS repository. Use the \fB--cert\fR option to specify a client SSL certificate file to use for package retrieval from an HTTPS repository. This option pair can be specified multiple times.
-.RE
-
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fBpkgrepo help\fR
-.ad
-.sp .6
-.RS 4n
+.It Fl \&-key Ar ssl_key Fl \&-cert Ar ssl_cert
+Use the
+.Fl \&-key
+option to specify a client SSL key file to use for package retrieval from an
+HTTPS repository.
+Use the
+.Fl \&-cert
+option to specify a client SSL certificate file to use for package retrieval
+from an HTTPS repository.
+This option pair can be specified multiple times.
+.El
+.Ed
+.Pp
+.\" help
+.Nm Cm help
+.Bd -ragged -offset Ds
 Display a usage message.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fBpkgrepo version\fR
-.ad
-.sp .6
-.RS 4n
-Display a unique string that identifies the version of the \fBpkg\fR(5) system. The values produced by the \fBversion\fR operation are not sortable and are not safe for comparison beyond equality.
-.RE
-
-.SH EXAMPLES
-.LP
-\fBExample 1 \fRCreate a Package Repository
-.sp
-.in +2
-.nf
-$ \fBpkgrepo create /my/repository\fR
-.fi
-.in -2
-.sp
-
-.LP
-\fBExample 2 \fRDisplay Information
-.sp
-.LP
+.Ed
+.Pp
+.\" version
+.Nm Cm version
+.Bd -ragged -offset Ds
+Display a unique string that identifies the version of the
+.Xr pkg 5
+system.
+The values produced by the version operation are not sortable and are not safe
+for comparison beyond equality.
+.Ed
+.Sh EXAMPLES
+.Bl -tag -width 6
+.\"
+.It Sy Example 1 No Create a Package Repository
+.Bd -literal
+    $ pkgrepo create /my/repository
+.Ed
+.It Sy Example 2 No Display Information
+.Pp
 Display a summary of publishers and the number of packages in a repository.
+.Bd -literal
+    $ pkgrepo info -s /my/repository
+    PUBLISHER   PACKAGES STATUS UPDATED
+    example.com 5        online 2011-07-22T18:09:09.769106Z
 
-.sp
-.in +2
-.nf
-$ \fBpkgrepo info -s /my/repository\fR
-PUBLISHER   PACKAGES STATUS UPDATED
-example.com 5        online 2011-07-22T18:09:09.769106Z
-$ \fBpkgrepo info -s https://pkg.omnios.org/r151022/core/\fR
-PUBLISHER PACKAGES STATUS           UPDATED
-omnios    697      online           2017-07-11T21:58:08.054608Z
-.fi
-.in -2
-.sp
-
-.LP
-\fBExample 3 \fRRebuild Catalogs and Search Data
-.sp
-.LP
+    $ pkgrepo info -s https://pkg.omnios.org/r151038/core/
+    PUBLISHER PACKAGES STATUS           UPDATED
+    omnios    863      online           2021-11-17T09:27:46.600621Z
+.Ed
+.It Sy Example 3 No Rebuild Catalogs and Search Data
+.Pp
 Rebuild the repository's catalogs and search data.
-
-.sp
-.in +2
-.nf
-$ \fBpkgrepo rebuild -s /my/repository\fR
-.fi
-.in -2
-.sp
-
-.LP
-\fBExample 4 \fRRefresh Catalogs and Search Data
-.sp
-.LP
+.Bd -literal
+    $ pkgrepo rebuild -s /my/repository
+.Ed
+.It Sy Example 4 No Refresh Catalogs and Search Data
+.Pp
 Refresh the repository's catalogs and search data.
+.Bd -literal
+    $ pkgrepo refresh -s /my/repository
+    $ pkgrepo refresh -s http://example.com/repository
+.Ed
+.It Sy Example 5 No Display All Repository Properties
+.Bd -literal
+    $ pkgrepo get -s /my/repository
+    SECTION    PROPERTY VALUE
+    publisher  prefix   ""
+    repository version  4
 
-.sp
-.in +2
-.nf
-$ \fBpkgrepo refresh -s /my/repository\fR
-$ \fBpkgrepo refresh -s http://example.com/repository\fR
-.fi
-.in -2
-.sp
-
-.LP
-\fBExample 5 \fRDisplay All Repository Properties
-.sp
-.in +2
-.nf
-$ \fBpkgrepo get -s /my/repository\fR
-SECTION    PROPERTY VALUE
-publisher  prefix   ""
-repository version  4
-$ \fBpkgrepo get -s https://pkg.omnios.org/r151022/core/\fR
-SECTION    PROPERTY                     VALUE
-publisher  prefix                       omnios
-repository check-certificate-revocation False
-repository signature-required-names     ()
-repository trust-anchor-directory       /etc/ssl/pkg/
-repository version                      4
-.fi
-.in -2
-.sp
-
-.LP
-\fBExample 6 \fRDisplay All Publisher Properties
-.sp
-.in +2
-.nf
-$ \fBpkgrepo get -s https://pkg.omnios.org/r151022/core/ -p all\fR
-PUBLISHER SECTION    PROPERTY         VALUE
-omnios    publisher  alias
-omnios    publisher  prefix           omnios
-omnios    repository collection-type  core
-omnios    repository description      IPS\ Packages\ for\ OmniOS\ r151022\ core
-omnios    repository legal-uris       ()
-omnios    repository mirrors          ()
-omnios    repository name             OmniOS\ r151022\ core
-omnios    repository origins          ()
-omnios    repository refresh-seconds
-omnios    repository registration-uri ""
-omnios    repository related-uris     ()
-.fi
-.in -2
-.sp
-
-.LP
-\fBExample 7 \fRSet the Default Publisher
-.sp
-.in +2
-.nf
-$ \fBpkgrepo set -s /my/repository publisher/prefix=example.com\fR
-.fi
-.in -2
-.sp
-
-.LP
-\fBExample 8 \fRSet a Publisher Property
-.sp
-.in +2
-.nf
-$ \fBpkgrepo set -s /my/repository -p example.com \e\fR
-\fBrepository/origins=http://example.com/repository\fR
-.fi
-.in -2
-.sp
-
-.LP
-\fBExample 9 \fRAdd a New Publisher To the Repository
-.sp
-.in +2
-.nf
-$ \fBpkgrepo add-publisher -s /my/repository example.com\fR
-.fi
-.in -2
-.sp
-
-.SH EXIT STATUS
-.sp
-.LP
-The following exit values are returned:
-.sp
-.ne 2
-.mk
-.na
-\fB0\fR
-.ad
-.RS 6n
-.rt
+    $ pkgrepo get -s https://pkg.omnios.org/r151040/core/
+    SECTION    PROPERTY                     VALUE
+    publisher  prefix                       omnios
+    repository check-certificate-revocation False
+    repository signature-required-names     ()
+    repository trust-anchor-directory       /etc/ssl/pkg/
+    repository version                      4
+.Ed
+.It Sy Example 6 No Display All Publisher Properties
+.Bd -literal
+    $ pkgrepo get -s https://pkg.omnios.org/r151040/core/ -p all
+    PUBLISHER SECTION    PROPERTY         VALUE
+    omnios    publisher  alias
+    omnios    publisher  prefix           omnios
+    omnios    repository collection-type  core
+    omnios    repository description      Packages\ for\ OmniOS\ r151040
+    omnios    repository legal-uris       ()
+    omnios    repository mirrors          ()
+    omnios    repository name             OmniOS\ r151040\ core
+    omnios    repository origins          ()
+    omnios    repository refresh-seconds
+    omnios    repository registration-uri ""
+    omnios    repository related-uris     ()
+.Ed
+.It Sy Example 7 No Set the Default Publisher
+.Bd -literal
+    $ pkgrepo set -s /my/repository publisher/prefix=example.com
+.Ed
+.It Sy Example 8 No Set a Publisher Property
+.Bd -literal
+    $ pkgrepo set -s /my/repository -p example.com \e
+	repository/origins=http://example.com/repository
+.Ed
+.It Sy Example 9 No Add a New Publisher To the Repository
+.Bd -literal
+    $ pkgrepo add-publisher -s /my/repository example.com
+.Ed
+.El
+.Sh EXIT STATUS
+.Bl -tag -width Ds
+.It Sy 0
 Command succeeded (or no differences encountered for pkgrepo diff).
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB1\fR
-.ad
-.RS 6n
-.rt
+.It Sy 1
 An error occurred.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB2\fR
-.ad
-.RS 6n
-.rt
+.It Sy 2
 Invalid command line options were specified.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB3\fR
-.ad
-.RS 6n
-.rt
+.It Sy 3
 Multiple operations were requested, but only some of them succeeded.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB5\fR
-.ad
-.RS 6n
-.rt
-Differences found for pkgrepo diff.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB4\fR
-.ad
-.RS 6n
-.rt
+.It Sy 4
 No changes were made, nothing to do.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB99\fR
-.ad
-.RS 6n
-.rt
+.It Sy 5
+Differences found for pkgrepo diff.
+.It Sy 99
 An unanticipated exception occurred.
-.RE
-
-.SH ATTRIBUTES
-.sp
-.LP
-See \fBattributes\fR(5) for descriptions of the following attributes:
-.sp
-
-.sp
-.TS
-tab() box;
-cw(2.75i) |cw(2.75i)
-lw(2.75i) |lw(2.75i)
-.
-ATTRIBUTE TYPEATTRIBUTE VALUE
-_
-Availability\fBpackage/pkg\fR
-_
-Interface StabilityUncommitted
-.TE
-
-.SH SEE ALSO
-.sp
-.LP
-\fBpkg\fR(1), \fBpkgrecv\fR(1), \fBpkgsend\fR(1), \fBpkg.depotd\fR(1M), \fBpkg\fR(5)
-.sp
+.El
+.Sh INTERFACE STABILITY
+The command line interface of
+.Nm
+is
+.Sy Uncommitted .
+The output of
+.Nm
+is
+.Sy Not-An-Interface
+and may change at any time.
+.Sh SEE ALSO
+.Xr pkg 1 ,
+.Xr pkgrecv 1 ,
+.Xr pkgsend 1 ,
+.Xr pkg.depotd 1M ,
+.Xr glob 3C ,
+.Xr pkg 5
