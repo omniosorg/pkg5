@@ -219,6 +219,11 @@ Available options are:
 .Sy vendor = Ar ID , Sy device = Ar ID
 .Sm on
 .El
+.It Sy memreserve Ar on Ns | Ns Ar off
+When this option is enabled, memory is pre-allocated and retained even when
+the zone is shut down.
+This is useful to prevent memory being re-used by the system for other things
+such as the ZFS cache (ARC) when the zone is not running.
 .It Sy netif Ar type
 .Pp
 Specifies the type of network interface that will be used for the interfaces
