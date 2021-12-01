@@ -35,7 +35,7 @@
 	<install>/usr/lib/brand/bhyve/createzone -z %z -R %R</install>
 	<installopts />
 	<boot>/usr/lib/brand/bhyve/boot -z %z</boot>
-	<sysboot />
+	<sysboot>/usr/lib/brand/bhyve/boot -S -z %z</sysboot>
 	<halt />
 	<shutdown>/usr/lib/brand/bhyve/support shutdown %z</shutdown>
 	<verify_cfg />

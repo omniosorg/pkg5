@@ -29,30 +29,34 @@ import yaml
 import xml.etree.ElementTree as etree
 from pprint import pprint, pformat
 
-testmode = False
-zone = None
-xmlfile = None
+STATEDIR        = '/var/run/bhyve'
+RSRVRCTL        = '/usr/lib/rsrvrctl'
+MiB             = 1024 * 1024
+BOOTROM_SIZE    = 16 * MiB
+FBUF_SIZE       = 16 * MiB
 
 # Default values
 opts = {
-    'acpi':         'on',
-    'bootorder':    'cd',
-    'bootrom':      'BHYVE_RELEASE_CSM',
-    'cloud-init':   'off',
-    'console':      '/dev/zconsole',
-    'diskif':       'virtio-blk',
-    'extra':        None,
-    'hostbridge':   'i440fx',
-    'netif':        'virtio-net-viona',
-    'priv.debug':   'off',
-    'ram':          '1G',
-    'rng':          'off',
-    'type':         'generic',
-    'uuid':         None,
-    'vcpus':        '1',
-    'vga':          'off',
-    'vnc':          'off',
-    'xhci':         'on',
+    'acpi':             'on',
+    'bootorder':        'cd',
+    'bootrom':          'BHYVE_RELEASE_CSM',
+    'cloud-init':       'off',
+    'console':          '/dev/zconsole',
+    'debug.persist':    'off',
+    'diskif':           'virtio-blk',
+    'extra':            None,
+    'hostbridge':       'i440fx',
+    'memreserve':       'off',
+    'netif':            'virtio-net-viona',
+    'priv.debug':       'off',
+    'ram':              '1G',
+    'rng':              'off',
+    'type':             'generic',
+    'uuid':             None,
+    'vcpus':            '1',
+    'vga':              'off',
+    'vnc':              'off',
+    'xhci':             'on',
 }
 
 aliases = {
@@ -98,28 +102,48 @@ LPC_SLOT_WIN    = 31
 
 ##############################################################################
 
+sysboot         = False
+testmode        = False
+zone            = None
+xmlfile         = None
+
 uc = ucred.get(os.getpid())
 if not uc.has_priv("Effective", "sys_config"):
     testmode = True
 
+if not testmode:
+    try:
+        os.mkdir(STATEDIR, mode=0o755)
+    except FileExistsError:
+        pass
+
 def usage(msg=None):
-    print("boot [-t] [-x xml] <[-z] zone>")
+    print('''
+boot [-S] [-t] [-x xml] <[-z] zone>
+   -S   System initialisation (host boot) mode
+   -t   Test mode - just show what would be done
+   -x   Path to zone's XML file
+   -z   Name of zone
+''')
+
     if msg: print(msg)
     sys.exit(2)
 
 try:
-    cliopts, args = getopt.getopt(sys.argv[1:], "tx:z:")
+    cliopts, args = getopt.getopt(sys.argv[1:], "Stx:z:")
 except getopt.GetoptError:
     usage()
 for opt, arg in cliopts:
-    if opt == '-t':
+    if opt == '-S':
+        sysboot = True
+    elif opt == '-t':
         testmode = True
     elif opt == '-x':
         xmlfile = arg
     elif opt == '-z':
         zone = arg
     else:
-        assert False, "unhandled option"
+        assert False, f'unhandled option, {opt}'
 
 if not zone and len(args):
     zone = args.pop(0)
@@ -239,6 +263,31 @@ def build_devlist(type, maxval, plain=True):
     logging.debug('{} list: \n{}'.format(type, pformat(devlist)))
 
     return sorted(devlist.items())
+
+ram_shift = { 'e': 60, 'p': 50, 't': 40, 'g': 30, 'm': 20, 'k': 10, 'b': 0 }
+def parse_ram(v):
+    # Parse a string representing an amount of RAM into bytes in the same
+    # way as libvmmapi's vm_parse_memsize()
+    m = re.search(rf'^(\d+)(.?)$', v)
+    if not m:
+        fatal(f'Could not parse ram value "{v}"')
+    (mem, suffix) = m.groups()
+    mem = int(mem)
+
+    if not suffix:
+        # If the memory size specified as a plain number is less than a
+        # mebibyte then bhyve will interpret it as being in units of MiB.
+        suffix = 'm' if mem < MiB else 'b'
+
+    try:
+        shift = ram_shift[suffix.lower()]
+    except KeyError:
+        fatal(f'Unknown RAM suffix, {suffix}')
+
+    mem <<= shift
+
+    logging.debug(f'parse_ram({v}) = {mem}')
+    return mem
 
 def build_cloudinit_image(uuid, src):
     logging.info('Generating cloud-init data')
@@ -378,6 +427,61 @@ def build_cloudinit_image(uuid, src):
 
 for tag in opts.keys():
     parseopt(tag)
+
+if boolv(opts['memreserve'], 'memreserve'):
+    # In memreserve mode, the memory for this VM needs to be reserved in
+    # the bhyve memory reservoir, then the VM must be told to use memory
+    # from that reservoir (see later).
+    mem = parse_ram(opts['ram'])
+    mem += BOOTROM_SIZE
+    if  boolv(opts['vnc'], 'vnc', ignore=True) is not False:
+        mem += FBUF_SIZE
+
+    try:
+        with open(f'{STATEDIR}/{name}.resv') as f:
+            oldmem = int(f.read().strip())
+    except OSError:
+        oldmem = 0
+
+    # Update the reservoir if necessary
+    if not testmode and oldmem != mem:
+        delta = mem - oldmem
+        if delta > 0:
+            delta //= MiB
+            op = '-a'
+        else:
+            delta //= -MiB
+            op = '-r'
+        logging.debug(f'RAM change from {oldmem} to {mem} - {op} {delta}')
+        ret = subprocess.run([RSRVRCTL, op, str(delta)],
+            text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        for l in ret.stdout.splitlines():
+            logging.debug(l)
+
+        try:
+            fh = tempfile.NamedTemporaryFile(mode='w', dir=f'{STATEDIR}',
+                prefix=f'{name}.resv.', delete=False)
+        except Exception as e:
+            fatal(f'Could not create temporary file: {e}')
+        else:
+            logging.debug(f'Created temporary file at {fh.name}')
+
+        tf = fh.name
+        fh.write(str(mem))
+        fh.close()
+        try:
+            os.rename(tf, f'{STATEDIR}/{name}.resv')
+        except Exception as e:
+            fatal(f'Could not create {name}.resv from temporary file: {e}')
+        else:
+            logging.debug(f'Successfully created {STATEDIR}/{name}.resv')
+
+        logging.info(f'{mem//MiB} MiB of RAM reserved in memory reservoir')
+
+# This may be being called during system boot for a VM which does not
+# have autoboot set on it, and in that case there is nothing more to do.
+if sysboot:
+    sys.exit(0)
 
 if opts['type'] == 'windows':
     # See https://wiki.freebsd.org/bhyve/Windows
@@ -608,6 +712,14 @@ if boolv(opts['rng'], 'rng'):
 # priv.debug
 if boolv(opts['priv.debug'], 'priv.debug'):
     args.extend(['-o', 'privileges.debug=true'])
+
+# debug.persist
+if boolv(opts['debug.persist'], 'debug.persist'):
+    args.extend(['-o', 'debug.persist=true'])
+
+# memreserve
+if boolv(opts['memreserve'], 'memreserve'):
+    args.extend(['-o', 'memory.use_reservoir=true'])
 
 # Extra options
 
