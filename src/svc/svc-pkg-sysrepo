@@ -1,4 +1,4 @@
-#!/sbin/sh
+#!/bin/sh
 #
 # CDDL HEADER START
 #
@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright (c) 2011, 2013 Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2021, Oracle and/or its affiliates.
 #
 
 . /lib/svc/share/smf_include.sh
@@ -80,7 +80,7 @@ run_sysrepo() {
 	fi
 
         /usr/lib/pkg.sysrepo \
-               -R / \
+               -R ${SYSREPO_IMAGE_ROOT} \
                -c ${SYSREPO_CACHE_DIR} \
                -h ${SYSREPO_HOST} \
                -l ${SYSREPO_LOG_DIR} \
@@ -122,6 +122,11 @@ kill_htcacheclean() {
 		    "not_fatal"
         fi
 }
+
+getprop config/image_root
+if [ "${PROPVAL}" != "" ]; then
+	SYSREPO_IMAGE_ROOT=${PROPVAL}
+fi
 
 getprop config/host
 if [ "${PROPVAL}" != "" ] ; then
