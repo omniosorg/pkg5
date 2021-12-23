@@ -1012,7 +1012,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                                 atexit.register(shutil.rmtree,
                                     self.__write_cache_dir, ignore_errors=True)
                 else:
-                        os.removedirs(self._incoming_cache_dir)
+                        os.rmdir(self._incoming_cache_dir)
 
                 # Forcibly discard image catalogs so they can be re-loaded
                 # from the new location if they are already loaded.  This
