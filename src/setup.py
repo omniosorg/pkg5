@@ -21,7 +21,7 @@
 #
 # Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
 # Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
-# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2022 OmniOS Community Edition (OmniOSce) Association.
 #
 
 from __future__ import print_function
@@ -52,6 +52,7 @@ from distutils.command.build_ext import build_ext as _build_ext
 from distutils.command.build_py import build_py as _build_py
 from distutils.command.bdist import bdist as _bdist
 from distutils.command.clean import clean as _clean
+from setuptools.command.egg_info import egg_info as _egg_info
 from distutils.dist import Distribution
 from distutils import log
 
@@ -964,6 +965,7 @@ def intltool_update_pot():
         files (e.g. .py)
         """
         rm_f("po/pkg.pot")
+        open("configure.in", "w").close()
 
         args = [
             "/usr/bin/intltool-update", "--pot"
@@ -972,6 +974,8 @@ def intltool_update_pot():
         podir = os.path.join(os.getcwd(), "po")
         run_cmd(args, podir,
             updenv={"LC_ALL": "C", "XGETTEXT": "/usr/gnu/bin/xgettext"})
+
+        rm_f("configure.in")
 
         if not os.path.exists("po/pkg.pot"):
             print("Failed in generating pkg.pot.", file=sys.stderr)
@@ -1400,6 +1404,9 @@ class build_py_func(_build_py):
 
                 return dst, copied
 
+        def get_data_files_without_manifest(self):
+                return ()
+
 def manpage_input_dir(path):
         """Convert a manpage output path to the directory where its source lives."""
 
@@ -1588,6 +1595,15 @@ class dist_func(_bdist):
                 _bdist.initialize_options(self)
                 self.dist_dir = dist_dir
 
+class egg_info_func(_egg_info):
+        def write_installer(self):
+                p = os.path.join(self.egg_info, "INSTALLER")
+                self.write_file('installer', p, "pkg\n")
+
+        def run(self):
+                super().run()
+                self.write_installer()
+
 class Extension(distutils.core.Extension):
         # This class wraps the distutils Extension class, allowing us to set
         # build_64 in the object constructor instead of being forced to add it
@@ -1656,6 +1672,7 @@ cmdclasses = {
         'build_ext': build_ext_func,
         'build_py': build_py_func,
         'bdist': dist_func,
+        'egg_info': egg_info_func,
         'lint': lint_func,
         'clint': clint_func,
         'pylint': pylint_func,
@@ -1799,6 +1816,11 @@ setup(cmdclass = cmdclasses,
     data_files = data_files,
     ext_package = 'pkg',
     ext_modules = ext_modules,
+    description = "The OmniOS IPS packaging system",
+    long_description = "The OmniOS IPS packaging system",
+    url = "https://github.com/omniosorg/pkg5",
+    license = "CDDL",
+    platforms = "OmniOS",
     classifiers = [
         'Programming Language :: Python :: 3',
     ]
