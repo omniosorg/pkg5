@@ -965,6 +965,7 @@ def intltool_update_pot():
         files (e.g. .py)
         """
         rm_f("po/pkg.pot")
+        open("configure.in", "w").close()
 
         args = [
             "/usr/bin/intltool-update", "--pot"
@@ -973,6 +974,8 @@ def intltool_update_pot():
         podir = os.path.join(os.getcwd(), "po")
         run_cmd(args, podir,
             updenv={"LC_ALL": "C", "XGETTEXT": "/usr/gnu/bin/xgettext"})
+
+        rm_f("configure.in")
 
         if not os.path.exists("po/pkg.pot"):
             print("Failed in generating pkg.pot.", file=sys.stderr)
