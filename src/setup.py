@@ -1816,6 +1816,11 @@ setup(cmdclass = cmdclasses,
     data_files = data_files,
     ext_package = 'pkg',
     ext_modules = ext_modules,
+    description = "The OmniOS IPS packaging system",
+    long_description = "The OmniOS IPS packaging system",
+    url = "https://github.com/omniosorg/pkg5",
+    license = "CDDL",
+    platforms = "OmniOS",
     classifiers = [
         'Programming Language :: Python :: 3',
     ]
