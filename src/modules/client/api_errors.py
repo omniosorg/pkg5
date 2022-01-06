@@ -3533,5 +3533,15 @@ class UnsupportedFacetChange(ApiException):
                 return _("Changing '{facet}' to '{value}' is not supported.".
                          format(facet=self.facet, value=self.value))
 
+class InvalidMediatorTarget(ApiException):
+        """ Used to indicate if the target of a mediated link is missing,
+            which could lead to a broken system on a reboot."""
+
+        def __init__(self, medmsg):
+            self.medmsg = medmsg
+
+        def __str__(self):
+            return self.medmsg
+
 # Vim hints
 # vim:ts=4:sw=4:et:fdm=marker
