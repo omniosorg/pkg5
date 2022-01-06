@@ -27,7 +27,7 @@
 
 # Whitespace separated list of versions to build and test
 # The version listed first will end up in the command shebang lines
-PYVERSIONS = 3.10 3.9
+PYVERSIONS = 3.10
 
 PYTESTS = $(PYVERSIONS:%=runtest/%)
 TESTRESULTS = $(PYVERSIONS:%=testresults/%)
