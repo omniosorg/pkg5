@@ -499,13 +499,12 @@ if opts['bootorder'].startswith('c') and opts['type'] != 'windows':
 
 # Bootrom
 bootrom = opts['bootrom']
-if bootrom.find('/') == -1:
+if not os.path.isabs(bootrom):
     bootrom = f'/usr/share/bhyve/firmware/{bootrom}'
-if not bootrom.endswith('.fd'):
-    bootrom += '.fd'
-# NOTE: boot runs in gz context, also check inside the zoneroot
-if not os.path.isfile(bootrom) and not os.path.isfile(f'{zoneroot}/{bootrom}'):
-    fatal(f'bootrom {opts["bootrom"]} not found.')
+    if not bootrom.endswith('.fd'):
+        bootrom += '.fd'
+    if not os.path.isfile(bootrom):
+        fatal(f'bootrom {opts["bootrom"]} not found.')
 logging.debug(f'Final bootrom: {bootrom}')
 
 # UUID
