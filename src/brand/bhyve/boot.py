@@ -503,7 +503,8 @@ if bootrom.find('/') == -1:
     bootrom = f'/usr/share/bhyve/firmware/{bootrom}'
 if not bootrom.endswith('.fd'):
     bootrom += '.fd'
-if not os.path.isfile(bootrom):
+# NOTE: boot runs in gz context, also check inside the zoneroot
+if not os.path.isfile(bootrom) and not os.path.isfile(f'{zoneroot}/{bootrom}'):
     fatal(f'bootrom {opts["bootrom"]} not found.')
 logging.debug(f'Final bootrom: {bootrom}')
 
