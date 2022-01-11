@@ -122,12 +122,11 @@ class TestMisc(pkg5unittest.Pkg5TestCase):
 
                 # memory limit to test, keep small to avoid test slowdown
                 mem_cap = 100 * 1024 * 1024
-                # memory tolerance: allowed discrepancy between set limit and
-                # measured process resources. This is specified as a percentage
-                # of the cap. This may seem high but in an environment with
-                # several GiB available, a few hundred megabytes is sufficient
-                # to prove that the memory cap works.
-                mem_tol = 185
+                # measured process resources. Note, that we have a static
+                # overhead in waste.py for the forking of ps, so while 20M seems
+                # large compared to a 100M limit, in a real world example with
+                # 8G limit it's fairly small.
+                mem_tol = 20 * 1024 * 1024
 
                 waste_mem_py = """
 import os
@@ -169,9 +168,9 @@ except MemoryError:
                 self.debug("mem_cap:   " + str(mem_cap))
                 self.debug("proc size: " + str(res))
 
-                self.assertTrue(res < mem_cap * (100 + mem_tol) / 100,
+                self.assertTrue(res < mem_cap + mem_tol,
                     "process mem consumption too high")
-                self.assertTrue(res > mem_cap * mem_tol / 100,
+                self.assertTrue(res > mem_cap - mem_tol,
                     "process mem consumption too low")
 
                 # test if env var works
@@ -179,17 +178,13 @@ except MemoryError:
                 res = int(subprocess.check_output([f'python{pyv}', tmpfile]))
                 res *= 1024
 
-                self.debug("mem_cap:   " + str(mem_cap * 2))
+                self.debug("mem_cap:   " + str(mem_cap))
                 self.debug("proc size: " + str(res))
 
-                mem_tol += 200;
-
-                self.assertTrue(res < mem_cap * 2  * (100 + mem_tol) / 100,
+                self.assertTrue(res < mem_cap * 2 + mem_tol,
                     "process mem consumption too high")
-                #self.assertTrue(res > mem_cap * 2 * mem_tol / 100,
+                #self.assertTrue(res > mem_cap * 2 - mem_tol,
                 #    "process mem consumption too low")
-
-                mem_tol -= 200;
 
                 # test if invalid env var is handled correctly
                 os.environ["PKG_CLIENT_MAX_PROCESS_SIZE"] = "octopus"
@@ -199,9 +194,9 @@ except MemoryError:
                 self.debug("mem_cap:   " + str(mem_cap))
                 self.debug("proc size: " + str(res))
 
-                self.assertTrue(res < mem_cap * (100 + mem_tol) / 100,
+                self.assertTrue(res < mem_cap + mem_tol,
                     "process mem consumption too high")
-                self.assertTrue(res > mem_cap * mem_tol / 100,
+                self.assertTrue(res > mem_cap - mem_tol,
                     "process mem consumption too low")
 
 if __name__ == "__main__":

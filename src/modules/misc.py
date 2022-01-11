@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2007, 2020, Oracle and/or its affiliates.
+# Copyright (c) 2007, 2022, Oracle and/or its affiliates.
 # Copyright 2014, OmniTI Computer Consulting, Inc. All rights reserved.
 # Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 
@@ -3067,7 +3067,8 @@ def cmp(a, b):
                 return NotImplemented
 
 def set_memory_limit(bytes, allow_override=True):
-        """Limit memory consumption of current process to 'bytes'."""
+        """Limit memory consumption of current process to 'bytes'.
+           This only limits the brk() and mmap() calls made by python."""
 
         if allow_override:
                 try:
@@ -3076,9 +3077,9 @@ def set_memory_limit(bytes, allow_override=True):
                         pass
 
         try:
-                resource.setrlimit(resource.RLIMIT_DATA, (bytes, bytes))
+                resource.setrlimit(resource.RLIMIT_VMEM, (bytes, bytes))
         except AttributeError:
-                # If platform doesn't support RLIMIT_DATA, just ignore it.
+                # If platform doesn't support RLIMIT_VMEM, just ignore it.
                 pass
         except ValueError:
                 # An unprivileged user can not raise a previously set limit,
