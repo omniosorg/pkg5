@@ -45,7 +45,7 @@ test := TARGET = test
 JOBS = 8
 CC = gcc
 
-SUBDIRS=brand zoneproxy tsol util/mkcert
+SUBDIRS=brand zoneproxy util/mkcert
 
 all: $(SUBDIRS) build
 
