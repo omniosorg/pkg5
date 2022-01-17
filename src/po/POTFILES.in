@@ -36,7 +36,6 @@ modules/client/pkg_solver.py
 modules/client/plandesc.py
 modules/client/progress.py
 modules/client/publisher.py
-modules/client/rad_pkg.py
 modules/client/transport/exception.py
 modules/client/transport/repo.py
 modules/client/transport/transport.py
@@ -78,7 +77,6 @@ pkgdep.py
 pkgrepo.py
 publish.py
 pull.py
-rad-invoke.py
 sign.py
 sysrepo.py
 util/publish/pkgdiff.py

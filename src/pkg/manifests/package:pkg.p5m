@@ -115,7 +115,6 @@ file path=$(PYDIRVP)/pkg/client/printengine.py
 file path=$(PYDIRVP)/pkg/client/progress.py
 file path=$(PYDIRVP)/pkg/client/publisher.py pkg.depend.bypass-generate=.*
 file path=$(PYDIRVP)/pkg/client/query_parser.py
-file path=$(PYDIRVP)/pkg/client/rad_pkg.py
 file path=$(PYDIRVP)/pkg/client/sigpolicy.py
 dir  path=$(PYDIRVP)/pkg/client/transport
 file path=$(PYDIRVP)/pkg/client/transport/__init__.py
