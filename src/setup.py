@@ -129,7 +129,6 @@ man1m_zh_CN_dir = 'usr/share/man/zh_CN.UTF-8/man1m'
 man5_zh_CN_dir = 'usr/share/man/zh_CN.UTF-8/man5'
 
 ignored_deps_dir = 'usr/share/pkg/ignored_deps'
-rad_dir = 'usr/share/lib/pkg'
 resource_dir = 'usr/share/lib/pkg'
 transform_dir = 'usr/share/pkg/transforms'
 smf_app_dir = 'lib/svc/manifest/application/pkg'
@@ -187,9 +186,6 @@ scripts_sunos = {
         svc_share_dir: [
                 ['svc/pkg5_include.sh', 'pkg5_include.sh'],
                 ],
-        rad_dir: [
-                ["rad-invoke.py", "rad-invoke"],
-                ],
         }
 
 scripts_windows = {
@@ -224,9 +220,6 @@ scripts_other_unix = {
         lib_dir: [
                 ['depot.py', 'depot.py'],
                 ['scripts/pkg.depotd.sh', 'pkg.depotd'],
-                ],
-        rad_dir: [
-                ["rad-invoke.py", "rad-invoke"],
                 ],
         }
 
