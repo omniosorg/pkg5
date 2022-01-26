@@ -16,7 +16,13 @@ BRAND = lipkg
 FILES = config.xml platform.xml
 
 BRANDDIR = $(ROOTBRAND)/$(BRAND)
-BRANDFILES = $(FILES:%=$(BRANDDIR)/%)
+ETCDIR = $(ROOTETCBRAND)/$(BRAND)
+BRANDFILES = $(FILES:%=$(BRANDDIR)/%) $(ETCDIR)
 
 include ../Makefile.common
+
+$(ETCDIR): FRC
+	rm -f $@; ln -s ipkg $@
+
+FRC:
 

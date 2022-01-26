@@ -171,17 +171,17 @@ scripts_sunos = {
                 ],
         lib_dir: [
                 ['depot.py', 'pkg.depotd'],
-                ['sysrepo.py', 'pkg.sysrepo'],
-                ['depot-config.py', "pkg.depot-config"]
+                #['sysrepo.py', 'pkg.sysrepo'],
+                #['depot-config.py', "pkg.depot-config"]
                 ],
         svc_method_dir: [
-                ['svc/svc-pkg-depot', 'svc-pkg-depot'],
+                #['svc/svc-pkg-depot', 'svc-pkg-depot'],
                 ['svc/svc-pkg-mdns', 'svc-pkg-mdns'],
                 ['svc/svc-pkg-mirror', 'svc-pkg-mirror'],
                 ['svc/svc-pkg-repositories-setup',
                     'svc-pkg-repositories-setup'],
                 ['svc/svc-pkg-server', 'svc-pkg-server'],
-                ['svc/svc-pkg-sysrepo', 'svc-pkg-sysrepo'],
+                #['svc/svc-pkg-sysrepo', 'svc-pkg-sysrepo'],
                 ],
         svc_share_dir: [
                 ['svc/pkg5_include.sh', 'pkg5_include.sh'],
@@ -249,8 +249,8 @@ man1_files = [
         ]
 man1m_files = [
         'man/pkg.depotd.1m',
-        'man/pkg.depot-config.1m',
-        'man/pkg.sysrepo.1m'
+        #'man/pkg.depot-config.1m',
+        #'man/pkg.sysrepo.1m'
         ]
 man5_files = [
         'man/bhyve.5',
@@ -345,16 +345,6 @@ for entry in os.walk("web"):
             os.path.join(web_dir, f) for f in files
             if f != "Makefile"
             ]))
-        # install same set of files in "en/" in "__LOCALE__/ as well"
-        # for localizable file package (regarding themes, install
-        # theme "oracle.com" only)
-        if os.path.basename(web_dir) == "en" and \
-            os.path.dirname(web_dir) in ("web", "web/_themes/oracle.com"):
-                web_files.append((os.path.join(resource_dir,
-                    os.path.dirname(web_dir), "__LOCALE__"), [
-                        os.path.join(web_dir, f) for f in files
-                        if f != "Makefile"
-                    ]))
 
 # The bandit configuration file does not support an
 # exclude or exclude_dir operation (bandit bug 499).
@@ -362,14 +352,14 @@ bandit_exclude_files = [
         '*/tests/*'
         ]
 smf_app_files = [
-        'svc/pkg-depot.xml',
+        #'svc/pkg-depot.xml',
         'svc/pkg-mdns.xml',
         'svc/pkg-mirror.xml',
         'svc/pkg-repositories-setup.xml',
         'svc/pkg-server.xml',
-        'svc/pkg-system-repository.xml',
-        'svc/zoneproxy-client.xml',
-        'svc/zoneproxyd.xml'
+        #'svc/pkg-system-repository.xml',
+        #'svc/zoneproxy-client.xml',
+        #'svc/zoneproxyd.xml'
         ]
 resource_files = [
         'util/opensolaris.org.sections',
@@ -402,9 +392,6 @@ depot_log_stubs = [
         ]
 ignored_deps_files = []
 
-# The apache-based depot includes an shtml file we add to the resource dir
-web_files.append((os.path.join(resource_dir, "web"),
-    ["util/apache2/depot/repos.shtml"]))
 execattrd_files = [
         'util/misc/exec_attr.d/package:pkg',
 ]
@@ -1463,9 +1450,6 @@ class build_data_func(Command):
                 intltool_update_maintain()
                 intltool_update_pot()
 
-                #xml2roff(man1_files + man1m_files + man5_files)
-                #xml2roff(man1_ja_files + man1m_ja_files + man5_ja_files)
-                #xml2roff(man1_zh_CN_files + man1m_zh_CN_files + man5_zh_CN_files)
 
 def rm_f(filepath):
         """Remove a file without caring whether it exists."""
@@ -1705,13 +1689,13 @@ if osname == 'sunos':
                 (execattrd_dir, execattrd_files),
                 (authattrd_dir, authattrd_files),
                 (userattrd_dir, userattrd_files),
-                (sysrepo_dir, sysrepo_files),
-                (sysrepo_logs_dir, sysrepo_log_stubs),
-                (sysrepo_cache_dir, {}),
-                (depot_dir, depot_files),
-                (depot_conf_dir, {}),
-                (depot_logs_dir, depot_log_stubs),
-                (depot_cache_dir, {}),
+                #(sysrepo_dir, sysrepo_files),
+                #(sysrepo_logs_dir, sysrepo_log_stubs),
+                #(sysrepo_cache_dir, {}),
+                #(depot_dir, depot_files),
+                #(depot_conf_dir, {}),
+                #(depot_logs_dir, depot_log_stubs),
+                #(depot_cache_dir, {}),
                 (mirror_cache_dir, {}),
                 (mirror_logs_dir, {}),
                 ]
@@ -1720,11 +1704,6 @@ if osname == 'sunos':
             (os.path.join(locale_dir, locale, 'LC_MESSAGES'),
                 [('po/{0}.mo'.format(locale), 'pkg.mo')])
             for locale in pkg_locales
-        ]
-        # install English .pot file to put into localizable file package
-        data_files += [
-            (os.path.join(locale_dir, '__LOCALE__', 'LC_MESSAGES'),
-                [('po/pkg.pot', 'pkg.pot')])
         ]
 
 if osname == 'sunos' or osname == "linux":

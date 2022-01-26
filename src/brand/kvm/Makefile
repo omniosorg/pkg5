@@ -15,11 +15,18 @@
 BRAND = kvm
 FILES = config.xml init platform.xml support uninstall
 BINS = init
+BHYVELINKS = createzone socat
 
 BRANDDIR = $(ROOTBRAND)/$(BRAND)
-BRANDFILES = $(FILES:%=$(BRANDDIR)/%)
+ROOTBHYVELINKS = $(BHYVELINKS:%=$(BRANDDIR)/%)
+BRANDFILES = $(FILES:%=$(BRANDDIR)/%) $(ROOTBHYVELINKS)
 
 all: $(BINS)
 
 include ../Makefile.common
+
+$(ROOTBHYVELINKS): FRC
+	rm -f $@; ln -s ../bhyve/$(@F) $@
+
+FRC:
 
