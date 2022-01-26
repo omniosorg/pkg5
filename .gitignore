@@ -30,3 +30,4 @@
 /src/cffi_src/64
 /src/tests/failures
 /src/tests/failures.3*
+src/pkg.egg-info/
