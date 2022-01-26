@@ -15,6 +15,8 @@ set name=pkg.fmri value=pkg:/system/zones/brand/illumos@$(PKGVERS)
 set name=pkg.summary value="Image Packaging System branded zone - illumos zones"
 set name=pkg.description \
     value="A branded zone for running a generic illumos distribution"
+set name=info.classification \
+    value=org.opensolaris.category.2008:System/Virtualization
 set name=variant.arch value=$(ARCH)
 dir  path=etc
 dir  path=etc/zones

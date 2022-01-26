@@ -16,16 +16,23 @@
     pkg:/library/python-3/rapidjson-310
     pkg:/library/python-3/six-310
     #
+    pkg:/system/library/python/libbe-310
+    #
     pkg:/SUNWcs
     pkg:/archiver/gnu-tar
     pkg:/developer/build/make
     pkg:/developer/build/onbld
+    pkg:/driver/virtualization/kvm
+    pkg:/media/cdrtools
+    pkg:/network/netcat
     pkg:/package/svr4
     pkg:/service/network/dns/mdns
     pkg:/shell/bash
     pkg:/shell/ksh93
+    pkg:/system/bhyve
     pkg:/system/file-system/zfs
     pkg:/system/header
+    pkg:/system/kvm
     pkg:/system/library
     pkg:/system/library/dbus
     pkg:/system/library/math
@@ -38,3 +45,4 @@
     pkg:/text/locale
     pkg:/web/ca-bundle
     pkg:/web/wget
+

@@ -19,7 +19,6 @@ set name=pkg.description \
 set name=info.classification \
     value=org.opensolaris.category.2008:System/Packaging
 set name=variant.arch value=$(ARCH)
-set name=variant.opensolaris.zone value=global value=nonglobal
 dir  path=etc/zones
 file path=etc/zones/OMNIlx.xml mode=0444
 file path=etc/zones/OMNIlx26.xml mode=0444

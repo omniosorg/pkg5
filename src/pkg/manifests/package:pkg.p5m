@@ -38,6 +38,8 @@ set name=pkg.fmri value=pkg:/package/pkg@$(PKGVERS)
 set name=pkg.summary value="Image Packaging System - pkg(5)"
 set name=pkg.description \
     value="The Image Packaging System (IPS), or pkg(5), is the software delivery system used on OmniOS."
+set name=info.classification \
+    value=org.opensolaris.category.2008:System/Packaging
 set name=variant.arch value=$(ARCH)
 dir  path=$(PYDIR)
 dir  path=$(PYDIRVP)
@@ -437,7 +439,6 @@ license lic_minisat license="MIT (MiniSAT)" \
 license cr_Oracle license=cr_Oracle
 # CFFI import is done in C code, so it isn't picked up by pkgdepend
 depend type=require fmri=library/python-3/cffi$(PYPKGVERS)
-depend type=require fmri=library/python-3/prettytable$(PYPKGVERS)
 depend type=require fmri=system/library/python/libbe$(PYPKGVERS)
 depend type=require fmri=web/ca-bundle
 
