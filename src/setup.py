@@ -121,12 +121,6 @@ svc_share_dir = 'lib/svc/share'
 man1_dir = 'usr/share/man/man1'
 man1m_dir = 'usr/share/man/man1m'
 man5_dir = 'usr/share/man/man5'
-man1_ja_JP_dir = 'usr/share/man/ja_JP.UTF-8/man1'
-man1m_ja_JP_dir = 'usr/share/man/ja_JP.UTF-8/man1m'
-man5_ja_JP_dir = 'usr/share/man/ja_JP.UTF-8/man5'
-man1_zh_CN_dir = 'usr/share/man/zh_CN.UTF-8/man1'
-man1m_zh_CN_dir = 'usr/share/man/zh_CN.UTF-8/man1m'
-man5_zh_CN_dir = 'usr/share/man/zh_CN.UTF-8/man5'
 
 ignored_deps_dir = 'usr/share/pkg/ignored_deps'
 resource_dir = 'usr/share/lib/pkg'
@@ -262,47 +256,6 @@ man5_files = [
         'man/pkgsrc.5',
         'man/pkg.5',
         'man/sparse.5',
-        ]
-man1_ja_files = [
-        'man/ja_JP/pkg.1',
-        'man/ja_JP/pkgdepend.1',
-        'man/ja_JP/pkgdiff.1',
-        'man/ja_JP/pkgfmt.1',
-        'man/ja_JP/pkglint.1',
-        'man/ja_JP/pkgmerge.1',
-        'man/ja_JP/pkgmogrify.1',
-        'man/ja_JP/pkgsend.1',
-        'man/ja_JP/pkgsign.1',
-        'man/ja_JP/pkgrecv.1',
-        'man/ja_JP/pkgrepo.1',
-        ]
-man1m_ja_files = [
-        'man/ja_JP/pkg.depotd.1m',
-        'man/ja_JP/pkg.sysrepo.1m'
-        ]
-man5_ja_files = [
-        'man/ja_JP/pkg.5'
-        ]
-
-man1_zh_CN_files = [
-        'man/zh_CN/pkg.1',
-        'man/zh_CN/pkgdepend.1',
-        'man/zh_CN/pkgdiff.1',
-        'man/zh_CN/pkgfmt.1',
-        'man/zh_CN/pkglint.1',
-        'man/zh_CN/pkgmerge.1',
-        'man/zh_CN/pkgmogrify.1',
-        'man/zh_CN/pkgsend.1',
-        'man/zh_CN/pkgsign.1',
-        'man/zh_CN/pkgrecv.1',
-        'man/zh_CN/pkgrepo.1',
-        ]
-man1m_zh_CN_files = [
-        'man/zh_CN/pkg.depotd.1m',
-        'man/zh_CN/pkg.sysrepo.1m'
-        ]
-man5_zh_CN_files = [
-        'man/zh_CN/pkg.5'
         ]
 
 packages = [
@@ -1666,12 +1619,6 @@ data_files += [
         (man1_dir, man1_files),
         (man1m_dir, man1m_files),
         (man5_dir, man5_files),
-        (man1_ja_JP_dir, man1_ja_files),
-        (man1m_ja_JP_dir, man1m_ja_files),
-        (man5_ja_JP_dir, man5_ja_files),
-        (man1_zh_CN_dir, man1_zh_CN_files),
-        (man1m_zh_CN_dir, man1m_zh_CN_files),
-        (man5_zh_CN_dir, man5_zh_CN_files),
         (resource_dir, resource_files),
         ]
 # add transforms
