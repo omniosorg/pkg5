@@ -30,7 +30,6 @@ set name=pkg.description \
 set name=info.classification \
     value=org.opensolaris.category.2008:System/Packaging
 set name=variant.arch value=$(ARCH)
-set name=variant.opensolaris.zone value=global value=nonglobal
 dir  path=etc
 dir  path=etc/brand
 dir  path=etc/brand/ipkg
@@ -76,8 +75,6 @@ file path=usr/lib/brand/shared/vars.ksh
 file path=usr/lib/brand/shared/vnic.ksh
 dir  path=usr/share/man/man5
 file path=usr/share/man/man5/ipkg.5
-legacy pkg=SUNWipkg-brand version=0.0.0
 license cr_Oracle license=cr_Oracle
 license lic_CDDL license=lic_CDDL
 depend type=require fmri=system/extended-system-utilities pkg.linted=true
-depend type=require fmri=system/zones

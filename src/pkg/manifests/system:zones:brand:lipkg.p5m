@@ -33,7 +33,7 @@ set name=info.classification \
 set name=variant.arch value=$(ARCH)
 dir  path=etc
 dir  path=etc/brand
-link path=etc/brand/lipkg target=./ipkg
+link path=etc/brand/lipkg target=ipkg
 dir  path=etc/zones
 file path=etc/zones/OMNIlipkg.xml
 dir  path=usr/lib

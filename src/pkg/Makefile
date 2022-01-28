@@ -146,7 +146,7 @@ clobber: clean
 	rm -rf $(PKGDEST) Makefile.link
 
 pkgfmt:
-	$(PKGFMT) -c manifests/*.p5m
+	$(PKGFMT) -fv2 -c manifests/*.p5m
 
 $(PDIR):
 	mkdir -p $@

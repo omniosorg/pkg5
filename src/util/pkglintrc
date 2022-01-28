@@ -43,7 +43,7 @@ do_pub_checks = True
 
 # List modules or methods which should be excluded from
 # execution during each lint run.
-pkglint.exclude = pkg.lint.opensolaris
+pkglint.exclude = pkg.lint.opensolaris \
     pkg.lint.pkglint_action.PkgActionChecker.arch64
 
 # The version pattern we use when searching for manifests

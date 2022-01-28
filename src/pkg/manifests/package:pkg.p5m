@@ -38,6 +38,8 @@ set name=pkg.fmri value=pkg:/package/pkg@$(PKGVERS)
 set name=pkg.summary value="Image Packaging System - pkg(5)"
 set name=pkg.description \
     value="The Image Packaging System (IPS), or pkg(5), is the software delivery system used on OmniOS."
+set name=info.classification \
+    value=org.opensolaris.category.2008:System/Packaging
 set name=variant.arch value=$(ARCH)
 dir  path=$(PYDIR)
 dir  path=$(PYDIRVP)
@@ -221,6 +223,7 @@ dir  path=lib
 dir  path=lib/svc
 dir  path=lib/svc/manifest
 dir  path=lib/svc/manifest/application
+dir  path=lib/svc/manifest/application/pkg
 file path=lib/svc/manifest/application/pkg/pkg-mdns.xml
 file path=lib/svc/manifest/application/pkg/pkg-mirror.xml
 file path=lib/svc/manifest/application/pkg/pkg-repositories-setup.xml
@@ -273,7 +276,6 @@ file path=usr/share/lib/pkg/web/_themes/omnios.org/en/header.shtml
 file path=usr/share/lib/pkg/web/_themes/omnios.org/feed-icon-14x14.png
 file path=usr/share/lib/pkg/web/_themes/omnios.org/logo_ban0.png
 file path=usr/share/lib/pkg/web/_themes/omnios.org/logo_ban0.svg
-link path=usr/share/lib/pkg/web/_themes/omniosce.org target=omnios.org
 file path=usr/share/lib/pkg/web/_themes/p5i-link.png
 file path=usr/share/lib/pkg/web/_themes/pkg-block-icon.png
 file path=usr/share/lib/pkg/web/_themes/pkg-block-logo.png
@@ -356,23 +358,6 @@ dir  path=usr/share/locale/zh_TW
 dir  path=usr/share/locale/zh_TW/LC_MESSAGES
 file path=usr/share/locale/zh_TW/LC_MESSAGES/pkg.mo
 dir  path=usr/share/man
-dir  path=usr/share/man/ja_JP.UTF-8
-dir  path=usr/share/man/ja_JP.UTF-8/man1
-file path=usr/share/man/ja_JP.UTF-8/man1/pkg.1
-file path=usr/share/man/ja_JP.UTF-8/man1/pkgdepend.1
-file path=usr/share/man/ja_JP.UTF-8/man1/pkgdiff.1
-file path=usr/share/man/ja_JP.UTF-8/man1/pkgfmt.1
-file path=usr/share/man/ja_JP.UTF-8/man1/pkglint.1
-file path=usr/share/man/ja_JP.UTF-8/man1/pkgmerge.1
-file path=usr/share/man/ja_JP.UTF-8/man1/pkgmogrify.1
-file path=usr/share/man/ja_JP.UTF-8/man1/pkgrecv.1
-file path=usr/share/man/ja_JP.UTF-8/man1/pkgrepo.1
-file path=usr/share/man/ja_JP.UTF-8/man1/pkgsend.1
-file path=usr/share/man/ja_JP.UTF-8/man1/pkgsign.1
-dir  path=usr/share/man/ja_JP.UTF-8/man1m
-file path=usr/share/man/ja_JP.UTF-8/man1m/pkg.depotd.1m
-dir  path=usr/share/man/ja_JP.UTF-8/man5
-file path=usr/share/man/ja_JP.UTF-8/man5/pkg.5
 dir  path=usr/share/man/man1
 file path=usr/share/man/man1/pkg.1
 file path=usr/share/man/man1/pkgdepend.1
@@ -390,30 +375,19 @@ dir  path=usr/share/man/man1m
 file path=usr/share/man/man1m/pkg.depotd.1m
 dir  path=usr/share/man/man5
 file path=usr/share/man/man5/pkg.5
-dir  path=usr/share/man/zh_CN.UTF-8
-dir  path=usr/share/man/zh_CN.UTF-8/man1
-file path=usr/share/man/zh_CN.UTF-8/man1/pkg.1
-file path=usr/share/man/zh_CN.UTF-8/man1/pkgdepend.1
-file path=usr/share/man/zh_CN.UTF-8/man1/pkgdiff.1
-file path=usr/share/man/zh_CN.UTF-8/man1/pkgfmt.1
-file path=usr/share/man/zh_CN.UTF-8/man1/pkglint.1
-file path=usr/share/man/zh_CN.UTF-8/man1/pkgmerge.1
-file path=usr/share/man/zh_CN.UTF-8/man1/pkgmogrify.1
-file path=usr/share/man/zh_CN.UTF-8/man1/pkgrecv.1
-file path=usr/share/man/zh_CN.UTF-8/man1/pkgrepo.1
-file path=usr/share/man/zh_CN.UTF-8/man1/pkgsend.1
-file path=usr/share/man/zh_CN.UTF-8/man1/pkgsign.1
-dir  path=usr/share/man/zh_CN.UTF-8/man1m
-file path=usr/share/man/zh_CN.UTF-8/man1m/pkg.depotd.1m
-dir  path=usr/share/man/zh_CN.UTF-8/man5
-file path=usr/share/man/zh_CN.UTF-8/man5/pkg.5
 dir  path=usr/share/pkg
+dir  path=usr/share/pkg/ignored_deps
 dir  path=usr/share/pkg/transforms
 file path=usr/share/pkg/transforms/developer
 file path=usr/share/pkg/transforms/documentation
 file path=usr/share/pkg/transforms/locale
 file path=usr/share/pkg/transforms/smf-manifests
+dir  path=var
+dir  path=var/cache
+dir  path=var/cache/pkg
 dir  path=var/cache/pkg/mirror
+dir  path=var/log
+dir  path=var/log/pkg
 dir  path=var/log/pkg/mirror
 #
 group groupname=pkg5srv gid=97
@@ -431,7 +405,6 @@ license lic_minisat license="MIT (MiniSAT)" \
 license cr_Oracle license=cr_Oracle
 # CFFI import is done in C code, so it isn't picked up by pkgdepend
 depend type=require fmri=library/python-3/cffi$(PYPKGVERS)
-depend type=require fmri=library/python-3/prettytable$(PYPKGVERS)
 depend type=require fmri=system/library/python/libbe$(PYPKGVERS)
 depend type=require fmri=web/ca-bundle
 

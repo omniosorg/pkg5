@@ -22,9 +22,5 @@
 # Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
 #
 set name=pkg.fmri value=pkg:/package/pkg-35@$(PKGVERS)
-set name=pkg.summary \
-    value="Python 3.5 support modules for the Image Packaging System"
-set name=pkg.description \
-    value="Python 3.5 support modules for the Image Packaging System. The Image Packaging System (IPS), or pkg(5), is the software delivery system used on OmniOS."
 set name=pkg.obsolete value=true
 
