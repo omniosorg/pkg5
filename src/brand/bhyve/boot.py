@@ -13,7 +13,7 @@
 #
 # }}}
 
-# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2022 OmniOS Community Edition (OmniOSce) Association.
 
 import getopt
 import logging
@@ -31,6 +31,7 @@ from pprint import pprint, pformat
 
 STATEDIR        = '/var/run/bhyve'
 RSRVRCTL        = '/usr/lib/rsrvrctl'
+FIRMWAREPATH    = '/usr/share/bhyve/firmware'
 MiB             = 1024 * 1024
 BOOTROM_SIZE    = 16 * MiB
 FBUF_SIZE       = 16 * MiB
@@ -423,6 +424,20 @@ def build_cloudinit_image(uuid, src):
     except Exception as e:
         fatal(f'Could not create cloud-init ISO image: {e}')
 
+def install_uefi_vars():
+    src = f'{FIRMWAREPATH}/BHYVE_VARS.fd'
+    dst = '/etc/uefivars'
+
+    if testmode or os.path.exists(f'{zoneroot}/{dst}'):
+        return dst
+
+    if not os.path.exists(src):
+        fatal(f'Could not find template UEFI variables file at {src}')
+
+    logging.info('Copying UEFI template variables file')
+    shutil.copyfile(src, f'{zoneroot}/{dst}')
+    return dst
+
 ##############################################################################
 
 for tag in opts.keys():
@@ -500,7 +515,7 @@ if opts['bootorder'].startswith('c') and opts['type'] != 'windows':
 # Bootrom
 bootrom = opts['bootrom']
 if not os.path.isabs(bootrom):
-    bootrom = f'/usr/share/bhyve/firmware/{bootrom}'
+    bootrom = f'{FIRMWAREPATH}/{bootrom}'
     if not bootrom.endswith('.fd'):
         bootrom += '.fd'
     if not os.path.isfile(bootrom):
@@ -555,7 +570,8 @@ args.extend([
 
 # Bootrom
 
-args.extend(['-l', 'bootrom,{0}'.format(bootrom)])
+bootvars = install_uefi_vars()
+args.extend(['-l', f'bootrom,{bootrom},{bootvars}'])
 
 # Host bridge
 
