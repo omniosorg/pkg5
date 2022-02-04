@@ -307,7 +307,8 @@ def find_tests(testdir, testpats, startatpat=False, output=OUTPUT_DOTS,
                             'TestBasicSysrepoCli', 'TestDetailedSysrepoCli',
                             'TestHttpDepot', 'TestHttpsDepot',
                             'TestPkgInstallApache', 'TestPkgrecvHTTPS',
-                            'TestPkgrepoHTTPS', 'TestPkgsendHTTPS']:
+                            'TestPkgrepoHTTPS', 'TestPkgsendHTTPS',
+                            'TestP5pWsgi']:
                                 continue
 
                         for attrname in dir(classobj):
