@@ -53,6 +53,7 @@ opts = {
     'ram':              '1G',
     'rng':              'off',
     'type':             'generic',
+    'uefivars':         'on',
     'uuid':             None,
     'vcpus':            '1',
     'vga':              'off',
@@ -570,8 +571,11 @@ args.extend([
 
 # Bootrom
 
-bootvars = install_uefi_vars()
-args.extend(['-l', f'bootrom,{bootrom},{bootvars}'])
+if boolv(opts['uefivars'], 'uefivars'):
+    bootvars = install_uefi_vars()
+    args.extend(['-l', f'bootrom,{bootrom},{bootvars}'])
+else:
+    args.extend(['-l', f'bootrom,{bootrom}'])
 
 # Host bridge
 
