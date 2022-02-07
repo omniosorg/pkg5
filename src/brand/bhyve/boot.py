@@ -617,14 +617,23 @@ except:
 # Additional Disks
 
 for i, v in build_devlist('disk', 16):
+    if (vv := xmlroot.find(f'./attr[@name="diskif{i}"]')) is not None:
+        diskif = vv.get('value')
+        try:
+            diskif = aliases['diskif'][diskif]
+        except KeyError:
+            pass
+    else:
+        diskif = opts['diskif']
+
     if i < 8:
         args.extend([
-            '-s', '{0}:{1},{2},{3}'.format(DISK_SLOT, i, opts['diskif'],
+            '-s', '{0}:{1},{2},{3}'.format(DISK_SLOT, i, diskif,
             diskpath(v))
         ])
     else:
         args.extend([
-            '-s', '{0}:{1},{2},{3}'.format(DISK_SLOT2, i - 8, opts['diskif'],
+            '-s', '{0}:{1},{2},{3}'.format(DISK_SLOT2, i - 8, diskif,
             diskpath(v))
         ])
 

@@ -10,9 +10,9 @@
 .\"
 .\" Copyright 2016, Joyent, Inc.
 .\" Copyright 2016, OmniTI Computer Consulting, Inc. All Rights Reserved.
-.\" Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
+.\" Copyright 2022 OmniOS Community Edition (OmniOSce) Association.
 .\"
-.Dd September 11, 2021
+.Dd February 7, 2022
 .Dt BHYVE 5
 .Os
 .Sh NAME
@@ -193,6 +193,13 @@ Available options are:
 .It
 .Sy virtio-blk Pq default
 .El
+.It Sy diskif Ns Ar N Ar type
+.Pp
+Override the
+.Sy diskif
+.Ar type
+for the disk at target
+.Ar N .
 .It Sy dns-domain Ar domainname
 .Pp
 The DNS domain name for the guest.
