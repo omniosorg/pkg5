@@ -22,17 +22,15 @@
 #
 # Copyright (c) 2007, 2019, Oracle and/or its affiliates. All rights reserved.
 # Copyright 2016, OmniTI Computer Consulting, Inc. All rights reserved.
-# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2022 OmniOS Community Edition (OmniOSce) Association.
 #
 
-# Whitespace separated list of versions to build and test
-# The version listed first will end up in the command shebang lines
-PYVERSIONS = 3.10
+include Makefile.com
+
+JOBS = 8
 
 PYTESTS = $(PYVERSIONS:%=runtest/%)
 TESTRESULTS = $(PYVERSIONS:%=testresults/%)
-
-CODE_WS = $$(git rev-parse --show-toplevel)
 
 all := TARGET = all
 build := TARGET = build
@@ -41,9 +39,6 @@ clean := TARGET = clean
 clobber := TARGET = clobber
 packages := TARGET = install
 test := TARGET = test
-
-JOBS = 8
-CC = gcc
 
 SUBDIRS=brand util/mkcert
 

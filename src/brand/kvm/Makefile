@@ -23,7 +23,7 @@ BRANDFILES = $(FILES:%=$(BRANDDIR)/%) $(ROOTBHYVELINKS)
 
 all: $(BINS)
 
-include ../Makefile.common
+include ../Makefile.com
 
 $(ROOTBHYVELINKS): FRC
 	rm -f $@; ln -s ../bhyve/$(@F) $@

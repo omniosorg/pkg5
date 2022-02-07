@@ -19,7 +19,7 @@ BRANDDIR = $(ROOTBRAND)/$(BRAND)
 ETCDIR = $(ROOTETCBRAND)/$(BRAND)
 BRANDFILES = $(FILES:%=$(BRANDDIR)/%) $(ETCDIR)
 
-include ../Makefile.common
+include ../Makefile.com
 
 $(ETCDIR): FRC
 	rm -f $@; ln -s ipkg $@

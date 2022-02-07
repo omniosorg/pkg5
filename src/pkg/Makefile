@@ -20,26 +20,21 @@
 #
 # Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
 # Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
-# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2022 OmniOS Community Edition (OmniOSce) Association.
 #
+
+include ../Makefile.com
 
 PKGVERS_COMPONENT = 0.5.11
 PKGVERS_BUILTON   = 5.11
 BUILDNUM.cmd      = \
 	nawk '$$1 == "OmniOS" { print $$3 }' /etc/release | tr -d '[a-z]'
-#BUILDNUM          = 151002
 BUILDNUM          = $(BUILDNUM.cmd:sh)
 UPDATENUM         = 0
 SRUNUM            = 0
 PLATNUM           = 0
-#BUILDID.cmd       = \
-#	hg tags | \
-#	nawk '$$1 ~ /^s11u$(UPDATENUM)b[0-9]*/ {print substr($$1, 7) + 0; exit}'
-#BUILDID           = $(BUILDID.cmd:sh)
 BUILDID           = 0
-#NIGHTLYID:sh      = hg parents --template '{rev}'
 NIGHTLYID         = 1
-#CHANGESET.cmd     = hg id -i
 CHANGESET.cmd     = git show --format=%h --no-patch
 CHANGESET         = $(CHANGESET.cmd:sh)
 CURBUILD.cmd      = \
@@ -80,9 +75,8 @@ ALL_MANIFESTS:sh  = \
 	exit 0
 $(PUBLISHALL)MANIFESTS      = $(ALL_MANIFESTS)
 
-PYTHON3           = python3.10
-PYVERS            = $(PYTHON3:python%=%)
-PYDEDOT.cmd       = echo $(PYVERS) | tr -d .
+PYTHON3           = python$(PYVER)
+PYDEDOT.cmd       = echo $(PYVER) | tr -d .
 PYPKGVERS         = -$(PYDEDOT.cmd:sh)
 PYDIR             = usr/lib/$(PYTHON3)
 PYDIRVP           = $(PYDIR)/vendor-packages
@@ -129,7 +123,7 @@ PKGMOG_DEFVALS    = \
 	REV=$(REV) \
 	PYDIR=$(PYDIR) \
 	PYDIRVP=$(PYDIRVP) \
-	PYVERS=$(PYVERS) \
+	PYVERS=$(PYVER) \
 	PYPKGVERS=$(PYPKGVERS) \
 	CHANGESET=$(CHANGESET) \
 	PKGPUBLISHER_LOCALIZABLE=$(PKGPUBLISHER_LOCALIZABLE)
@@ -199,7 +193,7 @@ $(PDIR)/%.pub: $(PDIR)/.resolved $(PKGREPOTGT)
 
 # Compare the proto area with the package manifests; if they've got different
 # filesets, complain
-check: $(PDIR)/protomanifest $(PDIR)/pkgmanifest
+check: $(PDIR)/pkgmanifest $(PDIR)/protomanifest
 	$(PKGDIFF) $(PDIR)/protomanifest $(PDIR)/pkgmanifest
 
 # We either lint against a reference repository, provided in

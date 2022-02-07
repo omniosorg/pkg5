@@ -22,16 +22,10 @@
 #
 # Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
 # Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
-# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2022 OmniOS Community Edition (OmniOSce) Association.
 #
 
-PYVER = 3.10
-MACH:sh = uname -p
-SHELL= /usr/bin/ksh93
-
-INSTALL = /usr/sbin/install
-CTFCONVERT = /opt/onbld/bin/i386/ctfconvert
-STRIP = /usr/bin/strip
+include ../../Makefile.com
 
 ROOT = ../../../proto/root_${MACH}
 ROOTETC = $(ROOT)/etc
@@ -39,10 +33,6 @@ ROOTETCZONES = $(ROOT)/etc/zones
 ROOTETCBRAND = $(ROOT)/etc/brand
 ROOTUSRLIB = $(ROOT)/usr/lib
 ROOTBRAND = $(ROOTUSRLIB)/brand
-
-CFLAGS = -gdwarf-2 -gstrict-dwarf -Werror -Wall
-CTFCONVERT_BIN = $(CTFCONVERT) -l pkg5
-POST_PROCESS = $(CTFCONVERT_BIN) $@; $(STRIP) -x $@
 
 ROOTDIRS = \
 	$(ROOT) \
@@ -66,9 +56,6 @@ $(ROOTDIRS) $(BRANDDIR):
 
 $(BRANDDIR)/%: $(BRANDDIR) %
 	rm -f $@; $(INSTALL) -f $(BRANDDIR) -m 0444 $<
-
-PRE_HASH=	pre\#
-HASH=		$(PRE_HASH:pre\%=%)
 
 INS.py= \
 	{ \

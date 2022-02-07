@@ -24,7 +24,7 @@ BRANDDIR = $(ROOTBRAND)/$(BRAND)
 ETCDIR = $(ROOTETCBRAND)/$(BRAND)
 BRANDFILES = $(FILES:%=$(BRANDDIR)/%) $(EFILES:%=$(ETCDIR)/%)
 
-include ../Makefile.common
+include ../Makefile.com
 
 all: $(BINS)
 

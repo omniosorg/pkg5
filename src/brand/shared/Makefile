@@ -19,5 +19,5 @@ FILES = $(SFILES:%=%.ksh) rsyslog.xml
 BRANDDIR = $(ROOTBRAND)/$(BRAND)
 BRANDFILES = $(FILES:%=$(BRANDDIR)/%)
 
-include ../Makefile.common
+include ../Makefile.com
 
