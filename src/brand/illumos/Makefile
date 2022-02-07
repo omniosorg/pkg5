@@ -18,5 +18,5 @@ FILES = config.xml createzone platform.xml poststate prestate query uninstall
 BRANDDIR = $(ROOTBRAND)/$(BRAND)
 BRANDFILES = $(FILES:%=$(BRANDDIR)/%)
 
-include ../Makefile.common
+include ../Makefile.com
 

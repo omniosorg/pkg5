@@ -18,5 +18,5 @@ FILES = config.xml lx_install lx_uninstall platform.xml prestate poststate
 BRANDDIR = $(ROOTBRAND)/$(BRAND)
 BRANDFILES = $(FILES:%=$(BRANDDIR)/%)
 
-include ../Makefile.common
+include ../Makefile.com
 

@@ -26,7 +26,7 @@ FILES = \
 BRANDDIR = $(ROOTETCZONES)
 BRANDFILES = $(FILES:%=$(ROOTETCZONES)/%)
 
-include ../Makefile.common
+include ../Makefile.com
 
 $(ROOTETCZONES)/OMNIipkg.xml:
 	rm -f $@; ln -s SUNWipkg.xml $@

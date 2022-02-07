@@ -18,7 +18,7 @@ FILES = config.xml platform.xml postinstall profile.xml
 BRANDDIR = $(ROOTBRAND)/$(BRAND)
 BRANDFILES = $(FILES:%=$(BRANDDIR)/%)
 
-include ../Makefile.common
+include ../Makefile.com
 
 $(BRANDDIR)/profile.xml: $(BRANDDIR)
 	rm -f $@; ln -s ../sparse/profile.xml $@

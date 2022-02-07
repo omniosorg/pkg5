@@ -139,7 +139,7 @@ setup_environment(void)
 }
 
 int
-main(int argc, char **argv)
+main(int argc __unused, char **argv __unused)
 {
 	char zonename[ZONENAME_MAX];
 

@@ -27,5 +27,5 @@ init: init.c
 	$(LINK.c) -o $@ $@.c $(LDLIBS)
 	$(POST_PROCESS)
 
-include ../Makefile.common
+include ../Makefile.com
 

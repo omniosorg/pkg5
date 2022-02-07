@@ -19,5 +19,5 @@ FILES = attach clone common.ksh config.xml detach pkgcreatezone platform.xml \
 BRANDDIR = $(ROOTBRAND)/$(BRAND)
 BRANDFILES = $(FILES:%=$(BRANDDIR)/%)
 
-include ../Makefile.common
+include ../Makefile.com
 
