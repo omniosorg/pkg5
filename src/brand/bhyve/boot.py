@@ -698,6 +698,7 @@ for nic, promisc in promisc_filtered_nics.items():
 
 # VNC
 
+vncpassword = None
 v = boolv(opts['vnc'], 'vnc', ignore=True)
 if v is not False:
     if v is True:
@@ -705,7 +706,6 @@ if v is not False:
 
     # The VNC options need to be processed in order to extract and mask
     # the 'password' attribute and to handle aliases for other elements.
-    vncpassword = None
     vopts = expandopts(opts['vnc'])
     for k, v in list(vopts.items()):
         if not len(v):
