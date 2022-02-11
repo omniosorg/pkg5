@@ -320,7 +320,7 @@ unconfigure_zone() {
 
 	ZONE_BRAND=`zoneadm list -pc | /usr/bin/nawk -v zone=$ZONENAME -F':' '$2 == zone { print $6 }'`
 	case "$ZONE_BRAND" in
-	    ipkg|lipkg|sparse|vm)
+	    ipkg|lipkg|sparse|pkgsrc|vm)
 		zlogin -S $ZONENAME /usr/lib/brand/ipkg/system-unconfigure -R /a \
 		    >/dev/null 2>&1
 		if (( $? != 0 )); then
