@@ -75,7 +75,7 @@ aliases = {
     },
     'vnc': {
         'on':   'unix=/tmp/vm.vnc',
-        'wait': 'wait,unix=/tmp/vm.vnc',
+        'wait': 'unix=/tmp/vm.vnc,wait',
     },
     'bootrom': {
         # These old firmware files were present before r151035. Provide aliases
@@ -204,6 +204,15 @@ def boolv(s, var, ignore=False):
         fatal(f'Invalid value {s} for boolean variable {var}')
     return None
 
+def file_or_string(f):
+    if os.path.isabs(f) and os.path.isfile(f):
+        try:
+            with open(f) as fh:
+                f = fh.read()
+        except Exception as e:
+            fatal(f'Could not read from {f}: {e}')
+    return f.strip()
+
 def parseopt(tag):
     global opts, xmlroot
     try:
@@ -222,6 +231,27 @@ def parseopt(tag):
                 pass
     except:
         pass
+
+def expandopts(opt):
+    """ Expand a comma-separated option string out into a dictionary.
+        For example:
+            on,password=fred,wait,w=1234
+        becomes:
+            {'on': '', 'password': 'fred', 'wait': '', 'w': '1234'}
+    """
+    return {
+        k: v
+        for (k, v, *_)
+        in [
+            (o + '=').split('=')
+            for o in opt.split(',')
+        ]
+    }
+
+def collapseopts(opts):
+    """ The reverse of expandopts. Convert a dictionary back into an option
+        string. """
+    return ','.join([f'{k}={v}'.rstrip('=') for k, v in opts.items()])
 
 def writecfg(fh, arg):
     if testmode:
@@ -307,15 +337,6 @@ def build_cloudinit_image(uuid, src):
         'hostname':         name,
         'disable_root':     False,
     }
-
-    def file_or_string(f):
-        if os.path.isabs(f) and os.path.isfile(f):
-            try:
-                with open(f) as fh:
-                    f = fh.read()
-            except Exception as e:
-                fatal(f'Could not read from {f}: {e}')
-        return f.strip()
 
     if (v := xmlroot.find('./attr[@name="password"]')) is not None:
         user_data['password'] = file_or_string(v.get('value'))
@@ -617,14 +638,23 @@ except:
 # Additional Disks
 
 for i, v in build_devlist('disk', 16):
+    if (vv := xmlroot.find(f'./attr[@name="diskif{i}"]')) is not None:
+        diskif = vv.get('value')
+        try:
+            diskif = aliases['diskif'][diskif]
+        except KeyError:
+            pass
+    else:
+        diskif = opts['diskif']
+
     if i < 8:
         args.extend([
-            '-s', '{0}:{1},{2},{3}'.format(DISK_SLOT, i, opts['diskif'],
+            '-s', '{0}:{1},{2},{3}'.format(DISK_SLOT, i, diskif,
             diskpath(v))
         ])
     else:
         args.extend([
-            '-s', '{0}:{1},{2},{3}'.format(DISK_SLOT2, i - 8, opts['diskif'],
+            '-s', '{0}:{1},{2},{3}'.format(DISK_SLOT2, i - 8, diskif,
             diskpath(v))
         ])
 
@@ -672,6 +702,29 @@ v = boolv(opts['vnc'], 'vnc', ignore=True)
 if v is not False:
     if v is True:
         opts['vnc'] = 'on'
+
+    # The VNC options need to be processed in order to extract and mask
+    # the 'password' attribute and to handle aliases for other elements.
+    vncpassword = None
+    vopts = expandopts(opts['vnc'])
+    for k, v in list(vopts.items()):
+        if not len(v):
+            try:
+                newopts = expandopts(aliases['vnc'][k])
+            except KeyError:
+                pass
+            else:
+                del vopts[k]
+                # This way round means that the keys from vopts will overwrite
+                # any duplicates in newopts.
+                newopts |= vopts
+                vopts = newopts
+        elif k == 'password':
+            vncpassword = file_or_string(v)
+            del vopts[k]
+
+    opts['vnc'] = collapseopts(vopts)
+
     args.extend(['-s', '{0}:0,fbuf,vga={1},{2}'.format(
         VNC_SLOT, opts['vga'], opts['vnc'])])
     if boolv(opts['xhci'], 'xhci'):
@@ -780,6 +833,9 @@ writecfg(fh, '#\n# Generated from zone configuration\n#')
 for line in p.stdout.splitlines():
     if line.startswith('config.dump'): continue
     writecfg(fh, line)
+
+if vncpassword:
+    writecfg(fh, f'pci.0.{VNC_SLOT}.0.password={vncpassword}')
 
 if not testmode:
     tf = fh.name

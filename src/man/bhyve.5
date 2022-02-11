@@ -10,9 +10,9 @@
 .\"
 .\" Copyright 2016, Joyent, Inc.
 .\" Copyright 2016, OmniTI Computer Consulting, Inc. All Rights Reserved.
-.\" Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
+.\" Copyright 2022 OmniOS Community Edition (OmniOSce) Association.
 .\"
-.Dd September 11, 2021
+.Dd February 11, 2022
 .Dt BHYVE 5
 .Os
 .Sh NAME
@@ -24,7 +24,8 @@ A
 branded zone uses the
 .Xr brands 5
 framework to provide an environment for running a virtual machine under the
-bhyve hypervisor.
+.Xr bhyve 1m
+hypervisor.
 .Sh CONFIGURATION
 .Nm
 zones are configured mostly via custom attributes in the zone configuration.
@@ -33,11 +34,9 @@ Supported attributes are:
 .Bl -tag -width Ds
 .It Xo Sy acpi
 .Sm off
-.Ar on
-|
-.Ar off
-.Xc
+.Ar on | off
 .Sm on
+.Xc
 .Pp
 This is a legacy option that no longer has any effect.
 .It Sy bootdisk Ar path Ns Op , Ns Cm serial Ns = Ns Ar serial
@@ -104,15 +103,9 @@ Each image file must also be mapped into the zone using an
 block, as shown in the example below.
 .It Xo Sy cloud-init
 .Sm off
-.Ar on
-|
-.Ar off
-|
-.Ar filename
-|
-.Ar URL
-.Xc
+.Ar on | off | filename | URL
 .Sm on
+.Xc
 .Pp
 When this option is enabled, and set to
 .Ar on
@@ -193,6 +186,13 @@ Available options are:
 .It
 .Sy virtio-blk Pq default
 .El
+.It Sy diskif Ns Ar N Ar type
+.Pp
+Override the
+.Sy diskif
+.Ar type
+for the disk at target
+.Ar N .
 .It Sy dns-domain Ar domainname
 .Pp
 The DNS domain name for the guest.
@@ -248,13 +248,9 @@ Note that only the accelerated virtio interface supports filtering using the
 zone firewall.
 .It Xo Sy password
 .Sm off
-.Ar string
-|
-.Ar hash
-|
-.Ar filename
-.Xc
+.Ar string | hash | filename
 .Sm on
+.Xc
 .Pp
 When the
 .Sy cloud-init
@@ -264,9 +260,9 @@ will be passed to the guest which can use it to set the password for the
 default user.
 Depending on the guest, this may be the root user or a distribution-dependant
 initial user.
-.Ar password
-can be provided as a fixed string, a pre-computed hash or a path to a file
-that contains the desired password or password hash.
+The password can be provided as a fixed string, a pre-computed hash or a path
+to a file that contains the desired password or password hash, relative to
+the global zone root.
 .It Sy priv.debug Ar on Ns | Ns Ar off
 Set to
 .Ar on
@@ -339,11 +335,9 @@ These are included in the data passed to the guest when the
 option is enabled.
 .It Xo Sy rng
 .Sm off
-.Ar on
-|
-.Ar off
-.Xc
+.Ar on | off
 .Sm on
+.Xc
 .Pp
 Set to
 .Ar on
@@ -353,9 +347,7 @@ to the guest
 .Pq default: Ar off .
 .It Xo Sy sshkey
 .Sm off
-.Ar string
-|
-.Ar filename
+.Ar string | filename
 .Xc
 .Sm on
 .Pp
@@ -448,20 +440,19 @@ result in I/O port queries and fail to boot if I/O decode is disabled.
 .El
 .It Xo Sy vnc
 .Sm off
-.Ar on
-|
-.Ar wait
-|
-.Ar off
-|
-.Ar options
-.Xc
+.Ar on | wait | off | options
 .Sm on
+.Xc
 .Pp
 This parameter controls whether a virtual frambuffer is attached to the
 guest and made available via VNC.
 Available options are:
 .Bl -tag -width Ds
+.It Sy off
+Disable the framebuffer.
+This is the same as omitting the
+.Sy vnc
+attribute.
 .It Sy on
 An alias for
 .Sy unix=/tmp/vm.vnc
@@ -473,12 +464,8 @@ An alias for
 .Sy wait,unix=/tmp/vm.vnc
 which is identical to
 .Sy on
-except that the zone boot is halted until a VNC connection is established.
-.It Sy off
-Disable the framebuffer.
-This is the same as omitting the
-.Sy vnc
-attribute.
+except that the zone boot is halted until the first VNC connection is
+established.
 .It Sy unix Ns = Ns Ar path
 Sets up a VNC server on a UNIX socket at the specified
 .Ar path .
@@ -489,8 +476,17 @@ Specifies the horizontal screen resolution
 .It Sy h Ns = Ns Ar pixels
 Specifies the vertical screen resolution
 .Pq default: 768, max: 1200
+.It Xo
+.Sm off
+.Sy password = Ar string | filename
+.Sm on
+.Xc
+Specifies a password for the VNC server.
+If no password is specified, no authentication is required.
+The password can be provided as a fixed string or a path to a file that
+contains the desired password, relative to the global zone root.
 .It Sy wait
-Pause boot until a VNC connection is established.
+Pause boot until the first VNC connection is established.
 .El
 .Pp
 Multiple options can be provided, separated by commas.
@@ -516,11 +512,9 @@ If you prefer, you can also use the real socat utility that's shipped in core:
 .Ed
 .It Xo Sy xhci
 .Sm off
-.Ar on
-|
-.Ar off
-.Xc
+.Ar on | off
 .Sm on
+.Xc
 .Pp
 Enable or disable the emulated USB tablet interface along with the emulated
 framebuffer.
