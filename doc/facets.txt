@@ -16,7 +16,7 @@ both sparc and x86, since the two architecture's files intersect or
 collide.  Other examples include debug vs non-debug binaries, and
 global vs nonglobal zones.
 
-In pkg(5), options that may be selected or not selected, such as various
+In pkg(7), options that may be selected or not selected, such as various
 locales, documentation, etc., are referred to as facets.  Options which
 are mutually exclusive are called variants.  Both variants and facets
 appear as tags on IPS actions, and result in the action being
@@ -100,7 +100,7 @@ of the change.
 
 Because of the need to select the appropriate variant types prior to
 installation or parsing manifests, only variant.debug.* variants can
-used with pkg(5) without making explicit changes to the source
+used with pkg(7) without making explicit changes to the source
 code. Developers are encourged to design their components not to
 intersect in the filesystem so that facets may be used rather than
 variants.

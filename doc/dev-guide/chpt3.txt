@@ -232,7 +232,7 @@ Types of Actions
 
 There are currently twelve action types in IPS.  The following
 sections describe each action type, and the attributes that
-define these actions.  The action types are detailed in the |pkg5| man
+define these actions.  The action types are detailed in the |pkg7| man
 page, and are repeated here for reference.
 
 Each section contains an example action, as it would appear in a manifest
@@ -475,7 +475,7 @@ Set Actions
                            The name and version of the containing package.
 
      info.classification
-                           One or more tokens that a |pkg5| client can use
+                           One or more tokens that a |pkg7| client can use
                            to classify the package.  The value should have
                            a scheme (such as ``org.opensolaris.category.2008``
                            or ``org.acm.class.1998``) and the actual
@@ -543,7 +543,7 @@ Driver Actions
      The driver action represents a  device  driver.  The  driver
      action  does not reference a payload. The driver files themselves
      must be installed as ``file`` actions.  The  following
-     attributes are recognized (see ``add_drv(1M)`` for more information):
+     attributes are recognized (see ``add_drv(8)`` for more information):
 
      name
                     The name of the driver. This is usually,  but
@@ -586,7 +586,7 @@ Driver Actions
                     This specifies an entry in ``/etc/devlink.tab``.
                     The value is the exact line to go into the
                     file, with tabs denoted by ‘``\t``’. See
-                    ``devlinks(1M)`` for more information. A given
+                    ``devlinks(8)`` for more information. A given
                     driver can have more than one ``devlink``
                     attribute.
 
@@ -843,12 +843,12 @@ User Actions
 
      group-list
                     Secondary groups to which the  user  belongs.
-                    See ``group(4)``.
+                    See ``group(5)``.
 
      ftpuser
                     Can be set to ``true`` or ``false``.  The default
                     value of ``true`` indicates that the user is
-                    permitted to login via FTP. See ``ftpusers(4)``.
+                    permitted to login via FTP. See ``ftpusers(5)``.
 
      lastchg
                     The number of days between January  1,  1970,
@@ -863,7 +863,7 @@ User Actions
 
      max
                     The maximum number of days  the  password  is
-                    valid.  The default value is empty.  See ``shadow(4)``.
+                    valid.  The default value is empty.  See ``shadow(5)``.
 
      warn
                     The number of days  before  password  expires
@@ -887,18 +887,18 @@ User Actions
                     Set to empty.
 
      For more information on the values of these attributes, see
-     the ``shadow(4)`` man page.
+     the ``shadow(5)`` man page.
 
      A example of a user action is::
 
-        user gcos-field="pkg(5) server UID" group=pkg5srv uid=97 username=pkg5srv
+        user gcos-field="pkg(7) server UID" group=pkg5srv uid=97 username=pkg5srv
 
 
 Group Actions
 `````````````
 
      The  group  action  defines  a  UNIX  group  as  defined  in
-     ``group(4)``.  No support is present for group passwords. Groups
+     ``group(5)``.  No support is present for group passwords. Groups
      defined with this action initially have no user list.  Users
      can  be added with the user action. The following attributes
      are recognized:

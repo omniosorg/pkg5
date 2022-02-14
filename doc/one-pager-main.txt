@@ -5,12 +5,12 @@ This information is Copyright 2008 Sun Microsystems
 1. Introduction
    1.1. Project/Component Working Name:
 
-        pkg(5): image packaging system
+        pkg(7): image packaging system
 
    1.2. Name of Document Author/Supplier:
 
         Stephen Hahn, Sun Microsystems,
-          on behalf of the pkg(5) project team
+          on behalf of the pkg(7) project team
 
    1.3. Date of This Document:
 
@@ -37,10 +37,10 @@ This information is Copyright 2008 Sun Microsystems
 2. Project Summary
    2.1. Project Description:
 
-        The image packaging system, pkg(5), is a portable software
+        The image packaging system, pkg(7), is a portable software
         packaging and delivery system intended to allow efficient,
         observable, and controllable transitions between known
-        configurations of software content.  pkg(5) will subsume the
+        configurations of software content.  pkg(7) will subsume the
         functionality of the of the packaging and patching utilities
         included in historical Solaris releases.  A primary goal for
         this project is to improve and extend the usability and
@@ -169,7 +169,7 @@ This information is Copyright 2008 Sun Microsystems
 4. Technical Description:
     4.1. Details:
 
-        pkg(5) is a network-oriented binary packaging system.  Although
+        pkg(7) is a network-oriented binary packaging system.  Although
         it will have on-disk representations for versioned packages, the
         primary expected use for installation of software will be
         between an intelligent client and one or more relatively simple
@@ -250,7 +250,7 @@ This information is Copyright 2008 Sun Microsystems
 
     4.5. Interfaces:
 
-        pkg(5) will present a substantial set of new and modified interfaces
+        pkg(7) will present a substantial set of new and modified interfaces
         to the core system.  In particular, documented definitions of
 
         - retrieval client CLI,
@@ -325,8 +325,8 @@ This information is Copyright 2008 Sun Microsystems
         All package, cluster, and metacluster boundaries will be
         examined in the course of the project.
 
-        The primary upgrade mechanism for operating systems using pkg(5)
-        will be achieved via pkg(5) components; this mechanism is
+        The primary upgrade mechanism for operating systems using pkg(7)
+        will be achieved via pkg(7) components; this mechanism is
         expected to replace the current standalone upgrade and
         LiveUpgrade paths.  The replacement is expected, in concert with
         the SnapUpgrade project, to present capabilities that equal or

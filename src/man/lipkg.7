@@ -11,51 +11,60 @@
 .\" Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
 .\"
 .Dd March 25, 2019
-.Dt SPARSE 5
+.Dt LIPKG 7
 .Os
 .Sh NAME
-.Nm sparse
-.Nd zone brand for running a reduced copy of OmniOS with linked packages
+.Nm lipkg
+.Nd zone brand for running a full copy of OmniOS with linked packages
 .Sh DESCRIPTION
 The
-.Em sparse
+.Em lipkg
 brand
 uses the
-.Xr brands 5
-framework to provide an environment for running a small copy of Omnios, with
+.Xr brands 7
+framework to provide an environment for running a full copy of Omnios, with
 system software packages linked to those installed in the global zone.
 .Pp
-A
-.Em sparse
-zone is an
-.Xr lipkg 5
-zone where several of its filesystems are directly shared with the global zone.
-This makes a sparse zone very small indeed (and quick to build) but they are
-only suitable for software packages that do not need to install files under
-shared filesystems such as
-.Pa /usr ;
-those being read-only within the zone.
+A linked-ipkg (
+.Em lipkg )
+zone is an extension of an
+.Xr ipkg 7
+zone which has its
+installed software set linked to that within the global zone.
+By default, when performing a package update from the global zone,
+core system packages within
+.Em lipkg
+zones are automatically updated at the same time.
+It is possible to extend this to upgrade all packages and to upgrade multiple
+.Em lipkg
+zones in parallel via command line options or pkg properties.
+.Pp
+A further benefit over
+.Xr ipkg 7
+zones is that major version upgrades can be performed without having to detach
+and re-attach the zones.
+.Pp
 Like
-.Xr ipkg 5
+.Xr ipkg 7
 zones,
-.Em sparse
+.Em lipkg
 zones can have multiple boot environments, created either locally within the
 zone or managed automatically from the global zone as BEs are
 created/destroyed there.
 .Pp
-Given their small size, low overhead and ease of maintenance, it is common to
-use sparse zones for running individual services such as an NTP, DHCP or DNS
-server.
+Even though the software image is linked to the global zone, it is perfectly
+possible to have a different set of packages installed in an lipkg zone as long
+as system consistency rules are met.
 .Sh CONFIGURATION
 Persistent network configuration (including DNS resolver information) can be
 configured using
-.Xr zonecfg 1m .
+.Xr zonecfg 8 .
 An example
 .Em lipkg
 zone configured with VNIC "vnic0" using a static IP address is below:
 .sp
 .Bd -literal -offset indent
-create -t sparse
+create -t lipkg
 set zonepath=/zones/testzone
 set autoboot=true
 add net
@@ -77,16 +86,7 @@ end
 .Ed
 .sp
 .Sh LIMITATIONS
-Within a
-.Em sparse
-zone, the
-.Pa /usr ,
-.Pa /lib
-and
-.Pa /sbin
-directories are read-only.
-.Pp
-.Em sparse
+.Em lipkg
 zone boot environments are linked to the global zone boot environment under
 which they were created.
 This means that rolling back the global zone to a previous boot environment
@@ -94,11 +94,11 @@ will also roll back the zone.
 For this reason, zone data which should be shared across boot environments
 should be allocated to a dedicated dataset.
 .Sh SEE ALSO
-.Xr zfs 1m ,
-.Xr zoneadm 1m ,
-.Xr zonecfg 1m ,
-.Xr brands 5 ,
-.Xr ipkg 5 ,
-.Xr privileges 5 ,
-.Xr resource_controls 5 ,
-.Xr zones 5
+.Xr brands 7 ,
+.Xr ipkg 7 ,
+.Xr privileges 7 ,
+.Xr resource_controls 7 ,
+.Xr zones 7 ,
+.Xr zfs 8 ,
+.Xr zoneadm 8 ,
+.Xr zonecfg 8

@@ -22,7 +22,7 @@
 
 .. _Basic operations:
 
-|pkg5| basic operations
+|pkg7| basic operations
 =======================
 
 We provide a brief summary of the client operations and their invocation

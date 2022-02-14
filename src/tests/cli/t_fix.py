@@ -206,7 +206,7 @@ class TestFix(pkg5unittest.SingleDepotTestCase):
                 "ftpusers" :
 """# ident      "@(#)ftpusers   1.6     06/11/21 SMI"
 #
-# List of users denied access to the FTP server, see ftpusers(4).
+# List of users denied access to the FTP server, see ftpusers(5).
 #
 root
 bin

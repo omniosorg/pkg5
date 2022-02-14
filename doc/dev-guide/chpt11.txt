@@ -290,7 +290,7 @@ Example 6: Unknown Extension Value
 
     pkg install: The certificate whose subject is 
     /C=US/ST=California/L=Menlo Park/O=pkg5/CN=cs5_ch1_ta3/emailAddress=cs5_ch1_ta3
-    could not be verified because it has an extension with a value that pkg(5)
+    could not be verified because it has an extension with a value that pkg(7)
     does not understand.
     Extension name:keyUsage
     Extension value:Encipher Only

@@ -26,7 +26,7 @@ presented via a URL-based mechanism that allows each to be versioned so
 that changes in protocol can be hidden from older clients as the
 interfaces to operations evolve.
 
-Operations made available by a |depotd1m| server can be accessed via
+Operations made available by a |depotd8| server can be accessed via
 GET or POST, as appropriate for each operation, via a URL such as the
 following:
 
@@ -61,7 +61,7 @@ Operation Types
 ---------------
 
 Each operation that the depot server provides is either designed to interact
-with a pkg(5) repository, or with the depot server itself.  These operations
+with a pkg(7) repository, or with the depot server itself.  These operations
 can be categorized as follows:
 
     - content
@@ -71,7 +71,7 @@ can be categorized as follows:
     - depot
         These operations are read-only, and permit retrieval of: the list of
         operations that the depot server currently provides (including protocol
-        version and pkg(5) software version), statistics information, and other
+        version and pkg(7) software version), statistics information, and other
         depot information.
 
     - metadata

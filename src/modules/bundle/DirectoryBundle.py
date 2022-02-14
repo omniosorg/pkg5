@@ -37,7 +37,7 @@ import pkg.actions.hardlink
 
 class DirectoryBundle(pkg.bundle.Bundle):
         """The DirectoryBundle class assists in the conversion of a directory
-        tree to a pkg(5) package by traversing the tree and emitting actions for
+        tree to a pkg(7) package by traversing the tree and emitting actions for
         all files, directories, and links found therein.
 
         Paths are published relative to the given directory.  Hardlinks are

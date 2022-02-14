@@ -25,7 +25,7 @@ pkgsend \- Image Packaging System publication client
 .SH DESCRIPTION
 .sp
 .LP
-\fBpkgsend\fR enables the publication of new packages and new package versions to an image packaging repository using package manifests. To create or manage repositories, see \fBpkgrepo\fR(1). To create package archives from packages in an existing repository, see \fBpkgrecv\fR(1). For more information about package manifests, see \fBpkg\fR(5).
+\fBpkgsend\fR enables the publication of new packages and new package versions to an image packaging repository using package manifests. To create or manage repositories, see \fBpkgrepo\fR(1). To create package archives from packages in an existing repository, see \fBpkgrecv\fR(1). For more information about package manifests, see \fBpkg\fR(7).
 .sp
 .LP
 After a \fBpkgsend publish\fR operation, if your \fIrepo_uri_or_path\fR repository must support \fBpkg search\fR operations, run \fBpkgrepo refresh\fR on the repository to update search indexes.
@@ -152,7 +152,7 @@ The SVR4 \fBDESC\fR parameter is converted to a \fBpkg.description\fR value. The
 .RS 4n
 Publish a package using the specified package manifests to the target package repository, retrieving files for the package from the provided sources. If multiple manifests are specified, they are joined in the order provided. If a manifest is not specified, the manifest is read from \fBstdin\fR.
 .sp
-If not specified, \fBpkgsend publish\fR adds the build version to the package FMRI. The \fBpublish\fR tool also adds the timestamp (the current time in UTC) to the package FMRI. See the \fBpkg\fR(5) man page for information about the version string of a package FMRI.
+If not specified, \fBpkgsend publish\fR adds the build version to the package FMRI. The \fBpublish\fR tool also adds the timestamp (the current time in UTC) to the package FMRI. See the \fBpkg\fR(7) man page for information about the version string of a package FMRI.
 .sp
 If multiple \fBpkgsend publish\fR processes might be publishing to the same \fB-s\fR repository simultaneously, specifying the \fB--no-catalog\fR option is recommended. See the description of the \fB--no-catalog\fR option below.
 .sp
@@ -366,7 +366,7 @@ An unanticipated exception occurred.
 .SH ATTRIBUTES
 .sp
 .LP
-See \fBattributes\fR(5) for descriptions of the following attributes:
+See \fBattributes\fR(7) for descriptions of the following attributes:
 .sp
 
 .sp
@@ -385,7 +385,7 @@ Interface StabilityUncommitted
 .SH SEE ALSO
 .sp
 .LP
-\fBpkgdepend\fR(1), \fBpkgrepo\fR(1), \fBpkg.depotd\fR(1M), \fBpkg\fR(5)
+\fBpkgdepend\fR(1), \fBpkgrepo\fR(1), \fBpkg.depotd\fR(8), \fBpkg\fR(7)
 .sp
 .SH NOTES
 .sp
@@ -393,4 +393,4 @@ Interface StabilityUncommitted
 Because of publication protocol limitations, file system based publication must be used when publishing individual package files that are greater than 128 MB in size. File system based publication is also recommended when access control for a repository is needed.
 .sp
 .LP
-When using file system based publication, any \fBpkg.depotd\fR processes that are serving the target repository must be restarted after publication is completed for the changes to be reflected in its web interface or search responses. See \fBpkg.depotd\fR(1M) for more information.
+When using file system based publication, any \fBpkg.depotd\fR processes that are serving the target repository must be restarted after publication is completed for the changes to be reflected in its web interface or search responses. See \fBpkg.depotd\fR(8) for more information.

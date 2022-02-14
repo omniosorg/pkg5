@@ -37,7 +37,7 @@ Depot Operations
                 Nothing
 
             Returns:
-                text/plain data containing the version of the pkg(5) software that
+                text/plain data containing the version of the pkg(7) software that
                 the depot is based upon, a list of the operations currently
                 supported, and the protocol version supported for each
                 operation.
@@ -73,7 +73,7 @@ Metadata Operations
                     If-Modified-Since: {ISO 8601 formatted date and time in UTC}
 
             Returns:
-                Either the contents of a pkg(5) catalog file, or the entries
+                Either the contents of a pkg(7) catalog file, or the entries
                 that were added since the specified date as they are found
                 in the catalog file, separated by newlines.
 
@@ -88,7 +88,7 @@ Metadata Operations
                 http://pkg.opensolaris.org/info/0/entire@0.5.11,5.11-0.101:20081119T235706Z
 
             Expects:
-                A URL-encoded pkg(5) FMRI, excluding the 'pkg:/' scheme prefix
+                A URL-encoded pkg(7) FMRI, excluding the 'pkg:/' scheme prefix
                 and publisher information, and including the full version
                 information.
 
@@ -119,7 +119,7 @@ Metadata Operations
                 http://pkg.opensolaris.org/manifest/0/entire@0.5.11,5.11-0.101:20081119T235706Z
 
             Expects:
-                A URL-encoded pkg(5) FMRI excluding the 'pkg:/' scheme prefix
+                A URL-encoded pkg(7) FMRI excluding the 'pkg:/' scheme prefix
                 and publisher information and including the full version
                 information.
 
@@ -139,7 +139,7 @@ Metadata Operations
                 http://pkg.opensolaris.org/release/p5i/0/SUNWcs
 
             Expects:
-                A full or partial URL-encoded pkg(5) FMRI, excluding the
+                A full or partial URL-encoded pkg(7) FMRI, excluding the
                 publisher prefix.  If the partial or full FMRI is valid, it will
                 be added to the datastream as is.  If it includes the wildcard
                 character '*', a search of the repository's catalog for matching
@@ -148,7 +148,7 @@ Metadata Operations
                 found, a 404 error will be raised.
 
             Returns:
-                Returns a pkg(5) information datastream based on the repository
+                Returns a pkg(7) information datastream based on the repository
                 configuration's publisher information and the provided full or
                 partial FMRI or matching entries.  The Content-Type of the
                 response is 'application/vnd.pkg5.info'.
@@ -168,7 +168,7 @@ Metadata Operations
                 Nothing
 
             Returns:
-                Returns a pkg(5) information datastream based on the repository
+                Returns a pkg(7) information datastream based on the repository
                 configuration's publisher information.  The Content-Type of the
                 response is 'application/vnd.pkg5.info'.
 

@@ -23,7 +23,7 @@
 # Use is subject to license terms.
 
 These scripts are used to gather data and generate reports from the logs of
-apaache servers sitting in front of pkg(5) depots.
+apaache servers sitting in front of pkg(7) depots.
 
 To get started:
 

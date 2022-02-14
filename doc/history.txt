@@ -12,7 +12,7 @@ image-modifying operations that they perform.
 2.1 Operations
 
     The following operations are currently recorded by the clients that are
-    part of pkg(5):
+    part of pkg(7):
 
         add-publisher
         image-create
@@ -29,7 +29,7 @@ image-modifying operations that they perform.
         update-publisher
 
     These operations were chosen because they have the potential to alter the
-    behavior of pkg(5) operations or because they modify an image.
+    behavior of pkg(7) operations or because they modify an image.
 
 3. History Entries
 

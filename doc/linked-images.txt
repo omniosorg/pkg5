@@ -4,7 +4,7 @@
      rst2html.py doc/linked-images.txt > doc/linked-images.html
 
 ============================
-Ips pkg(5) zones integration
+Ips pkg(7) zones integration
 ============================
 
 :Author: Edward Pilatowicz
@@ -16,21 +16,21 @@ Ips pkg(5) zones integration
 Introduction
 ============
 
-To allow for support of pkg(5) within zones and the automatic management
-and upgrading of zones during global zone pkg(5) operations, this
-proposal describes enhancements to pkg(5) to support "linked images".
+To allow for support of pkg(7) within zones and the automatic management
+and upgrading of zones during global zone pkg(7) operations, this
+proposal describes enhancements to pkg(7) to support "linked images".
 
-The pkg(5) linked images functionality proposed herein is intended to
+The pkg(7) linked images functionality proposed herein is intended to
 be generic, with zones being one type of linked images that can be
 supported. In addition to supporting zones linked images we also propose
 supporting another "system" type of linked images. The details of how
 these linked image types differ will be explained in more detail below.
 
-Another goal of the pkg(5) linked image support is to make all the
-linked image functionality visible to other pkg(5) subsystems common,
+Another goal of the pkg(7) linked image support is to make all the
+linked image functionality visible to other pkg(7) subsystems common,
 and to isolate code dealing with the different linked image types within
 well defined modules contained within the linked image subsystem. IE,
-while other pkg(5) subsystems may need to be aware of linked images,
+while other pkg(7) subsystems may need to be aware of linked images,
 they should not have to worry about specific linked image types.
 (zones, system, etc.)
 
@@ -47,7 +47,7 @@ may be derived from zonecfg(1m) parameters, etc.)
 Zones and linked images
 =======================
 
-The design for pkg(5) linked images as proposed herein is primarily
+The design for pkg(7) linked images as proposed herein is primarily
 being driven by the need to support zones. Hence, before jumping into
 the specifics of linked images support it is worth discussing how zones
 user are expected to interact with linked images, and also the
@@ -70,7 +70,7 @@ automatically under the hood when users do operations like:
   the global zone.
 
 - Run zoneadm(1m) install/uninstall/detach/attach/etc.  In this case the
-  zone brand callbacks will utilize with the pkg(5) linked image
+  zone brand callbacks will utilize with the pkg(7) linked image
   functionality to manage zones as linked images.
 
 
@@ -84,7 +84,7 @@ with it's own filesystem, processes, network stack, etc. The default
 execution environment (IE, the one you get when you install Solaris or
 OpenSolaris) is called the global zone.  Subsequent execution
 environments are called non-global zones and can be created and managed
-via zonecfg(1M) and zoneadm(1M).
+via zonecfg(8) and zoneadm(1M).
 
 All the zones on a system share the same kernel, and the kernel is
 managed by the global zone. Non-global zones can not supply their own
@@ -124,7 +124,7 @@ The basic requirements here can be summed up as:
 - Software management operations will need to span multiple processes
   operating in different zones.
 
-- Since zones are untrusted execution environment, global zone pkg(5)
+- Since zones are untrusted execution environment, global zone pkg(7)
   operations should not read data from non-global zone.  IE, any data
   flow required to support linked images must be from a global zone to a
   non-global zone, and never in the reverse direction.  Also, write
@@ -149,7 +149,7 @@ While developing linked images, existing Solaris 10 zones users have
 asked how linked images will enable them to continue to do certain zones
 administrative operations that they are familiar with.  Unfortunately,
 some of these operations were possible mainly as side effects of the
-zones and SVR4 packaging implementations on Solaris 10.  Since pkg(5) is
+zones and SVR4 packaging implementations on Solaris 10.  Since pkg(7) is
 significantly changing the way zones are used and managed, some of these
 legacy operations will no longer be possible and users will need to
 adopt new ways of managing their zones.  So here are some of the
@@ -159,10 +159,10 @@ linked images.
 
 **The ability to install a patch on all zones on a system.**
 
-Patching of systems with pkg(5) will be substantially different from the
+Patching of systems with pkg(7) will be substantially different from the
 patching of Solaris 10 system.  This change is the administrative model
-is being driven by pkg(5) and is largely orthogonal to zones.  With
-pkg(5), patching of systems will be done via pkg(1) update, where
+is being driven by pkg(7) and is largely orthogonal to zones.  With
+pkg(7), patching of systems will be done via pkg(1) update, where
 repositories are populated with the latests versions of packages that
 all system should be running, and when systems are image-updated they
 will automatically install the latest versions of software available
@@ -177,7 +177,7 @@ zones.
 Previously in Solaris 10, the package content of zones closely tracked
 the package content of the global zone.  In most cases installing a
 package in the global zone would result in that package being installed
-in all zones.  With pkg(5) the contents of zones are much more decoupled
+in all zones.  With pkg(7) the contents of zones are much more decoupled
 from the contents of global zones.  We will not be providing a way to
 install packages across multiple zones.  In general, system should only
 contain the software that they need for their operation.  Hence, this
@@ -219,11 +219,11 @@ where they might be used.
     taking into account the constraints placed upon the zone by the
     software installed in the global zone.
 
-  - Allow pkg(5) operations initiated from (and operating on) the global
+  - Allow pkg(7) operations initiated from (and operating on) the global
     zone to update non-global zone images as required to keep them in
     sync with software being updated in the global zone.
 
-  - Allow for pkg(5) operations initiated directly upon non-global zone
+  - Allow for pkg(7) operations initiated directly upon non-global zone
     image to take into account the constraints placed upon then by the
     software installed in the global zone.
 
@@ -273,7 +273,7 @@ where they might be used.
   system image. Then he could install SpamAssassin into that image.
   Pkg(5) would install a version of SpamAssassin that is compatible with
   the software contents already installed on jurassic. (In the process
-  of doing this pkg(5) would also install into the user image any
+  of doing this pkg(7) would also install into the user image any
   dependencies required by SpamAssassin that were missing from
   jurassic.) Ed could then run this version of SpamAssassin without
   having to worry about his software being out of sync with the system.
@@ -305,7 +305,7 @@ where they might be used.
 **Distributed linked images**
 
   Support for Distributed linked images is NOT included in this
-  proposal.  But if pkg(5) functionality was accessible over the network
+  proposal.  But if pkg(7) functionality was accessible over the network
   via rad interfaces, it should be possible to create linked image
   relationships that span multiple machines.  This could be used in a
   manager similar to diskless clients where a master deployment image is
@@ -319,7 +319,7 @@ Out of scope
 ============
 
 There are many components which will probably be required to allow
-pkg(5) and zones to work seamlessly together. This proposal does not
+pkg(7) and zones to work seamlessly together. This proposal does not
 address all of them. Specifically, the following features are not being
 delivered by this project.
 
@@ -336,7 +336,7 @@ delivered by this project.
 
   This proposal does nothing to address the current requirement that an
   active network connection to a valid package repository be available
-  during most pkg(5) operations. If anything, this proposal will
+  during most pkg(7) operations. If anything, this proposal will
   increase the number of operations that may require such a connection
   to be available.
 
@@ -364,14 +364,14 @@ delivered by this project.
 
 **Zones image locking.** [3]_
 
-  When performing pkg(5) operations in a global zone that affect the
+  When performing pkg(7) operations in a global zone that affect the
   contents of the global zone, we need a locking mechanism to prevent
   concurrent operations from being done within a non-global zone. We
   also need a locking mechanism that allows for the reverse. Ie, if a
-  zone is in the middle of a pkg(5) operation we don't want to initiate
+  zone is in the middle of a pkg(7) operation we don't want to initiate
   an operation from the global zone which might also require updating
   that zone. Other scenarios that we will probably also need to protect
-  against include a zone changing state while we're performing a pkg(5)
+  against include a zone changing state while we're performing a pkg(7)
   operation on that zone. For example, if we're installing a package in
   a global zone which results in us also installing a package in a
   non-global zone, we need to prevent that non-global zone from
@@ -380,7 +380,7 @@ delivered by this project.
   probably want to prevent a concurrent install of a non-global zone
   since that could results in the freshly installed zone being out of
   sync with the global zone. This proposal does not address any of the
-  possible race conditions wrt pkg(5) and zone linked image operations.
+  possible race conditions wrt pkg(7) and zone linked image operations.
 
 
 **Pkg(5)/beadm(1M) image filesystem management.** [4]_
@@ -390,12 +390,12 @@ delivered by this project.
   those filesystems are zfs based and are all children of the current
   root filesystem. beadm(1M) treats any other filesystems in the current
   BE as shared and lofs mounts them into any other alternate BE. This
-  means that if any pkg(5) software is installed into these "shared"
+  means that if any pkg(7) software is installed into these "shared"
   filesystems that software will become out of sync wrt some BE. Pkg(5)
   and beadm(1M) do not perform any check to ensure that all the software
   being installed is not being installed into "shared" filesystems. This
   same problem also affects zones. This proposal does not address this
-  issue in any way and assumes that eventually pkg(5) or beadm(1M) will
+  issue in any way and assumes that eventually pkg(7) or beadm(1M) will
   provide more flexible and robust functionality to manage images that
   span multiple filesystem.
 
@@ -407,8 +407,8 @@ delivered by this project.
   beadm(1M) does not support running within a non-global zone and
   creating snapshots of zone boot environments from within a zone.
   Beadm(1M) support within a zone is a requirements for supporting
-  pkg(5) image-update within a zone.  (Since image-update only operates
-  on alternate boot environments.) It is also the case that other pkg(5)
+  pkg(7) image-update within a zone.  (Since image-update only operates
+  on alternate boot environments.) It is also the case that other pkg(7)
   operations may refuse to operate on the currently running image and
   may only be run on cloned and offline boot environments. Since
   beadm(1M) can not be run within a zone, we can't create cloned boot
@@ -420,17 +420,17 @@ delivered by this project.
   all linked images should be snapshotted, cloned, and upgraded in sync.
   Enhancing beadm(1M) will be required to support non-zone types of
   linked images that live outside the current boot environment. Once
-  this project delivers initial pkg(5) linked image interfaces it will
+  this project delivers initial pkg(7) linked image interfaces it will
   be possible to update beadm(1M) to consume these interfaces so that it
   can be aware of all linked images on the system, instead of just zone
   images. These beadm(1M) enhancements are out of the scope of this
   proposal.
 
 
-pkg(5) linked image overview
+pkg(7) linked image overview
 ============================
 
-pkg(5) linked images will always always have a parent and child
+pkg(7) linked images will always always have a parent and child
 relationship. Parent images may have multiple children, but each child
 image may only have one parent. It's possible for there to be multiple
 levels of linked images (i.e., nested linked image), for example, you
@@ -438,10 +438,10 @@ could have a system linked image, which is a child of a zone linked
 image, which is the child of a global zone image.
 
 
-pkg(5) linked image name
+pkg(7) linked image name
 ------------------------
 
-All pkg(5) linked images are uniquely identified by a name. A fully
+All pkg(7) linked images are uniquely identified by a name. A fully
 qualified linked image name is <linked image type>:<linked image name>.
 The linked image name must begin with an alphanumeric character and can
 contain alphanumeric characters, underscores (_), hyphens (-), and dots
@@ -449,7 +449,7 @@ contain alphanumeric characters, underscores (_), hyphens (-), and dots
 defined by the linked image plugin handling that type of linked image.
 
 
-pkg(5) linked image attach mode
+pkg(7) linked image attach mode
 -------------------------------
 
 As previously mentioned, all linked images will have a parent/child
@@ -497,7 +497,7 @@ Zones linked images will exclusively use the push linking mode.
 System linked images will support both the push and pull linking modes.
 
 
-pkg(5) linked image properties
+pkg(7) linked image properties
 ------------------------------
 
 As mentioned earlier, each child linked image will have properties
@@ -505,7 +505,7 @@ associated with it.
 
 In the case of both push and pull based child images, linked image
 property information will always be stored within a private file and
-directory in the pkg(5) image metadata directory.  Currently either
+directory in the pkg(7) image metadata directory.  Currently either
 /.org.opensolaris,pkg/linked/ or /var/pkg/linked/.
 
 In the case of push based parent images, the property information for
@@ -556,7 +556,7 @@ Initially the following properties will be supported:
   This property only exists for push based children of a parent image.
 
   By default, for zones this property will be set to false.  This means
-  that if we do an recursive pkg(5) operation in the global zone that
+  that if we do an recursive pkg(7) operation in the global zone that
   affects a non-global zone, we will update that non-global zone, but we
   will ignore any children of that non-global zone.  So if for example,
   a non-global zone administrator has created a push based child of the
@@ -564,7 +564,7 @@ Initially the following properties will be supported:
   into that child image.
 
 
-pkg(5) linked image interfaces
+pkg(7) linked image interfaces
 ==============================
 
 
@@ -572,11 +572,11 @@ pkg(1) linked image interfaces introduction
 -------------------------------------------
 
 Linked image support has an impact on the behavior and interfaces of
-many pkg(5) operations.  Hence, before jumping into all the new linked
+many pkg(7) operations.  Hence, before jumping into all the new linked
 image interfaces it makes sense to discuss some of the common linked
 image behaviors and options to pkg(1) cli interfaces.
 
-pkg(5) operation recursion
+pkg(7) operation recursion
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
   Any pkg(1) subcommand which installs or removes packages from a linked
@@ -584,7 +584,7 @@ pkg(5) operation recursion
   keep those child images in sync with the parent.  There are two things
   to note about this recursive behavior.
 
-  First, the initial recursion into child images by a pkg(5) operation
+  First, the initial recursion into child images by a pkg(7) operation
   on a parent image has no relation to the li-recure linked image
   property.  This property is only used when dealing with multiple
   levels of recursion.  If this property is false for a child image, a
@@ -595,7 +595,7 @@ pkg(5) operation recursion
   the operation being performed on the parent will also be performed on
   all it's children.  Recursion into children is only done to keep child
   images in sync.  To clarify this point it's worth explicitly
-  describing how this impacts common pkg(5) operations.
+  describing how this impacts common pkg(7) operations.
 
     **pkg(1) install** - When an install recurses into child linked images,
     it does so only to keep those images in sync.  Hence, if a user
@@ -976,13 +976,13 @@ pkg(1) detach-linked
 
 
 
-pkg(5) linked image manifest metadata
+pkg(7) linked image manifest metadata
 -------------------------------------
 
 When dealing with zones, package publishers need a way to specify which
 packages must be kept in sync between zone images.  In Solaris 10 this
 was done via a SVR4 packaging attribute (SUNW_PKG_ALLZONES).  With
-pkg(5) we will create a new manifest depend actions for this
+pkg(7) we will create a new manifest depend actions for this
 purpose::
 
   depend type=parent
@@ -1012,31 +1012,31 @@ would include:
 - Any software which delivers interfaces which may span a zone boundary.
   Some examples would include:
 
-  - pkg(5) - Since zones are different linked images, pkg(5) by
+  - pkg(7) - Since zones are different linked images, pkg(7) by
     definition must manage images that span zones.
 
   - libdladm - When this library is used inside a zone it will will
     communicate (via private interfaces) to the dlmgmtd daemon inside
     the global zone.
 
-Initially, all of ON and pkg(5) will set this property for all packages
+Initially, all of ON and pkg(7) will set this property for all packages
 they deliver.  In time, the number of packages delivered from the ON and
-pkg(5) gates with this attribute set will be reduced.
+pkg(7) gates with this attribute set will be reduced.
 
 This property will also be a public interface since anyone delivering
-software via pkg(5) may fall into one of the categories above.  Examples
+software via pkg(7) may fall into one of the categories above.  Examples
 of third parties applications which fall into this category would
 include things like VirtualBox, VxVM/VxFS, ClearCase, etc.
 
 
-pkg(5) linked image api.py interfaces
+pkg(7) linked image api.py interfaces
 -------------------------------------
 
-There will need to be changes made to the pkg(5) api.py interfaces to
+There will need to be changes made to the pkg(7) api.py interfaces to
 support linked images.
 
-The new pkg(5) api.py interfaces will attempt to minimize the amount of
-change required for existing pkg(5) api.py clients which do not wish to
+The new pkg(7) api.py interfaces will attempt to minimize the amount of
+change required for existing pkg(7) api.py clients which do not wish to
 provide support for managing linked images directly.  (This should
 include every api.py client except for the pkg(1) cli).  Aside from
 tweaks to existing api.py interfaces, the most significant impact to
@@ -1045,11 +1045,11 @@ exceptions and errors that may be generated by api.py interface calls.
 
 
 
-pkg(5) linked image internals
+pkg(7) linked image internals
 =============================
 
 
-pkg(5) linked image child operations
+pkg(7) linked image child operations
 ------------------------------------
 
 When operating on child linked images, pkg(1) will access those images
@@ -1064,7 +1064,7 @@ this will be a normal pkg(1) process started with the -R option.  Zones
 linked images will initially operate in the same way as system images.
 
 
-pkg(5) linked image operation staging
+pkg(7) linked image operation staging
 -------------------------------------
 
 Currently pkg(1) has multiple stages of operation when manipulating
@@ -1083,12 +1083,12 @@ will allows us to report problems early.).  Before beginning any
 operation which modifies an image we also want to make sure that we've
 downloaded any required content for updating any linked images.
 
-Also, depending on how many packages are installed within an pkg(5)
+Also, depending on how many packages are installed within an pkg(7)
 image, stages 1 and 2 above can be very memory intensive, and when
 planning operations across many images we want to be careful not to run
 a system out of memory.
 
-Hence, this project will create a mechanism where using pkg(5) we can
+Hence, this project will create a mechanism where using pkg(7) we can
 execute one of the specific stages above, save the results to disk, and
 then resume our operation to perform a later stage, only using
 previously saved results.  This will be done by adding the following
@@ -1122,7 +1122,7 @@ will be used internally by the linked image code when invoking pkg(1)
 commands to operate on child images.
 
 
-zones(5) and pkg(5) integration
+zones(5) and pkg(7) integration
 ===============================
 
 This project will update the zones smf service script and the zones ipkg
@@ -1192,10 +1192,10 @@ for fully integrated zones support are covered by:
 - | 16150 need linked image support for zones, phase 2
   | https://defect.opensolaris.org/bz/show_bug.cgi?id=16150
 
-- | 6978239 pkg(5) needs a zones state locking mechanism
+- | 6978239 pkg(7) needs a zones state locking mechanism
   | http://monaco.sfbay.sun.com/detail.jsf?cr=6978239
 
-Other bugs which are related to pkg(5) and zones(5) which are not being
+Other bugs which are related to pkg(7) and zones(5) which are not being
 addressed by this work include:
 
 - | 1947 Offline zone creation is impossible
@@ -1219,7 +1219,7 @@ addressed by this work include:
 - | 6988152 beadm/libbe needs support for zone/linked dataset management
   | http://monaco.sfbay.sun.com/detail.jsf?cr=6988152
 
-- | 6998842 Zones Proxy for the pkg(5) System Repository
+- | 6998842 Zones Proxy for the pkg(7) System Repository
   | http://monaco.sfbay.sun.com/detail.jsf?cr=6998842
 
 
@@ -1232,10 +1232,10 @@ PTL Entries
 - | 8724 Pkg support for Zones phase 2
   | http://sac.sfbay/projectlog/ptl/dashboard.php?UniqueID=8724
 
-- | 8725 pkg(5) System Repository
+- | 8725 pkg(7) System Repository
   | http://sac.sfbay/projectlog/ptl/dashboard.php?UniqueID=8725
 
-- | 8726 Zones Proxy for the pkg(5) System Repository
+- | 8726 Zones Proxy for the pkg(7) System Repository
   | http://sac.sfbay/projectlog/ptl/dashboard.php?UniqueID=8726
 
 - | 8727 Updater Branded Zones
@@ -1258,7 +1258,7 @@ References
    | https://defect.opensolaris.org/bz/show_bug.cgi?id=15343
    | 15342 libbe (and beadm) need BE write lock support
    | https://defect.opensolaris.org/bz/show_bug.cgi?id=15342
-   | 6978239 pkg(5) needs a zones state locking mechanism
+   | 6978239 pkg(7) needs a zones state locking mechanism
    | http://monaco.sfbay.sun.com/detail.jsf?cr=6978239
 
 .. [4] | 16838 pkg should be aware of image and filesystem boundaries

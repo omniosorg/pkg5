@@ -370,7 +370,7 @@ class ImagePkgStateError(ApiException):
 
 class IpkgOutOfDateException(ApiException):
         def __str__(self):
-                return _("pkg(5) out of date")
+                return _("pkg(7) out of date")
 
 
 class ImageUpdateOnLiveImageException(ApiException):
@@ -1064,7 +1064,7 @@ class ActionExecutionError(ApiException):
 
         In particular, this exception indicates that something went wrong in the
         application (or unapplication) of the action to the system, and is most
-        likely not an error in the pkg(5) code."""
+        likely not an error in the pkg(7) code."""
 
         def __init__(self, action, details=None, error=None, fmri=None,
             use_errno=None):
@@ -1654,25 +1654,25 @@ class InvalidP5SFile(DataError):
 
 class UnsupportedP5IFile(DataError):
         """Used to indicate that an attempt to read an unsupported version
-        of pkg(5) info file was attempted."""
+        of pkg(7) info file was attempted."""
 
         def __str__(self):
-                return _("Unsupported pkg(5) publisher information data "
+                return _("Unsupported pkg(7) publisher information data "
                     "format.")
 
 
 class UnsupportedP5SFile(DataError):
         """Used to indicate that an attempt to read an unsupported version
-        of pkg(5) info file was attempted."""
+        of pkg(7) info file was attempted."""
 
         def __str__(self):
-                return _("Unsupported pkg(5) publisher and image information "
+                return _("Unsupported pkg(7) publisher and image information "
                     "data format.")
 
 
 class UnsupportedP5SVersion(ApiException):
         """Used to indicate that an attempt to read an unsupported version
-        of pkg(5) info file was attempted."""
+        of pkg(7) info file was attempted."""
 
         def __init__(self, v):
                 self.version = v
@@ -2300,7 +2300,7 @@ class BadFileFormat(SigningException):
 
 class UnsupportedSignatureVersion(SigningException):
         """Exception used when a signature reports a version which this version
-        of pkg(5) doesn't support."""
+        of pkg(7) doesn't support."""
 
         def __init__(self, version, *args, **kwargs):
                 SigningException.__init__(self, *args, **kwargs)
@@ -2308,7 +2308,7 @@ class UnsupportedSignatureVersion(SigningException):
 
         def __str__(self):
                 return _("The signature action {act} was made using a "
-                    "version ({ver}) this version of pkg(5) doesn't "
+                    "version ({ver}) this version of pkg(7) doesn't "
                     "understand.").format(act=self.sig, ver=self.version)
 
 
@@ -2480,7 +2480,7 @@ class UnsupportedExtensionValue(SigningException):
         def __str__(self):
                 s = _("The certificate whose subject is {cert} could not be "
                     "verified because it has an extension with a value that "
-                    "pkg(5) does not understand."
+                    "pkg(7) does not understand."
                     "\nExtension name: {name}\nExtension value: {val}").format(
                     cert="/".join("{0}={1}".format(
                     s.oid._name, s.value) for s in self.cert.subject),
@@ -2898,7 +2898,7 @@ class ImageCfgEmptyError(ApiException):
 
 class UnsupportedImageError(ApiException):
         """Used to indicate that the image at a specific location is in a format
-        not supported by this version of the pkg(5) API."""
+        not supported by this version of the pkg(7) API."""
 
         def __init__(self, path):
                 ApiException.__init__(self)

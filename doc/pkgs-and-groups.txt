@@ -1,6 +1,6 @@
 
 PSARC/2008/190
-pkg(5): image packaging system
+pkg(7): image packaging system
 
 PACKAGES AND GROUPS
 

@@ -971,7 +971,7 @@ depend fmri=network/ping
 # legacy and license actions should appear after group actions, which should
 # appear before depend actions.
 license a8c4507c0abeaa04fa24adda980a2558890c0249 chash=4636ad2345de0ab201674162c134796f8f1ecb72 license=cr_Oracle pkg.csize=88 pkg.size=71
-legacy arch=i386 category=system desc="The Image Packaging System (IPS), or pkg(5), is the software delivery system used on OpenSolaris systems.  This package contains the core command-line components and depot server." hotline="Please contact your local service provider" name="Image Packaging System" pkg=SUNWipkg variant.arch=i386 vendor="Sun Microsystems, Inc." version=0.0.0,REV=2011.04.08.15.41.42
+legacy arch=i386 category=system desc="The Image Packaging System (IPS), or pkg(7), is the software delivery system used on OpenSolaris systems.  This package contains the core command-line components and depot server." hotline="Please contact your local service provider" name="Image Packaging System" pkg=SUNWipkg variant.arch=i386 vendor="Sun Microsystems, Inc." version=0.0.0,REV=2011.04.08.15.41.42
 
 # This transform is the first; wrapping should be maintained although leading
 # spaces should be trimmed.
@@ -1167,7 +1167,7 @@ file \\
     path=usr/share/software/example/of/really/long/path/that/really/should/be/shorter
 hardlink path=etc/example target=opt/etc/example facet.devel=true
 legacy pkg=SUNWipkg arch=i386 category=system \\
-    desc="The Image Packaging System (IPS), or pkg(5), is the software delivery system used on OpenSolaris systems.  This package contains the core command-line components and depot server." \\
+    desc="The Image Packaging System (IPS), or pkg(7), is the software delivery system used on OpenSolaris systems.  This package contains the core command-line components and depot server." \\
     hotline="Please contact your local service provider" \\
     name="Image Packaging System" vendor="Sun Microsystems, Inc." \\
     version=0.0.0,REV=2011.04.08.15.41.42 variant.arch=i386
@@ -1313,7 +1313,7 @@ driver name=usbvc perms="* 0666 root sys" \\
     alias=usbia46d,8c5.config1.0 \\
     alias=usbia,classe
 legacy pkg=SUNWipkg arch=i386 category=system \\
-    desc="The Image Packaging System (IPS), or pkg(5), is the software delivery system used on OpenSolaris systems.  This package contains the core command-line components and depot server." \\
+    desc="The Image Packaging System (IPS), or pkg(7), is the software delivery system used on OpenSolaris systems.  This package contains the core command-line components and depot server." \\
     hotline="Please contact your local service provider" \\
     name="Image Packaging System" vendor="Sun Microsystems, Inc." \\
     version=0.0.0,REV=2011.04.08.15.41.42 variant.arch=i386

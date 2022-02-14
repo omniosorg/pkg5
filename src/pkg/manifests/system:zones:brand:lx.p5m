@@ -35,8 +35,8 @@ file path=usr/lib/brand/lx/platform.xml mode=0444 \
     variant.opensolaris.zone=global
 file path=usr/lib/brand/lx/poststate mode=0555 variant.opensolaris.zone=global
 file path=usr/lib/brand/lx/prestate mode=0555 variant.opensolaris.zone=global
-dir  path=usr/share/man/man5
-file path=usr/share/man/man5/lx.5
+dir  path=usr/share/man/man7
+file path=usr/share/man/man7/lx.7
 license lic_CDDL license=lic_CDDL
 depend type=require fmri=system/zones
 depend type=require fmri=system/zones/brand/ipkg

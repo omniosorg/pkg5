@@ -37,7 +37,7 @@ export PKG_IMAGE
 . /usr/lib/brand/sparse/common.ksh
 
 f_a_obs=$(gettext "-a publisher=uri option is obsolete, use -P instead.")
-f_pkg5_missing=$(gettext "pkg(5) does not seem to be present on this system.\n")
+f_pkg5_missing=$(gettext "pkg(7) does not seem to be present on this system.\n")
 f_img=$(gettext "failed to create image\n")
 f_pkg=$(gettext "failed to install package\n")
 f_interrupted=$(gettext "Installation cancelled due to interrupt.\n")

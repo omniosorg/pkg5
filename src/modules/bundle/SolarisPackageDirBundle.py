@@ -58,7 +58,7 @@ class SolarisPackageDirBundle(pkg.bundle.Bundle):
                 self.hollow = self.pkg.pkginfo.get("SUNW_PKG_HOLLOW",
                     "").lower() == "true"
                 # A list of pkg.action.AttributeActions with pkginfo
-                # attributes for items that don't map to pkg(5) equivalents
+                # attributes for items that don't map to pkg(7) equivalents
                 self.pkginfo_actions = self.get_pkginfo_actions(self.pkg.pkginfo)
 
         def _walk_bundle(self):
@@ -232,7 +232,7 @@ class SolarisPackageDirBundle(pkg.bundle.Bundle):
 
         def get_pkginfo_actions(self, pkginfo):
                 """Creates a list of pkg.action.AttributeActions corresponding
-                to pkginfo fields that aren't directly mapped to pkg(5)
+                to pkginfo fields that aren't directly mapped to pkg(7)
                 equivalents."""
 
                 # these keys get converted to a legacy action
@@ -247,7 +247,7 @@ class SolarisPackageDirBundle(pkg.bundle.Bundle):
                     "version"
                 ]
 
-                # parameters defined in pkginfo(4) that we always ignore.
+                # parameters defined in pkginfo(5) that we always ignore.
                 # by default, we also ignore SUNW_*
                 ignored_keys = [
                     "pstamp",

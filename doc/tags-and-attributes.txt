@@ -1,6 +1,6 @@
 
 PSARC/2008/190
-pkg(5): image packaging system
+pkg(7): image packaging system
 
 TAGS AND ATTRIBUTES
 
@@ -24,7 +24,7 @@ TAGS AND ATTRIBUTES
 2.1.1 Naming
 
     The syntax for attributes and tags is similar to that used for
-    pkg(5) and smf(5) FMRIs.
+    pkg(7) and smf(5) FMRIs.
 
     [org_prefix,][name][:locale]
 
@@ -104,22 +104,22 @@ TAGS AND ATTRIBUTES
 2.3.2.  Common tags
 
     disable_fmri
-       See "Actuators" section of pkg(5)
+       See "Actuators" section of pkg(7)
 
     facet.*
        See facets.txt
 
     reboot-needed
-       See "Actuators" section of pkg(5)
+       See "Actuators" section of pkg(7)
 
     refresh_fmri
-       See "Actuators" section of pkg(5)
+       See "Actuators" section of pkg(7)
 
     restart_fmri
-       See "Actuators" section of pkg(5)
+       See "Actuators" section of pkg(7)
 
     suspend_fmri
-       See "Actuators" section of pkg(5)
+       See "Actuators" section of pkg(7)
 
     variant.*
        See facets.txt
@@ -132,7 +132,7 @@ users.
 
     info.classification
        A list of labels classifying the package into the categories
-       shared among pkg(5) graphical clients.
+       shared among pkg(7) graphical clients.
 
        Values currently used for OpenSolaris are prefixed with
        "org.opensolaris.category.2008:" and must match one of the
@@ -232,7 +232,7 @@ users.
 
     Each type of action also has specific attributes covered in the 
     documentation of those actions.   These are generally documented 
-    in the section of the pkg(5) manual page for that action.
+    in the section of the pkg(7) manual page for that action.
 
 2.7   Attributes specific to certain types of file
 
@@ -243,7 +243,7 @@ users.
 
 	Data about ELF format binary files (may be renamed in the future
 	to info.file.elf.*).   Automatically generated during package 
-	publication.  See the "File Actions" section of pkg(5).
+	publication.  See the "File Actions" section of pkg(7).
 
     info.file.font.name
 

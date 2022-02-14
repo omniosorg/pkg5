@@ -13,7 +13,7 @@
 .\" Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
 .\"
 .Dd March 25, 2019
-.Dt ILLUMOS 5
+.Dt ILLUMOS 7
 .Os
 .Sh NAME
 .Nm illumos
@@ -23,17 +23,17 @@ An
 .Em illumos
 branded zone
 uses the
-.Xr brands 5
+.Xr brands 7
 framework to provide an environment for running a generic illumos system.
 .Pp
 Subject to the constraints imposed by the shared kernel, it can be used to run
 a foreign version of OmniOS userland or even a different illumos distribution.
 .Pp
 The zone must be installed using one of:  an absolute pathname of a
-.Xr zfs 1m
+.Xr zfs 8
 send stream of a dataset which contains an image of the software to be run in
 the zone, a name of a
-.Xr zfs 1m
+.Xr zfs 8
 dataset to be cloned or snapshot to be promoted, or the absolute pathname of a
 .Xr tar 1
 file or gzipped tar file.
@@ -49,7 +49,7 @@ zoneadm -z myzone install -t /path/to/tarball.tgz
 .Sh CONFIGURATION
 Persistent network configuration (including DNS resolver information) can be
 configured using
-.Xr zonecfg 1m .
+.Xr zonecfg 8 .
 An example
 .Em illumos
 zone configured with VNIC "vnic0" using a static IP address is below:
@@ -86,11 +86,11 @@ branded zone.
 .Sh SEE ALSO
 .Xr mdb 1 ,
 .Xr proc 1 ,
-.Xr dtrace 1m ,
-.Xr zfs 1m ,
-.Xr zoneadm 1m ,
-.Xr zonecfg 1m ,
-.Xr brands 5 ,
-.Xr privileges 5 ,
-.Xr resource_controls 5 ,
-.Xr zones 5
+.Xr brands 7 ,
+.Xr privileges 7 ,
+.Xr resource_controls 7 ,
+.Xr zones 7 ,
+.Xr dtrace 8 ,
+.Xr zfs 8 ,
+.Xr zoneadm 8 ,
+.Xr zonecfg 8

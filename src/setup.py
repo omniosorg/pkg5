@@ -119,8 +119,8 @@ svc_method_dir = 'lib/svc/method'
 svc_share_dir = 'lib/svc/share'
 
 man1_dir = 'usr/share/man/man1'
-man1m_dir = 'usr/share/man/man1m'
-man5_dir = 'usr/share/man/man5'
+man8_dir = 'usr/share/man/man8'
+man7_dir = 'usr/share/man/man7'
 
 ignored_deps_dir = 'usr/share/pkg/ignored_deps'
 resource_dir = 'usr/share/lib/pkg'
@@ -241,21 +241,21 @@ man1_files = [
         'man/pkgrecv.1',
         'man/pkgrepo.1',
         ]
-man1m_files = [
-        'man/pkg.depotd.1m',
-        #'man/pkg.depot-config.1m',
-        #'man/pkg.sysrepo.1m'
+man8_files = [
+        'man/pkg.depotd.8',
+        #'man/pkg.depot-config.8',
+        #'man/pkg.sysrepo.8'
         ]
-man5_files = [
-        'man/bhyve.5',
-        'man/illumos.5',
-        'man/ipkg.5',
-        'man/kvm.5',
-        'man/lipkg.5',
-        'man/lx.5',
-        'man/pkgsrc.5',
-        'man/pkg.5',
-        'man/sparse.5',
+man7_files = [
+        'man/bhyve.7',
+        'man/illumos.7',
+        'man/ipkg.7',
+        'man/kvm.7',
+        'man/lipkg.7',
+        'man/lx.7',
+        'man/pkgsrc.7',
+        'man/pkg.7',
+        'man/sparse.7',
         ]
 
 packages = [
@@ -1617,8 +1617,8 @@ cmdclasses = {
 # all builds of IPS should have manpages
 data_files += [
         (man1_dir, man1_files),
-        (man1m_dir, man1m_files),
-        (man5_dir, man5_files),
+        (man8_dir, man8_files),
+        (man7_dir, man7_files),
         (resource_dir, resource_files),
         ]
 # add transforms

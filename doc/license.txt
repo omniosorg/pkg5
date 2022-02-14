@@ -1,4 +1,4 @@
-pkg(5): image packaging system
+pkg(7): image packaging system
 
 LICENSE ACTIONS ACCEPTANCE PROPOSAL
 
@@ -8,7 +8,7 @@ LICENSE ACTIONS ACCEPTANCE PROPOSAL
     contained within licenses, copyright notices, disclaimers, or
     other legally-related documents that need to be associated with
     the contents of a package.  They also provide a way for packages
-    to provide guidance to pkg(5) clients as to how this information
+    to provide guidance to pkg(7) clients as to how this information
     should be presented or if it requires acceptance by the user
     before the package can be delivered into an image.
 
@@ -17,7 +17,7 @@ LICENSE ACTIONS ACCEPTANCE PROPOSAL
 
     * Support for non-interactive and interactive package operations
 
-    * Enablement of package creators to provide guidance to pkg(5)
+    * Enablement of package creators to provide guidance to pkg(7)
       client API consumers as to how licensing or other informational
       data should be presented and interacted with
 
@@ -30,7 +30,7 @@ LICENSE ACTIONS ACCEPTANCE PROPOSAL
       licensing information.
 
     To achieve these goals, changes must be made to the following
-    pkg(5) components:
+    pkg(7) components:
 
     * License Actions
 
@@ -71,7 +71,7 @@ LICENSE ACTIONS ACCEPTANCE PROPOSAL
 
     To support license acceptance functionality, new attributes for
     license actions are needed to allow packages to provide guidance
-    to pkg(5) API consumers:
+    to pkg(7) API consumers:
 
     class           This optional attribute is primarily for use in
                     filter and query operations.  It is intended that
@@ -130,9 +130,9 @@ LICENSE ACTIONS ACCEPTANCE PROPOSAL
 
     It is believed that a clear delineation between image properties
     (which describe the image itself) and policies (which provide
-    guidance to pkg(5) clients) will be helpful to end-users from a
+    guidance to pkg(7) clients) will be helpful to end-users from a
     usage and documentation standpoint.  As such, a new policy system
-    has been devised to allow users to provide guidance to the pkg(5)
+    has been devised to allow users to provide guidance to the pkg(7)
     system and clients on a per-publisher (and/or global) level based
     on the policy in question.  Per-publisher values will override
     the global value based on the publisher of the package that is
@@ -323,7 +323,7 @@ LICENSE ACTIONS ACCEPTANCE PROPOSAL
 
 5.1. pkg.depotd(1m)
 
-    The pkg.depotd(1m) server that pkg(5) provides will be changed
+    The pkg.depotd(1m) server that pkg(7) provides will be changed
     such that its output matches that of the CLI when listing licenses
     as much as possible, such as showing the "license" attribute of
     a license action.
@@ -332,7 +332,7 @@ LICENSE ACTIONS ACCEPTANCE PROPOSAL
 
 6.1.  pkg(1)
 
-    The pkg(1) client that pkg(5) provides needs to be enhanced to
+    The pkg(1) client that pkg(7) provides needs to be enhanced to
     provide the following functionality:
 
 

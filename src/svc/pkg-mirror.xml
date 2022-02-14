@@ -166,7 +166,7 @@
 		<propval name='publishers' type='astring'
 			value='omnios' />
 
-		<!-- The cache_dir used for the -c option to pkgrecv(1M)
+		<!-- The cache_dir used for the -c option to pkgrecv(1)
 		-->
                 <propval name='cache_dir' type='astring'
                         value='/var/cache/pkg/mirror' />
@@ -187,7 +187,7 @@
                     <loctext xml:lang='C'>IPS Repository Mirror</loctext>
                 </common_name>
                 <documentation>
-                        <manpage title='pkgrecv' section='1M' />
+                        <manpage title='pkgrecv' section='1' />
                 </documentation>
         </template>
 

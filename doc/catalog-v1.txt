@@ -1,16 +1,16 @@
-pkg(5): image packaging system
+pkg(7): image packaging system
 
 CATALOG FORMAT AND CACHING PROPOSAL
 
 1.  Overview
 
-    The pkg(5) server and client catalogs currently provides a summary
+    The pkg(7) server and client catalogs currently provides a summary
     view of the packages provided by a repository: the FMRIs of each
     package, the last time the set of available packages changed, and
     the total number of packages.  The server uses this information
     for publication checks, to fulfill client requests, for search
     indexing and analysis, and to enable browser-based access to the
-    repository via the BUI (Browser User Interface).  pkg(5) clients
+    repository via the BUI (Browser User Interface).  pkg(7) clients
     use this information to determine what packages are available, to
     validate user input, and to fulfill packaging operation requests.
 
@@ -73,7 +73,7 @@ CATALOG FORMAT AND CACHING PROPOSAL
 
     - the existing caching mechanisms do not provide the information
       needed to determine (ahead of time) what package manifests need
-      to be retrieved during packaging operations, which leaves pkg(5)
+      to be retrieved during packaging operations, which leaves pkg(7)
       clients unable to provide sufficient feedback to the user during
       plan creation such as number of bytes to be transferred, time
       estimates, etc.

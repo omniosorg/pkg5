@@ -3,14 +3,14 @@
 .\" Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
 .\" Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
 .Dd july 17, 2021
-.Dt PKG 5
+.Dt PKG 7
 .Os
 .Sh NAME
 .Nm pkg
 .Nd Image Packaging System
 .Sh DESCRIPTION
 The image packaging system,
-.Nm Ns Sy (5) ,
+.Nm Ns Sy (7) ,
 is a framework that provides for software lifecycle management (installation,
 upgrade, and removal).
 Image packaging manages software in units of packages, which are collections of
@@ -845,7 +845,7 @@ of the
 .Sy mediator-version .
 Implementation strings are not considered to be ordered and a string is
 arbitrarily selected by
-.Nm Ns (5)
+.Nm Ns (7)
 if not explicitly specified by a system administrator.
 .Pp
 The value can be a string of arbitrary length composed of alphanumeric
@@ -863,7 +863,7 @@ vendor, site, or local override applies, or if one of the links is version
 mediated.
 .It Sy mediator-priority
 When resolving conflicts in mediated links,
-.Nm Ns (5)
+.Nm Ns (7)
 normally chooses the link with the greatest value of
 .Sy mediator-version
 or based on
@@ -915,7 +915,7 @@ actions.
 The following attributes are recognised
 .Po
 see
-.Xr add_drv 1M
+.Xr add_drv 8
 for more information
 .Pc :
 .Bl -tag -width 6n
@@ -958,7 +958,7 @@ This specifies an entry in
 The value is the exact line to go into the file, with tabs denoted by
 .Sy \et .
 See
-.Xr devlinks 1M
+.Xr devlinks 8
 for more information.
 A given driver can have more than one
 .Sy devlink
@@ -1178,7 +1178,7 @@ attribute is installed on the system, so that the package can be used to
 satisfy dependencies.
 .Pp
 The following attributes, named in accordance with the parameters on
-.Xr pkginfo 4 ,
+.Xr pkginfo 7 ,
 are recognised:
 .Bl -tag -width 6n
 .It Sy category
@@ -1238,7 +1238,7 @@ meaning to the packaging system.
 .Bl -tag -width 6n
 .It Sy info.classification
 One or more tokens that a
-.Nm Ns (5)
+.Nm Ns (7)
 client can use to classify the package.
 The value should have a scheme
 .Po such as
@@ -1308,7 +1308,7 @@ A short, one-line description of the package.
 The
 .Sy group
 action defines a UNIX group as defined in
-.Xr group 4 .
+.Xr group 7 .
 No support is present for group passwords.
 Groups defined with this action initially have no user list.
 Users can be added with the
@@ -1353,7 +1353,7 @@ The encrypted password of the user.
 Default value is
 .Sy \&*LK* .
 See
-.Xr shadow 4 .
+.Xr shadow 7 .
 The special value
 .Sy UP
 can be used to indicate that the
@@ -1395,7 +1395,7 @@ Default value is empty.
 .It Sy group-list
 Secondary groups to which the user belongs.
 See
-.Xr group 4 .
+.Xr group 7 .
 .It Sy ftpuser
 Can be set to
 .Sy true
@@ -1405,28 +1405,28 @@ The default value of
 .Sy true
 indicates that the user is permitted to login via FTP.
 See
-.Xr ftpusers 4 .
+.Xr ftpusers 7 .
 .It Sy lastchg
 The number of days between January 1, 1970, and the date that the password was
 last modified.
 Default value is empty.
 See
-.Xr shadow 4 .
+.Xr shadow 7 .
 .It Sy min
 The minimum number of days required between password changes.
 This field must be set to 0 or above to enable password aging.
 Default value is empty.
 See
-.Xr shadow 4 .
+.Xr shadow 7 .
 .It Sy max
 The maximum number of days the password is valid.
 Default value is empty.
 See
-.Xr shadow 4 .
+.Xr shadow 7 .
 .It Sy warn
 The number of days before password expires that the user is warned.
 See
-.Xr shadow 4 .
+.Xr shadow 7 .
 .It Sy inactive
 The number of days of inactivity allowed for that user.
 This is counted on a per-machine basis.
@@ -1434,7 +1434,7 @@ The information about the last login is taken from the machine's
 .Sy lastlog
 file.
 See
-.Xr shadow 4 .
+.Xr shadow 7 .
 .It Sy expire
 An absolute date expressed as the number of days since the UNIX Epoch (January
 1, 1970).
@@ -1442,11 +1442,11 @@ When this number is reached, the login can no longer be used.
 For example, an expire value of 13514 specifies a login expiration of January
 1, 2007.
 See
-.Xr shadow 4 .
+.Xr shadow 7 .
 .It Sy flag
 Set to empty.
 See
-.Xr shadow 4 .
+.Xr shadow 7 .
 .El
 .\"
 .Sh ACTUATORS
@@ -1489,13 +1489,13 @@ operate on during the package installation or removal.
 causes the given FMRI to be disabled prior to action removal, per the
 .Sy disable
 subcommand to
-.Xr svcadm 1M .
+.Xr svcadm 8 .
 .Sy refresh_fmri
 and
 .Sy restart_fmri
 cause the given FMRI to be refreshed or restarted after action installation,
 update, or removal per the respective subcommands of
-.Xr svcadm 1M .
+.Xr svcadm 8 .
 Finally,
 .Sy suspend_fmri
 causes the given FMRI to be disabled temporarily prior to the action install
@@ -1633,7 +1633,7 @@ If the mirror is unreachable, does not have the required content, or is slower,
 the client API retrieves the content from any configured origin repositories.
 Mirrors are intended for content sharing among a trusted set of clients using
 the dynamic mirror functionality of
-.Xr pkg.depotd 1M .
+.Xr pkg.depotd 8 .
 Mirrors are also intended to be used to authenticate access to package
 metadata, but distribute the package content without authentication.
 For example, a client might be configured with an
@@ -1649,7 +1649,7 @@ those named
 and their parents.
 An origin repository can be also be provisioned as a mirror by using the mirror
 mode of
-.Xr pkg.depotd 1M .
+.Xr pkg.depotd 8 .
 .\"
 .Sh GLOBAL AND NON-GLOBAL ZONE UPDATE
 The
@@ -1674,7 +1674,7 @@ have a similar publisher configuration.
 Both of these objectives are achieved by using a
 .Sy system repository
 .Po see the
-.Xr pkg.sysrepo 1M
+.Xr pkg.sysrepo 8
 man page
 .Pc .
 The system repository provides access to the publishers configured in the
@@ -1958,7 +1958,7 @@ properties and information about how to view and modify their values.
 .\"
 .Sh FILES
 Since
-.Nm Ns (5)
+.Nm Ns (7)
 images can be located arbitrarily within a larger file system, the token
 .Sy $IMAGE_ROOT
 is used to distinguish relative paths.
@@ -2001,12 +2001,12 @@ directory hierarchy are Private, and are subject to change.
 .Xr pkg 1 ,
 .Xr pkgsend 1 ,
 .Xr svcs 1 ,
-.Xr add_drv 1M ,
-.Xr devlinks 1M ,
-.Xr pkg.depotd 1M ,
-.Xr pkg.sysrepo 1M ,
-.Xr svcadm 1M ,
-.Xr ftpusers 4 ,
-.Xr group 4 ,
-.Xr pkginfo 4 ,
-.Xr shadow 4
+.Xr ftpusers 7 ,
+.Xr group 7 ,
+.Xr pkginfo 7 ,
+.Xr shadow 7 ,
+.Xr add_drv 8 ,
+.Xr devlinks 8 ,
+.Xr pkg.depotd 8 ,
+.Xr pkg.sysrepo 8 ,
+.Xr svcadm 8

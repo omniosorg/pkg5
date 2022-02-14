@@ -103,7 +103,7 @@ Run Basic Checks
 Run the Solver
 ``````````````
 
-   The solver forms the core of the computation engine used by |pkg5|
+   The solver forms the core of the computation engine used by |pkg7|
    to determine the packages that can be installed, updated or removed,
    given the constraints in the image and constraints introduced by any
    new packages for installation.

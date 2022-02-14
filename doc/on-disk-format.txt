@@ -1,4 +1,4 @@
-pkg(5): image packaging system
+pkg(7): image packaging system
 
 This information is Copyright (c) 2010, Oracle and/or its affiliates.
 All rights reserved.
@@ -13,7 +13,7 @@ ON-DISK FORMAT PROPOSAL
     1.2. Name of Document Author/Supplier:
 
         Shawn Walker, Oracle,
-          on behalf of the pkg(5) project team
+          on behalf of the pkg(7) project team
 
     1.3. Acknowledgements:
 
@@ -37,7 +37,7 @@ ON-DISK FORMAT PROPOSAL
         stick, 2D barcode, and protected by the Black Knight, fire
         moats, komodo dragons, etc." - Danek Duvall
 
-        pkg(5) is primarily a network-oriented binary packaging system.
+        pkg(7) is primarily a network-oriented binary packaging system.
         Although some of the tools it provides support filesystem-based
         operations for publication, the primary expected use for package
         operations (such as install, update, search, etc.) is between an
@@ -45,14 +45,14 @@ ON-DISK FORMAT PROPOSAL
         to a package repository and/or other interactive services.
 
         This project seeks to define and establish an on-disk format
-        (and corresponding container format), for the pkg(5) system,
+        (and corresponding container format), for the pkg(7) system,
         with the intent that it can enable the ubiquitous, transparent
         use of package data from filesystem-based resources.
 
         The changes proposed by this project are evolutionary, not
         revolutionary, in nature.  In particular, this project seeks
         to refine and adopt the existing repository format used by the
-        pkg(5) depot server as the on-disk format.  Supplementary to
+        pkg(7) depot server as the on-disk format.  Supplementary to
         that, it also seeks the addition of a container format to ease
         provisioning of the on-disk format, and the unification of the
         scheme used by the client and server to store package data.
@@ -190,7 +190,7 @@ ON-DISK FORMAT PROPOSAL
 
         4.2.2. Raw Format specification:
 
-            The pkg(5) repository format is a set of directories and
+            The pkg(7) repository format is a set of directories and
             files that conform to a pre-defined structure.
             
             For a version 3 repository (the current format), the
@@ -285,7 +285,7 @@ ON-DISK FORMAT PROPOSAL
             - publisher/<prefix>/pkg/
                 If absent, search must be disabled for this publisher
                 even if index is present.  If present, manifests are
-                stored in pkg(5) manifest format using the uri-encoded
+                stored in pkg(7) manifest format using the uri-encoded
                 version of the package FMRI as the filename, and using
                 the uri-encoded package FMRI stem (name) as the parent
                 directory's name.
@@ -302,7 +302,7 @@ ON-DISK FORMAT PROPOSAL
                   %3A20090616T181511Z
 
             - publisher/<prefix>/pub.p5i
-                This pkg(5) information (p5i) file should contain
+                This pkg(7) information (p5i) file should contain
                 suggested configuration information for clients such as
                 origins, mirrors, alias, etc.  Consumers can use this to
                 provide clients with initial or suggested configuration
@@ -440,7 +440,7 @@ ON-DISK FORMAT PROPOSAL
               than LZMA, a primary motivator for using 7z would be the
               ability to use LZMA natively as part of the conatiner
               format.  However, the tradeoffs in terms of CPU and memory
-              footprint currently make LZMA unsuitable for pkg(5) when
+              footprint currently make LZMA unsuitable for pkg(7) when
               compared to other compression algorithms such as those
               used by gzip(1).
 
@@ -505,7 +505,7 @@ ON-DISK FORMAT PROPOSAL
 
             Based on the requirements set forth in section 4.3.1, the
             PAX format was selected as the on-disk archive format
-            for pkg(5) packages.  However, to enable efficient access
+            for pkg(7) packages.  However, to enable efficient access
             to the archive contents, an index file needs to be present
             as the first file in the archive.
 
@@ -527,13 +527,13 @@ ON-DISK FORMAT PROPOSAL
 
         4.3.7. Package Archive Specification:
 
-            pkg(5) archive files will have an extension of 'p5p' which
-            will stand for 'pkg(5) package'.  The format of these
+            pkg(7) archive files will have an extension of 'p5p' which
+            will stand for 'pkg(7) package'.  The format of these
             archives matches that defined by IEEE Std 1003.1, 2004 for
             the pax Interchange Format, with the exception that the
             first archive entry is tagged with an extended pax archive
             header that specifies the archive version and the version
-            of the pkg(5) API that was used to write it.  In addition,
+            of the pkg(7) API that was used to write it.  In addition,
             the file for the first archive entry must be the index
             file file for the package archive.  The layout can be
             visualised as follows:
@@ -573,9 +573,9 @@ ON-DISK FORMAT PROPOSAL
             find the archive index and/or identify the archive in
             the first 2048 bytes).
 
-            In addition, pkg(5) archives in this format make remote,
+            In addition, pkg(7) archives in this format make remote,
             selective archive access possible.  For example, a client
-            could request the first 2048 bytes of a pkg(5) archive file
+            could request the first 2048 bytes of a pkg(7) archive file
             from a remote repository, identify the offsets of the index
             and then retrieve it using a HTTP/1.1 byte-ranges request.
             Once it has the archive index file, it can then perform
@@ -613,8 +613,8 @@ ON-DISK FORMAT PROPOSAL
             files) must conform to the repository layout specified in
             section 4.2.2 of this proposal.
 
-            Since a pkg(5) repository can contain one or more packages,
-            pkg(5) archive files can also contain the data for one or
+            Since a pkg(7) repository can contain one or more packages,
+            pkg(7) archive files can also contain the data for one or
             more packages.  This allows easy redistribution of a single
             package and all of its dependencies in a single file.
 
@@ -624,7 +624,7 @@ ON-DISK FORMAT PROPOSAL
 
         4.3.8. Package Archive Index Specification:
 
-            The pkg(5) archive index file enables fast, efficient access
+            The pkg(7) archive index file enables fast, efficient access
             to the contents of an archive.  It contains an entry for all
             files in the archive excluding the index file itself in the
             following format (also referred to as index format version
@@ -689,7 +689,7 @@ ON-DISK FORMAT PROPOSAL
 
     5.1. Client Support for filesystem-based Repository Access:
 
-        The pkg.client.api provided by pkg(5) will be updated to allow
+        The pkg.client.api provided by pkg(7) will be updated to allow
         access to repositories via the filesystem.  All functionality
         normally offered by pkg.depotd will be supported.
 
@@ -725,15 +725,15 @@ ON-DISK FORMAT PROPOSAL
 
         The '-d' option of pkgrecv(1) will be changed such that if
         the name of a file with a '.p5p' extension is specified,
-        and that file does not already exist, a pkg(5) archive
+        and that file does not already exist, a pkg(7) archive
         file will be created containing the specified packages.
         If the file already exists, it will exit with an error.
-        When pkgrecv(1) creates pkg(5) archive files, it will omit
+        When pkgrecv(1) creates pkg(7) archive files, it will omit
         catalog and index data.
 
         Due to the transport changes above, pkgrecv(1) will also
-        be able to use pkg(5) archive files as a source of package
-        data.  pkgsend(1) will not support the use of pkg(5)
+        be able to use pkg(7) archive files as a source of package
+        data.  pkgsend(1) will not support the use of pkg(7)
         archive files as a destination due to the publication
         model it currently uses.
 
@@ -767,11 +767,11 @@ ON-DISK FORMAT PROPOSAL
           correct operation.
 
         A new utility named pkgrepo will be added to facilitate the
-        creation and management of pkg(5) repositories.  It will have
+        creation and management of pkg(7) repositories.  It will have
         the following global options:
 
         -s repo_uri_or_path
-            A URI or path specifying the location of a pkg(5)
+            A URI or path specifying the location of a pkg(7)
             package repository.
 
         -? / --help
@@ -779,7 +779,7 @@ ON-DISK FORMAT PROPOSAL
         It will have the following subcommands:
 
         create <uri_or_path>
-            Creates a pkg(5) repository at the specified location.
+            Creates a pkg(7) repository at the specified location.
             Can only be used with filesystem-based repositories.
 
         publisher [<pub_prefix> ...]
@@ -827,7 +827,7 @@ ON-DISK FORMAT PROPOSAL
     5.3. Client Storage and Image Format Update:
 
         To simplify and unify the storage format used by the client,
-        and pkg(5) repositories, the format of the client image
+        and pkg(7) repositories, the format of the client image
         will be changed to use the structure described below.
 
         For a version 3 image (the current format), the structure is as
@@ -916,17 +916,17 @@ ON-DISK FORMAT PROPOSAL
     5.4. Client and Depot Support for On-Disk Archive Format:
 
         The pkg.server.repository module will be updated to support
-        the serving of a repository in readonly mode using a pkg(5)
+        the serving of a repository in readonly mode using a pkg(7)
         archive file.
 
         The pkg.client.api transport system will be updated to support
-        the usage of a pkg(5) archive file as an origin for package
+        the usage of a pkg(7) archive file as an origin for package
         data.
 
         To support the specification of temporary origins, the install
         and update subcommands will be modified by adding a '-g' option
         to specify additional temporary package origin URIs or
-        the path to a pkg(5) archive file or pkg(5) info file.  The
+        the path to a pkg(7) archive file or pkg(7) info file.  The
         '-g' option may be specified multiple times.  As an example:
 
             $ pkg install -g /path/to/foo.p5p \
@@ -934,7 +934,7 @@ ON-DISK FORMAT PROPOSAL
                 -g file:/path/to/bar.p5p \
                 foo bar localpkg
 
-        pkg(5) archive files used as a source of package data during an
+        pkg(7) archive files used as a source of package data during an
         install or update operation will have their content cached by
         the client before the operation begins.  Any publishers found
         in the archive will be temporarily added to the image if they do

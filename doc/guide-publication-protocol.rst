@@ -95,7 +95,7 @@
                 http://pkg.opensolaris.org/open/0/system%2Flibc@0.1-98
 
             Expects:
-                A URL-encoded pkg(5) FMRI (excluding timestamp).
+                A URL-encoded pkg(7) FMRI (excluding timestamp).
 
             Returns:
                 Response status of 200 on success and an identifier for the new

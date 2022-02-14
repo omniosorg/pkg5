@@ -49,7 +49,7 @@ Naming
 ^^^^^^
 
     The syntax for attributes and tags is similar to that used for
-    |pkg5| and |smf5| FMRIs.
+    |pkg7| and |smf7| FMRIs.
 
     [org_prefix,][name][:locale]
 
@@ -134,22 +134,22 @@ Common tags
 ^^^^^^^^^^^
 
     disable_fmri
-       See "Actuators" section of |pkg5|
+       See "Actuators" section of |pkg7|
 
     facet.*
        See facets.txt
 
     reboot-needed
-       See "Actuators" section of |pkg5|
+       See "Actuators" section of |pkg7|
 
     refresh_fmri
-       See "Actuators" section of |pkg5|
+       See "Actuators" section of |pkg7|
 
     restart_fmri
-       See "Actuators" section of |pkg5|
+       See "Actuators" section of |pkg7|
 
     suspend_fmri
-       See "Actuators" section of |pkg5|
+       See "Actuators" section of |pkg7|
 
     variant.*
        See facets.txt
@@ -163,7 +163,7 @@ users.
 
 info.classification
     A list of labels classifying the package into the categories
-    shared among |pkg5| graphical clients.
+    shared among |pkg7| graphical clients.
 
     Values currently used for OpenSolaris are prefixed with
     ``org.opensolaris.category.2008:`` and must match one of the
@@ -252,7 +252,7 @@ Attributes specific to certain types of actions
 
     Each type of action also has specific attributes covered in the 
     documentation of those actions.   These are generally documented 
-    in the section of the |pkg5| manual page for that action.
+    in the section of the |pkg7| manual page for that action.
 
 Attributes specific to certain types of file
 ````````````````````````````````````````````
@@ -264,7 +264,7 @@ Attributes specific to certain types of file
 
 	Data about ELF format binary files (may be renamed in the future
 	to info.file.elf.*).   Automatically generated during package 
-	publication.  See the "File Actions" section of |pkg5|.
+	publication.  See the "File Actions" section of |pkg7|.
 
     info.file.font.name
 
