@@ -4,11 +4,11 @@
 The pkg5 components have been updated to the latest upstream solaris-ips
 as of:
 
-commit dc798e4a23b735fa814734f33ed3ae1a72a83a47
-Author: Chandana R <chandana.r@oracle.com>
-Date:   Sun Nov 14 22:04:15 2021 -0800
+commit 00023c2411c7f2d93712dde9d516d67cb6d2782b
+Author: Peter Dennis <peter.dennis@oracle.com>
+Date:   Mon Jan 24 03:43:37 2022 -0800
 
-    32458925 deliver python 3.9 modules for pkg
+    27640082 IPS Test suite broken for depotd tests
 
 -----------------------------------------------------------------------------
 
