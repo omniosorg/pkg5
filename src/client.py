@@ -857,15 +857,15 @@ WARNING: The boot environment being modified is not the active one.
 
         # Display list of removed packages in the default output.
         # Verbose output already has this in a different form.
-        if not verbose and r:
+        if not verbose and r and op in [PKG_OP_INSTALL, PKG_OP_UPDATE]:
                 logger.info(_("\nRemoved Packages:\n"))
                 removals = [src.pkg_stem for src, dest in r]
-                if len(r) < 5:
+                if len(r) <= 5:
                         logger.info("  " + "\n  ".join(removals))
                 else:
                         logger.info("  " + "\n  ".join(removals[:5]))
                         logger.info("  ...")
-                        logger.info("  {0:d} additional removed packages. "
+                        logger.info("  {0:d} additional removed package(s). "
                                     "Use 'pkg history' to view "
                                     "the full list.".format(len(r) - 5))
 
