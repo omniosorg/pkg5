@@ -1,6 +1,6 @@
 .\" Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
 .\" Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
-.Dd March 12, 2021
+.Dd August 17, 2021
 .Dt PKG 1
 .Os
 .Sh NAME
@@ -2228,6 +2228,10 @@ Set the version of the mediated interface to use.
 .Pp
 If the specified mediator version and/or implementation is not currently
 available, any links using the specified mediators are removed.
+If, during an update, the mediated link target is removed, a warning will
+be produced indicating this.
+If the update had created a new boot environment, the boot environment will be
+left mounted and not activated.
 .Pp
 For all other options, see the
 .Cm install

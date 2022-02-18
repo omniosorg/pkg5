@@ -20,7 +20,7 @@
 # CDDL HEADER END
 
 #
-# Copyright (c) 2008, 2020, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2022, Oracle and/or its affiliates.
 #
 
 import cherrypy
@@ -185,7 +185,6 @@ class CatalogInterface(_Interface):
                                                 del a
                                                 break
                                         del a
-                                    else:
                                         allowed[pkg_name].append((f, sn))
 
                 sort_ver = itemgetter(0)
