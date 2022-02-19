@@ -22,15 +22,16 @@
 # Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
+include ../../Makefile.com
+
 EXEC =	certgen
 SRCS =	mkcert.c
 OBJS =	$(SRCS:%.c=%.o)
 CERTS = cust_key.pem cust_cert.pem
 CLEANFILES = $(OBJS) $(EXEC) $(CERTS)
 
-#CC = cc
-CFLAGS = -D CUSTOM_EXT
-LDLIBS = -lcrypto
+CFLAGS += -D CUSTOM_EXT
+LDLIBS += -lcrypto
 
 all:	install
 
@@ -44,3 +45,4 @@ clobber: clean
 $(EXEC): $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $(LDLIBS) $^
 
+.KEEP_STATE:
