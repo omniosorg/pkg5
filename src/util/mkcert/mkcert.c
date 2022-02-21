@@ -50,7 +50,7 @@ int mkcert(X509 **x509p, EVP_PKEY **pkeyp, int bits, int serial, int days);
 int add_ext(X509 *cert, int nid, char *value);
 
 int
-main(int argc, char **argv)
+main(int argc __unused, char **argv __unused)
 {
 	BIO *bio_err;
 	X509 *x509 = NULL;
@@ -92,7 +92,8 @@ main(int argc, char **argv)
 	return (0);
 }
 
-static int callback(int p, int n, BN_GENCB *cb)
+static int
+callback(int p, int n __unused, BN_GENCB *cb __unused)
 {
 	char c = 'B';
 
@@ -101,6 +102,8 @@ static int callback(int p, int n, BN_GENCB *cb)
 	if (p == 2) c = '*';
 	if (p == 3) c = '\n';
 	fputc(c, stderr);
+
+	return (1);
 }
 
 int
