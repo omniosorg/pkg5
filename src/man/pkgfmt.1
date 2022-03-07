@@ -1,225 +1,172 @@
-'\" te
 .\" Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
-.\" Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
-.TH pkgfmt 1 "24 Apr 2020" "OmniOS" "User Commands"
-.SH NAME
-pkgfmt \- format a package manifest
-.SH SYNOPSIS
-.LP
-.nf
-/usr/bin/pkgfmt [-c|-d|-s|-u] [-f \fIv1|v2\fR] [\fIpackage-manifest-file\fR]
-.fi
-
-.SH DESCRIPTION
-.sp
-.LP
-\fBpkgfmt\fR without the \fB-c\fR or \fB-d\fR options formats a package
-manifest in a consistent manner, including wrapping lines at 80 characters,
-sorting lines by attributes. There are two different output formats - \fBv1\fR
-and \fBv2\fR - which have different sorting characteristics and are described
-below.
-The default output format is \fBv2\fR.
-Lines that do not parse into actions (such as macros, comments, or transforms)
+.\" Copyright 2022 OmniOS Community Edition (OmniOSce) Association.
+.Dd February 17, 2022
+.Dt PKGFMT 1
+.Os
+.Sh NAME
+.Nm pkgfmt
+.Nd format a package manifest
+.Sh SYNOPSIS
+.Nm
+.Sm off
+.Op Fl c | d | s | u
+.Sm on
+.Op Fl f Cm v1 Ns | Ns Cm v2
+.Op Ar package-manifest-file
+.Sh DESCRIPTION
+.Nm
+without the
+.Fl c
+or
+.Fl d
+options formats a package manifest in a consistent manner, including wrapping
+lines at 80 characters, sorting lines by attributes.
+There are two different output formats -
+.Cm v1
+and
+.Cm v2
+- which have different sorting characteristics and are described below.
+The default output format is
+.Cm v2 .
+Lines that do not parse into actions
+.Pq such as macros, comments, or transforms
 do not appear in sorted order.
-.sp
-.LP
-If no arguments are given, \fBpkgfmt\fR reads \fBstdin\fR until EOF, and then
-writes the formatted manifest to \fBstdout\fR. Any manifests specified on the
-command line are formatted in place.
-.sp
-.LP
-\fBpkgfmt\fR with the \fB-c\fR option checks whether the manifests are
-formatted in \fBpkgfmt\fR style. The \fB-d\fR option displays the differences
-if the file is not properly formatted.
-.sp
-.LP
-\fBpkgfmt\fR with the \fB-s\fR option removes additional diagnostic attributes
-from actions that are not required in a published manifest.
-
-.SH OUTPUT FORMATS
-\fBpkgfmt\fR supports two different output formats selectable with the \fB-f\fR
-option. The default format is \fBv2\fR.
-
-.sp
-.ne 2
-.mk
-.na
-\fBv1\fR
-.ad
-.RS 10n
-.rt
-The \fBv1\fR format places \fIset\fR actions first, \fIdepend\fR actions last
-and all other actions in between, sorted alphabetically. Actions are
-secondarily sorted by their primary attribute.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fBv2\fR
-.ad
-.RS 10n
-.rt
-The \fBv2\fR format groups actions together into different sections. The
-resulting action order is:
-.sp
-.RS 4n
-1. \fIset\fR actions
-.br
-2. all other actions, sorted by key attribute
-.br
-3. \fIdriver\fR, \fIgroup\fR and \fIuser\fR actions
-.br
-4. \fIlegacy\fR and \fIlicense\fR actions
-.br
-5. \fIdepend\fR actions.
-.RE
-.sp
-In particular, this format groups \fIfile\fR, \fIdir\fR, \fIlink\fR and
-\fIhardlink\fR actions together by path which can aid readability.
-
-.SH OPTIONS
-.sp
-.LP
+.Pp
+If no arguments are given,
+.Nm
+reads
+.Dv stdin
+until EOF, and then writes the formatted manifest to
+.Dv stdout .
+Any manifests specified on the command line are formatted in place.
+.Pp
+.Nm
+with the
+.Fl c
+option checks whether the manifests are formatted in
+.Nm
+style.
+The
+.Fl d
+option displays the differences if the file is not properly formatted.
+.Pp
+.Nm
+with the
+.Fl s
+option removes additional diagnostic attributes from actions that are not
+required in a published manifest.
+.Sh OUTPUT FORMATS
+.Nm
+supports two different output formats selectable with the
+.Fl f
+option.
+The default format is
+.Cm v2 .
+.Bl -tag -width offset
+.It Cm v1
+The
+.Cm v1
+format places
+.Ic set
+actions first,
+.Ic depend
+actions last and all other actions in between, sorted alphabetically.
+Actions are secondarily sorted by their primary attribute.
+.It Cm v2
+The
+.Cm v2
+format groups actions together into different sections.
+The resulting action order is:
+.Pp
+.Bl -enum -offset Ds -compact
+.It
+.Ic set
+actions
+.It
+all other actions, sorted by key attribute
+.It
+.Cm driver ,
+.Cm group
+and
+.Cm user
+actions
+.It
+.Cm legacy
+and
+.Cm license
+actions
+.It
+.Ic depend
+actions.
+.El
+.Pp
+In particular, this format groups
+.Cm file ,
+.Cm dir ,
+.Cm link
+and
+.Cm hardlink
+actions together by path which can aid readability.
+.El
+.Sh OPTIONS
 The following options are supported:
-.sp
-.ne 2
-.mk
-.na
-\fB-h\fR | \fB--help\fR | \fB-?\fR
-.ad
-.RS 10n
-.rt
+.Bl -tag -width Ds
+.It Fl h | \&help | \&?
 Display a usage message.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-c\fR
-.ad
-.RS 10n
-.rt
-Check whether the manifest is formatted in the \fBpkgfmt\fR style.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-d\fR
-.ad
-.RS 10n
-.rt
+.It Fl c
+Check whether the manifest is formatted in the
+.Nm
+style.
+.It Fl d
 Display manifest differences from the formatted version in unified form.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-f\fR \fIv1|v2\fR
-.ad
-.RS 10n
-.rt
+.It Fl f Cm v1 Ns | Ns Cm v2
 Specify the desired output format.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-s\fR
-.ad
-.RS 10n
-.rt
+.It Fl s
 Remove unecessary diagnostic attributes from manifest actions.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-u\fR
-.ad
-.RS 10n
-.rt
-Do not wrap lines at 80 characters. This option is useful for applying traditional text processing tools to package manifests.
-.RE
-
-.SH EXIT STATUS
-.sp
-.LP
+.It Fl u
+Do not wrap lines at 80 characters.
+This option is useful for applying traditional text processing tools to package
+manifests.
+.El
+.Sh EXIT STATUS
 The following exit values are returned:
-.sp
-.ne 2
-.mk
-.na
-\fB0\fR
-.ad
-.RS 6n
-.rt
+.Bl -tag -width Ds
+.It 0
 Command succeeded.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB1\fR
-.ad
-.RS 6n
-.rt
-The \fB-c\fR or \fB-d\fR options were specified, and one or more manifests are not in \fBpkgfmt\fR normal form, or an error occurred.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB2\fR
-.ad
-.RS 6n
-.rt
+.It 1
+The
+.Fl c
+or
+.Fl d
+options were specified, and one or more manifests are not in
+.Nm
+normal form, or an error occurred.
+.It  2
 Invalid command line options were specified.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB99\fR
-.ad
-.RS 6n
-.rt
+.It 99
 An unanticipated exception occurred.
-.RE
-
-.SH ATTRIBUTES
-.sp
-.LP
-See \fBattributes\fR(5) for descriptions of the following attributes:
-.sp
-
-.sp
-.TS
-tab() box;
-cw(2.75i) |cw(2.75i)
-lw(2.75i) |lw(2.75i)
-.
-ATTRIBUTE TYPEATTRIBUTE VALUE
-_
-Availability\fBpackage/pkg\fR
-_
-Interface StabilityUncommitted
-.TE
-
-.SH SEE ALSO
-.sp
-.LP
-\fBpkg\fR(5)
-.sp
-.LP
-\fBhttps://github.com/omniosorg/pkg5\fR
+.El
+.Sh ENVIRONMENT VARIABLES
+The following environment variable is supported:
+.Pp
+.Bl -tag -width Ds
+.It Ev PKGFMT_OUTPUT
+The default output format,
+.Cm v1
+or
+.Cm v2 ,
+overriding the built-in default value of
+.Cm v2 .
+.El
+.Sh INTERFACE STABILITY
+The command line interface of
+.Nm
+is
+.Sy Uncommitted .
+The output of
+.Nm
+is
+.Sy Not-An-Interface
+and may change at any time.
+.Sh SEE ALSO
+.Xr pkg 7

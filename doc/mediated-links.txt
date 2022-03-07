@@ -59,7 +59,7 @@ delivered by the package, or by the version in the package FMRI.  For
 instance, links participating in the "python" mediation might have
 "mediator-version" set to "2.4", "2.6", "3.2", etc.
 
-When resolving the conflict in mediated links, pkg(5) will normally choose
+When resolving the conflict in mediated links, pkg(7) will normally choose
 the link with the greatest value of "mediator-version".  The package vendor
 may override this selection by adding the attribute "mediator-priority"
 with the value "vendor" to its preferred link in a package it delivers.

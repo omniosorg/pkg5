@@ -1,5 +1,5 @@
 
-In order to select packages from a variety of sources, pkg(5) supports
+In order to select packages from a variety of sources, pkg(7) supports
 the configuration of multiple publishers.  We've started with the
 concept of a preferred publisher, but some ambiguity has arisen as to
 what should happen when publishers are deleted, added, etc.  In

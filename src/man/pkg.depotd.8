@@ -1,0 +1,602 @@
+.\" Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
+.\" Copyright 2022 OmniOS Community Edition (OmniOSce) Association.
+.Dd February 17, 2022
+.Dt PKG.DEPOTD 8
+.Os
+.Sh NAME
+.Nm pkg.depotd
+.Nd Image Packaging System depot server
+.Sh SYNOPSIS
+.Nm /usr/lib/pkg.depotd
+.Op Fl \&-cfg Ar source
+.Op Fl a Ar address
+.Op Fl \&-content-root Ar root_dir
+.Op Fl d Ar inst_root
+.Op Fl \&-debug Ar feature_list
+.Sm off
+.Oo Fl \&-disable-ops
+.No \&=
+.Ar op Op /1
+.Op \&,...
+.Oc
+.Sm on
+.Op Fl \&-image-root Ar path
+.Op Fl \&-log-access Ar dest
+.Op Fl \&-log-errors Ar dest
+.Op Fl \&-mirror Ar mode
+.Op Fl p Ar port
+.Op Fl \&-proxy-base Ar url
+.Op Fl \&-readonly Ar mode
+.Op Fl s Ar threads
+.Op Fl \&-sort-file-max-size Ar bytes
+.Op Fl \&-ssl-cert-file Ar source
+.Op Fl \&-ssl-dialog Ar type
+.Op Fl \&-ssl-key-file Ar source
+.Op Fl t Ar socket_timeout
+.Op Fl \&-writable-root Ar path
+.Sh DESCRIPTION
+.Nm
+is the depot server for the Image Packaging System,
+.Xr pkg 7 .
+It provides network access to the data contained within a package repository.
+Clients that do not support direct access to a repository through the file
+system, or for which network access is the only available or preferred method
+of transport, typically use the package depot.
+.Pp
+Clients such as
+.Xr pkg 1 ,
+the retrieval client, can retrieve a list of packages and package metadata from
+a repository directly or through the depot server.
+.Xr pkgsend 1 ,
+the publication client, can send new versions of packages to a repository
+directly or through the depot server.
+.Xr pkgrepo 1
+can be used to create repositories for use with the depot server, or to manage
+them both directly and through the depot server.
+.Pp
+.Nm
+is typically run as a service on the system.
+Package and software developers might want to run private copies for testing.
+.Pp
+The depot does not provide any access control methods of its own.
+By default, all of the clients that are able to connect are able to read all
+package data and publish new package versions.
+The exception is that when running under Service Management Facility
+.Pq SMF ,
+the default is to run in read-only mode.
+The
+.Sx Notes
+section below describes some best practices for maintaining a public depot
+server with evolving content.
+.Sh SMF PROPERTIES
+The
+.Nm
+server is generally configured via the SMF properties associated with its
+service.
+The
+.Sy svc:/application/pkg/server
+service runs a
+.Nm
+server process.
+.Pp
+See the
+.Xr smf 7
+man page for information about SMF properties.
+The following properties are recognized:
+.Bl -tag -width Ds
+.It Sy pkg/address
+.Pq Sy net_address
+The IP address on which to listen for connections.
+The default value is 0.0.0.0
+.Pq Sy INADDR_ANY ,
+which listens on all active interfaces.
+To listen on all active IPv6 interfaces, use
+.Sq :: .
+Only the first value is used.
+.It Sy pkg/content_root
+.Pq Sy astring
+The file system path at which the instance should find its static and other web
+content.
+The default value is
+.Pa /usr/share/lib/pkg .
+.It Sy pkg/debug
+.Pq Sy astring
+A comma-separated list of debug features to enable.
+Possible values are:
+.Bl -tag -width Ds
+.It Sy headers
+Logs the headers of every request to the error log.
+.El
+.It Sy pkg/disable_ops
+.Pq Sy astring
+A comma-separated list of operations that should be disabled for the depot
+server.
+Operations are given as
+.Ar operation Ns Op / Ar version
+.Po
+.Sy catalog
+or
+.Sy search_1 ,
+for example
+.Pc .
+.It Sy pkg/image_root
+.Pq Sy astring
+The path to the image whose file information will be used as a cache for file
+data.
+.It Sy pkg/inst_root
+.Pq Sy astring
+The file system path at which the instance should find its repository data.
+Required unless
+.Ev PKG_REPO
+has been provided.
+The default value is
+.Pa /var/pkgrepo .
+.It Sy pkg/log_access
+.Pq Sy astring
+The destination for any access related information logged by the depot process.
+Possible values are:
+.Dv stderr ,
+.Dv stdout ,
+none ,or an absolute path name.
+The default value is
+.Dv stdout
+if
+.Dv stdout
+is a
+.Sy tty .
+If
+.Dv stdout
+is not a
+.Sy tty ,
+the default value is
+.Sq none .
+If you run
+.Sy pkg
+as a service, the default value for
+.Sy log_access
+is
+.Sq none
+and output is written to
+.Pa /var/svc/log/application-pkg-server:* .
+See the
+.Xr logadm 8
+man page for examples of managing large log files.
+.It Sy pkg/log_errors
+.Pq Sy astring
+The destination for any errors or other information logged by the depot process.
+Possible values are:
+.Dv stderr ,
+.Dv stdout ,
+none ,or an absolute path name.
+The default value is
+.Dv stderr .
+See the
+.Xr logadm 8
+man page for examples of managing large log files.
+.It Sy pkg/mirror
+.Pq Sy boolean
+Sets whether package mirror mode is used.
+When true, publishing and metadata operations are disabled and only a limited
+browser user interface is provided.
+This property cannot be true when the
+.Sy pkg/readonly
+property is true.
+The default value is
+.Sy false .
+.It Sy pkg/port
+.Pq Sy count
+The port number on which the instance should listen for incoming package
+requests.
+If SSL certificate and key information has not been provided, the default value
+is 80; otherwise, the default value is 443.
+.It Sy pkg/proxy_base
+.Pq Sy uri
+This changes the base URL for the depot server and is most useful when running
+behind Apache or some other web server in a reverse proxy configuration.
+.It Sy pkg/readonly
+.Pq Sy boolean
+Sets whether modifying operations, such as those initiated by
+.Xr pkgsend 1 ,
+are disabled.
+Retrieval operations are still available.
+This property cannot be true when the
+.Sy pkg/mirror
+property is true.
+The default value is
+.Sy true .
+.It Sy pkg/socket_timeout
+.Pq Sy count
+The maximum number of seconds the server should wait for a response from a
+client before closing a connection.
+The default value is 60.
+.It Sy pkg/sort_file_max_size
+.Pq Sy count
+The maximum size of the indexer sort file.
+Used to limit the amount of RAM the depot uses for indexing, or increase it for
+speed.
+.It Sy pkg/ssl_cert_file
+.Pq Sy astring
+The absolute path name to a PEM-encoded Certificate file.
+The default value is
+.Sq none .
+This property must be used with
+.Sy ssl_key_file .
+The depot only responds to SSL requests if both
+.Sy ssl_cert_file
+and
+.Sy ssl_key_file
+are provided.
+.It Sy pkg/ssl_dialog
+.Pq Sy astring
+Specifies what method should be used to obtain the passphrase used to decrypt
+the
+.Sy ssl_key_file .
+Possible values are:
+.Bl -tag -width Ds
+.It Sy builtin
+Prompt for the passphrase.
+This is the default value.
+.It Sy exec\&: Ns Pa /path/to/program
+Execute the specified external program to obtain the passphrase.
+The first argument to the program is '', and is reserved.
+The second argument to the program is the port number of the server.
+The passphrase is printed to
+.Dv stdout .
+.It Sy smf:fmri
+Attempt to retrieve the value of the property
+.Sy pkg_secure/ssl_key_passphrase
+from the service instance related to the FMRI.
+.El
+.It Sy pkg/ssl_key_file
+.Pq Sy astring
+The absolute path name to a PEM-encoded Private Key file.
+This property must be used with the property
+.Sy ssl_cert_file .
+The depot only responds to SSL requests if both
+.Sy ssl_key_file
+and
+.Sy ssl_cert_file
+are provided.
+.It Sy pkg/threads
+.Pq Sy count
+The number of threads started to serve requests.
+The default value is 60.
+Suitable only for small deployments.
+This value should be approximately 20 times the number of concurrent clients.
+The maximum value of
+.Sy threads
+is 5000.
+.It Sy pkg/writable_root
+.Pq Sy astring
+The file system path to a directory to which the program has write access.
+This is used with the
+.Fl readonly
+option to enable the depot server to create files, such as search indexes,
+without needing write access to the package information.
+.It Sy pkg_secure/ssl_key_passphrase
+.Pq Sy astring
+The password to use to decrypt the
+.Sy pkg/ssl_key_file .
+This value is read-authorization protected using the attribute
+.Sy solaris.smf.read.pkg-server .
+.El
+.Pp
+The presentation and behaviour of the Browser User Interface
+.Pq BUI
+of the depot server is controlled using the following properties:
+.Bl -tag -width Ds
+.It Sy pkg_bui/feed_description
+.Pq Sy astring
+A descriptive paragraph for the RSS/Atom feed.
+.It Sy pkg_bui/feed_icon
+.Pq Sy astring
+The path name of a small image used to visually represent the RSS/Atom feed.
+The path name should be relative to the
+.Sy content_root .
+The default value is
+.Sy web/_themes/pkg-block-icon.png .
+.It Sy pkg_bui/feed_logo
+.Pq Sy astring
+The path name of a large image that will be used to visually brand or identify
+the RSS/Atom feed.
+This value should be relative to the
+.Sy content_root .
+The default value is
+.Sy web/_themes/pkg-block-icon.png .
+.It Sy pkg_bui/feed_name
+.Pq Sy astring
+A short, descriptive name for RSS/Atom feeds generated by the depot serving the
+repository.
+The default value is
+.Dq package repository feed .
+.It Sy pkg_bui/feed_window
+.Pq Sy count
+The number of hours before the feed for the repository was last generated, to
+include when generating the feed.
+.El
+.Pp
+The package depot is also able to act as a mirror server for local client
+images from
+.Xr pkg 7 .
+This enables clients that share a subnet on a LAN to mirror their file caches.
+Clients can download files from one another, thereby reducing load on the
+package depot server.
+This functionality is available as an alternate depot service configured by SMF.
+It uses mDNS and
+.Sy dns-sd
+for service discovery.
+.Pp
+The mDNS mirror is generally configured via the SMF properties associated with
+its service.
+The following properties are recognized:
+.Bl -tag -width Ds
+.It Sy pkg/image_root
+.Pq Sy astring
+The path to the image whose file information will be used as a cache for file
+data.
+The default value is
+.Sq / .
+.It Sy pkg/port
+.Pq Sy count
+The port number on which the instance should listen for incoming package
+requests.
+The default value is 80.
+.El
+.Sh OPTIONS
+.Nm
+can read its base configuration information from a file or from the property
+data of an existing SMF service instance.
+.Bl -tag -width Ds
+.It Fl \&-cfg Ar source
+Specify the path name of a file to use when reading and writing configuration
+data, or a string of the form
+.Sy smf\&: Ns Ar fmri
+where
+.Ar fmri
+is the service fault management resource identifier
+.Pq FMRI
+of the instance to read configuration data from.
+See
+.Sx Depot Configuration
+below for details on the format of the file specified.
+.El
+.Pp
+If no preexisting configuration source is available, or to override values read
+from a configuration file provided using
+.Fl \&-cfg ,
+the following options can be used to alter the default behaviour of the depot
+server:
+.Bl -tag -width Ds
+.It Fl a Ar address
+See
+.Sy pkg/address
+above.
+.It Fl \&-content-root Ar root_dir
+See
+.Sy pkg/content_root
+above.
+.It Fl d Ar inst_root
+See
+.Sy pkg/inst_root
+above.
+.It Fl \&-debug Ar feature_list
+See
+.Sy pkg/debug
+above.
+.It Xo
+.Sm off
+.Oo Fl \&-disable-ops
+.No \&=
+.Ar op Op /1
+.Op \&,...
+.Oc
+.Sm on
+.Xc
+See
+.Sy pkg/disable_ops
+above.
+.It Fl \&-image-root Ar path
+See
+.Sy pkg/image_root
+above.
+.It Fl \&-log-access Ar dest
+See
+.Sy pkg/log_access
+above.
+.It Fl \&-log-errors Ar dest
+See
+.Sy pkg/log_errors
+above.
+.It Fl \&-mirror Ar mode
+See
+.Sy pkg/mirror
+above.
+.It Fl p Ar port
+See
+.Sy pkg/port
+above.
+.It Fl \&-proxy-base Ar url
+See
+.Sy pkg/proxy_base
+above.
+This option is ignored if an empty value is provided.
+.It Fl \&-readonly Ar mode
+See
+.Sy pkg/readonly
+above.
+.It Fl s Ar threads
+See
+.Sy pkg/threads
+above.
+.It Fl \&-sort-file-max-size Ar bytes
+See
+.Sy pkg/sort_file_max_size
+above.
+.It Fl \&-ssl-cert-file Ar source
+See
+.Sy pkg/ssl_cert_file
+above.
+.It Fl \&-ssl-dialog .Ar type
+See
+.Sy pkg/ssl_dialog
+above.
+.It Fl \&-ssl-key-file Ar source
+See
+.Sy pkg/ssl_key_file
+above.
+.It Fl t Ar socket_timeout
+See
+.Sy pkg/socket_timeout
+above.
+.It Fl \&-writable-root Ar path
+See
+.Sy pkg/writable_root
+above.
+.It Fl \&-help , \&?
+Display a usage message.
+.El
+.Pp
+Additional administrative and management functionality for package repositories
+is provided by
+.Xr pkgrepo 1 .
+.Sh DEPOT CONFIGURATION
+When a configuration file is provided
+.Pq instead of an SMF FMRI
+by using the
+.Fl \&-cfg
+option, the depot server reads and writes all configuration data in a simple
+text format.
+The configuration data is described in
+.Sx SMF Properties
+above.
+The configuration data consists of sections, lead by a
+.Bq section
+header, and followed by
+.Ar name Ns \&= Ns Ar value
+entries.
+Continuations are in the style of RFC 822.
+Values can be split over multiple lines by beginning continuation lines with
+whitespace.
+.Pp
+Any required values not provided in the configuration file must be provided
+using the option listed in
+.Sx Options
+above.
+A sample configuration file might look like this:
+.Bd -literal -offset 6n
+[pkg]
+port = 80
+inst_root = /export/repo
+
+[pub_example_com]
+feed_description = example.com's software
+  update log
+.Ed
+.Sh FILES
+.Bl -tag -width Ds
+.It Pa /usr/share/lib/pkg
+Default presentation content location.
+Modify
+.Sy pkg/content_root
+to select an alternate location.
+.El
+.Sh EXIT STATUS
+The following exit values are returned:
+.Bl -tag -width Ds
+.It 0
+Successful operation.
+.It 1
+An error occurred.
+.It 2
+Invalid command line options were specified.
+.It 99
+An unanticipated exception occurred.
+.El
+.Sh EXAMPLES
+.Sy Example 1 No Enabling the Depot Server
+.Bd -literal -offset 4n
+svcadm enable application/pkg/server
+.Ed
+.Pp
+.Sy Example 2 No Changing the Listening Port of the Server.
+.Bd -literal -offset 4n
+svccfg -s application/pkg/server setprop pkg/port = 10000
+svcadm refresh application/pkg/server
+svcadm restart application/pkg/server
+.Ed
+.Pp
+.Sy Example 3 No Enabling the Mirror
+.Bd -literal -offset 4n
+svcadm enable application/pkg/dynamic-mirror
+.Ed
+.Sh ENVIRONMENT VARIABLES
+The following environment variables are supported:
+.Bl -tag -width Ds
+.It Ev PKG_REPO
+Specifies the directory that contains the repository to serve.
+This value is ignored if
+.Fl d
+is specified.
+.It Ev PKG_DEPOT_CONTENT
+Specifies the directory that contains static content served by the depot.
+The files listed below under
+.Sx Files
+should be present in this directory, although their content can differ from the
+supplied default content.
+.El
+.Sh INTERFACE STABILITY
+The command line interface of
+.Nm
+is
+.Sy Uncommitted .
+The output of
+.Nm
+is
+.Sy Not-An-Interface
+and may change at any time.
+.Sh SEE ALSO
+.Xr kill 1 ,
+.Xr pkg 1 ,
+.Xr pkgrepo 1 ,
+.Xr pkgsend 1 ,
+.Xr smf 7 ,
+.Xr dns-sd 8 ,
+.Xr mdnsd 8 ,
+.Xr svcadm 8 ,
+.Xr syslogd 8
+.Sh NOTES
+The
+.Nm
+service is managed by SMF under the service identifier
+.Sy svc:/application/pkg/server .
+.Pp
+The mDNS mirror service is managed by SMF under the service identifier
+.Sy svc:/application/pkg/dynamic-mirror .
+.Pp
+To control read access to the depot, you can use an HTTP reverse proxy in
+combination with authentication methods such as client based SSL certificate
+access, which
+.Xr pkg 1
+natively supports.
+.Pp
+Changes to configuration, or changes to package data using file system based
+operations, require a restart of the depot server process so that the changes
+can be reflected in operations and output.
+Use one of the following methods to restart the depot server process:
+.Bl -bullet -offset Ds
+.It
+Use
+.Xr svcadm 8
+to restart the
+.Sy application/pkg/server
+instance.
+.It
+Send a
+.Dv SIGUSR1
+signal to the depot server process using
+.Xr kill 1 .
+This executes a graceful restart that leaves the process intact but reloads
+all configuration, package, and search data:
+.Pp
+.Dl kill -USR1 <pid>
+.El

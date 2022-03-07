@@ -1,422 +1,371 @@
-'\" te
 .\" Copyright (c) 2007, 2019, Oracle and/or its affiliates. All rights reserved.
-.TH pkglint 1 "10 Sep 2018" "OmniOS" "User Commands"
-.SH NAME
-pkglint \- Image Packaging System package lint
-.SH SYNOPSIS
-.LP
-.nf
-/usr/bin/pkglint [-c \fIcache_dir\fR] [-r \fIrepo_uri\fR]... [-p \fIregexp\fR]
-    [-e \fIextension_path\fR] [-f \fIconfig_file\fR] [-b \fIbuild_no\fR] [-v]
-    [-l \fIlint_uri\fR]... | \fImanifest\fR ...
-.fi
-
-.LP
-.nf
-/usr/bin/pkglint -L [-v]
-.fi
-
-.SH DESCRIPTION
-.sp
-.LP
-\fBpkglint\fR runs a series of checks on one or more package manifests, optionally referencing another repository.
-.sp
-.LP
-\fBpkglint\fR should be used during the package authoring process, prior to package publication. \fBpkglint\fR performs exhaustive testing on the manifests that might be too expensive to perform during normal operation of \fBpkgsend\fR or \fBpkg.depotd\fR. \fBpkglint\fR checks include tests for duplicate actions, missing attributes, and unusual file permissions.
-.sp
-.LP
-Manifests for linting can be passed as a space-separated list of local files on the command line, or manifests can be retrieved from a repository.
-.sp
-.LP
-When retrieving manifests from repositories, on first run \fBpkglint\fR creates and populates \fBpkg\fR(5) user images in the specified cache directory. If the \fB-r\fR option is supplied, a user image named \fIcache_dir\fR\fB/ref_image\fR is created for the reference repository. If the \fB-l\fR option is supplied, a user image named \fIcache_dir\fR\fB/lint_image\fR is created for the lint repository. No content is installed in these images. These images are only used by \fBpkglint\fR to retrieve manifests from the repositories.
-.sp
-.LP
-Subsequent invocations of \fBpkglint\fR can reuse the cache directory and can omit any \fB-r\fR or \fB-l\fR arguments.
-.sp
-.LP
-\fBpkglint\fR provides limited support for configuring publishers in the cache directory. Use \fBpkg\fR to perform more complex publisher configuration on these images.
-.sp
-.LP
-\fBpkglint\fR allows package authors to bypass checks for a given manifest or action. A manifest or action that contains the attribute \fBpkg.linted\fR set to \fBTrue\fR does not produce any lint output for that manifest or action.
-.sp
-.LP
-More granular \fBpkg.linted\fR settings can be made using substrings of \fBpkglint\fR check names. For example, \fBpkg.linted.\fIcheck\fR.\fIid\fR\fR set to \fBTrue\fR bypasses all checks with the name \fB\fIcheck\fR.\fIid\fR\fR for the given manifest or action.
-.sp
-.LP
-The behavior of \fBpkglint\fR can be configured by specifying a \fBpkglintrc\fR file. By default, \fBpkglint\fR searches in \fB/usr/share/lib/pkg/pkglintrc\fR and \fB$HOME/.pkglintrc\fR for configuration options. Use the \fB-f\fR option to specify a different configuration file.
-.sp
-.LP
-During the lint run, any errors or warnings encountered are printed to \fBstderr\fR.
-.SH OPTIONS
-.sp
-.LP
+.\" Copyright 2022 OmniOS Community Edition (OmniOSce) Association.
+.Dd February 17, 2022
+.Dt PKGLINT 1
+.Os
+.Sh NAME
+.Nm pkglint
+.Nd Image Packaging System package lint
+.Sh SYNOPSIS
+.Nm
+.Op Fl c Ar cache_dir
+.Oo Fl r Ar repo_uri Oc Ns \&...
+.Op Fl p Ar regexp
+.Op Fl e Ar extension_path
+.Op Fl f Ar config_file
+.Op Fl b Ar build_no
+.Op Fl v
+.Oo Fl l Ar lint_uri Oc Ns \&...
+.Ar manifest Ns \&...
+.Pp
+.Nm
+.Fl L
+.Op Fl v
+.Sh DESCRIPTION
+.Nm
+runs a series of checks on one or more package manifests, optionally
+referencing another repository.
+.Pp
+.Nm
+should be used during the package authoring process, prior to package
+publication.
+.Nm
+performs exhaustive testing on the manifests that might be too expensive to
+perform during normal operation of
+.Xr pkgsend 1
+or
+.Xr pkg.depotd 8 .
+.Nm
+checks include tests for duplicate actions, missing attributes, and unusual
+file permissions.
+.Pp
+Manifests for linting can be passed as a space-separated list of local files on
+the command line, or manifests can be retrieved from a repository.
+.Pp
+When retrieving manifests from repositories, on first run
+.Nm
+creates and populates
+.Xr pkg 7
+user images in the specified cache directory.
+If the
+.Fl r
+option is supplied, a user image named
+.Ar cache_dir Ns Sy /ref_image
+is created for the reference repository.
+If the
+.Fl l
+option is supplied, a user image named
+.Ar cache_dir Ns Sy /lint_image
+is created for the lint repository.
+No content is installed in these images.
+These images are only used by
+.Nm
+to retrieve manifests from the repositories.
+.Pp
+Subsequent invocations of
+.Nm
+can reuse the cache directory and can omit any
+.Fl r
+or
+.Fl l
+arguments.
+.Pp
+.Nm
+provides limited support for configuring publishers in the cache directory.
+Use
+.Xr pkg 1
+to perform more complex publisher configuration on these images.
+.Pp
+.Nm
+allows package authors to bypass checks for a given manifest or action.
+A manifest or action that contains the attribute
+.Sy pkg.linted
+set to
+.Sy True
+does not produce any lint output for that manifest or action.
+.Pp
+More granular
+.Sy pkg.linted
+settings can be made using substrings of
+.Nm
+check names.
+For example,
+.Sy pkg.linted\&. Ns Em check Ns \&. Ns Em id
+set to
+.Sy True
+bypasses all checks with the name
+.Ar check Ns \&. Ns id
+for the given manifest or action.
+.Pp
+The behaviour of
+.Nm
+can be configured by specifying a
+.Sy pkglintrc
+file.
+By default,
+.Nm
+searches in
+.Pa /usr/share/lib/pkg/pkglintrc
+and
+.Pa $HOME/.pkglintrc
+for configuration options.
+Use the
+.Fl f
+option to specify a different configuration file.
+.Pp
+During the lint run, any errors or warnings encountered are printed to
+.Dv stderr .
+.Sh OPTIONS
 The following options are supported:
-.sp
-.ne 2
-.mk
-.na
-\fB-h\fR
-.ad
-.br
-.na
-\fB--help\fR
-.ad
-.sp .6
-.RS 4n
+.Bl -tag -width Ds
+.It Fl h , \&-help
 Display a usage message.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-b\fR \fIbuild_no\fR
-.ad
-.sp .6
-.RS 4n
-Specify a build number used to narrow the list of packages used during linting from lint and reference repositories. If no \fB-b\fR option is specified, the latest versions of packages are used. See also the \fBversion.pattern\fR configuration property.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-c\fR \fIcache_dir\fR
-.ad
-.sp .6
-.RS 4n
-Specify a local directory used for caching package metadata from the lint and reference repositories.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-l\fR \fIlint_uri\fR
-.ad
-.sp .6
-.RS 4n
-Specify a URI representing the location of the lint repository. Both HTTP and file system based publication are supported. If you specify \fB-l\fR, then you must also specify \fB-c\fR. The \fB-l\fR option can be specified multiple times.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-L\fR
-.ad
-.sp .6
-.RS 4n
-List the known and excluded lint checks and then exit. Display the short name and description of each check. When combined with the \fB-v\fR flag, display the method that implements the check instead of the description.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-e\fR \fIextension_path\fR
-.ad
-.sp .6
-.RS 4n
-Directory to add to the Python search path when loading \fBpkglint\fR
+.It Fl b Ar build_no
+Specify a build number used to narrow the list of packages used during linting
+from lint and reference repositories.
+If no
+.Fl b
+option is specified, the latest versions of packages are used.
+See also the
+.Sy version.pattern
+configuration property.
+.It Fl c Ar cache_dir
+Specify a local directory used for caching package metadata from the lint and
+reference repositories.
+.It Fl l Ar lint_uri
+Specify a URI representing the location of the lint repository.
+Both HTTP and file system based publication are supported.
+If you specify
+.Fl l ,
+then you must also specify
+.Fl c .
+The
+.Fl l
+option can be specified multiple times.
+.It Fl L
+List the known and excluded lint checks and then exit.
+Display the short name and description of each check.
+When combined with the
+.Fl v
+flag, display the method that implements the check instead of the description.
+.It Fl e Ar extension_path
+Directory to add to the Python search path when loading
+.Nm
 extensions.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-f\fR \fIconfig_file\fR
-.ad
-.sp .6
-.RS 4n
-Configure the \fBpkglint\fR session using the \fIconfig_file\fR configuration file.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-p\fR \fIregexp\fR
-.ad
-.sp .6
-.RS 4n
-Specify a regular expression used to narrow the list of packages to be checked from the lint repository. All manifests from the reference repository are loaded (assuming they match the value for \fB-b\fR, if supplied), ignoring this pattern.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-r\fR \fIrepo_uri\fR
-.ad
-.sp .6
-.RS 4n
-Specify a URI representing the location of the reference repository. If you specify \fB-r\fR, then you must also specify \fB-c\fR. The \fB-r\fR option can be specified multiple times.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-v\fR
-.ad
-.sp .6
-.RS 4n
-Run \fBpkglint\fR in a verbose mode, overriding any \fBlog_level\fR settings in the configuration file.
-.RE
-
-.SH FILES
-.sp
-.LP
-The \fBpkglintrc\fR configuration file takes the following key/value arguments:
-.sp
-.ne 2
-.mk
-.na
-\fBlog_level\fR
-.ad
-.sp .6
-.RS 4n
-The minimum level at which to emit lint messages. Lint messages lower than this level are discarded. The default value is \fBINFO\fR.
-.sp
-Log levels in order of least to most severe are \fBDEBUG\fR, \fBINFO\fR, \fBWARNING\fR, \fBERROR\fR, and \fBCRITICAL\fR.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fBdo_pub_checks\fR
-.ad
-.sp .6
-.RS 4n
-If \fBTrue\fR, perform checks that might only make sense for published packages. The default value is \fBTrue\fR.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB\fBpkglint.ext.\fR*\fR
-.ad
-.sp .6
-.RS 4n
-The plugin mechanism of \fBpkglint\fR allows for additional lint modules to be added at runtime. Any key that starts with \fBpkglint.ext.\fR takes a value that must be a fully-specified Python module. See the "Developers" section for more information.
-The \fIextension_path\fR option specifies additional directory locations to
-search when loading extensions.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fBextension_path\fR
-.ad
-.sp .6
-.RS 4n
-A list of directories, separated by ':', to search for extension modules. If
-the \fI-e\fR flag is specified on the command line, it is added higher in
-the search order than this configuration file option.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fBpkglint.exclude\fR
-.ad
-.sp .6
-.RS 4n
-A space-separated list of fully specified Python modules, classes, or function names to omit from the set of checks performed.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fBuse_progress_tracker\fR
-.ad
-.sp .6
-.RS 4n
-If \fBTrue\fR, use a progress tracker when iterating over manifests during lint runs. The default value is \fBTrue\fR.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fBversion.pattern\fR
-.ad
-.sp .6
-.RS 4n
-A version pattern, used when specifying a build number to lint against (\fB-b\fR). If not specified in the configuration file, the \fB-b\fR option uses the pattern \fB*,5.11-0.\fR, matching all components of the 5.11 build, with a branch prefix of 0.
-.RE
-
-.SH DEVELOPERS
-.sp
-.LP
-To extend the set of checks performed by \fBpkglint\fR, subclass \fBpkg.lint.base.Checker\fR and its subclasses, \fBManifestChecker\fR and \fBActionChecker\fR. Add the Python module name that contains those classes to a new \fBpkglint.ext.\fR key in the configuration file.
-.sp
-.LP
-Instances of those new subclasses are created by \fBpkglint\fR on startup. Methods inside each subclass with the special keyword argument \fBpkglint_id\fR are invoked during the course of the lint session. Those methods should have the same signature as the corresponding \fBcheck()\fR method in the super class. Methods should also be assigned a \fBpkglint_desc\fR attribute, which is used as the description printed by \fBpkglint -L\fR.
-.sp
-.LP
-Parameters are available to \fBChecker\fR subclasses, allowing them to tune their behavior. The recommended parameter naming convention is \fB\fIpkglint_id\fR.\fIname\fR\fR. Parameter values can be stored in the configuration file, or accessed in manifests or actions retrieved using the \fBLintEngine.get_param()\fR method. When accessing parameters from the manifest, the prefix \fBpkg.lint\fR is prepended to the key name to ensure that \fBpkglint\fR parameters do not overlap with any existing action or manifest values.
-.SH EXAMPLES
-.LP
-\fBExample 1 \fRFirst Run on a Particular Repository
-.sp
-.LP
-Running a \fBpkglint\fR session for the first time on a given repository.
-
-.sp
-.in +2
-.nf
-$ \fBpkglint -c /space/cache -r http://localhost:10000 mymanifest.mf\fR
-.fi
-.in -2
-.sp
-
-.LP
-\fBExample 2 \fRSubsequent Run on the Same Repository
-.sp
-.LP
-A subsequent run against the same repository used in Example 1.
-
-.sp
-.in +2
-.nf
-$ \fBpkglint -c /space/cache mymanifest-fixed.mf\fR
-.fi
-.in -2
-.sp
-
-.LP
-\fBExample 3 \fRUsing a Lint Repository With a Narrowed Manifest Set
-.sp
-.LP
-Running a \fBpkglint\fR session with a lint repository and specifying a subset of manifests to check.
-
-.sp
-.in +2
-.nf
-$ \fBpkglint -c /space/othercache -l http://localhost:10000 \e\fR
-\fB-p '.*firefox.*'\fR
-.fi
-.in -2
-.sp
-
-.LP
-\fBExample 4 \fRSpecifying a Build
-.sp
-.LP
-Running a \fBpkglint\fR session against a given build in verbose mode.
-
-.sp
-.in +2
-.nf
-$ \fBpkglint -c /space/cache -r http://localhost:10000 \e\fR
-\fB-l http://localhost:12000 -b 147 -v\fR
-.fi
-.in -2
-.sp
-
-.LP
-\fBExample 5 \fRModifying a Configuration File
-.sp
-.LP
-A configuration file with a new lint module, excluding some checks.
-
-.sp
-.in +2
-.nf
-$ \fBcat ~/.pkglintrc\fR
-[pkglint]
-
-log_level = DEBUG
-# log_level = INFO
-
-pkglint.ext.mycheck = org.timf.mychecks
-pkglint.ext.opensolaris = pkg.lint.opensolaris
-pkglint.exclude: pkg.lint.opensolaris.OpenSolarisActionChecker
-pkg.lint.pkglint.PkgActionChecker.unusual_perms pkg.lint.pkglint.PkgManifestChecker
-pkg.lint.opensolaris.OpenSolarisManifestChecker
-.fi
-.in -2
-.sp
-
-.SH EXIT STATUS
-.sp
-.LP
+.It Fl f Ar config_file
+Configure the
+.Nm
+session using the
+.Ar config_file
+configuration file.
+.It Fl p Ar regexp
+Specify a regular expression used to narrow the list of packages to be checked
+from the lint repository.
+All manifests from the reference repository are loaded
+.Po
+assuming they match the value for
+.Fl b ,
+if supplied
+.Pc ,
+ignoring this pattern.
+.It Fl r Ar repo_uri
+Specify a URI representing the location of the reference repository.
+If you specify
+.Fl r ,
+then you must also specify
+.Fl c .
+The
+.Fl r
+option can be specified multiple times.
+.It Fl v
+Run
+.Nm
+in a verbose mode, overriding any
+.Sy log_level
+settings in the configuration file.
+.El
+.Sh FILES
+The
+.Sy pkglintrc
+configuration file takes the following key/value arguments:
+.Bl -tag -width Ds
+.It Sy log_level
+The minimum level at which to emit lint messages.
+Lint messages lower than this level are discarded.
+The default value is
+.Sy INFO .
+.Pp
+Log levels in order of least to most severe are
+.Sy DEBUG ,
+.Sy INFO ,
+.Sy WARNING ,
+.Sy ERROR ,
+and
+.Sy CRITICAL .
+.It Sy do_pub_checks
+If
+.Sy True ,
+perform checks that might only make sense for published packages.
+The default value is
+.Sy True .
+.It Sy pkglint.ext.*
+The plugin mechanism of
+.Nm
+allows for additional lint modules to be added at runtime.
+Any key that starts with
+.Sy pkglint.ext\&.
+takes a value that must be a fully-specified Python module.
+See the
+.Sx Developers
+section for more information.
+The
+.Ar extension_path
+option specifies additional directory locations to search when loading
+extensions.
+.It Sy extension_path
+A list of directories, separated by
+.Sq \&: ,
+to search for extension modules.
+If the
+.Fl e
+flag is specified on the command line, it is added higher in the search order
+than this configuration file option.
+.It Sy pkglint.exclude
+A space-separated list of fully specified Python modules, classes, or function
+names to omit from the set of checks performed.
+.It Sy use_progress_tracker
+If
+.Sy True ,
+use a progress tracker when iterating over manifests during lint runs.
+The default value is
+.Sy True .
+.It Sy version.pattern
+A version pattern, used when specifying a build number to lint against
+.Pq Fl b .
+If not specified in the configuration file, the
+.Fl b
+option uses the pattern
+.Sy *,5.11-0\&. ,
+matching all components of the 5.11 build, with a branch prefix of 0.
+.El
+.Sh DEVELOPERS
+To extend the set of checks performed by
+.Nm ,
+subclass
+.Sy pkg.lint.base.Checker
+and its subclasses,
+.Sy ManifestChecker
+and
+.Sy ActionChecker .
+Add the Python module name that contains those classes to a new
+.Sy pkglint.ext\&.
+key in the configuration file.
+.Pp
+Instances of those new subclasses are created by
+.Nm
+on startup.
+Methods inside each subclass with the special keyword argument
+.Sy pkglint_id
+are invoked during the course of the lint session.
+Those methods should have the same signature as the corresponding
+.Sy check()
+method in the super class.
+Methods should also be assigned a
+.Sy pkglint_desc
+attribute, which is used as the description printed by
+.Sy pkglint -L .
+.Pp
+Parameters are available to
+.Sy Checker
+subclasses, allowing them to tune their behaviour.
+The recommended parameter naming convention is
+.Em pkglint_id Ns \&. Ar name .
+Parameter values can be stored in the configuration file, or accessed in
+manifests or actions retrieved using the
+.Sy LintEngine.get_param()
+method.
+When accessing parameters from the manifest, the prefix
+.Sy pkg.lint
+is prepended to the key name to ensure that
+.Nm
+parameters do not overlap with any existing action or manifest values.
+.Sh EXIT STATUS
 The following exit values are returned:
-.sp
-.ne 2
-.mk
-.na
-\fB0\fR
-.ad
-.RS 6n
-.rt
+.Bl -tag -width Ds
+.It 0
 Command succeeded.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB1\fR
-.ad
-.RS 6n
-.rt
+.It 1
 One or more package manifests contain lint errors.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB2\fR
-.ad
-.RS 6n
-.rt
-An error occurred that is not a lint error in a manifest. For example, an invalid command line option might have been specified.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB99\fR
-.ad
-.RS 6n
-.rt
+.It 2
+An error occurred that is not a lint error in a manifest.
+For example, an invalid command line option might have been specified.
+.It 99
 An unanticipated exception occurred.
-.RE
-
-.SH ATTRIBUTES
-.sp
-.LP
-See \fBattributes\fR(5) for descriptions of the following attributes:
-.sp
-
-.sp
-.TS
-tab() box;
-cw(2.75i) |cw(2.75i)
-lw(2.75i) |lw(2.75i)
-.
-ATTRIBUTE TYPEATTRIBUTE VALUE
-_
-Availability\fBpackage/pkg\fR
-_
-Interface StabilityUncommitted
-.TE
-
-.SH SEE ALSO
-.sp
-.LP
-\fBpkg\fR(1), \fBpkg.depotd\fR(1M), \fBpkgsend\fR(1), \fBpkg\fR(5)
-.sp
-.LP
-\fBhttps://github.com/omniosorg/pkg5\fR
+.El
+.Sh EXAMPLES
+.Sy Example 1 No First Run on a Particular Repository
+.Pp
+Running a
+.Nm
+session for the first time on a given repository.
+.Bd -literal -offset 4n
+pkglint -c /space/cache -r http://localhost:10000 mymanifest.mf
+.Ed
+.Pp
+.Sy Example 2 No Subsequent Run on the Same Repository
+.Pp
+A subsequent run against the same repository used in Example 1.
+.Bd -literal -offset 4n
+pkglint -c /space/cache mymanifest-fixed.mf
+.Ed
+.Pp
+.Sy Example 3 No Using a Lint Repository With a Narrowed Manifest Set
+.Pp
+Running a
+.Nm
+session with a lint repository and specifying a subset of manifests to check.
+.Bd -literal -offset 4n
+pkglint -c /space/othercache -l http://localhost:10000 \e
+    -p '.*firefox.*'
+.Ed
+.Pp
+.Sy Example 4 No Specifying a Build
+.Pp
+Running a
+.Nm
+session against a given build in verbose mode.
+.Bd -literal -offset 4n
+pkglint -c /space/cache -r http://localhost:10000 \e
+    -l http://localhost:12000 -b 147 -v
+.Ed
+.Pp
+.Sy Example 5 No Modifying a Configuration File
+.Pp
+A configuration file with a new lint module, excluding some checks.
+.Bd -literal -offset 4n
+cat ~/.pkglintrc
+  [pkglint]
+  log_level = DEBUG
+  # log_level = INFO
+  pkglint.ext.mycheck = org.timf.mychecks
+  pkglint.ext.opensolaris = pkg.lint.opensolaris
+  pkglint.exclude: pkg.lint.opensolaris.OpenSolarisActionChecker
+  pkg.lint.pkglint.PkgActionChecker.unusual_perms
+  pkg.lint.pkglint.PkgManifestChecker
+  pkg.lint.opensolaris.OpenSolarisManifestChecker
+.Ed
+.Sh INTERFACE STABILITY
+The command line interface of
+.Nm
+is
+.Sy Uncommitted .
+The output of
+.Nm
+is
+.Sy Not-An-Interface
+and may change at any time.
+.Sh SEE ALSO
+.Xr pkg 1 ,
+.Xr pkgsend 1 ,
+.Xr pkg 7 ,
+.Xr pkg.depotd 8

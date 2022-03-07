@@ -1,6 +1,6 @@
 '\" te
 .\" Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
-.TH pkg.sysrepo 1M "21 May 2013" "OmniOS" "System Administration Commands"
+.TH pkg.sysrepo 8 "21 May 2013" "OmniOS" "System Administration Commands"
 .SH NAME
 pkg.sysrepo \- Image Packaging System system repository configuration
 .SH SYNOPSIS
@@ -19,7 +19,7 @@ pkg.sysrepo \- Image Packaging System system repository configuration
 The system repository is responsible for providing access to the package repositories configured in a reference image through a centralized proxy. Publisher configuration changes made to that reference image are seen immediately by any clients configured to use the system repository.
 .sp
 .LP
-The system repository is primarily used in the global zone to allow non-global zones to access the repositories configured in the global zone. The SMF services \fBsvc:/application/pkg/zones-proxyd\fR and \fBsvc:/application/pkg/zones-proxy-client\fR are responsible for providing the transport between non-global zones and the global zone. This transport is only used by \fBpkg\fR(5).
+The system repository is primarily used in the global zone to allow non-global zones to access the repositories configured in the global zone. The SMF services \fBsvc:/application/pkg/zones-proxyd\fR and \fBsvc:/application/pkg/zones-proxy-client\fR are responsible for providing the transport between non-global zones and the global zone. This transport is only used by \fBpkg\fR(7).
 .sp
 .LP
 Note that only \fBhttp\fR, \fBhttps\fR, and \fBv4\fR file repositories and \fBp5p\fR archives are supported. Older file repository formats are not supported. See \fBpkgrepo\fR(1) for more information about repository versions.
@@ -146,7 +146,7 @@ An unanticipated exception occurred.
 .SH ATTRIBUTES
 .sp
 .LP
-See \fBattributes\fR(5) for descriptions of the following attributes:
+See \fBattributes\fR(7) for descriptions of the following attributes:
 .sp
 
 .sp
@@ -165,7 +165,7 @@ Interface StabilityUncommitted
 .SH SEE ALSO
 .sp
 .LP
-\fBpkg\fR(1), \fBpkg.depotd\fR(1M), \fBpkg\fR(5)
+\fBpkg\fR(1), \fBpkg.depotd\fR(8), \fBpkg\fR(7)
 .sp
 .LP
 \fBhttps://github.com/omniosorg/pkg5\fR

@@ -1,521 +1,428 @@
 '\" te
 .\" Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
-.TH pkgdepend 1 "12 Jul 2013" "OmniOS" "User Commands"
-.SH NAME
-pkgdepend \- Image Packaging System dependency analyzer
-.SH SYNOPSIS
-.LP
-.nf
-/usr/bin/pkgdepend [\fIoptions\fR] \fIcommand\fR [\fIcmd_options\fR] [\fIoperands\fR]
-.fi
-
-.LP
-.nf
-/usr/bin/pkgdepend generate [-IMm] -d \fIdir\fR [-d \fIdir\fR]
-    [-D \fIname\fR=\fIvalue\fR] [-k \fIpath\fR] \fImanifest_file\fR
-.fi
-
-.LP
-.nf
-/usr/bin/pkgdepend resolve [-EmoSv] [-d \fIoutput_dir\fR]
-    [-e \fIexternal_package_file\fR]... [-s \fIsuffix\fR]
-    \fImanifest_file\fR ...
-.fi
-
-.SH DESCRIPTION
-.sp
-.LP
-The \fBpkgdepend\fR command generates and resolves dependencies for packages. A package might depend on files from other packages. The \fBpkgdepend\fR command is typically used in two passes: file dependency generation and file-to-package resolution.
-.sp
-.LP
-The \fBgenerate\fR subcommand examines the content of a package and determines what external files the package needs.
-.sp
-.LP
-The \fBresolve\fR subcommand takes the list of files from the \fBgenerate\fR step, and searches a reference set of packages to determine the names of the packages that contain those dependent files. The reference set of packages that are searched for the dependent files are the packages that are currently installed on the publisher's system.
-.sp
-.LP
-Several components of delivered files are used as sources of dependency information:
-.sp
-.ne 2
-.mk
-.na
-\fBELF\fR
-.ad
-.RS 14n
-.rt
-ELF headers in delivered files are analyzed for dependency information, with the \fB-k\fR and \fB-D\fR options modifying the information obtained. For more details on ELF dependencies, see \fBldd\fR and the \fILinker and Libraries Guide\fR.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fBScripts\fR
-.ad
-.RS 14n
-.rt
-Shell scripts that contain \fB#!\fR lines referencing an interpreter result in a dependency on the package that delivers that interpreter.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fBPython\fR
-.ad
-.RS 14n
-.rt
-Python scripts are first analyzed as scripts. In addition, any imports the script declares might also serve as sources of dependency information.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fBHard links\fR
-.ad
-.RS 14n
-.rt
-Hard links in manifests result in a dependency on the package that delivers the link target.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fBSMF\fR
-.ad
-.RS 14n
-.rt
-Delivered SMF service manifests that include \fBrequire_all\fR dependencies result in dependencies on the packages that deliver the SMF manifests that provide those FMRIs.
-.RE
-
-.SH OPTIONS
-.sp
-.LP
+.Dd February 17, 2022
+.Dt PKGDEPEND 1
+.Os
+.Sh NAME
+.Nm pkgdepend
+.Nd Image Packaging System dependency analyzer
+.Sh SYNOPSIS
+.Nm
+.Op Ar options
+.Ic command
+.Op Ar cmd_options
+.Op Ar operands
+.Pp
+.Nm
+.Ic generate
+.Op Fl IMm
+.Fl d Ar dir
+.Op Fl d Ar dir
+.Op Fl D Ar name Ns Cm \&= Ns Ar value
+.Op Fl k Ar path
+.Ar manifest_file
+.Pp
+.Nm
+.Ic resolve
+.Op Fl EmoSv
+.Op Fl d Ar output_dir
+.Oo Fl e Ar external_package_file Oc Ns \&...
+.Op Fl s Ar suffix
+.Ar manifest_file Ns \&...
+.Sh DESCRIPTION
+The
+.Nm
+command generates and resolves dependencies for packages.
+A package might depend on files from other packages.
+The
+.Nm
+command is typically used in two passes: file dependency generation and
+file-to-package resolution.
+.Pp
+The
+.Ic generate
+subcommand examines the content of a package and determines what external files
+the package needs.
+.Pp
+The
+.Ic resolve
+subcommand takes the list of files from the
+.Ic generate
+step, and searches a reference set of packages to determine the names of the
+packages that contain those dependent files.
+The reference set of packages that are searched for the dependent files are the
+packages that are currently installed on the publisher's system.
+.Pp
+Several components of delivered files are used as sources of dependency
+information:
+.Bl -tag -width "Hard links"
+.It Sy ELF
+ELF headers in delivered files are analyzed for dependency information, with the
+.Fl k
+and
+.Fl D
+options modifying the information obtained.
+For more details on ELF dependencies, see
+.Xr ldd 1
+and the
+.%T Linker and Libraries Guide .
+.It Sy Scripts
+Shell scripts that contain
+.Sy #!
+lines referencing an interpreter result in a dependency on the package that
+delivers that interpreter.
+.It Sy Python
+Python scripts are first analysed as scripts.
+In addition, any imports the script declares might also serve as sources of
+dependency information.
+.It Sy Hard links
+Hard links in manifests result in a dependency on the package that delivers the
+link target.
+.It Sy SMF
+Delivered SMF service manifests that include
+.Sy require_all
+dependencies result in dependencies on the packages that deliver the SMF
+manifests that provide those FMRIs.
+.El
+.Sh OPTIONS
 The following options are supported:
-.sp
-.ne 2
-.mk
-.na
-\fB-?\fR
-.ad
-.br
-.na
-\fB--help\fR
-.ad
-.sp .6
-.RS 4n
+.Bl -tag -width Ds
+.It Fl \&-help , Fl \&?
 Display a usage message.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-R\fR \fIdir\fR
-.ad
-.sp .6
-.RS 4n
-Operate on the image rooted at \fIdir\fR. If no directory was specified or determined based on environment, the default is /. See the "Environment Variables" section for more information.
-.RE
-
-.SH SUB-COMMANDS
-.sp
-.LP
+.It Fl R Ar dir
+Operate on the image rooted at
+.Ar dir .
+If no directory was specified or determined based on environment, the default
+is /.
+See the
+.Sx Environment Variables
+section for more information.
+.El
+.Sh SUB-COMMANDS
 The following subcommands are supported:
-.sp
-.ne 2
-.mk
-.na
-\fBpkgdepend generate\fR [\fB-IMm\fR] \fB-d\fR \fIdir\fR [\fB-d\fR \fIdir\fR] [\fB-D\fR \fIname\fR=\fIvalue\fR] [\fB-k\fR \fIpath\fR] \fImanifest_file\fR
-.ad
-.sp .6
-.RS 4n
-Produce the dependencies on files of the manifest specified by \fImanifest_file\fR.
-.sp
-.ne 2
-.mk
-.na
-\fB-I\fR
-.ad
-.sp .6
-.RS 4n
-Show the dependencies that are satisfied within \fImanifest_file\fR. Do not use the result of \fB-I\fR with \fBpkgdepend resolve\fR.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-M\fR
-.ad
-.sp .6
-.RS 4n
+.Bl -tag -width Ds
+.It Xo
+.Nm
+.Ic generate
+.Op Fl IMm
+.Fl d Ar dir
+.Op Fl d Ar dir
+.Op Fl D Ar name Ns Cm \&= Ns Ar value
+.Op Fl k Ar path
+.Ar manifest_file
+.Xc
+.Pp
+Produce the dependencies on files of the manifest specified by
+.Ar manifest_file .
+.Bl -tag -width Ds
+.It Fl I
+Show the dependencies that are satisfied within
+.Ar manifest_file .
+Do not use the result of
+.Fl I
+with
+.Nm Ic resolve .
+.It Fl M
 Display a list of file types that could not be analyzed.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-m\fR
-.ad
-.sp .6
-.RS 4n
+.It Fl m
 Repeat the original manifest with any discovered dependencies added after.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-d\fR \fIdir\fR
-.ad
-.sp .6
-.RS 4n
-Add \fIdir\fR to a list of directories to search for the manifest's files.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-D\fR \fIname\fR=\fIvalue\fR
-.ad
-.sp .6
-.RS 4n
-Add the \fIvalue\fR as a way to expand the token \fIname\fR in run paths for ELF file dependencies.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-k\fR \fIpath\fR
-.ad
-.sp .6
-.RS 4n
-Add the \fIpath\fR to the list of run paths to search for kernel modules. Using the \fB-k\fR option removes the default paths, which are \fB/kernel\fR and \fB/usr/kernel\fR.
-.sp
-Run paths such as those specified by the \fB-k\fR option can also be specified per action or per manifest by using the action or manifest attribute \fBpkg.depend.runpath\fR. The value of the \fBpkg.depend.runpath\fR attribute is a colon-separated string of the paths to use. Setting any \fBpkg.depend.runpath\fR attributes in the manifest or action overrides paths specified with the \fB-k\fR option.
-.sp
-The special token \fB$PKGDEPEND_RUNPATH\fR can be used as one component of the \fBpkg.depend.runpath\fR attribute value in order to include the standard system run path for the file being analyzed.
-.RE
-
-In some cases, you might want to prevent automatic generation of dependencies. For example, if a package delivers a sample Python script that imports a set of modules, those modules imported by the sample script are not dependencies for the package that delivers the sample script. Use the action or manifest attribute \fBpkg.depend.bypass-generate\fR to prevent generating dependencies against the specified files.
-.sp
-The \fBpkg.depend.bypass-generate\fR values are Python regular expressions that match file names. The regular expressions are implicitly anchored at the start and end of the file path. The value given in the following example matches \fBthis/that\fR but does not match \fBsomething/this/that/the/other\fR.
-.sp
-.in +2
-.nf
-pkg.depend.bypass-generate=this/that
-.fi
-.in -2
-
-For more information about Python regular expression syntax, use the command \fBpydoc re\fR or see more complete documentation at \fBhttp://docs.python.org/dev/howto/regex.html\fR.
-.sp
-When \fBpkgdepend generate\fR input manifests contain SMF manifest files, any SMF services or instances declared by those SMF manifest files are included in the \fBpkgdepend\fR output. These SMF services or instances are included in the form of a \fBset\fR action with the name \fBorg.opensolaris.smf.fmri\fR.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB\fBpkgdepend resolve\fR [\fB-EmoSv\fR] [\fB-d\fR \fIoutput_dir\fR] [\fB-e\fR \fIexternal_package_file\fR]... [\fB-s\fR \fIsuffix\fR] \fImanifest_file\fR ...\fR
-.ad
-.sp .6
-.RS 4n
-Transform dependencies on files into dependencies on the packages that deliver those files. Dependencies are first resolved against the manifests given on the command line and then against the packages installed on the system. By default, the dependencies for each manifest are placed in a file named \fB\fImanifest_file\fR.res\fR.
-.sp
-.ne 2
-.mk
-.na
-\fB-e\fR \fIexternal_package_file\fR
-.ad
-.sp .6
-.RS 4n
-Only resolve against packages from the system whose names match a pattern in \fIexternal_package_file\fR. This option can be specified multiple times. The \fB-e\fR option cannot be used with the \fB-S\fR option.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-E\fR
-.ad
-.sp .6
-.RS 4n
-If \fB-e\fR is specified, show the packages that were expected to be external dependencies but were not external dependencies. Packages that were expected to be external dependencies are packages from the system whose names match a pattern in \fIexternal_package_file\fR.
-.sp
-If \fB-e\fR is not specified, show the external dependencies of the resolved packages. External dependencies of the resolved packages are packages not named on the command line that are targets of dependencies in the resolved packages.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-m\fR
-.ad
-.sp .6
-.RS 4n
-Repeat the manifest, with any dependencies produced by the \fBgenerate\fR step removed, before adding the resolved dependencies.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-o\fR
-.ad
-.sp .6
-.RS 4n
-Write the results to standard output. This option is intended for human consumption. Appending this output to a file might result in an invalid manifest. The \fB-d\fR or \fB-s\fR options are strongly recommended instead of \fB-o\fR for use in a pipeline for manifest processing.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-d\fR \fIoutput_dir\fR
-.ad
-.sp .6
-.RS 4n
-Write the resolved dependencies for each manifest provided in a separate file in \fIoutput_dir\fR. By default, each file has the same base name as the manifest that was the source of the dependencies written to that file.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-s\fR \fIsuffix\fR
-.ad
-.sp .6
-.RS 4n
-For each output file, append \fIsuffix\fR to the base name of the file that was the source of the resolved dependencies. If \fIsuffix\fR is not \fI\&.suffix\fR, a period (.) is prepended to \fIsuffix\fR.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-S\fR
-.ad
-.sp .6
-.RS 4n
-Only resolve against the manifests given on the command line and not against the manifests installed on the system.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-v\fR
-.ad
-.sp .6
-.RS 4n
+.It Fl d Ar dir
+Add
+.Ar dir
+to a list of directories to search for the manifest's files.
+.It Fl D Ar name Ns Cm = Ns Ar value
+Add the
+.Ar value
+as a way to expand the token
+.Ar name
+in run paths for ELF file dependencies.
+.It Fl k Ar path
+Add the
+.Ar path
+to the list of run paths to search for kernel modules.
+Using the
+.Fl k
+option removes the default paths, which are
+.Pa /kernel
+and
+.Pa /usr/kernel .
+.Pp
+Run paths such as those specified by the
+.Fl k
+option can also be specified per action or per manifest by using the action or
+manifest attribute
+.Sy pkg.depend.runpath .
+The value of the
+.Sy pkg.depend.runpath
+attribute is a colon-separated string of the paths to use.
+Setting any
+.Sy pkg.depend.runpath
+attributes in the manifest or action overrides paths specified with the
+.Fl k
+option.
+.Pp
+The special token
+.Sy $PKGDEPEND_RUNPATH
+can be used as one component of the
+.Sy pkg.depend.runpath
+attribute value in order to include the standard system run path for the file
+being analyzed.
+.El
+.Pp
+In some cases, you might want to prevent automatic generation of dependencies.
+For example, if a package delivers a sample Python script that imports a set of
+modules, those modules imported by the sample script are not dependencies for
+the package that delivers the sample script.
+Use the action or manifest attribute
+.Sy pkg.depend.bypass-generate
+to prevent generating dependencies against the specified files.
+.Pp
+The
+.Sy pkg.depend.bypass-generate
+values are Python regular expressions that match file names.
+The regular expressions are implicitly anchored at the start and end of the
+file path.
+The value given in the following example matches
+.Sy this/that
+but does not match
+.Sy something/this/that/the/other .
+.Pp
+.Dl pkg.depend.bypass-generate=this/that
+.Pp
+For more information about Python regular expression syntax, see the
+documentation at
+.Lk http://docs.python.org/dev/howto/regex.html .
+.Pp
+When
+.Nm Ic generate
+input manifests contain SMF manifest files, any SMF services or instances
+declared by those SMF manifest files are included in the
+.Nm
+output.
+These SMF services or instances are included in the form of a
+.Ic set
+action with the name
+.Sy org.opensolaris.smf.fmri .
+.It Xo
+.Nm
+.Ic resolve
+.Op Fl EmoSv
+.Op Fl d Ar output_dir
+.Oo Fl e Ar external_package_file Oc Ns \&...
+.Op Fl s Ar suffix
+.Ar manifest_file Ns \&...
+.Xc
+.Pp
+Transform dependencies on files into dependencies on the packages that deliver
+those files.
+Dependencies are first resolved against the manifests given on the command line
+and then against the packages installed on the system.
+By default, the dependencies for each manifest are placed in a file named
+.Ar manifest_file Ns \&.res
+.Bl -tag -width Ds
+.It Fl e Ar external_package_file
+Only resolve against packages from the system whose names match a pattern in
+.Ar external_package_file .
+This option can be specified multiple times.
+The
+.Fl e
+option cannot be used with the
+.Fl S
+option.
+.It Fl E
+If
+.Fl e
+is specified, show the packages that were expected to be external dependencies
+but were not external dependencies.
+Packages that were expected to be external dependencies are packages from the
+system whose names match a pattern in
+.Ar external_package_file .
+.Pp
+If
+.Fl e
+is not specified, show the external dependencies of the resolved packages.
+External dependencies of the resolved packages are packages not named on the
+command line that are targets of dependencies in the resolved packages.
+.It Fl m
+Repeat the manifest, with any dependencies produced by the
+.Ic generate
+step removed, before adding the resolved dependencies.
+.It Fl o
+Write the results to standard output.
+This option is intended for human consumption.
+Appending this output to a file might result in an invalid manifest.
+The
+.Fl d
+or
+.Fl s
+options are strongly recommended instead of
+.Fl o
+for use in a pipeline for manifest processing.
+.It Fl d Ar output_dir
+Write the resolved dependencies for each manifest provided in a separate file in
+.Ar output_dir .
+By default, each file has the same base name as the manifest that was the
+source of the dependencies written to that file.
+.It Fl s Ar suffix
+For each output file, append
+.Ar suffix
+to the base name of the file that was the source of the resolved dependencies.
+If
+.Ar suffix
+does not begin with a dot
+.Pq \&.
+one will be prepended.
+.It Fl S
+Only resolve against the manifests given on the command line and not against
+the manifests installed on the system.
+.It Fl v
 Include additional package dependency debugging metadata.
-.RE
-
-.RE
-
-.SH EXAMPLES
-.LP
-\fBExample 1 \fRGenerate Dependencies
-.sp
-.LP
-Generate the dependencies for the manifest written in \fBfoo\fR, whose content directory is in \fB\&./bar/baz\fR, and store the results in \fBfoo.fdeps.\fR
-
-.sp
-.in +2
-.nf
-$ \fBpkgdepend generate -d ./bar/baz foo > foo.fdeps\fR
-.fi
-.in -2
-.sp
-
-.LP
-\fBExample 2 \fRResolve Dependencies
-.sp
-.LP
-Resolve the file dependencies in \fBfoo.fdeps\fR and \fBbar.fdeps\fR against each other and against the packages currently installed on the system.
-
-.sp
-.in +2
-.nf
-$ \fBpkgdepend resolve foo.fdeps bar.fdeps\fR
-$ \fBls *.res\fR
-foo.fdeps.res    bar.fdeps.res
-.fi
-.in -2
-.sp
-
-.LP
-\fBExample 3 \fRGenerate and Resolve Dependencies For Two Manifests
-.sp
-.LP
-Generate the file dependencies for two manifests (\fBfoo\fR and \fBbar\fR) and retain all the information in the original manifests. Then resolve the file dependencies and place the resulting manifests in \fB\&./res\fR. These resulting manifests can be used with \fBpkgsend publish\fR.
-
-.sp
-.in +2
-.nf
-$ \fBpkgdepend generate -d /proto/foo -m foo > ./deps/foo\fR
-$ \fBpkgdepend generate -d /proto/bar -m bar > ./deps/bar\fR
-$ \fBpkgdepend resolve -m -d ./res ./deps/foo ./deps/bar\fR
-$ \fBls ./res\fR
-foo    bar
-.fi
-.in -2
-.sp
-
-.LP
-\fBExample 4 \fRAdd Values To Tokens For ELF File Dependencies
-.sp
-.LP
-Replace all \fBPLATFORM\fR tokens in the run paths in ELF files with \fBsun4v\fR and \fBsun4u\fR while generating the dependencies for the manifest written in \fBfoo\fR whose content directory is in /.
-
-.sp
-.in +2
-.nf
-$ \fBpkgdepend generate -d / -D 'PLATFORM=sun4v' \e\fR
-\fB-D 'PLATFORM=sun4u' foo\fR
-.fi
-.in -2
-.sp
-
-.LP
-\fBExample 5 \fRSpecify a Kernel Module Directory
-.sp
-.LP
-Specify \fB/kmod\fR as the directory in which to find kernel modules when generating the dependencies for the manifest written in \fBfoo\fR whose content directory is in /.
-
-.sp
-.in +2
-.nf
-$ \fBpkgdepend generate -d / -k /kmod foo\fR
-.fi
-.in -2
-.sp
-
-.LP
-\fBExample 6 \fRBypass Dependency Generation
-.sp
-.LP
-Append \fBopt/python\fR to the standard Python run path for a given Python script, and bypass dependency generation against all Python modules called \fBtest\fR for a file delivered as \fBopt/python/foo/file.py\fR.
-
-.sp
-.LP
-Avoid generating dependencies against any file delivered in \fBusr/lib/python2.6/vendor-packages/xdg\fR.
-
-.sp
-.in +2
-.nf
-$ \fBcat manifest.py\fR
-set name=pkg.fmri value=pkg:/mypackage@1.0,1.0
-set name=pkg.summary value="My test package"
-dir path=opt mode=0755 group=sys owner=root
-dir path=opt/python mode=0755 group=sys owner=root
-dir path=opt/python/foo mode=0755 group=sys owner=root
-file path=opt/python/__init__.py mode=0644 group=sys owner=root
-file path=opt/python/foo/__init__.py mode=0644 group=sys owner=root
-#
-# Add runpath and bypass-generate attributes:
-#
-file path=opt/python/foo/file.py mode=0644 group=sys owner=root \e
-    pkg.depend.bypass-generate=.*/test.py.* \e
-    pkg.depend.bypass-generate=.*/testmodule.so \e
-    pkg.depend.bypass-generate=.*/test.so \e
-    pkg.depend.bypass-generate=usr/lib/python2.6/vendor-packages/xdg/.* \e
-    pkg.depend.runpath=$PKGDEPEND_RUNPATH:/opt/python
-
-$ \fBpkgdepend generate -d proto manifest.py\fR
-.fi
-.in -2
-.sp
-
-.SH ENVIRONMENT VARIABLES
-.sp
-.ne 2
-.mk
-.na
-\fBPKG_IMAGE\fR
-.ad
-.RS 13n
-.rt
-Specifies the directory that contains the image to use for package operations. This value is ignored if \fB-R\fR is specified.
-.RE
-
-.SH EXIT STATUS
-.sp
-.LP
+.El
+.El
+.Sh ENVIRONMENT VARIABLES
+The following environment variable is supported:
+.Bl -tag -width Ds
+.It Ev PKG_IMAGE
+Specifies the directory that contains the image to use for package operations.
+This value is ignored if
+.Fl R
+is specified.
+.El
+.Sh EXIT STATUS
 The following exit values are returned:
-.sp
-.ne 2
-.mk
-.na
-\fB0\fR
-.ad
-.RS 6n
-.rt
+.Bl -tag -width Ds
+.It 0
 Everything worked.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB1\fR
-.ad
-.RS 6n
-.rt
+.It 1
 An error occurred.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB2\fR
-.ad
-.RS 6n
-.rt
+.It 2
 Invalid command line options were specified.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB99\fR
-.ad
-.RS 6n
-.rt
+.It 99
 An unanticipated exception occurred.
-.RE
+.El
+.Sh EXAMPLES
+.Sy Example 1 No Generate Dependencies
+.Pp
+Generate the dependencies for the manifest written in
+.Pa foo ,
+whose content directory is in
+.Pq ./bar/baz ,
+and store the results in
+.Pa foo.fdeps .
+.Bd -literal -offset 4n
+pkgdepend generate -d ./bar/baz foo > foo.fdeps
+.Ed
+.Pp
+.Sy Example 2 No Resolve Dependencies
+.Pp
+Resolve the file dependencies in
+.Pa foo.fdeps
+and
+.Pa bar.fdeps
+against each other and against the packages currently installed on the system.
+.Bd -literal -offset 4n
+pkgdepend resolve foo.fdeps bar.fdeps
+ls *.res
+    foo.fdeps.res    bar.fdeps.res
+.Ed
+.Pp
+.Sy Example 3 No Generate and Resolve Dependencies For Two Manifests
+.Pp
+Generate the file dependencies for two manifests
+.Pq
+.Pa foo
+and
+.Pa bar
+and retain all the information in the original manifests.
+Then resolve the file dependencies and place the resulting manifests in
+.Pa ./res .
+These resulting manifests can be used with
+.Sy pkgsend publish .
+.Bd -literal -offset 4n
+pkgdepend generate -d /proto/foo -m foo > ./deps/foo
+pkgdepend generate -d /proto/bar -m bar > ./deps/bar
+pkgdepend resolve -m -d ./res ./deps/foo ./deps/bar
+ls ./res
+    foo    bar
+.Ed
+.Pp
+.Sy Example 4 No Add Values To Tokens For ELF File Dependencies
+.Pp
+Replace all
+.Sy PLATFORM
+tokens in the run paths in ELF files with
+.Sy sun4v
+and
+.Sy sun4u
+while generating the dependencies for the manifest written in
+.Pa foo
+whose content directory is in
+.Pa / .
+.Bd -literal -offset 4n
+Bpkgdepend generate -d / -D 'PLATFORM=sun4v' \e
+    -D 'PLATFORM=sun4u' foo
+.Ed
+.Pp
+.Sy Example 5 No Specify a Kernel Module Directory
+.Pp
+Specify
+.Pa /kmod
+as the directory in which to find kernel modules when generating the
+dependencies for the manifest written in
+.Pa foo
+whose content directory is in
+.Pa / .
+.Bd -literal -offset 4n
+pkgdepend generate -d / -k /kmod foo
+.Ed
+.Pp
+.Sy Example 6 No Bypass Dependency Generation
+.Pp
+Append
+.Pa opt/python
+to the standard Python run path for a given Python script, and bypass
+dependency generation against all Python modules called
+.Sy test
+for a file delivered as
+.Pa opt/python/foo/file.py .
+.Pp
+Avoid generating dependencies against any file delivered in
+.Pa usr/lib/python2.6/vendor-packages/xdg .
+.Bd -literal -offset 4n
+cat manifest.py
+  set name=pkg.fmri value=pkg:/mypackage@1.0,1.0
+  set name=pkg.summary value="My test package"
+  dir path=opt mode=0755 group=sys owner=root
+  dir path=opt/python mode=0755 group=sys owner=root
+  dir path=opt/python/foo mode=0755 group=sys owner=root
+  file path=opt/python/__init__.py mode=0644 group=sys owner=root
+  file path=opt/python/foo/__init__.py mode=0644 group=sys owner=root
+  #
+  # Add runpath and bypass-generate attributes:
+  #
+  file path=opt/python/foo/file.py mode=0644 group=sys owner=root \e
+  pkg.depend.bypass-generate=.*/test.py.* \e
+  pkg.depend.bypass-generate=.*/testmodule.so \e
+  pkg.depend.bypass-generate=.*/test.so \e
+  pkg.depend.bypass-generate=usr/lib/python2.6/vendor-packages/xdg/.* \e
+  pkg.depend.runpath=$PKGDEPEND_RUNPATH:/opt/python
 
-.SH ATTRIBUTES
-.sp
-.LP
-See \fBattributes\fR(5) for descriptions of the following attributes:
-.sp
-
-.sp
-.TS
-tab() box;
-cw(2.75i) |cw(2.75i)
-lw(2.75i) |lw(2.75i)
-.
-ATTRIBUTE TYPEATTRIBUTE VALUE
-_
-Availability\fBpackage/pkg\fR
-_
-Interface StabilityUncommitted
-.TE
-
-.SH SEE ALSO
-.sp
-.LP
-\fBpkg\fR(5)
-.sp
-.LP
-\fBhttps://github.com/omniosorg/pkg5\fR
+pkgdepend generate -d proto manifest.py
+.Ed
+.Sh INTERFACE STABILITY
+The command line interface of
+.Nm
+is
+.Sy Uncommitted .
+The output of
+.Nm
+is
+.Sy Not-An-Interface
+and may change at any time.
+.Sh SEE ALSO
+.Xr ldd 1 ,
+.Xr pkgsend 1 ,
+.Xr pkg 7
+.Rs
+.%B Linker and Libraries Guide
+.Re

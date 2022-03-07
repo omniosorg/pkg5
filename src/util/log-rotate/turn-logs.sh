@@ -25,7 +25,7 @@
 #
 
 #
-# This relatively basic script looks for pkg(5) depot server instances
+# This relatively basic script looks for pkg(7) depot server instances
 # in the smf repository, and invokes logadm to roll their logs in
 # $CHUNKSIZE chunks.  It is intended to be run from cron.  For example:
 #

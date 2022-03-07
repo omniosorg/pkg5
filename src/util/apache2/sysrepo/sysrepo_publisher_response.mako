@@ -24,7 +24,7 @@
 #
 # This file is a template for the IPS system publisher Apache configuration
 # file.  It is used to serve the "publisher" response from proxied file://
-# repositories to pkg(5) clients that aren't using the "syspub" response
+# repositories to pkg(7) clients that aren't using the "syspub" response
 # to obtain their publisher information.
 #
 </%doc>

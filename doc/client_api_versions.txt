@@ -515,7 +515,7 @@ Version 53:
 Incompatible with clients using versions 0-52:
 
     General changes:
-        * Support for pkg(5) archives has been added; a file URI
+        * Support for pkg(7) archives has been added; a file URI
           containing the location of an archive can be used anywhere
           that a repository location is (except for search).
 
@@ -1148,7 +1148,7 @@ Changes:
                 history."""
 
         def parse_p5i(self, fileobj=None, location=None):
-                """Reads the pkg(5) publisher json formatted data at 'location'
+                """Reads the pkg(7) publisher json formatted data at 'location'
                 or from the provided file-like object 'fileobj' and returns a
                 list of tuples of the format (publisher object, pkg_names).
                 pkg_names is a list of strings representing package names or

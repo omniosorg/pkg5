@@ -1,634 +1,490 @@
-'\" te
 .\" Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
-.TH pkgrecv 1 "08 Oct 2015" "OmniOS" "User Commands"
-.SH NAME
-pkgrecv \- Image Packaging System content retrieval utility
-.SH SYNOPSIS
-.LP
-.nf
-/usr/bin/pkgrecv [-aknrv] [-s (\fIsrc_path\fR|\fIsrc_uri\fR)]
-    [-d (\fIdest_path\fR|\fIdest_uri\fR)] [-c \fIcache_dir\fR]
-    [-m \fImatch\fR] [--mog-file \fIfile_path\fR ...] [--raw]
-    [--key \fIsrc_key\fR --cert \fIsrc_cert\fR]
-    [--dkey \fIdest_key\fR --dcert \fIdest_cert\fR]
-    (\fIfmri\fR|\fIpattern\fR) ...
-.fi
-
-.LP
-.nf
-/usr/bin/pkgrecv [-s (\fIsrc_path\fR|\fIsrc_uri\fR)] --newest
-.fi
-
-.LP
-.nf
-/usr/bin/pkgrecv [-nv] [-s (\fIsrc_path\fR|\fIsrc_uri\fR)]
-    [-d (\fIdest_path\fR|\fIdest_uri\fR)] [-p \fIpublisher\fR]...
-    [--key \fIsrc_key\fR --cert \fIsrc_cert\fR] --clone
-.fi
-
-.SH DESCRIPTION
-.sp
-.LP
-\fBpkgrecv\fR retrieves all versions of each matching \fIfmri\fR or \fIpattern\fR from the \fBpkg\fR(5) repository or package archive specified by the \fB-s\fR option and optionally republishes the retrieved packages to the package repository or package archive specified by the \fB-d\fR option. By default, packages are retrieved in package repository format suitable for use with \fBpkg\fR, \fBpkg.depotd\fR, and package publication tools.
-.sp
-.LP
-Packages that have not changed are not republished. Therefore, the time to update an existing repository depends on the number of new and changed packages.
-.sp
-.LP
-Use the \fB-m\fR option to specify whether to retrieve all versions of each matching package, or only the newest version of each matching package.
-.sp
-.LP
-If you do not specify \fB\&'*'\fR to be retrieved, you might want to specify the \fB-r\fR option to be sure to retrieve all the dependencies of the specified packages.
-.LP
+.\" Copyright 2022 OmniOS Community Edition (OmniOSce) Association.
+.Dd February 17, 2022
+.Dt PKGRECV 1
+.Os
+.Sh NAME
+.Nm pkgrecv
+.Nd Image Packaging System content retrieval utility
+.Sh SYNOPSIS
+.Nm
+.Op Fl aknrv
+.Op Fl s Ar src_path Ns | Ns Ar src_uri
+.Op Fl d Ar dest_path Ns | Ns Ar dest_uri
+.Op Fl c Ar cache_dir
+.Op Fl m Ar match
+.Op Fl \&-mog-file Ar file_path No \&...
+.Op Fl \&-raw
+.Op Fl \&-key Ar src_key Fl \&-cert Ar src_cert
+.Op Fl \&-dkey dest_key Fl \&-dcert Ar dest_cert
+.Ar fmri | pattern No \&...
+.Pp
+.Nm
+.Op Fl s Ar src_path Ns | Ns Ar src_uri
+.Fl \&-newest
+.Pp
+.Nm
+.Op Fl nv
+.Op Fl s Ar src_path Ns | Ns Ar src_uri
+.Op Fl d Ar dest_path Ns | Ns Ar dest_uri
+.Op Fl \&-key Ar src_key Fl \&-cert Ar src_cert
+.Fl \&-clone
+.Sh DESCRIPTION
+.Nm
+retrieves all versions of each matching
+.Ar fmri
+or
+.Ar pattern
+from the
+.Xr pkg 7
+repository or package archive specified by the
+.Fl s
+option and optionally republishes the retrieved packages to the package
+repository or package archive specified by the
+.Fl d
+option.
+By default, packages are retrieved in package repository format suitable for
+use with
+.Xr pkg 1 ,
+.Xr pkg.depotd 8 ,
+and package publication tools.
+.Pp
+Packages that have not changed are not republished.
+Therefore, the time to update an existing repository depends on the number of
+new and changed packages.
+.Pp
+Use the
+.Fl m
+option to specify whether to retrieve all versions of each matching package, or
+only the newest version of each matching package.
+.Pp
+If you do not specify
+.Sq \&*
+to be retrieved, you might want to specify the
+.Fl r
+option to be sure to retrieve all the dependencies of the specified packages.
+.Pp
 Note -
-.sp
-.RS 2
-Do not use multiple instances of \fBpkgrecv\fR simultaneously to republish packages to the same destination repository or archive. In this case, newly received packages could contain duplicate actions.
-.RE
-.sp
-.LP
-After a \fBpkgrecv\fR operation that retrieves packages into a \fIdest_uri\fR, if the \fIdest_uri\fR repository must support \fBpkg search\fR operations, run \fBpkgrepo refresh\fR on that repository to update search indexes.
-.SH OPTIONS
-.sp
-.LP
+.Bd -ragged -offset Ds
+Do not use multiple instances of
+.Nm
+simultaneously to republish packages to the same destination repository or
+archive.
+In this case, newly received packages could contain duplicate actions.
+.Ed
+.Pp
+After a
+.Nm
+operation that retrieves packages into a
+.Ar dest_uri ,
+if the
+.Ar dest_uri
+repository must support
+.Sy pkg search
+operations, run
+.Sy pkgrepo refresh
+on that repository to update search indexes.
+.Sh OPTIONS
 The following options are supported:
-.sp
-.ne 2
-.mk
-.na
-\fB-h\fR
-.ad
-.sp .6
-.RS 4n
+.Bl -tag -width Ds
+.It Fl h
 Display a usage message.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-a\fR
-.ad
-.sp .6
-.RS 4n
-Store the retrieved package data in a \fBpkg\fR(5) archive at the location specified by the \fB-d\fR option. The file specified by \fB-d\fR cannot already exist. The \fB-a\fR option can be used only with file system based destinations. Although not required, using a file extension of \fB\&.p5p\fR (for example, \fBarchive.p5p\fR) is strongly suggested. The \fB-a\fR option cannot be combined with the \fB--raw\fR option.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-c\fR \fIcache_dir\fR
-.ad
-.sp .6
-.RS 4n
-Specify the path to a directory that will be used to cache downloaded content. If this directory is not supplied, the client automatically selects a cache directory. In the case where a download is interrupted, and a cache directory was automatically chosen, use this option to resume the download. See the "Environment Variables" section below for details about how to set the location used for temporary data storage.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB\fB-d\fR (\fIdest_path\fR|\fIdest_uri\fR)\fR
-.ad
-.sp .6
-.RS 4n
-Specify the file system path or URI where the retrieved packages should be republished. If \fB-a\fR  is specified, this destination must be a package archive that does not already exist. If \fB-a\fR  is not specified, this destination must be a package repository that already exists. Use the \fBpkgrepo\fR command to create a new package repository. If \fB-d\fR is not specified, the value of \fBPKG_DEST\fR is used. See "Environment Variables" below.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-k\fR
-.ad
-.sp .6
-.RS 4n
-Keep the retrieved package content compressed. This option is ignored when republishing. Compressed package content should not be used with \fBpkgsend\fR.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-m\fR \fImatch\fR
-.ad
-.sp .6
-.RS 4n
-Control which versions of packages are retrieved if \fIpattern\fR is specified or if \fIfmri\fR is not fully specified. For this description, the following four example packages exist in the source specified by the \fB-s\fR option. In these FMRI, the characters between the \fB@\fR and the \fB:\fR denote the numbered package version, and the characters from the \fB:\fR to the end denote the timestamp portion of the version string.
-.sp
-.in +2
-.nf
-pkg://omnios/package/pkg@0.5.11,5.11-0.175.1.0.0.24.0:20120904T180335Z
-pkg://omnios/package/pkg@0.5.11,5.11-0.175.1.0.0.24.0:20120903T170234Z
-pkg://omnios/package/pkg@0.5.11,5.11-0.175.1.0.0.23.0:20120820T165108Z
-pkg://omnios/package/pkg@0.5.11,5.11-0.175.1.0.0.23.0:20120819T155007Z
-.fi
-.in -2
-
-.sp
-.ne 2
-.mk
-.na
-\fBall-timestamps\fR
-.ad
-.sp .6
-.RS 4n
-Retrieve all versions of each matching \fIfmri\fR or \fIpattern\fR (implies \fBall-versions\fR). This is the default behavior if the \fB-m\fR option is not specified. In the example above, all four packages are retrieved.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fBall-versions\fR
-.ad
-.sp .6
-.RS 4n
-Retrieve the latest timestamp for each version of each matching \fIfmri\fR or \fIpattern\fR. In the example above, the following two packages are retrieved:
-.sp
-.in +2
-.nf
-pkg://omnios/package/pkg@0.5.11,5.11-0.175.1.0.0.24.0:20120904T180335Z
-pkg://omnios/package/pkg@0.5.11,5.11-0.175.1.0.0.23.0:20120820T165108Z
-.fi
-.in -2
-
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fBlatest\fR
-.ad
-.sp .6
-.RS 4n
-Retrieve only the newest version of each matching \fIfmri\fR or \fIpattern\fR. In the example above, only the following package is retrieved:
-.sp
-.in +2
-.nf
-pkg://omnios/package/pkg@0.5.11,5.11-0.175.1.0.0.24.0:20120904T180335Z
-.fi
-.in -2
-
-.RE
-
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB--mog-file \fIfile_path\fR
-.ad
-.sp .6
-.RS 4n
-Specifies a file containing pkgmogrify(1) transforms to be
-applied to the manifest of each package before it is copied to the destination
-package repository. '-' can be specified to use stdin as input. If both files
-and '-' are specified together, '-' will be ignored and only files specified
-are used. Use of this option will automatically cause any existing package
-signatures to be dropped from the package. Adding new hashable actions
-such as files and licenses is not allowed. This option can be specified
-multiple times. This option may not be combined with --clone.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-n\fR
-.ad
-.sp .6
-.RS 4n
+.It Fl a
+Store the retrieved package data in a
+.Xr pkg 7
+archive at the location specified by the
+.Fl d
+option.
+The file specified by
+.Fl d
+cannot already exist.
+The
+.Fl a
+option can be used only with file system based destinations.
+Although not required, using a file extension of
+.Sq .p5p
+.Po for example,
+.Pa archive.p5p
+.Pc
+is strongly suggested.
+The
+.Fl a
+option cannot be combined with the
+.Fl \&-raw
+option.
+.It Fl c Ar cache_dir
+Specify the path to a directory that will be used to cache downloaded content.
+If this directory is not supplied, the client automatically selects a cache
+directory.
+In the case where a download is interrupted, and a cache directory was
+automatically chosen, use this option to resume the download.
+See the
+.Sx Environment Variables
+section below for details about how to set the location used for temporary data
+storage.
+.It Fl d Ar dest_path Ns \&| Ns Ar dest_uri
+Specify the file system path or URI where the retrieved packages should be
+republished.
+If
+.Fl a
+is specified, this destination must be a package archive that does not already
+exist.
+If
+.Fl a
+is not specified, this destination must be a package repository that already
+exists.
+Use the
+.Xr pkgrepo 1
+command to create a new package repository.
+If
+.Fl d
+is not specified, the value of
+.Ev PKG_DEST
+is used.
+See
+.Sx Environment Variables
+below.
+.It Fl k
+Keep the retrieved package content compressed.
+This option is ignored when republishing.
+Compressed package content should not be used with
+.Sy pkgsend .
+.It Fl m Ar match
+Control which versions of packages are retrieved if
+.Ar pattern
+is specified or if
+.Ar fmri
+is not fully specified.
+For this description, the following four example packages exist in the source
+specified by the
+.Fl s
+option.
+In these FMRI, the characters between the
+.Sy @
+and the
+.Sy \&:
+denote the numbered package version, and the characters from the
+.Sy \&:
+to the end denote the timestamp portion of the version string.
+.Bd -literal -offset 4n
+pkg://omnios/package/pkg@0.5.11-151038.1:20120904T180335Z
+pkg://omnios/package/pkg@0.5.11-151038.1:20120903T170234Z
+pkg://omnios/package/pkg@0.5.11-151038.0:20120820T165108Z
+pkg://omnios/package/pkg@0.5.11-151038.0:20120819T155007Z
+.Ed
+.Bl -tag -width Ds
+.It Sy all-timestamps
+Retrieve all versions of each matching
+.Ar fmri
+or
+.Ar pattern
+.Pq implies Sy all-versions .
+This is the default behaviour if the
+.Fl m
+option is not specified.
+In the example above, all four packages are retrieved.
+.It Sy all-versions
+Retrieve the latest timestamp for each version of each matching
+.Ar fmri
+or
+.Ar pattern .
+In the example above, the following two packages are retrieved:
+.Bd -literal -offset 2n
+pkg://omnios/package/pkg@0.5.11-151038.1:20120904T180335Z
+pkg://omnios/package/pkg@0.5.11-151038.0:20120820T165108Z
+.Ed
+.It Sy latest
+Retrieve only the newest version of each matching
+.Ar fmri
+or
+.Ar pattern .
+In the example above, only the following package is retrieved:
+.Bd -literal -offset 2n
+pkg://omnios/package/pkg@0.5.11-151038.1:20120904T180335Z
+.Ed
+.El
+.It Fl \&-mog-file Ar file_path
+Specifies a file containing
+.Xr pkgmogrify 1
+transforms to be applied to the manifest of each package before it is copied to
+the destination package repository.
+.Sq \&-
+can be specified to use stdin as input.
+If both files
+and
+.Sq \&-
+are specified together,
+.Sq \&-
+will be ignored and only files specified are used.
+Use of this option will automatically cause any existing package signatures to
+be dropped from the package.
+Adding new hashable actions such as files and licenses is not allowed.
+This option can be specified multiple times.
+This option may not be combined with
+.Fl \&--clone .
+.It Fl n
 Perform a trial run with no changes made.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-p\fR \fIpublisher\fR
-.ad
-.sp .6
-.RS 4n
-Only clone the specified publisher. This option can be specified multiple times. The \fB-p\fR option is valid only with the \fB--clone\fR option.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-r\fR
-.ad
-.sp .6
-.RS 4n
-Recursively retrieve all dependencies for each matching \fIfmri\fR or \fIpattern\fR.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB\fB-s\fR (\fIsrc_path\fR|\fIsrc_uri\fR)\fR
-.ad
-.sp .6
-.RS 4n
-Specify the file system path or URI of a \fBpkg\fR(5) repository or package archive from which to receive package data. If \fB-s\fR is not specified, the value of \fBPKG_SRC\fR is used. See "Environment Variables" below.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-v\fR
-.ad
-.sp .6
-.RS 4n
-Display verbose output, including the number of packages retrieved and their full FMRIs, the number of files retrieved, and the estimated size of the transfer.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB--key\fR \fIsrc_key\fR
-.ad
-.sp .6
-.RS 4n
-Specify a client SSL key file to use for package retrieval from the source HTTPS repository.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB--cert\fR \fIsrc_cert\fR
-.ad
-.sp .6
-.RS 4n
-Specify a client SSL certificate file to use for package retrieval from the source HTTPS repository.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB--dkey\fR \fIdest_key\fR
-.ad
-.sp .6
-.RS 4n
-Specify a client SSL key file to use for package publication to the destination HTTPS repository.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB--dcert\fR \fIdest_cert\fR
-.ad
-.sp .6
-.RS 4n
-Specify a client SSL certificate file to use for package publication to the destination HTTPS repository.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB--clone\fR
-.ad
-.sp .6
-.RS 4n
-Make an exact copy of the source repository. By default, the clone operation succeeds only if publishers in the source repository are also present in the destination. To limit the clone operation to specified publishers, use the \fB-p\fR option. Publishers specified by using the \fB-p\fR option are added to the destination repository if they are not already present. Packages that are in the destination repository but not in the source repository are removed. The clone operation leaves the destination repository altered if an error occurs. Therefore, the destination repository should be in its own ZFS dataset, and a snapshot should be created prior to performing the clone operation.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB--newest\fR
-.ad
-.sp .6
-.RS 4n
-List the most recent versions of the packages available from the repository specified by the \fB-s\fR option. All other options are ignored.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB--raw\fR
-.ad
-.sp .6
-.RS 4n
-Retrieve and store the raw package data in a set of directory structures by stem and version at the location specified by \fB-d\fR. The \fB--raw\fR option can be used only with file system based destinations. This package data can be used to conveniently modify and republish packages, perhaps by correcting file contents or providing additional package metadata. The \fB--raw\fR option cannot be combined with \fB-a\fR.
-.RE
-
-.SH EXAMPLES
-.LP
-\fBExample 1 \fRList Newest Packages
-.sp
-.LP
-List the newest packages available from the repository on the system named \fBtest\fR.
-
-.sp
-.in +2
-.nf
-$ \fBpkgrecv -s http://test --newest\fR
-pkg://omnios/system/library/c++-runtime@0.5.11,5.11-0.175.0.0.0.2.1:20120921T190358Z
-pkg://omnios/system/library/freetype-2@2.4.8,5.11-0.175.1.0.0.7.1234:20120109T215840Z
-pkg://omnios/system/library/math@0.5.11,5.11-0.175.0.0.0.2.1:20120921T190432Z
-.fi
-.in -2
-.sp
-
-.LP
-\fBExample 2 \fRRetrieve Raw Package Data
-.sp
-.LP
-Receive the \fBc++-runtime\fR package from Example 1 in a format suitable for use with \fBpkgsend publish\fR.
-
-.sp
-.in +2
-.nf
-$ \fBpkgrecv -s http://test \e\fR
-\fB-d /local/repo --raw \e\fR
-\fBc++-runtime@0.5.11,5.11-0.175.0.0.0.2.1:20120921T190358Z\fR
-Processing packages for publisher omnios ...
-Retrieving and evaluating 1 package(s)...
-PROCESS       ITEMS     GET (MB)    SEND (MB)
-Completed       1/1      3.5/3.5      0.0/0.0
-$ \fBls /local/repo\fR
-pkg5.repository  publisher  system%2Flibrary%2Fc%2B%2B-runtime
-.fi
-.in -2
-.sp
-
-.LP
-\fBExample 3 \fRRetrieve Dependencies From a System
-.sp
-.LP
-Receive the package \fBeditor/vim\fR and all of its dependencies from the system named \fBtest\fR.
-
-.sp
-.in +2
-.nf
-$ \fBpkgrecv -s http://test -d /local/repo -r editor/vim\fR
-.fi
-.in -2
-.sp
-
-.LP
-\fBExample 4 \fRRetrieve Only the Latest Version
-.sp
-.LP
-Receive only the latest version of the package \fBeditor/vim\fR from the system named \fBtest\fR.
-
-.sp
-.in +2
-.nf
-$ \fBpkgrecv -s http://test -d /local/repo -m latest -v \e\fR
-\fBeditor/vim\fR
-Processing packages for publisher omnios ...
-Retrieving and evaluating 1 package(s)...
-
-Retrieving packages ...
-        Packages to add:       1
-      Files to retrieve:    1557
-Estimated transfer size: 9.21 MB
-
-Packages to transfer:
-editor/vim@7.3.600,5.11-0.175.1.0.0.24.0:20120904T172128Z
-
-PROCESS                                     ITEMS    GET (MB) SEND (MB)
-Completed                                     1/1     9.2/9.2 25.4/25.4
-.fi
-.in -2
-.sp
-
-.LP
-\fBExample 5 \fRRetrieve All Versions and Republish Remotely
-.sp
-.LP
-Receive all versions of the package \fBlibrary/zlib\fR from the system named \fBtest\fR and republish it to a remote repository on the system named \fBremote\fR.
-
-.sp
-.in +2
-.nf
-$ \fBpkgrecv -s http://test -d http://remote:10000 \e\fR
-\fB-m all-versions library/zlib\fR
-.fi
-.in -2
-.sp
-
-.LP
-\fBExample 6 \fRRetrieve Dependencies From a Repository
-.sp
-.LP
-Receive the package \fBeditor/gnu-emacs\fR and all of its dependencies from the repository located at \fB/export/repo\fR.
-
-.sp
-.in +2
-.nf
-$ \fBpkgrecv -s /export/repo -d /local/repo -r editor/gnu-emacs\fR
-.fi
-.in -2
-.sp
-
-.LP
-\fBExample 7 \fRRetrieve Additional Packages and Changed Content
-.sp
-.LP
-Receive all packages that do not already exist and all changed content from the repository located at \fBhttps://pkg.omnios.org/bloody/core/\fR to the repository located at \fB/export/bloody\fR.
-
-.sp
-.in +2
-.nf
-$ \fBpkgrecv -s https://pkg.omnios.org/bloody/core/ \e\fR
-\fB-d /export/bloody -m all-timestamps '*'\fR
-.fi
-.in -2
-.sp
-
-.sp
-.LP
-Receive all packages that do not already exist and all changed content from the secure repository located at \fBhttps://pkg.omnios.org/bloody/core/\fR to the repository located at \fB/export/bloody\fR.
-
-.sp
-.in +2
-.nf
-$ \fBpkgrecv -s https://pkg.omnios.org/bloody/core/ \e\fR
-\fB-d /export/bloody -m all-timestamps \e\fR
-\fB--key /var/pkg/ssl/Your-Organization.key.pem \e\fR
-\fB--cert /var/pkg/ssl/Your-Organization.certificate.pem '*'\fR
-.fi
-.in -2
-.sp
-
-.LP
-\fBExample 8 \fRCreate a Package Archive
-.sp
-.LP
-Create a package archive containing the package \fBeditor/gnu-emacs\fR and all of its dependencies from the repository located at \fBhttp://example.com:10000\fR.
-
-.sp
-.in +2
-.nf
-$ \fBpkgrecv -s http://example.com:10000 -d /my/emacs.p5p -a \e\fR
-\fB-r editor/gnu-emacs\fR
-.fi
-.in -2
-.sp
-
-.LP
-\fBExample 9 \fRCopy Packages From an Archive to a Repository
-.sp
-.LP
-Copy all of the packages in a package archive to an existing repository located at \fB/export/repo\fR.
-
-.sp
-.in +2
-.nf
-$ \fBpkgrecv -s /my/archive.p5p -d /export/repo '*'\fR
-.fi
-.in -2
-.sp
-
-.LP
-\fBExample 10 \fRChange publisher name
-.sp
-.LP
-Change the publisher name of the package 'foo' and all its
-dependencies into 'extra' during republishing.
-.sp
-.in +2
-.nf
-$ \fBecho '<transform set name=pkg.fmri -> edit value\fR
-  \fB(pkg://).*?(/.*) \\1extra\\2>' | \\\fR
-  \fBpkgrecv -s repo1 -d repo2 --mog-file - foo\fR
-.fi
-.in -2
-.sp
-
-.SH ENVIRONMENT VARIABLES
-.sp
-.LP
-The following environment variables are supported:
-.sp
-.ne 2
-.mk
-.na
-\fBPKG_DEST\fR
-.ad
-.RS 12n
-.rt
-The path of a directory to save the retrieved package to, or the file system path or URI of a repository or package archive where the packages will be copied.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fBPKG_SRC\fR
-.ad
-.RS 12n
-.rt
-A URI or file system path representing the location of a \fBpkg\fR(5) repository or package archive from which to retrieve packages.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fBTMPDIR\fR
-.ad
-.RS 12n
-.rt
-The absolute path of the directory where temporary data should be stored during program execution. If not set, the default is to store temporary data in \fB/var/tmp\fR.
-.RE
-
-.SH EXIT STATUS
-.sp
-.LP
+.It Fl p Ar publisher
+Only clone the specified publisher.
+This option can be specified multiple times.
+The
+.Fl p
+option is valid only with the
+.Fl \&-clone
+option.
+.It Fl r
+Recursively retrieve all dependencies for each matching
+.Ar fmri
+or
+.Ar pattern .
+.It Fl s Ar src_path Ns \&| Ns Ar src_uri
+Specify the file system path or URI of a
+.Xr pkg 7
+repository or package archive from which to receive package data.
+If
+.Fl s
+is not specified, the value of
+.Ev PKG_SRC
+is used.
+See
+.Sx Environment Variables
+below.
+.It Fl v
+Display verbose output, including the number of packages retrieved and their
+full FMRIs, the number of files retrieved, and the estimated size of the
+transfer.
+.It Fl \&-key Ar src_key
+Specify a client SSL key file to use for package retrieval from the source
+HTTPS repository.
+.It Fl \&-cert Ar src_cert
+Specify a client SSL certificate file to use for package retrieval from the
+source HTTPS repository.
+.It Fl \&-dkey Ar dest_key
+Specify a client SSL key file to use for package publication to the destination
+HTTPS repository.
+.It Fl \&-dcert Ar dest_cert
+Specify a client SSL certificate file to use for package publication to the
+destination HTTPS repository.
+.It Fl \&-clone
+Make an exact copy of the source repository.
+By default, the clone operation succeeds only if publishers in the source
+repository are also present in the destination.
+To limit the clone operation to specified publishers, use the
+.Fl p
+option.
+Publishers specified by using the
+.Fl p
+option are added to the destination repository if they are not already present.
+Packages that are in the destination repository but not in the source
+repository are removed.
+The clone operation leaves the destination repository altered if an error
+occurs.
+Therefore, the destination repository should be in its own ZFS dataset, and a
+snapshot should be created prior to performing the clone operation.
+.It Fl \&-newest
+List the most recent versions of the packages available from the repository
+specified by the
+.Fl s
+option.
+All other options are ignored.
+.It Fl \&-raw
+Retrieve and store the raw package data in a set of directory structures by
+stem and version at the location specified by
+.Fl d .
+The
+.Fl \&-raw
+option can be used only with file system based destinations.
+This package data can be used to conveniently modify and republish packages,
+perhaps by correcting file contents or providing additional package metadata.
+The
+.Fl \&-raw
+option cannot be combined with
+.Fl a .
+.El
+.Sh EXIT STATUS
 The following exit values are returned:
-.sp
-.ne 2
-.mk
-.na
-\fB0\fR
-.ad
-.RS 6n
-.rt
+.Bl -tag -width Ds
+.It 0
 Command succeeded.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB1\fR
-.ad
-.RS 6n
-.rt
+.It 1
 An error occurred.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB2\fR
-.ad
-.RS 6n
-.rt
+.It 2
 Invalid command line options were specified.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB3\fR
-.ad
-.RS 6n
-.rt
+.It 3
 Multiple operations were requested, but only some of them succeeded.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB99\fR
-.ad
-.RS 6n
-.rt
+.It 99
 An unanticipated exception occurred.
-.RE
-
-.SH ATTRIBUTES
-.sp
-.LP
-See \fBattributes\fR(5) for descriptions of the following attributes:
-.sp
-
-.sp
-.TS
-tab() box;
-cw(2.75i) |cw(2.75i)
-lw(2.75i) |lw(2.75i)
-.
-ATTRIBUTE TYPEATTRIBUTE VALUE
-_
-Availability\fBpackage/pkg\fR
-_
-Interface StabilityUncommitted
-.TE
-
-.SH SEE ALSO
-.sp
-.LP
-\fBpkgrepo\fR(1), \fBpkgsend\fR(1), \fBpkg\fR(5)
-.sp
+.El
+.Sh EXAMPLES
+.Sy Example 1 No List Newest Packages
+.Pp
+List the newest packages available from the repository on the system named
+.Sy test .
+.Bd -literal -offset 4n
+pkgrecv -s http://test --newest
+pkg://omnios/system/library/c++-runtime@0.5.11,151038.0:20120921T190358Z
+pkg://omnios/system/library/freetype-2@2.4.8,151038.0:20120109T215840Z
+pkg://omnios/system/library/math@0.5.11,151038.0:20120921T190432Z
+.Ed
+.Pp
+.Sy Example 2 No Retrieve Raw Package Data
+.Pp
+Receive the
+.Sy c++-runtime
+package from Example 1 in a format suitable for use with
+.Sy pkgsend publish .
+.Bd -literal -offset 4n
+pkgrecv -s http://test \e
+    -d /local/repo --raw \e
+    c++-runtime@0.5.11,151038.0:20120921T190358Z
+    Processing packages for publisher omnios ...
+    Retrieving and evaluating 1 package(s)
+    PROCESS       ITEMS     GET (MB)    SEND (MB)
+    Completed       1/1      3.5/3.5      0.0/0.0
+ls /local/repo
+    pkg5.repository  publisher  system%2Flibrary%2Fc%2B%2B-runtime
+.Ed
+.Pp
+.Sy Example 3 No Retrieve Dependencies From a System
+.Pp
+Receive the package
+.Sy editor/vim
+and all of its dependencies from the system named
+.Sy test .
+.Bd -literal -offset 4n
+pkgrecv -s http://test -d /local/repo -r editor/vim
+.Ed
+.Pp
+.Sy Example 4 No Retrieve Only the Latest Version
+.Pp
+Receive only the latest version of the package
+.Sy editor/vim
+from the system named
+.Sy test .
+.Bd -literal -offset 4n
+pkgrecv -s http://test -d /local/repo -m latest -v \e
+    editor/vim
+Processing packages for publisher omnios ...
+Retrieving and evaluating 1 package(s)
+Retrieving packages ...
+Packages to add:       1
+Files to retrieve:    1557
+Estimated transfer size: 9.21 MB
+Packages to transfer:
+editor/vim@7.3.600,151038.0:20120904T172128Z
+    PROCESS       ITEMS     GET (MB)    SEND (MB)
+    Completed       1/1      9.2/9.2    25.4/25.4
+.Ed
+.Pp
+.Sy Example 5 No Retrieve All Versions and Republish Remotely
+.Pp
+Receive all versions of the package
+.Sy library/zlib
+from the system named
+.Sy test
+and republish it to a remote repository on the system named
+.Sy remote .
+.Bd -literal -offset 4n
+pkgrecv -s http://test -d http://remote:10000 \e
+    -m all-versions library/zlib
+.Ed
+.Pp
+.Sy Example 6 No Retrieve Dependencies From a Repository
+.Pp
+Receive the package
+.Sy editor/gnu-emacs
+and all of its dependencies from the repository located at
+.Pa /export/repo .
+.Bd -literal -offset 4n
+pkgrecv -s /export/repo -d /local/repo -r editor/gnu-emacs
+.Ed
+.Pp
+.Sy Example 7 No Retrieve Additional Packages and Changed Content
+.Pp
+Receive all packages that do not already exist and all changed content from the
+repository located at
+.Lk https://pkg.omnios.org/bloody/core/
+to the repository located at
+.Pa /export/bloody .
+.Bd -literal -offset 4n
+pkgrecv -s https://pkg.omnios.org/bloody/core/ \e
+    -d /export/bloody -m all-timestamps '*'
+.Ed
+.Pp
+Receive all packages that do not already exist and all changed content from the
+secure repository located at
+.Lk https://pkg.omnios.org/bloody/core/
+to the repository located at
+.Pa /export/bloody .
+.Bd -literal -offset 4n
+pkgrecv -s https://pkg.omnios.org/bloody/core/ \e
+    -d /export/bloody -m all-timestamps \e
+    --key /var/pkg/ssl/Your-Organisation.key.pem \e
+    --cert /var/pkg/ssl/Your-Organisation.certificate.pem '*'
+.Ed
+.Pp
+.Sy Example 8 No Create a Package Archive
+.Pp
+Create a package archive containing the package
+.Sy editor/gnu-emacs
+and all of its dependencies from the repository located at
+.Lk http://example.com:10000 .
+.Bd -literal -offset 4n
+pkgrecv -s http://example.com:10000 -d /my/emacs.p5p -a \e
+    -r editor/gnu-emacs
+.Ed
+.Pp
+.Sy Example 9 No Copy Packages From an Archive to a Repository
+.Pp
+Copy all of the packages in a package archive to an existing repository located
+at
+.Pa /export/repo .
+.Bd -literal -offset 4n
+pkgrecv -s /my/archive.p5p -d /export/repo '*'
+.Ed
+.Pp
+.Sy Example 10 No Change publisher name
+.Pp
+Change the publisher name of the package
+.Sq foo
+and all its dependencies into
+.Sq extra
+during republishing.
+.Bd -literal -offset 4n
+echo '<transform set name=pkg.fmri -> edit value
+    (pkg://).*?(/.*) \e1extra\e2' | \e
+    pkgrecv -s repo1 -d repo2 --mog-file - foo
+.Ed
+.Sh ENVIRONMENT VARIABLES
+The following environment variables are supported:
+.Bl -tag -width Ds
+.It Ev PKG_DEST
+The path of a directory to save the retrieved package to, or the file system
+path or URI of a repository or package archive where the packages will be
+copied.
+.It Ev PKG_SRC
+A URI or file system path representing the location of a
+.Xr pkg 7
+repository or package archive from which to retrieve packages.
+.It Ev TMPDIR
+The absolute path of the directory where temporary data should be stored during
+program execution.
+If not set, the default is to store temporary data in
+.Pa /var/tmp .
+.El
+.Sh INTERFACE STABILITY
+The command line interface of
+.Nm
+is
+.Sy Uncommitted .
+The output of
+.Nm
+is
+.Sy Not-An-Interface
+and may change at any time.
+.Sh SEE ALSO
+.Xr pkg 1 ,
+.Xr pkgrepo 1 ,
+.Xr pkgsend 1 ,
+.Xr pkg 7 ,
+.Xr pkg.depotd 8

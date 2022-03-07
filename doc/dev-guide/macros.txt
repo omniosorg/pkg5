@@ -6,9 +6,9 @@
 
 .. |packagemanager| replace:: ``packagemanager(1)``
 .. |pkg| replace:: ``pkg(1)``
-.. |pkg.depotd| replace:: ``pkg.depotd(1M)``
-.. |pkg.sysrepo| replace:: ``pkg.sysrepo(1M)``
-.. |pkg5| replace:: ``pkg(5)``
+.. |pkg.depotd| replace:: ``pkg.depotd(8)``
+.. |pkg.sysrepo| replace:: ``pkg.sysrepo(8)``
+.. |pkg7| replace:: ``pkg(7)``
 .. |pkgdepend| replace:: ``pkgdepend(1)``
 .. |pkgdiff| replace:: ``pkgdiff(1)``
 .. |pkgfmt| replace:: ``pkgfmt(1)``
@@ -25,7 +25,7 @@
 
 .. |svc.startd| replace:: ``svc.startd(1M)``
 .. |beadm| replace:: ``beadm(1M)``
-.. |zonecfg| replace:: ``zonecfg(1M)``
+.. |zonecfg| replace:: ``zonecfg(8)``
 
 .. Terminology - we want hyperlinks to the right places for these eventually
 ..  and only use these macros the first time we mention these.

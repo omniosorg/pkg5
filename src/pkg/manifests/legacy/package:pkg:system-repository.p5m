@@ -24,7 +24,7 @@
 set name=pkg.fmri value=pkg:/package/pkg/system-repository@$(PKGVERS)
 set name=pkg.summary value="IPS System Repository"
 set name=pkg.description \
-    value="A service that provides a publisher proxy to pkg(5) clients."
+    value="A service that provides a publisher proxy to pkg(7) clients."
 set name=info.classification \
     value=org.opensolaris.category.2008:System/Packaging
 # p5p support in the system repository requires mod_wsgi

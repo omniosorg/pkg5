@@ -116,7 +116,7 @@ Configuration components
       /disabled                boolean indicating whether publisher should be used
 
     Image properties.  The image has a collection of simple properties,
-    like machine type and policies that control the behavior of the pkg(5)
+    like machine type and policies that control the behavior of the pkg(7)
     software within that image.  Policies are properties with a boolean value.
 
     properties/

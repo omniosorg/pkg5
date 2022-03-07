@@ -274,7 +274,7 @@ mediated links are delivered:
           Specifies the implementation of the mediator for use in addition to
           or instead of the ``mediator-version``.  Implementation strings are
           not considered to be ordered.  A string is arbitrarily selected by
-          |pkg5| if not explicitly specified by a system administrator.
+          |pkg7| if not explicitly specified by a system administrator.
 
           The value can be a string of arbitrary length composed of
           alpha-numeric characters and spaces.  If the implementation itself can
@@ -291,7 +291,7 @@ mediated links are delivered:
           override applies, or if one of the links is version-mediated.
 
      mediator-priority
-          When resolving conflicts in mediated links, |pkg5| normally
+          When resolving conflicts in mediated links, |pkg7| normally
           chooses the link with the greatest value of ``mediator-version`` or
           based on ``mediator-implementation`` if that is not possible.  This
           attribute is used to specify an override for the normal conflict

@@ -37,7 +37,7 @@ except ImportError:
 # debug flags.
 from pkg.client.debugvalues import DebugValues
 
-# pkg(5) uses cryptographic hash functions for a number of tasks. We define the
+# pkg(7) uses cryptographic hash functions for a number of tasks. We define the
 # default hash function, along with the hash name here. Note that the use of
 # hashes in package metadata is *not* governed by this value, since multiple
 # hashes are supported for payload-bearing actions in a package.
@@ -144,11 +144,11 @@ EXTRACT_GZIP = "gzip"
 # At present, some of these are hashlib factory methods. When maintaining these
 # dictionaries, it is important to *never remove* entries from them, otherwise
 # clients with installed packages will not be able to verify their content when
-# pkg(5) is updated.
+# pkg(7) is updated.
 
-# Dictionaries of the pkg(5) hash and content-hash attributes we know about.
+# Dictionaries of the pkg(7) hash and content-hash attributes we know about.
 if DebugValues["hash"] == "sha1":
-        # Simulate older non-SHA2 aware pkg(5) code
+        # Simulate older non-SHA2 aware pkg(7) code
         HASH_ALGS = {"hash": hashlib.sha1}
         GELF_HASH_ALGS = {"elfhash": hashlib.sha1}
 else:

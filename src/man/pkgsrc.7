@@ -11,60 +11,53 @@
 .\" Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
 .\"
 .Dd March 25, 2019
-.Dt LIPKG 5
+.Dt PKGSRC 7
 .Os
 .Sh NAME
-.Nm lipkg
-.Nd zone brand for running a full copy of OmniOS with linked packages
+.Nm pkgsrc
+.Nd zone brand for running a reduced copy of OmniOS alongside Joyent's pkgsrc
+repository
 .Sh DESCRIPTION
 The
-.Em lipkg
+.Em pkgsrc
 brand
 uses the
-.Xr brands 5
-framework to provide an environment for running a full copy of Omnios, with
+.Xr brands 7
+framework to provide an environment for running a small copy of Omnios, with
 system software packages linked to those installed in the global zone.
 .Pp
-A linked-ipkg (
-.Em lipkg )
-zone is an extension of an
-.Xr ipkg 5
-zone which has its
-installed software set linked to that within the global zone.
-By default, when performing a package update from the global zone,
-core system packages within
-.Em lipkg
-zones are automatically updated at the same time.
-It is possible to extend this to upgrade all packages and to upgrade multiple
-.Em lipkg
-zones in parallel via command line options or pkg properties.
-.Pp
-A further benefit over
-.Xr ipkg 5
-zones is that major version upgrades can be performed without having to detach
-and re-attach the zones.
-.Pp
+A
+.Em pkgsrc
+zone is a
+.Xr sparse 7
+zone which is pre-configured to use Joyent's binary package repository.
+This provides access to over 20,000 ready-built packages ready to install and
+use.
+Within a pkgsrc zone, use the pkgin command to manage these packages which
+are all installed under the
+.Pa /opt/local
+directory.
 Like
-.Xr ipkg 5
+.Xr ipkg 7
 zones,
-.Em lipkg
+.Em pkgsrc
 zones can have multiple boot environments, created either locally within the
 zone or managed automatically from the global zone as BEs are
 created/destroyed there.
 .Pp
-Even though the software image is linked to the global zone, it is perfectly
-possible to have a different set of packages installed in an lipkg zone as long
-as system consistency rules are met.
+Given their small size, low overhead and ease of maintenance, it is common to
+use pkgsrc zones for running individual services such as an NTP, DHCP or DNS
+server.
 .Sh CONFIGURATION
 Persistent network configuration (including DNS resolver information) can be
 configured using
-.Xr zonecfg 1m .
+.Xr zonecfg 8 .
 An example
 .Em lipkg
 zone configured with VNIC "vnic0" using a static IP address is below:
 .sp
 .Bd -literal -offset indent
-create -t lipkg
+create -t pkgsrc
 set zonepath=/zones/testzone
 set autoboot=true
 add net
@@ -86,7 +79,16 @@ end
 .Ed
 .sp
 .Sh LIMITATIONS
-.Em lipkg
+Within a
+.Em pkgsrc
+zone, the
+.Pa /usr ,
+.Pa /lib
+and
+.Pa /sbin
+directories are read-only.
+.Pp
+.Em pkgsrc
 zone boot environments are linked to the global zone boot environment under
 which they were created.
 This means that rolling back the global zone to a previous boot environment
@@ -94,11 +96,11 @@ will also roll back the zone.
 For this reason, zone data which should be shared across boot environments
 should be allocated to a dedicated dataset.
 .Sh SEE ALSO
-.Xr zfs 1m ,
-.Xr zoneadm 1m ,
-.Xr zonecfg 1m ,
-.Xr brands 5 ,
-.Xr ipkg 5 ,
-.Xr privileges 5 ,
-.Xr resource_controls 5 ,
-.Xr zones 5
+.Xr brands 7 ,
+.Xr ipkg 7 ,
+.Xr privileges 7 ,
+.Xr resource_controls 7 ,
+.Xr zones 7 ,
+.Xr zfs 8 ,
+.Xr zoneadm 8 ,
+.Xr zonecfg 8

@@ -25,7 +25,7 @@
 Image Packaging Developer's Guide
 =================================
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-*PSARC/2008/190:* pkg(5): image packaging system
+*PSARC/2008/190:* pkg(7): image packaging system
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 :Authors: David Comay, Danek Duvall, Tim Foster, Stephen Hahn, Krister Johansen,
@@ -60,18 +60,18 @@ About this document
    main text.
 
 In this text, *The Image Packaging Developer's Guide*, we cover a range
-of topics covering technical aspects of software delivery using |pkg5|,
+of topics covering technical aspects of software delivery using |pkg7|,
 the image packaging system.  As you complete Parts I, II, and III of the
 document, you should feel comfortable
 
-* with basic |pkg5| principles of operation and use,
+* with basic |pkg7| principles of operation and use,
 
 * with authoring packages, decorated with correct metadata and named
   according to convention,
 
 * renaming previously published packages, and
 
-* managing simple and complex |depotd1m| deployments.
+* managing simple and complex |depotd8| deployments.
 
 Parts IV and V focus on implementing components capable of replacing
 the default image packaging retrieval clients and depot servers,
@@ -80,7 +80,7 @@ respectively.
 Introduction
 ============
 
-The Image Packaging System, or |pkg5|, is a software delivery mechanism
+The Image Packaging System, or |pkg7|, is a software delivery mechanism
 that enables the publication and retrieval of versioned, interdependent
 software components.  The goal of this mechanism is to always produce a
 functioning image, in which each component in that image has its
@@ -89,7 +89,7 @@ Usually, when we refer to an image, we are referring to the *system
 image* associated with an instance of the |OS_Name| operating system,
 but an image can also be used to deliver an independent set of software
 components, or a set linked in some fashion to yet another image.
-Inter-image relationships allow |pkg5| to be used in a wide variety of
+Inter-image relationships allow |pkg7| to be used in a wide variety of
 software deployment contexts.
 
 The idea of a versioned component comes from recognizing that, in
@@ -100,12 +100,12 @@ a series of versions of that component, persisting indefinitely.  In the
 following chapters, the relationship over time of a component to other
 components, and to itself, will be revisited.  The intent is to
 emphasize that each software component has a lifecycle, and that there
-are representative states and operations in |pkg5| as a component moves
+are representative states and operations in |pkg7| as a component moves
 through that lifecycle.
 
-There are a number of features in |pkg5| that make it particularly
-appealing in a network context.  In general, all |pkg5| metadata is
-searchable remotely, easing the discovery of available software.  |pkg5|
+There are a number of features in |pkg7| that make it particularly
+appealing in a network context.  In general, all |pkg7| metadata is
+searchable remotely, easing the discovery of available software.  |pkg7|
 content delivery is bandwidth-efficient, sending only needed data to the
 client, and always in a compressed form.  Each publisher's depot
 software has public information, which allows the identification of
@@ -113,7 +113,7 @@ other locations for software retrieval, such as mirrors for that depot
 or publishers of related software.  These features are discussed as they
 apply to each of the components.
 
-|pkg5|, although it has a command line client, was developed to support
+|pkg7|, although it has a command line client, was developed to support
 both interactive use with other clients and programmatic use by higher
 level management software.  We generally illustrate operations by
 reviewing the command line client.  For developers and package
@@ -123,7 +123,7 @@ package, can influence these different client uses.  We, in addition,
 describe the more complex publication scenarios, such as signed
 manifests and obsolescence.  For operators and administrators, we
 discuss security, in the form of access control, and depot management.
-Our final sections focus on |pkg5| extensions, such as entitlement
+Our final sections focus on |pkg7| extensions, such as entitlement
 support.
 
 Key concepts
@@ -199,7 +199,7 @@ Actuators
     side effect this action will have when installed on the in-use image
     on a running system (a "live image").  Actuators have no effect on
     non-live images.  One typical actuator use is to request a restart
-    of a particular |smf5| service instance.  This request is made by
+    of a particular |smf7| service instance.  This request is made by
     specifying the FMRI as the value for the ``restart_fmri`` actuator.
 
 Images and image types
@@ -306,14 +306,14 @@ include
 -----------------------------
 
 Migration and compatibility
-    |pkg5| supplants the historical Solaris Operating System packaging
+    |pkg7| supplants the historical Solaris Operating System packaging
     tools, although these are still supported for compatibility.  Moving
     a software component to the Image Packaging System requires some
     planning.
 
-|smf5| configuration transition
+|smf7| configuration transition
     Certain resource types, such as manual pages and desktop icons, are
-    delivered by multiple applications.  New |smf5| service instances
+    delivered by multiple applications.  New |smf7| service instances
     have been provided to simplify the integration of standard resources.
 
 Application configuration
@@ -329,7 +329,7 @@ Commands
 
    - use of SSL
 
-   - relationship with |beadm1m|, |libbe3lib|, ZFS
+   - relationship with |beadm8|, |libbe3lib|, ZFS
 
  - **Publication and manipulation clients.** |pkgsend1| and |pkgrecv1|
 
@@ -337,7 +337,7 @@ Commands
 
    - authentication
 
- - **Depot servers.** |depotd1m|
+ - **Depot servers.** |depotd8|
 
    - reverse proxy
 
@@ -362,7 +362,7 @@ Pick a publisher name, based on a DNS domain you control.
 Running a depot
 ---------------
 
-An |smf5| service instance of ``pkg/server`` is provided with a default
+An |smf7| service instance of ``pkg/server`` is provided with a default
 OpenSolaris installation.
 
 set publisher name
@@ -411,7 +411,7 @@ release of the operating system.
 Supported Actions
 -----------------
 
-|pkg5| supports an extensible set of "actions", which are defined as
+|pkg7| supports an extensible set of "actions", which are defined as
 reversible operations that a package can request to enable its later
 function on the target image.
 
@@ -430,7 +430,7 @@ an action for a specific class of resource is strongly influenced by the
 need for elements of that class to be fully configured for system boot to
 complete.  Resources that can be configured after initial boot are
 generally not provided with actions, and are expected to use ``file``
-actions to deliver content and an |smf5| service to derive and assemble
+actions to deliver content and an |smf7| service to derive and assemble
 any necessary local configuration.
 
 depend
@@ -647,7 +647,7 @@ Versioned interpreter
 XXX perl
 XXX ``verexec``
 
-|smf5| Service
+|smf7| Service
 --------------
 
 XXX pkg.depotd
@@ -789,7 +789,7 @@ Package depots and other servers
 
 .. include:: guide-repository-format.rst
 
-|depotd1m| implementation
+|depotd8| implementation
 =========================
 
 .. include:: guide-implementation-depot.rst
@@ -873,7 +873,7 @@ pkgsend(1)
 
    \end{verbatim}
 
-pkg.depotd(1M)
+pkg.depotd(8)
 ==============
 
 .. raw:: html
@@ -898,7 +898,7 @@ pkg.depotd(1M)
 
    \end{verbatim}
 
-pkg(5)
+pkg(7)
 ======
 
 .. raw:: html

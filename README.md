@@ -1,4 +1,4 @@
-This is the OmniOS child of pkg(5)
+This is the OmniOS child of pkg(7)
 
 Branches:
 

@@ -23,18 +23,18 @@
 
 .. Hyperlinks
 
-.. _pkg-project: http://opensolaris.org/os/project/pkg/
+.. _pkg-project: https://github.com/omniosorg/pkg5/
 
-.. _pkg-opensolaris-release: http://pkg.opensolaris.org/release/
+.. _pkg-opensolaris-release: https://github.com/omniosorg/pkg5/
 
-.. _pkg-opensolaris-dev: http://pkg.opensolaris.org/dev/
+.. _pkg-opensolaris-dev: https://github.com/omniosorg/pkg5/
 
 
 .. Substitutions
 
-.. |pkg5| replace:: ``pkg``\ (5)
+.. |pkg7| replace:: ``pkg``\ (7)
 
-.. |smf5| replace:: ``smf``\ (5)
+.. |smf7| replace:: ``smf``\ (7)
 
 .. |tar1| replace:: ``tar``\ (1)
 .. |pkg1| replace:: ``pkg``\ (1)
@@ -45,9 +45,9 @@
 .. |pkgfmt1| replace:: ``pkgfmt``\ (1)
 .. |pkgmogrify1| replace:: ``pkgmogrify``\ (1)
 
-.. |depotd1m| replace:: ``pkg.depotd``\ (1M)
+.. |depotd8| replace:: ``pkg.depotd``\ (8)
 
-.. |beadm1m| replace:: ``beadm``\ (1M)
+.. |beadm8| replace:: ``beadm``\ (8)
 .. |libbe3lib| replace:: ``libbe``\ (3LIB)
 
-.. |OS_Name| replace:: OpenSolaris
+.. |OS_Name| replace:: OmniOS

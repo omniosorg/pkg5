@@ -25,7 +25,7 @@ DEPOT
 
 1.  Summary
 
-    This document describes the architecture of a pkg(5) depot server as
+    This document describes the architecture of a pkg(7) depot server as
     implemented in pkg.depotd(1m).  This includes: an overview of the depot
     server's filesystem layout, operations provided by the depot server,
     the interfaces provided by the depot server, and a description of how

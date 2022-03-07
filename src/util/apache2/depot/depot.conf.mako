@@ -23,7 +23,7 @@
 #
 
 #
-# This file is the template for an Apache configuration that serves pkg(5)
+# This file is the template for an Apache configuration that serves pkg(7)
 # repositories.  On its own, it can be used to render a fragment that can be
 # dropped into an Apache conf.d directory, or it can be referenced from
 # a more complete httpd.conf template via an include directive.

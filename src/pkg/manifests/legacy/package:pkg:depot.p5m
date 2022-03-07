@@ -24,7 +24,7 @@
 set name=pkg.fmri value=pkg:/package/pkg/depot@$(PKGVERS)
 set name=pkg.summary value="IPS Depot"
 set name=pkg.description \
-    value="A service that provides a scalable web-based pkg(5) server."
+    value="A service that provides a scalable web-based pkg(7) server."
 set name=info.classification \
     value=org.opensolaris.category.2008:System/Packaging
 set name=variant.arch value=$(ARCH)

@@ -104,7 +104,7 @@
 .Sh DESCRIPTION
 .Nm
 provides the ability to create and manage
-.Xr pkg 5
+.Xr pkg 7
 package repositories.
 Package repositories are a predefined set of directories and files that permit
 the storage and retrieval of package data by
@@ -114,7 +114,7 @@ and publication clients such as
 or
 .Xr pkgrecv 1 .
 In addition, when network-based access to a package repository is needed,
-.Xr pkg.depotd 1M
+.Xr pkg.depotd 8
 can provide clients access to the repository to store and/or retrieve package
 data.
 .Sh OPTIONS
@@ -131,7 +131,7 @@ Display a usage message.
 .Ar uri_or_path
 .Bd -ragged -offset Ds
 Create a
-.Xr pkg 5
+.Xr pkg 7
 repository at the specified location.
 .Pp
 This sub-command can only be used with filesystem-based repositories.
@@ -323,7 +323,8 @@ A value of l in the status column indicates that the package is legacy, meaning
 that it will be removed in the future.
 The fourth column contains the release and branch versions of the package.
 See
-.Xr pkg 5 for information about release and branch versions.
+.Xr pkg 7
+for information about release and branch versions.
 .Bl -tag -width Ar
 .It Fl p Ar publisher
 Only display the data for the given publisher.
@@ -365,7 +366,7 @@ option by separating the action names with commas.
 The value of action_name is one of the actions listed in
 .Em Actions
 in the
-.Xr pkg 5
+.Xr pkg 7
 man page, such as
 .Cm file , Cm dir , Cm driver , Cm depend ,
 or
@@ -777,7 +778,7 @@ Display a usage message.
 .Nm Cm version
 .Bd -ragged -offset Ds
 Display a unique string that identifies the version of the
-.Xr pkg 5
+.Xr pkg 7
 system.
 The values produced by the version operation are not sortable and are not safe
 for comparison beyond equality.
@@ -890,6 +891,6 @@ and may change at any time.
 .Xr pkg 1 ,
 .Xr pkgrecv 1 ,
 .Xr pkgsend 1 ,
-.Xr pkg.depotd 1M ,
 .Xr glob 3C ,
-.Xr pkg 5
+.Xr pkg 7 ,
+.Xr pkg.depotd 8

@@ -1,256 +1,147 @@
-'\" te
 .\" Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
-.TH pkgsurf 1 "09 Aug 2013" "OmniOS" "User Commands"
-.SH NAME
-pkgsurf \- Image Packaging System repository resurfacing utility
-.SH SYNOPSIS
-.LP
-.nf
-/usr/bin/pkgsurf -s \fItarget_repo\fR -r \fIreference_repo\fR [-n]
-    [-p \fIpublisher_prefix\fR]... [-i \fIname\fR]... [-c \fIpattern\fR]...
-.fi
-
-.SH DESCRIPTION
-.sp
-.LP
-\fBpkgsurf\fR is a package publication tool for replacing packages in a target repository that have not changed since the latest published version in the reference repository. The result is a new version surface of all packages in the target repository.
-.sp
-.LP
-\fBpkgsurf\fR operations are not reversible. In case the \fBpkgsurf\fR operation must be reverted, you should store the target repository in its own ZFS dataset and take a snapshot of the dataset before you run \fBpkgsurf\fR.
-.sp
-.LP
-Packages in the target repository are compared to packages in the reference repository and analyzed for content changes. For each package, if no content change is found, the package manifest is removed from the target repository and replaced with the manifest of the same package from the reference repository.
-.sp
-.LP
-The target repository must be a file system based repository. For optimal performance, the reference repository should also be a file system based repository.
-.sp
-.LP
-The target repository should contain only one version of each package. If the target repository contains a package that is both newer than the latest version in the reference repository and older than the latest version in the target repository, no package manifest replacement is done for that package.
-.sp
-.LP
-The reference repository can contain one or more versions of each package. However, only the latest version will be used for comparison.
-.SH OPTIONS
-.sp
-.LP
+.\" Copyright 2022 OmniOS Community Edition (OmniOSce) Association.
+.Dd February 17, 2022
+.Dt PKGSURF 1
+.Os
+.Sh NAME
+.Nm pkgsurf
+.Nd Image Packaging System repository resurfacing utility
+.Sh SYNOPSIS
+.Nm
+.Fl s Ar target_repo
+.Fl r Ar refrence_repo
+.Op Fl n
+.Oo Fl p Ar publisher_prefix Oc Ns \&...
+.Oo Fl i Ar name Oc Ns \&...
+.Oo Fl c Ar pattern Oc Ns \&...
+.Sh DESCRIPTION
+.Nm
+is a package publication tool for replacing packages in a target repository
+that have not changed since the latest published version in the reference
+repository.
+The result is a new version surface of all packages in the target repository.
+.Pp
+.Nm
+operations are not reversible.
+In case the
+.Nm
+operation must be reverted, you should store the target repository in its own
+ZFS dataset and take a snapshot of the dataset before you run
+.Nm .
+.Pp
+Packages in the target repository are compared to packages in the reference
+repository and analyzed for content changes.
+For each package, if no content change is found, the package manifest is
+removed from the target repository and replaced with the manifest of the same
+package from the reference repository.
+.Pp
+The target repository must be a file system based repository.
+For optimal performance, the reference repository should also be a file system
+based repository.
+.Pp
+The target repository should contain only one version of each package.
+If the target repository contains a package that is both newer than the latest
+version in the reference repository and older than the latest version in the
+target repository, no package manifest replacement is done for that package.
+.Pp
+The reference repository can contain one or more versions of each package.
+However, only the latest version will be used for comparison.
+.Sh OPTIONS
 The following options are supported:
-.sp
-.ne 2
-.mk
-.na
-\fB-?\fR
-.ad
-.br
-.na
-\fB--help\fR
-.ad
-.sp .6
-.RS 4n
+.Bl -tag -width Ds
+.It Fl \&help , Fl \&?
 Display a usage message.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-c\fR \fIpattern\fR
-.ad
-.sp .6
-.RS 4n
-Treat every package whose FMRI matches \fIpattern\fR as changed and do not reversion it, even if there is no content change. This option can be specified multiple times.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-i\fR \fIname\fR
-.ad
-.sp .6
-.RS 4n
-Ignore \fBset\fR actions with the \fBname\fR field set to \fIname\fR for determination of content change. The package will be reversioned even if this action differs between target and reference versions. This option can be specified multiple times.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-n\fR
-.ad
-.sp .6
-.RS 4n
-Perform a trial run of the operation with no changes made to the target repository.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-p\fR \fIpublisher_prefix\fR
-.ad
-.sp .6
-.RS 4n
-Specify the name of the publisher to be resurfaced. This option can be specified multiple times.
-.sp
-By default, packages from all publishers found in target and reference repositories are resurfaced.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-r\fR \fIreference_repo\fR
-.ad
-.sp .6
-.RS 4n
-Specify the URI of the reference repository to be used for manifest comparison. Only the latest version of each package is considered.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB-s\fR \fItarget_repo\fR
-.ad
-.sp .6
-.RS 4n
-Specify the path to the target repository. Packages in this repository are reversioned to the versions present in the reference repository according to the comparison results. The target repository should contain only one version of each package. The target repository must be a file system based repository.
-.RE
-
-.SH ENVIRONMENT VARIABLES
-.sp
-.LP
+.It Fl c Ar pattern
+Treat every package whose FMRI matches
+.Ar pattern
+as changed and do not reversion it, even if there is no content change.
+This option can be specified multiple times.
+.It Fl i Ar name
+Ignore
+.Ic set
+actions with the
+.Ic name
+field set to
+.Ar name
+for determination of content change.
+The package will be reversioned even if this action differs between target and
+reference versions.
+This option can be specified multiple times.
+.It Fl n
+Perform a trial run of the operation with no changes made to the target
+repository.
+.It Fl p Ar publisher_prefix
+Specify the name of the publisher to be resurfaced.
+This option can be specified multiple times.
+.Pp
+By default, packages from all publishers found in target and reference
+repositories are resurfaced.
+.It Fl r Ar reference_repo
+Specify the URI of the reference repository to be used for manifest comparison.
+Only the latest version of each package is considered.
+.It Fl s Ar target_repo
+Specify the path to the target repository.
+Packages in this repository are reversioned to the versions present in the
+reference repository according to the comparison results.
+The target repository should contain only one version of each package.
+The target repository must be a file system based repository.
+.El
+.Sh ENVIRONMENT VARIABLES
 The following environment variable is supported:
-.sp
-.ne 2
-.mk
-.na
-\fBPKG_REPO\fR
-.ad
-.RS 12n
-.rt
+.Bl -tag -width Ds
+.It Ev PKG_REPO
 The absolute path of the target repository.
-.RE
-
-.SH EXAMPLES
-.LP
-\fBExample 1 \fRResurface a Repository
-.sp
-.LP
-Reversion each package in the target repository that did not have any content change from the same package in the reference repository.
-
-.sp
-.in +2
-.nf
-$ \fBpkgsurf -s /path/to/target -r http://reference.example.com\fR
-.fi
-.in -2
-.sp
-
-.sp
-.LP
+.El
+.Sh EXIT STATUS
+The following exit values are returned:
+.Bl -tag -width Ds
+.It 0
+Command succeeded.
+.It 1
+An error occurred.
+.It 2
+Invalid command line options were specified.
+.It 99
+An unanticipated exception occurred.
+.El
+.Sh EXAMPLES
+.Sy Example 1
+Resurface a Repository
+.Pp
+Reversion each package in the target repository that did not have any content
+change from the same package in the reference repository.
+.Pp
+.D1 Nm Fl s Pa /path/to/target Fl r Lk http://reference.example.com
+.Pp
 Sample package in the target repository:
-
-.sp
-.in +2
-.nf
+.Bd -literal -offset 2n
 set name=pkg.fmri value=pkg://example.com/foo@2.0:20381001T163427Z
 dir group=sys mode=0755 owner=root path=usr
-.fi
-.in -2
-
-.sp
-.LP
+.Ed
+.Pp
 Sample package in the reference repository:
-
-.sp
-.in +2
-.nf
+.Bd -literal -offset 2n
 set name=pkg.fmri value=pkg://example.com/foo@1.0:20381001T163427Z
 dir group=sys mode=0755 owner=root path=usr
-.fi
-.in -2
-
-.sp
-.LP
-Sample package in the target repository after the \fBpkgsurf\fR operation:
-
-.sp
-.in +2
-.nf
+.Ed
+.Pp
+Sample package in the target repository after the
+.Nm
+operation:
+.Bd -literal -offset 2n
 set name=pkg.fmri value=pkg://example.com/foo@1.0:20381001T163427Z
 dir group=sys mode=0755 owner=root path=usr
-.fi
-.in -2
-
-.SH EXIT STATUS
-.sp
-.LP
-The following exit values are returned:
-.sp
-.ne 2
-.mk
-.na
-\fB0\fR
-.ad
-.RS 6n
-.rt
-Command succeeded.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB1\fR
-.ad
-.RS 6n
-.rt
-An error occurred.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB2\fR
-.ad
-.RS 6n
-.rt
-Invalid command line options were specified.
-.RE
-
-.sp
-.ne 2
-.mk
-.na
-\fB99\fR
-.ad
-.RS 6n
-.rt
-An unanticipated exception occurred.
-.RE
-
-.SH ATTRIBUTES
-.sp
-.LP
-See \fBattributes\fR(5) for descriptions of the following attributes:
-.sp
-
-.sp
-.TS
-tab() box;
-cw(2.75i) |cw(2.75i)
-lw(2.75i) |lw(2.75i)
-.
-ATTRIBUTE TYPEATTRIBUTE VALUE
-_
-Availability\fBpackage/pkg\fR
-_
-Interface StabilityUncommitted
-.TE
-
-.SH SEE ALSO
-.sp
-.LP
-\fBpkgrepo\fR(1), \fBpkg\fR(5)
-.sp
+.Ed
+.Sh INTERFACE STABILITY
+The command line interface of
+.Nm
+is
+.Sy Uncommitted .
+The output of
+.Nm
+is
+.Sy Not-An-Interface
+and may change at any time.
+.Sh SEE ALSO
+.Xr pkgrepo 1 ,
+.Xr pkg 7

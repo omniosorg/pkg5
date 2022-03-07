@@ -35,9 +35,9 @@
 <transform file path=$(PYDIRVP)/pkg/client/linkedimage/(?:system|zone).py -> \
     set pkg.depend.bypass-generate .*>
 set name=pkg.fmri value=pkg:/package/pkg@$(PKGVERS)
-set name=pkg.summary value="Image Packaging System - pkg(5)"
+set name=pkg.summary value="Image Packaging System - pkg(7)"
 set name=pkg.description \
-    value="The Image Packaging System (IPS), or pkg(5), is the software delivery system used on OmniOS."
+    value="The Image Packaging System (IPS), or pkg(7), is the software delivery system used on OmniOS."
 set name=info.classification \
     value=org.opensolaris.category.2008:System/Packaging
 set name=variant.arch value=$(ARCH)
@@ -371,10 +371,10 @@ file path=usr/share/man/man1/pkgrepo.1
 file path=usr/share/man/man1/pkgsend.1
 file path=usr/share/man/man1/pkgsign.1
 file path=usr/share/man/man1/pkgsurf.1
-dir  path=usr/share/man/man1m
-file path=usr/share/man/man1m/pkg.depotd.1m
-dir  path=usr/share/man/man5
-file path=usr/share/man/man5/pkg.5
+dir  path=usr/share/man/man7
+file path=usr/share/man/man7/pkg.7
+dir  path=usr/share/man/man8
+file path=usr/share/man/man8/pkg.depotd.8
 dir  path=usr/share/pkg
 dir  path=usr/share/pkg/ignored_deps
 dir  path=usr/share/pkg/transforms
@@ -391,7 +391,7 @@ dir  path=var/log/pkg
 dir  path=var/log/pkg/mirror
 #
 group groupname=pkg5srv gid=97
-user username=pkg5srv gcos-field="pkg(5) server UID" group=pkg5srv password=NP \
+user username=pkg5srv gcos-field="pkg(7) server UID" group=pkg5srv password=NP \
     uid=97
 license lic_CDDL license=CDDL
 license lic_gustaebel license="MIT (Lars Gustaebel)" \

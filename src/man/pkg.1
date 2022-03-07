@@ -627,7 +627,7 @@ can also uninstall packages, refresh publisher metadata (such as the list of
 available packages), validate package installation in an image, and query the
 image for various tokens.
 These queries can also be made of
-.Xr pkg 5 .
+.Xr pkg 7 .
 .Pp
 Images can be of three types: full images, capable of providing a complete
 system; partial images, which are linked to a full image (parent image), but do
@@ -734,7 +734,7 @@ using the extension
 For more information about how the package system determines which files to
 preserve, and how these files are preserved during package upgrades, see "File
 Actions" in the
-.Xr pkg 5
+.Xr pkg 7
 man page.
 .Pp
 Packages are selected based on publisher search order and stickiness.
@@ -767,7 +767,7 @@ process.
 For more information about how the package system determines which files to
 preserve, and how they are preserved during package operations, see "File
 Actions" in the
-.Xr pkg 5
+.Xr pkg 7
 man page.
 .Pp
 If a package is on the avoid list, installing it removes it from that list.
@@ -909,18 +909,18 @@ retrieve the newest list of available packages and other metadata.
 If a boot environment is created, do not set it as the active boot environment
 on the next boot.
 See the
-.Xr beadm 1M
+.Xr beadm 8
 man page for more information.
 .It Fl \-temp-be-activate
 If a boot environment is created, set it as the active boot environment for the
 next boot only (temporary activation).
 See the
-.Xr beadm 1M
+.Xr beadm 8
 man page for more information.
 This is particularly useful for hosted environments where console access is not
 readily available.
 If the new boot environment boots successfully, it can be activated using
-.Xr beadm 1M
+.Xr beadm 8
 and, if not, a power cycle will automatically revert to the previous boot
 environment.
 Temporary activation can be enabled by default for updates to an image via the
@@ -948,7 +948,7 @@ Use of
 implies
 .Fl -require-backup-be .
 See also the
-.Xr beadm 1M
+.Xr beadm 8
 man page.
 .It Fl \-deny-new-be
 Do not create a new boot environment.
@@ -971,7 +971,7 @@ Use of
 implies
 .Fl -require-new-be .
 See also the
-.Xr beadm 1M
+.Xr beadm 8
 man page.
 .It Fl \-reject Ar pkg_fmri_pattern
 Prevent packages with names matching the given pattern from being installed.
@@ -1069,7 +1069,7 @@ process.
 For more information about how the package system determines which files to
 preserve, and how they are preserved during package operations, see "File
 Actions" in the
-.Xr pkg 5
+.Xr pkg 7
 man page.
 .Pp
 If a package is on the avoid list, installing it removes it from that list.
@@ -1118,7 +1118,7 @@ been created.
 If a new boot environment has been created and activated, that is the
 environment that is booted by default on next reboot.
 See the
-.Xr beadm 1M
+.Xr beadm 8
 man page for information about managing boot environments.
 .Bl -tag -width Ds
 .It Fl \-ignore-missing
@@ -1177,7 +1177,7 @@ environment that is booted by default on next reboot if you do not specify the
 .Fl \-no-be-activate
 option.
 See the
-.Xr beadm 1M
+.Xr beadm 8
 man page for information about managing boot environments.
 .Pp
 Recursion can be enabled by default for updates to an image via the
@@ -1219,7 +1219,7 @@ using the extension
 For more information about how the package system determines which files to
 preserve, and how these files are preserved during package upgrades, see "File
 Actions" in the
-.Xr pkg 5
+.Xr pkg 7
 man page.
 .Pp
 If more than one
@@ -1292,7 +1292,7 @@ environment that is booted by default on next reboot if you do not specify the
 .Fl \-no-be-activate
 option.
 See the
-.Xr beadm 1M
+.Xr beadm 8
 man page for information about managing boot environments.
 .Bl -tag -width Ds
 .It Ar path_or_uri
@@ -1381,7 +1381,7 @@ installed) is not the first in the publisher search order, then the publisher
 name is listed in parentheses after the package name.
 The second column contains the release and branch versions of the package.
 See the
-.Xr pkg 5
+.Xr pkg 7
 man page for information about release and branch versions and about variants.
 .Pp
 The last column contains a set of flags that show the status of the package:
@@ -1587,7 +1587,7 @@ attribute value.
 If the
 .Fl o
 option is not specified, the key attributes, as described in
-.Xr pkg 5 ,
+.Xr pkg 7 ,
 of the related action name will be displayed instead.
 In addition,
 .Sy depend
@@ -1601,7 +1601,7 @@ actions will include the
 When more than one action name is specified, the default attributes are
 the set of all attributes, as described above, of all the specified actions.
 For information about actions and their attributes, see 'Actions' in the
-.Xr pkg 5
+.Xr pkg 7
 man page.
 See also the list of pseudo attribute names below.
 .Bl -tag -width Ds
@@ -1673,7 +1673,7 @@ option by separating the action names with commas.
 The value of
 .Ar action_name
 is one of the actions listed in "Actions" in the
-.Xr pkg 5
+.Xr pkg 7
 man page, such as
 .Sy file ,
 .Sy directory ,
@@ -1845,7 +1845,7 @@ actually sees these characters.
 Which tokens are indexed is action-dependent, but can include content hashes
 and path names.
 For information about actions and their attributes, see "Actions" in the
-.Xr pkg 5
+.Xr pkg 7
 man page.
 See also the list of pseudo attribute names in
 .Nm
@@ -1863,7 +1863,7 @@ Structured queries are supported with the following syntax:
 The value of
 .Ar action_name
 is one of the actions listed in "Actions" in the
-.Xr pkg 5
+.Xr pkg 7
 man page.
 The
 .Ar index
@@ -2152,7 +2152,7 @@ this tag and that match
 See the description of the
 .Sy revert-tag
 attribute in "File Actions" and "Directory Actions" in the
-.Xr pkg 5
+.Xr pkg 7
 man page for more information about
 .Sy tag-name
 and
@@ -2275,7 +2275,7 @@ command above.
 .Bd -ragged -offset Ds
 Display the current values of all variants set in this image.
 See "Facets and Variants" in the
-.Xr pkg 5
+.Xr pkg 7
 man page for more information about variants.
 .Bl -tag -width Ds
 .It Ar variant_pattern
@@ -2348,7 +2348,7 @@ updated, or installed.
 Changing a variant value can also cause entire packages to be installed,
 updated, or removed to satisfy the new image configuration.
 See "Facets and Variants" in the
-.Xr pkg 5
+.Xr pkg 7
 man page for more information about variants.
 .Pp
 For descriptions of the options, see the
@@ -2370,7 +2370,7 @@ locally in this image by using the
 command or have been inherited from a parent image (such as a non-global zone
 inheriting the facet setting from the global zone).
 See "Facets and Variants" in the
-.Xr pkg 5
+.Xr pkg 7
 man page for more information about facets.
 .Bl -tag -width Ds
 .It Ar facet_pattern
@@ -2452,7 +2452,7 @@ applies the default value of
 .Sy True
 to that facet; thus, any actions subject to the facet will be installed.
 See "Actions" in the
-.Xr pkg 5
+.Xr pkg 7
 man page for information about actions.
 .Pp
 Changing the value of a facet can cause package content to be removed, updated,
@@ -2460,7 +2460,7 @@ or installed.
 Changing a facet value can also cause entire packages to be installed, updated,
 or removed to satisfy the new image configuration.
 See "Facets and Variants" in the
-.Xr pkg 5
+.Xr pkg 7
 man page for more information about facets.
 .Pp
 For dscriptions of the options, see the
@@ -2891,7 +2891,7 @@ Update an existing publisher property or add a new publisher property.
 .It Fl \-sticky
 Updates to packages that were installed from this publisher must also come from
 this publisher.
-This is the default behavior.
+This is the default behaviour.
 .It Fl \-unset-ca-cert Ar CA_hash
 For verifying signed packages, remove the certificate with the given hash from
 the list of approved certificates and the list of revoked certificates.
@@ -3144,7 +3144,7 @@ This is a recovery operation not intended for general use.
 Update the format of the image to the current version.
 Once this operation has completed, the image can no longer be used with older
 versions of the
-.Xr pkg 5
+.Xr pkg 7
 system.
 .Ed
 .\" version
@@ -3202,9 +3202,9 @@ or
 options with
 .Nm
 commands, or use the
-.Xr beadm 1M
+.Xr beadm 8
 or
-.Xr zoneadm 1M
+.Xr zoneadm 8
 commands to create images.
 The
 .Nm
@@ -3266,7 +3266,7 @@ This option should be used with care.
 .It Fl \-facet Ar name Ns = Ns Pq Cm True Ns | Ns Cm False
 Set the specified facet to the indicated value.
 See "Facets and Variants" in the
-.Xr pkg 5
+.Xr pkg 7
 man page for more information about facets.
 .It Fl \-no-refresh
 Do not attempt to contact the repositories for the image's publishers to
@@ -3279,7 +3279,7 @@ below for descriptions of image properties.
 .It Fl \-variant Ar name Ns = Ns Ar value
 Set the specified variant to the indicated value.
 See "Facets and Variants" in the
-.Xr pkg 5
+.Xr pkg 7
 man page for more information about variants.
 .El
 .Ed
@@ -3413,7 +3413,7 @@ Use the
 command to display information about the change at that time.
 .Pp
 The following properties define characteristics of the image.
-These properties store information about the purpose, content, and behavior of
+These properties store information about the purpose, content, and behaviour of
 the image.
 To view the current values of these properties in the image, use the
 .Nm Cm property
@@ -3617,7 +3617,7 @@ If this property is set to
 the client attempts to download package content from mirrors it dynamically
 discovers.
 To run a mirror that advertises its content via mDNS, see the
-.Xr pkg.depotd 1M
+.Xr pkg.depotd 8
 man page.
 .Pp
 Default value:
@@ -4271,7 +4271,7 @@ HTTP or HTTPS proxy server.
 .El
 .Sh FILES
 A
-.Xr pkg 5
+.Xr pkg 7
 image can be located arbitrarily within a larger file system.
 In the following file descriptions, the token
 .Sy $IMAGE_ROOT
@@ -4319,11 +4319,11 @@ and may change at any time.
 .Sh SEE ALSO
 .Xr curl 1 ,
 .Xr pkgsend 1 ,
-.Xr beadm 1M ,
-.Xr pkg.depotd 1M ,
-.Xr pkg.sysrepo 1M ,
-.Xr zoneadm 1M ,
 .Xr glob 3C ,
 .Xr strftime 3C ,
 .Xr SSL_CTX_load_verify_locations 3openssl ,
-.Xr pkg 5
+.Xr pkg 7 ,
+.Xr beadm 8 ,
+.Xr pkg.depotd 8 ,
+.Xr pkg.sysrepo 8 ,
+.Xr zoneadm 8

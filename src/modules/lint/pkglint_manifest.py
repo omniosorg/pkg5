@@ -25,7 +25,7 @@
 # Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
 #
 
-# Some pkg(5) specific lint manifest checks
+# Some pkg(7) specific lint manifest checks
 
 import os.path
 import six
