@@ -214,11 +214,11 @@ class Repository(progress.GuiProgressTracker):
                     builder.get_object(
                     "repositorymodifymirrorsexpander")
                 self.w_repositorymodify_registration_box = \
-                    builder.get_object("modify_registration_box")   
+                    builder.get_object("modify_registration_box")
                 self.w_repositorymodify_key_entry = \
-                    builder.get_object("modkeyentry")   
+                    builder.get_object("modkeyentry")
                 self.w_repositorymodify_cert_entry = \
-                    builder.get_object("modcertentry")   
+                    builder.get_object("modcertentry")
                 self.w_manage_publishers_dialog = \
                     builder.get_object("manage_publishers")
                 self.w_manage_publishers_dialog.set_icon(self.parent.window_icon)
@@ -240,7 +240,7 @@ class Repository(progress.GuiProgressTracker):
                     builder.get_object("manage_cancel")
                 self.w_manage_help_btn = \
                     builder.get_object("manage_help")
-                    
+
                 self.publishers_apply = \
                     builder.get_object("publishers_apply")
                 self.publishers_apply.set_icon(self.parent.window_icon)
@@ -319,9 +319,9 @@ class Repository(progress.GuiProgressTracker):
                                                     # - key/val: [sha-hash] = ips-hash
                 self.orig_sig_policy = {}
                 self.pub_certs_setup = False
-                
+
                 if self.action == enumerations.ADD_PUBLISHER:
-                        gui_misc.set_modal_and_transient(self.w_add_publisher_dialog, 
+                        gui_misc.set_modal_and_transient(self.w_add_publisher_dialog,
                             self.main_window)
                         self.__on_manage_add_clicked(None)
                         return
@@ -378,53 +378,53 @@ class Repository(progress.GuiProgressTracker):
                     (self.w_add_pub_help_button, "clicked",
                      self.__on_add_pub_help_clicked),
 
-                    (self.w_add_publisher_comp_dialog, "delete_event", 
+                    (self.w_add_publisher_comp_dialog, "delete_event",
                      self.__on_add_publisher_complete_delete_event),
-                    (self.w_add_publisher_c_close, "clicked", 
+                    (self.w_add_publisher_c_close, "clicked",
                      self.__on_add_publisher_c_close_clicked),
 
-                    (self.w_manage_publishers_dialog, "delete_event", 
+                    (self.w_manage_publishers_dialog, "delete_event",
                      self.__on_manage_publishers_delete_event),
-                    (self.w_manage_add_btn, "clicked", 
+                    (self.w_manage_add_btn, "clicked",
                      self.__on_manage_add_clicked),
-                    (self.w_manage_modify_btn, "clicked", 
+                    (self.w_manage_modify_btn, "clicked",
                      self.__on_manage_modify_clicked),
-                    (self.w_manage_remove_btn, "clicked", 
+                    (self.w_manage_remove_btn, "clicked",
                      self.__on_manage_remove_clicked),
-                    (self.w_manage_up_btn, "clicked", 
+                    (self.w_manage_up_btn, "clicked",
                      self.__on_manage_move_up_clicked),
-                    (self.w_manage_down_btn, "clicked", 
+                    (self.w_manage_down_btn, "clicked",
                      self.__on_manage_move_down_clicked),
-                    (self.w_manage_cancel_btn, "clicked", 
+                    (self.w_manage_cancel_btn, "clicked",
                      self.__on_manage_cancel_clicked),
-                    (self.w_manage_ok_btn, "clicked", 
+                    (self.w_manage_ok_btn, "clicked",
                      self.__on_manage_ok_clicked),
-                    (self.w_manage_help_btn, "clicked", 
+                    (self.w_manage_help_btn, "clicked",
                      self.__on_manage_help_clicked),
 
-                    (self.w_modify_repository_dialog, "delete_event", 
+                    (self.w_modify_repository_dialog, "delete_event",
                      self.__on_modifydialog_delete_event),
                     (self.w_modify_pub_alias, "changed",
                      self.__on_modify_pub_alias_changed),
-                    (self.w_modkeybrowse, "clicked", 
+                    (self.w_modkeybrowse, "clicked",
                      self.__on_modkeybrowse_clicked),
-                    (self.w_modcertbrowse, "clicked", 
+                    (self.w_modcertbrowse, "clicked",
                      self.__on_modcertbrowse_clicked),
-                    (self.w_addmirror_entry, "changed", 
+                    (self.w_addmirror_entry, "changed",
                      self.__on_addmirror_entry_changed),
-                    (self.w_addorigin_entry, "changed", 
+                    (self.w_addorigin_entry, "changed",
                      self.__on_addorigin_entry_changed),
-                    (self.w_addmirror_button, "clicked", 
+                    (self.w_addmirror_button, "clicked",
                      self.__on_addmirror_button_clicked),
-                    (self.w_addorigin_button, "clicked", 
+                    (self.w_addorigin_button, "clicked",
                      self.__on_addorigin_button_clicked),
-                    (self.w_rmmirror_button, "clicked", 
+                    (self.w_rmmirror_button, "clicked",
                      self.__on_rmmirror_button_clicked),
-                    (self.w_rmorigin_button, "clicked", 
+                    (self.w_rmorigin_button, "clicked",
                      self.__on_rmorigin_button_clicked),
-                    (self.w_repositorymodify_key_entry, "changed", 
+                    (self.w_repositorymodify_key_entry, "changed",
                      self.__on_modcertkeyentry_changed),
-                    (self.w_repositorymodify_cert_entry, "changed", 
+                    (self.w_repositorymodify_cert_entry, "changed",
                      self.__on_modcertkeyentry_changed),
                     (self.w_repositorymodifyok_button, "clicked",
                      self.__on_repositorymodifyok_clicked),
@@ -435,9 +435,9 @@ class Repository(progress.GuiProgressTracker):
 
                     (self.w_confirmation_dialog, "delete_event",
                         self.__delete_widget_handler_hide),
-                    (self.w_confirm_cancel_btn, "clicked", 
+                    (self.w_confirm_cancel_btn, "clicked",
                         self.__on_cancel_conf_clicked),
-                    (self.w_confirm_ok_btn, "clicked", 
+                    (self.w_confirm_ok_btn, "clicked",
                         self.__on_ok_conf_clicked),
 
                     (self.publishers_apply, "delete_event",
@@ -477,14 +477,14 @@ class Repository(progress.GuiProgressTracker):
         def __on_pub_sig_view_globpol_clicked(self, widget):
                 #Preferences Dialog is modal so no need to hide the Modify Dialog
                 self.parent.preferences.show_signature_policy()
-        
+
         def __update_pub_sig_policy_prop(self, set_props):
                 errors = []
                 try:
                         pub = self.repository_modify_publisher
                         if pub != None:
                                 pub.update_props(set_props=set_props)
-                except api_errors.ApiException, e:
+                except api_errors.ApiException as e:
                         errors.append(("", e))
                 return errors
 
@@ -504,7 +504,7 @@ class Repository(progress.GuiProgressTracker):
                 if len(set_props) > 0:
                         errors = self.__update_pub_sig_policy_prop(set_props)
                 return errors
-        
+
         def __prepare_pub_signature_policy(self):
                 if self.orig_sig_policy:
                         return
@@ -659,9 +659,9 @@ class Repository(progress.GuiProgressTracker):
                         return
                 model.clear()
 
-                self.orig_pub_cert_added_dict.clear() 
-                self.all_pub_cert_added_dict.clear() 
-                self.removed_orig_pub_cert_dict.clear() 
+                self.orig_pub_cert_added_dict.clear()
+                self.all_pub_cert_added_dict.clear()
+                self.removed_orig_pub_cert_dict.clear()
 
                 pub_display_name = self.__get_pub_display_name(pub)
                 if pub_display_name != "":
@@ -689,7 +689,7 @@ class Repository(progress.GuiProgressTracker):
                         sel_path = selected_rows[1][0]
                 self.__set_pub_cert_selection(sorted_model, sel_path)
                 self.pub_certs_setup = True
-                
+
         def __add_cert_to_model(self, model, cert, ips_hash, status, path = "",
             scroll_to=False, new=False):
                 pub = self.repository_modify_publisher
@@ -888,8 +888,8 @@ class Repository(progress.GuiProgressTracker):
                         return
                 try:
                         cert = self.__get_new_cert(filename)
-			sha = hashlib.sha1(
-			    misc.force_bytes(cert.subject)).hexdigest()
+                        sha = hashlib.sha1(
+                            misc.force_bytes(cert.subject)).hexdigest()
                         ips_hash = PUBCERT_NOTSET_HASH
                         status = PUBCERT_APPROVED_STR
                         new = True
@@ -905,8 +905,8 @@ class Repository(progress.GuiProgressTracker):
                                 return
                         model = sorted_model.get_model()
                         self.__add_cert_to_model(model, cert, ips_hash, status,
-                            path=filename, scroll_to=True, new=new) 
-                except api_errors.ApiException, e:
+                            path=filename, scroll_to=True, new=new)
+                except api_errors.ApiException as e:
                         self.__show_errors([("", e)])
                         return
 
@@ -916,7 +916,7 @@ class Repository(progress.GuiProgressTracker):
                 try:
                         with open(filename, "rb") as fh:
                                 s = fh.read()
-                except EnvironmentError, e:
+                except EnvironmentError as e:
                         if e.errno == errno.ENOENT:
                                 raise api_errors.MissingFileArgumentException(
                                     filename)
@@ -926,7 +926,7 @@ class Repository(progress.GuiProgressTracker):
                         raise api_errors.ApiException(e)
                 try:
                         cert = x509.load_pem_x509_certificate(s,
-			    default_backend())
+                            default_backend())
                 except ValueError as e:
                         raise api_errors.BadFileFormat(_("The file:\n"
                             " %s\nwas expected to be a PEM certificate but it "
@@ -972,7 +972,7 @@ class Repository(progress.GuiProgressTracker):
                         return
                 orig_sha = cert.get_fingerprint('sha1')
                 new_sha = hashlib.sha1(
-		    misc.force_bytes(new_cert.subject)).hexdigest()
+                    misc.force_bytes(new_cert.subject)).hexdigest()
                 if orig_sha != new_sha:
                         pub = self.repository_modify_publisher
                         if not pub:
@@ -1095,7 +1095,7 @@ class Repository(progress.GuiProgressTracker):
                 self.w_pub_cert_remove_btn.set_sensitive(False)
                 self.w_pub_cert_revoke_btn.set_sensitive(False)
                 self.w_pub_cert_reinstate_btn.set_sensitive(False)
-                
+
         def __get_selected_pub_cert_itr_model(self):
                 return self.__get_fitr_model_from_tree(self.w_pub_cert_treeview)
 
@@ -1140,7 +1140,7 @@ class Repository(progress.GuiProgressTracker):
                 try:
                         with open(path, "rb") as fh:
                                 s = fh.read()
-                except EnvironmentError, e:
+                except EnvironmentError as e:
                         if e.errno == errno.ENOENT:
                                 errors.append(("",
                                     api_errors.MissingFileArgumentException(path)))
@@ -1152,7 +1152,7 @@ class Repository(progress.GuiProgressTracker):
                         pub = self.repository_modify_publisher
                         if pub != None:
                                 pub.approve_ca_cert(s)
-                except api_errors.ApiException, e:
+                except api_errors.ApiException as e:
                         errors.append(("", e))
                 return errors
 
@@ -1162,7 +1162,7 @@ class Repository(progress.GuiProgressTracker):
                         pub = self.repository_modify_publisher
                         if pub != None:
                                 pub.revoke_ca_cert(ips_hash)
-                except api_errors.ApiException, e:
+                except api_errors.ApiException as e:
                         errors.append(("", e))
                 return errors
 
@@ -1172,7 +1172,7 @@ class Repository(progress.GuiProgressTracker):
                         pub = self.repository_modify_publisher
                         if pub != None:
                                 pub.unset_ca_cert(ips_hash)
-                except api_errors.ApiException, e:
+                except api_errors.ApiException as e:
                         errors.append(("", e))
                 return errors
 
@@ -1201,7 +1201,7 @@ class Repository(progress.GuiProgressTracker):
                 toggle_renderer.set_property("activatable", True)
                 column.set_expand(False)
                 toggle_renderer.connect('toggled', self.__enable_disable)
-                column.set_cell_data_func(toggle_renderer, 
+                column.set_cell_data_func(toggle_renderer,
                     self.__toggle_data_function, None)
                 self.w_publishers_treeview.append_column(column)
                 # Sticky column
@@ -1211,7 +1211,7 @@ class Repository(progress.GuiProgressTracker):
                 toggle_renderer.set_property("activatable", True)
                 column.set_expand(False)
                 toggle_renderer.connect('toggled', self.__sticky_unsticky)
-                column.set_cell_data_func(toggle_renderer, 
+                column.set_cell_data_func(toggle_renderer,
                     self.__toggle_data_function, None)
                 self.w_publishers_treeview.append_column(column)
                 publishers_list_filter.set_visible_func(self.__publishers_filter)
@@ -1224,7 +1224,7 @@ class Repository(progress.GuiProgressTracker):
                 self.w_publishers_treeview.set_model(None)
                 try:
                         pubs = self.api_o.get_publishers(duplicate=True)
-                except api_errors.ApiException, e:
+                except api_errors.ApiException as e:
                         self.__show_errors([("", e)])
                         return
                 if not sorted_model:
@@ -1281,7 +1281,7 @@ class Repository(progress.GuiProgressTracker):
                                 self.new_pub = None
                         else:
                         # We do have gtk.SELECTION_SINGLE mode, so if exists, we are
-                        # interested only in the first selected path. 
+                        # interested only in the first selected path.
                                 if len(selected_rows) > 1 and len(selected_rows[1]) > 0:
                                         self.w_publishers_treeview.scroll_to_cell(
                                             selected_rows[1][0])
@@ -1298,22 +1298,22 @@ class Repository(progress.GuiProgressTracker):
         def __select_last_publisher(self):
                 sorted_model = self.w_publishers_treeview.get_model()
                 itr = sorted_model.get_iter_first()
-                next_itr = sorted_model.iter_next(itr) 
+                next_itr = sorted_model.iter_next(itr)
                 while next_itr != None:
                         itr = next_itr
-                        next_itr = sorted_model.iter_next(itr) 
+                        next_itr = sorted_model.iter_next(itr)
                 path = sorted_model.get_path(itr)
                 self.w_publishers_treeview.scroll_to_cell(path)
                 self.w_publishers_treeview.get_selection().select_path(path)
 
         def __validate_url(self, url_widget, w_ssl_key = None, w_ssl_cert = None):
-                self.__validate_url_generic(url_widget, self.w_add_error_label, 
+                self.__validate_url_generic(url_widget, self.w_add_error_label,
                     self.w_publisher_add_button, self.is_alias_valid,
                     w_ssl_label=self.w_add_sslerror_label,
                     w_ssl_key=w_ssl_key, w_ssl_cert=w_ssl_cert)
 
         def __validate_url_generic(self, w_url_text, w_error_label, w_action_button,
-                alias_valid = False, function = None, w_ssl_label = None, 
+                alias_valid = False, function = None, w_ssl_label = None,
                 w_ssl_key = None, w_ssl_cert = None):
                 ssl_key = None
                 ssl_cert = None
@@ -1360,7 +1360,7 @@ class Repository(progress.GuiProgressTracker):
             function = None):
                 valid_btn = False
                 valid_func = True
-                name = name_widget.get_text() 
+                name = name_widget.get_text()
                 self.is_alias_valid = self.__is_alias_valid(name)
                 self.__reset_error_label()
                 if self.is_alias_valid:
@@ -1388,16 +1388,16 @@ class Repository(progress.GuiProgressTracker):
                         return True
                 try:
                         publisher.Publisher(prefix=name)
-                except api_errors.BadPublisherPrefix, e:
+                except api_errors.BadPublisherPrefix as e:
                         self.name_error = _("Alias contains invalid characters")
                         return False
                 try:
                         self.api_o.get_publisher(prefix=name)
                         self.name_error = _("Alias already in use")
                         return False
-                except api_errors.UnknownPublisher, e:
+                except api_errors.UnknownPublisher as e:
                         return True
-                except api_errors.ApiException, e:
+                except api_errors.ApiException as e:
                         self.__show_errors([("", e)])
                         return False
 
@@ -1431,12 +1431,12 @@ class Repository(progress.GuiProgressTracker):
                 try:
                         self.repository_modify_publisher = self.api_o.get_publisher(
                             prefix=pub.prefix, alias=pub.prefix, duplicate=True)
-                except api_errors.ApiException, e:
+                except api_errors.ApiException as e:
                         self.__show_errors([("", e)])
-                        return                
+                        return
                 updated_modify_repository = self.__update_modify_repository_dialog(True,
                     True, True, True)
-                    
+
                 self.w_modify_repository_dialog.set_size_request(
                     MODIFY_DIALOG_WIDTH_DEFAULT, -1)
 
@@ -1460,7 +1460,7 @@ class Repository(progress.GuiProgressTracker):
 
                 style = self.w_repositorymodify_name.get_style()
                 font_size_in_pango_unit = style.font_desc.get_size()
-                font_size_in_pixel = font_size_in_pango_unit / pango.SCALE 
+                font_size_in_pixel = font_size_in_pango_unit / pango.SCALE
                 ssl_error_len = len(unicode(ssl_error)) * font_size_in_pixel
                 if ssl_error_len > MODIFY_DIALOG_SSL_WIDTH_DEFAULT:
                         new_dialog_width = ssl_error_len * \
@@ -1472,7 +1472,7 @@ class Repository(progress.GuiProgressTracker):
                         self.w_modify_repository_dialog.set_size_request(
                             MODIFY_DIALOG_WIDTH_DEFAULT, -1)
 
-        def __update_modify_repository_dialog(self, update_alias=False, 
+        def __update_modify_repository_dialog(self, update_alias=False,
             update_mirrors=False, update_origins=False, update_ssl=False):
                 if not self.repository_modify_publisher:
                         return False
@@ -1550,7 +1550,7 @@ class Repository(progress.GuiProgressTracker):
                 try:
                         repo.add_mirror(new_mirror)
                         self.w_addmirror_entry.set_text("")
-                except api_errors.ApiException, e:
+                except api_errors.ApiException as e:
                         self.__show_errors([(pub, e)])
                 self.__update_modify_repository_dialog(update_mirrors=True)
 
@@ -1563,7 +1563,7 @@ class Repository(progress.GuiProgressTracker):
                 repo = pub.repository
                 try:
                         repo.remove_mirror(remove_mirror)
-                except api_errors.ApiException, e:
+                except api_errors.ApiException as e:
                         self.__show_errors([(pub, e)])
                 self.__update_modify_repository_dialog(update_mirrors=True)
 
@@ -1573,7 +1573,7 @@ class Repository(progress.GuiProgressTracker):
                 try:
                         repo.add_origin(new_origin)
                         self.w_addorigin_entry.set_text("")
-                except api_errors.ApiException, e:
+                except api_errors.ApiException as e:
                         self.__show_errors([(pub, e)])
                 self.__update_modify_repository_dialog(update_origins=True)
 
@@ -1586,7 +1586,7 @@ class Repository(progress.GuiProgressTracker):
                 repo = pub.repository
                 try:
                         repo.remove_origin(remove_origin)
-                except api_errors.ApiException, e:
+                except api_errors.ApiException as e:
                         self.__show_errors([(pub, e)])
                 self.__update_modify_repository_dialog(update_origins=True)
 
@@ -1682,7 +1682,7 @@ class Repository(progress.GuiProgressTracker):
                                     enumerations.PUBLISHER_OBJECT)
                                 if prev_pub.sys_pub:
                                         prev_sys_pub = True
-             
+
                         if current_priority == sorted_size - 1:
                                 down_enabled = False
                         elif current_priority == 0:
@@ -1693,9 +1693,9 @@ class Repository(progress.GuiProgressTracker):
                                 down_enabled = False
                         else:
                                 if next_sys_pub or is_sys_pub:
-                                        down_enabled = False 
+                                        down_enabled = False
                                 if prev_sys_pub or is_sys_pub:
-                                        up_enabled = False 
+                                        up_enabled = False
                 self.w_manage_up_btn.set_sensitive(up_enabled)
                 self.w_manage_down_btn.set_sensitive(down_enabled)
 
@@ -1717,11 +1717,11 @@ class Repository(progress.GuiProgressTracker):
                         self.cancel_progress_thread = True
                         self.publishers_apply_cancel.set_sensitive(False)
 
-        def __add_repository(self, alias=None, origin_url=None, ssl_key=None, 
+        def __add_repository(self, alias=None, origin_url=None, ssl_key=None,
             ssl_cert=None, pub=None):
                 errors = []
                 if pub == None:
-                        if self.__check_publisher_exists(self.api_o, alias, 
+                        if self.__check_publisher_exists(self.api_o, alias,
                                 origin_url):
                                 self.progress_stop_thread = True
                                 return
@@ -1739,7 +1739,7 @@ class Repository(progress.GuiProgressTracker):
                 try:
                         errors_update = self.__update_publisher(pub,
                             new_publisher=new_pub)
-                except api_errors.UnknownRepositoryPublishers, e:
+                except api_errors.UnknownRepositoryPublishers as e:
                         if len(e.known) > 0:
                                 pub, repo, new_pub = self.__get_or_create_pub_with_url(
                                     self.api_o, e.known[0], origin_url)
@@ -1765,7 +1765,7 @@ class Repository(progress.GuiProgressTracker):
                                     alias=name)
                                 self.__g_update_details_text(
                                     _("Publisher %s succesfully removed\n") % name)
-                        except api_errors.ApiException, e:
+                        except api_errors.ApiException as e:
                                 errors.append((pub, e))
                         self.progress_stop_thread = True
                 else:
@@ -1803,12 +1803,12 @@ class Repository(progress.GuiProgressTracker):
                         else:
                                 self.__g_update_details_text(
                                     _("Publisher %s succesfully updated\n") % pub.prefix)
-                except api_errors.UnknownRepositoryPublishers, e:
+                except api_errors.UnknownRepositoryPublishers as e:
                         if raise_unknownpubex:
                                 raise e
                         else:
                                 errors.append((pub, e))
-                except api_errors.ApiException, e:
+                except api_errors.ApiException as e:
                         errors.append((pub, e))
                 return errors
 
@@ -1891,21 +1891,21 @@ class Repository(progress.GuiProgressTracker):
                 textiter = textbuf.get_end_iter()
 
                 disable_text = ngettext("Disable Publisher:\n",
-		    "Disable Publishers:\n", disable_no)
+                    "Disable Publishers:\n", disable_no)
                 enable_text = ngettext("Enable Publisher:\n",
-		    "Enable Publishers:\n", enable_no)
+                    "Enable Publishers:\n", enable_no)
                 delete_text = ngettext("Remove Publisher:\n",
-		    "Remove Publishers:\n", delete_no)
+                    "Remove Publishers:\n", delete_no)
                 sticky_text = ngettext("Set sticky Publisher:\n",
-		    "Set sticky Publishers:\n", delete_no)
+                    "Set sticky Publishers:\n", delete_no)
                 unsticky_text = ngettext("Unset sticky Publisher:\n",
-		    "Unset sticky Publishers:\n", delete_no)
+                    "Unset sticky Publishers:\n", delete_no)
                 priority_text = _("Change Priorities:\n")
 
                 confirm_no = delete_no + enable_no + disable_no + sticky_no + \
                     unsticky_no
                 confirm_text = ngettext("Apply the following change:",
-		    "Apply the following changes:", confirm_no)
+                    "Apply the following changes:", confirm_no)
 
                 self.w_confirmation_label.set_markup("<b>" + confirm_text + "</b>")
 
@@ -1980,7 +1980,7 @@ class Repository(progress.GuiProgressTracker):
                                 self.__g_update_details_text(details_text %
                                     {"enable" : enable_text, "name" : name})
                                 self.api_o.update_publisher(pub)
-                        except api_errors.ApiException, e:
+                        except api_errors.ApiException as e:
                                 errors.append(pub, e)
                 self.progress_stop_thread = True
                 gobject.idle_add(self.publishers_apply_expander.set_expanded, False)
@@ -2011,12 +2011,12 @@ class Repository(progress.GuiProgressTracker):
                                 self.__g_update_details_text(
                                     _("Changing priority for publisher %s\n")
                                     % row[1])
-                        except api_errors.ImageLockedError, e:
+                        except api_errors.ImageLockedError as e:
                                 self.no_changes = 0
                                 if not image_lock_err:
                                         errors.append((row[1], e))
                                         image_lock_err = True
-                        except api_errors.ApiException, e:
+                        except api_errors.ApiException as e:
                                 errors.append((row[1], e))
 
                 for row in self.publishers_list:
@@ -2034,13 +2034,13 @@ class Repository(progress.GuiProgressTracker):
                                 elif row[enumerations.PUBLISHER_ENABLE_CHANGED] or \
                                     row[enumerations.PUBLISHER_STICKY_CHANGED]:
                                         self.__do_changes_for_row(row, name)
-                        except api_errors.ImageLockedError, e:
+                        except api_errors.ImageLockedError as e:
                                 self.no_changes = 0
                                 if not image_lock_err:
                                         errors.append(
                                             (row[enumerations.PUBLISHER_OBJECT], e))
                                         image_lock_err = True
-                        except api_errors.ApiException, e:
+                        except api_errors.ApiException as e:
                                 errors.append((row[enumerations.PUBLISHER_OBJECT], e))
                 self.progress_stop_thread = True
                 if len(errors) > 0:
@@ -2059,7 +2059,7 @@ class Repository(progress.GuiProgressTracker):
                 self.no_changes += 1
                 update_text = _("Updating")
                 details_text = _("%(update)s publisher %(name)s\n")
-                self.__g_update_details_text(details_text % 
+                self.__g_update_details_text(details_text %
                     {"update" : update_text, "name" : name})
                 self.api_o.update_publisher(pub)
 
@@ -2093,7 +2093,7 @@ class Repository(progress.GuiProgressTracker):
                         errors += self.__update_pub_certs()
                         errors += self.__update_pub_sig_policy()
                         errors += self.__update_publisher(pub, new_publisher=False)
-                except api_errors.ApiException, e:
+                except api_errors.ApiException as e:
                         errors.append((pub, e))
                 self.progress_stop_thread = True
                 if len(errors) > 0:
@@ -2112,7 +2112,7 @@ class Repository(progress.GuiProgressTracker):
                 if ssl_key and len(ssl_key) > 0 and ssl_cert and len(ssl_cert) > 0:
                         return False
                 for uri in repo.origins:
-                        print uri
+                        print(uri)
                         if uri.scheme in publisher.SSL_SCHEMES:
                                 return True
                 for uri in repo.mirrors:
@@ -2183,7 +2183,7 @@ class Repository(progress.GuiProgressTracker):
         def __g_on_add_publisher_delete_event(self, widget, event):
                 self.__on_add_publisher_delete_event(widget, event)
                 return False
-                
+
         def __on_add_publisher_delete_event(self, widget, event):
                 self.w_add_publisher_url.set_text("")
                 self.w_add_publisher_alias.set_text("")
@@ -2382,7 +2382,7 @@ class Repository(progress.GuiProgressTracker):
                 sorted_model = selection[0]
                 sorted_path = sorted_model.get_path(sel_itr)
                 if itr and model:
-                        current_priority = model.get_value(itr, 
+                        current_priority = model.get_value(itr,
                             enumerations.PUBLISHER_PRIORITY_CHANGED)
                         model.set_value(itr, enumerations.PUBLISHER_REMOVED, True)
                         for element in model:
@@ -2474,7 +2474,7 @@ class Repository(progress.GuiProgressTracker):
 
         def __on_rmorigin_button_clicked(self, widget):
                 self.__rm_origin()
-                
+
         def __on_repositorymodifyok_clicked(self, widget):
                 pub = self.repository_modify_publisher
                 if pub == None:
@@ -2500,7 +2500,7 @@ class Repository(progress.GuiProgressTracker):
                             self.__get_pub_display_name(pub),
                             gtk.MESSAGE_INFO)
                 return True
-                
+
         def __on_repositorymodifycancel_clicked(self, widget):
                 self.__delete_widget_handler_hide(
                     self.w_modify_repository_dialog, None)
@@ -2524,7 +2524,7 @@ class Repository(progress.GuiProgressTracker):
                    subsequent publishers  are decremented. We need to ignore the
                    priority changes caused solely by publisher(s) removal.
                    This function returns True if the priority change for a publisher
-                   is due to publisher(s) removal or False otherwise.""" 
+                   is due to publisher(s) removal or False otherwise."""
                 priority_sum = 0
                 priority = pub[enumerations.PUBLISHER_PRIORITY]
                 priority_changed = pub[enumerations.PUBLISHER_PRIORITY_CHANGED]
@@ -2658,7 +2658,7 @@ class Repository(progress.GuiProgressTracker):
                         raise URIExistingPublisher(origin_url, pub)
                 except api_errors.UnknownPublisher:
                         return False
-                except api_errors.ApiException, e:
+                except api_errors.ApiException as e:
                         gobject.idle_add(self.__show_errors, [(name, e)])
                         return True
 
@@ -2708,7 +2708,7 @@ class Repository(progress.GuiProgressTracker):
                         for url in add_origins:
                                 repo.add_origin(url)
                         return (src_pub, repo, True)
-                except api_errors.ApiException, e:
+                except api_errors.ApiException as e:
                         if  self.__is_ssl_scheme(origin_url) and \
                             ((not ssl_key or len(ssl_key) == 0) or \
                             (not ssl_cert or len(ssl_cert) == 0)) and \
@@ -2745,7 +2745,7 @@ class Repository(progress.GuiProgressTracker):
                         else:
                                 origin = repo.origins[0]
                                 origin.uri = origin_url
-                except api_errors.ApiException, e:
+                except api_errors.ApiException as e:
                         gobject.idle_add(self.__show_errors, [(name, e)])
                 return (pub, repo, new_pub)
 
@@ -2766,7 +2766,7 @@ class Repository(progress.GuiProgressTracker):
                                         continue
                                 uri.ssl_cert = ssl_cert
                                 uri.ssl_key = ssl_key
-                except api_errors.ApiException, e:
+                except api_errors.ApiException as e:
                         errors.append((pub, e))
                 return errors
 
@@ -2802,17 +2802,17 @@ class Repository(progress.GuiProgressTracker):
                                 check_str = "%s://" % val
                                 if check_str.startswith(url):
                                         valid_start = True
-                                        break 
+                                        break
                         if valid_start:
                                 url_error = None
                         else:
                                 url_error = _("URI is not valid")
                         return False, url_error
-                except api_errors.ApiException, e:
+                except api_errors.ApiException as e:
                         self.__show_errors([("", e)])
                         return False, url_error
 
-        def __validate_ssl_key_cert(self, origin_url, ssl_key, ssl_cert, 
+        def __validate_ssl_key_cert(self, origin_url, ssl_key, ssl_cert,
             ignore_ssl_check_for_not_https = False):
                 '''The SSL Cert and SSL Key may be valid and contain no error'''
                 ssl_error = None
@@ -2830,7 +2830,7 @@ class Repository(progress.GuiProgressTracker):
                 elif origin_url == None or self.__is_ssl_scheme(origin_url):
                         if (ssl_key == None or len(ssl_key) == 0) or \
                             (ssl_cert == None or len(ssl_cert) == 0):
-                        # Key and Cert need not be specified 
+                        # Key and Cert need not be specified
                                 ssl_valid = True
                         elif not os.path.isfile(ssl_key):
                                 ssl_error = _("SSL Key not found at specified location")
@@ -2847,8 +2847,8 @@ class Repository(progress.GuiProgressTracker):
                 for val in publisher.SSL_SCHEMES:
                         if uri.startswith(val):
                                 ret_val = True
-                                break 
-                return ret_val 
+                                break
+                return ret_val
 
         @staticmethod
         def __init_mirrors_tree_view(treeview):
@@ -2937,7 +2937,7 @@ class Repository(progress.GuiProgressTracker):
                 if repo != None and repo.origins != None and len(repo.origins) > 0:
                         origin_uri = repo.origins[0].uri
                 if origin_uri != None and self.__is_ssl_scheme(origin_uri):
-                        gui_misc.set_modal_and_transient(self.w_add_publisher_dialog, 
+                        gui_misc.set_modal_and_transient(self.w_add_publisher_dialog,
                             parent)
                         self.main_window = self.w_add_publisher_dialog
                         self.__on_manage_add_clicked(None)
