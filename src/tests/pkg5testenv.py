@@ -24,10 +24,11 @@
 
 from __future__ import print_function
 import os
-import six
 import sys
 import platform
 import tempfile
+
+from site import getsitepackages, getusersitepackages, addsitedir
 
 def setup_environment(path_to_proto, debug=False, system_test=False):
         """ Set up environment for doing testing.
@@ -89,10 +90,16 @@ def setup_environment(path_to_proto, debug=False, system_test=False):
         proto_area = os.path.realpath(proto_area)
 
         py_version = '.'.join(platform.python_version_tuple()[:2])
+        bundledpkgs = os.path.join(pkg_path,
+            "usr/lib/pkg/python{0}".format(py_version))
         pkgs = os.path.join(pkg_path,
             "usr/lib/python{0}/vendor-packages".format(py_version))
+        sys.path, remainder = sys.path[:2], sys.path[2:]
+        addsitedir(bundledpkgs)
+        addsitedir(pkgs)
+        sys.path.extend(remainder)
+
         bins = os.path.join(pkg_path, "usr/bin")
-        sys.path.insert(1, pkgs)
 
         #
         # Because subprocesses must also source from the proto area,
@@ -103,15 +110,15 @@ def setup_environment(path_to_proto, debug=False, system_test=False):
                 pypath = os.pathsep + os.environ["PYTHONPATH"]
         else:
                 pypath = ""
-        os.environ["PYTHONPATH"] = "." + os.pathsep + pkgs + pypath
+        os.environ["PYTHONPATH"] = (
+            os.pathsep.join(['.', bundledpkgs, pkgs]) + pypath)
 
         os.environ["PATH"] = bins + os.pathsep + os.environ["PATH"]
 
         # Because some test cases will fail under Python 3 if the locale is set
         # to "C". A "C" locale supports only "ascii" characters, so essentially
         # if we want to test unicode characters, we need to use "utf-8" locale.
-        if six.PY3:
-                os.environ["LC_ALL"] = "en_US.UTF-8"
+        os.environ["LC_ALL"] = "en_US.UTF-8"
 
         # Proxy environment variables cause all kinds of problems, strip them
         # all out.

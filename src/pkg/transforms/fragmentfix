@@ -1,0 +1,8 @@
+# This transform file is used by tools/installmodules to help generate
+# the final package manifest fragment.
+
+<transform path=(python3\.\d+) -> edit hash %<1> usr/lib/pkg/%<1>>
+<transform path=(python3\.\d+) -> edit path %<1> usr/lib/pkg/%<1>>
+<transform file mode=0755 -> set mode 0555>
+<transform file mode=0644 -> set mode 0444>
+

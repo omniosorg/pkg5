@@ -25,7 +25,7 @@
 # Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 #
 
-import pkg.no_site_packages
+import pkg.site_paths; pkg.site_paths.init()
 import atexit
 import errno
 import getopt

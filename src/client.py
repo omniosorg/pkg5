@@ -45,19 +45,21 @@
 
 from __future__ import print_function
 try:
-    import pkg.no_site_packages
+    import pkg.site_paths
 except ImportError:
     import sys
 
     if sys.platform == "sunos5":
         print("""
 The Python environment on this system is damaged and missing a critical core
-component (pkg.no_site_packages) and can not be repaired with pkg(1).
+component (pkg.site_paths) and can not be repaired with pkg(1).
 
 To recover this system reboot and select an alternate Boot Environment (BE)
 from the boot menu. From the alternate BE mount and run 'pkg fix' on this BE.
 """)
         sys.exit(1)
+
+pkg.site_paths.init()
 
 try:
         import calendar

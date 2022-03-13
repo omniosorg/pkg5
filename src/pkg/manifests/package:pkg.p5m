@@ -34,10 +34,15 @@
     set pkg.depend.bypass-generate .*>
 <transform file path=$(PYDIRVP)/pkg/client/linkedimage/(?:system|zone).py -> \
     set pkg.depend.bypass-generate .*>
+#
+<include bundledlicences.3.10.p5m>
+<include bundledmodules.3.10.p5m>
 set name=pkg.fmri value=pkg:/package/pkg@$(PKGVERS)
 set name=pkg.summary value="Image Packaging System - pkg(7)"
 set name=pkg.description \
     value="The Image Packaging System (IPS), or pkg(7), is the software delivery system used on OmniOS."
+set name=pkg.depend.runpath \
+    value=/usr/lib/pkg/python$(PYVERS):$PKGDEPEND_RUNPATH
 set name=info.classification \
     value=org.opensolaris.category.2008:System/Packaging
 set name=variant.arch value=$(ARCH)
@@ -165,8 +170,6 @@ file path=$(PYDIRVP)/pkg/manifest.py
 file path=$(PYDIRVP)/pkg/mediator.py
 file path=$(PYDIRVP)/pkg/misc.py
 file path=$(PYDIRVP)/pkg/mogrify.py
-dir  path=$(PYDIRVP)/pkg/no_site_packages
-file path=$(PYDIRVP)/pkg/no_site_packages/__init__.py
 file path=$(PYDIRVP)/pkg/nrlock.py
 file path=$(PYDIRVP)/pkg/p5i.py
 file path=$(PYDIRVP)/pkg/p5p.py
@@ -203,6 +206,8 @@ file path=$(PYDIRVP)/pkg/server/query_parser.py
 file path=$(PYDIRVP)/pkg/server/repository.py pkg.depend.bypass-generate=.*
 file path=$(PYDIRVP)/pkg/server/transaction.py
 file path=$(PYDIRVP)/pkg/sha512_t.py
+dir  path=$(PYDIRVP)/pkg/site_paths
+file path=$(PYDIRVP)/pkg/site_paths/__init__.py
 file path=$(PYDIRVP)/pkg/smf.py
 file path=$(PYDIRVP)/pkg/solver.cpython$(PYPKGVERS).so
 file path=$(PYDIRVP)/pkg/sysattr.py
@@ -250,6 +255,7 @@ file path=usr/bin/pkgsend
 file path=usr/bin/pkgsign
 file path=usr/bin/pkgsurf
 dir  path=usr/lib
+dir  path=usr/lib/pkg
 file path=usr/lib/pkg.depotd mode=0755
 dir  path=usr/share
 dir  path=usr/share/lib

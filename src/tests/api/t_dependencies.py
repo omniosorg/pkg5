@@ -2716,7 +2716,7 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
 
                 # finally, test a combination of the above, we have:
                 # pkg.depend.bypass-generate=.*/pdtest.py \
-                # pkg.depend.bypass-generate=usr/lib/python3.xvendor-packages/.* \
+                # pkg.depend.bypass-generate=usr/lib/python3.x/vendor-packages/.* \
                 # pkg.depend.bypass-generate=usr/lib/python3.x/site-packages/pkgdep_runpath/pdtest.cpython-3x.so
                 t_path = self.make_manifest(
                     self.python_wildcard_combo_bypass_manf)

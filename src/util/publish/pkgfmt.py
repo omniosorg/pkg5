@@ -25,7 +25,7 @@
 #
 
 from __future__ import print_function
-import pkg.no_site_packages
+import pkg.site_paths; pkg.site_paths.init()
 
 # Prefixes should be ordered alphabetically with most specific first.
 DRIVER_ALIAS_PREFIXES = (

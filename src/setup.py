@@ -29,7 +29,6 @@ import errno
 import fnmatch
 import os
 import platform
-import six
 import stat
 import sys
 import shutil
@@ -92,9 +91,8 @@ req_pylint_version = "1.4.3"
 # is properly interleaved with output from this program.
 #
 # Can't have unbuffered text I/O in Python 3. This doesn't quite matter.
-if six.PY2:
-        sys.stdout = os.fdopen(sys.stdout.fileno(), "w", 0)
-        sys.stderr = os.fdopen(sys.stderr.fileno(), "w", 0)
+#sys.stdout = os.fdopen(sys.stdout.fileno(), "w", 0)
+#sys.stderr = os.fdopen(sys.stderr.fileno(), "w", 0)
 
 dist_dir = os.path.normpath(os.path.join(pwd, os.pardir, "proto", "dist_" + arch))
 build_dir = os.path.normpath(os.path.join(pwd, os.pardir, "proto", "build_" + arch))
@@ -268,7 +266,7 @@ packages = [
         'pkg.file_layout',
         'pkg.flavor',
         'pkg.lint',
-        'pkg.no_site_packages',
+        'pkg.site_paths',
         'pkg.portable',
         'pkg.publish',
         'pkg.server'
@@ -711,7 +709,7 @@ class install_func(_install):
                                 else:
                                         file_util.copy_file(src, dest, update=1)
 
-                for d, files in six.iteritems(scripts[osname]):
+                for d, files in scripts[osname].items():
                         for (srcname, dstname) in files:
                                 dst_dir = util.change_root(self.root_dir, d)
                                 dst_path = util.change_root(self.root_dir,
@@ -765,7 +763,7 @@ class install_data_func(_install_data):
                                 self.outfiles.append(dir)
                         else:
                                 for file in files:
-                                        if isinstance(file, six.string_types):
+                                        if isinstance(file, str):
                                                 infile = file
                                                 outfile = os.path.join(dir,
                                                     os.path.basename(file))
@@ -995,7 +993,7 @@ class installfile(Command):
         def finalize_options(self):
                 if self.mode is None:
                         self.mode = 0o644
-                elif isinstance(self.mode, six.string_types):
+                elif isinstance(self.mode, str):
                         try:
                                 self.mode = int(self.mode, 8)
                         except ValueError:
@@ -1040,7 +1038,7 @@ def syntax_check(filename):
         except py_compile.PyCompileError as e:
                 res = ""
                 for err in e.exc_value:
-                        if isinstance(err, six.string_types):
+                        if isinstance(err, str):
                                 res += err + "\n"
                                 continue
 
@@ -1450,7 +1448,8 @@ class Extension(distutils.core.Extension):
 # These are set to real values based on the platform, down below
 compile_args = None
 if osname in ("sunos", "linux", "darwin"):
-        compile_args = [ "-O3" ]
+        compile_args = [ "-O3", "-gstrict-dwarf",
+            "-fno-aggressive-loop-optimizations" ]
 if osname == "sunos":
         link_args = []
 else:

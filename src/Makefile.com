@@ -12,10 +12,21 @@
 # Copyright 2022, Richard Lowe.
 # Copyright 2022 OmniOS Community Edition (OmniOSce) Association.
 
-CODE_WS = $$(git rev-parse --show-toplevel)
+CODE_WS:sh = git rev-parse --show-toplevel
+MACH:sh = uname -p
+PROTO = $(CODE_WS)/proto
 
-CC = /usr/bin/gcc-11
-CFLAGS = -m64 -Wall -Werror -Wextra -gdwarf-2 -gstrict-dwarf
+ROOT = $(PROTO)/root_$(MACH)
+ROOTETC = $(ROOT)/etc
+ROOTETCZONES = $(ROOTETC)/zones
+ROOTETCBRAND = $(ROOTETC)/brand
+ROOTUSRLIB = $(ROOT)/usr/lib
+ROOTBRAND = $(ROOTUSRLIB)/brand
+ROOTPKGLIB = $(ROOTUSRLIB)/pkg
+
+CC = /usr/bin/gcc-12
+CFLAGS = -m64 -Wall -Werror -Wextra -gdwarf-2 -gstrict-dwarf \
+	-fno-aggressive-loop-optimizations
 CPPFLAGS = -D_REENTRANT -D_POSIX_PTHREAD_SEMANTICS
 
 # Whitespace separated list of versions to build and test
@@ -23,7 +34,6 @@ PYVERSIONS = 3.10
 # The single version used for shebang lines and packaging.
 PYVER = 3.10
 
-MACH:sh = uname -p
 SHELL= /usr/bin/ksh93
 INSTALL = /usr/sbin/install
 CTFCONVERT = /opt/onbld/bin/i386/ctfconvert

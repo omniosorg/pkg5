@@ -24,7 +24,7 @@
 # Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
 #
 
-import pkg.no_site_packages
+import pkg.site_paths; pkg.site_paths.init()
 import codecs
 import logging
 import six

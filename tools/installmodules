@@ -1,0 +1,105 @@
+#!/bin/ksh
+
+# {{{ CDDL HEADER
+#
+# This file and its contents are supplied under the terms of the
+# Common Development and Distribution License ("CDDL"), version 1.0.
+# You may only use this file in accordance with the terms of version
+# 1.0 of the CDDL.
+#
+# A full copy of the text of the CDDL should have accompanied this
+# source. A copy of the CDDL is also available via the Internet at
+# http://www.illumos.org/license/CDDL.
+# }}}
+
+# Copyright 2022 OmniOS Community Edition (OmniOSce) Association.
+
+typeset TOP="${1?usage}"; shift
+typeset TARGET="${1?usage}"; shift
+typeset PYVER="${1?usage}"; shift
+typeset LIB="${1?usage}"; shift
+typeset ROOT="${1?usage}"; shift
+
+PYTHON=python$PYVER
+
+echo "$TARGET python modules, $PYVER - $LIB ($ROOT)"
+
+set -e
+
+tmpd=`mktemp -d`
+trap 'rm -rf $tmpd' EXIT
+
+echo "+ Preparing virtual environment"
+$PYTHON -mvenv $tmpd
+. $tmpd/bin/activate
+pip install --quiet --upgrade pip
+pip install -r requirements.txt
+pip uninstall -y pip setuptools
+
+rm -rf $LIB
+mkdir -p $LIB
+cd $LIB
+mv $tmpd/lib/python$PYVER/site-packages/ python$PYVER
+cd python$PYVER
+find . -type d -name __pycache__ -exec rm -rf {} +
+for d in *.{egg,dist}-info; do
+	[ -d "$d" ] || continue
+	echo pkg > $d/INSTALLER
+done
+
+# Patches
+for s in $TOP/patches/*/series; do
+	[ -f "$s" ] || continue
+	typeset dir=${s%/*}
+	echo "+ Applying patches for ${dir##*/}"
+	cat $s | while read line; do
+		[[ $line = \#* ]] && continue
+		set -- $line
+		typeset file=$1; shift
+		gpatch --batch --forward --strip=1 "$@" < $dir/$file
+	done
+done
+
+mkdir -p $TOP/src/pkg/generated
+
+echo "+ Collating licences"
+cd $ROOT
+for d in ${LIB#$ROOT}/python$PYVER/*-info; do
+    d=${d#/}
+    [ -d "$d" ] || continue
+    (
+        cd "$d"
+        pkg=`basename $d | cut -d- -f1`
+        echo "  -- $pkg" >> /dev/stderr
+        for l in LICEN[CS]E* COPYING; do
+            [ -f "$l" ] || continue
+            echo "license $d/$l license=bundled/$pkg/$l"
+        done
+    )
+done > $TOP/src/pkg/generated/bundledlicences.$PYVER.p5m
+
+echo "+ Compiling modules"
+cd $LIB
+$PYTHON -m compileall -q .
+
+echo "+ Generating manifest fragment"
+(
+    PYTHONPATH=$LIB/python$PYVER
+    PYTHONPATH+=:$ROOT/usr/lib/python$PYVER/vendor-packages
+    PYTHONPATH+=:/usr/lib/python$PYVER/vendor-packages
+    PKGSEND="python3 -s $ROOT/usr/bin/pkgsend"
+    PKGMOGRIFY="python3 -s $ROOT/usr/bin/pkgmogrify"
+    PKGFMT="python3 -s $ROOT/usr/bin/pkgfmt"
+    PATH=$ROOT/usr/bin:$PATH
+    export PYTHONPATH PATH
+    $PKGSEND generate . \
+        | $PKGMOGRIFY - $TOP/src/pkg/transforms/fragmentfix \
+        | sed -E '
+            s/file python[^ ]+/file/
+            s%hash="python%hash="usr/lib/pkg/python%
+        ' | $PKGFMT -f v2 \
+        > $TOP/src/pkg/generated/bundledmodules.$PYVER.p5m
+)
+
+# Vim hints
+# vim:ts=4:sw=4:et:fdm=marker
