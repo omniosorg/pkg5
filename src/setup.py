@@ -1284,45 +1284,6 @@ class build_py_func(_build_py):
         def get_data_files_without_manifest(self):
                 return ()
 
-def manpage_input_dir(path):
-        """Convert a manpage output path to the directory where its source lives."""
-
-        patharr = path.split("/")
-        if len(patharr) == 4:
-                loc = ""
-        elif len(patharr) == 5:
-                loc = patharr[-3].split(".")[0]
-        else:
-                raise RuntimeError("bad manpage path")
-        return os.path.join(patharr[0], loc).rstrip("/")
-
-def xml2roff(files):
-        """Convert XML manpages to ROFF for delivery.
-
-        The input should be a list of the output file paths.  The corresponding
-        inputs will be generated from this.  We do it in this way so that we can
-        share the paths with the install code.
-
-        All paths should have a common manpath root.  In particular, pages
-        belonging to different localizations should be run through this function
-        separately.
-        """
-
-        input_dir = manpage_input_dir(files[0])
-        do_files = [
-            os.path.join(input_dir, os.path.basename(f))
-            for f in files
-            if dep_util.newer(os.path.join(input_dir, os.path.basename(f)), f)
-        ]
-        if do_files:
-                # Get the output dir by removing the filename and the manX
-                # directory
-                output_dir = os.path.join(*files[0].split("/")[:-2])
-                args = ["/usr/share/xml/xsolbook/python/xml2roff.py", "-o", output_dir]
-                args += do_files
-                print(" ".join(args))
-                run_cmd(args, os.getcwd())
-
 class build_data_func(Command):
         description = "build data files whose source isn't in deliverable form"
         user_options = []
@@ -1373,8 +1334,6 @@ class clean_func(_clean):
                 rm_f("po/pkg.pot")
 
                 rm_f("po/i18n_errs.txt")
-
-                #shutil.rmtree(MANPAGE_OUTPUT_ROOT, True)
 
 class clobber_func(Command):
         user_options = []
