@@ -592,7 +592,7 @@ args.extend([
 
 # Bootrom
 
-if boolv(opts['uefivars'], 'uefivars'):
+if boolv(opts['uefivars'], 'uefivars') and '_CSM' not in bootrom:
     bootvars = install_uefi_vars()
     args.extend(['-l', f'bootrom,{bootrom},{bootvars}'])
 else:
