@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2009, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2022, Oracle and/or its affiliates.
 # Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
 
 from . import testutils
@@ -1415,7 +1415,7 @@ class TestApiSearchBasicsP(TestApiSearchBasics):
                 self.sent_pkgs = set()
 
         def pkgsend_bulk(self, durl, pkg, optional=True):
-                if pkg not in self.sent_pkgs or optional == False:
+                if pkg not in self.sent_pkgs or optional is False:
                         self.sent_pkgs.add(pkg)
                         # Ensures indexing is done for every pkgsend.
                         TestApiSearchBasics.pkgsend_bulk(self, durl, pkg,

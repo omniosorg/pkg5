@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2012, 2022, Oracle and/or its affiliates.
 #
 
 """
@@ -366,6 +366,7 @@ class PkgRemote(object):
                         # Catch "Exception"; pylint: disable=W0703
                         rv = rpc_method(**kwargs)
                 except Exception as ex:
+                        # due to python 3 scoping rules
                         e = ex
                         self.__debug_msg("caught exception\n{0}".format(
                             traceback.format_exc()), t1=True)
