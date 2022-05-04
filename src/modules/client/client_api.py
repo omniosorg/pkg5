@@ -995,7 +995,8 @@ def __api_execute_plan(operation, api_inst):
                 rval = __prepare_json(EXIT_OOPS, errors=errors_json)
         except (api_errors.InvalidPlanError,
             api_errors.ActionExecutionError,
-            api_errors.InvalidPackageErrors) as e:
+            api_errors.InvalidPackageErrors,
+            api_errors.PlanExclusionError) as e:
                 # Prepend a newline because otherwise the exception will
                 # be printed on the same line as the spinner.
                 _error_json("\n" + str(e), errors_json=errors_json)
@@ -1176,6 +1177,7 @@ pkg:/package/pkg' as a privileged user and then retry the {op}."""
             api_errors.NonLeafPackageException,
             api_errors.ReadOnlyFileSystemException,
             api_errors.InvalidPlanError,
+            api_errors.PlanExclusionError,
             api_errors.ActionExecutionError,
             api_errors.InvalidPackageErrors,
             api_errors.ImageBoundaryErrors,

@@ -174,8 +174,9 @@ class TestPkgPropertyBasics(pkg5unittest.SingleDepotTestCase):
                 self.pkg("add-property-value exclude-patterns 'usr/(?!lib/fm)'")
                 self.pkg("add-property-value exclude-patterns 'sbin/'")
 
+                self.pkg("set-property exclude-policy ignore")
                 self.pkg("install xpkg")
-
+                self.assertTrue("libbarney.so" not in self.output);
                 self.assert_files_exist((
                     ("bambam", True),
                     ("sbin/dino", False),
@@ -184,7 +185,20 @@ class TestPkgPropertyBasics(pkg5unittest.SingleDepotTestCase):
                     ("usr/lib/fm/wilma.xml", True),
                     ("usr/lib/fm/betty.xml", True),
                 ))
+                self.pkg("uninstall xpkg")
 
+                self.pkg("set-property exclude-policy warn")
+                self.pkg("install xpkg")
+                self.assertTrue("actions have not been installed" in
+                    self.output);
+                self.assertTrue("configured exclusions" in self.output)
+                self.assertTrue("libbarney.so" in self.output)
+                self.pkg("uninstall xpkg")
+
+                self.pkg("set-property exclude-policy reject")
+                self.pkg("install xpkg", exit=1)
+                self.assertTrue("match exclusions which" in self.errout)
+                self.assertTrue("libbarney.so" in self.errout)
 
 if __name__ == "__main__":
         unittest.main()

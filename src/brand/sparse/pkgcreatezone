@@ -178,6 +178,7 @@ lc_pkg copy-publishers-from $GZ_IMAGE || fail_incomplete "$f_img"
 lc_pkg add-property-value exclude-patterns 'usr/(?!lib/fm)'
 lc_pkg add-property-value exclude-patterns 'sbin/'
 lc_pkg add-property-value exclude-patterns 'lib/(?!svc)'
+lc_pkg set-property exclude-policy ignore
 for ov in $overlays; do
     mp=${ov#*:}
     lc_pkg add-property-value key-files "$mp/.org.opensolaris,pkgkey"
@@ -238,6 +239,8 @@ cp /etc/default/{login,su} $ZONEROOT/etc/default/
 if [ -x /usr/lib/brand/$ZONEBRAND/postinstall ]; then
 	/usr/lib/brand/$ZONEBRAND/postinstall $ZONEROOT
 fi
+
+lc_pkg set-property exclude-policy reject
 
 printf "$m_complete\n\n" ${SECONDS}
 

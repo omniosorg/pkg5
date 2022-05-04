@@ -42,6 +42,7 @@ import collections
 import itertools
 import operator
 import six
+from typing import Iterator
 
 import pkg.actions
 import pkg.client.actuator
@@ -148,6 +149,7 @@ class PlanDescription(object):
             "children_nop": [ li.LinkedImageName ],
             "children_planned": [ li.LinkedImageName ],
             "install_actions": [ _ActionPlan ],
+            "elided_actions": [ _ActionPlan ],
             "li_pfacets": pkg.facet.Facets,
             "li_ppkgs": frozenset([ pkg.fmri.PkgFmri ]),
             "li_props": { li.PROP_NAME: li.LinkedImageName },
@@ -210,6 +212,7 @@ class PlanDescription(object):
                 self.removal_actions = []
                 self.update_actions = []
                 self.install_actions = []
+                self.elided_actions = []
                 # smf and other actuators (driver actions get added during
                 # execution stage).
                 self._actuators = pkg.client.actuator.Actuator()
@@ -652,6 +655,10 @@ class PlanDescription(object):
                     self.install_actions):
                 # pylint: enable=W0612
                         yield "{0} -> {1}".format(o_act, d_act)
+
+        def get_elided_actions(self) -> Iterator[tuple[object, object]]:
+                for pplan, o_act, d_act in self.elided_actions:
+                        yield (o_act, d_act)
 
         def has_release_notes(self):
                 """True if there are release notes for this plan"""

@@ -234,6 +234,23 @@ class InvalidPackageErrors(ApiException):
                     "to invalid package metadata.  Details follow:\n\n"
                     "{0}").format("\n".join(str(e) for e in self.errors))
 
+class PlanExclusionError(ApiException):
+        """Used to indicate that the requested operation could not be executed
+        due to exclusions configured on the image."""
+
+        def __init__(self, paths):
+                self.paths = paths
+
+        def __str__(self):
+                return "{0}\n\n    {1}\n\n{2}".format(
+                    _("""\
+The files listed below match exclusions which are configured
+on this image and can therefore not be installed:"""),
+                    "\n    ".join(list(self.paths)),
+                    _("""\
+See the 'exclude-patterns' and 'exclude-policy' image properties in pkg(1) for
+more information.""")
+                )
 
 class LicenseAcceptanceError(ApiException):
         """Used to indicate that license-related errors occurred during

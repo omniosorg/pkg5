@@ -3904,6 +3904,23 @@ class ImagePlan(object):
                         raise api_errors.PlanCreationException(
                             pkg_updates_required=fmri_updates)
 
+                # Check for files which have been elided due to image
+                # exclusions, and honour the image's exclusion policy.
+                ix_policy = self.image.get_property(
+                    imageconfig.EXCLUDE_POLICY)
+                if self.pd.elided_actions and ix_policy != 'ignore':
+                    elided = []
+                    for (o, n) in self.pd.get_elided_actions():
+                        if o is None:
+                            elided.extend(n.attrlist('path'))
+                    if ix_policy == 'warn':
+                        timestamp = misc.time_to_timestamp(time.time())
+                        self.pd.add_item_message(
+                            "warning", timestamp, MSG_WARNING,
+                            self.__make_excl_msg(elided))
+                    elif ix_policy == 'reject':
+                        raise api_errors.PlanExclusionError(paths=elided)
+
                 # These must be done after action merging.
                 self.__evaluate_pkg_preserved_files()
                 self.__evaluate_pkg_downloads()
@@ -4401,6 +4418,19 @@ class ImagePlan(object):
                                                    self.invalid_meds[med]))
                 return res
 
+        def __make_excl_msg(self, elided: list[str]) -> str:
+                """ Helper function to create the message string for excluded
+                    actions. """
+
+                return _("""\
+*****************************************************************************
+WARNING: The following actions have not been installed as this is a partial
+image (there are configured exclusions):""") + \
+                        "\n\n    " + "\n    ".join(elided) + """
+*****************************************************************************
+"""
+
+
         def __is_target_removed(self, filepath):
                 """ Check to see if the named filepath is being removed in
                     the plan."""
@@ -4768,6 +4798,7 @@ class ImagePlan(object):
                                 if self.__check_excluded(lpath):
                                         if DebugValues["exclude"]:
                                                 print("!Removal:", lpath)
+                                        self.pd.elided_actions.append(ap)
                                         remove = False
                                 elif lpath in inst_links:
                                         # Another link delivers to the same
@@ -4814,6 +4845,7 @@ class ImagePlan(object):
                             self.__check_excluded(ap.src.attrs["path"]):
                                 if DebugValues["exclude"]:
                                         print("!Remove", ap.src.attrs["path"])
+                                self.pd.elided_actions.append(ap)
                                 remove = False
 
                         if not remove:
@@ -4888,6 +4920,7 @@ class ImagePlan(object):
                             self.__check_excluded(ap.dst.attrs["path"]):
                                 if DebugValues["exclude"]:
                                         print("!Install", ap.dst.attrs["path"])
+                                self.pd.elided_actions.append(ap)
                                 pp_needs_trimming.add(ap.p)
                                 ap.p.actions.added[plan_pos[id(ap.dst)]] = None
                                 self.pd.install_actions[i] = None
@@ -5020,9 +5053,11 @@ class ImagePlan(object):
                             self.__check_excluded(
                             ap.dst.attrs["path"])):
                                 path = ap.dst.attrs["path"]
+
                         if path:
                                 if DebugValues["exclude"]:
                                         print("!Update", path)
+                                self.pd.elided_actions.append(ap)
                                 self.pd.update_actions[i] = None
 
                 pt.plan_done(pt.PLAN_ACTION_CONSOLIDATE)

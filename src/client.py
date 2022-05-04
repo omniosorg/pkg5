@@ -1052,6 +1052,15 @@ WARNING: The boot environment being modified is not the active one.
                 for a in plan.get_actions():
                         logger.info("  {0}".format(a))
 
+                seen = False
+                for (o, n) in plan.get_elided_actions():
+                        if not seen:
+                                logger.info("")
+                                logger.info(_(
+                                    "Elided due to image exclusions:"))
+                                seen = True
+
+                        logger.info(f'  {o} -> {n}')
 
         if plan.has_release_notes():
                 if need_blank:
@@ -1549,7 +1558,8 @@ def __api_execute_plan(operation, api_inst):
                 rval = EXIT_OOPS
         except (api_errors.InvalidPlanError,
             api_errors.ActionExecutionError,
-            api_errors.InvalidPackageErrors) as e:
+            api_errors.InvalidPackageErrors,
+            api_errors.PlanExclusionError) as e:
                 # Prepend a newline because otherwise the exception will
                 # be printed on the same line as the spinner.
                 error("\n" + str(e))
@@ -1701,7 +1711,8 @@ pkg:/package/pkg' as a privileged user and then retry the {op}."""
         if e_type in (api_errors.InvalidPlanError,
             api_errors.ReadOnlyFileSystemException,
             api_errors.ActionExecutionError,
-            api_errors.InvalidPackageErrors):
+            api_errors.InvalidPackageErrors,
+            api_errors.PlanExclusionError):
                 error("\n" + str(e), cmd=op)
                 return EXIT_OOPS
         if e_type == api_errors.ImageFormatUpdateNeeded:
