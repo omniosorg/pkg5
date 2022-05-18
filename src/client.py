@@ -381,7 +381,7 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False,
         adv_usage["property"] = _("[-H] [propname ...]")
 
         adv_usage["set-publisher"] = _("[-Pedv] [-k ssl_key] [-c ssl_cert]\n"
-            "            [-O origin_to_set|--origin_uri=origin_to_set ...]\n"
+            "            [-O origin_to_set|--origin-uri=origin_to_set ...]\n"
             "            [-g origin_to_add|--add-origin=origin_to_add ...]\n"
             "            [-G origin_to_remove|--remove-origin=origin_to_remove ...]\n"
             "            [-m mirror_to_add|--add-mirror=mirror_to_add ...]\n"
