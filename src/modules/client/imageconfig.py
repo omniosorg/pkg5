@@ -65,6 +65,7 @@ SEND_UUID = "send-uuid"
 USE_SYSTEM_REPO = "use-system-repo"
 CHECK_CERTIFICATE_REVOCATION = "check-certificate-revocation"
 EXCLUDE_PATTERNS = "exclude-patterns"
+EXCLUDE_POLICY = "exclude-policy"
 KEY_FILES = "key-files"
 DEFAULT_RECURSE = "default-recurse"
 DEFAULT_CONCURRENCY = "recursion-concurrency"
@@ -81,6 +82,7 @@ default_policies = {
     USE_SYSTEM_REPO: False,
     DEFAULT_RECURSE: False,
     TEMP_BE_ACTIVATION: False,
+    EXCLUDE_POLICY: "warn",
 }
 
 default_policy_map = {
@@ -205,6 +207,9 @@ class ImageConfig(cfg.FileConfig):
                             CHECK_CERTIFICATE_REVOCATION]),
                     cfg.PropList("dehydrated"),
                     cfg.PropList(EXCLUDE_PATTERNS),
+                    cfg.PropDefined(EXCLUDE_POLICY,
+                        allowed=["ignore", "warn", "reject"],
+                        default=default_policies[EXCLUDE_POLICY]),
                     cfg.PropList(KEY_FILES),
                     cfg.PropBool(DEFAULT_RECURSE,
                         default=default_policies[DEFAULT_RECURSE]),

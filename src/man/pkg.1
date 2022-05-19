@@ -3575,7 +3575,35 @@ and should include a trailing
 .Pp
 Default value:
 .Sy []
-(empty list)
+.Pq empty list
+.\" exclude-policy
+.It Cm exclude-policy
+.Pq string
+Determine what happens when an execution plan attempts to deliver an action to
+an image when that action is excluded by the configured
+.Cm exclude-patterns
+property.
+The following values are allowed:
+.Bl -tag -width Ds
+.It Cm ignore
+Ignore excluded actions; the actions will not be delivered to the image.
+.It Cm warn
+Display a warning message, listing each action which has not been delivered to
+the image.
+.It Cm reject
+Reject the operation as an error, listing each action which matches the
+configured image exclusions, and is therefore preventing the operation.
+.El
+.Pp
+Default value:
+.Cm warn .
+.Pp
+NB: The
+.Sy sparse
+brand installer sets this property to
+.Cm reject
+for sparse zone images.
+.\" flush-content-cache-on-success
 .It Cm flush-content-cache-on-success
 .Pq boolean
 If this is set to
@@ -3607,7 +3635,7 @@ will refuse to perform update operations on the image.
 .Pp
 Default value:
 .Sy []
-(empty list)
+.Pq empty list
 .It Cm mirror-discovery
 .Pq boolean
 This property tells the client to discover link-local content mirrors using
@@ -4247,12 +4275,15 @@ Ignored if the
 .Fl C
 option is specified.
 .Pp
-When recursing into child images (usually installed
+When recursing into child images
+.Po usually installed
 .Sy lipkg ,
 .Sy sparse
 or
 .Sy pkgsrc
-branded non-global zones), update at most
+branded non-global zones
+.Pc ,
+update at most
 .Sy $PKG_CONCURRENCY
 child images in parallel.
 If
