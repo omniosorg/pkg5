@@ -63,7 +63,8 @@ PUBLISHALL        = $(POUND_SIGN)
 MANIFESTS.cmd     = \
 	cd manifests; \
 	buildnum=$(BUILDID); \
-	m=$$($(PKGMOGRIFY) -O /dev/null *.p5m ../transforms/nopublish); \
+	m=$$($(PKGMOGRIFY) -I ../generated -O /dev/null \
+	    *.p5m ../transforms/nopublish); \
 	echo "$$m" | while read name build; do \
 		[[ $$build -ge $${buildnum%%.*} ]] && echo $$name; \
 	done | sed -e 's/:/\\:/g'; \
@@ -80,12 +81,14 @@ PYDEDOT.cmd       = echo $(PYVER) | tr -d .
 PYPKGVERS         = -$(PYDEDOT.cmd:sh)
 PYDIR             = usr/lib/$(PYTHON3)
 PYDIRVP           = $(PYDIR)/vendor-packages
+PYSHLIB		  = usr/lib/pkg/$(PYTHON3)
 
 # PKGCMDENV needs to specify the interpreter explicitly since the shebang
 # lines include -Es which suppresses the use of non-default environments.
 PKGCMDENV         = \
 	PATH=$(PKGROOT)/usr/bin:/usr/sbin:/usr/bin \
-	PYTHONPATH=$(PKGROOT)/$(PYDIRVP) $(PYTHON3) $(PKGROOT)/usr/bin/
+	PYTHONPATH=$(PKGROOT)/$(PYSHLIB):$(PKGROOT)/$(PYDIRVP) \
+	    $(PYTHON3) -s $(PKGROOT)/usr/bin
 
 PKG               = $(PKGCMDENV)/pkg
 PKGDEPEND         = $(PKGCMDENV)/pkgdepend
@@ -171,7 +174,9 @@ $(PKGDEST)/repo:
 # The main mogrification rule
 $(PDIR)/%.mog: manifests/%.p5m $(PM_TRANSFORMS:%=transforms/%) $(PDIR) \
 	$(PM_TRANSFORMS:%=transforms/%)
-	$(PKGMOGRIFY) $(PKGMOG_DEFINES) -I transforms -O $@ $< $(PM_TRANSFORMS)
+	$(PKGMOGRIFY) $(PKGMOG_DEFINES) \
+	-I generated -I transforms \
+	-O $@ $< $(PM_TRANSFORMS)
 
 # The main dependency generation rule
 $(PDIR)/%.dep: $(PDIR)/%.mog

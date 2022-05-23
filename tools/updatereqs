@@ -1,0 +1,105 @@
+#!/bin/ksh
+#
+# {{{ CDDL HEADER
+#
+# This file and its contents are supplied under the terms of the
+# Common Development and Distribution License ("CDDL"), version 1.0.
+# You may only use this file in accordance with the terms of version
+# 1.0 of the CDDL.
+#
+# A full copy of the text of the CDDL should have accompanied this
+# source. A copy of the CDDL is also available via the Internet at
+# http://www.illumos.org/license/CDDL.
+# }}}
+
+# Copyright 2022 OmniOS Community Edition (OmniOSce) Association.
+
+ROOT="`git rev-parse --show-toplevel`"
+if [ -z "$ROOT" ]; then
+	echo "Cannot find root of checked out repository"
+	exit 1
+fi
+
+MIRROR=https://mirrors.omnios.org/pymodules
+typeset -A override=(
+    # Not python3 compatible, project seems dormant, use patched version
+    [pybonjour]=" @ $MIRROR/pybonjour/pybonjour-1.1.1-python3.tar.gz"
+    # Stuck on 7.44.1 - see https://github.com/pycurl/pycurl/issues/748
+    [pycurl]="==7.44.1 # stuck on 7.44.1 - https://github.com/pycurl/pycurl/issues/748"
+)
+
+OSED=
+for o in ${!override[@]}; do
+    OSED+="
+        /^$o/ {
+            s^=.*^^
+            s^$o\$^&${override[$o]}^
+        }
+    "
+done
+
+function overrides {
+    sed "$OSED"
+}
+
+typeset -a ignore=(
+	util
+	modules/gui
+	brand
+	tests
+)
+
+tmpd=`mktemp -d`
+tmpf=`mktemp`
+trap 'rm -rf $tmpd $tmpf' EXIT
+
+echo "+ Installing 'pipreqs' to $tmpd"
+python3 -mvenv $tmpd
+. $tmpd/bin/activate
+pip install --quiet --upgrade pip
+pip install --quiet pipreqs
+
+echo "+ Evaluating requirements"
+ignores=`printf ",%s" "${ignore[@]}"`
+pipreqs --print --ignore ${ignores:1} --mode no-pin $ROOT/src | sed "
+    # Use core version
+    /setuptools/d
+    /wheel/d
+    # Use patched version from core
+    /rapidjson/d
+    # Use updated (python 3 compatible) core version
+    /jsonrpclib/d
+    # Use core version (also needed by validate_pkg in gate)
+    /jsonschema/d
+    # Use versions from core
+    /cffi/d
+    /cryptography/d
+    /pyOpenSSL/d
+    /pylint/d
+    /six/d
+" | overrides > $tmpf
+
+echo "+ Top level package set"
+sed 's/^/    /' <  $tmpf
+
+rm -rf $tmpd
+python3 -mvenv $tmpd
+. $tmpd/bin/activate
+echo "+ Building required package set"
+pip install --quiet --upgrade pip wheel
+pip install -r $tmpf
+
+echo "+ Generating freeze file"
+pip freeze | sed "
+1i\\
+#\\
+# This file was automatically produced by tools/updatereqs\\
+# Generated on `date`\\
+# Do not edit directly\\
+#
+" | overrides > $ROOT/src/requirements.txt
+
+echo "+ Updated src/requirements.txt"
+
+# Vim hints
+# vim:ts=4:sw=4:et:fdm=marker

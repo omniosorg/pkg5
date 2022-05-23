@@ -24,7 +24,7 @@
 # Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
 # Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 #
-import pkg.no_site_packages
+import pkg.site_paths; pkg.site_paths.init()
 
 PKG_CLIENT_NAME = "pkgrepo"
 

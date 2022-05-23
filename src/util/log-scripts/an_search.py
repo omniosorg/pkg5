@@ -59,38 +59,38 @@ def emit_search_report(summary_file, searchtype, label, results):
 
         if summary_file:
                 print("""
-			<h3>Top 25 {searchtype} searches</h3>
-			<div id="search-{searchtype}-container">
-			<table id="search-{searchtype}-table">
-			<thead><tr><th>Term</th><th>{label}</th></tr></thead>
-		""".format(label=label, searchtype=searchtype), file=summary_file)
+                        <h3>Top 25 {searchtype} searches</h3>
+                        <div id="search-{searchtype}-container">
+                        <table id="search-{searchtype}-table">
+                        <thead><tr><th>Term</th><th>{label}</th></tr></thead>
+                """.format(label=label, searchtype=searchtype), file=summary_file)
 
                 for i, n in results[:25]:
                         print("<tr><td>{0}</td><td>{1}</td></tr>".format(i, n),
                 file=summary_file)
 
                 print("</table></div>", file=summary_file)
-		print("""
+                print("""
 <script type="text/javascript">
-	var myDataSource =
-	    new YAHOO.util.DataSource(YAHOO.util.Dom.get(
-	    "search-{searchtype}-table"));
-	myDataSource.responseType = YAHOO.util.DataSource.TYPE_HTMLTABLE;
-	myDataSource.responseSchema = {
-	    fields: [{key:"Term", sortable:true},
-		    {key:"{label}", parser:YAHOO.util.DataSource.parseNumber}
-	    ]
-	};
+        var myDataSource =
+            new YAHOO.util.DataSource(YAHOO.util.Dom.get(
+            "search-{searchtype}-table"));
+        myDataSource.responseType = YAHOO.util.DataSource.TYPE_HTMLTABLE;
+        myDataSource.responseSchema = {
+            fields: [{key:"Term", sortable:true},
+                    {key:"{label}", parser:YAHOO.util.DataSource.parseNumber}
+            ]
+        };
 
-	var myColumnDefs = [
-	    {key:"Term", sortable:true},
-	    {key:"{label}", sortable:true}
-	];
+        var myColumnDefs = [
+            {key:"Term", sortable:true},
+            {key:"{label}", sortable:true}
+        ];
 
-	var myDataTable =
-	    new YAHOO.widget.DataTable("search-{searchtype}-container",
-	    myColumnDefs, myDataSource,
-	    {sortedBy:{key:"{label}", dir:YAHOO.widget.DataTable.CLASS_DESC}});
+        var myDataTable =
+            new YAHOO.widget.DataTable("search-{searchtype}-container",
+            myColumnDefs, myDataSource,
+            {sortedBy:{key:"{label}", dir:YAHOO.widget.DataTable.CLASS_DESC}});
 </script>
                 """.format(label=label, searchtype=searchtype), file=summary_file)
 
@@ -98,12 +98,12 @@ def emit_search_report(summary_file, searchtype, label, results):
 
 def report_search_by_failure():
         sfi = sorted(search_by_failure.items(), reverse=True, key=lambda k_v: (k_v[1],k_v[0]))
-	emit_search_report(summary_file, "failed", "Misses", sfi)
+        emit_search_report(summary_file, "failed", "Misses", sfi)
 
 
 def report_search_by_success():
         ssi = sorted(search_by_success.items(), reverse=True, key=lambda k_v1: (k_v1[1],k_v1[0]))
-	emit_search_report(summary_file, "successful", "Hits", ssi)
+        emit_search_report(summary_file, "successful", "Hits", ssi)
 
 
 def count_search(mg, d):

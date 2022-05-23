@@ -66,7 +66,7 @@
 # change. It runs a catalog rebuild as the last step to regain catalog integrity
 # within the repo.
 
-import pkg.no_site_packages
+import pkg.site_paths; pkg.site_paths.init()
 import getopt
 import gettext
 import locale

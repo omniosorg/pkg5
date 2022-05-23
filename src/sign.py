@@ -25,7 +25,7 @@
 # Copyright 2017 OmniOS Community Edition (OmniOSce) Association.
 #
 
-import pkg.no_site_packages
+import pkg.site_paths; pkg.site_paths.init()
 import getopt
 import gettext
 import hashlib

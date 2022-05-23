@@ -30,6 +30,7 @@ include Makefile.com
 JOBS = 8
 
 PYTESTS = $(PYVERSIONS:%=runtest/%)
+PYMODULES = $(PYVERSIONS:%=modules/%)
 TESTRESULTS = $(PYVERSIONS:%=testresults/%)
 
 all := TARGET = all
@@ -46,7 +47,7 @@ all: $(SUBDIRS) build
 
 build: $(PYVERSIONS)
 
-install: $(SUBDIRS) $(PYVERSIONS)
+install: $(SUBDIRS) $(PYVERSIONS) $(PYMODULES)
 
 clean: $(SUBDIRS) $(PYVERSIONS)
 	@cd pkg; pwd; make clean
@@ -56,7 +57,7 @@ clobber: $(SUBDIRS) $(PYVERSONS)
 
 packages: install
 	@cd pkg; pwd; $(MAKE) $(TARGET) check \
-	    PATH=$(CODE_WS)/proto/root_$$(uname -p)/usr/bin:$$PATH \
+	    PATH=$(ROOT)/usr/bin:$$PATH \
 	    CC=$(CC)
 
 test: install .WAIT $(PYTESTS) $(TESTRESULTS)
@@ -67,14 +68,18 @@ $(SUBDIRS): FRC
 $(PYVERSIONS): FRC
 	python$@ setup.py $(TARGET)
 
-$(PYTESTS): FRC
-	-pfexec python$(@F) tests/run.py -j $(JOBS)
-	-pfexec cp tests/failures.3 tests/failures.3.$(@F)
+$(PYMODULES): $(PYVERSIONS)
+	../tools/installmodules $(CODE_WS) $(TARGET) $(@F) $(ROOTPKGLIB) $(ROOT)
+
+$(PYTESTS): $(PYMODULES)
+	-pfexec python$(@F) tests/run.py -t -j $(JOBS)
+	-pfexec cp tests/failures.3 tests/failures.$(@F)
+	-pfexec cp tests/timing_info.txt tests/timing_info.$(@F)
 
 $(TESTRESULTS): $(PYTESTS)
 	@echo
 	@echo ">>> Test results for Python $(@F)"
-	@cat tests/failures.3.$(@F)
+	@cat tests/failures.$(@F)
 
 FRC:
 

@@ -27,13 +27,6 @@
 
 include ../../Makefile.com
 
-ROOT = ../../../proto/root_${MACH}
-ROOTETC = $(ROOT)/etc
-ROOTETCZONES = $(ROOT)/etc/zones
-ROOTETCBRAND = $(ROOT)/etc/brand
-ROOTUSRLIB = $(ROOT)/usr/lib
-ROOTBRAND = $(ROOTUSRLIB)/brand
-
 ROOTDIRS = \
 	$(ROOT) \
 	$(ROOTETC) \

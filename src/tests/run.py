@@ -55,7 +55,6 @@ sys.path.insert(0, ".")
 import tempfile
 covdir = tempfile.mkdtemp(prefix=".coverage-", dir=os.getcwd())
 
-import six
 import getopt
 import pkg5testenv
 import warnings
@@ -109,9 +108,8 @@ if __name__ == "__main__":
             'renamed to CRLEntryExtensionOID',
             category=PendingDeprecationWarning)
 
-        if six.PY3:
-                # Suppress ResourceWarning: unclosed file.
-                warnings.filterwarnings("ignore", category=ResourceWarning)
+        # Suppress ResourceWarning: unclosed file.
+        warnings.filterwarnings("ignore", category=ResourceWarning)
 
         try:
                 #
@@ -127,10 +125,7 @@ if __name__ == "__main__":
                 print("Illegal option -- {0}".format(e.opt), file=sys.stderr)
                 usage(1)
 
-        if six.PY3:
-                bfile = os.path.join(os.getcwd(), "baseline3.txt")
-        else:
-                bfile = os.path.join(os.getcwd(), "baseline.txt")
+        bfile = os.path.join(os.getcwd(), "baseline3.txt")
         generate = False
         onlyval = []
         output = ""
@@ -245,11 +240,9 @@ def find_tests(testdir, testpats, startatpat=False, output=OUTPUT_DOTS,
                 return False
         def _istestmethod(name, obj):
                 if name.startswith("test"):
-                    if six.PY2 and isinstance(obj, types.MethodType):
-                        return True
                     # There is no unbound methods in Python 3, instead they
                     # simply become functions.
-                    elif six.PY3 and isinstance(obj, types.FunctionType):
+                    if isinstance(obj, types.FunctionType):
                         return True
                 return False
 
@@ -319,10 +312,9 @@ def find_tests(testdir, testpats, startatpat=False, output=OUTPUT_DOTS,
                                 # Skip some test cases for Python 3.
                                 # test_bootenv requires boot-environment-utils
                                 # Python 3.x package
-                                if six.PY3 and (
-                                    attrname in ["test_bootenv"]):
-                                        delattr(classobj, attrname)
-                                        continue
+                                if attrname in ["test_bootenv"]:
+                                    delattr(classobj, attrname)
+                                    continue
                                 full = "{0}.{1}.{2}.{3}".format(testdir,
                                     filename, cname, attrname)
                                 # Remove this function from our class obj if
@@ -545,10 +537,8 @@ if __name__ == "__main__":
         if onlyval[0] != "":
                 # Do not overwrite failure file if running selected tests
                 failfile = None
-        elif six.PY3:
-                failfile = 'failures.3'
         else:
-                failfile = 'failures'
+                failfile = 'failures.3'
 
         baseline.store()
         baseline.reportfailures(failfile)
@@ -595,11 +585,18 @@ if __name__ == "__main__":
                 except EnvironmentError:
                         pass
 
-        # The tree likely contains python cache objects owned by root, if a
-        # true test run was performed. Adjust the ownership to match the
-        # test directory so they can be easily removed.
+        # The tree likely contains files and python cache objects owned by
+        # root, if a true test run was performed. Adjust the ownership to match
+        # the test directory so they can be easily removed.
         try:
                 uid, gid = os.stat(".")[4:6]
+                for f in [timing_file, failfile]:
+                        if not f:
+                                continue
+                        f = os.path.join(os.getcwd(), f)
+                        if os.path.exists(f):
+                                os.chown(f, uid, gid);
+
                 for dir in ['.', '../../proto']:
                         for root, dirs, files in os.walk(dir):
                                 if os.path.basename(root) != '__pycache__':
