@@ -33,8 +33,9 @@ echo "+ Preparing virtual environment"
 $PYTHON -mvenv $tmpd
 . $tmpd/bin/activate
 pip install --quiet --upgrade pip
+pip install wheel
 pip install -r requirements.txt
-pip uninstall -y pip setuptools
+pip uninstall -y pip setuptools wheel
 
 rm -rf $LIB
 mkdir -p $LIB
@@ -64,7 +65,7 @@ mkdir -p $TOP/src/pkg/generated
 
 echo "+ Collating licences"
 cd $ROOT
-for d in ${LIB#$ROOT}/python$PYVER/*-info; do
+for d in ${LIB#$ROOT/}/python$PYVER/*-info; do
     d=${d#/}
     [ -d "$d" ] || continue
     (

@@ -20,6 +20,28 @@ if [ -z "$ROOT" ]; then
 	exit 1
 fi
 
+MIRROR=https://mirrors.omnios.org/pymodules
+typeset -A override=(
+    # Not python3 compatible, project seems dormant, use patched version
+    [pybonjour]=" @ $MIRROR/pybonjour/pybonjour-1.1.1-python3.tar.gz"
+    # Stuck on 7.44.1 - see https://github.com/pycurl/pycurl/issues/748
+    [pycurl]="==7.44.1 # stuck on 7.44.1 - https://github.com/pycurl/pycurl/issues/748"
+)
+
+OSED=
+for o in ${!override[@]}; do
+    OSED+="
+        /^$o/ {
+            s^=.*^^
+            s^$o\$^&${override[$o]}^
+        }
+    "
+done
+
+function overrides {
+    sed "$OSED"
+}
+
 typeset -a ignore=(
 	util
 	modules/gui
@@ -39,13 +61,12 @@ pip install --quiet pipreqs
 
 echo "+ Evaluating requirements"
 ignores=`printf ",%s" "${ignore[@]}"`
-pipreqs --print --ignore ${ignores:1} --mode no-pin $ROOT/src | sed '
+pipreqs --print --ignore ${ignores:1} --mode no-pin $ROOT/src | sed "
     # Use core version
     /setuptools/d
+    /wheel/d
     # Use patched version from core
     /rapidjson/d
-    # Not python3 compatible, project seems dormant, use patched core version
-    /pybonjour/d
     # Use updated (python 3 compatible) core version
     /jsonrpclib/d
     # Use core version (also needed by validate_pkg in gate)
@@ -56,7 +77,7 @@ pipreqs --print --ignore ${ignores:1} --mode no-pin $ROOT/src | sed '
     /pyOpenSSL/d
     /pylint/d
     /six/d
-' > $tmpf
+" | overrides > $tmpf
 
 echo "+ Top level package set"
 sed 's/^/    /' <  $tmpf
@@ -65,7 +86,7 @@ rm -rf $tmpd
 python3 -mvenv $tmpd
 . $tmpd/bin/activate
 echo "+ Building required package set"
-pip install --quiet --upgrade pip
+pip install --quiet --upgrade pip wheel
 pip install -r $tmpf
 
 echo "+ Generating freeze file"
@@ -76,7 +97,7 @@ pip freeze | sed "
 # Generated on `date`\\
 # Do not edit directly\\
 #
-" > $ROOT/src/requirements.txt
+" | overrides > $ROOT/src/requirements.txt
 
 echo "+ Updated src/requirements.txt"
 

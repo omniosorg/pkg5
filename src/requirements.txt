@@ -1,6 +1,6 @@
 #
 # This file was automatically produced by tools/updatereqs
-# Generated on Sat May 21 14:12:26 UTC 2022
+# Generated on Mon May 23 19:39:54 UTC 2022
 # Do not edit directly
 #
 cheroot==8.6.0
@@ -16,8 +16,8 @@ more-itertools==8.13.0
 ply==3.11
 portend==3.1.0
 prettytable==3.3.0
+pybonjour @ https://mirrors.omnios.org/pymodules/pybonjour/pybonjour-1.1.1-python3.tar.gz
 pycurl==7.44.1 # stuck on 7.44.1 - https://github.com/pycurl/pycurl/issues/748
-pyrsistent==0.18.1
 pytz==2022.1
 six==1.16.0
 tempora==5.0.1
