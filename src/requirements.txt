@@ -1,6 +1,6 @@
 #
 # This file was automatically produced by tools/updatereqs
-# Generated on Mon May 23 19:39:54 UTC 2022
+# Generated on Tue Jun  7 11:53:32 UTC 2022
 # Do not edit directly
 #
 cheroot==8.6.0
@@ -9,7 +9,7 @@ jaraco.classes==3.2.1
 jaraco.collections==3.5.1
 jaraco.context==4.1.1
 jaraco.functools==3.5.0
-jaraco.text==3.7.0
+jaraco.text==3.8.0
 Mako==1.2.0
 MarkupSafe==2.1.1
 more-itertools==8.13.0
