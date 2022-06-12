@@ -9,15 +9,18 @@
 # http://www.illumos.org/license/CDDL.
 
 #
-# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2022 OmniOS Community Edition (OmniOSce) Association.
 #
 
 BRAND = bhyve
-FILES = boot config.xml createzone init platform.xml socat support uninstall
+FILES = boot config.xml createzone init platform.xml socat support uninstall \
+	bundle.py uefi/__init__.py uefi/align.py uefi/vars.py
 BINS = init boot
 
+PYMODULES = $(PYVERSIONS:%=modules/%)
+
 BRANDDIR = $(ROOTBRAND)/$(BRAND)
-BRANDFILES = $(FILES:%=$(BRANDDIR)/%)
+BRANDFILES = $(FILES:%=$(BRANDDIR)/%) $(PYMODULES)
 
 LDLIBS += -lzfs
 
@@ -29,3 +32,13 @@ init: init.c
 
 include ../Makefile.com
 
+$(BRANDDIR)/uefi: FRC
+	mkdir -p $@
+
+$(BRANDFILES): $(BRANDDIR)/uefi
+
+$(PYMODULES): FRC
+	$(CODE_WS)/tools/installmodules $(CODE_WS) $(ROOT) $(@F) \
+            install $(BRANDDIR) bhyve requirements.txt
+
+FRC:

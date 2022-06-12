@@ -43,11 +43,11 @@ test := TARGET = test
 
 SUBDIRS=brand util/mkcert
 
-all: $(SUBDIRS) build
+all: build $(SUBDIRS)
 
 build: $(PYVERSIONS)
 
-install: $(SUBDIRS) $(PYVERSIONS) $(PYMODULES)
+install: $(PYVERSIONS) .WAIT $(PYMODULES) .WAIT $(SUBDIRS)
 
 clean: $(SUBDIRS) $(PYVERSIONS)
 	@cd pkg; pwd; make clean
@@ -68,8 +68,9 @@ $(SUBDIRS): FRC
 $(PYVERSIONS): FRC
 	python$@ setup.py $(TARGET)
 
-$(PYMODULES): $(PYVERSIONS)
-	../tools/installmodules $(CODE_WS) $(TARGET) $(@F) $(ROOTPKGLIB) $(ROOT)
+$(PYMODULES): FRC
+	../tools/installmodules $(CODE_WS) $(ROOT) $(@F) \
+	    $(TARGET) $(ROOTPKGLIB) core requirements.txt
 
 $(PYTESTS): $(PYMODULES)
 	-pfexec python$(@F) tests/run.py -t -j $(JOBS)

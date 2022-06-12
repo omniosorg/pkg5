@@ -15,14 +15,16 @@
 # Copyright 2022 OmniOS Community Edition (OmniOSce) Association.
 
 typeset TOP="${1?usage}"; shift
-typeset TARGET="${1?usage}"; shift
-typeset PYVER="${1?usage}"; shift
-typeset LIB="${1?usage}"; shift
 typeset ROOT="${1?usage}"; shift
+typeset PYVER="${1?usage}"; shift
+typeset TARGET="${1?usage}"; shift
+typeset LIB="${1?usage}"; shift
+typeset COMP="${1?usage}"; shift
+typeset REQS="${1?usage}"; shift
 
 PYTHON=python$PYVER
 
-echo "$TARGET python modules, $PYVER - $LIB ($ROOT)"
+echo "$TARGET python modules, $PYVER - $LIB ($REQS)"
 
 set -e
 
@@ -34,10 +36,10 @@ $PYTHON -mvenv $tmpd
 . $tmpd/bin/activate
 pip install --quiet --upgrade pip
 pip install wheel
-pip install -r requirements.txt
+pip install -r $REQS
 pip uninstall -y pip setuptools wheel
 
-rm -rf $LIB
+rm -rf $LIB/python$PYVER
 mkdir -p $LIB
 cd $LIB
 mv $tmpd/lib/python$PYVER/site-packages/ python$PYVER
@@ -49,7 +51,7 @@ for d in *.{egg,dist}-info; do
 done
 
 # Patches
-for s in $TOP/patches/*/series; do
+for s in $TOP/patches/$COMP/*/series; do
 	[ -f "$s" ] || continue
 	typeset dir=${s%/*}
 	echo "+ Applying patches for ${dir##*/}"
@@ -77,7 +79,7 @@ for d in ${LIB#$ROOT/}/python$PYVER/*-info; do
             echo "license $d/$l license=bundled/$pkg/$l"
         done
     )
-done > $TOP/src/pkg/generated/bundledlicences.$PYVER.p5m
+done > $TOP/src/pkg/generated/bundledlicences.$PYVER.$COMP.p5m
 
 echo "+ Compiling modules"
 cd $LIB
@@ -85,7 +87,7 @@ $PYTHON -m compileall -q .
 
 echo "+ Generating manifest fragment"
 (
-    PYTHONPATH=$LIB/python$PYVER
+    PYTHONPATH=$ROOT/usr/lib/pkg/python$PYVER
     PYTHONPATH+=:$ROOT/usr/lib/python$PYVER/vendor-packages
     PYTHONPATH+=:/usr/lib/python$PYVER/vendor-packages
     PKGSEND="python3 -s $ROOT/usr/bin/pkgsend"
@@ -94,12 +96,14 @@ echo "+ Generating manifest fragment"
     PATH=$ROOT/usr/bin:$PATH
     export PYTHONPATH PATH
     $PKGSEND generate . \
-        | $PKGMOGRIFY - $TOP/src/pkg/transforms/fragmentfix \
+        | egrep 'python|pycache' \
+        | $PKGMOGRIFY -DLIB="${LIB#$ROOT/}" \
+            - $TOP/src/pkg/transforms/fragmentfix \
         | sed -E '
             s/file python[^ ]+/file/
             s%hash="python%hash="usr/lib/pkg/python%
         ' | $PKGFMT -f v2 \
-        > $TOP/src/pkg/generated/bundledmodules.$PYVER.p5m
+        > $TOP/src/pkg/generated/bundledmodules.$PYVER.$COMP.p5m
 )
 
 # Vim hints
