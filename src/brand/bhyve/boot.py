@@ -15,6 +15,7 @@
 
 # Copyright 2022 OmniOS Community Edition (OmniOSce) Association.
 
+import bundle
 import getopt
 import logging
 import os
@@ -29,9 +30,12 @@ import yaml
 import xml.etree.ElementTree as etree
 from pprint import pprint, pformat
 
+import uefi.vars as uefivars
+
 STATEDIR        = '/var/run/bhyve'
 RSRVRCTL        = '/usr/lib/rsrvrctl'
 FIRMWAREPATH    = '/usr/share/bhyve/firmware'
+DEFAULTVARS     = f'{FIRMWAREPATH}/BHYVE_VARS.fd'
 MiB             = 1024 * 1024
 BOOTROM_SIZE    = 16 * MiB
 FBUF_SIZE       = 16 * MiB
@@ -39,7 +43,8 @@ FBUF_SIZE       = 16 * MiB
 # Default values
 opts = {
     'acpi':             'on',
-    'bootorder':        'cd',
+    'bootorder':        'bootdisk,cdrom',
+    "bootnext":         None,
     'bootrom':          'BHYVE_RELEASE_CSM',
     'cloud-init':       'off',
     'console':          '/dev/zconsole',
@@ -62,6 +67,10 @@ opts = {
 }
 
 aliases = {
+    'bootorder': {
+        'cd':           'bootdisk,cdrom',
+        'dc':           'cdrom,bootdisk',
+    },
     'diskif': {
         'virtio':       'virtio-blk',
         'ahci':         'ahci-hd',
@@ -85,6 +94,10 @@ aliases = {
         'BHYVE_RELEASE-2.70':       'BHYVE_RELEASE',
         'BHYVE_RELEASE_CSM-2.40':   'BHYVE_RELEASE_CSM',
     }
+}
+
+bootoptions = {
+    'shell':    ('app', '7c04a583-9e3e-4f1c-ad65-e05268d0b4d1'),
 }
 
 HOSTBRIDGE_SLOT = 0
@@ -446,19 +459,75 @@ def build_cloudinit_image(uuid, src):
     except Exception as e:
         fatal(f'Could not create cloud-init ISO image: {e}')
 
+uefivars_path = None
 def install_uefi_vars():
-    src = f'{FIRMWAREPATH}/BHYVE_VARS.fd'
+    src = DEFAULTVARS
     dst = '/etc/uefivars'
 
-    if testmode or os.path.exists(f'{zoneroot}/{dst}'):
+    global uefivars_path
+    uefivars_path = f'{zoneroot}{dst}'
+
+    if testmode or os.path.exists(uefivars_path):
         return dst
 
     if not os.path.exists(src):
         fatal(f'Could not find template UEFI variables file at {src}')
 
     logging.info('Copying UEFI template variables file')
-    shutil.copyfile(src, f'{zoneroot}/{dst}')
+    shutil.copyfile(src, uefivars_path)
     return dst
+
+def add_bootoption(opt, i, val):
+    bootoptions['{}{}'.format(opt, "" if i is None else i)] = val
+    if i is not None and i == 0:
+        bootoptions[opt] = val
+
+def resolve_bootopt(opt):
+    param = None
+
+    if opt.startswith('net'):
+        (opt, param) = opt.split('=')
+        if param and param not in ['pxe', 'http']:
+            fatal(f"Invalid protocol '{param}' for '{opt}'")
+        if param == 'pxe':
+            param = None
+
+    try:
+        opt = bootoptions[opt]
+    except KeyError:
+        return None
+
+    if param:
+        return opt + (param,)
+
+    return opt
+
+def apply_bootorder(v):
+    bootorder = []
+    for opt in opts['bootorder'].split(','):
+        t = resolve_bootopt(opt)
+        if t:
+            bootorder.append(t)
+
+    logging.debug(f'Setting bootorder to:\n{pformat(bootorder)}')
+
+    try:
+        v.set_bootorder(bootorder)
+    except Exception as e:
+        logging.error(f'Could not set VM boot order: {e}')
+
+def apply_bootnext(v):
+    opt = opts['bootnext']
+    if not opt: return
+    nxt = resolve_bootopt(opt)
+    if not nxt: return
+
+    logging.debug(f'Setting bootnext to: {nxt}')
+
+    try:
+        v.set_bootnext(nxt)
+    except Exception as e:
+        logging.error(f'Could not set VM boot next: {e}')
 
 ##############################################################################
 
@@ -528,12 +597,6 @@ if opts['type'] == 'windows':
     logging.info('Adjusting LPC PCI slot for windows')
     LPC_SLOT = LPC_SLOT_WIN
 
-# At present, moving the CDROM to after the hard disks is the only way we
-# have of changing the boot order. This will hopefully improve in the
-# future once we get persistent bootrom variables.
-if opts['bootorder'].startswith('c') and opts['type'] != 'windows':
-    CDROM_SLOT = CDROM_SLOT2
-
 # Bootrom
 bootrom = opts['bootrom']
 if not os.path.isabs(bootrom):
@@ -543,6 +606,15 @@ if not os.path.isabs(bootrom):
     if not os.path.isfile(bootrom):
         fatal(f'bootrom {opts["bootrom"]} not found.')
 logging.debug(f'Final bootrom: {bootrom}')
+
+uefi_bootrom = boolv(opts['uefivars'], 'uefivars') and '_CSM' not in bootrom
+
+# If we don't have a UEFI bootrom, only basic boot order selection is
+# possible, and  we attempt to honour the request to favour the hard disk
+# by moving the CDROM device to a higher PCI slot.
+if not uefi_bootrom and opts['bootorder'].startswith('bootdisk') and \
+    opts['type'] != 'windows':
+    CDROM_SLOT = CDROM_SLOT2
 
 # UUID
 uuid = opts['uuid']
@@ -592,7 +664,7 @@ args.extend([
 
 # Bootrom
 
-if boolv(opts['uefivars'], 'uefivars') and '_CSM' not in bootrom:
+if uefi_bootrom:
     bootvars = install_uefi_vars()
     args.extend(['-l', f'bootrom,{bootrom},{bootvars}'])
 else:
@@ -623,6 +695,7 @@ for i, v in build_devlist('cdrom', 8):
     args.extend([
         '-s', '{0}:{1},{2},{3},ro'.format(CDROM_SLOT, i, 'ahci-cd', v)
     ])
+    add_bootoption('cdrom', i, ('pci', f'{CDROM_SLOT}.{i}'))
 
 # Bootdisk
 
@@ -632,6 +705,7 @@ try:
         '-s', '{0}:0,{1},{2}'.format(BOOTDISK_SLOT, opts['diskif'],
             diskpath(bootdisk.get('value').strip()))
     ])
+    add_bootoption('bootdisk', None, ('pci', f'{BOOTDISK_SLOT}.0'))
 except:
     pass
 
@@ -652,11 +726,13 @@ for i, v in build_devlist('disk', 16):
             '-s', '{0}:{1},{2},{3}'.format(DISK_SLOT, i, diskif,
             diskpath(v))
         ])
+        add_bootoption('disk', i, ('pci', f'{DISK_SLOT}.{i}'))
     else:
         args.extend([
             '-s', '{0}:{1},{2},{3}'.format(DISK_SLOT2, i - 8, diskif,
             diskpath(v))
         ])
+        add_bootoption(f'disk', i, ('pci', f'{DISK_SLOT2}.{i - 8}'))
 
 # Network
 
@@ -682,6 +758,7 @@ for f in xmlroot.findall('./network[@physical]'):
         '-s', '{0}:{1},{2},{3}{4}'
         .format(NET_SLOT, i, netif, ifname, net_extra)
     ])
+    add_bootoption('net', i, ('pci', f'{NET_SLOT}.{i}'))
     i += 1
 
 for nic, promisc in promisc_filtered_nics.items():
@@ -809,7 +886,17 @@ args.append(name)
 
 ##############################################################################
 
-logging.debug('Final arguments: {0}'.format(pformat(args)))
+logging.debug(f'Final bootoptions:\n{pformat(bootoptions)}')
+if uefivars_path and not testmode:
+    v = uefivars.UEFIVars(uefivars_path)
+    apply_bootorder(v)
+    apply_bootnext(v)
+    try:
+        v.write()
+    except Exception as e:
+        logging.info(f'Could not write boot options: {e}')
+
+logging.debug(f'Final arguments:\n{pformat(args)}')
 logging.info('{0}'.format(' '.join(map(
     lambda s: f'"{s}"' if ' ' in s else s, args))))
 

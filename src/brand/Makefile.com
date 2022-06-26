@@ -48,7 +48,7 @@ $(ROOTDIRS) $(BRANDDIR):
 	mkdir -p $@
 
 $(BRANDDIR)/%: $(BRANDDIR) %
-	rm -f $@; $(INSTALL) -f $(BRANDDIR) -m 0444 $<
+	rm -f $@; $(INSTALL) -f $(@D) -m 0444 $<
 
 INS.py= \
 	{ \

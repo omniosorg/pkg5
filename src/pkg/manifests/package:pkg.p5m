@@ -35,8 +35,8 @@
 <transform file path=$(PYDIRVP)/pkg/client/linkedimage/(?:system|zone).py -> \
     set pkg.depend.bypass-generate .*>
 #
-<include bundledlicences.3.10.p5m>
-<include bundledmodules.3.10.p5m>
+<include bundledlicences.3.10.core.p5m>
+<include bundledmodules.3.10.core.p5m>
 set name=pkg.fmri value=pkg:/package/pkg@$(PKGVERS)
 set name=pkg.summary value="Image Packaging System - pkg(7)"
 set name=pkg.description \

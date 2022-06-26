@@ -12,7 +12,7 @@
 .\" Copyright 2016, OmniTI Computer Consulting, Inc. All Rights Reserved.
 .\" Copyright 2022 OmniOS Community Edition (OmniOSce) Association.
 .\"
-.Dd February 11, 2022
+.Dd June 12, 2022
 .Dt BHYVE 7
 .Os
 .Sh NAME
@@ -39,12 +39,13 @@ Supported attributes are:
 .Xc
 .Pp
 This is a legacy option that no longer has any effect.
-.It Sy bootdisk Ar path Ns Op , Ns Cm serial Ns = Ns Ar serial
+.\" bootdisk
+.It Ic bootdisk Ar path Ns Op , Ns Cm serial Ns = Ns Ar serial
 .Pp
 Specifies a ZFS volume dataset name which will be attached to
 the guest as the boot disk.
 Additional disks can be specified using the
-.Sy disk
+.Ic disk
 attribute, see below.
 .Pp
 If the optional serial number is not provided, one will be automatically
@@ -58,7 +59,86 @@ A suitable ZFS volume can be created using the
 command, for example:
 .Pp
 .Dl zfs create -V 30G rpool/bootdisk2
-.It Sy bootrom Ar firmware
+.\" bootorder
+.It Ic bootorder Ar option Ns Oo \&, Ns Ar option Ns \&... Oc
+.Pp
+Specifies the attempted boot order for the virtual machine.
+.Pp
+For the UEFI bootrom, the available options are:
+.Bl -tag -width bootdisk -offset 4n
+.It Cm shell
+The UEFI firmware shell.
+.It Cm bootdisk
+The disk defined using the
+.Ic bootdisk
+attribute.
+.It Cm disk Ns Oo Ar N Oc
+One of the disks defined with a
+.Ic disk
+attribute.
+.It Cm cdrom Ns Oo Ar N Oc
+One of the cdrom devices defined with a
+.Ic cdrom
+attribute.
+.Sm off
+.It Cm net Ns Oo Ar N Oc Op = Cm pxe | http
+.Sm on
+One of the zone's network devices.
+If the optional protocol is not specified, it defaults to
+.Cm pxe .
+.El
+.Pp
+For the legacy CSM bootrom, the available options are:
+.Bl -tag -width bootdisk -offset 4n
+.It Cm bootdisk
+The disk defined using the
+.Ic bootdisk
+attribute.
+.It Cm cdrom
+The first cdrom device found.
+.El
+.Pp
+For both bootroms, the following legacy aliases are supported but are
+deprecated.
+These must be used alone, without any additional options:
+.Bl -tag -width bootdisk -offset 4n
+.It Cm cd
+Legacy alias for
+.Sm off
+.Ic bootdisk , cdrom .
+.Sm on
+.It Cm dc
+Legacy alias for
+.Sm off
+.Ic cdrom , bootdisk .
+.Sm on
+.El
+.Pp
+Default value:
+.Sm off
+.Ic bootdisk , cdrom
+.Sm on
+.Pp
+Example:
+.Sm off
+.Ic net=http , cdrom1, disk, bootdisk, shell
+.Sm on
+.\" bootnext
+.It Ic bootnext Ar option
+.Pp
+For the UEFI bootrom, specifies the boot device to be used for the next boot
+only, after which booting will revert to the standard boot order
+.Po device enumeration order, or that defined using the
+.Ic bootorder
+attribute
+.Pc .
+The
+.Ar option
+parameter is one of the
+.Ic bootorder
+values shown above for the UEFI bootrom.
+.\" bootrom
+.It Ic bootrom Ar firmware
 .Pp
 Specifies the name of the boot ROM to use for starting the virtual machine.
 The available ROMs are:
@@ -85,7 +165,8 @@ A version of the UEFI ROM which produces debug messages to the console.
 The
 .Ar firmware
 parameter can also be specified as an absolute path to a custom ROM.
-.It Sy cdrom Ns Oo Ar N Oc Ar path
+.\" cdrom
+.It Ic cdrom Ns Oo Ar N Oc Ar path
 .Pp
 Specifies the path to one or more CD/DVD image
 .Pq Pa .iso
@@ -133,7 +214,8 @@ If a
 .Ar URL
 is provided, then that is passed to the guest system as the source of the
 full meta-data.
-.It Sy console Ar options
+.\" console
+.It Ic console Ar options
 .Pp
 This parameter configures where the guest's console device is presented.
 The default value is
@@ -147,13 +229,15 @@ Other supported values include
 which places a UNIX domain socket at
 .Ql <path>
 through which the console can be accessed.
-.It Sy debug.persist Ar on Ns | Ns Ar off
+.\" debug.persist
+.It Ic debug.persist Ar on Ns | Ns Ar off
 A debugging option that causes the zone to keep running after the VM terminates.
 This can be used, for example, to allow a terminated VM to be inspected with the
 .Fl b
 option of
 .Xr mdb 1 .
-.It Sy disk Ns Oo Ar N Oc Ar dataset Ns Op , Ns Cm serial Ns = Ns Ar serial
+.\" disk
+.It Ic disk Ns Oo Ar N Oc Ar dataset Ns Op , Ns Cm serial Ns = Ns Ar serial
 .Pp
 Specifies one or more ZFS volume dataset names which will be attached to
 the guest as disks.
@@ -165,16 +249,17 @@ If only a single disk is required,
 .Ar N
 can be omitted.
 The disks specified via the
-.Sy disk
+.Ic disk
 attribute are in addition to the system boot disk, which is specified using
-.Sy bootdisk .
+.Ic bootdisk .
 .Pp
 If the optional serial number is not provided, one will be automatically
 generated from the dataset name.
 Each ZFS volume must also be mapped into the zone using a
 .Sy device
 block as shown in the example below.
-.It Sy diskif Ar type
+.\" diskif
+.It Ic diskif Ar type
 .Pp
 Specifies the type of interface to which the disks will be attached.
 Available options are:
@@ -193,20 +278,23 @@ Override the
 .Ar type
 for the disk at target
 .Ar N .
-.It Sy dns-domain Ar domainname
+.\" dns-domain
+.It Ic dns-domain Ar domainname
 .Pp
 The DNS domain name for the guest.
 Included in the data passed to the guest when the
 .Sy cloud-init
 option is enabled.
-.It Sy extra Ar options
+.\" extra
+.It Ic extra Ar options
 .Pp
 Any extra
 .Ar options
 to be passed directly to the
 .Nm
 hypervisor.
-.It Sy hostbridge Ar type
+.\" hostbridge
+.It Ic hostbridge Ar type
 .Pp
 Specifies the type of emulated system host bridge that will be presented to
 the guest.
@@ -225,12 +313,14 @@ Available options are:
 .Sy vendor = Ar ID , Sy device = Ar ID
 .Sm on
 .El
-.It Sy memreserve Ar on Ns | Ns Ar off
+.\" memreserve
+.It Ic memreserve Ar on Ns | Ns Ar off
 When this option is enabled, memory is pre-allocated and retained even when
 the zone is shut down.
 This is useful to prevent memory being re-used by the system for other things
 such as the ZFS cache (ARC) when the zone is not running.
-.It Sy netif Ar type
+.\" netif
+.It Ic netif Ar type
 .Pp
 Specifies the type of network interface that will be used for the interfaces
 presented to the guest.
@@ -263,13 +353,15 @@ initial user.
 The password can be provided as a fixed string, a pre-computed hash or a path
 to a file that contains the desired password or password hash, relative to
 the global zone root.
-.It Sy priv.debug Ar on Ns | Ns Ar off
+.\" priv.debug
+.It Ic priv.debug Ar on Ns | Ns Ar off
 Set to
 .Ar on
 to enable debugging for privilege management.
 The debug messages will appear in the zone's
 .Pa /tmp/init.log .
-.It Sy ppt Ns Ar N Cm on Ns | Ns Cm off Ns | Ns Cm slot Ns Ar S
+.\" ppt
+.It Ic ppt Ns Ar N Cm on Ns | Ns Cm off Ns | Ns Cm slot Ns Ar S
 .Pp
 Pass through a PCI device to the guest.
 Available devices for pass-through can be viewed with
@@ -311,7 +403,8 @@ or by adding an entry to the
 file
 .Pq in the same format as Pa /etc/driver_aliases
 and rebooting.
-.It Sy ram Ar size Ns Op Cm KMGT
+.\" ram
+.It Ic ram Ar size Ns Op Cm KMGT
 .Pp
 Specify the guest's physical memory size.
 The
@@ -327,7 +420,8 @@ If no suffix is given, the value is assumed to be in mebibytes.
 .Pp
 The default value, if this attribute is not specified, is
 .Sy 256M .
-.It Sy resolvers Ar resolver Ns Oo \&, Ns Ar resolver Ns \&... Oc
+.\" resolvers
+.It Ic resolvers Ar resolver Ns Oo \&, Ns Ar resolver Ns \&... Oc
 .Pp
 A comma-delimited list of DNS resolver IP addresses.
 These are included in the data passed to the guest when the
@@ -360,7 +454,8 @@ for the default user and/or the root user.
 .Ar sshkey
 can be provided as a fixed string or a path to a file that contains the desired
 public key.
-.It Sy type Ar type
+.\" type
+.It Ic type Ar type
 .Pp
 Specifies the type of the virtual machine.
 This needs to be set for some guest operating systems so that things are
@@ -384,7 +479,8 @@ Supported values are:
 Enable or disable persistent UEFI variables.
 Defaults to
 .Cm on .
-.It Sy uuid Ar uuid
+.\" uuid
+.It Ic uuid Ar uuid
 .Pp
 Specifies the unique identifier for the virtual machine.
 If this attribute is not set, a random UUID will be generated when the zone
@@ -431,7 +527,8 @@ mount.
 See the
 .Sx EXAMPLES
 section below.
-.It Sy vga Ar off Ns | Ns Ar on Ns | Ns Ar io
+.\" vga
+.It Ic vga Ar off Ns | Ns Ar on Ns | Ns Ar io
 .Pp
 Specify the type of VGA emulation to use when the framebuffer and VNC server
 are enabled.

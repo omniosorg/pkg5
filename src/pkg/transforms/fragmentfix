@@ -1,8 +1,24 @@
+#
+# This file and its contents are supplied under the terms of the
+# Common Development and Distribution License ("CDDL"), version 1.0.
+# You may only use this file in accordance with the terms of version
+# 1.0 of the CDDL.
+#
+# A full copy of the text of the CDDL should have accompanied this
+# source. A copy of the CDDL is also available via the Internet at
+# http://www.illumos.org/license/CDDL.
+
+# Copyright 2022 OmniOS Community Edition (OmniOSce) Association.
+
 # This transform file is used by tools/installmodules to help generate
 # the final package manifest fragment.
 
-<transform path=(python3\.\d+) -> edit hash %<1> usr/lib/pkg/%<1>>
-<transform path=(python3\.\d+) -> edit path %<1> usr/lib/pkg/%<1>>
+<transform path=. -> set path TBD%(path)>
+
+<transform path=TBD(python3\.\d+) -> edit hash %<1> $(LIB)/%<1>>
+<transform path=TBD(python3\.\d+) -> edit path TBD%<1> $(LIB)/%<1>>
 <transform file mode=0755 -> set mode 0555>
 <transform file mode=0644 -> set mode 0444>
+
+<transform path=TBD -> drop>
 

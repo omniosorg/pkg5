@@ -6,7 +6,6 @@
     pkg:/library/python-3/jsonschema-310
     pkg:/library/python-3/pybonjour-310
     pkg:/library/python-3/pyopenssl-310
-    pkg:/library/python-3/pyyaml-310
     pkg:/library/python-3/rapidjson-310
     #
     pkg:/system/library/python/libbe-310

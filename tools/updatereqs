@@ -51,7 +51,7 @@ typeset -a ignore=(
 
 tmpd=`mktemp -d`
 tmpf=`mktemp`
-trap 'rm -rf $tmpd $tmpf' EXIT
+trap 'rm -rf $tmpd $tmpf $tmpf.*' EXIT
 
 echo "+ Installing 'pipreqs' to $tmpd"
 python3 -mvenv $tmpd
@@ -59,7 +59,7 @@ python3 -mvenv $tmpd
 pip install --quiet --upgrade pip
 pip install --quiet pipreqs
 
-echo "+ Evaluating requirements"
+echo "+ Evaluating requirements (core)"
 ignores=`printf ",%s" "${ignore[@]}"`
 pipreqs --print --ignore ${ignores:1} --mode no-pin $ROOT/src | sed "
     # Use core version
@@ -77,29 +77,42 @@ pipreqs --print --ignore ${ignores:1} --mode no-pin $ROOT/src | sed "
     /pyOpenSSL/d
     /pylint/d
     /six/d
-" | overrides > $tmpf
+" | overrides > $tmpf.core
 
-echo "+ Top level package set"
-sed 's/^/    /' <  $tmpf
+echo "+ Evaluating requirements (bhyve)"
+pipreqs --print --mode no-pin $ROOT/src/brand/bhyve > $tmpf.bhyve
 
-rm -rf $tmpd
-python3 -mvenv $tmpd
-. $tmpd/bin/activate
-echo "+ Building required package set"
-pip install --quiet --upgrade pip wheel
-pip install -r $tmpf
+function freeze {
+    typeset tag="$1"; shift
+    typeset f="$1"; shift
+    typeset op="$1"; shift
 
-echo "+ Generating freeze file"
-pip freeze | sed "
+    echo "+ $tag package set"
+    sed 's/^/    /' <  $f
+
+    rm -rf $tmpd
+    python3 -mvenv $tmpd
+    . $tmpd/bin/activate
+    echo "+ Building required package set ($tag)"
+    pip install --quiet --upgrade pip wheel
+    pip install -r $f
+
+    echo "+ Generating freeze file ($tag)"
+    pip freeze | sed "
 1i\\
 #\\
 # This file was automatically produced by tools/updatereqs\\
 # Generated on `date`\\
 # Do not edit directly\\
 #
-" | overrides > $ROOT/src/requirements.txt
+" | overrides > $op
+}
 
+freeze core $tmpf.core $ROOT/src/requirements.txt
 echo "+ Updated src/requirements.txt"
+
+freeze bhyve $tmpf.bhyve $ROOT/src/brand/bhyve/requirements.txt
+echo "+ Updated src/brand/bhyve/requirements.txt"
 
 # Vim hints
 # vim:ts=4:sw=4:et:fdm=marker
