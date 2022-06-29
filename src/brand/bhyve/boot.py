@@ -43,7 +43,7 @@ FBUF_SIZE       = 16 * MiB
 # Default values
 opts = {
     'acpi':             'on',
-    'bootorder':        'bootdisk,cdrom',
+    'bootorder':        'path0,bootdisk,cdrom0',
     "bootnext":         None,
     'bootrom':          'BHYVE_RELEASE_CSM',
     'cloud-init':       'off',
@@ -68,8 +68,8 @@ opts = {
 
 aliases = {
     'bootorder': {
-        'cd':           'bootdisk,cdrom',
-        'dc':           'cdrom,bootdisk',
+        'cd':           'path0,bootdisk,cdrom0',
+        'dc':           'cdrom0,path0,bootdisk',
     },
     'diskif': {
         'virtio':       'virtio-blk',
@@ -485,6 +485,15 @@ def add_bootoption(opt, i, val):
 def resolve_bootopt(opt):
     param = None
 
+    m = re.search(rf'^path(\d+)?$', opt)
+    if m:
+        pathindex = int(m.group(1)) if m.group(1) else 0
+        return ('path', pathindex)
+
+    m = re.search(rf'^boot(\d+)$', opt)
+    if m:
+        return ('boot', int(m.group(1)))
+
     if opt.startswith('net'):
         (opt, param) = opt.split('=')
         if param and param not in ['pxe', 'http']:
@@ -503,13 +512,16 @@ def resolve_bootopt(opt):
     return opt
 
 def apply_bootorder(v):
+    if not opts['bootorder']:
+        return
     bootorder = []
     for opt in opts['bootorder'].split(','):
         t = resolve_bootopt(opt)
         if t:
             bootorder.append(t)
 
-    logging.debug(f'Setting bootorder to:\n{pformat(bootorder)}')
+    logging.debug(f'For requested bootorder {opts["bootorder"]}')
+    logging.debug(f'... setting to: {pformat(bootorder)}')
 
     try:
         v.set_bootorder(bootorder)
@@ -518,9 +530,11 @@ def apply_bootorder(v):
 
 def apply_bootnext(v):
     opt = opts['bootnext']
-    if not opt: return
+    if not opt:
+        return
     nxt = resolve_bootopt(opt)
-    if not nxt: return
+    if not nxt:
+        return
 
     logging.debug(f'Setting bootnext to: {nxt}')
 
@@ -528,6 +542,9 @@ def apply_bootnext(v):
         v.set_bootnext(nxt)
     except Exception as e:
         logging.error(f'Could not set VM boot next: {e}')
+
+    subprocess.run(['/usr/sbin/zonecfg', '-z', zone,
+        'remove attr name=bootnext'])
 
 ##############################################################################
 
@@ -889,6 +906,11 @@ args.append(name)
 logging.debug(f'Final bootoptions:\n{pformat(bootoptions)}')
 if uefivars_path and not testmode:
     v = uefivars.UEFIVars(uefivars_path)
+    for i in sorted(v.bootmap.keys()):
+        logging.debug(f'Boot{i:04x} - {v.bootmap[i]}')
+    logging.debug('-----------')
+    for k, i in v.bootrmap.items():
+        logging.debug(f'{k} -> Boot{i:04x}')
     apply_bootorder(v)
     apply_bootnext(v)
     try:
