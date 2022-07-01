@@ -173,8 +173,8 @@ class UEFIVars:
         self._parse_bootoptions()
 
     def _parse_bootoptions(self):
-        rmap = {}
         fmap = {}
+        paths = []
         for v in self.vars:
             if v.state != VAR_ADDED:
                 continue
@@ -190,7 +190,7 @@ class UEFIVars:
               data.attributes.LOAD_OPTION_HIDDEN):
                 continue
 
-            guid = pci = None
+            guid = pci = path = None
             uri = False
             for p in data.paths:
                 if p.type == 1 and p.subtype == 1 and p.datalen == 2:
@@ -200,17 +200,33 @@ class UEFIVars:
                     guid = EfiGuid.parse(p.data).str
                 if p.type == 3 and p.subtype == 24:
                     uri = True
+                if p.type == 4 and p.subtype == 4:
+                    path = CString("utf_16_le").parse(p.data)
 
+            entry = None
             if pci and uri:
-                fmap[index] = ('pci', pci, 'http')
+                entry = ('pci', pci, 'http')
             elif pci:
-                fmap[index] = ('pci', pci)
+                entry = ('pci', pci)
             elif guid:
-                fmap[index] = ('app', guid)
-            rmap[fmap[index]] = index
+                entry = ('app', guid)
+            elif path:
+                entry = ('path', path)
+                paths.append(index)
+
+            if entry:
+                fmap[index] = entry
 
         self.bootmap = fmap
         self.bootrmap = {v: k for k, v in fmap.items()}
+
+        for i in fmap.keys():
+            self.bootrmap[('boot', i)] = i
+
+        if paths:
+            self.bootrmap[('path',)] = paths[0]
+            for i, pi in enumerate(paths):
+                self.bootrmap[('path', i)] = pi
 
     def print_vars(self):
         i = 0

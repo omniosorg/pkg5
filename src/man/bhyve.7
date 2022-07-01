@@ -68,6 +68,15 @@ For the UEFI bootrom, the available options are:
 .Bl -tag -width bootdisk -offset 4n
 .It Cm shell
 The UEFI firmware shell.
+.It Cm path Ns Oo Ar N Oc
+The
+.Ar N Ns th
+boot entry that specifies a specific boot media path.
+The first such entry is selected with
+.Cm path
+or
+.Cm path0
+and subsequent ones use increasing suffixes.
 .It Cm bootdisk
 The disk defined using the
 .Ic bootdisk
@@ -105,18 +114,18 @@ These must be used alone, without any additional options:
 .It Cm cd
 Legacy alias for
 .Sm off
-.Ic bootdisk , cdrom .
+.Ic path0 , bootdisk , cdrom0
 .Sm on
 .It Cm dc
 Legacy alias for
 .Sm off
-.Ic cdrom , bootdisk .
+.Ic cdrom0 , path0 , bootdisk
 .Sm on
 .El
 .Pp
 Default value:
 .Sm off
-.Ic bootdisk , cdrom
+.Ic path0, bootdisk , cdrom0
 .Sm on
 .Pp
 Example:
