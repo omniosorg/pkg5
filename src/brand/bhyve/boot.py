@@ -495,7 +495,10 @@ def resolve_bootopt(opt):
         return ('boot', int(m.group(1)))
 
     if opt.startswith('net'):
-        (opt, param) = opt.split('=')
+        if '=' in opt:
+            (opt, param) = opt.split('=')
+        else:
+            param = None
         if param and param not in ['pxe', 'http']:
             fatal(f"Invalid protocol '{param}' for '{opt}'")
         if param == 'pxe':
