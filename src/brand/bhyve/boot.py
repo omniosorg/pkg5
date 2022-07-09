@@ -26,7 +26,6 @@ import sys
 import tempfile
 import time
 import ucred
-import yaml
 import xml.etree.ElementTree as etree
 from pprint import pprint, pformat
 
@@ -119,6 +118,8 @@ LPC_SLOT_WIN    = 31
 
 sysboot         = False
 testmode        = False
+jsonmode        = False
+quiet           = False
 zone            = None
 xmlfile         = None
 
@@ -137,6 +138,7 @@ def usage(msg=None):
 boot [-S] [-t] [-x xml] <[-z] zone>
    -S   System initialisation (host boot) mode
    -t   Test mode - just show what would be done
+   -j   Output the computed zone data in JSON format
    -x   Path to zone's XML file
    -z   Name of zone
 ''')
@@ -145,7 +147,7 @@ boot [-S] [-t] [-x xml] <[-z] zone>
     sys.exit(2)
 
 try:
-    cliopts, args = getopt.getopt(sys.argv[1:], "Stx:z:")
+    cliopts, args = getopt.getopt(sys.argv[1:], "Sjtx:z:")
 except getopt.GetoptError:
     usage()
 for opt, arg in cliopts:
@@ -153,6 +155,10 @@ for opt, arg in cliopts:
         sysboot = True
     elif opt == '-t':
         testmode = True
+    elif opt == '-j':
+        jsonmode = True
+        testmode = True
+        quiet = True
     elif opt == '-x':
         xmlfile = arg
     elif opt == '-z':
@@ -175,6 +181,21 @@ def fatal(msg):
     logging.error(msg)
     print(msg, file=sys.stderr)
     sys.exit(1)
+
+def error(msg):
+    logging.error(msg)
+
+def debug(msg):
+    if not quiet:
+        logging.debug(msg)
+
+def info(msg):
+    if not quiet:
+        logging.info(msg)
+
+def warning(msg):
+    if not quiet:
+        logging.warning(msg)
 
 if not xmlfile:
     xmlfile = f'/etc/zones/{zone}.xml'
@@ -204,7 +225,7 @@ if not testmode:
     logging.basicConfig(filename=f'{zonepath}/log/zone.log', filemode='a',
         level=logging.DEBUG, force=True)
 
-logging.info(f'Zone name: {name}')
+info(f'Zone name: {name}')
 
 ##############################################################################
 
@@ -231,15 +252,14 @@ def parseopt(tag):
     try:
         el = xmlroot.find('./attr[@name="{0}"]'.format(tag))
         opts[tag] = el.get('value').strip()
-        logging.debug('Found custom {0} attribute - "{1}"'
-            .format(tag, opts[tag]))
+        debug('Found custom {0} attribute - "{1}"'.format(tag, opts[tag]))
         if tag in aliases:
             val = opts[tag]
             if (bt := boolv(val, tag, ignore=True)) is not None:
                 val = 'on' if bt else 'off'
             try:
                 opts[tag] = aliases[tag][val]
-                logging.debug('  Alias expanded to {0}'.format(opts[tag]))
+                debug('  Alias expanded to {0}'.format(opts[tag]))
             except KeyError:
                 pass
     except:
@@ -305,7 +325,7 @@ def build_devlist(type, maxval, plain=True):
                 fatal('{type}: no more available slots')
             devlist[k] = dev.get('value').strip()
 
-    logging.debug('{} list: \n{}'.format(type, pformat(devlist)))
+    debug('{} list: \n{}'.format(type, pformat(devlist)))
 
     return sorted(devlist.items())
 
@@ -331,11 +351,11 @@ def parse_ram(v):
 
     mem <<= shift
 
-    logging.debug(f'parse_ram({v}) = {mem}')
+    debug(f'parse_ram({v}) = {mem}')
     return mem
 
 def build_cloudinit_image(uuid, src):
-    logging.info('Generating cloud-init data')
+    info('Generating cloud-init data')
 
     #### Metadata
 
@@ -383,7 +403,7 @@ def build_cloudinit_image(uuid, src):
                 'show-vnic', '-p', '-o', 'MACADDRESS', vnic ],
                 capture_output=True, text=True)
             if p.returncode != 0:
-                logging.warning(f'Could not find MAC address for VNIC {vnic}')
+                warning(f'Could not find MAC address for VNIC {vnic}')
                 continue
             mac = p.stdout.strip()
             mac = ':'.join(l.zfill(2) for l in mac.split(':'))
@@ -411,9 +431,10 @@ def build_cloudinit_image(uuid, src):
 
             network_data['ethernets'][vnic] = data
 
-    logging.debug('Metadata:\n' + yaml.dump(meta_data))
-    logging.debug('Userdata:\n' + yaml.dump(user_data))
-    logging.debug('Netdata:\n' + yaml.dump(network_data))
+    import yaml
+    debug('Metadata:\n' + yaml.dump(meta_data))
+    debug('Userdata:\n' + yaml.dump(user_data))
+    debug('Netdata:\n' + yaml.dump(network_data))
 
     if testmode:
         return
@@ -424,7 +445,7 @@ def build_cloudinit_image(uuid, src):
         yaml.dump(meta_data, fh)
 
     if os.path.isabs(src) and os.path.isfile(src):
-        logging.info(f'Using supplied cloud-init user-data file from {src}')
+        info(f'Using supplied cloud-init user-data file from {src}')
         shutil.copyfile(src, f'{dir}/user-data')
     else:
         with open(f'{dir}/user-data', 'w') as fh:
@@ -442,7 +463,7 @@ def build_cloudinit_image(uuid, src):
     if os.path.exists(cidir):
         shutil.rmtree(cidir)
     os.rename(dir, cidir)
-    logging.info('Building cloud-init ISO image')
+    info('Building cloud-init ISO image')
     try:
         ret = subprocess.run([
             '/usr/bin/mkisofs',
@@ -454,7 +475,7 @@ def build_cloudinit_image(uuid, src):
             cidir
         ], text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         for l in ret.stdout.splitlines():
-            logging.info(l)
+            info(l)
         os.chmod(seed, mode=0o644)
     except Exception as e:
         fatal(f'Could not create cloud-init ISO image: {e}')
@@ -473,7 +494,7 @@ def install_uefi_vars():
     if not os.path.exists(src):
         fatal(f'Could not find template UEFI variables file at {src}')
 
-    logging.info('Copying UEFI template variables file')
+    info('Copying UEFI template variables file')
     shutil.copyfile(src, uefivars_path)
     return dst
 
@@ -523,13 +544,13 @@ def apply_bootorder(v):
         if t:
             bootorder.append(t)
 
-    logging.debug(f'For requested bootorder {opts["bootorder"]}')
-    logging.debug(f'... setting to: {pformat(bootorder)}')
+    debug(f'For requested bootorder {opts["bootorder"]}')
+    debug(f'... setting to: {pformat(bootorder)}')
 
     try:
         v.set_bootorder(bootorder)
     except Exception as e:
-        logging.error(f'Could not set VM boot order: {e}')
+        error(f'Could not set VM boot order: {e}')
 
 def apply_bootnext(v):
     opt = opts['bootnext']
@@ -539,12 +560,12 @@ def apply_bootnext(v):
     if not nxt:
         return
 
-    logging.debug(f'Setting bootnext to: {nxt}')
+    debug(f'Setting bootnext to: {nxt}')
 
     try:
         v.set_bootnext(nxt)
     except Exception as e:
-        logging.error(f'Could not set VM boot next: {e}')
+        error(f'Could not set VM boot next: {e}')
 
     subprocess.run(['/usr/sbin/zonecfg', '-z', zone,
         'remove attr name=bootnext'])
@@ -578,11 +599,11 @@ if boolv(opts['memreserve'], 'memreserve'):
         else:
             delta //= -MiB
             op = '-r'
-        logging.debug(f'RAM change from {oldmem} to {mem} - {op} {delta}')
+        debug(f'RAM change from {oldmem} to {mem} - {op} {delta}')
         ret = subprocess.run([RSRVRCTL, op, str(delta)],
             text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         for l in ret.stdout.splitlines():
-            logging.debug(l)
+            debug(l)
 
         try:
             fh = tempfile.NamedTemporaryFile(mode='w', dir=f'{STATEDIR}',
@@ -590,7 +611,7 @@ if boolv(opts['memreserve'], 'memreserve'):
         except Exception as e:
             fatal(f'Could not create temporary file: {e}')
         else:
-            logging.debug(f'Created temporary file at {fh.name}')
+            debug(f'Created temporary file at {fh.name}')
 
         tf = fh.name
         fh.write(str(mem))
@@ -600,9 +621,9 @@ if boolv(opts['memreserve'], 'memreserve'):
         except Exception as e:
             fatal(f'Could not create {name}.resv from temporary file: {e}')
         else:
-            logging.debug(f'Successfully created {STATEDIR}/{name}.resv')
+            debug(f'Successfully created {STATEDIR}/{name}.resv')
 
-        logging.info(f'{mem//MiB} MiB of RAM reserved in memory reservoir')
+        info(f'{mem//MiB} MiB of RAM reserved in memory reservoir')
 
 # This may be being called during system boot for a VM which does not
 # have autoboot set on it, and in that case there is nothing more to do.
@@ -614,7 +635,7 @@ if opts['type'] == 'windows':
     # ... There are currently some slot limitations with UEFI:
     # ... - AHCI devices must be in slots 3/4/5/6
     # ... - The PCI-ISA bus aka lpc must be in slot 31
-    logging.info('Adjusting LPC PCI slot for windows')
+    info('Adjusting LPC PCI slot for windows')
     LPC_SLOT = LPC_SLOT_WIN
 
 # Bootrom
@@ -625,7 +646,7 @@ if not os.path.isabs(bootrom):
         bootrom += '.fd'
     if not os.path.isfile(bootrom):
         fatal(f'bootrom {opts["bootrom"]} not found.')
-logging.debug(f'Final bootrom: {bootrom}')
+debug(f'Final bootrom: {bootrom}')
 
 uefi_bootrom = boolv(opts['uefivars'], 'uefivars') and '_CSM' not in bootrom
 
@@ -642,10 +663,10 @@ if not uuid:
     try:
         with open(f'{zoneroot}/etc/uuid') as file:
             uuid = file.read().strip()
-            logging.info('Zone UUID: {0}'.format(uuid))
+            info('Zone UUID: {0}'.format(uuid))
     except:
         uuid = None
-logging.debug(f'Final uuid: {uuid}')
+debug(f'Final uuid: {uuid}')
 
 ##############################################################################
 
@@ -659,12 +680,13 @@ if boolv(opts['cloud-init'], 'cloud-init', ignore=True) is not False:
     else:
         build_cloudinit_image(uuid, opts['cloud-init'])
         ser = f'ds=nocloud;i={uuid}'
-        args.extend([
-            '-s', '{0}:0,ahci-cd,/cloud-init.iso,ro'.format(CINIT_SLOT)
+        args.extend([ '-s',
+            '{0}:0,ahci-cd,/cloud-init.iso,ro,ser=CLOUD-INIT-0'
+            .format(CINIT_SLOT)
         ])
 
 if opts['type'] == 'openbsd':
-    logging.info('Ignoring unknown MSRs for OpenBSD')
+    info('Ignoring unknown MSRs for OpenBSD')
     args.append('-w')
 
 if uuid:
@@ -788,7 +810,7 @@ for nic, promisc in promisc_filtered_nics.items():
         nic,
     ]
 
-    logging.debug(f'Setting promisc-filtered for {nic} to {promisc}')
+    debug(f'Setting promisc-filtered for {nic} to {promisc}')
     p = subprocess.run(dladm_args, capture_output=True, text=True)
     if p.returncode > 0:
         fatal(f'Could set promisc-filtered for {nic}: {p.stderr}')
@@ -906,29 +928,74 @@ args.append(name)
 
 ##############################################################################
 
-logging.debug(f'Final bootoptions:\n{pformat(bootoptions)}')
+debug(f'Final bootoptions:\n{pformat(bootoptions)}')
 if uefivars_path and not testmode:
     v = uefivars.UEFIVars(uefivars_path)
     for i in sorted(v.bootmap.keys()):
-        logging.debug(f'Boot{i:04x} - {v.bootmap[i]}')
-    logging.debug('-----------')
+        debug(f'Boot{i:04x} - {v.bootmap[i]}')
+    debug('-----------')
     for k, i in v.bootrmap.items():
-        logging.debug(f'{k} -> Boot{i:04x}')
+        debug(f'{k} -> Boot{i:04x}')
     apply_bootorder(v)
     apply_bootnext(v)
     try:
         v.write()
     except Exception as e:
-        logging.info(f'Could not write boot options: {e}')
+        info(f'Could not write boot options: {e}')
 
-logging.debug(f'Final arguments:\n{pformat(args)}')
-logging.info('{0}'.format(' '.join(map(
+debug(f'Final arguments:\n{pformat(args)}')
+info('{0}'.format(' '.join(map(
     lambda s: f'"{s}"' if ' ' in s else s, args))))
 
 p = subprocess.run(args, capture_output=True, text=True)
 # config.dump exits with a status code of 1. Other errors indicate a problem.
 if p.returncode != 1:
     fatal(f'Could not parse configuration: {p.stderr}')
+
+if jsonmode:
+    from itertools import zip_longest
+    import json
+
+    data = {
+        'zonename':     name,
+        'zonepath':     zonepath,
+        'zoneroot':     zoneroot,
+        'slots': {
+            "hostbridge":   HOSTBRIDGE_SLOT,
+            "lpc":          LPC_SLOT,
+            "cdrom":        CDROM_SLOT,
+            "bootdisk":     BOOTDISK_SLOT,
+            "disk":         DISK_SLOT,
+            "net":          NET_SLOT,
+            "ppt":          PPT_SLOT,
+            "rng":          RNG_SLOT,
+            "virtfs":       VIRTFS_SLOT,
+            "cloudinit":    CINIT_SLOT,
+            "vnc":          VNC_SLOT,
+        },
+        'uefi':         uefi_bootrom,
+        'bootoptions':  bootoptions,
+        'opts':         opts,
+        'config':       {},
+    }
+
+    for line in p.stdout.splitlines():
+        if line.startswith('config.dump'): continue
+        if '=' not in line: continue
+        (k, v) = line.split('=', maxsplit=1)
+
+        keys = k.split('.')
+        p = data['config']
+        for (a, b) in zip_longest(keys, keys[1:]):
+            if b is None:   # tail
+                p[a] = v
+                break
+            if a not in p:
+                p[a] = {}
+            p = p[a]
+
+    print(json.dumps(data))
+    sys.exit(0)
 
 fh = None
 if not testmode:
@@ -938,7 +1005,7 @@ if not testmode:
     except Exception as e:
         fatal(f'Could not create temporary file: {e}')
     else:
-        logging.debug(f'Created temporary file at {fh.name}')
+        debug(f'Created temporary file at {fh.name}')
 
 writecfg(fh, '#\n# Generated from zone configuration\n#')
 
@@ -957,7 +1024,7 @@ if not testmode:
     except Exception as e:
         fatal(f'Could not create bhyve.cfg from temporary file: {e}')
     else:
-        logging.info(f'Successfully created {zoneroot}/etc/bhyve.cfg')
+        info(f'Successfully created {zoneroot}/etc/bhyve.cfg')
 
 # Vim hints
 # vim:ts=4:sw=4:et:fdm=marker
