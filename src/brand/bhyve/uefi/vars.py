@@ -173,17 +173,21 @@ class UEFIVars:
         self._parse_bootoptions()
 
     def _parse_bootoptions(self):
+
+        def be_index(x):
+            return int(x.name[4:], 16) if x.name.startswith('Boot0') else 255
+
+        def is_be(x):
+            return (
+                x.state == VAR_ADDED and
+                x.guid.str == GLOBAL_VARIABLE_GUID and
+                x.name.startswith('Boot0')
+            )
+
         fmap = {}
         paths = []
-        for v in self.vars:
-            if v.state != VAR_ADDED:
-                continue
-            if v.guid.str != GLOBAL_VARIABLE_GUID:
-                continue
-            if not v.name.startswith('Boot0'):
-                continue
-
-            index = int(v.name[4:], 16)
+        for v in sorted(filter(is_be, self.vars), key=be_index):
+            index = be_index(v)
             data = BootEntry.parse(v.data)
 
             if (not data.attributes.LOAD_OPTION_ACTIVE or
