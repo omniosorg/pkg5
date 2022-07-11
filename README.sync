@@ -4,13 +4,11 @@
 The pkg5 components have been updated to the latest upstream solaris-ips
 as of:
 
-commit 818d6795b518f01281ca259bff623ec3fc4ff34b
-Author: Peter Dennis <peter.dennis@oracle.com>
-Date:   Wed Apr 6 15:49:29 2022 -0700
+commit 5ee60e3c8e5b2dbc4f2dcc9e4a47871ac3178a3d
+Author: Darren J Moffat <Darren.Moffat@Oracle.COM>
+Date:   Tue Jul 5 06:49:42 2022 -0700
 
-    33860789 t_dependencies.py fails when Python 2 is not available
-    33957374 bad python files causes stack trace and byte stream output
-    33996346 baseline out the sysattr failures for file retension
+    33845953 constrained image puts auto-update into maintenance
 
 -----------------------------------------------------------------------------
 
