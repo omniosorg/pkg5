@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2022, Oracle and/or its affiliates.
 #
 
 from __future__ import print_function
@@ -793,7 +793,7 @@ def archive_pkgs(pargs, target, list_newest, all_versions, all_timestamps,
                 tracker = get_tracker()
                 msg(_("Retrieving packages for publisher {0} ...").format(
                     src_pub.prefix))
-                if pargs == None or len(pargs) == 0:
+                if pargs is None or len(pargs) == 0:
                         usage(_("must specify at least one pkgfmri"))
 
                 matches = get_matches(src_pub, tracker, xport, pargs,
@@ -1003,7 +1003,12 @@ def clone_repo(pargs, target, list_newest, all_versions, all_timestamps,
                             prefix='catalog-')
                         shutil.rmtree(old_c_root)
                         shutil.move(c_root, old_c_root)
-                        shutil.copytree(src_cat_root, c_root)
+                        # Check if the source catalog is empty.
+                        if not src_cat_root:
+                            msg(_("The source catalog '{0}' is empty").
+                                    format(pub))
+                        else:
+                            shutil.copytree(src_cat_root, c_root)
                 except Exception as e:
                         abort(err=_("Unable to copy catalog files: {0}").format(
                             e))
@@ -1347,7 +1352,7 @@ def transfer_pkgs(pargs, target, list_newest, all_versions, all_timestamps,
 
                 msg(_("Processing packages for publisher {0} ...").format(
                     src_pub.prefix))
-                if pargs == None or len(pargs) == 0:
+                if pargs is None or len(pargs) == 0:
                         usage(_("must specify at least one pkgfmri"))
 
                 republish = False
