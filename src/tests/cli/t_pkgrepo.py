@@ -22,7 +22,7 @@
 
 #
 # Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
-# Copyright (c) 2010, 2021, Oracle and/or its affiliates.
+# Copyright (c) 2010, 2022, Oracle and/or its affiliates.
 #
 
 from . import testutils
@@ -1099,7 +1099,7 @@ test1\t1\tonline\t2011-08-04T20:34:58Z
                 repo = self.get_repo(repo_path, read_only=True)
                 self.assertEqualDiff([pfmri],
                     [str(f) for f in repo.get_catalog("test").fmris()])
- 
+
                 # Now verify that 'pkgrepo rebuild' will still work
                 # (filesystem-based repos only) if the catalog is corrupted.
                 cat = repo.get_catalog("test")
@@ -2081,7 +2081,7 @@ test2	zoo		1.0	5.11	0	20110804T203458Z	pkg://test2/zoo@1.0,5.11-0:20110804T20345
                 with open(path, "r") as mf:
                         with open(mpath_new, "w") as mf_new:
                                 for line in mf.readlines():
-                                        if not "pkg.t_pkgrepo.bad_sig" in line:
+                                        if "pkg.t_pkgrepo.bad_sig" not in line:
                                                 mf_new.write(line)
                 os.rename(mpath_new, path)
 
@@ -3689,12 +3689,15 @@ class TestPkgrepoMultiRepo(pkg5unittest.ManyDepotTestCase):
 
                 self.rurl1 = self.dcs[1].get_repo_url()
                 self.durl1 = self.dcs[1].get_depot_url()
+                self.rdir1 = self.dcs[1].get_repodir()
 
                 self.rurl2 = self.dcs[2].get_repo_url()
                 self.durl2 = self.dcs[2].get_depot_url()
+                self.rdir2 = self.dcs[2].get_repodir()
 
                 self.rurl3 = self.dcs[3].get_repo_url()
                 self.durl3 = self.dcs[3].get_depot_url()
+                self.rdir3 = self.dcs[3].get_repodir()
 
                 self.rurl4 = self.dcs[4].get_repo_url()
                 self.rdir4 = self.dcs[4].get_repodir()
@@ -3926,7 +3929,7 @@ class TestPkgrepoMultiRepo(pkg5unittest.ManyDepotTestCase):
                 self.pkgrepo("diff --parsable -s {0} -s {1}".format(self.rurl1,
                     self.rurl4), exit=10)
                 output = json.loads(self.output)
-                # test1 in repo4 conatins completely different fmris for the
+                # test1 in repo4 contains completely different fmris for the
                 # the one in repo1.
                 self.assertTrue(output["table_data"][0][3]["packages"] == 0)
                 self.assertTrue(output["table_data"][0][3]["versions"] == 0)
@@ -3940,6 +3943,29 @@ class TestPkgrepoMultiRepo(pkg5unittest.ManyDepotTestCase):
                 self.pkgrepo("diff -v --strict -s {0} -s {1}".format(
                     self.rurl4, self.rurl5))
                 self.assertTrue(not self.output)
+
+                # Test that clone removes all the packages if the source catalog
+                # does not exist.
+                # Source and destination have the same publishers.
+                self.pkgrepo("remove -s {0} -p test1 '*'".format(self.rdir4))
+                # Delete the catlog
+                repo = self.get_repo(self.rdir4)
+                repo.get_catalog('test1').destroy()
+                self.pkgrecv(self.rdir4, "--clone -d {0} -p test1".
+                        format(self.rdir3))
+                expected = "The source catalog 'test1' is empty"
+                self.assertTrue(expected in self.output, self.output)
+
+                # Mention all the publishers while cloning
+                self.pkgrepo("remove -s {0} '*'".format(self.rdir2))
+                repo = self.get_repo(self.rdir2)
+                # Delete the catalog
+                repo.get_catalog('test2').destroy()
+                self.pkgrecv(self.rdir2, "--clone -d {0} -p '*'".
+                        format(self.rdir1))
+                expected = "The source catalog 'test2' is empty"
+                self.assertTrue(expected in self.output, self.output)
+
 
 class TestPkgrepoHTTPS(pkg5unittest.HTTPSTestClass):
 
@@ -3955,7 +3981,7 @@ class TestPkgrepoHTTPS(pkg5unittest.HTTPSTestClass):
 
                 pkg5unittest.HTTPSTestClass.setUp(self, [pub],
                     start_depots=True)
-                
+
                 self.url = self.ac.url + "/{0}".format(pub)
 
                 # publish a simple test package
@@ -3966,7 +3992,7 @@ class TestPkgrepoHTTPS(pkg5unittest.HTTPSTestClass):
                 #set permissions of tmp/verboten to make it non-readable
                 self.verboten = os.path.join(self.test_root, "tmp/verboten")
                 os.system("chmod 600 {0}".format(self.verboten))
-                
+
 
         def test_01_basics(self):
                 """Test that running pkgrepo on an SSL-secured repo works for

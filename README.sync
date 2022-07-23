@@ -4,11 +4,11 @@
 The pkg5 components have been updated to the latest upstream solaris-ips
 as of:
 
-commit 5ee60e3c8e5b2dbc4f2dcc9e4a47871ac3178a3d
-Author: Darren J Moffat <Darren.Moffat@Oracle.COM>
-Date:   Tue Jul 5 06:49:42 2022 -0700
+commit 09da193853d1b4ac6a9ccd8271550ca5ed6b1b0a
+Author: Chandana R <chandana.r@oracle.com>
+Date:   Thu Jul 21 06:56:44 2022 -0700
 
-    33845953 constrained image puts auto-update into maintenance
+    33588361 pkgrecv clone may remove packages if previous pkgrecv clone failed
 
 -----------------------------------------------------------------------------
 
