@@ -740,7 +740,12 @@ def process_mog(file_args, ignoreincludes, verbose, includes, macros,
 
                 if line.startswith("$("): #prepended unexpanded macro
                         # doesn't handle nested macros
-                        eom = line.index(")") + 1
+                        try:
+                                eom = line.index(")") + 1
+                        except ValueError as e:
+                                process_error("File {0} line {1:d}: '{2}' {3}"
+                                    .format(filename, lineno, line,
+                                    "closing ')' not found"), error_cb)
                         prepended_macro = line[0:eom]
                         line = line[eom:]
                 else:
