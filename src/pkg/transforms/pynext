@@ -8,7 +8,7 @@
 # source. A copy of the CDDL is also available via the Internet at
 # http://www.illumos.org/license/CDDL.
 #
-# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2022 OmniOS Community Edition (OmniOSce) Association.
 #
 
 # A temporary transform that makes it easy to ship modules from a newer
@@ -21,12 +21,10 @@
 
 <transform path=TBD -> delete pkg.depend.bypass-generate notfound>
 
-#<transform path=TBD -> edit path 39 310>
-#<transform path=TBD -> edit path 3.9 3.10>
-
-# Deliver 3.9 modules alongside the 3.10 ones (temporary, during migration)
-<transform path=TBD -> edit path 310 39>
-<transform path=TBD -> edit path 3.10 3.9>
+# Deliver 3.10 modules alongside the 3.11 ones (temporary, during migration)
+<transform path=TBD -> edit path 311 310>
+<transform path=TBD -> edit path 3.11 3.10>
 
 <transform path=TBD -> edit path TBD ''>
+
 
