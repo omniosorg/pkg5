@@ -53,9 +53,26 @@ class Popen(subprocess.Popen):
                 subprocess.Popen.__init__(self, args, **kwargs)
 
         if "posix_spawnp" in globals():
-                if sys.version_info.minor >= 9:
+                if sys.version_info.minor >= 11:
                         # This is the signature for the private
-                        # _execute_child() method in Python 3.9
+                        # _execute_child() method in Python 3.11
+                        def _execute_child(self, args, executable, preexec_fn,
+                            close_fds,
+                            pass_fds, cwd, env,
+                            startupinfo, creationflags, shell,
+                            p2cread, p2cwrite,
+                            c2pread, c2pwrite,
+                            errread, errwrite,
+                            restore_signals,
+                            gid, gids, uid, umask,
+                            start_new_session, process_group):
+                                self._pkg_execute_child(args, executable,
+                                    preexec_fn, close_fds, cwd, env, shell,
+                                    p2cread, p2cwrite, c2pread, c2pwrite,
+                                    errread, errwrite)
+                elif sys.version_info.minor >= 9:
+                        # This is the signature for the private
+                        # _execute_child() method in Python 3.9 and 3.10
                         def _execute_child(self, args, executable, preexec_fn,
                             close_fds,
                             pass_fds, cwd, env,
@@ -72,7 +89,7 @@ class Popen(subprocess.Popen):
                                     errread, errwrite)
                 else:
                         # This is the signature for the private
-                        # _execute_child() method in Python 3.7 & 3.8
+                        # _execute_child() method in Python 3.7 and 3.8
                         def _execute_child(self, args, executable, preexec_fn,
                             close_fds,
                             pass_fds, cwd, env,
