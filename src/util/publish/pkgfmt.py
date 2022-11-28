@@ -749,8 +749,7 @@ def fmt_file(in_file, out_file):
 
 if __name__ == "__main__":
         misc.setlocale(locale.LC_ALL, "", error)
-        gettext.install("pkg", "/usr/share/locale",
-            codeset=locale.getpreferredencoding())
+        gettext.install("pkg", "/usr/share/locale")
         misc.set_fd_limits(printer=error)
 
         if six.PY3:

@@ -83,7 +83,8 @@ done > $TOP/src/pkg/generated/bundledlicences.$PYVER.$COMP.p5m
 
 echo "+ Compiling modules"
 cd $LIB
-$PYTHON -m compileall -q .
+$PYTHON -m compileall -q python$PYVER
+$PYTHON -m compileall -q -x 'python.*' .
 
 echo "+ Generating manifest fragment"
 (
@@ -97,6 +98,7 @@ echo "+ Generating manifest fragment"
     export PYTHONPATH PATH
     $PKGSEND generate . \
         | egrep 'python|pycache' \
+        | egrep "python$PYVER" \
         | $PKGMOGRIFY -DLIB="${LIB#$ROOT/}" \
             - $TOP/src/pkg/transforms/fragmentfix \
         | sed -E '

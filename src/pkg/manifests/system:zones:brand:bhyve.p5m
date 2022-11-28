@@ -13,8 +13,9 @@
 # Copyright 2022 OmniOS Community Edition (OmniOSce) Association.
 #
 
-<include bundledlicences.3.10.bhyve.p5m>
+<include bundledlicences.3.11.bhyve.p5m>
 <include bundledmodules.3.10.bhyve.p5m>
+<include bundledmodules.3.11.bhyve.p5m>
 set name=pkg.fmri value=pkg:/system/zones/brand/bhyve@$(PKGVERS)
 set name=pkg.summary value="Image Packaging System branded zone - bhyve zones"
 set name=pkg.description value="Support for bhyve branded zones"
@@ -31,6 +32,7 @@ dir  path=usr/lib/brand
 dir  path=usr/lib/brand/bhyve
 dir  path=usr/lib/brand/bhyve/__pycache__
 file path=usr/lib/brand/bhyve/__pycache__/bundle.cpython-310.pyc mode=0444
+file path=usr/lib/brand/bhyve/__pycache__/bundle.cpython-311.pyc mode=0444
 file path=usr/lib/brand/bhyve/boot mode=0555
 file path=usr/lib/brand/bhyve/bundle.py mode=0444
 file path=usr/lib/brand/bhyve/config.xml mode=0444
@@ -44,8 +46,12 @@ file path=usr/lib/brand/bhyve/uefi/__init__.py mode=0444
 dir  path=usr/lib/brand/bhyve/uefi/__pycache__
 file path=usr/lib/brand/bhyve/uefi/__pycache__/__init__.cpython-310.pyc \
     mode=0444
+file path=usr/lib/brand/bhyve/uefi/__pycache__/__init__.cpython-311.pyc \
+    mode=0444
 file path=usr/lib/brand/bhyve/uefi/__pycache__/align.cpython-310.pyc mode=0444
+file path=usr/lib/brand/bhyve/uefi/__pycache__/align.cpython-311.pyc mode=0444
 file path=usr/lib/brand/bhyve/uefi/__pycache__/vars.cpython-310.pyc mode=0444
+file path=usr/lib/brand/bhyve/uefi/__pycache__/vars.cpython-311.pyc mode=0444
 file path=usr/lib/brand/bhyve/uefi/align.py mode=0444
 file path=usr/lib/brand/bhyve/uefi/vars.py mode=0444
 file path=usr/lib/brand/bhyve/uninstall mode=0555

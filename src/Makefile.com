@@ -30,9 +30,9 @@ CFLAGS = -m64 -Wall -Werror -Wextra -gdwarf-2 -gstrict-dwarf \
 CPPFLAGS = -D_REENTRANT -D_POSIX_PTHREAD_SEMANTICS
 
 # Whitespace separated list of versions to build and test
-PYVERSIONS = 3.10
+PYVERSIONS = 3.11 3.10
 # The single version used for shebang lines and packaging.
-PYVER = 3.10
+PYVER = 3.11
 
 SHELL= /usr/bin/ksh93
 INSTALL = /usr/sbin/install
