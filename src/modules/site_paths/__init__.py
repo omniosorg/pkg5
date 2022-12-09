@@ -36,7 +36,8 @@ import os, sys
 def strip_site():
         strip = getsitepackages()
         strip.append(getusersitepackages())
-        sys.path = [d for d in sys.path if d not in strip]
+        sys.path = [d for d in sys.path if d not in strip
+            and not d.endswith('.zip')]
 
 def add_pkglib():
         # If PYTHONPATH is set in the environment and the environment is not
