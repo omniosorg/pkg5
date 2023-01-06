@@ -1,18 +1,18 @@
 #
 # This file was automatically produced by tools/updatereqs
-# Generated on Sat Nov 12 13:16:38 UTC 2022
+# Generated on Wed Jan  4 19:34:20 UTC 2023
 # Do not edit directly
 #
-autocommand==2.2.1
-cheroot==8.6.0
+autocommand==2.2.2
+cheroot==9.0.0
 CherryPy==18.8.0
 inflect==6.0.2
 jaraco.classes==3.2.3
 jaraco.collections==3.8.0
-jaraco.context==4.1.2
+jaraco.context==4.2.0
 jaraco.functools==3.5.2
-jaraco.text==3.10.0
-Mako==1.2.3
+jaraco.text==3.11.0
+Mako==1.2.4
 MarkupSafe==2.1.1
 more-itertools==9.0.0
 ply==3.11
@@ -20,10 +20,10 @@ portend==3.1.0
 prettytable==3.5.0
 pybonjour @ https://mirrors.omnios.org/pymodules/pybonjour/pybonjour-1.1.1-python3.tar.gz
 pycurl==7.44.1 # stuck on 7.44.1 - https://github.com/pycurl/pycurl/issues/748
-pydantic==1.10.2
-pytz==2022.6
+pydantic==1.10.4
+pytz==2022.7
 six==1.16.0
-tempora==5.0.2
+tempora==5.2.0
 typing_extensions==4.4.0
 wcwidth==0.2.5
 zc.lockfile==2.0
