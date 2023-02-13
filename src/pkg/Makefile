@@ -104,9 +104,9 @@ PUBLIFESTS        = $(MANIFESTS:%.p5m=$(PDIR)/%.pub)
 DEPENDED          = $(MANIFESTS:%.p5m=$(PDIR)/%.dep)
 INCORP            = consolidation\:ips\:ips-incorporation
 
-#PM_TRANSFORMS     = defaults
+PM_TRANSFORMS     = defaults
 # For python version migrations
-PM_TRANSFORMS     = defaults pynext
+#PM_TRANSFORMS     += pynext
 
 i386_DEFINES      = \
 	i386_ONLY=''    \
