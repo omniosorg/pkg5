@@ -1,4 +1,4 @@
-#!/usr/bin/python3.10 -Es
+#!/usr/bin/python3.11 -Es
 
 # {{{ CDDL HEADER
 #

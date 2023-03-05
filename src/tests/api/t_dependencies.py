@@ -55,8 +55,8 @@ import pkg.updatelog as updatelog
 # updated. py_ver_lib is the string associated with the
 # cpython library for the version of python (can be found
 # using from importlib.machinery import EXTENSION_SUFFIXES).
-py_ver_default = "3.10"
-py_ver_lib = "310"
+py_ver_default = "3.11"
+py_ver_lib = "311"
 py_ver_lib_list = ["{0}.abi3.so",
                    "{0}.cpython-{1}.so".format("{0}", py_ver_lib),
                    "64/{0}.abi3.so",
