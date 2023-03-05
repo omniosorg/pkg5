@@ -4,11 +4,11 @@
 The pkg5 components have been updated to the latest upstream solaris-ips
 as of:
 
-commit 09da193853d1b4ac6a9ccd8271550ca5ed6b1b0a
+commit bd2027fc9459d3f362d80ecc76092d0cd080ab97
 Author: Chandana R <chandana.r@oracle.com>
-Date:   Thu Jul 21 06:56:44 2022 -0700
+Date:   Thu Feb 2 03:21:24 2023 -0800
 
-    33588361 pkgrecv clone may remove packages if previous pkgrecv clone failed
+    34872181 pkgrecv MemoryError due to 8GB memory limit
 
 -----------------------------------------------------------------------------
 
