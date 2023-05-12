@@ -30,8 +30,10 @@ dir  path=usr/lib
 dir  path=usr/lib/brand
 dir  path=usr/lib/brand/bhyve
 dir  path=usr/lib/brand/bhyve/__pycache__
+file path=usr/lib/brand/bhyve/__pycache__/bootlib.cpython-311.pyc mode=0444
 file path=usr/lib/brand/bhyve/__pycache__/bundle.cpython-311.pyc mode=0444
 file path=usr/lib/brand/bhyve/boot mode=0555
+file path=usr/lib/brand/bhyve/bootlib.py mode=0444
 file path=usr/lib/brand/bhyve/bundle.py mode=0444
 file path=usr/lib/brand/bhyve/config.xml mode=0444
 file path=usr/lib/brand/bhyve/createzone mode=0555

@@ -13,20 +13,23 @@
 #
 # }}}
 
-# Copyright 2022 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2023 OmniOS Community Edition (OmniOSce) Association.
 
 import bundle
+import bootlib
+from bootlib import fatal, error, debug, info, warning, boolv, diskpath, \
+    expandopts, collapseopts
 import getopt
 import logging
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
 import tempfile
 import time
 import ucred
-import xml.etree.ElementTree as etree
 from pprint import pprint, pformat
 
 import uefi.vars as uefivars
@@ -41,7 +44,7 @@ FBUF_SIZE       = 16 * MiB
 
 # Default values
 opts = {
-    'acpi':             'on',
+    'acpi':             'on',       # No effect on illumos bhyve
     'bootorder':        'path0,bootdisk,cdrom0',
     "bootnext":         None,
     'bootrom':          'BHYVE_RELEASE_CSM',
@@ -49,7 +52,6 @@ opts = {
     'console':          '/dev/zconsole',
     'debug.persist':    'off',
     'diskif':           'virtio-blk',
-    'extra':            None,
     'hostbridge':       'i440fx',
     'memreserve':       'off',
     'netif':            'virtio-net-viona',
@@ -119,8 +121,7 @@ LPC_SLOT_WIN    = 31
 sysboot         = False
 testmode        = False
 jsonmode        = False
-quiet           = False
-zone            = None
+name            = None
 xmlfile         = None
 
 uc = ucred.get(os.getpid())
@@ -158,327 +159,46 @@ for opt, arg in cliopts:
     elif opt == '-j':
         jsonmode = True
         testmode = True
-        quiet = True
+        bootlib.set_quiet(True)
     elif opt == '-x':
         xmlfile = arg
     elif opt == '-z':
-        zone = arg
+        name = arg
     else:
-        assert False, f'unhandled option, {opt}'
+        fatal(f'unhandled option, {opt}')
 
-if not zone and len(args):
-    zone = args.pop(0)
+if not name and len(args):
+    name = args.pop(0)
 
 if len(args):
     usage('Unexpected arguments')
 
-if not zone:
+if not name:
     usage('No zone name supplied')
 
-logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
-
-def fatal(msg):
-    logging.error(msg)
-    print(msg, file=sys.stderr)
-    sys.exit(1)
-
-def error(msg):
-    logging.error(msg)
-
-def debug(msg):
-    if not quiet:
-        logging.debug(msg)
-
-def info(msg):
-    if not quiet:
-        logging.info(msg)
-
-def warning(msg):
-    if not quiet:
-        logging.warning(msg)
+bootlib.log_stdout(logging.DEBUG)
 
 if not xmlfile:
-    xmlfile = f'/etc/zones/{zone}.xml'
+    xmlfile = f'/etc/zones/{name}.xml'
 
-if not os.path.isfile(xmlfile):
-    fatal(f'Cannot find zone XML file at {xmlfile}')
+z = bootlib.Zone(xmlfile)
 
-try:
-    cfg = etree.parse(xmlfile)
-except:
-    fatal(f'Could not parse {xmlfile}')
+if z.name != name:
+    fatal(f'Zone name {name} does not match XML file {z.name}')
 
-xmlroot = cfg.getroot()
-
-name = xmlroot.get('name')
-zonepath = xmlroot.get('zonepath')
-zoneroot = f'{zonepath}/root'
-
-if not testmode and not os.path.isdir(zoneroot):
-    fatal(f'Could not find zone root {zoneroot}')
+if not testmode and not os.path.isdir(z.zoneroot):
+    fatal(f'Could not find zone root {z.zoneroot}')
 
 if not testmode:
     try:
-        os.unlink(f'{zoneroot}/tmp/init.log')
+        os.unlink(f'{z.zoneroot}/tmp/init.log')
     except:
         pass
-    logging.basicConfig(filename=f'{zonepath}/log/zone.log', filemode='a',
-        level=logging.DEBUG, force=True)
+    bootlib.log_file(f'{z.zonepath}/log/zone.log', logging.DEBUG)
 
 info(f'Zone name: {name}')
 
 ##############################################################################
-
-def boolv(s, var, ignore=False):
-    if s in ['true', 'yes', 'on', '1']:
-        return True
-    if s in ['false', 'no', 'off', '0']:
-        return False
-    if not ignore:
-        fatal(f'Invalid value {s} for boolean variable {var}')
-    return None
-
-def file_or_string(f):
-    if os.path.isabs(f) and os.path.isfile(f):
-        try:
-            with open(f) as fh:
-                f = fh.read()
-        except Exception as e:
-            fatal(f'Could not read from {f}: {e}')
-    return f.strip()
-
-def parseopt(tag):
-    global opts, xmlroot
-    try:
-        el = xmlroot.find('./attr[@name="{0}"]'.format(tag))
-        opts[tag] = el.get('value').strip()
-        debug('Found custom {0} attribute - "{1}"'.format(tag, opts[tag]))
-        if tag in aliases:
-            val = opts[tag]
-            if (bt := boolv(val, tag, ignore=True)) is not None:
-                val = 'on' if bt else 'off'
-            try:
-                opts[tag] = aliases[tag][val]
-                debug('  Alias expanded to {0}'.format(opts[tag]))
-            except KeyError:
-                pass
-    except:
-        pass
-
-def expandopts(opt):
-    """ Expand a comma-separated option string out into a dictionary.
-        For example:
-            on,password=fred,wait,w=1234
-        becomes:
-            {'on': '', 'password': 'fred', 'wait': '', 'w': '1234'}
-    """
-    return {
-        k: v
-        for (k, v, *_)
-        in [
-            (o + '=').split('=')
-            for o in opt.split(',')
-        ]
-    }
-
-def collapseopts(opts):
-    """ The reverse of expandopts. Convert a dictionary back into an option
-        string. """
-    return ','.join([f'{k}={v}'.rstrip('=') for k, v in opts.items()])
-
-def writecfg(fh, arg):
-    if testmode:
-        print(arg)
-    else:
-        fh.write(f'{arg}\n')
-
-def diskpath(arg):
-    if arg.startswith('/'):
-        return arg
-    return '/dev/zvol/rdsk/{0}'.format(arg)
-
-def findattr(rex):
-    for dev in xmlroot.findall('./attr[@name]'):
-        if m := re.search(rex, dev.get('name').strip()):
-            yield dev, m
-
-# Look for attributes of the form <type>N (and <type> if plain is True) and
-# generate a list.
-def build_devlist(type, maxval, plain=True):
-    devlist = {}
-    for dev, m in findattr(rf'^{type}(\d+)$'):
-        k = int(m.group(1))
-        if k in devlist:
-            fatal(f'{type}{k} appears more than once in configuration')
-        if (k >= maxval):
-            fatal(f'{type}{k} slot out of range')
-        devlist[k] = dev.get('value').strip()
-
-    if plain:
-        # Now insert plain <type> tags into the list, using available slots in
-        # order
-        avail = sorted(set(range(0, maxval)).difference(sorted(devlist.keys())))
-        for dev in xmlroot.findall(f'./attr[@name="{type}"]'):
-            try:
-                k = avail.pop(0)
-            except IndexError:
-                fatal('{type}: no more available slots')
-            devlist[k] = dev.get('value').strip()
-
-    debug('{} list: \n{}'.format(type, pformat(devlist)))
-
-    return sorted(devlist.items())
-
-ram_shift = { 'e': 60, 'p': 50, 't': 40, 'g': 30, 'm': 20, 'k': 10, 'b': 0 }
-def parse_ram(v):
-    # Parse a string representing an amount of RAM into bytes in the same
-    # way as libvmmapi's vm_parse_memsize()
-    m = re.search(rf'^(\d+)(.?)$', v)
-    if not m:
-        fatal(f'Could not parse ram value "{v}"')
-    (mem, suffix) = m.groups()
-    mem = int(mem)
-
-    if not suffix:
-        # If the memory size specified as a plain number is less than a
-        # mebibyte then bhyve will interpret it as being in units of MiB.
-        suffix = 'm' if mem < MiB else 'b'
-
-    try:
-        shift = ram_shift[suffix.lower()]
-    except KeyError:
-        fatal(f'Unknown RAM suffix, {suffix}')
-
-    mem <<= shift
-
-    debug(f'parse_ram({v}) = {mem}')
-    return mem
-
-def build_cloudinit_image(uuid, src):
-    info('Generating cloud-init data')
-
-    #### Metadata
-
-    meta_data = {
-        'instance-id':      uuid,
-        'local-hostname':   name,
-    }
-
-    #### Userdata
-
-    user_data = {
-        'hostname':         name,
-        'disable_root':     False,
-    }
-
-    if (v := xmlroot.find('./attr[@name="password"]')) is not None:
-        user_data['password'] = file_or_string(v.get('value'))
-        user_data['chpasswd'] = { 'expire': False }
-        user_data['ssh-pwauth'] = True
-
-    if (v := xmlroot.find('./attr[@name="sshkey"]')) is not None:
-        v = file_or_string(v.get('value'))
-        user_data['ssh_authorized_keys'] = [v]
-        user_data['users'] = [
-            'default',
-            {'name': 'root', 'ssh_authorized_keys': [v]}
-        ]
-
-    #### Network
-
-    network_data = {}
-
-    addresses = xmlroot.findall('./network[@allowed-address]')
-    if addresses is not None:
-        nsdone = False
-        network_data['version'] = 2
-        network_data['ethernets'] = {}
-
-        for a in addresses:
-            vnic = a.get('physical')
-            addr = a.get('allowed-address')
-            rtr = a.get('defrouter')
-
-            p = subprocess.run([ '/usr/sbin/dladm',
-                'show-vnic', '-p', '-o', 'MACADDRESS', vnic ],
-                capture_output=True, text=True)
-            if p.returncode != 0:
-                warning(f'Could not find MAC address for VNIC {vnic}')
-                continue
-            mac = p.stdout.strip()
-            mac = ':'.join(l.zfill(2) for l in mac.split(':'))
-
-            data = {
-                'match':        { 'macaddress': mac },
-                'set-name':     vnic,
-                'addresses':    [addr],
-            }
-            if rtr:
-                data['gateway4'] = rtr
-
-            if not nsdone:
-                domain = xmlroot.find('./attr[@name="dns-domain"]')
-                resolvers = xmlroot.find('./attr[@name="resolvers"]')
-                if resolvers is not None or domain is not None:
-                    nsdata = {}
-                    if domain is not None:
-                        nsdata['search'] = [domain.get('value').strip()]
-                    if resolvers is not None:
-                        nsdata['addresses'] = \
-                            resolvers.get('value').strip().split(',')
-                    data['nameservers'] = nsdata
-                nsdone = True
-
-            network_data['ethernets'][vnic] = data
-
-    import yaml
-    debug('Metadata:\n' + yaml.dump(meta_data))
-    debug('Userdata:\n' + yaml.dump(user_data))
-    debug('Netdata:\n' + yaml.dump(network_data))
-
-    if testmode:
-        return
-
-    dir = tempfile.mkdtemp(dir=f'{zoneroot}', prefix='cloud-init.')
-
-    with open(f'{dir}/meta-data', 'w') as fh:
-        yaml.dump(meta_data, fh)
-
-    if os.path.isabs(src) and os.path.isfile(src):
-        info(f'Using supplied cloud-init user-data file from {src}')
-        shutil.copyfile(src, f'{dir}/user-data')
-    else:
-        with open(f'{dir}/user-data', 'w') as fh:
-            fh.write('#cloud-config\n')
-            yaml.dump(user_data, fh)
-
-    if network_data:
-        with open(f'{dir}/network-config', 'w') as fh:
-            yaml.dump(network_data, fh)
-
-    #### Build image
-
-    cidir = f'{zoneroot}/cloud-init'
-    seed = f'{zoneroot}/cloud-init.iso'
-    if os.path.exists(cidir):
-        shutil.rmtree(cidir)
-    os.rename(dir, cidir)
-    info('Building cloud-init ISO image')
-    try:
-        ret = subprocess.run([
-            '/usr/bin/mkisofs',
-            '-full-iso9660-filenames',
-            '-untranslated-filenames',
-            '-rock',
-            '-volid', 'CIDATA',
-            '-o', seed,
-            cidir
-        ], text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        for l in ret.stdout.splitlines():
-            info(l)
-        os.chmod(seed, mode=0o644)
-    except Exception as e:
-        fatal(f'Could not create cloud-init ISO image: {e}')
 
 uefivars_path = None
 def install_uefi_vars():
@@ -486,7 +206,7 @@ def install_uefi_vars():
     dst = '/etc/uefivars'
 
     global uefivars_path
-    uefivars_path = f'{zoneroot}{dst}'
+    uefivars_path = f'{z.zoneroot}{dst}'
 
     if testmode or os.path.exists(uefivars_path):
         return dst
@@ -573,13 +293,13 @@ def apply_bootnext(v):
 ##############################################################################
 
 for tag in opts.keys():
-    parseopt(tag)
+    z.parseopt(tag, opts, aliases)
 
 if boolv(opts['memreserve'], 'memreserve'):
     # In memreserve mode, the memory for this VM needs to be reserved in
     # the bhyve memory reservoir, then the VM must be told to use memory
     # from that reservoir (see later).
-    mem = parse_ram(opts['ram'])
+    mem = bootlib.parse_ram(opts['ram'])
     mem += BOOTROM_SIZE
     if  boolv(opts['vnc'], 'vnc', ignore=True) is not False:
         mem += FBUF_SIZE
@@ -658,14 +378,7 @@ if not uefi_bootrom and opts['bootorder'].startswith('bootdisk') and \
     CDROM_SLOT = CDROM_SLOT2
 
 # UUID
-uuid = opts['uuid']
-if not uuid:
-    try:
-        with open(f'{zoneroot}/etc/uuid') as file:
-            uuid = file.read().strip()
-            info('Zone UUID: {0}'.format(uuid))
-    except:
-        uuid = None
+uuid = opts['uuid'] if opts['uuid'] else z.uuid()
 debug(f'Final uuid: {uuid}')
 
 ##############################################################################
@@ -678,7 +391,7 @@ if boolv(opts['cloud-init'], 'cloud-init', ignore=True) is not False:
     if opts['cloud-init'].startswith(('http://', 'https://')):
         ser = 'ds=nocloud-net;s={};i={}'.format(opts['cloud-init'], uuid)
     else:
-        build_cloudinit_image(uuid, opts['cloud-init'])
+        z.build_cloudinit_image(uuid, opts['cloud-init'], testmode)
         ser = f'ds=nocloud;i={uuid}'
         args.extend([ '-s',
             '{0}:0,ahci-cd,/cloud-init.iso,ro,ser=CLOUD-INIT-0'
@@ -691,10 +404,6 @@ if opts['type'] == 'openbsd':
 
 if uuid:
     args.extend(['-U', uuid])
-
-# The ACPI option has no effect with illumos bhyve
-#if boolv(opts['acpi'], 'acpi'):
-#    args.append('-A')
 
 args.extend([
     '-H',
@@ -733,7 +442,7 @@ args.extend(['-l', 'com1,{0}'.format(opts['console'])])
 
 # CDROM
 
-for i, v in build_devlist('cdrom', 8):
+for i, v in z.build_devlist('cdrom', 8):
     args.extend([
         '-s', '{0}:{1},{2},{3},ro'.format(CDROM_SLOT, i, 'ahci-cd', v)
     ])
@@ -742,7 +451,7 @@ for i, v in build_devlist('cdrom', 8):
 # Bootdisk
 
 try:
-    bootdisk = xmlroot.find('./attr[@name="bootdisk"]')
+    bootdisk = z.findattr('bootdisk')
     args.extend([
         '-s', '{0}:0,{1},{2}'.format(BOOTDISK_SLOT, opts['diskif'],
             diskpath(bootdisk.get('value').strip()))
@@ -753,8 +462,8 @@ except:
 
 # Additional Disks
 
-for i, v in build_devlist('disk', 16):
-    if (vv := xmlroot.find(f'./attr[@name="diskif{i}"]')) is not None:
+for i, v in z.build_devlist('disk', 16):
+    if (vv := x.findattr(f'diskif{i}')) is not None:
         diskif = vv.get('value')
         try:
             diskif = aliases['diskif'][diskif]
@@ -780,7 +489,7 @@ for i, v in build_devlist('disk', 16):
 
 i = 0
 promisc_filtered_nics = {}
-for f in xmlroot.findall('./network[@physical]'):
+for f in z.findall('./network[@physical]'):
     ifname = f.get('physical').strip()
 
     netif = opts['netif']
@@ -839,7 +548,7 @@ if v is not False:
                 newopts |= vopts
                 vopts = newopts
         elif k == 'password':
-            vncpassword = file_or_string(v)
+            vncpassword = bootlib.file_or_string(v)
             del vopts[k]
 
     opts['vnc'] = collapseopts(vopts)
@@ -851,7 +560,7 @@ if v is not False:
 
 # PPT - PCI Pass-through devices
 
-pptlist = build_devlist('ppt', 8, False)
+pptlist = z.build_devlist('ppt', 8, False)
 pptassign = {}
 
 # Build the PPT list in two passes looking for devices with a specifically
@@ -883,7 +592,7 @@ if len(pptassign) > 0:
 
 # virtio-9p devices
 
-for i, v in build_devlist('virtfs', 8):
+for i, v in z.build_devlist('virtfs', 8):
     # Expect <sharename>,<path>[,ro]
     arr = v.split(',')
     vfsopts = ''
@@ -915,8 +624,8 @@ if boolv(opts['memreserve'], 'memreserve'):
 
 # Extra options
 
-if opts['extra']:
-    args.extend(opts['extra'].split(' '))
+for i, v in z.build_devlist('extra', 16):
+    args.extend(shlex.split(v))
 
 # Dump configuration
 
@@ -957,9 +666,9 @@ if jsonmode:
     import json
 
     data = {
-        'zonename':     name,
-        'zonepath':     zonepath,
-        'zoneroot':     zoneroot,
+        'zonename':     z.name,
+        'zonepath':     z.zonepath,
+        'zoneroot':     z.zoneroot,
         'slots': {
             "hostbridge":   HOSTBRIDGE_SLOT,
             "lpc":          LPC_SLOT,
@@ -997,10 +706,16 @@ if jsonmode:
     print(json.dumps(data))
     sys.exit(0)
 
+def writecfg(fh, arg):
+    if testmode:
+        print(arg)
+    else:
+        fh.write(f'{arg}\n')
+
 fh = None
 if not testmode:
     try:
-        fh = tempfile.NamedTemporaryFile(mode='w', dir=f'{zoneroot}/etc',
+        fh = tempfile.NamedTemporaryFile(mode='w', dir=f'{z.zoneroot}/etc',
             prefix='bhyve.', delete=False)
     except Exception as e:
         fatal(f'Could not create temporary file: {e}')
@@ -1020,11 +735,11 @@ if not testmode:
     tf = fh.name
     fh.close()
     try:
-        os.rename(tf, f'{zoneroot}/etc/bhyve.cfg')
+        os.rename(tf, f'{z.zoneroot}/etc/bhyve.cfg')
     except Exception as e:
         fatal(f'Could not create bhyve.cfg from temporary file: {e}')
     else:
-        info(f'Successfully created {zoneroot}/etc/bhyve.cfg')
+        info(f'Successfully created {z.zoneroot}/etc/bhyve.cfg')
 
 # Vim hints
 # vim:ts=4:sw=4:et:fdm=marker

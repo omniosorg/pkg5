@@ -9,12 +9,12 @@
 # http://www.illumos.org/license/CDDL.
 
 #
-# Copyright 2022 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2023 OmniOS Community Edition (OmniOSce) Association.
 #
 
 BRAND = bhyve
 FILES = boot config.xml createzone init platform.xml socat support uninstall \
-	bundle.py uefi/__init__.py uefi/align.py uefi/vars.py
+	bootlib.py bundle.py uefi/__init__.py uefi/align.py uefi/vars.py
 BINS = init boot
 
 PYMODULES = $(PYVERSIONS:%=modules/%)

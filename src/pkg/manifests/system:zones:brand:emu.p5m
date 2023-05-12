@@ -1,0 +1,40 @@
+#
+# CDDL HEADER
+#
+# This file and its contents are supplied under the terms of the
+# Common Development and Distribution License ("CDDL"), version 1.0.
+# You may only use this file in accordance with the terms of version
+# 1.0 of the CDDL.
+#
+# A full copy of the text of the CDDL should have accompanied this
+# source. A copy of the CDDL is also available via the Internet at
+# http://www.illumos.org/license/CDDL.
+#
+# Copyright 2023 OmniOS Community Edition (OmniOSce) Association.
+#
+
+set name=pkg.fmri value=pkg:/system/zones/brand/emu@$(PKGVERS)
+set name=pkg.summary value="Image Packaging System branded zone - emu zones"
+set name=pkg.description value="Support for emu branded zones"
+set name=info.classification \
+    value=org.opensolaris.category.2008:System/Virtualization
+set name=variant.arch value=$(ARCH)
+dir  path=etc
+dir  path=etc/zones
+file path=etc/zones/OMNIemu.xml
+dir  path=usr/lib
+dir  path=usr/lib/brand
+dir  path=usr/lib/brand/emu
+file path=usr/lib/brand/emu/boot mode=0555
+link path=usr/lib/brand/emu/bootlib.py target=../bhyve/bootlib.py
+file path=usr/lib/brand/emu/config.xml mode=0444
+link path=usr/lib/brand/emu/createzone target=../bhyve/createzone
+file path=usr/lib/brand/emu/init mode=0555 pkg.depend.bypass-generate=.*
+file path=usr/lib/brand/emu/platform.xml mode=0444
+file path=usr/lib/brand/emu/support mode=0555
+link path=usr/lib/brand/emu/uninstall target=../bhyve/uninstall
+dir  path=usr/share/man/man7
+file path=usr/share/man/man7/emu.7
+license lic_CDDL license=lic_CDDL
+depend type=require fmri=pkg://extra.omnios/ooce/emulator/qemu@8
+depend type=require fmri=system/zones/brand/bhyve@$(PKGVERS)

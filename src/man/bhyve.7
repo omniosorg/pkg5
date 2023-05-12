@@ -10,9 +10,9 @@
 .\"
 .\" Copyright 2016, Joyent, Inc.
 .\" Copyright 2016, OmniTI Computer Consulting, Inc. All Rights Reserved.
-.\" Copyright 2022 OmniOS Community Edition (OmniOSce) Association.
+.\" Copyright 2023 OmniOS Community Edition (OmniOSce) Association.
 .\"
-.Dd June 12, 2022
+.Dd June 3, 2023
 .Dt BHYVE 7
 .Os
 .Sh NAME
@@ -32,7 +32,8 @@ zones are configured mostly via custom attributes in the zone configuration.
 .Pp
 Supported attributes are:
 .Bl -tag -width Ds
-.It Xo Sy acpi
+.\" acpi
+.It Xo Ic acpi
 .Sm off
 .Ar on | off
 .Sm on
@@ -191,7 +192,8 @@ can be omitted.
 Each image file must also be mapped into the zone using an
 .Sy fs
 block, as shown in the example below.
-.It Xo Sy cloud-init
+.\" cloud-init
+.It Xo Ic cloud-init
 .Sm off
 .Ar on | off | filename | URL
 .Sm on
@@ -280,7 +282,8 @@ Available options are:
 .It
 .Sy virtio-blk Pq default
 .El
-.It Sy diskif Ns Ar N Ar type
+.\" diskifN
+.It Ic diskif Ns Ar N Ar type
 .Pp
 Override the
 .Sy diskif
@@ -295,13 +298,18 @@ Included in the data passed to the guest when the
 .Sy cloud-init
 option is enabled.
 .\" extra
-.It Ic extra Ar options
+.It Ic extra Ns Op Ar N
 .Pp
 Any extra
 .Ar options
 to be passed directly to the
 .Nm
 hypervisor.
+To add multiple options, create multiple attriutes with different values of
+.Ar N .
+If only a single extra option is required,
+.Ar N
+can be omitted.
 .\" hostbridge
 .It Ic hostbridge Ar type
 .Pp
@@ -345,7 +353,8 @@ Available options are:
 .Pp
 Note that only the accelerated virtio interface supports filtering using the
 zone firewall.
-.It Xo Sy password
+.\" password
+.It Xo Ic password
 .Sm off
 .Ar string | hash | filename
 .Sm on
@@ -436,7 +445,8 @@ A comma-delimited list of DNS resolver IP addresses.
 These are included in the data passed to the guest when the
 .Sy cloud-init
 option is enabled.
-.It Xo Sy rng
+.\" rng
+.It Xo Ic rng
 .Sm off
 .Ar on | off
 .Sm on
@@ -448,7 +458,8 @@ to attach a virtio random number generator
 .Pq RNG
 to the guest
 .Pq default: Ar off .
-.It Xo Sy sshkey
+.\" sshkey
+.It Xo Ic sshkey
 .Sm off
 .Ar string | filename
 .Xc
@@ -479,7 +490,7 @@ Supported values are:
 .It
 .Sy windows
 .El
-.It Xo Sy uefivars
+.It Xo Ic uefivars
 .Sm off
 .Ar on | off
 .Sm on
@@ -494,7 +505,8 @@ Defaults to
 Specifies the unique identifier for the virtual machine.
 If this attribute is not set, a random UUID will be generated when the zone
 is first installed.
-.It Xo Sy vcpus
+.\" vcpus
+.It Xo Ic vcpus
 .Sm off
 .Oo Cm cpus = Oc Ar numcpus
 .Oo Cm ,sockets = Ar s Oc
@@ -513,7 +525,7 @@ must equal the product of the other parameters.
 The maximum supported number of virtual CPUs is
 .Sy 32 .
 .It Xo
-.Sy virtfs Ns Op Ar N
+.Ic virtfs Ns Op Ar N
 .Sm off
 .Ar sharename \&,
 .Ar path
@@ -553,7 +565,7 @@ guests that require the legacy VGA I/O and memory regions to be available.
 This option should be used for guests that attempt to issue BIOS calls which
 result in I/O port queries and fail to boot if I/O decode is disabled.
 .El
-.It Xo Sy vnc
+.It Xo Ic vnc
 .Sm off
 .Ar on | wait | off | options
 .Sm on
@@ -606,7 +618,7 @@ Pause boot until the first VNC connection is established.
 .Pp
 Multiple options can be provided, separated by commas.
 See also
-.Sy xhci
+.Ic xhci
 below.
 .Pp
 The
@@ -625,7 +637,7 @@ If you prefer, you can also use the real socat utility that's shipped in core:
         TCP-LISTEN:5905,bind=127.0.0.1,reuseaddr,fork \e
         UNIX-CONNECT:/zones/bhyve/root/tmp/vm.vnc
 .Ed
-.It Xo Sy xhci
+.It Xo Ic xhci
 .Sm off
 .Ar on | off
 .Sm on

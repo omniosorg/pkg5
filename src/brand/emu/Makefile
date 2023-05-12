@@ -12,16 +12,22 @@
 # Copyright 2023 OmniOS Community Edition (OmniOSce) Association.
 #
 
-BRAND = kvm
-FILES = config.xml init platform.xml support
-BINS = init
-BHYVELINKS = createzone uninstall socat
+BRAND = emu
+FILES = boot config.xml init platform.xml support
+BINS = init boot
+BHYVELINKS = createzone uninstall bootlib.py
 
 BRANDDIR = $(ROOTBRAND)/$(BRAND)
 ROOTBHYVELINKS = $(BHYVELINKS:%=$(BRANDDIR)/%)
 BRANDFILES = $(FILES:%=$(BRANDDIR)/%) $(ROOTBHYVELINKS)
 
+LDLIBS += -lzfs
+
 all: $(BINS)
+
+init: init.c
+	$(LINK.c) -o $@ $@.c $(LDLIBS)
+	$(POST_PROCESS)
 
 include ../Makefile.com
 
@@ -29,4 +35,3 @@ $(ROOTBHYVELINKS): FRC
 	rm -f $@; ln -s ../bhyve/$(@F) $@
 
 FRC:
-
