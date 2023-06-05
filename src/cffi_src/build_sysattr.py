@@ -146,7 +146,7 @@ int nvpair_value_boolean_value(nvpair_t *, boolean_t *);
 """)
 
 if __name__ == "__main__":
-    ffi.compile(tmpdir="./cffi_src")
+        ffi.emit_c_code("cffi_src/_sysattr.c")
 
 # Vim hints
 # vim:ts=8:sw=8:et:fdm=marker

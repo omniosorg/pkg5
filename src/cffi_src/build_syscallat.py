@@ -49,7 +49,7 @@ int unlinkat(int, const char *, int);
 """)
 
 if __name__ == "__main__":
-    ffi.compile(tmpdir="./cffi_src")
+        ffi.emit_c_code("cffi_src/_syscallat.c")
 
 # Vim hints
 # vim:ts=8:sw=8:et:fdm=marker
