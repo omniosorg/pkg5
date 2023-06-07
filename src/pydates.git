@@ -39,7 +39,8 @@ if [ ! -z $FILES_MODIFIED ]; then
     LATEST_TIMESTAMP=0
     for file in $FILES_MODIFIED; do
         MTIME=`stat -c %Y $file`
-        [ $MTIME -gt $LATEST_TIMESTAMP ] && LATEST_TIMESTAMP=$MTIME
+        [ -n "$MTIME" -a "$MTIME" -gt "$LATEST_TIMESTAMP" ] \
+            && LATEST_TIMESTAMP=$MTIME
     done
     echo $LATEST_TIMESTAMP.0 .
 else

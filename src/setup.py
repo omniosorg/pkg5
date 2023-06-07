@@ -64,6 +64,7 @@ import distutils.ccompiler
 from distutils.unixccompiler import UnixCCompiler
 
 osname = platform.uname()[0].lower()
+osname = 'sunos' if osname == 'sunos5' else osname
 ostype = arch = 'unknown'
 if osname == 'sunos':
         arch = platform.processor()

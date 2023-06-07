@@ -66,4 +66,7 @@ void *memcpy(void *restrict s1, const void *restrict s2, size_t n);
 """)
 
 if __name__ == "__main__":
-    ffi.compile(tmpdir="./cffi_src")
+        ffi.emit_c_code("cffi_src/_sha512_t.c")
+
+# Vim hints
+# vim:ts=8:sw=8:et:fdm=marker

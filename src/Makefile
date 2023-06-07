@@ -62,7 +62,7 @@ packages: install
 
 test: install .WAIT $(PYTESTS) $(TESTRESULTS)
 
-$(SUBDIRS): FRC
+$(SUBDIRS) cffi_src: FRC
 	@cd $@; pwd; $(MAKE) $(TARGET) CC=$(CC)
 
 $(PYVERSIONS): FRC

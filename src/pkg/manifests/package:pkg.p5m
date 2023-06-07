@@ -20,7 +20,7 @@
 #
 # Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
 # Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
-# Copyright 2022 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2023 OmniOS Community Edition (OmniOSce) Association.
 #
 #
 # The six compatibility layers cause detection problems for pkgdepend
@@ -34,6 +34,10 @@
     set pkg.depend.bypass-generate .*>
 <transform file path=$(PYDIRVP)/pkg/client/linkedimage/(?:system|zone).py -> \
     set pkg.depend.bypass-generate .*>
+#
+# When packaging for aarch64, we need to skip the dependency check on libm.so.0
+<transform file path=$(PYDIRVP)/pkg/solver -> \
+    set pkg.depend.bypass-generate libm.so.0>
 #
 <include bundledlicences.3.11.core.p5m>
 <include bundledmodules.3.11.core.p5m>
