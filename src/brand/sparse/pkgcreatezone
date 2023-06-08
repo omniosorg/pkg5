@@ -240,7 +240,7 @@ if [ -x /usr/lib/brand/$ZONEBRAND/postinstall ]; then
 	/usr/lib/brand/$ZONEBRAND/postinstall $ZONEROOT
 fi
 
-lc_pkg set-property exclude-policy reject
+lc_pkg set-property exclude-policy warn
 
 printf "$m_complete\n\n" ${SECONDS}
 
