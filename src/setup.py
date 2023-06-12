@@ -21,7 +21,7 @@
 #
 # Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
 # Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
-# Copyright 2022 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2023 OmniOS Community Edition (OmniOSce) Association.
 #
 
 from __future__ import print_function
@@ -247,6 +247,7 @@ man8_files = [
         ]
 man7_files = [
         'man/bhyve.7',
+        'man/emu.7',
         'man/illumos.7',
         'man/ipkg.7',
         'man/kvm.7',

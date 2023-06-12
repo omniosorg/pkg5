@@ -1,0 +1,71 @@
+#!/bin/ksh -p
+#
+# This file and its contents are supplied under the terms of the
+# Common Development and Distribution License ("CDDL"), version 1.0.
+# You may only use this file in accordance with the terms of version
+# 1.0 of the CDDL.
+#
+# A full copy of the text of the CDDL should have accompanied this
+# source. A copy of the CDDL is also available via the Internet at
+# http://www.illumos.org/license/CDDL.
+
+# Copyright 2023 OmniOS Community Edition (OmniOSce) Association.
+
+. /usr/lib/brand/shared/common.ksh
+. /usr/lib/brand/shared/vars.ksh
+. /usr/lib/brand/shared/firewall.ksh
+. /usr/lib/brand/shared/vnic.ksh
+. /usr/lib/brand/shared/log.ksh
+
+emu_shutdown()
+{
+	typeset -i delay="${1:-60}"
+	log "Killing emu process - %d" $delay
+	pkill -z "$ZONENAME" qemu-system-
+	while (( delay > 0 )) && pgrep -z "$ZONENAME" qemu-system- >/dev/null
+	do
+		((delay % 30 == 0)) && log "Waiting for qemu to exit"
+		((delay = delay - 1))
+		sleep 1
+	done
+	log "qemu shutdown done"
+}
+
+cmd="${1:?cmd}"; shift
+ZONENAME="${1:?zonename}"; shift
+[ -n "$1" ] && { ZONEPATH="$1"; shift; }
+# shutdown is run inside the zone context and does not need a path
+[ $cmd != shutdown -a -z "$ZONEPATH" ] && fatal "No zonepath provided"
+
+log "emu support z=%s p=%s c=%s %s:%s" "$ZONENAME" "$ZONEPATH" "$cmd" $*
+
+case $cmd in
+    shutdown)
+	emu_shutdown 300
+	;;
+    prestate)
+	case $1:$2 in
+	    *:$ZONE_STATE_CMD_READY)
+		clearlog
+		config_vnics
+		;;
+	    $ZONE_STATE_RUNNING:$ZONE_STATE_CMD_HALT)
+		# halting (even as part of rebooting)
+		emu_shutdown 1800
+		;;
+	esac
+	;;
+    poststate)
+	case $1:$2 in
+	    *:$ZONE_STATE_CMD_READY)
+		setup_firewall
+		;;
+	    *:$ZONE_STATE_CMD_HALT)
+		unconfig_vnics
+		;;
+	esac
+	;;
+esac
+
+exit $ZONE_SUBPROC_OK
+

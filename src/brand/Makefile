@@ -9,7 +9,7 @@
 # http://www.illumos.org/license/CDDL.
 
 #
-# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2023 OmniOS Community Edition (OmniOSce) Association.
 #
 
 all := TARGET = all
@@ -17,7 +17,7 @@ clean := TARGET = clean
 clobber := TARGET = clobber
 install := TARGET = install
 
-SUBDIRS = shared etc ipkg lipkg sparse pkgsrc lx illumos kvm bhyve
+SUBDIRS = shared etc ipkg lipkg sparse pkgsrc lx illumos kvm bhyve emu
 
 all clean clobber install: $(SUBDIRS)
 

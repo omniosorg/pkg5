@@ -10,7 +10,7 @@
 # source. A copy of the CDDL is also available via the Internet at
 # http://www.illumos.org/license/CDDL.
 #
-# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2023 OmniOS Community Edition (OmniOSce) Association.
 #
 
 set name=pkg.fmri value=pkg:/system/zones/brand/kvm@$(PKGVERS)
@@ -31,7 +31,7 @@ file path=usr/lib/brand/kvm/init mode=0555 pkg.depend.bypass-generate=.*
 file path=usr/lib/brand/kvm/platform.xml mode=0444
 link path=usr/lib/brand/kvm/socat target=../bhyve/socat
 file path=usr/lib/brand/kvm/support mode=0555
-file path=usr/lib/brand/kvm/uninstall mode=0555
+link path=usr/lib/brand/kvm/uninstall target=../bhyve/uninstall
 dir  path=usr/share/man/man7
 file path=usr/share/man/man7/kvm.7
 license lic_CDDL license=lic_CDDL

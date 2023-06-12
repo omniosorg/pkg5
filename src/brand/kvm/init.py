@@ -15,7 +15,7 @@
 
 # Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
 
-import logging, os, subprocess, sys, time, re, getopt
+import logging, os, subprocess, sys, time, re, getopt, shlex
 import xml.etree.ElementTree as etree
 from pprint import pprint, pformat
 
@@ -54,7 +54,6 @@ opts = {
     'cpu':          'qemu64',
     'bootorder':    'cd',
     'rtc':          'base=utc,driftfix=slew',
-    'extra':        '',
 }
 
 aliases = {
@@ -273,8 +272,8 @@ args.extend(['-vnc', opts['vnc']])
 
 # Extra options
 
-if len(opts['extra']):
-    args.extend(opts['extra'].split(' '))
+for i, v in build_devlist('extra', 16):
+    args.extend(shlex.split(v))
 
 logging.info('Final arguments: {0}'.format(pformat(args)))
 logging.info('{0}'.format(' '.join(args)))
