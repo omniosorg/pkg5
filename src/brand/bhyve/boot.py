@@ -463,7 +463,7 @@ except:
 # Additional Disks
 
 for i, v in z.build_devlist('disk', 16):
-    if (vv := x.findattr(f'diskif{i}')) is not None:
+    if (vv := z.findattr(f'diskif{i}')) is not None:
         diskif = vv.get('value')
         try:
             diskif = aliases['diskif'][diskif]
