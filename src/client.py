@@ -261,7 +261,7 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False,
         )
 
         basic_usage["list"] = _(
-            "[-HafMmnqRrsuv] [-g path_or_uri ...] [--no-refresh]\n"
+            "[-HafiMmnqRrsuv] [-g path_or_uri ...] [--no-refresh]\n"
             "            [pkg_fmri_pattern ...]")
         basic_usage["refresh"] = _("[-q] [--full] [publisher ...]")
         basic_usage["version"] = ""
@@ -560,7 +560,8 @@ def get_fmri_args(api_inst, pargs, cmd=None):
 def list_inventory(op, api_inst, pargs,
     li_parent_sync, list_all, list_installed_newest, list_newest,
     list_upgradable, omit_headers, origins, quiet, refresh_catalogs, summary,
-    list_removable, list_all_removable, list_manual, list_not_manual, verbose):
+    list_removable, list_all_removable, list_manual, list_not_manual,
+    list_installable, verbose):
         """List packages."""
 
         if verbose:
@@ -616,6 +617,11 @@ def list_inventory(op, api_inst, pargs,
                                 continue
 
                         if list_not_manual and 'manual' in entry['states']:
+                                continue
+
+                        if (list_installable and
+                            not set(['installed', 'obsolete', 'renamed'])
+                            .isdisjoint(entry['states'])):
                                 continue
 
                         if not omit_headers:
@@ -5773,6 +5779,7 @@ opts_mapping = {
     "list_all_removable" :    ("R",  ""),
     "list_manual" :           ("m",  ""),
     "list_not_manual" :       ("M",  ""),
+    "list_installable" :      ("i",  ""),
 
     "ctlfd" :                 ("",  "ctlfd"),
     "progfd" :                ("",  "progfd"),

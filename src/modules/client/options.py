@@ -71,6 +71,7 @@ LIST_INSTALLED_NEWEST = "list_installed_newest"
 LIST_NEWEST           = "list_newest"
 LIST_UPGRADABLE       = "list_upgradable"
 LIST_REMOVABLE        = "list_removable"
+LIST_INSTALLABLE      = "list_installable"
 LIST_ALL_REMOVABLE    = "list_all_removable"
 LIST_MANUAL           = "list_manual"
 LIST_NOT_MANUAL       = "list_not_manual"
@@ -785,54 +786,48 @@ def opts_table_cb_md_only(op, api_inst, opts, opts_new):
                 raise InvalidOptionError(InvalidOptionError.INCOMPAT,
                     [arg1, REJECT_PATS])
 
+list_incompat_options = [
+    [ ORIGINS, LIST_UPGRADABLE ],
+    [ ORIGINS, LIST_REMOVABLE ],
+
+    [ LIST_INSTALLED_NEWEST, LIST_NEWEST ],
+    [ LIST_INSTALLED_NEWEST, LIST_UPGRADABLE],
+    [ LIST_INSTALLED_NEWEST, LIST_REMOVABLE],
+
+    [ LIST_UPGRADABLE, LIST_REMOVABLE],
+    [ LIST_MANUAL, LIST_NOT_MANUAL],
+
+    [ LIST_INSTALLABLE, LIST_MANUAL ],
+    [ LIST_INSTALLABLE, LIST_NOT_MANUAL ],
+    [ LIST_INSTALLABLE, LIST_REMOVABLE ],
+    [ LIST_INSTALLABLE, LIST_UPGRADABLE ],
+
+    [ SUMMARY, VERBOSE],
+    [ QUIET, VERBOSE],
+]
+
 def opts_cb_list(op, api_inst, opts, opts_new):
 
-        if opts_new[LIST_ALL_REMOVABLE]:
-                opts_new[LIST_REMOVABLE] = True
-
-        if opts_new[ORIGINS] and opts_new[LIST_UPGRADABLE]:
-                raise InvalidOptionError(InvalidOptionError.INCOMPAT,
-                    [ORIGINS, LIST_UPGRADABLE])
-
-        if opts_new[ORIGINS] and opts_new[LIST_REMOVABLE]:
-                raise InvalidOptionError(InvalidOptionError.INCOMPAT,
-                    [ORIGINS, LIST_REMOVABLE])
-
-        if opts_new[ORIGINS] and not opts_new[LIST_NEWEST]:
-                # Use of -g implies -a unless -n is provided.
-                opts_new[LIST_INSTALLED_NEWEST] = True
+        for (a, b) in list_incompat_options:
+                if opts_new[a] and opts_new[b]:
+                        raise InvalidOptionError(InvalidOptionError.INCOMPAT,
+                            [a, b])
 
         if opts_new[LIST_ALL] and not opts_new[LIST_INSTALLED_NEWEST]:
                 raise InvalidOptionError(InvalidOptionError.REQUIRED,
                     [LIST_ALL, LIST_INSTALLED_NEWEST])
 
-        if opts_new[LIST_INSTALLED_NEWEST] and opts_new[LIST_NEWEST]:
-                raise InvalidOptionError(InvalidOptionError.INCOMPAT,
-                    [LIST_INSTALLED_NEWEST, LIST_NEWEST])
+        if opts_new[LIST_INSTALLABLE] and not opts_new[LIST_INSTALLED_NEWEST]:
+                # Use of -i implies -n unless -a is provided.
+                opts_new[LIST_NEWEST] = True
 
-        if opts_new[LIST_INSTALLED_NEWEST] and opts_new[LIST_UPGRADABLE]:
-                raise InvalidOptionError(InvalidOptionError.INCOMPAT,
-                    [LIST_INSTALLED_NEWEST, LIST_UPGRADABLE])
+        if opts_new[LIST_ALL_REMOVABLE]:
+                opts_new[LIST_REMOVABLE] = True
 
-        if opts_new[LIST_INSTALLED_NEWEST] and opts_new[LIST_REMOVABLE]:
-                raise InvalidOptionError(InvalidOptionError.INCOMPAT,
-                    [LIST_INSTALLED_NEWEST, LIST_REMOVABLE])
+        if opts_new[ORIGINS] and not opts_new[LIST_NEWEST]:
+                # Use of -g implies -a unless -n is provided.
+                opts_new[LIST_INSTALLED_NEWEST] = True
 
-        if opts_new[LIST_UPGRADABLE] and opts_new[LIST_REMOVABLE]:
-                raise InvalidOptionError(InvalidOptionError.INCOMPAT,
-                    [LIST_UPGRADABLE, LIST_REMOVABLE])
-
-        if opts_new[LIST_MANUAL] and opts_new[LIST_NOT_MANUAL]:
-                raise InvalidOptionError(InvalidOptionError.INCOMPAT,
-                    [LIST_MANUAL, LIST_NOT_MANUAL])
-
-        if opts_new[SUMMARY] and opts_new[VERBOSE]:
-                raise InvalidOptionError(InvalidOptionError.INCOMPAT,
-                    [SUMMARY, VERBOSE])
-
-        if opts_new[QUIET] and opts_new[VERBOSE]:
-                raise InvalidOptionError(InvalidOptionError.INCOMPAT,
-                    [QUIET, VERBOSE])
 
 def opts_cb_int(k, api_inst, opts, opts_new, minimum=None):
 
@@ -1322,6 +1317,7 @@ opts_list_inventory = \
     (SUMMARY,               False, [], {"type": "boolean"}),
     (LIST_UPGRADABLE,       False, [], {"type": "boolean"}),
     (LIST_REMOVABLE,        False, [], {"type": "boolean"}),
+    (LIST_INSTALLABLE,      False, [], {"type": "boolean"}),
     (LIST_ALL_REMOVABLE,    False, [], {"type": "boolean"}),
     (LIST_MANUAL,           False, [], {"type": "boolean"}),
     (LIST_NOT_MANUAL,       False, [], {"type": "boolean"}),

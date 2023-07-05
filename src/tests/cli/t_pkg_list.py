@@ -151,6 +151,10 @@ class TestPkgList(pkg5unittest.ManyDepotTestCase):
                 self.pkg("list -v -s", exit=2)
                 self.pkg("list -a -u", exit=2)
                 self.pkg("list -a -r", exit=2)
+                self.pkg("list -m -M", exit=2)
+                self.pkg("list -i -r", exit=2)
+                self.pkg("list -i -m", exit=2)
+                self.pkg("list -i -M", exit=2)
                 self.pkg("list -g pkg://test1/ -u", exit=2)
 
                 # Should only print fatal errors when using -q.
@@ -836,6 +840,66 @@ class TestPkgList(pkg5unittest.ManyDepotTestCase):
                 self.pkg("list -Ha fenix")
                 expected = \
                     "fenix            1.0-0 ---\n"
+                output = self.reduceSpaces(self.output)
+                expected = self.reduceSpaces(expected)
+                self.assertEqualDiff(expected, output)
+
+        def test_16d_installable(self):
+                """Verify that pkg list -i works as expected."""
+
+                self.image_create(self.rurl1)
+
+                self.pkg("list -Hi")
+                expected = \
+                    "cowley           1.1-0 ---\n" \
+                    "dragon           1.0-0 ---\n" \
+                    "fenix            1.0-0 ---\n" \
+                    "foo              1.2.1-0 ---\n" \
+                    "food             1.2-0 ---\n" \
+                    "hier/foo         1.0-0 ---\n"
+                output = self.reduceSpaces(self.output)
+                expected = self.reduceSpaces(expected)
+                self.assertEqualDiff(expected, output)
+
+                # fenix and cowley should be installed
+                # (fenix depends on cowley)
+                self.pkg("install -v /foo@1.0 fenix")
+
+                self.pkg("list -Hi")
+                expected = \
+                    "dragon           1.0-0 ---\n" \
+                    "foo              1.2.1-0 ---\n" \
+                    "food             1.2-0 ---\n" \
+                    "hier/foo         1.0-0 ---\n"
+                output = self.reduceSpaces(self.output)
+                expected = self.reduceSpaces(expected)
+                self.assertEqualDiff(expected, output)
+
+                self.pkg("list -Hi fenix")
+
+                expected = ""
+                output = self.reduceSpaces(self.output)
+                expected = self.reduceSpaces(expected)
+                self.assertEqualDiff(expected, output)
+
+                self.pkg("uninstall fenix")
+
+                self.pkg("list -Hi fenix")
+
+                expected = \
+                    "fenix            1.0-0 ---\n"
+                output = self.reduceSpaces(self.output)
+                expected = self.reduceSpaces(expected)
+                self.assertEqualDiff(expected, output)
+
+                self.pkg("list -Hi")
+
+                expected = \
+                    "dragon           1.0-0 ---\n" \
+                    "fenix            1.0-0 ---\n" \
+                    "foo              1.2.1-0 ---\n" \
+                    "food             1.2-0 ---\n" \
+                    "hier/foo         1.0-0 ---\n"
                 output = self.reduceSpaces(self.output)
                 expected = self.reduceSpaces(expected)
                 self.assertEqualDiff(expected, output)
