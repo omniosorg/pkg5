@@ -184,7 +184,7 @@
 .Nm
 .Cm list
 .Bk -words
-.Op Fl HafMmnqRrsuv
+.Op Fl HafiMmnqRrsuv
 .Oo Fl g Ar path_or_uri Oc Ns ...
 .Op Fl \-no-refresh
 .Ek
@@ -1356,7 +1356,7 @@ Packages marked in this way are ignored by
 .Nm
 .Cm list
 .Bk -words
-.Op Fl HafMmnqRrsuv
+.Op Fl HafiMmnqRrsuv
 .Oo Fl g Ar path_or_uri Oc Ns ...
 .Op Fl \-no-refresh
 .Ek
@@ -1452,6 +1452,9 @@ implies
 if
 .Fl n
 is not specified.
+.It Fl i
+Show only packages which are installable
+.Pq i.e. not currently installed .
 .It Fl M
 Show only packages which were automatically
 .Pq rather than manually

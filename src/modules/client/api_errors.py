@@ -3448,7 +3448,7 @@ class InvalidOptionError(ApiException):
                         return s
                 elif self.err_type == self.INCOMPAT:
                         assert len(self.options) == 2
-                        return _("The '{op1}' and '{op2}' option may "
+                        return _("The '{op1}' and '{op2}' options may "
                             "not be combined.").format(op1=self.options[0],
                             op2=self.options[1])
                 elif self.err_type == self.REQUIRED:
