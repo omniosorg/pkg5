@@ -81,8 +81,9 @@ NEW_BE                = "new_be"
 NO_BACKUP_BE          = "no_backup_be"
 NOEXECUTE             = "noexecute"
 OMIT_HEADERS          = "omit_headers"
-ORIGINS               = "origins"
+OUTPUT_FIELDS         = "output_fields"
 PARSABLE_VERSION      = "parsable_version"
+ORIGINS               = "origins"
 QUIET                 = "quiet"
 REFRESH_CATALOGS      = "refresh_catalogs"
 REJECT_PATS           = "reject_pats"
@@ -196,9 +197,14 @@ def __parse_prop_values(args, add=True):
 
         return props_values
 
-def opts_table_cb_pub_list(op, api_inst, opts, opts_new):
+def opts_table_cb_output_format(op, api_inst, opts, opts_new):
         if opts[OUTPUT_FORMAT] == None:
                 opts_new[OUTPUT_FORMAT] = "default"
+
+        if (QUIET in opts and opts[QUIET] and
+            opts_new[OUTPUT_FORMAT] != 'default'):
+                raise InvalidOptionError(InvalidOptionError.INCOMPAT,
+                    [QUIET, OUTPUT_FORMAT])
 
 def opts_table_cb_pub_props(op, api_inst, opts, opts_new):
         opts_new[SET_PROPS] = __parse_set_props(opts[SET_PROPS])
@@ -927,11 +933,8 @@ opts_table_info = [
 ]
 
 opts_table_pub_list = [
-    opts_table_cb_pub_list,
     (PREFERRED_ONLY,  False, [],                 {"type": "boolean"}),
     (INC_DISABLED,    True,  [],                 {"type": "boolean"}),
-    (OUTPUT_FORMAT,   None,  ["default", "tsv"], {"type": ["null", "string"]}),
-    (OMIT_HEADERS,    False, [],                 {"type": "boolean"})
 ]
 
 opts_table_pub_props = [
@@ -1080,9 +1083,24 @@ opts_table_licenses = [
     (SHOW_LICENSES,        False, [], {"type": "boolean"}),
 ]
 
+opts_table_output_format = [
+    opts_table_cb_output_format,
+    (OUTPUT_FORMAT,   None,  ["default", "tsv", "json", "json-formatted"],
+                                {"type": ["null", "string"]}),
+]
+
+opts_table_output_format_tsv_only = [
+    opts_table_cb_output_format,
+    (OUTPUT_FORMAT,   None,  ["default", "tsv"], {"type": ["null", "string"]}),
+]
+
 opts_table_no_headers = [
     opts_table_cb_no_headers_vs_quiet,
     (OMIT_HEADERS,         False, [], {"type": "boolean"}),
+]
+
+opts_table_output_fields = [
+    (OUTPUT_FIELDS,        None, [], {"type": "string"}),
 ]
 
 opts_table_no_index = [
@@ -1305,6 +1323,8 @@ opts_list_inventory = \
     opts_table_li_no_psync + \
     opts_table_no_refresh + \
     opts_table_no_headers + \
+    opts_table_output_format + \
+    opts_table_output_fields + \
     opts_table_origins + \
     opts_table_quiet + \
     opts_table_verbose + \
@@ -1352,6 +1372,8 @@ opts_verify = \
 ]
 
 opts_publisher = \
+    opts_table_no_headers + \
+    opts_table_output_format_tsv_only + \
     opts_table_pub_list + \
     []
 
