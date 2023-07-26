@@ -856,7 +856,8 @@ class TestPkgList(pkg5unittest.ManyDepotTestCase):
                     "fenix            1.0-0 ---\n" \
                     "foo              1.2.1-0 ---\n" \
                     "food             1.2-0 ---\n" \
-                    "hier/foo         1.0-0 ---\n"
+                    "hier/foo         1.0-0 ---\n" \
+                    "legacy           1.0-0 --l\n"
                 output = self.reduceSpaces(self.output)
                 expected = self.reduceSpaces(expected)
                 self.assertEqualDiff(expected, output)
@@ -870,7 +871,8 @@ class TestPkgList(pkg5unittest.ManyDepotTestCase):
                     "dragon           1.0-0 ---\n" \
                     "foo              1.2.1-0 ---\n" \
                     "food             1.2-0 ---\n" \
-                    "hier/foo         1.0-0 ---\n"
+                    "hier/foo         1.0-0 ---\n" \
+                    "legacy           1.0-0 --l\n"
                 output = self.reduceSpaces(self.output)
                 expected = self.reduceSpaces(expected)
                 self.assertEqualDiff(expected, output)
@@ -899,7 +901,8 @@ class TestPkgList(pkg5unittest.ManyDepotTestCase):
                     "fenix            1.0-0 ---\n" \
                     "foo              1.2.1-0 ---\n" \
                     "food             1.2-0 ---\n" \
-                    "hier/foo         1.0-0 ---\n"
+                    "hier/foo         1.0-0 ---\n" \
+                    "legacy           1.0-0 --l\n"
                 output = self.reduceSpaces(self.output)
                 expected = self.reduceSpaces(expected)
                 self.assertEqualDiff(expected, output)
