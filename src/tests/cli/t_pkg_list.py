@@ -847,6 +847,11 @@ class TestPkgList(pkg5unittest.ManyDepotTestCase):
         def test_16d_installable(self):
                 """Verify that pkg list -i works as expected."""
 
+                # In a bulk test run, newpkg10 is published by test09
+                # above. To support running the test standalone, publish
+                # it explicitly here.
+                plist = self.pkgsend_bulk(self.rurl1, self.newpkg10)
+
                 self.image_create(self.rurl1)
 
                 self.pkg("list -Hi")
@@ -857,7 +862,8 @@ class TestPkgList(pkg5unittest.ManyDepotTestCase):
                     "foo              1.2.1-0 ---\n" \
                     "food             1.2-0 ---\n" \
                     "hier/foo         1.0-0 ---\n" \
-                    "legacy           1.0-0 --l\n"
+                    "legacy           1.0-0 --l\n" \
+                    "newpkg           1.0   ---\n"
                 output = self.reduceSpaces(self.output)
                 expected = self.reduceSpaces(expected)
                 self.assertEqualDiff(expected, output)
@@ -872,7 +878,8 @@ class TestPkgList(pkg5unittest.ManyDepotTestCase):
                     "foo              1.2.1-0 ---\n" \
                     "food             1.2-0 ---\n" \
                     "hier/foo         1.0-0 ---\n" \
-                    "legacy           1.0-0 --l\n"
+                    "legacy           1.0-0 --l\n" \
+                    "newpkg           1.0   ---\n"
                 output = self.reduceSpaces(self.output)
                 expected = self.reduceSpaces(expected)
                 self.assertEqualDiff(expected, output)
@@ -902,7 +909,8 @@ class TestPkgList(pkg5unittest.ManyDepotTestCase):
                     "foo              1.2.1-0 ---\n" \
                     "food             1.2-0 ---\n" \
                     "hier/foo         1.0-0 ---\n" \
-                    "legacy           1.0-0 --l\n"
+                    "legacy           1.0-0 --l\n" \
+                    "newpkg           1.0   ---\n"
                 output = self.reduceSpaces(self.output)
                 expected = self.reduceSpaces(expected)
                 self.assertEqualDiff(expected, output)
