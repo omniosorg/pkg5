@@ -808,10 +808,17 @@ list_incompat_options = [
 
 def opts_cb_list(op, api_inst, opts, opts_new):
 
+        if opts_new[LIST_ALL_REMOVABLE]:
+                opts_new[LIST_REMOVABLE] = True
+
         for (a, b) in list_incompat_options:
                 if opts_new[a] and opts_new[b]:
                         raise InvalidOptionError(InvalidOptionError.INCOMPAT,
                             [a, b])
+
+        if opts_new[ORIGINS] and not opts_new[LIST_NEWEST]:
+                # Use of -g implies -a unless -n is provided.
+                opts_new[LIST_INSTALLED_NEWEST] = True
 
         if opts_new[LIST_ALL] and not opts_new[LIST_INSTALLED_NEWEST]:
                 raise InvalidOptionError(InvalidOptionError.REQUIRED,
@@ -820,14 +827,6 @@ def opts_cb_list(op, api_inst, opts, opts_new):
         if opts_new[LIST_INSTALLABLE] and not opts_new[LIST_INSTALLED_NEWEST]:
                 # Use of -i implies -n unless -a is provided.
                 opts_new[LIST_NEWEST] = True
-
-        if opts_new[LIST_ALL_REMOVABLE]:
-                opts_new[LIST_REMOVABLE] = True
-
-        if opts_new[ORIGINS] and not opts_new[LIST_NEWEST]:
-                # Use of -g implies -a unless -n is provided.
-                opts_new[LIST_INSTALLED_NEWEST] = True
-
 
 def opts_cb_int(k, api_inst, opts, opts_new, minimum=None):
 
@@ -1317,10 +1316,10 @@ opts_list_inventory = \
     (SUMMARY,               False, [], {"type": "boolean"}),
     (LIST_UPGRADABLE,       False, [], {"type": "boolean"}),
     (LIST_REMOVABLE,        False, [], {"type": "boolean"}),
-    (LIST_INSTALLABLE,      False, [], {"type": "boolean"}),
     (LIST_ALL_REMOVABLE,    False, [], {"type": "boolean"}),
     (LIST_MANUAL,           False, [], {"type": "boolean"}),
     (LIST_NOT_MANUAL,       False, [], {"type": "boolean"}),
+    (LIST_INSTALLABLE,      False, [], {"type": "boolean"}),
 ]
 
 opts_dehydrate = \
