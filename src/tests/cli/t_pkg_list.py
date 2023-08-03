@@ -927,6 +927,47 @@ class TestPkgList(pkg5unittest.ManyDepotTestCase):
                     include_build=False) + " im-\n"
                 self.assertEqualDiff(expected, output)
 
+        def test_18_options(self):
+                """Verify some of the pkg list -o options"""
+
+                self.pkg("install fenix", exit=[0,4])
+
+                expected = {
+                    'branch': '0',
+                    'flags': 'im-',
+                    'name': 'fenix',
+                    'namepub': 'fenix',
+                    'osrelease': '5.11',
+                    'publisher': 'test1',
+                    'release': '1.0',
+                    'version': '1.0-0',
+                    'name,osrelease,publisher': 'fenix 5.11 test1',
+                }
+
+                for attr, val in expected.items():
+                        self.pkg(f"list -H -o {attr} fenix")
+                        output = self.reduceSpaces(self.output).rstrip()
+                        self.assertEqual(val, output)
+
+        def test_19_format(self):
+                """Verify pkg list -F"""
+
+                self.pkg("install fenix", exit=[0,4])
+
+                self.pkg("list -F tsv -o name,osrelease,publisher fenix")
+                self.assertEqualDiff(
+                    "NAME\tOS RELEASE\tPUBLISHER\n" + \
+                    "fenix\t5.11\ttest1\n", self.output)
+
+                self.pkg("list -HF tsv -o name,osrelease,publisher fenix")
+                self.assertEqual("fenix\t5.11\ttest1\n", self.output)
+
+                self.pkg("list -F json -o name,osrelease,publisher fenix")
+                self.assertEqualDiff(
+                    '[{"name":"fenix","osrelease":"5.11","publisher":"test1"}]',
+                    self.output)
+
+
 
 class TestPkgListSingle(pkg5unittest.SingleDepotTestCase):
         # Destroy test space every time.

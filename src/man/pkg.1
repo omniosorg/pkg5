@@ -1,6 +1,6 @@
 .\" Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
-.\" Copyright 2022 OmniOS Community Edition (OmniOSce) Association.
-.Dd July 9, 2022
+.\" Copyright 2023 OmniOS Community Edition (OmniOSce) Association.
+.Dd July 20, 2023
 .Dt PKG 1
 .Os
 .Sh NAME
@@ -187,6 +187,8 @@
 .Op Fl HafiMmnqRrsuv
 .Oo Fl g Ar path_or_uri Oc Ns ...
 .Op Fl \-no-refresh
+.Op Fl F Ar format
+.Oo Fl o Ar column Ns Oo , Ns Ar column Oc Ns ... Oc Ns ...
 .Ek
 .br
 .Op Ar pkg_fmri_pattern No ...
@@ -1359,6 +1361,8 @@ Packages marked in this way are ignored by
 .Op Fl HafiMmnqRrsuv
 .Oo Fl g Ar path_or_uri Oc Ns ...
 .Op Fl \-no-refresh
+.Op Fl F Ar format
+.Oo Fl o Ar column Ns Oo , Ns Ar column Oc Ns ... Oc Ns ...
 .Ek
 .br
 .Op Ar pkg_fmri_pattern No ...
@@ -1416,6 +1420,18 @@ and will be removed in a future release.
 .Bl -tag -width Ds
 .It Ar pkg_fmri_pattern
 List only the specified packages.
+.It Fl F Ar format
+Specify an alternative output format.
+The value of
+.Ar format
+can be
+.Sy tsv
+.Pq Tab Separated Values ,
+.Sy json
+.Pq JavaScript Object Notation as a single line ,
+or
+.Sy json-formatted
+.Pq JavaScript Object Notation, formatted for readability .
 .It Fl H
 Omit the headers from the listing.
 .It Fl a
@@ -1474,6 +1490,44 @@ command, or were flagged using
 .It Fl n
 Display the newest versions of all known packages, regardless of installed
 state.
+.It Fl o Ar column Ns Oo , Ns Ar column Oc Ns \&...
+Specify the columns to include in the output.
+Multiple attributes can be specified by separating the attribute names with
+commas.
+Valid column names are:
+.Bl -tag -width osrelease
+.It Cm branch
+The branch portion of the full package version.
+.It Cm flags
+The set of flags as described above.
+.It Cm fmri
+The full package FMRI.
+.It Cm name
+The package name.
+.It Cm namepub
+The package name, followed by the publisher name in brackets if it is different
+from the preferred
+.Pq highest priority
+publisher configured on the system.
+.It Cm osrelease
+The OS release portion of the full package version.
+.It Cm publisher
+The publisher.
+.It Cm release
+The release portion of the full package version.
+.It Cm summary
+The package summary text.
+.It Cm timestamp
+The timestamp portion of the full package version.
+.It Cm version
+The version of the package.
+This is the
+.Cm release
+and
+.Cm branch
+components of the version separated by a hyphen
+.Sq \&- .
+.El
 .It Fl q
 Do not list any packages, but return failure if a fatal error occurs.
 .It Fl r

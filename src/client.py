@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2023 OmniOS Community Edition (OmniOSce) Association.
 # Copyright (c) 2007, 2022, Oracle and/or its affiliates.
 #
 
@@ -43,7 +43,6 @@
 # PKG_IMAGE_TYPE [entire, partial, user] - type of image
 #       XXX or is this in the Image configuration?
 
-from __future__ import print_function
 try:
     import pkg.site_paths
 except ImportError:
@@ -135,6 +134,8 @@ pkg_timer = pkg.misc.Timer("pkg client")
 valid_special_attrs = ["action.hash", "action.key", "action.name", "action.raw"]
 
 valid_special_prefixes = ["action."]
+
+all_formats = ("default", "json", "tsv")
 
 default_attrs = {}
 for atype, aclass in six.iteritems(actions.types):
@@ -262,6 +263,7 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False,
 
         basic_usage["list"] = _(
             "[-HafiMmnqRrsuv] [-g path_or_uri ...] [--no-refresh]\n"
+            "            [-F format] [-o column[,column]]\n"
             "            [pkg_fmri_pattern ...]")
         basic_usage["refresh"] = _("[-q] [--full] [publisher ...]")
         basic_usage["version"] = ""
@@ -319,8 +321,9 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False,
         adv_usage["info"] = \
             _("[-lqr] [-g path_or_uri ...] [--license] [pkg_fmri_pattern ...]")
         adv_usage["contents"] = _(
-            "[-Hmr] [-a attribute=pattern ...] [-g path_or_uri ...]\n"
-            "            [-o attribute ...] [-s sort_key] [-t action_type ...]\n"
+            "[-Hmr] [-a attribute=pattern]... [-g path_or_uri]...\n"
+            "            [-o attribute[,attribute]...]... [-s sort_key]\n"
+            "            [-t action_name[,action_name]...]...\n"
             "            [pkg_fmri_pattern ...]")
         adv_usage["search"] = _(
             "[-HIaflpr] [-o attribute ...] [-s repo_uri] query")
@@ -328,7 +331,7 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False,
         adv_usage["verify"] = _("[-Hqv] [-p path]... [--parsable version]\n"
             "            [--unpackaged] [--unpackaged-only] [pkg_fmri_pattern ...]")
         adv_usage["fix"] = _(
-            "[-Hnvq]\n"
+            "[-nvq]\n"
             + beopts +
             "            [--accept] [--licenses] [--parsable version] [--unpackaged]\n"
             "            [pkg_fmri_pattern ...]")
@@ -557,58 +560,119 @@ def get_fmri_args(api_inst, pargs, cmd=None):
                 error("\n".join(str(e) for e in errors), cmd=cmd)
         return len(errors) == 0, res
 
+def calc_fmtstr(attrs, data):
+        widths = [0] * len(data[0])
+
+        for entry in data:
+                for i, field in enumerate(attrs):
+                        if len(entry.get(field)) > widths[i]:
+                                widths[i] = len(entry.get(field))
+
+        fmt = ''
+        for i, w in enumerate(widths):
+                fmt += '{' + f'{i}:{w+1}' + '}'
+        return fmt
+
+def format_output(attrs, fields, data, output_format, fmt_str, omit_headers):
+        field_data = { a: [all_formats, fields.get(a), ""] for a in attrs }
+        order = [ fields.get(a) for a in attrs ]
+
+        sys.stdout.write(misc.get_listing(
+                order, field_data, data, output_format, fmt_str, omit_headers,
+                False))
+
 def list_inventory(op, api_inst, pargs,
     li_parent_sync, list_all, list_installed_newest, list_newest,
-    list_upgradable, omit_headers, origins, quiet, refresh_catalogs, summary,
-    list_removable, list_all_removable, list_manual, list_not_manual,
-    list_installable, verbose):
+    list_upgradable, omit_headers, output_format, output_fields, origins, quiet,
+    refresh_catalogs, summary, list_removable, list_all_removable, list_manual,
+    list_not_manual, list_installable, verbose):
         """List packages."""
 
-        if verbose:
-                fmt_str = "{0:76} {1}"
-        elif summary:
-                fmt_str = "{0:55} {1}"
-        else:
-                fmt_str = "{0:49} {1:26} {2}"
+        def gen(meta=False):
+                fields = {
+                    "fmri": {
+                        "header": "FMRI",
+                        "display": lambda x:
+                            f"pkg://{x['pub']}/{x['pkg']}@{short_ver}:{ts}"
+                    },
+                    "version": {
+                        "header": "VERSION",
+                        "display": lambda x: short_ver
+                    },
+                    "release": {
+                        "header": "RELEASE",
+                        "display": lambda x: release
+                    },
+                    "osrelease": {
+                        "header": "OS RELEASE",
+                        "display": lambda x: build_release
+                    },
+                    "branch": {
+                        "header": "BRANCH",
+                        "display": lambda x: branch
+                    },
+                    "timestamp": {
+                        "header": "TIMESTAMP",
+                        "display": lambda x: ts
+                    },
+                    "flags": {
+                        "header": "IFO",
+                        "display": lambda x: status
+                    },
+                    "name": {
+                        "header": "NAME",
+                        "display": lambda x: x.get('pkg')
+                    },
+                    "publisher": {
+                        "header": "PUBLISHER",
+                        "display": lambda x: x.get('pub')
+                    },
+                    "namepub": {
+                        "header": "NAME (PUBLISHER)",
+                        "display": lambda x:
+                            x.get('pkg') + (
+                                f" ({x['pub']})" if x['pub'] != ppub else ''
+                            )
+                    },
+                    "summary": {
+                        "header": "SUMMARY",
+                        "display": lambda x: x.get('summary')
+                    },
+                }
 
-        state_map = [
-            [
-                ("installed", "i")
-            ],
-            [
-                ("frozen", "f"),
-                ("optional", "S"),
-                ("manual", "m")
-            ],
-            [
-                ("obsolete", "o"),
-                ("renamed", "r"),
-                ("legacy", "l")
-            ],
-        ]
+                if meta:
+                        yield {k: fields[k].get('header')
+                               for k in fields.keys()}
+                        return
 
-        ppub = api_inst.get_highest_ranked_publisher()
-        if ppub:
-                ppub = ppub.prefix
-
-        # getting json output.
-        out_json = client_api._list_inventory(op, api_inst, pargs,
-            li_parent_sync, list_all, list_installed_newest, list_newest,
-            list_upgradable, origins, quiet, refresh_catalogs,
-            list_removable=list_removable)
-
-        errors = None
-        if "errors" in out_json:
-                errors = out_json["errors"]
-                errors = _generate_error_messages(out_json["status"], errors,
-                    selected_type=["catalog_refresh", "catalog_refresh_failed"])
-
-        if "data" in out_json:
+                if not "data" in out_json:
+                        return
                 data = out_json["data"]
-                for entry in data:
-                        if quiet:
-                                continue
 
+                ppub = api_inst.get_highest_ranked_publisher()
+                if ppub:
+                        ppub = ppub.prefix
+
+                state_map = [
+                    [
+                        ("installed", "i")
+                    ],
+                    [
+                        ("frozen", "f"),
+                        ("optional", "S"),
+                        ("manual", "m")
+                    ],
+                    [
+                        ("obsolete", "o"),
+                        ("renamed", "r"),
+                        ("legacy", "l")
+                    ],
+                ]
+
+                if quiet:
+                        return
+
+                for entry in data:
                         if (list_removable and not list_all_removable and
                             'optional' in entry['states']):
                                 continue
@@ -624,20 +688,6 @@ def list_inventory(op, api_inst, pargs,
                             .isdisjoint(entry['states'])):
                                 continue
 
-                        if not omit_headers:
-                                if verbose:
-                                        msg(fmt_str.format(
-                                            "FMRI", "IFO"))
-                                elif summary:
-                                        msg(fmt_str.format(
-                                            "NAME (PUBLISHER)",
-                                            "SUMMARY"))
-                                else:
-                                        msg(fmt_str.format(
-                                            "NAME (PUBLISHER)",
-                                            "VERSION", "IFO"))
-                                omit_headers = True
-
                         status = ""
                         for sentry in state_map:
                                 for s, v in sentry:
@@ -648,37 +698,68 @@ def list_inventory(op, api_inst, pargs,
                                                 st = "-"
                                 status += st
 
-                        pub, stem, ver = entry["pub"], entry["pkg"], \
-                            entry["version"]
-                        if pub == ppub:
-                                spub = ""
-                        else:
-                                spub = " (" + pub + ")"
-
-                        # Display full FMRI (without build version) for
-                        # verbose case.
                         # Use class method instead of creating an object for
                         # performance reasons.
-                        if verbose:
-                                (release, build_release, branch, ts), \
-                                    short_ver = version.Version.split(ver)
-                                pfmri = "pkg://{0}/{1}@{2}:{3}".format(
-                                    pub, stem, short_ver, ts)
-                                msg(fmt_str.format(pfmri, status))
-                                continue
+                        (release, build_release, branch, ts), \
+                            short_ver = version.Version.split(entry['version'])
 
-                        # Display short FMRI + summary.
-                        summ = entry["summary"]
-                        pf = stem + spub
-                        if summary:
-                                if summ is None:
-                                        summ = ""
-                                msg(fmt_str.format(pf, summ))
-                                continue
+                        yield { a: fields[a].get('display')(entry)
+                                for a in attrs
+                        }
 
-                        # Default case; display short FMRI and version info.
-                        sver = version.Version.split(ver)[-1]
-                        msg(fmt_str.format(pf, sver, status))
+        fields = list(gen(True))[0]
+
+        accumulate = False
+        fmt_str = "{0}"
+        if output_fields:
+                if verbose or summary:
+                        usage("-o cannot be used with -v or -s")
+                attrs = list(dict.fromkeys(output_fields.lower().split(",")))
+                unknown = [a for a in attrs if not fields.get(a)]
+                if len(unknown):
+                        usage(
+                            "Unknown output field(s): {}\n".format(
+                                ', '.join(unknown)) +
+                            "Known fields are: {}".format(
+                                ', '.join(sorted(fields.keys()))))
+                if len(attrs) == 0:
+                        usage("No fields specified. Known fields are: {}"
+                              .format(', '.join(sorted(fields.keys()))))
+                # If there is more than one field selected, we need to
+                # accumulate all results in order to determine the column
+                # widths.
+                if len(attrs) > 1:
+                        accumulate = True
+        elif verbose:
+                fmt_str = "{0:76} {1}"
+                attrs = ["fmri", "flags"]
+        elif summary:
+                fmt_str = "{0:55} {1}"
+                attrs = ["namepub", "summary"]
+        else:
+                fmt_str = "{0:49} {1:26} {2}"
+                attrs = ["namepub", "version", "flags"]
+
+        # getting json output.
+        out_json = client_api._list_inventory(op, api_inst, pargs,
+            li_parent_sync, list_all, list_installed_newest, list_newest,
+            list_upgradable, origins, quiet, refresh_catalogs,
+            list_removable=list_removable)
+
+        errors = None
+        if "errors" in out_json:
+                errors = out_json["errors"]
+                errors = _generate_error_messages(out_json["status"], errors,
+                    selected_type=["catalog_refresh", "catalog_refresh_failed"])
+
+        if accumulate:
+                data = list(gen())
+                fmt_str = calc_fmtstr(attrs, data)
+        else:
+                data = gen()
+
+        format_output(attrs, fields, data, output_format, fmt_str, omit_headers)
+
         # Print errors left.
         if errors:
                 _generate_error_messages(out_json["status"], errors)
@@ -5727,6 +5808,7 @@ opts_mapping = {
     "show_licenses" :     ("",  "licenses"),
 
     "omit_headers" :      ("H",  ""),
+    "output_fields" :     ("o",  "output-fields"),
 
     "update_index" :      ("",  "no-index"),
 

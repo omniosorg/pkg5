@@ -156,7 +156,7 @@ Subcommands:
      pkgrepo remove-publisher [-n] [--synchronous] -s repo_uri_or_path
          publisher ...
 
-     pkgrepo get [-F format] [-p publisher ...] -s repo_uri_or_path
+     pkgrepo get [-F format] [-H] [-p publisher ...] -s repo_uri_or_path
          [--key ssl_key ... --cert ssl_cert ...] [section/property ...]
 
      pkgrepo info [-F format] [-H] [-p publisher ...] -s repo_uri_or_path
