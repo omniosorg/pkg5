@@ -33,6 +33,8 @@ PYTESTS = $(PYVERSIONS:%=runtest/%)
 PYMODULES = $(PYVERSIONS:%=modules/%)
 TESTRESULTS = $(PYVERSIONS:%=testresults/%)
 
+REQUIREMENTS = requirements.txt
+
 all := TARGET = all
 build := TARGET = build
 install := TARGET = install
@@ -70,7 +72,7 @@ $(PYVERSIONS): FRC
 
 $(PYMODULES): FRC
 	../tools/installmodules $(CODE_WS) $(ROOT) $(@F) \
-	    $(TARGET) $(ROOTPKGLIB) core requirements.txt
+	    $(TARGET) $(ROOTPKGLIB) core $(REQUIREMENTS)
 
 $(PYTESTS): $(PYMODULES)
 	-pfexec python$(@F) tests/run.py -t -j $(JOBS)
