@@ -756,7 +756,10 @@ def list_inventory(op, api_inst, pargs,
                 data = list(gen())
                 fmt_str = calc_fmtstr(attrs, data)
         else:
-                data = gen()
+                data = list(gen())
+
+        if len(data) == 0:
+                omit_headers = True
 
         format_output(attrs, fields, data, output_format, fmt_str, omit_headers)
 
