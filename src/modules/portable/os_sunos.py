@@ -39,7 +39,8 @@ from .os_unix import \
     get_group_by_name, get_user_by_name, get_name_by_gid, get_name_by_uid, \
     get_usernames_by_gid, is_admin, get_userid, get_username, chown, rename, \
     remove, link, copyfile, split_path, get_root, assert_mode
-from pkg.portable import ELF, EXEC, PD_LOCAL_PATH, UNFOUND, SMF_MANIFEST
+from pkg.portable import PD_LOCAL_PATH, \
+    ELF, EXEC, UNFOUND, SMF_MANIFEST, XMLDOC, EMPTYFILE, NOTFILE, UNKNOWN
 
 import pkg.arch as arch
 from pkg.sysattr import fgetattr, fsetattr
@@ -54,32 +55,42 @@ def get_release():
 def get_platform():
         return arch.get_platform()
 
-def get_file_type(actions):
+def get_file_type(path):
         from pkg.flavor.smf_manifest import is_smf_manifest
-        for a in actions:
-                lpath = a.attrs[PD_LOCAL_PATH]
-                if os.stat(lpath).st_size == 0:
-                        # Some tests rely on this being identified
-                        yield "empty file"
-                        continue
-                try:
-                        with open(lpath, 'rb') as f:
-                                magic = f.read(4)
-                except FileNotFoundError:
-                        yield UNFOUND
-                        continue
-                if magic == b'\x7fELF':
-                        yield ELF
-                elif magic[:2] == b'#!':
-                        yield EXEC
-                elif lpath.endswith('.xml'):
-                        if is_smf_manifest(lpath):
-                                yield SMF_MANIFEST
-                        else:
-                                # Some tests rely on this type being identified
-                                yield "XML document"
+
+        if not os.path.isfile(path):
+                return NOTFILE
+
+        try:
+                # Some tests rely on this being identified
+                if os.stat(path).st_size == 0:
+                        return EMPTYFILE
+                with open(path, 'rb') as f:
+                        magic = f.read(4)
+        except FileNotFoundError:
+                return UNFOUND
+        except OSError:
+                # Most likely EPERM
+                return UNKNOWN
+
+        if magic == b'\x7fELF':
+                return ELF
+
+        if magic[:2] == b'#!':
+                return EXEC
+
+        if path.endswith('.xml'):
+                if is_smf_manifest(path):
+                        return SMF_MANIFEST
                 else:
-                        yield "unknown"
+                        # Some tests rely on this type being identified
+                        return XMLDOC
+
+        return UNKNOWN
+
+def get_actions_file_type(actions):
+        for a in actions:
+                yield get_file_type(a.attrs[PD_LOCAL_PATH])
 
 # Vim hints
 # vim:ts=8:sw=8:et:fdm=marker
