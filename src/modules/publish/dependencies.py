@@ -413,7 +413,7 @@ def list_implicit_deps_for_manifest(mfst, proto_dirs, pkg_vars, dyn_tok_conv,
         warnings = []
         pkg_attrs = {}
         act_list = list(mfst.gen_actions_by_type("file"))
-        file_types = portable.get_file_type(act_list)
+        file_types = portable.get_actions_file_type(act_list)
         var_dict = dict()
 
         # Collect all variants that are used and not declared and emit a warning
@@ -1616,6 +1616,38 @@ def prune_debug_attrs(action):
                      if not k.startswith(base.Dependency.DEPEND_DEBUG_PREFIX))
         return actions.depend.DependencyAction(**attrs)
 
+# In order to resolve dependencies, we build a mapping of all files and
+# symlinks delivered by installed packages. To reduce the size of that working
+# set we apply some pre-filters to discard files which can never be a
+# dependency target, either intrinsically (like a man page or image file), or
+# because we don't implement a dependency parser for it (e.g. perl).
+
+skip_prefix = (
+        'usr/share/man',
+        'opt/ooce/share/man',
+)
+
+skip_suffix = (
+        '.json', '.toml', '.txt', '.html',
+        '.mf', '.p5m',
+        '.png', '.jpg', '.gif',
+        '.pdf',
+        '.pl', '.pm',
+        '.h', '.c',
+        '.rs', '.go', '.js', '.d', '.lua', '.zig', '.rb', '.m4',
+        '.gz', '.zip',
+        '.cmake',
+        '.rst',
+        '.mo',
+        '.vim',
+        '.elc',
+        '.hpp',
+        # texinfo
+        '.tex', '.eps', '.ltx', '.def', '.md', '.ins', '.otf', '.tikz', '.dtx',
+        '.afm', '.fd', '.enc', '.sty', '.pfb', '.htf', '.vf', '.tfm',
+
+)
+
 def add_fmri_path_mapping(files_dict, links_dict, pfmri, mfst,
     distro_vars=None, use_template=False):
         """Add mappings from path names to FMRIs and variants.
@@ -1639,6 +1671,14 @@ def add_fmri_path_mapping(files_dict, links_dict, pfmri, mfst,
         dictionaries with VariantCombinationTemplates instead of
         VariantCombinations."""
 
+        def filter(action):
+                path = action.attrs['path']
+                if path.startswith(skip_prefix):
+                        return True
+                if path.endswith(skip_suffix):
+                        return True
+                return False
+
         assert not distro_vars or not use_template
         if not use_template:
                 pvariants = mfst.get_all_variants()
@@ -1646,6 +1686,7 @@ def add_fmri_path_mapping(files_dict, links_dict, pfmri, mfst,
                         pvariants.merge_unknown(distro_vars)
 
         for f in mfst.gen_actions_by_type("file"):
+                if filter(f): continue
                 vc = f.get_variant_template()
                 if not use_template:
                         vc.merge_unknown(pvariants)
@@ -1655,6 +1696,7 @@ def add_fmri_path_mapping(files_dict, links_dict, pfmri, mfst,
                     (pfmri, vc))
         for f in itertools.chain(mfst.gen_actions_by_type("hardlink"),
              mfst.gen_actions_by_type("link")):
+                if filter(f): continue
                 vc = f.get_variant_template()
                 if not use_template:
                         vc.merge_unknown(pvariants)
@@ -1784,6 +1826,7 @@ def resolve_deps(manifest_paths, api_inst, system_patterns, prune_attrs=False):
                         ]
                         files.installed[pth] = new_val
                 del tmp_files
+
                 # Populate the link dictionary using the installed packages'
                 # information.
                 for pth, l in six.iteritems(tmp_links):
