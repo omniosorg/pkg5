@@ -36,55 +36,54 @@ import pkg.client.printengine as printengine
 import pkg.misc as misc
 
 if __name__ == "__main__":
-        misc.setlocale(locale.LC_ALL, "", None)
-        gettext.install("pkg", "/usr/share/locale")
+    misc.setlocale(locale.LC_ALL, "", None)
+    gettext.install("pkg", "/usr/share/locale")
 
-        test_ttymode = test_nottymode = test_logging = False
-        opts, argv = getopt.getopt(sys.argv[1:], "tTl")
-        for (opt, arg) in opts:
-                if opt == '-t':
-                        test_ttymode = True
-                elif opt == '-T':
-                        test_nottymode = True
-                elif opt == '-l':
-                        test_logging = True
-                else:
-                        print("bad option {0}".format(opt), file=sys.stderr)
-                        sys.exit(2)
-
-        if not (test_ttymode or test_nottymode or test_logging):
-                print("must specify one or more of -t, -T or -l",
-                    file=sys.stderr)
-                sys.exit(2)
-
-        if len(argv) == 1:
-                output_file = open(argv[0], "w")
-        elif len(argv) > 1:
-                print("too many arguments", file=sys.stderr)
-                sys.exit(2)
+    test_ttymode = test_nottymode = test_logging = False
+    opts, argv = getopt.getopt(sys.argv[1:], "tTl")
+    for opt, arg in opts:
+        if opt == "-t":
+            test_ttymode = True
+        elif opt == "-T":
+            test_nottymode = True
+        elif opt == "-l":
+            test_logging = True
         else:
-                output_file = sys.stdout
+            print("bad option {0}".format(opt), file=sys.stderr)
+            sys.exit(2)
 
-        try:
-                if test_ttymode:
-                        print("---test_ttymode---", file=output_file)
-                        print(("-" * 60), file=output_file)
-                        printengine.test_posix_printengine(output_file, True)
-                if test_nottymode:
-                        print("---test_nottymode---", file=output_file)
-                        print(("-" * 60), file=output_file)
-                        printengine.test_posix_printengine(output_file, False)
-                if test_logging:
-                        print("---test_logging---", file=output_file)
-                        print(("-" * 60), output_file)
-                        printengine.test_logging_printengine(output_file)
-        except printengine.PrintEngineException as e:
-                print(e, file=sys.stderr)
-                sys.exit(1)
-        except:
-                traceback.print_exc()
-                sys.exit(99)
-        sys.exit(0)
+    if not (test_ttymode or test_nottymode or test_logging):
+        print("must specify one or more of -t, -T or -l", file=sys.stderr)
+        sys.exit(2)
+
+    if len(argv) == 1:
+        output_file = open(argv[0], "w")
+    elif len(argv) > 1:
+        print("too many arguments", file=sys.stderr)
+        sys.exit(2)
+    else:
+        output_file = sys.stdout
+
+    try:
+        if test_ttymode:
+            print("---test_ttymode---", file=output_file)
+            print(("-" * 60), file=output_file)
+            printengine.test_posix_printengine(output_file, True)
+        if test_nottymode:
+            print("---test_nottymode---", file=output_file)
+            print(("-" * 60), file=output_file)
+            printengine.test_posix_printengine(output_file, False)
+        if test_logging:
+            print("---test_logging---", file=output_file)
+            print(("-" * 60), output_file)
+            printengine.test_logging_printengine(output_file)
+    except printengine.PrintEngineException as e:
+        print(e, file=sys.stderr)
+        sys.exit(1)
+    except:
+        traceback.print_exc()
+        sys.exit(99)
+    sys.exit(0)
 
 # Vim hints
-# vim:ts=8:sw=8:et:fdm=marker
+# vim:ts=4:sw=4:et:fdm=marker

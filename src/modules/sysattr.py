@@ -35,8 +35,16 @@ F_ATTR_ALL = lib.F_ATTR_ALL
 def is_supported(attr):
     """Test if a sys attr is not in the list of ignored attributes."""
 
-    ignore = [lib.F_OWNERSID, lib.F_GROUPSID, lib.F_AV_SCANSTAMP,
-              lib.F_OPAQUE, lib.F_CRTIME, lib.F_FSID, lib.F_GEN, lib.F_REPARSE]
+    ignore = [
+        lib.F_OWNERSID,
+        lib.F_GROUPSID,
+        lib.F_AV_SCANSTAMP,
+        lib.F_OPAQUE,
+        lib.F_CRTIME,
+        lib.F_FSID,
+        lib.F_GEN,
+        lib.F_REPARSE,
+    ]
 
     for i in ignore:
         if i == attr:
@@ -50,6 +58,7 @@ def fgetattr(filename, compact=False):
     return a string consisting of compact option identifiers."""
 
     from pkg.misc import force_text
+
     if not isinstance(filename, six.string_types):
         raise TypeError("filename must be string type")
 
@@ -120,6 +129,7 @@ def fsetattr(filename, attr):
     """
 
     from pkg.misc import force_bytes
+
     if not isinstance(filename, six.string_types):
         raise TypeError("filename must be string type")
     if not attr:
@@ -147,20 +157,32 @@ def fsetattr(filename, attr):
 
         if sys_attr == lib.F_ATTR_INVAL:
             if compact:
-                raise ValueError("{0} is not a valid compact system "
-                                 "attribute".format(attr))
+                raise ValueError(
+                    "{0} is not a valid compact system "
+                    "attribute".format(attr)
+                )
             else:
-                raise ValueError("{0} is not a valid verbose system "
-                                 "attribute".format(attr))
+                raise ValueError(
+                    "{0} is not a valid verbose system "
+                    "attribute".format(attr)
+                )
         if not is_supported(sys_attr):
             if compact:
-                raise ValueError("{0} is not a supported compact system "
-                                 "attribute".format(attr))
+                raise ValueError(
+                    "{0} is not a supported compact system "
+                    "attribute".format(attr)
+                )
             else:
-                raise ValueError("{0} is not a supported verbose system "
-                                 "attribute".format(attr))
-        if lib.nvlist_add_boolean_value(request[0], lib.attr_to_name(sys_attr),
-                                        1) != 0:
+                raise ValueError(
+                    "{0} is not a supported verbose system "
+                    "attribute".format(attr)
+                )
+        if (
+            lib.nvlist_add_boolean_value(
+                request[0], lib.attr_to_name(sys_attr), 1
+            )
+            != 0
+        ):
             raise OSError(ffi.errno, os.strerror(ffi.errno))
 
     fd = os.open(filename, os.O_RDONLY)
@@ -176,12 +198,13 @@ def fsetattr(filename, attr):
 def get_attr_dict():
     """Get a dictionary containing all supported system attributes in the form:
 
-        { <verbose_name>: <compact_option>,
-          ...
-        }
+    { <verbose_name>: <compact_option>,
+      ...
+    }
     """
 
     from pkg.misc import force_text
+
     sys_attrs = {}
     for i in range(F_ATTR_ALL):
         if not is_supported(i):
@@ -191,5 +214,6 @@ def get_attr_dict():
         sys_attrs.setdefault(key, value)
     return sys_attrs
 
+
 # Vim hints
-# vim:ts=8:sw=8:et:fdm=marker
+# vim:ts=4:sw=4:et:fdm=marker

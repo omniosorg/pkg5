@@ -29,25 +29,39 @@ below override the definitions from os_unix
 
 import os
 import errno
-from .os_unix import \
-    get_isainfo, get_release, get_platform, get_group_by_name, \
-    get_user_by_name, get_name_by_gid, get_name_by_uid, get_usernames_by_gid, \
-    is_admin, get_userid, get_username, rename, remove, link, split_path, \
-    get_root, assert_mode, copyfile
+from .os_unix import (
+    get_isainfo,
+    get_release,
+    get_platform,
+    get_group_by_name,
+    get_user_by_name,
+    get_name_by_gid,
+    get_name_by_uid,
+    get_usernames_by_gid,
+    is_admin,
+    get_userid,
+    get_username,
+    rename,
+    remove,
+    link,
+    split_path,
+    get_root,
+    assert_mode,
+    copyfile,
+)
+
 
 def chown(path, owner, group):
-        # The "nobody" user on AIX has uid -2, which is an invalid UID on NFS
-        # file systems mounted from non-AIX hosts.
-        # However, we don't want to fail an install because of this.
-        try:
-                return os.chown(path, owner, group)
-        except EnvironmentError as e:
-                if owner == -2 and e.errno == errno.EINVAL:
-                        return os.chown(path, -1, group)
-                raise
-
-
+    # The "nobody" user on AIX has uid -2, which is an invalid UID on NFS
+    # file systems mounted from non-AIX hosts.
+    # However, we don't want to fail an install because of this.
+    try:
+        return os.chown(path, owner, group)
+    except EnvironmentError as e:
+        if owner == -2 and e.errno == errno.EINVAL:
+            return os.chown(path, -1, group)
+        raise
 
 
 # Vim hints
-# vim:ts=8:sw=8:et:fdm=marker
+# vim:ts=4:sw=4:et:fdm=marker

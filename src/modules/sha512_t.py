@@ -59,7 +59,6 @@ For example:
 
 
 class SHA512_t(object):
-
     def __init__(self, message=None, t=256):
         self.ctx = ffi.new("SHA2_CTX *")
         if t == 256:
@@ -67,13 +66,14 @@ class SHA512_t(object):
         elif t == 224:
             lib.SHA2Init(lib.SHA512_224, self.ctx)
         else:
-            raise ValueError("The module only supports "
-                             "SHA512/256 or SHA512/224.")
+            raise ValueError(
+                "The module only supports " "SHA512/256 or SHA512/224."
+            )
 
         self.hash_size = t
 
         if message:
-                self.update(message)
+            self.update(message)
 
     def update(self, message):
         """Update the hash object with the string arguments."""
@@ -104,7 +104,9 @@ class SHA512_t(object):
 
         # import goes here to prevent circular import
         from pkg.misc import binary_to_hex
+
         return binary_to_hex(self.digest())
+
 
 # Vim hints
 # vim:ts=4:sw=4:et:fdm=marker

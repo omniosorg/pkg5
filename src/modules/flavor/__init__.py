@@ -24,14 +24,7 @@
 # Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
-__all__ = [
-    "base"
-    "elf"
-    "hardlink"
-    "pound_bang"
-    "python"
-    "smf_manifest"
-]
+__all__ = ["base" "elf" "hardlink" "pound_bang" "python" "smf_manifest"]
 
 # Vim hints
-# vim:ts=8:sw=8:et:fdm=marker
+# vim:ts=4:sw=4:et:fdm=marker

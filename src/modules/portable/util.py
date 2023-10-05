@@ -26,62 +26,66 @@ import os
 import platform
 import re
 
+
 def get_canonical_os_type():
-        """
-        Return a standardized, lower case version of the "type" of OS family.
-        """
-        if os.name == 'posix':
-                return 'unix'
-        elif os.name == 'mac':
-                # Note that darwin systems return 'posix'.  This is for pre-darwin
-                return 'mac'
-        elif os.name == 'nt':
-                return 'windows'
-        else:
-                return 'unknown'
+    """
+    Return a standardized, lower case version of the "type" of OS family.
+    """
+    if os.name == "posix":
+        return "unix"
+    elif os.name == "mac":
+        # Note that darwin systems return 'posix'.  This is for pre-darwin
+        return "mac"
+    elif os.name == "nt":
+        return "windows"
+    else:
+        return "unknown"
+
 
 def get_canonical_os_name():
-        """
-        Return a standardized, lower case version of the name of the OS.  This is
-        useful to avoid the ambiguity of OS marketing names.
-        """
+    """
+    Return a standardized, lower case version of the name of the OS.  This is
+    useful to avoid the ambiguity of OS marketing names.
+    """
 
-        psl = platform.system().lower()
-        if psl in ['sunos', 'darwin', 'windows', 'aix']:
-                return psl
+    psl = platform.system().lower()
+    if psl in ["sunos", "darwin", "windows", "aix"]:
+        return psl
 
-        if psl == 'linux':
-                # add distro information for Linux
-                return 'linux_{0}'.format(platform.dist()[0])
+    if psl == "linux":
+        # add distro information for Linux
+        return "linux_{0}".format(platform.dist()[0])
 
-        # Workaround for python bug 1082, on Vista, platform.system()
-        # returns 'Microsoft'
-        prl = platform.release().lower()
-        if psl == 'microsoft' or prl == 'vista' or prl == 'windows':
-                return 'windows'
+    # Workaround for python bug 1082, on Vista, platform.system()
+    # returns 'Microsoft'
+    prl = platform.release().lower()
+    if psl == "microsoft" or prl == "vista" or prl == "windows":
+        return "windows"
 
-        return 'unknown'
+    return "unknown"
+
 
 def get_os_release():
-        """
-        Return a standardized, sanitized version string, consisting of a
-        dot-separated list of integers representing the release version of
-        this OS.
-        """
+    """
+    Return a standardized, sanitized version string, consisting of a
+    dot-separated list of integers representing the release version of
+    this OS.
+    """
 
-        ostype = get_canonical_os_type()
-        release = None
-        if ostype == 'unix':
-                release = os.uname()[2]
-        elif ostype == 'windows':
-                # Windows has no os.uname, and platform.release
-                # gives you things like "XP" and "Vista"
-                release = platform.version()
-        else:
-                release = platform.release()
+    ostype = get_canonical_os_type()
+    release = None
+    if ostype == "unix":
+        release = os.uname()[2]
+    elif ostype == "windows":
+        # Windows has no os.uname, and platform.release
+        # gives you things like "XP" and "Vista"
+        release = platform.version()
+    else:
+        release = platform.release()
 
-        # force release into a dot-separated list of integers
-        return '.'.join((re.sub(r'[^0-9]', ' ', release)).split())
+    # force release into a dot-separated list of integers
+    return ".".join((re.sub(r"[^0-9]", " ", release)).split())
+
 
 # Vim hints
-# vim:ts=8:sw=8:et:fdm=marker
+# vim:ts=4:sw=4:et:fdm=marker

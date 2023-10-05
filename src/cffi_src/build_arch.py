@@ -29,13 +29,17 @@ from cffi import FFI
 
 ffi = FFI()
 
-ffi.set_source("_arch", """
+ffi.set_source(
+    "_arch",
+    """
 /* Includes */
 #include <sys/systeminfo.h>
 #include <stdlib.h>
-""")
+""",
+)
 
-ffi.cdef("""
+ffi.cdef(
+    """
 /* Macros */
 #define	SI_RELEASE  3            /* return release of operating system */
 #define	SI_ARCHITECTURE_32  516  /* basic 32-bit SI_ARCHITECTURE */
@@ -47,10 +51,11 @@ void *malloc(size_t);
 void *realloc(void *, size_t);
 void free(void *);
 int sysinfo(int, char *, long);
-""")
+"""
+)
 
 if __name__ == "__main__":
-        ffi.emit_c_code("cffi_src/_arch.c")
+    ffi.emit_c_code("cffi_src/_arch.c")
 
 # Vim hints
-# vim:ts=8:sw=8:et:fdm=marker
+# vim:ts=4:sw=4:et:fdm=marker

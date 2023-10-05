@@ -29,12 +29,14 @@ import sys
 # Set the path so that modules can be found
 path_to_parent = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if path_to_parent not in sys.path:
-        sys.path.insert(0, path_to_parent)
+    sys.path.insert(0, path_to_parent)
 
 import pkg5testenv
 
+
 def setup_environment(proto):
-        pkg5testenv.setup_environment(proto)
+    pkg5testenv.setup_environment(proto)
+
 
 # Vim hints
-# vim:ts=8:sw=8:et:fdm=marker
+# vim:ts=4:sw=4:et:fdm=marker

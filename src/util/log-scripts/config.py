@@ -27,15 +27,17 @@
 import os
 from six.moves import configparser
 
-CFGFILE="site-config"
+CFGFILE = "site-config"
+
 
 def get(option, default=None):
-        cfg = configparser.ConfigParser()
-        cfg.read(CFGFILE)
-        value = cfg.get("default", option)
-        if not value:
-                return default
-        return value
+    cfg = configparser.ConfigParser()
+    cfg.read(CFGFILE)
+    value = cfg.get("default", option)
+    if not value:
+        return default
+    return value
+
 
 # Vim hints
-# vim:ts=8:sw=8:et:fdm=marker
+# vim:ts=4:sw=4:et:fdm=marker

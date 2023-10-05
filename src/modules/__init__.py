@@ -26,4 +26,4 @@
 VERSION = "unknown"
 
 # Vim hints
-# vim:ts=8:sw=8:et:fdm=marker
+# vim:ts=4:sw=4:et:fdm=marker

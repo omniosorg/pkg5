@@ -30,13 +30,17 @@ from cffi import FFI
 
 ffi = FFI()
 
-ffi.set_source("_sha512_t", """
+ffi.set_source(
+    "_sha512_t",
+    """
 /* Includes */
 #include <sys/sha2.h>
 #include <string.h>
-""")
+""",
+)
 
-ffi.cdef("""
+ffi.cdef(
+    """
 #define	SHA512_224 9
 #define	SHA512_256 10
 
@@ -63,10 +67,11 @@ void SHA2Init(uint64_t t_bits, SHA2_CTX *ctx);
 void SHA2Update(SHA2_CTX *ctx, const void *buf, size_t bufsz);
 void SHA2Final(void *digest, SHA2_CTX *ctx);
 void *memcpy(void *restrict s1, const void *restrict s2, size_t n);
-""")
+"""
+)
 
 if __name__ == "__main__":
-        ffi.emit_c_code("cffi_src/_sha512_t.c")
+    ffi.emit_c_code("cffi_src/_sha512_t.c")
 
 # Vim hints
-# vim:ts=8:sw=8:et:fdm=marker
+# vim:ts=4:sw=4:et:fdm=marker

@@ -23,8 +23,9 @@
 # Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
 
 from . import testutils
+
 if __name__ == "__main__":
-        testutils.setup_environment("../../../proto")
+    testutils.setup_environment("../../../proto")
 import pkg5unittest
 
 import unittest
@@ -32,64 +33,68 @@ import os
 import sys
 import pkg.client.bootenv as bootenv
 
+
 class TestBootEnv(pkg5unittest.Pkg5TestCase):
+    def test_api_consistency(self):
+        """Make sure every public method in BootEnv exists in
+        BootEnvNull and the other way around.
+        """
 
-        def test_api_consistency(self):
-                """Make sure every public method in BootEnv exists in
-                BootEnvNull and the other way around.
-                """
+        nullm = set(
+            d for d in dir(bootenv.BootEnvNull) if not d.startswith("_")
+        )
+        bem = set(d for d in dir(bootenv.BootEnv) if not d.startswith("_"))
 
-                nullm = set(d for d in dir(bootenv.BootEnvNull)
-                    if not d.startswith("_"))
-                bem = set(d for d in dir(bootenv.BootEnv)
-                    if not d.startswith("_"))
+        be_missing = nullm - bem
+        null_missing = bem - nullm
 
-                be_missing = nullm - bem
-                null_missing = bem - nullm
+        estr = ""
+        if be_missing:
+            estr += (
+                "The following methods were missing from "
+                "BootEnv:\n" + "\n".join("\t{0}".format(s) for s in be_missing)
+            )
+        if null_missing:
+            estr += (
+                "The following methods were missing from "
+                "BootEnvNull:\n"
+                + "\n".join("\t{0}".format(s) for s in null_missing)
+            )
+        self.assertTrue(not estr, estr)
 
-                estr = ""
-                if be_missing:
-                        estr += "The following methods were missing from " \
-                            "BootEnv:\n" + \
-                            "\n".join("\t{0}".format(s) for s in be_missing)
-                if null_missing:
-                        estr += "The following methods were missing from " \
-                            "BootEnvNull:\n" + \
-                            "\n".join("\t{0}".format(s) for s in null_missing)
-                self.assertTrue(not estr, estr)
+    def test_bootenv(self):
+        """All other test suite tests test the BootEnv class with,
+        PKG_NO_LIVE_ROOT set in the environment, see the run() and
+        env_santize(..) methods in Pkg5TestSuite.  That environment
+        variable means that BootEnv.get_be_list will always return an
+        empty list.  While we want to generally avoid touching the live
+        image root at all, making an exception here seems the best
+        reasonable way to test some of the non-modifying BootEnv code.
+        To that end, this test clears the relevant environment variable.
+        """
 
-        def test_bootenv(self):
-                """All other test suite tests test the BootEnv class with,
-                PKG_NO_LIVE_ROOT set in the environment, see the run() and
-                env_santize(..) methods in Pkg5TestSuite.  That environment
-                variable means that BootEnv.get_be_list will always return an
-                empty list.  While we want to generally avoid touching the live
-                image root at all, making an exception here seems the best
-                reasonable way to test some of the non-modifying BootEnv code.
-                To that end, this test clears the relevant environment variable.
-                """
+        del os.environ["PKG_NO_LIVE_ROOT"]
+        self.assertTrue(bootenv.BootEnv.libbe_exists())
+        self.assertTrue(bootenv.BootEnv.check_verify())
+        self.assertTrue(
+            isinstance(bootenv.BootEnv.get_be_list(raise_error=False), list)
+        )
+        self.assertTrue(
+            isinstance(bootenv.BootEnv.get_be_list(raise_error=True), list)
+        )
 
-                del os.environ["PKG_NO_LIVE_ROOT"]
-                self.assertTrue(bootenv.BootEnv.libbe_exists())
-                self.assertTrue(bootenv.BootEnv.check_verify())
-                self.assertTrue(isinstance(
-                    bootenv.BootEnv.get_be_list(raise_error=False), list))
-                self.assertTrue(isinstance(
-                    bootenv.BootEnv.get_be_list(raise_error=True), list))
-
-                bootenv.BootEnv.get_be_name("/")
-                self.assertTrue(
-                    isinstance(bootenv.BootEnv.get_uuid_be_dic(), dict))
-                bootenv.BootEnv.get_activated_be_name()
-                bootenv.BootEnv.get_activated_be_name(bootnext=True)
-                bootenv.BootEnv.get_active_be_name()
-                # This assumes that a1b2c3d4e5f6g7h8i9j0 is highly unlikely to
-                # be an existing BE on the system.
-                bootenv.BootEnv.check_be_name("a1b2c3d4e5f6g7h8i9j0")
+        bootenv.BootEnv.get_be_name("/")
+        self.assertTrue(isinstance(bootenv.BootEnv.get_uuid_be_dic(), dict))
+        bootenv.BootEnv.get_activated_be_name()
+        bootenv.BootEnv.get_activated_be_name(bootnext=True)
+        bootenv.BootEnv.get_active_be_name()
+        # This assumes that a1b2c3d4e5f6g7h8i9j0 is highly unlikely to
+        # be an existing BE on the system.
+        bootenv.BootEnv.check_be_name("a1b2c3d4e5f6g7h8i9j0")
 
 
 if __name__ == "__main__":
-        unittest.main()
+    unittest.main()
 
 # Vim hints
-# vim:ts=8:sw=8:et:fdm=marker
+# vim:ts=4:sw=4:et:fdm=marker

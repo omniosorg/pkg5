@@ -33,28 +33,38 @@
 from site import getsitepackages, getusersitepackages, addsitedir
 import os, sys
 
+
 def strip_site():
-        strip = getsitepackages()
-        strip.append(getusersitepackages())
-        sys.path = [d for d in sys.path if d not in strip
-            and not d.endswith('.zip')]
+    strip = getsitepackages()
+    strip.append(getusersitepackages())
+    sys.path = [
+        d for d in sys.path if d not in strip and not d.endswith(".zip")
+    ]
+
 
 def add_pkglib():
-        # If PYTHONPATH is set in the environment and the environment is not
-        # being ignored, then don't adjust the path. This could, for example,
-        # be running under the testsuite.
-        if ('PYTHONPATH' in os.environ and
-            not getattr(sys.flags, 'ignore_environment')):
-                return
-        import platform
-        sys.path, remainder = sys.path[:2], sys.path[2:]
-        addsitedir("/usr/lib/pkg/python{}".format(
-            '.'.join(platform.python_version_tuple()[:2])))
-        sys.path.extend(remainder)
+    # If PYTHONPATH is set in the environment and the environment is not
+    # being ignored, then don't adjust the path. This could, for example,
+    # be running under the testsuite.
+    if "PYTHONPATH" in os.environ and not getattr(
+        sys.flags, "ignore_environment"
+    ):
+        return
+    import platform
+
+    sys.path, remainder = sys.path[:2], sys.path[2:]
+    addsitedir(
+        "/usr/lib/pkg/python{}".format(
+            ".".join(platform.python_version_tuple()[:2])
+        )
+    )
+    sys.path.extend(remainder)
+
 
 def init():
-        strip_site()
-        add_pkglib()
+    strip_site()
+    add_pkglib()
+
 
 # Vim hints
-# vim:ts=8:sw=8:et:fdm=marker
+# vim:ts=4:sw=4:et:fdm=marker

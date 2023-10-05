@@ -27,6 +27,7 @@ from pylint.interfaces import IAstroidChecker
 from pylint.checkers import BaseChecker
 from logilab.common.modutils import get_module_part
 
+
 class MultiPlatformAPIChecker(BaseChecker):
     """
     This class implements a pylint extension which checks for the use
@@ -54,80 +55,145 @@ class MultiPlatformAPIChecker(BaseChecker):
     python library module names within an importing module.  For example,
     if there is an import such as "import os as foo", then a call to
     foo.symlink, this would not be caught with a traditional 'grep'-style
-    checker.  This is caught using this class. """
+    checker.  This is caught using this class."""
 
     #
     # The list of APIs that are not available on all modern, supported
     # platforms.
     #
     VERBOTEN = [
-        'getpass.getuser', 'os.chown', 'os.chroot', 'os.confstr',
-        'os.confstr_names', 'os.ctermid', 'os.fchdir',
-        'os.fdatasync', 'os.fork', 'os.forkpty', 'os.fpathconf',
-        'os.fstatvfs', 'os.ftruncate', 'os.getegid', 'os.geteuid',
-        'os.getgid', 'os.getgroups', 'os.getlogin', 'os.getpgid',
-        'os.getpgrp', 'os.getppid', 'os.getsid', 'os.getuid',
-        'os.isatty', 'os.kill', 'os.killpg', 'os.lchown', 'os.link',
-        'os.linkmknod', 'os.lstat', 'os.major', 'os.makedev',
-        'os.minor', 'os.mkfifo', 'os.nice', 'os.openpty',
-        'os.pathconf', 'os.pathconf_names', 'os.plock',
-        'os.readlink', 'os.setegid', 'os.seteuid', 'os.setgid',
-        'os.setgroups', 'os.setpgid', 'os.setpgrp', 'os.setregid',
-        'os.setreuid', 'os.setsid', 'os.setuid', 'os.spawnl',
-        'os.spawnle', 'os.spawnlp', 'os.spawnlpe', 'os.spawnv',
-        'os.spawnve', 'os.spawnvp', 'os.spawnvpe', 'os.startfile',
-        'os.statvfs', 'os.symlink', 'os.sysconf',
-        'os.sysconf_names', 'os.tcgetpgrp', 'os.tcsetpgrp',
-        'os.ttyname', 'os.uname', 'os.wait3', 'os.wait4',
-        'signal.alarm', 'signal.getsignal', 'signal.signal',
-        'socket.fromfd', 'socket.inet_ntop', 'socket.inet_pton',
-        'socket.socketpair', 'sys.getdlopenflags',
-        'sys.getwindowsversion', 'sys.setdlopenflags',
-        'thread.stack_size', 'time.tzset', 'fcntl.fcntl', 'fcntl.ioctl',
-        'fcntl.flock', 'fcntl.lockf',
+        "getpass.getuser",
+        "os.chown",
+        "os.chroot",
+        "os.confstr",
+        "os.confstr_names",
+        "os.ctermid",
+        "os.fchdir",
+        "os.fdatasync",
+        "os.fork",
+        "os.forkpty",
+        "os.fpathconf",
+        "os.fstatvfs",
+        "os.ftruncate",
+        "os.getegid",
+        "os.geteuid",
+        "os.getgid",
+        "os.getgroups",
+        "os.getlogin",
+        "os.getpgid",
+        "os.getpgrp",
+        "os.getppid",
+        "os.getsid",
+        "os.getuid",
+        "os.isatty",
+        "os.kill",
+        "os.killpg",
+        "os.lchown",
+        "os.link",
+        "os.linkmknod",
+        "os.lstat",
+        "os.major",
+        "os.makedev",
+        "os.minor",
+        "os.mkfifo",
+        "os.nice",
+        "os.openpty",
+        "os.pathconf",
+        "os.pathconf_names",
+        "os.plock",
+        "os.readlink",
+        "os.setegid",
+        "os.seteuid",
+        "os.setgid",
+        "os.setgroups",
+        "os.setpgid",
+        "os.setpgrp",
+        "os.setregid",
+        "os.setreuid",
+        "os.setsid",
+        "os.setuid",
+        "os.spawnl",
+        "os.spawnle",
+        "os.spawnlp",
+        "os.spawnlpe",
+        "os.spawnv",
+        "os.spawnve",
+        "os.spawnvp",
+        "os.spawnvpe",
+        "os.startfile",
+        "os.statvfs",
+        "os.symlink",
+        "os.sysconf",
+        "os.sysconf_names",
+        "os.tcgetpgrp",
+        "os.tcsetpgrp",
+        "os.ttyname",
+        "os.uname",
+        "os.wait3",
+        "os.wait4",
+        "signal.alarm",
+        "signal.getsignal",
+        "signal.signal",
+        "socket.fromfd",
+        "socket.inet_ntop",
+        "socket.inet_pton",
+        "socket.socketpair",
+        "sys.getdlopenflags",
+        "sys.getwindowsversion",
+        "sys.setdlopenflags",
+        "thread.stack_size",
+        "time.tzset",
+        "fcntl.fcntl",
+        "fcntl.ioctl",
+        "fcntl.flock",
+        "fcntl.lockf",
     ]
-    
+
     # The list of package prefixes that are allowed to call VERBOTEN APIs
     ALLOWED = [
-        'pkg.portable',
+        "pkg.portable",
     ]
 
     #
     # Messages to show when checking detects an error
     #
     msgs = {
-    'E0900': ('Imported Non-Portable API (%s)' ,
-              'imported non-portable api',
-              'Used when a non-portable API is imported.'),
-    'E0901': ('Non-portable API used (%s)',
-              'non-portable api',
-              'Used when a non-portable API is called.'),
+        "E0900": (
+            "Imported Non-Portable API (%s)",
+            "imported non-portable api",
+            "Used when a non-portable API is imported.",
+        ),
+        "E0901": (
+            "Non-portable API used (%s)",
+            "non-portable api",
+            "Used when a non-portable API is called.",
+        ),
     }
 
     __implements__ = IAstroidChecker
-    name = 'multiplatform'
+    name = "multiplatform"
     options = ()
 
-    imported_modules={}
-    calledfuncname=[]
-    calledfuncstack=[]
+    imported_modules = {}
+    calledfuncname = []
+    calledfuncstack = []
 
     # this is important so that your checker is executed before others
-    priority = -1 
+    priority = -1
 
     def leave_getattr(self, node):
         self.calledfuncname.append(node.attrname)
 
     def leave_name(self, node):
-        self.calledfuncname=[node.name]
+        self.calledfuncname = [node.name]
 
     def visit_callfunc(self, node):
         self.calledfuncstack.append(self.calledfuncname)
-        self.calledfuncname=[]
+        self.calledfuncname = []
 
     def leave_callfunc(self, node):
         self._check_verboten_call(node, self.calledfuncname)
-        self.calledfuncname=self.calledfuncstack.pop()
+        self.calledfuncname = self.calledfuncstack.pop()
 
     def visit_import(self, node):
         """triggered when an import statement is seen"""
@@ -141,17 +207,18 @@ class MultiPlatformAPIChecker(BaseChecker):
         """triggered when an import statement is seen"""
         basename = node.modname
         for name, alias in node.names:
-            fullname = '{0}.{1}'.format(basename, name)
+            fullname = "{0}.{1}".format(basename, name)
             self._check_verboten_import(node, fullname)
-            if fullname.find('.') > -1:
+            if fullname.find(".") > -1:
                 try:
-                    fullname = get_module_part(fullname,
-                                               context_file=node.root().file)
+                    fullname = get_module_part(
+                        fullname, context_file=node.root().file
+                    )
                 except ImportError as ex:
                     # this is checked elsewhere in pylint (F0401)
                     continue
             if alias == None:
-                alias = fullname         
+                alias = fullname
             self.imported_modules.update({alias: fullname})
 
     def _is_allowed(self, node):
@@ -164,24 +231,25 @@ class MultiPlatformAPIChecker(BaseChecker):
         if self._is_allowed(node):
             return
         if name in self.VERBOTEN:
-            self.add_message('E0900', args=(name), node=node)
+            self.add_message("E0900", args=(name), node=node)
 
     def _unalias(self, name):
-        for i,e in enumerate(name):
-            fullname = '.'.join(name[:i])
+        for i, e in enumerate(name):
+            fullname = ".".join(name[:i])
             if fullname in self.imported_modules:
                 alias = self.imported_modules.get(fullname)
-                return alias.split('.') +  name[i:]
+                return alias.split(".") + name[i:]
         return name
 
-    def _check_verboten_call(self,node, name):
+    def _check_verboten_call(self, node, name):
         if self._is_allowed(node):
             return
         name = self._unalias(name)
-        for i,e in enumerate(name):
-            fullname = '.'.join(name[:i + 1])
+        for i, e in enumerate(name):
+            fullname = ".".join(name[: i + 1])
             if fullname in self.VERBOTEN:
-                self.add_message('E0901', args=(fullname), node=node)
+                self.add_message("E0901", args=(fullname), node=node)
+
 
 def register(linter):
     """required method to auto register this checker"""
@@ -189,4 +257,4 @@ def register(linter):
 
 
 # Vim hints
-# vim:ts=8:sw=8:et:fdm=marker
+# vim:ts=4:sw=4:et:fdm=marker

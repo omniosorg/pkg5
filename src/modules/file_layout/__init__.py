@@ -25,9 +25,8 @@
 # Use is subject to license terms.
 #
 
-__all__ = [
-]
-    
+__all__ = []
+
 
 # Vim hints
-# vim:ts=8:sw=8:et:fdm=marker
+# vim:ts=4:sw=4:et:fdm=marker

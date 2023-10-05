@@ -23,8 +23,9 @@
 # Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
 
 from . import testutils
+
 if __name__ == "__main__":
-        testutils.setup_environment("../../../proto")
+    testutils.setup_environment("../../../proto")
 import pkg5unittest
 
 import unittest
@@ -32,19 +33,18 @@ import os
 
 
 class TestPkgVersion(pkg5unittest.SingleDepotTestCase):
+    def test_pkg_version_bad_opts(self):
+        """test pkg version with bad options"""
 
-        def test_pkg_version_bad_opts(self):
-                """ test pkg version with bad options """
+        self.image_create(self.rurl)
 
-                self.image_create(self.rurl)
-
-                self.pkg("version -vq", use_img_root=False, exit=2)
-                self.pkg("version foo", use_img_root=False, exit=2)
-                self.pkg("version --", use_img_root=False, exit=2)
+        self.pkg("version -vq", use_img_root=False, exit=2)
+        self.pkg("version foo", use_img_root=False, exit=2)
+        self.pkg("version --", use_img_root=False, exit=2)
 
 
 if __name__ == "__main__":
-        unittest.main()
+    unittest.main()
 
 # Vim hints
-# vim:ts=8:sw=8:et:fdm=marker
+# vim:ts=4:sw=4:et:fdm=marker
