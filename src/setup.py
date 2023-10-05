@@ -1157,12 +1157,11 @@ class build_py_func(_build_py):
                 # consistent across builds, causing their corresponding .pyc
                 # files to be unchanged unless the .py file content changed.
 
+                print("Gathering file timestamps from git history")
+
                 self.timestamps = {}
 
-                pydates = "pydates"
-
-                if os.path.isdir(os.path.join(pwd, "../.git")):
-                    pydates = "pydates.git"
+                pydates = "pydates.git"
 
                 p = subprocess.Popen(
                     os.path.join(pwd, pydates),
@@ -1255,7 +1254,8 @@ class build_py_func(_build_py):
                         src_mtime = self.timestamps[b"."]
                 else:
                         src_mtime = self.timestamps.get(
-                            os.path.join("src", infile), self.timestamps[b"."])
+                            os.path.join("src", infile).encode('utf-8'),
+                            self.timestamps[b"."])
 
                 # Force a copy of the file if the source timestamp is different
                 # from that of the destination, not just if it's newer.  This
