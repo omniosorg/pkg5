@@ -24,8 +24,9 @@
 # Use is subject to license terms.
 
 import testutils
+
 if __name__ == "__main__":
-        testutils.setup_environment("../../../proto")
+    testutils.setup_environment("../../../proto")
 import pkg5unittest
 
 import os
@@ -33,103 +34,109 @@ import unittest
 
 from pkg import misc
 
+
 class TestAllFine(pkg5unittest.SingleDepotTestCase):
-        
-        def setUp(self):
-                pkg5unittest.SingleDepotTestCase.setUp(self)
+    def setUp(self):
+        pkg5unittest.SingleDepotTestCase.setUp(self)
 
-        def tearDown(self):
-                pkg5unittest.SingleDepotTestCase.tearDown(self)
+    def tearDown(self):
+        pkg5unittest.SingleDepotTestCase.tearDown(self)
 
-        def test_shouldpass1(self):
-                pass
+    def test_shouldpass1(self):
+        pass
 
-        def test_shouldpass2(self):
-                pass
+    def test_shouldpass2(self):
+        pass
+
 
 class TestSetupFailing(pkg5unittest.SingleDepotTestCase):
-        
-        def setUp(self):
-                pkg5unittest.SingleDepotTestCase.setUp(self)
-                raise RuntimeError("setup failing")
+    def setUp(self):
+        pkg5unittest.SingleDepotTestCase.setUp(self)
+        raise RuntimeError("setup failing")
 
-        def test_shoulderror1(self):
-                pass
+    def test_shoulderror1(self):
+        pass
 
-        def test_shoulderror2(self):
-                pass
+    def test_shoulderror2(self):
+        pass
+
 
 class TestSetupFailingEarly(pkg5unittest.SingleDepotTestCase):
-        
-        def setUp(self):
-                raise RuntimeError("setup failing")
-                pkg5unittest.SingleDepotTestCase.setUp(self)
+    def setUp(self):
+        raise RuntimeError("setup failing")
+        pkg5unittest.SingleDepotTestCase.setUp(self)
 
-        def test_shoulderror1(self):
-                pass
+    def test_shoulderror1(self):
+        pass
+
 
 class TestSetupFailingP(pkg5unittest.SingleDepotTestCase):
-        persistent_setup = True
-        
-        def setUp(self):
-                pkg5unittest.SingleDepotTestCase.setUp(self)
-                raise RuntimeError("setup failing")
+    persistent_setup = True
 
-        def test_shoulderror1(self):
-                pass
+    def setUp(self):
+        pkg5unittest.SingleDepotTestCase.setUp(self)
+        raise RuntimeError("setup failing")
 
-        def test_shoulderror2(self):
-                pass
+    def test_shoulderror1(self):
+        pass
+
+    def test_shoulderror2(self):
+        pass
+
 
 class TestSetupFailingEarlyP(pkg5unittest.SingleDepotTestCase):
-        persistent_setup = True
-        
-        def setUp(self):
-                raise RuntimeError("setup failing")
-                pkg5unittest.SingleDepotTestCase.setUp(self)
+    persistent_setup = True
 
-        def test_shoulderror1(self):
-                pass
+    def setUp(self):
+        raise RuntimeError("setup failing")
+        pkg5unittest.SingleDepotTestCase.setUp(self)
+
+    def test_shoulderror1(self):
+        pass
+
 
 class TestTeardownFailing(pkg5unittest.SingleDepotTestCase):
-        def setUp(self):
-                pkg5unittest.SingleDepotTestCase.setUp(self)
+    def setUp(self):
+        pkg5unittest.SingleDepotTestCase.setUp(self)
 
-        def tearDown(self):
-                raise RuntimeError("tearDown failing")
+    def tearDown(self):
+        raise RuntimeError("tearDown failing")
 
-        def test_shoulderror1(self):
-                pass
+    def test_shoulderror1(self):
+        pass
 
-        def test_shoulderror2(self):
-                pass
+    def test_shoulderror2(self):
+        pass
+
 
 class TestTeardownFailingP(pkg5unittest.SingleDepotTestCase):
-        persistent_setup = True
+    persistent_setup = True
 
-        def setUp(self):
-                pkg5unittest.SingleDepotTestCase.setUp(self)
+    def setUp(self):
+        pkg5unittest.SingleDepotTestCase.setUp(self)
 
-        def tearDown(self):
-                raise RuntimeError("tearDown failing")
+    def tearDown(self):
+        raise RuntimeError("tearDown failing")
 
-        def test_shouldpass1(self):
-                pass
+    def test_shouldpass1(self):
+        pass
 
-        def test_shouldpass2(self):
-                pass
+    def test_shouldpass2(self):
+        pass
+
 
 class TestMisc(pkg5unittest.CliTestCase):
-        def doassign(self):
-                self.test_root = "foo"
+    def doassign(self):
+        self.test_root = "foo"
 
-        def test_testroot_readonly(self):
-                """ Test that test_root is readable but not writable """
-                x = self.test_root
-                self.assertRaises(AttributeError, self.doassign)
+    def test_testroot_readonly(self):
+        """Test that test_root is readable but not writable"""
+        x = self.test_root
+        self.assertRaises(AttributeError, self.doassign)
+
 
 if __name__ == "__main__":
-        unittest.main()
+    unittest.main()
 
 # Vim hints
-# vim:ts=8:sw=8:et:fdm=marker
+# vim:ts=4:sw=4:et:fdm=marker

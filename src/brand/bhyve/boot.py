@@ -17,8 +17,17 @@
 
 import bundle
 import bootlib
-from bootlib import fatal, error, debug, info, warning, boolv, diskpath, \
-    expandopts, collapseopts
+from bootlib import (
+    fatal,
+    error,
+    debug,
+    info,
+    warning,
+    boolv,
+    diskpath,
+    expandopts,
+    collapseopts,
+)
 import getopt
 import logging
 import os
@@ -33,6 +42,8 @@ import ucred
 from pprint import pprint, pformat
 
 import uefi.vars as uefivars
+
+# fmt: off
 
 STATEDIR        = '/var/run/bhyve'
 RSRVRCTL        = '/usr/lib/rsrvrctl'
@@ -115,6 +126,8 @@ VIRTFS_SLOT     = 11
 CINIT_SLOT      = 29
 VNC_SLOT        = 30
 LPC_SLOT_WIN    = 31
+
+# fmt: off
 
 ##############################################################################
 
@@ -665,6 +678,8 @@ if jsonmode:
     from itertools import zip_longest
     import json
 
+    # fmt: off
+
     data = {
         'zonename':     z.name,
         'zonepath':     z.zonepath,
@@ -687,6 +702,8 @@ if jsonmode:
         'opts':         opts,
         'config':       {},
     }
+
+    # fmt: on
 
     for line in p.stdout.splitlines():
         if line.startswith('config.dump'): continue

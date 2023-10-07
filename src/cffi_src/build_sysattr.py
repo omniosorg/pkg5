@@ -29,16 +29,20 @@ from cffi import FFI
 
 ffi = FFI()
 
-ffi.set_source("_sysattr", """
+ffi.set_source(
+    "_sysattr",
+    """
 /* Includes */
 #include <attr.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdbool.h>
 #include <sys/nvpair.h>
-""")
+""",
+)
 
-ffi.cdef("""
+ffi.cdef(
+    """
 /* Macros */
 #define	NV_UNIQUE_NAME 0x1
 
@@ -143,10 +147,11 @@ nvpair_t *nvlist_next_nvpair(nvlist_t *, nvpair_t *);
 char *nvpair_name(nvpair_t *);
 data_type_t nvpair_type(nvpair_t *);
 int nvpair_value_boolean_value(nvpair_t *, boolean_t *);
-""")
+"""
+)
 
 if __name__ == "__main__":
-        ffi.emit_c_code("cffi_src/_sysattr.c")
+    ffi.emit_c_code("cffi_src/_sysattr.c")
 
 # Vim hints
-# vim:ts=8:sw=8:et:fdm=marker
+# vim:ts=4:sw=4:et:fdm=marker

@@ -28,56 +28,60 @@
 
 import pkg.lint.base as base
 
+
 class OpenSolarisActionChecker(base.ActionChecker):
-        """An opensolaris.org-specific class to check actions."""
+    """An opensolaris.org-specific class to check actions."""
 
-        name = "opensolaris.action"
+    name = "opensolaris.action"
 
-        def __init__(self, config):
-                self.description = _(
-                    "checks OpenSolaris packages for common action errors")
-                super(OpenSolarisActionChecker, self).__init__(config)
+    def __init__(self, config):
+        self.description = _(
+            "checks OpenSolaris packages for common action errors"
+        )
+        super(OpenSolarisActionChecker, self).__init__(config)
 
-        # opensolaris.action001 is obsolete and should not be reused.
+    # opensolaris.action001 is obsolete and should not be reused.
 
 
 class OpenSolarisManifestChecker(base.ManifestChecker):
-        """An opensolaris.org-specific class to check manifests."""
+    """An opensolaris.org-specific class to check manifests."""
 
-        name = "opensolaris.manifest"
+    name = "opensolaris.manifest"
 
-        def __init__(self, config):
-                self.description = _(
-                    "checks OpenSolaris packages for common errors")
-                super(OpenSolarisManifestChecker, self).__init__(config)
+    def __init__(self, config):
+        self.description = _("checks OpenSolaris packages for common errors")
+        super(OpenSolarisManifestChecker, self).__init__(config)
 
-        def missing_attrs(self, manifest, engine, pkglint_id="001"):
-                """Warn when a package doesn't have an
-                org.opensolaris.consolidation attribute.
-                Warn when a package don't have an info.classification value
-                """
-                if "pkg.renamed" in manifest:
-                        return
+    def missing_attrs(self, manifest, engine, pkglint_id="001"):
+        """Warn when a package doesn't have an
+        org.opensolaris.consolidation attribute.
+        Warn when a package don't have an info.classification value
+        """
+        if "pkg.renamed" in manifest:
+            return
 
-                if "pkg.obsolete" in manifest:
-                        return
+        if "pkg.obsolete" in manifest:
+            return
 
-                keys = ["org.opensolaris.consolidation", "info.classification"]
-                for key in keys:
-                        if key not in manifest:
-                                engine.warning(
-                                    _("Missing attribute '{key}' in "
-                                    "{pkg}").format(key=key, pkg=manifest.fmri),
-                                    msgid="{0}{1}.1".format(self.name,
-                                    pkglint_id))
+        keys = ["org.opensolaris.consolidation", "info.classification"]
+        for key in keys:
+            if key not in manifest:
+                engine.warning(
+                    _("Missing attribute '{key}' in " "{pkg}").format(
+                        key=key, pkg=manifest.fmri
+                    ),
+                    msgid="{0}{1}.1".format(self.name, pkglint_id),
+                )
 
-        missing_attrs.pkglint_desc = _(
-            "Standard package attributes should be present.")
+    missing_attrs.pkglint_desc = _(
+        "Standard package attributes should be present."
+    )
 
-        # opensolaris.manifest001.2 is obsolete and should not be reused.
-        # opensolaris.manifest002 is obsolete and should not be reused.
-        # opensolaris.manifest003 is obsolete and should not be reused.
-        # opensolaris.manifest004 is obsolete and should not be reused.
+    # opensolaris.manifest001.2 is obsolete and should not be reused.
+    # opensolaris.manifest002 is obsolete and should not be reused.
+    # opensolaris.manifest003 is obsolete and should not be reused.
+    # opensolaris.manifest004 is obsolete and should not be reused.
+
 
 # Vim hints
-# vim:ts=8:sw=8:et:fdm=marker
+# vim:ts=4:sw=4:et:fdm=marker

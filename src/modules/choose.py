@@ -8,22 +8,24 @@
 import fnmatch
 import re
 
+
 def choose(names, pat, case_sensitive):
-        """Return the subset of names that match pat. case_sensitive determines
-        whether the regexp is compiled to be case sensitive or not.
-        """
-        # Derived from fnmatch.filter
-        result = []
-        flag = 0
-        # Setting the flag to re.I makes the regexp match using case
-        # insensitive rules.
-        if not case_sensitive:
-                flag = re.I
-        match = re.compile(fnmatch.translate(pat), flag).match
-        for name in names:
-                if match(name):
-                        result.append(name)
-        return result
+    """Return the subset of names that match pat. case_sensitive determines
+    whether the regexp is compiled to be case sensitive or not.
+    """
+    # Derived from fnmatch.filter
+    result = []
+    flag = 0
+    # Setting the flag to re.I makes the regexp match using case
+    # insensitive rules.
+    if not case_sensitive:
+        flag = re.I
+    match = re.compile(fnmatch.translate(pat), flag).match
+    for name in names:
+        if match(name):
+            result.append(name)
+    return result
+
 
 # Vim hints
-# vim:ts=8:sw=8:et:fdm=marker
+# vim:ts=4:sw=4:et:fdm=marker

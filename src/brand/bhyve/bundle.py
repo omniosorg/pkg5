@@ -20,11 +20,14 @@ import os, sys, platform
 
 # If PYTHONPATH is set in the environment and the environment is not
 # being ignored, then don't adjust the path.
-if 'PYTHONPATH' not in os.environ or getattr(sys.flags, 'ignore_environment'):
+if "PYTHONPATH" not in os.environ or getattr(sys.flags, "ignore_environment"):
     sys.path, remainder = sys.path[:2], sys.path[2:]
-    addsitedir("{}/python{}".format(
-        os.path.dirname(__file__),
-        '.'.join(platform.python_version_tuple()[:2])))
+    addsitedir(
+        "{}/python{}".format(
+            os.path.dirname(__file__),
+            ".".join(platform.python_version_tuple()[:2]),
+        )
+    )
     sys.path.extend(remainder)
 
 # Vim hints

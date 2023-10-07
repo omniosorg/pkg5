@@ -104,8 +104,9 @@ class SpawnFileAction(object):
         if not isinstance(path, mode):
             raise TypeError("path must be int type")
 
-        rc = lib.posix_spawn_file_actions_addopen(self.fa, fd, path, oflag,
-                                                  mode)
+        rc = lib.posix_spawn_file_actions_addopen(
+            self.fa, fd, path, oflag, mode
+        )
         _check_error(rc)
 
     def add_dup2(self, fd, newfd):
@@ -189,11 +190,13 @@ def posix_spawnp(filename, args, fileactions=None, env=None):
         s_action = fileactions.fa
 
     # Now do the actual spawn
-    rc = lib.posix_spawnp(pid, filename.encode(), s_action, ffi.NULL,
-                          spawn_args, spawn_env)
+    rc = lib.posix_spawnp(
+        pid, filename.encode(), s_action, ffi.NULL, spawn_args, spawn_env
+    )
     _check_error(rc)
 
     return pid[0]
 
+
 # Vim hints
-# vim:ts=8:sw=8:et:fdm=marker
+# vim:ts=4:sw=4:et:fdm=marker

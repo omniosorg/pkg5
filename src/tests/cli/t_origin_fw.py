@@ -23,8 +23,9 @@
 
 from __future__ import print_function
 from . import testutils
+
 if __name__ == "__main__":
-        testutils.setup_environment("../../../proto")
+    testutils.setup_environment("../../../proto")
 
 import os
 import pkg5unittest
@@ -32,13 +33,13 @@ import unittest
 
 import pkg.portable as portable
 
+
 class TestPkgFWDependencies(pkg5unittest.SingleDepotTestCase):
-        # Only start/stop the depot once (instead of for every test)
-        persistent_setup = True
-        # leverage smf test infrastructure here
-        smf_cmds = {
-            "testdriver" :
-"""#!/usr/bin/python
+    # Only start/stop the depot once (instead of for every test)
+    persistent_setup = True
+    # leverage smf test infrastructure here
+    smf_cmds = {
+        "testdriver": """#!/usr/bin/python
 import os
 import resource
 import sys
@@ -71,87 +72,98 @@ if __name__ == "__main__":
         warnings.simplefilter('error')
 
         sys.exit(main())
-"""}
+"""
+    }
 
-        def setUp(self):
+    def setUp(self):
+        pkg5unittest.SingleDepotTestCase.setUp(self)
 
-                pkg5unittest.SingleDepotTestCase.setUp(self)
+        self.pkg_list = []
 
-                self.pkg_list = []
-
-                for t in (
-                    ("1.0", "dwarf"),
-                    ("1.1", "elf"),
-                    ("1.2", "hobbit"),
-                    ("1.3", "wizard")
-                    ):
-                    self.pkg_list+= ["""
+        for t in (
+            ("1.0", "dwarf"),
+            ("1.1", "elf"),
+            ("1.2", "hobbit"),
+            ("1.3", "wizard"),
+        ):
+            self.pkg_list += [
+                """
                     open A@{0},5.11-0
                     add depend type=origin root-image=true fmri=pkg:/feature/firmware/testdriver minimum-version={1}
                     close
                     open B@{2},5.11-0
                     add depend type=origin root-image=true fmri=pkg:/feature/firmware/testdriver minimum-version={3}
-                    close """.format(*(t + t)) ]
+                    close """.format(
+                    *(t + t)
+                )
+            ]
 
-                self.pkg_list += ["""
+        self.pkg_list += [
+            """
                     open A@1.4,5.11-0
                     add depend type=origin root-image=true fmri=pkg:/feature/firmware/testdriver
-                    close """]
+                    close """
+        ]
 
-                self.pkg_list += ["""
+        self.pkg_list += [
+            """
                     open A@1.6,5.11-0
                     add depend type=origin root-image=true fmri=pkg:/feature/firmware/testdriver dump_core=1
-                    close"""]
+                    close"""
+        ]
 
-                self.pkg_list += ["""
+        self.pkg_list += [
+            """
                     open C@1.0,5.11-0
                     add depend type=origin root-image=true fmri=pkg:/feature/firmware/no-such-enumerator
-                    close"""]
+                    close"""
+        ]
 
-        def test_fw_dependency(self):
-                """test origin firmware dependency"""
-                """firmware test simulator uses alphabetic comparison"""
+    def test_fw_dependency(self):
+        """test origin firmware dependency"""
+        """firmware test simulator uses alphabetic comparison"""
 
-                if portable.osname != "sunos":
-                        raise pkg5unittest.TestSkippedException(
-                            "Firmware check unsupported on this platform.")
+        if portable.osname != "sunos":
+            raise pkg5unittest.TestSkippedException(
+                "Firmware check unsupported on this platform."
+            )
 
-                rurl = self.dc.get_repo_url()
-                plist = self.pkgsend_bulk(rurl, self.pkg_list)
-                self.image_create(rurl)
+        rurl = self.dc.get_repo_url()
+        plist = self.pkgsend_bulk(rurl, self.pkg_list)
+        self.image_create(rurl)
 
-                os.environ["PKG_INSTALLED_VERSION"] = "elf"
-                # trim some of the versions out; note that pkgs w/ firmware
-                # errors/problems are silently ignored.
-                self.pkg("install A B")
-                self.pkg("list")
-                self.pkg("verify A@1.1")
-                # test verify by changing device version
-                os.environ["PKG_INSTALLED_VERSION"] = "dwarf"
-                self.pkg("verify A@1.1", 1)
-                os.environ["PKG_INSTALLED_VERSION"] = "elf"
-                # exercise large number of devices code
-                os.environ["PKG_NUM_FAKE_DEVICES"] = "500"
-                self.pkg("install A@1.3", 1)
-                # exercise general error codes
-                self.pkg("install A@1.4", 1)
-                self.pkg("install A@1.6", 1)
-                # verify that upreving the firmware lets us install more
-                os.environ["PKG_INSTALLED_VERSION"] = "hobbit"
-                self.pkg("update")
-                self.pkg("verify A@1.2")
-                # simulate removing device
-                del os.environ["PKG_INSTALLED_VERSION"]
-                self.pkg("update")
-                self.pkg("list")
-                self.pkg("verify A@1.6")
-                # ok since we never drop core
-                # here as device
-                # doesn't exist.
+        os.environ["PKG_INSTALLED_VERSION"] = "elf"
+        # trim some of the versions out; note that pkgs w/ firmware
+        # errors/problems are silently ignored.
+        self.pkg("install A B")
+        self.pkg("list")
+        self.pkg("verify A@1.1")
+        # test verify by changing device version
+        os.environ["PKG_INSTALLED_VERSION"] = "dwarf"
+        self.pkg("verify A@1.1", 1)
+        os.environ["PKG_INSTALLED_VERSION"] = "elf"
+        # exercise large number of devices code
+        os.environ["PKG_NUM_FAKE_DEVICES"] = "500"
+        self.pkg("install A@1.3", 1)
+        # exercise general error codes
+        self.pkg("install A@1.4", 1)
+        self.pkg("install A@1.6", 1)
+        # verify that upreving the firmware lets us install more
+        os.environ["PKG_INSTALLED_VERSION"] = "hobbit"
+        self.pkg("update")
+        self.pkg("verify A@1.2")
+        # simulate removing device
+        del os.environ["PKG_INSTALLED_VERSION"]
+        self.pkg("update")
+        self.pkg("list")
+        self.pkg("verify A@1.6")
+        # ok since we never drop core
+        # here as device
+        # doesn't exist.
 
-                # check that we ignore dependencies w/ missing enumerators for now
-                self.pkg("install C@1.0")
+        # check that we ignore dependencies w/ missing enumerators for now
+        self.pkg("install C@1.0")
 
 
 # Vim hints
-# vim:ts=8:sw=8:et:fdm=marker
+# vim:ts=4:sw=4:et:fdm=marker

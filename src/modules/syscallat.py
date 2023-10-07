@@ -95,5 +95,6 @@ def unlinkat(dirfd, path, flag):
     if rv < 0:
         raise OSError(ffi.errno, os.strerror(ffi.errno), path)
 
+
 # Vim hints
-# vim:ts=8:sw=8:et:fdm=marker
+# vim:ts=4:sw=4:et:fdm=marker

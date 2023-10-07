@@ -28,21 +28,37 @@ Most if not all of the os_unix methods apply on Darwin. The methods
 below override the definitions from os_unix
 """
 
-from .os_unix import \
-    get_isainfo, get_release, get_platform, get_group_by_name, \
-    get_user_by_name, get_name_by_gid, get_name_by_uid, get_usernames_by_gid, \
-    is_admin, get_userid, get_username, chown, rename, remove, link, \
-    split_path, get_root, assert_mode
+from .os_unix import (
+    get_isainfo,
+    get_release,
+    get_platform,
+    get_group_by_name,
+    get_user_by_name,
+    get_name_by_gid,
+    get_name_by_uid,
+    get_usernames_by_gid,
+    is_admin,
+    get_userid,
+    get_username,
+    chown,
+    rename,
+    remove,
+    link,
+    split_path,
+    get_root,
+    assert_mode,
+)
 
 import macostools
 
+
 def copyfile(src, dst):
-        """
-        Use the Mac OS X-specific version of copyfile() so that
-        Mac OS X stuff gets handled properly.
-        """
-        macostools.copy(src, dst)
+    """
+    Use the Mac OS X-specific version of copyfile() so that
+    Mac OS X stuff gets handled properly.
+    """
+    macostools.copy(src, dst)
 
 
 # Vim hints
-# vim:ts=8:sw=8:et:fdm=marker
+# vim:ts=4:sw=4:et:fdm=marker

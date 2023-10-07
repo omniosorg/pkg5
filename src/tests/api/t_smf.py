@@ -24,8 +24,9 @@
 
 from __future__ import print_function
 from . import testutils
+
 if __name__ == "__main__":
-        testutils.setup_environment("../../../proto")
+    testutils.setup_environment("../../../proto")
 
 import os
 import pkg5unittest
@@ -35,12 +36,13 @@ import pkg.smf as smf
 
 from pkg.client.debugvalues import DebugValues
 
-class TestSMF(pkg5unittest.SingleDepotTestCase):
-        # Only start/stop the depot once (instead of for every test)
-        persistent_setup = True
 
-        smf_cmds = { \
-            "usr/bin/svcprop" : """\
+class TestSMF(pkg5unittest.SingleDepotTestCase):
+    # Only start/stop the depot once (instead of for every test)
+    persistent_setup = True
+
+    smf_cmds = {
+        "usr/bin/svcprop": """\
 #!/usr/bin/python
 
 import getopt
@@ -77,13 +79,11 @@ if __name__ == "__main__":
         print(s)
         sys.exit(0)
 """,
-                "usr/sbin/svcadm" : \
-"""#!/bin/sh
+        "usr/sbin/svcadm": """#!/bin/sh
 echo $0 "$@" >> $PKG_TEST_DIR/svcadm_arguments
 exit $PKG_SVCADM_EXIT_CODE
 """,
-                "usr/bin/svcs" : \
-"""#!/bin/sh
+        "usr/bin/svcs": """#!/bin/sh
 
 # called from pkg.client.actuator using 'svcs -H -o fmri <string>'
 # so $4 is the FMRI pattern that we're interested in resolving
@@ -117,16 +117,14 @@ esac
 echo $FMRI
 exit $RETURN
 """,
-                "bin_zlogin" : \
-"""#!/bin/ksh
+        "bin_zlogin": """#!/bin/ksh
 zone_name=$1
 shift
 echo "zlogin $zone_name" >> $PKG_TEST_DIR/zlogin_arguments
 ($*)""",
-}
-        misc_files = { \
-                "svcprop_enabled" :
-"""general/enabled boolean true
+    }
+    misc_files = {
+        "svcprop_enabled": """general/enabled boolean true
 general/entity_stability astring Unstable
 general/single_instance boolean true
 restarter/start_pid count 4172
@@ -155,9 +153,7 @@ start/type astring method
 stop/exec astring :true
 stop/timeout_seconds count 0
 stop/type astring method""",
-
-                "svcprop_disabled" :
-"""general/enabled boolean false
+        "svcprop_disabled": """general/enabled boolean false
 general/entity_stability astring Unstable
 general/single_instance boolean true
 restarter/start_pid count 4172
@@ -186,9 +182,7 @@ start/type astring method
 stop/exec astring :true
 stop/timeout_seconds count 0
 stop/type astring method""",
-
-                "svcprop_temp_enabled" :
-"""general/enabled boolean false
+        "svcprop_temp_enabled": """general/enabled boolean false
 general/entity_stability astring Unstable
 general/single_instance boolean true
 restarter/start_pid count 7816
@@ -218,9 +212,7 @@ start/type astring method
 stop/exec astring :true
 stop/timeout_seconds count 0
 stop/type astring method""",
-
-                "svcprop_temp_enabled2" :
-"""general/enabled boolean true
+        "svcprop_temp_enabled2": """general/enabled boolean true
 general/entity_stability astring Unstable
 general/single_instance boolean true
 restarter/start_pid count 7816
@@ -250,9 +242,7 @@ start/type astring method
 stop/exec astring :true
 stop/timeout_seconds count 0
 stop/type astring method""",
-
-                "svcprop_temp_disabled" :
-"""general/enabled boolean true
+        "svcprop_temp_disabled": """general/enabled boolean true
 general/entity_stability astring Unstable
 general/single_instance boolean true
 restarter/start_pid count 7816
@@ -282,9 +272,7 @@ start/type astring method
 stop/exec astring :true
 stop/timeout_seconds count 0
 stop/type astring method""",
-
-                "svcprop_temp_disabled2" :
-"""general/enabled boolean false
+        "svcprop_temp_disabled2": """general/enabled boolean false
 general/entity_stability astring Unstable
 general/single_instance boolean true
 restarter/start_pid count 7816
@@ -314,9 +302,7 @@ start/type astring method
 stop/exec astring :true
 stop/timeout_seconds count 0
 stop/type astring method""",
-
-                "svcprop_maintenance":
-"""general/enabled boolean true
+        "svcprop_maintenance": """general/enabled boolean true
 general/entity_stability astring Unstable
 general/single_instance boolean true
 restarter/start_pid count 4172
@@ -345,287 +331,318 @@ start/type astring method
 stop/exec astring :true
 stop/timeout_seconds count 0
 stop/type astring method""",
+        "empty": "",
+    }
 
-                "empty": "",
-}
+    def setUp(self):
+        pkg5unittest.SingleDepotTestCase.setUp(self)
+        self.make_misc_files(self.misc_files, prefix="testdata")
 
-        def setUp(self):
-                pkg5unittest.SingleDepotTestCase.setUp(self)
-                self.make_misc_files(self.misc_files, prefix="testdata")
+    def test_smf(self):
+        """Test that the smf interface performs as expected."""
 
-        def test_smf(self):
-                """Test that the smf interface performs as expected."""
+        testdata_dir = os.path.join(self.test_root, "testdata")
+        svcadm_output = os.path.join(testdata_dir, "svcadm_arguments")
+        os.environ["PKG_TEST_DIR"] = testdata_dir
+        os.environ["PKG_SVCADM_EXIT_CODE"] = "0"
+        os.environ["PKG_SVCPROP_EXIT_CODE"] = "0"
 
-                testdata_dir = os.path.join(self.test_root, "testdata")
-                svcadm_output = os.path.join(testdata_dir,
-                    "svcadm_arguments")
-                os.environ["PKG_TEST_DIR"] = testdata_dir
-                os.environ["PKG_SVCADM_EXIT_CODE"] = "0"
-                os.environ["PKG_SVCPROP_EXIT_CODE"] = "0"
+        smf.restart("svc:/system/test_restart_svc:default")
+        self.file_contains(
+            svcadm_output, "svcadm restart svc:/system/test_restart_svc:default"
+        )
+        os.unlink(svcadm_output)
 
-                smf.restart("svc:/system/test_restart_svc:default")
-                self.file_contains(svcadm_output,
-                    "svcadm restart svc:/system/test_restart_svc:default")
-                os.unlink(svcadm_output)
+        smf.restart("svc:/system/test_restart_svc:default", sync_timeout=0)
+        self.file_contains(
+            svcadm_output, "svcadm restart svc:/system/test_restart_svc:default"
+        )
+        os.unlink(svcadm_output)
 
-                smf.restart("svc:/system/test_restart_svc:default",
-                    sync_timeout=0)
-                self.file_contains(svcadm_output,
-                    "svcadm restart svc:/system/test_restart_svc:default")
-                os.unlink(svcadm_output)
+        smf.restart("svc:/system/test_restart_svc:default", sync_timeout=-1)
+        self.file_contains(
+            svcadm_output,
+            "svcadm restart -s svc:/system/test_restart_svc:default",
+        )
+        os.unlink(svcadm_output)
 
-                smf.restart("svc:/system/test_restart_svc:default",
-                    sync_timeout=-1)
-                self.file_contains(svcadm_output,
-                    "svcadm restart -s svc:/system/test_restart_svc:default")
-                os.unlink(svcadm_output)
+        smf.restart("svc:/system/test_restart_svc:default", sync_timeout=10)
+        self.file_contains(
+            svcadm_output,
+            "svcadm restart -s svc:/system/test_restart_svc:default",
+        )
+        os.unlink(svcadm_output)
 
-                smf.restart("svc:/system/test_restart_svc:default",
-                    sync_timeout=10)
-                self.file_contains(svcadm_output,
-                    "svcadm restart -s svc:/system/test_restart_svc:default")
-                os.unlink(svcadm_output)
+        smf.refresh("svc:/system/test_refresh_svc:default")
+        self.file_contains(
+            svcadm_output, "svcadm refresh svc:/system/test_refresh_svc:default"
+        )
+        os.unlink(svcadm_output)
 
-                smf.refresh("svc:/system/test_refresh_svc:default")
-                self.file_contains(svcadm_output,
-                    "svcadm refresh svc:/system/test_refresh_svc:default")
-                os.unlink(svcadm_output)
+        smf.refresh("svc:/system/test_refresh_svc:default", sync_timeout=0)
+        self.file_contains(
+            svcadm_output, "svcadm refresh svc:/system/test_refresh_svc:default"
+        )
+        os.unlink(svcadm_output)
 
-                smf.refresh("svc:/system/test_refresh_svc:default",
-                    sync_timeout=0)
-                self.file_contains(svcadm_output,
-                    "svcadm refresh svc:/system/test_refresh_svc:default")
-                os.unlink(svcadm_output)
+        smf.refresh("svc:/system/test_refresh_svc:default", sync_timeout=-1)
+        self.file_contains(
+            svcadm_output,
+            "svcadm refresh -s svc:/system/test_refresh_svc:default",
+        )
+        os.unlink(svcadm_output)
 
-                smf.refresh("svc:/system/test_refresh_svc:default",
-                    sync_timeout=-1)
-                self.file_contains(svcadm_output,
-                    "svcadm refresh -s svc:/system/test_refresh_svc:default")
-                os.unlink(svcadm_output)
+        smf.refresh("svc:/system/test_refresh_svc:default", sync_timeout=10)
+        self.file_contains(
+            svcadm_output,
+            "svcadm refresh -s svc:/system/test_refresh_svc:default",
+        )
+        os.unlink(svcadm_output)
 
-                smf.refresh("svc:/system/test_refresh_svc:default",
-                    sync_timeout=10)
-                self.file_contains(svcadm_output,
-                    "svcadm refresh -s svc:/system/test_refresh_svc:default")
-                os.unlink(svcadm_output)
+        smf.mark("maintenance", "svc:/system/test_mark_svc:default")
+        self.file_contains(
+            svcadm_output,
+            "svcadm mark maintenance svc:/system/test_mark_svc:default",
+        )
+        os.unlink(svcadm_output)
 
-                smf.mark("maintenance", "svc:/system/test_mark_svc:default")
-                self.file_contains(svcadm_output,
-                    "svcadm mark maintenance svc:/system/test_mark_svc:default")
-                os.unlink(svcadm_output)
+        smf.mark("degraded", "svc:/system/test_mark_svc:default")
+        self.file_contains(
+            svcadm_output,
+            "svcadm mark degraded svc:/system/test_mark_svc:default",
+        )
+        os.unlink(svcadm_output)
 
-                smf.mark("degraded", "svc:/system/test_mark_svc:default")
-                self.file_contains(svcadm_output,
-                    "svcadm mark degraded svc:/system/test_mark_svc:default")
-                os.unlink(svcadm_output)
+        smf.disable("svc:/system/test_disable_svc:default")
+        self.file_contains(
+            svcadm_output,
+            "svcadm disable -s svc:/system/test_disable_svc:default",
+        )
+        os.unlink(svcadm_output)
 
-                smf.disable("svc:/system/test_disable_svc:default")
-                self.file_contains(svcadm_output,
-                    "svcadm disable -s svc:/system/test_disable_svc:default")
-                os.unlink(svcadm_output)
+        smf.disable("svc:/system/test_disable_svc:default", temporary=True)
+        self.file_contains(
+            svcadm_output,
+            "svcadm disable -s -t svc:/system/test_disable_svc:default",
+        )
+        os.unlink(svcadm_output)
 
-                smf.disable("svc:/system/test_disable_svc:default",
-                    temporary=True)
-                self.file_contains(svcadm_output,
-                    "svcadm disable -s -t svc:/system/test_disable_svc:default")
-                os.unlink(svcadm_output)
+        smf.enable("svc:/system/test_enable_svc:default")
+        self.file_contains(
+            svcadm_output, "svcadm enable svc:/system/test_enable_svc:default"
+        )
+        os.unlink(svcadm_output)
 
-                smf.enable("svc:/system/test_enable_svc:default")
-                self.file_contains(svcadm_output,
-                    "svcadm enable svc:/system/test_enable_svc:default")
-                os.unlink(svcadm_output)
+        smf.enable("svc:/system/test_enable_svc:default", temporary=True)
+        self.file_contains(
+            svcadm_output,
+            "svcadm enable -t svc:/system/test_enable_svc:default",
+        )
+        os.unlink(svcadm_output)
 
-                smf.enable("svc:/system/test_enable_svc:default",
-                    temporary=True)
-                self.file_contains(svcadm_output,
-                    "svcadm enable -t svc:/system/test_enable_svc:default")
-                os.unlink(svcadm_output)
+        smf.enable("svc:/system/test_enable_svc:default", sync_timeout=-1)
+        self.file_contains(
+            svcadm_output,
+            "svcadm enable -s svc:/system/test_enable_svc:default",
+        )
+        os.unlink(svcadm_output)
 
-                smf.enable("svc:/system/test_enable_svc:default",
-                    sync_timeout=-1)
-                self.file_contains(svcadm_output,
-                    "svcadm enable -s svc:/system/test_enable_svc:default")
-                os.unlink(svcadm_output)
+        smf.enable("svc:/system/test_enable_svc:default", sync_timeout=0)
+        self.file_contains(
+            svcadm_output, "svcadm enable svc:/system/test_enable_svc:default"
+        )
+        os.unlink(svcadm_output)
 
-                smf.enable("svc:/system/test_enable_svc:default",
-                    sync_timeout=0)
-                self.file_contains(svcadm_output,
-                    "svcadm enable svc:/system/test_enable_svc:default")
-                os.unlink(svcadm_output)
+        smf.enable("svc:/system/test_enable_svc:default", sync_timeout=10)
+        self.file_contains(
+            svcadm_output,
+            "svcadm enable -s svc:/system/test_enable_svc:default",
+        )
+        os.unlink(svcadm_output)
 
-                smf.enable("svc:/system/test_enable_svc:default",
-                    sync_timeout=10)
-                self.file_contains(svcadm_output,
-                    "svcadm enable -s svc:/system/test_enable_svc:default")
-                os.unlink(svcadm_output)
+        os.environ["PKG_SVCPROP_OUTPUT"] = "svcprop_enabled"
+        self.assertEqual(smf.get_prop("foo", "start/timeout_seconds"), "0")
+        self.assertEqual(smf.get_prop("foo", "stop/exec"), ":true")
 
-                os.environ["PKG_SVCPROP_OUTPUT"] = "svcprop_enabled"
-                self.assertEqual(smf.get_prop("foo", "start/timeout_seconds"),
-                    "0")
-                self.assertEqual(smf.get_prop("foo", "stop/exec"), ":true")
+        p = smf.get_props("foo")
+        self.assertTrue("start/timeout_seconds" in p)
+        self.assertTrue("0" in p["start/timeout_seconds"])
+        self.assertTrue("stop/exec" in p)
+        self.assertTrue("true" in p["stop/exec"])
 
-                p = smf.get_props("foo")
-                self.assertTrue("start/timeout_seconds" in p)
-                self.assertTrue("0" in p["start/timeout_seconds"])
-                self.assertTrue("stop/exec" in p)
-                self.assertTrue("true" in p["stop/exec"])
+        # "a" should be removed from the list of fmris since it's not
+        # an instance.
+        fmris = smf.check_fmris("foo", set(["a"]))
+        self.assertEqual(fmris, set([]))
 
-                # "a" should be removed from the list of fmris since it's not
-                # an instance.
-                fmris = smf.check_fmris("foo", set(["a"]))
-                self.assertEqual(fmris, set([]))
+        fmris = smf.check_fmris("foo", set(["test_disable_svc:default"]))
+        self.assertEqual(fmris, set(["test_disable_svc:default"]))
 
-                fmris = smf.check_fmris("foo",
-                    set(["test_disable_svc:default"]))
-                self.assertEqual(fmris, set(["test_disable_svc:default"]))
+        fmris = smf.check_fmris("foo", set(["test_disable_svc*"]))
+        self.assertEqual(fmris, set(["svc:/system/test_disable_svc:default"]))
 
-                fmris = smf.check_fmris("foo", set(["test_disable_svc*"]))
-                self.assertEqual(fmris,
-                    set(["svc:/system/test_disable_svc:default"]))
+        self.assertEqual(smf.get_state("foo"), smf.SMF_SVC_ENABLED)
+        self.assertTrue(not smf.is_disabled("foo"))
 
-                self.assertEqual(smf.get_state("foo"), smf.SMF_SVC_ENABLED)
-                self.assertTrue(not smf.is_disabled("foo"))
+        os.environ["PKG_SVCPROP_OUTPUT"] = "svcprop_disabled"
+        self.assertEqual(smf.get_state("foo"), smf.SMF_SVC_DISABLED)
+        self.assertTrue(smf.is_disabled("foo"))
 
-                os.environ["PKG_SVCPROP_OUTPUT"] = "svcprop_disabled"
-                self.assertEqual(smf.get_state("foo"), smf.SMF_SVC_DISABLED)
-                self.assertTrue(smf.is_disabled("foo"))
+        os.environ["PKG_SVCPROP_OUTPUT"] = "svcprop_temp_enabled"
+        self.assertEqual(smf.get_state("foo"), smf.SMF_SVC_TMP_ENABLED)
+        self.assertTrue(not smf.is_disabled("foo"))
 
-                os.environ["PKG_SVCPROP_OUTPUT"] = "svcprop_temp_enabled"
-                self.assertEqual(smf.get_state("foo"), smf.SMF_SVC_TMP_ENABLED)
-                self.assertTrue(not smf.is_disabled("foo"))
+        os.environ["PKG_SVCPROP_OUTPUT"] = "svcprop_temp_enabled2"
+        self.assertEqual(smf.get_state("foo"), smf.SMF_SVC_TMP_ENABLED)
+        self.assertTrue(not smf.is_disabled("foo"))
 
-                os.environ["PKG_SVCPROP_OUTPUT"] = "svcprop_temp_enabled2"
-                self.assertEqual(smf.get_state("foo"), smf.SMF_SVC_TMP_ENABLED)
-                self.assertTrue(not smf.is_disabled("foo"))
+        os.environ["PKG_SVCPROP_OUTPUT"] = "svcprop_temp_disabled"
+        self.assertEqual(smf.get_state("foo"), smf.SMF_SVC_TMP_DISABLED)
+        self.assertTrue(smf.is_disabled("foo"))
 
-                os.environ["PKG_SVCPROP_OUTPUT"] = "svcprop_temp_disabled"
-                self.assertEqual(smf.get_state("foo"), smf.SMF_SVC_TMP_DISABLED)
-                self.assertTrue(smf.is_disabled("foo"))
+        os.environ["PKG_SVCPROP_OUTPUT"] = "svcprop_temp_disabled2"
+        self.assertEqual(smf.get_state("foo"), smf.SMF_SVC_TMP_DISABLED)
+        self.assertTrue(smf.is_disabled("foo"))
 
-                os.environ["PKG_SVCPROP_OUTPUT"] = "svcprop_temp_disabled2"
-                self.assertEqual(smf.get_state("foo"), smf.SMF_SVC_TMP_DISABLED)
-                self.assertTrue(smf.is_disabled("foo"))
+        os.environ["PKG_SVCPROP_OUTPUT"] = "svcprop_maintenance"
+        self.assertEqual(smf.get_state("foo"), smf.SMF_SVC_MAINTENANCE)
+        self.assertTrue(smf.is_disabled("foo"))
 
-                os.environ["PKG_SVCPROP_OUTPUT"] = "svcprop_maintenance"
-                self.assertEqual(smf.get_state("foo"), smf.SMF_SVC_MAINTENANCE)
-                self.assertTrue(smf.is_disabled("foo"))
+        # test if supplying tuples and lists as arguments works
+        smf.enable(["svc:/system/test_enable_svc:default", "foo"])
+        self.file_contains(
+            svcadm_output,
+            "svcadm enable svc:/system/test_enable_svc:default foo",
+        )
+        os.unlink(svcadm_output)
+        smf.enable(("svc:/system/test_enable_svc:default", "foo"))
+        self.file_contains(
+            svcadm_output,
+            "svcadm enable svc:/system/test_enable_svc:default foo",
+        )
+        os.unlink(svcadm_output)
 
-                # test if supplying tuples and lists as arguments works
-                smf.enable(["svc:/system/test_enable_svc:default", "foo"])
-                self.file_contains(svcadm_output,
-                    "svcadm enable svc:/system/test_enable_svc:default foo")
-                os.unlink(svcadm_output)
-                smf.enable(("svc:/system/test_enable_svc:default", "foo"))
-                self.file_contains(svcadm_output,
-                    "svcadm enable svc:/system/test_enable_svc:default foo")
-                os.unlink(svcadm_output)
+        smf.disable(["svc:/system/test_enable_svc:default", "foo"])
+        self.file_contains(
+            svcadm_output,
+            "svcadm disable -s svc:/system/test_enable_svc:default foo",
+        )
+        os.unlink(svcadm_output)
+        smf.disable(("svc:/system/test_enable_svc:default", "foo"))
+        self.file_contains(
+            svcadm_output,
+            "svcadm disable -s svc:/system/test_enable_svc:default foo",
+        )
+        os.unlink(svcadm_output)
 
-                smf.disable(["svc:/system/test_enable_svc:default", "foo"])
-                self.file_contains(svcadm_output,
-                    "svcadm disable -s svc:/system/test_enable_svc:default foo")
-                os.unlink(svcadm_output)
-                smf.disable(("svc:/system/test_enable_svc:default", "foo"))
-                self.file_contains(svcadm_output,
-                    "svcadm disable -s svc:/system/test_enable_svc:default foo")
-                os.unlink(svcadm_output)
+        smf.refresh(["svc:/system/test_enable_svc:default", "foo"])
+        self.file_contains(
+            svcadm_output,
+            "svcadm refresh svc:/system/test_enable_svc:default foo",
+        )
+        os.unlink(svcadm_output)
+        smf.refresh(("svc:/system/test_enable_svc:default", "foo"))
+        self.file_contains(
+            svcadm_output,
+            "svcadm refresh svc:/system/test_enable_svc:default foo",
+        )
+        os.unlink(svcadm_output)
 
-                smf.refresh(["svc:/system/test_enable_svc:default", "foo"])
-                self.file_contains(svcadm_output,
-                    "svcadm refresh svc:/system/test_enable_svc:default foo")
-                os.unlink(svcadm_output)
-                smf.refresh(("svc:/system/test_enable_svc:default", "foo"))
-                self.file_contains(svcadm_output,
-                    "svcadm refresh svc:/system/test_enable_svc:default foo")
-                os.unlink(svcadm_output)
+        smf.restart(["svc:/system/test_enable_svc:default", "foo"])
+        self.file_contains(
+            svcadm_output,
+            "svcadm restart svc:/system/test_enable_svc:default foo",
+        )
+        os.unlink(svcadm_output)
+        smf.restart(("svc:/system/test_enable_svc:default", "foo"))
+        self.file_contains(
+            svcadm_output,
+            "svcadm restart svc:/system/test_enable_svc:default foo",
+        )
+        os.unlink(svcadm_output)
 
-                smf.restart(["svc:/system/test_enable_svc:default", "foo"])
-                self.file_contains(svcadm_output,
-                    "svcadm restart svc:/system/test_enable_svc:default foo")
-                os.unlink(svcadm_output)
-                smf.restart(("svc:/system/test_enable_svc:default", "foo"))
-                self.file_contains(svcadm_output,
-                    "svcadm restart svc:/system/test_enable_svc:default foo")
-                os.unlink(svcadm_output)
+        smf.mark("degraded", ["svc:/system/test_enable_svc:default", "foo"])
+        self.file_contains(
+            svcadm_output,
+            "svcadm mark degraded svc:/system/test_enable_svc:default foo",
+        )
+        os.unlink(svcadm_output)
+        smf.mark("degraded", ("svc:/system/test_enable_svc:default", "foo"))
+        self.file_contains(
+            svcadm_output,
+            "svcadm mark degraded svc:/system/test_enable_svc:default foo",
+        )
+        os.unlink(svcadm_output)
 
-                smf.mark("degraded", ["svc:/system/test_enable_svc:default", "foo"])
-                self.file_contains(svcadm_output,
-                    "svcadm mark degraded svc:/system/test_enable_svc:default foo")
-                os.unlink(svcadm_output)
-                smf.mark("degraded", ("svc:/system/test_enable_svc:default", "foo"))
-                self.file_contains(svcadm_output,
-                    "svcadm mark degraded svc:/system/test_enable_svc:default foo")
-                os.unlink(svcadm_output)
+    def test_zone_actuators(self):
+        """Test that the smf interface for zones performs as
+        expected."""
 
-        def test_zone_actuators(self):
-                """Test that the smf interface for zones performs as
-                expected."""
+        testdata_dir = os.path.join(self.test_root, "testdata")
+        svcadm_output = os.path.join(testdata_dir, "svcadm_arguments")
+        zlogin_output = os.path.join(testdata_dir, "zlogin_arguments")
+        os.environ["PKG_TEST_DIR"] = testdata_dir
+        DebugValues["bin_zlogin"] = os.path.join(
+            self.test_root, "smf_cmds", "bin_zlogin"
+        )
 
-                testdata_dir = os.path.join(self.test_root, "testdata")
-                svcadm_output = os.path.join(testdata_dir,
-                    "svcadm_arguments")
-                zlogin_output = os.path.join(testdata_dir,
-                    "zlogin_arguments")
-                os.environ["PKG_TEST_DIR"] = testdata_dir
-                DebugValues["bin_zlogin"] = os.path.join(self.test_root,
-                    "smf_cmds", "bin_zlogin")
+        zone = "z1"
 
-                zone = "z1"
+        smf.restart("svc:/system/test_restart_svc:default", zone=zone)
+        self.file_contains(zlogin_output, "zlogin " + zone)
+        os.unlink(zlogin_output)
+        self.file_contains(
+            svcadm_output, "svcadm restart svc:/system/test_restart_svc:default"
+        )
+        os.unlink(svcadm_output)
 
-                smf.restart("svc:/system/test_restart_svc:default", zone=zone)
-                self.file_contains(zlogin_output,
-                    "zlogin "+zone)
-                os.unlink(zlogin_output)
-                self.file_contains(svcadm_output,
-                    "svcadm restart svc:/system/test_restart_svc:default")
-                os.unlink(svcadm_output)
+        smf.refresh("svc:/system/test_refresh_svc:default", zone=zone)
+        self.file_contains(zlogin_output, "zlogin " + zone)
+        os.unlink(zlogin_output)
+        self.file_contains(
+            svcadm_output, "svcadm refresh svc:/system/test_refresh_svc:default"
+        )
+        os.unlink(svcadm_output)
 
-                smf.refresh("svc:/system/test_refresh_svc:default", zone=zone)
-                self.file_contains(zlogin_output,
-                    "zlogin "+zone)
-                os.unlink(zlogin_output)
-                self.file_contains(svcadm_output,
-                    "svcadm refresh svc:/system/test_refresh_svc:default")
-                os.unlink(svcadm_output)
+        smf.mark("maintenance", "svc:/system/test_mark_svc:default", zone=zone)
+        self.file_contains(zlogin_output, "zlogin " + zone)
+        os.unlink(zlogin_output)
+        self.file_contains(
+            svcadm_output,
+            "svcadm mark maintenance svc:/system/test_mark_svc:default",
+        )
+        os.unlink(svcadm_output)
 
-                smf.mark("maintenance", "svc:/system/test_mark_svc:default", zone=zone)
-                self.file_contains(zlogin_output,
-                    "zlogin "+zone)
-                os.unlink(zlogin_output)
-                self.file_contains(svcadm_output,
-                    "svcadm mark maintenance svc:/system/test_mark_svc:default")
-                os.unlink(svcadm_output)
+        smf.enable("svc:/system/test_enable_svc:default", zone=zone)
+        self.file_contains(zlogin_output, "zlogin " + zone)
+        os.unlink(zlogin_output)
+        self.file_contains(
+            svcadm_output, "svcadm enable svc:/system/test_enable_svc:default"
+        )
+        os.unlink(svcadm_output)
 
-                smf.enable("svc:/system/test_enable_svc:default", zone=zone)
-                self.file_contains(zlogin_output,
-                    "zlogin "+zone)
-                os.unlink(zlogin_output)
-                self.file_contains(svcadm_output,
-                    "svcadm enable svc:/system/test_enable_svc:default")
-                os.unlink(svcadm_output)
+        smf.disable("svc:/system/test_disable_svc:default", zone=zone)
+        self.file_contains(zlogin_output, "zlogin " + zone)
+        os.unlink(zlogin_output)
+        self.file_contains(
+            svcadm_output,
+            "svcadm disable -s svc:/system/test_disable_svc:default",
+        )
+        os.unlink(svcadm_output)
 
-                smf.disable("svc:/system/test_disable_svc:default", zone=zone)
-                self.file_contains(zlogin_output,
-                    "zlogin "+zone)
-                os.unlink(zlogin_output)
-                self.file_contains(svcadm_output,
-                    "svcadm disable -s svc:/system/test_disable_svc:default")
-                os.unlink(svcadm_output)
+        os.environ["PKG_SVCPROP_OUTPUT"] = "svcprop_enabled"
+        smf.get_prop("foo", "start/timeout_seconds", zone=zone)
+        self.file_contains(zlogin_output, "zlogin " + zone)
+        os.unlink(zlogin_output)
 
-                os.environ["PKG_SVCPROP_OUTPUT"] = "svcprop_enabled"
-                smf.get_prop("foo", "start/timeout_seconds", zone=zone)
-                self.file_contains(zlogin_output,
-                    "zlogin "+zone)
-                os.unlink(zlogin_output)
+        smf.is_disabled("foo", zone=zone)
+        self.file_contains(zlogin_output, "zlogin " + zone)
+        os.unlink(zlogin_output)
 
-                smf.is_disabled("foo", zone=zone)
-                self.file_contains(zlogin_output,
-                    "zlogin "+zone)
-                os.unlink(zlogin_output)
+        smf.get_state("foo", zone=zone)
+        self.file_contains(zlogin_output, "zlogin " + zone)
+        os.unlink(zlogin_output)
 
-                smf.get_state("foo", zone=zone)
-                self.file_contains(zlogin_output,
-                    "zlogin "+zone)
-                os.unlink(zlogin_output)
 
 # Vim hints
-# vim:ts=8:sw=8:et:fdm=marker
+# vim:ts=4:sw=4:et:fdm=marker

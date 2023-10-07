@@ -40,68 +40,76 @@ import timeit
 # so that we can more easily detect these in testing of the CLI commands.
 #
 if __name__ == "__main__":
+    setup1 = "import pkg.actions as actions"
+    str1 = 'action = actions.fromstr("file 58371e22b5e75ec66602b966edf29bcce7038db5 elfarch=i386 elfbits=32 elfhash=cd12b081ddaef993fd0276dd04d653222d25fa77 group=bin mode=0755 owner=root path=usr/lib/libzonecfg.so.1 pkg.size=178072")'
 
-        setup1 = "import pkg.actions as actions"
-        str1 = 'action = actions.fromstr("file 58371e22b5e75ec66602b966edf29bcce7038db5 elfarch=i386 elfbits=32 elfhash=cd12b081ddaef993fd0276dd04d653222d25fa77 group=bin mode=0755 owner=root path=usr/lib/libzonecfg.so.1 pkg.size=178072")'
+    print("action creation")
+    n = 20000
+    for i in (1, 2, 3):
+        try:
+            t = timeit.Timer(str1, setup1).timeit(n)
+            print("{0:>20f}  {1:>8d} actions/sec".format(t, int(n // t)))
+        except KeyboardInterrupt:
+            import sys
 
-        print("action creation")
-        n = 20000
-        for i in (1, 2, 3):
-                try:
-                        t = timeit.Timer(str1, setup1).timeit(n)
-                        print("{0:>20f}  {1:>8d} actions/sec".format(t,
-                            int(n // t)))
-                except KeyboardInterrupt:
-                        import sys
-                        sys.exit(0)
+            sys.exit(0)
 
-        setup2 = """import pkg.actions as actions
+    setup2 = """import pkg.actions as actions
 a1 = actions.fromstr("file 1234 group=bin mode=0755 owner=root path=usr/lib/libzonecfg.so.1")
 a2 = actions.fromstr("dir group=bin mode=0755 owner=root path=usr/lib/libzonecfg.so.2")
         """
 
-        n = 520000
-        str2 = "a1 == a2"
+    n = 520000
+    str2 = "a1 == a2"
 
-        print("action comparison")
-        print("\tequality")
-        for i in (1, 2, 3):
+    print("action comparison")
+    print("\tequality")
+    for i in (1, 2, 3):
+        try:
+            t = timeit.Timer(str2, setup2).timeit(n)
+            print(
+                "{0:>20f}  {1:>8d} action comparisons/sec".format(
+                    t, int(n // t)
+                )
+            )
+        except KeyboardInterrupt:
+            import sys
 
-                try:
-                        t = timeit.Timer(str2, setup2).timeit(n)
-                        print("{0:>20f}  {1:>8d} action comparisons/sec".format(t,
-                            int(n // t)))
-                except KeyboardInterrupt:
-                        import sys
-                        sys.exit(0)
+            sys.exit(0)
 
-        str2 = "a1 > a2"
-        print("\tgt")
-        for i in (1, 2, 3):
+    str2 = "a1 > a2"
+    print("\tgt")
+    for i in (1, 2, 3):
+        try:
+            t = timeit.Timer(str2, setup2).timeit(n)
+            print(
+                "{0:>20f}  {1:>8d} action comparisons/sec".format(
+                    t, int(n // t)
+                )
+            )
+        except KeyboardInterrupt:
+            import sys
 
-                try:
-                        t = timeit.Timer(str2, setup2).timeit(n)
-                        print("{0:>20f}  {1:>8d} action comparisons/sec".format(t,
-                            int(n // t)))
-                except KeyboardInterrupt:
-                        import sys
-                        sys.exit(0)
+            sys.exit(0)
 
-        str2 = "a1 < a2"
-        print("\tlt")
-        for i in (1, 2, 3):
+    str2 = "a1 < a2"
+    print("\tlt")
+    for i in (1, 2, 3):
+        try:
+            t = timeit.Timer(str2, setup2).timeit(n)
+            print(
+                "{0:>20f}  {1:>8d} action comparisons/sec".format(
+                    t, int(n // t)
+                )
+            )
+        except KeyboardInterrupt:
+            import sys
 
-                try:
-                        t = timeit.Timer(str2, setup2).timeit(n)
-                        print("{0:>20f}  {1:>8d} action comparisons/sec".format(t,
-                            int(n // t)))
-                except KeyboardInterrupt:
-                        import sys
-                        sys.exit(0)
+            sys.exit(0)
 
-        print("minimalist comparison equality")
+    print("minimalist comparison equality")
 
-        setup3 = """
+    setup3 = """
 class superc(object):
         def __lt__(a, b):
                 return a.ordinality == b.ordinality
@@ -118,38 +126,37 @@ a = aa()
 b = bb()
         """
 
-        str3 = "a == b"
-        for i in (1, 2, 3):
+    str3 = "a == b"
+    for i in (1, 2, 3):
+        try:
+            t = timeit.Timer(str3, setup3).timeit(n)
+            print("{0:>20f}  {1:>8d} comparisons/sec".format(t, int(n // t)))
+        except KeyboardInterrupt:
+            import sys
 
-                try:
-                        t = timeit.Timer(str3, setup3).timeit(n)
-                        print("{0:>20f}  {1:>8d} comparisons/sec".format(t,
-                            int(n // t)))
-                except KeyboardInterrupt:
-                        import sys
-                        sys.exit(0)
+            sys.exit(0)
 
-
-        setup4 = """import pkg.actions as actions
+    setup4 = """import pkg.actions as actions
 a1 = actions.fromstr("file 1234 group=bin mode=0755 owner=root path=usr/lib/libzonecfg.so.1")
         """
 
-        n = 260000
-        str4 = "str(a1)"
+    n = 260000
+    str4 = "str(a1)"
 
-        print("action to string conversion")
-        for i in (1, 2, 3):
+    print("action to string conversion")
+    for i in (1, 2, 3):
+        try:
+            t = timeit.Timer(str4, setup4).timeit(n)
+            print(
+                "{0:>20f}  {1:>8d} actions to string/sec".format(t, int(n // t))
+            )
+        except KeyboardInterrupt:
+            import sys
 
-                try:
-                        t = timeit.Timer(str4, setup4).timeit(n)
-                        print("{0:>20f}  {1:>8d} actions to string/sec".format(t,
-                            int(n // t)))
-                except KeyboardInterrupt:
-                        import sys
-                        sys.exit(0)
+            sys.exit(0)
 
-        # I took an existing manifest and randomized the lines.
-        setup5 = """
+    # I took an existing manifest and randomized the lines.
+    setup5 = """
 import pkg.manifest as manifest
 m=\"\"\"
 dir group=sys mode=0755 owner=root path=usr/share
@@ -215,32 +222,37 @@ license f9562cfd7500134682a60f6d9d6dc256902917c8 license=SUNWzoner.copyright pat
 \"\"\"
 """
 
-        n = 1000
+    n = 1000
 
-        str5="""
+    str5 = """
 mf = manifest.Manifest()
 mf.set_content(m)
 """
 
-        try:
-                print("manifest contents loading")
-                for i in (1, 2, 3):
+    try:
+        print("manifest contents loading")
+        for i in (1, 2, 3):
+            t = timeit.Timer(str5, setup5).timeit(n)
+            print(
+                "{0:>20f} {1:>8d} manifest contents loads/sec ({2:d} actions/sec)".format(
+                    t, int(n // t), int((n * 60) // t)
+                )
+            )
 
-                        t = timeit.Timer(str5, setup5).timeit(n)
-                        print("{0:>20f} {1:>8d} manifest contents loads/sec ({2:d} actions/sec)".format(
-                            t, int(n // t), int((n * 60) // t)))
+        n = 1000000
+        str6 = "id(a1)"
+        print("id() speed")
+        for i in (1, 2, 3):
+            t = timeit.Timer(str6, setup4).timeit(n)
+            print(
+                "{0:>20f} {1:>8d} calls to id(action) /sec".format(
+                    t, int(n // t)
+                )
+            )
+    except KeyboardInterrupt:
+        import sys
 
-                n = 1000000
-                str6 = "id(a1)"
-                print("id() speed")
-                for i in (1, 2, 3):
-
-                        t = timeit.Timer(str6, setup4).timeit(n)
-                        print("{0:>20f} {1:>8d} calls to id(action) /sec".format(t,
-                            int(n // t)))
-        except KeyboardInterrupt:
-                import sys
-                sys.exit(0)
+        sys.exit(0)
 
 # Vim hints
-# vim:ts=8:sw=8:et:fdm=marker
+# vim:ts=4:sw=4:et:fdm=marker

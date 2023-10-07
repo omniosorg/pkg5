@@ -30,130 +30,136 @@ Definitions for values used by the pkg(1) client.
 """
 
 # pkg exit codes
-EXIT_OK        =  0 # Command succeeded.
-EXIT_OOPS      =  1 # An error occurred.
-EXIT_BADOPT    =  2 # Invalid command line options were specified.
-EXIT_PARTIAL   =  3 # Multiple ops were requested, but not all succeeded.
-EXIT_NOP       =  4 # No changes were made - nothing to do.
-EXIT_NOTLIVE   =  5 # The requested op cannot be performed on a live image.
-EXIT_LICENSE   =  6 # License acceptance required for requested op.
-EXIT_LOCKED    =  7 # Image is currently locked by another process
-EXIT_ACTUATOR  =  8 # Actuator timed out
-EXIT_CONSTRAINED = 9 # Overly constrained
+EXIT_OK = 0  # Command succeeded.
+EXIT_OOPS = 1  # An error occurred.
+EXIT_BADOPT = 2  # Invalid command line options were specified.
+EXIT_PARTIAL = 3  # Multiple ops were requested, but not all succeeded.
+EXIT_NOP = 4  # No changes were made - nothing to do.
+EXIT_NOTLIVE = 5  # The requested op cannot be performed on a live image.
+EXIT_LICENSE = 6  # License acceptance required for requested op.
+EXIT_LOCKED = 7  # Image is currently locked by another process
+EXIT_ACTUATOR = 8  # Actuator timed out
+EXIT_CONSTRAINED = 9  # Overly constrained
 
 # private pkg exit codes
-EXIT_EACCESS   = 51 # Can't access requested image
-EXIT_DIVERGED  = 52 # Image is not in sync with its constraints
-EXIT_NOPARENT  = 53 # Image is not linked to a parent image
-EXIT_PARENTOP  = 54 # Linked operation must be done from parent
+EXIT_EACCESS = 51  # Can't access requested image
+EXIT_DIVERGED = 52  # Image is not in sync with its constraints
+EXIT_NOPARENT = 53  # Image is not linked to a parent image
+EXIT_PARENTOP = 54  # Linked operation must be done from parent
 
 # package operations
-PKG_OP_ATTACH          = "attach-linked"
-PKG_OP_AUDIT_LINKED    = "audit-linked"
-PKG_OP_CHANGE_FACET    = "change-facet"
-PKG_OP_CHANGE_VARIANT  = "change-variant"
-PKG_OP_DEHYDRATE       = "dehydrate"
-PKG_OP_DETACH          = "detach-linked"
-PKG_OP_EXACT_INSTALL   = "exact-install"
-PKG_OP_FIX             = "fix"
-PKG_OP_FLAG            = "flag"
-PKG_OP_INFO            = "info"
-PKG_OP_INSTALL         = "install"
-PKG_OP_LIST            = "list"
-PKG_OP_LIST_LINKED     = "list-linked"
-PKG_OP_PROP_LINKED     = "property-linked"
-PKG_OP_PUBCHECK        = "pubcheck-linked"
-PKG_OP_PUBLISHER_LIST  = "publisher"
-PKG_OP_REHYDRATE       = "rehydrate"
-PKG_OP_REVERT          = "revert"
-PKG_OP_SET_MEDIATOR    = "set-mediator"
-PKG_OP_SET_PUBLISHER   = "set-publisher"
+PKG_OP_ATTACH = "attach-linked"
+PKG_OP_AUDIT_LINKED = "audit-linked"
+PKG_OP_CHANGE_FACET = "change-facet"
+PKG_OP_CHANGE_VARIANT = "change-variant"
+PKG_OP_DEHYDRATE = "dehydrate"
+PKG_OP_DETACH = "detach-linked"
+PKG_OP_EXACT_INSTALL = "exact-install"
+PKG_OP_FIX = "fix"
+PKG_OP_FLAG = "flag"
+PKG_OP_INFO = "info"
+PKG_OP_INSTALL = "install"
+PKG_OP_LIST = "list"
+PKG_OP_LIST_LINKED = "list-linked"
+PKG_OP_PROP_LINKED = "property-linked"
+PKG_OP_PUBCHECK = "pubcheck-linked"
+PKG_OP_PUBLISHER_LIST = "publisher"
+PKG_OP_REHYDRATE = "rehydrate"
+PKG_OP_REVERT = "revert"
+PKG_OP_SET_MEDIATOR = "set-mediator"
+PKG_OP_SET_PUBLISHER = "set-publisher"
 PKG_OP_SET_PROP_LINKED = "set-property-linked"
-PKG_OP_SYNC            = "sync-linked"
-PKG_OP_UNINSTALL       = "uninstall"
+PKG_OP_SYNC = "sync-linked"
+PKG_OP_UNINSTALL = "uninstall"
 PKG_OP_UNSET_PUBLISHER = "unset-publisher"
-PKG_OP_UPDATE          = "update"
-PKG_OP_APPLY_HOT_FIX   = "apply-hot-fix"
-PKG_OP_AUTOREMOVE      = "autoremove"
-PKG_OP_HOTFIX_CLEANUP  = "clean-up-hot-fix"
-PKG_OP_VERIFY          = "verify"
-pkg_op_values          = frozenset([
-    PKG_OP_ATTACH,
-    PKG_OP_AUDIT_LINKED,
-    PKG_OP_CHANGE_FACET,
-    PKG_OP_CHANGE_VARIANT,
-    PKG_OP_DEHYDRATE,
-    PKG_OP_DETACH,
-    PKG_OP_EXACT_INSTALL,
-    PKG_OP_FIX,
-    PKG_OP_FLAG,
-    PKG_OP_INFO,
-    PKG_OP_INSTALL,
-    PKG_OP_LIST,
-    PKG_OP_LIST_LINKED,
-    PKG_OP_PROP_LINKED,
-    PKG_OP_PUBCHECK,
-    PKG_OP_PUBLISHER_LIST,
-    PKG_OP_REVERT,
-    PKG_OP_REHYDRATE,
-    PKG_OP_SET_MEDIATOR,
-    PKG_OP_SET_PUBLISHER,
-    PKG_OP_SET_PROP_LINKED,
-    PKG_OP_SYNC,
-    PKG_OP_UNINSTALL,
-    PKG_OP_UNSET_PUBLISHER,
-    PKG_OP_UPDATE,
-    PKG_OP_APPLY_HOT_FIX,
-    PKG_OP_AUTOREMOVE,
-    PKG_OP_HOTFIX_CLEANUP,
-    PKG_OP_VERIFY,
-])
+PKG_OP_UPDATE = "update"
+PKG_OP_APPLY_HOT_FIX = "apply-hot-fix"
+PKG_OP_AUTOREMOVE = "autoremove"
+PKG_OP_HOTFIX_CLEANUP = "clean-up-hot-fix"
+PKG_OP_VERIFY = "verify"
+pkg_op_values = frozenset(
+    [
+        PKG_OP_ATTACH,
+        PKG_OP_AUDIT_LINKED,
+        PKG_OP_CHANGE_FACET,
+        PKG_OP_CHANGE_VARIANT,
+        PKG_OP_DEHYDRATE,
+        PKG_OP_DETACH,
+        PKG_OP_EXACT_INSTALL,
+        PKG_OP_FIX,
+        PKG_OP_FLAG,
+        PKG_OP_INFO,
+        PKG_OP_INSTALL,
+        PKG_OP_LIST,
+        PKG_OP_LIST_LINKED,
+        PKG_OP_PROP_LINKED,
+        PKG_OP_PUBCHECK,
+        PKG_OP_PUBLISHER_LIST,
+        PKG_OP_REVERT,
+        PKG_OP_REHYDRATE,
+        PKG_OP_SET_MEDIATOR,
+        PKG_OP_SET_PUBLISHER,
+        PKG_OP_SET_PROP_LINKED,
+        PKG_OP_SYNC,
+        PKG_OP_UNINSTALL,
+        PKG_OP_UNSET_PUBLISHER,
+        PKG_OP_UPDATE,
+        PKG_OP_APPLY_HOT_FIX,
+        PKG_OP_AUTOREMOVE,
+        PKG_OP_HOTFIX_CLEANUP,
+        PKG_OP_VERIFY,
+    ]
+)
 
-API_OP_ATTACH         = "attach-linked"
-API_OP_CHANGE_FACET   = "change-facet"
+API_OP_ATTACH = "attach-linked"
+API_OP_CHANGE_FACET = "change-facet"
 API_OP_CHANGE_VARIANT = "change-variant"
-API_OP_DEHYDRATE      = "dehydrate"
-API_OP_DETACH         = "detach-linked"
-API_OP_EXACT_INSTALL  = "exact-install"
-API_OP_FIX            = "fix"
-API_OP_INSTALL        = "install"
-API_OP_REHYDRATE      = "rehydrate"
-API_OP_REPAIR         = "repair"
-API_OP_REVERT         = "revert"
-API_OP_SET_MEDIATOR   = "set-mediator"
-API_OP_SYNC           = "sync-linked"
-API_OP_UNINSTALL      = "uninstall"
-API_OP_UPDATE         = "update"
-API_OP_VERIFY         = "verify"
-api_op_values         = frozenset([
-    API_OP_ATTACH,
-    API_OP_CHANGE_FACET,
-    API_OP_CHANGE_VARIANT,
-    API_OP_DETACH,
-    API_OP_DEHYDRATE,
-    API_OP_EXACT_INSTALL,
-    API_OP_FIX,
-    API_OP_INSTALL,
-    API_OP_REHYDRATE,
-    API_OP_REPAIR,
-    API_OP_REVERT,
-    API_OP_SET_MEDIATOR,
-    API_OP_SYNC,
-    API_OP_UNINSTALL,
-    API_OP_UPDATE,
-    API_OP_VERIFY
-])
+API_OP_DEHYDRATE = "dehydrate"
+API_OP_DETACH = "detach-linked"
+API_OP_EXACT_INSTALL = "exact-install"
+API_OP_FIX = "fix"
+API_OP_INSTALL = "install"
+API_OP_REHYDRATE = "rehydrate"
+API_OP_REPAIR = "repair"
+API_OP_REVERT = "revert"
+API_OP_SET_MEDIATOR = "set-mediator"
+API_OP_SYNC = "sync-linked"
+API_OP_UNINSTALL = "uninstall"
+API_OP_UPDATE = "update"
+API_OP_VERIFY = "verify"
+api_op_values = frozenset(
+    [
+        API_OP_ATTACH,
+        API_OP_CHANGE_FACET,
+        API_OP_CHANGE_VARIANT,
+        API_OP_DETACH,
+        API_OP_DEHYDRATE,
+        API_OP_EXACT_INSTALL,
+        API_OP_FIX,
+        API_OP_INSTALL,
+        API_OP_REHYDRATE,
+        API_OP_REPAIR,
+        API_OP_REVERT,
+        API_OP_SET_MEDIATOR,
+        API_OP_SYNC,
+        API_OP_UNINSTALL,
+        API_OP_UPDATE,
+        API_OP_VERIFY,
+    ]
+)
 
-API_STAGE_DEFAULT  = "default"
-API_STAGE_PLAN     = "plan"
-API_STAGE_PREPARE  = "prepare"
-API_STAGE_EXECUTE  = "execute"
-api_stage_values  = frozenset([
-    API_STAGE_DEFAULT,
-    API_STAGE_PLAN,
-    API_STAGE_PREPARE,
-    API_STAGE_EXECUTE,
-])
+API_STAGE_DEFAULT = "default"
+API_STAGE_PLAN = "plan"
+API_STAGE_PREPARE = "prepare"
+API_STAGE_EXECUTE = "execute"
+api_stage_values = frozenset(
+    [
+        API_STAGE_DEFAULT,
+        API_STAGE_PLAN,
+        API_STAGE_PREPARE,
+        API_STAGE_EXECUTE,
+    ]
+)
 
 #
 # Please note that the values of these PKG_STATE constants should not
@@ -190,8 +196,8 @@ PKG_STATE_RENAMED = 9
 
 # These states are used to indicate why a package was rejected and
 # is not available for packaging operations.
-PKG_STATE_UNSUPPORTED = 10      # Package contains invalid or
-                                # unsupported metadata.
+PKG_STATE_UNSUPPORTED = 10  # Package contains invalid or
+# unsupported metadata.
 
 # This state indicates that this package is frozen.
 PKG_STATE_FROZEN = 11
@@ -223,4 +229,4 @@ MSG_GENERAL = "general"
 MSG_UNPACKAGED = "unpackaged"
 
 # Vim hints
-# vim:ts=8:sw=8:et:fdm=marker
+# vim:ts=4:sw=4:et:fdm=marker

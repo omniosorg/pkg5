@@ -33,13 +33,15 @@ object it is.  No datastreams or attributes aside from a path are stored."""
 
 from . import generic
 
+
 class UnknownAction(generic.Action):
-        """Class representing a unknown type of packaging object."""
+    """Class representing a unknown type of packaging object."""
 
-        __slots__ = []
+    __slots__ = []
 
-        name = "unknown"
-        ordinality = generic._orderdict[name]
+    name = "unknown"
+    ordinality = generic._orderdict[name]
+
 
 # Vim hints
-# vim:ts=8:sw=8:et:fdm=marker
+# vim:ts=4:sw=4:et:fdm=marker

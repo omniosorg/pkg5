@@ -1,4 +1,3 @@
-
 # {{{ CDDL HEADER
 #
 # This file and its contents are supplied under the terms of the
@@ -20,8 +19,13 @@
 #
 # See https://github.com/construct/construct/issues/980
 
-from construct import Aligned as _Aligned, \
-    stream_tell, stream_read, stream_write
+from construct import (
+    Aligned as _Aligned,
+    stream_tell,
+    stream_read,
+    stream_write,
+)
+
 
 class Aligned(_Aligned):
     def _pad(self, stream, path):
@@ -41,4 +45,3 @@ class Aligned(_Aligned):
         pad = self._pad(stream, path)
         stream_write(stream, self.pattern * pad, pad, path)
         return buildret
-

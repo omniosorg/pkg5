@@ -29,15 +29,19 @@ from cffi import FFI
 
 ffi = FFI()
 
-ffi.set_source("_syscallat", """
+ffi.set_source(
+    "_syscallat",
+    """
 /* Includes */
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-""")
+""",
+)
 
-ffi.cdef("""
+ffi.cdef(
+    """
 /* Types */
 typedef	int... mode_t; /* file attribute type */
 
@@ -46,10 +50,11 @@ int mkdirat(int, const char *, mode_t);
 int openat(int, const char *, int, mode_t);
 int renameat(int, const char *, int, const char *);
 int unlinkat(int, const char *, int);
-""")
+"""
+)
 
 if __name__ == "__main__":
-        ffi.emit_c_code("cffi_src/_syscallat.c")
+    ffi.emit_c_code("cffi_src/_syscallat.c")
 
 # Vim hints
-# vim:ts=8:sw=8:et:fdm=marker
+# vim:ts=4:sw=4:et:fdm=marker

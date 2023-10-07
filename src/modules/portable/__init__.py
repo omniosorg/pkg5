@@ -56,190 +56,215 @@
 # not implemented to avoid pylint errors.  The included OS-specific module
 # redefines the methods with an OS-specific implementation.
 
+
 # Platform Methods
 # ----------------
 def get_isainfo():
-        """ Return the information for the OS's supported ISAs.
-        This can be a list or a single string."""
-        raise NotImplementedError
+    """Return the information for the OS's supported ISAs.
+    This can be a list or a single string."""
+    raise NotImplementedError
+
 
 def get_release():
-        """ Return the information for the OS's release version.  This
-        must be a dot-separated set of integers (i.e. no alphabetic
-        or punctuation)."""
-        raise NotImplementedError
+    """Return the information for the OS's release version.  This
+    must be a dot-separated set of integers (i.e. no alphabetic
+    or punctuation)."""
+    raise NotImplementedError
+
 
 def get_platform():
-        """ Return a string representing the current hardware model
-        information, e.g. "i86pc"."""
-        raise NotImplementedError
+    """Return a string representing the current hardware model
+    information, e.g. "i86pc"."""
+    raise NotImplementedError
+
 
 def get_file_type(path):
-        """ Return a value indicating the type of file found at path.
-        The return value is one of file type constants defined below."""
-        raise NotImplementedError
+    """Return a value indicating the type of file found at path.
+    The return value is one of file type constants defined below."""
+    raise NotImplementedError
+
 
 def get_actions_file_type(actions):
-        """ Return an iterator or list containing the file type for each file
-        in the list of provided actions."""
-        raise NotImplementedError
+    """Return an iterator or list containing the file type for each file
+    in the list of provided actions."""
+    raise NotImplementedError
+
 
 # Account access
 # --------------
 def get_group_by_name(name, dirpath, use_file):
-        """ Return the group ID for a group name.
-        If use_file is true, an OS-specific file from within the file tree
-        rooted by dirpath will be consulted, if it exists. Otherwise, the
-        group ID is retrieved from the operating system.
-        Exceptions:
-            KeyError if the specified group does not exist"""
-        raise NotImplementedError
+    """Return the group ID for a group name.
+    If use_file is true, an OS-specific file from within the file tree
+    rooted by dirpath will be consulted, if it exists. Otherwise, the
+    group ID is retrieved from the operating system.
+    Exceptions:
+        KeyError if the specified group does not exist"""
+    raise NotImplementedError
+
 
 def get_user_by_name(name, dirpath, use_file):
-        """ Return the user ID for a user name.
-        If use_file is true, an OS-specific file from within the file tree
-        rooted by dirpath will be consulted, if it exists. Otherwise, the
-        user ID is retrieved from the operating system.
-        Exceptions:
-            KeyError if the specified group does not exist"""
-        raise NotImplementedError
+    """Return the user ID for a user name.
+    If use_file is true, an OS-specific file from within the file tree
+    rooted by dirpath will be consulted, if it exists. Otherwise, the
+    user ID is retrieved from the operating system.
+    Exceptions:
+        KeyError if the specified group does not exist"""
+    raise NotImplementedError
+
 
 def get_name_by_gid(gid, dirpath, use_file):
-        """ Return the group name for a group ID.
-        If use_file is true, an OS-specific file from within the file tree
-        rooted by dirpath will be consulted, if it exists. Otherwise, the
-        group name is retrieved from the operating system.
-        Exceptions:
-            KeyError if the specified group does not exist"""
-        raise NotImplementedError
+    """Return the group name for a group ID.
+    If use_file is true, an OS-specific file from within the file tree
+    rooted by dirpath will be consulted, if it exists. Otherwise, the
+    group name is retrieved from the operating system.
+    Exceptions:
+        KeyError if the specified group does not exist"""
+    raise NotImplementedError
+
 
 def get_name_by_uid(uid, dirpath, use_file):
-        """ Return the user name for a user ID.
-        If use_file is true, an OS-specific file from within the file tree
-        rooted by dirpath will be consulted, if it exists. Otherwise, the
-        user name is retrieved from the operating system.
-        Exceptions:
-            KeyError if the specified group does not exist"""
-        raise NotImplementedError
+    """Return the user name for a user ID.
+    If use_file is true, an OS-specific file from within the file tree
+    rooted by dirpath will be consulted, if it exists. Otherwise, the
+    user name is retrieved from the operating system.
+    Exceptions:
+        KeyError if the specified group does not exist"""
+    raise NotImplementedError
+
 
 def get_usernames_by_gid(gid, dirpath):
-        """ Return all user names associated with a group ID.
-        The user name is first retrieved from an OS-specific file rooted
-        by dirpath. If failed, try to retrieve it from the operating system."""
-        raise NotImplementedError
+    """Return all user names associated with a group ID.
+    The user name is first retrieved from an OS-specific file rooted
+    by dirpath. If failed, try to retrieve it from the operating system."""
+    raise NotImplementedError
+
 
 def is_admin():
-        """ Return true if the invoking user has administrative
-        privileges on the current runtime OS (e.g. are they the
-        root user?)."""
-        raise NotImplementedError
+    """Return true if the invoking user has administrative
+    privileges on the current runtime OS (e.g. are they the
+    root user?)."""
+    raise NotImplementedError
+
 
 def get_userid():
-        """ Return a string representing the invoking user's id.  To be used
-        for display purposes only!"""
-        raise NotImplementedError
+    """Return a string representing the invoking user's id.  To be used
+    for display purposes only!"""
+    raise NotImplementedError
+
 
 def get_username():
-        """ Return a string representing the invoking user's username.  To be
-        used for display purposes only!"""
-        raise NotImplementedError
+    """Return a string representing the invoking user's username.  To be
+    used for display purposes only!"""
+    raise NotImplementedError
 
 
 # Miscellaneous filesystem operations
 # -----------------------------------
 def chown(path, owner, group):
-        """ Change ownership of a file in an OS-specific way.
-        The owner and group ownership information should be applied to
-        the given file, if applicable on the current runtime OS.
-        Exceptions:
-            EnvironmentError (or subclass) if the path does not exist
-            or ownership cannot be changed"""
-        raise NotImplementedError
+    """Change ownership of a file in an OS-specific way.
+    The owner and group ownership information should be applied to
+    the given file, if applicable on the current runtime OS.
+    Exceptions:
+        EnvironmentError (or subclass) if the path does not exist
+        or ownership cannot be changed"""
+    raise NotImplementedError
+
 
 def rename(src, dst):
-        """ Change the name of the given file, using the most
-        appropriate method for the OS.
-        Exceptions:
-            OSError (or subclass) if the source path does not exist
-            EnvironmentError if the rename fails."""
-        raise NotImplementedError
+    """Change the name of the given file, using the most
+    appropriate method for the OS.
+    Exceptions:
+        OSError (or subclass) if the source path does not exist
+        EnvironmentError if the rename fails."""
+    raise NotImplementedError
+
 
 def link(src, dst):
-        """ Link the src to the dst if supported, otherwise copy
-        Exceptions:
-           OSError (or subclass) if the source path does not exist or the link
-           or copy files"""
-        raise NotImplementedError
+    """Link the src to the dst if supported, otherwise copy
+    Exceptions:
+       OSError (or subclass) if the source path does not exist or the link
+       or copy files"""
+    raise NotImplementedError
+
 
 def remove(path):
-        """ Remove the given file in an OS-specific way
-        Exceptions:
-           OSError (or subclass) if the source path does not exist or
-           the file cannot be removed"""
-        raise NotImplementedError
+    """Remove the given file in an OS-specific way
+    Exceptions:
+       OSError (or subclass) if the source path does not exist or
+       the file cannot be removed"""
+    raise NotImplementedError
+
 
 def copyfile(src, dst):
-        """ Copy the contents of the file named src to a file named dst.
-        If dst already exists, it will be replaced. src and dst are
-        path names given as strings.
-        This is similar to python's shutil.copyfile() except that
-        the intention is to deal with platform specifics, such as
-        copying metadata associated with the file (e.g. Resource
-        forks on Mac OS X).
-        Exceptions: IOError if the destination location is not writable"""
-        raise NotImplementedError
+    """Copy the contents of the file named src to a file named dst.
+    If dst already exists, it will be replaced. src and dst are
+    path names given as strings.
+    This is similar to python's shutil.copyfile() except that
+    the intention is to deal with platform specifics, such as
+    copying metadata associated with the file (e.g. Resource
+    forks on Mac OS X).
+    Exceptions: IOError if the destination location is not writable"""
+    raise NotImplementedError
+
 
 def split_path(path):
-        """ Splits a path and gives back the components of the path.
-        This is intended to hide platform-specific details about splitting
-        a path into its components.  This interface is similar to
-        os.path.split() except that the entire path is split, not just
-        the head/tail.
+    """Splits a path and gives back the components of the path.
+    This is intended to hide platform-specific details about splitting
+    a path into its components.  This interface is similar to
+    os.path.split() except that the entire path is split, not just
+    the head/tail.
 
-        For platforms where there are additional components (like
-        a windows drive letter), these should be discarded before
-        performing the split."""
-        raise NotImplementedError
+    For platforms where there are additional components (like
+    a windows drive letter), these should be discarded before
+    performing the split."""
+    raise NotImplementedError
+
 
 def get_root(path):
-        """ Returns the 'root' of the given path.
-        This should include any and all components of a path up to the first
-        non-platform-specific component.  For example, on Windows,
-        it should include the drive letter prefix.
+    """Returns the 'root' of the given path.
+    This should include any and all components of a path up to the first
+    non-platform-specific component.  For example, on Windows,
+    it should include the drive letter prefix.
 
-        This is intended to be used when constructing or deconstructing
-        paths, where the root of the filesystem is significant (and
-        often leads to ambiguity in cross-platform code)."""
-        raise NotImplementedError
+    This is intended to be used when constructing or deconstructing
+    paths, where the root of the filesystem is significant (and
+    often leads to ambiguity in cross-platform code)."""
+    raise NotImplementedError
+
 
 def assert_mode(path, mode):
-        """ Checks that the file identified by path has the given mode to
-        the extent possible by the host operating system.  Otherwise raises
-        an AssertionError where the mode attribute of the assertion is the
-        mode of the file."""
-        raise NotImplementedError
+    """Checks that the file identified by path has the given mode to
+    the extent possible by the host operating system.  Otherwise raises
+    an AssertionError where the mode attribute of the assertion is the
+    mode of the file."""
+    raise NotImplementedError
+
 
 def fsetattr(path, attrs):
-        """ Set system attributes for file specified by 'path'. 'attrs' can be
-        a list of verbose system attributes or a string containing a sequence of
-        short options."""
-        raise NotImplementedError
+    """Set system attributes for file specified by 'path'. 'attrs' can be
+    a list of verbose system attributes or a string containing a sequence of
+    short options."""
+    raise NotImplementedError
+
 
 def fgetattr(path, compact=False):
-        """ Get system attributes for file specified by 'path'. If 'compact' is
-        True, it returns a string of short attribute options, otherwise a list
-        of verbose attributes."""
-        raise NotImplementedError
+    """Get system attributes for file specified by 'path'. If 'compact' is
+    True, it returns a string of short attribute options, otherwise a list
+    of verbose attributes."""
+    raise NotImplementedError
+
 
 def get_sysattr_dict():
-        """ Returns a dictionary containing all supported system attributes. The
-        keys of the dict are verbose attributes, the values short options."""
-        raise NotImplementedError
+    """Returns a dictionary containing all supported system attributes. The
+    keys of the dict are verbose attributes, the values short options."""
+    raise NotImplementedError
+
 
 # File type constants
 # -------------------
-ELF, EXEC, UNFOUND, SMF_MANIFEST, XMLDOC, EMPTYFILE, NOTFILE, UNKNOWN = \
-    range(0, 8)
+ELF, EXEC, UNFOUND, SMF_MANIFEST, XMLDOC, EMPTYFILE, NOTFILE, UNKNOWN = range(
+    0, 8
+)
 
 # String to be used for an action attribute created for the internal use of
 # dependency analysis.
@@ -271,19 +296,20 @@ ostype = os_util.get_canonical_os_type()
 
 fragments = [osname, ostype]
 for fragment in fragments:
-        modname = 'os_' + fragment
+    modname = "os_" + fragment
 
-        # try the most-specific module name first (e.g. os_suse),
-        # then try the more generic OS Name module (e.g. os_linux),
-        # then the OS type module (e.g. os_unix)
-        try:
-                exec('from .{0} import *'.format(modname))
-                break
-        except ImportError:
-                pass
+    # try the most-specific module name first (e.g. os_suse),
+    # then try the more generic OS Name module (e.g. os_linux),
+    # then the OS type module (e.g. os_unix)
+    try:
+        exec("from .{0} import *".format(modname))
+        break
+    except ImportError:
+        pass
 else:
-        raise ImportError(
-            "cannot find portable implementation class for os " + str(fragments))
+    raise ImportError(
+        "cannot find portable implementation class for os " + str(fragments)
+    )
 
 # Vim hints
-# vim:ts=8:sw=8:et:fdm=marker
+# vim:ts=4:sw=4:et:fdm=marker

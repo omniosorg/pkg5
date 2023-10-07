@@ -72,6 +72,7 @@ def get_isainfo():
         buf = buf1
 
     from pkg.misc import force_text
+
     # ffi.string returns a bytes
     if buf == NULL:
         buf1 = force_text(ffi.string(ffi.cast("char *", buf1)))
@@ -90,6 +91,7 @@ def get_release():
     if buf == NULL:
         return
     from pkg.misc import force_text
+
     return force_text(ffi.string(ffi.cast("char *", buf)))
 
 
@@ -99,7 +101,9 @@ def get_platform():
     if buf == NULL:
         return
     from pkg.misc import force_text
+
     return force_text(ffi.string(ffi.cast("char *", buf)))
 
+
 # Vim hints
-# vim:ts=8:sw=8:et:fdm=marker
+# vim:ts=4:sw=4:et:fdm=marker
