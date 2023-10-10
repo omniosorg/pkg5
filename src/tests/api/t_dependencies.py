@@ -2024,7 +2024,7 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                 if len(ms) != 1:
                         raise RuntimeError("Didn't get expected types of "
                             "missing files:\n{0}".format(ms))
-                self.assertEqual(list(ms.keys())[0], "empty file")
+                self.assertEqual(list(ms.keys())[0], portable.EMPTYFILE)
                 self.assertTrue(len(d_map) == 0)
 
                 # This should find the binary file first and thus produce
@@ -2263,7 +2263,7 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
 
                 # as it happens, file(1) isn't good at spotting broken
                 # XML documents, it only sniffs the header - so this file
-                # gets reported as an 'XML document' despite it being invalid
+                # gets reported as an XMLDOC despite it being invalid
                 # XML.
                 t_path = self.make_manifest(self.broken_smf_manf)
                 self.make_smf_test_files()
@@ -2275,14 +2275,14 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                 self.assertEqual(len(ms), 1, "No unknown files reported during "
                     "analysis")
 
-                if "XML document" not in ms:
+                if portable.XMLDOC not in ms:
                         self.assertTrue(False, "Broken SMF manifest file not"
                             " declared")
 
                 broken_path = os.path.join(self.proto_dir, self.paths["broken"])
-                self.assertEqual(ms["XML document"], broken_path,
+                self.assertEqual(ms[portable.XMLDOC], broken_path,
                     "Did not detect broken SMF manifest file: {0} != {1}".format(
-                    broken_path, ms["XML document"]))
+                    broken_path, ms[portable.XMLDOC]))
 
                 # We should still be able to resolve the other dependencies
                 # though and it's important to check that the one broken SMF
