@@ -219,6 +219,29 @@ class TestPkgApiInstall(pkg5unittest.SingleDepotTestCase):
             add file tmp/motd mode=0644 owner=root group=bin path=etc/motd
             close"""
 
+    barge10 = """
+            open barge@1.0,5.11-0
+            add file tmp/cat mode=0555 owner=root group=bin path=/bin/cat
+            add file tmp/motd mode=0444 owner=root group=bin path=etc/motd
+            close """
+
+    derelict = """
+            open derelict@1.0,5.11-0
+            add file tmp/motd mode=0444 owner=root group=bin path=etc/motd
+            close """
+
+    barge11 = """
+            open barge@1.1,5.11-0
+            add file tmp/cat mode=0555 owner=root group=bin path=/bin/cat
+            add depend type=require fmri=pkg:/derelict
+            close """
+
+    barge12 = """
+            open barge@1.2,5.11-0
+            add file tmp/cat mode=0555 owner=root group=bin path=/bin/cat
+            add depend type=origin fmri=pkg:/barge@1.1
+            close """
+
     misc_files = ["tmp/libc.so.1", "tmp/cat", "tmp/baz", "tmp/motd"]
 
     def setUp(self):
@@ -491,6 +514,66 @@ class TestPkgApiInstall(pkg5unittest.SingleDepotTestCase):
         api_obj.reset()
         self.__do_update(api_obj, ["carriage", "horse@1"])
         self.pkg("list carriage@3 horse@1")
+
+    def test_origin_depend(self):
+        """Confirm that an origin dependency causes the proper sequence of
+        upgrades to occur."""
+
+        self.pkgsend_bulk(self.rurl, self.barge10)
+        api_obj = self.image_create(self.rurl)
+
+        self.__do_install(api_obj, ["barge"])
+
+        self.pkg("list barge derelict", exit=3)
+
+        # Attempting to update barge should result in nothing to do.
+        api_obj.reset()
+        for pd in api_obj.gen_plan_update(["barge"]):
+            continue
+        self.assertTrue(api_obj.planned_nothingtodo())
+
+        # Publish derelict and barge versions 1.1 and 1.2
+        self.pkgsend_bulk(
+            self.rurl, (self.barge11, self.barge12, self.derelict)
+        )
+
+        # It should not be possible to update directly to barge@1.2 due to
+        # its origin dependency.
+        api_obj.reset()
+        self.assertRaises(
+            api_errors.PlanCreationException,
+            lambda *args, **kwargs: list(
+                api_obj.gen_plan_update(*args, **kwargs)
+            ),
+            ["barge@1.2"],
+        )
+
+        # Upgrading barge should result in derelict being installed, and barge
+        # only going to version 1.1
+        api_obj.reset()
+        self.__do_update(api_obj, ["barge"])
+        self.pkg("list barge@1.1 derelict")
+
+        # It should not be possible to uninstall derelict at this point as it
+        # is required by barge@1.1
+        api_obj.reset()
+        self.assertRaises(
+            api_errors.NonLeafPackageException,
+            lambda *args, **kwargs: list(
+                api_obj.gen_plan_uninstall(*args, **kwargs)
+            ),
+            ["derelict"],
+        )
+
+        # A subsequent update of barge should move it to 1.2
+        api_obj.reset()
+        self.__do_update(api_obj, ["barge"])
+        self.pkg("list barge@1.2 derelict")
+
+        # And now derelict should be uninstallable
+        api_obj.reset()
+        self.__do_uninstall(api_obj, ["derelict"])
+        self.pkg("list derelict", exit=1)
 
     def test_multi_publisher(self):
         """Verify that package install works as expected when multiple
