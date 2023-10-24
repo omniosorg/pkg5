@@ -4,11 +4,11 @@
 The pkg5 components have been updated to the latest upstream solaris-ips
 as of:
 
-commit bd2027fc9459d3f362d80ecc76092d0cd080ab97
-Author: Chandana R <chandana.r@oracle.com>
-Date:   Thu Feb 2 03:21:24 2023 -0800
+commit c5674fc26b31cd234007b090c451aa4ea0e0a668
+Author: Jakub Kulik <jakub.kulik@oracle.com>
+Date:   Fri Oct 20 06:43:37 2023 -0700
 
-    34872181 pkgrecv MemoryError due to 8GB memory limit
+    34044891 pkg verify is outputting ELF error that makes no sense
 
 -----------------------------------------------------------------------------
 
