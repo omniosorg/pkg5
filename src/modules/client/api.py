@@ -5299,7 +5299,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
             self.__cancel_state_callable(self.__can_be_canceled)
 
     def reset(self):
-        """Resets the API back the initial state. Note:
+        """Resets the API back to the initial state. Note:
         this does not necessarily return the disk to its initial state
         since the indexes or download cache may have been changed by
         the prepare method."""
