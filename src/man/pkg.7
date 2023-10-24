@@ -1867,7 +1867,7 @@ The exceptions are the
 variants.
 The
 .Sy debug
-variants can only be set to
+variants should only be set to
 .Sy true
 or
 .Sy false ;
@@ -1886,7 +1886,9 @@ file group=sys mode=0644 overlay=allow owner=root \e
 .Ed
 .Pp
 The variant value must be set on the image in order for a package using the
-variant to be installed.
+variant to be installed; by default all unspecified variants have the value
+.Sy false ,
+which may or may not make the package installable.
 The
 .Sy arch
 and

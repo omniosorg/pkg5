@@ -536,7 +536,14 @@ debug.foo false
         )
         self.__assert_variant_matches(exp_def, names=["debug.foo"])
 
-        # Unmatched because variant is not explicitly set.
+        # Matched because unknown variant is implicitly false.
+        exp_def = """\
+foobar false
+"""
+        self.__assert_variant_matches(exp_def, names=["foobar"])
+
+        # Unmatched because variant is not explicitly set (wildcard
+        # matching looks for explicit variants).
         self.__assert_variant_fails("'*foo'")
 
         # Matched case for explicitly set.
@@ -706,17 +713,6 @@ opensolaris.zone global
             # Unprivileged user case.
             self.__assert_variant_matches(exp_def, opts=opts, su_wrap=True)
 
-            # Unmatched case.
-            self.__assert_variant_matches_default(
-                "", opts=opts, names=("bogus",), exit=1
-            )
-
-            # Unmatched case tsv; subtly different as no error
-            # output is expected.
-            self.__assert_variant_matches_tsv(
-                "", opts=opts, names=("bogus",), exit=1, errout=False
-            )
-
         # No output expected for with no variants set and no packages
         # installed for -v, -av, -i, and -iv.
         for opts in (("-v",), ("-av",), ("-i",), ("-iv",)):
@@ -797,7 +793,7 @@ arch {0[variant.arch]}
 icecream strawberry
 opensolaris.imagetype full
 opensolaris.zone global
-unknown 
+unknown false
 """.format(
             variants
         )
@@ -805,7 +801,7 @@ unknown
 
         # Verify -i output.
         exp_def = """\
-unknown 
+unknown false
 """.format(
             variants
         )

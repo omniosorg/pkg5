@@ -208,10 +208,6 @@ class GroupAction(generic.Action):
             else:
                 cur_attrs.setdefault(k, "<missing>")
 
-        # Note where attributes are missing
-        for k in should_be:
-            cur_attrs.setdefault(k, "<missing>")
-
         # Note where attributes should be empty
         for k in cur_attrs:
             if cur_attrs[k]:
