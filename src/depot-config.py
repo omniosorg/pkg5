@@ -453,7 +453,7 @@ def _createCertificateKey(
     issuerCert=None,
     issuerKey=None,
     key_type=TYPE_RSA,
-    key_bits=1024,
+    key_bits=2048,
     digest="sha256",
 ):
     """Generate a certificate given a certificate request.
