@@ -1573,7 +1573,7 @@ License:
         if not matches:
             return ""
 
-        if not "@" in pfmri or "*" in pfmri:
+        if "@" not in pfmri or "*" in pfmri:
             # When using wildcards or exact name match, trim the
             # results to only the unique package stems.
             matches = sorted(set([m.pkg_name for m in matches]))
@@ -1665,7 +1665,7 @@ License:
             )
         except Exception as e:
             raise cherrypy.HTTPError(
-                http_client.NOT_FOUND, _("Unable " "to generate statistics.")
+                http_client.NOT_FOUND, _("Unable to generate statistics.")
             )
         return misc.force_bytes(out + "\n")
 
@@ -1698,10 +1698,10 @@ def nasty_before_handler(nasty_depot, maxroll=100):
             response = cherrypy.response
             response.body = random.choice(
                 [
-                    "",
-                    "set this is a bogus action",
-                    "Instead of office chair, " "package contained bobcat.",
-                    '{"this is a": "fragment of json"}',
+                    b"",
+                    b"set this is a bogus action",
+                    b"Instead of office chair, package contained bobcat.",
+                    b'{"this is a": "fragment of json"}',
                 ]
             )
             return True
@@ -2179,7 +2179,7 @@ class NastyDepotHTTP(DepotHTTP):
             # NASTY
             # Write garbage into the response
             cherrypy.log("NASTY serve_file: prepend garbage")
-            response.body = "NASTY!"
+            response.body = b"NASTY!"
             response.body += nfile.read(filesz)
             # If we're sending data, lie about the length and
             # make the client catch us.
@@ -2206,6 +2206,7 @@ class NastyDepotHTTP(DepotHTTP):
         else:
             response.body = nfile.read(filesz)
 
+        nfile.close()
         return response.body
 
 
