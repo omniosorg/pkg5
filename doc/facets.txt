@@ -2,13 +2,13 @@ Package facets and variants
 ---------------------------
 
 Traditionally, packaging systems have placed optional components
-of a package in separate packages, and established conventions 
+of a package in separate packages, and established conventions
 for naming such components, such as -localization-locale,
--devel, -doc, etc.  This method of ad-hoc decomposition 
+-devel, -doc, etc.  This method of ad-hoc decomposition
 makes it more difficult for GUI programs to offer the appropriate
 choices when selecting components, makes the introduction of new
 optional components difficult and makes installing documentation
-after the fact a painful process.  
+after the fact a painful process.
 
 Packaging options also exist which are mutually exclusive; the typical
 example is which architecture the package supports.  One cannot select
@@ -46,7 +46,7 @@ if any of the variant tags do not match, the action is not installed.
 On the other hand, the facet tags are OR'd together; if any of the
 facets match the action is installed.
 
-Facets and variants are tags, and as such can initially be 
+Facets and variants are tags, and as such can initially be
 set on any action, including dependencies, etc.  This can make
 testing problematic, however.  To simplify matters, variants and
 facets are set at the image level.  Package developers desiring
@@ -77,11 +77,11 @@ A more useful example would be installing the french locale as
 spoken in France.  This consists of files tagged
 
 facet.locale.fr, which tags files which should be installed for all
-French locales, 
+French locales,
 
 and
 
-facet.locale.fr_FR, which is for France in particular, 
+facet.locale.fr_FR, which is for France in particular,
 
 but not
 
@@ -90,11 +90,11 @@ facet.locale.fr_CA, which is for Canada.
 Setting the following facets insures this selection:
 
 facet.locale.*     false   # install only locales we specify
-facet.locale.fr    true    
+facet.locale.fr    true
 facet.locale.fr_FR true
 
 Changing either variants or facets for an installed image
-effectively causes re-evaluation of the actions in the installed 
+effectively causes re-evaluation of the actions in the installed
 packages, and may or may not be done live depending on the impact
 of the change.
 
@@ -117,9 +117,10 @@ facet.doc.html		 true
 facet.devel		 true
 facet.debug.<all>	 false
 facet.optional.<all>	 false
-facet.platform.sun4u	 true 
+facet.platform.sun4u	 true
 facet.platform.sun4v	 true
 variant.arch		 one of sparc, i386 as set by platform code
 variant.opensolaris.zone either global or nonglobal as set by image type
 variant.debug.<all>	 false
+variant.<unknown>        false   all unknown variants default to 'false'
 

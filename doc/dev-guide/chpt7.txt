@@ -89,21 +89,21 @@ are not installed in non-global zones.  This is typically done in the
 manifest during publication with a |pkgmogrify| rule.  Thus the packages
 from the i386 and sparc builds are already marked for zones.  We then
 use the |pkgmerge| command to take the packages from the sparc and i386
-builds and merge them together.  This is far more reliable and faster 
+builds and merge them together.  This is far more reliable and faster
 than attempting to construct such packages manually.
 
-In general, it is not practical to define new variants without
-modifying the packaging system as no practical means currently exists
-for defining a default value for variants in general.  Package developers
-cannot define new variants at present.
+The ``variant.debug.*`` portion of the variant namespace is explicitly
+predefined to have a default version of ``false``; thus, developers
+can provide debug versions of their components, tagged with the
+appropriate variant, and users can select that variant if problems
+arise.  Remember that variants are set per image, so selecting a
+suitable name that is unique at the appropriate resolution for that
+piece of software is important.
 
-However, the ``variant.debug.*`` portion of the variant namespace is predefined
-to have a default version of ``false``; thus, developers can provide debug
-versions of their components, tagged with the appropriate variant, and
-users can select that variant if problems arise.  Remember that
-variants are set per image, so selecting a suitable name that
-is unique at the appropriate resolution for that piece of software 
-is important.
+In addition, any variant tags not described here are assumed to
+have a default value of ``false`` in the image.  This allows
+the definition of custom variants not explicitly set in the
+image for use in packages.
 
 Note that variant tags are applied to any actions that differ between
 architectures during merging; this includes dependencies, ``set`` actions,
@@ -120,7 +120,7 @@ Facets
 Often, package developers have optional portions of their software
 that actually belong with the main body, but some people might not
 want to install.  Some examples are localization files for different
-locales, man pages and other documentation, header files needed 
+locales, man pages and other documentation, header files needed
 only by developers or DTrace users.
 
 Traditionally, such optional content has been placed in separate
@@ -141,8 +141,8 @@ with matching rules such that the longest match wins.
 
 For example, the default value for all facets is ``true``; the |pkg| client
 implicitly sets ``facet.*`` to ``true``.
-Documentation in Oracle Solaris packages is tagged with the type of 
-documentation.  For example, man pages are tagged with 
+Documentation in Oracle Solaris packages is tagged with the type of
+documentation.  For example, man pages are tagged with
 ``facet.doc.man=true`` in the package manifests.
 
 The following commands include man pages but exclude all other documentation
@@ -244,7 +244,7 @@ facet.locale.en_SG        facet.locale.ku           facet.locale.zh_HK
 facet.locale.en_US        facet.locale.ku_TR        facet.locale.zh_HK
 facet.locale.en_ZW        facet.locale.ky           facet.locale.zh_SG
 facet.locale.eo           facet.locale.ky_KG        facet.locale.zh_TW
-facet.locale.es_AR        facet.locale.lg     
+facet.locale.es_AR        facet.locale.lg
 ========================  ==================        ==================
 
 

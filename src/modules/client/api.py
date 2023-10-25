@@ -1185,8 +1185,6 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 for p in patterns
                 if "*" not in p and "?" not in p
             )
-            # Only debug variants can have an implicit value.
-            iset = set(p for p in iset if p.startswith("variant.debug."))
         vlist = sorted(vimg | set(vpkg.keys()) | iset)
 
         # Generate the results.
@@ -5301,7 +5299,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
             self.__cancel_state_callable(self.__can_be_canceled)
 
     def reset(self):
-        """Resets the API back the initial state. Note:
+        """Resets the API back to the initial state. Note:
         this does not necessarily return the disk to its initial state
         since the indexes or download cache may have been changed by
         the prepare method."""

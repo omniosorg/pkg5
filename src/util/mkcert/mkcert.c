@@ -20,7 +20,7 @@
  */
 
 /*
- * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2023,, Oracle and/or its affiliates.
  */
 
 /*
@@ -68,7 +68,7 @@ main(int argc __unused, char **argv __unused)
 
 	bio_err = BIO_new_fp(stderr, BIO_NOCLOSE);
 
-	mkcert(&x509, &pkey, 1024, 0, 365);
+	mkcert(&x509, &pkey, 2048, 0, 365);
 
 	rsa = EVP_PKEY_get0_RSA(pkey);
 	assert(rsa != NULL);

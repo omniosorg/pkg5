@@ -168,9 +168,10 @@ class TestPkgVariants(pkg5unittest.SingleDepotTestCase):
         )
         self.pkg("install silver", exit=1)
 
-        # Verify that debug variants are implicitly false and shown in
+        # Verify that unknown variants are implicitly false and shown in
         # output of 'pkg variant' before any variants are set.
-        self.pkg("variant -H -F tsv debug", exit=1)  # only 'debug.'
+        self.pkg("variant -H -F tsv unknown")
+        self.assertEqual("variant.unknown\tfalse\n", self.output)
         self.pkg("variant -H -F tsv debug.kernel")
         self.assertEqual("variant.debug.kernel\tfalse\n", self.output)
 

@@ -654,7 +654,9 @@ class bandit_func(Command):
         # Use the local directory so that the location of
         # the workspace does not matter.
         args = [
-            "/usr/bin/bandit",
+            sys.executable,
+            "-m",
+            "bandit",
             "-r",
             "-q",
             "-c",

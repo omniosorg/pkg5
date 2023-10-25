@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2013, 2023, Oracle and/or its affiliates.
 
 from . import testutils
 
@@ -85,6 +85,35 @@ class TestPkgVarcet(pkg5unittest.SingleDepotTestCase):
             add depend type=require fmri=foo
             """
 
+    pkg_user_facet = """
+            open user_facet@1.0,5.11-0
+            add dir path=etc mode=0755 owner=root group=sys
+            add dir path=etc/ftpd mode=0755 owner=root group=sys
+            add user username=root password=9EIfTNBp9elws uid=0 group=root homedir=/root login-shell=/usr/bin/bash ftpuser=false group-list=other group-list=bin group-list=sys group-list=adm
+            add group gid=0 groupname=root
+            add group gid=3 groupname=sys
+            add file empty path=etc/group mode=0644 owner=root group=sys preserve=true
+            add file empty path=etc/passwd mode=0644 owner=root group=sys preserve=true
+            add file empty path=etc/shadow mode=0400 owner=root group=sys preserve=true
+            add file empty path=etc/ftpd/ftpusers mode=0644 owner=root group=sys preserve=true
+            add group groupname=group12 gid=111112 facet.app.prod=true
+            add user username=user12 group=group12 home-dir=/export/home/user12 login-shell=/bin/sh password=*LK* uid=11112 facet.app.prod=true
+            close
+            """
+
+    pkg_group_var = """
+            open group_var@1.0,5.11-0
+            add dir path=etc mode=0755 owner=root group=sys
+            add dir path=etc/ftpd mode=0755 owner=root group=sys
+            add group gid=0 groupname=root
+            add group gid=3 groupname=sys
+            add file empty path=etc/group mode=0644 owner=root group=sys preserve=true
+            add group gid=5555511 groupname=appadmin variant.rel=prod
+            add group gid=5555522 groupname=appadmin variant.rel=dev
+            add group gid=5555533 groupname=appadmin variant.rel=test
+            close
+            """
+
     misc_files = [
         "tmp/debug",
         "tmp/non-debug",
@@ -95,9 +124,12 @@ class TestPkgVarcet(pkg5unittest.SingleDepotTestCase):
         "tmp/pdf",
     ]
 
+    empty_files = {"empty": ""}
+
     def setUp(self):
         pkg5unittest.SingleDepotTestCase.setUp(self)
         self.make_misc_files(self.misc_files)
+        self.make_misc_files(self.empty_files)
         self.pkgsend_bulk(
             self.rurl,
             [
@@ -305,8 +337,7 @@ doc.txt True local
         """Verify facet subcommand works as expected."""
 
         # create an image
-        variants = {"variant.icecream": "strawberry"}
-        self.image_create(self.rurl, variants=variants)
+        self.image_create(self.rurl)
 
         # Verify invalid options handled gracefully.
         self.__assert_facet_fails("-z", exit=2)
@@ -387,6 +418,103 @@ doc.txt True local
         self.pkg("install foo@1.0")
         self.__test_foo_facet_upgrade("foo@3.0")
 
+    def test_user_facet(self):
+        """Verify that the user is present when the facet is true and
+        that it is removed when the facet is set to false"""
+
+        # create an image
+        self.image_create(self.rurl)
+
+        # Install package that deliver user/group with facet
+        self.pkg("install user_facet@1.0")
+
+        # Ensure the user is present because facets are true by default
+
+        self.assertTrue(
+            "user12"
+            == portable.get_name_by_uid(11112, self.get_img_path(), True)
+        )
+
+        # Disable facets delivering user.
+        self.pkg("change-facet facet.app.prod=False")
+
+        # Verify that the user is removed due to the modified facet
+        try:
+            portable.get_name_by_uid(11112, self.get_img_path(), True)
+        except KeyError:
+            # Nothing to do, the user does not exist now
+            pass
+
+        exp_def = """\
+app.prod False local
+"""
+        # Ensure that the o/p for facet is as expected
+        opts = ("-i",)
+        self.__assert_facet_matches(exp_def, opts=opts)
+
+    def test_group_var(self):
+        """Verify that the group IDs for a group changes correctly,
+        as controlled by the variant tag associated with them."""
+
+        # create an image which includes the variant to be tested
+        variants = {"variant.rel": "prod"}
+        self.image_create(self.rurl, variants=variants)
+
+        # Gather up all the variants now in the image
+        api_obj = self.get_img_api_obj()
+        variants = dict(
+            v[:-1] for v in api_obj.gen_variants(api_obj.VARIANT_IMAGE)
+        )
+
+        # Install package that deliver group with facet
+        self.pkg("install group_var@1.0")
+
+        # Ensure group is present and mapped to right GID
+        self.assertTrue(
+            "appadmin"
+            == portable.get_name_by_gid(5555511, self.get_img_path(), True)
+        )
+
+        # Change the variant linked with the user.
+        self.pkg("change-variant variant.rel=dev")
+
+        # Verify that the GID has changed due to the modified variant
+        self.assertTrue(
+            "appadmin"
+            == portable.get_name_by_gid(5555522, self.get_img_path(), True)
+        )
+
+        # Verify we have the variant set correctly
+        exp_def = """\
+arch {0[variant.arch]}
+opensolaris.imagetype full
+opensolaris.zone global
+rel dev
+""".format(
+            variants
+        )
+        self.__assert_variant_matches(exp_def)
+
+        # Change the variant again
+        self.pkg("change-variant variant.rel=test")
+
+        # Verify that the GID has changed due to the modified variant
+        self.assertTrue(
+            "appadmin"
+            == portable.get_name_by_gid(5555533, self.get_img_path(), True)
+        )
+
+        # Verify we have the variant set correctly
+        exp_def = """\
+arch {0[variant.arch]}
+opensolaris.imagetype full
+opensolaris.zone global
+rel test
+""".format(
+            variants
+        )
+        self.__assert_variant_matches(exp_def)
+
     def __test_foo_variant_upgrade(self, pkg, variants):
         #
         # Next, verify output after upgrading package to varianted
@@ -413,7 +541,14 @@ debug.foo false
         )
         self.__assert_variant_matches(exp_def, names=["debug.foo"])
 
-        # Unmatched because variant is not explicitly set.
+        # Matched because unknown variant is implicitly false.
+        exp_def = """\
+foobar false
+"""
+        self.__assert_variant_matches(exp_def, names=["foobar"])
+
+        # Unmatched because variant is not explicitly set (wildcard
+        # matching looks for explicit variants).
         self.__assert_variant_fails("'*foo'")
 
         # Matched case for explicitly set.
@@ -583,17 +718,6 @@ opensolaris.zone global
             # Unprivileged user case.
             self.__assert_variant_matches(exp_def, opts=opts, su_wrap=True)
 
-            # Unmatched case.
-            self.__assert_variant_matches_default(
-                "", opts=opts, names=("bogus",), exit=1
-            )
-
-            # Unmatched case tsv; subtly different as no error
-            # output is expected.
-            self.__assert_variant_matches_tsv(
-                "", opts=opts, names=("bogus",), exit=1, errout=False
-            )
-
         # No output expected for with no variants set and no packages
         # installed for -v, -av, -i, and -iv.
         for opts in (("-v",), ("-av",), ("-i",), ("-iv",)):
@@ -674,7 +798,7 @@ arch {0[variant.arch]}
 icecream strawberry
 opensolaris.imagetype full
 opensolaris.zone global
-unknown 
+unknown false
 """.format(
             variants
         )
@@ -682,7 +806,7 @@ unknown
 
         # Verify -i output.
         exp_def = """\
-unknown 
+unknown false
 """.format(
             variants
         )

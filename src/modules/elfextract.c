@@ -20,7 +20,7 @@
  */
 
 /*
- *  Copyright (c) 2009, 2017, Oracle and/or its affiliates. All rights reserved.
+ *  Copyright (c) 2009, 2023, Oracle and/or its affiliates.
  *  Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
  */
 
@@ -684,7 +684,8 @@ gethashes(int fd, int doelf, int do256, int do512)
 	}
 
 	if (elf_kind(elf) != ELF_K_ELF || !elf_getshstrndx(elf, &sh_str)) {
-		PyErr_SetString(ElfError, elf_errmsg(-1));
+		/* No error is set at this point. */
+		PyErr_SetString(ElfError, "invalid file type");
 		goto err;
 	}
 

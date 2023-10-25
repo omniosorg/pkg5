@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2023, Oracle and/or its affiliates.
 #
 
 """module describing a user packaging object
@@ -289,7 +289,7 @@ class UserAction(generic.Action):
 
         # ignore changes in certain fields if password is
         # mutable; this indicates that this account is used
-        # by a human and logins, timeouts, etc. are changable.
+        # by a human and logins, timeouts, etc. are changeable.
         if should_be["password"] in self.mutable_passwords:
             for attr in self.use_existing_attrs:
                 if attr in should_be:
@@ -306,9 +306,15 @@ class UserAction(generic.Action):
         # always ignore flag
         if "flag" in cur_attrs:
             del cur_attrs["flag"]
-        # Note where attributes are missing
-        for k in should_be:
-            cur_attrs.setdefault(k, "<missing>")
+
+        # Ignore optional package metadata and flags
+        skip_list = ["variant", "facet", "flag"]
+        for k in list(should_be):
+            if any(token in k for token in skip_list):
+                should_be.pop(k, None)
+            else:
+                cur_attrs.setdefault(k, "<missing>")
+
         # Note where attributes should be empty
         for k in cur_attrs:
             if cur_attrs[k]:
