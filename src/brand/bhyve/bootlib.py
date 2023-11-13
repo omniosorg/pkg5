@@ -124,11 +124,14 @@ class Zone:
 
     def uuid(self):
         try:
-            with open(f'{z.zoneroot}/etc/uuid') as file:
+            with open(f"{self.zoneroot}/etc/uuid") as file:
                 uuid = file.read().strip()
-                info('Zone UUID: {0}'.format(id))
-        except:
+                info(f"Read zone UUID: {uuid}")
+        except FileNotFoundError:
             uuid = str(uuidlib.uuid4())
+            info(f"Generated UUID: {uuid}")
+        except Exception as e:
+            fatal(f"Could not read zone UUID file: {e}")
         return uuid
 
     # Look for attributes of the form <type>N (and <type> if plain is True) and
