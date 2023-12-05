@@ -524,14 +524,9 @@ class Facets(dict):
             self.__inherited_ro = ImmutableDict(self.__inherited)
         return self.__inherited_ro
 
-    if six.PY3:
+    def allow_action(self, action, publisher=None):
+        return _allow_facet(self, action, publisher=publisher)
 
-        def allow_action(self, action, publisher=None):
-            return _allow_facet(self, action, publisher=publisher)
-
-
-if six.PY2:
-    Facets.allow_action = types.MethodType(_allow_facet, None, Facets)
 
 # Vim hints
 # vim:ts=4:sw=4:et:fdm=marker

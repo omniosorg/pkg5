@@ -22,7 +22,6 @@
 # Copyright (c) 2007, 2022, Oracle and/or its affiliates.
 #
 
-from __future__ import print_function
 import pkg.site_paths
 
 pkg.site_paths.init()
@@ -75,7 +74,6 @@ import os.path
 import OpenSSL.crypto as crypto
 import string
 import shlex
-import six
 import string
 import subprocess
 import sys
@@ -83,7 +81,7 @@ import tempfile
 import portend
 
 from importlib import reload
-from six.moves.urllib.parse import urlparse, urlunparse
+from urllib.parse import urlparse, urlunparse
 
 try:
     import cherrypy

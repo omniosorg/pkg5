@@ -25,7 +25,6 @@
 #
 
 from __future__ import division
-from __future__ import print_function
 import cPickle as pickle
 import GeoIP
 import datetime
@@ -36,7 +35,6 @@ import socket
 import sys
 import config
 
-from six.moves.urllib.request import urlopen
 
 # Apache combined log pattern
 comb_log_pat = re.compile(

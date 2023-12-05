@@ -37,8 +37,8 @@ import tempfile
 import zlib
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
-from io import BytesIO
-from six.moves.urllib.parse import unquote
+from io import BytesIO, StringIO
+from urllib.parse import unquote
 
 import pkg.actions as actions
 import pkg.catalog as catalog
@@ -1411,7 +1411,7 @@ class _RepoStore(object):
             c = old_catalog.ServerCatalog(
                 self.catalog_root, read_only=True, publisher=self.publisher
             )
-            output = cStringIO.StringIO()
+            output = StringIO()
             c.send(output)
             output.seek(0)
             for l in output:
@@ -2034,18 +2034,13 @@ class _RepoStore(object):
             else:
                 os.fchmod(fd, misc.PKG_FILE_MODE)
 
-            if six.PY2:
-                with os.fdopen(fd, "wb") as f:
-                    with codecs.EncodedFile(f, "utf-8") as ef:
-                        p5i.write(ef, [pub])
-            else:
-                # we use json.dump() in p5i.write(),
-                # json module will produce str objects
-                # in Python 3, therefore fp.write()
-                # must support str input.
+            # we use json.dump() in p5i.write(),
+            # json module will produce str objects
+            # in Python 3, therefore fp.write()
+            # must support str input.
 
-                with open(fd, "w", encoding="utf-8") as fp:
-                    p5i.write(fp, [pub])
+            with open(fd, "w", encoding="utf-8") as fp:
+                p5i.write(fp, [pub])
             portable.rename(fn, p5ipath)
         except EnvironmentError as e:
             if e.errno == errno.EACCES:
@@ -3249,10 +3244,7 @@ class Repository(object):
             finally:
                 # This ensures that the original exception and
                 # traceback are used.
-                if six.PY2:
-                    six.reraise(exc_value, None, exc_tb)
-                else:
-                    raise exc_value
+                raise exc_value
 
     def remove_publisher(self, pfxs, repo_path, synch=False):
         """Removes a repository storage area and configuration
@@ -4610,7 +4602,7 @@ def repository_create(repo_uri, properties=misc.EmptyDict, version=None):
     raised.  Other errors can raise exceptions of class ApiException.
     """
 
-    if isinstance(repo_uri, six.string_types):
+    if isinstance(repo_uri, str):
         repo_uri = publisher.RepositoryURI(misc.parse_uri(repo_uri))
 
     path = repo_uri.get_pathname()

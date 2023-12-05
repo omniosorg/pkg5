@@ -34,7 +34,6 @@ import pkg.portable as portable
 import pkg.misc as misc
 import pkg.p5p
 import shutil
-import six
 import stat
 import tempfile
 import unittest
@@ -138,8 +137,7 @@ class TestPkgVarcet(pkg5unittest.SingleDepotTestCase):
             [
                 getattr(self, p)
                 for p in dir(self)
-                if p.startswith("pkg_")
-                and isinstance(getattr(self, p), six.string_types)
+                if p.startswith("pkg_") and isinstance(getattr(self, p), str)
             ],
         )
 
@@ -888,7 +886,6 @@ unknown foo
         )
 
 
-
 class TestPkgVarcetErrors(pkg5unittest.Pkg5TestCase):
     """This test class verifies that errors raised while within the _varcet
     extension are handled gracefully and won't cause segmentation faults."""
@@ -924,7 +921,7 @@ class TestPkgVarcetErrors(pkg5unittest.Pkg5TestCase):
         self.assertRaises(TypeError, facets.allow_action, Action(1, 0), None)
 
         # value encoding failure handling
-        self.assertEquals(facets.allow_action(Action(0, 1), None), False)
+        self.assertEqual(facets.allow_action(Action(0, 1), None), False)
         self.assertRaises(
             KeyboardInterrupt, facets.allow_action, Action(0, 2), None
         )
@@ -949,7 +946,7 @@ class TestPkgVarcetErrors(pkg5unittest.Pkg5TestCase):
 
         # attr and value encoding failure handling
         self.assertRaises(TypeError, variants.allow_action, Action(1), None)
-        self.assertEquals(variants.allow_action(Action(2), None), False)
+        self.assertEqual(variants.allow_action(Action(2), None), False)
 
         # variant value encoding failure handling
         variants = variant.Variants({"variant.icecream": b"strawberry"})

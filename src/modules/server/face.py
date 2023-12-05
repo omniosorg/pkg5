@@ -26,14 +26,13 @@
 """face - provides the BUI (Browser User Interface) for the image packaging
 server"""
 
-from __future__ import print_function
 import cherrypy
 import cherrypy.lib.static
+import http.client
 import os
 import sys
 
-from six.moves import http_client
-from six.moves.urllib.parse import unquote
+from urllib.parse import unquote
 
 import pkg.misc as misc
 import pkg.server.api as api
@@ -65,12 +64,12 @@ def init(depot):
 def feed(depot, request, response, pub):
     if depot.repo.mirror:
         raise cherrypy.HTTPError(
-            http_client.NOT_FOUND,
+            http.client.NOT_FOUND,
             "Operation not supported in current server mode.",
         )
     if not depot.repo.get_catalog(pub).updates:
         raise cherrypy.HTTPError(
-            http_client.SERVICE_UNAVAILABLE,
+            http.client.SERVICE_UNAVAILABLE,
             "No update history; unable to generate feed.",
         )
     return pkg.server.feed.handle(depot, request, response, pub)
@@ -92,7 +91,7 @@ def __handle_error(path, error):
     # All errors are treated as a 404 since reverse proxies such as Apache
     # don't handle 500 errors in a desirable way.  For any error but a 404,
     # an error is logged.
-    if error != http_client.NOT_FOUND:
+    if error != http.client.NOT_FOUND:
         cherrypy.log(
             "Error encountered while processing "
             "template: {0}\n".format(path),
@@ -144,7 +143,7 @@ def respond(depot, request, response, pub, http_depot=None):
             os.path.normpath(depot.web_root)
         ):
             # Ignore requests for files outside of the web root.
-            return __handle_error(path, http_client.NOT_FOUND)
+            return __handle_error(path, http.client.NOT_FOUND)
         else:
             return cherrypy.lib.static.serve_file(
                 os.path.join(depot.web_root, spath)
@@ -170,18 +169,18 @@ def respond(depot, request, response, pub, http_depot=None):
             "Ensure that the correct --content-root has been "
             "provided to pkg.depotd."
         )
-        return __handle_error(request.path_info, http_client.NOT_FOUND)
+        return __handle_error(request.path_info, http.client.NOT_FOUND)
     except IOError as e:
-        return __handle_error(path, http_client.INTERNAL_SERVER_ERROR)
+        return __handle_error(path, http.client.INTERNAL_SERVER_ERROR)
     except mako.exceptions.TemplateLookupException as e:
         # The above exception indicates that mako could not locate the
         # template (in most cases, Mako doesn't seem to always clearly
         # differentiate).
-        return __handle_error(path, http_client.NOT_FOUND)
+        return __handle_error(path, http.client.NOT_FOUND)
     except sae.RedirectException as e:
         raise cherrypy.HTTPRedirect(e.data)
     except:
-        return __handle_error(path, http_client.INTERNAL_SERVER_ERROR)
+        return __handle_error(path, http.client.INTERNAL_SERVER_ERROR)
 
 
 # Vim hints

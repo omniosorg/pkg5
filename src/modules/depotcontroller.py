@@ -22,7 +22,7 @@
 # Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
-from __future__ import print_function
+import http.client
 import os
 import platform
 import shlex
@@ -32,10 +32,9 @@ import ssl
 import sys
 import time
 
-from six.moves import http_client, range
-from six.moves.urllib.error import HTTPError, URLError
-from six.moves.urllib.request import pathname2url, urlopen
-from six.moves.urllib.parse import urlunparse, urljoin
+from urllib.error import HTTPError, URLError
+from urllib.request import pathname2url, urlopen
+from urllib.parse import urlunparse, urljoin
 
 import pkg.pkgsubprocess as subprocess
 import pkg.server.repository as sr
@@ -295,7 +294,7 @@ class DepotController(object):
         except HTTPError as e:
             # Server returns NOT_MODIFIED if catalog is up
             # to date
-            if e.code == http_client.NOT_MODIFIED:
+            if e.code == http.client.NOT_MODIFIED:
                 return True
             else:
                 return False
@@ -484,7 +483,7 @@ class DepotController(object):
 
     def start_expected_fail(self, exit=2):
         """Start the depot, and make sure that it responds in a reasonable time
-           and that it exits immediately with the expected exit code."""
+        and that it exits immediately with the expected exit code."""
 
         try:
             self.__initial_start()

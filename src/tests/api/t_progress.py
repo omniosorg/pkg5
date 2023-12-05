@@ -28,10 +28,10 @@ if __name__ == "__main__":
     testutils.setup_environment("../../../proto")
 import pkg5unittest
 
+import io
 import os
 import pty
 import shutil
-import six
 import sys
 import tempfile
 import threading
@@ -320,10 +320,10 @@ class TestFormatPair(pkg5unittest.Pkg5TestCase):
 class TestProgressTrackers(pkg5unittest.Pkg5TestCase):
     def test_basic_trackers(self):
         """Basic testing of all trackers; reset, and then retest."""
-        sio_c = six.StringIO()
-        sio_c2 = six.StringIO()
-        sio_f = six.StringIO()
-        sio_d = six.StringIO()
+        sio_c = io.StringIO()
+        sio_c2 = io.StringIO()
+        sio_f = io.StringIO()
+        sio_d = io.StringIO()
 
         tc = progress.CommandLineProgressTracker(output_file=sio_c)
         tc2 = progress.CommandLineProgressTracker(
@@ -389,7 +389,7 @@ class TestProgressTrackers(pkg5unittest.Pkg5TestCase):
 
     def test_fancy_unix_tracker_bad_tty(self):
         """Try to make a terminal-based tracker on non-terminals."""
-        f = six.StringIO()
+        f = io.StringIO()
         self.assertRaises(
             progress.ProgressTrackerException,
             progress.FancyUNIXProgressTracker,
@@ -413,8 +413,8 @@ class TestProgressTrackers(pkg5unittest.Pkg5TestCase):
 class TestMultiProgressTracker(pkg5unittest.Pkg5TestCase):
     def test_multi(self):
         """Test basic multi functionality."""
-        sio1 = six.StringIO()
-        sio2 = six.StringIO()
+        sio1 = io.StringIO()
+        sio2 = io.StringIO()
 
         #
         # The FunctionProgressTracker is used here because its

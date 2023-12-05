@@ -27,7 +27,6 @@
 
 from __future__ import unicode_literals, print_function
 import os
-import six
 from pkg._pspawn import lib, ffi
 
 
@@ -97,7 +96,7 @@ class SpawnFileAction(object):
 
         if not isinstance(fd, int):
             raise TypeError("fd must be int type")
-        if not isinstance(path, six.string_types):
+        if not isinstance(path, str):
             raise TypeError("path must be a string")
         if not isinstance(oflag, int):
             raise TypeError("oflag must be int type")
@@ -154,7 +153,7 @@ def posix_spawnp(filename, args, fileactions=None, env=None):
 
     'env', the enviroment, if provided, it must be a sequence object."""
 
-    if not isinstance(filename, six.string_types):
+    if not isinstance(filename, str):
         raise TypeError("filename must be a string")
 
     pid = ffi.new("pid_t *")
@@ -163,7 +162,7 @@ def posix_spawnp(filename, args, fileactions=None, env=None):
     # This essentially does force_bytes in pkg.misc, but importing pkg.misc has
     # a circular import issue, so we implement the conversion here.
     for arg in args:
-        if six.PY3 and isinstance(arg, six.string_types):
+        if isinstance(arg, str):
             arg = arg.encode()
         spawn_args.append(ffi.new("char []", arg))
     spawn_args.append(ffi.NULL)
@@ -173,7 +172,7 @@ def posix_spawnp(filename, args, fileactions=None, env=None):
     if env:
         for arg in env:
             try:
-                if six.PY3 and isinstance(arg, six.string_types):
+                if isinstance(arg, str):
                     arg = arg.encode()
                 spawn_env.append(ffi.new("char []", arg))
             except:

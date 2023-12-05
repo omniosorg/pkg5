@@ -1032,14 +1032,9 @@ class FileAction(generic.Action):
                 self, errors, fmri=fmri
             )
 
-    if six.PY3:
+    def __init__(self, data, **attrs):
+        _common._file_init(self, data, **attrs)
 
-        def __init__(self, data, **attrs):
-            _common._file_init(self, data, **attrs)
-
-
-if six.PY2:
-    FileAction.__init__ = types.MethodType(_common._file_init, None, FileAction)
 
 # Vim hints
 # vim:ts=4:sw=4:et:fdm=marker

@@ -105,18 +105,13 @@ class TestProperty(pkg5unittest.Pkg5TestCase):
             # Verify that the stringified form of the property's
             # value matches what is expected.
             p1 = propcls(propname, default=val)
-            self.assertEqual(six.text_type(p1), expstr)
-            if six.PY2:
-                self.assertEqual(str(p1), expstr.encode("utf-8"))
-            else:
-                # str() call in Python 3 must return str (unicode).
-                self.assertEqual(str(p1), expstr)
+            self.assertEqual(str(p1), expstr)
 
             # Verify that a property value's stringified form
             # provides can be parsed into an exact equivalent
             # in native form (e.g. list -> string -> list).
             p2 = propcls(propname)
-            p2.value = six.text_type(p1)
+            p2.value = str(p1)
             self.assertEqual(p1.value, p2.value)
             self.assertEqualDiff(str(p1), str(p2))
 
@@ -127,12 +122,9 @@ class TestProperty(pkg5unittest.Pkg5TestCase):
     def __verify_ex_stringify(self, ex):
         encs = str(ex)
         self.assertNotEqual(len(encs), 0)
-        unis = six.text_type(ex)
+        unis = str(ex)
         self.assertNotEqual(len(unis), 0)
-        if six.PY2:
-            self.assertEqualDiff(encs, unis.encode("utf-8"))
-        else:
-            self.assertEqualDiff(encs, unis)
+        self.assertEqualDiff(encs, unis)
 
     def test_base(self):
         """Verify base property functionality works as expected."""
@@ -527,39 +519,19 @@ class TestProperty(pkg5unittest.Pkg5TestCase):
 
         # Verify stringified form and that stringified form can be used
         # to set value.
-        if six.PY2:
-            self.__verify_stringify(
-                propcls,
-                "list",
-                [
-                    ([""], "['']"),
-                    (["box", "cat"], "['box', 'cat']"),
-                    # List literal form uses unicode_escape.
-                    (
-                        [TH_PACKAGE, "profit"],
-                        "[u'{0}', 'profit']".format(
-                            TH_PACKAGE.encode("unicode_escape")
-                        ),
-                    ),
-                    (["\xfe", "bob cat"], "['\\xfe', 'bob cat']"),
-                ],
-            )
-        else:
-            # unicode representation in Python 3 is not using
-            # escape sequence
-            self.__verify_stringify(
-                propcls,
-                "list",
-                [
-                    ([""], "['']"),
-                    (["box", "cat"], "['box', 'cat']"),
-                    (
-                        [TH_PACKAGE, "profit"],
-                        "['{0}', 'profit']".format(TH_PACKAGE),
-                    ),
-                    (["þ", "bob cat"], "['þ', 'bob cat']"),
-                ],
-            )
+        self.__verify_stringify(
+            propcls,
+            "list",
+            [
+                ([""], "['']"),
+                (["box", "cat"], "['box', 'cat']"),
+                (
+                    [TH_PACKAGE, "profit"],
+                    "['{0}', 'profit']".format(TH_PACKAGE),
+                ),
+                (["þ", "bob cat"], "['þ', 'bob cat']"),
+            ],
+        )
 
         # Verify allowed value functionality permits expected values.
         p = propcls(
@@ -1026,12 +998,7 @@ class TestPropertySection(pkg5unittest.Pkg5TestCase):
 
     def __verify_stringify(self, cls, explist):
         for val, expstr in explist:
-            self.assertEqual(six.text_type(cls(val)), expstr)
-            if six.PY2:
-                self.assertEqual(str(cls(val)), expstr.encode("utf-8"))
-            else:
-                # str() call in Python 3 must return str (unicode).
-                self.assertEqual(str(cls(val)), expstr)
+            self.assertEqual(str(cls(val)), expstr)
 
     def test_base(self):
         """Verify base section functionality works as expected."""
@@ -1421,9 +1388,7 @@ urilist_default = http://example.com/,file:/example/path
 uuid_basic = 
 uuid_default = 16fd2706-8baf-433b-82eb-8c7fada847da
 """.format(
-            uni_escape=TH_PACKAGE.encode("unicode_escape")
-            if six.PY2
-            else TH_PACKAGE,
+            uni_escape=TH_PACKAGE,
             uni_txt=TH_PACKAGE,
         ),
         1: """\
@@ -1516,31 +1481,17 @@ str_basic =
         )
 
         conf.set_property("first_section", "str_basic", TH_PACKAGE)
-        if six.PY2:
-            self.assertEqualDiff(
-                """\
+        self.assertEqualDiff(
+            """\
 [first_section]
 bool_basic = False
 str_basic = {0}
 
 """.format(
-                    TH_PACKAGE.encode("utf-8")
-                ),
-                str(conf),
-            )
-        else:
-            # str() must return str (unicode) in Python 3.
-            self.assertEqualDiff(
-                """\
-[first_section]
-bool_basic = False
-str_basic = {0}
-
-""".format(
-                    TH_PACKAGE
-                ),
-                str(conf),
-            )
+                TH_PACKAGE
+            ),
+            str(conf),
+        )
 
         #
         # Test unicode case with and without unicode data.
@@ -1553,7 +1504,7 @@ bool_basic = False
 str_basic = 
 
 """,
-            six.text_type(conf),
+            str(conf),
         )
 
         conf.set_property("first_section", "str_basic", TH_PACKAGE)
@@ -1566,7 +1517,7 @@ str_basic = {0}
 """.format(
                 TH_PACKAGE
             ),
-            six.text_type(conf),
+            str(conf),
         )
 
         # Verify target is None.
@@ -2301,12 +2252,9 @@ class TestSMFConfig(_TestConfigBase):
     def __verify_ex_stringify(self, ex):
         encs = str(ex)
         self.assertNotEqual(len(encs), 0)
-        unis = six.text_type(ex)
+        unis = str(ex)
         self.assertNotEqual(len(unis), 0)
-        if six.PY2:
-            self.assertEqualDiff(encs, unis.encode("utf-8"))
-        else:
-            self.assertEqualDiff(encs, unis)
+        self.assertEqualDiff(encs, unis)
 
     def test_exceptions(self):
         """Verify that exception classes can be initialized as expected,

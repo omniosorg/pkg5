@@ -24,11 +24,9 @@
 # Copyright (c) 2009, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
-from __future__ import print_function
 import os
 import fnmatch
 import re
-import six
 import sys
 import threading
 import copy

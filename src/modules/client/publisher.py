@@ -34,7 +34,6 @@
 # modules/client/api.py:__init__.
 #
 
-from __future__ import print_function
 
 import calendar
 import collections
@@ -55,14 +54,14 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 from io import BytesIO
-from six.moves.urllib.parse import (
+from urllib.parse import (
     quote,
     urlsplit,
     urlparse,
     urlunparse,
     ParseResult,
 )
-from six.moves.urllib.request import url2pathname
+from urllib.request import url2pathname
 
 import pkg.catalog
 import pkg.client.api_errors as api_errors
@@ -357,7 +356,7 @@ class RepositoryURI(object):
                 "ssl_cert", scheme=self.scheme
             )
         if filename:
-            if not isinstance(filename, six.string_types):
+            if not isinstance(filename, str):
                 raise api_errors.BadRepositoryAttributeValue(
                     "ssl_cert", value=filename
                 )
@@ -372,7 +371,7 @@ class RepositoryURI(object):
                 "ssl_key", scheme=self.scheme
             )
         if filename:
-            if not isinstance(filename, six.string_types):
+            if not isinstance(filename, str):
                 raise api_errors.BadRepositoryAttributeValue(
                     "ssl_key", value=filename
                 )
@@ -681,14 +680,14 @@ class TransportRepoURI(RepositoryURI):
     def __eq__(self, other):
         if isinstance(other, TransportRepoURI):
             return self.uri == other.uri and self.proxy == other.proxy
-        if isinstance(other, six.string_types):
+        if isinstance(other, str):
             return self.uri == other and self.proxy is None
         return False
 
     def __ne__(self, other):
         if isinstance(other, TransportRepoURI):
             return self.uri != other.uri or self.proxy != other.proxy
-        if isinstance(other, six.string_types):
+        if isinstance(other, str):
             return self.uri != other or self.proxy is not None
         return True
 
@@ -697,7 +696,7 @@ class TransportRepoURI(RepositoryURI):
     def __lt__(self, other):
         if not other:
             return False
-        if isinstance(other, six.string_types):
+        if isinstance(other, str):
             other = TransportRepoURI(other)
         elif not isinstance(other, TransportRepoURI):
             return False
@@ -710,7 +709,7 @@ class TransportRepoURI(RepositoryURI):
     def __gt__(self, other):
         if not other:
             return True
-        if isinstance(other, six.string_types):
+        if isinstance(other, str):
             other = TransportRepoURI(other)
         elif not isinstance(other, TransportRepoURI):
             return True
@@ -3593,7 +3592,7 @@ pkg unset-publisher {0}
 
         if name == SIGNATURE_POLICY:
             self.__sig_policy = None
-            if isinstance(values, six.string_types):
+            if isinstance(values, str):
                 values = [values]
             policy_name = values[0]
             if policy_name not in sigpolicy.Policy.policies():
@@ -3627,7 +3626,7 @@ pkg unset-publisher {0}
             self.__properties[SIGNATURE_POLICY] = policy_name
             return
         if name == "signature-required-names":
-            if isinstance(values, six.string_types):
+            if isinstance(values, str):
                 values = self.__read_list(values)
         self.__properties[name] = values
 

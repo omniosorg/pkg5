@@ -23,18 +23,14 @@
 ##
 <%!
         import six
-        if six.PY2:
-                import cgi
-        else:
-                # cgi.escape is deprecated since python 3.2
-                import html as cgi
+        import html as cgi
         import itertools
         import pkg.actions as actions
         import pkg.query_parser as qp
         import pkg.server.api_errors as api_errors
         import pkg.version as version
         import re
-        from six.moves.urllib.parse import urlencode, quote, urlparse, urlunparse
+        from urllib.parse import urlencode, quote, urlparse, urlunparse
 %>\
 <%inherit file="layout.shtml"/>\
 <%page args="g_vars"/>\
@@ -131,10 +127,7 @@
         # have to be checked for the real return type.
         if results:
                 try:
-                        if six.PY3:
-                                result = results.__next__()
-                        else:
-                                result = results.next()
+                        result = results.__next__()
                 except StopIteration:
                         result = None
                         results = None

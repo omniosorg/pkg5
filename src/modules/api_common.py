@@ -235,7 +235,7 @@ class PackageInfo(object):
             modifiers = tuple(
                 (
                     k,
-                    isinstance(modifiers[k], six.string_types)
+                    isinstance(modifiers[k], str)
                     and tuple([sorted(modifiers[k])])
                     or tuple(sorted(modifiers[k])),
                 )

@@ -25,21 +25,19 @@
 # Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 #
 
-from __future__ import print_function
 import copy
 import datetime as dt
 import errno
+import http.client
 import os
-import six
 import tempfile
 import zlib
 from collections import defaultdict
 from functools import cmp_to_key
 from io import BytesIO
-from six.moves import http_client, range
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
-from six.moves.urllib.parse import (
+from urllib.parse import (
     quote,
     urlsplit,
     urlparse,
@@ -180,7 +178,7 @@ class TransportCfg(object):
 
         if isinstance(pub, publisher.Publisher):
             pub = pub.prefix
-        elif not pub or not isinstance(pub, six.string_types):
+        elif not pub or not isinstance(pub, str):
             pub = None
 
         caches = [
@@ -728,11 +726,11 @@ class Transport(object):
                 failures.extend(ex.failures)
 
             except tx.TransportProtoError as e:
-                if e.code in (http_client.NOT_FOUND, errno.ENOENT):
+                if e.code in (http.client.NOT_FOUND, errno.ENOENT):
                     raise apx.UnsupportedSearchError(e.url, "search/1")
-                elif e.code == http_client.NO_CONTENT:
+                elif e.code == http.client.NO_CONTENT:
                     no_result_url = e.url
-                elif e.code in (http_client.BAD_REQUEST, errno.EINVAL):
+                elif e.code in (http.client.BAD_REQUEST, errno.EINVAL):
                     raise apx.MalformedSearchRequest(e.url)
                 elif e.retryable:
                     failures.append(e)
@@ -823,7 +821,7 @@ class Transport(object):
                 # failures that it contains
                 failures.extend(ex.failures)
             except tx.TransportProtoError as e:
-                if e.code == http_client.NOT_MODIFIED:
+                if e.code == http.client.NOT_MODIFIED:
                     return
                 elif e.retryable:
                     failures.append(e)

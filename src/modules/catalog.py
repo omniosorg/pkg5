@@ -25,7 +25,6 @@
 """Interfaces and implementation for the Catalog object, as well as functions
 that operate on lists of package FMRIs."""
 
-from __future__ import print_function
 import copy
 import calendar
 import collections

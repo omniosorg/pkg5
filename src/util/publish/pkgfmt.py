@@ -24,7 +24,6 @@
 # Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 #
 
-from __future__ import print_function
 import pkg.site_paths
 
 pkg.site_paths.init()
@@ -62,6 +61,7 @@ try:
     import errno
     import getopt
     import gettext
+    import io
     import locale
     import operator
     import os
@@ -73,7 +73,6 @@ try:
     import warnings
     from difflib import unified_diff
     from functools import cmp_to_key
-    from six.moves import cStringIO
 
     import pkg
     import pkg.actions
@@ -614,8 +613,8 @@ def main_func():
 
     def difference(in_file):
         whole_f1 = in_file.readlines()
-        f2 = cStringIO()
-        fmt_file(cStringIO("".join(whole_f1)), f2)
+        f2 = io.StringIO()
+        fmt_file(io.StringIO("".join(whole_f1)), f2)
         f2.seek(0)
         whole_f2 = f2.readlines()
 
@@ -630,7 +629,7 @@ def main_func():
     flist = pargs
     if not flist:
         try:
-            in_file = cStringIO()
+            in_file = io.StringIO()
             in_file.write(sys.stdin.read())
             in_file.seek(0)
 
@@ -790,9 +789,8 @@ if __name__ == "__main__":
     gettext.install("pkg", "/usr/share/locale")
     misc.set_fd_limits(printer=error)
 
-    if six.PY3:
-        # disable ResourceWarning: unclosed file
-        warnings.filterwarnings("ignore", category=ResourceWarning)
+    # disable ResourceWarning: unclosed file
+    warnings.filterwarnings("ignore", category=ResourceWarning)
     try:
         __ret = main_func()
     except (PipeError, KeyboardInterrupt):

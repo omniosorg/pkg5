@@ -28,10 +28,9 @@
 # aspects of pkglint configuration
 
 import os
-import six
+import configparser
 from collections import OrderedDict
 
-from six.moves import configparser
 
 defaults = {
     "log_level": "INFO",

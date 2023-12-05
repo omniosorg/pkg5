@@ -378,7 +378,7 @@ class DependencyAction(generic.Action):
         # release and without it creating a dummy timestamp.
         # Instead we have to split it apart manually.
         #
-        if isinstance(pfmris, six.string_types):
+        if isinstance(pfmris, str):
             pfmris = [pfmris]
         inds = []
         pat = re.compile(r"pkg:///|pkg://[^/]*/|pkg:/")
@@ -528,7 +528,7 @@ class DependencyAction(generic.Action):
             single_attrs=single_attrs,
         )
 
-        if isinstance(dtype, six.string_types) and dtype not in known_types:
+        if isinstance(dtype, str) and dtype not in known_types:
             errors.append(
                 (
                     "type",

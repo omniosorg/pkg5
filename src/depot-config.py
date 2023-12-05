@@ -36,7 +36,6 @@ import logging
 import os
 import re
 import shutil
-import six
 import socket
 import sys
 import traceback
@@ -1182,9 +1181,8 @@ if __name__ == "__main__":
 
     # Make all warnings be errors.
     warnings.simplefilter("error")
-    if six.PY3:
-        # disable ResourceWarning: unclosed file
-        warnings.filterwarnings("ignore", category=ResourceWarning)
+    # disable ResourceWarning: unclosed file
+    warnings.filterwarnings("ignore", category=ResourceWarning)
 
     __retval = handle_errors(main_func)
     try:

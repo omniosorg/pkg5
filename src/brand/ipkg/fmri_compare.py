@@ -24,7 +24,6 @@
 # Use is subject to license terms.
 #
 
-from __future__ import print_function
 import pkg.fmri
 import sys
 

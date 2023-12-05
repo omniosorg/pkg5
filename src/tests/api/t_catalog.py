@@ -24,7 +24,6 @@
 # Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
 # Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 
-from __future__ import print_function
 from . import testutils
 
 if __name__ == "__main__":

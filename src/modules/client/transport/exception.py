@@ -25,17 +25,17 @@
 #
 
 import errno
+import http.client
 import pycurl
 
 from functools import total_ordering
-from six.moves import http_client
 
 retryable_http_errors = set(
     (
-        http_client.REQUEST_TIMEOUT,
-        http_client.BAD_GATEWAY,
-        http_client.GATEWAY_TIMEOUT,
-        http_client.NOT_FOUND,
+        http.client.REQUEST_TIMEOUT,
+        http.client.BAD_GATEWAY,
+        http.client.GATEWAY_TIMEOUT,
+        http.client.NOT_FOUND,
     )
 )
 retryable_file_errors = set(
@@ -45,7 +45,7 @@ retryable_file_errors = set(
 import pkg.client.api_errors as api_errors
 
 # Errors that stats.py may include in a decay-able error rate
-decayable_http_errors = set((http_client.NOT_FOUND,))
+decayable_http_errors = set((http.client.NOT_FOUND,))
 decayable_file_errors = set(
     (pycurl.E_FILE_COULDNT_READ_FILE, errno.EAGAIN, errno.ENOENT)
 )
@@ -68,7 +68,7 @@ decayable_proto_errors = {
     "https": decayable_http_errors,
 }
 
-proto_code_map = {"http": http_client.responses, "https": http_client.responses}
+proto_code_map = {"http": http.client.responses, "https": http.client.responses}
 
 retryable_pycurl_errors = set(
     (

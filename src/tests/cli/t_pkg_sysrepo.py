@@ -24,7 +24,6 @@
 # Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
-from __future__ import print_function
 from . import testutils
 
 if __name__ == "__main__":
@@ -35,7 +34,6 @@ import copy
 import glob
 import os
 import shutil
-import six
 
 import pkg.client.api_errors as apx
 import pkg.client.transport.exception as tx
@@ -527,7 +525,7 @@ test4\ttrue\ttrue\ttrue\t\t\t\t
         if not port:
             port = self.sysrepo_port
         self.__configured_names = []
-        if isinstance(names, six.string_types):
+        if isinstance(names, str):
             names = [names]
         for name in names:
             props, pcs = self.configs[name]

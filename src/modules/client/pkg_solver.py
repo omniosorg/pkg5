@@ -33,13 +33,11 @@ import time
 
 from collections import defaultdict
 
-# Redefining built-in; pylint: disable=W0622
 from functools import reduce
 
 import six
 
 # Imports from package six are not grouped: pylint: disable=C0412
-from six.moves import range
 from itertools import chain
 
 import pkg.actions

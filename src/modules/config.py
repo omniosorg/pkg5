@@ -46,9 +46,9 @@ property sections or property objects can be used as well if advanced access or
 manipulation of configuration data is needed.
 """
 
-from __future__ import print_function
 import ast
 import codecs
+import configparser
 import copy
 import errno
 import os
@@ -60,8 +60,6 @@ import subprocess
 import tempfile
 import uuid
 from collections import OrderedDict
-from six import python_2_unicode_compatible
-from six.moves import configparser
 
 from pkg import misc, portable
 import pkg.version
@@ -224,7 +222,6 @@ class UnknownSectionError(PropertyConfigError):
         return _("Unknown property section: {0}.").format(self.section)
 
 
-@python_2_unicode_compatible
 class Property(object):
     """Base class for properties."""
 
@@ -235,9 +232,7 @@ class Property(object):
     _value_map = misc.EmptyDict
 
     def __init__(self, name, default="", value_map=misc.EmptyDict):
-        if not isinstance(name, six.string_types) or not self.__name_re.match(
-            name
-        ):
+        if not isinstance(name, str) or not self.__name_re.match(name):
             raise InvalidPropertyNameError(prop=name)
         try:
             name.encode("ascii")
@@ -296,7 +291,7 @@ class Property(object):
         """Raises an InvalidPropertyValueError if 'value' is not allowed
         for this property.
         """
-        if not isinstance(value, six.string_types):
+        if not isinstance(value, str):
             # Only string values are allowed.
             raise InvalidPropertyValueError(prop=self.name, value=value)
 
@@ -329,7 +324,7 @@ class Property(object):
     @value.setter
     def value(self, value):
         """Sets the property's value."""
-        if isinstance(value, six.string_types):
+        if isinstance(value, str):
             value = self._value_map.get(value, value)
         if value is None:
             value = ""
@@ -357,7 +352,7 @@ class PropertyTemplate(object):
         value_map=None,
     ):
         assert prop_type
-        if not isinstance(name_pattern, six.string_types) or not name_pattern:
+        if not isinstance(name_pattern, str) or not name_pattern:
             raise InvalidPropertyTemplateNameError(prop=name_pattern)
         self.__name = name_pattern
         try:
@@ -417,12 +412,12 @@ class PropBool(Property):
 
     @Property.value.setter
     def value(self, value):
-        if isinstance(value, six.string_types):
+        if isinstance(value, str):
             value = self._value_map.get(value, value)
         if value is None or value == "":
             self._value = False
             return
-        elif isinstance(value, six.string_types):
+        elif isinstance(value, str):
             if value.lower() == "true":
                 self._value = True
                 return
@@ -465,7 +460,7 @@ class PropInt(Property):
 
     @Property.value.setter
     def value(self, value):
-        if isinstance(value, six.string_types):
+        if isinstance(value, str):
             value = self._value_map.get(value, value)
         if value is None or value == "":
             value = 0
@@ -491,15 +486,13 @@ class PropPublisher(Property):
 
     @Property.value.setter
     def value(self, value):
-        if isinstance(value, six.string_types):
+        if isinstance(value, str):
             value = self._value_map.get(value, value)
         if value is None or value == "":
             self._value = ""
             return
 
-        if not isinstance(value, six.string_types) or not misc.valid_pub_prefix(
-            value
-        ):
+        if not isinstance(value, str) or not misc.valid_pub_prefix(value):
             # Only string values are allowed.
             raise InvalidPropertyValueError(prop=self.name, value=value)
         self._value = value
@@ -580,11 +573,11 @@ class PropList(PropDefined):
     @PropDefined.value.setter
     def value(self, value):
         # the value can be arbitrary 8-bit data, so we allow bytes here
-        if isinstance(value, (six.string_types, bytes)):
+        if isinstance(value, (str, bytes)):
             value = self._value_map.get(value, value)
         if value is None or value == "":
             value = []
-        elif isinstance(value, (six.string_types, bytes)):
+        elif isinstance(value, (str, bytes)):
             value = self._parse_str(value)
             if not isinstance(value, list):
                 # Only accept lists for literal string form.
@@ -601,7 +594,7 @@ class PropList(PropDefined):
                 v = ""
             elif isinstance(v, (bool, int)):
                 v = str(v)
-            elif not isinstance(v, six.string_types):
+            elif not isinstance(v, str):
                 # Only string values are allowed.
                 raise InvalidPropertyValueError(prop=self.name, value=value)
             self._is_allowed(v)
@@ -621,11 +614,11 @@ class PropDictionaryList(PropList):
 
     @PropDefined.value.setter
     def value(self, value):
-        if isinstance(value, six.string_types):
+        if isinstance(value, str):
             value = self._value_map.get(value, value)
         if value is None or value == "":
             value = []
-        elif isinstance(value, six.string_types):
+        elif isinstance(value, str):
             value = self._parse_str(value)
             if not isinstance(value, list):
                 # Only accept lists for literal string form.
@@ -682,7 +675,6 @@ class PropDictionaryList(PropList):
                 Property._is_allowed(self, val)
 
 
-@python_2_unicode_compatible
 class PropSimpleList(PropList):
     """Class representing a property with a list of string values that are
     simple in nature.  Output is in a comma-separated format that may not
@@ -724,7 +716,7 @@ class PropSimpleList(PropList):
             try:
                 v = misc.force_str(v)
             except ValueError:
-                if not isinstance(v, six.text_type):
+                if not isinstance(v, str):
                     try:
                         v = v.decode("utf-8")
                     except ValueError:
@@ -857,7 +849,7 @@ class PropVersion(Property):
 
     @Property.value.setter
     def value(self, value):
-        if isinstance(value, six.string_types):
+        if isinstance(value, str):
             value = self._value_map.get(value, value)
         if value is None or value == "":
             value = "0"
@@ -873,7 +865,6 @@ class PropVersion(Property):
         self._value = nvalue
 
 
-@python_2_unicode_compatible
 class PropertySection(object):
     """A class representing a section of the configuration that also
     provides an interface for adding and managing properties and sections
@@ -887,7 +878,7 @@ class PropertySection(object):
 
     def __init__(self, name, properties=misc.EmptyI):
         if (
-            not isinstance(name, six.string_types)
+            not isinstance(name, str)
             or not self.__name_re.match(name)
             or name == "CONFIGURATION"
         ):
@@ -929,7 +920,7 @@ class PropertySection(object):
         return propsec
 
     def __str__(self):
-        return six.text_type(self.name)
+        return str(self.name)
 
     def add_property(self, prop):
         """Adds the specified property object to the section.  The
@@ -980,7 +971,7 @@ class PropertySectionTemplate(object):
     """
 
     def __init__(self, name_pattern, properties=misc.EmptyI):
-        if not isinstance(name_pattern, six.string_types) or not name_pattern:
+        if not isinstance(name_pattern, str) or not name_pattern:
             raise InvalidSectionTemplateNameError(section=name_pattern)
         self.__name = name_pattern
         try:
@@ -1022,7 +1013,6 @@ class PropertySectionTemplate(object):
         return self.__name
 
 
-@python_2_unicode_compatible
 class Config(object):
     """The Config class provides basic in-memory management of configuration
     data."""
@@ -1069,7 +1059,7 @@ class Config(object):
         for sec, props in self.get_properties():
             out += "[{0}]\n".format(sec.name)
             for p in props:
-                out += "{0} = {1}\n".format(p.name, six.text_type(p))
+                out += "{0} = {1}\n".format(p.name, str(p))
             out += "\n"
         return out
 

@@ -24,7 +24,6 @@
 # Copyright 2023 OmniOS Community Edition (OmniOSce) Association.
 #
 
-from __future__ import print_function
 import errno
 import fnmatch
 import os

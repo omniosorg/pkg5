@@ -208,7 +208,7 @@ class Action(object):
             self.data = None
             return
 
-        if isinstance(data, six.string_types):
+        if isinstance(data, str):
             if not os.path.exists(data):
                 raise pkg.actions.ActionDataError(
                     _("No such file: '{0}'.").format(data), path=data
@@ -1289,9 +1289,7 @@ class Action(object):
 
         for attr in required_attrs:
             val = self.attrs.get(attr)
-            if not val or (
-                isinstance(val, six.string_types) and not val.strip()
-            ):
+            if not val or (isinstance(val, str) and not val.strip()):
                 errors.append((attr, _("{0} is required").format(attr)))
 
         if raise_errors and errors:
@@ -1345,16 +1343,10 @@ class Action(object):
         ).format(**locals())
         raise apx.ActionExecutionError(self, details=err_txt, fmri=fmri)
 
-    if six.PY3:
+    def __init__(self, data=None, **attrs):
+        # create a bound method (no unbound method in Python 3)
+        _common._generic_init(self, data, **attrs)
 
-        def __init__(self, data=None, **attrs):
-            # create a bound method (no unbound method in Python 3)
-            _common._generic_init(self, data, **attrs)
-
-
-if six.PY2:
-    # create an unbound method
-    Action.__init__ = types.MethodType(_common._generic_init, None, Action)
 
 # Vim hints
 # vim:ts=4:sw=4:et:fdm=marker

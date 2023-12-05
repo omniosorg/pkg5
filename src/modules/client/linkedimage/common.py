@@ -49,10 +49,8 @@ import operator
 import os
 import select
 
-# Redefining built-in 'reduce', 'zip'; pylint: disable=W0622
 # Imports from package six are not grouped: pylint: disable=C0412
 from functools import reduce
-from six.moves import zip
 
 import six
 

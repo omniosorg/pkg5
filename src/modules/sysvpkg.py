@@ -36,7 +36,6 @@ XXX Some caveats about rewinding a datastream or multiple packages per
 datastream.
 """
 
-from __future__ import print_function
 import errno
 import gzip
 import os

@@ -25,6 +25,7 @@
 #
 
 from . import testutils
+
 if __name__ == "__main__":
     testutils.setup_environment("../../../proto")
 import pkg5unittest
@@ -38,7 +39,6 @@ from pkg._misc import fast_quote, MAX_STACK_QUOTE_SIZE
 
 
 class TestFastQuote(pkg5unittest.Pkg5TestCase):
-
     def test_basic(self):
         """Verify that fast_quote returns the same values as standard quote."""
         for i in range(1024):

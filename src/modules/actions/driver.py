@@ -30,7 +30,6 @@ This module contains the DriverAction class, which represents a driver-type
 packaging object.
 """
 
-from __future__ import print_function
 import os
 from . import generic
 import six

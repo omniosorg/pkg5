@@ -74,7 +74,6 @@ import gettext
 import locale
 import os
 import shutil
-import six
 import sys
 import tempfile
 import traceback
@@ -423,7 +422,7 @@ def use_ref(a, deps, ignores):
     if a.name == "depend":
         # TODO: support dependency lists
         # For now, treat as content change.
-        if not isinstance(a.attrs["fmri"], six.string_types):
+        if not isinstance(a.attrs["fmri"], str):
             return False
         dpfmri = fmri.PkgFmri(a.attrs["fmri"])
         deps.add(dpfmri.get_pkg_stem())
@@ -994,9 +993,8 @@ if __name__ == "__main__":
     gettext.install("pkg", "/usr/share/locale")
     misc.set_fd_limits(printer=error)
 
-    if six.PY3:
-        # disable ResourceWarning: unclosed file
-        warnings.filterwarnings("ignore", category=ResourceWarning)
+    # disable ResourceWarning: unclosed file
+    warnings.filterwarnings("ignore", category=ResourceWarning)
     try:
         __ret = main_func()
     except PipeError:

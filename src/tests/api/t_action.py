@@ -524,7 +524,9 @@ Incorrect attribute list.
         self.assertInvalid("depend type=require")
 
         # Multiple values not allowed for 'fmri' if 'type' is multi-valued.
-        self.assertInvalid("depend type=require type=require-any fmri=foo fmri=bar")
+        self.assertInvalid(
+            "depend type=require type=require-any fmri=foo fmri=bar"
+        )
 
         # 'path' attribute specified multiple times
         self.assertInvalid(

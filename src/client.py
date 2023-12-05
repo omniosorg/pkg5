@@ -84,7 +84,7 @@ try:
     import pycurl
     import atexit
     import shutil
-    from six.moves.urllib.parse import urlparse, unquote
+    from urllib.parse import urlparse, unquote
 
     import pkg
     import pkg.actions as actions
@@ -204,7 +204,7 @@ def format_update_error(e):
 def error(text, cmd=None):
     """Emit an error message prefixed by the command name"""
 
-    if not isinstance(text, six.string_types):
+    if not isinstance(text, str):
         # Assume it's an object that can be stringified.
         text = str(text)
 
@@ -1998,10 +1998,7 @@ def __api_execute_plan(operation, api_inst):
                 raise
 
         if exc_value or exc_tb:
-            if six.PY2:
-                six.reraise(exc_value, None, exc_tb)
-            else:
-                raise exc_value
+            raise exc_value
 
     return rval
 
@@ -4051,12 +4048,10 @@ def __display_avoids(api_inst):
     """Display the current avoid list, and the pkgs that are tracking
     that pkg"""
     for avoid, tracking in sorted(api_inst.get_avoid_list()):
-        tracking = " ".join(a[1])
         if tracking:
-            logger.info(
+            logger.info(_(
                 "    {avoid_pkg} (group dependency of '{tracking_pkg}')")
                .format(avoid_pkg=avoid, tracking_pkg=" ".join(tracking)))
-            )
         else:
             logger.info("    {0}".format(avoid))
 
@@ -5686,7 +5681,7 @@ def publisher_list(
                 if not properties_displayed:
                     msg(_("           Properties:"))
                     properties_displayed = True
-                if not isinstance(v, six.string_types):
+                if not isinstance(v, str):
                     v = ", ".join(sorted(v))
                 msg(property_padding, k + " =", str(v))
     return retcode
@@ -8007,9 +8002,8 @@ if __name__ == "__main__":
     import warnings
 
     warnings.simplefilter("error")
-    if six.PY3:
-        # disable ResourceWarning: unclosed file
-        warnings.filterwarnings("ignore", category=ResourceWarning)
+    # disable ResourceWarning: unclosed file
+    warnings.filterwarnings("ignore", category=ResourceWarning)
 
     # Attempt to handle SIGHUP/SIGTERM gracefully.
     import signal

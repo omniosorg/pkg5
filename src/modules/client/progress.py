@@ -30,7 +30,6 @@
 #
 
 from __future__ import division
-from __future__ import print_function
 
 import inspect
 import itertools
@@ -40,8 +39,6 @@ import time
 from collections import deque
 from functools import wraps
 
-# Redefining built-in 'range'; pylint: disable=W0622
-from six.moves import range
 
 import six
 

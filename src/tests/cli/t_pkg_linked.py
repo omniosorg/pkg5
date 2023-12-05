@@ -26,7 +26,6 @@
 #
 
 from __future__ import division
-from __future__ import print_function
 
 from . import testutils
 
@@ -4786,9 +4785,7 @@ class TestLinkedInstallHoldRelax(TestPkgLinked):
 class TestPkgLinkedScale(pkg5unittest.ManyDepotTestCase):
     """Test the scalability of the linked image subsystem."""
 
-    max_image_count = 256
-    if six.PY3:
-        max_image_count = 32
+    max_image_count = 32
 
     p_sync1 = []
     p_vers = [

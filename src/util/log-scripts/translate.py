@@ -24,7 +24,6 @@
 # Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
-from __future__ import print_function
 import GeoIP
 import md5
 import sys

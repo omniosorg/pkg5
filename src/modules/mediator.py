@@ -23,7 +23,6 @@
 # Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
 
 import re
-import six
 
 import pkg.misc as misc
 import pkg.version as version
@@ -34,7 +33,7 @@ def valid_mediator(value):
     string is a valid name for a link mediation.  'valid' is a boolean
     and 'error' is None or a string containing the error."""
 
-    if isinstance(value, six.string_types):
+    if isinstance(value, str):
         if re.match(r"^[a-zA-Z0-9\-]+$", value):
             return True, None
     return False, _(
@@ -49,7 +48,7 @@ def valid_mediator_version(value):
     a boolean and 'error' is None or a string containing the error."""
 
     error = ""
-    if isinstance(value, six.string_types):
+    if isinstance(value, str):
         try:
             version.Version(value)
             return True, None
@@ -70,7 +69,7 @@ def parse_mediator_implementation(value):
     object representing the version.  If the implementation is not valid
     a tuple of (None, None) will be returned."""
 
-    if not isinstance(value, six.string_types):
+    if not isinstance(value, str):
         return None, None
 
     if "@" in value:
@@ -102,7 +101,7 @@ def valid_mediator_implementation(value, allow_empty_version=False):
 
     error = ""
     iname = iver = None
-    if isinstance(value, six.string_types):
+    if isinstance(value, str):
         if "@" in value:
             iname, iver = value.rsplit("@", 1)
         else:

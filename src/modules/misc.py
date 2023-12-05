@@ -59,6 +59,7 @@ from binascii import hexlify, unhexlify
 from collections import defaultdict
 from io import BytesIO
 from io import StringIO
+from itertools import zip_longest
 from operator import itemgetter
 
 from stat import (
@@ -80,13 +81,10 @@ from stat import (
     S_IXOTH,
 )
 
-# Redefining built-in 'range'; pylint: disable=W0622
-# Module 'urllib' has no 'parse' member; pylint: disable=E1101
-from six.moves import range, zip_longest
-from six.moves.urllib.parse import urlsplit, urlparse, urlunparse
-from six.moves.urllib.request import pathname2url, url2pathname
-
 import six
+
+from urllib.parse import urlsplit, urlparse, urlunparse
+from urllib.request import pathname2url, url2pathname
 
 import pkg.client.api_errors as api_errors
 import pkg.json as json
@@ -555,15 +553,17 @@ def setlocale(category, loc=None, printer=None):
         else:
             # Since no locale was given, try to determine what global
             # locale setting setlocale used.
-            for variable in ('LC_ALL', 'LC_CTYPE', 'LANG', 'LANGUAGE'):
+            for variable in ("LC_ALL", "LC_CTYPE", "LANG", "LANGUAGE"):
                 localename = os.environ.get(variable, None)
                 if localename:
                     dl = locale.normalize(localename)
                     break
             else:
                 dl = ""
-        printer(f"Unable to set locale {dl}; locale package may be broken or\n"
-                "not installed.  Reverting to C locale.")
+        printer(
+            "Unable to set locale{0}; locale package may be broken or\n"
+            "not installed.  Reverting to C locale.".format(dl)
+        )
         locale.setlocale(category, "C")
 
 
@@ -673,7 +673,7 @@ def get_data_digest(
 
     bufsz = PKG_FILE_BUFSIZ
     closefobj = False
-    if isinstance(data, six.string_types):
+    if isinstance(data, str):
         f = open(data, "rb", bufsz)
         closefobj = True
     else:
@@ -835,7 +835,7 @@ def compute_compressed_attrs(
         fobj = _GZWriteWrapper(opath, chashes)
         ofile = PkgGzipFile(mode="wb", fileobj=fobj)
 
-        if isinstance(data, (six.string_types, bytes)):
+        if isinstance(data, (str, bytes)):
             # caller passed data in string
             nbuf = size // bufsz
             for n in range(0, nbuf):
@@ -1964,7 +1964,7 @@ def get_listing(
         # any explicitly named fields are only included if 'json'
         # is explicitly listed.
         def fmt_val(v):
-            if isinstance(v, six.string_types):
+            if isinstance(v, str):
                 return v
             if isinstance(v, (list, tuple, set, frozenset)):
                 return [fmt_val(e) for e in v]
@@ -2064,8 +2064,8 @@ def flush_output():
 json_types_immediates = (
     bool,
     float,
-    six.integer_types,
-    six.string_types,
+    int,
+    str,
     type(None),
 )
 json_types_collections = (dict, list)
@@ -2205,16 +2205,6 @@ def json_encode(name, data, desc, commonize=None, je_state=None):
     ), "unexpected {0} for {1}, expected: {2}, value: {3}".format(
         data_type, name, desc_type, data
     )
-
-    # The following situation is only true for Python 2.
-    # We should not see unicode strings getting passed in. The assert is
-    # necessary since we use the PkgDecoder hook function during json_decode
-    # to convert unicode objects back into escaped str objects, which would
-    # otherwise do that conversion unintentionally.
-    if six.PY2:
-        assert not isinstance(
-            data_type, six.text_type
-        ), "unexpected unicode string: {0}".format(data)
 
     # we don't need to do anything for basic types
     for t in json_types_immediates:
@@ -2655,9 +2645,9 @@ def json_hook(dct):
 
     rvdct = {}
     for k, v in six.iteritems(dct):
-        if isinstance(k, six.string_types):
+        if isinstance(k, str):
             k = force_str(k)
-        if isinstance(v, six.string_types):
+        if isinstance(v, str):
             v = force_str(v)
 
         rvdct[k] = v
@@ -2927,15 +2917,6 @@ def get_runtime_proxy(proxy, uri):
 def decode(s):
     """convert non-ascii strings to unicode;
     replace non-convertable chars"""
-    if six.PY3:
-        return s
-    try:
-        # this will fail if any 8 bit chars in string
-        # this is a nop if string is ascii.
-        s = s.encode("ascii")
-    except ValueError:
-        # this will encode 8 bit strings into unicode
-        s = s.decode("utf-8", "replace")
     return s
 
 
@@ -3139,45 +3120,6 @@ def suggest_known_words(text, known_words):
     return [c[0] for c in sorted(candidates, key=itemgetter(1))]
 
 
-def force_bytes(s, encoding="utf-8", errors="strict"):
-    """Force the string into bytes."""
-
-    if isinstance(s, bytes):
-        if encoding == "utf-8":
-            return s
-        return s.decode("utf-8", errors).encode(encoding, errors)
-    elif isinstance(s, six.string_types):
-        # this case is: unicode in Python 2 and str in Python 3
-        return s.encode(encoding, errors)
-    elif six.PY3:
-        # type not a string and Python 3's bytes() requires
-        # a string argument
-        return six.text_type(s).encode(encoding)
-    # type not a string
-    return bytes(s)
-
-
-def force_text(s, encoding="utf-8", errors="strict"):
-    """Force the string into text."""
-
-    if isinstance(s, six.text_type):
-        return s
-    if isinstance(s, six.string_types):
-        # this case is: str(bytes) in Python 2
-        return s.decode(encoding, errors)
-    elif isinstance(s, bytes):
-        # this case is: bytes in Python 3
-        return s.decode(encoding, errors)
-    # type not a string
-    return six.text_type(s)
-
-
-if six.PY3:
-    force_str = force_text
-else:
-    force_str = force_bytes
-
-
 def open_image_file(root, path, flag, mode=None):
     """Open 'path' ensuring that we don't follow a symlink which may lead
     outside of the specified image.
@@ -3291,45 +3233,32 @@ def force_bytes(s, encoding="utf-8", errors="strict"):
     if isinstance(s, bytes):
         return s
     try:
-        if isinstance(s, six.string_types):
-            # this case is: unicode in Python 2 and str in Python 3
+        if isinstance(s, str):
             return s.encode(encoding, errors)
-        elif six.PY3:
-            # type not a string and Python 3's bytes() requires
-            # a string argument
-            return six.text_type(s).encode(encoding)
-        # type not a string
-        s = bytes(s)
+        else:
+            # type not a string
+            return str(s).encode(encoding)
     except UnicodeEncodeError:
         raise
-    return s
 
 
 def force_text(s, encoding="utf-8", errors="strict"):
     """Force the string into text."""
 
-    if isinstance(s, six.text_type):
+    if isinstance(s, str):
         return s
     try:
-        if isinstance(s, (six.string_types, bytes)):
-            # this case is: str(bytes) in Python 2 and bytes in
-            # Python 3
+        if isinstance(s, bytes):
             s = s.decode(encoding, errors)
         else:
             # type not a string
-            s = six.text_type(s)
+            s = str(s)
     except UnicodeDecodeError as e:
         raise api_errors.PkgUnicodeDecodeError(s, *e.args)
     return s
 
 
-# force_str minimizes the work for compatible string handling between Python
-# 2 and 3 because we will have the native string type in its runtime, that is,
-# bytes in Python 2 and unicode string in Python 3.
-if six.PY2:
-    force_str = force_bytes
-else:
-    force_str = force_text
+force_str = force_text
 
 FILE_DESCRIPTOR_LIMIT = 4096
 

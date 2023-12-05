@@ -45,7 +45,7 @@ import re as relib
 from contextlib import contextmanager
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
-from six.moves.urllib.parse import quote, unquote
+from urllib.parse import quote, unquote
 
 import pkg.actions
 import pkg.catalog

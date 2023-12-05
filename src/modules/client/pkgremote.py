@@ -37,7 +37,6 @@ import subprocess
 import tempfile
 import traceback
 
-import six
 
 # pkg classes
 import pkg.client.api_errors as apx
@@ -147,17 +146,12 @@ class PkgRemote(object):
             # unexpected-keyword-arg 'pass_fds';
             # pylint: disable=E1123
             # Redefinition of p type
-            if six.PY2:
-                p = pkg.pkgsubprocess.Popen(
-                    pkg_cmd, stdout=fstdout, stderr=fstderr
-                )
-            else:
-                p = subprocess.Popen(
-                    pkg_cmd,
-                    stdout=fstdout,
-                    stderr=fstderr,
-                    pass_fds=(server_cmd_pipe, server_prog_pipe_fobj.fileno()),
-                )
+            p = subprocess.Popen(
+                pkg_cmd,
+                stdout=fstdout,
+                stderr=fstderr,
+                pass_fds=(server_cmd_pipe, server_prog_pipe_fobj.fileno()),
+            )
 
         except OSError as e:
             # Access to protected member; pylint: disable=W0212

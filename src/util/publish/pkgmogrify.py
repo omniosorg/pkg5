@@ -23,14 +23,12 @@
 # Copyright (c) 2009, 2019, Oracle and/or its affiliates. All rights reserved.
 #
 
-from __future__ import print_function
 import pkg.site_paths
 
 pkg.site_paths.init()
 import getopt
 import gettext
 import locale
-import six
 import sys
 import traceback
 import warnings
@@ -170,9 +168,8 @@ if __name__ == "__main__":
 
     # Make all warnings be errors.
     warnings.simplefilter("error")
-    if six.PY3:
-        # disable ResourceWarning: unclosed file
-        warnings.filterwarnings("ignore", category=ResourceWarning)
+    # disable ResourceWarning: unclosed file
+    warnings.filterwarnings("ignore", category=ResourceWarning)
     try:
         exit_code = main_func()
     except (PipeError, KeyboardInterrupt):
