@@ -29,7 +29,6 @@
 import pkg.misc as misc
 import fnmatch
 import re
-import six
 import types
 from functools import cmp_to_key
 
@@ -113,12 +112,8 @@ class Facets(dict):
         that that can be easily stored using JSON, pickle, etc."""
 
         return [
-            [misc.force_text(k), v, True]
-            for k, v in six.iteritems(obj.__inherited)
-        ] + [
-            [misc.force_text(k), v, False]
-            for k, v in six.iteritems(obj.__local)
-        ]
+            [misc.force_text(k), v, True] for k, v in obj.__inherited.items()
+        ] + [[misc.force_text(k), v, False] for k, v in obj.__local.items()]
 
     @staticmethod
     def fromstate(state, jd_state=None):
@@ -441,9 +436,9 @@ class Facets(dict):
     def update(self, d):
         if type(d) == Facets:
             # preserve inherited facets.
-            for k, v in six.iteritems(d.__inherited):
+            for k, v in d.__inherited.items():
                 self._set_inherited(k, v)
-            for k, v in six.iteritems(d.__local):
+            for k, v in d.__local.items():
                 self[k] = v
             return
 

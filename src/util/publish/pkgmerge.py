@@ -36,7 +36,6 @@ try:
     import locale
     import os
     import shutil
-    import six
     import sys
     import tempfile
     import traceback
@@ -271,7 +270,7 @@ def main_func():
     variants = set()
     vcombos = collections.defaultdict(set)
     for src_vars in variant_list:
-        for v, vval in six.iteritems(src_vars):
+        for v, vval in src_vars.items():
             variants.add(v)
             vcombos[v].add((v, vval))
 
@@ -886,7 +885,7 @@ def build_merge_list(include, exclude, cat):
     return (
         dict(
             (k, sorted(list(v), reverse=True)[0])
-            for k, v in six.iteritems(include_dict)
+            for k, v in include_dict.items()
             if v
         ),
         include_misses,

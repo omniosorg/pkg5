@@ -35,7 +35,6 @@ import pkg.lint.base as base
 from pkg.actions import ActionError
 from pkg.actions.file import FileAction
 import re
-import six
 import stat
 
 ObsoleteFmri = collections.namedtuple("ObsoleteFmri", "is_obsolete, fmri")
@@ -134,7 +133,7 @@ class PkgDupActionChecker(base.ActionChecker):
                 variants = action.get_variant_template()
                 variants.merge_unknown(pkg_vars)
                 # Action attributes must be lists or strings.
-                for k, v in six.iteritems(variants):
+                for k, v in variants.items():
                     if isinstance(v, set):
                         action.attrs[k] = list(v)
                     else:

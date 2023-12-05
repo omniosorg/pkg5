@@ -29,7 +29,6 @@ import itertools
 import operator
 import os
 import re
-import six
 
 from collections import namedtuple
 from urllib.parse import unquote
@@ -183,7 +182,7 @@ class ExtraVariantedDependency(DependencyError):
 
     def __str__(self):
         s = ""
-        for r, diff in sorted(six.iteritems(self.rvs)):
+        for r, diff in sorted(self.rvs.items()):
             for kind in diff.type_diffs:
                 s += _(
                     "\t{r:15} Variant '{kind}' is not " "declared.\n"
@@ -464,7 +463,7 @@ def list_implicit_deps_for_manifest(
     # for each of them.
     for a in mfst.gen_actions():
         pvars = a.get_variant_template()
-        for k, v in six.iteritems(pvars):
+        for k, v in pvars.items():
             if k not in pkg_vars or not v.issubset(pkg_vars[k]):
                 warnings.append(
                     UndeclaredVariantWarning(
@@ -1443,9 +1442,7 @@ def __remove_unneeded_require_and_require_any(deps, pkg_fmri):
         if files_prefix in cur_dep.attrs or fullpaths_prefix in cur_dep.attrs:
             # convert to a set for set operation
             cur_fmris_set = set(cur_fmris)
-            for (comp_dep, comp_vars), comp_fmris_set in six.iteritems(
-                fmri_dict
-            ):
+            for (comp_dep, comp_vars), comp_fmris_set in fmri_dict.items():
                 if (
                     comp_fmris_set != cur_fmris_set
                     and comp_fmris_set.issubset(cur_fmris_set)
@@ -1708,7 +1705,7 @@ def prune_debug_attrs(action):
 
     attrs = dict(
         (k, v)
-        for k, v in six.iteritems(action.attrs)
+        for k, v in action.attrs.items()
         if not k.startswith(base.Dependency.DEPEND_DEBUG_PREFIX)
     )
     return actions.depend.DependencyAction(**attrs)
@@ -1955,7 +1952,7 @@ def resolve_deps(manifest_paths, api_inst, system_patterns, prune_attrs=False):
         for pkg_vct in package_vars.values():
             pkg_vct.merge_unknown(distro_vars)
         # Populate the installed files dictionary.
-        for pth, l in six.iteritems(tmp_files):
+        for pth, l in tmp_files.items():
             new_val = [
                 (p, __merge_actvct_with_pkgvct(tmpl, package_vars[p.pkg_name]))
                 for (p, tmpl) in l
@@ -1965,7 +1962,7 @@ def resolve_deps(manifest_paths, api_inst, system_patterns, prune_attrs=False):
 
         # Populate the link dictionary using the installed packages'
         # information.
-        for pth, l in six.iteritems(tmp_links):
+        for pth, l in tmp_links.items():
             new_val = [
                 (
                     p,

@@ -25,7 +25,7 @@
 #
 
 from __future__ import division
-import six.moves.cPickle as pickle
+import pickle
 import datetime
 import time
 

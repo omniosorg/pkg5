@@ -37,7 +37,6 @@ import pwd
 import re
 import shutil
 import signal
-import six
 import stat
 import tempfile
 import time
@@ -1457,8 +1456,8 @@ str_basic =
             definitions=self._defs, overrides=overrides, version=0
         )
         exp_state = copy.deepcopy(self._initial_state[0])
-        for sname, props in six.iteritems(overrides):
-            for pname, value in six.iteritems(props):
+        for sname, props in overrides.items():
+            for pname, value in props.items():
                 exp_state[sname][pname] = value
         self._verify_initial_state(conf, 0, exp_state=exp_state)
 
@@ -1659,7 +1658,7 @@ new_property = {0}
         portable.remove(scpath)
 
         # Verify read and write of sample files.
-        for ver, content in six.iteritems(self._initial_files):
+        for ver, content in self._initial_files.items():
             scpath = self.make_misc_files({"cfg_cache": content})[0]
 
             # Verify verison of content is auto detected and that
@@ -2393,7 +2392,7 @@ class TestSMFConfig(_TestConfigBase):
             # attempted (not currently supported).
             self.assertRaises(cfg.SMFWriteError, conf.write)
 
-        for ver, mfst_content in six.iteritems(self._initial_files):
+        for ver, mfst_content in self._initial_files.items():
             test_mfst(svc_fmri, ver, mfst_content, self._defs)
 
         # Verify configuration data with unknown sections or properties

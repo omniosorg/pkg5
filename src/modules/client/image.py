@@ -3327,7 +3327,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
 
                 # copy() is too slow here and catalog entries
                 # are shallow so this should be sufficient.
-                entry = dict(six.iteritems(sentry))
+                entry = dict(sentry.items())
                 if not base:
                     # Nothing else to do except add the
                     # entry for non-base catalog parts.
@@ -4590,7 +4590,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
             return dict(
                 [
                     (s, __make_publisherless_fmri(p))
-                    for s, p in six.iteritems(stems_and_pats)
+                    for s, p in stems_and_pats.items()
                 ]
             )
 
@@ -4606,7 +4606,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
             d.update(
                 [
                     (s, (str(p), comment, timestamp))
-                    for s, p in six.iteritems(stems_and_pats)
+                    for s, p in stems_and_pats.items()
                 ]
             )
             self._freeze_dict_save(d)
@@ -4813,8 +4813,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
         progtrack.plan_all_start()
         # compute dict of changing variants
         if variants:
-            new = set(six.iteritems(variants))
-            cur = set(six.iteritems(self.cfg.variants))
+            new = set(variants.items())
+            cur = set(self.cfg.variants.items())
             variants = dict(new - cur)
         elif facets:
             new_facets = self.get_facets()

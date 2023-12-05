@@ -36,7 +36,6 @@ import datetime
 import http.client
 import os
 import shutil
-import six
 import time
 import xml.dom.minidom as xmini
 
@@ -228,7 +227,7 @@ def get_updates_needed(repo, ts, pub):
         return []
 
     updates = set()
-    for name, mdata in six.iteritems(c.updates):
+    for name, mdata in c.updates.items():
         # The last component of the update name is the locale.
         locale = name.split(".", 2)[2]
 

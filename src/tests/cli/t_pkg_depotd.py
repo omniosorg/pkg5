@@ -34,7 +34,6 @@ import datetime
 import http.client
 import os
 import shutil
-import six
 import sys
 import tempfile
 import time
@@ -1037,7 +1036,7 @@ class TestDepotOutput(pkg5unittest.SingleDepotTestCase):
             pub_repo = publisher.Repository()
             pub.repository = pub_repo
 
-        for attr, val in six.iteritems(self.pub_repo_cfg):
+        for attr, val in self.pub_repo_cfg.items():
             setattr(pub_repo, attr, val)
         repo.update_publisher(pub)
 
@@ -1071,7 +1070,7 @@ class TestDepotOutput(pkg5unittest.SingleDepotTestCase):
             self.assertEqual(getattr(pub, prop), cfgdata["publisher"][prop])
 
         repo = pub.repository
-        for prop, expected in six.iteritems(self.pub_repo_cfg):
+        for prop, expected in self.pub_repo_cfg.items():
             returned = getattr(repo, prop)
             if prop.endswith("uris") or prop == "origins":
                 uris = []

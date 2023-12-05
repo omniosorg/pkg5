@@ -74,7 +74,6 @@ try:
     import logging
     import os
     import re
-    import six
     import socket
     import sys
     import tempfile
@@ -151,7 +150,7 @@ valid_special_prefixes = ["action."]
 all_formats = ("default", "json", "tsv")
 
 default_attrs = {}
-for atype, aclass in six.iteritems(actions.types):
+for atype, aclass in actions.types.items():
     default_attrs[atype] = [aclass.key_attr]
     if atype == "depend":
         default_attrs[atype].insert(0, "type")
@@ -3695,7 +3694,7 @@ def list_mediators(
         # Configured mediator information
         gen_mediators = (
             (mediator, mediation)
-            for mediator, mediation in six.iteritems(api_inst.mediators)
+            for mediator, mediation in api_inst.mediators.items()
         )
 
     # Set minimum widths for mediator and version columns by using the
@@ -4049,9 +4048,11 @@ def __display_avoids(api_inst):
     that pkg"""
     for avoid, tracking in sorted(api_inst.get_avoid_list()):
         if tracking:
-            logger.info(_(
-                "    {avoid_pkg} (group dependency of '{tracking_pkg}')")
-               .format(avoid_pkg=avoid, tracking_pkg=" ".join(tracking)))
+            logger.info(
+                _(
+                    "    {avoid_pkg} (group dependency of '{tracking_pkg}')"
+                ).format(avoid_pkg=avoid, tracking_pkg=" ".join(tracking))
+            )
         else:
             logger.info("    {0}".format(avoid))
 
@@ -5672,7 +5673,7 @@ def publisher_list(
 
             if "Properties" not in pub:
                 continue
-            pub_items = sorted(six.iteritems(pub["Properties"]))
+            pub_items = sorted(pub["Properties"].items())
             property_padding = "                      "
             properties_displayed = False
             for k, v in pub_items:

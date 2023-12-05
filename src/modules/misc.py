@@ -1008,7 +1008,7 @@ class ProcFS(object):
     }
 
     # fill in <format string> and <namedtuple> in _struct_descriptions
-    for struct_name, v in six.iteritems(_struct_descriptions):
+    for struct_name, v in _struct_descriptions.items():
         desc = v[0]
 
         # update _struct_descriptions with a format string
@@ -1774,7 +1774,7 @@ def api_pkgcmd():
     pkg_cmd = [sys.executable] + [pkg_bin]
 
     # propagate debug options
-    for k, v in six.iteritems(DebugValues):
+    for k, v in DebugValues.items():
         pkg_cmd.append("-D")
         pkg_cmd.append("{0}={1}".format(k, v))
 
@@ -1969,7 +1969,7 @@ def get_listing(
             if isinstance(v, (list, tuple, set, frozenset)):
                 return [fmt_val(e) for e in v]
             if isinstance(v, dict):
-                for k, e in six.iteritems(v):
+                for k, e in v.items():
                     v[k] = fmt_val(e)
                 return v
             return str(v)
@@ -2014,7 +2014,7 @@ def get_listing(
                 set_value,
                 (
                     (field_data[f], v)
-                    for f, v in six.iteritems(entry)
+                    for f, v in entry.items()
                     if f in field_data
                 ),
             )
@@ -2172,7 +2172,7 @@ def json_encode(name, data, desc, commonize=None, je_state=None):
         # strings (that way we're encoder/decoder independent).
         obj_cache = je_state[1]
         obj_cache2 = {}
-        for obj_id, obj_state in six.itervalues(obj_cache):
+        for obj_id, obj_state in obj_cache.values():
             obj_cache2[str(obj_id)] = obj_state
 
         data = {"json_state": data, "json_objects": obj_cache2}
@@ -2235,7 +2235,7 @@ def json_encode(name, data, desc, commonize=None, je_state=None):
             assert len(desc) == 1
 
             # encode all key / value pairs
-            for k, v in six.iteritems(data):
+            for k, v in data.items():
                 # encode the key
                 name2 = "{0}[{1}].key()".format(name, desc_k)
                 k2 = json_encode(name2, k, desc_k, je_state=je_state)
@@ -2251,7 +2251,7 @@ def json_encode(name, data, desc, commonize=None, je_state=None):
         # we have element specific value type descriptions.
         # encode the specific values.
         rv.update(data)
-        for desc_k, desc_v in six.iteritems(desc):
+        for desc_k, desc_v in desc.items():
             # check for the specific key
             if desc_k not in rv:
                 continue
@@ -2459,7 +2459,7 @@ def json_decode(name, data, desc, commonize=None, jd_state=None):
             assert len(desc) == 1
 
             # decode all key / value pairs
-            for k, v in six.iteritems(data):
+            for k, v in data.items():
                 # decode the key
                 name2 = "{0}[{1}].key()".format(name, desc_k)
                 k2 = json_decode(name2, k, desc_k, jd_state=jd_state)
@@ -2475,7 +2475,7 @@ def json_decode(name, data, desc, commonize=None, jd_state=None):
         # we have element specific value type descriptions.
         # copy all data and then decode the specific values
         rv.update(data)
-        for desc_k, desc_v in six.iteritems(desc):
+        for desc_k, desc_v in desc.items():
             # check for the specific key
             if desc_k not in rv:
                 continue
@@ -2644,7 +2644,7 @@ def json_hook(dct):
     objects are converted to str objects in Python 3."""
 
     rvdct = {}
-    for k, v in six.iteritems(dct):
+    for k, v in dct.items():
         if isinstance(k, str):
             k = force_str(k)
         if isinstance(v, str):

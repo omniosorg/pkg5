@@ -269,7 +269,7 @@ class UserAction(generic.Action):
 
         # Get the default values if they're non-empty
         pwdefval = dict(
-            ((k, v) for k, v in six.iteritems(pw.getdefaultvalues()) if v != "")
+            ((k, v) for k, v in pw.getdefaultvalues().items() if v != "")
         )
 
         # Certain defaults are dynamic, so we need to ignore what's on

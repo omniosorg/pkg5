@@ -34,7 +34,6 @@ import getopt
 import itertools
 import os
 import re
-import six
 import socket
 import sys
 import tempfile
@@ -94,10 +93,7 @@ def _strify(input):
 
     if isinstance(input, dict):
         return dict(
-            [
-                (_strify(key), _strify(value))
-                for key, value in six.iteritems(input)
-            ]
+            [(_strify(key), _strify(value)) for key, value in input.items()]
         )
     elif isinstance(input, list):
         return [_strify(element) for element in input]
@@ -2836,7 +2832,7 @@ def _publisher_list(
                 pub_data["sys_pub"] = "No"
             if pub.properties:
                 pub_data["Properties"] = {}
-                for k, v in six.iteritems(pub.properties):
+                for k, v in pub.properties.items():
                     pub_data["Properties"][k] = v
             data.setdefault("publisher_details", []).append(pub_data)
     return __prepare_json(retcode, data=data, errors=errors_json, op=op)

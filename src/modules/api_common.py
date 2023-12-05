@@ -30,7 +30,6 @@
 """Contains API functions and classes common to both pkg.client.api and
 pkg.server.api."""
 
-import six
 
 import pkg.client.pkgdefs as pkgdefs
 import pkg.fmri as fmri
@@ -239,7 +238,7 @@ class PackageInfo(object):
                     and tuple([sorted(modifiers[k])])
                     or tuple(sorted(modifiers[k])),
                 )
-                for k in sorted(six.iterkeys(modifiers))
+                for k in sorted(modifiers.keys())
             )
         return self.attrs.get(name, {modifiers: []}).get(modifiers, [])
 

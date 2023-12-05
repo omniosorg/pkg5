@@ -22,7 +22,6 @@
 ## Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
 ##
 <%!
-        import six
         import html as cgi
         import itertools
         import pkg.actions as actions
@@ -180,7 +179,7 @@
         scheme, netloc, path, params, query, fragment = urlparse(uri)
 
         nparams = []
-        for name, val in six.iteritems(request.params):
+        for name, val in request.params.items():
                 if name == "start":
                         continue
                 nparams.append((name, val))
@@ -204,7 +203,7 @@
         scheme, netloc, path, params, query, fragment = urlparse(uri)
 
         nparams = []
-        for name, val in six.iteritems(request.params):
+        for name, val in request.params.items():
                 if name == "start":
                         continue
                 nparams.append((name, val))
@@ -310,7 +309,7 @@ Next</a>
                             fragment = urlparse(uri)
 
                         nparams = []
-                        for name, val in six.iteritems(request.params):
+                        for name, val in request.params.items():
                                 if name in ("failed", "query_error"):
                                         continue
                                 nparams.append((name, val))

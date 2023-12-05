@@ -62,7 +62,6 @@ import operator
 import re
 import shlex
 import shutil
-import six
 import sys
 import tempfile
 import textwrap
@@ -1647,7 +1646,7 @@ def subcmd_set(conf, args):
 def _set_pub(conf, subcommand, props, pubs, repo):
     """Set publisher properties."""
 
-    for sname, sprops in six.iteritems(props):
+    for sname, sprops in props.items():
         if sname not in ("publisher", "repository"):
             usage(
                 _("unknown property section " "'{0}'").format(sname),
@@ -1697,7 +1696,7 @@ def _set_pub(conf, subcommand, props, pubs, repo):
 
         try:
             # Set/update the publisher's properties.
-            for sname, sprops in six.iteritems(props):
+            for sname, sprops in props.items():
                 if sname == "publisher":
                     target = pub
                 elif sname == "repository":
@@ -1706,7 +1705,7 @@ def _set_pub(conf, subcommand, props, pubs, repo):
                         target = publisher.Repository()
                         pub.repository = target
 
-                for pname, val in six.iteritems(sprops):
+                for pname, val in sprops.items():
                     attrname = pname.replace("-", "_")
                     pval = getattr(target, attrname)
                     if isinstance(pval, list) and not isinstance(val, list):
@@ -1746,8 +1745,8 @@ def _set_repo(conf, subcommand, props, repo):
     """Set repository properties."""
 
     # Set properties.
-    for sname, props in six.iteritems(props):
-        for pname, val in six.iteritems(props):
+    for sname, props in props.items():
+        for pname, val in props.items():
             repo.cfg.set_property(sname, pname, val)
     repo.write_config()
 

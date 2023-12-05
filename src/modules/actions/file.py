@@ -32,7 +32,6 @@ packaging object."""
 import errno
 from . import generic
 import os
-import six
 import stat
 import tempfile
 import types
@@ -875,7 +874,7 @@ class FileAction(generic.Action):
             self.remove_fsobj(pkgplan, path)
         except Exception as e:
             # Raise new exception chained to old.
-            six.raise_from(e, rm_exc)
+            raise e from rm_exc
         finally:
             # If parent directory wasn't image root, then assume
             # mode needs reset.

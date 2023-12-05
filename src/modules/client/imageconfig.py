@@ -30,7 +30,6 @@ import errno
 import os.path
 import platform
 import re
-import six
 
 from urllib.parse import quote, unquote
 
@@ -479,7 +478,7 @@ class ImageConfig(cfg.FileConfig):
 
     def __publisher_iteritems(self):
         """Support iteritems on publishers"""
-        return six.iteritems(self.__publishers)
+        return self.__publishers.items()
 
     def __publisher_keys(self):
         """Support keys() on publishers"""
@@ -553,13 +552,13 @@ class ImageConfig(cfg.FileConfig):
         self.variants.update(idx.get("variant", {}))
         # Variants and facets are encoded so they can contain
         # '/' characters.
-        for k, v in six.iteritems(idx.get("variant", {})):
+        for k, v in idx.get("variant", {}).items():
             # convert variant name from unicode to a string
             self.variants[str(unquote(k))] = v
-        for k, v in six.iteritems(idx.get("facet", {})):
+        for k, v in idx.get("facet", {}).items():
             # convert facet name from unicode to a string
             self.facets[str(unquote(k))] = v
-        for k, v in six.iteritems(idx.get("inherited_facet", {})):
+        for k, v in idx.get("inherited_facet", {}).items():
             # convert facet name from unicode to a string
             self.facets._set_inherited(str(unquote(k)), v)
 
@@ -573,7 +572,7 @@ class ImageConfig(cfg.FileConfig):
             self.variants["variant.opensolaris.imagetype"] = "full"
 
         # load linked image child properties
-        for s, v in six.iteritems(idx):
+        for s, v in idx.items():
             if not re.match("linked_.*", s):
                 continue
             linked_props = self.read_linked(s, v)
@@ -599,7 +598,7 @@ class ImageConfig(cfg.FileConfig):
 
         # Sort the index so that the prefixes are added to the list
         # "publisher-search-order" in alphabetic order.
-        for s, v in collections.OrderedDict(sorted(six.iteritems(idx))).items():
+        for s, v in collections.OrderedDict(sorted(idx.items())).items():
             if re.match("authority_.*", s):
                 k, a = self.read_publisher(s, v)
                 # this will call __set_publisher and add the
@@ -608,7 +607,7 @@ class ImageConfig(cfg.FileConfig):
 
         # Move any properties found in policy section (from older
         # images) to the property section.
-        for k, v in six.iteritems(idx.get("policy", {})):
+        for k, v in idx.get("policy", {}).items():
             self.set_property("property", k, v)
             self.remove_property("policy", k)
 
@@ -631,7 +630,7 @@ class ImageConfig(cfg.FileConfig):
         self.set_property("property", "publisher-search-order", pso)
 
         # Load mediator data.
-        for entry, value in six.iteritems(idx.get("mediators", {})):
+        for entry, value in idx.get("mediators", {}).items():
             mname, mtype = entry.rsplit(".", 1)
             # convert mediator name+type from unicode to a string
             mname = str(mname)
@@ -723,8 +722,8 @@ class ImageConfig(cfg.FileConfig):
             self.remove_section("mediators")
         except cfg.UnknownSectionError:
             pass
-        for mname, mvalues in six.iteritems(self.mediators):
-            for mtype, mvalue in six.iteritems(mvalues):
+        for mname, mvalues in self.mediators.items():
+            for mtype, mvalue in mvalues.items():
                 # name.implementation[-(source|version)]
                 # name.version[-source]
                 pname = mname + "." + mtype
@@ -732,7 +731,7 @@ class ImageConfig(cfg.FileConfig):
 
         # remove all linked image child configuration
         idx = self.get_index()
-        for s, v in six.iteritems(idx):
+        for s, v in idx.items():
             if not re.match("linked_.*", s):
                 continue
             self.remove_section(s)
@@ -1037,7 +1036,7 @@ class ImageConfig(cfg.FileConfig):
                 )
 
         props = {}
-        for k, v in six.iteritems(sec_idx):
+        for k, v in sec_idx.items():
             if not k.startswith("property."):
                 continue
             prop_name = k[len("property.") :]
@@ -1051,7 +1050,7 @@ class ImageConfig(cfg.FileConfig):
 
         # Load repository data.
         repo_data = {}
-        for key, val in six.iteritems(sec_idx):
+        for key, val in sec_idx.items():
             if key.startswith("repo."):
                 pname = key[len("repo.") :]
                 repo_data[pname] = val
@@ -1781,7 +1780,7 @@ class BlendedConfig(object):
 
     def __publisher_iteritems(self):
         """Support iteritems on publishers"""
-        return six.iteritems(self.__publishers)
+        return self.__publishers.items()
 
     def __publisher_keys(self):
         """Support keys() on publishers"""

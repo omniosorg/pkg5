@@ -37,7 +37,6 @@ import pkg.client.image as image
 import pkg.config as cfg
 import pkg.misc as misc
 import shutil
-import six
 import unittest
 
 
@@ -243,7 +242,7 @@ class TestPkgImageCreateBasics(pkg5unittest.ManyDepotTestCase):
         )
         pub = img.get_publisher(prefix=prefix)
         for section in pub_cfg:
-            for prop, val in six.iteritems(pub_cfg[section]):
+            for prop, val in pub_cfg[section].items():
                 if section == "publisher":
                     pub_val = getattr(pub, prop)
                 else:

@@ -44,7 +44,6 @@ import hashlib
 import os
 import pycurl
 import shutil
-import six
 import tempfile
 import time
 import uuid
@@ -2135,7 +2134,7 @@ pkg unset-publisher {0}
                 for t, sentry in spart.tuple_entries(pubs=[self.prefix]):
                     pub, stem, ver = t
 
-                    entry = dict(six.iteritems(sentry))
+                    entry = dict(sentry.items())
                     try:
                         npart.add(
                             metadata=entry,
@@ -3359,7 +3358,7 @@ pkg unset-publisher {0}
         certs_with_problems = []
 
         ca_dict = copy.copy(ca_dict)
-        for k, v in six.iteritems(self.get_ca_certs()):
+        for k, v in self.get_ca_certs().items():
             if k in ca_dict:
                 ca_dict[k].extend(v)
             else:
@@ -3647,7 +3646,7 @@ pkg unset-publisher {0}
 
     def __prop_iteritems(self):
         """Support iteritems on properties"""
-        return six.iteritems(self.__properties)
+        return self.__properties.items()
 
     def __prop_keys(self):
         """Support keys() on properties"""
@@ -3676,8 +3675,8 @@ pkg unset-publisher {0}
         # The logic in __set_prop requires that the item with key
         # 'SIGNATURE_POLICY' comes before the item with key
         # 'signature-required-names'.
-        od = collections.OrderedDict(sorted(six.iteritems(d)))
-        for k, v in six.iteritems(od):
+        od = collections.OrderedDict(sorted(d.items()))
+        for k, v in od.items():
             # Must iterate through each value and
             # set it this way so that the logic
             # in __set_prop is used.

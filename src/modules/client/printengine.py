@@ -38,8 +38,6 @@ import termios
 import time
 from abc import ABCMeta, abstractmethod
 
-import six
-
 from pkg.misc import PipeError, force_str
 
 
@@ -50,7 +48,7 @@ class PrintEngineException(Exception):
         return "PrintEngineException: {0}".format(" ".join(self.args))
 
 
-class PrintEngine(six.with_metaclass(ABCMeta, object)):
+class PrintEngine(object, metaclass=ABCMeta):
     """Abstract class defining what a PrintEngine must know how to do."""
 
     def __init__(self):

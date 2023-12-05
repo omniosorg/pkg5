@@ -28,7 +28,6 @@
 import os
 import sys
 import types
-import six
 import subprocess
 import pkg.portable
 
@@ -291,7 +290,7 @@ class Popen(subprocess.Popen):
             # The bundled subprocess module takes a dict in
             # the "env" argument.  Allow that here by doing
             # the explicit conversion to a list.
-            env = ["{0}={1}".format(k, v) for k, v in six.iteritems(env)]
+            env = ["{0}={1}".format(k, v) for k, v in env.items()]
 
         self.pid = posix_spawnp(executable, args, sfa, env)
         self._child_created = True

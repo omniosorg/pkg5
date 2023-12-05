@@ -27,7 +27,6 @@ import os
 import platform
 import shlex
 import signal
-import six
 import ssl
 import sys
 import time
@@ -380,7 +379,7 @@ class DepotController(object):
         if self.__nasty_sleep:
             args.append("--nasty-sleep {0:d}".format(self.__nasty_sleep))
         for section in self.__props:
-            for prop, val in six.iteritems(self.__props[section]):
+            for prop, val in self.__props[section].items():
                 args.append(
                     "--set-property={0}.{1}='{2}'".format(section, prop, val)
                 )

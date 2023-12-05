@@ -37,7 +37,6 @@ try:
     os.SEEK_SET
 except AttributeError:
     os.SEEK_SET, os.SEEK_CUR, os.SEEK_END = range(3)
-import six
 import stat
 import types
 from io import BytesIO
@@ -144,9 +143,7 @@ class NSG(type):
         return pkg.actions.fromstr(state)
 
 
-# metaclass-assignment; pylint: disable=W1623
-@six.add_metaclass(NSG)
-class Action(object):
+class Action(object, metaclass=NSG):
     """Class representing a generic packaging object.
 
     An Action is a very simple wrapper around two dictionaries: a named set

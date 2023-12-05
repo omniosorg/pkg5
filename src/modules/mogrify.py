@@ -27,7 +27,6 @@
 import os
 import re
 import shlex
-import six
 import sys
 
 import pkg.actions
@@ -567,7 +566,7 @@ def apply_transforms(
         s = transform[11 : transform.index("->")]
         # Map each pattern to its position in the original match string.
         matchorder = {}
-        for attr, match in six.iteritems(attrdict):
+        for attr, match in attrdict.items():
             # Attributes might be quoted even if they don't need it,
             # and lead to a mis-match.  These three patterns are all
             # safe to try.  If we fail to find the match expression,

@@ -24,8 +24,6 @@
 # Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
-import six
-
 
 class Singleton(type):
     """Set __metaclass__ to Singleton to create a singleton.
@@ -42,7 +40,7 @@ class Singleton(type):
         return self.instance
 
 
-class DebugValues(six.with_metaclass(Singleton, dict)):
+class DebugValues(dict, metaclass=Singleton):
     """Singleton dict that returns None if unknown value
     is referenced"""
 

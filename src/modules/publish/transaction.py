@@ -30,7 +30,6 @@ though the other classes can be referred to for documentation purposes."""
 
 import os
 import shutil
-import six
 from urllib.parse import quote, unquote, urlparse, urlunparse
 import tempfile
 
@@ -552,12 +551,12 @@ class TransportTransaction(object):
 
             self.__uploads[fname] = (elf_attrs, csize, chashes)
 
-        for k, v in six.iteritems(elf_attrs):
+        for k, v in elf_attrs.items():
             if isinstance(v, list):
                 action.attrs[k] = v + action.attrlist(k)
             else:
                 action.attrs[k] = v
-        for k, v in six.iteritems(chashes):
+        for k, v in chashes.items():
             if k == "pkg.content-hash":
                 action.attrs[k] = action.attrlist(k) + [v]
             else:

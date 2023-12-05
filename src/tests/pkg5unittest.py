@@ -52,7 +52,6 @@ import os
 import pprint
 import shutil
 import signal
-import six
 import stat
 import subprocess
 import sys
@@ -577,7 +576,7 @@ if __name__ == "__main__":
             ins = " [+{0:d} lines...]".format(len(lines) - 1)
         else:
             ins = ""
-        if isinstance(lines[0], six.text_type):
+        if isinstance(lines[0], str):
             lines[0] = lines[0].encode("utf-8")
         self.debugcmd("echo '{0}{1}' > {2}".format(lines[0], ins, path))
 
@@ -3705,7 +3704,7 @@ class CliTestCase(Pkg5TestCase):
         dc.set_port(port)
 
         for section in properties:
-            for prop, val in six.iteritems(properties[section]):
+            for prop, val in properties[section].items():
                 dc.set_property(section, prop, val)
         if refresh_index:
             dc.set_refresh_index()

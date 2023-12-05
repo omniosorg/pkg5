@@ -24,7 +24,7 @@
 # Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
-import six.moves.cPickle as pickle
+import pickle
 import datetime
 import fileinput
 import GeoIP

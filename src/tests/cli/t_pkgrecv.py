@@ -32,7 +32,6 @@ if __name__ == "__main__":
 import pkg5unittest
 
 import os
-import six
 import pkg.catalog as catalog
 import pkg.config as cfg
 import pkg.client.pkgdefs as pkgdefs
@@ -277,14 +276,14 @@ class TestPkgrecvMulti(pkg5unittest.ManyDepotTestCase):
         xformpaths = dict(
             (
                 (name, os.path.join(self.test_root, "transform_{0}".format(i)))
-                for i, name in enumerate(six.iterkeys(self.transforms))
+                for i, name in enumerate(self.transforms.keys())
             )
         )
 
         # Now that we have path names, we can use the expandos in the
         # transform contents to embed those pathnames, and write the
         # transform files out.
-        for name, path in six.iteritems(xformpaths):
+        for name, path in xformpaths.items():
             f = open(path, "w")
             self.transforms[name] = self.transforms[name].format(**xformpaths)
             f.write(self.transforms[name])

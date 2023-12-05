@@ -54,7 +54,6 @@ import errno
 import os
 import re
 import shlex
-import six
 import stat
 import subprocess
 import tempfile
@@ -934,7 +933,7 @@ class PropertySection(object):
         name."""
         return dict(
             (pname, p.value)
-            for pname, p in six.iteritems(self.__properties)
+            for pname, p in self.__properties.items()
             if hasattr(p, "value")
         )
 
@@ -948,7 +947,7 @@ class PropertySection(object):
 
     def get_properties(self):
         """Returns a generator that yields the list of property objects."""
-        return six.itervalues(self.__properties)
+        return self.__properties.values()
 
     def remove_property(self, name):
         """Removes any matching property object from the section."""
@@ -1186,8 +1185,8 @@ class Config(object):
             list(map(secobj.remove_property, elide))
             self.add_section(secobj)
 
-        for sname, props in six.iteritems(overrides):
-            for pname, val in six.iteritems(props):
+        for sname, props in overrides.items():
+            for pname, val in props.items():
                 self.set_property(sname, pname, val)
 
     def add_property_value(self, section, name, value):
@@ -1276,7 +1275,7 @@ class Config(object):
     def get_sections(self):
         """Returns a generator that yields the list of property section
         objects."""
-        return six.itervalues(self.__sections)
+        return self.__sections.values()
 
     def remove_property(self, section, name):
         """Remove the property object matching the given section and
@@ -1397,9 +1396,9 @@ class Config(object):
         # Dict is in arbitrary order, sort it first to ensure the
         # order is same in Python 2 and 3.
         properties = OrderedDict(sorted(properties.items()))
-        for section, props in six.iteritems(properties):
+        for section, props in properties.items():
             props = OrderedDict(sorted(props.items()))
-            for pname, pval in six.iteritems(props):
+            for pname, pval in props.items():
                 self.set_property(section, pname, pval)
 
     @property
@@ -1848,11 +1847,11 @@ class SMFConfig(Config):
 
         # shlex.split() automatically does escaping for a list of values
         # so no need to do it here.
-        for section, props in six.iteritems(cfgdata):
+        for section, props in cfgdata.items():
             if section == "CONFIGURATION":
                 # Reserved for configuration file management.
                 continue
-            for prop, value in six.iteritems(props):
+            for prop, value in props.items():
                 if section in overrides and prop in overrides[section]:
                     continue
 

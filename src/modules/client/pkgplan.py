@@ -29,7 +29,6 @@ import grp
 import itertools
 import os
 import pwd
-import six
 import stat
 
 import pkg.actions
@@ -474,7 +473,7 @@ class PkgPlan(object):
         entry).  Where 'entry' is a dict containing the license status
         information."""
 
-        for lic, entry in six.iteritems(self._license_status):
+        for lic, entry in self._license_status.items():
             yield lic, entry
 
     def set_license_status(self, plicense, accepted=None, displayed=None):

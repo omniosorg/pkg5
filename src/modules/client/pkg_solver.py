@@ -32,12 +32,7 @@ import operator
 import time
 
 from collections import defaultdict
-
 from functools import reduce
-
-import six
-
-# Imports from package six are not grouped: pylint: disable=C0412
 from itertools import chain
 
 import pkg.actions
@@ -583,7 +578,7 @@ class PkgSolver(object):
                 break
 
         # Remove trimmed items from possible_set.
-        possible.difference_update(six.iterkeys(self.__trim_dict))
+        possible.difference_update(self.__trim_dict.keys())
 
     def __enforce_unique_packages(self, excludes):
         """Constrain the solver solution so that only one version of
@@ -1255,7 +1250,7 @@ class PkgSolver(object):
 
         self.__start_subphase(10)
         # remove all trimmed fmris from consideration
-        possible_set.difference_update(six.iterkeys(self.__trim_dict))
+        possible_set.difference_update(self.__trim_dict.keys())
         # remove any versions from proposed_dict that are in trim_dict
         # as trim dict has been updated w/ missing dependencies
         try:
@@ -1442,7 +1437,7 @@ class PkgSolver(object):
         self.__start_subphase(4)
 
         # remove all trimmed fmris from consideration
-        possible_set.difference_update(six.iterkeys(self.__trim_dict))
+        possible_set.difference_update(self.__trim_dict.keys())
 
         #
         # Generate ids, possible_dict for clause generation.  Prepare
@@ -1765,7 +1760,7 @@ class PkgSolver(object):
 
         # assign clause numbers (ids) to possible pkgs
         pkgid = 1
-        for name in sorted(six.iterkeys(self.__possible_dict)):
+        for name in sorted(self.__possible_dict.keys()):
             for fmri in reversed(self.__possible_dict[name]):
                 self.__id2fmri[pkgid] = fmri
                 self.__fmri2id[fmri] = pkgid
@@ -2761,7 +2756,7 @@ class PkgSolver(object):
         assert DebugValues["plan"]
 
         return self.__fmri_list_errors(
-            six.iterkeys(self.__trim_dict), already_seen=set(), verbose=True
+            self.__trim_dict.keys(), already_seen=set(), verbose=True
         )
 
     def __check_installed(self):
@@ -3270,7 +3265,7 @@ class PkgSolver(object):
         relaxed_holds |= set(
             [
                 hold
-                for hold in six.itervalues(install_holds)
+                for hold in install_holds.values()
                 if [r for r in relaxed_holds if hold.startswith(r + ".")]
             ]
         )
@@ -3300,7 +3295,7 @@ class PkgSolver(object):
         versioned_dependents -= set(
             [
                 pkg_name
-                for pkg_name, hold_value in six.iteritems(install_holds)
+                for pkg_name, hold_value in install_holds.items()
                 if hold_value not in relaxed_holds
             ]
         )
@@ -3710,9 +3705,9 @@ class PkgSolver(object):
         # - upgrades of packages that are no longer incorporated
         #   in a newer version of an incorporating package and a newer
         #   version is otherwise allowed
-        for matchdg, nonmatchdg in six.itervalues(
-            self.__get_incorp_nonmatch_dict(fmri, excludes)
-        ):
+        for matchdg, nonmatchdg in self.__get_incorp_nonmatch_dict(
+            fmri, excludes
+        ).values():
             match = next(iter(matchdg), None)
             if not match or match.pkg_name not in self.__installed_dict:
                 continue

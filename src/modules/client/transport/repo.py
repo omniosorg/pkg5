@@ -31,7 +31,6 @@ import io
 import itertools
 import os
 import shutil
-import six
 import sys
 import tempfile
 
@@ -518,13 +517,8 @@ class HTTPRepo(TransportRepo):
                 exc_type, exc_value, exc_tb = sys.exc_info()
                 try:
                     e.details = self._parse_html_error(fobj.read())
-                # six.reraise requires the first argument
-                # callable if the second argument is None.
-                # Also the traceback is automatically attached,
-                # in Python 3, so we can simply raise it.
                 except:
-                    # If parse fails, raise original
-                    # exception.
+                    # If parse fails, raise original exception.
                     raise exc_value
             raise
         finally:
@@ -1249,7 +1243,7 @@ class HTTPRepo(TransportRepo):
             csize = resp.getheader("Content-Length", None)
             chashes = dict(
                 val.split("=", 1)
-                for hdr, val in six.iteritems(resp.headers)
+                for hdr, val in resp.headers.items()
                 if hdr.lower().startswith("x-ipkg-attr")
             )
             return (csize, chashes)
@@ -1966,7 +1960,7 @@ class _FilesystemRepo(TransportRepo):
         buf.write(
             "\n".join(
                 "{0} {1}".format(op, " ".join(vers))
-                for op, vers in six.iteritems(vops)
+                for op, vers in vops.items()
             )
             + "\n"
         )
@@ -2594,7 +2588,7 @@ class _ArchiveRepo(TransportRepo):
         buf.write(
             "\n".join(
                 "{0} {1}".format(op, " ".join(vers))
-                for op, vers in six.iteritems(vops)
+                for op, vers in vops.items()
             )
             + "\n"
         )
