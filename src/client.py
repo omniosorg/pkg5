@@ -1085,9 +1085,11 @@ WARNING: The boot environment being modified is not the active one.
     if not verbose and r and op in [PKG_OP_INSTALL, PKG_OP_UPDATE]:
         logger.info(_("\nRemoved Packages:\n"))
         removals = [src.pkg_stem for src, dest in r]
-        if len(r) <= 5:
+        if len(r) <= 7:
             logger.info("  " + "\n  ".join(removals))
         else:
+            # Display 7 lines at maximum, which is the first 5 removed
+            # packages and two additional lines below.
             logger.info("  " + "\n  ".join(removals[:5]))
             logger.info("  ...")
             logger.info(
@@ -4048,16 +4050,15 @@ def unavoid(api_inst, args):
 def __display_avoids(api_inst):
     """Display the current avoid list, and the pkgs that are tracking
     that pkg"""
-    for a in api_inst.get_avoid_list():
+    for avoid, tracking in sorted(api_inst.get_avoid_list()):
         tracking = " ".join(a[1])
         if tracking:
             logger.info(
-                _(
-                    "    {avoid_pkg} (group dependency of " "'{tracking_pkg}')"
-                ).format(avoid_pkg=a[0], tracking_pkg=tracking)
+                "    {avoid_pkg} (group dependency of '{tracking_pkg}')")
+               .format(avoid_pkg=avoid, tracking_pkg=" ".join(tracking)))
             )
         else:
-            logger.info("    {0}".format(a[0]))
+            logger.info("    {0}".format(avoid))
 
     return EXIT_OK
 

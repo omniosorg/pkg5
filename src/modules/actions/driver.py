@@ -120,7 +120,7 @@ class DriverAction(generic.Action):
     @staticmethod
     def __call(args, fmt, fmtargs):
         proc = subprocess.Popen(
-            args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+            args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
         )
         buf = proc.stdout.read()
         ret = proc.wait()
@@ -134,7 +134,9 @@ class DriverAction(generic.Action):
             print(("command run was:"), " ".join(args))
             print("command output was:")
             print("-" * 60)
-            print(buf, end=" ")
+            if not buf.endswith("\n"):
+                buf += "\n"
+            print(buf, end="")
             print("-" * 60)
 
     @staticmethod
