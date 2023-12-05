@@ -722,10 +722,7 @@ class PropSimpleList(PropList):
             value = value.split(",")
         for v in value:
             try:
-                if six.PY2:
-                    v = v.encode("ascii")
-                else:
-                    v = misc.force_str(v)
+                v = misc.force_str(v)
             except ValueError:
                 if not isinstance(v, six.text_type):
                     try:
@@ -1518,16 +1515,11 @@ class FileConfig(Config):
                 raise
         else:
             try:
-                # readfp() will be removed in futher Python
-                # versions, use read_file() instead.
-                if six.PY2:
-                    cp.readfp(efile)
-                else:
-                    cp.read_file(efile)
+                cp.read_file(efile)
             except (
                 configparser.ParsingError,
                 configparser.MissingSectionHeaderError,
-            ) as e:
+            ):
                 raise api_errors.InvalidConfigFile(self._target)
             # Attempt to determine version from contents.
             try:
@@ -1644,14 +1636,8 @@ class FileConfig(Config):
             else:
                 os.fchmod(fd, misc.PKG_FILE_MODE)
 
-            if six.PY2:
-                with os.fdopen(fd, "wb") as f:
-                    with codecs.EncodedFile(f, "utf-8") as ef:
-                        cp.write(ef)
-            else:
-                # it becomes easier to open the file
-                with open(fd, "w", encoding="utf-8") as f:
-                    cp.write(f)
+            with open(fd, "w", encoding="utf-8") as f:
+                cp.write(f)
             portable.rename(fn, self._target)
             self._dirty = False
         except EnvironmentError as e:
@@ -1885,10 +1871,7 @@ class SMFConfig(Config):
                     nvalue = []
                     for v in shlex.split(value):
                         try:
-                            if six.PY2:
-                                v = v.encode("ascii")
-                            else:
-                                v = misc.force_str(v, "ascii")
+                            v = misc.force_str(v, "ascii")
                         except ValueError:
                             try:
                                 v = v.decode("utf-8")
