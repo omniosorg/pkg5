@@ -64,6 +64,10 @@ packages: install
 
 test: install .WAIT $(PYTESTS) $(TESTRESULTS)
 
+fmt: FRC
+	python$(PYVER) -mpip install --quiet --user --upgrade black
+	$(HOME)/.local/bin/black --config $(CODE_WS)/.black $(CODE_WS)/src
+
 $(SUBDIRS) cffi_src: FRC
 	@cd $@; pwd; $(MAKE) $(TARGET) CC=$(CC)
 
