@@ -28,7 +28,6 @@ import copy
 import errno
 import os
 import shutil
-import six
 import sys
 import traceback
 import xml.dom.minidom as xmini
@@ -383,18 +382,6 @@ class History(object):
         # of just referencing self to avoid any of the special logic in
         # place interfering with logic here.
         if name == "operation_name":
-            # Before a new operation starts, clear exception state
-            # for the current one so that when this one ends, the
-            # last operation's exception won't be recorded to this
-            # one.  If the error hasn't been recorded by now, it
-            # doesn't matter anyway, so should be safe to clear.
-            # sys.exc_clear() isn't supported in Python 3, and
-            # couldn't find a replacement.
-            try:
-                sys.exc_clear()
-            except:
-                pass
-
             # Mark the operation as having started and record
             # other, relevant information.
             op.start_time = misc.time_to_timestamp(None)
@@ -858,7 +845,7 @@ class History(object):
             except (AttributeError, KeyError):
                 # Failing an exact match, determine if this
                 # error is a subclass of an existing one.
-                for entry, val in six.iteritems(error_results):
+                for entry, val in error_results.items():
                     if isinstance(error, entry):
                         result = val
                         break
@@ -894,7 +881,7 @@ class History(object):
                     output = traceback.format_exc()
                     use_current_stack = False
 
-            if isinstance(error, six.string_types):
+            if isinstance(error, str):
                 output = error
             elif use_current_stack:
                 # Assume the current stack is more useful if
@@ -947,7 +934,7 @@ class History(object):
         if not self.__snapshot:
             return
 
-        for name, val in six.iteritems(self.__snapshot):
+        for name, val in self.__snapshot.items():
             if not name.startswith("__"):
                 object.__setattr__(self, name, val)
         self.__operations = self.__snapshot["__operations"]

@@ -32,12 +32,11 @@ import pkg5unittest
 import copy
 import os
 import shutil
-import six
 import tempfile
 import time
 import unittest
-from six.moves.urllib.error import HTTPError
-from six.moves.urllib.request import urlopen
+from urllib.error import HTTPError
+from urllib.request import urlopen
 
 import pkg.client.api as api
 import pkg.client.api_errors as api_errors
@@ -3878,7 +3877,7 @@ class TestApiSearchMulti(pkg5unittest.ManyDepotTestCase):
             # appear in the log file. This test intermittently
             # fails as a result. Just check for at least one
             # UUID in the log.
-            if six.PY3 and num_expected[d] > 0 and found > 0:
+            if num_expected[d] > 0 and found > 0:
                 pass
             elif found != num_expected[d]:
                 raise RuntimeError(

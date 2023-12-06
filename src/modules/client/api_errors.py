@@ -28,10 +28,9 @@
 import errno
 import operator
 import os
-import six
 import xml.parsers.expat as expat
 from functools import total_ordering
-from six.moves.urllib.parse import urlsplit
+from urllib.parse import urlsplit
 
 # pkg classes
 import pkg.client.pkgdefs as pkgdefs
@@ -736,7 +735,7 @@ for the current image's architecture, zone type, and/or other variant:"""
 
         if self.invalid_mediations:
             s = _("The following mediations are not syntactically " "valid:")
-            for m, entries in six.iteritems(self.invalid_mediations):
+            for m, entries in self.invalid_mediations.items():
                 for value, error in entries.values():
                     res.append(error)
 
@@ -963,7 +962,7 @@ class InconsistentActionTypeError(ConflictingActionError):
                 "The following packages deliver conflicting "
                 "action types to {0}:\n"
             ).format(kv)
-            for name, pl in six.iteritems(ad):
+            for name, pl in ad.items():
                 s += "\n  {0}:".format(name)
                 s += "".join("\n    {0}".format(p) for p in pl)
             s += _(
@@ -1001,7 +1000,7 @@ class InconsistentActionAttributeError(ConflictingActionError):
         def ou(action):
             ua = dict(
                 (k, v)
-                for k, v in six.iteritems(action.attrs)
+                for k, v in action.attrs.items()
                 if (
                     (
                         k in action.unique_attrs
@@ -1021,10 +1020,7 @@ class InconsistentActionAttributeError(ConflictingActionError):
             if a[0].attrs.get("implicit", "false") == "false":
                 d.setdefault(str(ou(a[0])), set()).add(a[1])
         l = sorted(
-            [
-                (len(pkglist), action, pkglist)
-                for action, pkglist in six.iteritems(d)
-            ]
+            [(len(pkglist), action, pkglist) for action, pkglist in d.items()]
         )
 
         s = _(
@@ -2452,7 +2448,7 @@ class UnsupportedRepositoryURI(PublisherError):
     unsupported scheme."""
 
     def __init__(self, uris=[]):
-        if isinstance(uris, six.string_types):
+        if isinstance(uris, str):
             uris = [uris]
 
         assert isinstance(uris, (list, tuple, set))
@@ -2463,7 +2459,7 @@ class UnsupportedRepositoryURI(PublisherError):
         illegals = []
 
         for u in self.uris:
-            assert isinstance(u, six.string_types)
+            assert isinstance(u, str)
             scheme = urlsplit(u, allow_fragments=0)[0]
             illegals.append((u, scheme))
 

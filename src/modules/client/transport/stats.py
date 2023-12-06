@@ -29,7 +29,7 @@ from __future__ import division
 import os
 import datetime
 import random
-from six.moves.urllib.parse import urlsplit
+from urllib.parse import urlsplit
 import pkg.misc as misc
 
 

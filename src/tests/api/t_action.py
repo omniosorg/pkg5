@@ -30,7 +30,6 @@ if __name__ == "__main__":
     testutils.setup_environment("../../../proto")
 import pkg5unittest
 
-import six
 import sys
 import unittest
 import pkg.actions as action
@@ -346,7 +345,7 @@ Incorrect attribute list.
         }
 
         astr = "file {0} path=usr/bin/foo mode=0755 owner=root group=bin"
-        for k, v in six.iteritems(d):
+        for k, v in d.items():
             a = action.fromstr(astr.format(k))
             self.assertTrue(action.fromstr(str(a)) == a)
             self.assertTrue(a.hash == v)
@@ -523,14 +522,10 @@ Incorrect attribute list.
         # Missing key attribute 'fmri'.
         self.assertInvalid("depend type=require")
 
-        # XXX Fails in Python 3.4 due to module import issue; see
-        # set_invalid_action_error in actions/_common.c.
-        if six.PY2:
-            # Multiple values not allowed for 'fmri' if 'type' is
-            # multi-valued.
-            self.assertInvalid(
-                "depend type=require " "type=require-any fmri=foo fmri=bar"
-            )
+        # Multiple values not allowed for 'fmri' if 'type' is multi-valued.
+        self.assertInvalid(
+            "depend type=require type=require-any fmri=foo fmri=bar"
+        )
 
         # 'path' attribute specified multiple times
         self.assertInvalid(
@@ -724,7 +719,7 @@ Incorrect attribute list.
                 "mediator-implementation": "svr4",
                 "mediator-priority": "site",
             }
-            for prop, val in six.iteritems(props):
+            for prop, val in props.items():
                 nact = (
                     "{0} path=usr/bin/vi "
                     "target=../sunos/bin/edit {1}={2}".format(aname, prop, val)
@@ -733,7 +728,7 @@ Incorrect attribute list.
 
             # Action with multiple values for any property is
             # invalid.
-            for prop, val in six.iteritems(props):
+            for prop, val in props.items():
                 nact = (
                     "{0} path=usr/bin/vi "
                     "target=../sunos/bin/edit mediator=vi "

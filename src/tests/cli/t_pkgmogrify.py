@@ -33,7 +33,6 @@ import errno
 import os
 import re
 import shutil
-import six
 import stat
 import sys
 import tempfile
@@ -169,14 +168,14 @@ file NOHASH path=kernel/drv/common2 reboot-needed=true
         xformpaths = dict(
             (
                 (name, os.path.join(self.test_root, "transform_{0}".format(i)))
-                for i, name in enumerate(six.iterkeys(self.transforms))
+                for i, name in enumerate(self.transforms.keys())
             )
         )
 
         # Now that we have path names, we can use the expandos in the
         # transform contents to embed those pathnames, and write the
         # transform files out.
-        for name, path in six.iteritems(xformpaths):
+        for name, path in xformpaths.items():
             with open(path, "w") as f:
                 self.transforms[name] = self.transforms[name].format(
                     **xformpaths
@@ -199,7 +198,7 @@ file NOHASH path=kernel/drv/common2 reboot-needed=true
             defines = self.basic_defines
 
         defines = " ".join(
-            ["-D {0}={1}".format(k, v) for k, v in six.iteritems(defines)]
+            ["-D {0}={1}".format(k, v) for k, v in defines.items()]
         )
 
         sources = " ".join(sources)

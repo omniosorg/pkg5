@@ -25,7 +25,6 @@
 #
 
 import hashlib
-import six
 
 try:
     import pkg.sha512_t
@@ -247,7 +246,7 @@ class ContentHash(dict):
     def __init__(self, vals):
         dict.__init__(self)
 
-        if isinstance(vals, six.string_types):
+        if isinstance(vals, str):
             vals = (vals,)
 
         for v in vals:

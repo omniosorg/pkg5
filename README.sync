@@ -4,11 +4,12 @@
 The pkg5 components have been updated to the latest upstream solaris-ips
 as of:
 
-commit c5674fc26b31cd234007b090c451aa4ea0e0a668
+commit fc93022c19a68dae3db7613ff1860e6371fe85bc
 Author: Jakub Kulik <jakub.kulik@oracle.com>
-Date:   Fri Oct 20 06:43:37 2023 -0700
+Date:   Tue Dec 5 00:40:48 2023 -0800
 
-    34044891 pkg verify is outputting ELF error that makes no sense
+    36066495 remove all trivial use of six library from pkg(7) and related
+	     tools
 
 -----------------------------------------------------------------------------
 

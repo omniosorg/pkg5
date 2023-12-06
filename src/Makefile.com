@@ -24,7 +24,7 @@ ROOTUSRLIB = $(ROOT)/usr/lib
 ROOTBRAND = $(ROOTUSRLIB)/brand
 ROOTPKGLIB = $(ROOTUSRLIB)/pkg
 
-CC = /usr/bin/gcc-12
+CC = /usr/bin/gcc-13
 CFLAGS = -m64 -Wall -Werror -Wextra -gdwarf-2 -gstrict-dwarf \
 	-fno-aggressive-loop-optimizations
 CPPFLAGS = -D_REENTRANT -D_POSIX_PTHREAD_SEMANTICS

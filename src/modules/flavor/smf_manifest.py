@@ -25,7 +25,6 @@
 #
 
 import os.path
-import six
 import xml.dom.minidom as minidom
 import xml.parsers
 import xml.parsers.expat
@@ -51,7 +50,7 @@ class SMFManifestDependency(base.PublishingDependency):
         """See __init__ for PublishingDependency."""
         self.manifest = path
         full_paths = None
-        if isinstance(path, six.string_types):
+        if isinstance(path, str):
             base_names = [os.path.basename(path)]
             paths = [os.path.dirname(path)]
 

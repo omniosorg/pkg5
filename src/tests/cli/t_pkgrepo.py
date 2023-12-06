@@ -45,7 +45,6 @@ import pkg.server.repository as sr
 import pkg.client.api_errors as apx
 import pkg.p5p
 import shutil
-import six
 import subprocess
 import tempfile
 import time

@@ -24,7 +24,6 @@
 # Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 import os.path
-import six
 import sys
 
 import pkg.misc as misc
@@ -60,7 +59,7 @@ class Firmware(object):
         args.extend(
             [
                 "{0}={1}".format(k, quote_attr_value(v))
-                for k, v in sorted(six.iteritems(dep_action.attrs))
+                for k, v in sorted(dep_action.attrs.items())
                 if k not in ["type", "root-image", "fmri"]
             ]
         )

@@ -30,10 +30,8 @@ This module contains the DriverAction class, which represents a driver-type
 packaging object.
 """
 
-from __future__ import print_function
 import os
 from . import generic
-import six
 
 from tempfile import mkstemp
 
@@ -120,7 +118,7 @@ class DriverAction(generic.Action):
     @staticmethod
     def __call(args, fmt, fmtargs):
         proc = subprocess.Popen(
-            args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+            args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
         )
         buf = proc.stdout.read()
         ret = proc.wait()
@@ -134,7 +132,9 @@ class DriverAction(generic.Action):
             print(("command run was:"), " ".join(args))
             print("command output was:")
             print("-" * 60)
-            print(buf, end=" ")
+            if not buf.endswith("\n"):
+                buf += "\n"
+            print(buf, end="")
             print("-" * 60)
 
     @staticmethod
@@ -225,14 +225,14 @@ class DriverAction(generic.Action):
             a2d = {}
             for alias, name in (
                 (a, n)
-                for n, act_list in six.iteritems(driver_actions)
+                for n, act_list in driver_actions.items()
                 for act in act_list
                 for a in act.attrlist("alias")
             ):
                 a2d.setdefault(alias, set()).add(name)
 
             # Enhance that mapping with data from driver_aliases.
-            for name, aliases in six.iteritems(file_db):
+            for name, aliases in file_db.items():
                 for alias in aliases:
                     a2d.setdefault(alias, set()).add(name)
 

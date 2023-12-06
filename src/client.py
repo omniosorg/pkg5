@@ -74,7 +74,6 @@ try:
     import logging
     import os
     import re
-    import six
     import socket
     import sys
     import tempfile
@@ -84,7 +83,7 @@ try:
     import pycurl
     import atexit
     import shutil
-    from six.moves.urllib.parse import urlparse, unquote
+    from urllib.parse import urlparse, unquote
 
     import pkg
     import pkg.actions as actions
@@ -151,7 +150,7 @@ valid_special_prefixes = ["action."]
 all_formats = ("default", "json", "tsv")
 
 default_attrs = {}
-for atype, aclass in six.iteritems(actions.types):
+for atype, aclass in actions.types.items():
     default_attrs[atype] = [aclass.key_attr]
     if atype == "depend":
         default_attrs[atype].insert(0, "type")
@@ -204,7 +203,7 @@ def format_update_error(e):
 def error(text, cmd=None):
     """Emit an error message prefixed by the command name"""
 
-    if not isinstance(text, six.string_types):
+    if not isinstance(text, str):
         # Assume it's an object that can be stringified.
         text = str(text)
 
@@ -1085,9 +1084,11 @@ WARNING: The boot environment being modified is not the active one.
     if not verbose and r and op in [PKG_OP_INSTALL, PKG_OP_UPDATE]:
         logger.info(_("\nRemoved Packages:\n"))
         removals = [src.pkg_stem for src, dest in r]
-        if len(r) <= 5:
+        if len(r) <= 7:
             logger.info("  " + "\n  ".join(removals))
         else:
+            # Display 7 lines at maximum, which is the first 5 removed
+            # packages and two additional lines below.
             logger.info("  " + "\n  ".join(removals[:5]))
             logger.info("  ...")
             logger.info(
@@ -1996,10 +1997,7 @@ def __api_execute_plan(operation, api_inst):
                 raise
 
         if exc_value or exc_tb:
-            if six.PY2:
-                six.reraise(exc_value, None, exc_tb)
-            else:
-                raise exc_value
+            raise exc_value
 
     return rval
 
@@ -3696,7 +3694,7 @@ def list_mediators(
         # Configured mediator information
         gen_mediators = (
             (mediator, mediation)
-            for mediator, mediation in six.iteritems(api_inst.mediators)
+            for mediator, mediation in api_inst.mediators.items()
         )
 
     # Set minimum widths for mediator and version columns by using the
@@ -4048,16 +4046,15 @@ def unavoid(api_inst, args):
 def __display_avoids(api_inst):
     """Display the current avoid list, and the pkgs that are tracking
     that pkg"""
-    for a in api_inst.get_avoid_list():
-        tracking = " ".join(a[1])
+    for avoid, tracking in sorted(api_inst.get_avoid_list()):
         if tracking:
             logger.info(
                 _(
-                    "    {avoid_pkg} (group dependency of " "'{tracking_pkg}')"
-                ).format(avoid_pkg=a[0], tracking_pkg=tracking)
+                    "    {avoid_pkg} (group dependency of '{tracking_pkg}')"
+                ).format(avoid_pkg=avoid, tracking_pkg=" ".join(tracking))
             )
         else:
-            logger.info("    {0}".format(a[0]))
+            logger.info("    {0}".format(avoid))
 
     return EXIT_OK
 
@@ -5676,7 +5673,7 @@ def publisher_list(
 
             if "Properties" not in pub:
                 continue
-            pub_items = sorted(six.iteritems(pub["Properties"]))
+            pub_items = sorted(pub["Properties"].items())
             property_padding = "                      "
             properties_displayed = False
             for k, v in pub_items:
@@ -5685,7 +5682,7 @@ def publisher_list(
                 if not properties_displayed:
                     msg(_("           Properties:"))
                     properties_displayed = True
-                if not isinstance(v, six.string_types):
+                if not isinstance(v, str):
                     v = ", ".join(sorted(v))
                 msg(property_padding, k + " =", str(v))
     return retcode
@@ -8006,9 +8003,8 @@ if __name__ == "__main__":
     import warnings
 
     warnings.simplefilter("error")
-    if six.PY3:
-        # disable ResourceWarning: unclosed file
-        warnings.filterwarnings("ignore", category=ResourceWarning)
+    # disable ResourceWarning: unclosed file
+    warnings.filterwarnings("ignore", category=ResourceWarning)
 
     # Attempt to handle SIGHUP/SIGTERM gracefully.
     import signal

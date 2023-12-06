@@ -28,14 +28,13 @@
 
 import locale
 import os
-import six
 
 import pkg.misc as misc
 import pkg.pkgsubprocess as subprocess
 
 from pkg.client import global_settings
 from pkg.client.debugvalues import DebugValues
-from six.moves.urllib.parse import urlparse
+from urllib.parse import urlparse
 
 logger = global_settings.logger
 
@@ -138,7 +137,7 @@ def check_fmris(attr, fmris, zone=None):
     from the set that is returned and an error message is logged.
     """
 
-    if isinstance(fmris, six.string_types):
+    if isinstance(fmris, str):
         fmris = set([fmris])
     chars = "*?[!^"
     for fmri in fmris.copy():
@@ -207,7 +206,7 @@ def get_prop(fmri, prop, zone=None):
 def enable(fmris, temporary=False, sync_timeout=0, zone=None):
     if not fmris:
         return
-    if isinstance(fmris, six.string_types):
+    if isinstance(fmris, str):
         fmris = (fmris,)
 
     args = [svcadm_path, "enable"]
@@ -224,7 +223,7 @@ def enable(fmris, temporary=False, sync_timeout=0, zone=None):
 def disable(fmris, temporary=False, sync_timeout=0, zone=None):
     if not fmris:
         return
-    if isinstance(fmris, six.string_types):
+    if isinstance(fmris, str):
         fmris = (fmris,)
     args = [svcadm_path, "disable", "-s"]
     #        if sync_timeout > 0:
@@ -238,7 +237,7 @@ def disable(fmris, temporary=False, sync_timeout=0, zone=None):
 def mark(state, fmris, zone=None):
     if not fmris:
         return
-    if isinstance(fmris, six.string_types):
+    if isinstance(fmris, str):
         fmris = (fmris,)
     args = [svcadm_path, "mark", state]
     # fmris could be a list so explicit cast is necessary
@@ -248,7 +247,7 @@ def mark(state, fmris, zone=None):
 def refresh(fmris, sync_timeout=0, zone=None):
     if not fmris:
         return
-    if isinstance(fmris, six.string_types):
+    if isinstance(fmris, str):
         fmris = (fmris,)
     args = [svcadm_path, "refresh"]
     if sync_timeout:
@@ -262,7 +261,7 @@ def refresh(fmris, sync_timeout=0, zone=None):
 def restart(fmris, sync_timeout=0, zone=None):
     if not fmris:
         return
-    if isinstance(fmris, six.string_types):
+    if isinstance(fmris, str):
         fmris = (fmris,)
     args = [svcadm_path, "restart"]
     if sync_timeout:

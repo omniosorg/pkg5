@@ -20,11 +20,11 @@
  */
 
 /*
- * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
- * Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
+ * Copyright (c) 2012, 2023, Oracle and/or its affiliates.
  */
 
 #include <Python.h>
+
 
 /*ARGSUSED*/
 static PyObject *
@@ -77,12 +77,19 @@ _allow_facet(PyObject *self, PyObject *args, PyObject *kwargs)
 
 	while (PyDict_Next(act_attrs, &fpos, &attr, &value)) {
 		const char *as = PyUnicode_AsUTF8(attr);
+		if (as == NULL) {
+			CLEANUP_FREFS;
+			return (NULL);
+		}
 		if (strncmp(as, "facet.", 6) != 0)
 			continue;
 
-		PyObject *facet = PyDict_GetItem(facets, attr);
+		PyObject *facet = PyDict_GetItemWithError(facets, attr);
 		if (facet != NULL) {
 			facet_ret = facet;
+		} else if (PyErr_Occurred()) {
+			CLEANUP_FREFS;
+			return (NULL);
 		} else {
 			Py_ssize_t idx = 0;
 
@@ -92,12 +99,27 @@ _allow_facet(PyObject *self, PyObject *args, PyObject *kwargs)
 			 */
 			for (idx = 0; idx < klen; idx++) {
 				PyObject *key = PyList_GET_ITEM(keylist, idx);
-				PyObject *re = PyDict_GetItem(res, key);
+				PyObject *re = PyDict_GetItemWithError(
+				    res, key);
+				if (re == NULL && PyErr_Occurred()) {
+					CLEANUP_FREFS;
+					return (NULL);
+				}
 				PyObject *match = PyObject_CallMethod(re,
 				    "match", "O", attr);
+				if (match == NULL) {
+					CLEANUP_FREFS;
+					return (NULL);
+				}
+
 				if (match != Py_None) {
-					PyObject *fval = PyDict_GetItem(
+					PyObject *fval =
+					    PyDict_GetItemWithError(
 					    facets, key);
+					if (fval == NULL && PyErr_Occurred()) {
+						CLEANUP_FREFS;
+						return (NULL);
+					}
 
 					Py_DECREF(match);
 
@@ -132,16 +154,25 @@ _allow_facet(PyObject *self, PyObject *args, PyObject *kwargs)
 
 prep_ret:
 		if (facet_ret != NULL) {
-			const char *vs = PyUnicode_AsUTF8(value);
-			if (vs == NULL) {
-				/*
-				 * value is not a string; probably a list, so
-				 * don't allow the action since older clients
-				 * would fail anyway.
-				 */
-				PyErr_Clear();
-				all_ret = Py_False;
-				break;
+			const char *vs = NULL;
+			PyObject *strvalue = PyObject_Str(value);
+			if (strvalue != NULL) {
+				vs = PyUnicode_AsUTF8(strvalue);
+			}
+			if (strvalue == NULL || vs == NULL) {
+				if (PyErr_ExceptionMatches(PyExc_Exception)) {
+					/*
+					 * value is not a string; probably a
+					 * list, so don't allow the action since
+					 * older clients would fail anyway.
+					 */
+					PyErr_Clear();
+					all_ret = Py_False;
+					break;
+				} else {
+					CLEANUP_FREFS;
+					return (NULL);
+				}
 			}
 
 			if (strcmp(vs, "all") == 0) {
@@ -209,24 +240,34 @@ _allow_variant(PyObject *self, PyObject *args, PyObject *kwargs)
 
 	while (PyDict_Next(act_attrs, &pos, &attr, &value)) {
 		const char *as = PyUnicode_AsUTF8(attr);
+		if (as == NULL) {
+			Py_DECREF(act_attrs);
+			return (NULL);
+		}
 		if (strncmp(as, "variant.", 8) == 0) {
 			const char *av = PyUnicode_AsUTF8(value);
-			const char *sysav = NULL;
-			PyObject *sysv = NULL;
-
 			if (av == NULL) {
-				/*
-				 * value is not a string; probably a list, so
-				 * don't allow the action since older clients
-				 * would fail anyway.
-				 */
-				PyErr_Clear();
-				Py_DECREF(act_attrs);
-				Py_RETURN_FALSE;
+				if (PyErr_ExceptionMatches(PyExc_Exception)) {
+					/*
+					 * value is not a string; probably a
+					 * list, so don't allow the action since
+					 * older clients would fail anyway.
+					 */
+					PyErr_Clear();
+					Py_DECREF(act_attrs);
+					Py_RETURN_FALSE;
+				} else {
+					Py_DECREF(act_attrs);
+					return (NULL);
+				}
 			}
 
-			sysv = PyDict_GetItem(vars, attr);
+			PyObject *sysv = PyDict_GetItemWithError(vars, attr);
 			if (sysv == NULL) {
+				if (PyErr_Occurred()) {
+					Py_DECREF(act_attrs);
+					return (NULL);
+				}
 				/*
 				 * If system variant value doesn't exist, then
 				 * allow the action if it is a variant that is
@@ -240,7 +281,11 @@ _allow_variant(PyObject *self, PyObject *args, PyObject *kwargs)
 				continue;
 			}
 
-			sysav = PyUnicode_AsUTF8(sysv);
+			const char *sysav = PyUnicode_AsUTF8(sysv);
+			if (sysav == NULL) {
+				Py_DECREF(act_attrs);
+				return (NULL);
+			}
 			if (strcmp(av, sysav) != 0) {
 				/*
 				 * If system variant value doesn't match action
@@ -277,4 +322,3 @@ PyInit__varcet(void)
 {
 	return (PyModule_Create(&varcetmodule));
 }
-

@@ -61,6 +61,7 @@ file path=$(PYDIRVP)/pkg-0.1-py$(PYVERS).egg-info/dependency_links.txt
 file path=$(PYDIRVP)/pkg-0.1-py$(PYVERS).egg-info/top_level.txt
 file path=$(PYDIRVP)/pkg/__init__.py
 file path=$(PYDIRVP)/pkg/_arch.cpython$(PYPKGVERS).so
+file path=$(PYDIRVP)/pkg/_misc.cpython$(PYPKGVERS).so
 file path=$(PYDIRVP)/pkg/_pspawn.cpython$(PYPKGVERS).so
 file path=$(PYDIRVP)/pkg/_sha512_t.cpython$(PYPKGVERS).so
 file path=$(PYDIRVP)/pkg/_sysattr.cpython$(PYPKGVERS).so

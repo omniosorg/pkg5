@@ -33,15 +33,14 @@
 import cherrypy
 import copy
 import datetime
+import http.client
 import os
 import shutil
-import six
 import time
 import xml.dom.minidom as xmini
 
 from cherrypy.lib.static import serve_file
-from six.moves import http_client
-from six.moves.urllib.parse import quote, unquote, urlparse
+from urllib.parse import quote, unquote, urlparse
 
 import pkg.catalog as catalog
 import pkg.misc as misc
@@ -228,7 +227,7 @@ def get_updates_needed(repo, ts, pub):
         return []
 
     updates = set()
-    for name, mdata in six.iteritems(c.updates):
+    for name, mdata in c.updates.items():
         # The last component of the update name is the locale.
         locale = name.split(".", 2)[2]
 
@@ -330,7 +329,7 @@ def __clear_cache(depot, pub):
             os.remove(pathname)
     except IOError:
         raise cherrypy.HTTPError(
-            http_client.INTERNAL_SERVER_ERROR, "Unable to clear feed cache."
+            http.client.INTERNAL_SERVER_ERROR, "Unable to clear feed cache."
         )
 
 

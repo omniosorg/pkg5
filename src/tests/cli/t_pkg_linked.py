@@ -26,7 +26,6 @@
 #
 
 from __future__ import division
-from __future__ import print_function
 
 from . import testutils
 
@@ -39,7 +38,6 @@ import os
 import itertools
 import re
 import shutil
-import six
 import tempfile
 import unittest
 import sys
@@ -4786,9 +4784,7 @@ class TestLinkedInstallHoldRelax(TestPkgLinked):
 class TestPkgLinkedScale(pkg5unittest.ManyDepotTestCase):
     """Test the scalability of the linked image subsystem."""
 
-    max_image_count = 256
-    if six.PY3:
-        max_image_count = 32
+    max_image_count = 32
 
     p_sync1 = []
     p_vers = [
@@ -5235,7 +5231,7 @@ exit 0""".strip(
         )
         self.__ccmd("cat {0}".format(outfile1))
 
-        for p, v in six.iteritems(props):
+        for p, v in props.items():
             if v is None:
                 # verify property is not present
                 self.__ccmd('grep "^{0}[ 	]" {1}'.format(p, outfile1), rv=1)

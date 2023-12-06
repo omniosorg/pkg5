@@ -25,7 +25,6 @@
 #
 
 import os
-import six
 
 import pkg.bundle
 import pkg.misc as misc
@@ -195,7 +194,7 @@ class SolarisPackageDirBundle(pkg.bundle.Bundle):
 
             if (
                 act.hash == "NOHASH"
-                and isinstance(data, six.string_types)
+                and isinstance(data, str)
                 and data.startswith(self.filename)
             ):
                 act.hash = data[len(self.filename) + 1 :]
@@ -218,7 +217,7 @@ class SolarisPackageDirBundle(pkg.bundle.Bundle):
             )
             if (
                 act.hash == "NOHASH"
-                and isinstance(data, six.string_types)
+                and isinstance(data, str)
                 and data.startswith(self.filename)
             ):
                 act.hash = data[len(self.filename) + 1 :]

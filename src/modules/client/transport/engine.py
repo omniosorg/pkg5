@@ -28,13 +28,12 @@
 from __future__ import division
 
 import errno
+import http.client
 import os
 import pycurl
-import six
 import time
 
-from six.moves import http_client
-from six.moves.urllib.parse import urlsplit
+from urllib.parse import urlsplit
 
 # Need to ignore SIGPIPE if using pycurl in NOSIGNAL mode.
 try:
@@ -408,7 +407,7 @@ class CurlTransportEngine(TransportEngine):
 
             respcode = h.getinfo(pycurl.RESPONSE_CODE)
 
-            if proto not in response_protocols or respcode == http_client.OK:
+            if proto not in response_protocols or respcode == http.client.OK:
                 h.success = True
                 repostats.clear_consecutive_errors()
                 success.append(url)
@@ -950,13 +949,13 @@ class CurlTransportEngine(TransportEngine):
             headerlist = []
 
             # Headers common to all requests
-            for k, v in six.iteritems(self.__common_header):
+            for k, v in self.__common_header.items():
                 headerstr = "{0}: {1}".format(k, v)
                 headerlist.append(headerstr)
 
             # Headers specific to this request
             if treq.header:
-                for k, v in six.iteritems(treq.header):
+                for k, v in treq.header.items():
                     headerstr = "{0}: {1}".format(k, v)
                     headerlist.append(headerstr)
 

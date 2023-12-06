@@ -27,7 +27,7 @@
 
 import copy
 import os
-from six.moves.urllib.parse import urlparse, urlunparse
+from urllib.parse import urlparse, urlunparse
 
 import pkg.client.api_errors as api_errors
 import pkg.client.publisher as publisher

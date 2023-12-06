@@ -22,7 +22,6 @@
 # Copyright (c) 2007, 2022, Oracle and/or its affiliates.
 #
 
-from __future__ import print_function
 import pkg.site_paths
 
 pkg.site_paths.init()
@@ -75,7 +74,6 @@ import os.path
 import OpenSSL.crypto as crypto
 import string
 import shlex
-import six
 import string
 import subprocess
 import sys
@@ -83,7 +81,7 @@ import tempfile
 import portend
 
 from importlib import reload
-from six.moves.urllib.parse import urlparse, urlunparse
+from urllib.parse import urlparse, urlunparse
 
 try:
     import cherrypy
@@ -119,10 +117,7 @@ import pkg.server.repository as sr
 # to let the dispatcher to find the correct page handler, we need to skip
 # converting the hyphen symbol.
 punc = string.punctuation.replace("-", "_")
-if six.PY2:
-    translate = string.maketrans(punc, "_" * len(string.punctuation))
-else:
-    translate = str.maketrans(punc, "_" * len(string.punctuation))
+translate = str.maketrans(punc, "_" * len(string.punctuation))
 
 
 class Pkg5Dispatcher(Dispatcher):

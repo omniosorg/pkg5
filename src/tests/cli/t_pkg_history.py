@@ -35,7 +35,6 @@ import os
 import random
 import re
 import shutil
-import six
 import subprocess
 import time
 import unittest

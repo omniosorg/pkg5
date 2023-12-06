@@ -40,8 +40,7 @@ import time
 import unittest
 import zlib
 
-from six.moves.urllib.parse import urlparse
-from six.moves.urllib.request import url2pathname
+from urllib.parse import urlparse
 
 
 class TestUtilMerge(pkg5unittest.ManyDepotTestCase):

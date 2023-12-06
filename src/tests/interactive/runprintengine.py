@@ -24,7 +24,6 @@
 # Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
-from __future__ import print_function
 import getopt
 import locale
 import gettext

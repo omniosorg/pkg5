@@ -5046,7 +5046,7 @@
       "test_name": "blacklist"
     },
     {
-      "code": "1878             response.status = http_client.UNAUTHORIZED\n1879             response.headers[\"X-Ipkg-Error\"] = random.choice(\n1880                 [\"ENT\", \"LIC\", \"SVR\", \"MNT\", \"YYZ\", \"\"]\n1881             )\n1882             return \"\"\n",
+      "code": "1878             response.status = http.client.UNAUTHORIZED\n1879             response.headers[\"X-Ipkg-Error\"] = random.choice(\n1880                 [\"ENT\", \"LIC\", \"SVR\", \"MNT\", \"YYZ\", \"\"]\n1881             )\n1882             return \"\"\n",
       "col_offset": 47,
       "end_col_offset": 13,
       "filename": "./modules/server/depot.py",
@@ -5802,7 +5802,6 @@
       "test_name": "try_except_pass"
     },
     {
-      "code": "28 from __future__ import print_function\n29 import cPickle as pickle\n30 import GeoIP\n",
       "col_offset": 0,
       "end_col_offset": 24,
       "filename": "./util/log-scripts/an_report.py",

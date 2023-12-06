@@ -24,7 +24,6 @@
 # Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
-from __future__ import print_function
 import datetime
 import fileinput
 import getopt
@@ -35,7 +34,7 @@ import sys
 import time
 
 from an_report import *
-from six.moves.urllib.parse import unquote
+from urllib.parse import unquote
 
 after = None
 before = None

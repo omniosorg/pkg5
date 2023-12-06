@@ -35,14 +35,16 @@
 #
 
 from __future__ import division
-from __future__ import print_function
 import baseline
+import configparser
 import copy
 import difflib
 import errno
 import gettext
 import grp
 import hashlib
+import http.client
+import io
 import locale
 import logging
 import multiprocessing
@@ -50,7 +52,6 @@ import os
 import pprint
 import shutil
 import signal
-import six
 import stat
 import subprocess
 import sys
@@ -71,10 +72,9 @@ from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from importlib import reload
-from six.moves import configparser, http_client
-from six.moves.urllib.error import HTTPError, URLError
-from six.moves.urllib.parse import urljoin
-from six.moves.urllib.request import urlopen
+from urllib.error import HTTPError, URLError
+from urllib.parse import urljoin
+from urllib.request import urlopen
 from socket import error as socketerror
 
 import pkg.client.api_errors as apx
@@ -327,9 +327,7 @@ if __name__ == "__main__":
             '"{0}" does not match "{1}"'.format(regexp, text)
         )
 
-    def assertRaisesRegexp(
-        self, excClass, regexp, callableObj, *args, **kwargs
-    ):
+    def assertRaisesRegex(self, excClass, regexp, callableObj, *args, **kwargs):
         """Perform the same logic as assertRaises, but then verify
         that the stringified version of the exception contains the
         regexp pattern.
@@ -402,7 +400,7 @@ if __name__ == "__main__":
                     outlist.append(termdata)
 
         # This is the arg handling protocol from Popen
-        if isinstance(args, six.string_types):
+        if isinstance(args, str):
             args = [args]
         else:
             args = list(args)
@@ -578,7 +576,7 @@ if __name__ == "__main__":
             ins = " [+{0:d} lines...]".format(len(lines) - 1)
         else:
             ins = ""
-        if isinstance(lines[0], six.text_type):
+        if isinstance(lines[0], str):
             lines[0] = lines[0].encode("utf-8")
         self.debugcmd("echo '{0}{1}' > {2}".format(lines[0], ins, path))
 
@@ -926,17 +924,11 @@ if __name__ == "__main__":
         if not os.path.exists(os.path.dirname(path)):
             os.makedirs(os.path.dirname(path), 0o777)
         self.debugfilecreate(content, path)
-        if six.PY2:
-            if isinstance(content, six.text_type):
-                content = content.encode("utf-8")
-            with open(path, "wb") as fh:
-                fh.write(content)
+        if copy:
+            shutil.copy(content, path)
         else:
-            if copy:
-                shutil.copy(content, path)
-            else:
-                with open(path, "w", encoding="utf-8") as fh:
-                    fh.write(content)
+            with open(path, "w", encoding="utf-8") as fh:
+                fh.write(content)
         os.chmod(path, mode)
 
     def make_misc_files(self, files, prefix=None, mode=0o644, copy=False):
@@ -952,7 +944,7 @@ if __name__ == "__main__":
         # a list, simply turn it into a dict where each file's
         # contents is its own name, so that we get some uniqueness.
         #
-        if isinstance(files, six.string_types):
+        if isinstance(files, str):
             files = [files]
 
         if isinstance(files, list):
@@ -1025,9 +1017,9 @@ if __name__ == "__main__":
     ):
         """Compare two strings."""
 
-        if not isinstance(expected, six.string_types):
+        if not isinstance(expected, str):
             expected = pprint.pformat(expected)
-        if not isinstance(actual, six.string_types):
+        if not isinstance(actual, str):
             actual = pprint.pformat(actual)
 
         expected_lines = expected.splitlines()
@@ -1101,7 +1093,7 @@ if __name__ == "__main__":
         """Check that the parsable output in 'output' is what is
         expected."""
 
-        if isinstance(output, six.string_types):
+        if isinstance(output, str):
             try:
                 outd = json.loads(output)
             except Exception as e:
@@ -1193,10 +1185,7 @@ if __name__ == "__main__":
         ) as new_rcfile:
             conf = configparser.RawConfigParser()
             with open(rcfile) as f:
-                if six.PY2:
-                    conf.readfp(f)
-                else:
-                    conf.read_file(f)
+                conf.read_file(f)
 
             for key in config:
                 conf.set(section, key, config[key])
@@ -1715,7 +1704,7 @@ def q_run(
             # suite and we're about to start running it.
             outq.put(("START", find_names(test_suite.tests[0]), i), block=True)
 
-            buf = six.StringIO()
+            buf = io.StringIO()
             b = baseline.ReadOnlyBaseLine(filename=baseline_filepath)
             b.load()
             # Build a _Pkg5TestResult object to use for this test.
@@ -2339,20 +2328,6 @@ class Pkg5TestSuite(unittest.TestSuite):
         except IndexError:
             # No tests; that's ok.
             return
-
-        # This is needed because the import of some modules (such as
-        # pygtk or pango) causes the default encoding for Python to be
-        # changed which can can cause tests to succeed when they should
-        # fail due to unicode issues:
-        #     https://bugzilla.gnome.org/show_bug.cgi?id=132040
-        if six.PY2:
-            default_utf8 = getattr(self._tests[0], "default_utf8", False)
-            if not default_utf8:
-                # Now reset to the default a standard Python
-                # distribution uses.
-                sys.setdefaultencoding("ascii")
-            else:
-                sys.setdefaultencoding("utf-8")
 
         def setUp_donothing():
             pass
@@ -3729,7 +3704,7 @@ class CliTestCase(Pkg5TestCase):
         dc.set_port(port)
 
         for section in properties:
-            for prop, val in six.iteritems(properties[section]):
+            for prop, val in properties[section].items():
                 dc.set_property(section, prop, val)
         if refresh_index:
             dc.set_refresh_index()
@@ -4059,7 +4034,7 @@ class CliTestCase(Pkg5TestCase):
         image. The counting of appearances is line based. Repeated
         string on the same line will be count once."""
 
-        if isinstance(strings, six.string_types):
+        if isinstance(strings, str):
             strings = [strings]
 
         # Initialize a dict for counting appearances.
@@ -4095,7 +4070,7 @@ class CliTestCase(Pkg5TestCase):
 
     def file_doesnt_contain(self, path, strings):
         """Assert the non-existence of strings in a file in the image."""
-        if isinstance(strings, six.string_types):
+        if isinstance(strings, str):
             strings = [strings]
 
         file_path = os.path.join(self.get_img_path(), path)
@@ -4131,7 +4106,7 @@ class CliTestCase(Pkg5TestCase):
             f.write("\n{0}\n".format(string))
 
     def seed_ta_dir(self, certs, dest_dir=None):
-        if isinstance(certs, six.string_types):
+        if isinstance(certs, str):
             certs = [certs]
         if not dest_dir:
             dest_dir = self.ta_dir
@@ -4401,7 +4376,7 @@ class HTTPSTestClass(ApacheDepotTestCase):
         return ApacheDepotTestCase.pkgrepo(self, command, *args, **kwargs)
 
     def seed_ta_dir(self, certs, dest_dir=None):
-        if isinstance(certs, six.string_types):
+        if isinstance(certs, str):
             certs = [certs]
         if not dest_dir:
             dest_dir = self.ta_dir
@@ -5120,7 +5095,7 @@ class ApacheController(object):
         try:
             urlopen(self.__url)
         except HTTPError as e:
-            if e.code == http_client.FORBIDDEN:
+            if e.code == http.client.FORBIDDEN:
                 return True
             return False
         except URLError as e:
@@ -5317,7 +5292,7 @@ class SysrepoController(ApacheController):
         try:
             urlopen(urljoin(self.url, "syspub/0"))
         except HTTPError as e:
-            if e.code == http_client.FORBIDDEN:
+            if e.code == http.client.FORBIDDEN:
                 return True
             return False
         except URLError:
@@ -5341,7 +5316,7 @@ class HttpDepotController(ApacheController):
             # if the depot is running.
             urlopen(repourl, context=ssl._create_unverified_context())
         except HTTPError as e:
-            if e.code == http_client.FORBIDDEN:
+            if e.code == http.client.FORBIDDEN:
                 return True
             return False
         except URLError:

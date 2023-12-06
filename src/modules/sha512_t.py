@@ -21,12 +21,11 @@
 #
 
 #
-# Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2015, 2023, Oracle and/or its affiliates.
 # Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
 #
 
 from __future__ import division, unicode_literals
-import six
 from pkg._sha512_t import lib, ffi
 
 """A hash module computes SHA512/t. Now it only supports SHA512/256 and
@@ -77,12 +76,8 @@ class SHA512_t(object):
 
     def update(self, message):
         """Update the hash object with the string arguments."""
-        if six.PY3 and isinstance(message, str):
-            raise TypeError("Unicode-objects must be encoded before hashing")
-        if not isinstance(message, (six.string_types, bytes)):
-            raise TypeError("Message must be string or buffer.")
-        if isinstance(message, six.text_type):
-            message = message.encode("utf-8")
+        if not isinstance(message, bytes):
+            raise TypeError(f"Message must be bytes, not {type(message)}")
         lib.SHA2Update(self.ctx, message, len(message))
 
     def digest(self):
@@ -96,7 +91,7 @@ class SHA512_t(object):
         lib.memcpy(shc, self.ctx, ffi.sizeof("SHA2_CTX"))
         lib.SHA2Final(digest, shc)
 
-        return b"".join(six.int2byte(i) for i in digest)
+        return b"".join(bytes((i,)) for i in digest)
 
     def hexdigest(self):
         """Return hexadecimal digest of the strings passed to the update()

@@ -23,7 +23,6 @@
 # Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
 #
 
-from __future__ import print_function
 import pkg.site_paths
 
 pkg.site_paths.init()
@@ -37,7 +36,6 @@ try:
     import locale
     import os
     import shutil
-    import six
     import sys
     import tempfile
     import traceback
@@ -54,7 +52,7 @@ try:
 
     from functools import reduce
     from pkg.misc import PipeError, emsg, msg
-    from six.moves.urllib.parse import quote
+    from urllib.parse import quote
     from pkg.client.pkgdefs import EXIT_OK, EXIT_OOPS, EXIT_BADOPT, EXIT_PARTIAL
 except KeyboardInterrupt:
     import sys
@@ -272,7 +270,7 @@ def main_func():
     variants = set()
     vcombos = collections.defaultdict(set)
     for src_vars in variant_list:
-        for v, vval in six.iteritems(src_vars):
+        for v, vval in src_vars.items():
             variants.add(v)
             vcombos[v].add((v, vval))
 
@@ -887,7 +885,7 @@ def build_merge_list(include, exclude, cat):
     return (
         dict(
             (k, sorted(list(v), reverse=True)[0])
-            for k, v in six.iteritems(include_dict)
+            for k, v in include_dict.items()
             if v
         ),
         include_misses,
@@ -1024,9 +1022,8 @@ if __name__ == "__main__":
     import warnings
 
     warnings.simplefilter("error")
-    if six.PY3:
-        # disable ResourceWarning: unclosed file
-        warnings.filterwarnings("ignore", category=ResourceWarning)
+    # disable ResourceWarning: unclosed file
+    warnings.filterwarnings("ignore", category=ResourceWarning)
     try:
         __ret = main_func()
     except (

@@ -27,12 +27,10 @@
 # NOTE: This module is inherently posix specific.  Care is taken in the modules
 # that use this module to not use it on other operating systems.
 
-from __future__ import print_function
 import datetime
 import errno
 import os
 import re
-import six
 import stat
 import sys
 import tempfile
@@ -301,7 +299,7 @@ class PasswordFile(CfgFile):
     def getnextuid(self):
         """returns next free system (<=99) uid"""
         uids = []
-        for t in six.itervalues(self.password_file.index):
+        for t in self.password_file.index.values():
             if t[1]:
                 uids.append(t[1]["uid"])
         for i in range(100):
@@ -362,7 +360,7 @@ class GroupFile(CfgFile):
     def getnextgid(self):
         """returns next free system (<=99) gid"""
         gids = []
-        for t in six.itervalues(self.index):
+        for t in self.index.values():
             if t[1]:
                 gids.append(t[1]["gid"])
         for i in range(100):

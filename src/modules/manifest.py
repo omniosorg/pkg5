@@ -25,7 +25,6 @@
 # Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 #
 
-from __future__ import print_function
 from collections import namedtuple, defaultdict
 from functools import reduce
 
@@ -34,11 +33,9 @@ import fnmatch
 import hashlib
 import os
 import re
-import six
 import tempfile
 from itertools import groupby, chain, product, repeat
 from operator import itemgetter
-from six.moves import zip
 
 import pkg.actions as actions
 import pkg.client.api_errors as apx
@@ -66,7 +63,7 @@ def _compile_fnpats(fn_pats):
                 for pat in pats
             ],
         )
-        for (key, pats) in six.iteritems(fn_pats)
+        for (key, pats) in fn_pats.items()
     )
 
 
@@ -79,7 +76,7 @@ def _attr_matches(action, attr_match):
     if not attr_match:
         return True
 
-    for attr, matches in six.iteritems(attr_match):
+    for attr, matches in attr_match.items():
         if attr in action.attrs:
             for match in matches:
                 for attrval in action.attrlist(attr):
@@ -271,8 +268,8 @@ class Manifest(object):
         sdict = dict(dictify(self, self_exclude))
         odict = dict(dictify(origin, origin_exclude))
 
-        sset = set(six.iterkeys(sdict))
-        oset = set(six.iterkeys(odict))
+        sset = set(sdict.keys())
+        oset = set(odict.keys())
 
         added = [(None, sdict[i]) for i in sset - oset]
         removed = [(odict[i], None) for i in oset - sset]
@@ -454,7 +451,7 @@ class Manifest(object):
                 )
 
         mediators = self._actions_to_dict(gen_references)
-        for mediation, mvariants in six.iteritems(mediators):
+        for mediation, mvariants in mediators.items():
             values = {
                 "mediator-priority": mediation[1],
                 "mediator-version": mediation[2],
@@ -463,10 +460,8 @@ class Manifest(object):
             for mvariant in mvariants:
                 a = "set name=pkg.mediator " "value={0} {1} {2}\n".format(
                     mediation[0],
-                    " ".join(
-                        ("=".join(t) for t in six.iteritems(values) if t[1])
-                    ),
-                    " ".join(("=".join(t) for t in six.iteritems(mvariant))),
+                    " ".join(("=".join(t) for t in values.items() if t[1])),
+                    " ".join(("=".join(t) for t in mvariant.items())),
                 )
                 yield a
 
@@ -661,7 +656,7 @@ class Manifest(object):
             # Now emit a pkg.facet action for each variant
             # combination containing the list of facets unique to
             # that combination.
-            for varkey, fnames in six.iteritems(facets):
+            for varkey, fnames in facets.items():
                 # A unique key for each combination is needed,
                 # and using a hash obfuscates that interface
                 # while giving us a reliable way to generate
@@ -1060,7 +1055,7 @@ class Manifest(object):
         lineno = 0
         errors = []
 
-        if isinstance(content, six.string_types):
+        if isinstance(content, str):
             # Get an iterable for the string.
             content = content.splitlines()
 
@@ -1134,10 +1129,10 @@ class Manifest(object):
             except EnvironmentError as e:
                 raise apx._convert_error(e)
 
-        if six.PY3 and isinstance(content, bytes):
+        if isinstance(content, bytes):
             raise TypeError("content must be str, not bytes")
 
-        if isinstance(content, six.string_types):
+        if isinstance(content, str):
             if signatures:
                 # Generate manifest signature based upon
                 # input content, but only if signatures
@@ -1365,7 +1360,7 @@ class Manifest(object):
         # This must be an SHA-1 hash in order to interoperate with
         # older clients.
         sha_1 = hashlib.sha1()
-        if isinstance(mfstcontent, six.text_type):
+        if isinstance(mfstcontent, str):
             # Byte stream expected, so pass encoded.
             sha_1.update(mfstcontent.encode("utf-8"))
         else:
@@ -1516,16 +1511,9 @@ class Manifest(object):
             # allow you to be selective and various bits in
             # pkg.manifest assume you always filter on both so we
             # have to fake up a filter for facets.
-            if six.PY2:
-                nexcludes = [
-                    x for x in excludes if x.__func__ != facet._allow_facet
-                ]
-            else:
-                nexcludes = [
-                    x
-                    for x in excludes
-                    if x.__func__ != facet.Facets.allow_action
-                ]
+            nexcludes = [
+                x for x in excludes if x.__func__ != facet.Facets.allow_action
+            ]
             # Excludes list must always have zero or 2+ items; so
             # fake second entry.
             nexcludes.append(lambda x, publisher: True)
@@ -1713,7 +1701,7 @@ class FactoredManifest(Manifest):
         # so that empty cache files are created if no action of that
         # type exists for the package (avoids full manifest loads
         # later).
-        for n, acts in six.iteritems(self.actions_bytype):
+        for n, acts in self.actions_bytype.items():
             t_prefix = "manifest.{0}.".format(n)
 
             try:

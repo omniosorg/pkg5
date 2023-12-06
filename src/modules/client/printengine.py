@@ -30,14 +30,13 @@ render them to a file, a terminal, or a logger."""
 
 import curses
 import errno
+import io
 import logging
 import os
 import re
 import termios
 import time
 from abc import ABCMeta, abstractmethod
-
-import six
 
 from pkg.misc import PipeError, force_str
 
@@ -49,7 +48,7 @@ class PrintEngineException(Exception):
         return "PrintEngineException: {0}".format(" ".join(self.args))
 
 
-class PrintEngine(six.with_metaclass(ABCMeta, object)):
+class PrintEngine(object, metaclass=ABCMeta):
     """Abstract class defining what a PrintEngine must know how to do."""
 
     def __init__(self):
@@ -223,7 +222,7 @@ class LoggingPrintEngine(PrintEngine):
         PrintEngine.__init__(self)
         self._logger = logger
         self._loglevel = loglevel
-        self._stringio = six.StringIO()
+        self._stringio = io.StringIO()
         self._pxpe = POSIXPrintEngine(self._stringio, False)
 
     def isslow(self):

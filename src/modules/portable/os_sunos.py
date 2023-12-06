@@ -31,7 +31,6 @@ implementation in the 'arch' extension module.
 """
 
 import os
-import six
 import subprocess
 import tempfile
 

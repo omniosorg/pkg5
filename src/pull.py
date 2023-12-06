@@ -24,7 +24,6 @@
 # Copyright (c) 2008, 2022, Oracle and/or its affiliates.
 #
 
-from __future__ import print_function
 import pkg.site_paths
 
 pkg.site_paths.init()
@@ -60,7 +59,7 @@ import pkg.version as version
 from pkg.client import global_settings
 from pkg.misc import emsg, get_pkg_otw_size, msg, PipeError
 from pkg.client.debugvalues import DebugValues
-from six.moves.urllib.parse import quote
+from urllib.parse import quote
 
 # Globals
 archive = False
@@ -1943,11 +1942,9 @@ if __name__ == "__main__":
 
     # Make all warnings be errors.
     warnings.simplefilter("error")
-    import six
 
-    if six.PY3:
-        # disable ResourceWarning: unclosed file
-        warnings.filterwarnings("ignore", category=ResourceWarning)
+    # disable ResourceWarning: unclosed file
+    warnings.filterwarnings("ignore", category=ResourceWarning)
     try:
         __ret = main_func()
     except (KeyboardInterrupt, apx.CanceledException):

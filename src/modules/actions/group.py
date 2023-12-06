@@ -187,7 +187,7 @@ class GroupAction(generic.Action):
 
         # Get the default values if they're non-empty
         grdefval = dict(
-            ((k, v) for k, v in six.iteritems(gr.getdefaultvalues()) if v != "")
+            ((k, v) for k, v in gr.getdefaultvalues().items() if v != "")
         )
 
         # If "gid" is set dynamically, ignore what's on disk.

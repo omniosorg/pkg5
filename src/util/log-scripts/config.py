@@ -25,7 +25,6 @@
 #
 
 import os
-from six.moves import configparser
 
 CFGFILE = "site-config"
 

@@ -24,11 +24,10 @@
 # Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
+import configparser
 import inspect
 import os.path
-import six
 import traceback
-from six.moves import configparser
 
 import pkg.variant as variant
 import pkg.fmri as fmri
@@ -88,10 +87,7 @@ class Checker(object):
             # the short name for this checker class, Checker.name
             name = method.__self__.__class__.name
 
-            if six.PY2:
-                arg_spec = inspect.getargspec(method)
-            else:
-                arg_spec = inspect.getfullargspec(method)
+            arg_spec = inspect.getfullargspec(method)
 
             # arg_spec.args is a tuple of the method args,
             # populating the tuple with both arg values for
@@ -115,10 +111,7 @@ class Checker(object):
             method = item[1]
             # register the methods in the object that correspond
             # to lint checks
-            if six.PY2:
-                m = inspect.getargspec(method)
-            else:
-                m = inspect.getfullargspec(method)
+            m = inspect.getfullargspec(method)
             if "pkglint_id" in m[0]:
                 value = "{0}.{1}.{2}".format(
                     self.__module__, self.__class__.__name__, method.__name__
@@ -323,18 +316,9 @@ class ManifestChecker(Checker):
 
         if os.path.exists(self.classification_path):
             try:
-                if six.PY2:
-                    self.classification_data = configparser.SafeConfigParser()
-                    self.classification_data.readfp(
-                        open(self.classification_path)
-                    )
-                else:
-                    # SafeConfigParser has been renamed to
-                    # ConfigParser in Python 3.2.
-                    self.classification_data = configparser.ConfigParser()
-                    self.classification_data.read_file(
-                        open(self.classification_path)
-                    )
+                self.classification_data = configparser.ConfigParser()
+                with open(self.classification_path) as ifile:
+                    self.classification_data.read_file(ifile)
             except Exception as err:
                 # any exception thrown here results in a null
                 # classification_data object.  We deal with that
@@ -433,7 +417,7 @@ def _linted_action(action, lint_id):
     for key in action.attrs.keys():
         if key.startswith("pkg.linted") and linted.startswith(key):
             val = action.attrs.get(key, "false")
-            if isinstance(val, six.string_types):
+            if isinstance(val, str):
                 if val.lower() == "true":
                     return True
             else:
@@ -451,7 +435,7 @@ def _linted_manifest(manifest, lint_id):
     for key in manifest.attributes.keys():
         if key.startswith("pkg.linted") and linted.startswith(key):
             val = manifest.attributes.get(key, "false")
-            if isinstance(val, six.string_types):
+            if isinstance(val, str):
                 if val.lower() == "true":
                     return True
             else:

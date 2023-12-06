@@ -24,7 +24,6 @@
 # Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
-from __future__ import print_function
 from . import testutils
 
 if __name__ == "__main__":
@@ -35,11 +34,10 @@ import copy
 import hashlib
 import os
 import shutil
-import six
 import sys
 import unittest
-from six.moves.urllib.error import HTTPError
-from six.moves.urllib.request import urlopen
+from urllib.error import HTTPError
+from urllib.request import urlopen
 
 import pkg.catalog as catalog
 import pkg.client.pkgdefs as pkgdefs

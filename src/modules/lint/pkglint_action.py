@@ -35,7 +35,6 @@ import pkg.lint.base as base
 from pkg.actions import ActionError
 from pkg.actions.file import FileAction
 import re
-import six
 import stat
 
 ObsoleteFmri = collections.namedtuple("ObsoleteFmri", "is_obsolete, fmri")
@@ -134,7 +133,7 @@ class PkgDupActionChecker(base.ActionChecker):
                 variants = action.get_variant_template()
                 variants.merge_unknown(pkg_vars)
                 # Action attributes must be lists or strings.
-                for k, v in six.iteritems(variants):
+                for k, v in variants.items():
                     if isinstance(v, set):
                         action.attrs[k] = list(v)
                     else:
@@ -408,7 +407,7 @@ class PkgDupActionChecker(base.ActionChecker):
                             continue
 
                         action_types.add(a.name)
-                        if not key in a.attrs:
+                        if key not in a.attrs:
                             continue
 
                         for val in a.attrlist(key):
@@ -1554,7 +1553,7 @@ class PkgActionChecker(base.ActionChecker):
         if "fmri" not in action.attrs:
             return
         fmris = action.attrs["fmri"]
-        if isinstance(fmris, six.string_types):
+        if isinstance(fmris, str):
             fmris = [fmris]
 
         for fmri in fmris:
@@ -1745,12 +1744,12 @@ class PkgActionChecker(base.ActionChecker):
             start_pattern + "uninstall-on-uninstall",
         ]
 
-        if not "name" in action.attrs or not action.attrs["name"].startswith(
+        if "name" not in action.attrs or not action.attrs["name"].startswith(
             start_pattern
         ):
             return
 
-        if not action.attrs["name"] in supported_actuators:
+        if action.attrs["name"] not in supported_actuators:
             engine.warning(
                 _(
                     "invalid package actuator name {attr} in {fmri}\n"
@@ -1799,16 +1798,11 @@ class PkgActionChecker(base.ActionChecker):
         """ELF files should be delivered as 64-bit objects, other
         than libraries.
 
-        The pkglint paramater pkglint.action0014.report_type can change
-        whether this check issues errors or warnings. The value of
-        this parameter should be "error" or "warning". Any other value
-        defaults to "warning"
+        The boolean pkglint parameter pkglint.action014.report_errors can be
+        set to True to force this check to issue errors instead of warnings.
+        This is done via the pkglintrc config file:
+          pkglint.action014.report_errors = True
         """
-
-        # Note that this check is intentionally delivered as disabled
-        # by default in the pkglintrc config file. The check exists
-        # so that we can move packages towards best-practises,
-        # but this may not be appropriate in all cases.
 
         if action.name != "file":
             return

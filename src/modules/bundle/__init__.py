@@ -24,7 +24,6 @@
 # Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 
-from __future__ import print_function
 
 # The ordering is important -- SolarisPackageDirBundle must come before
 # DirectoryBundle, or the latter class will recognize a Solaris package

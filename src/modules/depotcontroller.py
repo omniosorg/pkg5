@@ -22,20 +22,18 @@
 # Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
-from __future__ import print_function
+import http.client
 import os
 import platform
 import shlex
 import signal
-import six
 import ssl
 import sys
 import time
 
-from six.moves import http_client, range
-from six.moves.urllib.error import HTTPError, URLError
-from six.moves.urllib.request import pathname2url, urlopen
-from six.moves.urllib.parse import urlunparse, urljoin
+from urllib.error import HTTPError, URLError
+from urllib.request import pathname2url, urlopen
+from urllib.parse import urlunparse, urljoin
 
 import pkg.pkgsubprocess as subprocess
 import pkg.server.repository as sr
@@ -295,7 +293,7 @@ class DepotController(object):
         except HTTPError as e:
             # Server returns NOT_MODIFIED if catalog is up
             # to date
-            if e.code == http_client.NOT_MODIFIED:
+            if e.code == http.client.NOT_MODIFIED:
                 return True
             else:
                 return False
@@ -381,7 +379,7 @@ class DepotController(object):
         if self.__nasty_sleep:
             args.append("--nasty-sleep {0:d}".format(self.__nasty_sleep))
         for section in self.__props:
-            for prop, val in six.iteritems(self.__props[section]):
+            for prop, val in self.__props[section].items():
                 args.append(
                     "--set-property={0}.{1}='{2}'".format(section, prop, val)
                 )
@@ -483,26 +481,41 @@ class DepotController(object):
             raise
 
     def start_expected_fail(self, exit=2):
+        """Start the depot, and make sure that it responds in a reasonable time
+        and that it exits immediately with the expected exit code."""
+
         try:
             self.__initial_start()
 
             sleeptime = 0.05
-            died = False
             rc = None
             while sleeptime <= 10.0:
                 rc = self.__depot_handle.poll()
                 if rc is not None:
-                    died = True
                     break
                 time.sleep(sleeptime)
                 sleeptime *= 2
 
-            if died and rc == exit:
-                self.__state = self.HALTED
-                return True
             else:
+                # in case the break above wasn't executed
                 self.stop()
-                return False
+                with open(self.__logpath, "rb", buffering=0) as errf:
+                    err = errf.read()
+                raise DepotStateException(
+                    "Depot did not respond to repeated attempts "
+                    f"to make contact. Output follows:\n{err}\n"
+                )
+
+            if rc != exit:
+                self.stop()
+                with open(self.__logpath, "rb", buffering=0) as errf:
+                    err = errf.read()
+                raise DepotStateException(
+                    f"Depot exited with unexpected exit code {rc} "
+                    f"(expected {exit}). Output follows:\n{err}\n"
+                )
+
+            self.__state = self.HALTED
         except KeyboardInterrupt:
             if self.__depot_handle:
                 self.kill(now=True)

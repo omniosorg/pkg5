@@ -31,7 +31,6 @@ import pkg5unittest
 import json
 import os
 import shutil
-import six
 import unittest
 
 import pkg.catalog as catalog
@@ -623,8 +622,7 @@ Packaging Date: Sat Sep 10 00:45:46 2011
 """
         self.assertEqualDiff(expected, self.reduceSpaces(self.output))
 
-        if six.PY3:
-            os.environ["LC_ALL"] = "en_US.UTF-8"
+        os.environ["LC_ALL"] = "en_US.UTF-8"
 
     def test_renamed_packages(self):
         """Verify that info returns the expected output for renamed
@@ -776,8 +774,7 @@ Packaging Date: {pkg_date}
         )
         self.assertEqualDiff(expected, actual)
 
-        if six.PY3:
-            os.environ["LC_ALL"] = "en_US.UTF-8"
+        os.environ["LC_ALL"] = "en_US.UTF-8"
 
     def test_legacy_packages(self):
         """Verify that info returns the expected output for legacy
@@ -887,8 +884,7 @@ Packaging Date: {pkg_date}
         )
         self.assertEqualDiff(expected, actual)
 
-        if six.PY3:
-            os.environ["LC_ALL"] = "en_US.UTF-8"
+        os.environ["LC_ALL"] = "en_US.UTF-8"
 
     def test_appropriate_license_files(self):
         """Verify that the correct license file is displayed."""
@@ -989,8 +985,7 @@ Packaging Date: {pkg_date}
             )
         )
 
-        if six.PY3:
-            os.environ["LC_ALL"] = "en_US.UTF-8"
+        os.environ["LC_ALL"] = "en_US.UTF-8"
 
 
 class TestPkgInfoPerTestRepo(pkg5unittest.SingleDepotTestCase):

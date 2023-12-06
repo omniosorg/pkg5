@@ -68,12 +68,13 @@ A RPC client can be implemented as follows:
         del client_rpc
 """
 
-from __future__ import print_function
 import errno
+import http.client
 import fcntl
 import logging
 import os
 import socket
+import socketserver
 import stat
 import struct
 import sys
@@ -97,9 +98,7 @@ from jsonrpclib.SimpleJSONRPCServer import (
 #
 # Unused import; pylint: disable=W0611
 from jsonrpclib import ProtocolError as ProtocolError1
-
-from six.moves import socketserver, http_client
-from six.moves.xmlrpc_client import ProtocolError as ProtocolError2
+from xmlrpc.client import ProtocolError as ProtocolError2
 
 # Unused import; pylint: enable=W0611
 
@@ -373,7 +372,7 @@ class PipeSocket(PipeFile):
 # PipedHTTP: Class has no __init__ method; pylint: disable=W0232
 # PipedHTTPResponse.begin: Attribute 'will_close' defined outside __init__;
 # pylint: disable=W0201
-class PipedHTTPResponse(http_client.HTTPResponse):
+class PipedHTTPResponse(http.client.HTTPResponse):
     """Create a httplib.HTTPResponse like object that can be used with
     a pipe as a transport.  We override the minimum number of parent
     routines necessary."""
@@ -382,12 +381,12 @@ class PipedHTTPResponse(http_client.HTTPResponse):
         """Our connection will never be automatically closed, so set
         will_close to False."""
 
-        http_client.HTTPResponse.begin(self)
+        http.client.HTTPResponse.begin(self)
         self.will_close = False
         return
 
 
-class PipedHTTPConnection(http_client.HTTPConnection):
+class PipedHTTPConnection(http.client.HTTPConnection):
     """Create a httplib.HTTPConnection like object that can be used with
     a pipe as a transport.  We override the minimum number of parent
     routines necessary."""
@@ -399,7 +398,7 @@ class PipedHTTPConnection(http_client.HTTPConnection):
         assert port is None
 
         # invoke parent constructor
-        http_client.HTTPConnection.__init__(self, "localhost")
+        http.client.HTTPConnection.__init__(self, "localhost")
 
         # self.sock was initialized by httplib.HTTPConnection
         # to point to a socket, overwrite it with a pipe.

@@ -20,8 +20,7 @@
  */
 
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
- * Copyright 2019 OmniOS Community Edition (OmniOSce) Association.
+ * Copyright (c) 2012, 2023, Oracle and/or its affiliates.
  */
 
 /*
@@ -32,6 +31,7 @@
 
 static PyObject *nohash;
 
+
 static void
 set_invalid_action_error(const char *name, PyObject *action,
     PyObject *key_aname)
@@ -39,23 +39,15 @@ set_invalid_action_error(const char *name, PyObject *action,
 	PyObject *exc = NULL;
 	PyObject *val = NULL;
 	PyObject *pkg_actions = NULL;
-	PyObject *sys = NULL;
-	PyObject *sys_modules = NULL;
 
-	if ((sys = PyImport_ImportModule("sys")) == NULL)
-		return;
+	/* PyImport_ImportModule cannot be called with set exception. */
+	PyErr_Clear();
 
-	if ((sys_modules = PyObject_GetAttrString(sys, "modules")) == NULL)
-		return;
-
-	if ((pkg_actions = PyDict_GetItemString(sys_modules, "pkg.actions"))
-	    == NULL) {
+	if ((pkg_actions = PyImport_ImportModule("pkg.actions")) == NULL) {
 		/* No exception is set */
-		PyErr_SetString(PyExc_KeyError, "siae.pkg.actions");
-		Py_DECREF(sys_modules);
+		PyErr_SetString(PyExc_KeyError, "pkg.actions");
 		return;
 	}
-	Py_DECREF(sys_modules);
 
 	/*
 	 * Obtain a reference to the action exception type so that SetObject can
@@ -308,7 +300,7 @@ moduleinit(void)
 
 	if ((pkg_actions = PyImport_ImportModule("pkg.actions")) == NULL) {
 		/* No exception is set */
-		PyErr_SetString(PyExc_KeyError, "_common.pkg.actions");
+		PyErr_SetString(PyExc_KeyError, "pkg.actions");
 		return (NULL);
 	}
 
@@ -326,4 +318,3 @@ PyInit__common(void)
 {
 	return (moduleinit());
 }
-

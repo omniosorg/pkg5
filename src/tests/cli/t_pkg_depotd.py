@@ -31,18 +31,17 @@ if __name__ == "__main__":
 import pkg5unittest
 
 import datetime
+import http.client
 import os
 import shutil
-import six
 import sys
 import tempfile
 import time
 import unittest
 
-from six.moves import http_client
-from six.moves.urllib.error import HTTPError, URLError
-from six.moves.urllib.parse import quote, urljoin
-from six.moves.urllib.request import urlopen
+from urllib.error import HTTPError, URLError
+from urllib.parse import quote, urljoin
+from urllib.request import urlopen
 
 import pkg.client.publisher as publisher
 import pkg.depotcontroller as dc
@@ -227,7 +226,7 @@ class TestPkgDepot(pkg5unittest.SingleDepotTestCase):
                 try:
                     urlopen("{0}/{1}/0/{2}".format(durl, operation, entry))
                 except HTTPError as e:
-                    if e.code != http_client.BAD_REQUEST:
+                    if e.code != http.client.BAD_REQUEST:
                         raise
 
     def test_bug_5366(self):
@@ -323,8 +322,7 @@ class TestPkgDepot(pkg5unittest.SingleDepotTestCase):
         self.assertEqual(info_dic["Size"], misc.bytes_to_str(size))
         self.assertEqual(info_dic["Compressed Size"], misc.bytes_to_str(csize))
         self.assertEqual(info_dic["FMRI"], fmri_content)
-        if six.PY3:
-            os.environ["LC_ALL"] = "en_US.UTF-8"
+        os.environ["LC_ALL"] = "en_US.UTF-8"
 
     def test_bug_5707(self):
         """Testing depotcontroller.refresh()."""
@@ -359,7 +357,7 @@ class TestPkgDepot(pkg5unittest.SingleDepotTestCase):
         try:
             urlopen("{0}/../../../../bin/pkg".format(depot_url))
         except HTTPError as e:
-            if e.code != http_client.NOT_FOUND:
+            if e.code != http.client.NOT_FOUND:
                 raise
 
         f = urlopen("{0}/robots.txt".format(depot_url))
@@ -382,13 +380,14 @@ class TestPkgDepot(pkg5unittest.SingleDepotTestCase):
         # First, test readonly mode with a repo_dir that doesn't exist.
         self.dc.set_readonly()
         self.dc.stop()
-        self.dc.start_expected_fail()
+        # expect exit code 1 - "an error occurred"
+        self.dc.start_expected_fail(exit=1)
         self.assertTrue(not self.dc.is_alive())
 
         # Next, test readonly mode with a repo_dir that is empty.
         os.makedirs(dpath, misc.PKG_DIR_MODE)
         self.dc.set_readonly()
-        self.dc.start_expected_fail()
+        self.dc.start_expected_fail(exit=1)
         self.assertTrue(not self.dc.is_alive())
 
         # Next, test readwrite (publishing) mode with a non-existent
@@ -668,37 +667,38 @@ class TestDepotController(pkg5unittest.CliTestCase):
         self.__dc.set_rebuild()
         self.__dc.set_norefresh_index()
 
-        self.assertTrue(self.__dc.start_expected_fail())
+        # # expect (default) exit code 2 - "invalid command line options"
+        self.__dc.start_expected_fail()
 
         self.__dc.set_readonly()
         self.__dc.set_norebuild()
         self.__dc.set_refresh_index()
 
-        self.assertTrue(self.__dc.start_expected_fail())
+        self.__dc.start_expected_fail()
 
         self.__dc.set_readonly()
         self.__dc.set_rebuild()
         self.__dc.set_refresh_index()
 
-        self.assertTrue(self.__dc.start_expected_fail())
+        self.__dc.start_expected_fail()
 
         self.__dc.set_readwrite()
         self.__dc.set_rebuild()
         self.__dc.set_refresh_index()
 
-        self.assertTrue(self.__dc.start_expected_fail())
+        self.__dc.start_expected_fail()
 
         self.__dc.set_mirror()
         self.__dc.set_rebuild()
         self.__dc.set_norefresh_index()
 
-        self.assertTrue(self.__dc.start_expected_fail())
+        self.__dc.start_expected_fail()
 
         self.__dc.set_mirror()
         self.__dc.set_norebuild()
         self.__dc.set_refresh_index()
 
-        self.assertTrue(self.__dc.start_expected_fail())
+        self.__dc.start_expected_fail()
 
     def test_disable_ops(self):
         """Verify that disable-ops works as expected."""
@@ -712,7 +712,7 @@ class TestDepotController(pkg5unittest.CliTestCase):
         try:
             urlopen("{0}/catalog/1/".format(durl))
         except HTTPError as e:
-            self.assertEqual(e.code, http_client.NOT_FOUND)
+            self.assertEqual(e.code, http.client.NOT_FOUND)
         self.__dc.stop()
 
         # For this disabled case, all /catalog/ operations should return
@@ -725,7 +725,7 @@ class TestDepotController(pkg5unittest.CliTestCase):
             try:
                 urlopen("{0}/catalog/{1:d}/".format(durl, ver))
             except HTTPError as e:
-                self.assertEqual(e.code, http_client.NOT_FOUND)
+                self.assertEqual(e.code, http.client.NOT_FOUND)
         self.__dc.stop()
 
         # In the normal case, /catalog/1/ should return
@@ -736,7 +736,7 @@ class TestDepotController(pkg5unittest.CliTestCase):
         try:
             urlopen("{0}/catalog/1/".format(durl))
         except HTTPError as e:
-            self.assertEqual(e.code, http_client.FORBIDDEN)
+            self.assertEqual(e.code, http.client.FORBIDDEN)
         self.__dc.stop()
 
         # A bogus operation should prevent the depot from starting.
@@ -1036,7 +1036,7 @@ class TestDepotOutput(pkg5unittest.SingleDepotTestCase):
             pub_repo = publisher.Repository()
             pub.repository = pub_repo
 
-        for attr, val in six.iteritems(self.pub_repo_cfg):
+        for attr, val in self.pub_repo_cfg.items():
             setattr(pub_repo, attr, val)
         repo.update_publisher(pub)
 
@@ -1070,7 +1070,7 @@ class TestDepotOutput(pkg5unittest.SingleDepotTestCase):
             self.assertEqual(getattr(pub, prop), cfgdata["publisher"][prop])
 
         repo = pub.repository
-        for prop, expected in six.iteritems(self.pub_repo_cfg):
+        for prop, expected in self.pub_repo_cfg.items():
             returned = getattr(repo, prop)
             if prop.endswith("uris") or prop == "origins":
                 uris = []
@@ -1135,7 +1135,7 @@ class TestDepotOutput(pkg5unittest.SingleDepotTestCase):
         try:
             urlopen(urljoin(durl, "p5i/0/nosuchpackage"))
         except HTTPError as e:
-            if e.code != http_client.NOT_FOUND:
+            if e.code != http.client.NOT_FOUND:
                 raise
 
     def test_3_headers(self):
@@ -1179,20 +1179,12 @@ class TestDepotOutput(pkg5unittest.SingleDepotTestCase):
             "file/0/3aad0bca6f3a6f502c175700ebe90ef36e312d7e",
         ):
             hdrs = dict(get_headers(req_path))
-            if six.PY2:
-                # Fields must be referenced in lowercase.
-                cc = hdrs.get("cache-control", "")
-                self.assertTrue(
-                    cc.startswith("must-revalidate, " "no-transform, max-age=")
-                )
-                exp = hdrs.get("expires", None)
-            else:
-                # Fields begin with uppercase.
-                cc = hdrs.get("Cache-Control", "")
-                self.assertTrue(
-                    cc.startswith("must-revalidate, " "no-transform, max-age=")
-                )
-                exp = hdrs.get("Expires", None)
+            # Fields begin with uppercase.
+            cc = hdrs.get("Cache-Control", "")
+            self.assertTrue(
+                cc.startswith("must-revalidate, " "no-transform, max-age=")
+            )
+            exp = hdrs.get("Expires", None)
             self.assertNotEqual(exp, None)
             self.assertTrue(exp.endswith(" GMT"))
 
@@ -1201,12 +1193,8 @@ class TestDepotOutput(pkg5unittest.SingleDepotTestCase):
             "file/0/3aad0bca6f3a6f502c175700ebe90ef36e312d7f",
         ):
             hdrs = dict(get_headers(req_path))
-            if six.PY2:
-                cc = hdrs.get("cache-control", None)
-                prg = hdrs.get("pragma", None)
-            else:
-                cc = hdrs.get("Cache-Control", None)
-                prg = hdrs.get("Pragma", None)
+            cc = hdrs.get("Cache-Control", None)
+            prg = hdrs.get("Pragma", None)
             self.assertEqual(cc, None)
             self.assertEqual(prg, None)
 

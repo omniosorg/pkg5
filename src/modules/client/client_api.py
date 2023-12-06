@@ -34,7 +34,6 @@ import getopt
 import itertools
 import os
 import re
-import six
 import socket
 import sys
 import tempfile
@@ -42,7 +41,6 @@ import textwrap
 import time
 import traceback
 
-from six.moves import filter, map, range
 
 import pkg
 import pkg.actions as actions
@@ -95,14 +93,11 @@ def _strify(input):
 
     if isinstance(input, dict):
         return dict(
-            [
-                (_strify(key), _strify(value))
-                for key, value in six.iteritems(input)
-            ]
+            [(_strify(key), _strify(value)) for key, value in input.items()]
         )
     elif isinstance(input, list):
         return [_strify(element) for element in input]
-    elif isinstance(input, (six.string_types, bytes)):
+    elif isinstance(input, (str, bytes)):
         return misc.force_str(input, "utf-8")
     else:
         return input
@@ -471,7 +466,7 @@ def _format_update_error(e, errors_json=None):
 def _error_json(text, cmd=None, errors_json=None, errorType=None):
     """Prepare an error message for json output."""
 
-    if not isinstance(text, six.string_types):
+    if not isinstance(text, str):
         # Assume it's an object that can be stringified.
         text = str(text)
 
@@ -1257,10 +1252,7 @@ def __api_execute_plan(operation, api_inst):
                 raise
 
         if exc_value or exc_tb:
-            if six.PY2:
-                six.reraise(exc_value, None, exc_tb)
-            else:
-                raise exc_value
+            raise exc_value
 
     return rval
 
@@ -2678,7 +2670,7 @@ def _publisher_list(
                 )
                 entry = []
                 for e in values:
-                    if isinstance(e, six.string_types):
+                    if isinstance(e, str):
                         entry.append(e)
                     else:
                         entry.append(str(e))
@@ -2715,7 +2707,7 @@ def _publisher_list(
                 )
                 entry = []
                 for e in values:
-                    if isinstance(e, six.string_types):
+                    if isinstance(e, str):
                         entry.append(e)
                     else:
                         entry.append(str(e))
@@ -2734,7 +2726,7 @@ def _publisher_list(
                 )
                 entry = []
                 for e in values:
-                    if isinstance(e, six.string_types):
+                    if isinstance(e, str):
                         entry.append(e)
                     else:
                         entry.append(str(e))
@@ -2840,7 +2832,7 @@ def _publisher_list(
                 pub_data["sys_pub"] = "No"
             if pub.properties:
                 pub_data["Properties"] = {}
-                for k, v in six.iteritems(pub.properties):
+                for k, v in pub.properties.items():
                     pub_data["Properties"][k] = v
             data.setdefault("publisher_details", []).append(pub_data)
     return __prepare_json(retcode, data=data, errors=errors_json, op=op)
@@ -3582,7 +3574,7 @@ def __pkg(
         else:
             pargs = json.loads(pargs_json)
         if not isinstance(pargs, list):
-            if not isinstance(pargs, six.string_types):
+            if not isinstance(pargs, str):
                 err = {"reason": "{0} is invalid.".format(arg_name)}
                 errors_json.append(err)
                 return None, __prepare_json(EXIT_OOPS, errors=errors_json)

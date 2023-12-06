@@ -24,11 +24,9 @@
 #
 
 
-from __future__ import print_function
 import os
 import re
 import shlex
-import six
 import sys
 
 import pkg.actions
@@ -257,7 +255,7 @@ def add_transform(transforms, printinfo, transform, filename, lineno):
             # It's now appropriate to compile the regexp, if there
             # are substitutions to be made.  So do the substitution
             # and compile the result.
-            if isinstance(regexp, six.string_types):
+            if isinstance(regexp, str):
                 rx = re.compile(
                     substitute_values(
                         regexp, action, matches, pkg_attrs, filename, lineno
@@ -468,7 +466,7 @@ def substitute_values(
         if not d["quote"]:
             q = lambda x: x
 
-        if isinstance(attr, six.string_types):
+        if isinstance(attr, str):
             newmsg += (
                 msg[prevend : i.start()]
                 + d.get("prefix", "")
@@ -568,7 +566,7 @@ def apply_transforms(
         s = transform[11 : transform.index("->")]
         # Map each pattern to its position in the original match string.
         matchorder = {}
-        for attr, match in six.iteritems(attrdict):
+        for attr, match in attrdict.items():
             # Attributes might be quoted even if they don't need it,
             # and lead to a mis-match.  These three patterns are all
             # safe to try.  If we fail to find the match expression,
@@ -606,7 +604,7 @@ def apply_transforms(
         if verbose:
             if (
                 not action
-                or not isinstance(action, six.string_types)
+                or not isinstance(action, str)
                 and orig_attrs != action.attrs
             ):
                 comments.append(
@@ -615,13 +613,13 @@ def apply_transforms(
                     )
                 )
                 comments.append("#  Result: {0}".format(action))
-        if not action or isinstance(action, six.string_types):
+        if not action or isinstance(action, str):
             break
 
     # Any newly-created actions need to have the transforms applied, too.
     newnewactions = []
     for act in newactions:
-        if not isinstance(act, six.string_types):
+        if not isinstance(act, str):
             c, al = apply_transforms(
                 transforms, act, pkg_attrs, verbose, act_filename, act_lineno
             )
@@ -884,7 +882,7 @@ def process_mog(
             if act.name == "set":
                 name = act.attrs["name"]
                 value = act.attrs["value"]
-                if isinstance(value, six.string_types):
+                if isinstance(value, str):
                     pkg_attrs.setdefault(name, []).append(value)
                 else:
                     pkg_attrs.setdefault(name, []).extend(value)

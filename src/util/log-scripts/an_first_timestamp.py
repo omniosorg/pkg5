@@ -28,7 +28,6 @@
 """an_first_timestamp.py - read first line of an Apache HTTPD log, and print 
    Unix timestamp"""
 
-from __future__ import print_function
 import datetime
 import fileinput
 import re

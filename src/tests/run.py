@@ -25,7 +25,6 @@
 # Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 #
 
-from __future__ import print_function
 import multiprocessing
 import json as stdlibjson
 import os

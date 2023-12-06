@@ -26,16 +26,16 @@
 #
 
 import errno
+import http.client
+import io
 import itertools
 import os
 import shutil
-import six
 import sys
 import tempfile
 
 from email.utils import formatdate
-from six.moves import cStringIO, http_client
-from six.moves.urllib.parse import (
+from urllib.parse import (
     quote,
     urlencode,
     urlsplit,
@@ -43,7 +43,7 @@ from six.moves.urllib.parse import (
     urlunparse,
     urljoin,
 )
-from six.moves.urllib.request import url2pathname, pathname2url
+from urllib.request import url2pathname, pathname2url
 
 import pkg
 import pkg.p5i as p5i
@@ -297,7 +297,7 @@ class TransportRepo(object):
 
         from xml.dom.minidom import Document, parse
 
-        dom = parse(cStringIO(content))
+        dom = parse(io.StringIO(content))
         msg = ""
 
         paragraphs = []
@@ -513,21 +513,13 @@ class HTTPRepo(TransportRepo):
             fobj.free_buffer = False
             fobj.read()
         except tx.TransportProtoError as e:
-            if e.code == http_client.BAD_REQUEST:
+            if e.code == http.client.BAD_REQUEST:
                 exc_type, exc_value, exc_tb = sys.exc_info()
                 try:
                     e.details = self._parse_html_error(fobj.read())
-                # six.reraise requires the first argument
-                # callable if the second argument is None.
-                # Also the traceback is automatically attached,
-                # in Python 3, so we can simply raise it.
                 except:
-                    # If parse fails, raise original
-                    # exception.
-                    if six.PY2:
-                        six.reraise(exc_value, None, exc_tb)
-                    else:
-                        raise exc_value
+                    # If parse fails, raise original exception.
+                    raise exc_value
             raise
         finally:
             fobj.close()
@@ -887,19 +879,15 @@ class HTTPRepo(TransportRepo):
             # use .read() since this will empty the data buffer.
             fobj.getheader("octopus", None)
         except tx.TransportProtoError as e:
-            if e.code == http_client.UNAUTHORIZED:
+            if e.code == http.client.UNAUTHORIZED:
                 exc_type, exc_value, exc_tb = sys.exc_info()
                 try:
                     e.details = self._analyze_server_error(
                         fobj.getheader("X-IPkg-Error", None)
                     )
                 except:
-                    # If analysis fails, raise original
-                    # exception.
-                    if six.PY2:
-                        six.reraise(exc_value, None, exc_tb)
-                    else:
-                        raise exc_value
+                    # If analysis fails, raise original exception.
+                    raise exc_value
             raise
         return fobj
 
@@ -1027,17 +1015,13 @@ class HTTPRepo(TransportRepo):
             state = fobj.getheader("State", None)
             pkgfmri = fobj.getheader("Package-FMRI", None)
         except tx.TransportProtoError as e:
-            if e.code == http_client.BAD_REQUEST:
+            if e.code == http.client.BAD_REQUEST:
                 exc_type, exc_value, exc_tb = sys.exc_info()
                 try:
                     e.details = self._parse_html_error(fobj.read())
                 except:
-                    # If parse fails, raise original
-                    # exception.
-                    if six.PY2:
-                        six.reraise(exc_value, None, exc_tb)
-                    else:
-                        raise exc_value
+                    # If parse fails, raise original exception.
+                    raise exc_value
             raise
         finally:
             fobj.close()
@@ -1067,17 +1051,13 @@ class HTTPRepo(TransportRepo):
             state = fobj.getheader("State", None)
             pkgfmri = fobj.getheader("Package-FMRI", None)
         except tx.TransportProtoError as e:
-            if e.code == http_client.BAD_REQUEST:
+            if e.code == http.client.BAD_REQUEST:
                 exc_type, exc_value, exc_tb = sys.exc_info()
                 try:
                     e.details = self._parse_html_error(fobj.read())
                 except:
-                    # If parse fails, raise original
-                    # exception.
-                    if six.PY2:
-                        six.reraise(exc_value, None, exc_tb)
-                    else:
-                        raise exc_value
+                    # If parse fails, raise original exception.
+                    raise exc_value
 
             raise
         finally:
@@ -1111,17 +1091,13 @@ class HTTPRepo(TransportRepo):
             fobj.read()
             trans_id = fobj.getheader("Transaction-ID", None)
         except tx.TransportProtoError as e:
-            if e.code == http_client.BAD_REQUEST:
+            if e.code == http.client.BAD_REQUEST:
                 exc_type, exc_value, exc_tb = sys.exc_info()
                 try:
                     e.details = self._parse_html_error(fobj.read())
                 except:
-                    # If parse fails, raise original
-                    # exception.
-                    if six.PY2:
-                        six.reraise(exc_value, None, exc_tb)
-                    else:
-                        raise exc_value
+                    # If parse fails, raise original exception.
+                    raise exc_value
             raise
         finally:
             fobj.close()
@@ -1267,7 +1243,7 @@ class HTTPRepo(TransportRepo):
             csize = resp.getheader("Content-Length", None)
             chashes = dict(
                 val.split("=", 1)
-                for hdr, val in six.iteritems(resp.headers)
+                for hdr, val in resp.headers.items()
                 if hdr.lower().startswith("x-ipkg-attr")
             )
             return (csize, chashes)
@@ -1703,7 +1679,7 @@ class _FilesystemRepo(TransportRepo):
 
         try:
             pubs = self._frepo.get_publishers()
-            buf = cStringIO()
+            buf = io.StringIO()
             p5i.write(buf, pubs)
         except Exception as e:
             reason = (
@@ -1721,7 +1697,7 @@ class _FilesystemRepo(TransportRepo):
     def get_status(self, header=None, ccancel=None):
         """Get status/0 information from the repository."""
 
-        buf = cStringIO()
+        buf = io.StringIO()
         try:
             rstatus = self._frepo.get_status()
             json.dump(
@@ -1963,7 +1939,7 @@ class _FilesystemRepo(TransportRepo):
         """Query the repo for versions information.
         Returns a file-like object."""
 
-        buf = cStringIO()
+        buf = io.StringIO()
         vops = {
             "abandon": ["0"],
             "add": ["0"],
@@ -1984,7 +1960,7 @@ class _FilesystemRepo(TransportRepo):
         buf.write(
             "\n".join(
                 "{0} {1}".format(op, " ".join(vers))
-                for op, vers in six.iteritems(vops)
+                for op, vers in vops.items()
             )
             + "\n"
         )
@@ -2357,7 +2333,7 @@ class _ArchiveRepo(TransportRepo):
                 # Remove temporary directory if possible.
                 shutil.rmtree(tmpdir, ignore_errors=True)
 
-        buf = cStringIO()
+        buf = io.StringIO()
         try:
             json.dump(
                 arcdata, buf, ensure_ascii=False, indent=2, sort_keys=True
@@ -2461,7 +2437,7 @@ class _ArchiveRepo(TransportRepo):
 
         try:
             pubs = self._arc.get_publishers()
-            buf = cStringIO()
+            buf = io.StringIO()
             p5i.write(buf, pubs)
         except Exception as e:
             reason = (
@@ -2598,7 +2574,7 @@ class _ArchiveRepo(TransportRepo):
         """Query the repo for versions information.
         Returns a file-like object."""
 
-        buf = cStringIO()
+        buf = io.StringIO()
         vops = {
             "catalog": ["1"],
             "file": ["0"],
@@ -2612,7 +2588,7 @@ class _ArchiveRepo(TransportRepo):
         buf.write(
             "\n".join(
                 "{0} {1}".format(op, " ".join(vers))
-                for op, vers in six.iteritems(vops)
+                for op, vers in vops.items()
             )
             + "\n"
         )

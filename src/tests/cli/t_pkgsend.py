@@ -38,10 +38,8 @@ import shutil
 import stat
 import tempfile
 import unittest
-import six
-from six.moves import range
-from six.moves.urllib.error import HTTPError
-from six.moves.urllib.request import urlopen, Request, pathname2url
+from urllib.error import HTTPError
+from urllib.request import urlopen, Request, pathname2url
 
 from pkg import misc
 from pkg.actions import fromstr
@@ -1679,9 +1677,7 @@ file elftest.so.1 mode=0755 owner=root group=bin path=bin/true pkg.size=ignored 
             "pkg.csize": "1358",
             "pkg.size": "3948",
         }
-        actual = dict(
-            (k, v) for (k, v) in six.iteritems(a.attrs) if k in expected
-        )
+        actual = dict((k, v) for (k, v) in a.attrs.items() if k in expected)
         self.assertEqualDiff(expected, actual)
 
         # 'elfhash' and 'pkg.content-hash' can vary depending upon
