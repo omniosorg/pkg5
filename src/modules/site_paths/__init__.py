@@ -34,15 +34,18 @@ from site import getsitepackages, getusersitepackages, addsitedir
 import os, sys
 
 
+def strip_zip():
+    sys.path = [d for d in sys.path if not d.endswith(".zip")]
+
+
 def strip_site():
     strip = getsitepackages()
     strip.append(getusersitepackages())
-    sys.path = [
-        d for d in sys.path if d not in strip and not d.endswith(".zip")
-    ]
+    sys.path = [d for d in sys.path if d not in strip]
 
 
 def add_pkglib():
+    strip_zip()
     # If PYTHONPATH is set in the environment and the environment is not
     # being ignored, then don't adjust the path. This could, for example,
     # be running under the testsuite.
