@@ -35,7 +35,6 @@ import hashlib
 import os
 import platform
 import shutil
-import six
 import stat
 import sys
 import tempfile
@@ -3969,14 +3968,14 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 portable.rename(op, offsets_path)
                 portable.rename(bp, conflicting_keys_path)
             else:
-                exc_info = sys.exc_info()
+                exc_type, exc_value, exc_traceback = sys.exc_info()
                 try:
                     os.unlink(stripped_path)
                     os.unlink(offsets_path)
                     os.unlink(conflicting_keys_path)
                 except:
                     pass
-                six.reraise(exc_info[0], exc_info[1], exc_info[2])
+                raise exc_value.with_traceback(exc_traceback)
 
         progtrack.job_add_progress(progtrack.JOB_FAST_LOOKUP)
         progtrack.job_done(progtrack.JOB_FAST_LOOKUP)

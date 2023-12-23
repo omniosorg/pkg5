@@ -72,7 +72,6 @@ from functools import cmp_to_key
 from urllib.parse import unquote
 
 import pkg.actions as actions
-import six
 
 import pkg.catalog as catalog
 import pkg.client.api_errors as apx
@@ -1299,7 +1298,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
         # re-raise the original exception. (we have to explicitly
         # restate the original exception since we may have cleared the
         # current exception scope above.)
-        six.reraise(exc_type, exc_value, exc_traceback)
+        raise exc_value.with_traceback(exc_traceback)
 
     def solaris_image(self):
         """Returns True if the current image is a solaris image, or an
