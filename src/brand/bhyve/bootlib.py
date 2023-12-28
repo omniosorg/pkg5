@@ -193,7 +193,7 @@ class Zone:
         if (v := self.findattr("password")) is not None:
             user_data["password"] = file_or_string(v.get("value"))
             user_data["chpasswd"] = {"expire": False}
-            user_data["ssh-pwauth"] = True
+            user_data["ssh_pwauth"] = True
 
         if (v := self.findattr("sshkey")) is not None:
             v = file_or_string(v.get("value"))
