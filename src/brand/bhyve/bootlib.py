@@ -228,7 +228,12 @@ class Zone:
                     "addresses": [addr],
                 }
                 if rtr:
-                    data["gateway4"] = rtr
+                    data["routes"] = [
+                        {
+                            "to": "0.0.0.0/0",
+                            "via": rtr,
+                        }
+                    ]
 
                 if not nsdone:
                     domain = self.findattr("dns-domain")
