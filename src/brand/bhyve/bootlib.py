@@ -208,7 +208,7 @@ class Zone:
         network_data = {}
 
         addresses = self.findall("./network[@allowed-address]")
-        if addresses is not None:
+        if len(addressess) > 0:
             nsdone = False
             network_data["version"] = 2
             network_data["ethernets"] = {}
