@@ -21,7 +21,6 @@ pybonjour @ https://mirrors.omnios.org/pymodules/pybonjour/pybonjour-1.1.1-pytho
 pycurl==7.44.1 # stuck on 7.44.1 - https://github.com/pycurl/pycurl/issues/748
 pydantic==1.10.7
 pytz==2023.3
-six==1.16.0
 tempora==5.2.2
 typing_extensions==4.5.0
 wcwidth==0.2.6

@@ -31,7 +31,6 @@ import pkg5unittest
 import itertools
 import os
 import re
-import six
 import subprocess
 import sys
 import unittest
@@ -851,7 +850,7 @@ depend fmri={dummy_fmri} {pfx}.file=python{bin_ver} {pfx}.path=usr/bin {pfx}.rea
             ver, proto, reason, include_os=include_os
         )
 
-    if six.PY2:
+    if sys.version_info[0] == 2:
         # in this case, py_ver_default = "2.7", py_ver_other = "3.x"
         pyver_resolve_dep_manf = """
 file NOHASH group=bin mode=0444 owner=root path=usr/lib/python{py_ver}/vendor-packages/pkg/indexer.py
@@ -907,7 +906,7 @@ file NOHASH group=bin mode=0755 owner=root path=usr/bin/python
             if f != "search_storage"
         ]
 
-        if six.PY2:
+        if sys.version_info[0] == 2:
             rel_paths += [
                 "usr/bin/python",
                 "usr/lib/python{py_ver}/lib-dynload/64/pkg/search_storage.py",

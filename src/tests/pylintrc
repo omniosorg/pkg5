@@ -185,8 +185,6 @@ acquired-members=REQUEST,acl_users,aq_parent
 # * use of variable before assigment
 #
 
-ignored-modules=six.moves
-
 [VARIABLES]
 
 # Tells wether we should check for unused import in __init__ files.

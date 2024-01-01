@@ -76,7 +76,6 @@ pipreqs --print --ignore ${ignores:1} --mode no-pin $ROOT/src | sed "
     /cryptography/d
     /pyOpenSSL/d
     /pylint/d
-    /six/d
 " | overrides > $tmpf.core
 
 echo "+ Evaluating requirements (bhyve)"

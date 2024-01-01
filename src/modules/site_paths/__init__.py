@@ -45,7 +45,6 @@ def strip_site():
 
 
 def add_pkglib():
-    strip_zip()
     # If PYTHONPATH is set in the environment and the environment is not
     # being ignored, then don't adjust the path. This could, for example,
     # be running under the testsuite.
@@ -55,6 +54,7 @@ def add_pkglib():
         return
     import platform
 
+    strip_zip()
     sys.path, remainder = sys.path[:2], sys.path[2:]
     addsitedir(
         "/usr/lib/pkg/python{}".format(

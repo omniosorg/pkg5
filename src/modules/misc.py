@@ -81,8 +81,6 @@ from stat import (
     S_IXOTH,
 )
 
-import six
-
 from urllib.parse import urlsplit, urlparse, urlunparse
 from urllib.request import pathname2url, url2pathname
 
@@ -180,7 +178,7 @@ def copytree(src, dst):
     nor the 'ignore' keyword arguments of the shutil version.
     """
 
-    problem = None
+    exc_value = None
     os.makedirs(dst, PKG_DIR_MODE)
     src_stat = os.stat(src)
     for name in sorted(os.listdir(src)):
@@ -222,7 +220,7 @@ def copytree(src, dst):
                     # Store original exception so that the
                     # real cause of failure can be raised if
                     # this fails.
-                    problem = sys.exc_info()
+                    exc_type, exc_value, exc_traceback = sys.exc_info()
                     continue
             os.chown(d_path, s.st_uid, s.st_gid)
             os.utime(d_path, (s.st_atime, s.st_mtime))
@@ -244,8 +242,8 @@ def copytree(src, dst):
     os.chmod(dst, S_IMODE(src_stat.st_mode))
     os.chown(dst, src_stat.st_uid, src_stat.st_gid)
     os.utime(dst, (src_stat.st_atime, src_stat.st_mtime))
-    if problem:
-        six.reraise(problem[0], problem[1], problem[2])
+    if exc_value:
+        raise exc_value.with_traceback(exc_traceback)
 
 
 def move(src, dst):

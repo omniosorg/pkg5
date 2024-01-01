@@ -23,9 +23,6 @@
 # Copyright 2023 OmniOS Community Edition (OmniOSce) Association.
 #
 #
-# The six compatibility layers cause detection problems for pkgdepend
-<transform file -> default pkg.depend.bypass-generate .*six.*>
-#
 # pkgdepend doesn't understand the relative import syntax "from .x import y",
 # so we have to bypass generating dependencies on those files.
 <transform file path=$(PYDIRVP)/pkg/actions -> \
