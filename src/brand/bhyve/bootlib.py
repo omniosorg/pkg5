@@ -193,7 +193,7 @@ class Zone:
         if (v := self.findattr("password")) is not None:
             user_data["password"] = file_or_string(v.get("value"))
             user_data["chpasswd"] = {"expire": False}
-            user_data["ssh-pwauth"] = True
+            user_data["ssh_pwauth"] = True
 
         if (v := self.findattr("sshkey")) is not None:
             v = file_or_string(v.get("value"))
@@ -208,7 +208,7 @@ class Zone:
         network_data = {}
 
         addresses = self.findall("./network[@allowed-address]")
-        if addresses is not None:
+        if len(addressess) > 0:
             nsdone = False
             network_data["version"] = 2
             network_data["ethernets"] = {}
@@ -228,7 +228,12 @@ class Zone:
                     "addresses": [addr],
                 }
                 if rtr:
-                    data["gateway4"] = rtr
+                    data["routes"] = [
+                        {
+                            "to": "0.0.0.0/0",
+                            "via": rtr,
+                        }
+                    ]
 
                 if not nsdone:
                     domain = self.findattr("dns-domain")
