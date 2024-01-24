@@ -23,11 +23,11 @@
 # Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
 #
 
-import pkg.site_paths
-
-pkg.site_paths.init()
-
 try:
+    import pkg.site_paths
+
+    pkg.site_paths.init()
+
     import calendar
     import collections
     import getopt
@@ -53,11 +53,11 @@ try:
     from functools import reduce
     from pkg.misc import PipeError, emsg, msg
     from urllib.parse import quote
-    from pkg.client.pkgdefs import EXIT_OK, EXIT_OOPS, EXIT_BADOPT, EXIT_PARTIAL
+    from pkg.client.pkgdefs import EXIT_OK, EXIT_OOPS, EXIT_BADOPT, EXIT_FATAL
 except KeyboardInterrupt:
     import sys
 
-    sys.exit(EXIT_OOPS)
+    sys.exit(1)  # EXIT_OOPS
 
 
 class PkgmergeException(Exception):
@@ -100,7 +100,7 @@ def cleanup():
             break
 
 
-def usage(errmsg="", exitcode=2):
+def usage(errmsg="", exitcode=EXIT_BADOPT):
     """Emit a usage message and optionally prefix it with a more specific
     error message.  Causes program to exit."""
 
@@ -1037,15 +1037,15 @@ if __name__ == "__main__":
         __ret = EXIT_OOPS
     except (PipeError, KeyboardInterrupt):
         __ret = EXIT_OOPS
-    except SystemExit as __e:
-        raise __e
+    except SystemExit:
+        raise
     except EnvironmentError as __e:
         error(str(apx._convert_error(__e)))
         __ret = EXIT_OOPS
-    except Exception as __e:
+    except Exception:
         traceback.print_exc()
         error(misc.get_traceback_message(), exitcode=None)
-        __ret = 99
+        __ret = EXIT_FATAL
     finally:
         cleanup()
 

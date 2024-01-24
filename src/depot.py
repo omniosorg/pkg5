@@ -22,9 +22,48 @@
 # Copyright (c) 2007, 2022, Oracle and/or its affiliates.
 #
 
-import pkg.site_paths
+try:
+    import pkg.site_paths
 
-pkg.site_paths.init()
+    pkg.site_paths.init()
+    import getopt
+    import gettext
+    import locale
+    import logging
+    import os
+    import os.path
+    import OpenSSL.crypto as crypto
+    import string
+    import shlex
+    import string
+    import subprocess
+    import sys
+    import tempfile
+    import portend
+
+    from importlib import reload
+    from urllib.parse import urlparse, urlunparse
+
+    import cherrypy
+    import cherrypy.process.servers
+    from cherrypy.process.plugins import Daemonizer
+    from cherrypy._cpdispatch import Dispatcher
+
+    from pkg.misc import msg, emsg, setlocale
+    from pkg.client.debugvalues import DebugValues
+
+    import pkg
+    import pkg.client.api_errors as api_errors
+    import pkg.config as cfg
+    import pkg.portable.util as os_util
+    import pkg.search_errors as search_errors
+    import pkg.server.depot as ds
+    import pkg.server.repository as sr
+    from pkg.client.pkgdefs import EXIT_OK, EXIT_OOPS, EXIT_BADOPT
+except KeyboardInterrupt:
+    import sys
+
+    sys.exit(1)  # EXIT_OOPS
 
 # pkg.depotd - package repository daemon
 
@@ -65,52 +104,6 @@ THREADS_MAX = 5000
 # connections.
 SOCKET_TIMEOUT_DEFAULT = 60
 
-import getopt
-import gettext
-import locale
-import logging
-import os
-import os.path
-import OpenSSL.crypto as crypto
-import string
-import shlex
-import string
-import subprocess
-import sys
-import tempfile
-import portend
-
-from importlib import reload
-from urllib.parse import urlparse, urlunparse
-
-try:
-    import cherrypy
-
-    version = cherrypy.__version__.split(".")
-    # comparison requires same type, therefore list conversion is needed
-    if list(map(int, version)) < [3, 1, 0]:
-        raise ImportError
-except ImportError:
-    print(
-        """cherrypy 3.1.0 or greater is required to use this program.""",
-        file=sys.stderr,
-    )
-    sys.exit(2)
-
-import cherrypy.process.servers
-from cherrypy.process.plugins import Daemonizer
-from cherrypy._cpdispatch import Dispatcher
-
-from pkg.misc import msg, emsg, setlocale
-from pkg.client.debugvalues import DebugValues
-
-import pkg
-import pkg.client.api_errors as api_errors
-import pkg.config as cfg
-import pkg.portable.util as os_util
-import pkg.search_errors as search_errors
-import pkg.server.depot as ds
-import pkg.server.repository as sr
 
 # Starting in CherryPy 3.2, its default dispatcher converts all punctuation to
 # underscore. Since publisher name can contain the hyphen symbol "-", in order
@@ -138,7 +131,7 @@ class LogSink(object):
         pass
 
 
-def usage(text=None, retcode=2, full=False):
+def usage(text=None, retcode=EXIT_BADOPT, full=False):
     """Optionally emit a usage message and then exit using the specified
     exit code."""
 
@@ -333,7 +326,7 @@ if __name__ == "__main__":
             if opt == "-a":
                 addresses.add(arg)
             elif opt == "-n":
-                sys.exit(0)
+                sys.exit(EXIT_OK)
             elif opt == "-d":
                 ivalues["pkg"]["inst_root"] = arg
             elif opt == "-p":
@@ -585,7 +578,7 @@ if __name__ == "__main__":
         )
 
     if show_usage:
-        usage(retcode=0, full=True)
+        usage(retcode=EXIT_OK, full=True)
 
     if not dconf.get_property("pkg", "log_errors"):
         dconf.set_property("pkg", "log_errors", "stderr")
@@ -688,7 +681,7 @@ if __name__ == "__main__":
                 "pkg.depotd: unable to bind to the specified "
                 "port: {0:d}. Reason: {1}".format(port, e)
             )
-            sys.exit(1)
+            sys.exit(EXIT_OOPS)
     else:
         # Not applicable if we're not going to serve content
         dconf.set_property("pkg", "content_root", "")
@@ -752,7 +745,7 @@ if __name__ == "__main__":
                     "passphrase needed to decrypt the SSL "
                     "private key file: {1}".format(cmdline, __e)
                 )
-                sys.exit(1)
+                sys.exit(EXIT_OOPS)
             return p.stdout.read().strip(b"\n")
 
         if ssl_dialog.startswith("exec:"):
@@ -790,14 +783,14 @@ if __name__ == "__main__":
                 "pkg.depotd: unable to read the SSL private key "
                 "file: {0}".format(_e)
             )
-            sys.exit(1)
+            sys.exit(EXIT_OOPS)
         except crypto.Error as _e:
             emsg(
                 "pkg.depotd: authentication or cryptography "
                 "failure while attempting to decode\nthe SSL "
                 "private key file: {0}".format(_e)
             )
-            sys.exit(1)
+            sys.exit(EXIT_OOPS)
         else:
             # Redirect the server to the decrypted key file.
             ssl_key_file = key_data.name
@@ -902,7 +895,7 @@ if __name__ == "__main__":
             pass
         except (api_errors.ApiException, sr.RepositoryError) as _e:
             emsg("pkg.depotd: {0}".format(_e))
-            sys.exit(1)
+            sys.exit(EXIT_OOPS)
 
     try:
         sort_file_max_size = dconf.get_property("pkg", "sort_file_max_size")
@@ -919,13 +912,13 @@ if __name__ == "__main__":
         )
     except (RuntimeError, sr.RepositoryError) as _e:
         emsg("pkg.depotd: {0}".format(_e))
-        sys.exit(1)
+        sys.exit(EXIT_OOPS)
     except search_errors.IndexingException as _e:
         emsg("pkg.depotd: {0}".format(str(_e)), "INDEX")
-        sys.exit(1)
+        sys.exit(EXIT_OOPS)
     except api_errors.ApiException as _e:
         emsg("pkg.depotd: {0}".format(str(_e)))
-        sys.exit(1)
+        sys.exit(EXIT_OOPS)
 
     if (
         not rebuild
@@ -950,38 +943,38 @@ if __name__ == "__main__":
             api_errors.ApiException,
         ) as e:
             emsg(str(e), "INDEX")
-            sys.exit(1)
+            sys.exit(EXIT_OOPS)
     elif rebuild:
         try:
             repo.rebuild(build_index=True)
         except sr.RepositoryError as e:
             emsg(str(e), "REBUILD")
-            sys.exit(1)
+            sys.exit(EXIT_OOPS)
         except (
             search_errors.IndexingException,
             api_errors.UnknownErrors,
             api_errors.PermissionsException,
         ) as e:
             emsg(str(e), "INDEX")
-            sys.exit(1)
+            sys.exit(EXIT_OOPS)
     elif add_content:
         try:
             repo.add_content()
             repo.refresh_index()
         except sr.RepositoryError as e:
             emsg(str(e), "ADD_CONTENT")
-            sys.exit(1)
+            sys.exit(EXIT_OOPS)
         except (
             search_errors.IndexingException,
             api_errors.UnknownErrors,
             api_errors.PermissionsException,
         ) as e:
             emsg(str(e), "INDEX")
-            sys.exit(1)
+            sys.exit(EXIT_OOPS)
 
     # Ready to start depot; exit now if requested.
     if exit_ready:
-        sys.exit(0)
+        sys.exit(EXIT_OK)
 
     # Next, initialize depot.
     if nasty:
@@ -999,8 +992,7 @@ if __name__ == "__main__":
             ),
         },
     }
-    if list(map(int, version)) >= [3, 2, 0]:
-        conf["/"]["request.dispatch"] = Pkg5Dispatcher()
+    conf["/"]["request.dispatch"] = Pkg5Dispatcher()
 
     proxy_base = dconf.get_property("pkg", "proxy_base")
     if proxy_base:
@@ -1050,7 +1042,7 @@ if __name__ == "__main__":
             "illegal option value specified?"
         )
         emsg(_e)
-        sys.exit(1)
+        sys.exit(EXIT_OOPS)
 
 # Vim hints
 # vim:ts=4:sw=4:et:fdm=marker

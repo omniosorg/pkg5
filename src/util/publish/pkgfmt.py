@@ -24,9 +24,39 @@
 # Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
 #
 
-import pkg.site_paths
+try:
+    import pkg.site_paths
 
-pkg.site_paths.init()
+    pkg.site_paths.init()
+
+    import copy
+    import errno
+    import getopt
+    import gettext
+    import io
+    import locale
+    import operator
+    import os
+    import re
+    import sys
+    import tempfile
+    import traceback
+    import warnings
+    from difflib import unified_diff
+    from functools import cmp_to_key
+
+    import pkg
+    import pkg.actions
+    import pkg.misc as misc
+    import pkg.portable
+    from pkg.misc import emsg, PipeError
+    from pkg.actions.generic import quote_attr_value
+    from pkg.actions.depend import known_types as dep_types
+    from pkg.client.pkgdefs import EXIT_OK, EXIT_OOPS, EXIT_BADOPT, EXIT_FATAL
+except KeyboardInterrupt:
+    import sys
+
+    sys.exit(1)  # EXIT_OOPS
 
 # Prefixes should be ordered alphabetically with most specific first.
 DRIVER_ALIAS_PREFIXES = (
@@ -55,36 +85,6 @@ DRIVER_ALIAS_PREFIXES = (
 # 5) variant & facet tags appear at the end of actions
 # 6) multi-valued tags appear at the end aside from the above
 # 7) key attribute tags come first
-
-try:
-    import copy
-    import errno
-    import getopt
-    import gettext
-    import io
-    import locale
-    import operator
-    import os
-    import re
-    import sys
-    import tempfile
-    import traceback
-    import warnings
-    from difflib import unified_diff
-    from functools import cmp_to_key
-
-    import pkg
-    import pkg.actions
-    import pkg.misc as misc
-    import pkg.portable
-    from pkg.misc import emsg, PipeError
-    from pkg.actions.generic import quote_attr_value
-    from pkg.actions.depend import known_types as dep_types
-    from pkg.client.pkgdefs import EXIT_OK, EXIT_OOPS, EXIT_BADOPT, EXIT_PARTIAL
-except KeyboardInterrupt:
-    import sys
-
-    sys.exit(EXIT_OOPS)
 
 FMT_V1 = "v1"
 FMT_V2 = "v2"
@@ -795,13 +795,13 @@ if __name__ == "__main__":
     except (PipeError, KeyboardInterrupt):
         # We don't want to display any messages here to prevent
         # possible further broken pipe (EPIPE) errors.
-        __ret = 1
-    except SystemExit as _e:
-        raise _e
-    except:
+        __ret = EXIT_OOPS
+    except SystemExit:
+        raise
+    except Exception:
         traceback.print_exc()
         error(misc.get_traceback_message(), exitcode=None)
-        __ret = 99
+        __ret = EXIT_FATAL
 
     sys.exit(__ret)
 

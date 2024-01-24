@@ -25,44 +25,50 @@
 # Copyright 2017 OmniOS Community Edition (OmniOSce) Association.
 #
 
-import pkg.site_paths
+try:
+    import pkg.site_paths
 
-pkg.site_paths.init()
-import getopt
-import gettext
-import hashlib
-import locale
-import os
-import shutil
-import sys
-import tempfile
-import traceback
-from importlib import reload
+    pkg.site_paths.init()
+    import getopt
+    import gettext
+    import hashlib
+    import locale
+    import os
+    import shutil
+    import sys
+    import tempfile
+    import traceback
+    from importlib import reload
 
-from cryptography import x509
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import serialization
+    from cryptography import x509
+    from cryptography.hazmat.backends import default_backend
+    from cryptography.hazmat.primitives import serialization
 
-import pkg
-import pkg.actions as actions
-import pkg.client.api_errors as api_errors
-import pkg.client.transport.transport as transport
-import pkg.digest as digest
-import pkg.fmri as fmri
-import pkg.manifest as manifest
-import pkg.misc as misc
-import pkg.publish.transaction as trans
-from pkg.client import global_settings
-from pkg.client.debugvalues import DebugValues
-from pkg.misc import emsg, msg, PipeError
+    import pkg
+    import pkg.actions as actions
+    import pkg.client.api_errors as api_errors
+    import pkg.client.transport.transport as transport
+    import pkg.digest as digest
+    import pkg.fmri as fmri
+    import pkg.manifest as manifest
+    import pkg.misc as misc
+    import pkg.publish.transaction as trans
+    from pkg.client import global_settings
+    from pkg.client.debugvalues import DebugValues
+    from pkg.misc import emsg, msg, PipeError
+    from pkg.client.pkgdefs import (
+        EXIT_OK,
+        EXIT_OOPS,
+        EXIT_BADOPT,
+        EXIT_PARTIAL,
+        EXIT_FATAL,
+    )
+except KeyboardInterrupt:
+    import sys
+
+    sys.exit(1)  # EXIT_OOPS
 
 PKG_CLIENT_NAME = "pkgsign"
-
-# pkg exit codes
-EXIT_OK = 0
-EXIT_OOPS = 1
-EXIT_BADOPT = 2
-EXIT_PARTIAL = 3
 
 repo_cache = {}
 
@@ -465,15 +471,15 @@ if __name__ == "__main__":
         # We don't want to display any messages here to prevent
         # possible further broken pipe (EPIPE) errors.
         __ret = EXIT_OOPS
-    except SystemExit as _e:
-        raise _e
+    except SystemExit:
+        raise
     except EnvironmentError as _e:
         error(str(api_errors._convert_error(_e)))
-        __ret = 1
-    except:
+        __ret = EXIT_OOPS
+    except Exception:
         traceback.print_exc()
         error(misc.get_traceback_message())
-        __ret = 99
+        __ret = EXIT_FATAL
     sys.exit(__ret)
 
 # Vim hints

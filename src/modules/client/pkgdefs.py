@@ -21,8 +21,8 @@
 #
 
 #
-# Copyright (c) 2011, 2022, Oracle and/or its affiliates.
 # Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
+# Copyright (c) 2011, 2023, Oracle and/or its affiliates.
 #
 
 """
@@ -40,6 +40,7 @@ EXIT_LICENSE = 6  # License acceptance required for requested op.
 EXIT_LOCKED = 7  # Image is currently locked by another process
 EXIT_ACTUATOR = 8  # Actuator timed out
 EXIT_CONSTRAINED = 9  # Overly constrained
+EXIT_FATAL = 99  # An unanticipated exception occurred
 
 # private pkg exit codes
 EXIT_EACCESS = 51  # Can't access requested image

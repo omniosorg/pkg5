@@ -24,18 +24,64 @@
 # Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
 # Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 #
-import pkg.site_paths
 
-pkg.site_paths.init()
+try:
+    import pkg.site_paths
+
+    pkg.site_paths.init()
+    import atexit
+    import collections
+    import copy
+    import errno
+    import getopt
+    import gettext
+    import locale
+    import logging
+    import os
+    import operator
+    import re
+    import shlex
+    import shutil
+    import sys
+    import tempfile
+    import textwrap
+    import traceback
+    import warnings
+    import itertools
+    from importlib import reload
+
+    from pkg.client import global_settings
+    from pkg.client.debugvalues import DebugValues
+    from pkg.misc import msg, PipeError
+    from prettytable import PrettyTable
+    import pkg
+    import pkg.catalog
+    import pkg.client.api_errors as apx
+    import pkg.client.pkgdefs as pkgdefs
+    import pkg.client.progress
+    import pkg.client.publisher as publisher
+    import pkg.client.transport.transport as transport
+    import pkg.fmri as fmri
+    import pkg.json as json
+    import pkg.misc as misc
+    import pkg.server.repository as sr
+
+    from pkg.client.pkgdefs import (
+        EXIT_OK,
+        EXIT_OOPS,
+        EXIT_BADOPT,
+        EXIT_PARTIAL,
+        EXIT_FATAL,
+    )
+except KeyboardInterrupt:
+    import sys
+
+    sys.exit(1)  # EXIT_OOPS
 
 PKG_CLIENT_NAME = "pkgrepo"
 
-# pkgrepo exit codes
-EXIT_OK = 0
-EXIT_OOPS = 1
-EXIT_BADOPT = 2
-EXIT_PARTIAL = 3
-EXIT_DIFF = 10
+# pkgrepo specific exit codes
+EXIT_DIFF = 10  # Differences found for pkgrepo diff.
 
 # listing constants
 LISTING_FORMATS = ("default", "json", "json-formatted", "tsv")
@@ -48,43 +94,6 @@ diff_type_f = {MINUS: "- ", PLUS: "+ ", COMMON: ""}
 
 # globals
 tmpdirs = []
-
-import atexit
-import collections
-import copy
-import errno
-import getopt
-import gettext
-import locale
-import logging
-import os
-import operator
-import re
-import shlex
-import shutil
-import sys
-import tempfile
-import textwrap
-import traceback
-import warnings
-import itertools
-from importlib import reload
-
-from pkg.client import global_settings
-from pkg.client.debugvalues import DebugValues
-from pkg.misc import msg, PipeError
-from prettytable import PrettyTable
-import pkg
-import pkg.catalog
-import pkg.client.api_errors as apx
-import pkg.client.pkgdefs as pkgdefs
-import pkg.client.progress
-import pkg.client.publisher as publisher
-import pkg.client.transport.transport as transport
-import pkg.fmri as fmri
-import pkg.json as json
-import pkg.misc as misc
-import pkg.server.repository as sr
 
 logger = global_settings.logger
 
@@ -130,7 +139,7 @@ def get_tracker(quiet=False):
     return progtrack
 
 
-def usage(usage_error=None, cmd=None, retcode=2, full=False):
+def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False):
     """Emit a usage message and optionally prefix it with a more
     specific error message.  Causes program to exit.
     """
@@ -2708,8 +2717,8 @@ def handle_errors(func, *args, **kwargs):
                 raise apx._convert_error(__e)
             error("\n" + misc.out_of_memory())
             __ret = EXIT_OOPS
-    except SystemExit as __e:
-        raise __e
+    except SystemExit:
+        raise
     except (IOError, PipeError, KeyboardInterrupt) as __e:
         # Don't display any messages here to prevent possible further
         # broken pipe (EPIPE) errors.
@@ -2735,10 +2744,10 @@ def handle_errors(func, *args, **kwargs):
     except (apx.ApiException, sr.RepositoryError) as __e:
         error(str(__e))
         __ret = EXIT_OOPS
-    except:
+    except Exception:
         traceback.print_exc()
         error(traceback_str)
-        __ret = 99
+        __ret = EXIT_FATAL
     return __ret
 
 

@@ -23,20 +23,25 @@
 # Copyright (c) 2009, 2019, Oracle and/or its affiliates. All rights reserved.
 #
 
-import pkg.site_paths
+try:
+    import pkg.site_paths
 
-pkg.site_paths.init()
-import getopt
-import gettext
-import locale
-import sys
-import traceback
-import warnings
+    pkg.site_paths.init()
+    import getopt
+    import gettext
+    import locale
+    import sys
+    import traceback
+    import warnings
 
-import pkg.misc as misc
-import pkg.mogrify as mog
-from pkg.misc import PipeError
-from pkg.client.pkgdefs import EXIT_OK, EXIT_OOPS, EXIT_BADOPT, EXIT_PARTIAL
+    import pkg.misc as misc
+    import pkg.mogrify as mog
+    from pkg.misc import PipeError
+    from pkg.client.pkgdefs import EXIT_OK, EXIT_OOPS, EXIT_BADOPT, EXIT_FATAL
+except KeyboardInterrupt:
+    import sys
+
+    sys.exit(1)  # EXIT_OOPS
 
 
 def usage(errmsg="", exitcode=EXIT_BADOPT):
@@ -174,12 +179,12 @@ if __name__ == "__main__":
         exit_code = main_func()
     except (PipeError, KeyboardInterrupt):
         exit_code = EXIT_OOPS
-    except SystemExit as __e:
-        exit_code = __e
-    except Exception as __e:
+    except SystemExit:
+        raise
+    except Exception:
         traceback.print_exc()
         error(misc.get_traceback_message(), exitcode=None)
-        exit_code = 99
+        exit_code = EXIT_FATAL
 
     sys.exit(exit_code)
 
