@@ -21,14 +21,12 @@
 #
 
 #
-# Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2014, 2024, Oracle and/or its affiliates.
 #
 
 #
 # manbench - benchmark manifest operations
 #
-
-from __future__ import division
 
 import sys
 

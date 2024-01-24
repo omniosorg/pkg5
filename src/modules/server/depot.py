@@ -21,11 +21,9 @@
 #
 
 #
-# Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
 # Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright (c) 2008, 2024, Oracle and/or its affiliates.
 #
-
-from __future__ import division
 
 import cherrypy
 from cherrypy._cptools import HandlerTool
@@ -1800,7 +1798,6 @@ class NastyDepotHTTP(DepotHTTP):
         self._lock.acquire()
 
         self.nasty_cycle = (self.nasty_cycle + 1) % self.NASTY_CYCLE
-        # old-division; pylint: disable=W1619
         self.maxroll_adj = 1 + self.NASTY_MULTIPLIER * math.sin(
             self.nasty_cycle * (math.pi / self.NASTY_CYCLE)
         )

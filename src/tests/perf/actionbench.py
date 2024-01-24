@@ -21,14 +21,12 @@
 #
 
 #
-# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2024, Oracle and/or its affiliates.
 #
 
 #
 # actionbench - benchmark action creation
 #
-
-from __future__ import division
 
 import pkg.actions as actions
 

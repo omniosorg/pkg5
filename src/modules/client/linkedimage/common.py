@@ -21,8 +21,8 @@
 #
 
 #
-# Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
 # Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
+# Copyright (c) 2011, 2024, Oracle and/or its affiliates.
 #
 
 """
@@ -2036,8 +2036,7 @@ class LinkedImage(object):
         )
 
         # check if we support detach for these children.  we don't use
-        # iteritems() when walking lic_dict because we might modify
-        # lic_dict.
+        # items() when walking lic_dict because we might modify lic_dict.
         for lin in lic_dict:
             lip = self.__plugins[lin.lin_type]
             if lip.support_detach or force:

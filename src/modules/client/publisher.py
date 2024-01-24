@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2009, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2024, Oracle and/or its affiliates.
 #
 
 #
@@ -581,7 +581,7 @@ class ProxyURI(RepositoryURI):
             # Set a special value for the uri, intentionally an
             # invalid URI which should get caught by any consumers
             # using it by mistake.  This also allows us to reuse
-            # the __eq__, __cmp__, etc. methods from the parent
+            # the __eq__, __lt__, etc. methods from the parent
             # (where there is no public way of setting the URI to
             # SYSREPO_PROXY, '<sysrepo>')
             self._override_uri(SYSREPO_PROXY)
@@ -3644,8 +3644,8 @@ pkg unset-publisher {0}
     def __prop_iter(self):
         return self.__properties.__iter__()
 
-    def __prop_iteritems(self):
-        """Support iteritems on properties"""
+    def __prop_items(self):
+        """Support items() on properties"""
         return self.__properties.items()
 
     def __prop_keys(self):
@@ -3694,7 +3694,7 @@ pkg unset-publisher {0}
         __get_prop,
         __set_prop,
         __del_prop,
-        __prop_iteritems,
+        __prop_items,
         __prop_keys,
         __prop_values,
         __prop_iter,

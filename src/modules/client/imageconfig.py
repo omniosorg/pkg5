@@ -21,8 +21,8 @@
 #
 
 #
-# Copyright (c) 2007, 2017, Oracle and/or its affiliates. All rights reserved.
 # Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
+# Copyright (c) 2007, 2024, Oracle and/or its affiliates.
 #
 
 import collections
@@ -476,8 +476,8 @@ class ImageConfig(cfg.FileConfig):
     def __publisher_iter(self):
         return self.__publishers.__iter__()
 
-    def __publisher_iteritems(self):
-        """Support iteritems on publishers"""
+    def __publisher_items(self):
+        """Support items() on publishers"""
         return self.__publishers.items()
 
     def __publisher_keys(self):
@@ -882,7 +882,7 @@ class ImageConfig(cfg.FileConfig):
                     # the existing configuration.
                     secobj.remove_property(pname)
 
-            for key, val in pub.properties.iteritems():
+            for key, val in pub.properties.items():
                 if val == DEF_TOKEN:
                     continue
                 self.set_property(section, "property.{0}".format(key), val)
@@ -1160,7 +1160,7 @@ class ImageConfig(cfg.FileConfig):
         __get_publisher,
         __set_publisher,
         __del_publisher,
-        __publisher_iteritems,
+        __publisher_items,
         __publisher_keys,
         __publisher_values,
         __publisher_iter,
@@ -1778,8 +1778,8 @@ class BlendedConfig(object):
     def __publisher_iter(self):
         return self.__publishers.__iter__()
 
-    def __publisher_iteritems(self):
-        """Support iteritems on publishers"""
+    def __publisher_items(self):
+        """Support items() on publishers"""
         return self.__publishers.items()
 
     def __publisher_keys(self):
@@ -1796,7 +1796,7 @@ class BlendedConfig(object):
         __get_publisher,
         __set_publisher,
         __del_publisher,
-        __publisher_iteritems,
+        __publisher_items,
         __publisher_keys,
         __publisher_values,
         __publisher_iter,

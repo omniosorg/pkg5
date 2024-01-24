@@ -20,15 +20,14 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2007, 2022, Oracle and/or its affiliates.
 # Copyright 2014, OmniTI Computer Consulting, Inc. All rights reserved.
 # Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright (c) 2007, 2024, Oracle and/or its affiliates.
 
 """
 Misc utility functions used by the packaging system.
 """
 
-from __future__ import division
 from __future__ import print_function
 
 import OpenSSL.crypto as osc
@@ -590,8 +589,6 @@ def bytes_to_str(nbytes, fmt="{num:>.2f} {unit}"):
     ]
 
     for uom, shortuom, limit in units:
-        # pylint is picky about this message:
-        # old-division; pylint: disable=W1619
         if uom != _("EB") and nbytes >= limit:
             # Try the next largest unit of measure unless this is
             # the largest or if the byte size is within the current
@@ -1173,7 +1170,7 @@ class DictProperty(object):
             fget,
             fset,
             fdel,
-            iteritems,
+            items,
             keys,
             values,
             iterator,
@@ -1186,7 +1183,7 @@ class DictProperty(object):
             self.__fget = fget
             self.__fset = fset
             self.__fdel = fdel
-            self.__iteritems = iteritems
+            self.__items = items
             self.__keys = keys
             self.__values = values
             self.__iter = iterator
@@ -1211,14 +1208,10 @@ class DictProperty(object):
                 raise AttributeError("can't delete attribute")
             self.__fdel(self.__obj, key)
 
-        def iteritems(self):
-            if self.__iteritems is None:
-                raise AttributeError("can't iterate over items")
-            return self.__iteritems(self.__obj)
-
-        # for Python 3 compatibility
         def items(self):
-            return self.iteritems()
+            if self.__items is None:
+                raise AttributeError("can't iterate over items")
+            return self.__items(self.__obj)
 
         def keys(self):
             if self.__keys is None:
@@ -1227,7 +1220,7 @@ class DictProperty(object):
 
         def values(self):
             if self.__values is None:
-                raise AttributeError("can't iterate over " "values")
+                raise AttributeError("can't iterate over values")
             return self.__values(self.__obj)
 
         def get(self, key, default=None):
@@ -1260,7 +1253,7 @@ class DictProperty(object):
         fget=None,
         fset=None,
         fdel=None,
-        iteritems=None,
+        items=None,
         keys=None,
         values=None,
         iterator=None,
@@ -1273,7 +1266,7 @@ class DictProperty(object):
         self.__fget = fget
         self.__fset = fset
         self.__fdel = fdel
-        self.__iteritems = iteritems
+        self.__items = items
         self.__doc__ = doc
         self.__keys = keys
         self.__values = values
@@ -1293,7 +1286,7 @@ class DictProperty(object):
             self.__fget,
             self.__fset,
             self.__fdel,
-            self.__iteritems,
+            self.__items,
             self.__keys,
             self.__values,
             self.__iter,
@@ -2910,12 +2903,6 @@ def get_runtime_proxy(proxy, uri):
         return
 
     return runtime_proxy
-
-
-def decode(s):
-    """convert non-ascii strings to unicode;
-    replace non-convertable chars"""
-    return s
 
 
 def yield_matching(pat_prefix, items, patterns):

@@ -22,10 +22,8 @@
 #
 
 #
-# Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2024, Oracle and/or its affiliates.
 #
-
-from __future__ import division
 
 from . import testutils
 

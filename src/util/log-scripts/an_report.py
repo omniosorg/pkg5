@@ -21,10 +21,9 @@
 #
 
 #
-# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2024, Oracle and/or its affiliates.
 #
 
-from __future__ import division
 import cPickle as pickle
 import GeoIP
 import datetime
@@ -257,7 +256,7 @@ Total {0} requests: <b>{1:d}</b><br />
 Period: {2} - {3} ({4:d} days)<br />
 Average {5} requests per day: {6:.1f}</p>""".format(
         title, total, start_day, end_day, days, title, total / days
-    )  # old-division; pylint: disable=W1619
+    )
 
     ndays = int(str(days))
     sz = chart_hz // ndays

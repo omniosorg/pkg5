@@ -22,7 +22,7 @@
 
 #
 # Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
-# Copyright (c) 2007, 2021, Oracle and/or its affiliates.
+# Copyright (c) 2007, 2024, Oracle and/or its affiliates.
 #
 
 from collections import defaultdict, namedtuple
@@ -4312,8 +4312,7 @@ class ImagePlan(object):
                     if act.attrs.get("must-display", "false") == "true":
                         must_display = True
                     for l in self.__get_note_text(act, pfmri).splitlines():
-                        notes.append(misc.decode(l))
-
+                        notes.append(l)
             self.pd.release_notes = (must_display, notes)
 
     def __save_release_notes(self):

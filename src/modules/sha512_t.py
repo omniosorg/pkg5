@@ -21,11 +21,10 @@
 #
 
 #
-# Copyright (c) 2015, 2023, Oracle and/or its affiliates.
 # Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
+# Copyright (c) 2015, 2024, Oracle and/or its affiliates.
 #
 
-from __future__ import division, unicode_literals
 from pkg._sha512_t import lib, ffi
 
 """A hash module computes SHA512/t. Now it only supports SHA512/256 and

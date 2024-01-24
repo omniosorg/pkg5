@@ -22,10 +22,9 @@
 #
 
 #
-# Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2014, 2024, Oracle and/or its affiliates.
 #
 
-from __future__ import unicode_literals
 from . import testutils
 
 if __name__ == "__main__":
