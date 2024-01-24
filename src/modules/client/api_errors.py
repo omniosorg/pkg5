@@ -21,8 +21,8 @@
 #
 
 #
-# Copyright (c) 2008, 2021, Oracle and/or its affiliates.
 # Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
+# Copyright (c) 2008, 2024, Oracle and/or its affiliates.
 #
 
 import errno
@@ -221,8 +221,8 @@ class ImageInsufficentSpace(ApiException):
         from pkg.misc import bytes_to_str
 
         return _(
-            "Insufficient disk space available ({avail}) "
-            "for estimated need ({needed}) for {use}"
+            "Insufficient disk space available for {use}. Available "
+            "space: {avail}. Estimated required: {needed}."
         ).format(
             avail=bytes_to_str(self.avail),
             needed=bytes_to_str(self.needed),
@@ -1113,7 +1113,7 @@ class ImageBoundaryError(ApiException):
         error_list = [self.GENERIC, self.OUTSIDE_BE, self.RESERVED]
         s = ""
         for err_type in error_list:
-            if not err_type in self.actions:
+            if err_type not in self.actions:
                 continue
             if self.actions[err_type]:
                 if err_type == self.GENERIC:
@@ -1183,7 +1183,7 @@ class ImageBoundaryErrors(ApiException):
             for err in self.__errors:
                 # If err does not contain this error type
                 # we just ignore this.
-                if not err_type in err.actions or not err.actions[err_type]:
+                if err_type not in err.actions or not err.actions[err_type]:
                     continue
                 cur_errs.append(err)
 
