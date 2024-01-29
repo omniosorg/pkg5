@@ -43,18 +43,8 @@ try:
     import warnings
     from mako.template import Template
     from mako.lookup import TemplateLookup
-    from OpenSSL.crypto import (
-        TYPE_RSA,
-        TYPE_DSA,
-        PKey,
-        load_privatekey,
-        dump_privatekey,
-        load_certificate,
-        dump_certificate,
-        X509,
-        X509Extension,
-        FILETYPE_PEM,
-    )
+    from OpenSSL import crypto
+
     import pkg
     import pkg.client.api_errors as apx
     import pkg.catalog
@@ -446,7 +436,7 @@ def _createCertificateKey(
     dump_key_path,
     issuerCert=None,
     issuerKey=None,
-    key_type=TYPE_RSA,
+    key_type=crypto.TYPE_RSA,
     key_bits=2048,
     digest="sha256",
 ):
@@ -477,10 +467,10 @@ def _createCertificateKey(
     'digest' is the digestion method to use for signing.
     """
 
-    key = PKey()
+    key = crypto.PKey()
     key.generate_key(key_type, key_bits)
 
-    cert = X509()
+    cert = crypto.X509()
     cert.set_serial_number(serial)
     cert.gmtime_adj_notBefore(starttime)
     cert.gmtime_adj_notAfter(endtime)
@@ -505,18 +495,18 @@ def _createCertificateKey(
     # Cert requires bytes.
     if issuerKey:
         cert.add_extensions(
-            [X509Extension(b"basicConstraints", True, b"CA:FALSE")]
+            [crypto.X509Extension(b"basicConstraints", True, b"CA:FALSE")]
         )
         cert.sign(issuerKey, digest)
     else:
         cert.add_extensions(
-            [X509Extension(b"basicConstraints", True, b"CA:TRUE")]
+            [crypto.X509Extension(b"basicConstraints", True, b"CA:TRUE")]
         )
         cert.sign(key, digest)
     with open(dump_cert_path, "wb") as f:
-        f.write(dump_certificate(FILETYPE_PEM, cert))
+        f.write(crypto.dump_certificate(crypto.FILETYPE_PEM, cert))
     with open(dump_key_path, "wb") as f:
-        f.write(dump_privatekey(FILETYPE_PEM, key))
+        f.write(crypto.dump_privatekey(crypto.FILETYPE_PEM, key))
     return (cert, key)
 
 
@@ -570,9 +560,9 @@ def _generate_server_cert_key(
                     )
                 )
             with open(ca_cert_file, "r") as fr:
-                ca_cert = load_certificate(FILETYPE_PEM, fr.read())
+                ca_cert = load_certificate(crypto.FILETYPE_PEM, fr.read())
             with open(ca_key_file, "r") as fr:
-                ca_key = load_privatekey(FILETYPE_PEM, fr.read())
+                ca_key = load_privatekey(crypto.FILETYPE_PEM, fr.read())
 
         _createCertificateKey(
             2,
@@ -1174,10 +1164,9 @@ if __name__ == "__main__":
     misc.setlocale(locale.LC_ALL, "", error)
     gettext.install("pkg", "/usr/share/locale")
 
-    # Make all warnings be errors.
-    warnings.simplefilter("error")
-    # disable ResourceWarning: unclosed file
-    warnings.filterwarnings("ignore", category=ResourceWarning)
+    # By default, hide all warnings from users.
+    if not sys.warnoptions:
+        warnings.simplefilter("ignore")
 
     __retval = handle_errors(main_func)
     try:

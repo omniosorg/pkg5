@@ -22,7 +22,6 @@
 
 #
 # Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
-# Copyright (c) 2010, 2022, Oracle and/or its affiliates.
 #
 
 from . import testutils

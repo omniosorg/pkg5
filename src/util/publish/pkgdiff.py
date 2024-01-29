@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2009, 2019, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2024, Oracle and/or its affiliates.
 #
 
 try:
@@ -426,8 +426,10 @@ if __name__ == "__main__":
     gettext.install("pkg", "/usr/share/locale")
     misc.set_fd_limits(printer=error)
 
-    # disable ResourceWarning: unclosed file
-    warnings.filterwarnings("ignore", category=ResourceWarning)
+    # By default, hide all warnings from users.
+    if not sys.warnoptions:
+        warnings.simplefilter("ignore")
+
     try:
         exit_code = main_func()
     except (PipeError, KeyboardInterrupt):

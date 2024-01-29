@@ -22,7 +22,7 @@
 #
 
 #
-# Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2024, Oracle and/or its affiliates.
 #
 
 from . import testutils
@@ -162,8 +162,6 @@ class TestProperty(pkg5unittest.Pkg5TestCase):
         # properties don't cause a traceback.
         p1 = propcls("property")
         self.assertFalse(p1 == "property")
-        self.assertTrue(p1 != "property")
-        self.assertFalse(p1 is None)
         self.assertTrue(p1 is not None)
 
         # Verify that all expected values are accepted at init and
@@ -1037,8 +1035,6 @@ class TestPropertySection(pkg5unittest.Pkg5TestCase):
         # sections don't cause a traceback.
         s1 = seccls("section")
         self.assertFalse(s1 == "section")
-        self.assertTrue(s1 != "section")
-        self.assertFalse(s1 is None)
         self.assertTrue(s1 is not None)
 
         # Verify base stringify works as expected.
@@ -2217,7 +2213,7 @@ class TestSMFConfig(_TestConfigBase):
                     break
 
             if contact is False:
-                raise RuntimeError("Process did not launch " "successfully.")
+                raise RuntimeError("Process did not launch successfully.")
         except (KeyboardInterrupt, RuntimeError) as e:
             try:
                 hndl.kill()
@@ -2324,6 +2320,7 @@ class TestSMFConfig(_TestConfigBase):
             conf = cfg.SMFConfig(svc_fmri, doorpath=dpath)
         finally:
             # Removing the files stops configd.
+            self.__configd.kill()
             self.__configd = None
             while rfiles:
                 portable.remove(rfiles[-1])
@@ -2358,6 +2355,7 @@ class TestSMFConfig(_TestConfigBase):
         svc_fmri = "svc:/application/pkg/configuration"
 
         def cleanup():
+            self.__configd.kill()
             self.__configd = None
             while rfiles:
                 portable.remove(rfiles[-1])
