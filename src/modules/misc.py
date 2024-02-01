@@ -177,7 +177,7 @@ def copytree(src, dst):
     nor the 'ignore' keyword arguments of the shutil version.
     """
 
-    exc_value = None
+    problem = None
     os.makedirs(dst, PKG_DIR_MODE)
     src_stat = os.stat(src)
     for name in sorted(os.listdir(src)):
@@ -215,11 +215,11 @@ def copytree(src, dst):
                 try:
                     sock.bind(d_path)
                     sock.close()
-                except sock.error as _e:
+                except socket.error as err:
                     # Store original exception so that the
                     # real cause of failure can be raised if
                     # this fails.
-                    exc_type, exc_value, exc_traceback = sys.exc_info()
+                    problem = err
                     continue
             os.chown(d_path, s.st_uid, s.st_gid)
             os.utime(d_path, (s.st_atime, s.st_mtime))
@@ -241,8 +241,8 @@ def copytree(src, dst):
     os.chmod(dst, S_IMODE(src_stat.st_mode))
     os.chown(dst, src_stat.st_uid, src_stat.st_gid)
     os.utime(dst, (src_stat.st_atime, src_stat.st_mtime))
-    if exc_value:
-        raise exc_value.with_traceback(exc_traceback)
+    if problem:
+        raise problem
 
 
 def move(src, dst):

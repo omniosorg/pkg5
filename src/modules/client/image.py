@@ -44,7 +44,6 @@ import re as relib
 from contextlib import contextmanager
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
-from urllib.parse import quote, unquote
 
 import pkg.actions
 import pkg.catalog
@@ -3949,8 +3948,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
             portable.rename(sp, stripped_path)
             portable.rename(op, offsets_path)
             portable.rename(bp, conflicting_keys_path)
-        except EnvironmentError as e:
-            if e.errno == errno.EACCES or e.errno == errno.EROFS:
+        except EnvironmentError as err:
+            if err.errno == errno.EACCES or err.errno == errno.EROFS:
                 self.__action_cache_dir = self.temporary_dir()
                 stripped_path = os.path.join(
                     self.__action_cache_dir, "actions.stripped"
@@ -3965,14 +3964,13 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 portable.rename(op, offsets_path)
                 portable.rename(bp, conflicting_keys_path)
             else:
-                exc_type, exc_value, exc_traceback = sys.exc_info()
                 try:
                     os.unlink(stripped_path)
                     os.unlink(offsets_path)
                     os.unlink(conflicting_keys_path)
                 except:
                     pass
-                raise exc_value.with_traceback(exc_traceback)
+                raise err
 
         progtrack.job_add_progress(progtrack.JOB_FAST_LOOKUP)
         progtrack.job_done(progtrack.JOB_FAST_LOOKUP)
