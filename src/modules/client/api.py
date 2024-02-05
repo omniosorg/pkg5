@@ -1250,8 +1250,9 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
         elif exc_type == apx.CanceledException:
             self._cancel_done()
         elif exc_type == apx.ConflictingActionErrors:
-            self.log_operation_end(error=str(exc),
-                result=RESULT_CONFLICTING_ACTIONS)
+            self.log_operation_end(
+                error=str(exc), result=RESULT_CONFLICTING_ACTIONS
+            )
         elif exc_type in (apx.IpkgOutOfDateException, fmri.IllegalFmri):
             self.log_operation_end(error=exc)
         elif log_op_end_all:
@@ -1722,7 +1723,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 API_OP_UPDATE,
                 API_OP_INSTALL,
                 API_OP_REVERT,
-                API_OP_SYNC]:
+                API_OP_SYNC,
+            ]:
                 self.__plan_common_exception(err, log_op_end_all=True)
             else:
                 self.__plan_common_exception(err)

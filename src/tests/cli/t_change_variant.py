@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2009, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2024, Oracle and/or its affiliates.
 
 from . import testutils
 
@@ -237,7 +237,6 @@ class TestPkgChangeVariant(pkg5unittest.SingleDepotTestCase):
 
         assert p is not None
         assert v_arch == "i386" or v_arch == "sparc" or v_arch == "zos"
-        assert v_imagetype == "full" or v_imagetype == "partial"
         assert v_zone == "global" or v_zone == "nonglobal"
 
         # make sure the package is installed

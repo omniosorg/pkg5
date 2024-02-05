@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2009, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2024, Oracle and/or its affiliates.
 #
 
 
@@ -563,13 +563,13 @@ class TestPublisher(pkg5unittest.Pkg5TestCase):
 
         # check that setting system results in uri being overridden
         pobj.system = True
-        self.assertTrue(pobj.system is True)
+        self.assertTrue(pobj.system)
         self.assertTrue(pobj.uri == publisher.SYSREPO_PROXY)
 
         # check that clearing system also clears uri
         pobj.system = False
-        self.assertTrue(pobj.system is False)
-        self.assertTrue(pobj.uri is None)
+        self.assertFalse(pobj.system)
+        self.assertIsNone(pobj.uri)
 
 
 if __name__ == "__main__":

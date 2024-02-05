@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2024, Oracle and/or its affiliates.
 #
 
 """\
@@ -141,7 +141,7 @@ def count_catalog(mg, d):
         catalog_by_ip[mg["ip"]] = 1
 
     try:
-        if not d in catalog_by_ip_active[mg["ip"]]:
+        if d not in catalog_by_ip_active[mg["ip"]]:
             catalog_by_ip_active[mg["ip"]].append(d)
     except KeyError:
         catalog_by_ip_active[mg["ip"]] = [d]

@@ -565,8 +565,6 @@ def pt_abstract(func):
 # versus front-end APIs.
 #
 class ProgressTrackerBackend(object):
-    # allow def func(args): pass
-    # More than one statement on a line; pylint: disable=C0321
 
     def __init__(self):
         pass
@@ -693,8 +691,6 @@ class ProgressTrackerBackend(object):
 class ProgressTrackerFrontend(object):
     """This essentially abstract class forms the interface that other
     modules in the system use to record progress against various goals."""
-
-    # More than one statement on a line; pylint: disable=C0321
 
     # Major phases of operation
     PHASE_PREPLAN = 1

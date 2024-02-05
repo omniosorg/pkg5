@@ -44,6 +44,7 @@ import re as relib
 from contextlib import contextmanager
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
+from urllib.parse import quote, unquote
 
 import pkg.actions
 import pkg.catalog
@@ -2009,7 +2010,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 # Not interesting; already installed.
                 return False, None
             img_entry = img_kcat.get_entry(pfmri=pfmri)
-            if not img_entry is None:
+            if img_entry is not None:
                 # Already in image known catalog.
                 return False, None
             return True, new_entry
