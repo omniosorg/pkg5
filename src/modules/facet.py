@@ -259,7 +259,7 @@ class Facets(dict):
         if not item.startswith("facet."):
             raise KeyError('key must start with "facet".')
 
-        if not (value == True or value == False):
+        if not (value is True or value is False):
             raise ValueError("value must be boolean")
 
         keylist_sort = False

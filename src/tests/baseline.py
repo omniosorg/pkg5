@@ -100,7 +100,7 @@ class BaseLine(object):
             print("", file=stream)
 
         op_baseline(sys.stderr)
-        if file != None:
+        if file is not None:
             try:
                 with open(file, "w") as out:
                     op_baseline(out)

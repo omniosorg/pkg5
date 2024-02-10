@@ -22,7 +22,7 @@
 
 #
 # Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
-# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
 #
 
 """
@@ -3915,7 +3915,7 @@ def _rterr(
             ", ".join(saved_temporal_props)
         )
     else:
-        assert err != None
+        assert err is not None
 
     if li:
         if li.ischild():

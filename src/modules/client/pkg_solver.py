@@ -22,7 +22,7 @@
 
 #
 # Copyright (c) 2007, 2020, Oracle and/or its affiliates.
-# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
 #
 
 """Provides the interfaces and exceptions needed to determine which packages
@@ -230,7 +230,7 @@ class PkgSolver(object):
         assert isinstance(parent_pkgs, (type(None), frozenset))
         self.__parent_pkgs = parent_pkgs
         self.__parent_dict = dict()
-        if self.__parent_pkgs != None:
+        if self.__parent_pkgs is not None:
             self.__parent_dict = dict(
                 [(f.pkg_name, f) for f in self.__parent_pkgs]
             )
@@ -1864,7 +1864,7 @@ class PkgSolver(object):
         )
 
     def __fmri_loadstate(self, fmri, excludes):
-        """load fmri state (obsolete == True, renamed == True)"""
+        """load fmri state (obsolete is True, renamed is True)"""
 
         try:
             relevant = dict(

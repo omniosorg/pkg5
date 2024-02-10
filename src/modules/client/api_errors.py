@@ -22,7 +22,7 @@
 
 #
 # Copyright (c) 2008, 2021, Oracle and/or its affiliates.
-# Copyright 2017 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
 #
 
 import errno
@@ -1267,7 +1267,7 @@ class ActionExecutionError(ApiException):
         self.details = details
         self.error = error
         self.fmri = fmri
-        if use_errno == None:
+        if use_errno is None:
             # If details were provided, don't use errno unless
             # explicitly requested.
             use_errno = not details
@@ -3398,7 +3398,7 @@ class LinkedImageException(ApiException):
                 assert isinstance(e, LinkedImageException)
 
             # set default error return value
-            if exitrv == None:
+            if exitrv is None:
                 exitrv = pkgdefs.EXIT_OOPS
 
             self.lix_err = None
@@ -3450,7 +3450,7 @@ class LinkedImageException(ApiException):
             )
 
         if child_bad_img is not None:
-            if exitrv == None:
+            if exitrv is None:
                 exitrv = pkgdefs.EXIT_EACCESS
             if lin:
                 err = _(
@@ -3462,7 +3462,7 @@ class LinkedImageException(ApiException):
                 )
 
         if child_diverged is not None:
-            if exitrv == None:
+            if exitrv is None:
                 exitrv = pkgdefs.EXIT_DIVERGED
             err = _("Linked image is diverged: {0}").format(child_diverged)
 
@@ -3490,7 +3490,7 @@ class LinkedImageException(ApiException):
 
         if child_op_failed is not None:
             op, cpath, e = child_op_failed
-            if exitrv == None:
+            if exitrv is None:
                 exitrv = pkgdefs.EXIT_EACCESS
             if lin:
                 err = _(
@@ -3546,7 +3546,7 @@ class LinkedImageException(ApiException):
             ).format(detach_child_notsup)
 
         if detach_from_parent is not None:
-            if exitrv == None:
+            if exitrv is None:
                 exitrv = pkgdefs.EXIT_PARENTOP
             err = _(
                 "Parent linked to child, can not detach " "child: {0}"
@@ -3583,7 +3583,7 @@ class LinkedImageException(ApiException):
             err = _("Can't link image to itself: {0}")
 
         if parent_bad_img is not None:
-            if exitrv == None:
+            if exitrv is None:
                 exitrv = pkgdefs.EXIT_EACCESS
             err = _("Can't initialize parent image at path: {0}").format(
                 parent_bad_img
@@ -3593,7 +3593,7 @@ class LinkedImageException(ApiException):
             err = _("Parent path not absolute: {0}").format(parent_bad_notabs)
 
         if parent_bad_path is not None:
-            if exitrv == None:
+            if exitrv is None:
                 exitrv = pkgdefs.EXIT_EACCESS
             err = _("Can't access parent image at path: {0}").format(
                 parent_bad_path
@@ -3659,7 +3659,7 @@ The child generated the following output:
             )
 
         if self_not_child is not None:
-            if exitrv == None:
+            if exitrv is None:
                 exitrv = pkgdefs.EXIT_NOPARENT
             err = _("Current image is not a linked child: {0}").format(
                 self_not_child
@@ -3685,7 +3685,7 @@ The child generated the following output:
             )
 
         # set default error return value
-        if exitrv == None:
+        if exitrv is None:
             exitrv = pkgdefs.EXIT_OOPS
 
         self.lix_err = err

@@ -113,7 +113,7 @@ if __name__ == "__main__":
         if opt == "-s":
             size = int(arg)
 
-    assert not fname == None
+    assert not fname is None
 
     lg = open(fname)
 

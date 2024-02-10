@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
 # Copyright (c) 2007, 2021, Oracle and/or its affiliates.
 #
 
@@ -1633,7 +1633,7 @@ class ImagePlan(object):
                 act.attrs.pop("preserve", None)
                 act.attrs.pop("preserve-version", None)
                 act.verify(self.image, forever=True)
-                if act.replace_required == True:
+                if act.replace_required is True:
                     needs_change.append(act)
 
             revert_dict[(f, m)] = needs_change
@@ -2683,7 +2683,7 @@ class ImagePlan(object):
     def __get_directories(self):
         """return set of all directories in target image"""
         # always consider var and the image directory fixed in image...
-        if self.__directories == None:
+        if self.__directories is None:
             # It's faster to build a large set and make a small
             # update to it than to do the reverse.
             dirs = set(
@@ -2707,7 +2707,7 @@ class ImagePlan(object):
 
     def __get_symlinks(self):
         """return a set of all symlinks in target image"""
-        if self.__symlinks == None:
+        if self.__symlinks is None:
             self.__symlinks = set(
                 (
                     a.attrs["path"]
@@ -2720,7 +2720,7 @@ class ImagePlan(object):
 
     def __get_hardlinks(self):
         """return a set of all hardlinks in target image"""
-        if self.__hardlinks == None:
+        if self.__hardlinks is None:
             self.__hardlinks = set(
                 (
                     a.attrs["path"]
@@ -2733,7 +2733,7 @@ class ImagePlan(object):
 
     def __get_licenses(self):
         """return a set of all licenses in target image"""
-        if self.__licenses == None:
+        if self.__licenses is None:
             self.__licenses = set(
                 (
                     a.attrs["license"]
@@ -2746,7 +2746,7 @@ class ImagePlan(object):
 
     def __get_legacy(self):
         """return a set of all legacy actions in target image"""
-        if self.__legacy == None:
+        if self.__legacy is None:
             self.__legacy = set(
                 (
                     a.attrs["pkg"]
@@ -4040,7 +4040,7 @@ class ImagePlan(object):
                     moved.append([mpath, tpath + ".legacy"])
                 installed.append(entry)
                 continue
-            elif pres_type == True and save_file:
+            elif pres_type is True and save_file:
                 # If the source and destination path are the
                 # same, the content won't be updated.
                 if mpath != tpath:
@@ -4051,7 +4051,7 @@ class ImagePlan(object):
             # Next, if on-disk file will be preserved and some other
             # unique_attr is changing (such as mode, etc.) mark the
             # file as "updated".
-            if pres_type == True and ImagePlan.__find_inconsistent_attrs(
+            if pres_type is True and ImagePlan.__find_inconsistent_attrs(
                 ((orig,), (dest,)), ignore=("path", "preserve")
             ):
                 # For 'install-only', we can only update for
@@ -4071,7 +4071,7 @@ class ImagePlan(object):
             elif pres_type is None:
                 # Delivered content or unique_attrs changed.
                 updated.append(entry)
-            elif pres_type == False:
+            elif pres_type is False:
                 if save_file:
                     moved.append([mpath, tpath])
                     continue
@@ -6549,7 +6549,7 @@ image (there are configured exclusions):"""
                             not pub
                             and match_type != ImagePlan.MATCH_INST_VERSIONS
                             and name in installed_pubs
-                            and pub_ranks[installed_pubs[name]][1] == True
+                            and pub_ranks[installed_pubs[name]][1] is True
                             and installed_pubs[name] != fpub
                         ):
                             # Fmri publisher
@@ -6696,7 +6696,7 @@ image (there are configured exclusions):"""
                 and common_pfmris
                 and match_type != ImagePlan.MATCH_INST_VERSIONS
                 and inst_pub
-                and pub_ranks[inst_pub][1] == True
+                and pub_ranks[inst_pub][1] is True
             ):
                 common_pfmris = set(
                     p for p in common_pfmris if p.publisher == inst_pub

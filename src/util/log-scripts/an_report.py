@@ -339,7 +339,7 @@ def report_by_country(data, title, summary_file=None):
     for i, n in sorted(data.items(), key=lambda k_v: (k_v[1], k_v[0])):
         total += n
         print(n, i, file=rf)
-        if i == None:
+        if i is None:
             continue
 
         if chart_ccs == "":

@@ -135,7 +135,7 @@ class TestAltroot(pkg5unittest.Pkg5TestCase):
         if isinstance(e, OSError) and e.errno == errno.EREMOTE:
             return
 
-        if e == None:
+        if e is None:
             e_str = str(None)
         else:
             e_str = traceback.format_exc()
@@ -178,7 +178,7 @@ class TestAltroot(pkg5unittest.Pkg5TestCase):
 
     def __bad_img_prefix(self, func, args):
         rv = func(*args)
-        if rv == None:
+        if rv is None:
             return
 
         args = ", ".join([str(a) for a in args])

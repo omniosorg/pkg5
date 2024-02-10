@@ -292,7 +292,7 @@ class PublishingDependency(Dependency):
 
         self.base_names = sorted(base_names)
 
-        if full_paths == None:
+        if full_paths is None:
             self.full_paths = []
         else:
             self.full_paths = full_paths

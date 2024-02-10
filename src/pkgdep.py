@@ -303,7 +303,7 @@ def resolve(args, img_dir):
 
     provided_image_dir = True
     pkg_image_used = False
-    if img_dir == None:
+    if img_dir is None:
         orig_cwd = None
         try:
             orig_cwd = os.getcwd()

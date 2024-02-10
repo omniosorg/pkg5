@@ -191,7 +191,7 @@ class UpdateLog(object):
 
         for entry in afile:
             m = attrre.match(entry)
-            if m != None:
+            if m is not None:
                 attrs[m.group(1)] = m.group(2)
 
         afile.close()

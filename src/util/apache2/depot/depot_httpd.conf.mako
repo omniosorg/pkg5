@@ -487,7 +487,7 @@ RewriteRule ^${sroot}/repos.shtml$ ${sroot}/depot/repos.shtml [NE,PT]
         context.write("# Map the default publishers for {repo_path} to "
             "{pub}\n".format(**locals()))
 
-        if "pub" != None:
+        if "pub" is not None:
                 # search
                 context.write("RewriteRule ^/{root}{repo_prefix}search/(.*)$ "
                     "{root}/depot/{repo_prefix}{pub}/search/$1 [NE,PT]\n"

@@ -73,7 +73,7 @@ def count_filelist(mg, d):
         filelist_by_date[d.date().isoformat()] = 1
 
     pm = pkg_pat.search(mg["uri"])
-    if pm != None:
+    if pm is not None:
         pg = pm.groupdict()
 
         if mg["response"] == "200":

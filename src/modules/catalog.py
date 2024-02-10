@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 # Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
-# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
 
 """Interfaces and implementation for the Catalog object, as well as functions
 that operate on lists of package FMRIs."""
@@ -2271,7 +2271,7 @@ class Catalog(object):
             # not enabled.  This ensures that the current state
             # is stored and then reset on completion or failure.
             # Since append() is never used as part of the
-            # publication process (log_updates == True),
+            # publication process (log_updates is True),
             # this is safe.
             old_batch_mode = self.batch_mode
             self.batch_mode = True
@@ -2331,7 +2331,7 @@ class Catalog(object):
             self.batch_mode = True
 
             updates = self.get_updates_needed(path)
-            if updates == None:
+            if updates is None:
                 # Nothing has changed, so nothing to do.
                 return
 

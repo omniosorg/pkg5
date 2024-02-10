@@ -108,22 +108,22 @@ class TestFMRI(pkg5unittest.Pkg5TestCase):
         self.assertTrue(not self.n1.is_similar(self.n6))
 
     def testfmrihaspublisher(self):
-        self.assertTrue(self.n1.has_publisher() == True)
-        self.assertTrue(self.n2.has_publisher() == False)
-        self.assertTrue(self.n3.has_publisher() == False)
-        self.assertTrue(self.n4.has_publisher() == False)
-        self.assertTrue(self.n5.has_publisher() == False)
-        self.assertTrue(self.n6.has_publisher() == False)
-        self.assertTrue(self.n7.has_publisher() == True)
-        self.assertTrue(self.n8.has_publisher() == True)
+        self.assertTrue(self.n1.has_publisher() is True)
+        self.assertTrue(self.n2.has_publisher() is False)
+        self.assertTrue(self.n3.has_publisher() is False)
+        self.assertTrue(self.n4.has_publisher() is False)
+        self.assertTrue(self.n5.has_publisher() is False)
+        self.assertTrue(self.n6.has_publisher() is False)
+        self.assertTrue(self.n7.has_publisher() is True)
+        self.assertTrue(self.n8.has_publisher() is True)
 
     def testfmrihasversion(self):
-        self.assertTrue(self.n1.has_version() == False)
-        self.assertTrue(self.n2.has_version() == False)
-        self.assertTrue(self.n3.has_version() == True)
-        self.assertTrue(self.n4.has_version() == True)
-        self.assertTrue(self.n5.has_version() == True)
-        self.assertTrue(self.n6.has_version() == False)
+        self.assertTrue(self.n1.has_version() is False)
+        self.assertTrue(self.n2.has_version() is False)
+        self.assertTrue(self.n3.has_version() is True)
+        self.assertTrue(self.n4.has_version() is True)
+        self.assertTrue(self.n5.has_version() is True)
+        self.assertTrue(self.n6.has_version() is False)
 
     def testfmriissamepkg(self):
         self.assertTrue(self.n7.is_same_pkg(self.n8))

@@ -235,7 +235,7 @@ class TestPkgChangeVariant(pkg5unittest.SingleDepotTestCase):
         to the test package will also likely required updates to
         this function."""
 
-        assert p != None
+        assert p is not None
         assert v_arch == "i386" or v_arch == "sparc" or v_arch == "zos"
         assert v_imagetype == "full" or v_imagetype == "partial"
         assert v_zone == "global" or v_zone == "nonglobal"
@@ -298,7 +298,7 @@ class TestPkgChangeVariant(pkg5unittest.SingleDepotTestCase):
         assert v_imagetype == "full" or v_imagetype == "partial"
         assert v_zone == "global" or v_zone == "nonglobal"
 
-        if pl == None:
+        if pl is None:
             pl = []
 
         # verify the variant settings

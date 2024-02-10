@@ -61,7 +61,7 @@ def error(text, exitcode=EXIT_OOPS):
     """Emit an error message prefixed by the command name"""
 
     print("pkgmogrify: {0}".format(text), file=sys.stderr)
-    if exitcode != None:
+    if exitcode is not None:
         sys.exit(exitcode)
 
 
@@ -116,7 +116,7 @@ def main_func():
         sys.exit(EXIT_OOPS)
 
     try:
-        if printfilename == None:
+        if printfilename is None:
             printfile = sys.stdout
         else:
             printfile = open(printfilename, "w")
@@ -128,7 +128,7 @@ def main_func():
         error(_("Cannot write extra data {0}").format(e))
 
     try:
-        if outfilename == None:
+        if outfilename is None:
             outfile = sys.stdout
         else:
             outfile = open(outfilename, "w")

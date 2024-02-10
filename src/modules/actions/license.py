@@ -152,7 +152,7 @@ class LicenseAction(generic.Action):
         )
 
         hash_attr, hash_val, hash_func = digest.get_preferred_hash(self)
-        if args["forever"] == True:
+        if args["forever"] is True:
             try:
                 chash, cdata = misc.get_data_digest(path, hash_func=hash_func)
             except EnvironmentError as e:

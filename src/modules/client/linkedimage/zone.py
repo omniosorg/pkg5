@@ -22,7 +22,7 @@
 
 #
 # Copyright (c) 2011, 2021, Oracle and/or its affiliates.
-# Copyright 2017 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
 #
 
 """
@@ -147,7 +147,7 @@ class LinkedImageZonePlugin(li.LinkedImagePlugin):
         this doesn't tell us anything about the image we're
         manipulating, just the environment that we're running in."""
 
-        if self.__in_gz_cached != None:
+        if self.__in_gz_cached is not None:
             return self.__in_gz_cached
 
         # check if we're running in the gz
@@ -227,7 +227,7 @@ class LinkedImageZonePlugin(li.LinkedImagePlugin):
             self.__zoneadm_list_cache = None
 
         # try to return the cached children
-        if self.__zoneadm_list_cache != None:
+        if self.__zoneadm_list_cache is not None:
             assert type(self.__zoneadm_list_cache) == list
             return self.__zoneadm_list_cache
 

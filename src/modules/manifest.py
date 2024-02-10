@@ -22,7 +22,7 @@
 
 #
 # Copyright (c) 2007, 2017, Oracle and/or its affiliates. All rights reserved.
-# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
 #
 
 from collections import namedtuple, defaultdict
@@ -189,7 +189,7 @@ class Manifest(object):
 
     def __str__(self):
         r = ""
-        if "pkg.fmri" not in self.attributes and self.fmri != None:
+        if "pkg.fmri" not in self.attributes and self.fmri is not None:
             r += "set name=pkg.fmri value={0}\n".format(self.fmri)
 
         for act in sorted(self.actions):
@@ -200,7 +200,7 @@ class Manifest(object):
         """A generator function that returns the unsorted manifest
         contents as lines of text."""
 
-        if "pkg.fmri" not in self.attributes and self.fmri != None:
+        if "pkg.fmri" not in self.attributes and self.fmri is not None:
             yield "set name=pkg.fmri value={0}\n".format(self.fmri)
 
         for act in self.actions:

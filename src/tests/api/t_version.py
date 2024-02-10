@@ -260,13 +260,13 @@ class TestVersion(pkg5unittest.Pkg5TestCase):
 
     def testversioneq(self):
         self.assertTrue(not self.v9 == self.v8)
-        self.assertTrue(not self.v9 == None)
+        self.assertTrue(not self.v9 is None)
         self.assertTrue(not None == self.v9)
         self.assertTrue(self.v9 == self.v9same)
 
     def testversionne(self):
         self.assertTrue(self.v9 != self.v8)
-        self.assertTrue(self.v9 != None)
+        self.assertTrue(self.v9 is not None)
         self.assertTrue(None != self.v9)
         self.assertTrue(not self.v9 != self.v9same)
 
@@ -378,8 +378,8 @@ class TestVersion(pkg5unittest.Pkg5TestCase):
         self.assertTrue(self.v1.get_timestamp().year == 2005)
         self.assertTrue(self.v1.get_timestamp().hour == 0)
         self.assertTrue(self.v1.get_timestamp().hour == 0)
-        self.assertTrue(self.v1.get_timestamp().tzname() == None)
-        self.assertTrue(self.v3.get_timestamp() == None)
+        self.assertTrue(self.v1.get_timestamp().tzname() is None)
+        self.assertTrue(self.v3.get_timestamp() is None)
 
     def testversionsettime(self):
         d = datetime.datetime.utcnow()

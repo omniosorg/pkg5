@@ -99,7 +99,7 @@ class SMFManifestDependency(base.PublishingDependency):
         """
 
         if not force_update:
-            if SMFManifestDependency.instance_mf != None:
+            if SMFManifestDependency.instance_mf is not None:
                 return
 
         SMFManifestDependency.instance_mf = {}

@@ -21,7 +21,7 @@
 #
 
 # Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
-# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
 
 from . import testutils
 
@@ -3902,7 +3902,7 @@ set name=info.classification value=org.opensolaris.category.2008:System/Core
             "pkg://opensolaris.org/check/parent@0.5.10",
         ]:
             mf = lint_engine.get_manifest(name, search_type=lint_engine.EXACT)
-            self.assertTrue(mf == None)
+            self.assertTrue(mf is None)
 
         # try retrieving a specific version of the manifest from the
         # reference repository.
@@ -3922,7 +3922,7 @@ set name=info.classification value=org.opensolaris.category.2008:System/Core
         )
         lint_engine.setup(cache=self.cache_dir, lint_manifests=manifests)
         mf = lint_engine.get_manifest("example/package")
-        self.assertTrue(mf == None)
+        self.assertTrue(mf is None)
         self.assertRaises(
             base.LintException,
             lint_engine.get_manifest,

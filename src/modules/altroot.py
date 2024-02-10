@@ -101,7 +101,7 @@ def ar_open(root, path, flags, mode=None, create=False, truncate=False):
     assert not truncate or (flags & os.O_WRONLY)
 
     # if create is true the user must supply a mode mask
-    assert not create or mode != None
+    assert not create or mode is not None
 
     # we're going to update root and path so prepare an error
     # message with the existing values now.

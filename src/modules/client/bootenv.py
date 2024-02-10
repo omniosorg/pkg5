@@ -21,7 +21,7 @@
 #
 
 # Copyright (c) 2008, 2021, Oracle and/or its affiliates.
-# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
 
 import errno
 import os
@@ -78,7 +78,7 @@ class BootEnv(object):
         self.root = self.img.get_root()
         rc = 0
 
-        assert self.root != None
+        assert self.root is not None
 
         # Need to find the name of the BE we're operating on in order
         # to create a snapshot and/or a clone of the BE.
@@ -151,7 +151,7 @@ class BootEnv(object):
     def get_new_be_name(self, new_bename=None, suffix=None):
         """Create a new boot environment name."""
 
-        if new_bename == None:
+        if new_bename is None:
             new_bename = self.be_name
         if suffix:
             new_bename += suffix

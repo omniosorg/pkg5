@@ -154,7 +154,7 @@ def count_catalog(mg, d):
     # Agent-specific measurements.
 
     agent = pkg_agent_pat.search(mg["agent"])
-    if agent == None:
+    if agent is None:
         return
 
     ag = agent.groupdict()

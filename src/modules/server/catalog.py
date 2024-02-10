@@ -184,7 +184,7 @@ class ServerCatalog(object):
         """Add a package, named by the fmri, to the catalog.
         Throws an exception if an identical package is already
         present.  Throws an exception if package has no version."""
-        if pfmri.version == None:
+        if pfmri.version is None:
             raise CatalogException(
                 "Unversioned FMRI not supported: {0}".format(pfmri)
             )
@@ -466,7 +466,7 @@ class ServerCatalog(object):
 
         for entry in afile:
             m = attrre.match(entry)
-            if m != None:
+            if m is not None:
                 self.attrs[m.group(1)] = m.group(2)
 
         afile.close()

@@ -21,7 +21,7 @@
 #
 
 # Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
-# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
 
 import os
 
@@ -219,7 +219,7 @@ def __parse_prop_values(args, add=True):
 
 
 def opts_table_cb_output_format(op, api_inst, opts, opts_new):
-    if opts[OUTPUT_FORMAT] == None:
+    if opts[OUTPUT_FORMAT] is None:
         opts_new[OUTPUT_FORMAT] = "default"
 
     if QUIET in opts and opts[QUIET] and opts_new[OUTPUT_FORMAT] != "default":
@@ -831,7 +831,7 @@ def opts_table_cb_origins(op, api_inst, opts, opts_new):
 
 
 def opts_table_cb_stage(op, api_inst, opts, opts_new):
-    if opts[STAGE] == None:
+    if opts[STAGE] is None:
         opts_new[STAGE] = pkgdefs.API_STAGE_DEFAULT
         return
 
@@ -941,7 +941,7 @@ def opts_cb_list(op, api_inst, opts, opts_new):
 
 
 def opts_cb_int(k, api_inst, opts, opts_new, minimum=None):
-    if k not in opts or opts[k] == None:
+    if k not in opts or opts[k] is None:
         err = _("missing required parameter")
         raise InvalidOptionError(msg=err, options=[k])
 

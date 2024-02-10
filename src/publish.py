@@ -534,7 +534,7 @@ def trans_include(repo_uri, fargs, transaction=None):
         elif opt == "-T":
             timestamp_files.append(arg)
 
-    if transaction == None:
+    if transaction is None:
         try:
             trans_id = os.environ["PKG_TRANS_ID"]
         except KeyError:

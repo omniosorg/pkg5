@@ -644,7 +644,7 @@ def searching_open(filename, includes, try_cwd=False):
     if filename == "-":
         return filename, sys.stdin
 
-    if filename.startswith("/") or try_cwd == True and os.path.exists(filename):
+    if filename.startswith("/") or try_cwd is True and os.path.exists(filename):
         try:
             return filename, open(filename)
         except IOError as e:

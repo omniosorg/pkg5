@@ -70,7 +70,7 @@ def error(text, exitcode=EXIT_PARTIAL):
 
     print("pkgdiff: {0}".format(text), file=sys.stderr)
 
-    if exitcode != None:
+    if exitcode is not None:
         sys.exit(exitcode)
 
 

@@ -22,7 +22,7 @@
 
 #
 # Copyright (c) 2007, 2020, Oracle and/or its affiliates. All rights reserved.
-# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
 #
 
 import atexit
@@ -151,11 +151,11 @@ class Image(object):
         self.__alt_pkg_sources_loaded = False
 
         # Determine identity of client executable if appropriate.
-        if cmdpath == None:
+        if cmdpath is None:
             cmdpath = misc.api_cmdpath()
         self.cmdpath = cmdpath
 
-        if self.cmdpath != None:
+        if self.cmdpath is not None:
             self.__cmddir = os.path.dirname(cmdpath)
 
         # prevent brokeness in the test suite
@@ -250,7 +250,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
         if should_exist:
             self.find_root(self.root, user_provided_dir, progtrack)
         else:
-            if not force and self.image_type(self.root) != None:
+            if not force and self.image_type(self.root) is not None:
                 raise apx.ImageAlreadyExists(self.root)
             if not force and os.path.exists(self.root):
                 # ignore .zfs snapdir if it's present
@@ -575,7 +575,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
         # XXX Incomplete with respect to doc/image.txt description of
         # configuration.
 
-        if self.root == None:
+        if self.root is None:
             raise RuntimeError("self.root must be set")
 
         version = None
@@ -831,7 +831,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
         self.__upgraded = False
 
         if not self.__allow_liveroot() and root == misc.liveroot():
-            if startd == None:
+            if startd is None:
                 startd = root
             raise RuntimeError(
                 "Live root image access is disabled but was \
@@ -1161,7 +1161,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
         self.__upgraded = True
 
         # Determine if on-disk portion of the upgrade is allowed.
-        if self.allow_ondisk_upgrade == False:
+        if self.allow_ondisk_upgrade is False:
             return True
 
         if self.allow_ondisk_upgrade is None and self.type != IMG_USER:

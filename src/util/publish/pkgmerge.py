@@ -157,7 +157,7 @@ def error(text, exitcode=EXIT_OOPS):
 
     emsg("pkgmerge: {0}".format(text))
 
-    if exitcode != None:
+    if exitcode is not None:
         sys.exit(exitcode)
 
 

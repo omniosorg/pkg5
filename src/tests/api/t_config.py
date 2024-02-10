@@ -163,8 +163,8 @@ class TestProperty(pkg5unittest.Pkg5TestCase):
         p1 = propcls("property")
         self.assertFalse(p1 == "property")
         self.assertTrue(p1 != "property")
-        self.assertFalse(p1 == None)
-        self.assertTrue(p1 != None)
+        self.assertFalse(p1 is None)
+        self.assertTrue(p1 is not None)
 
         # Verify that all expected values are accepted at init and
         # during set and that the value is set as expected.  Also
@@ -1038,8 +1038,8 @@ class TestPropertySection(pkg5unittest.Pkg5TestCase):
         s1 = seccls("section")
         self.assertFalse(s1 == "section")
         self.assertTrue(s1 != "section")
-        self.assertFalse(s1 == None)
-        self.assertTrue(s1 != None)
+        self.assertFalse(s1 is None)
+        self.assertTrue(s1 is not None)
 
         # Verify base stringify works as expected.
         self.__verify_stringify(seccls, [("section", "section")])
@@ -2216,7 +2216,7 @@ class TestSMFConfig(_TestConfigBase):
                     contact = True
                     break
 
-            if contact == False:
+            if contact is False:
                 raise RuntimeError("Process did not launch " "successfully.")
         except (KeyboardInterrupt, RuntimeError) as e:
             try:

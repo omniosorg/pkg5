@@ -80,7 +80,7 @@ for repo_prefix in repo_prefixes:
 #
 <%
         for pub, repo_path, repo_prefix in default_pubs:
-                if pub == None:
+                if pub is None:
                         continue
                 root = context.get("sroot")
                 # manifest rules need to use %{THE_REQUEST} undecoded

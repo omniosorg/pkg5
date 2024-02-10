@@ -20,7 +20,7 @@
 #
 
 # Copyright (c) 2008, 2020, Oracle and/or its affiliates.
-# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
 
 #
 # Define the basic classes that all test cases are inherited from.
@@ -608,7 +608,7 @@ if __name__ == "__main__":
         if not su_wrap:
             return "", ""
 
-        if su_wrap == True:
+        if su_wrap is True:
             su_user = get_su_wrap_user()
         else:
             su_user = ""
@@ -2589,7 +2589,7 @@ class CliTestCase(Pkg5TestCase):
         return self.__imgs_index
 
     def img_path(self, ii=None):
-        if ii != None:
+        if ii is not None:
             return self.__imgs_path[ii]
         return self.__imgs_path[self.__imgs_index]
 
@@ -3257,7 +3257,8 @@ class CliTestCase(Pkg5TestCase):
                     continue
                 if line.startswith("add"):
                     self.assertTrue(
-                        current_fmri != None, "Missing open in pkgsend string"
+                        current_fmri is not None,
+                        "Missing open in pkgsend string",
                     )
                     accumulate.append(line[4:])
                     continue
@@ -4840,7 +4841,7 @@ class SingleDepotTestCaseCorruptImage(SingleDepotTestCase):
         SingleDepotTestCase.tearDown(self)
 
     def backup_img_path(self, ii=None):
-        if ii != None:
+        if ii is not None:
             return self.__imgs_path_backup[ii]
         return self.__imgs_path_backup[self.img_index()]
 
@@ -4930,7 +4931,7 @@ def mkdir_eexist_ok(p):
 
 
 def env_sanitize(pkg_cmdpath, dv_keep=None):
-    if dv_keep == None:
+    if dv_keep is None:
         dv_keep = []
 
     dv_saved = {}
@@ -5174,7 +5175,7 @@ class ApacheController(object):
                     break
                 time.sleep(check_interval)
 
-            if contact == False:
+            if contact is False:
                 self.stop()
                 raise ApacheStateException(
                     "Apache did not "
@@ -5192,7 +5193,7 @@ class ApacheController(object):
             return
         try:
             lifetime = time.time() - self.__starttime
-            if now == False and lifetime < 1.0:
+            if now is False and lifetime < 1.0:
                 time.sleep(1.0 - lifetime)
         finally:
             try:
@@ -5268,11 +5269,11 @@ class ApacheController(object):
         Then make a little HTTP request to see if the depot is
         responsive to requests"""
 
-        if self.__repo_hdl == None:
+        if self.__repo_hdl is None:
             return False
 
         status = self.__repo_hdl.poll()
-        if status != None:
+        if status is not None:
             return False
         return self._network_ping()
 

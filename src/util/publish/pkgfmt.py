@@ -21,7 +21,7 @@
 
 #
 # Copyright (c) 2009, 2019, Oracle and/or its affiliates. All rights reserved.
-# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
 #
 
 import pkg.site_paths
@@ -132,7 +132,7 @@ def error(text, exitcode=EXIT_OOPS):
     # program name on all platforms.
     emsg(ws + "pkgfmt: error: " + text_nows)
 
-    if exitcode != None:
+    if exitcode is not None:
         sys.exit(exitcode)
 
 

@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
 # Copyright (c) 2008, 2021, Oracle and/or its affiliates.
 #
 
@@ -817,7 +817,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
         # If a new BE is required and no BE name has been provided
         # on the command line, attempt to determine a BE name
         # automatically.
-        if self.__new_be == True and self.__be_name == None:
+        if self.__new_be is True and self.__be_name is None:
             self.__auto_be_name()
 
         if not self.__new_be and self.__backup_be is None:
@@ -1556,7 +1556,10 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
         # sanity checks
         assert _op in api_op_values
         assert _ad_kwargs is None or _op in [API_OP_ATTACH, API_OP_DETACH]
-        assert _ad_kwargs != None or _op not in [API_OP_ATTACH, API_OP_DETACH]
+        assert _ad_kwargs is not None or _op not in [
+            API_OP_ATTACH,
+            API_OP_DETACH,
+        ]
         assert not _li_md_only or _op in [
             API_OP_ATTACH,
             API_OP_DETACH,

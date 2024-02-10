@@ -563,13 +563,13 @@ class TestPublisher(pkg5unittest.Pkg5TestCase):
 
         # check that setting system results in uri being overridden
         pobj.system = True
-        self.assertTrue(pobj.system == True)
+        self.assertTrue(pobj.system is True)
         self.assertTrue(pobj.uri == publisher.SYSREPO_PROXY)
 
         # check that clearing system also clears uri
         pobj.system = False
-        self.assertTrue(pobj.system == False)
-        self.assertTrue(pobj.uri == None)
+        self.assertTrue(pobj.system is False)
+        self.assertTrue(pobj.uri is None)
 
 
 if __name__ == "__main__":
