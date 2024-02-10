@@ -384,7 +384,7 @@ class ServerCatalog(object):
 
         # If a prefixes attribute doesn't exist, write one and get on
         # with it.
-        if not "prefix" in self.attrs:
+        if "prefix" not in self.attrs:
             self.attrs["prefix"] = "".join(known_prefixes)
             if not self.read_only:
                 self.save_attrs()

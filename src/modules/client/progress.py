@@ -22,7 +22,7 @@
 
 #
 # Copyright (c) 2008, 2017, Oracle and/or its affiliates. All rights reserved.
-# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
 #
 
 #
@@ -3159,8 +3159,8 @@ class FancyUNIXProgressTracker(ProgressTracker):
             not self._ptimer.time_to_print()
             and not outspec.first
             and not outspec.last
-            and not "startpkg" in outspec.changed
-            and not "endpkg" in outspec.changed
+            and "startpkg" not in outspec.changed
+            and "endpkg" not in outspec.changed
         ):
             return
 

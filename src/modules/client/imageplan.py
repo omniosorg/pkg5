@@ -4849,7 +4849,7 @@ image (there are configured exclusions):"""
         """Check whether files are delivered to var/pkg or
         .org.opensolaris.pkg"""
 
-        if not "path" in action.attrs:
+        if "path" not in action.attrs:
             return True
 
         dirs = [

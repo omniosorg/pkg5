@@ -251,7 +251,7 @@ class LoggingPrintEngine(PrintEngine):
         val = self._stringio.getvalue()
         if val:
             # should only ever have a partial line
-            assert not "\n" in val
+            assert "\n" not in val
             self._logger.log(self._loglevel, val)
         self._stringio.seek(0)
         self._stringio.truncate(0)

@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright 2023 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
 # Copyright (c) 2007, 2022, Oracle and/or its affiliates.
 #
 
@@ -724,7 +724,7 @@ def list_inventory(
             yield {k: fields[k].get("header") for k in fields.keys()}
             return
 
-        if not "data" in out_json:
+        if "data" not in out_json:
             return
         data = out_json["data"]
 

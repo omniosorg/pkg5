@@ -440,7 +440,7 @@ class FtpusersFile(CfgFile):
 
     def getuser(self, username):
         """returns true if user is allowed to use FTP - ie is NOT in file"""
-        return not "username" in self.getvalue({"username": username})
+        return "username" not in self.getvalue({"username": username})
 
     def adduser(self, username):
         """add specified user to file, removing ability to use ftp"""

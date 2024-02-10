@@ -1012,7 +1012,7 @@ class CurlTransportEngine(TransportEngine):
             hdl.setopt(pycurl.PROGRESSFUNCTION, treq.progfunc)
 
         proto = urlsplit(treq.url)[0]
-        if not proto in ("http", "https"):
+        if proto not in ("http", "https"):
             return
 
         if treq.read_filepath:
