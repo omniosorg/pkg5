@@ -4,12 +4,11 @@
 The pkg5 components have been updated to the latest upstream solaris-ips
 as of:
 
-commit fc93022c19a68dae3db7613ff1860e6371fe85bc
+commit aabf00838e04ed9a266354e598b408dd245773b3
 Author: Jakub Kulik <jakub.kulik@oracle.com>
-Date:   Tue Dec 5 00:40:48 2023 -0800
+Date:   Mon Feb 5 06:41:13 2024 -0800
 
-    36066495 remove all trivial use of six library from pkg(7) and related
-	     tools
+    36255456 fix most 'statement' pycodestyle issues
 
 -----------------------------------------------------------------------------
 
