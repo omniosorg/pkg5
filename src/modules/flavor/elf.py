@@ -107,9 +107,9 @@ class ElfDependency(base.PublishingDependency):
             and self.base_names[0] in delivered_base_names
         ):
             self.err_type = self.WARNING
-            self.attrs[
-                "{0}.severity".format(self.DEPEND_DEBUG_PREFIX)
-            ] = "warning"
+            self.attrs["{0}.severity".format(self.DEPEND_DEBUG_PREFIX)] = (
+                "warning"
+            )
             missing_vars = self.get_variant_combinations()
             missing_vars.mark_as_satisfied(
                 delivered_base_names[self.base_names[0]]

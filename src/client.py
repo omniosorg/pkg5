@@ -1049,9 +1049,11 @@ WARNING: The boot environment being modified is not the active one.
                 status.append(
                     (
                         _("Activate boot environment:"),
-                        "Next boot only"
-                        if plan.activate_be == "bootnext"
-                        else bool_str(plan.activate_be),
+                        (
+                            "Next boot only"
+                            if plan.activate_be == "bootnext"
+                            else bool_str(plan.activate_be)
+                        ),
                     )
                 )
             # plan.be_name can be undefined in the uninstall case

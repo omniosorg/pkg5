@@ -1387,9 +1387,9 @@ class BlendedConfig(object):
                         SIGNATURE_POLICY
                     ]
                 if "signature-required-names" in props:
-                    d.setdefault("property", {})[
-                        "signature-required-names"
-                    ] = props["signature-required-names"]
+                    d.setdefault("property", {})["signature-required-names"] = (
+                        props["signature-required-names"]
+                    )
                 if d:
                     self.sys_cfg.set_properties(d)
         else:

@@ -310,9 +310,9 @@ class PublishingDependency(Dependency):
 
         attrs = {"{0}.type".format(self.DEPEND_DEBUG_PREFIX): kind}
         if self.full_paths:
-            attrs[
-                "{0}.fullpath".format(self.DEPEND_DEBUG_PREFIX)
-            ] = self.full_paths
+            attrs["{0}.fullpath".format(self.DEPEND_DEBUG_PREFIX)] = (
+                self.full_paths
+            )
         else:
             attrs.update(
                 {

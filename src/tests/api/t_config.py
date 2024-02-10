@@ -192,7 +192,7 @@ class TestProperty(pkg5unittest.Pkg5TestCase):
             (123, "123"),  # int should become str.
             (False, "False"),  # boolean should become str.
             (TH_PACKAGE, TH_PACKAGE),  # UTF-8 data.
-            ("\xfe", "\xfe")  # Passthrough of 8-bit data.
+            ("\xfe", "\xfe"),  # Passthrough of 8-bit data.
             # (That is not valid UTF-8.)
         ]
         blist = [

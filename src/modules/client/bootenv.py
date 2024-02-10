@@ -48,7 +48,6 @@ except ImportError:
 
 
 class BootEnv(object):
-
     """A BootEnv object is an object containing the logic for managing the
     recovery of image-modifying operations such as install, uninstall, and
     update.
@@ -789,7 +788,6 @@ beadm activate {be_name_clone}
 
 
 class BootEnvNull(object):
-
     """BootEnvNull is a class that gets used when libbe doesn't exist."""
 
     def __init__(self, img, progress_tracker=None):

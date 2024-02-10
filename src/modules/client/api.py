@@ -4516,11 +4516,9 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 ren_inst_stems,
             ) = self.__map_installed_newest(pubs, known_cat=known_cat)
         else:
-            pub_ranks = (
-                inc_stems
-            ) = (
-                inc_vers
-            ) = inst_stems = ren_stems = ren_inst_stems = misc.EmptyDict
+            pub_ranks = inc_stems = inc_vers = inst_stems = ren_stems = (
+                ren_inst_stems
+            ) = misc.EmptyDict
 
         if installed or upgradable or removable:
             if inst_cat:
@@ -5080,13 +5078,9 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 else:
                     pub = name = version = None
 
-                links = (
-                    hardlinks
-                ) = (
-                    files
-                ) = (
-                    dirs
-                ) = csize = size = licenses = cat_info = description = None
+                links = hardlinks = files = dirs = csize = size = licenses = (
+                    cat_info
+                ) = description = None
 
                 if PackageInfo.CATEGORIES in info_needed:
                     cat_info = [

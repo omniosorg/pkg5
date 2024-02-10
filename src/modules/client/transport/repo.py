@@ -2317,9 +2317,9 @@ class _ArchiveRepo(TransportRepo):
 
                 cat = pkg.catalog.Catalog(meta_root=tmpdir)
                 pubinfo = {}
-                pubinfo[
-                    "last-catalog-update"
-                ] = pkg.catalog.datetime_to_basic_ts(cat.last_modified)
+                pubinfo["last-catalog-update"] = (
+                    pkg.catalog.datetime_to_basic_ts(cat.last_modified)
+                )
                 pubinfo["package-count"] = cat.package_count
                 pubinfo["status"] = "online"
                 pubsinfo[pub.prefix] = {

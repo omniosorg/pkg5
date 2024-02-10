@@ -1238,9 +1238,9 @@ class ImagePlan(object):
                     k == "implementation"
                     and "implementation-version" in cfg_mediators[m]
                 ):
-                    self.pd._new_mediators[m][
-                        "implementation-version"
-                    ] = cfg_mediators[m].get("implementation-version")
+                    self.pd._new_mediators[m]["implementation-version"] = (
+                        cfg_mediators[m].get("implementation-version")
+                    )
 
             if m not in cfg_mediators:
                 # mediation changed.
@@ -4472,9 +4472,9 @@ class ImagePlan(object):
         cfg_mediators = self.pd._cfg_mediators
         changed_mediators = set()
         for mediator, values in prop_mediators.items():
-            med_ver_source = (
-                med_impl_source
-            ) = med_priority = med_ver = med_impl = med_impl_ver = None
+            med_ver_source = med_impl_source = med_priority = med_ver = (
+                med_impl
+            ) = med_impl_ver = None
 
             mediation = self.pd._new_mediators.get(mediator)
             cfg_mediation = cfg_mediators.get(mediator)
@@ -4960,9 +4960,9 @@ image (there are configured exclusions):"""
                 if src.name == "user":
                     self.pd.removed_users[src.attrs["username"]] = p.origin_fmri
                 elif src.name == "group":
-                    self.pd.removed_groups[
-                        src.attrs["groupname"]
-                    ] = p.origin_fmri
+                    self.pd.removed_groups[src.attrs["groupname"]] = (
+                        p.origin_fmri
+                    )
 
                 self.pd.removal_actions.append(_ActionPlan(p, src, dest))
                 if (
@@ -5017,13 +5017,13 @@ image (there are configured exclusions):"""
                     print("Update:" + str(src))
                     print("       " + str(dest))
                 if dest.name == "user":
-                    self.pd.added_users[
-                        dest.attrs["username"]
-                    ] = p.destination_fmri
+                    self.pd.added_users[dest.attrs["username"]] = (
+                        p.destination_fmri
+                    )
                 elif dest.name == "group":
-                    self.pd.added_groups[
-                        dest.attrs["groupname"]
-                    ] = p.destination_fmri
+                    self.pd.added_groups[dest.attrs["groupname"]] = (
+                        p.destination_fmri
+                    )
                 elif dest.name == "driver" and src:
                     rm = set(src.attrlist("alias")) - set(
                         dest.attrlist("alias")
@@ -5046,13 +5046,13 @@ image (there are configured exclusions):"""
                 if DebugValues["actions"]:
                     print("Install: " + str(dest))
                 if dest.name == "user":
-                    self.pd.added_users[
-                        dest.attrs["username"]
-                    ] = p.destination_fmri
+                    self.pd.added_users[dest.attrs["username"]] = (
+                        p.destination_fmri
+                    )
                 elif dest.name == "group":
-                    self.pd.added_groups[
-                        dest.attrs["groupname"]
-                    ] = p.destination_fmri
+                    self.pd.added_groups[dest.attrs["groupname"]] = (
+                        p.destination_fmri
+                    )
                 # Check whether files are delivered in reserved
                 # locations.
                 if not self.__check_reserved(dest):
@@ -5194,9 +5194,9 @@ image (there are configured exclusions):"""
                 # Store the index into removal_actions and the
                 # id of the action object in that slot.
                 re = ConsolidationEntry(i, id(ap.src))
-                cons_generic[
-                    (ap.src.name, hashify(attrs[ap.src.key_attr]))
-                ] = re
+                cons_generic[(ap.src.name, hashify(attrs[ap.src.key_attr]))] = (
+                    re
+                )
                 if ap.src.name == "file":
                     fname = attrs.get(
                         "original_name",

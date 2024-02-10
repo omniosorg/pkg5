@@ -376,9 +376,9 @@ class DepotHTTP(_Depot):
             expires = now + expires
 
         headers = cherrypy.response.headers
-        headers[
-            "Cache-Control"
-        ] = "must-revalidate, no-transform, max-age={0:d}".format(max_age)
+        headers["Cache-Control"] = (
+            "must-revalidate, no-transform, max-age={0:d}".format(max_age)
+        )
         headers["Expires"] = formatdate(timeval=expires, usegmt=True)
 
     def refresh(self):
@@ -888,9 +888,9 @@ class DepotHTTP(_Depot):
             )
             response = cherrypy.response
             for i, attr in enumerate(chashes):
-                response.headers[
-                    "X-Ipkg-Attr-{0}".format(i)
-                ] = "{0}={1}".format(attr, chashes[attr])
+                response.headers["X-Ipkg-Attr-{0}".format(i)] = (
+                    "{0}={1}".format(attr, chashes[attr])
+                )
 
             # set expiration of response to one day
             self.__set_response_expires("file", 86400, 86400)
