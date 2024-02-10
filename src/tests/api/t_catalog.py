@@ -22,7 +22,7 @@
 #
 
 # Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
-# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
 
 from . import testutils
 
@@ -146,12 +146,10 @@ class TestCatalog(pkg5unittest.Pkg5TestCase):
             ]
 
             if f.pkg_name == "zpkg":
-                expected.append(
-                    "set name=pkg.depend.install-hold " "value=test"
-                )
-                expected.append("set name=pkg.renamed " "value=true")
+                expected.append("set name=pkg.depend.install-hold value=test")
+                expected.append("set name=pkg.renamed value=true")
             else:
-                expected.append("set name=pkg.obsolete " "value=true")
+                expected.append("set name=pkg.obsolete value=true")
             return expected
 
         def expected_summary(f):
@@ -254,7 +252,7 @@ class TestCatalog(pkg5unittest.Pkg5TestCase):
         except AssertionError:
             pass
         else:
-            raise RuntimeError("actions() did not raise expected " "exception")
+            raise RuntimeError("actions() did not raise expected exception")
 
         variants = variant.Variants()
         variants["variant.arch"] = "i386"
@@ -365,7 +363,7 @@ class TestCatalog(pkg5unittest.Pkg5TestCase):
             pass
         else:
             raise RuntimeError(
-                "get_entry_actions() did not raise " "expected exception"
+                "get_entry_actions() did not raise expected exception"
             )
 
         # This case should only return the dependency-related actions.
@@ -1188,11 +1186,11 @@ class TestCatalog(pkg5unittest.Pkg5TestCase):
 
         m = manifest.Manifest()
         contents = misc.force_text(
-            "set name=description " """value="legacy pkg description" """
+            'set name=description value="legacy pkg description"'
         )
         m.set_content(contents, signatures=True)
         f = fmri.PkgFmri(
-            "pkg://opensolaris.org/" "legacy@1.0,5.11-1:20000101T120000Z"
+            "pkg://opensolaris.org/legacy@1.0,5.11-1:20000101T120000Z"
         )
         nc = catalog.Catalog()
         nc.add_package(f, manifest=m)

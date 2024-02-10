@@ -702,7 +702,7 @@ def get_matches(
 
     matches = prune(matches, all_versions, all_timestamps)
     if recursive:
-        msg(_("Retrieving manifests for dependency " "evaluation ..."))
+        msg(_("Retrieving manifests for dependency evaluation ..."))
         matches = prune(
             get_dependencies(matches, xport_cfg, tracker),
             all_versions,
@@ -876,7 +876,7 @@ def archive_pkgs(
         do_mog = True
     target = os.path.abspath(target)
     if os.path.exists(target):
-        error(_("Target archive '{0}' already " "exists.").format(target))
+        error(_("Target archive '{0}' already exists.").format(target))
         abort()
 
     # Open the archive early so that permissions failures, etc. can be
@@ -965,7 +965,7 @@ def archive_pkgs(
                 except Exception as e:
                     _rm_temp_raw_files(nf, xport_cfg, ignore_errors=True)
                     abort(
-                        _("Creating mogrified " "manifest failed: {0}").format(
+                        _("Creating mogrified manifest failed: {0}").format(
                             str(e)
                         )
                     )
@@ -1118,9 +1118,7 @@ def clone_repo(
     target = publisher.RepositoryURI(misc.parse_uri(target))
 
     if target.scheme != "file":
-        abort(
-            err=_("Destination clone repository must be " "filesystem-based.")
-        )
+        abort(err=_("Destination clone repository must be filesystem-based."))
 
     # Initialize the target repo.
     try:
@@ -1573,9 +1571,7 @@ def transfer_pkgs(
                     )
                 except trans.TransactionRepositoryInvalidError as e:
                     txt = str(e) + "\n\n"
-                    txt += _(
-                        "To create a repository, use " "the pkgrepo command."
-                    )
+                    txt += _("To create a repository, use the pkgrepo command.")
                     abort(err=txt)
                 except trans.TransactionRepositoryConfigError as e:
                     txt = str(e) + "\n\n"
@@ -1598,7 +1594,7 @@ def transfer_pkgs(
                     os.makedirs(basedir, misc.PKG_DIR_MODE)
                 except Exception as e:
                     error(
-                        _("Unable to create basedir " "'{dir}': {err}").format(
+                        _("Unable to create basedir '{dir}': {err}").format(
                             dir=basedir, err=e
                         )
                     )
@@ -1722,7 +1718,7 @@ def transfer_pkgs(
                 except Exception as e:
                     _rm_temp_raw_files(nf, xport_cfg, ignore_errors=True)
                     abort(
-                        _("Creating mogrified " "manifest failed: {0}").format(
+                        _("Creating mogrified manifest failed: {0}").format(
                             str(e)
                         )
                     )

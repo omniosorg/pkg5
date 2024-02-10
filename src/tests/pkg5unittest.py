@@ -299,7 +299,7 @@ if __name__ == "__main__":
 
     def __set_base_port(self, port):
         if self.__base_port is not None or self.next_free_port is not None:
-            raise RuntimeError("Setting the base port twice isn't " "allowed")
+            raise RuntimeError("Setting the base port twice isn't allowed")
         self.__base_port = port
         self.next_free_port = port
 
@@ -2108,7 +2108,7 @@ class Pkg5TestRunner(unittest.TextTestRunner):
                     assert suite_name == test.suite_name
                 if tmp[0] != mod or tmp[1] != c:
                     raise RuntimeError(
-                        "tmp:{0} mod:{1} " "c:{2}".format(tmp, mod, c)
+                        "tmp:{0} mod:{1} c:{2}".format(tmp, mod, c)
                     )
             all_tests.add((mod, c))
             t.pkg_cmdpath = fakeroot_cmdpath
@@ -2171,7 +2171,7 @@ class Pkg5TestRunner(unittest.TextTestRunner):
                 if comm[0] == "START":
                     if comm[1] not in all_tests:
                         raise RuntimeError(
-                            "Got " "unexpected start " "comm:{0}".format(comm)
+                            "Got unexpected start comm:{0}".format(comm)
                         )
                     started_tests[comm[2]] = comm[1]
                     start_times[comm[1]] = time.time()
@@ -2201,7 +2201,7 @@ class Pkg5TestRunner(unittest.TextTestRunner):
                     )
                 else:
                     raise RuntimeError(
-                        "unexpected " "communication:{0}".format(comm)
+                        "unexpected communication:{0}".format(comm)
                     )
                 if self.bailonfail and (result.errors or result.failures):
                     raise TestStopException()
@@ -2255,7 +2255,7 @@ class Pkg5TestRunner(unittest.TextTestRunner):
                     )
 
                     if result.wasSkipped() and self.output == OUTPUT_VERBOSE:
-                        self.stream.write("Skipped " "tests:\n")
+                        self.stream.write("Skipped tests:\n")
                         for test, reason in result.skips:
                             self.stream.write("{0}: {1}\n".format(test, reason))
                     self.stream.write("\n")
@@ -3716,9 +3716,7 @@ class CliTestCase(Pkg5TestCase):
             try:
                 dc.start()
             except Exception as e:
-                self.debug(
-                    "prep_depot: failed to start " "depot!: {0}".format(e)
-                )
+                self.debug("prep_depot: failed to start depot!: {0}".format(e))
                 raise
             self.debug("depot on port {0} started".format(port))
         else:
@@ -3756,7 +3754,7 @@ class CliTestCase(Pkg5TestCase):
                 break
 
         if not ready:
-            raise RuntimeError("Repository readiness " "timeout exceeded.")
+            raise RuntimeError("Repository readiness timeout exceeded.")
 
     def _api_attach(self, api_obj, catch_wsie=True, **kwargs):
         self.debug("attach: {0}".format(str(kwargs)))
@@ -4080,7 +4078,7 @@ class CliTestCase(Pkg5TestCase):
                 f.close()
                 self.assertTrue(
                     False,
-                    "File {0} contains any " "of {1}".format(path, strings),
+                    "File {0} contains any of {1}".format(path, strings),
                 )
         else:
             f.close()
@@ -4317,9 +4315,7 @@ class ApacheDepotTestCase(ManyDepotTestCase):
                     ac.stop()
                 except Exception as e:
                     try:
-                        self.debug(
-                            "killing apache " "instance {0}".format(name)
-                        )
+                        self.debug("killing apache instance {0}".format(name))
                         ac.kill()
                     except Exception as e:
                         self.debug(
@@ -5154,7 +5150,7 @@ class ApacheController(object):
             )
             if self.__repo_hdl is None:
                 self.__state = "stopped"
-                raise ApacheStateException("Could not start " "apache")
+                raise ApacheStateException("Could not start apache")
             begintime = time.time()
 
             check_interval = 0.20

@@ -156,7 +156,7 @@ def generate(args):
             try:
                 dyn_tok_name, dyn_tok_val = arg.split("=", 1)
             except:
-                usage(_("-D arguments must be of the form " "'name=value'."))
+                usage(_("-D arguments must be of the form 'name=value'."))
             if not dyn_tok_name[0] == "$":
                 dyn_tok_name = "$" + dyn_tok_name
             dyn_tok_conv.setdefault(dyn_tok_name, []).append(dyn_tok_val)
@@ -377,7 +377,7 @@ def resolve(args, img_dir):
         if e.user_specified:
             if pkg_image_used:
                 error(
-                    _("No image rooted at '{0}' " "(set by $PKG_IMAGE)").format(
+                    _("No image rooted at '{0}' (set by $PKG_IMAGE)").format(
                         e.user_dir
                     )
                 )
@@ -443,7 +443,7 @@ def resolve(args, img_dir):
             for pfmri in sorted(unused_fmris):
                 msg("\t{0}".format(pfmri))
         if not constraint_files and external_deps:
-            msg(_("\nThe following fmris had dependencies resolve " "to them:"))
+            msg(_("\nThe following fmris had dependencies resolve to them:"))
             for pfmri in sorted(external_deps):
                 msg("\t{0}".format(pfmri))
 

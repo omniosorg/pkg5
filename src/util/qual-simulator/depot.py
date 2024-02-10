@@ -132,14 +132,14 @@ class RepositoryURI(object):
         self.__system = val
 
     proxy = property(
-        __get_proxy, __set_proxy, None, "Proxy of the " "repository URI."
+        __get_proxy, __set_proxy, None, "Proxy of the repository URI."
     )
 
     system = property(
         __get_system,
         __set_system,
         None,
-        "System publisher " "of the repository URI.",
+        "System publisher of the repository URI.",
     )
 
     def key(self):

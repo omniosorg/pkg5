@@ -22,7 +22,7 @@
 
 #
 # Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
-# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
 #
 
 from . import testutils
@@ -1151,7 +1151,7 @@ class TestPkgApiInstall(pkg5unittest.SingleDepotTestCase):
             self.__do_uninstall(api_obj, [pfmri.pkg_name])
 
             for bad_mode in ("", 'mode=""', "mode=???"):
-                self.debug("Testing with bad mode " "'{0}'.".format(bad_mode))
+                self.debug("Testing with bad mode '{0}'.".format(bad_mode))
 
                 bad_mdata = mdata.replace(src_mode, bad_mode)
                 self.write_img_manifest(pfmri, bad_mdata)
@@ -1164,7 +1164,7 @@ class TestPkgApiInstall(pkg5unittest.SingleDepotTestCase):
                 )
 
             for bad_owner in ("", 'owner=""', "owner=invaliduser"):
-                self.debug("Testing with bad owner " "'{0}'.".format(bad_owner))
+                self.debug("Testing with bad owner '{0}'.".format(bad_owner))
 
                 bad_mdata = mdata.replace("owner=root", bad_owner)
                 self.write_img_manifest(pfmri, bad_mdata)
@@ -1176,7 +1176,7 @@ class TestPkgApiInstall(pkg5unittest.SingleDepotTestCase):
                 )
 
             for bad_group in ("", 'group=""', "group=invalidgroup"):
-                self.debug("Testing with bad group " "'{0}'.".format(bad_group))
+                self.debug("Testing with bad group '{0}'.".format(bad_group))
 
                 bad_mdata = mdata.replace("group=bin", bad_group)
                 self.write_img_manifest(pfmri, bad_mdata)
@@ -1191,7 +1191,7 @@ class TestPkgApiInstall(pkg5unittest.SingleDepotTestCase):
                 'set name=description value="" " my desc  ""',
                 "set name=com.sun.service.escalations value=",
             ):
-                self.debug("Testing with bad action " "'{0}'.".format(bad_act))
+                self.debug("Testing with bad action '{0}'.".format(bad_act))
 
                 bad_mdata = mdata + "{0}\n".format(bad_act)
                 self.write_img_manifest(pfmri, bad_mdata)

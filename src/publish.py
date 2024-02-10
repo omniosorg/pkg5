@@ -393,7 +393,7 @@ def trans_publish(repo_uri, fargs):
 
     if not repo_uri:
         usage(
-            _("A destination package repository must be provided " "using -s."),
+            _("A destination package repository must be provided using -s."),
             cmd="publish",
         )
 
@@ -877,7 +877,7 @@ def main_func():
         "publish",
     ):
         usage(
-            _("A destination package repository must be provided " "using -s."),
+            _("A destination package repository must be provided using -s."),
             cmd=subcommand,
         )
 

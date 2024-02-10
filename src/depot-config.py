@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
 # Copyright (c) 2013, 2024, Oracle and/or its affiliates.
 #
 
@@ -169,7 +169,7 @@ def _chown_dir(dir):
     except OSError as err:
         if not os.environ.get("PKG5_TEST_ENV", None):
             raise DepotException(
-                _("Unable to chown {dir} to " "{user}:{group}: {err}").format(
+                _("Unable to chown {dir} to {user}:{group}: {err}").format(
                     dir=dir, user=DEPOT_USER, group=DEPOT_GROUP, err=err
                 )
             )
@@ -293,9 +293,7 @@ def _write_httpd_conf(
         try:
             num = int(cache_size)
             if num < 0:
-                raise DepotException(
-                    _("invalid cache size: " "{0}").format(num)
-                )
+                raise DepotException(_("invalid cache size: {0}").format(num))
         except ValueError:
             raise DepotException(
                 _("invalid cache size: {0}").format(cache_size)
@@ -345,7 +343,7 @@ def _write_httpd_conf(
         # socket.getaddrinfo raise UnicodeDecodeError in Python 3
         # for some input, such as '.'
         raise DepotException(
-            _("Unable to write Apache configuration: {host}: " "{err}").format(
+            _("Unable to write Apache configuration: {host}: {err}").format(
                 **locals()
             )
         )
@@ -550,12 +548,12 @@ def _generate_server_cert_key(
             if not os.path.exists(ca_cert_file):
                 raise DepotException(
                     _(
-                        "Cannot find user " "provided CA certificate file: {0}"
+                        "Cannot find user provided CA certificate file: {0}"
                     ).format(ca_cert_file)
                 )
             if not os.path.exists(ca_key_file):
                 raise DepotException(
-                    _("Cannot find user " "provided CA key file: {0}").format(
+                    _("Cannot find user provided CA key file: {0}").format(
                         ca_key_file
                     )
                 )
@@ -642,7 +640,7 @@ def refresh_conf(
                 errors.append(str(err))
         if errors:
             raise DepotException(
-                _("Unable to write configuration: " "{0}").format(
+                _("Unable to write configuration: {0}").format(
                     "\n".join(errors)
                 )
             )
@@ -710,7 +708,7 @@ def get_smf_repo_info():
     if not repo_info:
         raise DepotException(
             _(
-                "No online, readonly, non-standalone instances of " "{0} found."
+                "No online, readonly, non-standalone instances of {0} found."
             ).format(PKG_SERVER_SVC)
         )
     return repo_info
@@ -937,16 +935,14 @@ def main_func():
         usage(_("required port option -p missing."))
 
     if not use_smf_instances and not repo_info:
-        usage(_("at least one -d option is required if -S is " "not used."))
+        usage(_("at least one -d option is required if -S is not used."))
 
     if repo_info and use_smf_instances:
         usage(_("cannot use -d and -S together."))
 
     if https:
         if fragment:
-            usage(
-                _("https configuration is not supported in " "fragment mode.")
-            )
+            usage(_("https configuration is not supported in fragment mode."))
         if bool(ssl_cert_file) != bool(ssl_key_file):
             usage(
                 _(
@@ -963,7 +959,7 @@ def main_func():
                     )
                 )
             if ssl_cert_chain_file:
-                usage(_("Cannot use --cert-chain without " "--cert and --key"))
+                usage(_("Cannot use --cert-chain without --cert and --key"))
             if bool(ssl_ca_cert_file) != bool(ssl_ca_key_file):
                 usage(
                     _(
@@ -1039,7 +1035,7 @@ def main_func():
             if not os.path.exists(ssl_key_file):
                 error(
                     _(
-                        "User provided server key file {0} " "does not exist."
+                        "User provided server key file {0} does not exist."
                     ).format(ssl_key_file)
                 )
                 return EXIT_OOPS
@@ -1095,7 +1091,7 @@ def main_func():
     # HTTP servers. For now, we only support "apache2"
     if server_type not in KNOWN_SERVER_TYPES:
         usage(
-            _("unknown server type {type}. " "Known types are: {known}").format(
+            _("unknown server type {type}. Known types are: {known}").format(
                 type=server_type, known=", ".join(KNOWN_SERVER_TYPES)
             )
         )

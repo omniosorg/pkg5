@@ -1150,9 +1150,7 @@ class TestPkgApi(pkg5unittest.SingleDepotTestCase):
         except api_errors.UnsupportedP5SVersion as e:
             str(e)
         else:
-            raise RuntimeError(
-                "Expected write_syspub to raise " "an exception."
-            )
+            raise RuntimeError("Expected write_syspub to raise an exception.")
 
 
 if __name__ == "__main__":

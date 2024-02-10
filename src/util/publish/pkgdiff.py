@@ -133,7 +133,7 @@ def main_func():
 
     for v in varattrs:
         if len(varattrs[v]) > 1:
-            usage(_("For any variant, only one value may be " "specified."))
+            usage(_("For any variant, only one value may be specified."))
         varattrs[v] = varattrs[v].pop()
 
     ignoreattrs = set(ignoreattrs)
@@ -221,7 +221,7 @@ def main_func():
     for k in set(v1.keys()) & set(v2.keys()):
         if v1[k] != v2[k]:
             error(
-                _("Manifests support different variants " "{v1} {v2}").format(
+                _("Manifests support different variants {v1} {v2}").format(
                     v1=v1, v2=v2
                 )
             )

@@ -311,7 +311,7 @@ def read_manifests(names, lint_logger):
             continue
         except IOError as e:
             lint_logger.critical(
-                _("Unable to read manifest file " "{file}: {err}").format(
+                _("Unable to read manifest file {file}: {err}").format(
                     file=filename, err=e
                 ),
                 msgid="lint.manifest001",
@@ -355,7 +355,7 @@ def read_manifests(names, lint_logger):
                 manifest.fmri = pkg.fmri.PkgFmri(manifest["pkg.fmri"])
             except fmri.IllegalFmri as e:
                 lint_logger.critical(
-                    _("Error in file {file}: " "{err}").format(
+                    _("Error in file {file}: {err}").format(
                         file=filename, err=e
                     ),
                     "lint.manifest002",

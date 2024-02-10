@@ -257,9 +257,7 @@ def get_matching_pkgs(cat, patterns):
     matching, ref, unmatched = cat.get_matching_fmris(patterns)
 
     if unmatched:
-        msg = _(
-            "The specified packages were not found in the " "repository:\n\t"
-        )
+        msg = _("The specified packages were not found in the repository:\n\t")
         msg += "\n\t".join(unmatched)
         abort(msg)
 
@@ -645,14 +643,14 @@ def do_reversion(
         # This only happens if reference repo is ahead of target repo,
         # so only show if it actually happened.
         status.append(
-            (_("Packages with successors in " "reference repo:"), str(sucs))
+            (_("Packages with successors in reference repo:"), str(sucs))
         )
     if nrevs:
         # This only happens if user specified pkgs to not revert,
         # so only show if it actually happened.
         status.append(
             (
-                _("Packages not to be reversioned by user " "request:"),
+                _("Packages not to be reversioned by user request:"),
                 str(nrevs),
             )
         )
@@ -744,9 +742,9 @@ def do_reversion(
                 portable.rename(rmani.pathname, path)
             except OSError as e:
                 abort(
-                    err=_(
-                        "Could not reversion manifest " "{path}: {err}"
-                    ).format(path=path, err=str(e))
+                    err=_("Could not reversion manifest {path}: {err}").format(
+                        path=path, err=str(e)
+                    )
                 )
             continue
 
@@ -816,7 +814,7 @@ def add_missing_files(
                 trstore.copy_file(h, ref_repo.file(h))
             except (EnvironmentError, sr.RepositoryFileNotFoundError) as e:
                 abort(
-                    err=_("Could not reversion file " "{path}: {err}").format(
+                    err=_("Could not reversion file {path}: {err}").format(
                         path=h, err=str(e)
                     )
                 )
@@ -844,7 +842,7 @@ def add_missing_files(
             trstore.insert_file(h, src_path)
         except (EnvironmentError, sr.RepositoryFileNotFoundError) as e:
             abort(
-                err=_("Could not reversion file " "{path}: {err}").format(
+                err=_("Could not reversion file {path}: {err}").format(
                     path=h, err=str(e)
                 )
             )
@@ -949,9 +947,9 @@ def main_func():
                 found = True
                 break
         else:
-            txt = _(
-                "Publisher {0} not found in reference " "repository."
-            ).format(pub)
+            txt = _("Publisher {0} not found in reference repository.").format(
+                pub
+            )
             if publishers:
                 abort(err=txt)
             else:

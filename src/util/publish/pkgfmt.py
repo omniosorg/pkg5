@@ -196,7 +196,7 @@ def read_line(f):
             if act.name == "depend" and act.attrs.get("type") not in dep_types:
                 raise pkg.actions.InvalidActionError(
                     act,
-                    _("Unknown type '{0}' in depend " "action").format(
+                    _("Unknown type '{0}' in depend action").format(
                         act.attrs.get("type")
                     ),
                 )

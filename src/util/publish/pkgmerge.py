@@ -225,7 +225,7 @@ def main_func():
             elif opt == "-s":
                 s = arg.split(",")
                 if len(s) < 2:
-                    usage("-s option must specify " "variant=value,repo_uri")
+                    usage("-s option must specify variant=value,repo_uri")
 
                 # All but last part should be variant.
                 src_vars = {}
@@ -233,9 +233,7 @@ def main_func():
                     try:
                         vname, vval = v.split("=")
                     except ValueError:
-                        usage(
-                            "-s option must specify " "variant=value,repo_uri"
-                        )
+                        usage("-s option must specify variant=value,repo_uri")
 
                     if not vname.startswith("variant."):
                         vname = "variant.{0}".format(vname)
@@ -263,9 +261,7 @@ def main_func():
         )
 
     if not dest_repo:
-        usage(
-            _("A destination package repository must be provided " "using -d.")
-        )
+        usage(_("A destination package repository must be provided using -d."))
 
     # Determine the unique set of variants across all sources.
     variants = set()
@@ -287,7 +283,7 @@ def main_func():
             source = source_list[i]
             usage(
                 _(
-                    "Source {source} missing values for " "variants: {missing}"
+                    "Source {source} missing values for variants: {missing}"
                 ).format(**locals())
             )
 

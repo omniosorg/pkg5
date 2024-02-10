@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
 # Copyright (c) 2010, 2024, Oracle and/or its affiliates.
 #
 
@@ -149,7 +149,7 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False):
 
     if not full:
         # The full usage message isn't desired.
-        logger.error(_("Try `pkgrepo --help or -?' for more " "information."))
+        logger.error(_("Try `pkgrepo --help or -?' for more information."))
         sys.exit(retcode)
 
     msg(
@@ -256,7 +256,7 @@ def subcmd_remove(conf, args):
     # Get repository object.
     if not conf.get("repo_uri", None):
         usage(
-            _("A package repository location must be provided " "using -s."),
+            _("A package repository location must be provided using -s."),
             cmd=subcommand,
         )
     repo = get_repo(conf, read_only=False, subcommand=subcommand)
@@ -504,7 +504,7 @@ def subcmd_remove_publisher(conf, args):
 
     if noexisting:
         error(
-            _("The following publisher(s) could not be found:\n " "{0}").format(
+            _("The following publisher(s) could not be found:\n {0}").format(
                 "\n ".join(noexisting)
             ),
             cmd=subcommand,
@@ -629,7 +629,7 @@ def subcmd_get(conf, args):
     # Setup transport so configuration can be retrieved.
     if not conf.get("repo_uri", None):
         usage(
-            _("A package repository location must be provided " "using -s."),
+            _("A package repository location must be provided using -s."),
             cmd=subcommand,
         )
     xport, xpub, tmp_dir = setup_transport(
@@ -759,7 +759,7 @@ def _get_matching_pubs(
             err_msg = _("no matching publishers found")
             if repo_uri:
                 err_msg = _(
-                    "no matching publishers found in " "repository: {0}"
+                    "no matching publishers found in repository: {0}"
                 ).format(repo_uri)
             error(err_msg, cmd=subcommand)
         return EXIT_OOPS, None, None
@@ -938,7 +938,7 @@ def subcmd_info(conf, args):
     # Setup transport so status can be retrieved.
     if not conf.get("repo_uri", None):
         usage(
-            _("A package repository location must be provided " "using -s."),
+            _("A package repository location must be provided using -s."),
             cmd=subcommand,
         )
     xport, xpub, tmp_dir = setup_transport(
@@ -1053,7 +1053,7 @@ def subcmd_list(conf, args):
     # Setup transport so configuration can be retrieved.
     if not conf.get("repo_uri", None):
         usage(
-            _("A package repository location must be provided " "using -s."),
+            _("A package repository location must be provided using -s."),
             cmd=subcommand,
         )
     xport, xpub, tmp_dir = setup_transport(
@@ -1279,7 +1279,7 @@ def subcmd_contents(conf, args):
     # Setup transport so configuration can be retrieved.
     if not conf.get("repo_uri", None):
         usage(
-            _("A package repository location must be provided " "using -s."),
+            _("A package repository location must be provided using -s."),
             cmd=subcommand,
         )
 
@@ -1493,7 +1493,7 @@ def subcmd_rebuild(conf, args):
     # Setup transport so operation can be performed.
     if not conf.get("repo_uri", None):
         usage(
-            _("A package repository location must be provided " "using -s."),
+            _("A package repository location must be provided using -s."),
             cmd=subcommand,
         )
 
@@ -1549,7 +1549,7 @@ def subcmd_refresh(conf, args):
     # Setup transport so operation can be performed.
     if not conf.get("repo_uri", None):
         usage(
-            _("A package repository location must be provided " "using -s."),
+            _("A package repository location must be provided using -s."),
             cmd=subcommand,
         )
 
@@ -1640,7 +1640,7 @@ def subcmd_set(conf, args):
     # Get repository object.
     if not conf.get("repo_uri", None):
         usage(
-            _("A package repository location must be provided " "using -s."),
+            _("A package repository location must be provided using -s."),
             cmd=subcommand,
         )
     repo = get_repo(conf, read_only=False, subcommand=subcommand)
@@ -1658,7 +1658,7 @@ def _set_pub(conf, subcommand, props, pubs, repo):
     for sname, sprops in props.items():
         if sname not in ("publisher", "repository"):
             usage(
-                _("unknown property section " "'{0}'").format(sname),
+                _("unknown property section '{0}'").format(sname),
                 cmd=subcommand,
             )
         for pname in sprops:
@@ -1934,7 +1934,7 @@ def subcmd_verify(conf, args):
     repo_uri = conf.get("repo_uri", None)
     if not repo_uri:
         usage(
-            _("A package repository location must be provided " "using -s."),
+            _("A package repository location must be provided using -s."),
             cmd=subcommand,
         )
 
@@ -2035,7 +2035,7 @@ def subcmd_fix(conf, args):
     repo_uri = conf.get("repo_uri", None)
     if not repo_uri:
         usage(
-            _("A package repository location must be provided " "using -s."),
+            _("A package repository location must be provided using -s."),
             cmd=subcommand,
         )
 
@@ -2283,7 +2283,7 @@ def __repo_diff(
         __emit_msg(symbol, pub)
         __emit_msg(
             symbol,
-            _("({0:d} package(s) with " "{1:d} different version(s))").format(
+            _("({0:d} package(s) with {1:d} different version(s))").format(
                 len(pkgs), len(fmris)
             ),
         )
@@ -2534,9 +2534,7 @@ def subcmd_diff(conf, args):
             conf["com_repo_" + conf_type] = arg
         else:
             usage(
-                _("--{0} must be specified following a " "-s").format(
-                    conf_type
-                ),
+                _("--{0} must be specified following a -s").format(conf_type),
                 cmd=subcommand,
             )
 
@@ -2548,7 +2546,7 @@ def subcmd_diff(conf, args):
                 conf["com_repo_uri"] = parse_uri(arg)
             else:
                 usage(
-                    _("only two repositories can be " "specified"),
+                    _("only two repositories can be specified"),
                     cmd=subcommand,
                 )
         if opt == "-v":
@@ -2581,7 +2579,7 @@ def subcmd_diff(conf, args):
     repo_uri = conf.get("repo_uri")
     if not repo_uri:
         usage(
-            _("Two package repository locations must be provided " "using -s."),
+            _("Two package repository locations must be provided using -s."),
             cmd=subcommand,
         )
 
@@ -2661,7 +2659,7 @@ def main_func():
             except (AttributeError, ValueError):
                 usage(
                     _(
-                        "{opt} takes argument of form " "name=value, not {arg}"
+                        "{opt} takes argument of form name=value, not {arg}"
                     ).format(opt=opt, arg=arg)
                 )
             DebugValues[key] = value

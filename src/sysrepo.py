@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
 # Copyright (c) 2011, 2024, Oracle and/or its affiliates.
 #
 
@@ -329,7 +329,7 @@ def __validate_pub_info(pub_info, no_uri_pubs, api_inst):
         for props in uri_info:
             if len(props) != 6:
                 raise SysrepoException(
-                    "{0} does not have 6 " "items".format(props)
+                    "{0} does not have 6 items".format(props)
                 )
             # props [0] and [3] must be strings
             if not isinstance(props[0], str) or not isinstance(props[3], str):
@@ -603,9 +603,9 @@ def _get_publisher_info(api_inst, http_timeout, image_dir):
                         p5p.Archive(urlresult.path)
                     except p5p.InvalidArchive:
                         raise SysrepoException(
-                            _(
-                                "unable to read p5p " "archive file at {0}"
-                            ).format(urlresult.path)
+                            _("unable to read p5p archive file at {0}").format(
+                                urlresult.path
+                            )
                         )
 
             clean_uri = _clean_publisher(uri)
@@ -638,7 +638,7 @@ def _chown_cache_dir(dir):
     except OSError as err:
         if not os.environ.get("PKG5_TEST_ENV", None):
             raise SysrepoException(
-                _("Unable to chown to {user}:{group}: " "{err}").format(
+                _("Unable to chown to {user}:{group}: {err}").format(
                     user=SYSREPO_USER, group="bin", err=err
                 )
             )
@@ -697,9 +697,7 @@ def _write_httpd_conf(
         try:
             num = int(cache_size)
             if num <= 0:
-                raise SysrepoException(
-                    _("invalid cache size: " "{0}").format(num)
-                )
+                raise SysrepoException(_("invalid cache size: {0}").format(num))
         except ValueError:
             raise SysrepoException(
                 _("invalid cache size: {0}").format(cache_size)
@@ -756,7 +754,7 @@ def _write_httpd_conf(
         # socket.gethostbyname raise UnicodeDecodeError in Python 3
         # for some input, such as '.'
         raise SysrepoException(
-            _("Unable to write sysrepo_httpd.conf: {host}: " "{err}").format(
+            _("Unable to write sysrepo_httpd.conf: {host}: {err}").format(
                 **locals()
             )
         )
@@ -905,7 +903,7 @@ def _chown_runtime_dir(runtime_dir):
     except OSError as err:
         if not os.environ.get("PKG5_TEST_ENV", None):
             raise SysrepoException(
-                _("Unable to chown to {user}:{group}: " "{err}").format(
+                _("Unable to chown to {user}:{group}: {err}").format(
                     user=SYSREPO_USER, group=SYSREPO_GROUP, err=err
                 )
             )

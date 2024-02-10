@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright 2017 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
 # Copyright (c) 2010, 2024, Oracle and/or its affiliates.
 #
 
@@ -195,7 +195,7 @@ def main_func():
             if not os.path.isfile(key_path):
                 usage(
                     _(
-                        "{0} was expected to be a key file " "but isn't a file."
+                        "{0} was expected to be a key file but isn't a file."
                     ).format(key_path)
                 )
         elif opt == "--dkey":
@@ -203,7 +203,7 @@ def main_func():
             if not os.path.isfile(dkey):
                 usage(
                     _(
-                        "{0} was expected to be a key file " "but isn't a file."
+                        "{0} was expected to be a key file but isn't a file."
                     ).format(dkey)
                 )
         elif opt == "--dcert":
@@ -230,7 +230,7 @@ def main_func():
             except (AttributeError, ValueError):
                 error(
                     _(
-                        "{opt} takes argument of form " "name=value, not {arg}"
+                        "{opt} takes argument of form name=value, not {arg}"
                     ).format(opt=opt, arg=arg)
                 )
     if show_usage:
@@ -248,9 +248,7 @@ def main_func():
         )
 
     if cert_path and not key_path:
-        usage(
-            _("If a certificate is given, its associated key must be " "given.")
-        )
+        usage(_("If a certificate is given, its associated key must be given."))
 
     if chain_certs and not cert_path:
         usage(
@@ -261,7 +259,7 @@ def main_func():
         )
 
     if not pargs:
-        usage(_("At least one fmri or pattern must be provided to " "sign."))
+        usage(_("At least one fmri or pattern must be provided to sign."))
 
     if not set_alg and not key_path:
         sig_alg = "sha256"
