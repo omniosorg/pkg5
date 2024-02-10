@@ -21,8 +21,8 @@
 #
 
 #
-# Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
 # Copyright 2017 OmniOS Community Edition (OmniOSce) Association.
+# Copyright (c) 2010, 2024, Oracle and/or its affiliates.
 #
 
 try:
@@ -226,7 +226,7 @@ def main_func():
         elif opt == "-D":
             try:
                 key, value = arg.split("=", 1)
-                DebugValues.set_value(key, value)
+                DebugValues[key] = value
             except (AttributeError, ValueError):
                 error(
                     _(

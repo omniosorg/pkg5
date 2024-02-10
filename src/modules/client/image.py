@@ -21,8 +21,8 @@
 #
 
 #
-# Copyright (c) 2007, 2020, Oracle and/or its affiliates. All rights reserved.
 # Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
+# Copyright (c) 2007, 2024, Oracle and/or its affiliates.
 #
 
 import atexit
@@ -1664,14 +1664,11 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
         image."""
 
         # if we're simulating a live root then allow access to it
-        if (
-            DebugValues.get_value("simulate_live_root")
-            or "PKG_LIVE_ROOT" in os.environ
-        ):
+        if DebugValues["simulate_live_root"] or "PKG_LIVE_ROOT" in os.environ:
             return True
 
         # check if the user disabled access to the live root
-        if DebugValues.get_value("simulate_no_live_root"):
+        if DebugValues["simulate_no_live_root"]:
             return False
         if "PKG_NO_LIVE_ROOT" in os.environ:
             return False
@@ -4695,7 +4692,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
         cleanup.
         """
 
-        if DebugValues.get_value("simulate-plan-hang"):
+        if DebugValues["simulate-plan-hang"]:
             # If pkg5.hang file is present in image dir, then
             # sleep after loading configuration until file is
             # gone.  This is used by the test suite for signal
@@ -5117,7 +5114,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 img = newimg
 
         pfmri = img.get_version_installed(img.strtofmri("package/pkg"))
-        if not pfmri or not pkgdefs.PKG_STATE_UPGRADABLE in img.get_pkg_state(
+        if not pfmri or pkgdefs.PKG_STATE_UPGRADABLE not in img.get_pkg_state(
             pfmri
         ):
             # If no version of the package system is installed or a

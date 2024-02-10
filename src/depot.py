@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2007, 2022, Oracle and/or its affiliates.
+# Copyright (c) 2007, 2024, Oracle and/or its affiliates.
 #
 
 try:
@@ -369,7 +369,7 @@ if __name__ == "__main__":
                 for feature in features:
                     try:
                         key, val = feature.split("=", 1)
-                        DebugValues.set_value(key, val)
+                        DebugValues[key] = val
                     except (AttributeError, ValueError):
                         pass
 

@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2024, Oracle and/or its affiliates.
 #
 
 import pkg.smf as smf
@@ -307,24 +307,21 @@ class Actuator(object):
     def exec_prep(self, image):
         if not image.is_liveroot():
             #
-            # XXX don't create the marker file as illumos doesn't support self-assembly
-            # milestone
+            # illumos does not support the self-asssembly milestone
             #
-            #                        # we're doing off-line pkg ops; we need
-            #                        # to support self-assembly milestone
-            #                        # so create the necessary marker file
+            #        # we're doing off-line pkg ops; we need
+            #        # to support self-assembly milestone
+            #        # so create the necessary marker file
             #
-            #                        if image.type != IMG_USER:
-            #                                path = os.path.join(image.root,
-            #                                    ".SELF-ASSEMBLY-REQUIRED")
-            #                                # create only if it doesn't exist
+            #        if image.type != IMG_USER:
+            #                path = os.path.join(image.root,
+            #                    ".SELF-ASSEMBLY-REQUIRED")
+            #                # create only if it doesn't exist
             #
-            #                                if not os.path.exists(path):
-            #                                        os.close(os.open(path,
-            #                                            os.O_EXCL  |
-            #                                            os.O_CREAT |
-            #                                            os.O_WRONLY))
-            if not DebugValues.get_value("smf_cmds_dir") and not self.zone:
+            #                if not os.path.exists(path):
+            #                        os.close(os.open(path,
+            #                            os.O_EXCL  | os.O_CREAT | os.O_WRONLY))
+            if not DebugValues["smf_cmds_dir"] and not self.zone:
                 return
 
         self.do_nothing = False

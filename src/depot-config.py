@@ -21,8 +21,8 @@
 #
 
 #
-# Copyright (c) 2013, 2022, Oracle and/or its affiliates.
 # Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright (c) 2013, 2024, Oracle and/or its affiliates.
 #
 
 try:
@@ -929,7 +929,7 @@ def main_func():
                             "name=value, not {arg}"
                         ).format(opt=opt, arg=arg)
                     )
-                DebugValues.set_value(key, value)
+                DebugValues[key] = value
             else:
                 usage("unknown option {0}".format(opt))
 

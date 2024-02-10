@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2012, 2022, Oracle and/or its affiliates.
+# Copyright (c) 2012, 2024, Oracle and/or its affiliates.
 #
 
 """
@@ -51,7 +51,7 @@ from pkg.client.debugvalues import DebugValues
 # debugging aids
 # DebugValues is a singleton; pylint: disable=E1120
 pkgremote_debug = (
-    DebugValues.get_value("pkgremote_debug") is not None
+    DebugValues["pkgremote_debug"] is not None
     or os.environ.get("PKG_PKGREMOTE_DEBUG", None) is not None
 )
 

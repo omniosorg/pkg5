@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2008, 2022, Oracle and/or its affiliates.
+# Copyright (c) 2008, 2024, Oracle and/or its affiliates.
 #
 
 try:
@@ -503,7 +503,7 @@ def main_func():
                             "name=value, not {arg}"
                         ).format(opt=opt, arg=arg)
                     )
-            DebugValues.set_value(key, value)
+            DebugValues[key] = value
         elif opt == "-h":
             usage(retcode=0)
         elif opt == "-k":
@@ -725,7 +725,7 @@ def __mog_helper(mog_files, fmri, mpathname):
     line_buffer = []
 
     # Set mogrify in verbose mode for debugging.
-    if DebugValues.get_value("mogrify"):
+    if DebugValues["mogrify"]:
         mog_verbose = True
 
     # Take out "-" symbol. If the only one element is "-", input_files

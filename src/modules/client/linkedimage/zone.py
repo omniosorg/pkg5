@@ -21,8 +21,8 @@
 #
 
 #
-# Copyright (c) 2011, 2021, Oracle and/or its affiliates.
 # Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
+# Copyright (c) 2011, 2024, Oracle and/or its affiliates.
 #
 
 """
@@ -172,10 +172,8 @@ class LinkedImageZonePlugin(li.LinkedImagePlugin):
         """Check to see if zones are supported in the current image.
         i.e. can the current image have zone children."""
 
-        # pylint: disable=E1120
-        if DebugValues.get_value("zones_supported"):
+        if DebugValues["zones_supported"]:
             return True
-        # pylint: enable=E1120
 
         # first check if the image variant is global
         variant = "variant.opensolaris.zone"
@@ -387,7 +385,7 @@ class LinkedImageZoneChildPlugin(li.LinkedImageChildPlugin):
 def _zonename():
     """Get the zonname of the current system."""
 
-    cmd = DebugValues.get_value("bin_zonename")  # pylint: disable=E1120
+    cmd = DebugValues["bin_zonename"]
     if cmd is not None:
         cmd = [cmd]
     else:
@@ -457,7 +455,7 @@ def _list_zones(root, path_transform):
     results."""
 
     rv = dict()
-    cmd = DebugValues.get_value("bin_zoneadm")  # pylint: disable=E1120
+    cmd = DebugValues["bin_zoneadm"]
     if cmd is not None:
         cmd = [cmd]
     else:
