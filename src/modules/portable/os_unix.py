@@ -328,15 +328,17 @@ def get_root(path):
     return "/"
 
 
-def assert_mode(path, mode):
+def assert_mode(path, mode, allow_superset=False):
     fmode = stat.S_IMODE(os.lstat(path).st_mode)
-    if mode != fmode:
-        ae = AssertionError(
-            "mode mismatch for {0}, has {1:o}, "
-            "want {2:o}".format(path, fmode, mode)
-        )
-        ae.mode = fmode
-        raise ae
+
+    if mode == fmode or (allow_superset and (fmode & mode) == mode):
+        return
+
+    ae = AssertionError(
+        f"mode mismatch for {path}, has {fmode:o}, want {mode:o}"
+    )
+    ae.mode = fmode
+    raise ae
 
 
 def copyfile(src, dst):

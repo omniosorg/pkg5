@@ -1979,20 +1979,21 @@ class Catalog(object):
         # Force file_mode, so that unprivileged users can read these.
         bad_modes = []
         for name in files:
-            pathname = os.path.join(self.meta_root, name)
+            fpath = os.path.join(self.meta_root, name)
             try:
                 if self.read_only:
-                    fmode = stat.S_IMODE(os.stat(pathname).st_mode)
-                    if fmode != self.__file_mode:
+                    try:
+                        portable.assert_mode(fpath, self.__file_mode, True)
+                    except AssertionError as ae:
                         bad_modes.append(
                             (
-                                pathname,
+                                fpath,
                                 "{0:o}".format(self.__file_mode),
-                                "{0:o}".format(fmode),
+                                "{0:o}".format(ae.mode),
                             )
                         )
                 else:
-                    os.chmod(pathname, self.__file_mode)
+                    os.chmod(fpath, self.__file_mode)
             except EnvironmentError as e:
                 # If the file doesn't exist yet, move on.
                 if e.errno == errno.ENOENT:
@@ -2001,13 +2002,14 @@ class Catalog(object):
                 # If the mode change failed for another reason,
                 # check to see if we actually needed to change
                 # it, and if so, add it to bad_modes.
-                fmode = stat.S_IMODE(os.stat(pathname).st_mode)
-                if fmode != self.__file_mode:
+                try:
+                    portable.assert_mode(fpath, self.__file_mode, True)
+                except AssertionError as ae:
                     bad_modes.append(
                         (
-                            pathname,
+                            fpath,
                             "{0:o}".format(self.__file_mode),
-                            "{0:o}".format(fmode),
+                            "{0:o}".format(ae.mode),
                         )
                     )
 

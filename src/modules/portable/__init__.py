@@ -232,7 +232,7 @@ def get_root(path):
     raise NotImplementedError
 
 
-def assert_mode(path, mode):
+def assert_mode(path, mode, allow_superset=False):
     """Checks that the file identified by path has the given mode to
     the extent possible by the host operating system.  Otherwise raises
     an AssertionError where the mode attribute of the assertion is the
