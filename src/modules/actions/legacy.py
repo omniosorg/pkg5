@@ -174,7 +174,7 @@ class LegacyAction(generic.Action):
 
         if not os.path.isfile(os.path.join(pkgdir, "pkginfo")):
             errors.append(
-                _("Missing file " "var/sadm/pkg/{0}/pkginfo").format(
+                _("Missing file var/sadm/pkg/{0}/pkginfo").format(
                     self.attrs["pkg"]
                 )
             )

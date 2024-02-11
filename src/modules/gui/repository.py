@@ -3362,7 +3362,7 @@ class NoPublishersForURI(api_errors.ApiException):
 
     def __str__(self):
         return (
-            _("There are no publishers associated with the URI " "'%s'.")
+            _("There are no publishers associated with the URI '%s'.")
             % self.uri
         )
 

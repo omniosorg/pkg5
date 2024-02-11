@@ -1032,7 +1032,7 @@ class PlanDescription(object):
 
     def set_actuator_timeout(self, timeout):
         """Set timeout for synchronous actuators."""
-        assert type(timeout) == int, "Actuator timeout must be an " "integer."
+        assert type(timeout) == int, "Actuator timeout must be an integer."
         self._actuators.set_timeout(timeout)
 
     def add_pkg_actuator(self, trigger_pkg, exec_op, cpkg):

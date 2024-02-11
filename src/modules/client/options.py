@@ -580,7 +580,7 @@ def __parse_linked_props(args):
 
         if p not in li.prop_values:
             raise InvalidOptionError(
-                msg=_("invalid linked " "image property: '{0}'.").format(p)
+                msg=_("invalid linked image property: '{0}'.").format(p)
             )
 
         if p in linked_props:
@@ -741,9 +741,7 @@ def opts_table_cb_li_recurse(op, api_inst, opts, opts_new):
                 pass
         if lin is None or lin not in li_child_list:
             raise InvalidOptionError(
-                msg=_("invalid linked image or zone name " "'{0}'.").format(
-                    ulin
-                )
+                msg=_("invalid linked image or zone name '{0}'.").format(ulin)
             )
 
         return lin
@@ -837,7 +835,7 @@ def opts_table_cb_stage(op, api_inst, opts, opts_new):
 
     if opts_new[STAGE] not in pkgdefs.api_stage_values:
         raise InvalidOptionError(
-            msg=_("invalid operation stage: " "'{0}'").format(opts[STAGE])
+            msg=_("invalid operation stage: '{0}'").format(opts[STAGE])
         )
 
 

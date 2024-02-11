@@ -69,7 +69,7 @@ class TransactionContentError(TransactionError):
 
     def __str__(self):
         return _(
-            "Unrecognized or malformed data in operation payload: " "'{0}'."
+            "Unrecognized or malformed data in operation payload: '{0}'."
         ).format(self.data)
 
 
@@ -86,12 +86,12 @@ class TransactionOperationError(TransactionError):
 
     def __str__(self):
         if "client_release" in self._args:
-            return _(
-                "The specified client_release is invalid: " "'{0}'"
-            ).format(self._args.get("msg", ""))
+            return _("The specified client_release is invalid: '{0}'").format(
+                self._args.get("msg", "")
+            )
         elif "fmri_version" in self._args:
             return _(
-                "'The specified FMRI, '{0}', has an invalid " "version."
+                "'The specified FMRI, '{0}', has an invalid version."
             ).format(self._args.get("pfmri", ""))
         elif "valid_new_fmri" in self._args:
             return _(
@@ -107,12 +107,10 @@ class TransactionOperationError(TransactionError):
             ).format(self._args.get("pfmri", ""))
         elif "missing_fmri" in self._args:
             return _(
-                "Need an existing instance of {0} to exist to " "append to it"
+                "Need an existing instance of {0} to exist to append to it"
             ).format(self._args.get("pfmri", ""))
         elif "non_sig" in self._args:
-            return _(
-                "Only a signature can be appended to an " "existing package"
-            )
+            return _("Only a signature can be appended to an existing package")
         elif "pfmri" in self._args:
             return _("The specified FMRI, '{0}', is invalid.").format(
                 self._args["pfmri"]

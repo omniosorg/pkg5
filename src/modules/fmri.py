@@ -195,7 +195,7 @@ class PkgFmri(object):
                 raise IllegalFmri(
                     fmri,
                     IllegalFmri.SYNTAX_ERROR,
-                    detail=_("Missing '/' after " "publisher name"),
+                    detail=_("Missing '/' after publisher name"),
                 )
 
             # Publisher starts after //.
@@ -213,7 +213,7 @@ class PkgFmri(object):
                 raise IllegalFmri(
                     fmri,
                     IllegalFmri.SYNTAX_ERROR,
-                    detail=_("Missing '/' after " "publisher name"),
+                    detail=_("Missing '/' after publisher name"),
                 )
 
             # Publisher starts after //.

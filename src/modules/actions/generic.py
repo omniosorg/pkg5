@@ -842,7 +842,7 @@ class Action(object, metaclass=NSG):
                     )
                 )
             elif isinstance(raw_mode, list):
-                errors.append(("mode", _("mode may only be " "specified once")))
+                errors.append(("mode", _("mode may only be specified once")))
             else:
                 errors.append(
                     (
@@ -858,12 +858,12 @@ class Action(object, metaclass=NSG):
         try:
             owner = self.attrs.get("owner", "").rstrip()
         except AttributeError:
-            errors.append(("owner", _("owner may only be specified " "once")))
+            errors.append(("owner", _("owner may only be specified once")))
 
         try:
             group = self.attrs.get("group", "").rstrip()
         except AttributeError:
-            errors.append(("group", _("group may only be specified " "once")))
+            errors.append(("group", _("group may only be specified once")))
 
         return errors
 
@@ -1064,7 +1064,7 @@ class Action(object, metaclass=NSG):
 
         if ftype is not None and ftype != stat.S_IFMT(lstat.st_mode):
             errors.append(
-                _("file type: '{found}' should be " "'{expected}'").format(
+                _("file type: '{found}' should be '{expected}'").format(
                     found=ftype_to_name(stat.S_IFMT(lstat.st_mode)),
                     expected=ftype_to_name(ftype),
                 )
@@ -1101,7 +1101,7 @@ class Action(object, metaclass=NSG):
 
         if mode is not None and stat.S_IMODE(lstat.st_mode) != mode:
             errors.append(
-                _("mode: {found:04o} should be " "{expected:04o}").format(
+                _("mode: {found:04o} should be {expected:04o}").format(
                     found=stat.S_IMODE(lstat.st_mode), expected=mode
                 )
             )
@@ -1276,14 +1276,14 @@ class Action(object, metaclass=NSG):
                 or attr in single_attrs
             ) and type(self.attrs[attr]) is list:
                 errors.append(
-                    (attr, _("{0} may only be " "specified once").format(attr))
+                    (attr, _("{0} may only be specified once").format(attr))
                 )
             elif attr in numeric_attrs:
                 try:
                     int(self.attrs[attr])
                 except (TypeError, ValueError):
                     errors.append(
-                        (attr, _("{0} must be an " "integer").format(attr))
+                        (attr, _("{0} must be an integer").format(attr))
                     )
 
         for attr in required_attrs:

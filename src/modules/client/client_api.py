@@ -500,7 +500,7 @@ def _collect_proxy_config_errors(errors_json=None):
     if not http_proxy and not https_proxy:
         return
 
-    err = "\nThe following proxy configuration is set in the " "environment:\n"
+    err = "\nThe following proxy configuration is set in the environment:\n"
     if http_proxy:
         err += "http_proxy: {0}\n".format(http_proxy)
     if https_proxy:
@@ -639,7 +639,7 @@ def _collect_catalog_failures(cre, ignore_perms_failure=False, errors=None):
         partial_str = _(" ({0} partial):").format(str(partial))
 
     txt = _(
-        "pkg: {succeeded}/{total} catalogs successfully " "updated{partial}"
+        "pkg: {succeeded}/{total} catalogs successfully updated{partial}"
     ).format(succeeded=succeeded, total=total, partial=partial_str)
 
     if errors is not None:
@@ -825,14 +825,12 @@ def _list_inventory(
                             )
                         }
                     else:
-                        err = {"reason": _("no packages are " "installed")}
+                        err = {"reason": _("no packages are installed")}
                     errors_json.append(err)
                 api_inst.log_operation_end(result=RESULT_NOTHING_TO_DO)
             elif pkg_list == api_inst.LIST_REMOVABLE:
                 if not quiet:
-                    err = {
-                        "reason": _("no installed packages " "are removable")
-                    }
+                    err = {"reason": _("no installed packages are removable")}
                     errors_json.append(err)
                 api_inst.log_operation_end(result=RESULT_NOTHING_TO_DO)
             else:
@@ -1043,7 +1041,7 @@ def __api_alloc(
         if e.user_specified:
             if pkg_image_used:
                 _error_json(
-                    _("No image rooted at '{0}' " "(set by $PKG_IMAGE)").format(
+                    _("No image rooted at '{0}' (set by $PKG_IMAGE)").format(
                         e.user_dir
                     ),
                     errors_json=errors_json,
@@ -1210,9 +1208,9 @@ def __api_execute_plan(operation, api_inst):
         rval = __prepare_json(EXIT_PARTIAL, errors=errors_json)
     except Exception as e:
         _error_json(
-            _(
-                "An unexpected error happened during " "{operation}: {err}"
-            ).format(operation=operation, err=e),
+            _("An unexpected error happened during {operation}: {err}").format(
+                operation=operation, err=e
+            ),
             errors_json=errors_json,
         )
         rval = __prepare_json(EXIT_OOPS, errors=errors_json)
@@ -1320,9 +1318,7 @@ pkg:/package/pkg' as a privileged user and then retry the {op}."""
     if e_type == api_errors.ImageUpdateOnLiveImageException:
         _error_json(
             "\n"
-            + _(
-                "The proposed operation cannot be " "performed on a live image."
-            ),
+            + _("The proposed operation cannot be performed on a live image."),
             cmd=op,
             errors_json=errors_json,
         )
@@ -2094,7 +2090,7 @@ def _publisher_set(
         return __prepare_json(EXIT_BADOPT, errors=errors_json, op=op)
     elif len(pargs) > 1:
         errors_json.append(
-            {"reason": _("only one publisher name may " "be specified")}
+            {"reason": _("only one publisher name may be specified")}
         )
         return __prepare_json(EXIT_BADOPT, errors=errors_json, op=op)
     elif pargs:
@@ -2340,7 +2336,7 @@ assistance."""
         if first:
             first = False
             _error_json(
-                "failed to add or update one or more " "publishers",
+                "failed to add or update one or more publishers",
                 cmd=op,
                 errors_json=errors_json,
                 errorType="publisher_set",
@@ -2385,7 +2381,7 @@ def _publisher_unset(op, api_inst, pargs):
     errors_json = []
     if not pargs:
         errors_json.append(
-            {"reason": _("at least one publisher must " "be specified")}
+            {"reason": _("at least one publisher must be specified")}
         )
         return __prepare_json(EXIT_BADOPT, errors=errors_json, op=op)
 
@@ -2853,9 +2849,7 @@ def _info(
     errors_json = []
     data = {}
     if info_remote and not pargs:
-        error = {
-            "reason": _("must request remote info for specific " "packages")
-        }
+        error = {"reason": _("must request remote info for specific packages")}
         errors_json.append(error)
         return __prepare_json(EXIT_BADOPT, errors=errors_json, op=op)
 

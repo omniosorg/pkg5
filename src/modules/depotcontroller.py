@@ -403,7 +403,7 @@ class DepotController(object):
         entries to use when starting the depot."""
 
         if self.__state != self.HALTED:
-            raise DepotStateException("Depot already starting or " "running")
+            raise DepotStateException("Depot already starting or running")
 
         # XXX what about stdin and stdout redirection?
         args = self.get_args()

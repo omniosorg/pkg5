@@ -67,7 +67,7 @@ class OpenSolarisManifestChecker(base.ManifestChecker):
         for key in keys:
             if key not in manifest:
                 engine.warning(
-                    _("Missing attribute '{key}' in " "{pkg}").format(
+                    _("Missing attribute '{key}' in {pkg}").format(
                         key=key, pkg=manifest.fmri
                     ),
                     msgid="{0}{1}.1".format(self.name, pkglint_id),

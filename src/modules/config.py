@@ -170,7 +170,7 @@ class UnknownPropertyValueError(PropertyConfigError):
                 "'{section}'."
             ).format(**self.__dict__)
         return _(
-            "Value '{value}' not found in the list of values " "for {prop} ."
+            "Value '{value}' not found in the list of values for {prop} ."
         ).format(**self.__dict__)
 
 
@@ -209,7 +209,7 @@ class UnknownPropertyError(PropertyConfigError):
     def __str__(self):
         if self.section:
             return _(
-                "Unknown property '{prop}' in section " "'{section}'."
+                "Unknown property '{prop}' in section '{section}'."
             ).format(**self.__dict__)
         return _("Unknown property {0}").format(self.prop)
 

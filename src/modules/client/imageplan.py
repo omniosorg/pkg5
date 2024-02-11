@@ -2182,19 +2182,19 @@ class ImagePlan(object):
         if owner_overlaid != owner_overlaying:
             msgs.append(
                 _(
-                    "owner: {0} does not match overlaid " "package owner: {1}"
+                    "owner: {0} does not match overlaid package owner: {1}"
                 ).format(owner_overlaying, owner_overlaid)
             )
         if mode_overlaid != mode_overlaying:
             msgs.append(
-                _(
-                    "mode: {0} does not match overlaid " "package mode: {1}"
-                ).format(mode_overlaying, mode_overlaid)
+                _("mode: {0} does not match overlaid package mode: {1}").format(
+                    mode_overlaying, mode_overlaid
+                )
             )
         if group_overlaid != group_overlaying:
             msgs.append(
                 _(
-                    "group: {0} does not match overlaid " "package group: {1}"
+                    "group: {0} does not match overlaid package group: {1}"
                 ).format(group_overlaying, group_overlaid)
             )
         if not msgs:

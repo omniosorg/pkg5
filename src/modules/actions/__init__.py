@@ -117,7 +117,7 @@ class UnknownActionError(ActionError):
                 "unknown action type '{type}' in package "
                 "'{fmri}' in action '{action}'"
             ).format(type=self.type, fmri=self.fmri, action=self.actionstr)
-        return _("unknown action type '{type}' in action " "'{action}'").format(
+        return _("unknown action type '{type}' in action '{action}'").format(
             type=self.type, action=self.actionstr
         )
 
@@ -179,7 +179,7 @@ class InvalidActionError(ActionError):
     def __str__(self):
         if hasattr(self, "fmri") and self.fmri is not None:
             return _(
-                "invalid action in package {fmri}: " "{action}: {error}"
+                "invalid action in package {fmri}: {action}: {error}"
             ).format(fmri=self.fmri, action=self.actionstr, error=self.errorstr)
         return _("invalid action, '{action}': {error}").format(
             action=self.actionstr, error=self.errorstr

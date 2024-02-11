@@ -1702,7 +1702,7 @@ class Catalog(object):
             atypes = ("set",)
         else:
             raise RuntimeError(
-                _("Unknown info_needed " "type: {0}".format(info_needed))
+                _("Unknown info_needed type: {0}".format(info_needed))
             )
 
         for a, attr_name in self.__gen_manifest_actions(m, atypes, excludes):

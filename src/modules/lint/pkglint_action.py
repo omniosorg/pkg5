@@ -1188,7 +1188,7 @@ class PkgActionChecker(base.ActionChecker):
                 ):
                     continue
                 engine.warning(
-                    _("underscore in attribute name {key} in " "{fmri}").format(
+                    _("underscore in attribute name {key} in {fmri}").format(
                         key=key, fmri=manifest.fmri
                     ),
                     msgid="{0}{1}.1".format(self.name, pkglint_id),
@@ -1225,7 +1225,7 @@ class PkgActionChecker(base.ActionChecker):
             return
 
         engine.warning(
-            _("underscore in 'set' action name {name} in " "{fmri}").format(
+            _("underscore in 'set' action name {name} in {fmri}").format(
                 name=name, fmri=manifest.fmri
             ),
             msgid="{0}{1}.2".format(self.name, pkglint_id),
@@ -1323,7 +1323,7 @@ class PkgActionChecker(base.ActionChecker):
         ]:
             if required not in action.attrs:
                 engine.error(
-                    _("{attr} missing from legacy " "action in {pkg}").format(
+                    _("{attr} missing from legacy action in {pkg}").format(
                         attr=required, pkg=manifest.fmri
                     ),
                     msgid="{0}{1}.1".format(self.name, pkglint_id),
@@ -1345,7 +1345,7 @@ class PkgActionChecker(base.ActionChecker):
             if "REV=" not in action.attrs["version"]:
                 engine.warning(
                     _(
-                        "legacy action in {0} does not " "contain a REV= string"
+                        "legacy action in {0} does not contain a REV= string"
                     ).format(manifest.fmri),
                     msgid="{0}{1}.3".format(self.name, pkglint_id),
                 )
@@ -1581,7 +1581,7 @@ class PkgActionChecker(base.ActionChecker):
         if action.name == "license" and "path" in action.attrs:
             engine.error(
                 _(
-                    "license action in {pkg} has a path attribute, " "{path}"
+                    "license action in {pkg} has a path attribute, {path}"
                 ).format(pkg=manifest.fmri, path=action.attrs["path"]),
                 msgid="{0}{1}".format(self.name, pkglint_id),
             )
@@ -1634,9 +1634,9 @@ class PkgActionChecker(base.ActionChecker):
             # error messaging
             details = "; ".join([val.lstrip() for val in str(err).split("\n")])
             engine.error(
-                _(
-                    "Publication error with action in {pkg}: " "{details}"
-                ).format(pkg=manifest.fmri, details=details),
+                _("Publication error with action in {pkg}: {details}").format(
+                    pkg=manifest.fmri, details=details
+                ),
                 msgid="{0}{1}".format(self.name, pkglint_id),
             )
 
@@ -1652,7 +1652,7 @@ class PkgActionChecker(base.ActionChecker):
 
         if len(username) == 0:
             engine.error(
-                _("username attribute value must be set " "in {pkg}").format(
+                _("username attribute value must be set in {pkg}").format(
                     pkg=manifest.fmri
                 ),
                 msgid="{0}{1}.4".format(self.name, pkglint_id),
@@ -1682,7 +1682,7 @@ class PkgActionChecker(base.ActionChecker):
         ):
             engine.warning(
                 _(
-                    "Username {name} in {pkg} is discouraged - see " "passwd(5)"
+                    "Username {name} in {pkg} is discouraged - see passwd(5)"
                 ).format(name=username, pkg=manifest.fmri),
                 msgid="{0}{1}.3".format(self.name, pkglint_id),
             )
@@ -1730,7 +1730,7 @@ class PkgActionChecker(base.ActionChecker):
                     )
 
     facet_value.pkglint_desc = _(
-        "facet value should be set to " "a valid value in an action attribute"
+        "facet value should be set to a valid value in an action attribute"
     )
 
     def supported_pkg_actuator(
@@ -1791,7 +1791,7 @@ class PkgActionChecker(base.ActionChecker):
                 )
 
     supported_pkg_actuator.pkglint_desc = _(
-        "package actuator should be " "set to a valid value"
+        "package actuator should be set to a valid value"
     )
 
     def arch64(self, action, manifest, engine, pkglint_id="014"):
@@ -1832,7 +1832,7 @@ class PkgActionChecker(base.ActionChecker):
             lint_subid = "1"
 
         lint_report(
-            _("{elfbits}-bit object delivered for {path} " "in {fmri}.").format(
+            _("{elfbits}-bit object delivered for {path} in {fmri}.").format(
                 elfbits=elfbits, fmri=manifest.fmri, path=action.attrs["path"]
             ),
             msgid="{}.{}".format(lint_id, lint_subid),

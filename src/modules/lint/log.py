@@ -237,7 +237,7 @@ class PlainLogFormatter(LogFormatter):
                         if report and report.lower() == "false":
                             return
                     key = "{0} pkglint001.5".format(LEVELS[INFO])
-                    linted_msg = _("Linted message: {id}  " "{msg}").format(
+                    linted_msg = _("Linted message: {id}  {msg}").format(
                         id=msg.msgid, msg=msg
                     )
                     self.logger.warning(

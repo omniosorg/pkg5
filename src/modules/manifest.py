@@ -458,7 +458,7 @@ class Manifest(object):
                 "mediator-implementation": mediation[3],
             }
             for mvariant in mvariants:
-                a = "set name=pkg.mediator " "value={0} {1} {2}\n".format(
+                a = "set name=pkg.mediator value={0} {1} {2}\n".format(
                     mediation[0],
                     " ".join(("=".join(t) for t in values.items() if t[1])),
                     " ".join(("=".join(t) for t in mvariant.items())),
@@ -1037,9 +1037,9 @@ class Manifest(object):
                 characters from the input as it is read; this results in actions
                 with values across multiple lines being passed to the
                 action parsing code whitespace-separated instead.
-                
+
                 For example:
-                        
+
                 set name=pkg.summary \
                     value="foo"
                 set name=pkg.description value="foo " \
@@ -1457,7 +1457,7 @@ class Manifest(object):
             return False
         else:
             raise ValueError(
-                _("Attribute value '{0}' not 'true' or " "'false'".format(ret))
+                _("Attribute value '{0}' not 'true' or 'false'".format(ret))
             )
 
     def get_size(self, excludes=EmptyI):
@@ -2077,7 +2077,7 @@ class EmptyFactoredManifest(Manifest):
 
     def set_content(self, *args, **kwargs):
         raise RuntimeError(
-            "Cannot call set_content on an " "EmptyFactoredManifest"
+            "Cannot call set_content on an EmptyFactoredManifest"
         )
 
 

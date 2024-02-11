@@ -438,7 +438,7 @@ class CurlTransportEngine(TransportEngine):
                 elif respcode == 0:
                     repostats.record_error()
                     errors_seen += 1
-                    reason = "Invalid HTTP status code " "from server"
+                    reason = "Invalid HTTP status code from server"
                     ex = tx.TransportProtoError(
                         proto,
                         url=url,
@@ -1132,7 +1132,7 @@ class CurlTransportEngine(TransportEngine):
                 except EnvironmentError as e:
                     if e.errno != errno.ENOENT:
                         raise tx.TransportOperationError(
-                            "Unable to remove file: " "{0}".format(e)
+                            "Unable to remove file: {0}".format(e)
                         )
             else:
                 if hdl.fileprog:
