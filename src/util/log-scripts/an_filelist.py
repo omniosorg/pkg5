@@ -21,10 +21,9 @@
 #
 
 #
-# Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2024, Oracle and/or its affiliates.
 #
 
-from __future__ import division
 import datetime
 import fileinput
 import getopt
@@ -49,7 +48,6 @@ filelist_totals["bytes"] = 0
 pkg_pat = re.compile(r"/filelist/(?P<mversion>\d+)/(?P<trailing>.*)")
 
 
-# old-division; pylint: disable=W1619
 def report_filelist_by_bytes():
     print(
         "<p>Total kilobytes sent via filelist: {0:f}</p>".format(
@@ -73,7 +71,7 @@ def count_filelist(mg, d):
         filelist_by_date[d.date().isoformat()] = 1
 
     pm = pkg_pat.search(mg["uri"])
-    if pm != None:
+    if pm is not None:
         pg = pm.groupdict()
 
         if mg["response"] == "200":

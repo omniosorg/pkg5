@@ -21,8 +21,8 @@
 #
 
 #
-# Copyright 2023 OmniOS Community Edition (OmniOSce) Association.
-# Copyright (c) 2007, 2022, Oracle and/or its affiliates.
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
+# Copyright (c) 2007, 2024, Oracle and/or its affiliates.
 #
 
 #
@@ -129,7 +129,7 @@ try:
 except KeyboardInterrupt:
     import sys
 
-    sys.exit(1)
+    sys.exit(1)  # EXIT_OOPS
 
 CLIENT_API_VERSION = 83
 PKG_CLIENT_NAME = "pkg"
@@ -724,7 +724,7 @@ def list_inventory(
             yield {k: fields[k].get("header") for k in fields.keys()}
             return
 
-        if not "data" in out_json:
+        if "data" not in out_json:
             return
         data = out_json["data"]
 
@@ -1049,9 +1049,11 @@ WARNING: The boot environment being modified is not the active one.
                 status.append(
                     (
                         _("Activate boot environment:"),
-                        "Next boot only"
-                        if plan.activate_be == "bootnext"
-                        else bool_str(plan.activate_be),
+                        (
+                            "Next boot only"
+                            if plan.activate_be == "bootnext"
+                            else bool_str(plan.activate_be)
+                        ),
                     )
                 )
             # plan.be_name can be undefined in the uninstall case
@@ -2203,7 +2205,7 @@ def __api_plan(
 
     # display plan debugging information
     if _verbose > 2:
-        DebugValues.set_value("plan", "True")
+        DebugValues["plan"] = "True"
 
     # plan the requested operation
     stuff_to_do = None
@@ -3841,7 +3843,7 @@ def set_mediator(
         )
 
     if verbose > 2:
-        DebugValues.set_value("plan", "True")
+        DebugValues["plan"] = "True"
 
     # Now set version and/or implementation for all matching mediators.
     # The user may specify 'None' as a special value to explicitly
@@ -3951,7 +3953,7 @@ def unset_mediator(
     if not pargs:
         usage(_("at least one mediator must be specified"), cmd=op)
     if verbose > 2:
-        DebugValues.set_value("plan", "True")
+        DebugValues["plan"] = "True"
 
     # Build dictionary of mediators to unset based on input.
     mediators = collections.defaultdict(dict)
@@ -7555,7 +7557,7 @@ def main_func():
                             "name=value, not {arg}"
                         ).format(opt=opt, arg=arg)
                     )
-            DebugValues.set_value(key, value)
+            DebugValues[key] = value
         elif opt == "-R":
             mydir = arg
         elif opt == "--runid":
@@ -7939,7 +7941,7 @@ to perform the requested operation.  Details follow:\n\n{0}"""
 
         __ret = handle_errors(_wrapper, non_wrap_print=False)
         s = ""
-        if __ret == 99:
+        if __ret == EXIT_FATAL:
             s += _("\n{err}{stacktrace}").format(
                 err=__e, stacktrace=traceback_str
             )
@@ -7967,13 +7969,13 @@ to perform the requested operation.  Details follow:\n\n{0}"""
             " a UTF-8 locale or C."
         )
         __ret = EXIT_OOPS
-    except:
+    except Exception:
         if _api_inst:
             _api_inst.abort(result=RESULT_FAILED_UNKNOWN)
         if non_wrap_print:
             traceback.print_exc()
             error(traceback_str)
-        __ret = 99
+        __ret = EXIT_FATAL
     return __ret
 
 
@@ -7999,12 +8001,11 @@ if __name__ == "__main__":
     gettext.install("pkg", "/usr/share/locale")
     misc.set_fd_limits(printer=error)
 
-    # Make all warnings be errors.
-    import warnings
+    # By default, hide all warnings from users.
+    if not sys.warnoptions:
+        import warnings
 
-    warnings.simplefilter("error")
-    # disable ResourceWarning: unclosed file
-    warnings.filterwarnings("ignore", category=ResourceWarning)
+        warnings.simplefilter("ignore")
 
     # Attempt to handle SIGHUP/SIGTERM gracefully.
     import signal

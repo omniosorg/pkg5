@@ -187,7 +187,7 @@ class FileAction(generic.Action):
         pres_type = self._check_preserve(orig, pkgplan)
         do_content = True
         old_path = None
-        if pres_type == True or (
+        if pres_type is True or (
             pres_type and pkgplan.origin_fmri == pkgplan.destination_fmri
         ):
             # File is marked to be preserved and exists so don't
@@ -380,7 +380,7 @@ class FileAction(generic.Action):
             self.replace_required = True
             return errors, warnings, info
 
-        if path.lower().endswith("/bobcat") and args["verbose"] == True:
+        if path.lower().endswith("/bobcat") and args["verbose"] is True:
             # Returned as a purely informational (untranslated)
             # message so that no client should interpret it as a
             # reason to fail verification.
@@ -421,10 +421,10 @@ class FileAction(generic.Action):
                 )
             )
 
-        if preserve is not None and args["verbose"] == False or lstat is None:
+        if preserve is not None and args["verbose"] is False or lstat is None:
             return errors, warnings, info
 
-        if args["forever"] != True:
+        if args["forever"] is not True:
             return errors, warnings, info
 
         #

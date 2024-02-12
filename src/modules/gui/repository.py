@@ -86,7 +86,7 @@ class Repository(progress.GuiProgressTracker):
         self.action = action
         self.main_window = main_window
         self.api_o = gui_misc.get_api_object(image_directory, self, main_window)
-        if self.api_o == None:
+        if self.api_o is None:
             return
         self.webinstall_new = webinstall_new
         self.progress_stop_thread = False
@@ -595,7 +595,7 @@ class Repository(progress.GuiProgressTracker):
         errors = []
         try:
             pub = self.repository_modify_publisher
-            if pub != None:
+            if pub is not None:
                 pub.update_props(set_props=set_props)
         except api_errors.ApiException as e:
             errors.append(("", e))
@@ -1000,7 +1000,7 @@ class Repository(progress.GuiProgressTracker):
             text["org_unit_" + itype] = PUBCERT_NOTAVAILABLE
 
     def __get_pub_cert_filename(self, title, path=None):
-        if path == None or path == "":
+        if path is None or path == "":
             path = tempfile.gettempdir()
         filename = None
         chooser = gtk.FileChooserDialog(
@@ -1026,7 +1026,7 @@ class Repository(progress.GuiProgressTracker):
             filename = chooser.get_filename()
         chooser.destroy()
 
-        if filename != None:
+        if filename is not None:
             info = os.path.split(filename)
             self.gconf.last_add_pubcert_path = info[0]
         return filename
@@ -1035,7 +1035,7 @@ class Repository(progress.GuiProgressTracker):
         filename = self.__get_pub_cert_filename(
             _("Add Publisher Certificate"), self.gconf.last_add_pubcert_path
         )
-        if filename == None:
+        if filename is None:
             return
         try:
             cert = self.__get_new_cert(filename)
@@ -1121,13 +1121,13 @@ class Repository(progress.GuiProgressTracker):
             _("Reinstate Publisher Certificate"),
             self.gconf.last_add_pubcert_path,
         )
-        if filename == None:
+        if filename is None:
             return
 
         # Check the old cert and new ones match according to the sha fingerprint
         cert = model.get_value(child_itr, enumerations.PUBCERT_XCERT_OBJ)
         new_cert = self.__get_new_cert(filename)
-        if cert == None or new_cert == None:
+        if cert is None or new_cert is None:
             # Must have exisitng cert and new one to reinstate
             return
         orig_sha = cert.get_fingerprint("sha1")
@@ -1161,7 +1161,7 @@ class Repository(progress.GuiProgressTracker):
     @staticmethod
     def __get_cert_display_name(cert):
         cert_display_name = ""
-        if cert == None:
+        if cert is None:
             return cert_display_name
         issuer = cert.get_subject()
         cn = "-"
@@ -1285,7 +1285,7 @@ class Repository(progress.GuiProgressTracker):
         updated_pub_cert_dict = {}
         add_pub_cert_dict = {}
         iter_next = sorted_model.get_iter_first()
-        while iter_next != None:
+        while iter_next is not None:
             itr = sorted_model.convert_iter_to_child_iter(None, iter_next)
             ips_hash = model.get_value(itr, enumerations.PUBCERT_IPSHASH)
             status = model.get_value(itr, enumerations.PUBCERT_STATUS)
@@ -1327,7 +1327,7 @@ class Repository(progress.GuiProgressTracker):
                 errors.append(("", e))
         try:
             pub = self.repository_modify_publisher
-            if pub != None:
+            if pub is not None:
                 pub.approve_ca_cert(s)
         except api_errors.ApiException as e:
             errors.append(("", e))
@@ -1337,7 +1337,7 @@ class Repository(progress.GuiProgressTracker):
         errors = []
         try:
             pub = self.repository_modify_publisher
-            if pub != None:
+            if pub is not None:
                 pub.revoke_ca_cert(ips_hash)
         except api_errors.ApiException as e:
             errors.append(("", e))
@@ -1347,7 +1347,7 @@ class Repository(progress.GuiProgressTracker):
         errors = []
         try:
             pub = self.repository_modify_publisher
-            if pub != None:
+            if pub is not None:
                 pub.unset_ca_cert(ips_hash)
         except api_errors.ApiException as e:
             errors.append(("", e))
@@ -1416,7 +1416,7 @@ class Repository(progress.GuiProgressTracker):
         filtered_model = sorted_model.get_model()
         model = filtered_model.get_model()
 
-        if restore_changes == False:
+        if restore_changes is False:
             self.no_changes = 0
             self.priority_changes = []
             model.clear()
@@ -1504,7 +1504,7 @@ class Repository(progress.GuiProgressTracker):
         sorted_model = self.w_publishers_treeview.get_model()
         itr = sorted_model.get_iter_first()
         next_itr = sorted_model.iter_next(itr)
-        while next_itr != None:
+        while next_itr is not None:
             itr = next_itr
             next_itr = sorted_model.iter_next(itr)
         path = sorted_model.get_path(itr)
@@ -1550,14 +1550,14 @@ class Repository(progress.GuiProgressTracker):
             if alias_valid:
                 valid_url = True
             else:
-                if self.name_error != None:
+                if self.name_error is not None:
                     self.__show_error_label_with_format(
                         w_error_label, self.name_error
                     )
         else:
-            if self.url_err != None:
+            if self.url_err is not None:
                 self.__show_error_label_with_format(w_error_label, self.url_err)
-        if w_ssl_key != None and w_ssl_cert != None:
+        if w_ssl_key is not None and w_ssl_cert is not None:
             if w_ssl_key:
                 ssl_key = w_ssl_key.get_text()
             if w_ssl_cert:
@@ -1566,11 +1566,11 @@ class Repository(progress.GuiProgressTracker):
                 url, ssl_key, ssl_cert, ignore_ssl_check_for_not_https=True
             )
             self.__update_repository_dialog_width(ssl_error)
-            if ssl_error != None and w_ssl_label:
+            if ssl_error is not None and w_ssl_label:
                 self.__show_error_label_with_format(w_ssl_label, ssl_error)
             elif w_ssl_label:
                 w_ssl_label.hide()
-        if function != None:
+        if function is not None:
             valid_func = function()
         w_action_button.set_sensitive(valid_url and valid_func and ssl_valid)
 
@@ -1586,22 +1586,22 @@ class Repository(progress.GuiProgressTracker):
             if self.is_url_valid:
                 valid_btn = True
             else:
-                if self.url_err == None:
+                if self.url_err is None:
                     self.__validate_url(
                         url_widget,
                         w_ssl_key=self.w_key_entry,
                         w_ssl_cert=self.w_cert_entry,
                     )
-                if self.url_err != None:
+                if self.url_err is not None:
                     self.__show_error_label_with_format(
                         error_label, self.url_err
                     )
         else:
-            if self.name_error != None:
+            if self.name_error is not None:
                 self.__show_error_label_with_format(
                     error_label, self.name_error
                 )
-        if function != None:
+        if function is not None:
             valid_func = function()
         ok_btn.set_sensitive(valid_btn and valid_func)
 
@@ -1628,7 +1628,7 @@ class Repository(progress.GuiProgressTracker):
         itr, sorted_model = self.__get_fitr_model_from_tree(
             self.w_publishers_treeview
         )
-        if itr == None or sorted_model == None:
+        if itr is None or sorted_model is None:
             return (None, None)
         sorted_path = sorted_model.get_path(itr)
         filter_path = sorted_model.convert_path_to_child_path(sorted_path)
@@ -1683,7 +1683,7 @@ class Repository(progress.GuiProgressTracker):
             gobject.idle_add(self.__prepare_pub_signature_policy)
 
     def __update_repository_dialog_width(self, ssl_error):
-        if ssl_error == None:
+        if ssl_error is None:
             self.w_modify_repository_dialog.set_size_request(
                 MODIFY_DIALOG_WIDTH_DEFAULT, -1
             )
@@ -1768,7 +1768,7 @@ class Repository(progress.GuiProgressTracker):
                 self.modify_repo_origins_treeview.set_model(origins_list)
 
         reg_uri = self.__get_registration_uri(selected_repo)
-        if reg_uri != None:
+        if reg_uri is not None:
             self.w_repositorymodify_registration_link.set_uri(reg_uri)
             self.w_repositorymodify_registration_box.show()
         else:
@@ -1832,7 +1832,7 @@ class Repository(progress.GuiProgressTracker):
         path = filtered_model.convert_path_to_child_path(filtered_path)
         model = filtered_model.get_model()
         itr = model.get_iter(path)
-        if itr == None:
+        if itr is None:
             return
         pub = model.get_value(itr, enumerations.PUBLISHER_OBJECT)
         if pub.sys_pub:
@@ -1849,7 +1849,7 @@ class Repository(progress.GuiProgressTracker):
         path = filtered_model.convert_path_to_child_path(filtered_path)
         model = filtered_model.get_model()
         itr = model.get_iter(path)
-        if itr == None:
+        if itr is None:
             self.w_manage_modify_btn.set_sensitive(False)
             self.w_manage_remove_btn.set_sensitive(False)
             self.w_manage_up_btn.set_sensitive(False)
@@ -1872,7 +1872,7 @@ class Repository(progress.GuiProgressTracker):
         return False
 
     def __enable_disable_remove_modify_btn(self, itr, model):
-        if itr == None:
+        if itr is None:
             self.w_manage_modify_btn.set_sensitive(False)
             self.w_manage_remove_btn.set_sensitive(False)
             self.w_manage_up_btn.set_sensitive(False)
@@ -1965,7 +1965,7 @@ class Repository(progress.GuiProgressTracker):
             )
 
     def __stop(self):
-        if self.cancel_progress_thread == False:
+        if self.cancel_progress_thread is False:
             self.__update_details_text(_("Canceling...\n"))
             self.cancel_progress_thread = True
             self.publishers_apply_cancel.set_sensitive(False)
@@ -1974,14 +1974,14 @@ class Repository(progress.GuiProgressTracker):
         self, alias=None, origin_url=None, ssl_key=None, ssl_cert=None, pub=None
     ):
         errors = []
-        if pub == None:
+        if pub is None:
             if self.__check_publisher_exists(self.api_o, alias, origin_url):
                 self.progress_stop_thread = True
                 return
             pub, repo, new_pub = self.__setup_publisher_from_uri(
                 alias, origin_url, ssl_key, ssl_cert
             )
-            if pub == None:
+            if pub is None:
                 self.progress_stop_thread = True
                 return
         else:
@@ -2259,7 +2259,7 @@ class Repository(progress.GuiProgressTracker):
         image_lock_err = False
         for row in self.priority_changes:
             try:
-                if row[1] == None or row[2] == None:
+                if row[1] is None or row[2] is None:
                     continue
                 pub1 = self.api_o.get_publisher(row[1], duplicate=True)
                 pub2 = self.api_o.get_publisher(row[2], duplicate=True)
@@ -2392,7 +2392,7 @@ class Repository(progress.GuiProgressTracker):
     ):
         self.progress_stop_thread = False
         self.cancel_progress_thread = False
-        if cancel_func == None:
+        if cancel_func is None:
             self.publishers_apply_cancel.set_sensitive(False)
         else:
             self.publishers_apply_cancel.set_sensitive(True)
@@ -2510,9 +2510,9 @@ class Repository(progress.GuiProgressTracker):
         )
         self.__update_repository_dialog_width(ssl_error)
         self.w_repositorymodifyok_button.set_sensitive(True)
-        if ssl_valid == False and (len(ssl_key) > 0 or len(ssl_cert) > 0):
+        if ssl_valid is False and (len(ssl_key) > 0 or len(ssl_cert) > 0):
             self.w_repositorymodifyok_button.set_sensitive(False)
-            if ssl_error != None:
+            if ssl_error is not None:
                 self.__show_error_label_with_format(
                     self.w_modsslerror_label, ssl_error
                 )
@@ -2548,7 +2548,7 @@ class Repository(progress.GuiProgressTracker):
         error_label.set_sensitive(False)
         error_label.set_markup(self.publisher_info)
         if len(url) <= 4:
-            if is_url_valid == False and url_error != None:
+            if is_url_valid is False and url_error is not None:
                 self.__show_error_label_with_format(error_label, url_error)
             return
 
@@ -2559,8 +2559,8 @@ class Repository(progress.GuiProgressTracker):
                 self.__show_error_label_with_format(error_label, url_error)
                 return
 
-        if is_url_valid == False:
-            if url_error != None:
+        if is_url_valid is False:
+            if url_error is not None:
                 self.__show_error_label_with_format(error_label, url_error)
             return
         add_button.set_sensitive(True)
@@ -2583,7 +2583,7 @@ class Repository(progress.GuiProgressTracker):
         ok_btn = self.w_repositorymodifyok_button
         name = widget.get_text()
         self.is_alias_valid = self.__is_alias_valid(name)
-        if not self.is_alias_valid and self.name_error != None:
+        if not self.is_alias_valid and self.name_error is not None:
             self.__show_error_label_with_format(error_label, self.name_error)
             ok_btn.set_sensitive(False)
         else:
@@ -2782,7 +2782,7 @@ class Repository(progress.GuiProgressTracker):
 
     def __on_repositorymodifyok_clicked(self, widget):
         pub = self.repository_modify_publisher
-        if pub == None:
+        if pub is None:
             return
         error_dialog_title = _(
             "Modify Publisher - %s"
@@ -2861,7 +2861,7 @@ class Repository(progress.GuiProgressTracker):
 
     @staticmethod
     def __update_publisher_details(pub, details_view):
-        if pub == None:
+        if pub is None:
             return
         details_buffer = details_view.get_buffer()
         details_buffer.set_text("")
@@ -3058,7 +3058,7 @@ class Repository(progress.GuiProgressTracker):
             # object. It does not matter if it is wrong as the
             # __update_publisher() call in __add_repository() will
             # fail and it is dealt with there.
-            if name == None:
+            if name is None:
                 name = "None"
             pub = publisher.Publisher(name, repository=repo)
             new_pub = True
@@ -3100,7 +3100,7 @@ class Repository(progress.GuiProgressTracker):
         tsel = treeview.get_selection()
         selection = tsel.get_selected()
         itr = selection[1]
-        if itr == None:
+        if itr is None:
             return (None, None)
         model = selection[0]
         return (itr, model)
@@ -3150,18 +3150,18 @@ class Repository(progress.GuiProgressTracker):
         if origin_url and not self.__is_ssl_scheme(origin_url):
             if ignore_ssl_check_for_not_https:
                 return ssl_valid, ssl_error
-            if (ssl_key != None and len(ssl_key) != 0) or (
-                ssl_cert != None and len(ssl_cert) != 0
+            if (ssl_key is not None and len(ssl_key) != 0) or (
+                ssl_cert is not None and len(ssl_cert) != 0
             ):
                 ssl_error = _("SSL should not be specified")
                 ssl_valid = False
-            elif (ssl_key == None or len(ssl_key) == 0) or (
-                ssl_cert == None or len(ssl_cert) == 0
+            elif (ssl_key is None or len(ssl_key) == 0) or (
+                ssl_cert is None or len(ssl_cert) == 0
             ):
                 ssl_valid = True
-        elif origin_url == None or self.__is_ssl_scheme(origin_url):
-            if (ssl_key == None or len(ssl_key) == 0) or (
-                ssl_cert == None or len(ssl_cert) == 0
+        elif origin_url is None or self.__is_ssl_scheme(origin_url):
+            if (ssl_key is None or len(ssl_key) == 0) or (
+                ssl_cert is None or len(ssl_cert) == 0
             ):
                 # Key and Cert need not be specified
                 ssl_valid = True
@@ -3240,9 +3240,9 @@ class Repository(progress.GuiProgressTracker):
         # but not either.
         # Currently RegistrationURI is coming back with a trailing / this should
         # be removed.
-        if repo == None:
+        if repo is None:
             return None
-        if repo.registration_uri == None:
+        if repo.registration_uri is None:
             return None
         ret_uri = None
         if isinstance(repo.registration_uri, str):
@@ -3250,7 +3250,7 @@ class Repository(progress.GuiProgressTracker):
                 ret_uri = repo.registration_uri.strip("/")
         elif isinstance(repo.registration_uri, publisher.RepositoryURI):
             uri = repo.registration_uri.uri
-            if uri != None and len(uri) > 0:
+            if uri is not None and len(uri) > 0:
                 ret_uri = uri.strip("/")
         return ret_uri
 
@@ -3258,14 +3258,18 @@ class Repository(progress.GuiProgressTracker):
     # Public Methods
     # -----------------------------------------------------------------------------#
     def webinstall_new_pub(self, parent, pub=None):
-        if pub == None:
+        if pub is None:
             return
         self.repository_modify_publisher = pub
         repo = pub.repository
         origin_uri = ""
-        if repo != None and repo.origins != None and len(repo.origins) > 0:
+        if (
+            repo is not None
+            and repo.origins is not None
+            and len(repo.origins) > 0
+        ):
             origin_uri = repo.origins[0].uri
-        if origin_uri != None and self.__is_ssl_scheme(origin_uri):
+        if origin_uri is not None and self.__is_ssl_scheme(origin_uri):
             gui_misc.set_modal_and_transient(
                 self.w_add_publisher_dialog, parent
             )
@@ -3278,7 +3282,7 @@ class Repository(progress.GuiProgressTracker):
             self.w_add_publisher_url.set_sensitive(False)
             self.w_add_publisher_alias.set_sensitive(False)
             reg_uri = self.__get_registration_uri(repo)
-            if reg_uri == None or len(reg_uri) == 0:
+            if reg_uri is None or len(reg_uri) == 0:
                 reg_uri = origin_uri
             self.w_registration_link.set_uri(reg_uri)
             self.w_registration_box.show()
@@ -3295,7 +3299,7 @@ class Repository(progress.GuiProgressTracker):
             self.__do_add_repository()
 
     def webinstall_enable_disable_pubs(self, parent, pub_names, to_enable):
-        if pub_names == None:
+        if pub_names is None:
             return
         num = len(pub_names)
         if to_enable:

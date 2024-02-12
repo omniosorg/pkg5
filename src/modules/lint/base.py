@@ -194,7 +194,7 @@ class Checker(object):
             var = action.get_variant_template()
             vc = variant.VariantCombinations(var, True)
             if action.attrs["type"] in multidep_type:
-                if fmris_dict[i] == None:
+                if fmris_dict[i] is None:
                     fmris_dict[i] = get_fmri_set(action)
                 fmris = fmris_dict[i]
             for j in range(i + 1, len(action_list)):

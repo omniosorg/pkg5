@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2024, Oracle and/or its affiliates.
 #
 
 import pickle
@@ -61,7 +61,7 @@ def count_entry(mg, d):
     dipd = dip.hexdigest()
 
     if di in entry_by_date:
-        if not dipd in entry_by_date[di]:
+        if dipd not in entry_by_date[di]:
             entry_by_date[di].append(dipd)
     else:
         entry_by_date[di] = [dipd]

@@ -21,37 +21,46 @@
 #
 
 #
-# Copyright (c) 2007, 2019, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2024, Oracle and/or its affiliates.
 #
 
-import pkg.site_paths
+try:
+    import pkg.site_paths
 
-pkg.site_paths.init()
-import fnmatch
-import getopt
-import gettext
-import locale
-import os
-import sys
-import traceback
-import warnings
-import errno
-from pkg.client.pkgdefs import EXIT_OOPS, EXIT_OK, EXIT_PARTIAL, EXIT_BADOPT
+    pkg.site_paths.init()
+    import fnmatch
+    import getopt
+    import gettext
+    import locale
+    import os
+    import sys
+    import traceback
+    import warnings
+    import errno
+    from importlib import reload
+    import pkg.actions
+    import pkg.bundle
+    import pkg.client.api_errors as apx
+    import pkg.fmri
+    import pkg.manifest
+    import pkg.misc as misc
+    import pkg.publish.transaction as trans
+    import pkg.client.transport.transport as transport
+    import pkg.client.publisher as publisher
+    from pkg.misc import msg, emsg, PipeError
+    from pkg.client import global_settings
+    from pkg.client.debugvalues import DebugValues
+    from pkg.client.pkgdefs import (
+        EXIT_OK,
+        EXIT_OOPS,
+        EXIT_BADOPT,
+        EXIT_PARTIAL,
+        EXIT_FATAL,
+    )
+except KeyboardInterrupt:
+    import sys
 
-from importlib import reload
-
-import pkg.actions
-import pkg.bundle
-import pkg.client.api_errors as apx
-import pkg.fmri
-import pkg.manifest
-import pkg.misc as misc
-import pkg.publish.transaction as trans
-import pkg.client.transport.transport as transport
-import pkg.client.publisher as publisher
-from pkg.misc import msg, emsg, PipeError
-from pkg.client import global_settings
-from pkg.client.debugvalues import DebugValues
+    sys.exit(1)  # EXIT_OOPS
 
 nopub_actions = ["unknown"]
 
@@ -384,7 +393,7 @@ def trans_publish(repo_uri, fargs):
 
     if not repo_uri:
         usage(
-            _("A destination package repository must be provided " "using -s."),
+            _("A destination package repository must be provided using -s."),
             cmd="publish",
         )
 
@@ -534,7 +543,7 @@ def trans_include(repo_uri, fargs, transaction=None):
         elif opt == "-T":
             timestamp_files.append(arg)
 
-    if transaction == None:
+    if transaction is None:
         try:
             trans_id = os.environ["PKG_TRANS_ID"]
         except KeyError:
@@ -674,7 +683,7 @@ def trans_import(repo_uri, args, visitors=[]):
         print(
             _("No transaction ID specified in $PKG_TRANS_ID"), file=sys.stderr
         )
-        sys.exit(1)
+        sys.exit(EXIT_OOPS)
 
     opts, pargs = getopt.getopt(args, "T:", ["target="])
 
@@ -840,7 +849,7 @@ def main_func():
                                 "name=value, not {arg}"
                             ).format(opt=opt, arg=arg)
                         )
-                DebugValues.set_value(key, value)
+                DebugValues[key] = value
             elif opt in ("--help", "-?"):
                 show_usage = True
     except getopt.GetoptError as e:
@@ -868,7 +877,7 @@ def main_func():
         "publish",
     ):
         usage(
-            _("A destination package repository must be provided " "using -s."),
+            _("A destination package repository must be provided using -s."),
             cmd=subcommand,
         )
 
@@ -932,10 +941,9 @@ if __name__ == "__main__":
     gettext.install("pkg", "/usr/share/locale")
     misc.set_fd_limits(printer=error)
 
-    # Make all warnings be errors.
-    warnings.simplefilter("error")
-    # disable ResourceWarning: unclosed file
-    warnings.filterwarnings("ignore", category=ResourceWarning)
+    # By default, hide all warnings from users.
+    if not sys.warnoptions:
+        warnings.simplefilter("ignore")
 
     try:
         __ret = main_func()
@@ -961,12 +969,12 @@ if __name__ == "__main__":
     except MemoryError:
         error("\n" + misc.out_of_memory())
         __ret = EXIT_OOPS
-    except SystemExit as _e:
-        raise _e
-    except:
+    except SystemExit:
+        raise
+    except Exception:
         traceback.print_exc()
         error(misc.get_traceback_message())
-        __ret = 99
+        __ret = EXIT_FATAL
     sys.exit(__ret)
 
 # Vim hints

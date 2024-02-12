@@ -21,62 +21,47 @@
 #
 
 #
-# Copyright (c) 2013, 2022, Oracle and/or its affiliates.
-# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
+# Copyright (c) 2013, 2024, Oracle and/or its affiliates.
 #
 
-import pkg.site_paths
+try:
+    import pkg.site_paths
 
-pkg.site_paths.init()
-import errno
-import getopt
-import gettext
-import locale
-import logging
-import os
-import re
-import shutil
-import socket
-import sys
-import traceback
-import warnings
+    pkg.site_paths.init()
+    import errno
+    import getopt
+    import gettext
+    import locale
+    import logging
+    import os
+    import re
+    import shutil
+    import socket
+    import sys
+    import traceback
+    import warnings
+    from mako.template import Template
+    from mako.lookup import TemplateLookup
+    from OpenSSL import crypto
 
-from mako.template import Template
-from mako.lookup import TemplateLookup
-from OpenSSL.crypto import (
-    TYPE_RSA,
-    TYPE_DSA,
-    PKey,
-    load_privatekey,
-    dump_privatekey,
-    load_certificate,
-    dump_certificate,
-    X509,
-    X509Extension,
-    FILETYPE_PEM,
-)
+    import pkg
+    import pkg.client.api_errors as apx
+    import pkg.catalog
+    import pkg.config as cfg
+    import pkg.json as json
+    import pkg.misc as misc
+    import pkg.portable as portable
+    import pkg.p5i as p5i
+    import pkg.server.repository as sr
+    import pkg.smf as smf
+    from pkg.client.pkgdefs import EXIT_OK, EXIT_OOPS, EXIT_BADOPT, EXIT_FATAL
+except KeyboardInterrupt:
+    import sys
 
-import pkg
-import pkg.client.api_errors as apx
-import pkg.catalog
-import pkg.config as cfg
-import pkg.json as json
-import pkg.misc as misc
-import pkg.portable as portable
-import pkg.p5i as p5i
-import pkg.server.repository as sr
-import pkg.smf as smf
-
-from pkg.client import global_settings
-from pkg.client.debugvalues import DebugValues
-from pkg.misc import msg, PipeError
+    sys.exit(1)  # EXIT_OOPS
 
 logger = global_settings.logger
-
-# exit codes
-EXIT_OK = 0
-EXIT_OOPS = 1
-EXIT_BADOPT = 2
 
 DEPOT_HTTP_TEMPLATE = "depot_httpd.conf.mako"
 DEPOT_FRAGMENT_TEMPLATE = "depot.conf.mako"
@@ -184,7 +169,7 @@ def _chown_dir(dir):
     except OSError as err:
         if not os.environ.get("PKG5_TEST_ENV", None):
             raise DepotException(
-                _("Unable to chown {dir} to " "{user}:{group}: {err}").format(
+                _("Unable to chown {dir} to {user}:{group}: {err}").format(
                     dir=dir, user=DEPOT_USER, group=DEPOT_GROUP, err=err
                 )
             )
@@ -308,9 +293,7 @@ def _write_httpd_conf(
         try:
             num = int(cache_size)
             if num < 0:
-                raise DepotException(
-                    _("invalid cache size: " "{0}").format(num)
-                )
+                raise DepotException(_("invalid cache size: {0}").format(num))
         except ValueError:
             raise DepotException(
                 _("invalid cache size: {0}").format(cache_size)
@@ -360,7 +343,7 @@ def _write_httpd_conf(
         # socket.getaddrinfo raise UnicodeDecodeError in Python 3
         # for some input, such as '.'
         raise DepotException(
-            _("Unable to write Apache configuration: {host}: " "{err}").format(
+            _("Unable to write Apache configuration: {host}: {err}").format(
                 **locals()
             )
         )
@@ -451,7 +434,7 @@ def _createCertificateKey(
     dump_key_path,
     issuerCert=None,
     issuerKey=None,
-    key_type=TYPE_RSA,
+    key_type=crypto.TYPE_RSA,
     key_bits=2048,
     digest="sha256",
 ):
@@ -482,10 +465,10 @@ def _createCertificateKey(
     'digest' is the digestion method to use for signing.
     """
 
-    key = PKey()
+    key = crypto.PKey()
     key.generate_key(key_type, key_bits)
 
-    cert = X509()
+    cert = crypto.X509()
     cert.set_serial_number(serial)
     cert.gmtime_adj_notBefore(starttime)
     cert.gmtime_adj_notAfter(endtime)
@@ -510,18 +493,18 @@ def _createCertificateKey(
     # Cert requires bytes.
     if issuerKey:
         cert.add_extensions(
-            [X509Extension(b"basicConstraints", True, b"CA:FALSE")]
+            [crypto.X509Extension(b"basicConstraints", True, b"CA:FALSE")]
         )
         cert.sign(issuerKey, digest)
     else:
         cert.add_extensions(
-            [X509Extension(b"basicConstraints", True, b"CA:TRUE")]
+            [crypto.X509Extension(b"basicConstraints", True, b"CA:TRUE")]
         )
         cert.sign(key, digest)
     with open(dump_cert_path, "wb") as f:
-        f.write(dump_certificate(FILETYPE_PEM, cert))
+        f.write(crypto.dump_certificate(crypto.FILETYPE_PEM, cert))
     with open(dump_key_path, "wb") as f:
-        f.write(dump_privatekey(FILETYPE_PEM, key))
+        f.write(crypto.dump_privatekey(crypto.FILETYPE_PEM, key))
     return (cert, key)
 
 
@@ -565,19 +548,19 @@ def _generate_server_cert_key(
             if not os.path.exists(ca_cert_file):
                 raise DepotException(
                     _(
-                        "Cannot find user " "provided CA certificate file: {0}"
+                        "Cannot find user provided CA certificate file: {0}"
                     ).format(ca_cert_file)
                 )
             if not os.path.exists(ca_key_file):
                 raise DepotException(
-                    _("Cannot find user " "provided CA key file: {0}").format(
+                    _("Cannot find user provided CA key file: {0}").format(
                         ca_key_file
                     )
                 )
             with open(ca_cert_file, "r") as fr:
-                ca_cert = load_certificate(FILETYPE_PEM, fr.read())
+                ca_cert = load_certificate(crypto.FILETYPE_PEM, fr.read())
             with open(ca_key_file, "r") as fr:
-                ca_key = load_privatekey(FILETYPE_PEM, fr.read())
+                ca_key = load_privatekey(crypto.FILETYPE_PEM, fr.read())
 
         _createCertificateKey(
             2,
@@ -657,7 +640,7 @@ def refresh_conf(
                 errors.append(str(err))
         if errors:
             raise DepotException(
-                _("Unable to write configuration: " "{0}").format(
+                _("Unable to write configuration: {0}").format(
                     "\n".join(errors)
                 )
             )
@@ -725,7 +708,7 @@ def get_smf_repo_info():
     if not repo_info:
         raise DepotException(
             _(
-                "No online, readonly, non-standalone instances of " "{0} found."
+                "No online, readonly, non-standalone instances of {0} found."
             ).format(PKG_SERVER_SVC)
         )
     return repo_info
@@ -934,7 +917,7 @@ def main_func():
                             "name=value, not {arg}"
                         ).format(opt=opt, arg=arg)
                     )
-                DebugValues.set_value(key, value)
+                DebugValues[key] = value
             else:
                 usage("unknown option {0}".format(opt))
 
@@ -952,16 +935,14 @@ def main_func():
         usage(_("required port option -p missing."))
 
     if not use_smf_instances and not repo_info:
-        usage(_("at least one -d option is required if -S is " "not used."))
+        usage(_("at least one -d option is required if -S is not used."))
 
     if repo_info and use_smf_instances:
         usage(_("cannot use -d and -S together."))
 
     if https:
         if fragment:
-            usage(
-                _("https configuration is not supported in " "fragment mode.")
-            )
+            usage(_("https configuration is not supported in fragment mode."))
         if bool(ssl_cert_file) != bool(ssl_key_file):
             usage(
                 _(
@@ -978,7 +959,7 @@ def main_func():
                     )
                 )
             if ssl_cert_chain_file:
-                usage(_("Cannot use --cert-chain without " "--cert and --key"))
+                usage(_("Cannot use --cert-chain without --cert and --key"))
             if bool(ssl_ca_cert_file) != bool(ssl_ca_key_file):
                 usage(
                     _(
@@ -1054,7 +1035,7 @@ def main_func():
             if not os.path.exists(ssl_key_file):
                 error(
                     _(
-                        "User provided server key file {0} " "does not exist."
+                        "User provided server key file {0} does not exist."
                     ).format(ssl_key_file)
                 )
                 return EXIT_OOPS
@@ -1110,7 +1091,7 @@ def main_func():
     # HTTP servers. For now, we only support "apache2"
     if server_type not in KNOWN_SERVER_TYPES:
         usage(
-            _("unknown server type {type}. " "Known types are: {known}").format(
+            _("unknown server type {type}. Known types are: {known}").format(
                 type=server_type, known=", ".join(KNOWN_SERVER_TYPES)
             )
         )
@@ -1162,16 +1143,16 @@ def handle_errors(func, *args, **kwargs):
                 raise
             error("\n" + misc.out_of_memory())
             __ret = EXIT_OOPS
-    except SystemExit as __e:
-        raise __e
+    except SystemExit:
+        raise
     except (PipeError, KeyboardInterrupt):
         # Don't display any messages here to prevent possible further
         # broken pipe (EPIPE) errors.
         __ret = EXIT_OOPS
-    except:
+    except Exception:
         traceback.print_exc()
         error(traceback_str)
-        __ret = 99
+        __ret = EXIT_FATAL
     return __ret
 
 
@@ -1179,10 +1160,9 @@ if __name__ == "__main__":
     misc.setlocale(locale.LC_ALL, "", error)
     gettext.install("pkg", "/usr/share/locale")
 
-    # Make all warnings be errors.
-    warnings.simplefilter("error")
-    # disable ResourceWarning: unclosed file
-    warnings.filterwarnings("ignore", category=ResourceWarning)
+    # By default, hide all warnings from users.
+    if not sys.warnoptions:
+        warnings.simplefilter("ignore")
 
     __retval = handle_errors(main_func)
     try:

@@ -21,35 +21,38 @@
 #
 
 #
-# Copyright (c) 2009, 2019, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2024, Oracle and/or its affiliates.
 #
 
-import errno
-import getopt
-import gettext
-import locale
-import os
-import sys
-import traceback
-import warnings
+try:
+    # We should be using pkg.site_paths.init() here but doing so stops us being
+    # able to find Python dependencies in site-packages, so we just add the
+    # extra pkg lib directory.
+    import pkg.site_paths
 
-# We should be using pkg.site_paths.init() here but doing so stops us being
-# able to find Python dependencies in site-packages, so we just add the
-# extra pkg lib directory.
-import pkg.site_paths
+    pkg.site_paths.add_pkglib()
+    import errno
+    import getopt
+    import gettext
+    import locale
+    import os
+    import sys
+    import traceback
+    import warnings
+    import pkg
+    import pkg.actions as actions
+    import pkg.client.api as api
+    import pkg.client.api_errors as api_errors
+    import pkg.client.progress as progress
+    import pkg.manifest as manifest
+    import pkg.misc as misc
+    import pkg.publish.dependencies as dependencies
+    from pkg.misc import msg, emsg, PipeError
+    from pkg.client.pkgdefs import EXIT_OK, EXIT_OOPS, EXIT_BADOPT, EXIT_FATAL
+except KeyboardInterrupt:
+    import sys
 
-pkg.site_paths.add_pkglib()
-
-import pkg
-import pkg.actions as actions
-import pkg.client.api as api
-import pkg.client.api_errors as api_errors
-import pkg.client.progress as progress
-import pkg.manifest as manifest
-import pkg.misc as misc
-import pkg.publish.dependencies as dependencies
-from pkg.misc import msg, emsg, PipeError
-from pkg.client.pkgdefs import EXIT_OK, EXIT_OOPS, EXIT_BADOPT
+    sys.exit(1)  # EXIT_OOPS
 
 CLIENT_API_VERSION = 82
 PKG_CLIENT_NAME = "pkgdepend"
@@ -153,7 +156,7 @@ def generate(args):
             try:
                 dyn_tok_name, dyn_tok_val = arg.split("=", 1)
             except:
-                usage(_("-D arguments must be of the form " "'name=value'."))
+                usage(_("-D arguments must be of the form 'name=value'."))
             if not dyn_tok_name[0] == "$":
                 dyn_tok_name = "$" + dyn_tok_name
             dyn_tok_conv.setdefault(dyn_tok_name, []).append(dyn_tok_val)
@@ -303,7 +306,7 @@ def resolve(args, img_dir):
 
     provided_image_dir = True
     pkg_image_used = False
-    if img_dir == None:
+    if img_dir is None:
         orig_cwd = None
         try:
             orig_cwd = os.getcwd()
@@ -374,7 +377,7 @@ def resolve(args, img_dir):
         if e.user_specified:
             if pkg_image_used:
                 error(
-                    _("No image rooted at '{0}' " "(set by $PKG_IMAGE)").format(
+                    _("No image rooted at '{0}' (set by $PKG_IMAGE)").format(
                         e.user_dir
                     )
                 )
@@ -440,7 +443,7 @@ def resolve(args, img_dir):
             for pfmri in sorted(unused_fmris):
                 msg("\t{0}".format(pfmri))
         if not constraint_files and external_deps:
-            msg(_("\nThe following fmris had dependencies resolve " "to them:"))
+            msg(_("\nThe following fmris had dependencies resolve to them:"))
             for pfmri in sorted(external_deps):
                 msg("\t{0}".format(pfmri))
 
@@ -672,10 +675,9 @@ if __name__ == "__main__":
     gettext.install("pkg", "/usr/share/locale")
     misc.set_fd_limits(printer=error)
 
-    # Make all warnings be errors.
-    warnings.simplefilter("error")
-    # disable ResourceWarning: unclosed file
-    warnings.filterwarnings("ignore", category=ResourceWarning)
+    # By default, hide all warnings from users.
+    if not sys.warnoptions:
+        warnings.simplefilter("ignore")
 
     try:
         __ret = main_func()
@@ -705,12 +707,12 @@ if __name__ == "__main__":
         # We don't want to display any messages here to prevent
         # possible further broken pipe (EPIPE) errors.
         __ret = EXIT_OOPS
-    except SystemExit as _e:
-        raise _e
-    except:
+    except SystemExit:
+        raise
+    except Exception:
         traceback.print_exc()
         error(misc.get_traceback_message())
-        __ret = 99
+        __ret = EXIT_FATAL
     sys.exit(__ret)
 
 # Vim hints

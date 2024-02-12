@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2024, Oracle and/or its affiliates.
 #
 
 from . import testutils
@@ -2823,7 +2823,7 @@ if __name__ == "__main__":
                         sys.exit(1)
                 print(prop)
                 sys.exit(0)
-        for k, v in prop_dict.iteritems():
+        for k, v in prop_dict.items():
                 print("{{0}} {{1}}".format(k, v))
         sys.exit(0)
 """,

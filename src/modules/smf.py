@@ -21,13 +21,14 @@
 #
 
 #
-# Copyright (c) 2011, 2022, Oracle and/or its affiliates.
+# Copyright (c) 2011, 2024, Oracle and/or its affiliates.
 #
 
 # This module provides a basic interface to smf.
 
 import locale
 import os
+import shlex
 
 import pkg.misc as misc
 import pkg.pkgsubprocess as subprocess
@@ -74,7 +75,7 @@ class NonzeroExitException(Exception):
 
 def __call(args, zone=None):
     # a way to invoke a separate executable for testing
-    cmds_dir = DebugValues.get_value("smf_cmds_dir")
+    cmds_dir = DebugValues["smf_cmds_dir"]
     # returned values will be in the user's locale
     # so we need to ensure that the force_str uses
     # their locale.
@@ -82,7 +83,7 @@ def __call(args, zone=None):
     if cmds_dir:
         args = (os.path.join(cmds_dir, args[0].lstrip("/")),) + args[1:]
     if zone:
-        cmd = DebugValues.get_value("bin_zlogin")
+        cmd = DebugValues["bin_zlogin"]
         if cmd is None:
             cmd = zlogin_path
         args = (cmd, zone) + args
@@ -199,8 +200,11 @@ def get_prop(fmri, prop, zone=None):
     args = (svcprop_path, "-c", "-p", prop, fmri)
     buf = __call(args, zone=zone)
     assert len(buf) == 1, "Was expecting one entry, got:{0}".format(buf)
-    buf = buf[0].rstrip("\n")
-    return buf
+    string = buf[0].rstrip("\n")
+    # String returned by svcprop is escaped for use in shell and needs
+    # to be unescaped back to the original state.
+    string = " ".join(shlex.split(string))
+    return string
 
 
 def enable(fmris, temporary=False, sync_timeout=0, zone=None):

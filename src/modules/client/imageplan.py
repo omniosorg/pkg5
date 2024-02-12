@@ -21,8 +21,8 @@
 #
 
 #
-# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
-# Copyright (c) 2007, 2021, Oracle and/or its affiliates.
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
+# Copyright (c) 2007, 2024, Oracle and/or its affiliates.
 #
 
 from collections import defaultdict, namedtuple
@@ -315,7 +315,7 @@ class ImagePlan(object):
 
         pd = self.pd
         pd.state = pdstate
-        if not fmri_changes is None:
+        if fmri_changes is not None:
             pd._fmri_changes = fmri_changes
 
     def __vector_2_fmri_changes(
@@ -1238,9 +1238,9 @@ class ImagePlan(object):
                     k == "implementation"
                     and "implementation-version" in cfg_mediators[m]
                 ):
-                    self.pd._new_mediators[m][
-                        "implementation-version"
-                    ] = cfg_mediators[m].get("implementation-version")
+                    self.pd._new_mediators[m]["implementation-version"] = (
+                        cfg_mediators[m].get("implementation-version")
+                    )
 
             if m not in cfg_mediators:
                 # mediation changed.
@@ -1333,7 +1333,7 @@ class ImagePlan(object):
         # if we're not trying to uninstall packages, and inherited
         # facets are not changing, and we're already in sync, then
         # don't bother invoking the solver.
-        if not uninstall and not new_facets is not None and insync:
+        if not uninstall and new_facets is None and insync:
             # we don't need to do anything
             self.__finish_plan(plandesc.EVALUATED_PKGS, fmri_changes=[])
             return
@@ -1633,7 +1633,7 @@ class ImagePlan(object):
                 act.attrs.pop("preserve", None)
                 act.attrs.pop("preserve-version", None)
                 act.verify(self.image, forever=True)
-                if act.replace_required == True:
+                if act.replace_required is True:
                     needs_change.append(act)
 
             revert_dict[(f, m)] = needs_change
@@ -2683,7 +2683,7 @@ class ImagePlan(object):
     def __get_directories(self):
         """return set of all directories in target image"""
         # always consider var and the image directory fixed in image...
-        if self.__directories == None:
+        if self.__directories is None:
             # It's faster to build a large set and make a small
             # update to it than to do the reverse.
             dirs = set(
@@ -2707,7 +2707,7 @@ class ImagePlan(object):
 
     def __get_symlinks(self):
         """return a set of all symlinks in target image"""
-        if self.__symlinks == None:
+        if self.__symlinks is None:
             self.__symlinks = set(
                 (
                     a.attrs["path"]
@@ -2720,7 +2720,7 @@ class ImagePlan(object):
 
     def __get_hardlinks(self):
         """return a set of all hardlinks in target image"""
-        if self.__hardlinks == None:
+        if self.__hardlinks is None:
             self.__hardlinks = set(
                 (
                     a.attrs["path"]
@@ -2733,7 +2733,7 @@ class ImagePlan(object):
 
     def __get_licenses(self):
         """return a set of all licenses in target image"""
-        if self.__licenses == None:
+        if self.__licenses is None:
             self.__licenses = set(
                 (
                     a.attrs["license"]
@@ -2746,7 +2746,7 @@ class ImagePlan(object):
 
     def __get_legacy(self):
         """return a set of all legacy actions in target image"""
-        if self.__legacy == None:
+        if self.__legacy is None:
             self.__legacy = set(
                 (
                     a.attrs["pkg"]
@@ -4040,7 +4040,7 @@ class ImagePlan(object):
                     moved.append([mpath, tpath + ".legacy"])
                 installed.append(entry)
                 continue
-            elif pres_type == True and save_file:
+            elif pres_type is True and save_file:
                 # If the source and destination path are the
                 # same, the content won't be updated.
                 if mpath != tpath:
@@ -4051,7 +4051,7 @@ class ImagePlan(object):
             # Next, if on-disk file will be preserved and some other
             # unique_attr is changing (such as mode, etc.) mark the
             # file as "updated".
-            if pres_type == True and ImagePlan.__find_inconsistent_attrs(
+            if pres_type is True and ImagePlan.__find_inconsistent_attrs(
                 ((orig,), (dest,)), ignore=("path", "preserve")
             ):
                 # For 'install-only', we can only update for
@@ -4071,7 +4071,7 @@ class ImagePlan(object):
             elif pres_type is None:
                 # Delivered content or unique_attrs changed.
                 updated.append(entry)
-            elif pres_type == False:
+            elif pres_type is False:
                 if save_file:
                     moved.append([mpath, tpath])
                     continue
@@ -4312,8 +4312,7 @@ class ImagePlan(object):
                     if act.attrs.get("must-display", "false") == "true":
                         must_display = True
                     for l in self.__get_note_text(act, pfmri).splitlines():
-                        notes.append(misc.decode(l))
-
+                        notes.append(l)
             self.pd.release_notes = (must_display, notes)
 
     def __save_release_notes(self):
@@ -4472,9 +4471,9 @@ class ImagePlan(object):
         cfg_mediators = self.pd._cfg_mediators
         changed_mediators = set()
         for mediator, values in prop_mediators.items():
-            med_ver_source = (
-                med_impl_source
-            ) = med_priority = med_ver = med_impl = med_impl_ver = None
+            med_ver_source = med_impl_source = med_priority = med_ver = (
+                med_impl
+            ) = med_impl_ver = None
 
             mediation = self.pd._new_mediators.get(mediator)
             cfg_mediation = cfg_mediators.get(mediator)
@@ -4849,7 +4848,7 @@ image (there are configured exclusions):"""
         """Check whether files are delivered to var/pkg or
         .org.opensolaris.pkg"""
 
-        if not "path" in action.attrs:
+        if "path" not in action.attrs:
             return True
 
         dirs = [
@@ -4960,9 +4959,9 @@ image (there are configured exclusions):"""
                 if src.name == "user":
                     self.pd.removed_users[src.attrs["username"]] = p.origin_fmri
                 elif src.name == "group":
-                    self.pd.removed_groups[
-                        src.attrs["groupname"]
-                    ] = p.origin_fmri
+                    self.pd.removed_groups[src.attrs["groupname"]] = (
+                        p.origin_fmri
+                    )
 
                 self.pd.removal_actions.append(_ActionPlan(p, src, dest))
                 if (
@@ -5017,13 +5016,13 @@ image (there are configured exclusions):"""
                     print("Update:" + str(src))
                     print("       " + str(dest))
                 if dest.name == "user":
-                    self.pd.added_users[
-                        dest.attrs["username"]
-                    ] = p.destination_fmri
+                    self.pd.added_users[dest.attrs["username"]] = (
+                        p.destination_fmri
+                    )
                 elif dest.name == "group":
-                    self.pd.added_groups[
-                        dest.attrs["groupname"]
-                    ] = p.destination_fmri
+                    self.pd.added_groups[dest.attrs["groupname"]] = (
+                        p.destination_fmri
+                    )
                 elif dest.name == "driver" and src:
                     rm = set(src.attrlist("alias")) - set(
                         dest.attrlist("alias")
@@ -5046,13 +5045,13 @@ image (there are configured exclusions):"""
                 if DebugValues["actions"]:
                     print("Install: " + str(dest))
                 if dest.name == "user":
-                    self.pd.added_users[
-                        dest.attrs["username"]
-                    ] = p.destination_fmri
+                    self.pd.added_users[dest.attrs["username"]] = (
+                        p.destination_fmri
+                    )
                 elif dest.name == "group":
-                    self.pd.added_groups[
-                        dest.attrs["groupname"]
-                    ] = p.destination_fmri
+                    self.pd.added_groups[dest.attrs["groupname"]] = (
+                        p.destination_fmri
+                    )
                 # Check whether files are delivered in reserved
                 # locations.
                 if not self.__check_reserved(dest):
@@ -5194,9 +5193,9 @@ image (there are configured exclusions):"""
                 # Store the index into removal_actions and the
                 # id of the action object in that slot.
                 re = ConsolidationEntry(i, id(ap.src))
-                cons_generic[
-                    (ap.src.name, hashify(attrs[ap.src.key_attr]))
-                ] = re
+                cons_generic[(ap.src.name, hashify(attrs[ap.src.key_attr]))] = (
+                    re
+                )
                 if ap.src.name == "file":
                     fname = attrs.get(
                         "original_name",
@@ -6549,7 +6548,7 @@ image (there are configured exclusions):"""
                             not pub
                             and match_type != ImagePlan.MATCH_INST_VERSIONS
                             and name in installed_pubs
-                            and pub_ranks[installed_pubs[name]][1] == True
+                            and pub_ranks[installed_pubs[name]][1] is True
                             and installed_pubs[name] != fpub
                         ):
                             # Fmri publisher
@@ -6696,7 +6695,7 @@ image (there are configured exclusions):"""
                 and common_pfmris
                 and match_type != ImagePlan.MATCH_INST_VERSIONS
                 and inst_pub
-                and pub_ranks[inst_pub][1] == True
+                and pub_ranks[inst_pub][1] is True
             ):
                 common_pfmris = set(
                     p for p in common_pfmris if p.publisher == inst_pub

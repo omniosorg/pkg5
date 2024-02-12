@@ -20,23 +20,28 @@
 # CDDL HEADER END
 
 #
-# Copyright (c) 2009, 2019, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2024, Oracle and/or its affiliates.
 #
 
-import pkg.site_paths
+try:
+    import pkg.site_paths
 
-pkg.site_paths.init()
-import getopt
-import gettext
-import locale
-import sys
-import traceback
-import warnings
+    pkg.site_paths.init()
+    import getopt
+    import gettext
+    import locale
+    import sys
+    import traceback
+    import warnings
 
-import pkg.misc as misc
-import pkg.mogrify as mog
-from pkg.misc import PipeError
-from pkg.client.pkgdefs import EXIT_OK, EXIT_OOPS, EXIT_BADOPT, EXIT_PARTIAL
+    import pkg.misc as misc
+    import pkg.mogrify as mog
+    from pkg.misc import PipeError
+    from pkg.client.pkgdefs import EXIT_OK, EXIT_OOPS, EXIT_BADOPT, EXIT_FATAL
+except KeyboardInterrupt:
+    import sys
+
+    sys.exit(1)  # EXIT_OOPS
 
 
 def usage(errmsg="", exitcode=EXIT_BADOPT):
@@ -61,7 +66,7 @@ def error(text, exitcode=EXIT_OOPS):
     """Emit an error message prefixed by the command name"""
 
     print("pkgmogrify: {0}".format(text), file=sys.stderr)
-    if exitcode != None:
+    if exitcode is not None:
         sys.exit(exitcode)
 
 
@@ -116,7 +121,7 @@ def main_func():
         sys.exit(EXIT_OOPS)
 
     try:
-        if printfilename == None:
+        if printfilename is None:
             printfile = sys.stdout
         else:
             printfile = open(printfilename, "w")
@@ -128,7 +133,7 @@ def main_func():
         error(_("Cannot write extra data {0}").format(e))
 
     try:
-        if outfilename == None:
+        if outfilename is None:
             outfile = sys.stdout
         else:
             outfile = open(outfilename, "w")
@@ -166,20 +171,20 @@ if __name__ == "__main__":
     gettext.install("pkg", "/usr/share/locale")
     misc.set_fd_limits(printer=error)
 
-    # Make all warnings be errors.
-    warnings.simplefilter("error")
-    # disable ResourceWarning: unclosed file
-    warnings.filterwarnings("ignore", category=ResourceWarning)
+    # By default, hide all warnings from users.
+    if not sys.warnoptions:
+        warnings.simplefilter("ignore")
+
     try:
         exit_code = main_func()
     except (PipeError, KeyboardInterrupt):
         exit_code = EXIT_OOPS
-    except SystemExit as __e:
-        exit_code = __e
-    except Exception as __e:
+    except SystemExit:
+        raise
+    except Exception:
         traceback.print_exc()
         error(misc.get_traceback_message(), exitcode=None)
-        exit_code = 99
+        exit_code = EXIT_FATAL
 
     sys.exit(exit_code)
 

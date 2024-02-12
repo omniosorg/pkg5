@@ -287,16 +287,16 @@ RewriteEngine on
        # Specify http and https proxies if we need them
        # values are urls of the form http://<hostname>:[port]
 </%doc>
-% if http_proxy != None:
+% if http_proxy is not None:
 ProxyRemote http ${http_proxy}
 % endif
-% if https_proxy != None:
+% if https_proxy is not None:
 ProxyRemote https ${https_proxy}
 % endif
 <%doc> #
        # If we supplied proxies, then these override all per-repository proxies.
        # </%doc>
-% if http_proxy == None and https_proxy == None:
+% if http_proxy is None and https_proxy is None:
         % for uri in reversed(sorted(uri_pub_map.keys())):
                 % for pub, cert_path, key_path, hash, proxy, utype in uri_pub_map[uri]:
 <%
@@ -315,7 +315,7 @@ ProxyRemote https ${https_proxy}
        # Alternatively, if set to 'memory', we enable mod_mem_cache.
        #
 </%doc>
-% if cache_dir != None:
+% if cache_dir is not None:
 <IfModule mod_cache.c>
 % if cache_dir.startswith("/"):
 <IfModule mod_disk_cache.c>
@@ -504,7 +504,7 @@ SSLProxyProtocol all
                           "    Allow from 127.0.0.1\n"
                           "</Directory>\n".format(**locals()))
 %>
-                      % if cache_dir != None:
+                      % if cache_dir is not None:
 CacheDisable /${pub}/${hash}/catalog
 CacheDisable /${pub}/${hash}/publisher
 CacheDisable /${pub}/${hash}/versions

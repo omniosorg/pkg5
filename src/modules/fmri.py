@@ -121,13 +121,13 @@ class PkgFmri(object):
 
             veridx, nameidx, pubidx = PkgFmri._gen_fmri_indexes(fmri)
 
-            if pubidx != None:
+            if pubidx is not None:
                 # Always use publisher information provided in
                 # FMRI string.  (It could be ""; pkg:///name is
                 # valid.)
                 publisher = fmri[pubidx : nameidx - 1]
 
-            if veridx != None:
+            if veridx is not None:
                 self.pkg_name = fmri[nameidx:veridx]
                 try:
                     self.version = Version(fmri[veridx + 1 :], build_release)
@@ -331,7 +331,7 @@ class PkgFmri(object):
         if not publisher:
             publisher = default_publisher
 
-        if self.version == None:
+        if self.version is None:
             version = ""
         else:
             version = "@" + self.version.get_short_version()
@@ -358,13 +358,13 @@ class PkgFmri(object):
         Anarchy returns a string without any publisher."""
         pkg_str = ""
         publisher = self.publisher
-        if publisher == None:
+        if publisher is None:
             publisher = default_publisher
 
         if not publisher or publisher.startswith(PREF_PUB_PFX) or anarchy:
             if include_scheme:
                 pkg_str = "pkg:/"
-            if self.version == None:
+            if self.version is None:
                 return "{0}{1}".format(pkg_str, self.pkg_name)
 
             return "{0}{1}@{2}".format(
@@ -375,7 +375,7 @@ class PkgFmri(object):
 
         if include_scheme:
             pkg_str = "pkg://"
-        if self.version == None:
+        if self.version is None:
             return "{0}{1}/{2}".format(pkg_str, publisher, self.pkg_name)
 
         return "{0}{1}/{2}@{3}".format(
@@ -551,7 +551,7 @@ class PkgFmri(object):
         """True if the regular expression given in fmristr matches the
         stem of this pkg: FMRI."""
         m = re.match(fmristr, self.pkg_name)
-        return m != None
+        return m is not None
 
     def is_similar(self, other):
         """True if package names match exactly.  Not a pattern-based
@@ -645,9 +645,9 @@ def is_same_publisher(pub1, pub2):
     if pub1 == pub2:
         return True
 
-    if pub1 == None:
+    if pub1 is None:
         pub1 = ""
-    if pub2 == None:
+    if pub2 is None:
         pub2 = ""
 
     # String concatenation and string equality are both pretty fast.

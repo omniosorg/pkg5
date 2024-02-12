@@ -21,8 +21,8 @@
 #
 
 #
-# Copyright (c) 2009, 2020, Oracle and/or its affiliates.
 # Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright (c) 2009, 2024, Oracle and/or its affiliates.
 #
 
 import copy
@@ -2174,7 +2174,7 @@ class Transport(object):
             uri = uri[4:]
         if not uri.startswith("http://") and not uri.startswith("file://"):
             raise apx.InvalidResourceLocation(uri.strip())
-        crl_host = DebugValues.get_value("crl_host")
+        crl_host = DebugValues["crl_host"]
         if crl_host:
             orig = urlparse(uri)
             crl = urlparse(crl_host)

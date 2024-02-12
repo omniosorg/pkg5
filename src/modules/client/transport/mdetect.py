@@ -70,7 +70,7 @@ class MirrorDetector(object):
         # Clear the list of mirrors.  It will be repopulated later.
         self._mirrors = []
 
-        if not "pybonjour" in globals():
+        if "pybonjour" not in globals():
             return
 
         timedout = False

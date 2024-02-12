@@ -21,8 +21,8 @@
 #
 
 #
-# Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
-# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
+# Copyright (c) 2010, 2024, Oracle and/or its affiliates.
 #
 
 # Some pkg(7) specific lint manifest checks
@@ -592,7 +592,7 @@ class PkgManifestChecker(base.ManifestChecker):
         """Checks that the info.classification attribute is valid."""
 
         if (
-            not "info.classification" in manifest
+            "info.classification" not in manifest
         ) or self.skip_classification_check:
             return
 
@@ -628,7 +628,7 @@ class PkgManifestChecker(base.ManifestChecker):
     def _check_info_classification_value(self, engine, value, fmri, msgid):
         prefix = "org.opensolaris.category.2008:"
 
-        if not prefix in value:
+        if prefix not in value:
             engine.error(
                 _(
                     "info.classification attribute "

@@ -829,7 +829,7 @@ mta\tsystem\t\tsystem\tpostfix\t
         # Verify that an unmediated package can be installed if the
         # mediated ones are removed.
         self.pkg(
-            "install -vvv --reject postfix --reject sendmail " "unmediated-mta"
+            "install -vvv --reject postfix --reject sendmail unmediated-mta"
         )
         self.pkg("verify")
 
@@ -1123,7 +1123,7 @@ python\tlocal\t2.7\tlocal\t\t
         self.pkg("install -vvv python-unladen-swallow-35")
         check_not_exists(gen_python_links())
         self.pkg("verify")
-        self.pkg("set-mediator -vvv " "-V '' -I unladen-swallow@3.5 python")
+        self.pkg("set-mediator -vvv -V '' -I unladen-swallow@3.5 python")
         check_target(gen_python_links(), "python3.11-unladen-swallow")
         self.__assert_mediation_matches(
             """\
@@ -1147,7 +1147,7 @@ python\tsystem\t3.5\tlocal\tunladen-swallow\t3.5
         # ensure verify passes.
         remove_links(gen_python_links())
         self.pkg(
-            "verify -v python-unladen-swallow-27 " "python-unladen-swallow-34"
+            "verify -v python-unladen-swallow-27 python-unladen-swallow-34"
         )
         self.pkg("verify -v python-unladen-swallow-35", exit=1)
         self.pkg("fix")
@@ -1178,7 +1178,7 @@ python\tsystem\t3.4\tlocal\tunladen-swallow@\t
         # verify to pass again.
         remove_links(gen_python_links())
         self.pkg(
-            "verify -v python-unladen-swallow-27 " "python-unladen-swallow-35"
+            "verify -v python-unladen-swallow-27 python-unladen-swallow-35"
         )
         self.pkg("verify -v python-unladen-swallow-34", exit=1)
         self.pkg("verify -v -p /usr/bin/python", exit=1)

@@ -6413,9 +6413,9 @@ adm:NP:6445::::::
             pdata = f.readlines()
         with open(spath) as f:
             sdata = f.readlines()
-        sdata[
-            -1
-        ] = "kermit:$5$pWPEsjm2$GXjBRTjGeeWmJ81ytw3q1ah7QTaI7yJeRYZeyvB.Rp1:14579:3:10::::1234"
+        sdata[-1] = (
+            "kermit:$5$pWPEsjm2$GXjBRTjGeeWmJ81ytw3q1ah7QTaI7yJeRYZeyvB.Rp1:14579:3:10::::1234"
+        )
         with open(spath, "w") as f:
             f.writelines(sdata)
         self.pkg("verify simpleuser2")

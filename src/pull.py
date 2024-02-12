@@ -21,45 +21,51 @@
 #
 
 #
-# Copyright (c) 2008, 2022, Oracle and/or its affiliates.
+# Copyright (c) 2008, 2024, Oracle and/or its affiliates.
 #
 
-import pkg.site_paths
+try:
+    import pkg.site_paths
 
-pkg.site_paths.init()
-import calendar
-import errno
-import getopt
-import gettext
-import locale
-import os
-import shutil
-import sys
-import tempfile
-import traceback
-import warnings
+    pkg.site_paths.init()
+    import calendar
+    import errno
+    import getopt
+    import gettext
+    import locale
+    import os
+    import shutil
+    import sys
+    import tempfile
+    import traceback
+    import warnings
 
-import pkg.actions as actions
-import pkg.catalog as catalog
-import pkg.client.progress as progress
-import pkg.fmri
-import pkg.manifest as manifest
-import pkg.client.api_errors as apx
-import pkg.client.pkgdefs as pkgdefs
-import pkg.client.publisher as publisher
-import pkg.client.transport.transport as transport
-import pkg.misc as misc
-import pkg.mogrify as mog
-import pkg.p5p
-import pkg.pkgsubprocess as subprocess
-import pkg.publish.transaction as trans
-import pkg.server.repository as sr
-import pkg.version as version
+    import pkg.actions as actions
+    import pkg.catalog as catalog
+    import pkg.client.progress as progress
+    import pkg.fmri
+    import pkg.manifest as manifest
+    import pkg.client.api_errors as apx
+    import pkg.client.pkgdefs as pkgdefs
+    import pkg.client.publisher as publisher
+    import pkg.client.transport.transport as transport
+    import pkg.misc as misc
+    import pkg.mogrify as mog
+    import pkg.p5p
+    import pkg.pkgsubprocess as subprocess
+    import pkg.publish.transaction as trans
+    import pkg.server.repository as sr
+    import pkg.version as version
 
-from pkg.client import global_settings
-from pkg.misc import emsg, get_pkg_otw_size, msg, PipeError
-from pkg.client.debugvalues import DebugValues
-from urllib.parse import quote
+    from pkg.client import global_settings
+    from pkg.misc import emsg, get_pkg_otw_size, msg, PipeError
+    from pkg.client.debugvalues import DebugValues
+    from urllib.parse import quote
+except KeyboardInterrupt:
+    import sys
+
+    sys.exit(1)  # EXIT_OOPS
+
 
 # Globals
 archive = False
@@ -92,7 +98,7 @@ def error(text):
     emsg(ws + "pkgrecv: " + text_nows)
 
 
-def usage(usage_error=None, retcode=2):
+def usage(usage_error=None, retcode=pkgdefs.EXIT_BADOPT):
     """Emit a usage message and optionally prefix it with a more specific
     error message.  Causes program to exit."""
 
@@ -497,7 +503,7 @@ def main_func():
                             "name=value, not {arg}"
                         ).format(opt=opt, arg=arg)
                     )
-            DebugValues.set_value(key, value)
+            DebugValues[key] = value
         elif opt == "-h":
             usage(retcode=0)
         elif opt == "-k":
@@ -696,7 +702,7 @@ def get_matches(
 
     matches = prune(matches, all_versions, all_timestamps)
     if recursive:
-        msg(_("Retrieving manifests for dependency " "evaluation ..."))
+        msg(_("Retrieving manifests for dependency evaluation ..."))
         matches = prune(
             get_dependencies(matches, xport_cfg, tracker),
             all_versions,
@@ -719,7 +725,7 @@ def __mog_helper(mog_files, fmri, mpathname):
     line_buffer = []
 
     # Set mogrify in verbose mode for debugging.
-    if DebugValues.get_value("mogrify"):
+    if DebugValues["mogrify"]:
         mog_verbose = True
 
     # Take out "-" symbol. If the only one element is "-", input_files
@@ -870,7 +876,7 @@ def archive_pkgs(
         do_mog = True
     target = os.path.abspath(target)
     if os.path.exists(target):
-        error(_("Target archive '{0}' already " "exists.").format(target))
+        error(_("Target archive '{0}' already exists.").format(target))
         abort()
 
     # Open the archive early so that permissions failures, etc. can be
@@ -959,7 +965,7 @@ def archive_pkgs(
                 except Exception as e:
                     _rm_temp_raw_files(nf, xport_cfg, ignore_errors=True)
                     abort(
-                        _("Creating mogrified " "manifest failed: {0}").format(
+                        _("Creating mogrified manifest failed: {0}").format(
                             str(e)
                         )
                     )
@@ -1112,9 +1118,7 @@ def clone_repo(
     target = publisher.RepositoryURI(misc.parse_uri(target))
 
     if target.scheme != "file":
-        abort(
-            err=_("Destination clone repository must be " "filesystem-based.")
-        )
+        abort(err=_("Destination clone repository must be filesystem-based."))
 
     # Initialize the target repo.
     try:
@@ -1567,9 +1571,7 @@ def transfer_pkgs(
                     )
                 except trans.TransactionRepositoryInvalidError as e:
                     txt = str(e) + "\n\n"
-                    txt += _(
-                        "To create a repository, use " "the pkgrepo command."
-                    )
+                    txt += _("To create a repository, use the pkgrepo command.")
                     abort(err=txt)
                 except trans.TransactionRepositoryConfigError as e:
                     txt = str(e) + "\n\n"
@@ -1592,7 +1594,7 @@ def transfer_pkgs(
                     os.makedirs(basedir, misc.PKG_DIR_MODE)
                 except Exception as e:
                     error(
-                        _("Unable to create basedir " "'{dir}': {err}").format(
+                        _("Unable to create basedir '{dir}': {err}").format(
                             dir=basedir, err=e
                         )
                     )
@@ -1716,7 +1718,7 @@ def transfer_pkgs(
                 except Exception as e:
                     _rm_temp_raw_files(nf, xport_cfg, ignore_errors=True)
                     abort(
-                        _("Creating mogrified " "manifest failed: {0}").format(
+                        _("Creating mogrified manifest failed: {0}").format(
                             str(e)
                         )
                     )
@@ -1940,20 +1942,18 @@ if __name__ == "__main__":
     gettext.install("pkg", "/usr/share/locale")
     misc.set_fd_limits(printer=error)
 
-    # Make all warnings be errors.
-    warnings.simplefilter("error")
-
-    # disable ResourceWarning: unclosed file
-    warnings.filterwarnings("ignore", category=ResourceWarning)
+    # By default, hide all warnings from users.
+    if not sys.warnoptions:
+        warnings.simplefilter("ignore")
     try:
         __ret = main_func()
     except (KeyboardInterrupt, apx.CanceledException):
         try:
             cleanup(True)
         except:
-            __ret = 99
+            __ret = pkgdefs.EXIT_FATAL
         else:
-            __ret = 1
+            __ret = pkgdefs.EXIT_OOPS
     except (
         pkg.actions.ActionError,
         trans.TransactionError,
@@ -1964,28 +1964,28 @@ if __name__ == "__main__":
         try:
             cleanup(True)
         except:
-            __ret = 99
+            __ret = pkgdefs.EXIT_FATAL
         else:
-            __ret = 1
+            __ret = pkgdefs.EXIT_OOPS
     except PipeError:
         # We don't want to display any messages here to prevent
         # possible further broken pipe (EPIPE) errors.
         try:
             cleanup(False)
         except:
-            __ret = 99
+            __ret = pkgdefs.EXIT_FATAL
         else:
-            __ret = 1
+            __ret = pkgdefs.EXIT_OOPS
     except SystemExit as _e:
         try:
             cleanup(False)
         except:
-            __ret = 99
+            __ret = pkgdefs.EXIT_FATAL
         raise _e
     except EnvironmentError as _e:
         if _e.errno != errno.ENOSPC and _e.errno != errno.EDQUOT:
             error(str(apx._convert_error(_e)))
-            __ret = 1
+            __ret = pkgdefs.EXIT_OOPS
             sys.exit(__ret)
 
         txt = "\n"
@@ -2014,21 +2014,21 @@ if __name__ == "__main__":
         try:
             cleanup()
         except:
-            __ret = 99
+            __ret = pkgdefs.EXIT_FATAL
         else:
-            __ret = 1
+            __ret = pkgdefs.EXIT_OOPS
     except pkg.fmri.IllegalFmri as _e:
         error(_e)
         try:
             cleanup()
         except:
-            __ret = 99
+            __ret = pkgdefs.EXIT_FATAL
         else:
-            __ret = 1
-    except:
+            __ret = pkgdefs.EXIT_OOPS
+    except Exception:
         traceback.print_exc()
         error(misc.get_traceback_message())
-        __ret = 99
+        __ret = pkgdefs.EXIT_FATAL
         # Cleanup must be called *after* error messaging so that
         # exceptions processed during cleanup don't cause the wrong
         # traceback to be printed.

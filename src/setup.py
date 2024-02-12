@@ -21,7 +21,7 @@
 #
 # Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
 # Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
-# Copyright 2023 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
 #
 
 import errno
@@ -426,7 +426,7 @@ class pylint_func(Command):
 
         if os.environ.get("PKG_SKIP_PYLINT"):
             log.warn(
-                "WARNING: skipping pylint checks: " "$PKG_SKIP_PYLINT was set"
+                "WARNING: skipping pylint checks: $PKG_SKIP_PYLINT was set"
             )
             return
         elif not pylint_ver_str or not supported_pylint_ver(pylint_ver_str):
@@ -871,7 +871,7 @@ def _copy_file_contents(src, dst, buffer_size=16 * 1024):
         except EnvironmentError as e:
             if e.errno != errno.ENOENT:
                 raise DistutilsFileError(
-                    "could not delete " "'{0}': {1}".format(dst, e)
+                    "could not delete '{0}': {1}".format(dst, e)
                 )
 
         with open(dst, "w") as dfp:

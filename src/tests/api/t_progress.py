@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2012, 2024, Oracle and/or its affiliates.
 
 from . import testutils
 
@@ -178,9 +178,9 @@ class TestSpeedEstimator(pkg5unittest.Pkg5TestCase):
         # Test that estimator won't give out estimates when constructed
         #
         sp = progress.SpeedEstimator(goalbytes)
-        self.assertTrue(sp.get_speed_estimate() == None)
-        self.assertTrue(sp.elapsed() == None)
-        self.assertTrue(sp.get_final_speed() == None)
+        self.assertIsNone(sp.get_speed_estimate())
+        self.assertIsNone(sp.elapsed())
+        self.assertIsNone(sp.get_final_speed())
 
         timestamp = 1000.0
 
@@ -188,9 +188,9 @@ class TestSpeedEstimator(pkg5unittest.Pkg5TestCase):
         # Test again after starting, but before adding data
         #
         sp.start(timestamp)
-        self.assertTrue(sp.get_speed_estimate() == None)
-        self.assertTrue(sp.elapsed() == None)
-        self.assertTrue(sp.get_final_speed() == None)
+        self.assertIsNone(sp.get_speed_estimate())
+        self.assertIsNone(sp.elapsed())
+        self.assertIsNone(sp.get_final_speed())
 
         #
         # We record transactions of one hunk each until there
@@ -225,7 +225,7 @@ class TestSpeedEstimator(pkg5unittest.Pkg5TestCase):
         #
         sp = progress.SpeedEstimator(goalbytes)
         sp.start(timestamp)
-        while sp.get_speed_estimate() == None:
+        while sp.get_speed_estimate() is None:
             sp.newdata(hunk, timestamp)
             timestamp += 0.01
 
@@ -236,7 +236,7 @@ class TestSpeedEstimator(pkg5unittest.Pkg5TestCase):
         #
         timestamp = 2000.0
         sp.newdata(hunk, timestamp)
-        self.assertTrue(sp.get_speed_estimate() == None)
+        self.assertIsNone(sp.get_speed_estimate())
 
     def test_format_speed(self):
         """Test that format_speed works as expected."""

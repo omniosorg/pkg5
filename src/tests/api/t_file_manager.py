@@ -67,7 +67,7 @@ class TestFileManager(pkg5unittest.Pkg5TestCase):
             for b in str_bits:
                 if b not in s:
                     raise RuntimeError(
-                        "Expected to find " "{0} in {1}".format(b, s)
+                        "Expected to find {0} in {1}".format(b, s)
                     )
         else:
             raise RuntimeError("Didn't raise expected exception")

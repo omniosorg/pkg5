@@ -863,7 +863,8 @@ Refresh the repository's catalogs and search data.
 .Sh EXIT STATUS
 .Bl -tag -width Ds
 .It Sy 0
-Command succeeded (or no differences encountered for pkgrepo diff).
+Command succeeded
+.Pq or no differences encountered for pkgrepo diff .
 .It Sy 1
 An error occurred.
 .It Sy 2
@@ -872,7 +873,7 @@ Invalid command line options were specified.
 Multiple operations were requested, but only some of them succeeded.
 .It Sy 4
 No changes were made, nothing to do.
-.It Sy 5
+.It Sy 10
 Differences found for pkgrepo diff.
 .It Sy 99
 An unanticipated exception occurred.

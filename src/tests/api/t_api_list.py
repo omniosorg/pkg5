@@ -22,7 +22,7 @@
 
 #
 # Copyright (c) 2009, 2016, Oracle and/or its affiliates. All rights reserved.
-# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
 #
 
 from . import testutils
@@ -211,25 +211,25 @@ add set name=pkg.description value="{desc}"
             if var:
                 adata = "value="
                 adata += " value=".join(var)
-                pkg_data += "add set name=variant.mumble " "{0}\n".format(adata)
+                pkg_data += "add set name=variant.mumble {0}\n".format(adata)
 
             if stem == "corge" and sver.startswith("1.0"):
-                pkg_data += "add set name=pkg.renamed " "value=true\n"
-                pkg_data += "add depend type=require " "fmri=grault\n"
+                pkg_data += "add set name=pkg.renamed value=true\n"
+                pkg_data += "add depend type=require fmri=grault\n"
             elif stem == "entire":
-                pkg_data += "add depend type=incorporate " "fmri=apple@1.2-0\n"
+                pkg_data += "add depend type=incorporate fmri=apple@1.2-0\n"
                 # versionless incorporate dependencies should
                 # be ignored.
-                pkg_data += "add depend type=incorporate " "fmri=corge\n"
-                pkg_data += "add depend type=incorporate " "fmri=qux@1.0\n"
-                pkg_data += "add depend type=incorporate " "fmri=quux@1.0\n"
+                pkg_data += "add depend type=incorporate fmri=corge\n"
+                pkg_data += "add depend type=incorporate fmri=qux@1.0\n"
+                pkg_data += "add depend type=incorporate fmri=quux@1.0\n"
             elif stem == "obsolete":
-                pkg_data += "add set name=pkg.obsolete " "value=true\n"
+                pkg_data += "add set name=pkg.obsolete value=true\n"
             elif stem == "qux" and sver.startswith("1.0"):
-                pkg_data += "add set name=pkg.renamed " "value=true\n"
-                pkg_data += "add depend type=require " "fmri=quux\n"
+                pkg_data += "add set name=pkg.renamed value=true\n"
+                pkg_data += "add depend type=require fmri=quux\n"
             elif stem == "zzfenix":
-                pkg_data += "add depend type=require " "fmri=zzcowley\n"
+                pkg_data += "add depend type=require fmri=zzcowley\n"
 
             pkg_data += "close\n"
 

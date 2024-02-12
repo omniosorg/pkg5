@@ -20,13 +20,43 @@
 # CDDL HEADER END
 
 #
-# Copyright (c) 2009, 2019, Oracle and/or its affiliates. All rights reserved.
-# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
+# Copyright (c) 2009, 2024, Oracle and/or its affiliates.
 #
 
-import pkg.site_paths
+try:
+    import pkg.site_paths
 
-pkg.site_paths.init()
+    pkg.site_paths.init()
+
+    import copy
+    import errno
+    import getopt
+    import gettext
+    import io
+    import locale
+    import operator
+    import os
+    import re
+    import sys
+    import tempfile
+    import traceback
+    import warnings
+    from difflib import unified_diff
+    from functools import cmp_to_key
+
+    import pkg
+    import pkg.actions
+    import pkg.misc as misc
+    import pkg.portable
+    from pkg.misc import emsg, PipeError
+    from pkg.actions.generic import quote_attr_value
+    from pkg.actions.depend import known_types as dep_types
+    from pkg.client.pkgdefs import EXIT_OK, EXIT_OOPS, EXIT_BADOPT, EXIT_FATAL
+except KeyboardInterrupt:
+    import sys
+
+    sys.exit(1)  # EXIT_OOPS
 
 # Prefixes should be ordered alphabetically with most specific first.
 DRIVER_ALIAS_PREFIXES = (
@@ -55,36 +85,6 @@ DRIVER_ALIAS_PREFIXES = (
 # 5) variant & facet tags appear at the end of actions
 # 6) multi-valued tags appear at the end aside from the above
 # 7) key attribute tags come first
-
-try:
-    import copy
-    import errno
-    import getopt
-    import gettext
-    import io
-    import locale
-    import operator
-    import os
-    import re
-    import sys
-    import tempfile
-    import traceback
-    import warnings
-    from difflib import unified_diff
-    from functools import cmp_to_key
-
-    import pkg
-    import pkg.actions
-    import pkg.misc as misc
-    import pkg.portable
-    from pkg.misc import emsg, PipeError
-    from pkg.actions.generic import quote_attr_value
-    from pkg.actions.depend import known_types as dep_types
-    from pkg.client.pkgdefs import EXIT_OK, EXIT_OOPS, EXIT_BADOPT, EXIT_PARTIAL
-except KeyboardInterrupt:
-    import sys
-
-    sys.exit(EXIT_OOPS)
 
 FMT_V1 = "v1"
 FMT_V2 = "v2"
@@ -132,7 +132,7 @@ def error(text, exitcode=EXIT_OOPS):
     # program name on all platforms.
     emsg(ws + "pkgfmt: error: " + text_nows)
 
-    if exitcode != None:
+    if exitcode is not None:
         sys.exit(exitcode)
 
 
@@ -196,7 +196,7 @@ def read_line(f):
             if act.name == "depend" and act.attrs.get("type") not in dep_types:
                 raise pkg.actions.InvalidActionError(
                     act,
-                    _("Unknown type '{0}' in depend " "action").format(
+                    _("Unknown type '{0}' in depend action").format(
                         act.attrs.get("type")
                     ),
                 )
@@ -788,20 +788,22 @@ if __name__ == "__main__":
     gettext.install("pkg", "/usr/share/locale")
     misc.set_fd_limits(printer=error)
 
-    # disable ResourceWarning: unclosed file
-    warnings.filterwarnings("ignore", category=ResourceWarning)
+    # By default, hide all warnings from users.
+    if not sys.warnoptions:
+        warnings.simplefilter("ignore")
+
     try:
         __ret = main_func()
     except (PipeError, KeyboardInterrupt):
         # We don't want to display any messages here to prevent
         # possible further broken pipe (EPIPE) errors.
-        __ret = 1
-    except SystemExit as _e:
-        raise _e
-    except:
+        __ret = EXIT_OOPS
+    except SystemExit:
+        raise
+    except Exception:
         traceback.print_exc()
         error(misc.get_traceback_message(), exitcode=None)
-        __ret = 99
+        __ret = EXIT_FATAL
 
     sys.exit(__ret)
 

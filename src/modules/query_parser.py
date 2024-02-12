@@ -1273,7 +1273,7 @@ class TermQuery(object):
                 ret = ss.consistent_open(
                     tmp, self._dir_path, self._file_timeout_secs
                 )
-            if ret == None:
+            if ret is None:
                 raise search_errors.NoIndexException(self._dir_path)
             should_reread = False
             # Check to see if any of the in-memory stores of the
@@ -1303,7 +1303,7 @@ class TermQuery(object):
                         tmp, self._dir_path, self._file_timeout_secs
                     )
                     try:
-                        if ret == None:
+                        if ret is None:
                             raise search_errors.NoIndexException(self._dir_path)
                         # Reread the dictionaries and
                         # store the new information in

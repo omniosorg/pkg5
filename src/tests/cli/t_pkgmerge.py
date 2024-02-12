@@ -1010,14 +1010,14 @@ set name=variant.arch value=sparc value=arm\
         actual = [str(f) for f in sorted(cat.fmris())]
         self.assertEqualDiff(expected, actual)
 
-        merged_expected[
-            "amber"
-        ] = """\
+        merged_expected["amber"] = (
+            """\
 depend fmri=pkg:/tree@1.0 type=require
 set name=pkg.fmri value={0}
 set name=variant.arch value=sparc value=i386 value=arm\
 """.format(
-            self.published[10]
+                self.published[10]
+            )
         )  # pkg://os.org/amber@1.0-0
 
         # Verify that each package was merged correctly.

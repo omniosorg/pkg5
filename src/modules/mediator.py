@@ -199,7 +199,7 @@ def mediator_impl_matches(a, b):
     # means the implementation was specified as 'impl'
     # which allows any version to match.  Otherwise,
     # version components must match exactly.
-    return aver == None or bver == None or aver == bver
+    return aver is None or bver is None or aver == bver
 
 
 # Vim hints

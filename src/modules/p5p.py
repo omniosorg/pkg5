@@ -469,10 +469,10 @@ class Archive(object):
                 elif ti.isdir():
                     ti.mode = pkg.misc.PKG_DIR_MODE
                 if ti.name == "pkg5.index.0.gz":
-                    ti.pax_headers[
-                        "comment"
-                    ] = "pkg5.archive.version.{0:d}".format(
-                        self.CURRENT_VERSION
+                    ti.pax_headers["comment"] = (
+                        "pkg5.archive.version.{0:d}".format(
+                            self.CURRENT_VERSION
+                        )
                     )
                 ti.uid = 0
                 ti.gid = 0

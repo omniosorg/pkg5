@@ -20,15 +20,14 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2007, 2022, Oracle and/or its affiliates.
 # Copyright 2014, OmniTI Computer Consulting, Inc. All rights reserved.
 # Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright (c) 2007, 2024, Oracle and/or its affiliates.
 
 """
 Misc utility functions used by the packaging system.
 """
 
-from __future__ import division
 from __future__ import print_function
 
 import OpenSSL.crypto as osc
@@ -178,7 +177,7 @@ def copytree(src, dst):
     nor the 'ignore' keyword arguments of the shutil version.
     """
 
-    exc_value = None
+    problem = None
     os.makedirs(dst, PKG_DIR_MODE)
     src_stat = os.stat(src)
     for name in sorted(os.listdir(src)):
@@ -216,11 +215,11 @@ def copytree(src, dst):
                 try:
                     sock.bind(d_path)
                     sock.close()
-                except sock.error as _e:
+                except socket.error as err:
                     # Store original exception so that the
                     # real cause of failure can be raised if
                     # this fails.
-                    exc_type, exc_value, exc_traceback = sys.exc_info()
+                    problem = err
                     continue
             os.chown(d_path, s.st_uid, s.st_gid)
             os.utime(d_path, (s.st_atime, s.st_mtime))
@@ -242,8 +241,8 @@ def copytree(src, dst):
     os.chmod(dst, S_IMODE(src_stat.st_mode))
     os.chown(dst, src_stat.st_uid, src_stat.st_gid)
     os.utime(dst, (src_stat.st_atime, src_stat.st_mtime))
-    if exc_value:
-        raise exc_value.with_traceback(exc_traceback)
+    if problem:
+        raise problem
 
 
 def move(src, dst):
@@ -590,8 +589,6 @@ def bytes_to_str(nbytes, fmt="{num:>.2f} {unit}"):
     ]
 
     for uom, shortuom, limit in units:
-        # pylint is picky about this message:
-        # old-division; pylint: disable=W1619
         if uom != _("EB") and nbytes >= limit:
             # Try the next largest unit of measure unless this is
             # the largest or if the byte size is within the current
@@ -1173,7 +1170,7 @@ class DictProperty(object):
             fget,
             fset,
             fdel,
-            iteritems,
+            items,
             keys,
             values,
             iterator,
@@ -1186,7 +1183,7 @@ class DictProperty(object):
             self.__fget = fget
             self.__fset = fset
             self.__fdel = fdel
-            self.__iteritems = iteritems
+            self.__items = items
             self.__keys = keys
             self.__values = values
             self.__iter = iterator
@@ -1211,14 +1208,10 @@ class DictProperty(object):
                 raise AttributeError("can't delete attribute")
             self.__fdel(self.__obj, key)
 
-        def iteritems(self):
-            if self.__iteritems is None:
-                raise AttributeError("can't iterate over items")
-            return self.__iteritems(self.__obj)
-
-        # for Python 3 compatibility
         def items(self):
-            return self.iteritems()
+            if self.__items is None:
+                raise AttributeError("can't iterate over items")
+            return self.__items(self.__obj)
 
         def keys(self):
             if self.__keys is None:
@@ -1227,7 +1220,7 @@ class DictProperty(object):
 
         def values(self):
             if self.__values is None:
-                raise AttributeError("can't iterate over " "values")
+                raise AttributeError("can't iterate over values")
             return self.__values(self.__obj)
 
         def get(self, key, default=None):
@@ -1260,7 +1253,7 @@ class DictProperty(object):
         fget=None,
         fset=None,
         fdel=None,
-        iteritems=None,
+        items=None,
         keys=None,
         values=None,
         iterator=None,
@@ -1273,7 +1266,7 @@ class DictProperty(object):
         self.__fget = fget
         self.__fset = fset
         self.__fdel = fdel
-        self.__iteritems = iteritems
+        self.__items = items
         self.__doc__ = doc
         self.__keys = keys
         self.__values = values
@@ -1293,7 +1286,7 @@ class DictProperty(object):
             self.__fget,
             self.__fset,
             self.__fdel,
-            self.__iteritems,
+            self.__items,
             self.__keys,
             self.__values,
             self.__iter,
@@ -1495,21 +1488,6 @@ class DummyLock(object):
     @property
     def locked(self):
         return self.held
-
-
-class Singleton(type):
-    """Set __metaclass__ to Singleton to create a singleton.
-    See http://en.wikipedia.org/wiki/Singleton_pattern"""
-
-    def __init__(cls, name, bases, dictionary):
-        super(Singleton, cls).__init__(name, bases, dictionary)
-        cls.instance = None
-
-    def __call__(cls, *args, **kw):
-        if cls.instance is None:
-            cls.instance = super(Singleton, cls).__call__(*args, **kw)
-
-        return cls.instance
 
 
 EmptyDict = ImmutableDict()
@@ -1746,8 +1724,8 @@ def api_cmdpath():
         cmdpath = os.environ["PKG_CMDPATH"]
 
     # DebugValues is a singleton, hence no 'self' arg; pylint: disable=E1120
-    if DebugValues.get_value("simulate_cmdpath"):
-        cmdpath = DebugValues.get_value("simulate_cmdpath")
+    if DebugValues["simulate_cmdpath"]:
+        cmdpath = DebugValues["simulate_cmdpath"]
 
     return cmdpath
 
@@ -1784,7 +1762,7 @@ def liveroot():
     that we are running from."""
 
     # DebugValues is a singleton, hence no 'self' arg; pylint: disable=E1120
-    live_root = DebugValues.get_value("simulate_live_root")
+    live_root = DebugValues["simulate_live_root"]
     if not live_root and "PKG_LIVE_ROOT" in os.environ:
         live_root = os.environ["PKG_LIVE_ROOT"]
     if not live_root:
@@ -2910,12 +2888,6 @@ def get_runtime_proxy(proxy, uri):
         return
 
     return runtime_proxy
-
-
-def decode(s):
-    """convert non-ascii strings to unicode;
-    replace non-convertable chars"""
-    return s
 
 
 def yield_matching(pat_prefix, items, patterns):

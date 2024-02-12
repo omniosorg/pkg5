@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
 # Copyright (c) 2008, 2021, Oracle and/or its affiliates.
 
 import codecs
@@ -4068,7 +4068,7 @@ class Repository(object):
             # ignored, we need to check the ignored deps.
             for attrs in ignored_pkgs[astem]:
                 pub = fmri.PkgFmri(attrs["pkg"]).publisher
-                if pub != None and pub != afmri.publisher:
+                if pub is not None and pub != afmri.publisher:
                     continue
                 # Check the lower bound.
                 minfmri = attrs.get("min_ver", None)

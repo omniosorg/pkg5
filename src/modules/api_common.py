@@ -22,7 +22,7 @@
 
 #
 # Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
-# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
 #
 # Visible changes to classes here require an update to
 # doc/client_api_versions.txt and/or doc/server_api_versions.txt.
@@ -284,7 +284,7 @@ def _get_pkg_cat_data(
                 summ = a.attrs["value"]
         elif attr_name == "pkg.description":
             desc = a.attrs["value"]
-        elif cat_info != None and a.has_category_info():
+        elif cat_info is not None and a.has_category_info():
             cat_info.extend(a.parse_category_info())
 
     if get_summ and summ is None:

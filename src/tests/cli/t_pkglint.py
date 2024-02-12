@@ -230,7 +230,7 @@ pkglint.exclude = pkg.lint.pkglint_action.PkgActionChecker.linted \
     def test_1_usage(self):
         """Tests that we show a usage message."""
         ret, output, err = self.pkglint("--help")
-        self.assertTrue("Usage:" in output, "No usage string printed")
+        self.assertTrue("usage:" in output, "No usage string printed")
 
     def test_2_badopts(self):
         """Tests that we exit with an error on wrong or missing args"""

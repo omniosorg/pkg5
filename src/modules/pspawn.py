@@ -21,11 +21,10 @@
 #
 
 #
-# Copyright (c) 2015, 2019, Oracle and/or its affiliates. All rights reserved.
 # Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright (c) 2015, 2024, Oracle and/or its affiliates.
 #
 
-from __future__ import unicode_literals, print_function
 import os
 from pkg._pspawn import lib, ffi
 
@@ -45,7 +44,6 @@ def walk_func(data, fd):
 
 
 class SpawnFileAction(object):
-
     """SpawnFileAction() -> spawn file action object
 
     Creates a Python object that encapsulates the posix_spawn_file_action_t

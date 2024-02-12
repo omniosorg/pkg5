@@ -21,21 +21,67 @@
 #
 
 #
-# Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
-# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
+# Copyright (c) 2010, 2024, Oracle and/or its affiliates.
 #
-import pkg.site_paths
 
-pkg.site_paths.init()
+try:
+    import pkg.site_paths
+
+    pkg.site_paths.init()
+    import atexit
+    import collections
+    import copy
+    import errno
+    import getopt
+    import gettext
+    import locale
+    import logging
+    import os
+    import operator
+    import re
+    import shlex
+    import shutil
+    import sys
+    import tempfile
+    import textwrap
+    import traceback
+    import warnings
+    import itertools
+    from importlib import reload
+
+    from pkg.client import global_settings
+    from pkg.client.debugvalues import DebugValues
+    from pkg.misc import msg, PipeError
+    from prettytable import PrettyTable
+    import pkg
+    import pkg.catalog
+    import pkg.client.api_errors as apx
+    import pkg.client.pkgdefs as pkgdefs
+    import pkg.client.progress
+    import pkg.client.publisher as publisher
+    import pkg.client.transport.transport as transport
+    import pkg.fmri as fmri
+    import pkg.json as json
+    import pkg.misc as misc
+    import pkg.server.repository as sr
+
+    from pkg.client.pkgdefs import (
+        EXIT_OK,
+        EXIT_OOPS,
+        EXIT_BADOPT,
+        EXIT_PARTIAL,
+        EXIT_FATAL,
+    )
+except KeyboardInterrupt:
+    import sys
+
+    sys.exit(1)  # EXIT_OOPS
 
 PKG_CLIENT_NAME = "pkgrepo"
 
-# pkgrepo exit codes
-EXIT_OK = 0
-EXIT_OOPS = 1
-EXIT_BADOPT = 2
-EXIT_PARTIAL = 3
-EXIT_DIFF = 10
+# pkgrepo specific exit codes
+EXIT_DIFF = 10  # Differences found for pkgrepo diff.
 
 # listing constants
 LISTING_FORMATS = ("default", "json", "json-formatted", "tsv")
@@ -48,43 +94,6 @@ diff_type_f = {MINUS: "- ", PLUS: "+ ", COMMON: ""}
 
 # globals
 tmpdirs = []
-
-import atexit
-import collections
-import copy
-import errno
-import getopt
-import gettext
-import locale
-import logging
-import os
-import operator
-import re
-import shlex
-import shutil
-import sys
-import tempfile
-import textwrap
-import traceback
-import warnings
-import itertools
-from importlib import reload
-
-from pkg.client import global_settings
-from pkg.client.debugvalues import DebugValues
-from pkg.misc import msg, PipeError
-from prettytable import PrettyTable
-import pkg
-import pkg.catalog
-import pkg.client.api_errors as apx
-import pkg.client.pkgdefs as pkgdefs
-import pkg.client.progress
-import pkg.client.publisher as publisher
-import pkg.client.transport.transport as transport
-import pkg.fmri as fmri
-import pkg.json as json
-import pkg.misc as misc
-import pkg.server.repository as sr
 
 logger = global_settings.logger
 
@@ -130,7 +139,7 @@ def get_tracker(quiet=False):
     return progtrack
 
 
-def usage(usage_error=None, cmd=None, retcode=2, full=False):
+def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False):
     """Emit a usage message and optionally prefix it with a more
     specific error message.  Causes program to exit.
     """
@@ -140,7 +149,7 @@ def usage(usage_error=None, cmd=None, retcode=2, full=False):
 
     if not full:
         # The full usage message isn't desired.
-        logger.error(_("Try `pkgrepo --help or -?' for more " "information."))
+        logger.error(_("Try `pkgrepo --help or -?' for more information."))
         sys.exit(retcode)
 
     msg(
@@ -247,7 +256,7 @@ def subcmd_remove(conf, args):
     # Get repository object.
     if not conf.get("repo_uri", None):
         usage(
-            _("A package repository location must be provided " "using -s."),
+            _("A package repository location must be provided using -s."),
             cmd=subcommand,
         )
     repo = get_repo(conf, read_only=False, subcommand=subcommand)
@@ -495,7 +504,7 @@ def subcmd_remove_publisher(conf, args):
 
     if noexisting:
         error(
-            _("The following publisher(s) could not be found:\n " "{0}").format(
+            _("The following publisher(s) could not be found:\n {0}").format(
                 "\n ".join(noexisting)
             ),
             cmd=subcommand,
@@ -620,7 +629,7 @@ def subcmd_get(conf, args):
     # Setup transport so configuration can be retrieved.
     if not conf.get("repo_uri", None):
         usage(
-            _("A package repository location must be provided " "using -s."),
+            _("A package repository location must be provided using -s."),
             cmd=subcommand,
         )
     xport, xpub, tmp_dir = setup_transport(
@@ -750,7 +759,7 @@ def _get_matching_pubs(
             err_msg = _("no matching publishers found")
             if repo_uri:
                 err_msg = _(
-                    "no matching publishers found in " "repository: {0}"
+                    "no matching publishers found in repository: {0}"
                 ).format(repo_uri)
             error(err_msg, cmd=subcommand)
         return EXIT_OOPS, None, None
@@ -929,7 +938,7 @@ def subcmd_info(conf, args):
     # Setup transport so status can be retrieved.
     if not conf.get("repo_uri", None):
         usage(
-            _("A package repository location must be provided " "using -s."),
+            _("A package repository location must be provided using -s."),
             cmd=subcommand,
         )
     xport, xpub, tmp_dir = setup_transport(
@@ -1044,7 +1053,7 @@ def subcmd_list(conf, args):
     # Setup transport so configuration can be retrieved.
     if not conf.get("repo_uri", None):
         usage(
-            _("A package repository location must be provided " "using -s."),
+            _("A package repository location must be provided using -s."),
             cmd=subcommand,
         )
     xport, xpub, tmp_dir = setup_transport(
@@ -1270,7 +1279,7 @@ def subcmd_contents(conf, args):
     # Setup transport so configuration can be retrieved.
     if not conf.get("repo_uri", None):
         usage(
-            _("A package repository location must be provided " "using -s."),
+            _("A package repository location must be provided using -s."),
             cmd=subcommand,
         )
 
@@ -1484,7 +1493,7 @@ def subcmd_rebuild(conf, args):
     # Setup transport so operation can be performed.
     if not conf.get("repo_uri", None):
         usage(
-            _("A package repository location must be provided " "using -s."),
+            _("A package repository location must be provided using -s."),
             cmd=subcommand,
         )
 
@@ -1540,7 +1549,7 @@ def subcmd_refresh(conf, args):
     # Setup transport so operation can be performed.
     if not conf.get("repo_uri", None):
         usage(
-            _("A package repository location must be provided " "using -s."),
+            _("A package repository location must be provided using -s."),
             cmd=subcommand,
         )
 
@@ -1631,7 +1640,7 @@ def subcmd_set(conf, args):
     # Get repository object.
     if not conf.get("repo_uri", None):
         usage(
-            _("A package repository location must be provided " "using -s."),
+            _("A package repository location must be provided using -s."),
             cmd=subcommand,
         )
     repo = get_repo(conf, read_only=False, subcommand=subcommand)
@@ -1649,7 +1658,7 @@ def _set_pub(conf, subcommand, props, pubs, repo):
     for sname, sprops in props.items():
         if sname not in ("publisher", "repository"):
             usage(
-                _("unknown property section " "'{0}'").format(sname),
+                _("unknown property section '{0}'").format(sname),
                 cmd=subcommand,
             )
         for pname in sprops:
@@ -1870,7 +1879,7 @@ def __collect_default_ignore_dep_files(ignored_dep_files):
     """Helpler function to collect default ignored-dependency files."""
 
     root_ignored = "/usr/share/pkg/ignored_deps"
-    altroot = DebugValues.get_value("ignored_deps")
+    altroot = DebugValues["ignored_deps"]
     if altroot:
         root_ignored = altroot
     if os.path.exists(root_ignored):
@@ -1925,7 +1934,7 @@ def subcmd_verify(conf, args):
     repo_uri = conf.get("repo_uri", None)
     if not repo_uri:
         usage(
-            _("A package repository location must be provided " "using -s."),
+            _("A package repository location must be provided using -s."),
             cmd=subcommand,
         )
 
@@ -2026,7 +2035,7 @@ def subcmd_fix(conf, args):
     repo_uri = conf.get("repo_uri", None)
     if not repo_uri:
         usage(
-            _("A package repository location must be provided " "using -s."),
+            _("A package repository location must be provided using -s."),
             cmd=subcommand,
         )
 
@@ -2274,7 +2283,7 @@ def __repo_diff(
         __emit_msg(symbol, pub)
         __emit_msg(
             symbol,
-            _("({0:d} package(s) with " "{1:d} different version(s))").format(
+            _("({0:d} package(s) with {1:d} different version(s))").format(
                 len(pkgs), len(fmris)
             ),
         )
@@ -2525,9 +2534,7 @@ def subcmd_diff(conf, args):
             conf["com_repo_" + conf_type] = arg
         else:
             usage(
-                _("--{0} must be specified following a " "-s").format(
-                    conf_type
-                ),
+                _("--{0} must be specified following a -s").format(conf_type),
                 cmd=subcommand,
             )
 
@@ -2539,7 +2546,7 @@ def subcmd_diff(conf, args):
                 conf["com_repo_uri"] = parse_uri(arg)
             else:
                 usage(
-                    _("only two repositories can be " "specified"),
+                    _("only two repositories can be specified"),
                     cmd=subcommand,
                 )
         if opt == "-v":
@@ -2572,7 +2579,7 @@ def subcmd_diff(conf, args):
     repo_uri = conf.get("repo_uri")
     if not repo_uri:
         usage(
-            _("Two package repository locations must be provided " "using -s."),
+            _("Two package repository locations must be provided using -s."),
             cmd=subcommand,
         )
 
@@ -2652,10 +2659,10 @@ def main_func():
             except (AttributeError, ValueError):
                 usage(
                     _(
-                        "{opt} takes argument of form " "name=value, not {arg}"
+                        "{opt} takes argument of form name=value, not {arg}"
                     ).format(opt=opt, arg=arg)
                 )
-            DebugValues.set_value(key, value)
+            DebugValues[key] = value
 
     if DebugValues:
         reload(pkg.digest)
@@ -2708,8 +2715,8 @@ def handle_errors(func, *args, **kwargs):
                 raise apx._convert_error(__e)
             error("\n" + misc.out_of_memory())
             __ret = EXIT_OOPS
-    except SystemExit as __e:
-        raise __e
+    except SystemExit:
+        raise
     except (IOError, PipeError, KeyboardInterrupt) as __e:
         # Don't display any messages here to prevent possible further
         # broken pipe (EPIPE) errors.
@@ -2735,10 +2742,10 @@ def handle_errors(func, *args, **kwargs):
     except (apx.ApiException, sr.RepositoryError) as __e:
         error(str(__e))
         __ret = EXIT_OOPS
-    except:
+    except Exception:
         traceback.print_exc()
         error(traceback_str)
-        __ret = 99
+        __ret = EXIT_FATAL
     return __ret
 
 
@@ -2747,10 +2754,9 @@ if __name__ == "__main__":
     gettext.install("pkg", "/usr/share/locale")
     misc.set_fd_limits(printer=error)
 
-    # Make all warnings be errors.
-    warnings.simplefilter("error")
-    # disable ResourceWarning: unclosed file
-    warnings.filterwarnings("ignore", category=ResourceWarning)
+    # By default, hide all warnings from users.
+    if not sys.warnoptions:
+        warnings.simplefilter("ignore")
 
     __retval = handle_errors(main_func)
     try:

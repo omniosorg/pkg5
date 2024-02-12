@@ -21,43 +21,49 @@
 #
 
 #
-# Copyright (c) 2011, 2022, Oracle and/or its affiliates.
-# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
+# Copyright (c) 2011, 2024, Oracle and/or its affiliates.
 #
 
-import pkg.site_paths
+try:
+    import pkg.site_paths
 
-pkg.site_paths.init()
-import atexit
-import errno
-import getopt
-import gettext
-import locale
-import logging
-import os
-import shutil
-import socket
-import stat
-import sys
-import traceback
-import warnings
+    pkg.site_paths.init()
+    import atexit
+    import errno
+    import getopt
+    import gettext
+    import locale
+    import logging
+    import os
+    import shutil
+    import socket
+    import stat
+    import sys
+    import traceback
+    import warnings
 
-from mako.template import Template
-from urllib.parse import urlparse
+    from mako.template import Template
+    from urllib.parse import urlparse
 
-from pkg.client import global_settings
-from pkg.misc import msg, PipeError
+    from pkg.client import global_settings
+    from pkg.misc import msg, PipeError
 
-import pkg
-import pkg.catalog
-import pkg.client.api
-import pkg.client.progress as progress
-import pkg.client.api_errors as apx
-import pkg.digest as digest
-import pkg.json as json
-import pkg.misc as misc
-import pkg.portable as portable
-import pkg.p5p as p5p
+    import pkg
+    import pkg.catalog
+    import pkg.client.api
+    import pkg.client.progress as progress
+    import pkg.client.api_errors as apx
+    import pkg.digest as digest
+    import pkg.json as json
+    import pkg.misc as misc
+    import pkg.portable as portable
+    import pkg.p5p as p5p
+    from pkg.client.pkgdefs import EXIT_OK, EXIT_OOPS, EXIT_BADOPT, EXIT_FATAL
+except KeyboardInterrupt:
+    import sys
+
+    sys.exit(1)  # EXIT_OOPS
 
 logger = global_settings.logger
 orig_cwd = None
@@ -65,11 +71,6 @@ orig_cwd = None
 PKG_CLIENT_NAME = "pkg.sysrepo"
 CLIENT_API_VERSION = 82
 pkg.client.global_settings.client_name = PKG_CLIENT_NAME
-
-# exit codes
-EXIT_OK = 0
-EXIT_OOPS = 1
-EXIT_BADOPT = 2
 
 # Default port used for http traffic.
 HTTP_PORT = 80
@@ -328,7 +329,7 @@ def __validate_pub_info(pub_info, no_uri_pubs, api_inst):
         for props in uri_info:
             if len(props) != 6:
                 raise SysrepoException(
-                    "{0} does not have 6 " "items".format(props)
+                    "{0} does not have 6 items".format(props)
                 )
             # props [0] and [3] must be strings
             if not isinstance(props[0], str) or not isinstance(props[3], str):
@@ -602,9 +603,9 @@ def _get_publisher_info(api_inst, http_timeout, image_dir):
                         p5p.Archive(urlresult.path)
                     except p5p.InvalidArchive:
                         raise SysrepoException(
-                            _(
-                                "unable to read p5p " "archive file at {0}"
-                            ).format(urlresult.path)
+                            _("unable to read p5p archive file at {0}").format(
+                                urlresult.path
+                            )
                         )
 
             clean_uri = _clean_publisher(uri)
@@ -637,7 +638,7 @@ def _chown_cache_dir(dir):
     except OSError as err:
         if not os.environ.get("PKG5_TEST_ENV", None):
             raise SysrepoException(
-                _("Unable to chown to {user}:{group}: " "{err}").format(
+                _("Unable to chown to {user}:{group}: {err}").format(
                     user=SYSREPO_USER, group="bin", err=err
                 )
             )
@@ -696,9 +697,7 @@ def _write_httpd_conf(
         try:
             num = int(cache_size)
             if num <= 0:
-                raise SysrepoException(
-                    _("invalid cache size: " "{0}").format(num)
-                )
+                raise SysrepoException(_("invalid cache size: {0}").format(num))
         except ValueError:
             raise SysrepoException(
                 _("invalid cache size: {0}").format(cache_size)
@@ -755,7 +754,7 @@ def _write_httpd_conf(
         # socket.gethostbyname raise UnicodeDecodeError in Python 3
         # for some input, such as '.'
         raise SysrepoException(
-            _("Unable to write sysrepo_httpd.conf: {host}: " "{err}").format(
+            _("Unable to write sysrepo_httpd.conf: {host}: {err}").format(
                 **locals()
             )
         )
@@ -904,7 +903,7 @@ def _chown_runtime_dir(runtime_dir):
     except OSError as err:
         if not os.environ.get("PKG5_TEST_ENV", None):
             raise SysrepoException(
-                _("Unable to chown to {user}:{group}: " "{err}").format(
+                _("Unable to chown to {user}:{group}: {err}").format(
                     user=SYSREPO_USER, group=SYSREPO_GROUP, err=err
                 )
             )
@@ -1093,8 +1092,8 @@ def handle_errors(func, *args, **kwargs):
                 raise
             error("\n" + misc.out_of_memory())
             __ret = EXIT_OOPS
-    except SystemExit as __e:
-        raise __e
+    except SystemExit:
+        raise
     except (PipeError, KeyboardInterrupt):
         # Don't display any messages here to prevent possible further
         # broken pipe (EPIPE) errors.
@@ -1109,10 +1108,10 @@ def handle_errors(func, *args, **kwargs):
             ).format(client=__e.received_version, api=__e.expected_version)
         )
         __ret = EXIT_OOPS
-    except:
+    except Exception:
         traceback.print_exc()
         error(traceback_str)
-        __ret = 99
+        __ret = EXIT_FATAL
     return __ret
 
 
@@ -1120,10 +1119,9 @@ if __name__ == "__main__":
     misc.setlocale(locale.LC_ALL, "", error)
     gettext.install("pkg", "/usr/share/locale")
 
-    # Make all warnings be errors.
-    warnings.simplefilter("error")
-    # disable ResourceWarning: unclosed file
-    warnings.filterwarnings("ignore", category=ResourceWarning)
+    # By default, hide all warnings from users.
+    if not sys.warnoptions:
+        warnings.simplefilter("ignore")
 
     __retval = handle_errors(main_func)
     try:

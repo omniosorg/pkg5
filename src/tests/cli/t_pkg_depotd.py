@@ -862,7 +862,7 @@ class TestDepotOutput(pkg5unittest.SingleDepotTestCase):
             )
 
             self.assertTrue(
-                depot_handle != None, msg="Could not " "start depot"
+                depot_handle is not None, msg="Could not " "start depot"
             )
             begintime = time.time()
             check_interval = 0.20

@@ -21,11 +21,9 @@
 #
 
 #
-# Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
 # Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright (c) 2008, 2024, Oracle and/or its affiliates.
 #
-
-from __future__ import division
 
 import cherrypy
 from cherrypy._cptools import HandlerTool
@@ -376,9 +374,9 @@ class DepotHTTP(_Depot):
             expires = now + expires
 
         headers = cherrypy.response.headers
-        headers[
-            "Cache-Control"
-        ] = "must-revalidate, no-transform, max-age={0:d}".format(max_age)
+        headers["Cache-Control"] = (
+            "must-revalidate, no-transform, max-age={0:d}".format(max_age)
+        )
         headers["Expires"] = formatdate(timeval=expires, usegmt=True)
 
     def refresh(self):
@@ -888,9 +886,9 @@ class DepotHTTP(_Depot):
             )
             response = cherrypy.response
             for i, attr in enumerate(chashes):
-                response.headers[
-                    "X-Ipkg-Attr-{0}".format(i)
-                ] = "{0}={1}".format(attr, chashes[attr])
+                response.headers["X-Ipkg-Attr-{0}".format(i)] = (
+                    "{0}={1}".format(attr, chashes[attr])
+                )
 
             # set expiration of response to one day
             self.__set_response_expires("file", 86400, 86400)
@@ -1800,7 +1798,6 @@ class NastyDepotHTTP(DepotHTTP):
         self._lock.acquire()
 
         self.nasty_cycle = (self.nasty_cycle + 1) % self.NASTY_CYCLE
-        # old-division; pylint: disable=W1619
         self.maxroll_adj = 1 + self.NASTY_MULTIPLIER * math.sin(
             self.nasty_cycle * (math.pi / self.NASTY_CYCLE)
         )

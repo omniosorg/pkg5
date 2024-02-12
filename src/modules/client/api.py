@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
 # Copyright (c) 2008, 2021, Oracle and/or its affiliates.
 #
 
@@ -72,7 +72,6 @@ from functools import cmp_to_key
 from urllib.parse import unquote
 
 import pkg.actions as actions
-
 import pkg.catalog as catalog
 import pkg.client.api_errors as apx
 import pkg.client.bootenv as bootenv
@@ -817,7 +816,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
         # If a new BE is required and no BE name has been provided
         # on the command line, attempt to determine a BE name
         # automatically.
-        if self.__new_be == True and self.__be_name == None:
+        if self.__new_be is True and self.__be_name is None:
             self.__auto_be_name()
 
         if not self.__new_be and self.__backup_be is None:
@@ -1238,27 +1237,26 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
         finally:
             self._activity_lock.release()
 
-    def __plan_common_exception(self, log_op_end_all=False):
+    def __plan_common_exception(self, exc, log_op_end_all=False):
         """Deal with exceptions that can occur while planning an
         operation.  Any exceptions generated here are passed
         onto the calling context.  By default all exceptions
         will result in a call to self.log_operation_end() before
         they are passed onto the calling context."""
 
-        exc_type, exc_value, exc_traceback = sys.exc_info()
-
+        exc_type = type(exc)
         if exc_type == apx.PlanCreationException:
-            self.__set_history_PlanCreationException(exc_value)
+            self.__set_history_PlanCreationException(exc)
         elif exc_type == apx.CanceledException:
             self._cancel_done()
         elif exc_type == apx.ConflictingActionErrors:
             self.log_operation_end(
-                error=str(exc_value), result=RESULT_CONFLICTING_ACTIONS
+                error=str(exc), result=RESULT_CONFLICTING_ACTIONS
             )
-        elif exc_type in [apx.IpkgOutOfDateException, fmri.IllegalFmri]:
-            self.log_operation_end(error=exc_value)
+        elif exc_type in (apx.IpkgOutOfDateException, fmri.IllegalFmri):
+            self.log_operation_end(error=exc)
         elif log_op_end_all:
-            self.log_operation_end(error=exc_value)
+            self.log_operation_end(error=exc)
 
         if exc_type not in (apx.ImageLockedError, apx.ImageLockingFailedError):
             # Must be called before reset_unlock, and only if
@@ -1295,10 +1293,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
 
         self._activity_lock.release()
 
-        # re-raise the original exception. (we have to explicitly
-        # restate the original exception since we may have cleared the
-        # current exception scope above.)
-        raise exc_value.with_traceback(exc_traceback)
+        # re-raise the original exception.
+        raise exc
 
     def solaris_image(self):
         """Returns True if the current image is a solaris image, or an
@@ -1556,7 +1552,10 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
         # sanity checks
         assert _op in api_op_values
         assert _ad_kwargs is None or _op in [API_OP_ATTACH, API_OP_DETACH]
-        assert _ad_kwargs != None or _op not in [API_OP_ATTACH, API_OP_DETACH]
+        assert _ad_kwargs is not None or _op not in [
+            API_OP_ATTACH,
+            API_OP_DETACH,
+        ]
         assert not _li_md_only or _op in [
             API_OP_ATTACH,
             API_OP_DETACH,
@@ -1719,16 +1718,16 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
 
             self.__planned_children = True
 
-        except:
+        except Exception as err:
             if _op in [
                 API_OP_UPDATE,
                 API_OP_INSTALL,
                 API_OP_REVERT,
                 API_OP_SYNC,
             ]:
-                self.__plan_common_exception(log_op_end_all=True)
+                self.__plan_common_exception(err, log_op_end_all=True)
             else:
-                self.__plan_common_exception()
+                self.__plan_common_exception(err)
             # NOTREACHED
 
         stuff_to_do = not self.planned_nothingtodo()
@@ -4516,11 +4515,9 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 ren_inst_stems,
             ) = self.__map_installed_newest(pubs, known_cat=known_cat)
         else:
-            pub_ranks = (
-                inc_stems
-            ) = (
-                inc_vers
-            ) = inst_stems = ren_stems = ren_inst_stems = misc.EmptyDict
+            pub_ranks = inc_stems = inc_vers = inst_stems = ren_stems = (
+                ren_inst_stems
+            ) = misc.EmptyDict
 
         if installed or upgradable or removable:
             if inst_cat:
@@ -5080,13 +5077,9 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 else:
                     pub = name = version = None
 
-                links = (
-                    hardlinks
-                ) = (
-                    files
-                ) = (
-                    dirs
-                ) = csize = size = licenses = cat_info = description = None
+                links = hardlinks = files = dirs = csize = size = licenses = (
+                    cat_info
+                ) = description = None
 
                 if PackageInfo.CATEGORIES in info_needed:
                     cat_info = [

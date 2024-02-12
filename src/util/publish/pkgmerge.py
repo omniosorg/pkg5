@@ -20,14 +20,14 @@
 # CDDL HEADER END
 
 #
-# Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2024, Oracle and/or its affiliates.
 #
 
-import pkg.site_paths
-
-pkg.site_paths.init()
-
 try:
+    import pkg.site_paths
+
+    pkg.site_paths.init()
+
     import calendar
     import collections
     import getopt
@@ -39,6 +39,7 @@ try:
     import sys
     import tempfile
     import traceback
+    import warnings
 
     import pkg.actions as actions
     import pkg.fmri
@@ -53,11 +54,11 @@ try:
     from functools import reduce
     from pkg.misc import PipeError, emsg, msg
     from urllib.parse import quote
-    from pkg.client.pkgdefs import EXIT_OK, EXIT_OOPS, EXIT_BADOPT, EXIT_PARTIAL
+    from pkg.client.pkgdefs import EXIT_OK, EXIT_OOPS, EXIT_BADOPT, EXIT_FATAL
 except KeyboardInterrupt:
     import sys
 
-    sys.exit(EXIT_OOPS)
+    sys.exit(1)  # EXIT_OOPS
 
 
 class PkgmergeException(Exception):
@@ -100,7 +101,7 @@ def cleanup():
             break
 
 
-def usage(errmsg="", exitcode=2):
+def usage(errmsg="", exitcode=EXIT_BADOPT):
     """Emit a usage message and optionally prefix it with a more specific
     error message.  Causes program to exit."""
 
@@ -157,7 +158,7 @@ def error(text, exitcode=EXIT_OOPS):
 
     emsg("pkgmerge: {0}".format(text))
 
-    if exitcode != None:
+    if exitcode is not None:
         sys.exit(exitcode)
 
 
@@ -224,7 +225,7 @@ def main_func():
             elif opt == "-s":
                 s = arg.split(",")
                 if len(s) < 2:
-                    usage("-s option must specify " "variant=value,repo_uri")
+                    usage("-s option must specify variant=value,repo_uri")
 
                 # All but last part should be variant.
                 src_vars = {}
@@ -232,9 +233,7 @@ def main_func():
                     try:
                         vname, vval = v.split("=")
                     except ValueError:
-                        usage(
-                            "-s option must specify " "variant=value,repo_uri"
-                        )
+                        usage("-s option must specify variant=value,repo_uri")
 
                     if not vname.startswith("variant."):
                         vname = "variant.{0}".format(vname)
@@ -262,9 +261,7 @@ def main_func():
         )
 
     if not dest_repo:
-        usage(
-            _("A destination package repository must be provided " "using -d.")
-        )
+        usage(_("A destination package repository must be provided using -d."))
 
     # Determine the unique set of variants across all sources.
     variants = set()
@@ -286,7 +283,7 @@ def main_func():
             source = source_list[i]
             usage(
                 _(
-                    "Source {source} missing values for " "variants: {missing}"
+                    "Source {source} missing values for variants: {missing}"
                 ).format(**locals())
             )
 
@@ -1018,12 +1015,10 @@ if __name__ == "__main__":
     gettext.install("pkg", "/usr/share/locale")
     misc.set_fd_limits(printer=error)
 
-    # Make all warnings be errors.
-    import warnings
+    # By default, hide all warnings from users.
+    if not sys.warnoptions:
+        warnings.simplefilter("ignore")
 
-    warnings.simplefilter("error")
-    # disable ResourceWarning: unclosed file
-    warnings.filterwarnings("ignore", category=ResourceWarning)
     try:
         __ret = main_func()
     except (
@@ -1037,15 +1032,15 @@ if __name__ == "__main__":
         __ret = EXIT_OOPS
     except (PipeError, KeyboardInterrupt):
         __ret = EXIT_OOPS
-    except SystemExit as __e:
-        raise __e
+    except SystemExit:
+        raise
     except EnvironmentError as __e:
         error(str(apx._convert_error(__e)))
         __ret = EXIT_OOPS
-    except Exception as __e:
+    except Exception:
         traceback.print_exc()
         error(misc.get_traceback_message(), exitcode=None)
-        __ret = 99
+        __ret = EXIT_FATAL
     finally:
         cleanup()
 

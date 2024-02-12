@@ -21,8 +21,8 @@
 #
 
 #
-# Copyright (c) 2007, 2020, Oracle and/or its affiliates. All rights reserved.
-# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
+# Copyright (c) 2007, 2024, Oracle and/or its affiliates.
 #
 
 import atexit
@@ -151,11 +151,11 @@ class Image(object):
         self.__alt_pkg_sources_loaded = False
 
         # Determine identity of client executable if appropriate.
-        if cmdpath == None:
+        if cmdpath is None:
             cmdpath = misc.api_cmdpath()
         self.cmdpath = cmdpath
 
-        if self.cmdpath != None:
+        if self.cmdpath is not None:
             self.__cmddir = os.path.dirname(cmdpath)
 
         # prevent brokeness in the test suite
@@ -250,7 +250,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
         if should_exist:
             self.find_root(self.root, user_provided_dir, progtrack)
         else:
-            if not force and self.image_type(self.root) != None:
+            if not force and self.image_type(self.root) is not None:
                 raise apx.ImageAlreadyExists(self.root)
             if not force and os.path.exists(self.root):
                 # ignore .zfs snapdir if it's present
@@ -575,7 +575,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
         # XXX Incomplete with respect to doc/image.txt description of
         # configuration.
 
-        if self.root == None:
+        if self.root is None:
             raise RuntimeError("self.root must be set")
 
         version = None
@@ -831,7 +831,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
         self.__upgraded = False
 
         if not self.__allow_liveroot() and root == misc.liveroot():
-            if startd == None:
+            if startd is None:
                 startd = root
             raise RuntimeError(
                 "Live root image access is disabled but was \
@@ -1161,7 +1161,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
         self.__upgraded = True
 
         # Determine if on-disk portion of the upgrade is allowed.
-        if self.allow_ondisk_upgrade == False:
+        if self.allow_ondisk_upgrade is False:
             return True
 
         if self.allow_ondisk_upgrade is None and self.type != IMG_USER:
@@ -1664,14 +1664,11 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
         image."""
 
         # if we're simulating a live root then allow access to it
-        if (
-            DebugValues.get_value("simulate_live_root")
-            or "PKG_LIVE_ROOT" in os.environ
-        ):
+        if DebugValues["simulate_live_root"] or "PKG_LIVE_ROOT" in os.environ:
             return True
 
         # check if the user disabled access to the live root
-        if DebugValues.get_value("simulate_no_live_root"):
+        if DebugValues["simulate_no_live_root"]:
             return False
         if "PKG_NO_LIVE_ROOT" in os.environ:
             return False
@@ -2013,7 +2010,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 # Not interesting; already installed.
                 return False, None
             img_entry = img_kcat.get_entry(pfmri=pfmri)
-            if not img_entry is None:
+            if img_entry is not None:
                 # Already in image known catalog.
                 return False, None
             return True, new_entry
@@ -3952,8 +3949,8 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
             portable.rename(sp, stripped_path)
             portable.rename(op, offsets_path)
             portable.rename(bp, conflicting_keys_path)
-        except EnvironmentError as e:
-            if e.errno == errno.EACCES or e.errno == errno.EROFS:
+        except EnvironmentError as err:
+            if err.errno == errno.EACCES or err.errno == errno.EROFS:
                 self.__action_cache_dir = self.temporary_dir()
                 stripped_path = os.path.join(
                     self.__action_cache_dir, "actions.stripped"
@@ -3968,14 +3965,13 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 portable.rename(op, offsets_path)
                 portable.rename(bp, conflicting_keys_path)
             else:
-                exc_type, exc_value, exc_traceback = sys.exc_info()
                 try:
                     os.unlink(stripped_path)
                     os.unlink(offsets_path)
                     os.unlink(conflicting_keys_path)
                 except:
                     pass
-                raise exc_value.with_traceback(exc_traceback)
+                raise err
 
         progtrack.job_add_progress(progtrack.JOB_FAST_LOOKUP)
         progtrack.job_done(progtrack.JOB_FAST_LOOKUP)
@@ -4695,7 +4691,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
         cleanup.
         """
 
-        if DebugValues.get_value("simulate-plan-hang"):
+        if DebugValues["simulate-plan-hang"]:
             # If pkg5.hang file is present in image dir, then
             # sleep after loading configuration until file is
             # gone.  This is used by the test suite for signal
@@ -5117,7 +5113,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 img = newimg
 
         pfmri = img.get_version_installed(img.strtofmri("package/pkg"))
-        if not pfmri or not pkgdefs.PKG_STATE_UPGRADABLE in img.get_pkg_state(
+        if not pfmri or pkgdefs.PKG_STATE_UPGRADABLE not in img.get_pkg_state(
             pfmri
         ):
             # If no version of the package system is installed or a

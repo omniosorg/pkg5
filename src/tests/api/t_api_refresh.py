@@ -59,12 +59,12 @@ class TestApiRefresh(pkg5unittest.ManyDepotTestCase):
 
     pkgs_data = {}
     for i, pkg in enumerate(pkgs):
-        pkgs_data[
-            i
-        ] = """
+        pkgs_data[i] = (
+            """
                     open {pkg}
                     close""".format(
-            pkg=pkg
+                pkg=pkg
+            )
         )
 
     def setUp(self):

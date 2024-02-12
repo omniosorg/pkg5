@@ -21,29 +21,39 @@
 #
 
 #
-# Copyright (c) 2009, 2019, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2024, Oracle and/or its affiliates.
 #
 
-import pkg.site_paths
+try:
+    import pkg.site_paths
 
-pkg.site_paths.init()
-import getopt
-import gettext
-import locale
-import sys
-import traceback
-import warnings
-from functools import cmp_to_key
+    pkg.site_paths.init()
+    import getopt
+    import gettext
+    import locale
+    import sys
+    import traceback
+    import warnings
+    from functools import cmp_to_key
+    import pkg.actions
+    import pkg.variant as variant
+    import pkg.client.api_errors as apx
+    import pkg.manifest as manifest
+    import pkg.misc as misc
+    from pkg.misc import PipeError, CMP_UNSIGNED, CMP_ALL
+    from collections import defaultdict
+    from itertools import product
+    from pkg.client.pkgdefs import (
+        EXIT_OK,
+        EXIT_OOPS,
+        EXIT_BADOPT,
+        EXIT_PARTIAL,
+        EXIT_FATAL,
+    )
+except KeyboardInterrupt:
+    import sys
 
-import pkg.actions
-import pkg.variant as variant
-import pkg.client.api_errors as apx
-import pkg.manifest as manifest
-import pkg.misc as misc
-from pkg.misc import PipeError, CMP_UNSIGNED, CMP_ALL
-from collections import defaultdict
-from itertools import product
-from pkg.client.pkgdefs import EXIT_OK, EXIT_OOPS, EXIT_BADOPT, EXIT_PARTIAL
+    sys.exit(1)  # EXIT_OOPS
 
 
 def usage(errmsg="", exitcode=EXIT_BADOPT):
@@ -70,7 +80,7 @@ def error(text, exitcode=EXIT_PARTIAL):
 
     print("pkgdiff: {0}".format(text), file=sys.stderr)
 
-    if exitcode != None:
+    if exitcode is not None:
         sys.exit(exitcode)
 
 
@@ -123,7 +133,7 @@ def main_func():
 
     for v in varattrs:
         if len(varattrs[v]) > 1:
-            usage(_("For any variant, only one value may be " "specified."))
+            usage(_("For any variant, only one value may be specified."))
         varattrs[v] = varattrs[v].pop()
 
     ignoreattrs = set(ignoreattrs)
@@ -211,7 +221,7 @@ def main_func():
     for k in set(v1.keys()) & set(v2.keys()):
         if v1[k] != v2[k]:
             error(
-                _("Manifests support different variants " "{v1} {v2}").format(
+                _("Manifests support different variants {v1} {v2}").format(
                     v1=v1, v2=v2
                 )
             )
@@ -416,18 +426,20 @@ if __name__ == "__main__":
     gettext.install("pkg", "/usr/share/locale")
     misc.set_fd_limits(printer=error)
 
-    # disable ResourceWarning: unclosed file
-    warnings.filterwarnings("ignore", category=ResourceWarning)
+    # By default, hide all warnings from users.
+    if not sys.warnoptions:
+        warnings.simplefilter("ignore")
+
     try:
         exit_code = main_func()
     except (PipeError, KeyboardInterrupt):
         exit_code = EXIT_OOPS
-    except SystemExit as __e:
-        exit_code = __e
-    except Exception as __e:
+    except SystemExit:
+        raise
+    except Exception:
         traceback.print_exc()
         error(misc.get_traceback_message(), exitcode=None)
-        exit_code = 99
+        exit_code = EXIT_FATAL
 
     sys.exit(exit_code)
 

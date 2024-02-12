@@ -21,10 +21,9 @@
 #
 
 #
-# Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2024, Oracle and/or its affiliates.
 #
 
-from __future__ import division
 import pkg.site_paths
 
 pkg.site_paths.init()
@@ -113,7 +112,7 @@ if __name__ == "__main__":
         if opt == "-s":
             size = int(arg)
 
-    assert not fname == None
+    assert not fname is None
 
     lg = open(fname)
 

@@ -21,8 +21,8 @@
 #
 
 #
-# Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
-# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
+# Copyright (c) 2011, 2024, Oracle and/or its affiliates.
 #
 
 """
@@ -1582,7 +1582,7 @@ class LinkedImage(object):
         into a single return code."""
 
         _li_rvdict_check(rvdict)
-        if type(rv_map) != type(None):
+        if rv_map is not None:
             assert type(rv_map) == list
             for rv_set, rv in rv_map:
                 assert type(rv_set) == set
@@ -2036,8 +2036,7 @@ class LinkedImage(object):
         )
 
         # check if we support detach for these children.  we don't use
-        # iteritems() when walking lic_dict because we might modify
-        # lic_dict.
+        # items() when walking lic_dict because we might modify lic_dict.
         for lin in lic_dict:
             lip = self.__plugins[lin.lin_type]
             if lip.support_detach or force:
@@ -3915,7 +3914,7 @@ def _rterr(
             ", ".join(saved_temporal_props)
         )
     else:
-        assert err != None
+        assert err is not None
 
     if li:
         if li.ischild():

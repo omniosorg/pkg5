@@ -292,7 +292,7 @@ class PublishingDependency(Dependency):
 
         self.base_names = sorted(base_names)
 
-        if full_paths == None:
+        if full_paths is None:
             self.full_paths = []
         else:
             self.full_paths = full_paths
@@ -310,9 +310,9 @@ class PublishingDependency(Dependency):
 
         attrs = {"{0}.type".format(self.DEPEND_DEBUG_PREFIX): kind}
         if self.full_paths:
-            attrs[
-                "{0}.fullpath".format(self.DEPEND_DEBUG_PREFIX)
-            ] = self.full_paths
+            attrs["{0}.fullpath".format(self.DEPEND_DEBUG_PREFIX)] = (
+                self.full_paths
+            )
         else:
             attrs.update(
                 {

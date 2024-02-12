@@ -21,15 +21,13 @@
 #
 
 #
-# Copyright (c) 2008, 2017, Oracle and/or its affiliates. All rights reserved.
-# Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
+# Copyright (c) 2008, 2024, Oracle and/or its affiliates.
 #
 
 #
 # Missing docstring; pylint: disable=C0111
 #
-
-from __future__ import division
 
 import inspect
 import itertools
@@ -198,8 +196,6 @@ class SpeedEstimator(object):
         # used to disable 'startup mode' if the d/l completes
         # very rapidly.  We'll always start giving the user an
         # estimate once ratiocomplete >= 50%.
-        # pylint is picky about this message:
-        # old-division; pylint: disable=W1619
         ratiocomplete = (
             0.0 if self.goalbytes == 0 else self.__curtotal / self.goalbytes
         )
@@ -267,8 +263,6 @@ class SpeedEstimator(object):
         if self.__donetime is None:
             return None
         try:
-            # pylint is picky about this message:
-            # old-division; pylint: disable=W1619
             return self.goalbytes / self.elapsed()
         except ZeroDivisionError:
             return None
@@ -532,8 +526,6 @@ class GoalTrackerItem(TrackerItem):
         i.e. 37 / 100 would yield 37.0"""
         if self.goalitems is None or self.goalitems == 0:
             return 0
-        # pylint is picky about this message:
-        # old-division; pylint: disable=W1619
         return math.floor(100.0 * self.items / self.goalitems)
 
     def __str__(self):
@@ -573,8 +565,6 @@ def pt_abstract(func):
 # versus front-end APIs.
 #
 class ProgressTrackerBackend(object):
-    # allow def func(args): pass
-    # More than one statement on a line; pylint: disable=C0321
 
     def __init__(self):
         pass
@@ -701,8 +691,6 @@ class ProgressTrackerBackend(object):
 class ProgressTrackerFrontend(object):
     """This essentially abstract class forms the interface that other
     modules in the system use to record progress against various goals."""
-
-    # More than one statement on a line; pylint: disable=C0321
 
     # Major phases of operation
     PHASE_PREPLAN = 1
@@ -3159,8 +3147,8 @@ class FancyUNIXProgressTracker(ProgressTracker):
             not self._ptimer.time_to_print()
             and not outspec.first
             and not outspec.last
-            and not "startpkg" in outspec.changed
-            and not "endpkg" in outspec.changed
+            and "startpkg" not in outspec.changed
+            and "endpkg" not in outspec.changed
         ):
             return
 
@@ -3535,8 +3523,6 @@ def test_progress_tracker(t, gofast=False):
                 pkggoalbytes += delta
             filelist.append(hunks)
 
-    # pylint is picky about this message:
-    # old-division; pylint: disable=W1619
     pauseperfile = approx_time / pkggoalfiles
 
     try:

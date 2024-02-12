@@ -21,48 +21,54 @@
 #
 
 #
-# Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
-# Copyright 2017 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
+# Copyright (c) 2010, 2024, Oracle and/or its affiliates.
 #
 
-import pkg.site_paths
+try:
+    import pkg.site_paths
 
-pkg.site_paths.init()
-import getopt
-import gettext
-import hashlib
-import locale
-import os
-import shutil
-import sys
-import tempfile
-import traceback
-from importlib import reload
+    pkg.site_paths.init()
+    import getopt
+    import gettext
+    import hashlib
+    import locale
+    import os
+    import shutil
+    import sys
+    import tempfile
+    import traceback
+    from importlib import reload
 
-from cryptography import x509
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import serialization
+    from cryptography import x509
+    from cryptography.hazmat.backends import default_backend
+    from cryptography.hazmat.primitives import serialization
 
-import pkg
-import pkg.actions as actions
-import pkg.client.api_errors as api_errors
-import pkg.client.transport.transport as transport
-import pkg.digest as digest
-import pkg.fmri as fmri
-import pkg.manifest as manifest
-import pkg.misc as misc
-import pkg.publish.transaction as trans
-from pkg.client import global_settings
-from pkg.client.debugvalues import DebugValues
-from pkg.misc import emsg, msg, PipeError
+    import pkg
+    import pkg.actions as actions
+    import pkg.client.api_errors as api_errors
+    import pkg.client.transport.transport as transport
+    import pkg.digest as digest
+    import pkg.fmri as fmri
+    import pkg.manifest as manifest
+    import pkg.misc as misc
+    import pkg.publish.transaction as trans
+    from pkg.client import global_settings
+    from pkg.client.debugvalues import DebugValues
+    from pkg.misc import emsg, msg, PipeError
+    from pkg.client.pkgdefs import (
+        EXIT_OK,
+        EXIT_OOPS,
+        EXIT_BADOPT,
+        EXIT_PARTIAL,
+        EXIT_FATAL,
+    )
+except KeyboardInterrupt:
+    import sys
+
+    sys.exit(1)  # EXIT_OOPS
 
 PKG_CLIENT_NAME = "pkgsign"
-
-# pkg exit codes
-EXIT_OK = 0
-EXIT_OOPS = 1
-EXIT_BADOPT = 2
-EXIT_PARTIAL = 3
 
 repo_cache = {}
 
@@ -189,7 +195,7 @@ def main_func():
             if not os.path.isfile(key_path):
                 usage(
                     _(
-                        "{0} was expected to be a key file " "but isn't a file."
+                        "{0} was expected to be a key file but isn't a file."
                     ).format(key_path)
                 )
         elif opt == "--dkey":
@@ -197,7 +203,7 @@ def main_func():
             if not os.path.isfile(dkey):
                 usage(
                     _(
-                        "{0} was expected to be a key file " "but isn't a file."
+                        "{0} was expected to be a key file but isn't a file."
                     ).format(dkey)
                 )
         elif opt == "--dcert":
@@ -220,11 +226,11 @@ def main_func():
         elif opt == "-D":
             try:
                 key, value = arg.split("=", 1)
-                DebugValues.set_value(key, value)
+                DebugValues[key] = value
             except (AttributeError, ValueError):
                 error(
                     _(
-                        "{opt} takes argument of form " "name=value, not {arg}"
+                        "{opt} takes argument of form name=value, not {arg}"
                     ).format(opt=opt, arg=arg)
                 )
     if show_usage:
@@ -242,9 +248,7 @@ def main_func():
         )
 
     if cert_path and not key_path:
-        usage(
-            _("If a certificate is given, its associated key must be " "given.")
-        )
+        usage(_("If a certificate is given, its associated key must be given."))
 
     if chain_certs and not cert_path:
         usage(
@@ -255,7 +259,7 @@ def main_func():
         )
 
     if not pargs:
-        usage(_("At least one fmri or pattern must be provided to " "sign."))
+        usage(_("At least one fmri or pattern must be provided to sign."))
 
     if not set_alg and not key_path:
         sig_alg = "sha256"
@@ -465,15 +469,15 @@ if __name__ == "__main__":
         # We don't want to display any messages here to prevent
         # possible further broken pipe (EPIPE) errors.
         __ret = EXIT_OOPS
-    except SystemExit as _e:
-        raise _e
+    except SystemExit:
+        raise
     except EnvironmentError as _e:
         error(str(api_errors._convert_error(_e)))
-        __ret = 1
-    except:
+        __ret = EXIT_OOPS
+    except Exception:
         traceback.print_exc()
         error(misc.get_traceback_message())
-        __ret = 99
+        __ret = EXIT_FATAL
     sys.exit(__ret)
 
 # Vim hints

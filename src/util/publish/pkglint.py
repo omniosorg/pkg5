@@ -21,34 +21,39 @@
 #
 
 #
-# Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2024, Oracle and/or its affiliates.
 #
 
-import pkg.site_paths
+try:
+    import pkg.site_paths
 
-pkg.site_paths.init()
-import codecs
-import logging
-import sys
-import os
-import gettext
-import locale
-import traceback
-import warnings
-from optparse import OptionParser
+    pkg.site_paths.init()
+    import argparse
+    import codecs
+    import logging
+    import sys
+    import os
+    import gettext
+    import locale
+    import traceback
+    import warnings
 
-from pkg.client.api_errors import InvalidPackageErrors
-from pkg import VERSION
-from pkg.misc import PipeError
-from pkg.client.pkgdefs import EXIT_OK, EXIT_OOPS, EXIT_BADOPT
+    from pkg.client.api_errors import InvalidPackageErrors
+    from pkg import VERSION
+    from pkg.misc import PipeError
+    from pkg.client.pkgdefs import EXIT_OK, EXIT_OOPS, EXIT_BADOPT, EXIT_FATAL
 
-import pkg.lint.engine as engine
-import pkg.lint.log as log
-import pkg.fmri as fmri
-import pkg.manifest
-import pkg.misc as misc
-import pkg.client.api_errors as apx
-import pkg.client.transport.exception as tx
+    import pkg.lint.engine as engine
+    import pkg.lint.log as log
+    import pkg.fmri as fmri
+    import pkg.manifest
+    import pkg.misc as misc
+    import pkg.client.api_errors as apx
+    import pkg.client.transport.exception as tx
+except KeyboardInterrupt:
+    import sys
+
+    sys.exit(1)  # EXIT_OOPS
 
 logger = None
 
@@ -76,89 +81,88 @@ def main_func():
 
     usage = _(
         "\n"
-        "        %prog [-b build_no] [-c cache_dir] [-f file]\n"
+        "        %(prog)s [-b branch] [-c cache_dir] [-f file]\n"
         "            [-l uri ...] [-p regexp] [-r uri ...] [-v]\n"
         "            [-e extension_path ...]\n"
         "            manifest ...\n"
-        "        %prog -L"
+        "        %(prog)s -L"
     )
-    parser = OptionParser(usage=usage)
+    parser = argparse.ArgumentParser(usage=usage)
 
-    parser.add_option(
+    parser.add_argument(
         "-b",
         dest="release",
-        metavar="build_no",
-        help=_("build to use from lint and reference repositories"),
+        metavar="branch",
+        help=_("branch to use from lint and reference repositories"),
     )
-    parser.add_option(
+    parser.add_argument(
         "-c",
         dest="cache",
-        metavar="dir",
+        metavar="cache_dir",
         help=_("directory to use as a repository cache"),
     )
-    parser.add_option(
+    parser.add_argument(
         "-f",
         dest="config",
         metavar="file",
         help=_("specify an alternative pkglintrc file"),
     )
-    parser.add_option(
+    parser.add_argument(
         "-l",
         dest="lint_uris",
         metavar="uri",
+        default=[],
         action="append",
         help=_("lint repository URI"),
     )
-    parser.add_option(
+    parser.add_argument(
         "-L",
         dest="list_checks",
         action="store_true",
         help=_("list checks configured for this session and exit"),
     )
-    parser.add_option(
+    parser.add_argument(
         "-p",
         dest="pattern",
         metavar="regexp",
         help=_("pattern to match FMRIs in lint URI"),
     )
-    parser.add_option(
+    parser.add_argument(
         "-r",
         dest="ref_uris",
         metavar="uri",
+        default=[],
         action="append",
         help=_("reference repository URI"),
     )
-    parser.add_option(
+    parser.add_argument(
         "-e",
         dest="extension_path",
-        metavar="dir",
+        metavar="extension_path",
         action="append",
         help=_("extension_path"),
     )
-    parser.add_option(
+    parser.add_argument(
         "-v",
         dest="verbose",
         action="store_true",
         help=_("produce verbose output, overriding settings in pkglintrc"),
     )
+    parser.add_argument("manifests", nargs="*")
 
-    opts, args = parser.parse_args(sys.argv[1:])
+    args = parser.parse_args()
 
     # without a cache option, we can't access repositories, so expect
     # local manifests.
-    if not (opts.cache or opts.list_checks) and not args:
+    if not (args.cache or args.list_checks) and not args.manifests:
         parser.error(
             _("Required -c option missing, no local manifests provided.")
         )
 
-    pattern = opts.pattern
-    opts.ref_uris = _make_list(opts.ref_uris)
-    opts.lint_uris = _make_list(opts.lint_uris)
-
     logger = logging.getLogger("pkglint")
     ch = logging.StreamHandler(sys.stdout)
 
-    if opts.verbose:
+    if args.verbose:
         logger.setLevel(logging.DEBUG)
         ch.setLevel(logging.DEBUG)
 
@@ -170,41 +174,41 @@ def main_func():
 
     lint_logger = log.PlainLogFormatter()
     try:
-        if not opts.list_checks:
+        if not args.list_checks:
             msg(_("Lint engine setup..."))
         lint_engine = engine.LintEngine(
             lint_logger,
-            config_file=opts.config,
-            verbose=opts.verbose,
-            extension_path=opts.extension_path,
+            config_file=args.config,
+            verbose=args.verbose,
+            extension_path=args.extension_path,
         )
 
-        if opts.list_checks:
+        if args.list_checks:
             list_checks(
                 lint_engine.checkers,
                 lint_engine.excluded_checkers,
-                opts.verbose,
+                args.verbose,
             )
             return EXIT_OK
 
-        if (opts.lint_uris or opts.ref_uris) and not opts.cache:
+        if (args.lint_uris or args.ref_uris) and not args.cache:
             parser.error(
-                _("Required -c option missing when using " "repositories.")
+                _("Required -c option missing when using repositories.")
             )
 
         manifests = []
-        if len(args) >= 1:
-            manifests = read_manifests(args, lint_logger)
+        if args.manifests:
+            manifests = read_manifests(args.manifests, lint_logger)
             if None in manifests or lint_logger.produced_lint_msgs():
                 error(_("Fatal error in manifest - exiting."))
                 return EXIT_OOPS
         lint_engine.setup(
-            ref_uris=opts.ref_uris,
-            lint_uris=opts.lint_uris,
+            ref_uris=args.ref_uris,
+            lint_uris=args.lint_uris,
             lint_manifests=manifests,
-            cache=opts.cache,
-            pattern=pattern,
-            release=opts.release,
+            cache=args.cache,
+            pattern=args.pattern,
+            release=args.release,
         )
 
         msg(_("Starting lint run..."))
@@ -307,7 +311,7 @@ def read_manifests(names, lint_logger):
             continue
         except IOError as e:
             lint_logger.critical(
-                _("Unable to read manifest file " "{file}: {err}").format(
+                _("Unable to read manifest file {file}: {err}").format(
                     file=filename, err=e
                 ),
                 msgid="lint.manifest001",
@@ -351,7 +355,7 @@ def read_manifests(names, lint_logger):
                 manifest.fmri = pkg.fmri.PkgFmri(manifest["pkg.fmri"])
             except fmri.IllegalFmri as e:
                 lint_logger.critical(
-                    _("Error in file {file}: " "{err}").format(
+                    _("Error in file {file}: {err}").format(
                         file=filename, err=e
                     ),
                     "lint.manifest002",
@@ -379,39 +383,30 @@ def read_manifests(names, lint_logger):
     return manifests
 
 
-def _make_list(opt):
-    """Makes a list out of opt, and returns it."""
-
-    if isinstance(opt, list):
-        return opt
-    elif opt is None:
-        return []
-    else:
-        return [opt]
-
-
 if __name__ == "__main__":
     misc.setlocale(locale.LC_ALL, "", error)
     gettext.install("pkg", "/usr/share/locale")
     misc.set_fd_limits(printer=error)
 
-    # disable ResourceWarning: unclosed file
-    warnings.filterwarnings("ignore", category=ResourceWarning)
+    # By default, hide all warnings from users.
+    if not sys.warnoptions:
+        warnings.simplefilter("ignore")
+
     try:
         __ret = main_func()
     except (PipeError, KeyboardInterrupt):
         # We don't want to display any messages here to prevent
         # possible further broken pipe (EPIPE) errors.
         __ret = EXIT_BADOPT
-    except SystemExit as __e:
-        __ret = __e.code
+    except SystemExit:
+        raise
     except (apx.InvalidDepotResponseException, tx.TransportFailures) as __e:
         error(__e)
         __ret = EXIT_BADOPT
-    except:
+    except Exception:
         traceback.print_exc()
         error(misc.get_traceback_message())
-        __ret = 99
+        __ret = EXIT_FATAL
 
     sys.exit(__ret)
 

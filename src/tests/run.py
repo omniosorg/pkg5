@@ -21,8 +21,8 @@
 #
 
 #
-# Copyright (c) 2008, 2017, Oracle and/or its affiliates. All rights reserved.
 # Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright (c) 2008, 2024, Oracle and/or its affiliates.
 #
 
 import multiprocessing
@@ -107,23 +107,29 @@ if __name__ == "__main__":
         cov_file = "{0}/pkg5".format(covdir)
         cov = coverage.coverage(data_file=cov_file, data_suffix=True)
         cov.start()
+
     # Make all warnings be errors.
     warnings.simplefilter("error")
 
-    # These warnings only happen in the test suite when importing
-    # pkg5unittest. It may be because of circular import inside pkg5unittest.
-    # Suppress the warning.
+    # Suppress deprecation warnings for known occurrences
+    # outside of the pkg codebase.
     warnings.filterwarnings(
-        "ignore", message="Not importing directory .*", category=ImportWarning
-    )
-    warnings.filterwarnings(
-        "ignore",
-        message="CRLExtensionOID has been " "renamed to CRLEntryExtensionOID",
-        category=PendingDeprecationWarning,
+        "ignore", module="bemgmt|rad.encodings.xdr", category=DeprecationWarning
     )
 
     # Suppress ResourceWarning: unclosed file.
     warnings.filterwarnings("ignore", category=ResourceWarning)
+
+    # Apply similar filters in subprocesses as well
+    # os.environ["PYTHONWARNINGS"] = ",".join(
+    #    (
+    #        "error",
+    #        "ignore::DeprecationWarning:bemgmt",
+    #        "ignore::DeprecationWarning:rad.encodings.xdr",
+    #        "ignore::DeprecationWarning:cherrypy.lib.httputil",
+    #        "ignore::ResourceWarning",
+    #    )
+    # )
 
     try:
         #

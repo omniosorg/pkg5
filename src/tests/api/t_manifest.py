@@ -21,7 +21,7 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2008, 2022, Oracle and/or its affiliates.
+# Copyright (c) 2008, 2024, Oracle and/or its affiliates.
 
 from . import testutils
 
@@ -241,9 +241,9 @@ link path=usr/lib/amd64/libjpeg.so target=libjpeg.so.62.0.0
         # added
         #
         for d in diffs:
-            if type(d[0]) == type(None):
+            if d[0] is None:
                 self.assertEqual(type(d[1]), pkg.actions.file.FileAction)
-            if type(d[1]) == type(None):
+            if d[1] is None:
                 self.assertEqual(
                     type(d[0]), pkg.actions.directory.DirectoryAction
                 )

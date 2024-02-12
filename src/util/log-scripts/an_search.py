@@ -136,7 +136,7 @@ def count_search(mg, d):
         search_by_ip[mg["ip"]] = 1
 
     pm = pkg_pat.search(mg["uri"])
-    if pm != None:
+    if pm is not None:
         pg = pm.groupdict()
 
         kw = unquote(pg["keywords"])
@@ -166,7 +166,7 @@ def count_search(mg, d):
         # XXX should measure downtime via 503, other failure responses
 
     agent = pkg_agent_pat.search(mg["agent"])
-    if agent == None:
+    if agent is None:
         return
 
     ag = agent.groupdict()

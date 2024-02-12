@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2007, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2024, Oracle and/or its affiliates.
 #
 
 import os
@@ -172,8 +172,6 @@ class SolarisPackageDirBundle(pkg.bundle.Bundle):
             return None
 
         if mapline.type in "fev":
-            # false positive
-            # file-builtin; pylint: disable=W1607
             act = file.FileAction(
                 data,
                 mode=mapline.mode,

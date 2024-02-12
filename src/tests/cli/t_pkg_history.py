@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2024, Oracle and/or its affiliates.
 #
 
 from . import testutils
@@ -150,7 +150,7 @@ class TestPkgHistory(pkg5unittest.ManyDepotTestCase):
 
         self.pkg("history -H")
         o = self.output
-        self.assertTrue(re.search(r"START\s+", o.splitlines()[0]) == None)
+        self.assertTrue(re.search(r"START\s+", o.splitlines()[0]) is None)
 
         # Only the operation is listed in short format.
         for op in operations:
@@ -187,7 +187,9 @@ class TestPkgHistory(pkg5unittest.ManyDepotTestCase):
         o = self.output
         # Ensure that the first item in history output is now
         # purge-history.
-        self.assertTrue(re.search("purge-history", o.splitlines()[0]) != None)
+        self.assertTrue(
+            re.search("purge-history", o.splitlines()[0]) is not None
+        )
 
     def test_4_bug_4639(self):
         """Test that install and uninstall of non-existent packages
@@ -286,7 +288,7 @@ class TestPkgHistory(pkg5unittest.ManyDepotTestCase):
 
         self.pkg("history -H")
         o = self.output
-        self.assertTrue(re.search(r"START\s+", o.splitlines()[0]) == None)
+        self.assertTrue(re.search(r"START\s+", o.splitlines()[0]) is None)
 
         # Only the operation is listed in short format.
         for op in operations:
@@ -621,22 +623,21 @@ class TestPkgHistory(pkg5unittest.ManyDepotTestCase):
         """Verify we can get history when unicode locale is set"""
 
         # If pkg history run when below locales set, it fails.
-        unicode_locales = [
+        unicode_locales = {
             "fr_FR.UTF-8",
             "zh_TW.UTF-8",
             "zh_CN.UTF-8",
             "ko_KR.UTF-8",
             "ja_JP.UTF-8",
-        ]
-        p = subprocess.Popen(
+        }
+        res = subprocess.run(
             ["/usr/bin/locale", "-a"],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
+            text=True,
         )
-        lines = p.stdout.readlines()
-        # subprocess return bytes and we need str
-        locale_list = [force_str(i.rstrip()) for i in lines]
-        unicode_list = list(set(locale_list) & set(unicode_locales))
+        available_locales = set(res.stdout.splitlines())
+        unicode_list = list(available_locales & unicode_locales)
         self.assertTrue(
             unicode_list,
             "You must have one of the "
