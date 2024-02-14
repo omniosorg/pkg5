@@ -92,7 +92,7 @@ class NoIndexException(Exception):
         self.index_dir = index_dir
 
     def __str__(self):
-        return "Could not find index to search, looked in: " "{0}".format(
+        return "Could not find index to search, looked in: {0}".format(
             self.index_dir
         )
 

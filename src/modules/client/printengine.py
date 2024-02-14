@@ -106,7 +106,7 @@ class POSIXPrintEngine(PrintEngine):
             self.__el = curses.tigetstr("el")
         except curses.error:
             raise PrintEngineException(
-                "Unknown terminal " "'{0}'".format(os.environ.get("TERM", ""))
+                "Unknown terminal '{0}'".format(os.environ.get("TERM", ""))
             )
 
     def putp(self, string):
@@ -272,7 +272,7 @@ def test_logging_printengine(output_file):
     pe.cprint("Did you see this? ", end="")
     pe.cprint("And this?")
     pe.cprint(
-        "If the previous three sentences are on the same line, " "it's working."
+        "If the previous three sentences are on the same line, it's working."
     )
     pe.cprint("You need to see one more line after this one.")
     pe.cprint("This should be the last line, printed by flushing", end="")

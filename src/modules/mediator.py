@@ -57,7 +57,7 @@ def valid_mediator_version(value):
 
     if error:
         return False, _(
-            "'{value}' is not a valid mediator-version: " "{error}"
+            "'{value}' is not a valid mediator-version: {error}"
         ).format(**locals())
     return False, _("'{0}' is not a valid mediator-version").format(value)
 

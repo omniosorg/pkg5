@@ -289,7 +289,7 @@ class DepthLimitedModuleFinder(modulefinder.ModuleFinder):
         if name == "os.path":
             self.msg(
                 2,
-                "bypassing os.path import - importing os " "instead",
+                "bypassing os.path import - importing os instead",
                 name,
                 caller,
                 fromlist,

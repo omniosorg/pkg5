@@ -122,7 +122,7 @@ class RepositoryFileNotFoundError(RepositoryError):
 
     def __str__(self):
         return _(
-            "No file could be found for the specified " "hash name: '{0}'."
+            "No file could be found for the specified hash name: '{0}'."
         ).format(self.data)
 
 
@@ -137,7 +137,7 @@ class RepositoryInvalidError(RepositoryError):
                 "package repository."
             )
         return _(
-            "The path '{0}' does not contain a valid package " "repository."
+            "The path '{0}' does not contain a valid package repository."
         ).format(self.data)
 
 
@@ -1662,7 +1662,7 @@ class _RepoStore(object):
                             )
                         )
                     raise RepositoryError(
-                        _("unable to " "write to index directory.")
+                        _("unable to write to index directory.")
                     )
                 raise
         finally:
@@ -2493,9 +2493,7 @@ class _RepoStore(object):
                                 pfmri,
                                 {
                                     "hash": fname,
-                                    "err": _(
-                                        "Permission " "denied.", "path", h
-                                    ),
+                                    "err": _("Permission denied.", "path", h),
                                 },
                             )
                         )
@@ -2731,7 +2729,7 @@ class _RepoStore(object):
                 fixed_paths.add(path)
             except Exception as e:
                 status = REPO_FIX_FAILED
-                message = _("Unable to quarantine {path}: " "{err}").format(
+                message = _("Unable to quarantine {path}: {err}").format(
                     path=path, err=e
                 )
             finally:

@@ -275,7 +275,7 @@ def move(src, dst):
             )
         elif e.errno == errno.ENOTDIR and S_ISDIR(s.st_mode):
             raise shutil.Error(
-                "Destination path '{0}' already " "exists".format(dst)
+                "Destination path '{0}' already exists".format(dst)
             )
         else:
             raise api_errors._convert_error(e)

@@ -105,7 +105,7 @@ class LicenseAction(generic.Action):
         except zlib.error as e:
             raise ActionExecutionError(
                 self,
-                details=_("Error " "decompressing payload: {0}").format(
+                details=_("Error decompressing payload: {0}").format(
                     " ".join([str(a) for a in e.args])
                 ),
                 error=e,
@@ -158,14 +158,14 @@ class LicenseAction(generic.Action):
             except EnvironmentError as e:
                 if e.errno == errno.ENOENT:
                     errors.append(
-                        _("License file {0} does " "not exist.").format(path)
+                        _("License file {0} does not exist.").format(path)
                     )
                     return errors, warnings, info
                 raise
 
             if chash != hash_val:
                 errors.append(
-                    _("Hash: '{found}' should be " "'{expected}'").format(
+                    _("Hash: '{found}' should be '{expected}'").format(
                         found=chash, expected=hash_val
                     )
                 )

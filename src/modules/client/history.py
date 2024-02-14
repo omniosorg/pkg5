@@ -356,7 +356,7 @@ class History(object):
     def __setattr__(self, name, value):
         if name == "client_args":
             raise AttributeError(
-                "'history' object attribute '{0}' " "is read-only.".format(name)
+                "'history' object attribute '{0}' is read-only.".format(name)
             )
 
         if not name.startswith("operation_"):

@@ -149,7 +149,7 @@ class DriverAction(generic.Action):
             args = rem_base + ("-i", "{0}".format(i), driver_name)
             DriverAction.__call(
                 args,
-                "driver ({name}) upgrade (removal " "of alias '{alias}')",
+                "driver ({name}) upgrade (removal of alias '{alias}')",
                 {"name": driver_name, "alias": i},
             )
 
@@ -368,7 +368,7 @@ from {imgroot}/etc/driver_aliases.".format(
             )
             self.__call(
                 args,
-                "driver ({name}) clone permission " "update",
+                "driver ({name}) clone permission update",
                 {"name": self.attrs["name"]},
             )
 
@@ -433,7 +433,7 @@ from {imgroot}/etc/driver_aliases.".format(
             args = add_base + ("-i", "{0}".format(i), self.attrs["name"])
             self.__call(
                 args,
-                "driver ({name}) upgrade (addition " "of alias '{alias}')",
+                "driver ({name}) upgrade (addition of alias '{alias}')",
                 {"name": self.attrs["name"], "alias": i},
             )
 
@@ -597,7 +597,7 @@ from {imgroot}/etc/driver_aliases.".format(
             args = rem_base + ("-m", i, self.attrs["name"])
             self.__call(
                 args,
-                "driver ({name}) upgrade (removal " "of minor perm '{perm}')",
+                "driver ({name}) upgrade (removal of minor perm '{perm}')",
                 {"name": self.attrs["name"], "perm": i},
             )
 
@@ -605,7 +605,7 @@ from {imgroot}/etc/driver_aliases.".format(
             args = add_base + ("-m", i, self.attrs["name"])
             self.__call(
                 args,
-                "driver ({name}) upgrade (addition " "of minor perm '{perm}')",
+                "driver ({name}) upgrade (addition of minor perm '{perm}')",
                 {"name": self.attrs["name"], "perm": i},
             )
 
@@ -613,7 +613,7 @@ from {imgroot}/etc/driver_aliases.".format(
             args = add_base + ("-P", i, self.attrs["name"])
             self.__call(
                 args,
-                "driver ({name}) upgrade (addition " "of privilege '{priv}')",
+                "driver ({name}) upgrade (addition of privilege '{priv}')",
                 {"name": self.attrs["name"], "priv": i},
             )
 
@@ -621,7 +621,7 @@ from {imgroot}/etc/driver_aliases.".format(
             args = rem_base + ("-P", i, self.attrs["name"])
             self.__call(
                 args,
-                "driver ({name}) upgrade (removal " "of privilege '{priv}')",
+                "driver ({name}) upgrade (removal of privilege '{priv}')",
                 {"name": self.attrs["name"], "priv": i},
             )
 
@@ -655,7 +655,7 @@ from {imgroot}/etc/driver_aliases.".format(
             args = rem_base + ("-p", minornode, self.attrs["name"])
             self.__call(
                 args,
-                "driver ({name}) upgrade (removal " "of policy '{policy}')",
+                "driver ({name}) upgrade (removal of policy '{policy}')",
                 {"name": self.attrs["name"], "policy": i},
             )
 
@@ -663,7 +663,7 @@ from {imgroot}/etc/driver_aliases.".format(
             args = add_base + ("-p", i, self.attrs["name"])
             self.__call(
                 args,
-                "driver ({name}) upgrade (addition " "of policy '{policy}')",
+                "driver ({name}) upgrade (addition of policy '{policy}')",
                 {"name": self.attrs["name"], "policy": i},
             )
 
@@ -932,22 +932,22 @@ from {imgroot}/etc/driver_aliases.".format(
         mfst_aliases = set(self.attrlist("alias"))
         for a in onfs_aliases - mfst_aliases:
             warnings.append(
-                _("extra alias '{0}' found in " "etc/driver_aliases").format(a)
+                _("extra alias '{0}' found in etc/driver_aliases").format(a)
             )
         for a in mfst_aliases - onfs_aliases:
             errors.append(
-                _("alias '{0}' missing from " "etc/driver_aliases").format(a)
+                _("alias '{0}' missing from etc/driver_aliases").format(a)
             )
 
         onfs_classes = set(onfs.attrlist("class"))
         mfst_classes = set(self.attrlist("class"))
         for a in onfs_classes - mfst_classes:
             warnings.append(
-                _("extra class '{0}' found in " "etc/driver_classes").format(a)
+                _("extra class '{0}' found in etc/driver_classes").format(a)
             )
         for a in mfst_classes - onfs_classes:
             errors.append(
-                _("class '{0}' missing from " "etc/driver_classes").format(a)
+                _("class '{0}' missing from etc/driver_classes").format(a)
             )
 
         onfs_perms = set(onfs.attrlist("perms"))
@@ -962,7 +962,7 @@ from {imgroot}/etc/driver_aliases.".format(
         for a in mfst_perms - onfs_perms:
             errors.append(
                 _(
-                    "minor node permission '{0}' missing " "from etc/minor_perm"
+                    "minor node permission '{0}' missing from etc/minor_perm"
                 ).format(a)
             )
 
@@ -1038,7 +1038,7 @@ from {imgroot}/etc/driver_aliases.".format(
             )
             self.__call(
                 args,
-                "driver ({name}) clone permission " "update",
+                "driver ({name}) clone permission update",
                 {"name": self.attrs["name"]},
             )
 

@@ -252,16 +252,21 @@ def get_root(path):
         return drivepath[0] + "\\"
 
 
-def assert_mode(path, mode):
-    # only compare user's permission bits on Windows
+def assert_mode(path, mode, allow_superset=False):
     fmode = stat.S_IMODE(os.lstat(path).st_mode)
-    if (mode & stat.S_IRWXU) != (fmode & stat.S_IRWXU):
-        ae = AssertionError(
-            "mode mismatch for {0}, has {1:o}, "
-            "want {2:o}".format(path, fmode, mode)
-        )
-        ae.mode = fmode
-        raise ae
+
+    # only compare user's permission bits on Windows
+    ufmode = fmode & stat.S_IRWXU
+    umode = mode & stat.S_IRWXU
+
+    if umode == ufmode or (allow_superset and (ufmode & umode) == umode):
+        return
+
+    ae = AssertionError(
+        f"mode mismatch for {path}, has {fmode:o}, want {mode:o}"
+    )
+    ae.mode = fmode
+    raise ae
 
 
 def copyfile(src, dst):

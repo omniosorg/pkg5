@@ -173,7 +173,7 @@ def check_fmris(attr, fmris, zone=None):
                 )
             )
             logger.error(
-                _("Actuators for {attr} will not be run " "for {fmri}.").format(
+                _("Actuators for {attr} will not be run for {fmri}.").format(
                     **locals()
                 )
             )

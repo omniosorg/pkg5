@@ -80,9 +80,9 @@ class TransactionRepositoryURLError(TransactionError):
 
     def __str__(self):
         if "scheme" in self._args:
-            return _(
-                "Unsupported scheme '{scheme}' in URL: " "'{url}'."
-            ).format(scheme=self._args["scheme"], url=self.data)
+            return _("Unsupported scheme '{scheme}' in URL: '{url}'.").format(
+                scheme=self._args["scheme"], url=self.data
+            )
         elif "netloc" in self._args:
             return _("Malformed URL: '{0}'.").format(self.data)
         return _("Invalid repository URL: '{url}': {msg}").format(
@@ -110,7 +110,7 @@ class TransactionOperationError(TransactionError):
             )
         if self._args.get("trans_id", None):
             return _(
-                "'{op}' failed for transaction ID " "'{trans_id}': {msg}"
+                "'{op}' failed for transaction ID '{trans_id}': {msg}"
             ).format(
                 op=self.data,
                 trans_id=self._args["trans_id"],
@@ -118,7 +118,7 @@ class TransactionOperationError(TransactionError):
             )
         if self.data:
             return _(
-                "'{op}' failed; unable to initiate " "transaction:\n{msg}"
+                "'{op}' failed; unable to initiate transaction:\n{msg}"
             ).format(op=self.data, msg=self._args.get("msg", ""))
         return _("Unable to initiate transaction:\n{0}").format(
             self._args.get("msg", "")
@@ -838,7 +838,7 @@ class Transaction(object):
             scheme = "null"
         if scheme != "null" and (not xport or not pub):
             raise TransactionError(
-                "Caller must supply transport " "and publisher."
+                "Caller must supply transport and publisher."
             )
         if scheme not in cls.__schemes:
             raise TransactionRepositoryURLError(origin_url, scheme=scheme)

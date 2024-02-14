@@ -105,9 +105,9 @@ def ar_open(root, path, flags, mode=None, create=False, truncate=False):
 
     # we're going to update root and path so prepare an error
     # message with the existing values now.
-    eremote = _(
-        "Path outside alternate root: root={root}, " "path={path}"
-    ).format(root=root, path=path)
+    eremote = _("Path outside alternate root: root={root}, path={path}").format(
+        root=root, path=path
+    )
 
     # make target into a relative path
     if os.path.isabs(path):

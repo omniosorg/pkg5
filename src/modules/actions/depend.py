@@ -126,7 +126,7 @@ class DependencyAction(generic.Action):
         errors = []
         if fmri.pkg_name not in ppkgs_dict:
             errors.append(
-                _("Package is not installed in " "parent image {0}").format(
+                _("Package is not installed in parent image {0}").format(
                     fmri.pkg_name
                 )
             )
@@ -137,7 +137,7 @@ class DependencyAction(generic.Action):
             # package is from a different publisher
             errors.append(
                 _(
-                    "Package in parent is from a " "different publisher: {0}"
+                    "Package in parent is from a different publisher: {0}"
                 ).format(pf)
             )
             return errors
@@ -156,15 +156,11 @@ class DependencyAction(generic.Action):
 
         if pf.version.is_successor(fmri.version, pkg.version.CONSTRAINT_NONE):
             errors.append(
-                _("Parent image has a newer " "version of package {0}").format(
-                    pf
-                )
+                _("Parent image has a newer version of package {0}").format(pf)
             )
         else:
             errors.append(
-                _("Parent image has an older " "version of package {0}").format(
-                    pf
-                )
+                _("Parent image has an older version of package {0}").format(pf)
             )
 
         return errors
@@ -183,7 +179,7 @@ class DependencyAction(generic.Action):
         ):
             errors.append(
                 _(
-                    "{dep_type} dependency {dep_val} " "is downrev ({inst_ver})"
+                    "{dep_type} dependency {dep_val} is downrev ({inst_ver})"
                 ).format(
                     dep_type=ctype, dep_val=min_fmri, inst_ver=installed_version
                 )
@@ -199,7 +195,7 @@ class DependencyAction(generic.Action):
         ):
             errors.append(
                 _(
-                    "{dep_type} dependency {dep_val} " "is uprev ({inst_ver})"
+                    "{dep_type} dependency {dep_val} is uprev ({inst_ver})"
                 ).format(
                     dep_type=ctype, dep_val=max_fmri, inst_ver=installed_version
                 )
@@ -313,7 +309,7 @@ class DependencyAction(generic.Action):
             if group_stems and not matching_stems:
                 stems = ", ".join(p for p in group_stems)
                 errors.append(
-                    _("Group dependency on one of {0} not " "met").format(stems)
+                    _("Group dependency on one of {0} not met").format(stems)
                 )
             return errors, warnings, info
         elif ctype == "require-any":
@@ -328,7 +324,7 @@ class DependencyAction(generic.Action):
                     errors.extend(e)
             if not errors:  # none was installed
                 errors.append(
-                    _("Required dependency on one of " "{0} not met").format(
+                    _("Required dependency on one of {0} not met").format(
                         ", ".join((str(p) for p in pfmris))
                     )
                 )
@@ -352,7 +348,7 @@ class DependencyAction(generic.Action):
 
         if required and not installed_version:
             errors.append(
-                _("Required dependency {0} is not " "installed").format(pfmri)
+                _("Required dependency {0} is not installed").format(pfmri)
             )
 
         # cannot verify origin since it applys to upgrade
@@ -571,9 +567,9 @@ class DependencyAction(generic.Action):
                     errors.append(
                         (
                             attr,
-                            _(
-                                "invalid {attr} value " "'{value}': {error}"
-                            ).format(attr=attr, value=f, error=str(e)),
+                            _("invalid {attr} value '{value}': {error}").format(
+                                attr=attr, value=f, error=str(e)
+                            ),
                         )
                     )
 

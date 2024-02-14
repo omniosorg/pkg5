@@ -120,7 +120,7 @@ class LinkAction(generic.Action):
 
             if target != atarget:
                 errors.append(
-                    _("Target: '{found}' should be " "'{expected}'").format(
+                    _("Target: '{found}' should be '{expected}'").format(
                         found=atarget, expected=target
                     )
                 )

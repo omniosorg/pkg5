@@ -1767,7 +1767,7 @@ class BlendedConfig(object):
         """Accessor method for publishers"""
         if self.__is_sys_pub(prefix):
             raise apx.ModifyingSyspubException(
-                _("{0} is a system " "publisher and cannot be unset.").format(
+                _("{0} is a system publisher and cannot be unset.").format(
                     prefix
                 )
             )

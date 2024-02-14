@@ -252,9 +252,9 @@ class PkgSolver(object):
     def __str__(self):
         s = "Solver: ["
         if self.__state in [SOLVER_FAIL, SOLVER_SUCCESS]:
-            s += (
-                " Variables: {0:d} Clauses: {1:d} Iterations: " "{2:d}"
-            ).format(self.__variables, self.__clauses, self.__iterations)
+            s += (" Variables: {0:d} Clauses: {1:d} Iterations: {2:d}").format(
+                self.__variables, self.__clauses, self.__iterations
+            )
         s += " State: {0}]".format(self.__state)
 
         s += "\nTimings: ["
@@ -394,11 +394,7 @@ class PkgSolver(object):
                 continue
 
             ret.extend(
-                [
-                    _("No matching version of {0} can be " "installed:").format(
-                        name
-                    )
-                ]
+                [_("No matching version of {0} can be installed:").format(name)]
             )
             ret.extend(
                 self.__fmri_list_errors(
@@ -862,7 +858,7 @@ class PkgSolver(object):
         if ms:
             info.append("")
             info.append(
-                _("Plan Creation: dependency error(s) in " "proposed packages:")
+                _("Plan Creation: dependency error(s) in proposed packages:")
             )
             info.append("")
             for s in ms:
@@ -889,7 +885,7 @@ class PkgSolver(object):
                 )
             )
             info.append(
-                _("Dependency analysis is unable to " "determine exact cause.")
+                _("Dependency analysis is unable to determine exact cause.")
             )
             info.append(
                 _(
@@ -913,14 +909,10 @@ class PkgSolver(object):
 
         assert (
             trigger_op in self.__triggered_ops
-        ), "{0} is " "not a valid trigger op for pkg actuators".format(
-            trigger_op
-        )
+        ), "{0} is not a valid trigger op for pkg actuators".format(trigger_op)
         assert (
             exec_op in self.__triggered_ops[trigger_op]
-        ), "{0} is " "not a valid execution op for pkg actuators".format(
-            exec_op
-        )
+        ), "{0} is not a valid execution op for pkg actuators".format(exec_op)
         assert isinstance(fmris, set)
 
         self.__triggered_ops[trigger_op][exec_op] |= fmris
@@ -1128,9 +1120,7 @@ class PkgSolver(object):
             self.__trim(
                 set(self.__get_catalog_fmris(name)) - set(proposed_dict[name]),
                 _TRIM_PROPOSED_VER,
-                N_(
-                    "This version excluded by specified " "installation version"
-                ),
+                N_("This version excluded by specified installation version"),
             )
             # trim packages excluded by incorps in proposed.
             self.__trim_recursive_incorps(
@@ -1180,9 +1170,7 @@ class PkgSolver(object):
         # incorporations
         for i, flist in zip(inc_list, con_lists):
             reason = (
-                N_(
-                    "This version is excluded by installed " "incorporation {0}"
-                ),
+                N_("This version is excluded by installed incorporation {0}"),
                 (i.get_short_fmri(anarchy=True, include_scheme=False),),
             )
             self.__trim(
@@ -1503,7 +1491,7 @@ class PkgSolver(object):
         skey = operator.attrgetter("pkg_name")
         info = []
         info.append(
-            _("No solution found to update to latest available " "versions.")
+            _("No solution found to update to latest available versions.")
         )
         info.append(
             _(
@@ -1532,7 +1520,7 @@ class PkgSolver(object):
                 info.append("  {0}".format(s))
         else:
             info.append(
-                _("Dependency analysis is unable to " "determine the cause.")
+                _("Dependency analysis is unable to determine the cause.")
             )
             info.append(
                 _(
@@ -2632,9 +2620,7 @@ class PkgSolver(object):
             raise DependencyException(
                 _TRIM_DEP_MISSING,
                 (
-                    N_(
-                        "No version for '{0}' dependency on {1} can " "be found"
-                    ),
+                    N_("No version for '{0}' dependency on {1} can be found"),
                     (dtype, fstr),
                 ),
             )
@@ -2779,9 +2765,9 @@ class PkgSolver(object):
             )[0]
 
             ret.append(
-                _(
-                    "No suitable version of installed package " "{0} found"
-                ).format(f.pkg_name)
+                _("No suitable version of installed package {0} found").format(
+                    f.pkg_name
+                )
             )
             ret.extend(
                 self.__fmri_list_errors(matching, already_seen=already_seen)
@@ -2885,9 +2871,9 @@ class PkgSolver(object):
 
             # note to translators: 'indent' will be a series of
             # whitespaces.
-            reason = _(
-                "{indent}  {tag}  [already rejected; see " "above]"
-            ).format(indent=indent, tag=tag)
+            reason = _("{indent}  {tag}  [already rejected; see above]").format(
+                indent=indent, tag=tag
+            )
             return fmri_id, [reason]
 
         already_seen.add(fmri)
@@ -2997,7 +2983,7 @@ class PkgSolver(object):
             except DependencyException as e:
                 self.__trim((fmri,), e.reason_id, e.reason, fmri_adds=e.fmris)
                 s = _(
-                    "No suitable version of required package " "{0} found:"
+                    "No suitable version of required package {0} found:"
                 ).format(fmri.pkg_name)
                 return (
                     [s]
@@ -3119,7 +3105,7 @@ class PkgSolver(object):
                 self.__clauses += 1
             except TypeError:
                 raise TypeError(
-                    _("List of integers, not {0}, " "expected").format(c)
+                    _("List of integers, not {0}, expected").format(c)
                 )
 
     def __get_child_holds(self, install_holds, pkg_cons, inc_set):
@@ -3346,7 +3332,7 @@ class PkgSolver(object):
             else:
                 reason_id = _TRIM_PROPOSED_PUB
                 reason = N_(
-                    "Package is from publisher other " "than specified one."
+                    "Package is from publisher other than specified one."
                 )
         else:
             # order by pub_rank; choose highest possible tier for
@@ -3364,13 +3350,11 @@ class PkgSolver(object):
             reason_id = _TRIM_PUB_RANK
             if acceptable_pubs:
                 reason = (
-                    N_("Higher ranked publisher {0} was " "selected"),
+                    N_("Higher ranked publisher {0} was selected"),
                     (acceptable_pubs[0],),
                 )
             else:
-                reason = N_(
-                    "Package publisher is ranked lower " "in search order"
-                )
+                reason = N_("Package publisher is ranked lower in search order")
 
         # allow installed packages to co-exist to meet dependency reqs.
         # in case new publisher not proper superset of original.  avoid
@@ -3444,7 +3428,7 @@ class PkgSolver(object):
         for v in self.__variants.keys():
             if v in vd and self.__variants[v] not in vd[v]:
                 if vd == "variant.arch":
-                    reason = N_("Package doesn't support " "image architecture")
+                    reason = N_("Package doesn't support image architecture")
                 else:
                     reason = (
                         N_(
@@ -3473,12 +3457,12 @@ class PkgSolver(object):
             # package is not installed in parent
             if self.__is_zone():
                 reason = (
-                    N_("Package {0} is not installed in " "global zone."),
+                    N_("Package {0} is not installed in global zone."),
                     (fmri.pkg_name,),
                 )
             else:
                 reason = (
-                    N_("Package {0} is not installed in " "parent image."),
+                    N_("Package {0} is not installed in parent image."),
                     (fmri.pkg_name,),
                 )
             self.__trim((pkg_fmri,), _TRIM_PARENT_MISSING, reason)
@@ -3520,19 +3504,19 @@ class PkgSolver(object):
         if pf.version.is_successor(fmri.version, version.CONSTRAINT_NONE):
             reason_id = _TRIM_PARENT_NEWER
             if self.__is_zone():
-                reason = (N_("Global zone has a " "newer version: {0}"), (pf,))
+                reason = (N_("Global zone has a newer version: {0}"), (pf,))
             else:
-                reason = (N_("Parent image has a " "newer version: {0}"), (pf,))
+                reason = (N_("Parent image has a newer version: {0}"), (pf,))
         else:
             reason_id = _TRIM_PARENT_OLDER
             if self.__is_zone():
                 reason = (
-                    N_("Global zone has an older " "version of package: {0}"),
+                    N_("Global zone has an older version of package: {0}"),
                     (pf,),
                 )
             else:
                 reason = (
-                    N_("Parent image has an older " "version of package: {0}"),
+                    N_("Parent image has an older version of package: {0}"),
                     (pf,),
                 )
 

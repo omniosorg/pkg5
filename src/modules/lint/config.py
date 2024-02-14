@@ -83,7 +83,7 @@ class PkglintConfig(object):
         except configparser.Error as err:
             raise PkglintConfigException(
                 _(
-                    "missing or corrupt pkglintrc file " "{config_file}: {err}"
+                    "missing or corrupt pkglintrc file {config_file}: {err}"
                 ).format(**locals())
             )
 

@@ -524,7 +524,7 @@ class RepositoryURI(object):
         __get_proxy,
         __set_proxy,
         None,
-        "The proxy to use to " "access this repository.",
+        "The proxy to use to access this repository.",
     )
 
     proxies = property(
@@ -1625,7 +1625,7 @@ class Publisher(object):
     def __set_disabled(self, disabled):
         if self.sys_pub:
             raise api_errors.ModifyingSyspubException(
-                _("Cannot " "enable or disable a system publisher")
+                _("Cannot enable or disable a system publisher")
             )
 
         if disabled:
@@ -1742,7 +1742,7 @@ class Publisher(object):
     def __set_stickiness(self, value):
         if self.sys_pub:
             raise api_errors.ModifyingSyspubException(
-                _("Cannot " "change the stickiness of a system publisher")
+                _("Cannot change the stickiness of a system publisher")
             )
         self.__sticky = bool(value)
 
@@ -1843,7 +1843,7 @@ of the following commands as a privileged user:
 
             for pfx in pubs:
                 logger.warning(
-                    _("pkg set-publisher -P -g " "{origin} {pub}\n").format(
+                    _("pkg set-publisher -P -g {origin} {pub}\n").format(
                         origin=origin, pub=pfx
                     )
                 )
@@ -3597,7 +3597,7 @@ pkg unset-publisher {0}
             if policy_name not in sigpolicy.Policy.policies():
                 raise api_errors.InvalidPropertyValue(
                     _(
-                        "{val} is not a valid value for this " "property:{prop}"
+                        "{val} is not a valid value for this property:{prop}"
                     ).format(val=policy_name, prop=SIGNATURE_POLICY)
                 )
             if policy_name == "require-names":
@@ -3618,9 +3618,9 @@ pkg unset-publisher {0}
             else:
                 if len(values) > 1:
                     raise api_errors.InvalidPropertyValue(
-                        _(
-                            "The {0} signature-policy takes no " "argument."
-                        ).format(policy_name)
+                        _("The {0} signature-policy takes no argument.").format(
+                            policy_name
+                        )
                     )
             self.__properties[SIGNATURE_POLICY] = policy_name
             return
@@ -3686,7 +3686,7 @@ pkg unset-publisher {0}
         """Support pop() on properties"""
         if self.sys_pub:
             raise api_errors.ModifyingSyspubException(
-                _("Cannot " "unset a property for a system publisher.")
+                _("Cannot unset a property for a system publisher.")
             )
         return self.__properties.pop(d, default)
 

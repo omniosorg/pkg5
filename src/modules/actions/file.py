@@ -242,7 +242,7 @@ class FileAction(generic.Action):
             except zlib.error as e:
                 raise ActionExecutionError(
                     self,
-                    details=_("Error decompressing payload: " "{0}").format(
+                    details=_("Error decompressing payload: {0}").format(
                         " ".join([str(a) for a in e.args])
                     ),
                     error=e,
@@ -398,7 +398,7 @@ class FileAction(generic.Action):
             != misc.timestamp_to_time(self.attrs["timestamp"])
         ):
             errors.append(
-                _("Timestamp: {found} should be " "{expected}").format(
+                _("Timestamp: {found} should be {expected}").format(
                     found=misc.time_to_timestamp(lstat.st_mtime),
                     expected=self.attrs["timestamp"],
                 )
@@ -416,7 +416,7 @@ class FileAction(generic.Action):
             and lstat.st_size != pkg_size
         ):
             errors.append(
-                _("Size: {found:d} bytes should be " "{expected:d}").format(
+                _("Size: {found:d} bytes should be {expected:d}").format(
                     found=lstat.st_size, expected=pkg_size
                 )
             )
@@ -484,7 +484,7 @@ class FileAction(generic.Action):
 
                 if elfhash is not None and elf_hash_val != elfhash[0]:
                     elferror = _(
-                        "ELF content hash: " "{found} " "should be {expected}"
+                        "ELF content hash: {found} should be {expected}"
                     ).format(found=elfhash[0], expected=elf_hash_val)
 
             # Always check on the file hash because the ELF hash
@@ -496,15 +496,15 @@ class FileAction(generic.Action):
                 if sha_hash != hash_val:
                     # Prefer the ELF content hash error message.
                     if preserve is not None:
-                        info.append(_("editable file has " "been changed"))
+                        info.append(_("editable file has been changed"))
                     elif elferror:
                         errors.append(elferror)
                         self.replace_required = True
                     else:
                         errors.append(
-                            _(
-                                "Hash: " "{found} should be " "{expected}"
-                            ).format(found=sha_hash, expected=hash_val)
+                            _("Hash: {found} should be {expected}").format(
+                                found=sha_hash, expected=hash_val
+                            )
                         )
                         self.replace_required = True
 
@@ -532,7 +532,7 @@ class FileAction(generic.Action):
                 for a in sattrs:
                     if a not in set_attrs:
                         errors.append(
-                            _("System attribute '{0}' " "not set").format(a)
+                            _("System attribute '{0}' not set").format(a)
                         )
 
         except EnvironmentError as e:
@@ -1001,28 +1001,28 @@ class FileAction(generic.Action):
                 errors.append(
                     (
                         "preserve-version",
-                        _("preserve-version must specify " "the release"),
+                        _("preserve-version must specify the release"),
                     )
                 )
             if build_release != "":
                 errors.append(
                     (
                         "preserve-version",
-                        _("preserve-version must specify " "the release"),
+                        _("preserve-version must specify the release"),
                     )
                 )
             if branch:
                 errors.append(
                     (
                         "preserve-version",
-                        _("preserve-version must not specify " "the branch"),
+                        _("preserve-version must not specify the branch"),
                     )
                 )
             if timestr:
                 errors.append(
                     (
                         "preserve-version",
-                        _("preserve-version must not specify " "the timestamp"),
+                        _("preserve-version must not specify the timestamp"),
                     )
                 )
 

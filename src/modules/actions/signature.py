@@ -548,7 +548,7 @@ class SignatureAction(generic.Action):
         except InvalidSignature:
             raise apx.UnverifiedSignature(
                 self,
-                _("The signature value did not match the expected " "value."),
+                _("The signature value did not match the expected value."),
             )
 
         return True

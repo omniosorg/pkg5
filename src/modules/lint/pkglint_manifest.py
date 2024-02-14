@@ -129,7 +129,7 @@ class PkgManifestChecker(base.ManifestChecker):
                 action = engine.get_attr_action(key, manifest)
                 engine.advise_loggers(action=action, manifest=manifest)
                 engine.error(
-                    _("obsolete package {pkg} has " "{key} attribute").format(
+                    _("obsolete package {pkg} has {key} attribute").format(
                         pkg=manifest.fmri, key=key
                     ),
                     msgid="{0}{1}.1".format(self.name, pkglint_id),
@@ -356,7 +356,7 @@ class PkgManifestChecker(base.ManifestChecker):
         if len(undefined_variants) > 0:
             vlist = sorted((v for v in undefined_variants))
             engine.error(
-                _("variant(s) {vars} not defined by " "{pkg}").format(
+                _("variant(s) {vars} not defined by {pkg}").format(
                     vars=" ".join(vlist), pkg=manifest.fmri
                 ),
                 msgid=undefined_lint_id,
@@ -446,9 +446,9 @@ class PkgManifestChecker(base.ManifestChecker):
                     action=action, manifest=manifest, lint_id=lint_id
                 ):
                     engine.critical(
-                        _(
-                            "no fmri attribute in depend " "action in {0}"
-                        ).format(manifest.fmri),
+                        _("no fmri attribute in depend action in {0}").format(
+                            manifest.fmri
+                        ),
                         msgid=lint_id,
                     )
                 continue
@@ -571,9 +571,7 @@ class PkgManifestChecker(base.ManifestChecker):
 
         if linted_attrs:
             engine.info(
-                _(
-                    "pkg.linted attributes detected for " "{pkg}: {linted}"
-                ).format(
+                _("pkg.linted attributes detected for {pkg}: {linted}").format(
                     pkg=manifest.fmri,
                     linted=", ".join(
                         [
@@ -741,7 +739,7 @@ class PkgManifestChecker(base.ManifestChecker):
             action = engine.get_attr_action("pkg.summary", manifest)
             engine.advise_loggers(action=action, manifest=manifest)
             engine.warning(
-                _("pkg.description matches pkg.summary " "in {0}").format(
+                _("pkg.description matches pkg.summary in {0}").format(
                     manifest.fmri
                 ),
                 msgid="{0}{1}.2".format(self.name, pkglint_id),

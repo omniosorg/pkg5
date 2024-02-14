@@ -133,7 +133,7 @@ class UnresolvedDependencyError(DependencyError):
                 ),
             )
         else:
-            return _("{pth} has unresolved dependency " "'{dep}'.").format(
+            return _("{pth} has unresolved dependency '{dep}'.").format(
                 pth=self.path, dep=dep_str
             )
 
@@ -166,7 +166,7 @@ class BadPackageFmri(DependencyError):
 
     def __str__(self):
         return _(
-            "The manifest '{path}' has an invalid package " "FMRI:\n\t{exc}"
+            "The manifest '{path}' has an invalid package FMRI:\n\t{exc}"
         ).format(path=self.path, exc=self.exc)
 
 
@@ -184,9 +184,9 @@ class ExtraVariantedDependency(DependencyError):
         s = ""
         for r, diff in sorted(self.rvs.items()):
             for kind in diff.type_diffs:
-                s += _(
-                    "\t{r:15} Variant '{kind}' is not " "declared.\n"
-                ).format(r=r, kind=kind)
+                s += _("\t{r:15} Variant '{kind}' is not declared.\n").format(
+                    r=r, kind=kind
+                )
             for k, v in diff.value_diffs:
                 s += _(
                     "\t{r:15} Variant '{kind}' is not "

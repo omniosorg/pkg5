@@ -65,7 +65,7 @@ class SHA512_t(object):
             lib.SHA2Init(lib.SHA512_224, self.ctx)
         else:
             raise ValueError(
-                "The module only supports " "SHA512/256 or SHA512/224."
+                "The module only supports SHA512/256 or SHA512/224."
             )
 
         self.hash_size = t

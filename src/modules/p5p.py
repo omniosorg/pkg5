@@ -66,7 +66,7 @@ class InvalidArchiveIndex(ArchiveErrors):
 
     def __str__(self):
         return _(
-            "{0} is not in a supported or recognizable archive " "index format."
+            "{0} is not in a supported or recognizable archive index format."
         ).format(self.__name)
 
 

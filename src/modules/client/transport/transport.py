@@ -348,7 +348,7 @@ class TransportCfg(object):
     )
 
     user_agent = property(
-        doc="A string that identifies the user agent for " "the transport."
+        doc="A string that identifies the user agent for the transport."
     )
 
 
@@ -452,7 +452,7 @@ class ImageTransportCfg(TransportCfg):
 
     user_agent = property(
         __get_user_agent,
-        doc="A string that identifies " "the user agent for the transport.",
+        doc="A string that identifies the user agent for the transport.",
     )
 
 
@@ -1863,9 +1863,7 @@ class Transport(object):
             sigs = self.cfg.get_pkg_sigs(fmri, pub)
         except apx.UnknownCatalogEntry:
             if must_verify:
-                assert False, (
-                    "Did not validate manifest; " "couldn't find sigs."
-                )
+                assert False, "Did not validate manifest; couldn't find sigs."
             return False
 
         if sigs and "sha-1" in sigs:
@@ -1883,7 +1881,7 @@ class Transport(object):
             mcontent = content
         else:
             raise ValueError(
-                "Caller must supply either mfstpath " "or content arguments."
+                "Caller must supply either mfstpath or content arguments."
             )
 
         newhash = manifest.Manifest.hash_create(mcontent)
@@ -1961,7 +1959,7 @@ class Transport(object):
                 if e.errno == errno.EROFS:
                     raise apx.ReadOnlyFileSystemException(e.filename)
                 raise tx.TransportOperationError(
-                    "Unable to " "make directory: {0}".format(e)
+                    "Unable to make directory: {0}".format(e)
                 )
 
     def _get_files_list(self, mfile, flist):
@@ -2150,9 +2148,9 @@ class Transport(object):
                 return x509.load_der_x509_crl(raw, default_backend())
             except ValueError:
                 raise apx.BadFileFormat(
-                    _(
-                        "The CRL file " "{0} is not in a recognized " "format."
-                    ).format(pth)
+                    _("The CRL file {0} is not in a recognized format.").format(
+                        pth
+                    )
                 )
 
     @LockedTransport()
@@ -2373,7 +2371,7 @@ class Transport(object):
 
             except tx.InvalidContentException as e:
                 repostats.record_error(content=True)
-                e.reason = "Unable to parse repository's " "versions/0 response"
+                e.reason = "Unable to parse repository's versions/0 response"
                 failures.append(e)
 
             except tx.TransportException as e:
@@ -2413,7 +2411,7 @@ class Transport(object):
                     repo.get_url(),
                     "versions",
                     0,
-                    "InvalidContentException while parsing " "response",
+                    "InvalidContentException while parsing response",
                 )
 
         for key, val in vers.items():

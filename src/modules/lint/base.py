@@ -311,7 +311,7 @@ class ManifestChecker(Checker):
         # a default error message used if we've parsed the
         # data file, but haven't thrown any exceptions
         self.bad_classification_data = _(
-            "no sections found in data " "file {0}"
+            "no sections found in data file {0}"
         ).format(self.classification_path)
 
         if os.path.exists(self.classification_path):
@@ -324,7 +324,7 @@ class ManifestChecker(Checker):
                 # classification_data object.  We deal with that
                 # later.
                 self.bad_classification_data = _(
-                    "unable to parse data file {path}: " "{err}"
+                    "unable to parse data file {path}: {err}"
                 ).format(path=self.classification_path, err=err)
                 pass
         else:
@@ -422,7 +422,7 @@ def _linted_action(action, lint_id):
                     return True
             else:
                 raise DuplicateLintedAttrException(
-                    _("Multiple values for {key} " "in {actions}").format(
+                    _("Multiple values for {key} in {actions}").format(
                         key=key, action=str(action)
                     )
                 )
@@ -440,7 +440,7 @@ def _linted_manifest(manifest, lint_id):
                     return True
             else:
                 raise DuplicateLintedAttrException(
-                    _("Multiple values for {key} " "in {manifest}").format(
+                    _("Multiple values for {key} in {manifest}").format(
                         key=key, manifest=manifest.fmri
                     )
                 )

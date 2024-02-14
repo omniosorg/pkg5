@@ -470,9 +470,9 @@ class LintEngine(object):
 
                 except base.LintException as err:
                     raise LintEngineSetupException(
-                        _(
-                            "Error parsing config value for " "{key}: {err}"
-                        ).format(**locals())
+                        _("Error parsing config value for {key}: {err}").format(
+                            **locals()
+                        )
                     )
 
         self._unique_checkers()
@@ -576,7 +576,7 @@ class LintEngine(object):
                     if self.lint_api_inst and lint_uris:
                         self.tracker.flush()
                         self.logger.info(
-                            _("Ignoring -l option, " "existing image found.")
+                            _("Ignoring -l option, existing image found.")
                         )
 
                 # only create a new image if we've not been
@@ -605,7 +605,7 @@ class LintEngine(object):
                     if self.ref_api_inst and ref_uris:
                         self.tracker.flush()
                         self.logger.info(
-                            _("Ignoring -r option, " "existing image found.")
+                            _("Ignoring -r option, existing image found.")
                         )
 
                 # only create a new image if we've not been
@@ -634,9 +634,9 @@ class LintEngine(object):
 
             if not (self.ref_api_inst or self.lint_api_inst):
                 raise LintEngineSetupException(
-                    _(
-                        "Unable to access any pkglint images " "under {0}"
-                    ).format(cache)
+                    _("Unable to access any pkglint images under {0}").format(
+                        cache
+                    )
                 )
 
         for checker in self.checkers:
@@ -757,7 +757,7 @@ class LintEngine(object):
                     fmri = pkg.fmri.PkgFmri(pkg_name)
                     return fmri
                 except:
-                    msg = _("unable to construct fmri from " "{0}").format(
+                    msg = _("unable to construct fmri from {0}").format(
                         pkg_name
                     )
                     raise base.LintException(msg)
@@ -849,7 +849,7 @@ class LintEngine(object):
         if reference:
             if not self.ref_api_inst:
                 raise base.LintException(
-                    _("No reference repository has been " "configured")
+                    _("No reference repository has been configured")
                 )
             return mf_from_image(self.ref_api_inst, pkg_name, search_type)
 
@@ -1077,7 +1077,7 @@ class LintEngine(object):
     def skip_check_msg(self, action, msgid):
         """Log a message saying we're skipping a particular check."""
         self.info(
-            _("Not running {check} checks on linted action " "{action}").format(
+            _("Not running {check} checks on linted action {action}").format(
                 check=msgid, action=str(action)
             ),
             msgid="pkglint001.4",

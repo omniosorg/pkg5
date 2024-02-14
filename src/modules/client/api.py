@@ -1417,7 +1417,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 try:
                     iter(args[a])
                 except TypeError:
-                    raise AssertionError("{0} is not an " "iterable".format(a))
+                    raise AssertionError("{0} is not an iterable".format(a))
             elif a_type == "activate":
                 assert isinstance(args[a], bool) or (
                     isinstance(args[a], str) and args[a] == "bootnext"
@@ -1425,7 +1425,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
             else:
                 assert args[a] is None or isinstance(
                     args[a], a_type
-                ), "{0} is " "type {1}; expected {2}".format(a, type(a), a_type)
+                ), "{0} is type {1}; expected {2}".format(a, type(a), a_type)
 
         # check if passed FMRIs are valid
         illegals = []
@@ -1796,7 +1796,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
             if pp.destination_fmri:
                 assert pkg_cat.get_entry(
                     pp.destination_fmri
-                ), "fmri part of plan, but currently " "unknown: {0}".format(
+                ), "fmri part of plan, but currently unknown: {0}".format(
                     pp.destination_fmri
                 )
 
@@ -3121,9 +3121,9 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 finish = self.__utc_format(time_val[20:], utc_now)
             if start > finish:
                 raise apx.HistoryRequestException(
-                    _(
-                        "Start " "time must be older than finish time: " "{0}"
-                    ).format(time_val)
+                    _("Start time must be older than finish time: {0}").format(
+                        time_val
+                    )
                 )
             files = self.__get_history_range(start, finish)
         else:
@@ -3134,7 +3134,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
             )
         if not files:
             raise apx.HistoryRequestException(
-                _("No history " "entries found for {0}").format(time_val)
+                _("No history entries found for {0}").format(time_val)
             )
         return files
 
@@ -3186,7 +3186,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 if start > finish:
                     raise apx.HistoryRequestException(
                         _(
-                            "Start time must be older than " "finish time: {0}"
+                            "Start time must be older than finish time: {0}"
                         ).format(time_val)
                     )
                 files = self.__get_history_range(start, finish)

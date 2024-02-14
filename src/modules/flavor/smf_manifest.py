@@ -65,7 +65,7 @@ class SMFManifestDependency(base.PublishingDependency):
             full_paths = [p.replace(proto_dir, "").lstrip("/") for p in path]
         else:
             raise base.InvalidPublishingDependency(
-                "A string or " "tuple must be specified for 'path'."
+                "A string or tuple must be specified for 'path'."
             )
 
         base.PublishingDependency.__init__(

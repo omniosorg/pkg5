@@ -405,9 +405,9 @@ class DetailedValueError(QueryException):
         self.query = whole_query
 
     def __str__(self):
-        return _(
-            "In query {query}, {name} had a bad value of " "'{bv}'."
-        ).format(query=self.query, name=self.name, bv=self.bad_value)
+        return _("In query {query}, {name} had a bad value of '{bv}'.").format(
+            query=self.query, name=self.name, bv=self.bad_value
+        )
 
 
 class IncompleteQuery(QueryException):

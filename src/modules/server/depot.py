@@ -1136,7 +1136,7 @@ class DepotHTTP(_Depot):
         except queue.Full:
             raise cherrypy.HTTPError(
                 http.client.SERVICE_UNAVAILABLE,
-                "Another operation is already in progress; try " "again later.",
+                "Another operation is already in progress; try again later.",
             )
 
     @cherrypy.tools.response_headers(
@@ -1185,7 +1185,7 @@ class DepotHTTP(_Depot):
         if entry_type not in actions.types:
             raise cherrypy.HTTPError(
                 http.client.BAD_REQUEST,
-                _("The " "specified Action Type, '{0}', is not valid.").format(
+                _("The specified Action Type, '{0}', is not valid.").format(
                     entry_type
                 ),
             )
@@ -1366,7 +1366,7 @@ class DepotHTTP(_Depot):
         except queue.Full:
             raise cherrypy.HTTPError(
                 http.client.SERVICE_UNAVAILABLE,
-                "Another operation is already in progress; try " "again later.",
+                "Another operation is already in progress; try again later.",
             )
 
     @cherrypy.tools.response_headers(
@@ -1639,7 +1639,7 @@ License:
         if output == "":
             raise cherrypy.HTTPError(
                 http.client.NOT_FOUND,
-                _("No " "matching package found in repository."),
+                _("No matching package found in repository."),
             )
 
         self.__set_response_expires("p5i", 86400 * 365, 86400 * 365)
@@ -1900,7 +1900,7 @@ class NastyDepotHTTP(DepotHTTP):
                     # then sometimes leave one out
                     if verlen > 1 and random.randint(0, 10) <= 1:
                         cherrypy.log(
-                            "NASTY versions_0: " "dropped {0}/{1}".format(op, v)
+                            "NASTY versions_0: dropped {0}/{1}".format(op, v)
                         )
                         verlen -= 1
                         continue

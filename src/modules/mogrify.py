@@ -127,9 +127,9 @@ def add_transform(transforms, printinfo, transform, filename, lineno):
     elif op[0] == "abort":
         if len(op) > 1:
             raise RuntimeError(
-                _(
-                    "transform ({0}) has 'abort' " "operation syntax error"
-                ).format(transform)
+                _("transform ({0}) has 'abort' operation syntax error").format(
+                    transform
+                )
             )
 
         def abort_func(action, matches, pkg_attrs, filename, lineno):
@@ -331,9 +331,9 @@ def add_transform(transforms, printinfo, transform, filename, lineno):
     elif op[0] == "print":
         if len(op) > 2:
             raise RuntimeError(
-                _(
-                    "transform ({0}) has 'print' " "operation syntax error"
-                ).format(transform)
+                _("transform ({0}) has 'print' operation syntax error").format(
+                    transform
+                )
             )
 
         if len(op) == 1:
@@ -354,9 +354,9 @@ def add_transform(transforms, printinfo, transform, filename, lineno):
     elif op[0] == "emit":
         if len(op) > 2:
             raise RuntimeError(
-                _(
-                    "transform ({0}) has 'emit' " "operation syntax error"
-                ).format(transform)
+                _("transform ({0}) has 'emit' operation syntax error").format(
+                    transform
+                )
             )
 
         if len(op) == 1:
@@ -497,7 +497,7 @@ def substitute_values(
 
         if ref == 0 or ref > len(backrefs) - 1:
             raise RuntimeError(
-                _("no match group {group:d} " "(max {maxgroups:d})").format(
+                _("no match group {group:d} (max {maxgroups:d})").format(
                     group=ref, maxgroups=len(backrefs) - 1
                 )
             )
@@ -742,7 +742,7 @@ def read_file(
         except RuntimeError as e:
             if error_print_cb:
                 error_print_cb(
-                    _("File {file}, line {line:d}: " "{exception}").format(
+                    _("File {file}, line {line:d}: {exception}").format(
                         file=filename, line=lineno, exception=e
                     ),
                     exitcode=None,

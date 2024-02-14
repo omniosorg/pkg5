@@ -95,7 +95,7 @@ class InvalidDependBypassValue(DependencyAnalysisError):
 
     def __str__(self):
         return _(
-            "Invalid pkg.depend.bypass-generate value {val}: " "{err}"
+            "Invalid pkg.depend.bypass-generate value {val}: {err}"
         ).format(val=self.value, err=self.error)
 
 

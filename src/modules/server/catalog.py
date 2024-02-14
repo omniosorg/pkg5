@@ -51,11 +51,11 @@ class CatalogPermissionsException(CatalogException):
         CatalogException.__init__(self, files)
 
     def __str__(self):
-        msg = _("The following catalog files have incorrect " "permissions:\n")
+        msg = _("The following catalog files have incorrect permissions:\n")
         for f in self._args:
             fname, emode, fmode = f
             msg += _(
-                "\t{fname}: expected mode: {emode}, found " "mode: {fmode}\n"
+                "\t{fname}: expected mode: {emode}, found mode: {fmode}\n"
             ).format(fname=fname, emode=emode, fmode=fmode)
         return msg
 
@@ -88,7 +88,7 @@ class ServerCatalog(object):
     In order to improve the time to search the catalog, a cached list
     of package names is kept in the catalog instance."""
 
-    # The file mode to be used for all catalog files.
+    # The file mode to be used for all catalog files
     file_mode = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
 
     def __init__(self, cat_root, publisher=None, read_only=False):
@@ -147,7 +147,7 @@ class ServerCatalog(object):
             try:
                 if self.read_only:
                     try:
-                        portable.assert_mode(fpath, self.file_mode)
+                        portable.assert_mode(fpath, self.file_mode, True)
                     except AssertionError as ae:
                         bad_modes.append(
                             (
@@ -167,7 +167,7 @@ class ServerCatalog(object):
                 # check to see if we actually needed to change
                 # it, and if so, add it to bad_modes.
                 try:
-                    portable.assert_mode(fpath, self.file_mode)
+                    portable.assert_mode(fpath, self.file_mode, True)
                 except AssertionError as ae:
                     bad_modes.append(
                         (
@@ -196,7 +196,7 @@ class ServerCatalog(object):
         # lackadaisical
         if not self.valid_new_fmri(pfmri):
             raise CatalogException(
-                "FMRI {0} already exists in " "the catalog.".format(pfmri)
+                "FMRI {0} already exists in the catalog.".format(pfmri)
             )
 
         if critical:

@@ -143,7 +143,7 @@ class HardLinkAction(link.LinkAction):
             if os.stat(path).st_ino != os.stat(target).st_ino:
                 errors.append(
                     _(
-                        "Broken: Path and Target ({0}) " "inodes not the same"
+                        "Broken: Path and Target ({0}) inodes not the same"
                     ).format(self.get_target_path())
                 )
         except OSError as e:

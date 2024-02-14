@@ -931,7 +931,7 @@ class Indexer(object):
             return
         if self.file_version_number:
             raise RuntimeError(
-                "Got file_version_number other than " "None in setup."
+                "Got file_version_number other than None in setup."
             )
         self.file_version_number = INITIAL_VERSION_NUMBER
         for d in self._data_dict.values():
