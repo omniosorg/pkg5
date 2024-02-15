@@ -1,7 +1,7 @@
 #
 # This file was automatically produced by tools/updatereqs
-# Generated on Wed Jun 15 20:07:44 UTC 2022
+# Generated on February 15, 2024 at 02:31:17 PM UTC
 # Do not edit directly
 #
-construct==2.10.68
-PyYAML==6.0
+construct==2.10.70
+PyYAML==6.0.1
