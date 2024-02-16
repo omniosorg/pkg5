@@ -8,7 +8,7 @@
 # source. A copy of the CDDL is also available via the Internet at
 # http://www.illumos.org/license/CDDL.
 #
-# Copyright 2022 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
 #
 
 # A temporary transform that makes it easy to ship modules from a newer
@@ -21,10 +21,14 @@
 
 <transform path=TBD -> delete pkg.depend.bypass-generate notfound>
 
-# Deliver 3.10 modules alongside the 3.11 ones (temporary, during migration)
-<transform path=TBD -> edit path 311 310>
-<transform path=TBD -> edit path 3.11 3.10>
+# Deliver 3.12 modules alongside the 3.11 ones (temporary, during migration)
+<transform path=TBD -> edit path 311 312>
+<transform path=TBD -> edit path 3.11 3.12>
+
+# During the 3.11 to 3.12 upgrade, we need to also translate the loadable
+# module names as they were (incorrectly) unqualified with 3.11
+<transform path=TBD \
+    -> edit path cpython-312.so cpython-312-x86_64-pc-solaris2.so >
 
 <transform path=TBD -> edit path TBD ''>
-
 
