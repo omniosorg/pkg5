@@ -223,7 +223,7 @@ class Transaction(object):
             # A timestamp was not provided; try to generate a
             # unique one.
             while 1:
-                self.open_time = datetime.datetime.utcnow()
+                self.open_time = datetime.datetime.now(datetime.UTC)
                 self.fmri.set_timestamp(self.open_time)
                 cat = rstore.catalog
                 if not cat.get_entry(self.fmri):
@@ -361,7 +361,9 @@ class Transaction(object):
         except ValueError:
             raise TransactionUnknownIDError(os.path.basename(trans_dir))
 
-        self.open_time = datetime.datetime.utcfromtimestamp(int(open_time_str))
+        self.open_time = datetime.datetime.fromtimestamp(
+            int(open_time_str), datetime.UTC
+        )
         self.pkg_name = unquote(self.esc_pkg_name)
 
         # This conversion should always work, because we encoded the

@@ -392,7 +392,7 @@ class Version(object):
             branch_str = "-{0}".format(self.branch)
         return "{0}{1}".format(self.release, branch_str)
 
-    def set_timestamp(self, timestamp=datetime.datetime.utcnow()):
+    def set_timestamp(self, timestamp=datetime.datetime.now(datetime.UTC)):
         assert type(timestamp) == datetime.datetime
         assert timestamp.tzname() is None or timestamp.tzname() == "UTC"
         self.timestr = timestamp.strftime("%Y%m%dT%H%M%SZ")
@@ -401,7 +401,7 @@ class Version(object):
         if not self.timestr:
             return None
         t = time.strptime(self.timestr, "%Y%m%dT%H%M%SZ")
-        return datetime.datetime.utcfromtimestamp(calendar.timegm(t))
+        return datetime.datetime.fromtimestamp(calendar.timegm(t), datetime.UTC)
 
     def __ne__(self, other):
         if not isinstance(other, Version):

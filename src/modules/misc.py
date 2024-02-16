@@ -1335,11 +1335,11 @@ def validate_ssl_cert(ssl_cert, prefix=None, uri=None):
     if cert.has_expired():
         raise api_errors.ExpiredCertificate(ssl_cert, uri=uri, publisher=prefix)
 
-    now = datetime.datetime.utcnow()
+    now = datetime.datetime.now(datetime.UTC)
     nb = cert.get_notBefore()
     # strptime's first argument must be str
     t = time.strptime(force_str(nb), "%Y%m%d%H%M%SZ")
-    nbdt = datetime.datetime.utcfromtimestamp(calendar.timegm(t))
+    nbdt = datetime.datetime.fromtimestamp(calendar.timegm(t), datetime.UTC)
 
     # PyOpenSSL's has_expired() doesn't validate the notBefore
     # time on the certificate.  Don't ask me why.
@@ -1351,7 +1351,7 @@ def validate_ssl_cert(ssl_cert, prefix=None, uri=None):
 
     na = cert.get_notAfter()
     t = time.strptime(force_str(na), "%Y%m%d%H%M%SZ")
-    nadt = datetime.datetime.utcfromtimestamp(calendar.timegm(t))
+    nadt = datetime.datetime.fromtimestamp(calendar.timegm(t), datetime.UTC)
 
     diff = nadt - now
 

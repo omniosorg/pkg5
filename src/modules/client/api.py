@@ -3097,7 +3097,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
         try:
             local_dt = datetime.datetime.strptime(time_str, "%Y-%m-%dT%H:%M:%S")
             secs = time.mktime(local_dt.timetuple())
-            utc_dt = datetime.datetime.utcfromtimestamp(secs)
+            utc_dt = datetime.datetime.fromtimestamp(secs, datetime.UTC)
             return utc_dt.strftime("%Y%m%dT%H%M%SZ")
         except ValueError as e:
             raise apx.HistoryRequestException(e)
@@ -3172,7 +3172,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
         # times.
         entries = set()
 
-        utc_now = datetime.datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+        utc_now = datetime.datetime.now(datetime.UTC).strftime("%Y%m%dT%H%M%SZ")
         for time_val in times:
             # Ranges are 19 chars of timestamp, a '-', and
             # another timestamp.
@@ -3962,7 +3962,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
 
         img_inst_cat = self._img.get_catalog(self._img.IMG_CATALOG_INSTALLED)
         img_inst_base = img_inst_cat.get_part("catalog.base.C", must_exist=True)
-        op_time = datetime.datetime.utcnow()
+        op_time = datetime.datetime.now(datetime.UTC)
         pubs = self.__get_temp_repo_pubs(repos)
         progtrack = self.__progresstracker
 

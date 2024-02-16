@@ -317,7 +317,7 @@ class TestPkgDepot(pkg5unittest.SingleDepotTestCase):
         self.assertEqual(info_dic["Build Release"], str(ver.build_release))
         timestamp = datetime.datetime.strptime(
             info_dic["Packaging Date"], "%a %b %d %H:%M:%S %Y"
-        )
+        ).replace(tzinfo=datetime.UTC)
         self.assertEqual(timestamp, ver.get_timestamp())
         self.assertEqual(info_dic["Size"], misc.bytes_to_str(size))
         self.assertEqual(info_dic["Compressed Size"], misc.bytes_to_str(csize))

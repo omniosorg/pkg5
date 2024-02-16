@@ -401,7 +401,7 @@ def handle(depot, request, response, pub):
         # update until "now."  If last is none, we want it to use "now"
         # as its starting point.
         if last is None:
-            last = datetime.datetime.utcnow()
+            last = datetime.datetime.now(datetime.UTC)
 
         # Generate and cache the feed.
         misc.makedirs(os.path.dirname(cfpath))

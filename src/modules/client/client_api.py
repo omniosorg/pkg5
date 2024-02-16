@@ -2520,12 +2520,16 @@ def _publisher_list(
                 nb = cert.get_notBefore()
                 # strptime's first argument must be str
                 t = time.strptime(misc.force_str(nb), "%Y%m%d%H%M%SZ")
-                nb = datetime.datetime.utcfromtimestamp(calendar.timegm(t))
+                nb = datetime.datetime.fromtimestamp(
+                    calendar.timegm(t), datetime.UTC
+                )
                 times["effective"] = nb.strftime("%c")
 
                 na = cert.get_notAfter()
                 t = time.strptime(misc.force_str(na), "%Y%m%d%H%M%SZ")
-                na = datetime.datetime.utcfromtimestamp(calendar.timegm(t))
+                na = datetime.datetime.fromtimestamp(
+                    calendar.timegm(t), datetime.UTC
+                )
                 times["expiration"] = na.strftime("%c")
                 c["valid"] = True
 

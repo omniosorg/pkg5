@@ -955,7 +955,7 @@ class _RepoStore(object):
                 if e.errno == errno.ENOENT:
                     return None
                 raise
-            return datetime.datetime.utcfromtimestamp(mod_time)
+            return datetime.datetime.fromtimestamp(mod_time, datetime.UTC)
 
         # To determine if a transformation is needed, first check for a
         # v0 catalog attrs file.

@@ -375,11 +375,11 @@ class TestVersion(pkg5unittest.Pkg5TestCase):
         self.assertEqual(self.v1.get_timestamp().year, 2005)
         self.assertEqual(self.v1.get_timestamp().hour, 0)
         self.assertEqual(self.v1.get_timestamp().hour, 0)
-        self.assertIsNone(self.v1.get_timestamp().tzname())
+        self.assertEqual(self.v1.get_timestamp().tzname(), "UTC")
         self.assertIsNone(self.v3.get_timestamp())
 
     def testversionsettime(self):
-        d = datetime.datetime.utcnow()
+        d = datetime.datetime.now(datetime.UTC)
         # 'd' includes microseconds, so we trim those off.
         d = d.replace(microsecond=0)
         self.v1.set_timestamp(d)
