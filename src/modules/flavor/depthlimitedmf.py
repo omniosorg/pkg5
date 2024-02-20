@@ -3,6 +3,7 @@
 # Software Foundation; All Rights Reserved
 #
 # Copyright (c) 2012, 2022, Oracle and/or its affiliates.
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
 
 
 """A standalone version of ModuleFinder which limits the depth of exploration
@@ -66,9 +67,21 @@ class ModuleInfo(object):
                 "64/{0}module.so",
             ]
         else:
-            self.patterns += [
-                "{{0}}{0}".format(s) for s in EXTENSION_SUFFIXES
-            ] + ["64/{{0}}{0}".format(s) for s in EXTENSION_SUFFIXES]
+            try:
+                cross_env = os.environ["PKG_CROSS_DEPEND"]
+                suffixes = []
+                for s in EXTENSION_SUFFIXES:
+                    if s.endswith("solaris2.so"):
+                        s = "{}-{}.so".format(
+                            "-".join(s.split("-")[:2]), cross_env
+                        )
+                    suffixes.append(s)
+                self.patterns += ["{{0}}{0}".format(s) for s in suffixes]
+            except KeyError:
+                suffixes = EXTENSION_SUFFIXES
+                self.patterns += ["{{0}}{0}".format(s) for s in suffixes] + [
+                    "64/{{0}}{0}".format(s) for s in suffixes
+                ]
         self.dirs = sorted(dirs)
 
     def make_package(self):
