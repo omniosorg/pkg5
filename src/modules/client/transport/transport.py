@@ -2208,8 +2208,8 @@ class Transport(object):
             except EnvironmentError:
                 pass
             else:
-                nu = crl.next_update
-                cur_time = dt.datetime.utcnow()
+                nu = crl.next_update.replace(tzinfo=dt.UTC)
+                cur_time = dt.datetime.now(dt.UTC)
 
                 if cur_time < nu:
                     self.__tmp_crls[uri] = crl

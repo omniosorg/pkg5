@@ -20,7 +20,7 @@
 #
 # Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
 # Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
-# Copyright 2023 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
 #
 #
 # pkgdepend doesn't understand the relative import syntax "from .x import y",
@@ -38,6 +38,8 @@
 #
 <include bundledlicences.3.11.core.p5m>
 <include bundledmodules.3.11.core.p5m>
+<include bundledlicences.3.12.core.p5m>
+<include bundledmodules.3.12.core.p5m>
 set name=pkg.fmri value=pkg:/package/pkg@$(PKGVERS)
 set name=pkg.summary value="Image Packaging System - pkg(7)"
 set name=pkg.description \
@@ -259,6 +261,7 @@ file path=usr/bin/pkgsurf
 dir  path=usr/lib
 dir  path=usr/lib/pkg
 file path=usr/lib/pkg.depotd mode=0755
+dir  path=usr/lib/python3.12
 dir  path=usr/share
 dir  path=usr/share/lib
 dir  path=usr/share/lib/pkg

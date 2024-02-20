@@ -2315,8 +2315,8 @@ def __repo_diff(
         cat_lm_pub = None
         cat_lm_rpub = None
         if compare_cat:
-            cat_lm_pub = pub.catalog.last_modified.isoformat()
-            cat_lm_rpub = rpub.catalog.last_modified.isoformat()
+            cat_lm_pub = pkg.catalog.datetime_to_ts(pub.catalog.last_modified)
+            cat_lm_rpub = pkg.catalog.datetime_to_ts(rpub.catalog.last_modified)
             same_cat = same_repo = cat_lm_pub == cat_lm_rpub
             if not same_cat and quiet:
                 return EXIT_DIFF

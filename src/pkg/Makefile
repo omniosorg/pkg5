@@ -20,7 +20,7 @@
 #
 # Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
 # Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
-# Copyright 2022 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
 #
 
 include ../Makefile.com
@@ -106,7 +106,7 @@ INCORP            = consolidation\:ips\:ips-incorporation
 
 PM_TRANSFORMS     = defaults
 # For python version migrations
-#PM_TRANSFORMS     += pynext
+PM_TRANSFORMS     += pynext
 
 i386_DEFINES      = \
 	i386_ONLY=''    \

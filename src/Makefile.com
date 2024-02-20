@@ -10,7 +10,7 @@
 #
 
 # Copyright 2022, Richard Lowe.
-# Copyright 2022 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
 
 CODE_WS:sh = git rev-parse --show-toplevel
 MACH:sh = uname -p
@@ -30,7 +30,7 @@ CFLAGS = -m64 -Wall -Werror -Wextra -gdwarf-2 -gstrict-dwarf \
 CPPFLAGS = -D_REENTRANT -D_POSIX_PTHREAD_SEMANTICS
 
 # Whitespace separated list of versions to build and test, latest one first
-PYVERSIONS = 3.11
+PYVERSIONS = 3.12 3.11
 # The single version used for shebang lines and packaging.
 PYVER = 3.11
 

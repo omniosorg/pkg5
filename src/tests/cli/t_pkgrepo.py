@@ -778,7 +778,7 @@ PUBLISHER PACKAGES STATUS           UPDATED
         repo = self.get_repo(repo_path)
         self.pkgrepo("info -s {0} -H".format(repo_uri))
         cat = repo.get_catalog("test")
-        cat_lm = cat.last_modified.isoformat()
+        cat_lm = pkg.catalog.datetime_to_ts(cat.last_modified)
         expected = """\
 test      3        online           {0}Z
 """.format(

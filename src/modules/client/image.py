@@ -3195,7 +3195,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
         )
 
         # Mark all operations as occurring at this time.
-        op_time = datetime.datetime.utcnow()
+        op_time = datetime.datetime.now(datetime.UTC)
 
         # The image catalogs need to be updated, but this is a bit
         # tricky as previously known packages must remain known even

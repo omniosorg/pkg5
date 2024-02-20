@@ -1253,7 +1253,7 @@ class _CombinedResult(_OverTheWireResults):
             setattr(self, n, v)
 
 
-class _Pkg5TestResult(unittest._TextTestResult):
+class _Pkg5TestResult(unittest.TextTestResult):
     baseline = None
     machsep = "|"
 
