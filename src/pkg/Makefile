@@ -56,7 +56,8 @@ PKGSEND_OPTS      = --no-index --no-catalog
 PKGPUBLISHER      = pkg5-nightly
 PKGPUBLISHER_LOCALIZABLE      = pkg5-localizable
 
-POUND_SIGN:sh     = echo \\043
+PRE_POUND         = pre\#
+POUND_SIGN        = $(PRE_POUND:pre\%=%)
 PUBLISHALL        = $(POUND_SIGN)
 # This won't work if we obsolete a package in an update build, but shouldn't be
 # necessary after we stop publishing duplicate packages.
@@ -110,10 +111,17 @@ PM_TRANSFORMS     += pynext
 
 i386_DEFINES      = \
 	i386_ONLY=''    \
+	aarch64_ONLY=$(POUND_SIGN) \
+	sparc_ONLY=$(POUND_SIGN)
+
+aarch64_DEFINES      = \
+	i386_ONLY=$(POUND_SIGN)    \
+	aarch64_ONLY='' \
 	sparc_ONLY=$(POUND_SIGN)
 
 sparc_DEFINES     = \
 	i386_ONLY=$(POUND_SIGN) \
+	aarch64_ONLY=$(POUND_SIGN) \
 	sparc_ONLY=''
 
 ARCH_DEFINES      = $($(ARCH)_DEFINES)
