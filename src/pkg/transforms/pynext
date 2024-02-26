@@ -26,9 +26,11 @@
 <transform path=TBD -> edit path 3.11 3.12>
 
 # During the 3.11 to 3.12 upgrade, we need to also translate the loadable
-# module names as they were (incorrectly) unqualified with 3.11
-<transform path=TBD \
+# module names as they were unqualified with 3.11
+$(i386_ONLY)<transform path=TBD \
     -> edit path cpython-312.so cpython-312-x86_64-pc-solaris2.so >
+$(aarch64_ONLY)<transform path=TBD \
+    -> edit path cpython-312.so cpython-312-aarch64-unknown-solaris2.so >
 
 <transform path=TBD -> edit path TBD ''>
 
