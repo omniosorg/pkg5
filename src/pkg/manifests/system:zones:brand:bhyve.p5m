@@ -13,7 +13,6 @@
 # Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
 #
 
-<include bundledlicences.3.11.bhyve.p5m>
 <include bundledmodules.3.11.bhyve.p5m>
 <include bundledlicences.3.12.bhyve.p5m>
 <include bundledmodules.3.12.bhyve.p5m>

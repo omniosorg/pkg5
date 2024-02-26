@@ -29,10 +29,10 @@ CFLAGS = -m64 -Wall -Werror -Wextra -gdwarf-2 -gstrict-dwarf \
 	-fno-aggressive-loop-optimizations
 CPPFLAGS = -D_REENTRANT -D_POSIX_PTHREAD_SEMANTICS
 
-# Whitespace separated list of versions to build and test, latest one first
-PYVERSIONS = 3.12 3.11
+# Whitespace separated list of versions to build and test.
+PYVERSIONS = 3.11 3.12
 # The single version used for shebang lines and packaging.
-PYVER = 3.11
+PYVER = 3.12
 
 SHELL= /usr/bin/ksh93
 INSTALL = /usr/sbin/install

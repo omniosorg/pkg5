@@ -22,15 +22,12 @@
 <transform path=TBD -> delete pkg.depend.bypass-generate notfound>
 
 # Deliver 3.12 modules alongside the 3.11 ones (temporary, during migration)
-<transform path=TBD -> edit path 311 312>
-<transform path=TBD -> edit path 3.11 3.12>
+<transform path=TBD -> edit path 312 311>
+<transform path=TBD -> edit path 3.12 3.11>
 
 # During the 3.11 to 3.12 upgrade, we need to also translate the loadable
 # module names as they were unqualified with 3.11
-$(i386_ONLY)<transform path=TBD \
-    -> edit path cpython-312.so cpython-312-x86_64-pc-solaris2.so >
-$(aarch64_ONLY)<transform path=TBD \
-    -> edit path cpython-312.so cpython-312-aarch64-unknown-solaris2.so >
+<transform path=TBD -> edit path cpython-311-$(TRIPLE) cpython-311>
 
 <transform path=TBD -> edit path TBD ''>
 
