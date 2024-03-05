@@ -33,6 +33,7 @@ import os
 import re
 import subprocess
 import sys
+import sysconfig
 import unittest
 
 import pkg.actions as actions
@@ -45,9 +46,11 @@ import pkg.publish.dependencies as dependencies
 DDP = base.Dependency.DEPEND_DEBUG_PREFIX
 
 py2_ver = "2.7"
-py3_ver = "{}.{}".format(sys.version_info.major, sys.version_info.minor)
-py3_suffix = "m" if sys.version_info.minor < 9 else ""
-py3_ext = "{}{}".format(py3_ver.replace(".", ""), py3_suffix)
+
+py3_ver = sysconfig.get_config_var("py_version_short")  # 3.nn
+py3_ext = sysconfig.get_config_var("py_version_nodot")  # 3nn
+# .cpython-3nn-x86_64-pc-solaris2.so
+py3_ext_suffix = sysconfig.get_config_var("EXT_SUFFIX")
 
 py_ver_default = py3_ver
 py_ver_other = py2_ver
@@ -728,7 +731,7 @@ depend fmri=pkg:/satisfying_manf type=require variant.foo=baz
         discovered.
         """
 
-        v3 = ver.startswith("3.") and py3_ext
+        v3ext = ver.startswith("3.") and py3_ext_suffix
 
         vp = self.get_ver_paths(ver, proto_area)
         self.debug("ver_paths is {0}".format(vp))
@@ -742,11 +745,11 @@ depend fmri=pkg:/satisfying_manf type=require variant.foo=baz
             "{pfx}.file=indexer.so "
             "{pfx}.file=indexer/__init__.py "
             + (
-                v3
+                v3ext
                 and "{pfx}.file=indexer.abi3.so "
-                "{pfx}.file=indexer.cpython-{v3}.so "
+                "{pfx}.file=indexer{v3ext} "
                 "{pfx}.file=64/indexer.abi3.so "
-                "{pfx}.file=64/indexer.cpython-{v3}.so "
+                "{pfx}.file=64/indexer{v3ext} "
                 or "{pfx}.file=indexermodule.so "
                 "{pfx}.file=64/indexermodule.so "
             )
@@ -761,11 +764,11 @@ depend fmri=pkg:/satisfying_manf type=require variant.foo=baz
             "{pfx}.file=64/misc.so "
             "{pfx}.file=misc/__init__.py "
             + (
-                v3
+                v3ext
                 and "{pfx}.file=misc.abi3.so "
-                "{pfx}.file=misc.cpython-{v3}.so "
+                "{pfx}.file=misc{v3ext} "
                 "{pfx}.file=64/misc.abi3.so "
-                "{pfx}.file=64/misc.cpython-{v3}.so "
+                "{pfx}.file=64/misc{v3ext} "
                 or "{pfx}.file=64/miscmodule.so " "{pfx}.file=miscmodule.so "
             )
             + pkg_path
@@ -784,11 +787,11 @@ depend fmri=pkg:/satisfying_manf type=require variant.foo=baz
             "{pfx}.file=search_storage.so "
             "{pfx}.file=search_storage/__init__.py "
             + (
-                v3
+                v3ext
                 and "{pfx}.file=search_storage.abi3.so "
-                "{pfx}.file=search_storage.cpython-{v3}.so "
+                "{pfx}.file=search_storage{v3ext} "
                 "{pfx}.file=64/search_storage.abi3.so "
-                "{pfx}.file=64/search_storage.cpython-{v3}.so "
+                "{pfx}.file=64/search_storage{v3ext} "
                 or "{pfx}.file=64/search_storagemodule.so "
                 "{pfx}.file=search_storagemodule.so "
             )
@@ -807,11 +810,11 @@ depend fmri=pkg:/satisfying_manf type=require variant.foo=baz
                 "{pfx}.file=64/os.so "
                 "{pfx}.file=os/__init__.py "
                 + (
-                    v3
+                    v3ext
                     and "{pfx}.file=os.abi3.so "
-                    "{pfx}.file=os.cpython-{v3}.so "
+                    "{pfx}.file=os{v3ext} "
                     "{pfx}.file=64/os.abi3.so "
-                    "{pfx}.file=64/os.cpython-{v3}.so "
+                    "{pfx}.file=64/os{v3ext} "
                     or "{pfx}.file=64/osmodule.so " "{pfx}.file=osmodule.so "
                 )
                 + self.__make_paths("", vp, reason)
@@ -822,7 +825,7 @@ depend fmri=pkg:/satisfying_manf type=require variant.foo=baz
             pfx=base.Dependency.DEPEND_DEBUG_PREFIX,
             dummy_fmri=base.Dependency.DUMMY_FMRI,
             reason=reason,
-            v3=v3,
+            v3ext=v3ext,
         )
 
     pyver_other_script_full_manf_1 = """\
@@ -873,7 +876,7 @@ file NOHASH group=bin mode=0755 owner=root path=usr/bin/python
         """Generate the expected results when resolving a manifest which
         contains a file with a non-default version of python."""
 
-        v3 = py_ver_other.startswith("3.") and py3_ext
+        v3ext = py_ver_other.startswith("3.") and py3_ext_suffix
 
         patterns = (
             "{0}.py",
@@ -883,12 +886,12 @@ file NOHASH group=bin mode=0755 owner=root path=usr/bin/python
             "64/{0}.so",
             "{0}/__init__.py",
         )
-        if v3:
+        if v3ext:
             patterns += (
                 "{0}.abi3.so",
-                "{0}.cpython-{v3}.so",
+                "{0}{v3ext}",
                 "64/{0}.abi3.so",
-                "64/{0}.cpython-{v3}.so",
+                "64/{0}{v3ext}",
             )
         else:
             patterns += ("{0}module.so", "64/{0}module.so")
@@ -941,7 +944,7 @@ file NOHASH group=bin mode=0755 owner=root path=usr/bin/python
                     + ":".join(
                         sorted(
                             [
-                                proto_str + pat.format(f, v3=v3)
+                                proto_str + pat.format(f, v3ext=v3ext)
                                 for proto_str in vps
                                 for pat in patterns
                             ]
@@ -3632,8 +3635,7 @@ depend fmri=pkg:/a@0,5.11-1 type=conditional
                 actions.fromstr(l) for l in self.output.strip().splitlines()
             )
             if a.attrs.get(pfx + ".reason") == fp
-            and "64/zlib.cpython-{}.so".format(py3_ext)
-            in a.attrs[pfx + ".file"]
+            and f"64/zlib{py3_ext_suffix}" in a.attrs[pfx + ".file"]
         ]
         self.assertTrue(len(acts) == 1)
 
