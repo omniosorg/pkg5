@@ -68,6 +68,15 @@ fmt: FRC
 	python$(PYVER) -mpip install --quiet --user --upgrade black
 	$(HOME)/.local/bin/black --config $(CODE_WS)/.black $(CODE_WS)/src
 
+bandit: FRC
+	python$(PYVER) -mpip install --quiet --user --upgrade bandit
+
+check: bandit
+	python$(PYVER) setup.py bandit
+
+baseline: bandit
+	-python$(PYVER) setup.py bandit -g
+
 $(SUBDIRS) cffi_src: FRC
 	@cd $@; pwd; $(MAKE) $(TARGET) CC=$(CC)
 
