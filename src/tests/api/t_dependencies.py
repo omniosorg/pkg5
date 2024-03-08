@@ -34,6 +34,7 @@ import re
 import shutil
 import subprocess
 import sys
+import sysconfig
 import tempfile
 import unittest
 
@@ -50,18 +51,15 @@ import pkg.portable as portable
 import pkg.publish.dependencies as dependencies
 import pkg.updatelog as updatelog
 
-# Default python versions. When the default runtime version
-# of python changes then these variables will need to be
-# updated. py_ver_lib is the string associated with the
-# cpython library for the version of python (can be found
-# using from importlib.machinery import EXTENSION_SUFFIXES).
-py_ver_default = "3.11"
-py_ver_lib = "311"
+py_ver_default = sysconfig.get_config_var("py_version_short")  # 3.nn
+py_ver_lib = sysconfig.get_config_var("py_version_nodot")  # 3nn
+# .cpython-3nn-x86_64-pc-solaris2.so
+ext_suffix = sysconfig.get_config_var("EXT_SUFFIX")
 py_ver_lib_list = [
     "{0}.abi3.so",
-    "{0}.cpython-{1}.so".format("{0}", py_ver_lib),
+    "{0}{1}".format("{0}", ext_suffix),
     "64/{0}.abi3.so",
-    "64/{0}.cpython-{1}.so".format("{0}", py_ver_lib),
+    "64/{0}{1}".format("{0}", ext_suffix),
 ]
 
 mod_pats = [
@@ -1137,12 +1135,12 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
     python_bypass_manf = """
 file NOHASH group=sys mode=0755 owner=root path={bypass_path} \
     pkg.depend.bypass-generate=opt/pkgdep_runpath/pdtest.py \
-    pkg.depend.bypass-generate=usr/lib/python{0}/lib-dynload/pkgdep_runpath/pdtest.cpython-{1}.so \
+    pkg.depend.bypass-generate=usr/lib/python{0}/lib-dynload/pkgdep_runpath/pdtest{1} \
     pkg.depend.runpath=opt:$PKGDEPEND_RUNPATH
 file NOHASH group=sys mode=0755 owner=root path={runpath_mod_path}
 file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
 """.format(
-        py_ver_default, py_ver_lib, **paths
+        py_ver_default, ext_suffix, **paths
     )
 
     # a manifest that generates a single dependency, which we want to
@@ -1220,12 +1218,12 @@ file NOHASH group=sys mode=0755 owner=root path={bypass_path} \
     pkg.depend.bypass-generate=pdtest.pyc \
     pkg.depend.bypass-generate=pdtest.pyo \
     pkg.depend.bypass-generate=pdtest.so \
-    pkg.depend.bypass-generate=pdtest.cpython-{0}.so \
+    pkg.depend.bypass-generate=pdtest{0} \
     pkg.depend.runpath=$PKGDEPEND_RUNPATH:opt
 file NOHASH group=sys mode=0755 owner=root path={runpath_mod_path}
 file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
 """.format(
-        py_ver_lib, **paths
+        ext_suffix, **paths
     )
 
     # a manifest which uses a combination of directory, file and normal
@@ -1234,12 +1232,12 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
 file NOHASH group=sys mode=0755 owner=root path={bypass_path} \
     pkg.depend.bypass-generate=pdtest.py \
     pkg.depend.bypass-generate=usr/lib/python{0}/vendor-packages/.* \
-    pkg.depend.bypass-generate=usr/lib/python{0}/site-packages/pkgdep_runpath/pdtest.cpython-{1}.so \
+    pkg.depend.bypass-generate=usr/lib/python{0}/site-packages/pkgdep_runpath/pdtest{1} \
     pkg.depend.runpath=$PKGDEPEND_RUNPATH:opt
 file NOHASH group=sys mode=0755 owner=root path={runpath_mod_path}
 file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
 """.format(
-        py_ver_default, py_ver_lib, **paths
+        py_ver_default, ext_suffix, **paths
     )
 
     def glfilter(self, s):
@@ -3147,8 +3145,8 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                 es,
                 [
                     "opt/pkgdep_runpath/pdtest.py",
-                    "usr/lib/python{0}/lib-dynload/pkgdep_runpath/pdtest.cpython-{1}.so".format(
-                        py_ver_default, py_ver_lib
+                    "usr/lib/python{0}/lib-dynload/pkgdep_runpath/pdtest{1}".format(
+                        py_ver_default, ext_suffix
                     ),
                 ],
             ),
@@ -3187,8 +3185,8 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                 ds,
                 [
                     "opt/pkgdep_runpath/pdtest.py",
-                    "usr/lib/python{0}/lib-dynload/pkgdep_runpath/pdtest.cpython-{1}.so".format(
-                        py_ver_default, py_ver_lib
+                    "usr/lib/python{0}/lib-dynload/pkgdep_runpath/pdtest{1}".format(
+                        py_ver_default, ext_suffix
                     ),
                     "usr/lib/python{0}/lib-dynload/pkgdep_runpath/pdtest.so".format(
                         py_ver_default
@@ -3288,8 +3286,8 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                     "usr/lib/python{0}/lib-dynload/pkgdep_runpath/pdtest.pyo".format(
                         py_ver_default
                     ),
-                    "usr/lib/python{0}/lib-dynload/pkgdep_runpath/pdtest.cpython-{1}.so".format(
-                        py_ver_default, py_ver_lib
+                    "usr/lib/python{0}/lib-dynload/pkgdep_runpath/pdtest{1}".format(
+                        py_ver_default, ext_suffix
                     ),
                 ],
             ),
@@ -3326,9 +3324,7 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                 es,
                 [
                     "opt/pkgdep_runpath/pdtest.pyo",
-                    "opt/pkgdep_runpath/pdtest.cpython-{0}.so".format(
-                        py_ver_lib
-                    ),
+                    f"opt/pkgdep_runpath/pdtest{ext_suffix}",
                 ],
             ),
             "Failed to bypass some paths despite use of file-wildcard",
@@ -3341,8 +3337,8 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                     "usr/lib/python{0}/lib-dynload/pkgdep_runpath/pdtest.pyo".format(
                         py_ver_default
                     ),
-                    "usr/lib/python{0}/lib-dynload/pkgdep_runpath/pdtest.cpython-{1}.so".format(
-                        py_ver_default, py_ver_lib
+                    "usr/lib/python{0}/lib-dynload/pkgdep_runpath/pdtest{1}".format(
+                        py_ver_default, ext_suffix
                     ),
                 ],
             ),
@@ -3352,7 +3348,7 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
         # finally, test a combination of the above, we have:
         # pkg.depend.bypass-generate=.*/pdtest.py \
         # pkg.depend.bypass-generate=usr/lib/python3.x/vendor-packages/.* \
-        # pkg.depend.bypass-generate=usr/lib/python3.x/site-packages/pkgdep_runpath/pdtest.cpython-3x.so
+        # pkg.depend.bypass-generate=usr/lib/python3.x/site-packages/pkgdep_runpath/pdtest.cpython-3x-yyy.so
         t_path = self.make_manifest(self.python_wildcard_combo_bypass_manf)
 
         ds, es, ws, ms, pkg_attrs = dependencies.list_implicit_deps(
@@ -3375,8 +3371,8 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                     "usr/lib/python{0}/site-packages/pkgdep_runpath/pdtest.py".format(
                         py_ver_default
                     ),
-                    "usr/lib/python{0}/site-packages/pkgdep_runpath/pdtest.cpython-{1}.so".format(
-                        py_ver_default, py_ver_lib
+                    "usr/lib/python{0}/site-packages/pkgdep_runpath/pdtest{1}".format(
+                        py_ver_default, ext_suffix
                     ),
                 ],
             ),
@@ -3390,8 +3386,8 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
                     "usr/lib/python{0}/site-packages/pkgdep_runpath/pdtest.pyc".format(
                         py_ver_default
                     ),
-                    "usr/lib/python{0}/lib-dynload/pkgdep_runpath/pdtest.cpython-{1}.so".format(
-                        py_ver_default, py_ver_lib
+                    "usr/lib/python{0}/lib-dynload/pkgdep_runpath/pdtest{1}".format(
+                        py_ver_default, ext_suffix
                     ),
                 ],
             ),
