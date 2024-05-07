@@ -43,7 +43,7 @@ clobber := TARGET = clobber
 packages := TARGET = install
 test := TARGET = test
 
-SUBDIRS=brand util/mkcert
+SUBDIRS=brand util/mkcert po
 
 all: build $(SUBDIRS)
 
