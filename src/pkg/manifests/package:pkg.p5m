@@ -22,16 +22,6 @@
 # Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
 # Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
 #
-#
-# pkgdepend doesn't understand the relative import syntax "from .x import y",
-# so we have to bypass generating dependencies on those files.
-<transform file path=$(PYDIRVP)/pkg/actions -> \
-    set pkg.depend.bypass-generate .*>
-<transform file path=$(PYDIRVP)/pkg/portable -> \
-    set pkg.depend.bypass-generate .*>
-<transform file path=$(PYDIRVP)/pkg/client/linkedimage/(?:system|zone).py -> \
-    set pkg.depend.bypass-generate .*>
-#
 # When packaging for aarch64, we need to skip the dependency check on libm.so.0
 <transform file path=$(PYDIRVP)/pkg/solver -> \
     set pkg.depend.bypass-generate libm.so.0>
@@ -104,7 +94,7 @@ file path=$(PYDIRVP)/pkg/client/client_api.py
 file path=$(PYDIRVP)/pkg/client/debugvalues.py
 file path=$(PYDIRVP)/pkg/client/firmware.py
 file path=$(PYDIRVP)/pkg/client/history.py
-file path=$(PYDIRVP)/pkg/client/image.py pkg.depend.bypass-generate=.*
+file path=$(PYDIRVP)/pkg/client/image.py
 file path=$(PYDIRVP)/pkg/client/imageconfig.py
 file path=$(PYDIRVP)/pkg/client/imageplan.py
 file path=$(PYDIRVP)/pkg/client/imagetypes.py
@@ -122,7 +112,7 @@ file path=$(PYDIRVP)/pkg/client/pkgremote.py
 file path=$(PYDIRVP)/pkg/client/plandesc.py
 file path=$(PYDIRVP)/pkg/client/printengine.py
 file path=$(PYDIRVP)/pkg/client/progress.py
-file path=$(PYDIRVP)/pkg/client/publisher.py pkg.depend.bypass-generate=.*
+file path=$(PYDIRVP)/pkg/client/publisher.py
 file path=$(PYDIRVP)/pkg/client/query_parser.py
 file path=$(PYDIRVP)/pkg/client/sigpolicy.py
 dir  path=$(PYDIRVP)/pkg/client/transport
@@ -133,8 +123,7 @@ file path=$(PYDIRVP)/pkg/client/transport/fileobj.py
 file path=$(PYDIRVP)/pkg/client/transport/mdetect.py
 file path=$(PYDIRVP)/pkg/client/transport/repo.py
 file path=$(PYDIRVP)/pkg/client/transport/stats.py
-file path=$(PYDIRVP)/pkg/client/transport/transport.py \
-    pkg.depend.bypass-generate=.*
+file path=$(PYDIRVP)/pkg/client/transport/transport.py
 file path=$(PYDIRVP)/pkg/config.py
 file path=$(PYDIRVP)/pkg/cpiofile.py
 file path=$(PYDIRVP)/pkg/dependency.py
@@ -183,10 +172,12 @@ file path=$(PYDIRVP)/pkg/pkgtarfile.py
 dir  path=$(PYDIRVP)/pkg/portable
 file path=$(PYDIRVP)/pkg/portable/__init__.py
 file path=$(PYDIRVP)/pkg/portable/os_aix.py
-file path=$(PYDIRVP)/pkg/portable/os_darwin.py
+file path=$(PYDIRVP)/pkg/portable/os_darwin.py \
+    pkg.depend.bypass-generate=.*macostools.*
 file path=$(PYDIRVP)/pkg/portable/os_sunos.py
 file path=$(PYDIRVP)/pkg/portable/os_unix.py
-file path=$(PYDIRVP)/pkg/portable/os_windows.py
+file path=$(PYDIRVP)/pkg/portable/os_windows.py \
+    pkg.depend.bypass-generate=.*win32api.*
 file path=$(PYDIRVP)/pkg/portable/util.py
 file path=$(PYDIRVP)/pkg/pspawn.py
 dir  path=$(PYDIRVP)/pkg/publish
@@ -201,11 +192,11 @@ file path=$(PYDIRVP)/pkg/server/__init__.py
 file path=$(PYDIRVP)/pkg/server/api.py
 file path=$(PYDIRVP)/pkg/server/api_errors.py
 file path=$(PYDIRVP)/pkg/server/catalog.py
-file path=$(PYDIRVP)/pkg/server/depot.py pkg.depend.bypass-generate=.*
+file path=$(PYDIRVP)/pkg/server/depot.py
 file path=$(PYDIRVP)/pkg/server/face.py
 file path=$(PYDIRVP)/pkg/server/feed.py
 file path=$(PYDIRVP)/pkg/server/query_parser.py
-file path=$(PYDIRVP)/pkg/server/repository.py pkg.depend.bypass-generate=.*
+file path=$(PYDIRVP)/pkg/server/repository.py
 file path=$(PYDIRVP)/pkg/server/transaction.py
 file path=$(PYDIRVP)/pkg/sha512_t.py
 dir  path=$(PYDIRVP)/pkg/site_paths
@@ -215,7 +206,7 @@ file path=$(PYDIRVP)/pkg/solver.cpython$(PYPKGVERS)-$(TRIPLE).so
 file path=$(PYDIRVP)/pkg/sysattr.py
 file path=$(PYDIRVP)/pkg/syscallat.py
 file path=$(PYDIRVP)/pkg/sysvpkg.py
-file path=$(PYDIRVP)/pkg/updatelog.py pkg.depend.bypass-generate=.*
+file path=$(PYDIRVP)/pkg/updatelog.py
 file path=$(PYDIRVP)/pkg/variant.py
 file path=$(PYDIRVP)/pkg/version.py
 dir  path=etc

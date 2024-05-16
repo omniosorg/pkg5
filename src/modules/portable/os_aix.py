@@ -29,7 +29,7 @@ below override the definitions from os_unix
 
 import os
 import errno
-from .os_unix import (
+from pkg.portable.os_unix import (
     get_isainfo,
     get_release,
     get_platform,

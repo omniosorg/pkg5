@@ -34,7 +34,7 @@ import os
 import subprocess
 import tempfile
 
-from .os_unix import (
+from pkg.portable.os_unix import (
     get_group_by_name,
     get_user_by_name,
     get_name_by_gid,
