@@ -68,14 +68,16 @@ fmt: FRC
 	python$(PYVER) -mpip install --quiet --user --upgrade black
 	$(HOME)/.local/bin/black --config $(CODE_WS)/.black $(CODE_WS)/src
 
-bandit: FRC
+_bandit: FRC
 	python$(PYVER) -mpip install --quiet --user --upgrade bandit
 
-check: bandit
-	python$(PYVER) setup.py bandit
+check: _bandit
+	python$(PYVER) -m bandit -r -q -c tests/banditrc . \
+		-b tests/bandit-baseline.json
 
-baseline: bandit
-	-python$(PYVER) setup.py bandit -g
+baseline: _bandit
+	python$(PYVER) -m bandit -r -q -c tests/banditrc . \
+		-o tests/bandit-baseline.json -f json || true
 
 $(SUBDIRS) cffi_src: FRC
 	@cd $@; pwd; $(MAKE) $(TARGET) CC=$(CC)
