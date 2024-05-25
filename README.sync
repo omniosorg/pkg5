@@ -4,11 +4,11 @@
 The pkg5 components have been updated to the latest upstream solaris-ips
 as of:
 
-commit aabf00838e04ed9a266354e598b408dd245773b3
+commit c7efe165236d9243c6bc6a9b0abd6042ad9c04a3
 Author: Jakub Kulik <jakub.kulik@oracle.com>
-Date:   Mon Feb 5 06:41:13 2024 -0800
+Date:   Thu May 16 02:41:50 2024 -0700
 
-    36255456 fix most 'statement' pycodestyle issues
+    36591165 clean up packaging and pkgdepend bypasses
 
 -----------------------------------------------------------------------------
 

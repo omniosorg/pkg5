@@ -42,8 +42,6 @@ import time
 import re as relib
 
 from contextlib import contextmanager
-from cryptography import x509
-from cryptography.hazmat.backends import default_backend
 from urllib.parse import quote, unquote
 
 import pkg.actions
@@ -358,26 +356,9 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
             )
         self.__trust_anchors = {}
         if loc_is_dir:
-            for fn in os.listdir(trust_anchor_loc):
-                pth = os.path.join(trust_anchor_loc, fn)
-                if os.path.islink(pth):
-                    continue
-                try:
-                    with open(pth, "rb") as f:
-                        raw = f.read()
-                    trusted_ca = x509.load_pem_x509_certificate(
-                        raw, default_backend()
-                    )
-                except (ValueError, IOError) as e:
-                    self.__bad_trust_anchors.append((pth, str(e)))
-                else:
-                    # We store certificates internally by
-                    # the SHA-1 hash of its subject.
-                    s = hashlib.sha1(
-                        misc.force_bytes(trusted_ca.subject)
-                    ).hexdigest()
-                    self.__trust_anchors.setdefault(s, [])
-                    self.__trust_anchors[s].append(trusted_ca)
+            misc.load_trust_anchors(
+                trust_anchor_loc, self.__trust_anchors, self.__bad_trust_anchors
+            )
         for s in pkg_trust_anchors:
             if s not in self.__trust_anchors:
                 self.__trust_anchors[s] = pkg_trust_anchors[s]
@@ -2638,6 +2619,7 @@ in the environment or by setting simulate_cmdpath in DebugValues."""
                 alt_repo = None
                 if alt_pub:
                     alt_repo = alt_pub.repository
+
                 try:
                     self.transport.touch_manifest(
                         fmri, intent, alt_repo=alt_repo

@@ -390,7 +390,12 @@ def prune(fmri_list, all_versions, all_timestamps):
 
 
 def fetch_catalog(
-    src_pub, tracker, txport, target_catalog, include_updates=False
+    src_pub,
+    tracker,
+    txport,
+    target_catalog,
+    include_updates=False,
+    raiseonerror=False,
 ):
     """Fetch the catalog from src_uri.
 
@@ -422,6 +427,11 @@ def fetch_catalog(
         # and drive on.  If there was an actual failure due to a
         # transport issue, let the failure happen whenever some other
         # operation is attempted later.
+        if raiseonerror:
+            # If this was called from the clone operation, we cannot return an
+            # empty catalog because that would result in the local repository
+            # being purged.
+            raise
         return catalog.Catalog(read_only=True)
     finally:
         tracker.refresh_end_pub(src_pub)
@@ -1232,7 +1242,12 @@ def clone_repo(
         src_pub.meta_root = src_basedir
 
         src_cat = fetch_catalog(
-            src_pub, tracker, xport, False, include_updates=True
+            src_pub,
+            tracker,
+            xport,
+            False,
+            include_updates=True,
+            raiseonerror=True,
         )
         src_cat_root = src_cat.meta_root
 
