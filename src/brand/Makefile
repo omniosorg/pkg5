@@ -24,5 +24,7 @@ all clean clobber install: $(SUBDIRS)
 $(SUBDIRS): FRC
 	@cd $@; pwd; $(MAKE) $(TARGET)
 
+check:
+
 FRC:
 

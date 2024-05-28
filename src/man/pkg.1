@@ -1390,12 +1390,12 @@ man page for information about release and branch versions and about variants.
 .Pp
 The last column contains a set of flags that show the status of the package:
 .Bl -tag -offset Ds -width Ds
-.It \&In the Sy I No column.
+.It \&In the Sy I No column .
 .Bl -tag -offset Ds -width Ds
 .It Sy i
 The package is installed
 .El
-.It \&In the Sy F No column.
+.It \&In the Sy F No column .
 .Bl -tag -offset Ds -width Ds
 .It Sy f
 The package is frozen.
@@ -1405,7 +1405,7 @@ The package was manually installed.
 .Pq with the Fl R No flag
 The package is removable but is part of the default system software set.
 .El
-.It \&In the Sy O No column.
+.It \&In the Sy O No column .
 .Bl -tag -offset Ds -width Ds
 .It Sy o
 The package is obsolete.
@@ -3501,10 +3501,10 @@ section for some suggested values.
 .It Cm %d
 The publication date of the update being installed -
 .Sy YYYY.MM.DD
-.It Cm %D
+.It Cm \&%D
 The publication date of the update being installed -
 .Sy IYYYYMMDD
-.It Cm %r
+.It Cm \&%r
 The release being installed, without the leading
 .Sy r -
 e.g.
@@ -3594,7 +3594,8 @@ Always apply the default content update policy.
 .It Cm always
 Always download and update non-editable files that have changed.
 .It Cm when-required
-Download and update non-editable files that have changed only if the package system has determined that an update is required.
+Download and update non-editable files that have changed only if the package
+system has determined that an update is required.
 .El
 .Pp
 Default value:
@@ -4281,7 +4282,7 @@ For bloody releases, the release name does not change and so the
 .Sy %r
 token is not available.
 The
-.Sy %D
+.Sy \&%D
 token can be used to include the release date in the BE name:
 .Bd -literal
     $ pkg set-property auto-be-name bloody_%D
