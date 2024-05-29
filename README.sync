@@ -4,11 +4,11 @@
 The pkg5 components have been updated to the latest upstream solaris-ips
 as of:
 
-commit ea98f7c05e3fc1c8501a80f331128f3dd26ced31
+commit 616fce8ad21fc03eaa77ba38508c66c356f03d65
 Author: Jakub Kulik <jakub.kulik@oracle.com>
-Date:   Tue May 28 04:40:57 2024 -0700
+Date:   Wed May 29 05:44:20 2024 -0700
 
-    36615968 move man related code from setup.py to its own Makefile
+    36620736 TestPkgrepoMultiRepo.test_01_diff failing post 36247279
 
 -----------------------------------------------------------------------------
 
