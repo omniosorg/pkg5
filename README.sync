@@ -4,11 +4,11 @@
 The pkg5 components have been updated to the latest upstream solaris-ips
 as of:
 
-commit c7efe165236d9243c6bc6a9b0abd6042ad9c04a3
+commit ea98f7c05e3fc1c8501a80f331128f3dd26ced31
 Author: Jakub Kulik <jakub.kulik@oracle.com>
-Date:   Thu May 16 02:41:50 2024 -0700
+Date:   Tue May 28 04:40:57 2024 -0700
 
-    36591165 clean up packaging and pkgdepend bypasses
+    36615968 move man related code from setup.py to its own Makefile
 
 -----------------------------------------------------------------------------
 

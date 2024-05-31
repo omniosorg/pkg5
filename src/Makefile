@@ -22,7 +22,7 @@
 #
 # Copyright (c) 2007, 2019, Oracle and/or its affiliates. All rights reserved.
 # Copyright 2016, OmniTI Computer Consulting, Inc. All rights reserved.
-# Copyright 2022 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
 #
 
 include Makefile.com
@@ -36,16 +36,15 @@ TESTRESULTS = $(PYVERSIONS:%=testresults/%)
 REQUIREMENTS = requirements.txt
 
 all := TARGET = all
-build := TARGET = build
 install := TARGET = install
 clean := TARGET = clean
 clobber := TARGET = clobber
+check := TARGET = check
 packages := TARGET = install
-test := TARGET = test
 
-SUBDIRS=brand util/mkcert po
+SUBDIRS=brand util/mkcert man po
 
-all: build $(SUBDIRS)
+all: $(SUBDIRS)
 
 build: $(PYVERSIONS)
 
@@ -71,7 +70,7 @@ fmt: FRC
 _bandit: FRC
 	python$(PYVER) -mpip install --quiet --user --upgrade bandit
 
-check: _bandit
+check: _bandit $(SUBDIRS)
 	python$(PYVER) -m bandit -r -q -c tests/banditrc . \
 		-b tests/bandit-baseline.json
 

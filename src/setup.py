@@ -122,10 +122,6 @@ lib_dir = "usr/lib"
 svc_method_dir = "lib/svc/method"
 svc_share_dir = "lib/svc/share"
 
-man1_dir = "usr/share/man/man1"
-man8_dir = "usr/share/man/man8"
-man7_dir = "usr/share/man/man7"
-
 ignored_deps_dir = "usr/share/pkg/ignored_deps"
 resource_dir = "usr/share/lib/pkg"
 transform_dir = "usr/share/pkg/transforms"
@@ -227,38 +223,6 @@ scripts = {
     "aix": scripts_other_unix,
     "unknown": scripts_sunos,
 }
-
-man1_files = [
-    "man/pkg.1",
-    "man/pkgdepend.1",
-    "man/pkgdiff.1",
-    "man/pkgfmt.1",
-    "man/pkglint.1",
-    "man/pkgmerge.1",
-    "man/pkgmogrify.1",
-    "man/pkgsend.1",
-    "man/pkgsign.1",
-    "man/pkgsurf.1",
-    "man/pkgrecv.1",
-    "man/pkgrepo.1",
-]
-man8_files = [
-    "man/pkg.depotd.8",
-    #'man/pkg.depot-config.8',
-    #'man/pkg.sysrepo.8'
-]
-man7_files = [
-    "man/bhyve.7",
-    "man/emu.7",
-    "man/illumos.7",
-    "man/ipkg.7",
-    "man/kvm.7",
-    "man/lipkg.7",
-    "man/lx.7",
-    "man/pkgsrc.7",
-    "man/pkg.7",
-    "man/sparse.7",
-]
 
 packages = [
     "pkg",
@@ -1406,11 +1370,7 @@ cmdclasses = {
     "installfile": installfile,
 }
 
-# all builds of IPS should have manpages
 data_files += [
-    (man1_dir, man1_files),
-    (man8_dir, man8_files),
-    (man7_dir, man7_files),
     (resource_dir, resource_files),
 ]
 # add transforms
