@@ -22,6 +22,7 @@ ROOTETCZONES = $(ROOTETC)/zones
 ROOTETCBRAND = $(ROOTETC)/brand
 ROOTUSRLIB = $(ROOT)/usr/lib
 ROOTUSRSHARE = $(ROOT)/usr/share
+ROOTUSRSHARELOCALE = $(ROOTUSRSHARE)/locale
 ROOTBRAND = $(ROOTUSRLIB)/brand
 ROOTPKGLIB = $(ROOTUSRLIB)/pkg
 
@@ -39,6 +40,9 @@ SHELL= /usr/bin/ksh93
 INSTALL = /usr/sbin/install
 CTFCONVERT = /opt/onbld/bin/i386/ctfconvert
 STRIP = /usr/bin/strip
+RM = /usr/bin/rm -f
+MV = /usr/bin/mv
+MKDIR =	/usr/bin/mkdir -p
 
 CTFCONVERT_BIN = $(CTFCONVERT) -l pkg5
 POST_PROCESS = $(CTFCONVERT_BIN) $@; $(STRIP) -x $@
