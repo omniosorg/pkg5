@@ -35,12 +35,12 @@ information is stored within a parent image.
 # standard python classes
 import os
 import tempfile
+import subprocess
 
 
 # pkg classes
 import pkg.client.api_errors as apx
 import pkg.client.pkgdefs as pkgdefs
-import pkg.pkgsubprocess
 
 from pkg.client.debugvalues import DebugValues
 
@@ -394,7 +394,7 @@ def _zonename():
     # open a temporary file in text mode for compatible string handling
     fout = tempfile.TemporaryFile(mode="w+")
     ferrout = tempfile.TemporaryFile(mode="w+")
-    p = pkg.pkgsubprocess.Popen(cmd, stdout=fout, stderr=ferrout)
+    p = subprocess.Popen(cmd, stdout=fout, stderr=ferrout)
     p.wait()
     if p.returncode != 0:
         cmd = " ".join(cmd)
@@ -471,7 +471,7 @@ def _list_zones(root, path_transform):
     # open a temporary file in text mode for compatible string handling
     fout = tempfile.TemporaryFile(mode="w+")
     ferrout = tempfile.TemporaryFile(mode="w+")
-    p = pkg.pkgsubprocess.Popen(cmd, stdout=fout, stderr=ferrout)
+    p = subprocess.Popen(cmd, stdout=fout, stderr=ferrout)
     p.wait()
     if p.returncode != 0:
         cmd = " ".join(cmd)

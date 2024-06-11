@@ -67,7 +67,6 @@ import pkg.facet
 import pkg.fmri
 import pkg.json as json
 import pkg.misc as misc
-import pkg.pkgsubprocess
 import pkg.version
 
 from pkg.client import global_settings

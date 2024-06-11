@@ -31,6 +31,7 @@ import os
 import os.path
 import shutil
 import stat
+import subprocess
 import sys
 import tempfile
 import zlib
@@ -59,7 +60,6 @@ import pkg.query_parser as qp
 import pkg.server.catalog as old_catalog
 import pkg.server.query_parser as sqp
 import pkg.server.transaction as trans
-import pkg.pkgsubprocess as subprocess
 import pkg.version
 
 from pkg.pkggzip import PkgGzipFile

@@ -43,7 +43,7 @@ import os
 import stat
 import time
 import struct
-import pkg.pkgsubprocess as subprocess
+import subprocess
 
 # cpio magic numbers
 # XXX matches actual cpio archives and /etc/magic, but not archives.h

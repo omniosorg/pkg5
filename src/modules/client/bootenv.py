@@ -26,6 +26,7 @@
 import errno
 import os
 import shutil
+import subprocess
 import tempfile
 
 from pkg.client import global_settings
@@ -35,7 +36,6 @@ logger = global_settings.logger
 import pkg.client.api_errors as api_errors
 import pkg.misc as misc
 import pkg.portable as portable
-import pkg.pkgsubprocess as subprocess
 
 # Since pkg(1) may be installed without libbe installed
 # check for libbe and import it if it exists.

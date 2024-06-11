@@ -35,6 +35,7 @@ try:
     import locale
     import os
     import shutil
+    import subprocess
     import sys
     import tempfile
     import traceback
@@ -52,7 +53,6 @@ try:
     import pkg.misc as misc
     import pkg.mogrify as mog
     import pkg.p5p
-    import pkg.pkgsubprocess as subprocess
     import pkg.publish.transaction as trans
     import pkg.server.repository as sr
     import pkg.version as version
