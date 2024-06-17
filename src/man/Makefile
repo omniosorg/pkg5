@@ -62,7 +62,7 @@ check:
 clean clobber:
 
 $(MAN1DIR) $(MAN7DIR) $(MAN8DIR):
-	mkdir -p $@
+	$(MKDIR) $@
 
 $(MAN1DIR)/% $(MAN7DIR)/% $(MAN8DIR)/%: %
-	rm -f $@; $(INSTALL) -f $(@D) -m 0444 $<
+	$(RM) $@; $(INSTALL) -f $(@D) -m 0444 $<

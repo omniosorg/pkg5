@@ -21,44 +21,47 @@
 
 #
 # Copyright (c) 2024, Oracle and/or its affiliates.
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
 #
+
+include ../Makefile.com
 
 XGETTEXT =	/usr/gnu/bin/xgettext
 MSGFMT =	/usr/bin/msgfmt
-MKDIR = 	mkdir -p
-INSTALL =	cp
 
-PROTO_AREA:sh =	echo $(dirname $(dirname $(pwd)))/proto/root_$(uname -p)
-LOCALE_DIR =	$(PROTO_AREA)/usr/share/locale
+LOCALES = ar ca cs de es fr he hu id it ja ko nl pl \
+	pt_BR ru sk sv zh_CN zh_HK zh_TW
 
-LOCALES:sh =	grep -v "^\#" LINGUAS
 CATALOGS =	$(LOCALES:=.mo)
 
+ROOTLOCALES =	$(LOCALES:%=$(ROOTUSRSHARELOCALE)/%/LC_MESSAGES/pkg.mo)
+ROOTPOT =	$(ROOTUSRSHARELOCALE)/__LOCALE__/LC_MESSAGES/pkg.pot
 
 all: $(CATALOGS) pkg.pot
+
+$(ROOTPOT): pkg.pot
+	$(MKDIR) $(@D)
+	$(RM) $@; $(INSTALL) -f $(@D) -m 0444 pkg.pot
+
+$(ROOTUSRSHARELOCALE)/%/LC_MESSAGES/pkg.mo: %.mo
+	$(MKDIR) $(@D)
+	$(RM) $@; $(INSTALL) -f $(@D) -m 0444 $<
+	$(MV) $(@D)/$(<F) $@
+
+install: all $(ROOTPOT) $(ROOTLOCALES)
 
 %.mo: %.po
 	$(MSGFMT) -o $@ $^
 
 pkg.pot: POTFILES.in
-	$(XGETTEXT) --add-comments --keyword=N_ --from-code=UTF-8 -f POTFILES.in -D .. -o pkg.pot
-
-install: all
-	@for locale in $(LOCALES); do \
-		dir=$(LOCALE_DIR)/$$locale/LC_MESSAGES; \
-		$(MKDIR) $$dir; \
-		$(INSTALL) $$locale.mo $$dir/pkg.mo; \
-		echo "copying $$locale.mo -> $$dir/pkg.mo"; \
-	done; \
-	dir=$(LOCALE_DIR)/__LOCALE__/LC_MESSAGES; \
-	$(MKDIR) $$dir; \
-	$(INSTALL) pkg.pot $$dir/pkg.pot; \
-	echo "copying pkg.pot -> $$dir/pkg.pot"
+	$(XGETTEXT) --add-comments --keyword=N_ \
+	    --from-code=UTF-8 -f POTFILES.in -D .. -o pkg.pot
 
 check:
-	$(XGETTEXT) --keyword=N_ --from-code=UTF-8 -f POTFILES.in -D .. -o /dev/null 2>i18n_errs.txt
+	$(XGETTEXT) --keyword=N_ --from-code=UTF-8 -f POTFILES.in \
+	    -D .. -o /dev/null 2>i18n_errs.txt
 	@if [ -s i18n_errs.txt ]; then \
-		echo "The following i18n errors were detected and should be corrected:"; \
+		echo "The following i18n errors were detected:"; \
 		echo "(this list is saved in i18n_errs.txt)"; \
 		cat i18n_errs.txt; \
 		exit 1; \
