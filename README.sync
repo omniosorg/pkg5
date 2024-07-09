@@ -4,11 +4,11 @@
 The pkg5 components have been updated to the latest upstream solaris-ips
 as of:
 
-commit 616fce8ad21fc03eaa77ba38508c66c356f03d65
+commit 2cb20af7cc68247c0a809de5378915a99d2bc17b
 Author: Jakub Kulik <jakub.kulik@oracle.com>
-Date:   Wed May 29 05:44:20 2024 -0700
+Date:   Thu Jun 20 04:41:22 2024 -0700
 
-    36620736 TestPkgrepoMultiRepo.test_01_diff failing post 36247279
+    36752252 fix several real errors reported by pylint
 
 -----------------------------------------------------------------------------
 
