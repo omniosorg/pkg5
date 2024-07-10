@@ -25,8 +25,8 @@
 #
 
 import os
-import pkg.pkgsubprocess as subprocess
 import shutil
+import subprocess
 import sys
 
 sys.path.append("../../")

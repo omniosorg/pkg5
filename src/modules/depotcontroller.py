@@ -28,6 +28,7 @@ import platform
 import shlex
 import signal
 import ssl
+import subprocess
 import sys
 import time
 
@@ -35,7 +36,6 @@ from urllib.error import HTTPError, URLError
 from urllib.request import pathname2url, urlopen
 from urllib.parse import urlunparse, urljoin
 
-import pkg.pkgsubprocess as subprocess
 import pkg.server.repository as sr
 
 
