@@ -24,16 +24,13 @@
 # Copyright (c) 2007, 2024, Oracle and/or its affiliates.
 #
 
-
 __all__ = [
-    "catalog",
-    "config",
+    "api",
+    "api_errors",
     "depot",
     "face",
     "feed",
+    "query_parser",
     "repository",
     "transaction",
 ]
-
-# Vim hints
-# vim:ts=4:sw=4:et:fdm=marker

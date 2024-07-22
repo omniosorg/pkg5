@@ -333,7 +333,7 @@ class RepositoryURI(object):
                 "proxies", scheme=self.scheme
             )
 
-        if not (isinstance(proxies, list) or isinstance(proxies, tuple)):
+        if not isinstance(proxies, (list, tuple)):
             raise api_errors.BadRepositoryAttributeValue(
                 "proxies", value=proxies
             )

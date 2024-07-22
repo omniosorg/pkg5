@@ -21,10 +21,15 @@
 #
 
 #
-# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2024, Oracle and/or its affiliates.
 #
 
-__all__ = ["base" "elf" "hardlink" "pound_bang" "python" "smf_manifest"]
-
-# Vim hints
-# vim:ts=4:sw=4:et:fdm=marker
+__all__ = [
+    "base",
+    "depthlimitedmf",
+    "elf",
+    "hardlink",
+    "python",
+    "script",
+    "smf_manifest",
+]

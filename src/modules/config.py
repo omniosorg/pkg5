@@ -599,7 +599,7 @@ class PropList(PropDefined):
             self._is_allowed(v)
             nvalue.append(v)
 
-        if self.allowed and "" not in self.allowed and not len(nvalue):
+        if self.allowed and "" not in self.allowed and not nvalue:
             raise InvalidPropertyValueError(prop=self.name, value=nvalue)
 
         self._value = nvalue
@@ -645,7 +645,7 @@ class PropDictionaryList(PropList):
             nvalue.append(v)
 
         # if we don't allow an empty list, raise an error
-        if self.allowed and "" not in self.allowed and not len(nvalue):
+        if self.allowed and "" not in self.allowed and not nvalue:
             raise InvalidPropertyValueError(prop=self.name, value=nvalue)
         self._value = nvalue
 
@@ -728,9 +728,7 @@ class PropSimpleList(PropList):
         return result
 
     def __str__(self):
-        if self.value and len(self.value):
-            # Performing the join using a unicode string results in
-            # a single unicode string object.
+        if self.value:
             return ",".join(self.value)
         return ""
 

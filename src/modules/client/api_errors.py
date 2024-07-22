@@ -3885,12 +3885,7 @@ class InvalidOptionErrors(ApiException):
     def __init__(self, errors):
         self.errors = []
 
-        assert (
-            isinstance(errors, list)
-            or isinstance(errors, tuple)
-            or isinstance(errors, set)
-            or isinstance(errors, InvalidOptionError)
-        )
+        assert isinstance(errors, (list, tuple, set, InvalidOptionError))
 
         if isinstance(errors, InvalidOptionError):
             self.errors.append(errors)

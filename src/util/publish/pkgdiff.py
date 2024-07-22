@@ -319,7 +319,7 @@ def main_func():
                 return s
 
         v = attrs[k]
-        if isinstance(v, list) or isinstance(v, set):
+        if isinstance(v, (list, set)):
             out = " ".join(
                 [
                     "{0}={1}".format(k, q(lmt))
