@@ -545,7 +545,6 @@ class clint_func(Command):
             os.system(" ".join(sha512_tcmd))
 
 
-
 # Runs both C and Python lint
 class lint_func(Command):
     description = "Runs C and Python lint checkers"
