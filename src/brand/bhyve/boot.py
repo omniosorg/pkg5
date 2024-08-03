@@ -123,6 +123,7 @@ DISK_SLOT2      = 8
 PPT_SLOT        = 9
 RNG_SLOT        = 10
 VIRTFS_SLOT     = 11
+NET_SLOT2       = 12
 CINIT_SLOT      = 29
 VNC_SLOT        = 30
 LPC_SLOT_WIN    = 31
@@ -518,11 +519,18 @@ for f in z.findall('./network[@physical]'):
                 boolv(v, k)  # Value check
             net_extra += ',{}={}'.format(k, v)
 
-    args.extend([
-        '-s', '{0}:{1},{2},{3}{4}'
-        .format(NET_SLOT, i, netif, ifname, net_extra)
-    ])
-    add_bootoption('net', i, ('pci', f'{NET_SLOT}.{i}'))
+    if i < 8:
+        args.extend([
+            '-s', '{0}:{1},{2},{3}{4}'
+            .format(NET_SLOT, i, netif, ifname, net_extra)
+        ])
+        add_bootoption('net', i, ('pci', f'{NET_SLOT}.{i}'))
+    else:
+        args.extend([
+            '-s', '{0}:{1},{2},{3}{4}'
+            .format(NET_SLOT2, i - 8, netif, ifname, net_extra)
+        ])
+        add_bootoption('net', i, ('pci', f'{NET_SLOT2}.{i - 8}'))
     i += 1
 
 for nic, promisc in promisc_filtered_nics.items():
