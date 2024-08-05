@@ -13,7 +13,7 @@
 # Copyright 2023 OmniOS Community Edition (OmniOSce) Association.
 #
 
-EXTENSIONS= arch pspawn sha512_t sysattr syscallat
+EXTENSIONS= arch sha512_t sysattr syscallat
 SOURCES= $(EXTENSIONS:%=_%.c)
 OUTDIR= cffi_src
 
