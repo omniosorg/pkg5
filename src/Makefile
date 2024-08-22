@@ -42,7 +42,7 @@ clobber := TARGET = clobber
 check := TARGET = check
 packages := TARGET = install
 
-SUBDIRS=brand util/mkcert man po web
+SUBDIRS=brand util/mkcert man po svc web
 
 all: $(SUBDIRS)
 

@@ -119,13 +119,10 @@ py64_executable = "/usr/bin/python" + py_version
 
 scripts_dir = "usr/bin"
 lib_dir = "usr/lib"
-svc_method_dir = "lib/svc/method"
-svc_share_dir = "lib/svc/share"
 
 ignored_deps_dir = "usr/share/pkg/ignored_deps"
 resource_dir = "usr/share/lib/pkg"
 transform_dir = "usr/share/pkg/transforms"
-smf_app_dir = "lib/svc/manifest/application/pkg"
 execattrd_dir = "etc/security/exec_attr.d"
 authattrd_dir = "etc/security/auth_attr.d"
 userattrd_dir = "etc/user_attr.d"
@@ -165,17 +162,6 @@ scripts_sunos = {
         ["depot.py", "pkg.depotd"],
         # ['sysrepo.py', 'pkg.sysrepo'],
         # ['depot-config.py', "pkg.depot-config"]
-    ],
-    svc_method_dir: [
-        # ['svc/svc-pkg-depot', 'svc-pkg-depot'],
-        ["svc/svc-pkg-mdns", "svc-pkg-mdns"],
-        ["svc/svc-pkg-mirror", "svc-pkg-mirror"],
-        ["svc/svc-pkg-repositories-setup", "svc-pkg-repositories-setup"],
-        ["svc/svc-pkg-server", "svc-pkg-server"],
-        # ['svc/svc-pkg-sysrepo', 'svc-pkg-sysrepo'],
-    ],
-    svc_share_dir: [
-        ["svc/pkg5_include.sh", "pkg5_include.sh"],
     ],
 }
 
@@ -255,16 +241,6 @@ pylint_targets = [
     "pkg.pipeutils",
 ]
 
-smf_app_files = [
-    #'svc/pkg-depot.xml',
-    "svc/pkg-mdns.xml",
-    "svc/pkg-mirror.xml",
-    "svc/pkg-repositories-setup.xml",
-    "svc/pkg-server.xml",
-    #'svc/pkg-system-repository.xml',
-    #'svc/zoneproxy-client.xml',
-    #'svc/zoneproxyd.xml'
-]
 resource_files = [
     "util/opensolaris.org.sections",
     "util/pkglintrc",
@@ -569,22 +545,6 @@ class clint_func(Command):
             os.system(" ".join(sha512_tcmd))
 
 
-class smflint_func(Command):
-    description = "Validate SMF manifests"
-    user_options = []
-
-    def initialize_options(self):
-        pass
-
-    def finalize_options(self):
-        pass
-
-    def run(self):
-        for manifest in smf_app_files:
-            args = ["/usr/sbin/svccfg", "validate", manifest]
-            print(f"SMF manifest validate: {manifest}")
-            run_cmd(args, os.getcwd())
-
 
 # Runs both C and Python lint
 class lint_func(Command):
@@ -603,7 +563,6 @@ class lint_func(Command):
         return astring.replace(" ", "\\ ")
 
     def run(self):
-        smflint_func(Distribution()).run()
         clint_func(Distribution()).run()
         pylint_func(Distribution()).run()
 
@@ -1368,7 +1327,6 @@ data_files += [(ignored_deps_dir, ignored_deps_files)]
 if osname == "sunos":
     # Solaris-specific extensions are added here
     data_files += [
-        (smf_app_dir, smf_app_files),
         (execattrd_dir, execattrd_files),
         (authattrd_dir, authattrd_files),
         (userattrd_dir, userattrd_files),
