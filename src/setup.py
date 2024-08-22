@@ -255,18 +255,6 @@ pylint_targets = [
     "pkg.pipeutils",
 ]
 
-web_files = []
-for entry in os.walk("web"):
-    web_dir, dirs, files = entry
-    if not files:
-        continue
-    web_files.append(
-        (
-            os.path.join(resource_dir, web_dir),
-            [os.path.join(web_dir, f) for f in files if f != "Makefile"],
-        )
-    )
-
 smf_app_files = [
     #'svc/pkg-depot.xml',
     "svc/pkg-mdns.xml",
@@ -1348,7 +1336,7 @@ ext_modules = [
 elf_libraries = None
 sysattr_libraries = None
 sha512_t_libraries = None
-data_files = web_files
+data_files = []
 cmdclasses = {
     "install": install_func,
     "install_data": install_data_func,
