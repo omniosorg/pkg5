@@ -4,11 +4,11 @@
 The pkg5 components have been updated to the latest upstream solaris-ips
 as of:
 
-commit 2cb20af7cc68247c0a809de5378915a99d2bc17b
+commit 7caddba490ac61d0ae1ad9daead93e1fc7265c9c
 Author: Jakub Kulik <jakub.kulik@oracle.com>
-Date:   Thu Jun 20 04:41:22 2024 -0700
+Date:   Wed Aug 14 06:40:52 2024 -0700
 
-    36752252 fix several real errors reported by pylint
+    29414815 -D firmware-dependency-bypass=1 option throws stacktrace
 
 -----------------------------------------------------------------------------
 

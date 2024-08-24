@@ -1192,7 +1192,7 @@ def clone_repo(
 
     # We only print warning if the user didn't specify any valid publishers
     # to add/sync.
-    if len(unknown_pubs):
+    if unknown_pubs:
         txt = _(
             "\nThe following publishers are present in the "
             "source repository but not in the target repository.\n"

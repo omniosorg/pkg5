@@ -119,13 +119,10 @@ py64_executable = "/usr/bin/python" + py_version
 
 scripts_dir = "usr/bin"
 lib_dir = "usr/lib"
-svc_method_dir = "lib/svc/method"
-svc_share_dir = "lib/svc/share"
 
 ignored_deps_dir = "usr/share/pkg/ignored_deps"
 resource_dir = "usr/share/lib/pkg"
 transform_dir = "usr/share/pkg/transforms"
-smf_app_dir = "lib/svc/manifest/application/pkg"
 execattrd_dir = "etc/security/exec_attr.d"
 authattrd_dir = "etc/security/auth_attr.d"
 userattrd_dir = "etc/user_attr.d"
@@ -165,17 +162,6 @@ scripts_sunos = {
         ["depot.py", "pkg.depotd"],
         # ['sysrepo.py', 'pkg.sysrepo'],
         # ['depot-config.py', "pkg.depot-config"]
-    ],
-    svc_method_dir: [
-        # ['svc/svc-pkg-depot', 'svc-pkg-depot'],
-        ["svc/svc-pkg-mdns", "svc-pkg-mdns"],
-        ["svc/svc-pkg-mirror", "svc-pkg-mirror"],
-        ["svc/svc-pkg-repositories-setup", "svc-pkg-repositories-setup"],
-        ["svc/svc-pkg-server", "svc-pkg-server"],
-        # ['svc/svc-pkg-sysrepo', 'svc-pkg-sysrepo'],
-    ],
-    svc_share_dir: [
-        ["svc/pkg5_include.sh", "pkg5_include.sh"],
     ],
 }
 
@@ -255,28 +241,6 @@ pylint_targets = [
     "pkg.pipeutils",
 ]
 
-web_files = []
-for entry in os.walk("web"):
-    web_dir, dirs, files = entry
-    if not files:
-        continue
-    web_files.append(
-        (
-            os.path.join(resource_dir, web_dir),
-            [os.path.join(web_dir, f) for f in files if f != "Makefile"],
-        )
-    )
-
-smf_app_files = [
-    #'svc/pkg-depot.xml',
-    "svc/pkg-mdns.xml",
-    "svc/pkg-mirror.xml",
-    "svc/pkg-repositories-setup.xml",
-    "svc/pkg-server.xml",
-    #'svc/pkg-system-repository.xml',
-    #'svc/zoneproxy-client.xml',
-    #'svc/zoneproxyd.xml'
-]
 resource_files = [
     "util/opensolaris.org.sections",
     "util/pkglintrc",
@@ -317,7 +281,6 @@ userattrd_files = ["util/misc/user_attr.d/package:pkg"]
 sha512_t_srcs = ["cffi_src/_sha512_t.c"]
 sysattr_srcs = ["cffi_src/_sysattr.c"]
 syscallat_srcs = ["cffi_src/_syscallat.c"]
-pspawn_srcs = ["cffi_src/_pspawn.c"]
 elf_srcs = [
     "modules/elf.c",
     "modules/elfextract.c",
@@ -524,14 +487,6 @@ class clint_func(Command):
                 + ["-I" + self.escape(get_python_inc())]
                 + _misc_srcs
             )
-            pspawncmd = (
-                lint
-                + lint_flags
-                + ["-D_FILE_OFFSET_BITS=64"]
-                + ["{0}{1}".format("-I", k) for k in include_dirs]
-                + ["-I" + self.escape(get_python_inc())]
-                + pspawn_srcs
-            )
             syscallatcmd = (
                 lint
                 + lint_flags
@@ -571,31 +526,12 @@ class clint_func(Command):
             os.system(" ".join(_varcetcmd))
             print(" ".join(_misccmd))
             os.system(" ".join(_misccmd))
-            print(" ".join(pspawncmd))
-            os.system(" ".join(pspawncmd))
             print(" ".join(syscallatcmd))
             os.system(" ".join(syscallatcmd))
             print(" ".join(sysattrcmd))
             os.system(" ".join(sysattrcmd))
             print(" ".join(sha512_tcmd))
             os.system(" ".join(sha512_tcmd))
-
-
-class smflint_func(Command):
-    description = "Validate SMF manifests"
-    user_options = []
-
-    def initialize_options(self):
-        pass
-
-    def finalize_options(self):
-        pass
-
-    def run(self):
-        for manifest in smf_app_files:
-            args = ["/usr/sbin/svccfg", "validate", manifest]
-            print(f"SMF manifest validate: {manifest}")
-            run_cmd(args, os.getcwd())
 
 
 # Runs both C and Python lint
@@ -615,7 +551,6 @@ class lint_func(Command):
         return astring.replace(" ", "\\ ")
 
     def run(self):
-        smflint_func(Distribution()).run()
         clint_func(Distribution()).run()
         pylint_func(Distribution()).run()
 
@@ -1348,7 +1283,7 @@ ext_modules = [
 elf_libraries = None
 sysattr_libraries = None
 sha512_t_libraries = None
-data_files = web_files
+data_files = []
 cmdclasses = {
     "install": install_func,
     "install_data": install_data_func,
@@ -1380,7 +1315,6 @@ data_files += [(ignored_deps_dir, ignored_deps_files)]
 if osname == "sunos":
     # Solaris-specific extensions are added here
     data_files += [
-        (smf_app_dir, smf_app_files),
         (execattrd_dir, execattrd_files),
         (authattrd_dir, authattrd_files),
         (userattrd_dir, userattrd_files),
@@ -1421,15 +1355,6 @@ if osname == "sunos" or osname == "linux":
             Extension(
                 "_arch",
                 arch_srcs,
-                include_dirs=include_dirs,
-                extra_compile_args=compile_args,
-                extra_link_args=link_args,
-                define_macros=[("_FILE_OFFSET_BITS", "64")],
-                build_64=True,
-            ),
-            Extension(
-                "_pspawn",
-                pspawn_srcs,
                 include_dirs=include_dirs,
                 extra_compile_args=compile_args,
                 extra_link_args=link_args,

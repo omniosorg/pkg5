@@ -1367,7 +1367,7 @@ str_default = {uni_txt}
 str_allowed = builtin
 str_noneallowed =
 list_basic = []
-list_default = [u'{uni_escape}', 'bob cat', 'profit']
+list_default = ['{uni_escape}', 'bob cat', 'profit']
 list_allowed = ['builtin']
 list_noneallowed = []
 
