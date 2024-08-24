@@ -28,7 +28,8 @@ include ../Makefile.com
 PKGVERS_COMPONENT = 0.5.11
 PKGVERS_BUILTON   = 5.11
 BUILDNUM.cmd      = \
-	nawk '$$1 == "OmniOS" { print $$3 }' /etc/release | tr -d '[a-z]'
+	awk -F= '$$1 == "BUILD_ID" { split($$2, a, "."); print a[1] }' \
+	/etc/os-release
 BUILDNUM          = $(BUILDNUM.cmd:sh)
 UPDATENUM         = 0
 SRUNUM            = 0
