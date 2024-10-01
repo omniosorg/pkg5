@@ -886,6 +886,11 @@ def process_mog(
                     pkg_attrs.setdefault(name, []).append(value)
                 else:
                     pkg_attrs.setdefault(name, []).extend(value)
+                if name == "pkg.fmri":
+                    pfmri = pkg.fmri.PkgFmri(value)
+                    pkg_attrs.setdefault("pkg.fmri.name", []).append(
+                        pfmri.get_name()
+                    )
             comment, a = apply_transforms(
                 transforms, act, pkg_attrs, verbose, filename, lineno
             )

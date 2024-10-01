@@ -1,6 +1,6 @@
 .\" Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
-.\" Copyright 2022 OmniOS Community Edition (OmniOSce) Association.
-.Dd February 17, 2022
+.\" Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
+.Dd October 1, 2024
 .Dt PKGMOGRIFY 1
 .Os
 .Sh NAME
@@ -309,6 +309,15 @@ action, or it is treated as
 described above.
 When the processing reaches the end of the manifest file describing the
 package, the attributes are cleared for the next package.
+The following synthetic attributes are also automatically generated from
+.Sy pkg.fmri
+when it is encountered:
+.Bl -tag -width Ds
+.It Cm pkg.fmri.name
+The name of the package, without any scheme, publisher name or version
+information, e.g.
+.Sq library/libxml2 .
+.El
 .Pp
 It is useful not only to reference package attributes as if they were action
 attributes, but also to match on them, and even temporarily modify them.

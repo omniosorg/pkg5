@@ -70,7 +70,7 @@ link path=usr/X11/lib/libXmu.so target=./libXmu.so.4
 """
 
     pkgcontents2 = """\
-set name=pkg.fmri value=wombat/heaven@1.0,5.11-0.101
+set name=pkg.fmri value=pkg://tp/wombat/heaven@1.0,5.11-0.101
 set name=bugs value=12345 value=54321 value=13524
 set name=justonebug value=12345
 file thisismyhashvalue path=usr/bin/foo mode=0777 owner=root group=bin
@@ -111,6 +111,7 @@ file NOHASH path=kernel/drv/common2 reboot-needed=true
         "exit7 on bobcat": "<transform file bobcat=1 -> exit 7>",
         "exit6 on bobcat": "<transform file bobcat=1 -> exit 6 found a bobcat>",
         "pkg.fmri": '<transform file path=usr/bin/foo -> print pkg attr "%{{pkg.fmri}}" and the rest>',
+        "pkg.fmri.name": '<transform file path=usr/bin/foo -> print pkg attr "%{{pkg.fmri.name}}" and the rest>',
         "pkg.bugs": '<transform file path=usr/bin/foo -> print pkg attr "%{{bugs}}" and the rest>',
         "fmrival": '<transform set name=pkg.fmri -> print test of "%(value)" ... or is it?>',
         "fmrinoval": '<transform set name=pkg.fmri -> print test of "%(valuee)" ... or is it?>',
@@ -527,7 +528,7 @@ file NOHASH path=kernel/drv/common2 reboot-needed=true
         # ... or an action ...
         self.pkgmogrify([self.transforms["emitaction"], source_file])
         self.assertMatch(
-            "^depend fmri=wombat/heaven@1.0,5.11-0.101 type=incorporate"
+            "^depend fmri=pkg://tp/wombat/heaven@1.0,5.11-0.101 type=incorporate"
         )
 
         # Recursive transforms shouldn't blow up.
@@ -550,7 +551,7 @@ file NOHASH path=kernel/drv/common2 reboot-needed=true
         source_file = os.path.join(self.test_root, "source_file2")
 
         expect = r'^test of "{0}" ... or is it\?$'
-        fmri = "wombat/heaven@1.0,5.11-0.101"
+        fmri = "pkg://tp/wombat/heaven@1.0,5.11-0.101"
 
         # Simple %() replacement
         self.pkgmogrify([self.transforms["fmrival"], source_file])
@@ -625,8 +626,11 @@ file NOHASH path=kernel/drv/common2 reboot-needed=true
         # Simple valued
         self.pkgmogrify([self.transforms["pkg.fmri"], source_file])
         self.assertMatch(
-            '^pkg attr "wombat/heaven@1.0,5.11-0.101" and ' "the rest$"
+            '^pkg attr "pkg://tp/wombat/heaven@1.0,5.11-0.101" and ' "the rest$"
         )
+
+        self.pkgmogrify([self.transforms["pkg.fmri.name"], source_file])
+        self.assertMatch('^pkg attr "wombat/heaven" and ' "the rest$")
 
         # List valued
         self.pkgmogrify([self.transforms["pkg.bugs"], source_file])
