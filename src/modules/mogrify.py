@@ -886,15 +886,20 @@ def process_mog(
                     pkg_attrs.setdefault(name, []).append(value)
                 else:
                     pkg_attrs.setdefault(name, []).extend(value)
-                if name == "pkg.fmri":
-                    pfmri = pkg.fmri.PkgFmri(value)
-                    pkg_attrs.setdefault("pkg.fmri.name", []).append(
-                        pfmri.get_name()
-                    )
             comment, a = apply_transforms(
                 transforms, act, pkg_attrs, verbose, filename, lineno
             )
             output.append((comment, a, prepended_macro))
+            # Build additional synthetic attributes based on the final pkg.fmri
+            if act.name == "set" and act.attrs["name"] == "pkg.fmri":
+                try:
+                    pfmri = pkg.fmri.PkgFmri(value)
+                    pkg_attrs.setdefault("pkg.fmri.name", []).append(
+                        pfmri.get_name()
+                    )
+                except:
+                    pass
+
         except RuntimeError as e:
             process_error(
                 "File {0} line {1:d}: {2}".format(filename, lineno, e), error_cb
