@@ -65,7 +65,11 @@ from pkg.portable import (
 )
 
 import pkg.arch as arch
+
+# pylint: disable-next=unused-import
 from pkg.sysattr import fgetattr, fsetattr
+
+# pylint: disable-next=unused-import
 from pkg.sysattr import get_attr_dict as get_sysattr_dict
 
 

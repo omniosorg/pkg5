@@ -29,7 +29,6 @@ if __name__ == "__main__":
     testutils.setup_environment("../../../proto")
 import pkg5unittest
 
-import errno
 import os
 import pkg.portable as portable
 import shutil

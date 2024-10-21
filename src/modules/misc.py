@@ -51,7 +51,6 @@ import sys
 import threading
 import time
 import traceback
-import urllib
 import zlib
 
 # ungrouped-imports: pylint: disable=C0412

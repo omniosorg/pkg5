@@ -30,7 +30,6 @@ if __name__ == "__main__":
     testutils.setup_environment("../../../proto")
 import pkg5unittest
 
-import errno
 import unittest
 import io
 import os

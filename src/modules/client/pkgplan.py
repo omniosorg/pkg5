@@ -24,7 +24,6 @@
 # Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 
-import copy
 import grp
 import itertools
 import os

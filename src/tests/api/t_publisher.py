@@ -32,7 +32,6 @@ if __name__ == "__main__":
 import pkg5unittest
 
 import copy
-import errno
 import os
 import shutil
 import sys

@@ -29,7 +29,6 @@
 import pkg.misc as misc
 import fnmatch
 import re
-import types
 from functools import cmp_to_key
 
 import pkg.misc as misc
