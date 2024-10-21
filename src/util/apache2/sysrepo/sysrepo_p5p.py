@@ -25,6 +25,7 @@
 import pkg.p5p
 
 import http.client
+import errno
 import os
 import shutil
 import sys

@@ -49,7 +49,7 @@ from pkg.portable.os_unix import (
     assert_mode,
 )
 
-import macostools
+import macostools  # pylint: disable=import-error
 
 
 def copyfile(src, dst):

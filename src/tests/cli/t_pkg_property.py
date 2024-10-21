@@ -32,7 +32,6 @@ if __name__ == "__main__":
 import pkg5unittest
 
 import os
-import errno
 import pkg.portable as portable
 import unittest
 

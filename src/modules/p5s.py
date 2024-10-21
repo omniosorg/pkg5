@@ -26,14 +26,12 @@
 #
 
 import copy
-import os
 from urllib.parse import urlparse, urlunparse
 
 import pkg.client.api_errors as api_errors
 import pkg.client.publisher as publisher
 import pkg.json as json
 import pkg.digest as digest
-import pkg.fmri as fmri
 from pkg.client.imageconfig import DEF_TOKEN
 from pkg.misc import force_bytes
 

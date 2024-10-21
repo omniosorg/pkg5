@@ -38,7 +38,6 @@ import pkg.actions
 import pkg.mediator as med
 
 from pkg import misc
-from pkg.client.api_errors import ActionExecutionError
 
 
 class LinkAction(generic.Action):

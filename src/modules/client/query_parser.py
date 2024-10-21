@@ -21,7 +21,6 @@
 #
 # Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
 
-import os
 import sys
 import threading
 import pkg.client.api_errors as api_errors
