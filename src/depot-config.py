@@ -532,7 +532,7 @@ def _generate_server_cert_key(
         server_key_file
     ):
 
-        starttime = datetime.datetime.now()
+        starttime = datetime.datetime.now(tz=datetime.timezone.utc)
         endtime = starttime + datetime.timedelta(days=10 * 365)
 
         # If user specifies ca_cert_file and ca_key_file, just load
