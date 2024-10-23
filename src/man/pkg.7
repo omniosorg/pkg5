@@ -1,8 +1,8 @@
 '\" te
-.\" Copyright (c) 2009, 2020, Oracle and/or its affiliates. All rights reserved.
+.\" Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
 .\" Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
-.\" Copyright 2022 OmniOS Community Edition (OmniOSce) Association.
-.Dd November 16, 2022
+.\" Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
+.Dd November 14, 2024
 .Dt PKG 7
 .Os
 .Sh NAME
@@ -1178,7 +1178,7 @@ attribute is installed on the system, so that the package can be used to
 satisfy dependencies.
 .Pp
 The following attributes, named in accordance with the parameters on
-.Xr pkginfo 7 ,
+.Xr pkginfo 5 ,
 are recognised:
 .Bl -tag -width 6n
 .It Sy category
@@ -1308,7 +1308,7 @@ A short, one-line description of the package.
 The
 .Sy group
 action defines a UNIX group as defined in
-.Xr group 7 .
+.Xr group 5 .
 No support is present for group passwords.
 Groups defined with this action initially have no user list.
 Users can be added with the
@@ -1320,7 +1320,8 @@ The following attributes are recognised:
 The value for the name of the group.
 .It Sy gid
 The group's unique numerical id.
-The default value is the first free group under 100.
+If not specified the first free value in the dynamic allocation range 100-499
+in the target image is used.
 .El
 .\"
 .Ss "User Actions"
@@ -1353,7 +1354,7 @@ The encrypted password of the user.
 Default value is
 .Sy \&*LK* .
 See
-.Xr shadow 7 .
+.Xr shadow 5 .
 The special value
 .Sy UP
 can be used to indicate that the
@@ -1370,7 +1371,8 @@ report an unexpected change and
 will not change the value back to that of the manifest.
 .It Sy uid
 The unique uid of the user.
-Default value is first free value under 100.
+If not specified the first free value in the dynamic allocation range 100-499
+in the target image is used.
 .It Sy group
 The name of the user's primary group.
 Must be found in
@@ -1395,7 +1397,7 @@ Default value is empty.
 .It Sy group-list
 Secondary groups to which the user belongs.
 See
-.Xr group 7 .
+.Xr group 5 .
 .It Sy ftpuser
 Can be set to
 .Sy true
@@ -1405,28 +1407,28 @@ The default value of
 .Sy true
 indicates that the user is permitted to login via FTP.
 See
-.Xr ftpusers 7 .
+.Xr ftpusers 5 .
 .It Sy lastchg
 The number of days between January 1, 1970, and the date that the password was
 last modified.
 Default value is empty.
 See
-.Xr shadow 7 .
+.Xr shadow 5 .
 .It Sy min
 The minimum number of days required between password changes.
 This field must be set to 0 or above to enable password aging.
 Default value is empty.
 See
-.Xr shadow 7 .
+.Xr shadow 5 .
 .It Sy max
 The maximum number of days the password is valid.
 Default value is empty.
 See
-.Xr shadow 7 .
+.Xr shadow 5 .
 .It Sy warn
 The number of days before password expires that the user is warned.
 See
-.Xr shadow 7 .
+.Xr shadow 5 .
 .It Sy inactive
 The number of days of inactivity allowed for that user.
 This is counted on a per-machine basis.
@@ -1434,7 +1436,7 @@ The information about the last login is taken from the machine's
 .Sy lastlog
 file.
 See
-.Xr shadow 7 .
+.Xr shadow 5 .
 .It Sy expire
 An absolute date expressed as the number of days since the UNIX Epoch (January
 1, 1970).
@@ -1442,11 +1444,11 @@ When this number is reached, the login can no longer be used.
 For example, an expire value of 13514 specifies a login expiration of January
 1, 2007.
 See
-.Xr shadow 7 .
+.Xr shadow 5 .
 .It Sy flag
 Set to empty.
 See
-.Xr shadow 7 .
+.Xr shadow 5 .
 .El
 .\"
 .Sh ACTUATORS
@@ -1671,12 +1673,6 @@ dependencies.
 Because of restrictions that the global zone imposes on non-global zones, the
 non-global zones must have access to the packages of the global zone and must
 have a similar publisher configuration.
-Both of these objectives are achieved by using a
-.Sy system repository
-.Po see the
-.Xr pkg.sysrepo 8
-man page
-.Pc .
 The system repository provides access to the publishers configured in the
 global zone and information about how those publishers are configured.
 To prevent non-global zones from choosing different packages during
@@ -2010,12 +2006,11 @@ directory hierarchy are Private, and are subject to change.
 .Xr pkg 1 ,
 .Xr pkgsend 1 ,
 .Xr svcs 1 ,
-.Xr ftpusers 7 ,
-.Xr group 7 ,
-.Xr pkginfo 7 ,
-.Xr shadow 7 ,
+.Xr ftpusers 5 ,
+.Xr group 5 ,
+.Xr pkginfo 5 ,
+.Xr shadow 5 ,
 .Xr add_drv 8 ,
 .Xr devlinks 8 ,
 .Xr pkg.depotd 8 ,
-.Xr pkg.sysrepo 8 ,
 .Xr svcadm 8
