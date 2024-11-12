@@ -1,8 +1,8 @@
 #
 # This file was automatically produced by tools/updatereqs
-# Generated on Tue Jul 16 18:16:34 UTC 2024
+# Generated on Tue Nov 12 15:34:50 UTC 2024
 # Do not edit directly
 #
 construct==2.10.70
-PyYAML==6.0.1
-wheel==0.43.0
+PyYAML==6.0.2
+wheel==0.45.0
