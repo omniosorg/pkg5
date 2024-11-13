@@ -15,23 +15,18 @@
 
 include ../Makefile.com
 
-SUBDIRS= $(PYVERSIONS:%=src/%)
-
 all := TARGET = all
 install := TARGET = install
 clean := TARGET = clean
 clobber := TARGET = clobber
 
-all install clean: $(SUBDIRS)
+all install clean clobber: $(PYVERSIONS)
 
-clobber: $(SUBDIRS)
-	$(RMDIR) $(SUBDIRS) src
+$(PYVERSIONS): FRC
+	$(MAKE) -f Makefile.ext USEPY=$@ $(TARGET)
+	$(MAKE) -f Makefile.mod USEPY=$@ $(TARGET)
 
 check:
-
-$(SUBDIRS): FRC
-	$(MKDIR) $@
-	@cd $@; pwd; $(MAKE) -f ../../Makefile.ext $(TARGET) USEPY=$(@F)
 
 FRC:
 

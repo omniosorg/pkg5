@@ -9,29 +9,21 @@
 # http://www.illumos.org/license/CDDL.
 #
 
-#
 # Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
-#
 
-include ../Makefile.com
+include ../../../Makefile.com
 
-SUBDIRS= $(PYVERSIONS:%=src/%)
+USRSHAREMFST= $(ROOTUSRSHARE)/pkg/transforms
 
-all := TARGET = all
-install := TARGET = install
-clean := TARGET = clean
-clobber := TARGET = clobber
+TRANSFORMS = developer documentation locale smf-manifests
 
-all install clean: $(SUBDIRS)
+FILES= $(TRANSFORMS:%=$(USRSHAREMFST)/%)
 
-clobber: $(SUBDIRS)
-	$(RMDIR) $(SUBDIRS) src
+all check clean clobber:
 
-check:
+install: $(FILES)
 
-$(SUBDIRS): FRC
-	$(MKDIR) $@
-	@cd $@; pwd; $(MAKE) -f ../../Makefile.ext $(TARGET) USEPY=$(@F)
-
-FRC:
+$(USRSHAREMFST)/%: %
+	$(MKDIR) $(@D)
+	$(RM) $@; $(INSTALL) -f $(@D) -m 0444 $<
 

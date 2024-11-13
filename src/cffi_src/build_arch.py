@@ -35,6 +35,7 @@ ffi.set_source(
 #include <sys/systeminfo.h>
 #include <stdlib.h>
 """,
+    extra_compile_args=["-O3"],
 )
 
 ffi.cdef(
@@ -54,7 +55,7 @@ int sysinfo(int, char *, long);
 )
 
 if __name__ == "__main__":
-    ffi.emit_c_code("cffi_src/_arch.c")
+    ffi.compile(verbose=False)
 
 # Vim hints
 # vim:ts=4:sw=4:et:fdm=marker

@@ -21,10 +21,12 @@ ROOTETC = $(ROOT)/etc
 ROOTETCZONES = $(ROOTETC)/zones
 ROOTETCBRAND = $(ROOTETC)/brand
 ROOTUSRLIB = $(ROOT)/usr/lib
+ROOTUSRBIN = $(ROOT)/usr/bin
 ROOTUSRSHARE = $(ROOT)/usr/share
 ROOTUSRSHARELOCALE = $(ROOTUSRSHARE)/locale
 ROOTBRAND = $(ROOTUSRLIB)/brand
 ROOTPKGLIB = $(ROOTUSRLIB)/pkg
+TRIPLET = x86_64-pc-solaris2
 
 CC = /usr/bin/gcc-13
 CFLAGS = -m64 -Wall -Werror -Wextra -gdwarf-2 -gstrict-dwarf \
@@ -43,9 +45,13 @@ STRIP = /usr/bin/strip
 RM = /usr/bin/rm -f
 MV = /usr/bin/mv
 MKDIR =	/usr/bin/mkdir -p
+RMDIR = /usr/bin/rmdir
+SED = /usr/bin/sed
+CHMOD = /usr/bin/chmod
 
 CTFCONVERT_BIN = $(CTFCONVERT) -l pkg5
 POST_PROCESS = $(CTFCONVERT_BIN) $@; $(STRIP) -x $@
+PYCOMPILE_OPTS = -m compileall -j0 -f --invalidation-mode timestamp
 
 PRE_HASH=	pre\#
 HASH=		$(PRE_HASH:pre\%=%)
