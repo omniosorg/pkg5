@@ -36,6 +36,8 @@ ffi.set_source(
 #include <sys/sha2.h>
 #include <string.h>
 """,
+    extra_compile_args=["-O3"],
+    libraries=["md"],
 )
 
 ffi.cdef(
@@ -70,7 +72,7 @@ void *memcpy(void *restrict s1, const void *restrict s2, size_t n);
 )
 
 if __name__ == "__main__":
-    ffi.emit_c_code("cffi_src/_sha512_t.c")
+    ffi.compile(verbose=False)
 
 # Vim hints
 # vim:ts=4:sw=4:et:fdm=marker

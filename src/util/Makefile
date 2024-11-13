@@ -5,9 +5,8 @@
 # 1.0 of the CDDL.
 #
 # A full copy of the text of the CDDL should have accompanied this
-# source.  A copy of the CDDL is also available via the Internet at
+# source. A copy of the CDDL is also available via the Internet at
 # http://www.illumos.org/license/CDDL.
-#
 
 #
 # Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
@@ -15,23 +14,30 @@
 
 include ../Makefile.com
 
-SUBDIRS= $(PYVERSIONS:%=src/%)
-
 all := TARGET = all
-install := TARGET = install
 clean := TARGET = clean
 clobber := TARGET = clobber
+install := TARGET = install
 
-all install clean: $(SUBDIRS)
+SUBDIRS = misc publish/transforms mkcert
+PKGLIBFILES = opensolaris.org.sections pkglintrc
 
-clobber: $(SUBDIRS)
-	$(RMDIR) $(SUBDIRS) src
+ROOTPKGLIB = $(ROOTUSRSHARE)/lib/pkg
+
+FILES= $(PKGLIBFILES:%=$(ROOTPKGLIB)/%)
+
+all clean clobber: $(SUBDIRS)
+
+install: $(SUBDIRS) $(FILES)
+
+$(SUBDIRS): FRC
+	@cd $@; pwd; $(MAKE) $(TARGET)
 
 check:
 
-$(SUBDIRS): FRC
-	$(MKDIR) $@
-	@cd $@; pwd; $(MAKE) -f ../../Makefile.ext $(TARGET) USEPY=$(@F)
+$(ROOTPKGLIB)/%: %
+	$(MKDIR) $(@D)
+	$(RM) $@; $(INSTALL) -f $(@D) -m 0444 $<
 
 FRC:
 

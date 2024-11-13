@@ -1,0 +1,69 @@
+#
+# This file and its contents are supplied under the terms of the
+# Common Development and Distribution License ("CDDL"), version 1.0.
+# You may only use this file in accordance with the terms of version
+# 1.0 of the CDDL.
+#
+# A full copy of the text of the CDDL should have accompanied this
+# source.  A copy of the CDDL is also available via the Internet at
+# http://www.illumos.org/license/CDDL.
+#
+
+#
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
+#
+
+include ../Makefile.com
+
+SUSEPY.cmd = echo $(USEPY) | tr -d .
+SUSEPY = $(SUSEPY.cmd:sh)
+
+PYCFLAGS.cmd = python$(USEPY)-config --cflags
+PYLDFLAGS.cmd = python$(USEPY)-config --ldflags
+PYCFLAGS = $(PYCFLAGS.cmd:sh)
+PYLDFLAGS = $(PYLDFLAGS.cmd:sh)
+
+ROOTPYPKG= $(ROOT)/usr/lib/python$(USEPY)/vendor-packages/pkg
+
+EXTENSIONS= actions/_actions actions/_common _varcet _misc solver elf
+SOBJ= $(EXTENSIONS:%=%.cpython-$(SUSEPY)-$(TRIPLET).so)
+
+actions/_actions.cpython-%.so	:= SOURCES = actions/_actions.c
+actions/_common.cpython-%.so	:= SOURCES = actions/_common.c
+_varcet.cpython-%.so		:= SOURCES = _varcet.c
+_misc.cpython-%.so		:= SOURCES = _misc.c
+
+elf.cpython-%.so		:= SOURCES = elf.c elfextract.c liblist.c
+elf.cpython-%.so		:= CPPFLAGS = -I.
+elf.cpython-%.so		:= LDFLAGS = -lelf -lmd
+
+solver.cpython-%.so		:= SOURCES = solver/solver.c solver/py_solver.c
+solver.cpython-%.so		:= CPPFLAGS = -D_FILE_OFFSET_BITS=64
+solver.cpython-%.so		:= CERRWARN = \
+					-Wno-return-type \
+					-Wno-strict-aliasing \
+					-Wno-unused-function \
+					-Wno-unused-variable
+solver.cpython-%.so		:= LDFLAGS = -ztext -lm -lc
+
+all: $(SOBJ)
+
+install: all $(ROOTPYPKG) $(SOBJ:%=$(ROOTPYPKG)/%)
+
+clean:
+clobber:
+	$(RM) $(SOBJ)
+
+$(ROOTPYPKG): FRC
+	$(MKDIR) $@
+
+$(ROOTPYPKG)/%.so: %.so
+	$(MKDIR) $(@D)
+	$(RM) $@; $(INSTALL) -f $(@D) -m 0555 $<
+
+%.so: FRC
+	$(CC) -shared -fPIC $(SOURCES) $(CPPFLAGS) $(CERRWARN) $(PYCFLAGS) \
+	    $(PYLDFLAGS) $(LDFLAGS) -o $@
+
+FRC:
+
