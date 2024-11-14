@@ -29,6 +29,8 @@ PYTHON=python$PYVER
 echo "$TARGET python modules, $PYVER - $LIB ($REQS)"
 echo "ARCH: $ARCH"
 
+[ "$TARGET" = "install" ] || exit 0
+
 function fatal {
     echo "$*" >&2
     exit 1

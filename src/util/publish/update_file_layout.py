@@ -29,6 +29,7 @@ more details about the nature of these structures and layouts."""
 
 import gettext
 import locale
+import errno
 import os
 import sys
 import traceback

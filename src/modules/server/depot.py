@@ -41,7 +41,6 @@ else:
 
 import atexit
 import ast
-import errno
 import http.client
 import inspect
 import io

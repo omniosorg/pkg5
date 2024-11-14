@@ -29,7 +29,6 @@ from collections import defaultdict, namedtuple
 import contextlib
 import errno
 import fnmatch
-import io
 import itertools
 import mmap
 import operator
@@ -79,9 +78,7 @@ from pkg.client.pkgdefs import (
     MSG_ERROR,
     MSG_WARNING,
     MSG_INFO,
-    MSG_GENERAL,
     MSG_UNPACKAGED,
-    PKG_OP_VERIFY,
 )
 
 

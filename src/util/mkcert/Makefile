@@ -24,7 +24,7 @@
 
 include ../../Makefile.com
 
-EXEC =	certgen
+EXEC =	mkcert
 SRCS =	mkcert.c
 OBJS =	$(SRCS:%.c=%.o)
 CERTS = cust_key.pem cust_cert.pem

@@ -29,32 +29,33 @@ include Makefile.com
 
 JOBS = 8
 
+# These are artificial targets used to run actions against all current python
+# versions (in PYVERSIONS). In rules the target python version can be picked
+# up via $(@F).
 PYTESTS = $(PYVERSIONS:%=runtest/%)
-PYMODULES = $(PYVERSIONS:%=modules/%)
+EXTMODULES = $(PYVERSIONS:%=extmodules/%)
 TESTRESULTS = $(PYVERSIONS:%=testresults/%)
 
 REQUIREMENTS = requirements.txt
 
+TARGET = all
 all := TARGET = all
 install := TARGET = install
+install-cmd := TARGET = install
 clean := TARGET = clean
 clobber := TARGET = clobber
 check := TARGET = check
 packages := TARGET = install
+test := TARGET = install
 
-SUBDIRS=brand util/mkcert man po svc web
+SUBDIRS= cffi_src modules brand util man po svc web
+brand: cffi_src modules util $(EXTMODULES)
 
 all: $(SUBDIRS)
 
-build: $(PYVERSIONS)
+install: install-cmd $(SUBDIRS) $(EXTMODULES)
 
-install: $(PYVERSIONS) .WAIT $(PYMODULES) .WAIT $(SUBDIRS)
-
-clean: $(SUBDIRS) $(PYVERSIONS)
-	@cd pkg; pwd; make clean
-
-clobber: $(SUBDIRS) $(PYVERSONS)
-	@cd pkg; pwd; make clobber
+clean clobber: $(SUBDIRS) pkg
 
 packages: install
 	@cd pkg; pwd; $(MAKE) $(TARGET) check \
@@ -78,17 +79,17 @@ baseline: _bandit
 	python$(PYVER) -m bandit -r -q -c tests/banditrc . \
 		-o tests/bandit-baseline.json -f json || true
 
-$(SUBDIRS) cffi_src: FRC
+$(SUBDIRS) pkg: FRC
 	@cd $@; pwd; $(MAKE) $(TARGET) CC=$(CC)
 
-$(PYVERSIONS): FRC
-	python$@ setup.py $(TARGET)
+install-cmd: FRC
+	$(MAKE) -f Makefile.cmd $(TARGET)
 
-$(PYMODULES): FRC
+$(EXTMODULES):
 	../tools/installmodules $(CODE_WS) $(ROOT) $(@F) \
 	    $(TARGET) $(ROOTPKGLIB) core $(REQUIREMENTS)
 
-$(PYTESTS): $(PYMODULES)
+$(PYTESTS): $(EXTMODULES)
 	-pfexec python$(@F) tests/run.py -t -j $(JOBS)
 	-pfexec cp tests/failures.3 tests/failures.$(@F)
 	-pfexec cp tests/timing_info.txt tests/timing_info.$(@F)
@@ -99,6 +100,4 @@ $(TESTRESULTS): $(PYTESTS)
 	@cat tests/failures.$(@F)
 
 FRC:
-
-.NO_PARALLEL: $(PYVERSIONS) $(PYTESTS)
 

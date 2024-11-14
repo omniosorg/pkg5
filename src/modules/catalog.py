@@ -35,7 +35,6 @@ import hashlib
 import os
 import stat
 import threading
-import types
 
 from collections import OrderedDict
 from operator import itemgetter

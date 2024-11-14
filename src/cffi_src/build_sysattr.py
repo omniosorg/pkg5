@@ -38,6 +38,8 @@ ffi.set_source(
 #include <stdbool.h>
 #include <sys/nvpair.h>
 """,
+    extra_compile_args=["-O3"],
+    libraries=["nvpair"],
 )
 
 ffi.cdef(
@@ -150,7 +152,7 @@ int nvpair_value_boolean_value(nvpair_t *, boolean_t *);
 )
 
 if __name__ == "__main__":
-    ffi.emit_c_code("cffi_src/_sysattr.c")
+    ffi.compile(verbose=False)
 
 # Vim hints
 # vim:ts=4:sw=4:et:fdm=marker

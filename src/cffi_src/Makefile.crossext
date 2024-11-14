@@ -1,0 +1,53 @@
+#
+# This file and its contents are supplied under the terms of the
+# Common Development and Distribution License ("CDDL"), version 1.0.
+# You may only use this file in accordance with the terms of version
+# 1.0 of the CDDL.
+#
+# A full copy of the text of the CDDL should have accompanied this
+# source.  A copy of the CDDL is also available via the Internet at
+# http://www.illumos.org/license/CDDL.
+#
+
+#
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
+#
+
+#
+# This file is used instead of Makefile.ext when cross-compiling as the FFI
+# module is not available in the python cross environment.
+#
+
+include ../../../Makefile.com
+
+SUSEPY.cmd = echo $(USEPY) | tr -d .
+SUSEPY = $(SUSEPY.cmd:sh)
+
+ROOTPYPKG= $(ROOT)/usr/lib/python$(USEPY)/vendor-packages/pkg
+
+EXTENSIONS= arch sha512_t sysattr syscallat
+SOBJ= $(EXTENSIONS:%=_%.cpython-$(SUSEPY)-$(TRIPLET).so)
+
+_sha512_t.cpython-%.so		:= LDFLAGS = -lmd
+_sysattr.cpython-%.so		:= LDFLAGS = -lnvpair
+
+all: $(SOBJ)
+
+install: all $(ROOTPYPKG) $(SOBJ:%=$(ROOTPYPKG)/%)
+
+clean:
+clobber:
+	$(RM) $(SOBJ)
+
+$(ROOTPYPKG): FRC
+	$(MKDIR) $@
+
+$(ROOTPYPKG)/%.so: %.so
+	$(MKDIR) $(@D)
+	$(RM) $@; $(INSTALL) -f $(@D) -m 0555 $<
+
+%.cpython-$(SUSEPY)-$(TRIPLET).so: %.c
+	$(CC) -shared -fPIC $< $(PYCFLAGS) $(PYLDFLAGS) $(LDFLAGS) -o $@
+
+FRC:
+

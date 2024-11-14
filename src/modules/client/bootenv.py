@@ -23,7 +23,6 @@
 # Copyright (c) 2008, 2021, Oracle and/or its affiliates.
 # Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
 
-import errno
 import os
 import shutil
 import subprocess
