@@ -10,27 +10,28 @@
 #
 
 #
-# Copyright 2023 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
 #
 
-EXTENSIONS= arch sha512_t sysattr syscallat
-SOURCES= $(EXTENSIONS:%=_%.c)
-OUTDIR= cffi_src
+include ../Makefile.com
 
-all: $(SOURCES)
+SUBDIRS= $(PYVERSIONS:%=src/%)
 
-$(OUTDIR): FRC
-	mkdir $@
+all := TARGET = all
+install := TARGET = install
+clean := TARGET = clean
+clobber := TARGET = clobber
 
-_%.c: $(OUTDIR) build_%.py
-	./$<
-	mv $(OUTDIR)/$@ .
+all install clean: $(SUBDIRS)
 
-clean:
-	rm -f $(SOURCES)
+clobber: $(SUBDIRS)
+	$(RMDIR) $(SUBDIRS) src
 
-clobber: clean
-	rm -rf $(OUTDIR)
+check:
+
+$(SUBDIRS): FRC
+	$(MKDIR) $@
+	@cd $@; pwd; $(MAKE) -f ../../Makefile.ext $(TARGET) USEPY=$(@F)
 
 FRC:
 

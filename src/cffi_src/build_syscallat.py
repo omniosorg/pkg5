@@ -37,6 +37,7 @@ ffi.set_source(
 #include <sys/types.h>
 #include <unistd.h>
 """,
+    extra_compile_args=["-O3"],
 )
 
 ffi.cdef(
@@ -53,7 +54,7 @@ int unlinkat(int, const char *, int);
 )
 
 if __name__ == "__main__":
-    ffi.emit_c_code("cffi_src/_syscallat.c")
+    ffi.compile(verbose=False)
 
 # Vim hints
 # vim:ts=4:sw=4:et:fdm=marker

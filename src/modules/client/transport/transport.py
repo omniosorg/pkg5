@@ -39,7 +39,6 @@ from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from urllib.parse import (
     quote,
-    urlsplit,
     urlparse,
     urlunparse,
     ParseResult,

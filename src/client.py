@@ -63,7 +63,6 @@ from the boot menu. From the alternate BE mount and run 'pkg fix' on this BE.
 pkg.site_paths.init()
 
 try:
-    import calendar
     import collections
     import datetime
     import errno
@@ -89,7 +88,6 @@ try:
     import pkg.actions as actions
     import pkg.client.api as api
     import pkg.client.api_errors as api_errors
-    import pkg.client.bootenv as bootenv
     import pkg.client.client_api as client_api
     import pkg.client.progress as progress
     import pkg.client.linkedimage as li
@@ -112,7 +110,6 @@ try:
         RESULT_CANCELED,
         RESULT_FAILED_BAD_REQUEST,
         RESULT_FAILED_CONFIGURATION,
-        RESULT_FAILED_CONSTRAINED,
         RESULT_FAILED_LOCKED,
         RESULT_FAILED_STORAGE,
         RESULT_NOTHING_TO_DO,
@@ -123,9 +120,49 @@ try:
         RESULT_FAILED_DISKSPACE,
     )
     from pkg.client.debugvalues import DebugValues
-    from pkg.client.pkgdefs import *
+    from pkg.client.pkgdefs import (
+        API_STAGE_DEFAULT,
+        API_STAGE_EXECUTE,
+        API_STAGE_PLAN,
+        API_STAGE_PREPARE,
+        api_stage_values,
+        EXIT_ACTUATOR,
+        EXIT_BADOPT,
+        EXIT_DIVERGED,
+        EXIT_EACCESS,
+        EXIT_FATAL,
+        EXIT_LICENSE,
+        EXIT_LOCKED,
+        EXIT_NOP,
+        EXIT_NOTLIVE,
+        EXIT_OK,
+        EXIT_OOPS,
+        EXIT_PARTIAL,
+        MSG_ERROR,
+        MSG_INFO,
+        MSG_UNPACKAGED,
+        MSG_WARNING,
+        PKG_OP_ATTACH,
+        PKG_OP_AUDIT_LINKED,
+        PKG_OP_CHANGE_FACET,
+        PKG_OP_CHANGE_VARIANT,
+        PKG_OP_DEHYDRATE,
+        PKG_OP_DETACH,
+        PKG_OP_EXACT_INSTALL,
+        PKG_OP_FIX,
+        PKG_OP_HOTFIX_CLEANUP,
+        PKG_OP_INSTALL,
+        PKG_OP_LIST,
+        PKG_OP_PUBCHECK,
+        PKG_OP_REHYDRATE,
+        PKG_OP_REVERT,
+        PKG_OP_SYNC,
+        PKG_OP_UNINSTALL,
+        PKG_OP_UPDATE,
+        PKG_OP_VERIFY,
+    )
     from pkg.misc import EmptyI, msg, emsg, PipeError
-    from pkg.client.plandesc import OP_STAGE_PREP, OP_STAGE_EXEC, OP_STAGE_PLAN
+    from pkg.client.plandesc import OP_STAGE_PREP, OP_STAGE_EXEC
 except KeyboardInterrupt:
     import sys
 

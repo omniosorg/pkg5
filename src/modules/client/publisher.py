@@ -42,7 +42,6 @@ import datetime as dt
 import errno
 import hashlib
 import os
-import pycurl
 import shutil
 import tempfile
 import time
@@ -54,25 +53,21 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 from io import BytesIO
 from urllib.parse import (
-    quote,
     urlsplit,
     urlparse,
     urlunparse,
-    ParseResult,
 )
 from urllib.request import url2pathname
 
 import pkg.catalog
 import pkg.client.api_errors as api_errors
 import pkg.client.sigpolicy as sigpolicy
-import pkg.client.pkgdefs as pkgdefs
 import pkg.digest as digest
 import pkg.misc as misc
 import pkg.portable as portable
 import pkg.server.catalog as old_catalog
 
 from pkg.client import global_settings
-from pkg.client.debugvalues import DebugValues
 
 logger = global_settings.logger
 from pkg.misc import EmptyDict, EmptyI, SIGNATURE_POLICY, DictProperty

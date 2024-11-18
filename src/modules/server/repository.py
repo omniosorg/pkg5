@@ -22,10 +22,8 @@
 # Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
 # Copyright (c) 2008, 2021, Oracle and/or its affiliates.
 
-import codecs
 import datetime
 import errno
-import hashlib
 import logging
 import os
 import os.path
@@ -35,7 +33,8 @@ import subprocess
 import sys
 import tempfile
 import zlib
-from io import BytesIO, StringIO
+from io import StringIO
+
 from urllib.parse import unquote
 
 import pkg.actions as actions
