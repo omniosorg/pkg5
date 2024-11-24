@@ -27,7 +27,7 @@ PYFILES.cmd = find . -type f -name \*.py | cut -c3-
 PYFILES = $(PYFILES.cmd:sh)
 ROOTPYFILES = $(PYFILES:%=$(ROOTPYPKG)/%)
 
-SKIPFILES = gui/repository.py
+SKIPFILES = gui/repository.py client/rad_pkg.py
 ROOTSKIPFILES = $(SKIPFILES:%=$(ROOTPYPKG)/%)
 
 all clean clobber:
