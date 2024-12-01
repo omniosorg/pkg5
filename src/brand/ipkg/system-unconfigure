@@ -131,18 +131,15 @@ reset_ssh_config() {
             || bomb "Failed to update PermitRootLogin in $f"
     fi
     echo "------ Generating new ssh host keys"
-    for algo in rsa ecdsa; do
+    for algo in rsa ecdsa ed25519; do
         [ -f $ALTROOT/etc/ssh/ssh_host_${algo}_key ] \
             && mv $ALTROOT/etc/ssh/ssh_host_${algo}_key{,.old}
         [ -f $ALTROOT/etc/ssh/ssh_host_${algo}_key.pub ] \
             && mv $ALTROOT/etc/ssh/ssh_host_${algo}_key.pub{,.old}
     done
-    /usr/bin/ssh-keygen -q -t rsa -b 2048 -N '' -C root@unknown \
+    /usr/bin/ssh-keygen -q -A  -C root@unknown \
         -f $ALTROOT/etc/ssh/ssh_host_rsa_key \
-        || bomb "Failed to create new $ALTROOT/etc/ssh/ssh_host_rsa_key"
-    /usr/bin/ssh-keygen -q -t ecdsa -b 521 -N '' -C root@unknown \
-        -f $ALTROOT/etc/ssh/ssh_host_ecdsa_key \
-        || bomb "Failed to create new $ALTROOT/etc/ssh/ssh_host_dsa_key"
+        || bomb "Failed to create new $ALTROOT/etc/ssh/ssh_host_*_key"
     rm -f $ALTROOT/etc/ssh/ssh_host_*.old \
         || bomb "Failed to remove old key files"
 }
