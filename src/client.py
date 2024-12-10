@@ -22,6 +22,7 @@
 
 #
 # Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2024 Oxide Computer Company
 # Copyright (c) 2007, 2024, Oracle and/or its affiliates.
 #
 
@@ -290,7 +291,7 @@ def usage(
     ]
 
     beopts = (
-        "            [--no-be-activate] [--temp-be-activate]\n"
+        "            [--no-be-activate] [-t | --temp-be-activate]\n"
         "            [--no-backup-be | --require-backup-be] [--backup-be-name name]\n"
         "            [--deny-new-be | --require-new-be] [--be-name name]\n"
     )
@@ -7234,7 +7235,7 @@ opts_mapping = {
     "deny_new_be" :       ("",  "deny-new-be"),
     "no_backup_be" :      ("",  "no-backup-be"),
     "be_activate" :       ("",  "no-be-activate"),
-    "be_temp_activate" :  ("",  "temp-be-activate"),
+    "be_temp_activate" :  ("t",  "temp-be-activate"),
     "require_backup_be" : ("",  "require-backup-be"),
     "require_new_be" :    ("",  "require-new-be"),
 
