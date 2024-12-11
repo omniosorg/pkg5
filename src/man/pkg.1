@@ -1,6 +1,7 @@
 .\" Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
 .\" Copyright 2023 OmniOS Community Edition (OmniOSce) Association.
-.Dd July 20, 2023
+.\" Copyright 2024 Oxide Computer Company
+.Dd December 10, 2024
 .Dt PKG 1
 .Os
 .Sh NAME
@@ -37,7 +38,7 @@
 .Op Fl \-no-index
 .Op Fl \-no-refresh
 .br
-.Op Fl \-no-be-activate | Fl \-temp-be-activate
+.Op Fl \-no-be-activate | Oo Fl t | Fl \-temp-be-activate Oc
 .Op Fl \-no-backup-be | Fl \-require-backup-be
 .Op Fl \-backup-be-name Ar name
 .Op Fl \-deny-new-be | Fl \-require-new-be
@@ -62,7 +63,7 @@
 .Op Fl \-no-index
 .Op Fl \-no-refresh
 .br
-.Op Fl \-no-be-activate | Fl \-temp-be-activate
+.Op Fl \-no-be-activate | Oo Fl t | Fl \-temp-be-activate Oc
 .Op Fl \-no-backup-be | Fl \-require-backup-be
 .Op Fl \-backup-be-name Ar name
 .Op Fl \-deny-new-be | Fl \-require-new-be
@@ -87,7 +88,7 @@
 .Op Fl \-ignore-missing
 .Op Fl \-no-index
 .br
-.Op Fl \-no-be-activate | Fl \-temp-be-activate
+.Op Fl \-no-be-activate | Oo Fl t | Fl \-temp-be-activate Oc
 .Op Fl \-no-backup-be | Fl \-require-backup-be
 .Op Fl \-backup-be-name Ar name
 .Op Fl \-deny-new-be | Fl \-require-new-be
@@ -116,7 +117,7 @@
 .Op Fl \-no-index
 .Op Fl \-no-refresh
 .br
-.Op Fl \-no-be-activate | Fl \-temp-be-activate
+.Op Fl \-no-be-activate | Oo Fl t | Fl \-temp-be-activate Oc
 .Op Fl \-no-backup-be | Fl \-require-backup-be
 .Op Fl \-backup-be-name Ar name
 .Op Fl \-deny-new-be | Fl \-require-new-be
@@ -147,7 +148,7 @@
 .Op Fl \-no-index
 .Op Fl \-no-refresh
 .br
-.Op Fl \-no-be-activate | Fl \-temp-be-activate
+.Op Fl \-no-be-activate | Oo Fl t | Fl \-temp-be-activate Oc
 .Op Fl \-no-backup-be | Fl \-require-backup-be
 .Op Fl \-backup-be-name Ar name
 .Op Fl \-deny-new-be | Fl \-require-new-be
@@ -171,7 +172,7 @@
 .Op Fl \-ignore-missing
 .Op Fl \-no-index
 .br
-.Op Fl \-no-be-activate | Fl \-temp-be-activate
+.Op Fl \-no-be-activate | Oo Fl t | Fl \-temp-be-activate Oc
 .Op Fl \-no-backup-be | Fl \-require-backup-be
 .Op Fl \-backup-be-name Ar name
 .Op Fl \-deny-new-be | Fl \-require-new-be
@@ -248,7 +249,7 @@
 .Op Fl \-accept
 .Op Fl \-licenses
 .br
-.Op Fl \-no-be-activate | Fl \-temp-be-activate
+.Op Fl \-no-be-activate | Oo Fl t | Fl \-temp-be-activate Oc
 .Op Fl \-no-backup-be | Fl \-require-backup-be
 .Op Fl \-backup-be-name Ar name
 .Op Fl \-deny-new-be | Fl \-require-new-be
@@ -266,7 +267,7 @@
 .Bk -words
 .Op Fl nv
 .br
-.Op Fl \-no-be-activate | Fl \-temp-be-activate
+.Op Fl \-no-be-activate | Oo Fl t | Fl \-temp-be-activate Oc
 .Op Fl \-no-backup-be | Fl \-require-backup-be
 .Op Fl \-backup-be-name Ar name
 .Op Fl \-deny-new-be | Fl \-require-new-be
@@ -290,7 +291,7 @@
 .Op Fl I Ar implementation
 .Op Fl V Ar version
 .br
-.Op Fl \-no-be-activate | Fl \-temp-be-activate
+.Op Fl \-no-be-activate | Oo Fl t | Fl \-temp-be-activate Oc
 .Op Fl \-no-backup-be | Fl \-require-backup-be
 .Op Fl \-backup-be-name Ar name
 .Op Fl \-deny-new-be | Fl \-require-new-be
@@ -305,7 +306,7 @@
 .Bk -words
 .Op Fl nvIV
 .br
-.Op Fl \-no-be-activate | Fl \-temp-be-activate
+.Op Fl \-no-be-activate | Oo Fl t | Fl \-temp-be-activate Oc
 .Op Fl \-no-backup-be | Fl \-require-backup-be
 .Op Fl \-backup-be-name Ar name
 .Op Fl \-deny-new-be | Fl \-require-new-be
@@ -336,7 +337,7 @@
 .Op Fl \-accept
 .Op Fl \-licenses
 .br
-.Op Fl \-no-be-activate | Fl \-temp-be-activate
+.Op Fl \-no-be-activate | Oo Fl t | Fl \-temp-be-activate Oc
 .Op Fl \-no-backup-be | Fl \-require-backup-be
 .Op Fl \-backup-be-name Ar name
 .Op Fl \-deny-new-be | Fl \-require-new-be
@@ -369,7 +370,7 @@
 .Op Fl \-accept
 .Op Fl \-licenses
 .br
-.Op Fl \-no-be-activate | Fl \-temp-be-activate
+.Op Fl \-no-be-activate | Oo Fl t | Fl \-temp-be-activate Oc
 .Op Fl \-no-backup-be | Fl \-require-backup-be
 .Op Fl \-backup-be-name Ar name
 .Op Fl \-deny-new-be | Fl \-require-new-be
@@ -693,7 +694,7 @@ regular basis.
 .Op Fl \-no-index
 .Op Fl \-no-refresh
 .br
-.Op Fl \-no-be-activate | Fl \-temp-be-activate
+.Op Fl \-no-be-activate | Oo Fl t | Fl \-temp-be-activate Oc
 .Op Fl \-no-backup-be | Fl \-require-backup-be
 .Op Fl \-backup-be-name Ar name
 .Op Fl \-deny-new-be | Fl \-require-new-be
@@ -913,7 +914,7 @@ on the next boot.
 See the
 .Xr beadm 8
 man page for more information.
-.It Fl \-temp-be-activate
+.It Fl t | Fl \-temp-be-activate
 If a boot environment is created, set it as the active boot environment for the
 next boot only (temporary activation).
 See the
@@ -1013,7 +1014,7 @@ will continue operation and exit with return code 8.
 .Op Fl \-no-index
 .Op Fl \-no-refresh
 .br
-.Op Fl \-no-be-activate | Fl \-temp-be-activate
+.Op Fl \-no-be-activate | Oo Fl t | Fl \-temp-be-activate Oc
 .Op Fl \-no-backup-be | Fl \-require-backup-be
 .Op Fl \-backup-be-name Ar name
 .Op Fl \-deny-new-be | Fl \-require-new-be
@@ -1095,7 +1096,7 @@ sub-command above.
 .Op Fl \-ignore-missing
 .Op Fl \-no-index
 .br
-.Op Fl \-no-be-activate | Fl \-temp-be-activate
+.Op Fl \-no-be-activate | Oo Fl t | Fl \-temp-be-activate Oc
 .Op Fl \-no-backup-be | Fl \-require-backup-be
 .Op Fl \-backup-be-name Ar name
 .Op Fl \-deny-new-be | Fl \-require-new-be
@@ -1155,7 +1156,7 @@ command above.
 .Op Fl \-no-index
 .Op Fl \-no-refresh
 .br
-.Op Fl \-no-be-activate | Fl \-temp-be-activate
+.Op Fl \-no-be-activate | Oo Fl t | Fl \-temp-be-activate Oc
 .Op Fl \-no-backup-be | Fl \-require-backup-be
 .Op Fl \-backup-be-name Ar name
 .Op Fl \-deny-new-be | Fl \-require-new-be
@@ -1275,7 +1276,7 @@ command above.
 .Op Fl \-no-index
 .Op Fl \-no-refresh
 .br
-.Op Fl \-no-be-activate | Fl \-temp-be-activate
+.Op Fl \-no-be-activate | Oo Fl t | Fl \-temp-be-activate Oc
 .Op Fl \-no-backup-be | Fl \-require-backup-be
 .Op Fl \-backup-be-name Ar name
 .Op Fl \-deny-new-be | Fl \-require-new-be
@@ -1330,7 +1331,7 @@ command above.
 .Op Fl \-ignore-missing
 .Op Fl \-no-index
 .br
-.Op Fl \-no-be-activate | Fl \-temp-be-activate
+.Op Fl \-no-be-activate | Oo Fl t | Fl \-temp-be-activate Oc
 .Op Fl \-no-backup-be | Fl \-require-backup-be
 .Op Fl \-backup-be-name Ar name
 .Op Fl \-deny-new-be | Fl \-require-new-be
@@ -2135,7 +2136,7 @@ Include informational messages regarding packages.
 .Op Fl \-accept
 .Op Fl \-licenses
 .br
-.Op Fl \-no-be-activate | Fl \-temp-be-activate
+.Op Fl \-no-be-activate | Oo Fl t | Fl \-temp-be-activate Oc
 .Op Fl \-no-backup-be | Fl \-require-backup-be
 .Op Fl \-backup-be-name Ar name
 .Op Fl \-deny-new-be | Fl \-require-new-be
@@ -2185,7 +2186,7 @@ command above.
 .Bk -words
 .Op Fl nv
 .br
-.Op Fl \-no-be-activate | Fl \-temp-be-activate
+.Op Fl \-no-be-activate | Oo Fl t | Fl \-temp-be-activate Oc
 .Op Fl \-no-backup-be | Fl \-require-backup-be
 .Op Fl \-backup-be-name Ar name
 .Op Fl \-deny-new-be | Fl \-require-new-be
@@ -2264,7 +2265,7 @@ List the mediations that can be set for currently installed packages.
 .Op Fl I Ar implementation
 .Op Fl V Ar version
 .br
-.Op Fl \-no-be-activate | Fl \-temp-be-activate
+.Op Fl \-no-be-activate | Oo Fl t | Fl \-temp-be-activate Oc
 .Op Fl \-no-backup-be | Fl \-require-backup-be
 .Op Fl \-backup-be-name Ar name
 .Op Fl \-deny-new-be | Fl \-require-new-be
@@ -2301,7 +2302,7 @@ command above.
 .Bk -words
 .Op Fl nvIV
 .br
-.Op Fl \-no-be-activate | Fl \-temp-be-activate
+.Op Fl \-no-be-activate | Oo Fl t | Fl \-temp-be-activate Oc
 .Op Fl \-no-backup-be | Fl \-require-backup-be
 .Op Fl \-backup-be-name Ar name
 .Op Fl \-deny-new-be | Fl \-require-new-be
@@ -2387,7 +2388,7 @@ options.
 .Op Fl \-accept
 .Op Fl \-licenses
 .br
-.Op Fl \-no-be-activate | Fl \-temp-be-activate
+.Op Fl \-no-be-activate | Oo Fl t | Fl \-temp-be-activate Oc
 .Op Fl \-no-backup-be | Fl \-require-backup-be
 .Op Fl \-backup-be-name Ar name
 .Op Fl \-deny-new-be | Fl \-require-new-be
@@ -2480,7 +2481,7 @@ command) that are hidden by an inherited facet with the same name.
 .Op Fl \-accept
 .Op Fl \-licenses
 .br
-.Op Fl \-no-be-activate | Fl \-temp-be-activate
+.Op Fl \-no-be-activate | Oo Fl t | Fl \-temp-be-activate Oc
 .Op Fl \-no-backup-be | Fl \-require-backup-be
 .Op Fl \-backup-be-name Ar name
 .Op Fl \-deny-new-be | Fl \-require-new-be
