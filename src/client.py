@@ -682,6 +682,8 @@ def calc_fmtstr(attrs, data):
 
     for entry in data:
         for i, field in enumerate(attrs):
+            if not entry.get(field):
+                continue
             if len(entry.get(field)) > widths[i]:
                 widths[i] = len(entry.get(field))
 
