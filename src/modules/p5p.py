@@ -598,9 +598,6 @@ class Archive(object):
         self.__queue_offset += entry_sz
         self.__queue.append((pathname, ti.name))
 
-        # Discard tarinfo; it would be more efficient to keep these in
-        # memory, but at a significant memory footprint cost.
-        ti.tarfile = None
         del ti
 
     def __add_publisher_files(
@@ -1311,7 +1308,6 @@ class Archive(object):
             ti = tfile.members.pop()
             if progtrack:
                 progtrack.archive_add_progress(1, tfile.offset - start_offset)
-            ti.tarfile = None
             del ti
 
         # Cleanup temporary files.
