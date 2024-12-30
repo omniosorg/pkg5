@@ -464,9 +464,6 @@ def main_func():
 
     temp_root = misc.config_temp_root()
 
-    # set process limits for memory consumption to 8GB
-    misc.set_memory_limit(8 * 1024 * 1024 * 1024)
-
     global_settings.client_name = "pkgrecv"
     target = os.environ.get("PKG_DEST", None)
     src_uri = os.environ.get("PKG_SRC", None)
