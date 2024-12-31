@@ -3212,27 +3212,6 @@ def cmp(a, b):
         return NotImplemented
 
 
-def set_memory_limit(bytes, allow_override=True):
-    """Limit memory consumption of current process to 'bytes'.
-    This only limits the brk() and mmap() calls made by python."""
-
-    if allow_override:
-        try:
-            bytes = int(os.environ["PKG_CLIENT_MAX_PROCESS_SIZE"])
-        except (KeyError, ValueError):
-            pass
-
-    try:
-        resource.setrlimit(resource.RLIMIT_VMEM, (bytes, bytes))
-    except AttributeError:
-        # If platform doesn't support RLIMIT_VMEM, just ignore it.
-        pass
-    except ValueError:
-        # An unprivileged user can not raise a previously set limit,
-        # if that ever happens, just ignore it.
-        pass
-
-
 def force_bytes(s, encoding="utf-8", errors="strict"):
     """Force the string into bytes."""
 

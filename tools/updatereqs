@@ -24,8 +24,6 @@ MIRROR=https://mirrors.omnios.org/pymodules
 typeset -A override=(
     # Not python3 compatible, project seems dormant, use patched version
     [pybonjour]=" @ $MIRROR/pybonjour/pybonjour-1.1.1-python3.tar.gz"
-    # Stuck on 7.44.1 - see https://github.com/pycurl/pycurl/issues/748
-    [pycurl]="==7.44.1 # stuck on 7.44.1 - https://github.com/pycurl/pycurl/issues/748"
 )
 
 OSED=
@@ -74,6 +72,7 @@ pipreqs --print --ignore ${ignores:1} --mode no-pin $ROOT/src | sed "
     # Use versions from core
     /cffi/d
     /cryptography/d
+    /pycurl/d
     /pyOpenSSL/d
     /pylint/d
 " | overrides > $tmpf.core

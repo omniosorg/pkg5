@@ -117,9 +117,9 @@ echo "+ Generating manifest fragment"
             PYTHONPATH=$ROOT/usr/lib/pkg/python$PYVER
             PYTHONPATH+=:$ROOT/usr/lib/python$PYVER/vendor-packages
             PYTHONPATH+=:/usr/lib/python$PYVER/vendor-packages
-            PKGSEND="python3 -s $ROOT/usr/bin/pkgsend"
-            PKGMOGRIFY="python3 -s $ROOT/usr/bin/pkgmogrify"
-            PKGFMT="python3 -s $ROOT/usr/bin/pkgfmt"
+            PKGSEND="python$PYVER -s $ROOT/usr/bin/pkgsend"
+            PKGMOGRIFY="python$PYVER -s $ROOT/usr/bin/pkgmogrify"
+            PKGFMT="python$PYVER -s $ROOT/usr/bin/pkgfmt"
             PATH=$ROOT/usr/bin:$PATH
             ;;
     esac
