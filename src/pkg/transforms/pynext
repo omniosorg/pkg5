@@ -28,8 +28,12 @@
 <transform path=TBD -> delete pkg.depend.bypass-generate notfound>
 
 # Deliver new modules alongside the old ones (temporary, during migration)
-<transform path=TBD -> edit path 312 313>
-<transform path=TBD -> edit path 3.12 3.13>
+#<transform path=TBD -> edit path 312 313>
+#<transform path=TBD -> edit path 3.12 3.13>
+
+# Deliver old modules alongside the new ones (temporary, during migration)
+<transform path=TBD -> edit path 313 312>
+<transform path=TBD -> edit path 3.13 3.12>
 
 <transform path=TBD -> edit path TBD ''>
 

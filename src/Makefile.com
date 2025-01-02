@@ -36,7 +36,7 @@ CPPFLAGS = -D_REENTRANT -D_POSIX_PTHREAD_SEMANTICS
 # Whitespace separated list of versions to build and test.
 PYVERSIONS = 3.12 3.13
 # The single version used for shebang lines and packaging.
-PYVER = 3.12
+PYVER = 3.13
 
 SHELL= /usr/bin/ksh93
 INSTALL = /usr/sbin/install
