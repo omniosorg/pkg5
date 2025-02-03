@@ -1048,7 +1048,7 @@ test1\ttrue\ttrue\ttrue\tmirror\tonline\t{rurl1}/\t-
         sc.conf = self.apache_confs["none"]
 
         # Check that the catalog can't be refreshed and that the
-        # communcation with the repository fails.
+        # communication with the repository fails.
         self.pkg("contents -rm example_pkg")
         self.pkg("refresh --full", exit=1)
 
@@ -1157,7 +1157,7 @@ test3\ttrue\ttrue\ttrue\tmirror\tonline\thttp://localhost:{port}/test3/{hash3}/\
         """Test that changes to the syspub/0 response are handled
         correctly by the client."""
 
-        # Check that a syspub/0 response with no configured publisers
+        # Check that a syspub/0 response with no configured publishers
         # works.
         self.__prep_configuration(
             ["none", "test1-test12", "test1-test3", "test12"]

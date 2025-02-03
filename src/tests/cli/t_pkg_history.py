@@ -392,7 +392,7 @@ class TestPkgHistory(pkg5unittest.ManyDepotTestCase):
                 )
 
     def test_11_history_events(self):
-        """Verify the -t option, for discreet timestamps"""
+        """Verify the -t option, for discrete timestamps"""
 
         self.pkg("history -H")
         output = self.output.splitlines()

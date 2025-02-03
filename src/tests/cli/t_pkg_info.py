@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2008, 2020, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2025, Oracle and/or its affiliates.
 
 from . import testutils
 
@@ -965,7 +965,7 @@ Packaging Date: {pkg_date}
             )
         )
 
-        # Perfrom a full refresh and ensure the last-update/install
+        # Perform a full refresh and ensure the last-update/install
         # have been preserved.
         self.pkg("refresh --full")
         last_install = catalog.basic_ts_to_datetime(

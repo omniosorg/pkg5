@@ -510,7 +510,7 @@ Packaging Date: {pkg_date}
         )
         self.assertEqualDiff(expected, self.output)
 
-        # Again, as prvileged user.
+        # Again, as privileged user.
         self.pkg("info -r -g {0} foo".format(self.foo_arc))
         self.assertEqualDiff(expected, self.output)
 
@@ -726,7 +726,7 @@ link path=usr/local/bin/soft-foo target=usr/bin/foo
             self.foo10
         )
 
-        # Again, as prvileged user.
+        # Again, as privileged user.
         self.pkg("contents -mr -g {0} foo".format(self.foo_arc))
         self.assertEqualDiff(
             sorted(expected.splitlines()), sorted(self.output.splitlines())
@@ -799,7 +799,7 @@ link path=usr/local/bin/soft-foo target=usr/bin/foo
         self.pkg("set-property signature-policy ignore")
         self.pkg("list -a")
         # --no-refresh is required for now because -g combines temporary
-        # sources with configured soures and pkg(7) currently treats
+        # sources with configured sources and pkg(7) currently treats
         # refresh failure as fatal.  See bug 18323.
         self.pkg("install --no-refresh -g {0} foo".format(self.foo_arc))
 

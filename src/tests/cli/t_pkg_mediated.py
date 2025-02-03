@@ -1264,7 +1264,7 @@ python\tsystem\t\tlocal\tunladen-swallow\t
 
         # Verify that the default implementation of Python 3.4 was
         # selected even though the package offers Python 2.7 and an
-        # unladen swallow implemenation of each version of Python.
+        # unladen swallow implementation of each version of Python.
         self.__assert_mediation_matches(
             """\
 python\tsystem\t3.4\tsystem\t\t
@@ -1476,7 +1476,7 @@ foo\tlocal\t1\tsystem\t\t
             or "usr/bin/edition27, usr/lib/edition27" in self.errout
         )
 
-        # Verify a disappearing local mediator implemention
+        # Verify a disappearing local mediator implementation
         # triggers a warning, with an exit of EXIT_PARTIAL.
         self.pkg("install edit-incorp@1.0 edition27")
         self.pkg("set-mediator -I edit27 edition")
@@ -1486,7 +1486,7 @@ foo\tlocal\t1\tsystem\t\t
             or "usr/bin/edition27, usr/lib/edition27" in self.errout
         )
 
-        # Verify the setting of a fictious mediator value
+        # Verify the setting of a fictitious mediator value
         # has no impact.
         self.pkg("install edit-incorp@1.0 edition27")
         self.pkg("set-mediator -V 78 edition")

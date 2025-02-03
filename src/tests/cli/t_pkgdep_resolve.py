@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2009, 2017, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2025, Oracle and/or its affiliates.
 
 from . import testutils
 
@@ -3535,7 +3535,7 @@ file NOHASH group=sys mode=0600 owner=root path=var/log/bar
 
         # Check that an inferred require-any dependency will not be
         # removed if the require dependencies in the package are at a
-        # lower version of the pacakge.
+        # lower version of the package.
 
         manf = """
 set name=pkg.fmri value=foo@1.0,5.11-1
@@ -3694,7 +3694,7 @@ file NOHASH group=sys mode=0600 owner=root path=var/log/bar
         """Many of the tests for bug 19009 are similar.  This function
         takes a description of the combinations of packages which should
         satisfy a file dependency and generates a set of manifests to
-        match that desctiption, the dot encoding of the package
+        match that description, the dot encoding of the package
         dependency graph, and the set of expected dependencies of
         different types needed to represent the package dependencies."""
 

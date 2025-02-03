@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2025, Oracle and/or its affiliates.
 
 from . import testutils
 
@@ -849,7 +849,7 @@ dir group=sys mode=0755 owner=root path=etc
         shutil.rmtree(self.cache_dir)
 
         # Now test the case of updating publishers.
-        # Verify that updating the exising publishers by following
+        # Verify that updating the existing publishers by following
         # ref/lint repositories will work.
         self.pkglint(
             "-c {0} -r {1} -r {2} {3}".format(

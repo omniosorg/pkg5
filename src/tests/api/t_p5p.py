@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2011, 2024, Oracle and/or its affiliates.
+# Copyright (c) 2011, 2025, Oracle and/or its affiliates.
 #
 
 from . import testutils
@@ -726,7 +726,7 @@ class TestP5P(pkg5unittest.SingleDepotTestCase):
                     arc.extract_catalog1(pname, ext_tmp_dir, pub=pub)
                 except pkg.p5p.UnknownArchiveFiles:
                     if pname == "catalog.dependency.C":
-                        # No dependencies, so exeception
+                        # No dependencies, so exception
                         # is only expected for this.
                         continue
                     raise
