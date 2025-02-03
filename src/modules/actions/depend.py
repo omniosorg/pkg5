@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2007, 2019, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2025, Oracle and/or its affiliates.
 #
 
 
@@ -351,7 +351,7 @@ class DependencyAction(generic.Action):
                 _("Required dependency {0} is not installed").format(pfmri)
             )
 
-        # cannot verify origin since it applys to upgrade
+        # cannot verify origin since it applies to upgrade
         # operation, not final state
 
         return errors, warnings, info

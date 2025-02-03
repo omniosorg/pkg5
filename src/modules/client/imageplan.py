@@ -22,7 +22,7 @@
 
 #
 # Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
-# Copyright (c) 2007, 2024, Oracle and/or its affiliates.
+# Copyright (c) 2007, 2025, Oracle and/or its affiliates.
 #
 
 from collections import defaultdict, namedtuple
@@ -1869,8 +1869,8 @@ class ImagePlan(object):
         except Exception as e:
             did_create = dup_be_name in bootenv.BootEnv.get_be_names()
             warn = _(
-                "Cannot create or mount a copy of current be. "
-                "Reporting unpackaged content aganist current live "
+                "Cannot create or mount a copy of the current be. "
+                "Reporting unpackaged content against current live "
                 "image."
             )
             fallback = False
@@ -5817,7 +5817,7 @@ image (there are configured exclusions):"""
 
             # Linked Image code uses trailing slashes, Image code
             # does not. So we make sure that our path comparisons
-            # are always on tha same page.
+            # are always on the same page.
             root = os.path.normpath(self.image.root)
 
             rzones = zone.list_running_zones()
@@ -6439,7 +6439,7 @@ image (there are configured exclusions):"""
         # Track patterns rejected due to variants.
         rejected_vars = set()
 
-        # keep track of publishers we reject due to implict selection
+        # keep track of publishers we reject due to implicit selection
         # of installed publisher to produce better error message.
         rejected_pubs = {}
 

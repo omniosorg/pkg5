@@ -20,8 +20,8 @@
  */
 
 /*
- *  Copyright (c) 2009, 2023, Oracle and/or its affiliates.
  *  Copyright 2025 OmniOS Community Edition (OmniOSce) Association.
+ *  Copyright (c) 2009, 2025, Oracle and/or its affiliates.
  */
 
 #include <libelf.h>
@@ -423,7 +423,7 @@ getdynamic(int fd)
 		}
 	}
 
-	/* Runpath supercedes rpath, but use rpath if no runpath */
+	/* Runpath supersedes rpath, but use rpath if no runpath */
 	if (!runpath)
 		runpath = rpath;
 

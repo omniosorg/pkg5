@@ -22,7 +22,7 @@
 
 #
 # Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
-# Copyright (c) 2008, 2024, Oracle and/or its affiliates.
+# Copyright (c) 2008, 2025, Oracle and/or its affiliates.
 #
 
 import cherrypy
@@ -242,7 +242,7 @@ class DepotHTTP(_Depot):
                 # instance.  CherryPy relies on this for its
                 # dispatch tree mapping mechanism.  We can't
                 # use other object types here since Python
-                # won't let us set arbitary attributes on them.
+                # won't let us set arbitrary attributes on them.
                 opattr = Dummy()
                 setattr(self, op, opattr)
                 self.vops[op] = [int(ver)]
@@ -1811,7 +1811,7 @@ class NastyDepotHTTP(DepotHTTP):
         """Randomly returns true when the server should misbehave."""
 
         # Apply the sine wave adjustment to maxroll-- preserving the
-        # possiblity that bad things can still sporadically happen.
+        # possibility that bad things can still sporadically happen.
         # n.b. we don't bother to pick up the lock here.
         maxroll = int(maxroll * self.maxroll_adj)
 

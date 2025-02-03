@@ -22,7 +22,7 @@
 
 #
 # Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
-# Copyright (c) 2011, 2024, Oracle and/or its affiliates.
+# Copyright (c) 2011, 2025, Oracle and/or its affiliates.
 #
 
 """
@@ -1179,7 +1179,7 @@ class LinkedImage(object):
         return len(self.__list_children(li_ignore=li_ignore)) > 0
 
     def islinked(self):
-        """Indicates wether the current image is already linked."""
+        """Indicates whether the current image is already linked."""
         return self.ischild() or self.isparent()
 
     def get_path_transform(self):
@@ -1358,7 +1358,7 @@ class LinkedImage(object):
         'li_ignore' is either None or a list.  If it's None (the
         default), all children will be listed.  If it's an empty list
         no children will be listed.  Otherwise, any children listed
-        in li_ignore will be ommited from the results.
+        in li_ignore will be omitted from the results.
 
         The returned value is a list of tuples where each tuple
         contains (<li name>, <relationship>, <li path>)."""

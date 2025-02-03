@@ -21,8 +21,8 @@
 #
 
 #
-# Copyright (c) 2007, 2020, Oracle and/or its affiliates.
 # Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
+# Copyright (c) 2007, 2025, Oracle and/or its affiliates.
 #
 
 """Provides the interfaces and exceptions needed to determine which packages
@@ -877,7 +877,7 @@ class PkgSolver(object):
             for s in ms:
                 info.append("  {0}".format(s))
 
-        if not info:  # both error detection methods insufficent.
+        if not info:  # both error detection methods insufficient.
             info.append(
                 _(
                     "Plan Creation: Package solver is "
@@ -1388,7 +1388,7 @@ class PkgSolver(object):
         self.__trim_frozen(existing_freezes)
 
         # Trim packages with unsatisfied parent dependencies.  Then
-        # for packages with satisfied parent dependenices (which will
+        # for packages with satisfied parent dependencies (which will
         # include incorporations), call __trim_recursive_incorps() to
         # trim out more packages that are disallowed due to the synced
         # incorporations.
@@ -1945,7 +1945,7 @@ class PkgSolver(object):
         )
 
     def __get_variant_dict(self, fmri):
-        """Return dictionary of variants suppported by fmri"""
+        """Return dictionary of variants supported by fmri"""
         try:
             if fmri not in self.__variant_dict:
                 self.__variant_dict[fmri] = dict(
@@ -2185,7 +2185,7 @@ class PkgSolver(object):
         while work:
             fmris = work.pop()
             enc_pkg_name = fmris[0].get_name()
-            # If the package is not installed then any dependenices
+            # If the package is not installed then any dependencies
             # it has are irrelevant.
             if enc_pkg_name not in self.__installed_dict:
                 continue
@@ -3165,7 +3165,7 @@ class PkgSolver(object):
                 else:
                     # Track which constraints have
                     # already been processed
-                    # seperately from which
+                    # separately from which
                     # package FMRIs have been
                     # processed to avoid (unlikely)
                     # collision.
@@ -3207,7 +3207,7 @@ class PkgSolver(object):
         install_holds = {}
 
         # Determine installed packages that contain incorporation
-        # dependencies, those packages that are depended on by explict
+        # dependencies, those packages that are depended on by explicit
         # version, and those that have pkg.depend.install-hold values.
         for f in self.__installed_fmris - self.__removal_fmris:
             for d in self.__catalog.get_entry_actions(

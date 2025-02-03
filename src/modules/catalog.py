@@ -19,8 +19,8 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
 # Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
+# Copyright (c) 2007, 2025, Oracle and/or its affiliates.
 
 """Interfaces and implementation for the Catalog object, as well as functions
 that operate on lists of package FMRIs."""
@@ -3154,7 +3154,7 @@ class Catalog(object):
                     pkg_matching_pats.add(pat)
 
             if omit_package:
-                # Package didn't match critera; skip it.
+                # Package didn't match criteria; skip it.
                 continue
 
             # Collect attribute data if requested.

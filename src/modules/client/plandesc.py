@@ -21,8 +21,8 @@
 #
 
 #
-# Copyright (c) 2012, 2020, Oracle and/or its affiliates.
 # Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright (c) 2012, 2025, Oracle and/or its affiliates.
 #
 
 """
@@ -74,7 +74,7 @@ OP_STAGE_PRINTED = 3  # The message has been consumed by a client
 
 class _ActionPlan(collections.namedtuple("_ActionPlan", "p src dst")):
     """A named tuple used to keep track of all the actions that will be
-    executed during an image-modifying procecure."""
+    executed during an image-modifying procedure."""
 
     # Class has no __init__ method; pylint: disable=W0232
     # Use __slots__ on an old style class; pylint: disable=E1001
@@ -802,7 +802,7 @@ class PlanDescription(object):
             for rem, add in self.get_changes():
                 assert rem is not None or add is not None
                 if rem is not None and add is not None:
-                    # Lists of lists are used here becuase
+                    # Lists of lists are used here because
                     # json will convert lists of tuples
                     # into lists of lists anyway.
                     if rem.fmri == add.fmri:

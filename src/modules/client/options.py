@@ -20,8 +20,8 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
 # Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
+# Copyright (c) 2013, 2025, Oracle and/or its affiliates.
 
 import os
 
@@ -1595,7 +1595,7 @@ def opts_assemble(op, api_inst, opts, add_table=None, cwd=None):
             avail_opt, default, valid_args = o
         elif len(o) == 4:
             avail_opt, default, valid_args, schema = o
-        # for options not given we substitue the default value
+        # for options not given we substitute the default value
         if avail_opt not in opts:
             rv[avail_opt] = default
             continue
