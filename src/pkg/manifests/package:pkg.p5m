@@ -28,7 +28,6 @@
 #
 <include bundledlicences.3.13.core.p5m>
 <include bundledmodules.3.13.core.p5m>
-<include bundledmodules.3.12.core.p5m>
 set name=pkg.fmri value=pkg:/package/pkg@$(PKGVERS)
 set name=pkg.summary value="Image Packaging System - pkg(7)"
 set name=pkg.description \

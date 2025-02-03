@@ -1,16 +1,4 @@
     #
-    pkg:/runtime/python-312
-    pkg:/library/python-3/cffi-312
-    pkg:/library/python-3/coverage-312
-    pkg:/library/python-3/cryptography-312
-    pkg:/library/python-3/jsonrpclib-312
-    pkg:/library/python-3/jsonschema-312
-    pkg:/library/python-3/pybonjour-312
-    pkg:/library/python-3/pycurl-312
-    pkg:/library/python-3/pyopenssl-312
-    pkg:/library/python-3/rapidjson-312
-    pkg:/library/python-3/setuptools-312
-    #
     pkg:/runtime/python-313
     pkg:/library/python-3/cffi-313
     pkg:/library/python-3/coverage-313
@@ -23,7 +11,6 @@
     pkg:/library/python-3/rapidjson-313
     pkg:/library/python-3/setuptools-313
     #
-    pkg:/system/library/python/libbe-312
     pkg:/system/library/python/libbe-313
     #
     pkg:/SUNWcs
