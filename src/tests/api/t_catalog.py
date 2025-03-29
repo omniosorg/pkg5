@@ -1237,7 +1237,7 @@ class TestCatalogueFormats(pkg5unittest.Pkg5TestCase):
         m = manifest.Manifest()
         m.set_content(
             "set name=pkg.fmri value={}\n"
-            'set name=pkg.summary value="Jon K\u00F6gl"\n'.format(f),
+            'set name=pkg.summary value="Jon K\u00f6gl"\n'.format(f),
             signatures=True,
         )
         c.add_package(f, manifest=m)

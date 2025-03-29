@@ -26,9 +26,9 @@
 
 """feed - routines for generating RFC 4287 Atom feeds for packaging server
 
-   At present, the pkg.server.feed module provides a set of routines that, from
-   a catalog, allow the construction of a feed representing the activity within
-   a given time period."""
+At present, the pkg.server.feed module provides a set of routines that, from
+a catalog, allow the construction of a feed representing the activity within
+a given time period."""
 
 import cherrypy
 import copy
