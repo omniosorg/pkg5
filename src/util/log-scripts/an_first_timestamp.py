@@ -25,8 +25,8 @@
 #
 
 
-"""an_first_timestamp.py - read first line of an Apache HTTPD log, and print 
-   Unix timestamp"""
+"""an_first_timestamp.py - read first line of an Apache HTTPD log, and print
+Unix timestamp"""
 
 import datetime
 import fileinput

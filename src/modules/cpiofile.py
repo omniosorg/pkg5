@@ -24,8 +24,7 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 #
-"""Read from and write to cpio format archives.
-"""
+"""Read from and write to cpio format archives."""
 
 #
 # Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.

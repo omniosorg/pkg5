@@ -25,9 +25,9 @@
 #
 
 """Adjust sys.path so that /usr/lib/pkg is first and that neither the system
-   site-packages nor any user site-packages directory is present.
-   This provides a stable and consistent execution environment and allows
-   bundling some modules with pkg.
+site-packages nor any user site-packages directory is present.
+This provides a stable and consistent execution environment and allows
+bundling some modules with pkg.
 """
 
 from site import getsitepackages, getusersitepackages, addsitedir
