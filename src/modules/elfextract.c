@@ -21,7 +21,7 @@
 
 /*
  *  Copyright (c) 2009, 2023, Oracle and/or its affiliates.
- *  Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
+ *  Copyright 2025 OmniOS Community Edition (OmniOSce) Association.
  */
 
 #include <libelf.h>
@@ -335,7 +335,8 @@ getdynamic(int fd)
 				goto bad;
 			}
 
-			num_dyn = shdr.sh_size / shdr.sh_entsize;
+			num_dyn = shdr.sh_entsize > 0 ?
+			    shdr.sh_size / shdr.sh_entsize : 0;
 			dynstr = shdr.sh_link;
 			break;
 
