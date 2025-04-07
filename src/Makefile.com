@@ -29,7 +29,9 @@ ROOTPKGLIB = $(ROOTUSRLIB)/pkg
 TRIPLET = x86_64-pc-solaris2
 
 CC = /usr/bin/gcc-14
-CFLAGS = -m64 -Wall -Werror -Wextra -gdwarf-2 -gstrict-dwarf \
+CFLAGS_i386 = -m64
+CFLAGS_aarch64 =
+CFLAGS = $(CFLAGS_$(MACH)) -Wall -Werror -Wextra -gdwarf-2 -gstrict-dwarf \
 	-fno-aggressive-loop-optimizations
 CPPFLAGS = -D_REENTRANT -D_POSIX_PTHREAD_SEMANTICS
 
