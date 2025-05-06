@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2025, Oracle and/or its affiliates.
 #
 
 import configparser
@@ -275,7 +275,7 @@ class ActionChecker(Checker):
                         ),
                         msgid="lint.error",
                     )
-                    engine.debug(traceback.format_exc(err), msgid="lint.error")
+                    engine.debug(traceback.format_exc(), msgid="lint.error")
 
 
 class ManifestChecker(Checker):
@@ -360,7 +360,7 @@ class ManifestChecker(Checker):
                         ),
                         msgid="lint.error",
                     )
-                    engine.debug(traceback.format_exc(err), msgid="lint.error")
+                    engine.debug(traceback.format_exc(), msgid="lint.error")
 
 
 def get_checkers(module, config):

@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2013, 2025, Oracle and/or its affiliates.
 
 import atexit
 import cherrypy
@@ -850,7 +850,7 @@ class Pkg5Dispatch(object):
                 # before the client sees it.
                 raise cherrypy.HTTPError(
                     status=http.client.INTERNAL_SERVER_ERROR,
-                    message="".join(traceback.format_exc(e)),
+                    message=traceback.format_exc(),
                 )
 
 
