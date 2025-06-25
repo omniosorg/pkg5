@@ -81,7 +81,7 @@ function seed_zone {
 	else
 		# If the input file is compressed, extract the first portion
 		# to determine its type.
-		typeset type=`file -b "$seedsrc"`
+		typeset type=`/usr/has/bin/file -b "$seedsrc"`
 		typeset filter
 		case "$type" in
 		    ZFS*)	filter='cat' ;;
@@ -91,12 +91,7 @@ function seed_zone {
 				whence -fp pbzip2 >/dev/null && \
 				    filter='pbzip2 -dc'
 				;;
-		    Zstandard*)	filter='zstd -dc'
-				whence -fp zstd >/dev/null || \
-				    fatal "Cannot uncompress %s - %s" \
-				    "$type" \
-				    "no 'zstd' command found on system."
-				;;
+		    Zstandard*)	filter='zstd -dc' ;;
 		    *\ tar\ *)	filter='cat' ;;
 		    *)
 			fatal "Seed file %s not in a supported format (%s)" \
@@ -109,7 +104,7 @@ function seed_zone {
 
 		typeset tf=`mktemp`
 		$filter "$seedsrc" | dd of="$tf" bs=1024 count=1024
-		typeset type=`file -b "$tf"`
+		typeset type=`/usr/has/bin/file -b "$tf"`
 		rm -f "$tf"
 
 		log "Underlying file type is '%s'" "$type"
