@@ -129,6 +129,11 @@ def setup_environment(path_to_proto, debug=False, system_test=False):
         if k.startswith("PKG_") or k.lower().endswith("_proxy"):
             del os.environ[k]
 
+    # This environment variable changes the exit status of operations that
+    # result in no changes being required. Unset it so tests get the expected
+    # behaviour.
+    os.environ.pop("PKG_SUCCESS_ON_NOP", None)
+
     #
     # Tell package manager where its application data files live.
     #

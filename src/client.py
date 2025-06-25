@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2025 OmniOS Community Edition (OmniOSce) Association.
 # Copyright 2024 Oxide Computer Company
 # Copyright (c) 2007, 2024, Oracle and/or its affiliates.
 #
@@ -41,8 +41,8 @@
 # Environment variables
 #
 # PKG_IMAGE - root path of target image
-# PKG_IMAGE_TYPE [entire, partial, user] - type of image
-#       XXX or is this in the Image configuration?
+# PKG_SUCCESS_ON_NOP - when an operation completes with nothing to do, exit with
+#                      the success code (0) instead of the NOP one (4).
 
 try:
     import pkg.site_paths
@@ -199,6 +199,8 @@ _api_inst = None
 
 tmpdirs = []
 tmpfiles = []
+
+EXIT_NOP_VAL = EXIT_OK if os.environ.get("PKG_SUCCESS_ON_NOP") else EXIT_NOP
 
 
 @atexit.register
@@ -620,7 +622,8 @@ Options:
         --help or -?
 
 Environment:
-        PKG_IMAGE"""
+        PKG_IMAGE
+        PKG_SUCCESS_ON_NOP"""
             )
         )
     else:
@@ -898,6 +901,8 @@ def list_inventory(
     if errors:
         _generate_error_messages(out_json["status"], errors)
 
+    if out_json["status"] == EXIT_NOP:
+        return EXIT_NOP_VAL
     return out_json["status"]
 
 
@@ -2499,7 +2504,7 @@ def __api_op(
         if _op == PKG_OP_FIX and _noexecute and _quiet_plan:
             return _verify_exit_code(_api_inst)
         if _api_inst.planned_nothingtodo():
-            return EXIT_NOP
+            return EXIT_NOP_VAL
         if _noexecute or _stage == API_STAGE_PLAN:
             return EXIT_OK
     else:
@@ -2818,6 +2823,8 @@ def __handle_client_json_api_output(out_json, op, api_inst):
         display_repo_failures(out_json["data"]["repo_status"])
 
     __display_plan_messages(api_inst, frozenset([OP_STAGE_PREP, OP_STAGE_EXEC]))
+    if out_json["status"] == EXIT_NOP:
+        return EXIT_NOP_VAL
     return out_json["status"]
 
 
@@ -3525,7 +3532,7 @@ def autoremove(
 
     if not pargs:
         msg(_("No removable packages for this image."))
-        return EXIT_NOP
+        return EXIT_NOP_VAL
 
     out_json = client_api._uninstall(
         PKG_OP_UNINSTALL,
@@ -3602,6 +3609,8 @@ def verify(
 
     # Since the verify output has been handled by display_plan_cb, only
     # status code needs to be returned.
+    if out_json["status"] == EXIT_NOP:
+        return EXIT_NOP_VAL
     return out_json["status"]
 
 
@@ -3714,6 +3723,8 @@ def fix(
     if "errors" in out_json:
         _generate_error_messages(out_json["status"], out_json["errors"], cmd=op)
 
+    if out_json["status"] == EXIT_NOP:
+        return EXIT_NOP_VAL
     return out_json["status"]
 
 
@@ -3937,7 +3948,7 @@ def set_mediator(
                 return EXIT_OOPS
         else:
             msg(_("No changes required."))
-        return EXIT_NOP
+        return EXIT_NOP_VAL
 
     if api_inst.get_dehydrated_publishers():
         msg(
@@ -4038,7 +4049,7 @@ def unset_mediator(
                 return EXIT_OOPS
         else:
             msg(_("No changes required."))
-        return EXIT_NOP
+        return EXIT_NOP_VAL
 
     if not quiet:
         __display_plan(api_inst, verbose, noexecute)
@@ -4172,7 +4183,7 @@ def unfreeze(api_inst, args):
     try:
         pkgs = api_inst.freeze_pkgs(pargs, unfreeze=True, dry_run=dry_run)
         if not pkgs:
-            return EXIT_NOP
+            return EXIT_NOP_VAL
         for s in pkgs:
             logger.info(_("{0} was unfrozen.").format(s))
         return EXIT_OK
@@ -5594,6 +5605,8 @@ def publisher_set(
             add_info={"repo_uri": repo_uri},
         )
 
+    if out_json["status"] == EXIT_NOP:
+        return EXIT_NOP_VAL
     return out_json["status"]
 
 
@@ -5608,6 +5621,8 @@ def publisher_unset(api_inst, pargs):
             out_json["status"], out_json["errors"], cmd="unset-publisher"
         )
 
+    if out_json["status"] == EXIT_NOP:
+        return EXIT_NOP_VAL
     return out_json["status"]
 
 
@@ -7202,7 +7217,7 @@ def update_format(api_inst, pargs):
         return EXIT_OK
 
     logger.info(_("Image format already current."))
-    return EXIT_NOP
+    return EXIT_NOP_VAL
 
 
 def print_version(pargs):
