@@ -1,7 +1,7 @@
 .\" Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
-.\" Copyright 2023 OmniOS Community Edition (OmniOSce) Association.
 .\" Copyright 2024 Oxide Computer Company
-.Dd December 10, 2024
+.\" Copyright 2025 OmniOS Community Edition (OmniOSce) Association.
+.Dd June 25, 2025
 .Dt PKG 1
 .Os
 .Sh NAME
@@ -4331,6 +4331,12 @@ before a connection is aborted.
 A value of 0 means do not abort the operation.
 .Pp
 Default value: 5
+.It Sy PKG_CLIENT_MAX_TIMEOUT
+Maximum number of transport attempts per host before the client aborts the
+operation.
+A value of 0 means do not abort the operation.
+.Pp
+Default value: 4
 .It Sy PKG_CONCURRENCY
 The number of child images to update in parallel.
 Ignored if the
@@ -4353,12 +4359,16 @@ If
 is 0 or a negative number, all child images are updated in parallel.
 .Pp
 Default value: 1
-.It Sy PKG_CLIENT_MAX_TIMEOUT
-Maximum number of transport attempts per host before the client aborts the
-operation.
-A value of 0 means do not abort the operation.
+.It Sy PKG_SUCCESS_ON_NOP
+When set to a non-zero value, cause
+.Nm
+operations that result in there being no changes to apply to exit
+successfully, with exit status 0
+.Pq Command succeeded ,
+rather than with exit status 4
+.Pq \&No changes were made - nothing to do .
 .Pp
-Default value: 4
+Default value: 0
 .It Sy http_proxy , Sy https_proxy
 HTTP or HTTPS proxy server.
 .El
