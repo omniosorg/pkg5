@@ -27,7 +27,7 @@
 """Read from and write to cpio format archives."""
 
 #
-# Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2025, Oracle and/or its affiliates.
 #
 
 
@@ -60,12 +60,6 @@ BLOCKSIZE = 512
 
 class CpioError(Exception):
     """Base exception."""
-
-    pass
-
-
-class ExtractError(CpioError):
-    """General exception for extract errors."""
 
     pass
 
@@ -906,12 +900,6 @@ class CpioFile(object):
         # XXX deal with other types
         else:
             return None
-
-    def _block(self, count):
-        blocks, remainder = divmod(count, BLOCKSIZE)
-        if remainder:
-            blocks += 1
-        return blocks * BLOCKSIZE
 
     def _getmember(self, name, cpioinfo=None):
         members = self.getmembers()
