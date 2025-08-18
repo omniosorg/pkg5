@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2008, 2024, Oracle and/or its affiliates.
+# Copyright (c) 2008, 2025, Oracle and/or its affiliates.
 #
 
 try:
@@ -811,7 +811,7 @@ def __mog_helper(mog_files, fmri, mpathname):
         try:
             act = actions.fromstr(al)
         except Exception as e:
-            # If any exception encoutered here, that means the
+            # If any exception encountered here, that means the
             # action is corrupted with mogrify.
             abort(e)
         if act.name == "set" and act.attrs["name"] == "pkg.fmri":
@@ -1712,7 +1712,7 @@ def transfer_pkgs(
                     continue
 
             if do_mog:
-                # We have examined which packge to
+                # We have examined which package to
                 # republish. Then we need store the
                 # mogrified manifest for future use.
                 try:

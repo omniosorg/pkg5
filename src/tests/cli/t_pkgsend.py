@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2025, Oracle and/or its affiliates.
 
 from . import testutils
 
@@ -1503,7 +1503,7 @@ dir path=/usr/bin/foo target=bar hash=payload-pathname"""
         )
 
     def test_26_pkgsend_multihash(self):
-        """Tests that when publishing packages with mutiple hashes,
+        """Tests that when publishing packages with multiple hashes,
         we only overwrite those hashes if we're in multi-hash mode
         and only if they match the hash attributes we know how to
         compute, other attributes are left alone."""

@@ -3030,7 +3030,7 @@ test2	zoo		1.0	5.11	0	20110804T203458Z	pkg://test2/zoo@1.0,5.11-0:20110804T20345
             "-s {0} verify -i {1} -d".format(repo_path, badifpath), exit=1
         )
 
-        # Test file with arbitary new line or other space symbols does
+        # Test file with arbitrary new line or other space symbols does
         # not cause failure.
         ientry = "   pkg=amber   \t\t depend=tree   \n\t\r\n\n"
         self.__run_verify_with_ignore_file(repo_path, ientry, ifpath, exit2=1)
@@ -3315,7 +3315,7 @@ test2	zoo		1.0	5.11	0	20110804T203458Z	pkg://test2/zoo@1.0,5.11-0:20110804T20345
         file_created = False
         dir_created = False
 
-        # Test certificate load will not fail with a directoy in
+        # Test certificate load will not fail with a directory in
         # the trust anchor directory
         if not os.path.exists(cert_dir):
             dir_created = True
@@ -3475,7 +3475,7 @@ test2	zoo		1.0	5.11	0	20110804T203458Z	pkg://test2/zoo@1.0,5.11-0:20110804T20345
         self.pkgrepo("-s {0} fix".format(repo_path))
 
     def test_34_fix_brokenperm(self):
-        """Tests that when running fix as an unpriviliged user that we
+        """Tests that when running fix as an unprivileged user that we
         fail to fix the repository."""
 
         repo_path = self.dc.get_repodir()
@@ -3875,6 +3875,14 @@ publisher\tprefix\t""
             )
         )
         self.pkgrepo("-s {0} verify".format(repo_path), exit=0)
+
+    def test_42_verify_zero_timeout(self):
+        """Verify that PKG_CLIENT_MAX_TIMEOUT set to zero works as expected
+        and that empty TransportFailures exception is not raised."""
+        repo_path = self.dc.get_repodir()
+        env = {"PKG_CLIENT_MAX_TIMEOUT": "0"}
+
+        self.pkgrepo(f"contents -s {repo_path}", env_arg=env)
 
 
 class TestPkgrepoMultiRepo(pkg5unittest.ManyDepotTestCase):

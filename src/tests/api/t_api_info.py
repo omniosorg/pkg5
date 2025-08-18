@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2025, Oracle and/or its affiliates.
 #
 
 from . import testutils
@@ -239,7 +239,7 @@ class TestApiInfo(pkg5unittest.SingleDepotTestCase):
         self.assertTrue(res.dirs is not None)
         self.assertTrue(res.dependencies is not None)
         # A test for bug 8868 which ensures the pkg.description field
-        # is as exected.
+        # is as expected.
         self.assertEqual(res.description, "DESCRIPTION 1")
 
         # Verify that summary is pulled from the old "name=description"
@@ -336,7 +336,7 @@ class TestApiInfo(pkg5unittest.SingleDepotTestCase):
         res = pis[0]
         self.assertTrue(res.summary == "SUMMARY: Example Package 5")
         # A test for bug 8868 which ensures the pkg.description field
-        # is as exected.
+        # is as expected.
         self.assertEqual(res.description, "DESCRIPTION 2")
 
         # Test if the package summary has been correctly set if both
@@ -348,7 +348,7 @@ class TestApiInfo(pkg5unittest.SingleDepotTestCase):
         res = pis[0]
         self.assertTrue(res.summary == "SUMMARY: Example Package 6")
         # A test for bug 8868 which ensures the pkg.description field
-        # is as exected.
+        # is as expected.
         self.assertEqual(res.description, "DESCRIPTION 3")
 
     def test_1_bad_packages(self):

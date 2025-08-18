@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2025, Oracle and/or its affiliates.
 #
 
 import atexit
@@ -394,7 +394,7 @@ class Archive(object):
 
             # If we have an archive_index use that and return
             # immediately.  We assume that the caller has obtained
-            # the index from an exising Archive object,
+            # the index from an existing Archive object,
             # and will have validated the version of that archive.
             if archive_index:
                 self.__extract_offsets = archive_index

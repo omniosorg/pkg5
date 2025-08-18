@@ -20,7 +20,7 @@
 #
 
 # Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
-# Copyright (c) 2008, 2024, Oracle and/or its affiliates.
+# Copyright (c) 2008, 2025, Oracle and/or its affiliates.
 
 #
 # Define the basic classes that all test cases are inherited from.
@@ -1160,7 +1160,7 @@ if __name__ == "__main__":
             )
 
         if include:
-            # Assert all sections expicitly requested were matched.
+            # Assert all sections explicitly requested were matched.
             self.assertEqualDiff(
                 include, list(x for x in (seen & set(include)))
             )
@@ -2593,7 +2593,7 @@ class CliTestCase(Pkg5TestCase):
         return self.__imgs_path[self.__imgs_index]
 
     def get_img_path(self):
-        # for backward compatibilty
+        # for backward compatibility
         return self.img_path()
 
     def get_img_file_path(self, relpath):
@@ -3527,7 +3527,7 @@ class CliTestCase(Pkg5TestCase):
 
         if not pfmri.publisher:
             # Allow callers to not specify a fully-qualified FMRI
-            # if it can be asssumed which publisher likely has
+            # if it can be assumed which publisher likely has
             # the package.
             pubs = [p.prefix for p in img.gen_publishers(inc_disabled=True)]
             assert len(pubs) == 1
@@ -3541,7 +3541,7 @@ class CliTestCase(Pkg5TestCase):
 
         if not pfmri.publisher:
             # Allow callers to not specify a fully-qualified FMRI
-            # if it can be asssumed which publisher likely has
+            # if it can be assumed which publisher likely has
             # the package.
             pubs = [p.prefix for p in img.gen_publishers(inc_disabled=True)]
             assert len(pubs) == 1
@@ -4848,7 +4848,7 @@ class SingleDepotTestCaseCorruptImage(SingleDepotTestCase):
         image" which means it builds subdirectories the subdirectories
         specified by subdirs (essentially determining whether a user
         image or a full image will be built). It populates these
-        subdirectories with a partial image directory stucture as
+        subdirectories with a partial image directory structure as
         specified by config. As another subdirectory of bad, it
         creates a subdirectory called final which represents the
         directory the command was actually run from (which is why

@@ -22,7 +22,7 @@
 #
 
 #
-# Copyright (c) 2008, 2024, Oracle and/or its affiliates.
+# Copyright (c) 2008, 2025, Oracle and/or its affiliates.
 #
 
 from . import testutils
@@ -1657,7 +1657,7 @@ new_property = {0}
         for ver, content in self._initial_files.items():
             scpath = self.make_misc_files({"cfg_cache": content})[0]
 
-            # Verify verison of content is auto detected and that
+            # Verify version of content is auto detected and that
             # initial state matches file.
             conf = cfg.FileConfig(scpath, definitions=self._defs)
             self._verify_initial_state(conf, ver)

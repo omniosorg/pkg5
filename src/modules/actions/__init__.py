@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2025, Oracle and/or its affiliates.
 #
 
 """
@@ -155,7 +155,7 @@ class MalformedActionError(ActionError):
 
 
 class ActionDataError(ActionError):
-    """Used to indicate that a file-related error occuring during action
+    """Used to indicate that a file-related error occurring during action
     initialization."""
 
     def __init__(self, *args, **kwargs):

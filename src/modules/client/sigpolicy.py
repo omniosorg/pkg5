@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2025, Oracle and/or its affiliates.
 #
 
 import pkg.client.api_errors as apx
@@ -36,7 +36,7 @@ class Policy(object):
     Each subclass must also define its "strictness".
     Strictness is a positive integer and is relative to the other
     subclasses in existence.  More than one subclass may have the same
-    strictness level.  In the abscence of other information, when combining
+    strictness level.  In the absence of other information, when combining
     two policies, the result is the stricter policy."""
 
     _policies = {}

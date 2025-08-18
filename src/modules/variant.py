@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2009, 2020, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2025, Oracle and/or its affiliates.
 #
 
 # basic variant support
@@ -287,8 +287,8 @@ class VariantCombinations(object):
         dependencies whose variants are self.
 
         'only_not_sat' determines whether only the unsatisfied set of
-        variants for self is used for comparision.  When only_not_sat
-        is True, then intersects returns wether vc would satisfy at
+        variants for self is used for comparison.  When only_not_sat
+        is True, then intersects returns whether vc would satisfy at
         least one instance which is currently unsatisfied."""
 
         if self.is_empty() or vc.is_empty():

@@ -158,7 +158,7 @@ done
 # SERVICE_PROPS="svc:/application/pkg/server:foo%online%/space/repo%true%false%/space/writable_root"
 #
 # we expect to be called as "svcprop -c -p <property> <fmri>"
-# which is enough svcprop(1) functionalty for these tests. Any other
+# which is enough svcprop(1) functionality for these tests. Any other
 # command line options will cause us to return nonsense.
 #
 

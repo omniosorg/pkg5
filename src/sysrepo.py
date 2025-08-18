@@ -22,7 +22,7 @@
 
 #
 # Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
-# Copyright (c) 2011, 2024, Oracle and/or its affiliates.
+# Copyright (c) 2011, 2025, Oracle and/or its affiliates.
 #
 
 try:
@@ -451,7 +451,7 @@ def _load_publisher_info(api_inst, image_dir):
         return None, None
 
     # The cache file could have HTTP_PORT in it, cleaning it will
-    # cause the cache file to be rewriten due to the checks in the
+    # cause the cache file to be rewritten due to the checks in the
     # _validate_pub_info (the cleaned uri will not be in the cache
     # file).
     clean_pub_info = _clean_pub_info(pub_info)

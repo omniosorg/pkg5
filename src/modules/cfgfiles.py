@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2008, 2021, Oracle and/or its affiliates.
+# Copyright (c) 2008, 2025, Oracle and/or its affiliates.
 #
 
 # NOTE: This module is inherently posix specific.  Care is taken in the modules
@@ -34,6 +34,17 @@ import tempfile
 import time
 
 import pkg.lockfile as lockfile
+
+# Historically this class allocated from the 0-99 range, but
+# UID/GID 0-99 are reserved for the OS vendor and Solaris always
+# registers the id/name mappings.
+#
+# Following other platforms behaviour:
+#   https://en.wikipedia.org/wiki/User_identifier
+#
+# 100-499 will be used for actions where no uid/gid provided.
+MIN_DYNAMIC_ID = 100
+MAX_DYNAMIC_ID = 499
 
 
 class CfgFile(object):
@@ -76,31 +87,20 @@ class CfgFile(object):
             self.filename, self.keys, self.column_names, self.index
         )
 
-    # Historically this class allocated from the 0-99 range, but
-    # UID/GID 0-99 are reserved for the OS vendor and Solaris always
-    # registers the id/name mappings.
-    #
-    # Following other platforms behaviour:
-    #   https://en.wikipedia.org/wiki/User_identifier
-    #
-    # 100-499 will be used for actions where no uid/gid provided.
-    MIN_DYNAMIC_ID = 100
-    MAX_DYNAMIC_ID = 499
-
     def getnextid(self, values, idtype):
         """returns a free id (uid or gid) from the dynamic space 100-499"""
         ids = set()
         for t in values:
             if t[1]:
                 nid = int(t[1][idtype])
-                if nid >= self.MIN_DYNAMIC_ID and nid <= self.MAX_DYNAMIC_ID:
+                if nid >= MIN_DYNAMIC_ID and nid <= MAX_DYNAMIC_ID:
                     ids.add(nid)
-        for i in range(self.MIN_DYNAMIC_ID, self.MAX_DYNAMIC_ID + 1):
+        for i in range(MIN_DYNAMIC_ID, MAX_DYNAMIC_ID + 1):
             if i not in ids:
                 return i
         raise RuntimeError(
             f"No free {idtype} in dynamic allocation range: "
-            + f"{self.MIN_DYNAMIC_ID}-{self.MAX_DYNAMIC_ID}."
+            + f"{MIN_DYNAMIC_ID}-{MAX_DYNAMIC_ID}."
         )
 
     def getcolumnnames(self):
@@ -114,7 +114,7 @@ class CfgFile(object):
 
     def getfilelines(self):
         """given self, return list of lines to be printed.
-        default impl preserves orignal + insertion order"""
+        default impl preserves original + insertion order"""
         lines = [[self.index[l][2], self.index[l][0]] for l in self.index]
         lines.sort()
         return [l[1] for l in lines]

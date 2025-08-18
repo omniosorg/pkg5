@@ -21,8 +21,8 @@
 #
 
 #
-# Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
 # Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
+# Copyright (c) 2011, 2025, Oracle and/or its affiliates.
 #
 
 from . import testutils
@@ -271,7 +271,7 @@ providing a version at which to freeze them.
         self.api_obj.reset()
         self.api_obj.freeze_pkgs([existing_foo])
         self.api_obj.reset()
-        # Test that dispaying a timestamp freeze works.
+        # Test that displaying a timestamp freeze works.
         self.pkg("freeze")
         # This should fail because new_foo isn't the version frozen.
         self.assertRaises(

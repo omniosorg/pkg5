@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 # Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
-# Copyright (c) 2008, 2021, Oracle and/or its affiliates.
+# Copyright (c) 2008, 2025, Oracle and/or its affiliates.
 
 import datetime
 import errno
@@ -1443,7 +1443,7 @@ class _RepoStore(object):
         return os.path.normpath(os.path.join(self.catalog_root, name))
 
     def reset_search(self):
-        """Discards currenty loaded search data so that it will be
+        """Discards currently loaded search data so that it will be
         reloaded the next a search is performed.
         """
         if not self.index_root:
@@ -3833,7 +3833,7 @@ class Repository(object):
         return rstore.replace_package(pfmri)
 
     def reset_search(self, pub=None):
-        """Discards currenty loaded search data so that it will be
+        """Discards currently loaded search data so that it will be
         reloaded for the next search operation.
         """
         for rstore in self.rstores:

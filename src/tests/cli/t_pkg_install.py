@@ -985,7 +985,7 @@ class TestPkgInstallBasics(pkg5unittest.SingleDepotTestCase):
         # when entire class is run w/ one repo instance.
 
         # first case should fail since multiple patterns
-        # match the same pacakge
+        # match the same package
         self.pkg("{0} 'ba*' 'b*'".format(install_cmd), exit=1)
         self.pkg("{0} 'ba*'".format(install_cmd), exit=0)
         self.pkg("list foo", exit=0)
@@ -2622,7 +2622,7 @@ class TestPkgInstallUpdateSolverOutput(pkg5unittest.SingleDepotTestCase):
             "Excluding incorporation not shown in solver error.",
         )
         # Check that the notice about a newer version already installed
-        # is ommited (it's not relevant).
+        # is omited (it's not relevant).
         self.assertFalse(
             "octo@2.0" in self.errout,
             "Newer version should not be shown in solver error.",
@@ -4318,7 +4318,7 @@ adm
         self.pkg("uninstall renold")
 
     def test_file_preserve_renamenew(self):
-        """Make sure that file ugprade with preserve=renamenew works."""
+        """Make sure that file upgrade with preserve=renamenew works."""
 
         install_cmd = "install"
         plist = self.pkgsend_bulk(
@@ -6285,10 +6285,10 @@ adm:NP:6445::::::
                 open simpleuser2@2
                 add user username=kermit group=root gcos-field="& loves mspiggy" login-shell=/bin/sh uid=6
                 open simpleuser3@1
-                add user username=wombat group=root gcos-field="& has explict password" login-shell=/bin/bash uid=99 password=$5$FuMX5tH9$MJkmx3wE5MFHtHhGNBlimwHtqPUdTVWs6VAjfQcCKS5
+                add user username=wombat group=root gcos-field="& has explicit password" login-shell=/bin/bash uid=99 password=$5$FuMX5tH9$MJkmx3wE5MFHtHhGNBlimwHtqPUdTVWs6VAjfQcCKS5
                 close
                 open simpleuser3@2
-                add user username=wombat group=root gcos-field="& has explict password" login-shell=/bin/bash uid=99 password=$5$C6451mtT$PDg63UKGtFr7FHkMSxUhdTcd0XBtHTnKXNN7RpJe/h1 shell-change-ok=true
+                add user username=wombat group=root gcos-field="& has explicit password" login-shell=/bin/bash uid=99 password=$5$C6451mtT$PDg63UKGtFr7FHkMSxUhdTcd0XBtHTnKXNN7RpJe/h1 shell-change-ok=true
                 close"""
 
         self.pkgsend_bulk(self.rurl, (self.basics0, simpleusers))
@@ -7961,7 +7961,7 @@ class TestDependencies(pkg5unittest.SingleDepotTestCase):
         self.pkg("list pkg8@1.0 pkg2@1.1")
         self.pkg("uninstall '*'")
 
-        # test to see if solver will install new verion of existing
+        # test to see if solver will install new version of existing
         # package rather than add new package
         self.pkg("install pkg8@1.0 pkg9@1.0")  # install pkg
         self.pkg("verify")
@@ -8011,7 +8011,7 @@ class TestDependencies(pkg5unittest.SingleDepotTestCase):
         self.pkg("list pkg8@1.0 pkg2@1.1")
         self.pkg("uninstall '*'")
 
-        # test to see if solver will install new verion of existing
+        # test to see if solver will install new version of existing
         # package rather than add new package
         self.pkg("exact-install pkg8@1.0 pkg9@1.0")  # install pkg
         self.pkg("verify")
@@ -8798,9 +8798,9 @@ class TestImageCreateCorruptImage(pkg5unittest.SingleDepotTestCaseCorruptImage):
     # For each test:
     # A good image is created at $basedir/image
     # A corrupted image is created at $basedir/image/bad (called bad_dir
-    #     in subsequent notes) in verious ways
+    #     in subsequent notes) in various ways
     # The $basedir/image/bad/final directory is created and PKG_IMAGE
-    #     is set to that dirctory.
+    #     is set to that directory.
 
     # Tests simulating a corrupted Full Image
 

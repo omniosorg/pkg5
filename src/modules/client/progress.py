@@ -22,7 +22,7 @@
 
 #
 # Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
-# Copyright (c) 2008, 2024, Oracle and/or its affiliates.
+# Copyright (c) 2008, 2025, Oracle and/or its affiliates.
 #
 
 #
@@ -392,7 +392,7 @@ class TrackerItem(object):
 
     def reset(self):
         # This is a kludge but I can't find a better way to do this
-        # and keep pylint's "definied outside of __init__" rule (W0201)
+        # and keep pylint's "defined outside of __init__" rule (W0201)
         # happy, without either repeating all of this code twice, or
         # disabling the rule file-wide.  Both of which seem even worse.
         self.__init__(self.name)

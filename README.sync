@@ -4,16 +4,13 @@
 The pkg5 components have been updated to the latest upstream solaris-ips
 as of:
 
-commit 72081aaa8a75ea1d00b7b935a9627744a6fb4ad9
-Author: Darren J Moffat <Darren.Moffat@Oracle.COM>
-Date:   Wed Oct 23 09:42:15 2024 -0700
+    commit c1fc9182ee12aa1369a5f6a23d147594a3e2656f
+    Author:     Jakub Kulik <jakub.kulik@oracle.com>
+    AuthorDate: Wed Aug 6 08:41:48 2025 -0700
+    Commit:     Jakub Kulik <jakub.kulik@oracle.com>
+    CommitDate: Wed Aug 6 08:41:48 2025 -0700
 
-    PSARC/2024/105 pkg(7) user action uid selection must not use reserved range
-    37049008 pkg should not allocate uid/gid in the system reseved range
-    35721851 pkg fails to to preserve gid of existing group when manifest
-	     doesn't define a gid
-    37049046 test_minugid monumentally broken - will always pass
-    37049103 uid/gid allocation should not be a class default_value
+        38108626 "PKG_CLIENT_MAX_TIMEOUT=0" doesn't work as documented
 
 -----------------------------------------------------------------------------
 

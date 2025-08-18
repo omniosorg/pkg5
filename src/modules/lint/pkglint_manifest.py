@@ -22,7 +22,7 @@
 
 #
 # Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
-# Copyright (c) 2010, 2024, Oracle and/or its affiliates.
+# Copyright (c) 2010, 2025, Oracle and/or its affiliates.
 #
 
 # Some pkg(7) specific lint manifest checks
@@ -783,7 +783,7 @@ class PkgManifestChecker(base.ManifestChecker):
         smf_manifests = []
         for action in manifest.gen_actions_by_type("file"):
             if "path" not in action.attrs:
-                contine
+                continue
 
             path = action.attrs["path"]
 

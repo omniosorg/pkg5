@@ -22,7 +22,7 @@
 
 # Copyright 2014, OmniTI Computer Consulting, Inc. All rights reserved.
 # Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
-# Copyright (c) 2007, 2024, Oracle and/or its affiliates.
+# Copyright (c) 2007, 2025, Oracle and/or its affiliates.
 
 """
 Misc utility functions used by the packaging system.
@@ -1581,7 +1581,7 @@ def opts_parse(
         (option, default_value, [valid values], [json schema])
     It is valid to have other entries in the list when they are required
     for additional option processing elsewhere. These are ignore here. If
-    the list entry is a tuple it must conform to the format oulined above.
+    the list entry is a tuple it must conform to the format outlined above.
 
     The default value not only represents the default value assigned to the
     option, but it also implicitly determines how the option is parsed.  If
@@ -3097,29 +3097,18 @@ def suggest_known_words(text, known_words):
     if not text:
         return candidates
 
-    # We are confident to suggest if the text is part of the known words.
-    for known in known_words:
-        if len(text) < 4:
-            # If the text's length is short, treat it as a prefix.
-            if known.startswith(text):
-                candidates.append(known)
-        elif text in known or known in text:
-            # Otherwise check if the text is part of the known
-            # words or vice verse.
-            candidates.append(known)
-
-    if candidates:
-        if len(candidates) < 4:
-            return candidates
-        else:
-            # Give up suggestions if there are too many candidates.
-            return
+    # We are confident to suggest if the text is a prefix of known word.
+    if len(text) < 4:
+        # If the text's length is short, treat it as a prefix.
+        candidates = [word for word in known_words if word.startswith(text)]
+        if candidates:
+            return sorted(candidates)
 
     # If there are no candidates from the "contains" check, use the edit
     # distance algorithm to seek further.
     for known in known_words:
         distance = _min_edit_distance(text, known)
-        if distance <= len(known) / 2.0:
+        if distance <= len(known) / 2.0 or text in known or known in text:
             candidates.append((known, distance))
 
     # Sort the candidates by their distance, and return the words only.
@@ -3191,7 +3180,7 @@ def dict_cmp(a, b):
 
 
 def cmp(a, b):
-    """Implementaion for Python 2.7's built-in function cmp(), which is
+    """Implementation for Python 2.7's built-in function cmp(), which is
     removed in Python 3."""
 
     if isinstance(a, dict) and isinstance(b, dict):

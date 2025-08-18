@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2025, Oracle and/or its affiliates.
 #
 
 from . import testutils
@@ -33,8 +33,11 @@ import pkg5unittest
 import hashlib
 import os
 import shutil
+import socket
+import ssl
 import stat
 import tempfile
+import warnings
 import certgenerator
 
 import pkg.misc as misc
@@ -182,7 +185,7 @@ class TestHTTPS(pkg5unittest.HTTPSTestClass):
 
     def test_correct_cert_validation(self):
         """Test that an expired cert for one publisher doesn't prevent
-        making changes to other publishers due to certifcate checks on
+        making changes to other publishers due to certificate checks on
         all configured publishers. (Bug 17018362)"""
 
         bad_cert_path = os.path.join(self.cs_dir, "cs3_ch1_ta3_cert.pem")
@@ -275,7 +278,7 @@ class TestHTTPS(pkg5unittest.HTTPSTestClass):
 
         tmp_dir = tempfile.mkdtemp(dir=self.test_root)
 
-        # Retrive the correct CA and use it to generate a new cert.
+        # Retrieve the correct CA and use it to generate a new cert.
         test_ca = self.get_pub_ta("test")
         test_cs = "cs1_{0}".format(test_ca)
 
@@ -445,6 +448,59 @@ echo "12345"
             dialog="exec:{0}".format(self.ssl_auth_bad_script),
         )
         test_ssl_settings(exit=1)
+
+    def test_02_accepted_tls(self):
+        """Test that depot only accepts connection using TLS 1.2 or later."""
+
+        self.dc.enable_ssl(
+            key_path=self.server_ssl_key, cert_path=self.server_ssl_cert
+        )
+
+        self.pkg_image_create()
+        self.seed_ta_dir("ta7")
+
+        self.dc.start()
+
+        def test_tls_version(version):
+            context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+            context.check_hostname = False
+            context.verify_mode = ssl.CERT_NONE
+
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                context.minimum_version = version
+                context.maximum_version = version
+
+            port = self.dc.get_port()
+            with socket.create_connection(("localhost", port)) as sock:
+                with context.wrap_socket(sock) as ssock:
+                    pass
+
+        test_tls_version(ssl.TLSVersion.TLSv1_3)
+        test_tls_version(ssl.TLSVersion.TLSv1_2)
+
+        # Anything below TLS 1.2 is not allowed.
+        self.assertRaisesRegex(
+            ssl.SSLError,
+            r"ALERT_PROTOCOL_VERSION|NO_CIPHERS_AVAILABLE|NO_PROTOCOLS_AVAILABLE",
+            test_tls_version,
+            ssl.TLSVersion.TLSv1_1,
+        )
+        self.assertRaisesRegex(
+            ssl.SSLError,
+            r"ALERT_PROTOCOL_VERSION|NO_CIPHERS_AVAILABLE|NO_PROTOCOLS_AVAILABLE",
+            test_tls_version,
+            ssl.TLSVersion.TLSv1,
+        )
+        self.assertRaisesRegex(
+            ssl.SSLError,
+            r"NO_PROTOCOLS_AVAILABLE",
+            test_tls_version,
+            ssl.TLSVersion.SSLv3,
+        )
+
+        self.dc.stop()
+        self.dc.disable_ssl()
 
 
 if __name__ == "__main__":
