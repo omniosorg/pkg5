@@ -80,7 +80,7 @@ main(int argc __unused, char **argv __unused)
 	}
 
 	X509_set_version(cert, 2);
-	ASN1_INTEGER_set(X509_get_serialNumber(cert), 0);
+	ASN1_INTEGER_set(X509_get_serialNumber(cert), 1);
 	X509_gmtime_adj(X509_get_notBefore(cert), 0);
 	X509_gmtime_adj(X509_get_notAfter(cert), (long)60*60*24*365);
 	X509_set_pubkey(cert, pkey);
