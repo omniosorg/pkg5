@@ -44,6 +44,59 @@
 # PKG_SUCCESS_ON_NOP - when an operation completes with nothing to do, exit with
 #                      the success code (0) instead of the NOP one (4).
 
+# Support re-execing using pieces from an alternate mounted boot environment to
+# aid recovery.
+#
+# For example:
+#
+# beadm mount 20250902
+# Mounted successfully on: '/tmp/tmp.miaO0W'
+# pkg --with-be /tmp/tmp.miaO0W update
+#
+# Deliberately use minimal dependencies as we may be in a somewhat broken
+# python environment. We hope at least that these core modules are intact.
+import os, sys, sysconfig
+
+
+def altbe():
+    argv = sys.argv[1:]
+
+    be = None
+    rest = None
+
+    if argv:
+        if argv[0] == "--with-be" and len(argv) >= 2:
+            be = argv[1]
+            rest = argv[2:]
+        elif argv[0].startswith("--with-be="):
+            be = argv[0].split("=", 1)[1]
+            rest = argv[1:]
+
+    if be is None:
+        return
+
+    exe = sysconfig.get_config_var("EXENAME")
+    pyver = sysconfig.get_config_var("py_version_short")
+    libdir = sysconfig.get_config_var("LIBDIR")
+    destlib = sysconfig.get_config_var("DESTLIB")
+    pkglib = f"/usr/lib/pkg/python{pyver}"
+
+    env = os.environ.copy()
+    env["LD_LIBRARY_PATH"] = f"{be}{libdir}"
+    env["PYTHONPATH"] = f"{be}{pkglib}"
+    env["PYTHONPATH"] += f":{be}{destlib}/vendor-packages"
+
+    try:
+        os.execvpe(
+            f"{be}/{exe}", [exe, f"{be}/usr/bin/pkg"] + (rest or []), env
+        )
+    except OSError as e:
+        sys.stderr.write(f"error: failed to exec alt be pkg from '{be}': {e}\n")
+    sys.exit(127)
+
+
+altbe()
+
 try:
     import pkg.site_paths
 except ImportError:
@@ -72,10 +125,8 @@ try:
     import itertools
     import locale
     import logging
-    import os
     import re
     import socket
-    import sys
     import tempfile
     import textwrap
     import time
