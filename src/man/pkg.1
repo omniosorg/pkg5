@@ -1,7 +1,7 @@
 .\" Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
 .\" Copyright 2024 Oxide Computer Company
 .\" Copyright 2025 OmniOS Community Edition (OmniOSce) Association.
-.Dd June 25, 2025
+.Dd September 8, 2025
 .Dt PKG 1
 .Os
 .Sh NAME
@@ -650,6 +650,12 @@ is
 See the
 .Sx Environment Variables
 section for more information.
+.It Fl \&-with-be Ar path
+Run using python components from a boot environment mounted at
+.Ar path .
+This is useful to recover from a situation where
+.Nm
+does not run due to a problem with python modules.
 .El
 .\"
 .Sh SUB-COMMANDS
@@ -4296,6 +4302,12 @@ Verify an individual file at path
 and display verbose result.
 .Bd -literal
     $ pkg verify -v -p /usr/bin/ls
+.Ed
+.It Sy Example 38 No Update using python pieces in a different BE
+.Pp
+.Bd -literal
+    $ beadm mount <old be> /be
+    $ pkg --with-be /be update
 .Ed
 .El
 .Sh ENVIRONMENT VARIABLES
