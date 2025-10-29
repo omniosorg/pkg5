@@ -430,7 +430,7 @@ def main_func():
                         " not have matching versions across all "
                         "repositories for publisher {pubs}: "
                         "{patterns}"
-                    ).format(pub=pub.prefix, patterns=processdict[entry])
+                    ).format(pubs=pub.prefix, patterns=processdict[entry])
                 )
                 continue
 
