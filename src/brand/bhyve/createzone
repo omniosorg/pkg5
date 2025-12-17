@@ -14,7 +14,7 @@
 # }}}
 
 #
-# Copyright 2018 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2025 OmniOS Community Edition (OmniOSce) Association.
 #
 
 . /usr/lib/brand/sparse/common.ksh
@@ -49,9 +49,9 @@ ZONEPATH_DS=`zonepath_to_ds_chk $ZONEPATH`
     umask 022
     mkdir root
     cd root
-    mkdir -p dev etc usr sbin lib var/run tmp
+    mkdir -p dev etc usr sbin lib var/run tmp var/tmp
     chown -R root:sys .
-    chmod 1777 tmp
+    chmod 1777 tmp var/tmp
     ln -s usr/bin
 
 cat << EOM > etc/passwd
