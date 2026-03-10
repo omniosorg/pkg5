@@ -4,13 +4,12 @@
 The pkg5 components have been updated to the latest upstream solaris-ips
 as of:
 
-    commit c1fc9182ee12aa1369a5f6a23d147594a3e2656f
-    Author:     Jakub Kulik <jakub.kulik@oracle.com>
-    AuthorDate: Wed Aug 6 08:41:48 2025 -0700
-    Commit:     Jakub Kulik <jakub.kulik@oracle.com>
-    CommitDate: Wed Aug 6 08:41:48 2025 -0700
+    commit 4a9340355072e296bf37c27f1c8aa90e7c1e57d3
+    Author: Jakub Kulik <jakub.kulik@oracle.com>
+    Date:   Tue Mar 10 04:41:17 2026 -0700
 
-        38108626 "PKG_CLIENT_MAX_TIMEOUT=0" doesn't work as documented
+       PSARC/2026/020 EOF Python ply and create its private copy in the IPS gate
+       38920215 introduce a private copy of ply
 
 -----------------------------------------------------------------------------
 
