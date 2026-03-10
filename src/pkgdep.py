@@ -98,9 +98,7 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT):
 
     if usage_error:
         error(usage_error, cmd=cmd)
-    emsg(
-        _(
-            """\
+    emsg(_("""\
 Usage:
         pkgdepend [options] command [cmd_options] [operands]
 
@@ -114,9 +112,7 @@ Options:
         -R dir
         --help or -?
 Environment:
-        PKG_IMAGE"""
-        )
-    )
+        PKG_IMAGE"""))
 
     sys.exit(retcode)
 

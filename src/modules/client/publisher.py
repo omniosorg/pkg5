@@ -1769,8 +1769,7 @@ class Publisher(object):
             origins = repo.origins
             origin = origins[0]
             logger.error(
-                _(
-                    """
+                _("""
 Unable to retrieve package data for publisher '{prefix}' from one
 of the following origin(s):
 
@@ -1778,8 +1777,7 @@ of the following origin(s):
 
 The catalog retrieved from one of the origin(s) listed above only
 contains package data for: {pubs}.
-"""
-                ).format(
+""").format(
                     origins="\n".join(str(o) for o in origins),
                     prefix=self.prefix,
                     pubs=", ".join(pubs),
@@ -1787,54 +1785,36 @@ contains package data for: {pubs}.
             )
 
             if global_settings.client_name != "pkg":
-                logger.error(
-                    _(
-                        """\
+                logger.error(_("""\
 This is either a result of invalid origin information being provided
 for publisher '{0}', or because the wrong publisher name was
 provided when this publisher was added.
-"""
-                    ).format(self.prefix)
-                )
+""").format(self.prefix))
                 # Remaining messages are for pkg client only.
                 return
 
-            logger.error(
-                _(
-                    """\
+            logger.error(_("""\
 To resolve this issue, correct the origin information provided for
 publisher '{prefix}' using the pkg set-publisher subcommand, or re-add
 the publisher using the correct name and remove the '{prefix}'
 publisher.
-"""
-                ).format(prefix=self.prefix)
-            )
+""").format(prefix=self.prefix))
 
             if len(pubs) == 1:
-                logger.warning(
-                    _(
-                        """\
+                logger.warning(_("""\
 To re-add this publisher with the correct name, execute the following
 commands as a privileged user:
 
 pkg set-publisher -P -g {origin} {pub}
 pkg unset-publisher {prefix}
-"""
-                    ).format(
-                        origin=origin, prefix=self.prefix, pub=list(pubs)[0]
-                    )
-                )
+""").format(origin=origin, prefix=self.prefix, pub=list(pubs)[0]))
                 return
 
-            logger.warning(
-                _(
-                    """\
+            logger.warning(_("""\
 The origin(s) listed above contain package data for more than one
 publisher, but this issue can likely be resolved by executing one
 of the following commands as a privileged user:
-"""
-                )
-            )
+"""))
 
             for pfx in pubs:
                 logger.warning(
@@ -1843,16 +1823,12 @@ of the following commands as a privileged user:
                     )
                 )
 
-            logger.warning(
-                _(
-                    """\
+            logger.warning(_("""\
 Afterwards, the old publisher should be removed by executing the
 following command as a privileged user:
 
 pkg unset-publisher {0}
-"""
-                ).format(self.prefix)
-            )
+""").format(self.prefix))
 
     @property
     def catalog(self):

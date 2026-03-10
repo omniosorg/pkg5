@@ -110,9 +110,7 @@ header = """
 	</head>
 	<body class="yui-skin-sam">
 	<h1><img src="http://{0}/logo" alt="{1}"/> {2} Statistics</h1>
-""".format(
-    hostname, hostname, hostname
-)
+""".format(hostname, hostname, hostname)
 
 print(header)
 

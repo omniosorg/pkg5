@@ -63,15 +63,11 @@ def usage(errmsg="", exitcode=EXIT_BADOPT):
     if errmsg:
         print("pkgdiff: {0}".format(errmsg), file=sys.stderr)
 
-    print(
-        _(
-            """\
+    print(_("""\
 Usage:
         pkgdiff [-i attribute]... [-o attribute]
             [-t action_name[,action_name]...]...
-            [-v name=value]... (file1 | -) (file2 | -)"""
-        )
-    )
+            [-v name=value]... (file1 | -) (file2 | -)"""))
     sys.exit(exitcode)
 
 

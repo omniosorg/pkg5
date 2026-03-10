@@ -472,12 +472,10 @@ class TestPkgsendBasics(pkg5unittest.SingleDepotTestCase):
         open(os.path.join(dir_2, "B"), "w").close()
         mfpath = os.path.join(rootdir, "manifest_test")
         with open(mfpath, "w") as mf:
-            mf.write(
-                """file NOHASH mode=0755 owner=root group=bin path=/A
+            mf.write("""file NOHASH mode=0755 owner=root group=bin path=/A
                             file NOHASH mode=0755 owner=root group=bin path=/B
                             set name=pkg.fmri value=testmultipledirs@1.0
-                            """
-            )
+                            """)
 
         dhurl = self.dc.get_depot_url()
         self.pkgsend(
@@ -1396,23 +1394,19 @@ dir path=foo/bar mode=0755 owner=root group=bin
         open(os.path.join(dir_2, "B"), "w").close()
         mfpath = os.path.join(rootdir, "manifest_test")
         with open(mfpath, "w") as mf:
-            mf.write(
-                """file NOHASH mode=0755 owner=root group=bin path=/A
+            mf.write("""file NOHASH mode=0755 owner=root group=bin path=/A
                             file NOHASH mode=0755 owner=root group=bin path=/B
                             set name=pkg.fmri value=testmultipledirs@1.0,5.10
-                            """
-            )
+                            """)
         self.__test_publish(dir_1, dir_2, mfpath)
 
         # Test the publication of elf files.
         elfmfpath = os.path.join(self.test_root, "elftest.p5m")
         with open(elfmfpath, "w") as mf:
-            mf.write(
-                """\
+            mf.write("""\
                             set name=pkg.fmri value=pkg://test/elftest@1.0
                             file elftest.so.1 mode=0755 owner=root group=bin path=bin/true
-                            """
-            )
+                            """)
 
         self.pkgsend(
             self.dc.get_depot_url(),
@@ -1439,11 +1433,9 @@ dir path=foo/bar mode=0755 owner=root group=bin
         open(os.path.join(dir_1, "A"), "w").close()
         mfpath = os.path.join(rootdir, "manifest_test")
         with open(mfpath, "w") as mf:
-            mf.write(
-                """file NOHASH mode=0755 owner=root group=bin path=/A
+            mf.write("""file NOHASH mode=0755 owner=root group=bin path=/A
                             set name=pkg.fmri value=testnoversion
-                            """
-            )
+                            """)
 
         dhurl = self.dc.get_depot_url()
         self.pkgsend(
@@ -1458,10 +1450,8 @@ dir path=foo/bar mode=0755 owner=root group=bin
 
         mfpath = os.path.join(self.test_root, "foo.p5m")
         with open(mfpath, "w") as mf:
-            mf.write(
-                """set name=pkg.fmri value=foo@1
-link payload-pathname path=/usr/bin/foo target=bar"""
-            )
+            mf.write("""set name=pkg.fmri value=foo@1
+link payload-pathname path=/usr/bin/foo target=bar""")
         self.pkgsend(
             "",
             "-s {0} publish {1}".format(self.dc.get_depot_url(), mfpath),
@@ -1473,10 +1463,8 @@ link payload-pathname path=/usr/bin/foo target=bar"""
             exit=1,
         )
         with open(mfpath, "w") as mf:
-            mf.write(
-                """set name=pkg.fmri value=foo@1
-dir path=/usr/bin/foo target=bar hash=payload-pathname"""
-            )
+            mf.write("""set name=pkg.fmri value=foo@1
+dir path=/usr/bin/foo target=bar hash=payload-pathname""")
         self.pkgsend(
             "",
             "-s {0} publish {1}".format(self.dc.get_depot_url(), mfpath),
@@ -1522,14 +1510,10 @@ dir path=/usr/bin/foo target=bar hash=payload-pathname"""
         payload = self.make_misc_files(["pkgsend_multihash"])[0]
 
         with open(mfpath, "w") as mf:
-            mf.write(
-                """
+            mf.write("""
 set name=pkg.fmri value=pkg:/multihash@1.0
 file {0} path=/foo owner=root group=sys mode=0644 pkg.hash.rot13=caesar
-""".format(
-                    payload, hash_alg
-                )
-            )
+""".format(payload, hash_alg))
         self.pkgsend("", "-s {0} publish {1}".format(furi, mfpath))
         self.image_create(furi)
         self.pkg("contents -rm multihash")
@@ -1629,9 +1613,7 @@ file file-foo group={group} mode=0644 owner={owner} path=file-foo
 dir group={group} mode=0750 owner={owner} path=dir-foo/subdir-foo
 file dir-foo/subfile-foo group={group} mode=0444 owner={owner} path=dir-foo/subfile-foo
 file dir-foo/subdir-foo/subdirfile-foo group={group} mode=0400 owner={owner} \
-path=dir-foo/subdir-foo/subdirfile-foo\n""".format(
-            owner=owner, group=group
-        )
+path=dir-foo/subdir-foo/subdirfile-foo\n""".format(owner=owner, group=group)
 
         self.assertEqualDiff(
             self.reduceSpaces(expected), self.reduceSpaces(actual)
@@ -1643,12 +1625,10 @@ path=dir-foo/subdir-foo/subdirfile-foo\n""".format(
 
         mfpath = os.path.join(self.test_root, "content-attrs.p5m")
         with open(mfpath, "w") as mf:
-            mf.write(
-                """\
+            mf.write("""\
 set name=pkg.fmri value=pkg://test/content-attrs@1.0
 file elftest.so.1 mode=0755 owner=root group=bin path=bin/true pkg.size=ignored pkg.csize=ignored elfhash=ignored elfbits=ignored elfarch=ignored pkg.content-hash=ignored
-"""
-            )
+""")
 
         # Verify pkgsend publish can be performed even though values for
         # content-related attributes are invalid.  They should be
@@ -1840,12 +1820,10 @@ class TestPkgsendHTTPS(pkg5unittest.HTTPSTestClass):
         open(os.path.join(dir_1, "B"), "w").close()
         mfpath = os.path.join(rootdir, "manifest_test")
         with open(mfpath, "w") as mf:
-            mf.write(
-                """file NOHASH mode=0755 owner=root group=bin path=/A
+            mf.write("""file NOHASH mode=0755 owner=root group=bin path=/A
                             file NOHASH mode=0755 owner=root group=bin path=/B
                             set name=pkg.fmri value=httpstest@1.0,5.10
-                            """
-            )
+                            """)
 
         arg_dict = {
             "cert": os.path.join(self.cs_dir, self.get_cli_cert("test")),

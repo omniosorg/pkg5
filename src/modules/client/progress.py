@@ -173,7 +173,7 @@ class SpeedEstimator(object):
         # Step 2: Expunge old data
         #
         while len(self.__deque) > 0:
-            (ts, val) = self.__deque[0]
+            ts, val = self.__deque[0]
             if ts < curtime - self.INTERVAL:
                 self.__intervalbytes -= val
                 self.__deque.popleft()

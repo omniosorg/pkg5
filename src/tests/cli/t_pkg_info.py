@@ -704,9 +704,7 @@ Packaging Date: Sat Sep 10 00:45:46 2011
 Packaging Date: {pkg_date}
           Size: 0.00 B
           FMRI: {pkg_fmri}
-""".format(
-            pkg_date=pkg_date, pkg_fmri=pfmri.get_fmri(include_build=False)
-        )
+""".format(pkg_date=pkg_date, pkg_fmri=pfmri.get_fmri(include_build=False))
         self.assertEqualDiff(expected, actual)
 
         # Next, verify that a renamed package (for a variant not
@@ -727,9 +725,7 @@ Packaging Date: {pkg_date}
 Packaging Date: {pkg_date}
           Size: 0.00 B
           FMRI: {pkg_fmri}
-""".format(
-            pkg_date=pkg_date, pkg_fmri=pfmri.get_fmri(include_build=False)
-        )
+""".format(pkg_date=pkg_date, pkg_fmri=pfmri.get_fmri(include_build=False))
         self.assertEqualDiff(expected, actual)
 
         # Next, verify that a renamed package (for a variant applicable
@@ -748,9 +744,7 @@ Packaging Date: {pkg_date}
 Packaging Date: {pkg_date}
           Size: 0.00 B
           FMRI: {pkg_fmri}
-""".format(
-            pkg_date=pkg_date, pkg_fmri=pfmri.get_fmri(include_build=False)
-        )
+""".format(pkg_date=pkg_date, pkg_fmri=pfmri.get_fmri(include_build=False))
         self.assertEqualDiff(expected, actual)
 
         # Next, verify that a renamed package (for all variants),
@@ -769,9 +763,7 @@ Packaging Date: {pkg_date}
 Packaging Date: {pkg_date}
           Size: 0.00 B
           FMRI: {pkg_fmri}
-""".format(
-            pkg_date=pkg_date, pkg_fmri=pfmri.get_fmri(include_build=False)
-        )
+""".format(pkg_date=pkg_date, pkg_fmri=pfmri.get_fmri(include_build=False))
         self.assertEqualDiff(expected, actual)
 
         os.environ["LC_ALL"] = "en_US.UTF-8"
@@ -837,9 +829,7 @@ Packaging Date: {pkg_date}
 Packaging Date: {pkg_date}
           Size: 0.00 B
           FMRI: {pkg_fmri}
-""".format(
-            pkg_date=pkg_date, pkg_fmri=pfmri.get_fmri(include_build=False)
-        )
+""".format(pkg_date=pkg_date, pkg_fmri=pfmri.get_fmri(include_build=False))
         self.assertEqualDiff(expected, actual)
 
         # Next, verify that a legacy package, which is also renamed,
@@ -858,9 +848,7 @@ Packaging Date: {pkg_date}
 Packaging Date: {pkg_date}
           Size: 0.00 B
           FMRI: {pkg_fmri}
-""".format(
-            pkg_date=pkg_date, pkg_fmri=pfmri.get_fmri(include_build=False)
-        )
+""".format(pkg_date=pkg_date, pkg_fmri=pfmri.get_fmri(include_build=False))
         self.assertEqualDiff(expected, actual)
 
         # Next, verify that rename takes precedence no matter the
@@ -879,9 +867,7 @@ Packaging Date: {pkg_date}
 Packaging Date: {pkg_date}
           Size: 0.00 B
           FMRI: {pkg_fmri}
-""".format(
-            pkg_date=pkg_date, pkg_fmri=pfmri.get_fmri(include_build=False)
-        )
+""".format(pkg_date=pkg_date, pkg_fmri=pfmri.get_fmri(include_build=False))
         self.assertEqualDiff(expected, actual)
 
         os.environ["LC_ALL"] = "en_US.UTF-8"

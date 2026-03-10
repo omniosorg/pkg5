@@ -96,16 +96,12 @@ catalog 1
 file 1
 manifest 0
 status 0
-""".format(
-    pkg.VERSION
-)
+""".format(pkg.VERSION)
 
 # versions response used when we provide search capability
 DEPOT_VERSIONS_STR = """{0}admin 0
 search 0 1
-""".format(
-    DEPOT_FRAGMENT_VERSIONS_STR
-)
+""".format(DEPOT_FRAGMENT_VERSIONS_STR)
 
 DEPOT_USER = "pkg5srv"
 DEPOT_GROUP = "pkg5srv"
@@ -145,9 +141,7 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT):
 
     if usage_error:
         error(usage_error, cmd=cmd)
-    msg(
-        _(
-            """\
+    msg(_("""\
 Usage:
         pkg.depot-config ( -d repository_dir | -S ) -r runtime_dir
                 [-c cache_dir] [-s cache_size] [-p port] [-h hostname]
@@ -158,9 +152,7 @@ Usage:
                 --cert-key-dir cert_key_directory ) [ (--ca-cert ca_cert_file
                 --ca-key ca_key_file ) ]
                 [--smf-fmri smf_pkg_depot_fmri] ] )
-"""
-        )
-    )
+"""))
     sys.exit(retcode)
 
 

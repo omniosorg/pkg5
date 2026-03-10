@@ -383,7 +383,7 @@ class TestHistory(pkg5unittest.Pkg5TestCase):
   </operation>
 </history>"""
 
-        (fd1, path1) = tempfile.mkstemp(dir=self.__scratch_dir)
+        fd1, path1 = tempfile.mkstemp(dir=self.__scratch_dir)
         os.write(fd1, bad_hist)
 
         # Load the history entry.

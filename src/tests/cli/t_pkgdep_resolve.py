@@ -3753,15 +3753,11 @@ digraph G {
         expected_require_any = set([frozenset(expected_require_any)])
         dot_encoding += "}"
         # The first manifest always contains only a file dependency.
-        manfs = [
-            """\
+        manfs = ["""\
 set name=pkg.fmri value={pfmri}@1.0
 depend type=require fmri=__TBD pkg.debug.depend.file={path} \\
     pkg.debug.depend.reason=needs_{path} pkg.debug.depend.type=elf
-""".format(
-                pfmri=start_pfmri, path=start_pfmri.lower()
-            )
-        ]
+""".format(pfmri=start_pfmri, path=start_pfmri.lower())]
 
         # These templates are used to generate the other manifests.
         template = """\

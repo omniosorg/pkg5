@@ -105,9 +105,7 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT):
     if usage_error:
         error(usage_error, cmd=cmd)
 
-    print(
-        _(
-            """\
+    print(_("""\
 Usage:
         pkgsend [options] command [cmd_options] [operands]
 
@@ -121,9 +119,7 @@ Options:
         --help or -?    display usage message
 
 Environment:
-        PKG_REPO        The path or URI of the destination repository."""
-        )
-    )
+        PKG_REPO        The path or URI of the destination repository."""))
     sys.exit(retcode)
 
 

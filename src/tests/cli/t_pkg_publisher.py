@@ -822,12 +822,8 @@ class TestPkgPublisherBasics(pkg5unittest.SingleDepotTestCase):
             pkg.misc.get_data_digest(cert_path, hash_func=hashlib.sha1)[0],
         )
 
-        self.pkg(
-            "set-publisher --no-refresh -O https://{0} -c {1} \
-                    -k {2} test1".format(
-                self.bogus_url, cert_path, key_path
-            )
-        )
+        self.pkg("set-publisher --no-refresh -O https://{0} -c {1} \
+                    -k {2} test1".format(self.bogus_url, cert_path, key_path))
 
         # cert and key should exist
         self.assertTrue(os.path.exists(img_key_path))
@@ -835,12 +831,8 @@ class TestPkgPublisherBasics(pkg5unittest.SingleDepotTestCase):
 
         # Now change test1 to http URL to check whether
         # certificate and key are removed
-        self.pkg(
-            "set-publisher --no-refresh -O http://{0} \
-                    test1".format(
-                self.bogus_url
-            )
-        )
+        self.pkg("set-publisher --no-refresh -O http://{0} \
+                    test1".format(self.bogus_url))
 
         # cert and key should not exist.
         self.assertTrue(not os.path.exists(img_key_path))
@@ -848,43 +840,27 @@ class TestPkgPublisherBasics(pkg5unittest.SingleDepotTestCase):
 
         # Now test if cert and key is still in use
         # we should not remove them
-        self.pkg(
-            "set-publisher --no-refresh -O https://{0} -c {1} \
-                    -k {2} test1".format(
-                self.bogus_url, cert_path, key_path
-            )
-        )
+        self.pkg("set-publisher --no-refresh -O https://{0} -c {1} \
+                    -k {2} test1".format(self.bogus_url, cert_path, key_path))
 
-        self.pkg(
-            "set-publisher --no-refresh -O https://{0} -c {1} \
-                    -k {2} foo".format(
-                self.bogus_url, cert_path, key_path
-            )
-        )
+        self.pkg("set-publisher --no-refresh -O https://{0} -c {1} \
+                    -k {2} foo".format(self.bogus_url, cert_path, key_path))
 
         # cert and key should exist
         self.assertTrue(os.path.exists(img_key_path))
         self.assertTrue(os.path.exists(img_cert_path))
 
         # Remove ssl for test1
-        self.pkg(
-            "set-publisher --no-refresh -O http://{0} \
-                    foo".format(
-                self.bogus_url
-            )
-        )
+        self.pkg("set-publisher --no-refresh -O http://{0} \
+                    foo".format(self.bogus_url))
 
         # cert and key should still exist.
         self.assertTrue(os.path.exists(img_key_path))
         self.assertTrue(os.path.exists(img_cert_path))
 
         # Test unset-publisher
-        self.pkg(
-            "set-publisher --no-refresh -O https://{0} -c {1} \
-                    -k {2} foo".format(
-                self.bogus_url, cert_path, key_path
-            )
-        )
+        self.pkg("set-publisher --no-refresh -O https://{0} -c {1} \
+                    -k {2} foo".format(self.bogus_url, cert_path, key_path))
 
         # cert and key should exist.
         self.assertTrue(os.path.exists(img_key_path))

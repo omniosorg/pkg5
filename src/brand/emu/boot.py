@@ -94,15 +94,13 @@ if not uc.has_priv("Effective", "sys_config"):
 
 
 def usage(msg=None):
-    print(
-        """
+    print("""
 boot [-t] [-x xml] <[-z] zone>
    -t   Test mode - just show what would be done
    -j   Output the computed zone data in JSON format
    -x   Path to zone's XML file
    -z   Name of zone
-"""
-    )
+""")
 
     if msg:
         print(msg)

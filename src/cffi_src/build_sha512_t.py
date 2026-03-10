@@ -40,8 +40,7 @@ ffi.set_source(
     libraries=["md"],
 )
 
-ffi.cdef(
-    """
+ffi.cdef("""
 #define	SHA512_224 9
 #define	SHA512_256 10
 
@@ -68,8 +67,7 @@ void SHA2Init(uint64_t t_bits, SHA2_CTX *ctx);
 void SHA2Update(SHA2_CTX *ctx, const void *buf, size_t bufsz);
 void SHA2Final(void *digest, SHA2_CTX *ctx);
 void *memcpy(void *restrict s1, const void *restrict s2, size_t n);
-"""
-)
+""")
 
 if __name__ == "__main__":
     ffi.compile(verbose=False)

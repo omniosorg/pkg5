@@ -127,12 +127,10 @@ def get_traceback_message():
     is necessary since the _() call must be done at runtime after locale
     setup."""
 
-    return _(
-        """\n
+    return _("""\n
 This is an internal error in pkg(7) version {version}.  Please log a
 Service Request about this issue including the information above and this
-message."""
-    ).format(version=VERSION)
+message.""").format(version=VERSION)
 
 
 def get_release_notes_url():
@@ -3245,7 +3243,7 @@ def set_fd_limits(printer=None):
         printer = emsg
 
     try:
-        (soft, hard) = resource.getrlimit(resource.RLIMIT_NOFILE)
+        soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
         soft = max(hard, FILE_DESCRIPTOR_LIMIT)
         resource.setrlimit(resource.RLIMIT_NOFILE, (soft, hard))
     except (OSError, ValueError) as e:

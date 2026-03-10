@@ -105,11 +105,9 @@ def usage(errmsg="", exitcode=EXIT_BADOPT):
         error(errmsg)
 
     print(
-        _(
-            """\
+        _("""\
 Usage:
-        pkgfmt [-cdsu] [-f v1|v2] [file1] ... """
-        ),
+        pkgfmt [-cdsu] [-f v1|v2] [file1] ... """),
         file=sys.stderr,
     )
 

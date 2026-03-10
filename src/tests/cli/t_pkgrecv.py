@@ -1692,12 +1692,10 @@ Estimated transfer size: 3.17 kB
 
         mfpath = os.path.join(self.test_root, "content-attrs.p5m")
         with open(mfpath, "w") as mf:
-            mf.write(
-                """\
+            mf.write("""\
 set name=pkg.fmri value=pkg://test/content-attrs@1.0
 file elftest.so.1 mode=0755 owner=root group=bin path=bin/true
-"""
-            )
+""")
 
         # Create a repository and publish sample package.
         rpath = tempfile.mkdtemp(dir=self.test_root)

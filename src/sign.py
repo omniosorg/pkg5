@@ -97,16 +97,12 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT):
 
     if usage_error:
         error(usage_error, cmd=cmd)
-    emsg(
-        _(
-            """\
+    emsg(_("""\
 Usage:
         pkgsign -s path_or_uri [-acikn] [--no-index] [--no-catalog]
             [--dkey dest_key --dcert dest_cert]
             (fmri|pattern) ...
-"""
-        )
-    )
+"""))
 
     sys.exit(retcode)
 

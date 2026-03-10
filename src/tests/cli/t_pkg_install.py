@@ -11440,9 +11440,7 @@ adm
                                 open massivedupdir{0:d}@0,5.11-0
                                 add dir path=usr owner=root group={{0}} mode={{1}} zig={{2}}
                                 close
-                        """.format(
-                i
-            )
+                        """.format(i)
 
             if i == 14:
                 s = s.format("root", "0750", "zag")

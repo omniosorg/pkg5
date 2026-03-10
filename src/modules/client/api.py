@@ -375,14 +375,12 @@ class ImageInterface(object):
             and "PKG_NO_RUNPY_CMDPATH" in os.environ
             and self.cmdpath.endswith(os.sep + "run.py")
         ):
-            raise RuntimeError(
-                """
+            raise RuntimeError("""
 An ImageInterface object was allocated from within ipkg test suite and
 cmdpath was not explicitly overridden.  Please make sure to set
 explicitly set cmdpath when allocating an ImageInterface object, or
 override cmdpath when allocating an Image object by setting PKG_CMDPATH
-in the environment or by setting simulate_cmdpath in DebugValues."""
-            )
+in the environment or by setting simulate_cmdpath in DebugValues.""")
 
         if isinstance(img_path, str):
             # Store this for reset().

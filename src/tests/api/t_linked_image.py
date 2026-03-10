@@ -55,57 +55,41 @@ def pkg_err_verify(string, fmri):
     # Ignore package version as how it's displayed can change.
     substring = fmri.split("@", 1)[0]
     if string.find(substring) == -1:
-        raise RuntimeError(
-            """
+        raise RuntimeError("""
 Expected "{0}" to be contained in:
 {1}
-""".format(
-                substring, string
-            )
-        )
+""".format(substring, string))
 
 
 def apx_verify(e, e_type, e_member=None):
     if e is None:
-        raise RuntimeError(
-            """
+        raise RuntimeError("""
 Expected {0} exception.
 Didn't get any exception.
-""".format(
-                str(e_type)
-            )
-        )
+""".format(str(e_type)))
 
     if type(e) != e_type:
-        raise RuntimeError(
-            """
+        raise RuntimeError("""
 Expected {0} exception.
 Got a {1} exception:
 
 {2}
-""".format(
-                str(e_type), str(type(e)), traceback.format_exc()
-            )
-        )
+""".format(str(e_type), str(type(e)), traceback.format_exc()))
 
     if e_member is None:
         return
 
     if getattr(e, e_member, None) is None:
-        raise RuntimeError(
-            """
+        raise RuntimeError("""
 Expected {0} exception of type "{1}".
 Got a {2} exception with a different type:
 
 {3}
-""".format(
-                str(e_type), e_member, str(type(e)), traceback.format_exc()
-            )
-        )
+""".format(str(e_type), e_member, str(type(e)), traceback.format_exc()))
 
 
 def assertRaises(validate_cb, func, *args, **kwargs):
-    (validate_func, validate_args) = validate_cb
+    validate_func, validate_args = validate_cb
 
     e = None
     try:
@@ -493,7 +477,7 @@ This is a license.
         # attach each child to parent
         for c in cl:
             rv = rvdict.get(c, EXIT_OK)
-            (c_rv, c_err, p_dict) = self.api_objs[i].attach_linked_child(
+            c_rv, c_err, p_dict = self.api_objs[i].attach_linked_child(
                 lin=self.i_lin[c], li_path=self.i_path[c], **args
             )
             self.assertEqual(
@@ -502,9 +486,7 @@ This is a license.
                 """
 Child attach returned unexpected error code.  Expected {0:d}, got: {1:d}.
 Error output:
-{2}""".format(
-                    rv, c_rv, str(c_err)
-                ),
+{2}""".format(rv, c_rv, str(c_err)),
             )
             self.api_objs[c].reset()
 
@@ -556,9 +538,7 @@ unexpected verification error for pkg: {0}
 action: {1}
 error: {2}
 warning: {3}
-pinfo: {4}""".format(
-                    pfmri, str(act), str(err), str(warn), str(pinfo)
-                ),
+pinfo: {4}""".format(pfmri, str(act), str(err), str(warn), str(pinfo)),
             )
 
     def assertKnownPkgCount(self, api_objs, i, pl_init, offset=0):
@@ -932,19 +912,19 @@ packages known:
         api_objs[1].reset()
 
         # Attach p2c, 0 -> 2 (sync error)
-        (rv, err, p_dict) = api_objs[0].attach_linked_child(
+        rv, err, p_dict = api_objs[0].attach_linked_child(
             lin=self.i_lin[2], li_path=self.i_path[2]
         )
         self.assertEqual(rv, EXIT_OOPS)
 
         # Attach p2c, 0 -> 3 (sync error)
-        (rv, err, p_dict) = api_objs[0].attach_linked_child(
+        rv, err, p_dict = api_objs[0].attach_linked_child(
             lin=self.i_lin[3], li_path=self.i_path[3]
         )
         self.assertEqual(rv, EXIT_OOPS)
 
         # Attach p2c, 0 -> 4 (sync error)
-        (rv, err, p_dict) = api_objs[0].attach_linked_child(
+        rv, err, p_dict = api_objs[0].attach_linked_child(
             lin=self.i_lin[4], li_path=self.i_path[4]
         )
         self.assertEqual(rv, EXIT_OOPS)

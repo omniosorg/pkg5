@@ -387,9 +387,7 @@ class TestPkgChangeVariant(pkg5unittest.SingleDepotTestCase):
 variant.arch\t{0}
 variant.opensolaris.imagetype\t{1}
 variant.opensolaris.zone\t{2}
-""".format(
-            v_arch, v_imagetype, v_zone
-        )
+""".format(v_arch, v_imagetype, v_zone)
         self.__assert_variant_matches_tsv(exp_tsv)
 
         # install the specified packages into the image
@@ -416,9 +414,7 @@ variant.opensolaris.zone\t{2}
 variant.arch\t{0}
 variant.opensolaris.imagetype\t{1}
 variant.opensolaris.zone\t{2}
-""".format(
-            v_arch2, v_imagetype2, v_zone2
-        )
+""".format(v_arch2, v_imagetype2, v_zone2)
         self.__assert_variant_matches_tsv(exp_tsv)
 
         self.image_destroy()

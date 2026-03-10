@@ -1010,15 +1010,11 @@ set name=variant.arch value=sparc value=arm\
         actual = [str(f) for f in sorted(cat.fmris())]
         self.assertEqualDiff(expected, actual)
 
-        merged_expected["amber"] = (
-            """\
+        merged_expected["amber"] = """\
 depend fmri=pkg:/tree@1.0 type=require
 set name=pkg.fmri value={0}
 set name=variant.arch value=sparc value=i386 value=arm\
-""".format(
-                self.published[10]
-            )
-        )  # pkg://os.org/amber@1.0-0
+""".format(self.published[10])  # pkg://os.org/amber@1.0-0
 
         # Verify that each package was merged correctly.
         for f in cat.fmris():
@@ -1355,9 +1351,7 @@ file 1abe1a7084720f501912eceb1312ddd799fb2a34 chash=ea7230676e13986491d7405c5a92
 file 34f88965d55d3a730fa7683bc0f370fc6e42bf95 chash=66eebb69ee0299dcb495162336db81a3188de037 group=bin mode=0444 owner=root path=etc/tree pkg.content-hash=file:sha512t_256:23589d1dbb98cc597ed74ed10e38afed113e73c30ed6dcfd98971541477f1167 pkg.content-hash=gzip:sha512t_256:5446e3eab72747cfe5e2b01fb0936a626693088d5e214dbe7af20823d76a61fb pkg.csize=32 pkg.size=12
 set name=pkg.fmri value={0}
 set name=variant.arch value=sparc value=i386\
-""".format(
-            self.published_blend[2]
-        )
+""".format(self.published_blend[2])
 
         for f in cat.fmris():
             with open(repo.manifest(f), "r") as m:
@@ -1425,9 +1419,7 @@ file aab699c6424ed1fc258b6b39eb113e624a9ee368 chash=43c3b9a83a112727264390002c3d
 set name=pkg.fmri value={0}
 set name=variant.arch value=sparc value=i386
 set name=variant.debug value=true value=false\
-""".format(
-            self.published_blend[-1]
-        )
+""".format(self.published_blend[-1])
         self.assertEqualDiff(expected, actual)
         shutil.rmtree(repodir)
 
@@ -1520,25 +1512,19 @@ file 3a06aa547ffe0186a2b9db55b8853874a048fb47 chash=ab50364de4ce8f847d765d402d80
 set name=pkg.fmri value={osorg_scheme}
 set name=variant.arch value=sparc value=i386
 set name=variant.debug value=false\
-""".format(
-            **repo15_fmris
-        )
+""".format(**repo15_fmris)
         expected_osorg_tree = """\
 file 3a06aa547ffe0186a2b9db55b8853874a048fb47 chash=ab50364de4ce8f847d765d402d80e37431e1f0aa group=bin mode=0444 owner=root path=etc/tree pkg.content-hash=file:sha512t_256:e1152d631b4c2fda4a2b739d38e4cbc3e8d7ccf2aa5be2aef6ab776a60d5a187 pkg.content-hash=gzip:sha512t_256:bfdce1dc4ab94f2321f2bae46505dd204b2df323df55efadf4f3b4c3326b204d pkg.csize=40 pkg.size=20
 set name=pkg.fmri value={osorg_tree}
 set name=variant.arch value=sparc value=i386
 set name=variant.debug value=false\
-""".format(
-            **repo15_fmris
-        )
+""".format(**repo15_fmris)
         expected_altpub_amber = """\
 depend fmri=pkg:/tree@1.0 type=require
 set name=pkg.fmri value={altpub_amber}
 set name=variant.arch value=sparc value=i386
 set name=variant.debug value=false\
-""".format(
-            **repo15_fmris
-        )
+""".format(**repo15_fmris)
         expected_altpub_bronze = """\
 depend fmri=pkg:/amber@2.0 type=require
 depend fmri=pkg:/scheme@1.0 type=require variant.arch=i386
@@ -1556,9 +1542,7 @@ link path=usr/bin/jsh target=./sh
 set name=pkg.fmri value={altpub_bronze}
 set name=variant.arch value=sparc value=i386
 set name=variant.debug value=false\
-""".format(
-            **repo15_fmris
-        )
+""".format(**repo15_fmris)
         expected_last_gold = """\
 depend fmri=foo fmri=bar type=require-any
 file 3a06aa547ffe0186a2b9db55b8853874a048fb47 chash=ab50364de4ce8f847d765d402d80e37431e1f0aa group=bin mode=0444 owner=root path=etc/tree pkg.content-hash=file:sha512t_256:e1152d631b4c2fda4a2b739d38e4cbc3e8d7ccf2aa5be2aef6ab776a60d5a187 pkg.content-hash=gzip:sha512t_256:bfdce1dc4ab94f2321f2bae46505dd204b2df323df55efadf4f3b4c3326b204d pkg.csize=40 pkg.size=20 variant.arch=sparc
@@ -1570,9 +1554,7 @@ file aab699c6424ed1fc258b6b39eb113e624a9ee368 chash=43c3b9a83a112727264390002c3d
 set name=pkg.fmri value={last_gold}
 set name=variant.arch value=sparc value=i386
 set name=variant.debug value=false\
-""".format(
-            **repo15_fmris
-        )
+""".format(**repo15_fmris)
 
         # A dictionary of the expected package contents, keyed by FMRI
         expected = {
@@ -1751,9 +1733,7 @@ link mediator=version mediator-version=7 path=aardvark target=7
 link mediator=version mediator-version=8 path=aardvark target=8
 set name=pkg.fmri value={0}
 set name=variant.arch value=PPC value=ARM\
-""".format(
-            self.published_17[0]
-        )
+""".format(self.published_17[0])
 
         for f in cat.fmris():
             with open(repo.manifest(f), "r") as m:

@@ -722,9 +722,7 @@ file a285ada5f3cae14ea00e97a8d99bd3e357cb0dca chash=97a09a2356d068d8dbe418de9001
 file dc84bd4b606fe43fc892eb245d9602b67f8cba38 chash=e1106f9505253dfe46aa48c353740f9e1896a844 group=bin mode=0444 owner=root path=usr/share/doc/foo/README pkg.content-hash=file:sha512t_256:f57d0e3a47386f7ec82828ac86781a39e5e1763c9d8f013fdce0ca642b80e1d5 pkg.content-hash=gzip:sha512t_256:6e0d5f8b106123b129276a38cf3b8822abc91c5b291ba3e51b4854ba6218ab6d pkg.csize=30 pkg.size=10
 hardlink path=usr/local/bin/hard-foo target=/usr/bin/foo
 link path=usr/local/bin/soft-foo target=usr/bin/foo
-""".format(
-            self.foo10
-        )
+""".format(self.foo10)
 
         # Again, as privileged user.
         self.pkg("contents -mr -g {0} foo".format(self.foo_arc))
@@ -839,9 +837,7 @@ link path=usr/local/bin/soft-foo target=usr/bin/foo
         expected = """\
 empty origin online F {0}/
 test 
-""".format(
-            self.empty_rurl
-        )
+""".format(self.empty_rurl)
         output = self.reduceSpaces(self.output)
         self.assertEqualDiff(expected, output)
 
@@ -910,9 +906,7 @@ test
 empty origin online F {0}/
 test 
 test2 
-""".format(
-            self.empty_rurl
-        )
+""".format(self.empty_rurl)
         output = self.reduceSpaces(self.output)
         self.assertEqualDiff(expected, output)
 

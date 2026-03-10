@@ -364,7 +364,7 @@ def parse_ram(v):
     m = re.search(rf"^(\d+)(.?)$", v)
     if not m:
         fatal(f'Could not parse ram value "{v}"')
-    (mem, suffix) = m.groups()
+    mem, suffix = m.groups()
     mem = int(mem)
 
     if not suffix:

@@ -260,10 +260,8 @@ class TestPkgRevert(pkg5unittest.SingleDepotTestCase):
                             --tagged ted",
                 exit=1,
             )
-            self.pkg(
-                "-D hash=sha1+512_256 revert -n --parsable=0 \
-                            --tagged ted"
-            )
+            self.pkg("-D hash=sha1+512_256 revert -n --parsable=0 \
+                            --tagged ted")
             self.assertEqualParsable(
                 self.output, affect_packages=[self.plist[12], self.plist[1]]
             )

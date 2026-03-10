@@ -58,7 +58,7 @@ while True:
     # print("line: [{0}]".format(line))
 
     fields = line.split()
-    (ip, d, fullop) = (fields[0], fields[3], fields[6])
+    ip, d, fullop = (fields[0], fields[3], fields[6])
     del fields
 
     # Get country code and translate ip -> md5 of ip

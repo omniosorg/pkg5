@@ -42,8 +42,7 @@ ffi.set_source(
     libraries=["nvpair"],
 )
 
-ffi.cdef(
-    """
+ffi.cdef("""
 /* Macros */
 #define	NV_UNIQUE_NAME 0x1
 
@@ -148,8 +147,7 @@ nvpair_t *nvlist_next_nvpair(nvlist_t *, nvpair_t *);
 char *nvpair_name(nvpair_t *);
 data_type_t nvpair_type(nvpair_t *);
 int nvpair_value_boolean_value(nvpair_t *, boolean_t *);
-"""
-)
+""")
 
 if __name__ == "__main__":
     ffi.compile(verbose=False)

@@ -353,36 +353,28 @@ class TransportRepo(object):
         SERVER_ERROR = "SVR"
         MAINTENANCE = "MNT"
 
-        entitlement_err_msg = N_(
-            """
+        entitlement_err_msg = N_("""
 This account is not entitled to access this repository. Ensure that the correct
 certificate is being used and that the support contract for the product being
 accessed is still valid.
-"""
-        )
+""")
 
-        license_err_msg = N_(
-            """
+        license_err_msg = N_("""
 The license agreement required to access this repository has not been
 accepted yet or the license agreement for the product has changed. Please go to
 https://pkg-register.oracle.com and accept the license for the product you are
 trying to access.
-"""
-        )
+""")
 
-        server_err_msg = N_(
-            """
+        server_err_msg = N_("""
 Repository access is currently unavailable due to service issues. Please retry
 later or contact your customer service representative.
-"""
-        )
+""")
 
-        maintenance_msg = N_(
-            """
+        maintenance_msg = N_("""
 Repository access rights can currently not be verified due to server
 maintenance. Please retry later.
-"""
-        )
+""")
         msg = ""
 
         # multiple errors possible (e.g. license and entitlement not ok)

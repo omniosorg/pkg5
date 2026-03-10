@@ -485,8 +485,8 @@ class PlanDescription(object):
 
         ret = []
         for m, ver, impl in sorted(self.mediators):
-            ((orig_ver, orig_ver_source), (new_ver, new_ver_source)) = ver
-            ((orig_impl, orig_impl_source), (new_impl, new_impl_source)) = impl
+            (orig_ver, orig_ver_source), (new_ver, new_ver_source) = ver
+            (orig_impl, orig_impl_source), (new_impl, new_impl_source) = impl
             out = "mediator {0}:\n".format(m)
             if orig_ver and new_ver:
                 out += (

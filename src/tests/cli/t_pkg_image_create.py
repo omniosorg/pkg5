@@ -305,12 +305,8 @@ class TestPkgImageCreateBasics(pkg5unittest.ManyDepotTestCase):
         # is set to true works.
         saved_sysrepo_env = os.environ.get("PKG_SYSREPO_URL")
         os.environ["PKG_SYSREPO_URL"] = "http://localhost:1"
-        self.pkg(
-            "image-create --no-refresh --set-property \
-                    use-system-repo=true {0}".format(
-                img_path
-            )
-        )
+        self.pkg("image-create --no-refresh --set-property \
+                    use-system-repo=true {0}".format(img_path))
         shutil.rmtree(img_path)
         if saved_sysrepo_env:
             os.environ["PKG_SYSREPO_URL"] = saved_sysrepo_env
@@ -639,9 +635,7 @@ class TestPkgImageCreateBasics(pkg5unittest.ManyDepotTestCase):
         expected = """\
 test1\ttrue\tfalse\ttrue\torigin\tonline\t{0}/\t-
 test2\ttrue\tfalse\ttrue\torigin\tonline\t{1}/\t-
-""".format(
-            self.rurl1, self.rurl2
-        )
+""".format(self.rurl1, self.rurl2)
         self.pkg("publisher -HF tsv")
         output = self.reduceSpaces(self.output)
         self.assertEqualDiff(expected, output)
@@ -651,9 +645,7 @@ test2\ttrue\tfalse\ttrue\torigin\tonline\t{1}/\t-
         expected = """\
 test1\ttrue\tfalse\ttrue\torigin\tonline\t{0}/\t-
 test2\ttrue\tfalse\ttrue\torigin\tonline\t{1}/\t-
-""".format(
-            self.rurl2, self.rurl2
-        )
+""".format(self.rurl2, self.rurl2)
         self.pkg("set-publisher --no-refresh -O {0} test1".format(self.rurl2))
         self.pkg("publisher -HF tsv")
         output = self.reduceSpaces(self.output)

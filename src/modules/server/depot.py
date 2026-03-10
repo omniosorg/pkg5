@@ -2196,8 +2196,8 @@ class NastyDepotHTTP(DepotHTTP):
                 # also cap at bit #7.
                 bit = min(7, int(abs(random.gauss(0, 3))))
                 # flip it
-                char ^= (1 << bit)
-                body = body[:p] + char.to_bytes() + body[p + 1:]
+                char ^= 1 << bit
+                body = body[:p] + char.to_bytes() + body[p + 1 :]
             response.body = body
         else:
             response.body = nfile.read(filesz)

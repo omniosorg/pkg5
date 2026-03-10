@@ -74,9 +74,7 @@ expected_failures["unusual_perms.mf"] = [
     "pkglint.action009",
     "pkglint.action009",
 ]
-broken_manifests[
-    "unusual_perms.mf"
-] = """
+broken_manifests["unusual_perms.mf"] = """
 #
 #
 # We deliver prtdiag as a link on one platform, as a file on another, which is
@@ -109,9 +107,7 @@ expected_failures["combo_variants_broken.mf"] = [
     "pkglint.dupaction008",
     "pkglint.dupaction001.2",
 ]
-broken_manifests[
-    "combo_variants_broken.mf"
-] = """
+broken_manifests["combo_variants_broken.mf"] = """
 #
 #
 # We deliver prtdiag as a dir on one platform, as a file on another
@@ -146,9 +142,7 @@ expected_failures["combo_variants_broken_links.mf"] = [
     "pkglint.dupaction001.2",
     "pkglint.dupaction010.1",
 ]
-broken_manifests[
-    "combo_variants_broken_links.mf"
-] = """
+broken_manifests["combo_variants_broken_links.mf"] = """
 #
 #
 # We deliver prtdiag as a link on one platform, as a file on another
@@ -168,9 +162,7 @@ file 1d5eac1aab628317f9c088d21e4afda9c754bb76 chash=43dbb3e0bc142f399b61d171f926
 """
 
 expected_failures["dup-clashing-vars.mf"] = ["pkglint.dupaction001.1"]
-broken_manifests[
-    "dup-clashing-vars.mf"
-] = """
+broken_manifests["dup-clashing-vars.mf"] = """
 #
 # we try to deliver usr/sbin/fsadmin twice with the same variant value
 #
@@ -198,9 +190,7 @@ expected_failures["dup-depend-vars.mf"] = [
     "pkglint.action005.1",
     "pkglint.action005.1",
 ]
-broken_manifests[
-    "dup-depend-vars.mf"
-] = """
+broken_manifests["dup-depend-vars.mf"] = """
 #
 # we declare dependencies on the same package name twice, with variants
 #
@@ -220,9 +210,7 @@ depend fmri=shell/zsh/redherring@4.3.9-0.133 type=require variant.foo=bar
 """
 
 expected_failures["dup-depend-incorp.mf"] = ["pkglint.action005.1"]
-broken_manifests[
-    "dup-depend-incorp.mf"
-] = """
+broken_manifests["dup-depend-incorp.mf"] = """
 #
 # There are 2 dependencies on sfw-incorporation, but only one is a require
 # incorporation, so this should not generate errors, other than us not being
@@ -245,9 +233,7 @@ expected_failures["dup-depend-versions.mf"] = [
     "pkglint.action005.1",
     "pkglint.action005.1",
 ]
-broken_manifests[
-    "dup-depend-versions.mf"
-] = """
+broken_manifests["dup-depend-versions.mf"] = """
 #
 # as we're declaring complimentary variants, we shouldn't report errors,
 # other than the 3 lint warnings for the missing dependencies
@@ -271,9 +257,7 @@ expected_failures["dup-depend-linted.mf"] = [
     "pkglint.action005.1",
     "pkglint.action008",
 ]
-broken_manifests[
-    "dup-depend-linted.mf"
-] = """
+broken_manifests["dup-depend-linted.mf"] = """
 #
 # We deliver duplicate dependencies, one coming from a require-any dep
 #
@@ -291,9 +275,7 @@ expected_failures["dup-depend-require-any_1.mf"] = [
     "pkglint.manifest005.2",
     "pkglint.action005.1",
 ]
-broken_manifests[
-    "dup-depend-require-any_1.mf"
-] = """
+broken_manifests["dup-depend-require-any_1.mf"] = """
 #
 # We deliver duplicate dependencies, one coming from a require-any dep
 #
@@ -308,9 +290,7 @@ depend fmri=foo/bar fmri=foo/baz type=require-any
 """
 
 expected_failures["dup-depend-require-any_2.mf"] = ["pkglint.manifest005.2"]
-broken_manifests[
-    "dup-depend-require-any_2.mf"
-] = """
+broken_manifests["dup-depend-require-any_2.mf"] = """
 #
 # Should use all values of fmri attribute for duplicate depends check
 #
@@ -325,9 +305,7 @@ depend fmri=foo/gcc-c++-runtime fmri=foo/gcc-3-runtime type=require-any
 """
 
 expected_failures["dup-depend-group-any_1.mf"] = []
-broken_manifests[
-    "dup-depend-group-any_1.mf"
-] = """
+broken_manifests["dup-depend-group-any_1.mf"] = """
 #
 # Should use all values of fmri attribute for duplicate depends check
 #
@@ -342,9 +320,7 @@ depend fmri=foo/gcc-c-runtime fmri=foo/gcc-3-runtime type=group-any
 """
 
 expected_failures["dup-depend-group-any_2.mf"] = ["pkglint.manifest005.2"]
-broken_manifests[
-    "dup-depend-group-any_2.mf"
-] = """
+broken_manifests["dup-depend-group-any_2.mf"] = """
 #
 # Should use all values of fmri attribute for duplicate depends check
 #
@@ -361,9 +337,7 @@ depend fmri=foo/gcc-c++-runtime fmri=foo/gcc-3-runtime type=group-any
 expected_failures["dup-depend-group-any_require-any_1.mf"] = [
     "pkglint.manifest005.2"
 ]
-broken_manifests[
-    "dup-depend-group-any_require-any_1.mf"
-] = """
+broken_manifests["dup-depend-group-any_require-any_1.mf"] = """
 #
 # Should use all values of fmri attribute for duplicate depends check
 #
@@ -378,9 +352,7 @@ depend fmri=foo/gcc-c-runtime fmri=foo/gcc-3-runtime type=group-any
 """
 
 expected_failures["dup-depend-group-any_require-any_2.mf"] = []
-broken_manifests[
-    "dup-depend-group-any_require-any_2.mf"
-] = """
+broken_manifests["dup-depend-group-any_require-any_2.mf"] = """
 #
 # Should use all values of fmri attribute for duplicate depends check
 #
@@ -395,9 +367,7 @@ depend fmri=foo/gcc-c++-runtime fmri=foo/gcc-3-runtime type=group-any
 """
 
 expected_failures["bug-17337432.mf"] = []
-broken_manifests[
-    "bug-17337432.mf"
-] = """
+broken_manifests["bug-17337432.mf"] = """
 #
 # Should use all values of fmri attribute for duplicate depends check
 #
@@ -412,9 +382,7 @@ depend fmri=foo/gcc-c-runtime fmri=foo/gcc-3-runtime type=require-any
 """
 
 expected_failures["license-has-path.mf"] = ["pkglint.action007"]
-broken_manifests[
-    "license-has-path.mf"
-] = """
+broken_manifests["license-has-path.mf"] = """
 #
 # We deliver a license action that also specifies a path
 #
@@ -428,9 +396,7 @@ license license="Foo" path=usr/share/lib/legalese.txt
 """
 
 expected_failures["license-duplicate.mf"] = ["pkglint.manifest016"]
-broken_manifests[
-    "license-duplicate.mf"
-] = """
+broken_manifests["license-duplicate.mf"] = """
 #
 # We deliver two license actions with the same license
 #
@@ -445,9 +411,7 @@ license usr/foo/file license="Foo"
 """
 
 expected_failures["dup-no-vars.mf"] = ["pkglint.dupaction001.1"]
-broken_manifests[
-    "dup-no-vars.mf"
-] = """
+broken_manifests["dup-no-vars.mf"] = """
 #
 # We try to deliver usr/sbin/fsadmin twice without specifying any variants
 #
@@ -472,9 +436,7 @@ file nohash elfarch=i386 elfbits=64 elfhash=2d5abc9b99e65c52c1afde443e9c5da7a6fc
 """
 
 expected_failures["dup-refcount-diff-attrs.mf"] = ["pkglint.dupaction007"]
-broken_manifests[
-    "dup-refcount-diff-attrs.mf"
-] = """
+broken_manifests["dup-refcount-diff-attrs.mf"] = """
 #
 # we deliver some duplicate ref-counted actions (dir, link, hardlink) with differing
 # attributes
@@ -497,9 +459,7 @@ expected_failures["dup-refcount-diff-types.mf"] = [
     "pkglint.dupaction008",
     "pkglint.dupaction010.1",
 ]
-broken_manifests[
-    "dup-refcount-diff-types.mf"
-] = """
+broken_manifests["dup-refcount-diff-types.mf"] = """
 #
 # we deliver some duplicate ref-counted actions (dir, link, hardlink) with differing
 # types
@@ -518,9 +478,7 @@ hardlink path=usr/bin/gcc target=bar/gcc-bin1
 """
 
 expected_failures["dup-refcount-legacy.mf"] = ["pkglint.dupaction015.1"]
-broken_manifests[
-    "dup-refcount-legacy.mf"
-] = """
+broken_manifests["dup-refcount-legacy.mf"] = """
 #
 # we deliver two legacy actions with mismatched attributes
 #
@@ -550,9 +508,7 @@ expected_failures["dup-types-clashing-vars.mf"] = [
     "pkglint.dupaction008",
     "pkglint.dupaction001.1",
 ]
-broken_manifests[
-    "dup-types-clashing-vars.mf"
-] = """
+broken_manifests["dup-types-clashing-vars.mf"] = """
 #
 # we try to deliver usr/sbin/fsadmin with different action types, declaring a
 # variant on both.
@@ -579,9 +535,7 @@ expected_failures["dup-types.mf"] = [
     "pkglint.dupaction008",
     "pkglint.dupaction010.1",
 ]
-broken_manifests[
-    "dup-types.mf"
-] = """
+broken_manifests["dup-types.mf"] = """
 #
 # we deliver usr/lib/X11/fs as several action types
 #
@@ -603,9 +557,7 @@ file nohash elfarch=i386 elfbits=64 elfhash=2d5abc9b99e65c52c1afde443e9c5da7a6fc
 """
 
 expected_failures["duplicate_sets.mf"] = ["pkglint.manifest006"]
-broken_manifests[
-    "duplicate_sets.mf"
-] = """
+broken_manifests["duplicate_sets.mf"] = """
 #
 # We try to deliver the same set action twice
 #
@@ -620,9 +572,7 @@ set name=test value=i386
 """
 
 expected_failures["duplicate_sets_allowed_vars.mf"] = []
-broken_manifests[
-    "duplicate_sets_allowed_vars.mf"
-] = """
+broken_manifests["duplicate_sets_allowed_vars.mf"] = """
 #
 # We try to deliver the same set action twice, with different variants
 #
@@ -637,9 +587,7 @@ set name=test value=i386 variant.arch=i386
 """
 
 expected_failures["duplicate_sets_variants.mf"] = ["pkglint.manifest006"]
-broken_manifests[
-    "duplicate_sets_variants.mf"
-] = """
+broken_manifests["duplicate_sets_variants.mf"] = """
 #
 # We try to deliver the same set action twice, with variants
 #
@@ -657,9 +605,7 @@ expected_failures["duplicate_sets-linted.mf"] = [
     "pkglint.manifest006",
     "pkglint.action008",
 ]
-broken_manifests[
-    "duplicate_sets-linted.mf"
-] = """
+broken_manifests["duplicate_sets-linted.mf"] = """
 #
 # We try to deliver the same set action twice, the second time we do this,
 # we mark one of the actions as linted
@@ -681,9 +627,7 @@ expected_failures["duplicate_sets-not-enough-lint.mf"] = [
     "pkglint.manifest006",
     "pkglint.action008",
 ]
-broken_manifests[
-    "duplicate_sets-not-enough-lint.mf"
-] = """
+broken_manifests["duplicate_sets-not-enough-lint.mf"] = """
 #
 # We try to deliver the same set action twice, the second time we do this,
 # we mark one of the actions as linted, but still should have a broken manifest
@@ -701,9 +645,7 @@ set name=foo value=bar
 """
 
 expected_failures["info_class_valid.mf"] = []
-broken_manifests[
-    "info_class_valid.mf"
-] = """
+broken_manifests["info_class_valid.mf"] = """
 #
 # A perfectly valid manifest with a correct info.classification key
 #
@@ -718,9 +660,7 @@ set name=variant.arch value=i386 value=sparc
 """
 
 expected_failures["info_class_missing.mf"] = ["opensolaris.manifest001.1"]
-broken_manifests[
-    "info_class_missing.mf"
-] = """
+broken_manifests["info_class_missing.mf"] = """
 #
 # we deliver package with no info.classification key
 #
@@ -734,9 +674,7 @@ set name=variant.arch value=i386 value=sparc
 """
 
 expected_failures["silly_description.mf"] = ["pkglint.manifest009.2"]
-broken_manifests[
-    "silly_description.mf"
-] = """
+broken_manifests["silly_description.mf"] = """
 #
 # we deliver package where the description is the same as the summary
 #
@@ -750,9 +688,7 @@ set name=variant.arch value=i386 value=sparc
 """
 
 expected_failures["empty_description.mf"] = ["pkglint.manifest009.1"]
-broken_manifests[
-    "empty_description.mf"
-] = """
+broken_manifests["empty_description.mf"] = """
 #
 # we deliver package where the description is empty
 #
@@ -766,9 +702,7 @@ set name=variant.arch value=i386 value=sparc
 """
 
 expected_failures["empty_summary.mf"] = ["pkglint.manifest009.3"]
-broken_manifests[
-    "empty_summary.mf"
-] = """
+broken_manifests["empty_summary.mf"] = """
 #
 # we deliver package where the summary is empty
 #
@@ -782,9 +716,7 @@ set name=variant.arch value=i386 value=sparc
 """
 
 expected_failures["info_class_many_values.mf"] = ["pkglint.manifest008.6"]
-broken_manifests[
-    "info_class_many_values.mf"
-] = """
+broken_manifests["info_class_many_values.mf"] = """
 #
 # we deliver a directory with multiple info.classification keys, one of which
 # is wrong
@@ -800,9 +732,7 @@ set name=variant.arch value=i386 value=sparc
 """
 
 expected_failures["info_class_wrong_prefix.mf"] = ["pkglint.manifest008.2"]
-broken_manifests[
-    "info_class_wrong_prefix.mf"
-] = """
+broken_manifests["info_class_wrong_prefix.mf"] = """
 #
 # we deliver a directory with an incorrect info.classification key
 #
@@ -817,9 +747,7 @@ set name=variant.arch value=i386 value=sparc
 """
 
 expected_failures["info_class_no_category.mf"] = ["pkglint.manifest008.3"]
-broken_manifests[
-    "info_class_no_category.mf"
-] = """
+broken_manifests["info_class_no_category.mf"] = """
 #
 # we deliver a directory with an incorrect info.classification key,
 # with no category value
@@ -835,9 +763,7 @@ set name=variant.arch value=i386 value=sparc
 """
 
 expected_failures["info_class_wrong_category.mf"] = ["pkglint.manifest008.4"]
-broken_manifests[
-    "info_class_wrong_category.mf"
-] = """
+broken_manifests["info_class_wrong_category.mf"] = """
 #
 # we deliver a directory with incorrect info.classification section/category
 #
@@ -857,9 +783,7 @@ expected_failures["invalid_fmri.mf"] = [
     "pkglint.action009",
     "pkglint.action009",
 ]
-broken_manifests[
-    "invalid_fmri.mf"
-] = """
+broken_manifests["invalid_fmri.mf"] = """
 #
 # We deliver some broken fmri values
 #
@@ -882,9 +806,7 @@ expected_failures["invalid_linted.mf"] = [
     "pkglint.action009",
     "pkglint.action009",
 ]
-broken_manifests[
-    "invalid_linted.mf"
-] = """
+broken_manifests["invalid_linted.mf"] = """
 #
 # We have a broken pkg.linted action, so we report both broken depend actions
 # due to the corrupt FMRI values.  We also report two failed attempts
@@ -909,9 +831,7 @@ expected_failures["invalid_usernames.mf"] = [
     "pkglint.action010.1",
     "pkglint.action010.3",
 ]
-broken_manifests[
-    "invalid_usernames.mf"
-] = """
+broken_manifests["invalid_usernames.mf"] = """
 #
 # We try to deliver a series of invalid usernames, some result in multiple
 # lint messages
@@ -945,9 +865,7 @@ expected_failures["linted-action.mf"] = [
     "pkglint001.5",
     "pkglint001.5",
 ]
-broken_manifests[
-    "linted-action.mf"
-] = """
+broken_manifests["linted-action.mf"] = """
 #
 # we deliver some duplicate ref-counted actions (dir, link, hardlink) with
 # differing attributes, but since they're marked as linted, we should get no
@@ -996,9 +914,7 @@ expected_failures["linted-manifest.mf"] = [
     "pkglint001.5",
     "pkglint.manifest007",
 ]
-broken_manifests[
-    "linted-manifest.mf"
-] = """
+broken_manifests["linted-manifest.mf"] = """
 #
 # This manifest is marked as pkg.linted, and should not have manifest
 # checks run on it.  In particular, we should not complain about the lack
@@ -1026,9 +942,7 @@ expected_failures["linted-manifest-check.mf"] = [
     "pkglint.manifest007",
     "pkglint.action008",
 ]
-broken_manifests[
-    "linted-manifest-check.mf"
-] = """
+broken_manifests["linted-manifest-check.mf"] = """
 #
 # This manifest is delivers a weird info.classification value
 #
@@ -1052,9 +966,7 @@ expected_failures["linted-manifest-check2.mf"] = [
     "pkglint.manifest007",
     "pkglint.action008",
 ]
-broken_manifests[
-    "linted-manifest-check2.mf"
-] = """
+broken_manifests["linted-manifest-check2.mf"] = """
 #
 # This manifest delivers actions with underscores in attribute names
 # and values, but they're all marked linted because we have a manifest-level
@@ -1089,9 +1001,7 @@ expected_failures["linted-manifest-check3.mf"] = [
     "pkglint001.5",
     "pkglint001.5",
 ]
-broken_manifests[
-    "linted-manifest-check3.mf"
-] = """
+broken_manifests["linted-manifest-check3.mf"] = """
 #
 # This manifest delivers lots of actions with underscores in attribute names
 # and values, but we have a manifest-level check that bypasses only one
@@ -1116,9 +1026,7 @@ expected_failures["linted-missing-summary.mf"] = [
     "pkglint001.5",
     "pkglint.manifest007",
 ]
-broken_manifests[
-    "linted-missing-summary.mf"
-] = """
+broken_manifests["linted-missing-summary.mf"] = """
 # We don't care we don't have a summary
 #
 set name=pkg.fmri value=pkg://opensolaris.org/pkglint/TIMFtest@1.1.0,5.11-0.141:20100604T143737Z
@@ -1134,9 +1042,7 @@ expected_failures["linted-desc-match-summary.mf"] = [
     "pkglint001.5",
     "pkglint.action008",
 ]
-broken_manifests[
-    "linted-desc-match-summary.mf"
-] = """
+broken_manifests["linted-desc-match-summary.mf"] = """
 # We don't care that the description matches the summary
 #
 set name=pkg.fmri value=pkg://opensolaris.org/pkglint/TIMFtest@1.1.0,5.11-0.141:20100604T143737Z
@@ -1153,9 +1059,7 @@ expected_failures["linted-dup-path-types.mf"] = [
     "pkglint.action008",
     "pkglint.manifest007",
 ]
-broken_manifests[
-    "linted-dup-path-types.mf"
-] = """
+broken_manifests["linted-dup-path-types.mf"] = """
 # We don't care that usr/bin/ls is a different type across two actions, but
 # make sure we still complain about the duplicate path attribute
 #
@@ -1177,9 +1081,7 @@ expected_failures["linted-dup-attrs.mf"] = [
     "pkglint.action008",
     "pkglint.manifest007",
 ]
-broken_manifests[
-    "linted-dup-attrs.mf"
-] = """
+broken_manifests["linted-dup-attrs.mf"] = """
 # We don't care that usr/bin/ls is a duplicate path
 #
 set name=pkg.fmri value=pkg://opensolaris.org/pkglint/TIMFtest@1.1.0,5.11-0.141:20100604T143737Z
@@ -1197,9 +1099,7 @@ expected_failures["linted-dup-refcount.mf"] = [
     "pkglint.action008",
     "pkglint.action008",
 ]
-broken_manifests[
-    "linted-dup-refcount.mf"
-] = """
+broken_manifests["linted-dup-refcount.mf"] = """
 # We don't care that usr/bin/ls are duplicate links, the only output here
 # should be pkglint.action008, reporting on the use of each linted action.
 # Despite avoiding pkglint(1) errors here, pkg(1) will still refuse to
@@ -1217,9 +1117,7 @@ link path=usr/bin/ls target=foo pkg.linted.pkglint.dupaction010.2=true
 """
 
 expected_failures["no_desc-legacy.mf"] = ["pkglint.action003.1"]
-broken_manifests[
-    "no_desc-legacy.mf"
-] = """
+broken_manifests["no_desc-legacy.mf"] = """
 #
 # We deliver a legacy actions without a required attribute, "desc". Since we
 # can't find the package pointed to by the legacy 'pkg' attribute, we should
@@ -1236,9 +1134,7 @@ legacy variant.arch=sparc arch=sparc category=system desc="core kernel software 
 """
 
 expected_failures["no_dup-allowed-vars.mf"] = []
-broken_manifests[
-    "no_dup-allowed-vars.mf"
-] = """
+broken_manifests["no_dup-allowed-vars.mf"] = """
 #
 # we try to deliver usr/sbin/fsadmin twice with the same variant value
 #
@@ -1261,9 +1157,7 @@ file nohash elfarch=i386 elfbits=64 elfhash=2d5abc9b99e65c52c1afde443e9c5da7a6fc
 """
 
 expected_failures["no_dup-types-different-vars.mf"] = []
-broken_manifests[
-    "no_dup-types-different-vars.mf"
-] = """
+broken_manifests["no_dup-types-different-vars.mf"] = """
 #
 # we declare allowed variants for usr/lib/X11/fs, despite them
 # delivering to the same path name.  Ref-counted actions, but
@@ -1298,9 +1192,7 @@ expected_failures["nodup-depend-okvars.mf"] = [
     "pkglint.action005.1",
     "pkglint.action005.1",
 ]
-broken_manifests[
-    "nodup-depend-okvars.mf"
-] = """
+broken_manifests["nodup-depend-okvars.mf"] = """
 #
 # as we're declaring complimentary variants, we shouldn't report errors
 #
@@ -1324,9 +1216,7 @@ expected_failures["novariant_arch.mf"] = [
     "pkglint.action005.1",
     "pkglint.action005.1",
 ]
-broken_manifests[
-    "novariant_arch.mf"
-] = """
+broken_manifests["novariant_arch.mf"] = """
 #
 # we don't have a variant.arch attribute set, and are delivering a file with
 # an elfarch attribute
@@ -1346,9 +1236,7 @@ file nohash elfarch=i386 elfbits=64 elfhash=2d5abc9b99e65c52c1afde443e9c5da7a6fc
 """
 
 expected_failures["obsolete-has-description.mf"] = ["pkglint.manifest001.1"]
-broken_manifests[
-    "obsolete-has-description.mf"
-] = """
+broken_manifests["obsolete-has-description.mf"] = """
 #
 # We deliver an obsolete package that has a pkg.description
 #
@@ -1360,9 +1248,7 @@ set name=variant.arch value=i386
 """
 
 expected_failures["obsolete-more-actions.mf"] = ["pkglint.manifest001.2"]
-broken_manifests[
-    "obsolete-more-actions.mf"
-] = """
+broken_manifests["obsolete-more-actions.mf"] = """
 #
 # We deliver an obsolete package that has actions other than 'set'.
 # (bogus signature on this manifest, just for testing)
@@ -1376,9 +1262,7 @@ signature algorithm=sha256 value=75b662e14a4ea8f0fa0507d40133b0347a36bc1f6311248
 """
 
 expected_failures["obsolete.mf"] = []
-broken_manifests[
-    "obsolete.mf"
-] = """
+broken_manifests["obsolete.mf"] = """
 #
 # This is a perfectly valid example of an obsolete package
 #
@@ -1393,9 +1277,7 @@ expected_failures["obsolete-has-description-linted.mf"] = [
     "pkglint001.5",
     "pkglint.action008",
 ]
-broken_manifests[
-    "obsolete-has-description-linted.mf"
-] = """
+broken_manifests["obsolete-has-description-linted.mf"] = """
 #
 # We deliver an obsolete package that has a pkg.description
 #
@@ -1410,9 +1292,7 @@ expected_failures["obsolete-more-actions-linted.mf"] = [
     "pkglint.manifest001.2",
     "pkglint.action008",
 ]
-broken_manifests[
-    "obsolete-more-actions-linted.mf"
-] = """
+broken_manifests["obsolete-more-actions-linted.mf"] = """
 #
 # We deliver an obsolete package that has actions other than 'set'.
 # (bogus signature on this manifest, just for testing)
@@ -1426,9 +1306,7 @@ signature algorithm=sha256 value=75b662e14a4ea8f0fa0507d40133b0347a36bc1f6311248
 """
 
 expected_failures["overlay-valid-many-overlays-valid-mismatch.mf"] = []
-broken_manifests[
-    "overlay-valid-many-overlays-valid-mismatch.mf"
-] = """
+broken_manifests["overlay-valid-many-overlays-valid-mismatch.mf"] = """
 #
 # This manifest declares multiple overlay=true action, each under a different
 # variant, and multiple overlay=allow actions, one of our variants declares a
@@ -1450,9 +1328,7 @@ file NOHASH group=staff mode=0644 overlay=allow owner=timf path=foo preserve=tru
 """
 
 expected_failures["overlay-valid-many-overlays.mf"] = []
-broken_manifests[
-    "overlay-valid-many-overlays.mf"
-] = """
+broken_manifests["overlay-valid-many-overlays.mf"] = """
 #
 # This manifest declares multiple overlay=true action, each under a different
 # variant, and multiple overlay=allow actions.
@@ -1473,9 +1349,7 @@ file NOHASH group=staff mode=0644 overlay=allow owner=timf path=foo preserve=tru
 """
 
 expected_failures["overlay-valid-no-allow-overlay-variant.mf"] = []
-broken_manifests[
-    "overlay-valid-no-allow-overlay-variant.mf"
-] = """
+broken_manifests["overlay-valid-no-allow-overlay-variant.mf"] = """
 #
 # We have an overlay attribute, but no overlay=allow attribute on the 2nd
 # action, but since we use use variants, the first action never needs to overlay
@@ -1495,9 +1369,7 @@ file NOHASH group=staff mode=0644 overlay=allow owner=timf path=foo preserve=tru
 """
 
 expected_failures["overlay-valid-simple-no-overlay.mf"] = []
-broken_manifests[
-    "overlay-valid-simple-no-overlay.mf"
-] = """
+broken_manifests["overlay-valid-simple-no-overlay.mf"] = """
 #
 # A valid manifest which declares two overlay=allow actions across different
 # variants.
@@ -1515,9 +1387,7 @@ file NOHASH group=staff mode=0644 overlay=allow owner=timf path=foo preserve=tru
 """
 
 expected_failures["overlay-valid-simple-overlay-true.mf"] = []
-broken_manifests[
-    "overlay-valid-simple-overlay-true.mf"
-] = """
+broken_manifests["overlay-valid-simple-overlay-true.mf"] = """
 #
 # A valid manifest which just declares an overlay=true action
 #
@@ -1532,9 +1402,7 @@ file NOHASH group=staff mode=0644 overlay=true owner=timf path=foo variant.arch=
 """
 
 expected_failures["overlay-valid-simple-overlay.mf"] = []
-broken_manifests[
-    "overlay-valid-simple-overlay.mf"
-] = """
+broken_manifests["overlay-valid-simple-overlay.mf"] = """
 #
 # A basic valid manifest that uses overlays
 #
@@ -1551,9 +1419,7 @@ file NOHASH group=staff mode=0644 overlay=allow preserve=true owner=timf path=fo
 """
 
 expected_failures["overlay-valid-triple-allowed.mf"] = []
-broken_manifests[
-    "overlay-valid-triple-allowed.mf"
-] = """
+broken_manifests["overlay-valid-triple-allowed.mf"] = """
 #
 # A valid manifest which has a single overlay=true action, and multiple
 # overlay=allow actions, each in a different variant.
@@ -1574,9 +1440,7 @@ file NOHASH group=staff mode=0644 overlay=allow owner=timf path=foo preserve=tru
 """
 
 expected_failures["overlay-valid-triple-true.mf"] = []
-broken_manifests[
-    "overlay-valid-triple-true.mf"
-] = """
+broken_manifests["overlay-valid-triple-true.mf"] = """
 #
 # This manifest declares multiple overlay=true attributes, each under a
 # different variant.
@@ -1596,9 +1460,7 @@ file NOHASH group=staff mode=0644 overlay=allow owner=timf path=foo preserve=tru
 """
 
 expected_failures["overlay-valid-mismatch-attrs.mf"] = []
-broken_manifests[
-    "overlay-valid-mismatch-attrs.mf"
-] = """
+broken_manifests["overlay-valid-mismatch-attrs.mf"] = """
 #
 # We declare overlays, but have mismatching attributes between them
 # blah=foo differs, but shouldn't matter.
@@ -1618,9 +1480,7 @@ file NOHASH group=staff mode=0755 overlay=allow owner=timf path=foo preserve=ren
 expected_failures["overlay-invalid-broken-attrs.mf"] = [
     "pkglint.dupaction009.6"
 ]
-broken_manifests[
-    "overlay-invalid-broken-attrs.mf"
-] = """
+broken_manifests["overlay-invalid-broken-attrs.mf"] = """
 #
 # We declare overlays, but have mismatching attributes between them
 #
@@ -1638,9 +1498,7 @@ file NOHASH group=staff mode=0644 overlay=allow owner=timf path=foo preserve=ren
 expected_failures["overlay-invalid-duplicate-allows.mf"] = [
     "pkglint.dupaction009.3"
 ]
-broken_manifests[
-    "overlay-invalid-duplicate-allows.mf"
-] = """
+broken_manifests["overlay-invalid-duplicate-allows.mf"] = """
 #
 # Duplicate overlay=allow actions, with no overlay=true action.
 #
@@ -1658,9 +1516,7 @@ file NOHASH group=staff mode=0644 overlay=allow owner=timf path=foo preserve=ren
 expected_failures["overlay-invalid-duplicate-overlays.mf"] = [
     "pkglint.dupaction009.2"
 ]
-broken_manifests[
-    "overlay-invalid-duplicate-overlays.mf"
-] = """
+broken_manifests["overlay-invalid-duplicate-overlays.mf"] = """
 # We have duplicate overlay actions
 
 set name=pkg.fmri value=bar
@@ -1679,9 +1535,7 @@ expected_failures["overlay-invalid-duplicate-pairs.mf"] = [
     "pkglint.dupaction009.4",
     "pkglint.dupaction009.2",
 ]
-broken_manifests[
-    "overlay-invalid-duplicate-pairs.mf"
-] = """
+broken_manifests["overlay-invalid-duplicate-pairs.mf"] = """
 # ensure that depite complimentary pairs of overlay actions,
 # we still catch the duplicate one
 
@@ -1703,9 +1557,7 @@ expected_failures["overlay-invalid-no-allow-overlay.mf"] = [
     "pkglint.dupaction009.7",
     "pkglint.dupaction009.5",
 ]
-broken_manifests[
-    "overlay-invalid-no-allow-overlay.mf"
-] = """
+broken_manifests["overlay-invalid-no-allow-overlay.mf"] = """
 # we have an overlay attribute, but no overlay=allow attribute
 # on the 2nd action
 set name=pkg.fmri value=foo
@@ -1725,9 +1577,7 @@ expected_failures["overlay-invalid-no-overlay-allow.mf"] = [
     "pkglint.dupaction009.7",
     "pkglint.dupaction009.5",
 ]
-broken_manifests[
-    "overlay-invalid-no-overlay-allow.mf"
-] = """
+broken_manifests["overlay-invalid-no-overlay-allow.mf"] = """
 set name=pkg.fmri value=bar
 set name=pkg.summary value="Image Packaging System"
 set name=info.classification value=org.opensolaris.category.2008:System/Packaging
@@ -1742,9 +1592,7 @@ expected_failures["overlay-invalid-no-overlay-preserve.mf"] = [
     "pkglint.dupaction009.1",
     "pkglint.dupaction009.5",
 ]
-broken_manifests[
-    "overlay-invalid-no-overlay-preserve.mf"
-] = """
+broken_manifests["overlay-invalid-no-overlay-preserve.mf"] = """
 # we don't declare a 'preserve' attribute on our overlay=allow action
 #
 set name=pkg.fmri value=bar
@@ -1761,9 +1609,7 @@ expected_failures["overlay-invalid-no-overlay-true.mf"] = [
     "pkglint.dupaction001.1",
     "pkglint.dupaction009.7",
 ]
-broken_manifests[
-    "overlay-invalid-no-overlay-true.mf"
-] = """
+broken_manifests["overlay-invalid-no-overlay-true.mf"] = """
 # we're missing an overlay=true action, resulting in a duplicate
 set name=pkg.fmri value=bar
 set name=pkg.summary value="Image Packaging System"
@@ -1778,9 +1624,7 @@ file NOHASH group=staff mode=0644 owner=timf path=foo preserve=rename
 expected_failures["overlay-invalid-triple-broken-variants.mf"] = [
     "pkglint.dupaction009.4"
 ]
-broken_manifests[
-    "overlay-invalid-triple-broken-variants.mf"
-] = """
+broken_manifests["overlay-invalid-triple-broken-variants.mf"] = """
 # this package declares overlay actions, but we have duplicate
 # overlay='allow' attributes for variant.foo=foo1
 
@@ -1803,9 +1647,7 @@ file NOHASH group=staff mode=0644 overlay=allow owner=timf path=foo preserve=tru
 expected_failures["overlay-invalid-triple-broken.mf"] = [
     "pkglint.dupaction009.4"
 ]
-broken_manifests[
-    "overlay-invalid-triple-broken.mf"
-] = """
+broken_manifests["overlay-invalid-triple-broken.mf"] = """
 # this manifest has multiple overlay=allow variants, but the last is
 # duplicated across variant.bar variants
 set name=pkg.fmri value=foo
@@ -1823,9 +1665,7 @@ file NOHASH group=staff mode=0644 overlay=allow owner=timf path=foo preserve=tru
 """
 
 expected_failures["parent_is_not_dir.mf"] = ["pkglint.dupaction011"]
-broken_manifests[
-    "parent_is_not_dir.mf"
-] = """
+broken_manifests["parent_is_not_dir.mf"] = """
 # This manifest delivers /usr/bin as a symlink to /bin, but tries to install
 # a file through that symlink.
 #
@@ -1841,9 +1681,7 @@ file /etc/motd group=sys mode=0644 owner=root path=usr/bin/foo
 """
 
 expected_failures["parent_is_not_dir_variants.mf"] = []
-broken_manifests[
-    "parent_is_not_dir_variants.mf"
-] = """
+broken_manifests["parent_is_not_dir_variants.mf"] = """
 # This manifest delivers /usr/bin as a symlink to /bin, but tries to install
 # a file through that symlink.  However, since the symlink and the file are
 # delivered under different variants, this is acceptable
@@ -1864,9 +1702,7 @@ expected_failures["renamed-more-actions.mf"] = [
     "pkglint.manifest002.1",
     "pkglint.manifest002.3",
 ]
-broken_manifests[
-    "renamed-more-actions.mf"
-] = """
+broken_manifests["renamed-more-actions.mf"] = """
 #
 # We've reported a package as having been renamed, yet try to deliver
 # actions other than 'set' and 'depend'
@@ -1888,9 +1724,7 @@ expected_failures["renamed-more-actions-linted.mf"] = [
     "pkglint.action008",
     "pkglint001.5",
 ]
-broken_manifests[
-    "renamed-more-actions-linted.mf"
-] = """
+broken_manifests["renamed-more-actions-linted.mf"] = """
 #
 # We've reported a package as having been renamed, yet try to deliver
 # actions other than 'set' and 'depend'.  The additional actions are marked
@@ -1913,9 +1747,7 @@ expected_failures["renamed-more-actions-not-all-linted.mf"] = [
     "pkglint.manifest002.3",
     "pkglint.action008",
 ]
-broken_manifests[
-    "renamed-more-actions-not-all-linted.mf"
-] = """
+broken_manifests["renamed-more-actions-not-all-linted.mf"] = """
 #
 # We've reported a package as having been renamed, yet try to deliver
 # actions other than 'set' and 'depend'.  One of these additional actions
@@ -1935,9 +1767,7 @@ signature algorithm=sha256 value=75b662e14a4ea8f0fa0507d40133b0347a36bc1f6311248
 """
 
 expected_failures["renamed.mf"] = ["pkglint.manifest002.3"]
-broken_manifests[
-    "renamed.mf"
-] = """
+broken_manifests["renamed.mf"] = """
 #
 # This is a perfectly valid example of a renamed package
 # (bogus signature on this manifest, just for testing)
@@ -1953,9 +1783,7 @@ signature algorithm=sha256 value=75b662e14a4ea8f0fa0507d40133b0347a36bc1f6311248
 """
 
 expected_failures["renamed-self.mf"] = ["pkglint.manifest002.4"]
-broken_manifests[
-    "renamed-self.mf"
-] = """
+broken_manifests["renamed-self.mf"] = """
 #
 # We try to rename to ourself.
 #
@@ -1970,9 +1798,7 @@ depend fmri=renamed-ancestor-new type=require
 """
 
 expected_failures["smf-manifest.mf"] = []
-broken_manifests[
-    "smf-manifest.mf"
-] = """
+broken_manifests["smf-manifest.mf"] = """
 #
 # We deliver SMF manifests, with correct org.opensolaris.smf.fmri tags
 #
@@ -1989,9 +1815,7 @@ file path=var/svc/manifest/application/file.xml owner=root group=sys mode=644
 """
 
 expected_failures["smf-manifest_broken.mf"] = ["pkglint.manifest011"]
-broken_manifests[
-    "smf-manifest_broken.mf"
-] = """
+broken_manifests["smf-manifest_broken.mf"] = """
 #
 # We deliver SMF manifests, but don't declare an org.opensolaris.smf.fmri tag
 # We should get one warning, rather than one per-SMF-manifest
@@ -2016,9 +1840,7 @@ expected_failures["underscores.mf"] = [
     "pkglint.action001.2",
     "pkglint.action001.1",
 ]
-broken_manifests[
-    "underscores.mf"
-] = """
+broken_manifests["underscores.mf"] = """
 #
 # We try to deliver attributes with underscores.
 #
@@ -2036,9 +1858,7 @@ dir group=bin mode=0755 owner=root path=usr/lib/X11 reboot_needed=False
 """
 
 expected_failures["undescribed-variant.mf"] = ["pkglint.manifest003.1"]
-broken_manifests[
-    "undescribed-variant.mf"
-] = """
+broken_manifests["undescribed-variant.mf"] = """
 #
 # we try to set a variant we've never described in the manifest
 #
@@ -2058,9 +1878,7 @@ file nohash elfarch=i386 elfbits=64 elfhash=2d5abc9b99e65c52c1afde443e9c5da7a6fc
 """
 
 expected_failures["unknown-variant.mf"] = ["pkglint.manifest003.2"]
-broken_manifests[
-    "unknown-variant.mf"
-] = """
+broken_manifests["unknown-variant.mf"] = """
 #
 # we try to deliver an action with a variant value we haven't described
 #
@@ -2080,9 +1898,7 @@ file nohash elfarch=i386 elfbits=64 elfhash=2d5abc9b99e65c52c1afde443e9c5da7a6fc
 """
 
 expected_failures["ignorable-variant.mf"] = []
-broken_manifests[
-    "ignorable-variant.mf"
-] = """
+broken_manifests["ignorable-variant.mf"] = """
 #
 # we deliver an undefined, but ignorable variant
 #
@@ -2102,9 +1918,7 @@ file nohash variant.debug.osnet=True elfarch=i386 elfbits=64 elfhash=2d5abc9b99e
 """
 
 expected_failures["ignorable-unknown-variant.mf"] = ["pkglint.manifest003.2"]
-broken_manifests[
-    "ignorable-unknown-variant.mf"
-] = """
+broken_manifests["ignorable-unknown-variant.mf"] = """
 #
 # we try to deliver an action with a variant value we haven't described,
 # as well as an ignorable variant - we should still get an error
@@ -2125,9 +1939,7 @@ file nohash variant.debug.osnet=True elfarch=i386 elfbits=64 elfhash=2d5abc9b99e
 """
 
 expected_failures["unknown.mf"] = ["pkglint.action004"]
-broken_manifests[
-    "unknown.mf"
-] = """
+broken_manifests["unknown.mf"] = """
 #
 # We try to deliver an 'unknown' action
 #
@@ -2144,9 +1956,7 @@ expected_failures["unusual_mode_noexecdir.mf"] = [
     "pkglint.action002.1",
     "pkglint.action002.4",
 ]
-broken_manifests[
-    "unusual_mode_noexecdir.mf"
-] = """
+broken_manifests["unusual_mode_noexecdir.mf"] = """
 #
 # we deliver a directory with an unexecutable mode 0422
 #
@@ -2167,9 +1977,7 @@ file nohash elfarch=i386 elfbits=64 elfhash=2d5abc9b99e65c52c1afde443e9c5da7a6fc
 """
 
 expected_failures["action_validation.mf"] = ["pkglint.action009"]
-broken_manifests[
-    "action_validation.mf"
-] = """
+broken_manifests["action_validation.mf"] = """
 #
 # We deliver an intentionally broken file action
 #
@@ -2184,9 +1992,7 @@ file nohash path=/dev/null
 """
 
 expected_failures["whitelist_action_missing_dep.mf"] = []
-broken_manifests[
-    "whitelist_action_missing_dep.mf"
-] = """
+broken_manifests["whitelist_action_missing_dep.mf"] = """
 #
 #
 # We declare a pkg.lint.pkglint.action005.1 parameter to a depend action that
@@ -2203,9 +2009,7 @@ depend type=require fmri=test/package pkg.lint.pkglint.action005.1.missing-deps=
 """
 
 expected_failures["whitelist_mf_missing_dep.mf"] = []
-broken_manifests[
-    "whitelist_mf_missing_dep.mf"
-] = """
+broken_manifests["whitelist_mf_missing_dep.mf"] = """
 #
 # We declare a pkg.lint.pkglint.action005.1 parameter that tells the check to
 # ignore any missing dependencies, as part of its package obsoletion test
@@ -2221,9 +2025,7 @@ depend type=require fmri=test/package
 """
 
 expected_failures["okay_underscores.mf"] = []
-broken_manifests[
-    "okay_underscores.mf"
-] = """
+broken_manifests["okay_underscores.mf"] = """
 #
 # Underscores in attribute names generate warnings, except for a few that are
 # grandfathered in, locale facets, which have locale names in them, and
@@ -2246,9 +2048,7 @@ link path=usr/bin/foo7 target=bar original_name=SUNWcar:usr/bin/wazaap
 """
 
 expected_failures["mediated_links.mf"] = []
-broken_manifests[
-    "mediated_links.mf"
-] = """
+broken_manifests["mediated_links.mf"] = """
 #
 # A perfectly valid manifest that uses mediated links
 #
@@ -2266,9 +2066,7 @@ file path=usr/perl5/5.12/bin/perl owner=root group=sys mode=0755
 """
 
 expected_failures["mediated_links-dup_file.mf"] = ["pkglint.dupaction010.1"]
-broken_manifests[
-    "mediated_links-dup_file.mf"
-] = """
+broken_manifests["mediated_links-dup_file.mf"] = """
 #
 # We use mediated links, but also try to deliver a file using the same path as
 # that mediated link
@@ -2288,9 +2086,7 @@ file path=usr/bin/perl owner=root group=sys mode=0755
 """
 
 expected_failures["mediated_links-types.mf"] = ["pkglint.dupaction010.1"]
-broken_manifests[
-    "mediated_links-types.mf"
-] = """
+broken_manifests["mediated_links-types.mf"] = """
 #
 # We use mediated links, but then also try to deliver a directory over that link
 # this is similar to the last test, but ensures that reference-counted
@@ -2311,9 +2107,7 @@ dir path=usr/bin/perl owner=root group=sys mode=0755
 """
 
 expected_failures["mediated_links-variants.mf"] = []
-broken_manifests[
-    "mediated_links-variants.mf"
-] = """
+broken_manifests["mediated_links-variants.mf"] = """
 #
 # We use mediated links, but only in the nonglobal zone, with a file
 # in the global zone
@@ -2335,9 +2129,7 @@ file path=usr/bin/perl owner=root group=sys mode=0755 variant.opensolaris.zone=g
 expected_failures["mediated_links-missing-mediator.mf"] = [
     "pkglint.dupaction010.2"
 ]
-broken_manifests[
-    "mediated_links-missing-mediator.mf"
-] = """
+broken_manifests["mediated_links-missing-mediator.mf"] = """
 #
 # We're missing mediated link attributes on one of our links
 #
@@ -2355,9 +2147,7 @@ file path=usr/perl5/5.12/bin/perl owner=root group=sys mode=0755
 """
 
 expected_failures["mediated_links-namespaces.mf"] = ["pkglint.dupaction010.3"]
-broken_manifests[
-    "mediated_links-namespaces.mf"
-] = """
+broken_manifests["mediated_links-namespaces.mf"] = """
 #
 # Our mediated links deliver the same path to different namespaces
 #
@@ -2375,9 +2165,7 @@ file path=usr/perl5/5.12/bin/perl owner=root group=sys mode=0755
 """
 
 expected_failures["mediated_links-missing-attrs.mf"] = ["pkglint.action009"]
-broken_manifests[
-    "mediated_links-missing-attrs.mf"
-] = """
+broken_manifests["mediated_links-missing-attrs.mf"] = """
 #
 # One of our mediated links is missing mediator-version/impl, causing a
 # general action validation error.
@@ -2396,9 +2184,7 @@ file path=usr/perl5/5.12/bin/perl owner=root group=sys mode=0755
 """
 
 expected_failures["noversion-incorp.mf"] = ["pkglint.action011"]
-broken_manifests[
-    "noversion-incorp.mf"
-] = """
+broken_manifests["noversion-incorp.mf"] = """
 #
 # We deliver an 'incorporate' dependency without specifying the version.
 #
@@ -2413,9 +2199,7 @@ depend type=incorporate fmri=pkg:/some/package
 """
 
 expected_failures["facetvalue-invalid.mf"] = ["pkglint.action012"]
-broken_manifests[
-    "facetvalue-invalid.mf"
-] = """
+broken_manifests["facetvalue-invalid.mf"] = """
 #
 # Intentionally set facet into a value other than 'true', 'false' or 'all'
 #
@@ -2433,9 +2217,7 @@ file path=usr/perl5/5.12/bin/perl owner=root group=sys mode=0755
 """
 
 expected_failures["file-elfbits32.mf"] = ["pkglint.action014.1"]
-broken_manifests[
-    "file-elfbits32.mf"
-] = """
+broken_manifests["file-elfbits32.mf"] = """
 #
 # One of the file has elfbits=32, causing an elfbits validation error.
 #
@@ -2450,9 +2232,7 @@ file nohash elfarch=i386 elfbits=32 elfhash=2d5abc9b99e65c52c1afde443e9c5da7a6fc
 """
 
 expected_failures["so-elfbits32.mf"] = []
-broken_manifests[
-    "so-elfbits32.mf"
-] = """
+broken_manifests["so-elfbits32.mf"] = """
 #
 # Should not cause validation error if an so file has elfbits=32.
 #
@@ -2467,9 +2247,7 @@ file nohash elfarch=i386 elfbits=32 elfhash=2d5abc9b99e65c52c1afde443e9c5da7a6fc
 """
 
 expected_failures["valid_usernames.mf"] = []
-broken_manifests[
-    "valid_usernames.mf"
-] = """
+broken_manifests["valid_usernames.mf"] = """
 #
 # Usernames are allowed to contain digit zero.
 #
@@ -2485,9 +2263,7 @@ user gcos-field="pkg(7) server UID" group=pkg5srv uid=97 username="pkg5s0v"
 expected_failures["multiple_consolidation_values.mf"] = [
     "opensolaris.manifest005.1"
 ]
-broken_manifests[
-    "multiple_consolidation_values.mf"
-] = """
+broken_manifests["multiple_consolidation_values.mf"] = """
 #
 # org.opensolaris.consolidation shouldn't have multiple values.
 #
@@ -2661,9 +2437,7 @@ class TestLintEngineDepot(pkg5unittest.ManyDepotTestCase):
 
     ref_mf = {}
 
-    ref_mf[
-        "ref-ancient-sample1.mf"
-    ] = """
+    ref_mf["ref-ancient-sample1.mf"] = """
 #
 # A sample package which delivers several actions, to an earlier release than
 # 0.140. This manifest has an intentional error, which we should detect when
@@ -2680,9 +2454,7 @@ file /etc/passwd path=etc/passwd group=sys mode=0644 owner=root preserve=true
 dir group=sys mode=0755 owner=root path=etc
 """
 
-    ref_mf[
-        "ref-old-sample1.mf"
-    ] = """
+    ref_mf["ref-old-sample1.mf"] = """
 #
 # A sample package which delivers several actions, to an earlier release than
 # 0.141
@@ -2696,9 +2468,7 @@ set name=variant.arch value=i386 value=sparc
 file /etc/passwd path=etc/passwd group=sys mode=0644 owner=root preserve=true
 dir group=sys mode=0755 owner=root path=etc
 """
-    ref_mf[
-        "ref-sample1.mf"
-    ] = """
+    ref_mf["ref-sample1.mf"] = """
 #
 # A sample package which delivers several actions, to 0.141
 #
@@ -2712,9 +2482,7 @@ file /etc/passwd path=etc/passwd group=sys mode=0644 owner=root preserve=true
 dir group=sys mode=0755 owner=root path=etc
 """
 
-    ref_mf[
-        "ref-sample2.mf"
-    ] = """
+    ref_mf["ref-sample2.mf"] = """
 #
 # A sample package which delivers several actions
 #
@@ -2729,9 +2497,7 @@ dir group=sys mode=0755 owner=root path=etc
 dir group=sys mode=0755 owner=root path=etc
 """
 
-    ref_mf[
-        "ref-sample3.mf"
-    ] = """
+    ref_mf["ref-sample3.mf"] = """
 #
 # A sample package which delivers several actions
 #
@@ -2745,9 +2511,7 @@ file /etc/group group=sys mode=0644 owner=root path=etc/group
 dir group=sys mode=0755 owner=root path=etc
 """
 
-    ref_mf[
-        "ref-sample4-not-obsolete"
-    ] = """
+    ref_mf["ref-sample4-not-obsolete"] = """
 #
 # This is not an obsolete package - used to check versioning
 #
@@ -2756,9 +2520,7 @@ set name=variant.opensolaris.zone value=global value=nonglobal variant.arch=i386
 set name=variant.arch value=i386
 """
 
-    ref_mf[
-        "ref-sample4-obsolete"
-    ] = """
+    ref_mf["ref-sample4-obsolete"] = """
 #
 # This is a perfectly valid example of an obsolete package
 #
@@ -2768,9 +2530,7 @@ set name=variant.opensolaris.zone value=global value=nonglobal variant.arch=i386
 set name=variant.arch value=i386
 """
 
-    ref_mf[
-        "dummy-ancestor.mf"
-    ] = """
+    ref_mf["dummy-ancestor.mf"] = """
 #
 # This is a dummy package designed trip a lint of no-ancestor-legacy.mf
 # we don't declare a dependency on the package delivering the legacy action.
@@ -2785,9 +2545,7 @@ set name=variant.arch value=i386 value=sparc
 depend fmri=system/more type=require
 """
 
-    ref_mf[
-        "twovar.mf"
-    ] = """
+    ref_mf["twovar.mf"] = """
 #
 # This package shares the kernel/strmod path with onevar.mf but has a different
 # set of variants for both the action and the package.  This should not cause
@@ -2802,9 +2560,7 @@ set name=variant.opensolaris.zone value=global value=nonglobal
 set name=pkg.fmri value=pkg://opensolaris.org/variant/twovar@0.5.11,5.11-0.148:20100910T211706Z
 dir group=sys mode=0755 owner=root path=kernel/strmod variant.opensolaris.zone=global
 """
-    ref_mf[
-        "no_rename-dummy-ancestor.mf"
-    ] = """
+    ref_mf["no_rename-dummy-ancestor.mf"] = """
 #
 # This is a dummy package designed trip a lint of no-ancestor-legacy.mf
 # we don't declare a dependency on the FMRI delivered by it.
@@ -2818,9 +2574,7 @@ set name=variant.arch value=i386 value=sparc
 depend fmri=system/kernel type=require
 """
 
-    ref_mf[
-        "legacy-uses-renamed-ancestor.mf"
-    ] = """
+    ref_mf["legacy-uses-renamed-ancestor.mf"] = """
 #
 # A package with a legacy action that points to a renamed ancestor
 #
@@ -2833,9 +2587,7 @@ set name=variant.arch value=i386 value=sparc
 legacy pkg="renamed-ancestor-old" desc="core kernel software for a specific instruction-set architecture" arch=i386 category=system hotline="Please contact your local service provider" name="Core Solaris Kernel (Root)" vendor="Sun Microsystems, Inc." version=11.11,REV=2009.11.11
 """
 
-    ref_mf[
-        "renamed-ancestor-old.mf"
-    ] = """
+    ref_mf["renamed-ancestor-old.mf"] = """
 #
 # The ancestor referred to above, but we've renamed it
 #
@@ -2848,9 +2600,7 @@ set name=variant.arch value=i386 value=sparc
 set name=pkg.renamed value=true
 depend fmri=renamed-ancestor-new type=require
 """
-    ref_mf[
-        "renamed-ancestor-new.mf"
-    ] = """
+    ref_mf["renamed-ancestor-new.mf"] = """
 #
 # The renamed legacy ancestor - this correctly depends on the latest
 # named version
@@ -2865,9 +2615,7 @@ set name=pkg.renamed value=true
 depend fmri=legacy-uses-renamed-ancestor type=require
 """
 
-    ref_mf[
-        "compat-renamed-ancestor-old.mf"
-    ] = """
+    ref_mf["compat-renamed-ancestor-old.mf"] = """
 #
 # A package with a legacy action that points to a package name that has the
 # leaf name that matches the 'pkg' attribute of the legacy action that it
@@ -2890,9 +2638,7 @@ set name=variant.arch value=i386 value=sparc
 legacy pkg="renamed-ancestor-old" desc="core kernel software for a specific instruction-set architecture" arch=i386 category=system hotline="Please contact your local service provider" name="Core Solaris Kernel (Root)" vendor="Sun Microsystems, Inc." version=11.11,REV=2009.11.11
 """
 
-    ref_mf[
-        "depend-possibly-obsolete.mf"
-    ] = """
+    ref_mf["depend-possibly-obsolete.mf"] = """
 #
 # We declare a dependency on a package that we intend to make obsolete
 # in the lint repository, though this package itself is perfectly valid.
@@ -2919,9 +2665,7 @@ depend fmri=system/obsolete-this type=require
         "pkglint.dupaction001.1",
         "pkglint.manifest004",
     ]
-    lint_mf[
-        "deliver-old-sample1.mf"
-    ] = """
+    lint_mf["deliver-old-sample1.mf"] = """
 #
 # We deliver something a package older version than our ref_repo has,
 # 0.140 instead of 0.141, this should cause errors unless we're
@@ -2941,9 +2685,7 @@ dir group=sys mode=0755 owner=root path=etc
 """
 
     expected_failures["deliver-new-sample1.mf"] = []
-    lint_mf[
-        "deliver-new-sample1.mf"
-    ] = """
+    lint_mf["deliver-new-sample1.mf"] = """
 #
 # We deliver a newer version than our reference repo has
 #
@@ -2960,9 +2702,7 @@ dir group=sys mode=0755 owner=root path=etc
     expected_failures["deliver-new-sample1-duplicate.mf"] = [
         "pkglint.dupaction001.1"
     ]
-    lint_mf[
-        "deliver-new-sample1-duplicate.mf"
-    ] = """
+    lint_mf["deliver-new-sample1-duplicate.mf"] = """
 #
 # We deliver a newer version than our reference repo has, intentionally
 # duplicating a file our reference repository has in sample3
@@ -2979,9 +2719,7 @@ dir group=sys mode=0755 owner=root path=etc
 """
 
     expected_failures["no-ancestor-legacy.mf"] = ["pkglint.action003.2"]
-    lint_mf[
-        "no-ancestor-legacy.mf"
-    ] = """
+    lint_mf["no-ancestor-legacy.mf"] = """
 #
 # We deliver a legacy action, but declare a package in the legacy action pkg=
 # field from the ref repo which doesn't depend on us.  Only one failure,
@@ -2998,9 +2736,7 @@ legacy arch=sparc category=system desc="core kernel software for a specific inst
 """
 
     expected_failures["unversioned-dep-obsolete.mf"] = ["pkglint.action005"]
-    lint_mf[
-        "unversioned-dep-obsolete.mf"
-    ] = """
+    lint_mf["unversioned-dep-obsolete.mf"] = """
 #
 # We declare a dependency without a version number, on an obsolete package
 # this should result in a lint error
@@ -3015,9 +2751,7 @@ depend fmri=pkg:/system/obsolete type=require
         """
 
     expected_failures["versioned-dep-obsolete.mf"] = ["pkglint.action005"]
-    lint_mf[
-        "versioned-dep-obsolete.mf"
-    ] = """
+    lint_mf["versioned-dep-obsolete.mf"] = """
 #
 # We declare a dependency on a version known to be obsolete
 #
@@ -3031,9 +2765,7 @@ depend fmri=pkg://opensolaris.org/system/obsolete@0.5.11,5.11-0.141 type=require
         """
 
     expected_failures["versioned-older-obsolete.mf"] = ["pkglint.action005"]
-    lint_mf[
-        "versioned-older-obsolete.mf"
-    ] = """
+    lint_mf["versioned-older-obsolete.mf"] = """
 #
 # We have dependency on an older version of the packages which was recently
 # made obsolete. Even though we declared the dependency on the non-obsolete
@@ -3050,9 +2782,7 @@ depend fmri=system/obsolete@0.5.11-0.140 type=require
         """
 
     expected_failures["onevar.mf"] = []
-    lint_mf[
-        "onevar.mf"
-    ] = """
+    lint_mf["onevar.mf"] = """
 #
 # Test that a package which is only published against one variant value doesn't
 # cause an assertion failure when it shares an action with another package.
@@ -3072,9 +2802,7 @@ dir group=sys mode=0755 owner=root path=kernel/strmod variant.arch=i386 variant.
     expected_failures["broken-renamed-ancestor-new.mf"] = [
         "pkglint.manifest002.3"
     ]
-    lint_mf[
-        "broken-renamed-ancestor-new.mf"
-    ] = """
+    lint_mf["broken-renamed-ancestor-new.mf"] = """
 #
 # A new version of one of the packages in the rename chain for
 # legacy-has-renamed-ancestor, which should result in an error.
@@ -3096,9 +2824,7 @@ depend fmri=renamed-ancestor-missing type=require
     expected_failures["self-depend-renamed-ancestor-new.mf"] = [
         "pkglint.manifest002.4"
     ]
-    lint_mf[
-        "self-depend-renamed-ancestor-new.mf"
-    ] = """
+    lint_mf["self-depend-renamed-ancestor-new.mf"] = """
 #
 # A new version of one of the packages in the rename chain for
 # legacy-has-renamed-ancestor, which should result in an error.
@@ -3118,9 +2844,7 @@ depend fmri=renamed-ancestor-new type=require
 """
 
     expected_failures["renamed-obsolete.mf"] = ["pkglint.manifest002.5"]
-    lint_mf[
-        "renamed-obsolete.mf"
-    ] = """
+    lint_mf["renamed-obsolete.mf"] = """
 #
 # We try to rename ourselves to an obsolete package.
 #
@@ -3135,9 +2859,7 @@ depend fmri=system/obsolete type=require
 """
 
     expected_failures["obsolete-this.mf"] = ["pkglint.manifest001.3"]
-    lint_mf[
-        "obsolete-this.mf"
-    ] = """
+    lint_mf["obsolete-this.mf"] = """
 #
 # Make this package obsolete.  Since it has a dependency in the ref_repository,
 # we should get a warning, but only when linting against that repo.
@@ -3149,9 +2871,7 @@ set name=variant.arch value=i386
 """
 
     lint_move_mf = {}
-    lint_move_mf[
-        "move-sample1.mf"
-    ] = """
+    lint_move_mf["move-sample1.mf"] = """
 #
 # A sample package which delivers several actions, to 0.161. We no longer
 # deliver etc/passwd, moving that to the package in move-sample2.mf below.
@@ -3165,9 +2885,7 @@ set name=variant.arch value=i386 value=sparc
 dir group=sys mode=0755 owner=root path=etc
 """
 
-    lint_move_mf[
-        "move-sample2.mf"
-    ] = """
+    lint_move_mf["move-sample2.mf"] = """
 #
 # A sample package which delivers several actions, we now deliver etc/passwd
 # also.
@@ -3185,9 +2903,7 @@ dir group=sys mode=0755 owner=root path=etc
 """
 
     lint_license_mf = {}
-    lint_license_mf[
-        "pkg1.mf"
-    ] = """
+    lint_license_mf["pkg1.mf"] = """
 set name=variant.arch value=i386 value=sparc
 set name=pkg.fmri value=pkg://opensolaris.org/pkg1@0.5.11,5.11-0.141:20100603T215050Z
 set name=info.classification value=org.opensolaris.category.2008:System/Core
@@ -3197,9 +2913,7 @@ set name=pkg.summary value="license test"
 license usr/share/lib/legalese.txt license="Foo"
 """
 
-    lint_license_mf[
-        "pkg2.mf"
-    ] = """
+    lint_license_mf["pkg2.mf"] = """
 set name=variant.arch value=i386 value=sparc
 set name=pkg.fmri value=pkg://opensolaris.org/pkg2@0.5.11,5.11-0.141:20100603T215050Z
 set name=info.classification value=org.opensolaris.category.2008:System/Core
@@ -3815,9 +3529,7 @@ class TestVolatileLintEngineDepot(pkg5unittest.ManyDepotTestCase):
     # The following two manifests check that given a package in the lint repository,
     # that we can access the latest version of that package from the reference
     # repository using LintEngine.get_manifest(.., reference=True)
-    get_manifest_data[
-        "get-manifest-ref.mf"
-    ] = """
+    get_manifest_data["get-manifest-ref.mf"] = """
 set name=pkg.fmri value=pkg://opensolaris.org/check/parent@0.5.11,5.11-0.100:20100603T215050Z
 set name=variant.arch value=i386 value=sparc
 set name=pkg.summary value="additional content"
@@ -3825,9 +3537,7 @@ set name=pkg.description value="core kernel software for a specific instruction-
 set name=org.opensolaris.consolidation value=osnet
 set name=info.classification value=org.opensolaris.category.2008:System/Core
 """
-    get_manifest_data[
-        "get-manifest-oldref.mf"
-    ] = """
+    get_manifest_data["get-manifest-oldref.mf"] = """
 set name=pkg.fmri value=pkg://opensolaris.org/check/parent@0.5.11,5.11-0.99:20100603T215050Z
 set name=variant.arch value=i386 value=sparc
 set name=pkg.summary value="additional content"
@@ -3835,9 +3545,7 @@ set name=pkg.description value="core kernel software for a specific instruction-
 set name=org.opensolaris.consolidation value=osnet
 set name=info.classification value=org.opensolaris.category.2008:System/Core
 """
-    get_manifest_data[
-        "get-manifest-lint.mf"
-    ] = """
+    get_manifest_data["get-manifest-lint.mf"] = """
 #
 # This is the manifest that should appear in the lint repository.
 #

@@ -4729,12 +4729,10 @@ class ImagePlan(object):
         actions."""
 
         return (
-            _(
-                """\
+            _("""\
 *****************************************************************************
 WARNING: The following actions have not been installed as this is a partial
-image (there are configured exclusions):"""
-            )
+image (there are configured exclusions):""")
             + "\n\n    "
             + "\n    ".join(elided)
             + """

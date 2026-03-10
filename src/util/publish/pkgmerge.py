@@ -108,9 +108,7 @@ def usage(errmsg="", exitcode=EXIT_BADOPT):
     if errmsg:
         emsg("pkgmerge: {0}".format(errmsg))
 
-    msg(
-        _(
-            """\
+    msg(_("""\
 Usage:
         pkgmerge [-n] -d dest_repo -s variant=value[,...],src_repo ...
             [-p publisher_prefix ... ] [pkg_fmri_pattern ...]
@@ -146,9 +144,7 @@ Environment:
         TMPDIR, TEMP, TMP
                 The absolute path of the directory where temporary data should
                 be stored during program execution.
-"""
-        )
-    )
+"""))
 
     sys.exit(exitcode)
 

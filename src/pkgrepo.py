@@ -152,9 +152,7 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT, full=False):
         logger.error(_("Try `pkgrepo --help or -?' for more information."))
         sys.exit(retcode)
 
-    msg(
-        _(
-            """\
+    msg(_("""\
 Usage:
         pkgrepo [options] command [cmd_options] [operands]
 
@@ -205,9 +203,7 @@ Subcommands:
 
 Options:
         --help or -?
-            Displays a usage message."""
-        )
-    )
+            Displays a usage message."""))
 
     sys.exit(retcode)
 
@@ -1375,13 +1371,9 @@ using the -t option.""",
     if unmatched:
         if manifests:
             logger.error("")
-        logger.error(
-            _(
-                """\
+        logger.error(_("""\
 pkgrepo: contents: no packages matching the following patterns you specified
-were found in the repository."""
-            )
-        )
+were found in the repository."""))
         logger.error("")
         for p in unmatched:
             logger.error("        {0}".format(p))
@@ -2493,14 +2485,10 @@ def __repo_diff(
             # Here "number of packages" and "total distinct
             # versions" are shown outside and inside of square
             # brackets respectively.
-            msg(
-                _(
-                    """
+            msg(_("""
 The table below shows the number of packages [total distinct versions]
 by publisher in the specified repositories.
-"""
-                )
-            )
+"""))
             for leg in res_dict["table_legend"]:
                 msg("* " + leg[0] + ": " + leg[1])
             msg("")

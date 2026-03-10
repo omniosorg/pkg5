@@ -2686,142 +2686,106 @@ class TestPkgLinkedRecurse(TestPkgLinked):
                             open kernel@1.0,5.11-0.1
                             add depend type=require fmri=pkg:/incorp
                             add depend type=parent fmri={0}
-                            close """.format(
-                pkg.actions.depend.DEPEND_SELF
-            ),
+                            close """.format(pkg.actions.depend.DEPEND_SELF),
             """
                             open kernel@1.0,5.11-0.2
                             add depend type=require fmri=pkg:/incorp
                             add depend type=parent fmri={0}
-                            close """.format(
-                pkg.actions.depend.DEPEND_SELF
-            ),
+                            close """.format(pkg.actions.depend.DEPEND_SELF),
             """
                             open network@1.0,5.11-0.1
                             add depend type=require fmri=pkg:/incorp
                             add depend type=parent fmri={0}
-                            close """.format(
-                pkg.actions.depend.DEPEND_SELF
-            ),
+                            close """.format(pkg.actions.depend.DEPEND_SELF),
             """
                             open network@1.0,5.11-0.2
                             add depend type=require fmri=pkg:/incorp
                             add depend type=parent fmri={0}
-                            close """.format(
-                pkg.actions.depend.DEPEND_SELF
-            ),
+                            close """.format(pkg.actions.depend.DEPEND_SELF),
             """
                             open incorp@1.0,5.11-0.1
                             add depend type=incorporate fmri=kernel@1.0,5.11-0.1
                             add depend type=incorporate fmri=network@1.0,5.11-0.1
                             add depend type=parent fmri={0}
-                            close """.format(
-                pkg.actions.depend.DEPEND_SELF
-            ),
+                            close """.format(pkg.actions.depend.DEPEND_SELF),
             """
                             open incorp@1.0,5.11-0.2
                             add depend type=incorporate fmri=kernel@1.0,5.11-0.2
                             add depend type=incorporate fmri=network@1.0,5.11-0.2
                             add depend type=parent fmri={0}
-                            close """.format(
-                pkg.actions.depend.DEPEND_SELF
-            ),
+                            close """.format(pkg.actions.depend.DEPEND_SELF),
             """
                             open kernel@1.0,5.11-0.1.1.0
                             add depend type=require fmri=pkg:/incorp
                             add depend type=require fmri=pkg:/idr1
                             add depend type=parent fmri={0}
-                            close """.format(
-                pkg.actions.depend.DEPEND_SELF
-            ),
+                            close """.format(pkg.actions.depend.DEPEND_SELF),
             """
                             open kernel@1.0,5.11-0.1.1.1
                             add depend type=require fmri=pkg:/incorp
                             add depend type=require fmri=pkg:/idr1
                             add depend type=parent fmri={0}
-                            close """.format(
-                pkg.actions.depend.DEPEND_SELF
-            ),
+                            close """.format(pkg.actions.depend.DEPEND_SELF),
             """
                             open kernel@1.0,5.11-0.1.2.0
                             add depend type=require fmri=pkg:/incorp
                             add depend type=require fmri=pkg:/idr2
                             add depend type=parent fmri={0}
-                            close """.format(
-                pkg.actions.depend.DEPEND_SELF
-            ),
+                            close """.format(pkg.actions.depend.DEPEND_SELF),
             """
                             open network@1.0,5.11-0.1.1.0
                             add depend type=require fmri=pkg:/incorp
                             add depend type=require fmri=pkg:/idr1
                             add depend type=parent fmri={0}
-                            close """.format(
-                pkg.actions.depend.DEPEND_SELF
-            ),
+                            close """.format(pkg.actions.depend.DEPEND_SELF),
             """
                             open network@1.0,5.11-0.1.1.1
                             add depend type=require fmri=pkg:/incorp
                             add depend type=require fmri=pkg:/idr1
                             add depend type=parent fmri={0}
-                            close """.format(
-                pkg.actions.depend.DEPEND_SELF
-            ),
+                            close """.format(pkg.actions.depend.DEPEND_SELF),
             """
                             open network@1.0,5.11-0.1.2.0
                             add depend type=require fmri=pkg:/incorp
                             add depend type=require fmri=pkg:/idr2
                             add depend type=parent fmri={0}
-                            close """.format(
-                pkg.actions.depend.DEPEND_SELF
-            ),
+                            close """.format(pkg.actions.depend.DEPEND_SELF),
             """
                             open idr1@1.0,5.11-0.1.1.0
                             add depend type=incorporate fmri=kernel@1.0,5.11-0.1.1.0
                             add depend type=incorporate fmri=network@1.0,5.11-0.1.1.0
                             add depend type=require fmri=idr1_entitlement
                             add depend type=parent fmri={0}
-                            close """.format(
-                pkg.actions.depend.DEPEND_SELF
-            ),
+                            close """.format(pkg.actions.depend.DEPEND_SELF),
             """
                             open idr1@1.0,5.11-0.1.1.1
                             add depend type=incorporate fmri=kernel@1.0,5.11-0.1.1.1
                             add depend type=incorporate fmri=network@1.0,5.11-0.1.1.1
                             add depend type=require fmri=idr1_entitlement
                             add depend type=parent fmri={0}
-                            close """.format(
-                pkg.actions.depend.DEPEND_SELF
-            ),
+                            close """.format(pkg.actions.depend.DEPEND_SELF),
             """
                             open idr2@1.0,5.11-0.1.2.0
                             add depend type=incorporate fmri=kernel@1.0,5.11-0.1.2.0
                             add depend type=incorporate fmri=network@1.0,5.11-0.1.2.0
                             add depend type=require fmri=idr2_entitlement
                             add depend type=parent fmri={0}
-                            close """.format(
-                pkg.actions.depend.DEPEND_SELF
-            ),
+                            close """.format(pkg.actions.depend.DEPEND_SELF),
             """
                             open idr1_entitlement@1.0,5.11-0
                             add depend type=exclude fmri=no-idrs
                             add depend type=parent fmri={0}
-                            close """.format(
-                pkg.actions.depend.DEPEND_SELF
-            ),
+                            close """.format(pkg.actions.depend.DEPEND_SELF),
             """
                             open idr2_entitlement@1.0,5.11-0
                             add depend type=exclude fmri=no-idrs
                             add depend type=parent fmri={0}
-                            close """.format(
-                pkg.actions.depend.DEPEND_SELF
-            ),
+                            close """.format(pkg.actions.depend.DEPEND_SELF),
             # hack to prevent idrs from being installed from repo...
             """
                             open no-idrs@1.0,5.11-0
                             add depend type=parent fmri={0}
-                            close """.format(
-                pkg.actions.depend.DEPEND_SELF
-            ),
+                            close """.format(pkg.actions.depend.DEPEND_SELF),
         )
 
         # publish additional idr packages
@@ -3183,16 +3147,12 @@ class TestPkgLinkedIncorpDowngrade(TestPkgLinked):
                     open incorp@1.0,5.11-0.1
                     add depend type=incorporate fmri=A@2
                     add depend type=parent fmri={0}
-                    close """.format(
-            pkg.actions.depend.DEPEND_SELF
-        ),
+                    close """.format(pkg.actions.depend.DEPEND_SELF),
         """
                     open incorp@2.0,5.11-0.1
                     add depend type=incorporate fmri=A@1
                     add depend type=parent fmri={0}
-                    close """.format(
-            pkg.actions.depend.DEPEND_SELF
-        ),
+                    close """.format(pkg.actions.depend.DEPEND_SELF),
         """
                     open A@1.0,5.11-0.1
                     add depend type=require fmri=pkg:/incorp
@@ -4996,9 +4956,7 @@ class TestPkgLinkedPaths(pkg5unittest.ManyDepotTestCase):
     zonename_sh = """
 #!/bin/sh
 echo global
-exit 0""".strip(
-        "\n"
-    )
+exit 0""".strip("\n")
 
     # fake zoneadm binary used for testing
     zoneadm_sh = """
@@ -5019,9 +4977,7 @@ cat <<-EOF
 -:kz:installed:$PKG_GZR/system/volatile/zones/kz1/zonepath::solaris-kz:excl:-:solaris-kz:
 -:s10:installed:$PKG_GZR/s10::solaris10:excl:-::
 EOF
-exit 0""".strip(
-        "\n"
-    )
+exit 0""".strip("\n")
 
     # generate packages that do need to be synced
     p_sync1_name_gen = "sync1"
@@ -5859,9 +5815,7 @@ exit 0""".strip(
 cat <<-EOF
 this is invalid zoneadm list -p output.
 EOF
-exit 0""".strip(
-            "\n"
-        )
+exit 0""".strip("\n")
 
         # create a zonename binary
         bin_zonename = os.path.join(base_path, "zonename")
@@ -5911,9 +5865,7 @@ cat <<-EOF
 0:global:running:$PKG_GZR::solaris:shared:-:none:
 -:z1:installed:$PKG_GZR/ngzzone_path_with_a\\:colon::solaris:excl:-::
 EOF
-exit 0""".strip(
-            "\n"
-        )
+exit 0""".strip("\n")
 
         # create a zonename binary
         bin_zonename = os.path.join(base_path, "zonename")

@@ -110,7 +110,7 @@ def parse_argv():
 #
 if __name__ == "__main__":
     try:
-        (_tracker, _gofast) = parse_argv()
+        _tracker, _gofast = parse_argv()
         progress.test_progress_tracker(_tracker, gofast=_gofast)
     except progress.ProgressTrackerException as e:
         print("Error: {0}".format(e), file=sys.stderr)

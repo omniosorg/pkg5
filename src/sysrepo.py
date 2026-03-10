@@ -122,9 +122,7 @@ catalog 1
 file 1
 syspub 0
 manifest 0
-""".format(
-    pkg.VERSION
-)
+""".format(pkg.VERSION)
 
 SYSREPO_USER = "pkg5srv"
 SYSREPO_GROUP = "pkg5srv"
@@ -171,16 +169,12 @@ def usage(usage_error=None, cmd=None, retcode=EXIT_BADOPT):
     if usage_error:
         error(usage_error, cmd=cmd)
 
-    msg(
-        _(
-            """\
+    msg(_("""\
 Usage:
         pkg.sysrepo -p <port> [-R image_root] [ -c cache_dir] [-h hostname]
                 [-l logs_dir] [-r runtime_dir] [-s cache_size] [-t template_dir]
                 [-T http_timeout] [-w http_proxy] [-W https_proxy]
-     """
-        )
-    )
+     """))
     sys.exit(retcode)
 
 

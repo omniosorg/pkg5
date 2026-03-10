@@ -45,7 +45,6 @@ from urllib.parse import quote, unquote, urlparse
 import pkg.catalog as catalog
 import pkg.misc as misc
 
-
 MIME_TYPE = "application/atom+xml"
 CACHE_FILENAME = "feed.xml"
 RFC3339_FMT = "%Y-%m-%dT%H:%M:%SZ"

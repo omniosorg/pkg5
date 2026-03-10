@@ -40,8 +40,7 @@ import pkg.portable as portable
 
 
 class TestImageConfig(pkg5unittest.Pkg5TestCase):
-    misc_files = {
-        imageconfig.CFG_FILE: """\
+    misc_files = {imageconfig.CFG_FILE: """\
 [policy]
 Display-Copyrights: False
 
@@ -64,8 +63,7 @@ repo.registered: True
 repo.registration_uri: http://zruty.sfbay:10001/reg.html
 repo.related_uris:
 sort_policy: priority
-"""
-    }
+"""}
 
     def setUp(self):
         pkg5unittest.Pkg5TestCase.setUp(self)
