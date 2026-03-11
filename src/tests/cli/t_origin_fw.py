@@ -38,8 +38,7 @@ class TestPkgFWDependencies(pkg5unittest.SingleDepotTestCase):
     # Only start/stop the depot once (instead of for every test)
     persistent_setup = True
     # leverage smf test infrastructure here
-    smf_cmds = {
-        "testdriver": """#!/usr/bin/python
+    smf_cmds = {"testdriver": """#!/usr/bin/python
 import os
 import resource
 import sys
@@ -72,8 +71,7 @@ if __name__ == "__main__":
         warnings.simplefilter('error')
 
         sys.exit(main())
-"""
-    }
+"""}
 
     def setUp(self):
         pkg5unittest.SingleDepotTestCase.setUp(self)
@@ -86,38 +84,28 @@ if __name__ == "__main__":
             ("1.2", "hobbit"),
             ("1.3", "wizard"),
         ):
-            self.pkg_list += [
-                """
+            self.pkg_list += ["""
                     open A@{0},5.11-0
                     add depend type=origin root-image=true fmri=pkg:/feature/firmware/testdriver minimum-version={1}
                     close
                     open B@{2},5.11-0
                     add depend type=origin root-image=true fmri=pkg:/feature/firmware/testdriver minimum-version={3}
-                    close """.format(
-                    *(t + t)
-                )
-            ]
+                    close """.format(*(t + t))]
 
-        self.pkg_list += [
-            """
+        self.pkg_list += ["""
                     open A@1.4,5.11-0
                     add depend type=origin root-image=true fmri=pkg:/feature/firmware/testdriver
-                    close """
-        ]
+                    close """]
 
-        self.pkg_list += [
-            """
+        self.pkg_list += ["""
                     open A@1.6,5.11-0
                     add depend type=origin root-image=true fmri=pkg:/feature/firmware/testdriver dump_core=1
-                    close"""
-        ]
+                    close"""]
 
-        self.pkg_list += [
-            """
+        self.pkg_list += ["""
                     open C@1.0,5.11-0
                     add depend type=origin root-image=true fmri=pkg:/feature/firmware/no-such-enumerator
-                    close"""
-        ]
+                    close"""]
 
     def tearDown(self):
         """Try to clean core files dumped by fwenum dump_core=1"""

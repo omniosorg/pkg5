@@ -1482,9 +1482,7 @@ str_basic =
 bool_basic = False
 str_basic = {0}
 
-""".format(
-                TH_PACKAGE
-            ),
+""".format(TH_PACKAGE),
             str(conf),
         )
 
@@ -1509,9 +1507,7 @@ str_basic =
 bool_basic = False
 str_basic = {0}
 
-""".format(
-                TH_PACKAGE
-            ),
+""".format(TH_PACKAGE),
             str(conf),
         )
 
@@ -1623,9 +1619,7 @@ version = 0
 
 [unknown_section]
 unknown_property = {0}
-""".format(
-            TH_PACKAGE
-        )
+""".format(TH_PACKAGE)
         scpath = self.make_misc_files({"cfg_cache": content})[0]
         conf = cfg.FileConfig(scpath, definitions=self._defs)
         self.assertEqual(conf.version, 0)
@@ -1642,9 +1636,7 @@ version = 2
 
 [new_section]
 new_property = {0}
-""".format(
-            TH_PACKAGE
-        )
+""".format(TH_PACKAGE)
         scpath = self.make_misc_files({"cfg_cache": content})[0]
         conf = cfg.FileConfig(scpath, definitions=self._defs)
         self.assertEqual(conf.version, 2)

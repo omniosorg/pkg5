@@ -305,10 +305,8 @@ sys::3:root,bin,adm
 
         # Test verification of multiple paths in a package.
         # Should not fail since files specified by paths are all intact.
-        self.pkg_verify(
-            "-v -p /etc/driver_aliases -p /etc/minor_perm \
-                    -p /etc/security/extra_privs"
-        )
+        self.pkg_verify("-v -p /etc/driver_aliases -p /etc/minor_perm \
+                    -p /etc/security/extra_privs")
 
         # Test verification of multiple paths in different packages.
         # Should not fail since files specified by paths are all intact.
@@ -651,10 +649,8 @@ sys::3:root,bin,adm
 
         # Update the UID manually and see if the verification fails
         passwd = open(os.path.join(self.get_img_path(), "etc", "passwd"), "w")
-        passwd.write(
-            """root:x:0:0:Super-User:/root:/usr/bin/bash
-user1:x:10001:111111:& User:/export/home/user1:/bin/sh"""
-        )
+        passwd.write("""root:x:0:0:Super-User:/root:/usr/bin/bash
+user1:x:10001:111111:& User:/export/home/user1:/bin/sh""")
         passwd.close()
 
         self.pkg_verify("var", exit=1)
@@ -700,11 +696,9 @@ user1:x:10001:111111:& User:/export/home/user1:/bin/sh"""
 
         # Remove Group manually and then verify package
         grp = open(os.path.join(self.get_img_path(), "etc", "group"), "w")
-        grp.write(
-            """root::0:
+        grp.write("""root::0:
 sys::3:root,bin,adm
-+::::"""
-        )
++::::""")
         grp.close()
 
         self.pkg_verify("multivar", su_wrap=True, exit=1)

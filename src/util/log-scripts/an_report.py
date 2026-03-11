@@ -34,7 +34,6 @@ import socket
 import sys
 import config
 
-
 # Apache combined log pattern
 comb_log_pat = re.compile(
     r"(?P<ip>[\d\.]*) - - \[(?P<date>[^:]*):(?P<time>\S*) (?P<tz>[^\]]*)\] \"(?P<op>GET|POST|HEAD|\S*) (?P<uri>\S*) HTTP/(?P<httpver>[^\"]*)\" (?P<response>\d*) (?P<subcode>\d*|-) \"(?P<refer>[^\"]*)\" \"(?P<agent>[^\"]*)\" \"(?P<uuid>[^\"]*)\" \"(?P<intent>[^\"]*)\""
@@ -151,35 +150,27 @@ def prefix_summary_open(fileprefix):
 
 
 def report_begin(cap_title):
-    print(
-        """\
+    print("""\
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
 <title>pkg.depotd Logs: {0}</title>
 </head>
-<body>""".format(
-            cap_title
-        )
-    )
+<body>""".format(cap_title))
 
 
 def report_end():
-    print(
-        """\
+    print("""\
 </body>
-</html>"""
-    )
+</html>""")
 
 
 def report_section_begin(cap_title, summary_file=None):
     msg = """\
 <br clear="all" />
 <div class="section">
-<h2>{0}</h2>""".format(
-        cap_title
-    )
+<h2>{0}</h2>""".format(cap_title)
 
     print(msg)
     if summary_file:
@@ -284,9 +275,7 @@ Average {5} requests per day: {6:.1f}</p>""".format(
 
     msg += """\
 <!-- {0} -->
-<img src=\"{1}\" alt=\"{2}\" /><br />""".format(
-        url, fname, title
-    )
+<img src=\"{1}\" alt=\"{2}\" /><br />""".format(url, fname, title)
 
     rf.close()
 
@@ -371,9 +360,7 @@ def report_by_country(data, title, summary_file=None):
 </script>
 <div id="{2}-country" class="yui-navset">
   <ul class="yui-nav">
-""".format(
-        title, title, title
-    )
+""".format(title, title, title)
 
     sel = 'class="selected"'
     for r in map_regions:

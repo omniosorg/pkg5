@@ -167,7 +167,7 @@ class TestP5I(pkg5unittest.Pkg5TestCase):
         # Verify that parse returns the expected object and information
         # when provided a file path.
         fobj.seek(0)
-        (fd1, path1) = tempfile.mkstemp(dir=self.test_root)
+        fd1, path1 = tempfile.mkstemp(dir=self.test_root)
         # tempfile.mkstemp open the file in binary mode
         os.write(fd1, misc.force_bytes(fobj.read()))
         os.close(fd1)

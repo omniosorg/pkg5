@@ -129,113 +129,81 @@ class TestDependencyAnalyzer(pkg5unittest.Pkg5TestCase):
 hardlink path=usr/foo target=../{syslog_path}
 hardlink path=usr/bar target=../{syslog_path}
 hardlink path=baz target={authlog_path}
-""".format(
-        **paths
-    )
+""".format(**paths)
 
     int_hardlink_manf = """ \
 hardlink path=usr/foo target=../{syslog_path}
 file NOHASH group=sys mode=0644 owner=root path={syslog_path}
-""".format(
-        **paths
-    )
+""".format(**paths)
 
     int_hardlink_manf_test_symlink = """ \
 hardlink path=usr/foo target=../{syslog_path}
 file NOHASH group=sys mode=0644 owner=root path=bar/syslog
-""".format(
-        **paths
-    )
+""".format(**paths)
 
     ext_script_manf = """ \
 file NOHASH group=bin mode=0755 owner=root path={script_path}
-""".format(
-        **paths
-    )
+""".format(**paths)
 
     int_script_manf = """ \
 file NOHASH group=bin mode=0755 owner=root path={script_path}
 file NOHASH group=bin mode=0755 owner=root path={ksh_path}
-""".format(
-        **paths
-    )
+""".format(**paths)
 
     ext_elf_manf = """ \
 file NOHASH group=bin mode=0755 owner=root path={curses_path}
-""".format(
-        **paths
-    )
+""".format(**paths)
 
     int_elf_manf = """ \
 file NOHASH group=bin mode=0755 owner=root path={libc_path}
 file NOHASH group=bin mode=0755 owner=root path={curses_path}
-""".format(
-        **paths
-    )
+""".format(**paths)
 
     ext_python_manf = """ \
 file NOHASH group=bin mode=0755 owner=root path={indexer_path}
-""".format(
-        **paths
-    )
+""".format(**paths)
 
     ext_python_pkg_manf = """ \
 file NOHASH group=bin mode=0755 owner=root path={pkg_path}
-""".format(
-        **paths
-    )
+""".format(**paths)
 
     python_mod_manf = """ \
 file NOHASH group=bin mode=0755 owner=root path={py_mod_path}
 file NOHASH group=bin mode=0755 owner=root path={py_mod_path_alt}
-""".format(
-        **paths
-    )
+""".format(**paths)
 
     relative_ext_depender_manf = """ \
 file NOHASH group=bin mode=0755 owner=root path={relative_depender}
-""".format(
-        **paths
-    )
+""".format(**paths)
     relative_int_manf = """ \
 file NOHASH group=bin mode=0755 owner=root path={relative_dependee}
 file NOHASH group=bin mode=0755 owner=root path={relative_depender}
-""".format(
-        **paths
-    )
+""".format(**paths)
 
     variant_manf_1 = """ \
 set name=variant.arch value=foo value=bar value=baz
 file NOHASH group=bin mode=0755 owner=root path={script_path}
 file NOHASH group=bin mode=0755 owner=root path={ksh_path} variant.arch=foo
-""".format(
-        **paths
-    )
+""".format(**paths)
 
     variant_manf_2 = """ \
 set name=variant.arch value=foo value=bar value=baz
 file NOHASH group=bin mode=0755 owner=root path={script_path} variant.arch=foo
 file NOHASH group=bin mode=0755 owner=root path={ksh_path} variant.arch=foo
-""".format(
-        **paths
-    )
+""".format(**paths)
 
     variant_manf_3 = """ \
 set name=variant.arch value=foo value=bar value=baz
 file NOHASH group=bin mode=0755 owner=root path={script_path} variant.arch=bar
 file NOHASH group=bin mode=0755 owner=root path={ksh_path} variant.arch=foo
-""".format(
-        **paths
-    )
+""".format(**paths)
 
     variant_manf_4 = """ \
 set name=variant.arch value=foo
 set name=variant.opensolaris.zone value=global value=nonglobal
 file NOHASH group=bin mode=0755 owner=root path={script_path} variant.opensolaris.zone=global
 file NOHASH group=bin mode=0755 owner=root path={ksh_path} variant.opensolaris.zone=global
-""".format(
-        **paths
-    )
+""".format(**paths)
 
     python_abs_text = """\
 #!/usr/bin/python
@@ -284,9 +252,7 @@ class Foo(object):
     ]
 
     smf_manifest_text = {}
-    smf_manifest_text[
-        "service_single"
-    ] = """<?xml version="1.0"?>
+    smf_manifest_text["service_single"] = """<?xml version="1.0"?>
 <!DOCTYPE service_bundle SYSTEM "/usr/share/lib/xml/dtd/service_bundle.dtd.1">
 <service_bundle type='manifest' name='service-default'>
 
@@ -356,9 +322,7 @@ class Foo(object):
         "svc:/application/pkg5test/delivered-many:nodeps2",
     ]
 
-    smf_manifest_text[
-        "service_single_specific"
-    ] = """<?xml version="1.0"?>
+    smf_manifest_text["service_single_specific"] = """<?xml version="1.0"?>
 <!DOCTYPE service_bundle SYSTEM "/usr/share/lib/xml/dtd/service_bundle.dtd.1">
 <service_bundle type='manifest' name='service-default'>
 
@@ -432,9 +396,7 @@ class Foo(object):
         "svc:/application/pkg5test/delivered-many"
     ]
 
-    smf_manifest_text[
-        "service_general"
-    ] = """<?xml version="1.0"?>
+    smf_manifest_text["service_general"] = """<?xml version="1.0"?>
 <!DOCTYPE service_bundle SYSTEM "/usr/share/lib/xml/dtd/service_bundle.dtd.1">
 <service_bundle type='manifest' name='service-general'>
 
@@ -511,9 +473,7 @@ class Foo(object):
         "svc:/application/pkg5test/foreign-many"
     ]
 
-    smf_manifest_text[
-        "service_many"
-    ] = """<?xml version="1.0"?>
+    smf_manifest_text["service_many"] = """<?xml version="1.0"?>
 <!DOCTYPE service_bundle SYSTEM "/usr/share/lib/xml/dtd/service_bundle.dtd.1">
 <service_bundle type='manifest' name='pkg5test-many-instances'>
 
@@ -606,9 +566,7 @@ class Foo(object):
         "svc:/application/pkg5test/another-unknown:default",
     ]
 
-    smf_manifest_text[
-        "service_unknown"
-    ] = """<?xml version="1.0"?>
+    smf_manifest_text["service_unknown"] = """<?xml version="1.0"?>
 <!DOCTYPE service_bundle SYSTEM "/usr/share/lib/xml/dtd/service_bundle.dtd.1">
 <service_bundle type='manifest' name='service-unknown'>
 
@@ -695,9 +653,7 @@ class Foo(object):
     smf_known_deps["svc:/application/pkg5test/delivered-many:nodeps"] = []
     smf_known_deps["svc:/application/pkg5test/delivered-many:nodeps1"] = []
 
-    smf_manifest_text[
-        "delivered_many_nodeps"
-    ] = """<?xml version="1.0"?>
+    smf_manifest_text["delivered_many_nodeps"] = """<?xml version="1.0"?>
 <!DOCTYPE service_bundle SYSTEM "/usr/share/lib/xml/dtd/service_bundle.dtd.1">
 <service_bundle type='manifest' name='default-service-many'>
 <!-- we deliver
@@ -746,9 +702,7 @@ None of these services or instances declare any dependencies.
     smf_known_deps["svc:/application/pkg5test/delivered-many:nodeps2"] = []
     smf_known_deps["svc:/application/pkg5test/delivered-many:nodeps3"] = []
 
-    smf_manifest_text[
-        "delivered_many_nodeps_alt"
-    ] = """<?xml version="1.0"?>
+    smf_manifest_text["delivered_many_nodeps_alt"] = """<?xml version="1.0"?>
 <!DOCTYPE service_bundle SYSTEM "/usr/share/lib/xml/dtd/service_bundle.dtd.1">
 <service_bundle type='manifest' name='default-service-many'>
 <!-- we deliver alternative instances of the "delivered-many" service.
@@ -801,9 +755,7 @@ None of these services or instances declare any dependencies.
     smf_known_deps["svc:/application/pkg5test/foreign-single"] = []
     smf_known_deps["svc:/application/pkg5test/foreign-single:nodeps"] = []
 
-    smf_manifest_text[
-        "foreign_single_nodeps"
-    ] = """<?xml version="1.0"?>
+    smf_manifest_text["foreign_single_nodeps"] = """<?xml version="1.0"?>
 <!DOCTYPE service_bundle SYSTEM "/usr/share/lib/xml/dtd/service_bundle.dtd.1">
 <service_bundle type='manifest' name='SUNWcsr:cron'>
 
@@ -859,9 +811,7 @@ None of these services or instances declare any dependencies.
     smf_known_deps["svc:/application/pkg5test/foreign-opt"] = []
     smf_known_deps["svc:/application/pkg5test/foreign-opt:nodeps"] = []
 
-    smf_manifest_text[
-        "foreign_many_nodeps"
-    ] = """<?xml version="1.0"?>
+    smf_manifest_text["foreign_many_nodeps"] = """<?xml version="1.0"?>
 <!DOCTYPE service_bundle SYSTEM "/usr/share/lib/xml/dtd/service_bundle.dtd.1">
 <service_bundle type='manifest' name='foreign-many-instances'>
 
@@ -942,9 +892,7 @@ None of these services or instances declare any dependencies.
 </service_bundle>
 """
 
-    smf_manifest_text[
-        "broken"
-    ] = """<?xml version="1.0"?>
+    smf_manifest_text["broken"] = """<?xml version="1.0"?>
 <!DOCTYPE service_bundle SYSTEM "/usr/share/lib/xml/dtd/service_bundle.dtd.1">
 <service_bundle type='manifest' name='broken-service'>
 
@@ -978,9 +926,7 @@ None of these services or instances declare any dependencies.
     ]
     smf_known_deps["svc:/application/pkg5test/deleteservice"] = []
     smf_known_deps["svc:/application/pkg5test/deleteservice:default"] = []
-    smf_manifest_text[
-        "delete"
-    ] = """<?xml version="1.0"?>
+    smf_manifest_text["delete"] = """<?xml version="1.0"?>
 <!DOCTYPE service_bundle SYSTEM "/usr/share/lib/xml/dtd/service_bundle.dtd.1">
 <service_bundle type='manifest' name='delete-service'>
 
@@ -1010,9 +956,7 @@ None of these services or instances declare any dependencies.
     int_smf_manf = """\
 file NOHASH group=sys mode=0644 owner=root path={service_single}
 file NOHASH group=sys mode=0644 owner=root path={delivered_many_nodeps}
-""".format(
-        **paths
-    )
+""".format(**paths)
 
     # service_general depends on a service, instances of which are delivered
     # by both of the other SMF manifests
@@ -1020,9 +964,7 @@ file NOHASH group=sys mode=0644 owner=root path={delivered_many_nodeps}
 file NOHASH group=sys mode=0644 owner=root path={service_general}
 file NOHASH group=sys mode=0644 owner=root path={delivered_many_nodeps_alt}
 file NOHASH group=sys mode=0644 owner=root path={delivered_many_nodeps}
-""".format(
-        **paths
-    )
+""".format(**paths)
 
     # a bypassed version of the above, to ensure that the use of
     # full_paths by SMFManifestDependency when multiple files are
@@ -1032,9 +974,7 @@ file NOHASH group=sys mode=0644 owner=root path={service_general} \
     pkg.depend.bypass-generate=.*var/svc/manifest/delivered-many-nodeps-alt.xml
 file NOHASH group=sys mode=0644 owner=root path={delivered_many_nodeps_alt}
 file NOHASH group=sys mode=0644 owner=root path={delivered_many_nodeps}
-""".format(
-        **paths
-    )
+""".format(**paths)
 
     # service_specific depends on instances delivered by both of the
     # other SMF manifests
@@ -1042,39 +982,29 @@ file NOHASH group=sys mode=0644 owner=root path={delivered_many_nodeps}
 file NOHASH group=sys mode=0644 owner=root path={service_single_specific}
 file NOHASH group=sys mode=0644 owner=root path={delivered_many_nodeps_alt}
 file NOHASH group=sys mode=0644 owner=root path={delivered_many_nodeps}
-""".format(
-        **paths
-    )
+""".format(**paths)
 
     ext_smf_manf = """\
 file NOHASH group=sys mode=0644 owner=root path={service_many}
 file NOHASH group=sys mode=0644 owner=root path={foreign_single_nodeps}
-""".format(
-        **paths
-    )
+""".format(**paths)
 
     broken_smf_manf = """\
 file NOHASH group=sys mode=0644 owner=root path={broken}
 file NOHASH group=sys mode=0644 owner=root path={delivered_many_nodeps}
 file NOHASH group=sys mode=0644 owner=root path={service_single}
-""".format(
-        **paths
-    )
+""".format(**paths)
 
     delete_smf_manf = """\
 file NOHASH group=sys mode=0644 owner=root path={delete}
 file NOHASH group=sys mode=0644 owner=root path={foreign_single_nodeps}
-""".format(
-        **paths
-    )
+""".format(**paths)
 
     faildeps_smf_manf = """\
 file NOHASH group=sys mode=0644 owner=root path={delivered_many_nodeps}
 file NOHASH group=sys mode=0644 owner=root path={service_single}
 file NOHASH group=sys mode=0644 owner=root path={service_unknown}
-""".format(
-        **paths
-    )
+""".format(**paths)
 
     script_text = "#!/usr/bin/ksh -p\n"
 
@@ -1086,9 +1016,7 @@ file NOHASH group=sys mode=0644 owner=root path={service_unknown}
 # functionality. pdtest is installed in a non-standard location and generates
 # dependencies on multiple files (pdtest.py, pdtest.pyc, pdtest.pyo, etc.)
 import pkgdep_runpath.pdtest
-""".format(
-        py_ver_default
-    )
+""".format(py_ver_default)
 
     # standard use of a runpath attribute
     python_runpath_manf = """\
@@ -1096,9 +1024,7 @@ file NOHASH group=sys mode=0755 owner=root path={bypass_path} \
     pkg.depend.runpath=opt:$PKGDEPEND_RUNPATH:dummy_directory
 file NOHASH group=sys mode=0755 owner=root path={runpath_mod_path}
 file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
-""".format(
-        **paths
-    )
+""".format(**paths)
 
     # a manifest which has an empty runpath (which is zany) - we will
     # throw an error here and want to test for it
@@ -1107,9 +1033,7 @@ file NOHASH group=sys mode=0755 owner=root path={bypass_path} \
     pkg.depend.runpath=""
 file NOHASH group=sys mode=0755 owner=root path={runpath_mod_path}
 file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
-""".format(
-        **paths
-    )
+""".format(**paths)
 
     # a manifest which has a broken runpath
     python_invalid_runpath_manf = """
@@ -1117,9 +1041,7 @@ file NOHASH group=sys mode=0755 owner=root path={bypass_path} \
     pkg.depend.runpath=foo pkg.depend.runpath=bar pkg.depend.runpath=opt
 file NOHASH group=sys mode=0755 owner=root path={runpath_mod_path}
 file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
-""".format(
-        **paths
-    )
+""".format(**paths)
 
     # a manifest which needs a runpath in order to generate deps properly
     python_invalid_runpath2_manf = """
@@ -1127,9 +1049,7 @@ file NOHASH group=sys mode=0755 owner=root path={bypass_path} \
     pkg.depend.runpath=$PKGDEPEND_RUNPATH:foo:$PKGDEPEND_RUNPATH
 file NOHASH group=sys mode=0755 owner=root path={runpath_mod_path}
 file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
-""".format(
-        **paths
-    )
+""".format(**paths)
 
     # a manifest that bypasses two files and sets a runpath
     python_bypass_manf = """
@@ -1139,18 +1059,14 @@ file NOHASH group=sys mode=0755 owner=root path={bypass_path} \
     pkg.depend.runpath=opt:$PKGDEPEND_RUNPATH
 file NOHASH group=sys mode=0755 owner=root path={runpath_mod_path}
 file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
-""".format(
-        py_ver_default, ext_suffix, **paths
-    )
+""".format(py_ver_default, ext_suffix, **paths)
 
     # a manifest that generates a single dependency, which we want to
     # bypass
     ksh_bypass_manf = """
 file NOHASH group=sys mode=055 owner=root path={script_path} \
     pkg.depend.bypass-generate=usr/bin/ksh
-""".format(
-        **paths
-    )
+""".format(**paths)
 
     # a manifest that generates a single dependency, which we want to
     # bypass.  Specifying just the filename means we should bypass all
@@ -1158,9 +1074,7 @@ file NOHASH group=sys mode=055 owner=root path={script_path} \
     ksh_bypass_filename_manf = """
 file NOHASH group=sys mode=055 owner=root path={script_path} \
     pkg.depend.bypass-generate=ksh
-""".format(
-        **paths
-    )
+""".format(**paths)
 
     # a manifest that generates a single dependency, which we want to
     # bypass, duplicating the value
@@ -1168,9 +1082,7 @@ file NOHASH group=sys mode=055 owner=root path={script_path} \
 file NOHASH group=sys mode=055 owner=root path={script_path} \
     pkg.depend.bypass-generate=usr/bin/ksh \
     pkg.depend.bypass-generate=usr/bin/ksh
-""".format(
-        **paths
-    )
+""".format(**paths)
 
     # a manifest that declares bypasses, none of which match the
     # dependences we generate
@@ -1181,9 +1093,7 @@ file NOHASH group=sys mode=0755 owner=root path={bypass_path} \
     pkg.depend.runpath=$PKGDEPEND_RUNPATH:opt
 file NOHASH group=sys mode=0755 owner=root path={runpath_mod_path}
 file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
-""".format(
-        **paths
-    )
+""".format(**paths)
 
     # a manifest which uses a wildcard to bypass all dependency generation
     python_wildcard_bypass_manf = """
@@ -1196,9 +1106,7 @@ file NOHASH group=sys mode=0755 owner=root path={runpath_mod_path} \
 file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path} \
     pkg.depend.bypass-generate=.* \
     pkg.depend.runpath=$PKGDEPEND_RUNPATH:opt
-""".format(
-        **paths
-    )
+""".format(**paths)
 
     # a manifest which uses a file wildcard to bypass generation
     python_wildcard_file_bypass_manf = """
@@ -1207,9 +1115,7 @@ file NOHASH group=sys mode=0755 owner=root path={bypass_path} \
     pkg.depend.runpath=$PKGDEPEND_RUNPATH:opt
 file NOHASH group=sys mode=0755 owner=root path={runpath_mod_path}
 file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
-""".format(
-        **paths
-    )
+""".format(**paths)
 
     # a manifest which uses a dir wildcard to bypass generation
     python_wildcard_dir_bypass_manf = """
@@ -1222,9 +1128,7 @@ file NOHASH group=sys mode=0755 owner=root path={bypass_path} \
     pkg.depend.runpath=$PKGDEPEND_RUNPATH:opt
 file NOHASH group=sys mode=0755 owner=root path={runpath_mod_path}
 file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
-""".format(
-        ext_suffix, **paths
-    )
+""".format(ext_suffix, **paths)
 
     # a manifest which uses a combination of directory, file and normal
     # bypass entries
@@ -1236,9 +1140,7 @@ file NOHASH group=sys mode=0755 owner=root path={bypass_path} \
     pkg.depend.runpath=$PKGDEPEND_RUNPATH:opt
 file NOHASH group=sys mode=0755 owner=root path={runpath_mod_path}
 file NOHASH group=sys mode=0755 owner=root path={runpath_mod_test_path}
-""".format(
-        py_ver_default, ext_suffix, **paths
-    )
+""".format(py_ver_default, ext_suffix, **paths)
 
     def glfilter(self, s):
         return set([x for x in s if not re.match(r"usr/gcc/\d+/", x)])

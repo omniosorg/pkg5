@@ -62,9 +62,7 @@ def report_by_date(data, title, summary_file=None):
     msg = """\
 <p>
 Period: {0} - {1} ({2:d} days)<br />
-""".format(
-        start_day, end_day, days
-    )
+""".format(start_day, end_day, days)
 
     ndays = days
     sz = chart_hz // ndays

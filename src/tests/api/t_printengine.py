@@ -60,7 +60,7 @@ class TestPrintEngine(pkg5unittest.Pkg5TestCase):
         # - Connect the printengine to the slave side
         # - Set it running
         #
-        (master, slave) = pty.openpty()
+        master, slave = pty.openpty()
         slavef = os.fdopen(slave, "w")
         masterf = os.fdopen(master, "r")
 

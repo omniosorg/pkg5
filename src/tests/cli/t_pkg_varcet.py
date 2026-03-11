@@ -491,9 +491,7 @@ arch {0[variant.arch]}
 opensolaris.imagetype full
 opensolaris.zone global
 rel dev
-""".format(
-            variants
-        )
+""".format(variants)
         self.__assert_variant_matches(exp_def)
 
         # Change the variant again
@@ -511,9 +509,7 @@ arch {0[variant.arch]}
 opensolaris.imagetype full
 opensolaris.zone global
 rel test
-""".format(
-            variants
-        )
+""".format(variants)
         self.__assert_variant_matches(exp_def)
 
     def __test_foo_variant_upgrade(self, pkg, variants):
@@ -529,17 +525,13 @@ arch {0[variant.arch]}
 icecream strawberry
 opensolaris.imagetype full
 opensolaris.zone global
-""".format(
-            variants
-        )
+""".format(variants)
         self.__assert_variant_matches(exp_def)
 
         # Matched because variant is implicitly false.
         exp_def = """\
 debug.foo false
-""".format(
-            variants
-        )
+""".format(variants)
         self.__assert_variant_matches(exp_def, names=["debug.foo"])
 
         # Matched because unknown variant is implicitly false.
@@ -557,9 +549,7 @@ foobar false
 arch {0[variant.arch]}
 opensolaris.imagetype full
 opensolaris.zone global
-""".format(
-            variants
-        )
+""".format(variants)
         names = ("arch", "'variant.*imagetype'", "'variant.*zone'")
         self.__assert_variant_matches(exp_def, names=names)
 
@@ -570,9 +560,7 @@ debug.foo false
 icecream strawberry
 opensolaris.imagetype full
 opensolaris.zone global
-""".format(
-            variants
-        )
+""".format(variants)
         opts = ("-a",)
         self.__assert_variant_matches(exp_def, opts=opts)
 
@@ -582,9 +570,7 @@ arch {0[variant.arch]}
 debug.foo false
 opensolaris.imagetype full
 opensolaris.zone global
-""".format(
-            variants
-        )
+""".format(variants)
         names = ("'variant.debug.*'", "arch", "'*imagetype'", "'*zone'")
         opts = ("-a",)
         self.__assert_variant_matches(exp_def, opts=opts, names=names)
@@ -593,9 +579,7 @@ opensolaris.zone global
         exp_def = """\
 debug.foo false
 icecream strawberry
-""".format(
-            variants
-        )
+""".format(variants)
         opts = ("-i",)
         self.__assert_variant_matches(exp_def, opts=opts)
 
@@ -617,9 +601,7 @@ icecream strawberry
         exp_def = """\
 icecream neapolitan
 icecream strawberry
-""".format(
-            variants
-        )
+""".format(variants)
         names = ("'ice*'",)
         opts = ("-av",)
         self.__assert_variant_matches(exp_def, opts=opts, names=names)
@@ -627,18 +609,14 @@ icecream strawberry
         # Matched case in packages.
         exp_def = """\
 icecream strawberry
-""".format(
-            variants
-        )
+""".format(variants)
         names = ("'variant.*[!o]'",)
         opts = ("-i",)
         self.__assert_variant_matches(exp_def, opts=opts, names=names)
 
         exp_def = """\
 debug.foo false
-""".format(
-            variants
-        )
+""".format(variants)
         names = ("*foo",)
         opts = ("-i",)
         self.__assert_variant_matches(exp_def, opts=opts, names=names)
@@ -652,9 +630,7 @@ arch {0[variant.arch]}
 icecream strawberry
 opensolaris.imagetype full
 opensolaris.zone global
-""".format(
-            variants
-        )
+""".format(variants)
 
         # Output should be the same for both -a and default cases with
         # no packages installed.
@@ -708,9 +684,7 @@ opensolaris.zone global
 arch {0[variant.arch]}
 opensolaris.imagetype full
 opensolaris.zone global
-""".format(
-            variants
-        )
+""".format(variants)
 
         for opts in ((), ("-a",)):
             # No operands specified case.
@@ -736,9 +710,7 @@ arch {0[variant.arch]}
 icecream strawberry
 opensolaris.imagetype full
 opensolaris.zone global
-""".format(
-            variants
-        )
+""".format(variants)
 
         # Output should be the same for both -a and default cases with
         # no packages installed.
@@ -756,9 +728,7 @@ arch {0[variant.arch]}
 icecream strawberry
 opensolaris.imagetype full
 opensolaris.zone global
-""".format(
-            variants
-        )
+""".format(variants)
         self.__assert_variant_matches(exp_def)
 
         # Verify -a output.
@@ -788,9 +758,7 @@ arch {0[variant.arch]}
 icecream strawberry
 opensolaris.imagetype full
 opensolaris.zone global
-""".format(
-            variants
-        )
+""".format(variants)
         self.__assert_variant_matches(exp_def)
 
         # Verify -a output.
@@ -800,17 +768,13 @@ icecream strawberry
 opensolaris.imagetype full
 opensolaris.zone global
 unknown false
-""".format(
-            variants
-        )
+""".format(variants)
         self.__assert_variant_matches(exp_def, opts=("-a",))
 
         # Verify -i output.
         exp_def = """\
 unknown false
-""".format(
-            variants
-        )
+""".format(variants)
         self.__assert_variant_matches(exp_def, opts=("-i",))
 
         # Verify -v, -av, and -iv output.
@@ -818,9 +782,7 @@ unknown false
             exp_def = """\
 unknown bar
 unknown foo
-""".format(
-                variants
-            )
+""".format(variants)
             self.__assert_variant_matches(exp_def, opts=opts)
 
     def test_02_varcet_reject(self):

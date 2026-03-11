@@ -65,9 +65,7 @@ endor-packages/pkg/client/indexer.py
 file NOHA\
 SH group=bin mode=0755 owner=root path=u\
 sr/xpg4/lib/libcurses.so.1
-""".format(
-        py_ver_default
-    )
+""".format(py_ver_default)
 
     test_manf_2 = """\
 set name=variant.arch value=foo value=bar
@@ -101,9 +99,7 @@ file NOHASH group=sys mode=0600 owner=root path=var/log/authlog preserve=true
 hardlink path=usr/baz target=lib/python{0}/foo/bar.py
 file usr/lib/python{0}/vendor-packages/pkg/client/indexer.py \
 group=bin mode=0755 owner=root path=usr/lib/python{0}/foo/bar.py
-""".format(
-        py_ver_default
-    )
+""".format(py_ver_default)
 
     elf_sub_manf = """\
 file {file_loc} group=bin mode=0755 owner=root path=bar/foo
@@ -598,37 +594,27 @@ from pkg.misc import EmptyI
 #!/usr/bin/python{0}
 
 import zlib
-""".format(
-        py3_ver
-    )
+""".format(py3_ver)
 
     python_amd_text = """\
 #!/usr/bin/amd64/python{0}
 
 import pkg.indexer as indexer
-""".format(
-        py_ver_default
-    )
+""".format(py_ver_default)
 
     python_amd_manf = """\
 file NOHASH group=bin mode=0755 owner=root path=usr/bin/amd64/python{0}-config
-""".format(
-        py_ver_default
-    )
+""".format(py_ver_default)
 
     python_sparcv9_text = """\
 #!/usr/bin/sparcv9/python{0}
 
 from pkg.misc import EmptyI
-""".format(
-        py_ver_default
-    )
+""".format(py_ver_default)
 
     python_sparcv9_manf = """\
 file NOHASH group=bin mode=0755 owner=root path=usr/bin/sparcv9/python{0}-config
-""".format(
-        py_ver_default
-    )
+""".format(py_ver_default)
 
     py_in_usr_bin_manf = """\
 file NOHASH group=bin mode=0755 owner=root path=usr/bin/pkg \
@@ -639,15 +625,12 @@ file NOHASH group=bin mode=0644 owner=root path=usr/bin/pkg \
 """
 
     # The #! line has lots of spaces to test for bug 14632.
-    pyver_python_text = (
-        "#!                  /usr/bin/python{0}     -S  "
-        + """
+    pyver_python_text = "#!                  /usr/bin/python{0}     -S  " + """
 import pkg.indexer as indexer
 import pkg.search_storage as ss
 import os.path
 from pkg.misc import EmptyI
 """
-    )
 
     pyver_test_manf_1 = """\
 file NOHASH group=bin mode=0755 owner=root path=usr/lib/python{py_ver}/vendor-packages/pkg/client/indexer.py \
@@ -664,24 +647,18 @@ file NOHASH group=bin mode=0644 owner=root path=usr/lib/python{py_ver}/vendor-pa
     inst_pkg = """\
 open example2_pkg@1.0,5.11-0
 add file tmp/foo mode=0555 owner=root group=bin path=/usr/bin/python{0}
-close""".format(
-        py_ver_default
-    )
+close""".format(py_ver_default)
 
     multi_deps = """\
 file NOHASH group=bin mode=0755 owner=root path=usr/lib/python{0}/v-p/pkg/client/indexer.py
 depend fmri=__TBD pkg.debug.depend.file=usr/bin/python{0} pkg.debug.depend.reason=usr/lib/python{0}/v-p/pkg/client/indexer.py pkg.debug.depend.type=script type=require
 depend fmri=__TBD pkg.debug.depend.file=usr/lib/python{0}/v-p/pkg/misc.py pkg.debug.depend.reason=usr/lib/python{0}/v-p/pkg/client/indexer.py pkg.debug.depend.type=python type=require
-""".format(
-        py_ver_default
-    )
+""".format(py_ver_default)
 
     misc_manf = """\
 set name=pkg.fmri value=pkg:/footest@0.5.11,5.11-0.117
 file NOHASH group=bin mode=0444 owner=root path=usr/lib/python{0}/v-p/pkg/misc.py
-""".format(
-        py_ver_default
-    )
+""".format(py_ver_default)
 
     unsatisfied_manf = """\
 set name=pkg.fmri value=pkg:/unsatisfied_manf
@@ -972,9 +949,7 @@ depend fmri={dummy_fmri} {pfx}.file=python{default} {pfx}.path=usr/bin {pfx}.rea
 
     pyver_mismatch_errs = """
 The file to be installed at usr/lib/python{0}/vendor-packages/pkg/client/indexer.py declares a python version of {1}.  However, the path suggests that the version should be {0}.  The text of the file can be found at {{0}}/usr/lib/python{0}/vendor-packages/pkg/client/indexer.py
-""".format(
-        py_ver_other, py_ver_default
-    )
+""".format(py_ver_other, py_ver_default)
 
     pyver_unspecified_ver_err = """
 The file to be installed in usr/bin/pkg does not specify a specific version of python either in its installed path nor in its text.  Such a file cannot be analyzed for dependencies since the version of python it will be used with is unknown.  The text of the file is here: {0}/usr/bin/pkg.
@@ -991,12 +966,9 @@ file NOHASH group=bin mode=0755 owner=root path=var/log/syslog variant.opensolar
 hardlink path=var/log/foobar target=syslog
 """
 
-    bug_15958_manf = (
-        """\
+    bug_15958_manf = """\
 set name=variant.opensolaris.zone value=global value=nonglobal
-"""
-        + bug_16808_manf
-    )
+""" + bug_16808_manf
 
     res_bug_15958 = """\
 depend fmri=__TBD pkg.debug.depend.file=syslog pkg.debug.depend.path=var/log pkg.debug.depend.reason=var/log/foobar pkg.debug.depend.type=hardlink type=require variant.opensolaris.zone=nonglobal

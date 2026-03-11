@@ -51,14 +51,10 @@ def usage(errmsg="", exitcode=EXIT_BADOPT):
     if errmsg:
         print("pkgmogrify: {0}".format(errmsg), file=sys.stderr)
 
-    print(
-        _(
-            """\
+    print(_("""\
 Usage:
         pkgmogrify [-vi] [-I includedir ...] [-D macro=value ...]
-            [-O outputfile] [-P printfile] [inputfile ...]"""
-        )
-    )
+            [-O outputfile] [-P printfile] [inputfile ...]"""))
     sys.exit(exitcode)
 
 

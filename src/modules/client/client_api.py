@@ -1309,12 +1309,12 @@ def __api_plan_exception(
         return __prepare_json(e.lix_exitrv, errors=errors_json)
     if e_type == api_errors.IpkgOutOfDateException:
         error = {
-            "info": _(
-                """\
+            "info": _("""\
 WARNING: pkg(7) appears to be out of date, and should be updated before
 running {op}.  Please update pkg(7) by executing 'pkg install
-pkg:/package/pkg' as a privileged user and then retry the {op}."""
-            ).format(**locals())
+pkg:/package/pkg' as a privileged user and then retry the {op}.""").format(
+                **locals()
+            )
         }
         errors_json.append(error)
         return __prepare_json(EXIT_OOPS, errors=errors_json)
@@ -2203,13 +2203,11 @@ def _publisher_set(
     # specified publisher prefix.
     if "data" not in ret_json:
         _error_json(
-            _(
-                """
+            _("""
 The specified repository did not contain any publisher configuration
 information.  This is likely the result of a repository configuration
 error.  Please contact the repository administrator for further
-assistance."""
-            ),
+assistance."""),
             errors_json=errors_json,
         )
         return __prepare_json(EXIT_OOPS, errors=errors_json)
@@ -3059,18 +3057,14 @@ def _info(
             err = EXIT_OOPS
         if not quiet:
             if info_local:
-                err_txt += _(
-                    """\
+                err_txt += _("""\
 pkg: info: no packages matching the following patterns you specified are
-installed on the system.  Try querying remotely instead:\n"""
-                )
+installed on the system.  Try querying remotely instead:\n""")
             elif info_remote:
-                err_txt += _(
-                    """\
+                err_txt += _("""\
 pkg: info: no packages matching the following patterns you specified were
 found in the catalog.  Try relaxing the patterns, refreshing, and/or
-examining the catalogs:\n"""
-                )
+examining the catalogs:\n""")
             err_txt += "\n"
             for p in notfound:
                 err_txt += "        {0}".format(p)

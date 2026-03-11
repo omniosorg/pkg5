@@ -64,9 +64,7 @@ def emit_search_report(summary_file, searchtype, label, results):
                         <div id="search-{searchtype}-container">
                         <table id="search-{searchtype}-table">
                         <thead><tr><th>Term</th><th>{label}</th></tr></thead>
-                """.format(
-                label=label, searchtype=searchtype
-            ),
+                """.format(label=label, searchtype=searchtype),
             file=summary_file,
         )
 
@@ -100,9 +98,7 @@ def emit_search_report(summary_file, searchtype, label, results):
             myColumnDefs, myDataSource,
             {sortedBy:{key:"{label}", dir:YAHOO.widget.DataTable.CLASS_DESC}});
 </script>
-                """.format(
-                label=label, searchtype=searchtype
-            ),
+                """.format(label=label, searchtype=searchtype),
             file=summary_file,
         )
 

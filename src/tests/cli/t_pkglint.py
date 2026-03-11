@@ -529,9 +529,7 @@ class TestPkglintCliDepot(pkg5unittest.ManyDepotTestCase):
     """Tests that exercise the CLI aspect of dealing with repositories"""
 
     ref_mf = {}
-    ref_mf[
-        "ref-sample1.mf"
-    ] = """
+    ref_mf["ref-sample1.mf"] = """
 #
 # A sample package which delivers several actions
 #
@@ -545,9 +543,7 @@ file /etc/passwd path=etc/passwd group=sys mode=0644 owner=root preserve=true
 dir group=sys mode=0755 owner=root path=etc
 """
 
-    ref_mf[
-        "ref-sample2.mf"
-    ] = """
+    ref_mf["ref-sample2.mf"] = """
 #
 # A sample package which delivers several actions
 #
@@ -562,9 +558,7 @@ dir group=sys mode=0755 owner=root path=etc
 dir group=sys mode=0755 owner=root path=etc
 """
 
-    ref_mf[
-        "ref-sample3.mf"
-    ] = """
+    ref_mf["ref-sample3.mf"] = """
 #
 # A sample package which delivers several actions
 #

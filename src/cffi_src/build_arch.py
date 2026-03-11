@@ -38,8 +38,7 @@ ffi.set_source(
     extra_compile_args=["-O3"],
 )
 
-ffi.cdef(
-    """
+ffi.cdef("""
 /* Macros */
 #define	SI_RELEASE  3            /* return release of operating system */
 #define	SI_ARCHITECTURE_32  516  /* basic 32-bit SI_ARCHITECTURE */
@@ -51,8 +50,7 @@ void *malloc(size_t);
 void *realloc(void *, size_t);
 void free(void *);
 int sysinfo(int, char *, long);
-"""
-)
+""")
 
 if __name__ == "__main__":
     ffi.compile(verbose=False)

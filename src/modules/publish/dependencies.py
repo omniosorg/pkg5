@@ -218,15 +218,13 @@ class NeedConditionalRequireAny(DependencyError):
         self.pkg_vct = pkg_vars
 
     def __str__(self):
-        s = _(
-            """\
+        s = _("""\
 pkgdepend has inferred conditional dependencies with different targets but
 which share a predicate.  pkg(7) can not represent these dependencies.  This
 issue can be resolved by changing the packaging of the links which generated the
 conditional dependencies so that they have different predicates or share the
 same FMRI.  Each pair of problematic conditional dependencies follows:
-"""
-        )
+""")
         for i, (d1, d2, v) in enumerate(self.conditionals):
             i += 1
             v.simplify(self.pkg_vct)

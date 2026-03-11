@@ -22,7 +22,7 @@
 
 #
 # Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
-# Copyright (c) 2008, 2025, Oracle and/or its affiliates.
+# Copyright (c) 2008, 2026, Oracle and/or its affiliates.
 #
 
 import cherrypy
@@ -2191,13 +2191,13 @@ class NastyDepotHTTP(DepotHTTP):
             ncorrupt = 1 + int(abs(random.gauss(0, 1)))
             for x in range(0, ncorrupt):
                 p = random.randint(0, max(0, filesz - 1))
-                char = ord(body[p])
+                char = body[p]
                 # pick a bit to flip; favor low numbers, must
                 # also cap at bit #7.
                 bit = min(7, int(abs(random.gauss(0, 3))))
                 # flip it
                 char ^= 1 << bit
-                body = body[:p] + chr(char) + body[p + 1 :]
+                body = body[:p] + char.to_bytes() + body[p + 1 :]
             response.body = body
         else:
             response.body = nfile.read(filesz)

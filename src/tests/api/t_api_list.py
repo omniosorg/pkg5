@@ -196,9 +196,7 @@ class TestApiList(pkg5unittest.ManyDepotTestCase):
 open {stem}@{ver}
 add set name=pkg.summary value="{summ}"
 add set name=pkg.description value="{desc}"
-""".format(
-                stem=stem, ver=ver, summ=summ, desc=desc
-            )
+""".format(stem=stem, ver=ver, summ=summ, desc=desc)
 
             cats = self.__get_pkg_cats(stem, sver)
             if cats:

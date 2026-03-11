@@ -250,16 +250,14 @@ class Pkg5TestCase(unittest.TestCase):
     bogus_url = "test.0.invalid"
     __debug_buf = ""
 
-    smf_cmds = {
-        "usr/bin/svcprop": """\
+    smf_cmds = {"usr/bin/svcprop": """\
 #!/usr/bin/python
 
 import sys
 
 if __name__ == "__main__":
         sys.exit(1)
-"""
-    }
+"""}
 
     def __init__(self, methodName="runTest"):
         super(Pkg5TestCase, self).__init__(methodName)

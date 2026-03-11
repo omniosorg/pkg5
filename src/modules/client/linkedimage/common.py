@@ -51,7 +51,6 @@ import select
 
 from functools import reduce
 
-
 # pkg classes
 import pkg.actions
 import pkg.altroot as ar
@@ -1701,7 +1700,7 @@ class LinkedImage(object):
 
         # Does the parent image (ourselves) reside in clonable BE?
         # Unused variable 'be_uuid'; pylint: disable=W0612
-        (be_name, be_uuid) = bootenv.BootEnv.get_be_name(self.__root)
+        be_name, be_uuid = bootenv.BootEnv.get_be_name(self.__root)
         # pylint: enable=W0612
         img_is_clonable = bool(be_name)
 
@@ -3501,7 +3500,7 @@ class LinkedImageChild(object):
         # make sure we're not going to block
         assert self.__pkg_remote.is_done()
 
-        (rv, e, stdout, stderr) = self.__pkg_remote.result()
+        rv, e, stdout, stderr = self.__pkg_remote.result()
         if e is not None:
             rv = pkgdefs.EXIT_OOPS
 

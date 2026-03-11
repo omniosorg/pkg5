@@ -230,77 +230,57 @@ stop/type astring method
 
         self.pkg_list = []
 
-        self.pkg_list += [
-            """
+        self.pkg_list += ["""
                     open basics@1.0,5.11-0
                     add file testdata/empty mode=0644 owner=root group=sys path=/test_restart restart_fmri=svc:/system/test_restart_svc:default
-                    close """
-        ]
+                    close """]
 
-        self.pkg_list += [
-            """
+        self.pkg_list += ["""
                     open basics@1.1,5.11-0
                     add file testdata/empty mode=0655 owner=root group=sys path=/test_restart restart_fmri=svc:/system/test_restart_svc:default
-                    close """
-        ]
+                    close """]
 
-        self.pkg_list += [
-            """
+        self.pkg_list += ["""
                     open basics@1.2,5.11-0
                     add file testdata/empty mode=0646 owner=root group=sys path=/test_restart restart_fmri=svc:/system/test_restart_svc:default
-                    close """
-        ]
+                    close """]
 
-        self.pkg_list += [
-            """
+        self.pkg_list += ["""
                     open basics@1.3,5.11-0
                     add file testdata/empty mode=0657 owner=root group=sys path=/test_restart refresh_fmri=svc:/system/test_refresh_svc:default
-                    close """
-        ]
+                    close """]
 
-        self.pkg_list += [
-            """
+        self.pkg_list += ["""
                     open basics@1.4,5.11-0
                     add file testdata/empty mode=0667 owner=root group=sys path=/test_restart suspend_fmri=svc:/system/test_suspend_svc:default
-                    close """
-        ]
+                    close """]
 
-        self.pkg_list += [
-            """
+        self.pkg_list += ["""
                     open basics@1.5,5.11-0
                     add file testdata/empty mode=0677 owner=root group=sys path=/test_restart suspend_fmri=svc:/system/test_suspend_svc:default disable_fmri=svc:/system/test_disable_svc:default
-                    close """
-        ]
+                    close """]
 
         # no fully specified FMRIs here
-        self.pkg_list += [
-            """
+        self.pkg_list += ["""
                     open basics@1.6,5.11-0
                     add file testdata/empty mode=0677 owner=root group=sys path=/test_restart restart_fmri=svc:/system/test_restart_svc suspend_fmri=svc:/system/test_suspend_svc disable_fmri=svc:/system/test_disable_svc
-                    close """
-        ]
+                    close """]
 
         # multiple FMRIs, some with globbing characters
-        self.pkg_list += [
-            """
+        self.pkg_list += ["""
                     open basics@1.7,5.11-0
                     add file testdata/empty mode=0677 owner=root group=sys path=/test_restart refresh_fmri=svc:/system/test_refresh_svc:default restart_fmri=svc:/system/test_restart_svc* suspend_fmri=svc:/sy*t?st_suspend_svc:def* disable_fmri=*test_disable_svc*
-                    close """
-        ]
+                    close """]
 
-        self.pkg_list += [
-            """
+        self.pkg_list += ["""
                     open basics@1.8,5.11-0
                     add file testdata/empty mode=0677 owner=root group=sys path=/test_restart restart_fmri=svc:/system/test_multi_svc1:default restart_fmri=svc:/system/test_multi_svc2:default
-                    close """
-        ]
+                    close """]
 
-        self.pkg_list += [
-            """
+        self.pkg_list += ["""
                     open basics@1.9,5.11-0
                     add file testdata/empty mode=0677 owner=root group=sys path=/test_restart disable_fmri=svc:/system/test_multi_svc1:default disable_fmri=svc:/system/test_multi_svc2:default
-                    close """
-        ]
+                    close """]
 
         self.make_misc_files(self.misc_files, prefix="testdata", mode=0o755)
 

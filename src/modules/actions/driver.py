@@ -259,22 +259,17 @@ class DriverAction(generic.Action):
                 "imgroot": image.get_root(),
             }
             if name in driver_actions:
-                raise RuntimeError(
-                    "\
+                raise RuntimeError("\
 The '{new}' driver shares the alias '{alias}' with the '{old}'\n\
 driver; both drivers cannot be installed simultaneously.  Please remove\n\
 the package delivering '{old}' or ensure that the package delivering\n\
-'{new}' will not be installed, and try the operation again.".format(
-                        **errdict
-                    )
-                )
+'{new}' will not be installed, and try the operation again.".format(**errdict))
             else:
                 comment = "# pkg(7): "
                 lines[line] = comment + lines[line]
                 # XXX Module printing
                 if be_name:
-                    print(
-                        "\
+                    print("\
 The '{new}' driver shares the alias '{alias}' with the '{old}'\n\
 driver, but the system cannot determine how the latter was delivered.\n\
 Its entry on line {line:d} in /etc/driver_aliases has been commented\n\
@@ -283,22 +278,15 @@ into the '{be}' boot environment and invoking 'rem_drv {old}'\n\
 as well as removing line {line:d} from /etc/driver_aliases or, before\n\
 rebooting, mounting the '{be}' boot environment and running\n\
 'rem_drv -b <mountpoint> {old}' and removing line {line:d} from\n\
-<mountpoint>/etc/driver_aliases.".format(
-                            **errdict
-                        )
-                    )
+<mountpoint>/etc/driver_aliases.".format(**errdict))
                 else:
-                    print(
-                        "\
+                    print("\
 The '{new}' driver shares the  alias '{alias}' with the '{old}'\n\
 driver, but the system cannot determine how the latter was delivered.\n\
 Its entry on line {line:d} in /etc/driver_aliases has been commented\n\
 out.  If this driver is no longer needed, it may be removed by invoking\n\
 'rem_drv -b {imgroot} {old}' as well as removing line {line:d}\n\
-from {imgroot}/etc/driver_aliases.".format(
-                            **errdict
-                        )
-                    )
+from {imgroot}/etc/driver_aliases.".format(**errdict))
 
             dap = image.get_root() + "/etc/driver_aliases"
             datd, datp = mkstemp(

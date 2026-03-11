@@ -144,8 +144,7 @@ def usage(text=None, retcode=EXIT_BADOPT, full=False):
         emsg(_("Try `pkg.depotd --help or -?' for more " "information."))
         sys.exit(retcode)
 
-    print(
-        """\
+    print("""\
 Usage: /usr/lib/pkg.depotd [-a address] [-d inst_root] [-p port] [-s threads]
            [-t socket_timeout] [--cfg] [--content-root]
            [--disable-ops op[/1][,...]] [--debug feature_list]
@@ -240,8 +239,7 @@ Options:
 Environment:
         PKG_REPO                Used as default inst_root if -d not provided.
         PKG_DEPOT_CONTENT       Used as default content_root if --content-root
-                                not provided."""
-    )
+                                not provided.""")
     sys.exit(retcode)
 
 

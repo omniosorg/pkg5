@@ -781,36 +781,28 @@ PUBLISHER PACKAGES STATUS           UPDATED
         cat_lm = pkg.catalog.datetime_to_ts(cat.last_modified)
         expected = """\
 test      3        online           {0}Z
-""".format(
-            cat_lm
-        )
+""".format(cat_lm)
         self.assertEqualDiff(expected, self.output)
 
         # Verify full tsv output.
         self.pkgrepo("info -s {0} -HF tsv".format(repo_uri))
         expected = """\
 test\t3\tonline\t{0}Z
-""".format(
-            cat_lm
-        )
+""".format(cat_lm)
         self.assertEqualDiff(expected, self.output)
 
         # Verify info specific publisher default output.
         self.pkgrepo("info -s {0} -H -p test".format(repo_uri))
         expected = """\
 test      3        online           {0}Z
-""".format(
-            cat_lm
-        )
+""".format(cat_lm)
         self.assertEqualDiff(expected, self.output)
 
         # Verify info specific publisher tsv output.
         self.pkgrepo("info -s {0} -HF tsv -p test".format(repo_uri))
         expected = """\
 test\t3\tonline\t{0}Z
-""".format(
-            cat_lm
-        )
+""".format(cat_lm)
         self.assertEqualDiff(expected, self.output)
 
     def test_03_info(self):

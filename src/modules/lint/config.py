@@ -31,7 +31,6 @@ import os
 import configparser
 from collections import OrderedDict
 
-
 defaults = {
     "log_level": "INFO",
     "do_pub_checks": "True",

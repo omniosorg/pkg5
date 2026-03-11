@@ -135,18 +135,14 @@ def cleanup(no_msg=False):
     global temp_root
 
     if repo_modified and not repo_finished and not no_msg:
-        error(
-            _(
-                """
+        error(_("""
 The target repository has been modified but the operation did not finish
 successfully. It is now in an inconsistent state.
 
 To re-try the operation, run the following commands:
   /usr/bin/pkgrepo rebuild -s {repo}
   {argv}
-"""
-            ).format(repo=repo_uri, argv=" ".join(sys.argv))
-        )
+""").format(repo=repo_uri, argv=" ".join(sys.argv)))
 
     if temp_root:
         shutil.rmtree(temp_root)
@@ -160,9 +156,7 @@ def usage(usage_error=None, cmd=None, retcode=pkgdefs.EXIT_BADOPT):
     if usage_error:
         error(usage_error, cmd=cmd)
 
-    emsg(
-        _(
-            """\
+    emsg(_("""\
 Usage:
         pkgsurf -s target_path -r ref_uri [-n] [-p publisher ...]
             [-i name ...] [-c pattern ...]
@@ -188,9 +182,7 @@ Options:
                         filesystem-based repository.
 
         -?/--help       Print this message.
-"""
-        )
-    )
+"""))
 
     sys.exit(retcode)
 

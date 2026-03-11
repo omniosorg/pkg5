@@ -30,7 +30,6 @@
 """Contains API functions and classes common to both pkg.client.api and
 pkg.server.api."""
 
-
 import pkg.client.pkgdefs as pkgdefs
 import pkg.fmri as fmri
 import pkg.misc as misc

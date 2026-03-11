@@ -622,7 +622,7 @@ class Indexer(object):
 
         try:
             for line in file_handle:
-                (tok, at_lst) = self._data_main_dict.parse_main_dict_line(line)
+                tok, at_lst = self._data_main_dict.parse_main_dict_line(line)
                 existing_entries = []
                 for at, st_list in at_lst:
                     st_res = []

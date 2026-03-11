@@ -152,8 +152,7 @@ file fff555ff9 mode=0555 owner=sch group=staff path=/usr/bin/i386/sort isa=i386
         # expected.
         m = manifest.Manifest()
         m.set_content(self.diverse_contents)
-        expected = sorted(
-            """\
+        expected = sorted("""\
 set name=com.sun,test value=false
 set name=pkg.description value="The Z Shell (zsh) is a Bourne-like shell designed for interactive use, although it is also a powerful scripting language.  Many of the useful features of bash, ksh, and tcsh were incorporated into zsh, but many original features were added."
 depend fmri=pkg:/library/libc type=require
@@ -164,8 +163,7 @@ dir group=bin mode=0755 owner=root path=usr/bin variant.arch=i386 variant.arch=s
 file fff555ff9 group=staff isa=i386 mode=0555 owner=sch path=usr/bin/i386/sort
 hardlink path=usr/bin/amd64/rksh93 target=ksh93 variant.opensolaris.zone=global
 link path=usr/lib/amd64/libjpeg.so target=libjpeg.so.62.0.0
-""".splitlines()
-        )
+""".splitlines())
         actual = sorted(l.strip() for l in m.as_lines())
 
         self.assertEqualDiff(expected, actual)
@@ -253,23 +251,19 @@ link path=usr/lib/amd64/libjpeg.so target=libjpeg.so.62.0.0
     def test_diffs7(self):
         """ASSERT: changes in attributes are detected"""
 
-        self.m1.set_content(
-            """
+        self.m1.set_content("""
             dir mode=0755 owner=root group=sys path=bin
             dir mode=0755 owner=root group=sys path=bin/foo
             file 00000000 mode=0644 owner=root group=sys path=a
             link path=bin/change-link target=change variant.opensolaris.zone=global
-                    """
-        )
+                    """)
 
-        self.m2.set_content(
-            """
+        self.m2.set_content("""
             dir mode=0755 owner=root group=sys path=bin
             dir mode=0555 owner=root group=sys path=bin/foo
             file 00000000 mode=0444 owner=root group=sys path=a
             link path=bin/change-link target=change variant.opensolaris.zone=nonglobal
-                    """
-        )
+                    """)
 
         diffs = self.m2.combined_difference(self.m1)
         #
@@ -283,18 +277,14 @@ link path=usr/lib/amd64/libjpeg.so target=libjpeg.so.62.0.0
     def test_diffs8(self):
         """ASSERT: changes in checksum are detected"""
 
-        self.m1.set_content(
-            """
+        self.m1.set_content("""
                     file 00000000 mode=0444 owner=root group=sys path=a
                     file 00000001 mode=0444 owner=root group=sys path=b
-                    """
-        )
-        self.m2.set_content(
-            """
+                    """)
+        self.m2.set_content("""
                     file 00000000 mode=0444 owner=root group=sys path=a
                     file 00000002 mode=0444 owner=root group=sys path=b
-                    """
-        )
+                    """)
 
         diffs = self.m2.combined_difference(self.m1)
         #
@@ -332,18 +322,14 @@ link path=usr/lib/amd64/libjpeg.so target=libjpeg.so.62.0.0
     def test_diffs10(self):
         """ASSERT: changes in target are detected"""
 
-        self.m1.set_content(
-            """
+        self.m1.set_content("""
                     link target=old path=a
                     hardlink target=old path=b
-                    """
-        )
-        self.m2.set_content(
-            """
+                    """)
+        self.m2.set_content("""
                     link target=new path=a
                     hardlink target=new path=b
-                    """
-        )
+                    """)
 
         diffs = self.m2.combined_difference(self.m1)
         #
@@ -363,16 +349,14 @@ link path=usr/lib/amd64/libjpeg.so target=libjpeg.so.62.0.0
 
         # XXX dp: "duplicates" is an odd name for this routine.
 
-        self.m1.set_content(
-            """\
+        self.m1.set_content("""\
 dir mode=0755 owner=root group=sys path=bin
 dir mode=0755 owner=root group=sys path=bin
 dir mode=0755 owner=root group=sys path=bin
 dir mode=0755 owner=root group=sys path=usr
 dir mode=0755 owner=root group=root path=usr
 dir mode=0755 owner=bin group=sys path=usr
-                        """
-        )
+                        """)
 
         acount = 0
         for kv, actions in self.m1.duplicates():

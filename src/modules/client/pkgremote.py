@@ -37,7 +37,6 @@ import subprocess
 import tempfile
 import traceback
 
-
 # pkg classes
 import pkg.client.api_errors as apx
 import pkg.client.pkgdefs as pkgdefs

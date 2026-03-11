@@ -103,15 +103,13 @@ except ImportError:
     import sys
 
     if sys.platform == "sunos5":
-        print(
-            """
+        print("""
 The Python environment on this system is damaged and missing a critical core
 component (pkg.site_paths) and can not be repaired with pkg(1).
 
 To recover this system reboot and select an alternate Boot Environment (BE)
 from the boot menu. From the alternate BE mount and run 'pkg fix' on this BE.
-"""
-        )
+""")
         sys.exit(1)
 
 pkg.site_paths.init()
@@ -650,23 +648,17 @@ def usage(
 
     if verbose:
         # Display a verbose usage message of subcommands.
-        logger.error(
-            _(
-                """\
+        logger.error(_("""\
 Usage:
         pkg [options] command [cmd_options] [operands]
-"""
-            )
-        )
+"""))
         logger.error(_("Basic subcommands:"))
         print_cmds(basic_cmds, basic_usage)
 
         logger.error(_("\nAdvanced subcommands:"))
         print_cmds(advanced_cmds, adv_usage)
 
-        logger.error(
-            _(
-                """
+        logger.error(_("""
 Options:
         -R dir
         --no-network-cache
@@ -674,21 +666,13 @@ Options:
 
 Environment:
         PKG_IMAGE
-        PKG_SUCCESS_ON_NOP"""
-            )
-        )
+        PKG_SUCCESS_ON_NOP"""))
     else:
         # Display the full list of subcommands.
-        logger.error(
-            _(
-                """\
-Usage:    pkg [options] command [cmd_options] [operands]"""
-            )
-        )
+        logger.error(_("""\
+Usage:    pkg [options] command [cmd_options] [operands]"""))
         logger.error(_("The following commands are supported:"))
-        logger.error(
-            _(
-                """
+        logger.error(_("""
 Package Information  : list           search         info      contents
 Package Transitions  : update         install        uninstall
                        history        exact-install  apply-hot-fix
@@ -703,9 +687,7 @@ Image Configuration  : refresh        rebuild-index  purge-history
                        property       set-property   add-property-value
                        unset-property remove-property-value
 Miscellaneous        : image-create   dehydrate      rehydrate     clean
-For more info, run: pkg help <command>"""
-            )
-        )
+For more info, run: pkg help <command>"""))
     sys.exit(retcode)
 
 
@@ -1047,31 +1029,23 @@ def __display_plan(api_inst, verbose, noexecute, op=None):
     if api_inst.is_liveroot and not api_inst.is_active_liveroot_be:
         # Warn the user since this isn't likely what they wanted.
         if plan.new_be:
-            logger.warning(
-                _(
-                    """\
+            logger.warning(_("""\
 
 ******************************************************************************
 WARNING: The boot environment being modified is not the active one.
          Changes made in the active BE will not be reflected on the next boot.
 ******************************************************************************
 
-"""
-                )
-            )
+"""))
         else:
-            logger.warning(
-                _(
-                    """\
+            logger.warning(_("""\
 
 ******************************************************************************
 WARNING: The boot environment being modified is not the active one.
          Changes made will not be reflected on the next boot.
 ******************************************************************************
 
-"""
-                )
-            )
+"""))
 
     # a = change(!!!) (due to fix or mediator/variant/facet)
     # c = update
@@ -2159,12 +2133,12 @@ def __api_plan_exception(op, noexecute, verbose, api_inst):
         return e.lix_exitrv
     if e_type == api_errors.IpkgOutOfDateException:
         msg(
-            _(
-                """\
+            _("""\
 WARNING: pkg(7) appears to be out of date, and should be updated before
 running {op}.  Please update pkg(7) by executing 'pkg install
-pkg:/package/pkg' as a privileged user and then retry the {op}."""
-            ).format(**locals())
+pkg:/package/pkg' as a privileged user and then retry the {op}.""").format(
+                **locals()
+            )
         )
         return EXIT_OOPS
     if e_type == api_errors.NonLeafPackageException:
@@ -2954,16 +2928,12 @@ def _emit_error_general_cb(
             if selected_type and err["errtype"] not in selected_type:
                 return False
 
-            emsg(
-                _(
-                    """
+            emsg(_("""
 To add a publisher using this repository, execute the following command as a
 privileged user:
 
 pkg set-publisher -g {0} <publisher>
-"""
-                ).format(add_info["repo_uri"])
-            )
+""").format(add_info["repo_uri"]))
         elif "info" in err:
             msg(err["info"])
         elif "reason" in err:
@@ -5018,15 +4988,9 @@ def list_contents(api_inst, args):
         if invalid_atype == action_types:
             usage(_("no valid action types specified"), cmd=subcommand)
         elif invalid_atype:
-            emsg(
-                _(
-                    """\
+            emsg(_("""\
 WARNING: invalid action types specified: {0}
-""".format(
-                        ",".join(invalid_atype)
-                    )
-                )
-            )
+""".format(",".join(invalid_atype))))
 
     check_attrs(attrs, subcommand)
 
@@ -5158,12 +5122,8 @@ WARNING: invalid action types specified: {0}
     rval = EXIT_OK
     if attr_match and manifests and not found:
         rval = EXIT_OOPS
-        logger.error(
-            _(
-                """\
-pkg: contents: no matching actions found in the listed packages"""
-            )
-        )
+        logger.error(_("""\
+pkg: contents: no matching actions found in the listed packages"""))
 
     if manifests and rval == EXIT_OK:
         displayed_results = display_contents_results(
@@ -5219,22 +5179,14 @@ the raw package manifests.""",
         if manifests:
             logger.error("")
         if local:
-            logger.error(
-                _(
-                    """\
+            logger.error(_("""\
 pkg: contents: no packages matching the following patterns you specified are
-installed on the system.  Try specifying -r to query remotely:"""
-                )
-            )
+installed on the system.  Try specifying -r to query remotely:"""))
         elif remote:
-            logger.error(
-                _(
-                    """\
+            logger.error(_("""\
 pkg: contents: no packages matching the following patterns you specified were
 found in the catalog.  Try relaxing the patterns, refreshing, and/or
-examining the catalogs:"""
-                )
-            )
+examining the catalogs:"""))
         logger.error("")
         for p in notfound:
             logger.error("        {0}".format(p))
@@ -6574,7 +6526,7 @@ def attach_linked(
     api_inst.progresstracker.set_major_phase(
         api_inst.progresstracker.PHASE_UTILITY
     )
-    (rv, err, p_dict) = api_inst.attach_linked_child(
+    rv, err, p_dict = api_inst.attach_linked_child(
         lin,
         li_path,
         li_props,
@@ -7964,13 +7916,9 @@ def handle_errors(func, non_wrap_print=True, *args, **kwargs):
     except api_errors.InvalidCatalogFile as __e:
         if _api_inst:
             _api_inst.abort(result=RESULT_FAILED_STORAGE)
-        logger.error(
-            _(
-                """
+        logger.error(_("""
 An error was encountered while attempting to read image state information
-to perform the requested operation.  Details follow:\n\n{0}"""
-            ).format(__e)
-        )
+to perform the requested operation.  Details follow:\n\n{0}""").format(__e))
         __ret = EXIT_OOPS
     except api_errors.InvalidDepotResponseException as __e:
         if _api_inst:

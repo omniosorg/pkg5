@@ -53,7 +53,7 @@ def __path_abs_to_relative(path):
 
     path_new = None
     while True:
-        (path, tail) = os.path.split(path)
+        path, tail = os.path.split(path)
         if not tail:
             break
         if path_new:

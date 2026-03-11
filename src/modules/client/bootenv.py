@@ -565,31 +565,23 @@ class BootEnv(object):
             os.rmdir(self.clone_dir)
 
             if set_active:
-                logger.info(
-                    _(
-                        """
+                logger.info(_("""
 A clone of {be_name} exists and has been updated and activated.
 On the next boot the Boot Environment {be_name_clone} will be
 mounted on '/'.  Reboot when ready to switch to this updated BE.
 
 *** Reboot required ***
 New BE: {be_name_clone}
-"""
-                    ).format(**self.__dict__)
-                )
+""").format(**self.__dict__))
             else:
-                logger.info(
-                    _(
-                        """
+                logger.info(_("""
 A clone of {be_name} exists and has been updated.  To set the
 new BE as the active one on next boot, execute the following
 command as a privileged user and reboot when ready to switch to
 the updated BE:
 
 beadm activate {be_name_clone}
-"""
-                    ).format(**self.__dict__)
-                )
+""").format(**self.__dict__))
 
         def activate_be():
             # Delete the snapshot that was taken before we

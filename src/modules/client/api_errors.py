@@ -55,10 +55,8 @@ class ApiException(Exception):
 
 class SuidUnsupportedError(ApiException):
     def __str__(self):
-        return _(
-            """
-The pkg client api module can not be invoked from an setuid executable."""
-        )
+        return _("""
+The pkg client api module can not be invoked from an setuid executable.""")
 
 
 class HistoryException(ApiException):
@@ -277,17 +275,13 @@ class PlanExclusionError(ApiException):
 
     def __str__(self):
         return "{0}\n\n    {1}\n\n{2}".format(
-            _(
-                """\
+            _("""\
 The files listed below match exclusions which are configured
-on this image and can therefore not be installed:"""
-            ),
+on this image and can therefore not be installed:"""),
             "\n    ".join(list(self.paths)),
-            _(
-                """\
+            _("""\
 See the 'exclude-patterns' and 'exclude-policy' image properties in pkg(1) for
-more information."""
-            ),
+more information."""),
         )
 
 
@@ -468,12 +462,10 @@ class PermissionsException(ApiException):
                 "command again as a privileged user."
             ).format(self.path)
         else:
-            return _(
-                """
+            return _("""
 Could not complete the operation because of insufficient permissions.
 Please try the command again as a privileged user.
-"""
-            )
+""")
 
 
 class FileInUseException(PermissionsException):
@@ -658,31 +650,25 @@ class PlanCreationException(ApiException):
     def __str__(self):
         res = []
         if self.unmatched_fmris:
-            s = _(
-                """\
+            s = _("""\
 The following pattern(s) did not match any allowable packages.  Try
 using a different matching pattern, or refreshing publisher information:
-"""
-            )
+""")
             res += [s]
             res += ["\t{0}".format(p) for p in self.unmatched_fmris]
 
         if self.rejected_pats:
-            s = _(
-                """\
+            s = _("""\
 The following pattern(s) only matched packages rejected by user request.  Try
 using a different matching pattern, or refreshing publisher information:
-"""
-            )
+""")
             res += [s]
             res += ["\t{0}".format(p) for p in self.rejected_pats]
 
         if self.wrong_variants:
-            s = _(
-                """\
+            s = _("""\
 The following pattern(s) only matched packages that are not available
-for the current image's architecture, zone type, and/or other variant:"""
-            )
+for the current image's architecture, zone type, and/or other variant:""")
             res += [s]
             res += ["\t{0}".format(p) for p in self.wrong_variants]
 
@@ -756,11 +742,9 @@ for the current image's architecture, zone type, and/or other variant:"""
                 res.extend(self.no_solution)
 
         if self.pkg_updates_required:
-            s = _(
-                """\
+            s = _("""\
 Syncing this linked image would require the following package updates:
-"""
-            )
+""")
             res += [s]
             for oldfmri, newfmri in self.pkg_updates_required:
                 res += [
@@ -773,14 +757,12 @@ Syncing this linked image would require the following package updates:
             res += self.no_version
 
         if self.no_tmp_origins:
-            s = _(
-                """
+            s = _("""
 The proposed operation on this parent image can not be performed because
 temporary origins were specified and this image has children.  Please either
 retry the operation again without specifying any temporary origins, or if
 packages from additional origins are required, please configure those origins
-persistently."""
-            )
+persistently.""")
             res = [s]
 
         if self.missing_dependency:
@@ -842,27 +824,19 @@ persistently."""
 
         if self.linked_pub_error:
             res = []
-            (pubs, parent_pubs) = self.linked_pub_error
+            pubs, parent_pubs = self.linked_pub_error
 
-            res.append(
-                _(
-                    """
+            res.append(_("""
 Invalid child image publisher configuration.  Child image publisher
 configuration must be a superset of the parent image publisher configuration.
 Please update the child publisher configuration to match the parent.  If the
 child image is a zone this can be done automatically by detaching and
 attaching the zone.
 
-The parent image has the following enabled publishers:"""
-                )
-            )
+The parent image has the following enabled publishers:"""))
             __format_li_pubs(parent_pubs, res)
-            res.append(
-                _(
-                    """
-The child image has the following enabled publishers:"""
-                )
-            )
+            res.append(_("""
+The child image has the following enabled publishers:"""))
             __format_li_pubs(pubs, res)
 
         if self.no_repo_pubs:
@@ -1977,11 +1951,9 @@ class BENamingNotSupported(BEException):
         self.be_name = be_name
 
     def __str__(self):
-        return _(
-            """\
+        return _("""\
 Boot environment naming during package install is not supported on this
-version of OpenSolaris. Please update without the --be-name option."""
-        )
+version of OpenSolaris. Please update without the --be-name option.""")
 
 
 class UnableToCopyBE(BEException):
@@ -1997,11 +1969,9 @@ class UnableToRenameBE(BEException):
 
     def __str__(self):
         d = {"orig": self.original_name, "dest": self.destination_name}
-        return _(
-            """\
+        return _("""\
 A problem occurred while attempting to rename the boot environment
-currently named {orig} to {dest}."""
-        ).format(**d)
+currently named {orig} to {dest}.""").format(**d)
 
 
 class UnableToMountBE(BEException):
@@ -2022,11 +1992,9 @@ class BENameGivenOnDeadBE(BEException):
         self.name = be_name
 
     def __str__(self):
-        return _(
-            """\
+        return _("""\
 Naming a boot environment when operating on a non-live image is
-not allowed."""
-        )
+not allowed.""")
 
 
 class UnrecognizedOptionsToInfo(ApiException):
@@ -2259,14 +2227,12 @@ class NoPublisherRepositories(TransportError):
         self.publisher = prefix
 
     def __str__(self):
-        return _(
-            """
+        return _("""
 The requested operation requires that one or more package repositories are
 configured for publisher '{0}'.
 
 Use 'pkg set-publisher' to add new package repositories or restore previously
-configured package repositories for publisher '{0}'."""
-        ).format(self.publisher)
+configured package repositories for publisher '{0}'.""").format(self.publisher)
 
 
 class MoveRelativeToSelf(PublisherError):
@@ -2523,15 +2489,13 @@ class UnknownSysrepoConfiguration(ApiException):
     repository but can't find the configuration for it."""
 
     def __str__(self):
-        return _(
-            """\
+        return _("""\
 pkg is configured to use the system repository (via the use-system-repo
 property) but it could not get the host and port from
 svc:/application/pkg/zones-proxy-client nor svc:/application/pkg/system-repository, and
 the PKG_SYSREPO_URL environment variable was not set.  Please try enabling one
 of those services or setting the PKG_SYSREPO_URL environment variable.
-"""
-        )
+""")
 
 
 class ModifyingSyspubException(ApiException):
@@ -3516,7 +3480,7 @@ class LinkedImageException(ApiException):
             err = _("Unknown child linked image: {0}").format(child_unknown)
 
         if cmd_failed is not None:
-            (rv, cmd, errout) = cmd_failed
+            rv, cmd, errout = cmd_failed
             err = _(
                 "The following subprocess returned an "
                 "unexpected exit code of {rv:d}:\n    {cmd}"
@@ -3528,7 +3492,7 @@ class LinkedImageException(ApiException):
                 )
 
         if cmd_output_invalid is not None:
-            (cmd, output) = cmd_output_invalid
+            cmd, output = cmd_output_invalid
             err = _(
                 "The following subprocess:\n"
                 "    {cmd}\n"
@@ -3614,26 +3578,23 @@ class LinkedImageException(ApiException):
 
         if pkg_op_failed is not None:
             assert lin
-            (op, exitrv, errout, e) = pkg_op_failed
+            op, exitrv, errout, e = pkg_op_failed
             assert op is not None
 
             if e is None:
-                err = _(
-                    """
+                err = _("""
 A '{op}' operation failed for child '{lin}' with an unexpected
 return value of {exitrv:d} and generated the following output:
 {errout}
 
-"""
-                ).format(
+""").format(
                     lin=lin,
                     op=op,
                     exitrv=exitrv,
                     errout=force_str(errout),
                 )
             else:
-                err = _(
-                    """
+                err = _("""
 A '{op}' operation failed for child '{lin}' with an unexpected
 exception:
 {e}
@@ -3641,8 +3602,7 @@ exception:
 The child generated the following output:
 {errout}
 
-"""
-                ).format(
+""").format(
                     lin=lin,
                     op=op,
                     errout=force_str(errout),
@@ -3662,9 +3622,8 @@ The child generated the following output:
             )
 
         if unparsable_output is not None:
-            (op, errout, e) = unparsable_output
-            err = _(
-                """
+            op, errout, e = unparsable_output
+            err = _("""
 A '{op}' operation for child '{lin}' generated non-json output.
 The json parser failed with the following error:
 {e}
@@ -3672,8 +3631,7 @@ The json parser failed with the following error:
 The child generated the following output:
 {errout}
 
-"""
-            ).format(
+""").format(
                 lin=lin,
                 op=op,
                 e=e,
@@ -3726,12 +3684,10 @@ class FreezePkgsException(ApiException):
     def __str__(self):
         res = []
         if self.multiversions:
-            s = _(
-                """\
+            s = _("""\
 The following packages were frozen at two different versions by
 the patterns provided.  The package stem and the versions it was frozen at are
-provided:"""
-            )
+provided:""")
             res += [s]
             res += [
                 "\t{0}\t{1}".format(
@@ -3741,22 +3697,18 @@ provided:"""
             ]
 
         if self.unmatched_wildcards:
-            s = _(
-                """\
+            s = _("""\
 The following patterns contained wildcards but matched no
-installed packages."""
-            )
+installed packages.""")
             res += [s]
             res += [
                 "\t{0}".format(pat) for pat in sorted(self.unmatched_wildcards)
             ]
 
         if self.version_mismatch:
-            s = _(
-                """\
+            s = _("""\
 The following patterns attempted to freeze the listed packages
-at a version different from the version at which the packages are installed."""
-            )
+at a version different from the version at which the packages are installed.""")
             res += [s]
             for pat in sorted(self.version_mismatch):
                 res += ["\t{0}".format(pat)]
@@ -3767,12 +3719,10 @@ at a version different from the version at which the packages are installed."""
                     ]
 
         if self.versionless_uninstalled:
-            s = _(
-                """\
+            s = _("""\
 The following patterns don't match installed packages and
 contain no version information.  Uninstalled packages can only be frozen by
-providing a version at which to freeze them."""
-            )
+providing a version at which to freeze them.""")
             res += [s]
             res += [
                 "\t{0}".format(p) for p in sorted(self.versionless_uninstalled)

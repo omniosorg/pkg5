@@ -48,8 +48,7 @@ class TestUserGroup(pkg5unittest.Pkg5TestCase):
             return
 
         grpfile = open(os.path.join(self.test_root, "etc", "group"), "w")
-        grpfile.write(
-            """root::0:
+        grpfile.write("""root::0:
 gk::0:
 other::1:root
 bin::2:root,daemon
@@ -57,8 +56,7 @@ sys::3:root,bin,adm
 adm::4:root,daemon
 uucp::5:root
 mail::6:root
-tty::7:root,adm"""
-        )
+tty::7:root,adm""")
         grpfile.close()
 
         self.assertRaises(
@@ -107,8 +105,7 @@ tty::7:root,adm"""
             return
 
         grpfile = open(os.path.join(self.test_root, "etc", "group"), "w")
-        grpfile.write(
-            """root::0:
+        grpfile.write("""root::0:
 blorg
 bin::2:root,daemon
 
@@ -118,8 +115,7 @@ uucp::5:root
 mail::6:root
 tty::7:root,adm
 gk::0:
-+"""
-        )
++""")
         grpfile.close()
         self.assertTrue(
             "root" == portable.get_name_by_gid(0, self.test_root, True)
@@ -161,8 +157,7 @@ gk::0:
             return
 
         grpfile = open(os.path.join(self.test_root, "etc", "group"), "w")
-        grpfile.write(
-            """root::0:
+        grpfile.write("""root::0:
 gk::0:
 bin::2:root,daemon
 +plusgrp
@@ -170,8 +165,7 @@ adm::4:root,daemon
 uucp::5:root
 mail::6:root
 tty::7:root,adm
-+"""
-        )
++""")
         grpfile.close()
         self.assertTrue(
             "root" == portable.get_name_by_gid(0, self.test_root, True)
@@ -199,8 +193,7 @@ tty::7:root,adm
             return
 
         passwd = open(os.path.join(self.test_root, "etc", "passwd"), "w")
-        passwd.write(
-            """root:x:0:0::/root:/usr/bin/bash
+        passwd.write("""root:x:0:0::/root:/usr/bin/bash
 gk:x:0:0::/root:/usr/bin/bash
 daemon:x:1:1::/:
 bin:x:2:2::/usr/bin:
@@ -208,8 +201,7 @@ sys:x:3:3::/:
 adm:x:4:4:Admin:/var/adm:
 lp:x:71:8:Line Printer Admin:/usr/spool/lp:
 uucp:x:5:5:uucp Admin:/usr/lib/uucp:
-moop:x:999:999:moop:/usr/moop:"""
-        )
+moop:x:999:999:moop:/usr/moop:""")
         passwd.close()
 
         self.assertRaises(
@@ -262,8 +254,7 @@ moop:x:999:999:moop:/usr/moop:"""
             return
 
         passwd = open(os.path.join(self.test_root, "etc", "passwd"), "w")
-        passwd.write(
-            """root:x:0:0::/root:/usr/bin/bash
+        passwd.write("""root:x:0:0::/root:/usr/bin/bash
 daemon:x:1:1::/:
 bin:x:2:2::/usr/bin:
 sys:x:3:3::/:
@@ -275,8 +266,7 @@ gk:x:0:0::/root:/usr/bin/bash
 adm:x:4:4:Admin:/var/adm:
 lp:x:71:8:Line Printer Admin:/usr/spool/lp:
 uucp:x:5:5:uucp Admin:/usr/lib/uucp:
-+"""
-        )
++""")
         passwd.close()
         self.assertTrue(
             0 == portable.get_user_by_name("root", self.test_root, True)
@@ -311,8 +301,7 @@ uucp:x:5:5:uucp Admin:/usr/lib/uucp:
             return
 
         passwd = open(os.path.join(self.test_root, "etc", "passwd"), "w")
-        passwd.write(
-            """root:x:0:0::/root:/usr/bin/bash
+        passwd.write("""root:x:0:0::/root:/usr/bin/bash
 gk:x:0:0::/root:/usr/bin/bash
 daemon:x:1:1::/:
 bin:x:2:2::/usr/bin:
@@ -321,8 +310,7 @@ sys:x:3:3::/:
 adm:x:4:4:Admin:/var/adm:
 lp:x:71:8:Line Printer Admin:/usr/spool/lp:
 uucp:x:5:5:uucp Admin:/usr/lib/uucp:
-+"""
-        )
++""")
         passwd.close()
         self.assertTrue(
             0 == portable.get_user_by_name("root", self.test_root, True)

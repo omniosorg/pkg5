@@ -115,7 +115,7 @@ class BaseLine(object):
         try:
             f = open(self.__filename, "w")
         except IOError as xxx_todo_changeme:
-            (err, msg) = xxx_todo_changeme.args
+            err, msg = xxx_todo_changeme.args
             print("ERROR: storing baseline:", file=sys.stderr)
             print(
                 "Failed to open {0}: {1}".format(self.__filename, msg),
@@ -144,7 +144,7 @@ class BaseLine(object):
         try:
             f = open(self.__filename, "r")
         except IOError as xxx_todo_changeme1:
-            (err, msg) = xxx_todo_changeme1.args
+            err, msg = xxx_todo_changeme1.args
             print("ERROR: loading baseline:", file=sys.stderr)
             print(
                 "Failed to open {0}: {1}".format(self.__filename, msg),

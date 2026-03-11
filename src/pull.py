@@ -105,9 +105,7 @@ def usage(usage_error=None, retcode=pkgdefs.EXIT_BADOPT):
     if usage_error:
         error(usage_error)
 
-    msg(
-        _(
-            """\
+    msg(_("""\
 Usage:
         pkgrecv [-aknrv] [-s src_uri] [-d (path|dest_uri)] [-c cache_dir]
             [-m match] [--mog-file file_path ...] [--raw]
@@ -202,9 +200,7 @@ Options:
 
 Environment:
         PKG_DEST        Destination directory or URI
-        PKG_SRC         Source URI or path"""
-        )
-    )
+        PKG_SRC         Source URI or path"""))
     sys.exit(retcode)
 
 

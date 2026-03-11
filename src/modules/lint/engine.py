@@ -381,7 +381,7 @@ class LintEngine(object):
             # the fifth parameter is 'level', which defaults to -1
             # in Python 2 and 0 in Python 3.
             __import__(name, None, None, [])
-            (checkers, excluded) = base.get_checkers(sys.modules[name], config)
+            checkers, excluded = base.get_checkers(sys.modules[name], config)
             return (checkers, excluded)
         except (KeyError, ImportError) as err:
             raise base.LintException(err)
@@ -459,12 +459,12 @@ class LintEngine(object):
             if "pkglint.ext" in key:
                 if value in excl:
                     # want to exclude everything from here
-                    (checkers, exclude) = self._load_checker_module(value, conf)
+                    checkers, exclude = self._load_checker_module(value, conf)
                     self.excluded_checkers.extend(checkers)
                     self.excluded_checkers.extend(exclude)
                     continue
                 try:
-                    (checkers, exclude) = self._load_checker_module(value, conf)
+                    checkers, exclude = self._load_checker_module(value, conf)
                     self.checkers.extend(checkers)
                     self.excluded_checkers.extend(exclude)
 

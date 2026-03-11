@@ -69,7 +69,7 @@ class PkgMapLine(object):
         self.klass = None
 
         if self.type == "i":
-            (self.pathname, self.size, self.chksum, self.modtime) = array[2:]
+            self.pathname, self.size, self.chksum, self.modtime = array[2:]
             return
 
         self.klass = array[2]
@@ -96,10 +96,10 @@ class PkgMapLine(object):
             ) = array[3:]
 
         elif self.type == "d" or self.type == "x" or self.type == "p":
-            (self.pathname, self.mode, self.owner, self.group) = array[3:]
+            self.pathname, self.mode, self.owner, self.group = array[3:]
 
         elif self.type == "l" or self.type == "s":
-            (self.pathname, self.target) = array[3].split("=")
+            self.pathname, self.target = array[3].split("=")
             self.target = self.target.replace("$BASEDIR", basedir)
         else:
             raise ValueError("Invalid file type: " + self.type)
@@ -212,7 +212,7 @@ class SolarisPackage(object):
             fp = open(self.pkgpath + "/install/depend")
         except IOError as xxx_todo_changeme:
             # Missing depend file is just fine
-            (err, msg) = xxx_todo_changeme.args
+            err, msg = xxx_todo_changeme.args
             # Missing depend file is just fine
             if err == errno.ENOENT:
                 return []
@@ -255,7 +255,7 @@ class SolarisPackage(object):
                     pkginfo["faspac"] = line.lstrip("#FASPACD=").split()
                 continue
 
-            (key, val) = line.split("=", 1)
+            key, val = line.split("=", 1)
             pkginfo[key] = val.strip('"')
 
         # Expose the platform-specific package name, too.

@@ -735,11 +735,9 @@ class TestPkgHydrate(pkg5unittest.ManyDepotTestCase):
         self.pkg("set-property signature-policy require-signatures")
         self.pkg("set-publisher -g " + self.rurl2 + " test2")
         self.pkg("install dev@1.0 etc@1.0")
-        assert_mediation_matches(
-            """\
+        assert_mediation_matches("""\
 vi\tsystem\t\tsystem\tdev\t
-"""
-        )
+""")
 
         warning = """\
 WARNING: pkg mediators may not be accurately shown when one or more publishers have been dehydrated. The correct mediation will be applied when the publishers are rehydrated.
@@ -757,11 +755,9 @@ WARNING: pkg mediators may not be accurately shown when one or more publishers h
         self.assertTrue(warning in self.output, self.output)
         self.pkg("rehydrate")
         assert_target(vi_path, dev_path)
-        assert_mediation_matches(
-            """\
+        assert_mediation_matches("""\
 vi\tsystem\t\tlocal\tdev\t
-"""
-        )
+""")
         self.pkg("verify")
 
         self.pkg("dehydrate -p test1 -p test2")
@@ -770,11 +766,9 @@ vi\tsystem\t\tlocal\tdev\t
         self.file_doesnt_exist(vi_path)
         self.pkg("rehydrate")
         assert_target(vi_path, dev_path)
-        assert_mediation_matches(
-            """\
+        assert_mediation_matches("""\
 vi\tsystem\t\tsystem\tdev\t
-"""
-        )
+""")
         self.pkg("verify")
 
         # If dehydrate all publishers that have the mediated hardlink
@@ -787,11 +781,9 @@ vi\tsystem\t\tsystem\tdev\t
         self.file_doesnt_exist(etc_path)
         self.pkg("rehydrate")
         assert_target(vi_path, etc_path)
-        assert_mediation_matches(
-            """\
+        assert_mediation_matches("""\
 vi\tsystem\t\tlocal\tetc\t
-"""
-        )
+""")
         self.pkg("verify")
 
         self.pkg("dehydrate -p test1 -p test2")
@@ -802,11 +794,9 @@ vi\tsystem\t\tlocal\tetc\t
         self.file_doesnt_exist(etc_path)
         self.pkg("rehydrate")
         assert_target(vi_path, dev_path)
-        assert_mediation_matches(
-            """\
+        assert_mediation_matches("""\
 vi\tsystem\t\tsystem\tdev\t
-"""
-        )
+""")
         self.pkg("verify")
 
         # If dehydrate only a publisher that has the mediated hardlink
@@ -818,11 +808,9 @@ vi\tsystem\t\tsystem\tdev\t
         self.pkg("set-mediator -vvv -I dev vi")
         self.pkg("rehydrate -vvv")
         assert_target(vi_path, dev_path)
-        assert_mediation_matches(
-            """\
+        assert_mediation_matches("""\
 vi\tsystem\t\tlocal\tdev\t
-"""
-        )
+""")
         self.pkg("verify")
 
         self.pkg("dehydrate -p test2")
@@ -831,11 +819,9 @@ vi\tsystem\t\tlocal\tdev\t
         self.pkg("unset-mediator -vvv vi")
         self.pkg("rehydrate")
         assert_target(vi_path, dev_path)
-        assert_mediation_matches(
-            """\
+        assert_mediation_matches("""\
 vi\tsystem\t\tsystem\tdev\t
-"""
-        )
+""")
         self.pkg("verify")
 
         self.pkg("dehydrate -p test1")
@@ -844,11 +830,9 @@ vi\tsystem\t\tsystem\tdev\t
         self.pkg("set-mediator -vvv -I dev vi")
         self.pkg("rehydrate")
         assert_target(vi_path, dev_path)
-        assert_mediation_matches(
-            """\
+        assert_mediation_matches("""\
 vi\tsystem\t\tlocal\tdev\t
-"""
-        )
+""")
         self.pkg("verify")
 
         self.pkg("dehydrate -p test1")
@@ -857,11 +841,9 @@ vi\tsystem\t\tlocal\tdev\t
         self.pkg("set-mediator -vvv -I etc vi")
         self.pkg("rehydrate")
         assert_target(vi_path, etc_path)
-        assert_mediation_matches(
-            """\
+        assert_mediation_matches("""\
 vi\tsystem\t\tlocal\tetc\t
-"""
-        )
+""")
         self.pkg("verify")
 
         self.pkg("dehydrate -p test1")
@@ -870,11 +852,9 @@ vi\tsystem\t\tlocal\tetc\t
         self.pkg("unset-mediator -vvv vi")
         self.pkg("rehydrate")
         assert_target(vi_path, dev_path)
-        assert_mediation_matches(
-            """\
+        assert_mediation_matches("""\
 vi\tsystem\t\tsystem\tdev\t
-"""
-        )
+""")
         self.pkg("verify")
 
         # If dehydrate only a publisher that has the mediated hardlink
@@ -887,11 +867,9 @@ vi\tsystem\t\tsystem\tdev\t
         self.file_doesnt_exist(etc_path)
         self.pkg("rehydrate")
         assert_target(vi_path, etc_path)
-        assert_mediation_matches(
-            """\
+        assert_mediation_matches("""\
 vi\tsystem\t\tlocal\tetc\t
-"""
-        )
+""")
         self.pkg("verify")
 
 

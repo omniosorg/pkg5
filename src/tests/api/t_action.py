@@ -95,25 +95,17 @@ class TestActions(pkg5unittest.Pkg5TestCase):
             value.sort()
 
         if attrs != value:
-            self.fail(
-                """\
+            self.fail("""\
 Incorrect attribute value.
     Expected: {0}
-    Actual:   {1}""".format(
-                    value, attrs
-                )
-            )
+    Actual:   {1}""".format(value, attrs))
 
     def assertAttributes(self, action, attrlist):
         if sorted(action.attrs.keys()) != sorted(attrlist):
-            self.fail(
-                """\
+            self.fail("""\
 Incorrect attribute list.
     Expected: {0}
-    Actual:   {1}""".format(
-                    sorted(attrlist), sorted(action.attrs.keys())
-                )
-            )
+    Actual:   {1}""".format(sorted(attrlist), sorted(action.attrs.keys())))
 
     def test_action_parser(self):
         action.fromstr("file 12345 name=foo path=/tmp/foo")

@@ -418,30 +418,22 @@ class TestPkgMediated(pkg5unittest.SingleDepotTestCase):
                 ]
             ],
         )
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 mta\tsystem\t\tlocal\tsendmail\t
-"""
-        )
+""")
 
         self.pkg("set-mediator -vvv -V 1.0 mta")
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 mta\tlocal\t1.0\tlocal\tsendmail\t
-"""
-        )
+""")
         self.pkg("set-mediator -vvv -V '' -I sendmail mta")
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 mta\tsystem\t\tlocal\tsendmail\t
-"""
-        )
+""")
         self.pkg("set-mediator -vvv -V 1.0 -I postfix@1.0 mta")
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 mta\tlocal\t1.0\tlocal\tpostfix@1.0\t
-"""
-        )
+""")
 
         # Verify unprilveged user attempting unset-mediator results in
         # graceful failure.
@@ -449,11 +441,9 @@ mta\tlocal\t1.0\tlocal\tpostfix@1.0\t
 
         # Verify individual components of mediation can be unset.
         self.pkg("unset-mediator -vvv -V mta")
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 mta\tsystem\t\tlocal\tpostfix@1.0\t
-"""
-        )
+""")
         # Test the parsable output of set-mediator.
         self.pkg("set-mediator --parsable=0 -V 1.0 mta")
         self.assertEqualParsable(
@@ -466,11 +456,9 @@ mta\tsystem\t\tlocal\tpostfix@1.0\t
                 ]
             ],
         )
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 mta\tlocal\t1.0\tlocal\tpostfix@1.0\t
-"""
-        )
+""")
 
         self.pkg("unset-mediator -n --parsable=0 -I mta")
         self.assertEqualParsable(
@@ -494,27 +482,22 @@ mta\tlocal\t1.0\tlocal\tpostfix@1.0\t
                 ]
             ],
         )
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 mta\tlocal\t1.0\tsystem\t\t
-"""
-        )
+""")
 
         # Verify unsetting last component without installed package
         # results in completely removing mediation.
         self.pkg("unset-mediator -vvv -V mta")
-        self.__assert_mediation_matches(
-            """\
-"""
-        )
+        self.__assert_mediation_matches("""\
+""")
 
         # Now install some packages to test the ability to list
         # available mediations.
         self.pkg("install -vvv \\*/python\\* \\*perl\\* \\*vi\\*")
 
         # Test listing all available mediations.
-        self.__assert_available_mediation_matches(
-            """\
+        self.__assert_available_mediation_matches("""\
 perl\tsystem\t5.10.0\tsystem\t\t
 perl\tsystem\t5.8.4\tsystem\t\t
 python\tsystem\t3.5\tsystem\tunladen-swallow@3.5\t
@@ -525,8 +508,7 @@ python\tsystem\t2.7\tsystem\tunladen-swallow\t
 vi\tsite\t\tsite\tvim\t
 vi\tvendor\t\tvendor\tnvi\t
 vi\tsystem\t\tsystem\tsvr4\t
-"""
-        )
+""")
 
         # Dump image cache before continuing to verify the
         # information is re-generated and operations succeed.
@@ -682,11 +664,9 @@ vi\tsystem\t\tsystem\tsvr4\t
         # verify passes.
         check_target(gen_mta_links(), "sendmail-mta")
         self.pkg("verify")
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 mta\tsystem\t\tsystem\tsendmail\t
-"""
-        )
+""")
 
         # Upgrading to 3.0 should change the targets of every link.
         self.pkg("install -vvv sendmail@3")
@@ -715,11 +695,9 @@ mta\tsystem\t\tsystem\tsendmail\t
         self.pkg("install -vvv postfix@1")
         check_target(gen_mta_links(), "postfix")
         self.pkg("verify")
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 mta\tsystem\t\tsystem\tpostfix\t
-"""
-        )
+""")
 
         # Remove the links for postfix, and then check that verify
         # fails and that fix will restore the correct ones.
@@ -734,11 +712,9 @@ mta\tsystem\t\tsystem\tpostfix\t
         # a change since mediation will now be marked as source
         # 'local'.
         self.pkg("set-mediator -vvv -I postfix mta")
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 mta\tsystem\t\tlocal\tpostfix\t
-"""
-        )
+""")
 
         # Verify that setting the same mediation again results in no
         # changes since mediation is already effective and marked as
@@ -747,11 +723,9 @@ mta\tsystem\t\tlocal\tpostfix\t
 
         # Now change mediation implementation to sendmail.
         self.pkg("set-mediator -vvv -I sendmail mta")
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 mta\tsystem\t\tlocal\tsendmail\t
-"""
-        )
+""")
 
         # Check that installed links point to sendmail and that verify
         # passes.
@@ -764,21 +738,17 @@ mta\tsystem\t\tlocal\tsendmail\t
         self.pkg("set-mediator -vvv -I nosuchmta mta")
         check_not_exists(gen_mta_links())
         self.pkg("verify")
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 mta\tsystem\t\tlocal\tnosuchmta\t
-"""
-        )
+""")
 
         # Now uninstall all packages.
         self.pkg("uninstall -vvv \\*")
         self.pkg("verify")
         check_not_exists(gen_mta_links())
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 mta\tsystem\t\tlocal\tnosuchmta\t
-"""
-        )
+""")
 
         # Now install both at the same time, since the bogus
         # implementation is still set, no links should be installed.
@@ -791,11 +761,9 @@ mta\tsystem\t\tlocal\tnosuchmta\t
         self.pkg("unset-mediator -vvv -I mta")
         check_target(gen_mta_links(), "postfix")
         self.pkg("verify")
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 mta\tsystem\t\tsystem\tpostfix\t
-"""
-        )
+""")
 
         # Now uninstall all packages, then reinstall them and verify
         # that postfix was selected for initial install (since user did
@@ -804,11 +772,9 @@ mta\tsystem\t\tsystem\tpostfix\t
         self.pkg("install -vvv sendmail@1 postfix@1")
         check_target(gen_mta_links(), "postfix")
         self.pkg("verify")
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 mta\tsystem\t\tsystem\tpostfix\t
-"""
-        )
+""")
 
         # Verify that an unmediated package can't be installed if it
         # conflicts with mediated packages that are installed.
@@ -917,19 +883,15 @@ mta\tsystem\t\tsystem\tpostfix\t
         check_target(gen_mta_links(), "postfix")
         self.pkg("update -vvv sendmail@2")
         check_target(gen_mta_links(), "sendmail-mta")
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 mta\tvendor\t\tvendor\tsendmail\t
-"""
-        )
+""")
         self.pkg("verify")
         self.pkg("update -vvv postfix@2")
         check_target(gen_mta_links(), "postfix")
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 mta\tsite\t\tsite\tpostfix\t
-"""
-        )
+""")
         self.pkg("verify")
 
         # The mta packages are left installed to verify that the system
@@ -951,24 +913,20 @@ mta\tsite\t\tsite\tpostfix\t
         # 5.8.4 and verify passes.
         self.pkg("set-mediator -vvv -V 5.8.4 perl")
         check_target(gen_perl_links(), "5.8.4")
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 mta\tsite\t\tsite\tpostfix\t
 perl\tlocal\t5.8.4\tsystem\t\t
-"""
-        )
+""")
         self.pkg("verify")
 
         # Remove perl5.8.4 and verify links no longer exist and verify
         # passes.
         self.pkg("uninstall -vvv perl-584")
         check_not_exists(gen_perl_links())
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 mta\tsite\t\tsite\tpostfix\t
 perl\tlocal\t5.8.4\tsystem\t\t
-"""
-        )
+""")
         self.pkg("verify")
 
         # Unset mediation, verify links point to perl5.10.0,
@@ -976,19 +934,15 @@ perl\tlocal\t5.8.4\tsystem\t\t
         # passes, and mediation is unknown.
         self.pkg("unset-mediator -vvv perl")
         check_target(gen_perl_links(), "5.10.0")
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 mta\tsite\t\tsite\tpostfix\t
 perl\tsystem\t5.10.0\tsystem\t\t
-"""
-        )
+""")
         self.pkg("uninstall -vvv perl-510")
         self.pkg("mediator perl", exit=1)
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 mta\tsite\t\tsite\tpostfix\t
-"""
-        )
+""")
         self.pkg("verify")
 
         # Install both perl5.8.4 and perl5.10.0, verify that 5.10.0 is
@@ -996,12 +950,10 @@ mta\tsite\t\tsite\tpostfix\t
         # verify passes.
         self.pkg("install -vvv perl-584 perl-510")
         check_target(gen_perl_links(), "5.10.0")
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 mta\tsite\t\tsite\tpostfix\t
 perl\tsystem\t5.10.0\tsystem\t\t
-"""
-        )
+""")
         self.pkg("verify")
         self.pkg("uninstall -vvv \\*")
         self.pkg("verify")
@@ -1009,99 +961,81 @@ perl\tsystem\t5.10.0\tsystem\t\t
         # Install python and python-unladen-swallow at the same time,
         # verify that unladen-swallow is NOT selected.
         self.pkg("install python-27 python-unladen-swallow-27")
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 python\tsystem\t2.7\tsystem\t\t
-"""
-        )
+""")
         check_not_target(gen_python_links(), "unladen-swallow")
         self.pkg("verify")
 
         # Set only mediation version and verify unladen swallow is NOT
         # selected.
         self.pkg("set-mediator -vvv -V 2.7 python")
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 python\tlocal\t2.7\tsystem\t\t
-"""
-        )
+""")
         check_not_target(gen_python_links(), "unladen-swallow")
         self.pkg("verify")
 
         # Set mediation implementation to unladen swallow and verify it
         # was selected.
         self.pkg("set-mediator -vvv -I unladen-swallow python")
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 python\tlocal\t2.7\tlocal\tunladen-swallow\t
-"""
-        )
+""")
         check_target(gen_python_links(), "unladen-swallow")
         self.pkg("verify")
 
         # Unset only version mediation and verify unladen swallow is
         # still selected.
         self.pkg("unset-mediator -V python")
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 python\tsystem\t2.7\tlocal\tunladen-swallow\t
-"""
-        )
+""")
         check_target(gen_python_links(), "unladen-swallow")
         self.pkg("verify")
 
         # Install python-34 and verify unladen swallow is still
         # selected.
         self.pkg("install python-34")
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 python\tsystem\t2.7\tlocal\tunladen-swallow\t
-"""
-        )
+""")
         check_target(gen_python_links(), "unladen-swallow")
         self.pkg("verify")
 
         # Install python-unladen-swallow-34 and verify that version
         # is selected.
         self.pkg("install python-unladen-swallow-34")
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 python\tsystem\t3.4\tlocal\tunladen-swallow\t
-"""
-        )
+""")
         check_target(gen_python_links(), "python3.4-unladen-swallow")
         self.pkg("verify")
 
         # Set mediation version to 2.7 and verify that version of
         # unladen swallow is selected.
         self.pkg("set-mediator -vvv -V 2.7 python")
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 python\tlocal\t2.7\tlocal\tunladen-swallow\t
-"""
-        )
+""")
         check_target(gen_python_links(), "python2.7-unladen-swallow")
         self.pkg("verify")
 
         # Unset implementation mediation and verify unladen swallow
         # is NOT selected.
         self.pkg("unset-mediator -vvv -I python")
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 python\tlocal\t2.7\tsystem\t\t
-"""
-        )
+""")
         check_not_target(gen_python_links(), "unladen-swallow")
         self.pkg("verify")
 
         # Remove python-27 and python-34 and then verify unladen swallow
         # is selected.
         self.pkg("uninstall -vvv python-27 python-34")
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 python\tlocal\t2.7\tsystem\tunladen-swallow\t
-"""
-        )
+""")
         check_target(gen_python_links(), "python2.7-unladen-swallow")
         self.pkg("verify")
 
@@ -1109,11 +1043,9 @@ python\tlocal\t2.7\tsystem\tunladen-swallow\t
         # unladen swallow is NOT selected and link does not exist
         # since no package satisfied mediation.
         self.pkg("set-mediator -vvv -I None python")
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 python\tlocal\t2.7\tlocal\t\t
-"""
-        )
+""")
         check_not_exists(gen_python_links())
         self.pkg("verify")
 
@@ -1125,22 +1057,18 @@ python\tlocal\t2.7\tlocal\t\t
         self.pkg("verify")
         self.pkg("set-mediator -vvv -V '' -I unladen-swallow@3.5 python")
         check_target(gen_python_links(), "python3.11-unladen-swallow")
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 python\tsystem\t3.5\tlocal\tunladen-swallow@3.5\t
-"""
-        )
+""")
         self.pkg("verify")
 
         # Set mediation to unladen-swallow and verify
         # unladen-swallow@3.5 remains selected.
         self.pkg("set-mediator -vvv -I unladen-swallow python")
         check_target(gen_python_links(), "python3.11-unladen-swallow")
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 python\tsystem\t3.5\tlocal\tunladen-swallow\t3.5
-"""
-        )
+""")
         self.pkg("verify")
 
         # Remove installed links and ensure verify fails, then fix and
@@ -1155,22 +1083,18 @@ python\tsystem\t3.5\tlocal\tunladen-swallow\t3.5
 
         # Human-readable output shows any version selected but not
         # explicitly requested in parentheses.
-        self.__assert_human_mediation_matches(
-            """\
+        self.__assert_human_mediation_matches("""\
 MEDIATOR VER. SRC. VERSION IMPL. SRC. IMPLEMENTATION
 python   system    3.5     local      unladen-swallow(@3.5)
-"""
-        )
+""")
 
         # Set mediation to unladen-swallow@ and verify unladen-swallow
         # 3.4 is selected.
         self.pkg("set-mediator -vvv -I unladen-swallow@ python")
         check_target(gen_python_links(), "python3.4-unladen-swallow")
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 python\tsystem\t3.4\tlocal\tunladen-swallow@\t
-"""
-        )
+""")
         self.pkg("verify")
 
         # Remove links and ensure verify fails for for unladen-swallow
@@ -1193,29 +1117,23 @@ python\tsystem\t3.4\tlocal\tunladen-swallow@\t
 
         # Install apache-php52; verify that php 5.2.5 is selected.
         self.pkg("install -vvv apache-php52")
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 php\tsystem\t5.2.5\tsystem\t\t
-"""
-        )
+""")
         check_target(gen_php_links(), "5.2.5")
         self.pkg("verify")
 
         # Test available mediations.
-        self.__assert_available_mediation_matches(
-            """\
+        self.__assert_available_mediation_matches("""\
 php\tsystem\t5.2.5\tsystem\t\t
 php\tsystem\t5.2\tsystem\t\t
-"""
-        )
+""")
 
         # Set mediation version to 5.2 and verify 5.2.5 is NOT selected.
         self.pkg("set-mediator -vvv -V 5.2 php")
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 php\tlocal\t5.2\tsystem\t\t
-"""
-        )
+""")
         check_not_target(gen_php_links(), "5.2.5")
         self.pkg("verify")
 
@@ -1228,30 +1146,24 @@ php\tlocal\t5.2\tsystem\t\t
         # Install multi-impl-python; verify that unladen swallow is NOT
         # selected.
         self.pkg("install -vvv multi-impl-python-27")
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 python\tsystem\t\tsystem\tcpython\t
-"""
-        )
+""")
         check_not_target(gen_python_links(), "unladen-swallow")
         self.pkg("verify")
 
         # Test available mediations.
-        self.__assert_available_mediation_matches(
-            """\
+        self.__assert_available_mediation_matches("""\
 python\tsystem\t\tsystem\tcpython\t
 python\tsystem\t\tsystem\tunladen-swallow\t
-"""
-        )
+""")
 
         # Set mediation implementation to unladen swallow and verify it
         # was selected.
         self.pkg("set-mediator -vvv -I unladen-swallow python")
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 python\tsystem\t\tlocal\tunladen-swallow\t
-"""
-        )
+""")
         check_target(gen_python_links(), "unladen-swallow")
         self.pkg("verify")
 
@@ -1265,23 +1177,19 @@ python\tsystem\t\tlocal\tunladen-swallow\t
         # Verify that the default implementation of Python 3.4 was
         # selected even though the package offers Python 2.7 and an
         # unladen swallow implementation of each version of Python.
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 python\tsystem\t3.4\tsystem\t\t
-"""
-        )
+""")
         check_not_target(gen_python_links(), "unladen-swallow")
         self.pkg("verify")
 
         # Test available mediations.
-        self.__assert_available_mediation_matches(
-            """\
+        self.__assert_available_mediation_matches("""\
 python\tsystem\t3.4\tsystem\t\t
 python\tsystem\t3.4\tsystem\tunladen-swallow\t
 python\tsystem\t2.7\tsystem\t\t
 python\tsystem\t2.7\tsystem\tunladen-swallow\t
-"""
-        )
+""")
 
     def test_02_hardlink_mediation(self):
         """Verify that package mediation works as expected for install,
@@ -1316,33 +1224,27 @@ python\tsystem\t2.7\tsystem\tunladen-swallow\t
         # verify passes.
         assert_target(vi_path, svr4_path)
         self.pkg("verify")
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 vi\tsystem\t\tsystem\tsvr4\t
-"""
-        )
+""")
 
         # Install vim package and verify link still points to svr4-vi
         # and that verify passes.
         self.pkg("install -vvv vim@1")
         assert_target(vi_path, svr4_path)
         self.pkg("verify")
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 vi\tsystem\t\tsystem\tsvr4\t
-"""
-        )
+""")
 
         # Set mediation to use vim implementation of vi, and then
         # verify link points to that implementation.
         self.pkg("set-mediator -vvv -I vim vi")
         assert_target(vi_path, vim_path)
         self.pkg("verify")
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 vi\tsystem\t\tlocal\tvim\t
-"""
-        )
+""")
 
         # Remove vi link and then ensure verify fails, fix will fix it,
         # and then verify will succeed.
@@ -1357,49 +1259,39 @@ vi\tsystem\t\tlocal\tvim\t
         # uninstall svr4-vi and verify mediation reverts to vim.
         self.pkg("unset-mediator -vvv vi")
         assert_target(vi_path, svr4_path)
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 vi\tsystem\t\tsystem\tsvr4\t
-"""
-        )
+""")
         self.pkg("verify")
         self.pkg("uninstall -vvv svr4-vi")
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 vi\tsystem\t\tsystem\tvim\t
-"""
-        )
+""")
         self.pkg("verify")
 
         # Install nvi and verify mediation changes to nvi due to
         # mediator priority of vendor.
         self.pkg("install -vvv nvi@1")
         assert_target(vi_path, nvi_path)
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 vi\tvendor\t\tvendor\tnvi\t
-"""
-        )
+""")
 
         # Update to vim@2 and verify mediation changes to vim due to
         # mediator priority of site.
         self.pkg("update -vvv vim@2")
         assert_target(vi_path, vim_path)
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 vi\tsite\t\tsite\tvim\t
-"""
-        )
+""")
 
         # Install svr4-vi and verify mediation remains set to vim due to
         # mediator priority of site.
         self.pkg("install -vvv svr4-vi")
         assert_target(vi_path, vim_path)
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 vi\tsite\t\tsite\tvim\t
-"""
-        )
+""")
 
         # Uninstall all packages; then verify that a single package
         # containing multiple varianted, mediated hardlinks works as
@@ -1416,32 +1308,26 @@ vi\tsite\t\tsite\tvim\t
         # selected.
         self.pkg("install -vvv multi-ver-variant")
         assert_target(foo_path, foo_2_nd_path)
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 foo\tsystem\t2\tsystem\t\t
-"""
-        )
+""")
         self.pkg("verify")
 
         # Set debug variant and verify version 2 debug is selected.
         self.pkg("change-variant -vvv debug.osnet=true")
         assert_target(foo_path, foo_2_d_path)
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 foo\tsystem\t2\tsystem\t\t
-"""
-        )
+""")
         self.pkg("verify")
 
         # Set mediator version to 1 and verify version 1 debug is
         # selected.
         self.pkg("set-mediator -vvv -V 1 foo")
         assert_target(foo_path, foo_1_d_path)
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 foo\tlocal\t1\tsystem\t\t
-"""
-        )
+""")
         self.pkg("verify")
 
         # Reset debug variant and verify version 1 non-debug is
@@ -1449,11 +1335,9 @@ foo\tlocal\t1\tsystem\t\t
         self.pkg("change-variant -vvv debug.osnet=false")
         self.pkg("verify")
         assert_target(foo_path, foo_1_nd_path)
-        self.__assert_mediation_matches(
-            """\
+        self.__assert_mediation_matches("""\
 foo\tlocal\t1\tsystem\t\t
-"""
-        )
+""")
 
     def test_03_obsoleted_mediator(self):
         """Verify locally set mediators generate a warning message

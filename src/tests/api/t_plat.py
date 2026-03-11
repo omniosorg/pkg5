@@ -63,9 +63,9 @@ class TestPlat(pkg5unittest.Pkg5TestCase):
 
     def testForcibleRename(self):
         # rename a file on top of another file which already exists
-        (fd1, path1) = tempfile.mkstemp()
+        fd1, path1 = tempfile.mkstemp()
         os.write(fd1, b"foo")
-        (fd2, path2) = tempfile.mkstemp()
+        fd2, path2 = tempfile.mkstemp()
         os.write(fd2, b"bar")
         os.close(fd1)
         os.close(fd2)

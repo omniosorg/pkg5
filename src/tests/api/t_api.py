@@ -776,7 +776,7 @@ class TestPkgApi(pkg5unittest.SingleDepotTestCase):
         # Verify that parse returns the expected object and information
         # when provided a file path.
         fobj.seek(0)
-        (fd1, path1) = tempfile.mkstemp(dir=self.test_root)
+        fd1, path1 = tempfile.mkstemp(dir=self.test_root)
         with open(path1, "w") as f:
             f.write(fobj.read())
         validate_results(api_obj.parse_p5i(location=path1))
