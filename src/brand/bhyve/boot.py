@@ -301,7 +301,7 @@ def apply_bootnext(v):
     except Exception as e:
         error(f'Could not set VM boot next: {e}')
 
-    subprocess.run(['/usr/sbin/zonecfg', '-z', zone,
+    subprocess.run(['/usr/sbin/zonecfg', '-z', name,
         'remove attr name=bootnext'])
 
 ##############################################################################
