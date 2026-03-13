@@ -22,7 +22,7 @@
 
 #
 # Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
-# Copyright (c) 2008, 2025, Oracle and/or its affiliates.
+# Copyright (c) 2008, 2026, Oracle and/or its affiliates.
 #
 
 import errno
@@ -2427,27 +2427,23 @@ class UnsupportedRepositoryURI(PublisherError):
             scheme = urlsplit(u, allow_fragments=0)[0]
             illegals.append((u, scheme))
 
+        supported = _("Supported schemes are {}, {}, and {}.").format(
+            "file://", "http://", "https://")
         if len(illegals) > 1:
             msg = _(
-                "The following URIs use unsupported "
-                "schemes.  Supported schemes are "
-                "file://, http://, and https://."
-            )
+                "The following URIs use unsupported schemes.  {cont}"
+            ).format(cont=supported)
             for i, s in illegals:
                 msg += _("\n  {uri} (scheme: {scheme})").format(uri=i, scheme=s)
             return msg
         elif len(illegals) == 1:
             i, s = illegals[0]
             return _(
-                "The URI '{uri}' uses the unsupported "
-                "scheme '{scheme}'.  Supported schemes are "
-                "file://, http://, and https://."
-            ).format(uri=i, scheme=s)
+                "The URI '{uri}' uses the unsupported scheme '{scheme}'.  "
+                "{cont}").format(uri=i, scheme=s, cont=supported)
         return _(
-            "The specified URI uses an unsupported scheme."
-            "  Supported schemes are: file://, http://, and "
-            "https://."
-        )
+            "The specified URI uses an unsupported scheme.  {cont}"
+        ).format(cont=supported)
 
 
 class UnsupportedRepositoryURIAttribute(PublisherError):
