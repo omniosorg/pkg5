@@ -31,11 +31,6 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 //=================================================================================================
 // Simple types:
 
-// does not work for c++
-typedef int  bool;
-static const bool  true      = 1;
-static const bool  false     = 0;
-
 typedef int                lit;
 typedef char               lbool;
 

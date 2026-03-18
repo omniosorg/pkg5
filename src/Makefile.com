@@ -28,7 +28,7 @@ ROOTBRAND = $(ROOTUSRLIB)/brand
 ROOTPKGLIB = $(ROOTUSRLIB)/pkg
 TRIPLET = x86_64-pc-solaris2
 
-CC = /usr/bin/gcc-14
+CC = /usr/bin/gcc-15
 CFLAGS_i386 = -m64
 CFLAGS_aarch64 =
 CFLAGS = $(CFLAGS_$(MACH)) -Wall -Werror -Wextra -gdwarf-2 -gstrict-dwarf \

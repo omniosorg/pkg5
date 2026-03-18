@@ -21,6 +21,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include <stdio.h>
 #include <assert.h>
+#include <string.h>
 #include <math.h>
 
 #include "solver.h"
@@ -83,8 +84,8 @@ struct clause_t
 static inline int   clause_size       (clause* c)          { return c->size_learnt >> 1; }
 static inline lit*  clause_begin      (clause* c)          { return c->lits; }
 static inline int   clause_learnt     (clause* c)          { return c->size_learnt & 1; }
-static inline float clause_activity   (clause* c)          { return *((float*)&c->lits[c->size_learnt>>1]); }
-static inline void  clause_setactivity(clause* c, float a) { *((float*)&c->lits[c->size_learnt>>1]) = a; }
+static inline float clause_activity   (clause* c)          { float a; memcpy(&a, &c->lits[c->size_learnt>>1], sizeof(a)); return a; }
+static inline void  clause_setactivity(clause* c, float a) { memcpy(&c->lits[c->size_learnt>>1], &a, sizeof(a)); }
 static inline int   clause_bytesize   (clause *c)
 {
   return clause_size(c) * sizeof (lit) + 
@@ -296,8 +297,10 @@ static clause* clause_new(solver* s, lit* begin, lit* end, int learnt)
     for (i = 0; i < size; i++)
         c->lits[i] = begin[i];
 
-    if (learnt)
-        *((float*)&c->lits[size]) = 0.0;
+    if (learnt) {
+        float zero = 0.0f;
+        memcpy(&c->lits[size], &zero, sizeof(zero));
+    }
 
     assert(begin[0] >= 0);
     assert(begin[0] < s->size*2);
