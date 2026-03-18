@@ -86,7 +86,7 @@ import pkg.client.plandesc as plandesc
 import pkg.client.publisher as publisher
 import pkg.client.query_parser as query_p
 import pkg.fmri as fmri
-import pkg.json as json
+import pkg.json_wrapper as json
 import pkg.mediator as med
 import pkg.misc as misc
 import pkg.nrlock

@@ -86,7 +86,7 @@ from urllib.parse import urlsplit, urlparse, urlunparse
 from urllib.request import pathname2url, url2pathname
 
 import pkg.client.api_errors as api_errors
-import pkg.json as json
+import pkg.json_wrapper as json
 import pkg.portable as portable
 import pkg.digest as digest
 

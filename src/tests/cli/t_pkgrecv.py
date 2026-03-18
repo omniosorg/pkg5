@@ -51,7 +51,7 @@ import zlib
 
 from pkg.actions import fromstr
 from pkg.digest import DEFAULT_HASH_FUNC
-import pkg.json as json
+import pkg.json_wrapper as json
 from urllib.parse import urlparse
 from urllib.request import url2pathname
 

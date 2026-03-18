@@ -32,7 +32,7 @@ if __name__ == "__main__":
 import pkg5unittest
 import os
 
-import pkg.json as json
+import pkg.json_wrapper as json
 
 
 class TestPkgAvoid(pkg5unittest.SingleDepotTestCase):

@@ -59,7 +59,7 @@ import pkg.client.transport.transport as transport
 import pkg.config as cfg
 import pkg.file_layout.layout as fl
 import pkg.fmri
-import pkg.json as json
+import pkg.json_wrapper as json
 import pkg.lockfile as lockfile
 import pkg.manifest as manifest
 import pkg.mediator as med

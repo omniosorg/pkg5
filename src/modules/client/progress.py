@@ -41,7 +41,7 @@ from functools import wraps
 import pkg.client.pkgdefs as pkgdefs
 import pkg.client.publisher as publisher
 import pkg.fmri
-import pkg.json as json
+import pkg.json_wrapper as json
 import pkg.misc as misc
 
 from pkg.client import global_settings

@@ -48,7 +48,7 @@ import time
 from urllib.parse import urlparse, unquote
 
 import pkg.misc as misc
-import pkg.json as json
+import pkg.json_wrapper as json
 import pkg.portable as portable
 
 from pkg.digest import DEFAULT_HASH_FUNC

@@ -50,7 +50,7 @@ import pkg.p5i as p5i
 import pkg.client.api_errors as apx
 import pkg.client.transport.exception as tx
 import pkg.config as cfg
-import pkg.json as json
+import pkg.json_wrapper as json
 import pkg.p5p
 import pkg.server.repository as svr_repo
 import pkg.server.query_parser as sqp

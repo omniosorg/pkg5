@@ -58,7 +58,7 @@ import pkg.client.progress as progress
 import pkg.digest as digest
 import pkg.file_layout.file_manager as fm
 import pkg.fmri
-import pkg.json as json
+import pkg.json_wrapper as json
 import pkg.manifest as manifest
 import pkg.misc as misc
 import pkg.nrlock as nrlock

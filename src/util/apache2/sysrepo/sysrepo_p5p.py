@@ -31,7 +31,7 @@ import shutil
 import sys
 import threading
 import traceback
-import pkg.json as json
+import pkg.json_wrapper as json
 from pkg.misc import force_str
 
 # redirecting stdout for proper WSGI portability

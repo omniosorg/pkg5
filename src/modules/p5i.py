@@ -33,7 +33,7 @@ from urllib.request import urlopen, pathname2url
 
 import pkg.client.api_errors as api_errors
 import pkg.client.publisher as publisher
-import pkg.json as json
+import pkg.json_wrapper as json
 import pkg.fmri as fmri
 
 CURRENT_VERSION = 1

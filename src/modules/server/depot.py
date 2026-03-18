@@ -71,7 +71,7 @@ import pkg
 import pkg.actions as actions
 import pkg.config as cfg
 import pkg.fmri as fmri
-import pkg.json as json
+import pkg.json_wrapper as json
 import pkg.indexer as indexer
 import pkg.manifest as manifest
 import pkg.misc as misc

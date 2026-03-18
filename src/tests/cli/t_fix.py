@@ -39,7 +39,7 @@ import tempfile
 import time
 import unittest
 
-import pkg.json as json
+import pkg.json_wrapper as json
 
 
 class TestFix(pkg5unittest.SingleDepotTestCase):

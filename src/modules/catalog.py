@@ -43,7 +43,7 @@ import pkg.actions
 import pkg.client.api_errors as api_errors
 import pkg.client.pkgdefs as pkgdefs
 import pkg.fmri as fmri
-import pkg.json as json
+import pkg.json_wrapper as json
 import pkg.misc as misc
 import pkg.portable as portable
 import pkg.version

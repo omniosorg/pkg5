@@ -37,7 +37,7 @@ import pkg.catalog
 import pkg.manifest
 import pkg.depotcontroller as dc
 import pkg.fmri as fmri
-import pkg.json as json
+import pkg.json_wrapper as json
 import pkg.misc as misc
 import pkg.pkggzip
 import pkg.server.repository as sr

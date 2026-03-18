@@ -34,7 +34,7 @@ import pkg5unittest
 import os
 import pkg.client.client_api as cli_api
 import pkg.client.progress as progress
-import pkg.json as json
+import pkg.json_wrapper as json
 
 from pkg.client import global_settings
 
