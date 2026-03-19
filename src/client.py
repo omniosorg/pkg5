@@ -145,7 +145,7 @@ try:
     import pkg.client.transport.transport as transport
     import pkg.client.options as options
     import pkg.fmri as fmri
-    import pkg.json as json
+    import pkg.json_wrapper as json
     import pkg.misc as misc
     import pkg.pipeutils as pipeutils
     import pkg.portable as portable

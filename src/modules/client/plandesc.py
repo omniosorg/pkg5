@@ -50,7 +50,7 @@ import pkg.client.linkedimage as li
 import pkg.client.pkgplan
 import pkg.facet
 import pkg.fmri
-import pkg.json as json
+import pkg.json_wrapper as json
 import pkg.misc
 import pkg.version
 

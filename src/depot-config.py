@@ -54,7 +54,7 @@ try:
     import pkg.client.api_errors as apx
     import pkg.catalog
     import pkg.config as cfg
-    import pkg.json as json
+    import pkg.json_wrapper as json
     import pkg.misc as misc
     import pkg.portable as portable
     import pkg.p5i as p5i

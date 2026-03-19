@@ -55,7 +55,7 @@ try:
     import pkg.client.progress as progress
     import pkg.client.api_errors as apx
     import pkg.digest as digest
-    import pkg.json as json
+    import pkg.json_wrapper as json
     import pkg.misc as misc
     import pkg.portable as portable
     import pkg.p5p as p5p

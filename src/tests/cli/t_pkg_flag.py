@@ -36,7 +36,7 @@ import stat
 import time
 
 import pkg.client.api_errors as apx
-import pkg.json as json
+import pkg.json_wrapper as json
 import pkg.fmri as fmri
 
 

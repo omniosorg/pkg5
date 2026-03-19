@@ -37,7 +37,7 @@ import tempfile
 import time
 import unittest
 
-import pkg.json as json
+import pkg.json_wrapper as json
 
 
 class TestPkgVerify(pkg5unittest.SingleDepotTestCase):

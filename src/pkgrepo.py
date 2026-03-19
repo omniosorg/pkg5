@@ -62,7 +62,7 @@ try:
     import pkg.client.publisher as publisher
     import pkg.client.transport.transport as transport
     import pkg.fmri as fmri
-    import pkg.json as json
+    import pkg.json_wrapper as json
     import pkg.misc as misc
     import pkg.server.repository as sr
 

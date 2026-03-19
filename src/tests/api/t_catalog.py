@@ -39,7 +39,7 @@ from functools import cmp_to_key
 
 import pkg.actions
 import pkg.fmri as fmri
-import pkg.json as json
+import pkg.json_wrapper as json
 import pkg.catalog as catalog
 import pkg.client.api_errors as api_errors
 import pkg.manifest as manifest
