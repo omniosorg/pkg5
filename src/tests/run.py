@@ -35,11 +35,10 @@ from functools import reduce
 
 pdir = os.path.dirname(__file__)
 if pdir != "" and pdir != "." and pdir != os.getcwd():
-    os.putenv("PYEXE", sys.executable)
     os.chdir(pdir)
     import subprocess
 
-    cmd = [sys.executable, "run.py"]
+    cmd = [sys.executable, "-B", "run.py"]
     cmd.extend(sys.argv[1:])  # Skip argv[0]
     sys.exit(subprocess.call(cmd))
 
@@ -130,6 +129,9 @@ if __name__ == "__main__":
     #        "ignore::ResourceWarning",
     #    )
     # )
+
+    # Prevent creation of root owned pyc files
+    os.environ["PYTHONDONTWRITEBYTECODE"] = "True"
 
     try:
         opts, pargs = getopt.getopt(
