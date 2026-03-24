@@ -84,7 +84,6 @@
 	<privilege set="prohibited" name="dtrace_kernel" />
 	<privilege set="prohibited" name="proc_zone" />
 	<privilege set="prohibited" name="sys_config" />
-	<privilege set="prohibited" name="sys_devices" />
 	<privilege set="prohibited" name="sys_ip_config" ip-type="shared" />
 	<privilege set="prohibited" name="sys_linkdir" />
 	<privilege set="prohibited" name="sys_net_config" />
