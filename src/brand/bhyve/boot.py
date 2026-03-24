@@ -14,6 +14,7 @@
 # }}}
 
 # Copyright 2023 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2026 EFit Partners
 
 import bundle
 import bootlib
@@ -124,6 +125,7 @@ PPT_SLOT        = 9
 RNG_SLOT        = 10
 VIRTFS_SLOT     = 11
 NET_SLOT2       = 12
+SCSI_SLOT       = 16
 CINIT_SLOT      = 29
 VNC_SLOT        = 30
 LPC_SLOT_WIN    = 31
@@ -513,6 +515,47 @@ for i, v in z.build_devlist('disk', 16):
             diskpath(v))
         ])
         add_bootoption(f'disk', i, ('pci', f'{DISK_SLOT2}.{i - 8}'))
+
+# SCSI passthrough
+
+scsi_hba = {}
+backend_opts = []
+for i, v in z.build_devlist('scsi', 8):
+    if (vv := z.findattr(f'scsi{i}')) is None:
+        vv = z.findattr('scsi')
+        index = 'scsi'
+    else:
+        index = f'scsi{i}'
+
+    backend_opts = [x.strip() for x in vv.get('value').split(',')]
+
+    scsi_hba[index] = {
+        'id': i,
+        'device': 'virtio-scsi',
+        'backend-opts': backend_opts,
+        'targets': [],
+    }
+
+    for j, w in z.build_devlist(f'{index}-target', 256):
+        scsi_hba[index]['targets'].append(f'{j}:{diskpath(w)}')
+
+for v in scsi_hba.values():
+    scsi_hba_ctrl = '{0}:{1},{2}'.format(SCSI_SLOT, v['id'], v['device'])
+
+    if len(v['backend-opts']):
+        scsi_hba_opts = ',{0}'.format(','.join(v['backend-opts']))
+    else:
+        scsi_hba_opts = ''
+
+    if len(v['targets']):
+        scsi_hba_targ = ',{0}'.format(
+            ','.join(list(map(lambda x: 'target=' + x , v['targets']))))
+    else:
+        scsi_hba_targ = ''
+
+    args.extend([
+        '-s', scsi_hba_ctrl + scsi_hba_opts + scsi_hba_targ
+    ])
 
 # Network
 
