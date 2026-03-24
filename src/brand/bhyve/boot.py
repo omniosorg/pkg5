@@ -14,6 +14,7 @@
 # }}}
 
 # Copyright 2023 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2026 EFit Partners
 
 import bundle
 import bootlib
@@ -124,6 +125,7 @@ PPT_SLOT        = 9
 RNG_SLOT        = 10
 VIRTFS_SLOT     = 11
 NET_SLOT2       = 12
+SCSI_SLOT       = 16
 CINIT_SLOT      = 29
 VNC_SLOT        = 30
 LPC_SLOT_WIN    = 31
@@ -474,9 +476,30 @@ try:
 except:
     pass
 
+# SCSI passthrough
+
+scsi_hba = {}
+for i, v in z.build_devlist('scsi', 8):
+    if (vv := z.findattr(f'scsi{i}')) is None:
+        vv = z.findattr('scsi')
+        index = 'scsi'
+    else:
+        index = f'scsi{i}'
+
+    if (vv) is not None:
+        backend_opts = [x.strip() for x in vv.get('value').split(',')]
+
+    scsi_hba[index] = {
+        'id': i,
+        'device': 'virtio-scsi',
+        'backend-opts': backend_opts,
+        'targets': [],
+    }
+
 # Additional Disks
 
-for i, v in z.build_devlist('disk', 16):
+nsd = 0
+for i, v in z.build_devlist('disk', 99):
     if (vv := z.findattr(f'diskif{i}')) is not None:
         diskif = vv.get('value')
         try:
@@ -486,18 +509,42 @@ for i, v in z.build_devlist('disk', 16):
     else:
         diskif = opts['diskif']
 
-    if i < 8:
+    if diskif.startswith('scsi') and diskif in scsi_hba:
+        scsi_hba[diskif]['targets'].append(diskpath(v))
+    elif nsd < 8:
         args.extend([
-            '-s', '{0}:{1},{2},{3}'.format(DISK_SLOT, i, diskif,
+            '-s', '{0}:{1},{2},{3}'.format(DISK_SLOT, nsd, diskif,
             diskpath(v))
         ])
-        add_bootoption('disk', i, ('pci', f'{DISK_SLOT}.{i}'))
+        add_bootoption('disk', nsd, ('pci', f'{DISK_SLOT}.{nsd}'))
+        nsd += 1
+    elif nsd < 16:
+        args.extend([
+            '-s', '{0}:{1},{2},{3}'.format(DISK_SLOT2, nsd - 8, diskif,
+            diskpath(v))
+        ])
+        add_bootoption(f'disk', nsd, ('pci', f'{DISK_SLOT2}.{nsd - 8}'))
+        nsd += 1
     else:
-        args.extend([
-            '-s', '{0}:{1},{2},{3}'.format(DISK_SLOT2, i - 8, diskif,
-            diskpath(v))
-        ])
-        add_bootoption(f'disk', i, ('pci', f'{DISK_SLOT2}.{i - 8}'))
+        fatal(f'unhandled disk configuration id: {nsd}')
+
+for v in scsi_hba.values():
+    scsi_hba_ctrl = '{0}:{1},{2}'.format(SCSI_SLOT, v['id'], v['device'])
+
+    if len(v['backend-opts']):
+        scsi_hba_opts = ',{0}'.format(','.join(list(v['backend-opts'])))
+    else:
+        scsi_hba_opts = ''
+
+    if len(v['targets']):
+        scsi_hba_targ = ',{0}'.format(
+            ','.join(list(map(lambda x: 'target=' + x , v['targets']))))
+    else:
+        scsi_hba_targ = ''
+
+    args.extend([
+        '-s', scsi_hba_ctrl + scsi_hba_opts + scsi_hba_targ
+    ])
 
 # Network
 

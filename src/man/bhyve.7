@@ -11,8 +11,9 @@
 .\" Copyright 2016, Joyent, Inc.
 .\" Copyright 2016, OmniTI Computer Consulting, Inc. All Rights Reserved.
 .\" Copyright 2023 OmniOS Community Edition (OmniOSce) Association.
+.\" Copyright 2026 EFit Partners
 .\"
-.Dd June 3, 2023
+.Dd March 25, 2026
 .Dt BHYVE 7
 .Os
 .Sh NAME
@@ -280,6 +281,8 @@ Available options are:
 .It
 .Sy nvme
 .It
+.Sy scsi Ns Oo Ar N Oc
+.It
 .Sy virtio-blk Pq default
 .El
 .\" diskifN
@@ -474,6 +477,49 @@ for the default user and/or the root user.
 .Ar sshkey
 can be provided as a fixed string or a path to a file that contains the desired
 public key.
+.\" scsi
+.It Ic scsi Ns Oo Ar N Oc Ar scsi-config
+.Pp
+Specifies a
+.Sy virtio-scsi
+controller configuration.
+To configure multiple
+.Sy virtio-scsi controllers, create multiple attributes with
+different values of
+.Ar N .
+In that case, each
+.Sy virtio-scsi
+controller will be configured as a separate PCI function
+.Ar N .
+If only a single
+.Sy virtio-scsi
+controller is required,
+.Ar N
+can be omitted.
+The
+.Ar scsi-config
+argument is a comma-separated list of assignments of any of the following
+.Sy virtio-scsi
+properties:
+.Bl -tag -width Ds
+.It Ic backend
+Specifies the backend to use.
+Currently the only valid backend is the
+.Qq Sy uscsi
+backend.
+.It Ic ctl_ringsz
+The ring size of the control queue.
+.It Ic evt_ringsz
+The ring size of the event queue.
+.It Ic req_ringsz
+The ring size of each I/O request queue.
+.It Ic num_queues
+The number of I/O request queues.
+.It Ic thr_per_q
+The number of parallel request processing threads per I/O request queue.
+.It seg_max
+The maximum number of segments allowed in a single I/O request.
+.El
 .\" type
 .It Ic type Ar type
 .Pp
@@ -720,7 +766,7 @@ add attr
 end
 .Ed
 .Pp
-and to share the global zone filesystem
+To share the global zone filesystem
 .Pa /data/websites
 read-only to the guest, add:
 .Bd -literal -offset indent
@@ -737,9 +783,110 @@ add attr
     set value=websites,/data/websites,ro
 end
 .Ed
+.Pp
+The following examples shows how to configure SCSI device passthrough using
+.Sy virtio-scsi
+with the
+.Sy uscsi
+backend.
+.Pp
+To configure a single
+.Sy virtio-scsi
+controller with a single target
+.Pa c0t5000039668186AD9d0 ,
+add:
+.Bd -literal -offset indent
+add device
+    set match="/dev/rdsk/c0t5000039668186AD9d0"
+end
+add attr
+    set name="scsi"
+    set type="string"
+    set value="backend=uscsi"
+end
+add attr
+    set name="disk0"
+    set type="string"
+    set value="/dev/rdsk/c0t5000039668186AD9d0"
+end
+add attr
+    set name="diskif0"
+    set type="string"
+    set value="scsi"
+end
+.Ed
+.Pp
+A more complex configuration using two
+.Sy virtio-scsi
+controllers, additional I/O queues, and two targets each could look like this:
+.Bd -literal -offset indent
+add device
+    set match="/dev/rdsk/c0t5000039668186AD9d0"
+end
+add device
+    set match="/dev/rdsk/c0t50000396681866A5d0"
+end
+add device
+    set match="/dev/rdsk/c0t50000396681B21F5d0"
+end
+add device
+    set match="/dev/rdsk/c0t50000396681AFF1Dd0"
+end
+add attr
+    set name="scsi0"
+    set type="string"
+    set value="backend=uscsi,num_queues=4"
+end
+add attr
+    set name="scsi1"
+    set type="string"
+    set value="backend=uscsi,num_queues=4"
+end
+add attr
+    set name="disk0"
+    set type="string"
+    set value="/dev/rdsk/c0t5000039668186AD9d0"
+end
+add attr
+    set name="disk1"
+    set type="string"
+    set value="/dev/rdsk/c0t50000396681866A5d0"
+end
+add attr
+    set name="disk2"
+    set type="string"
+    set value="/dev/rdsk/c0t50000396681B21F5d0"
+end
+add attr
+    set name="disk3"
+    set type="string"
+    set value="/dev/rdsk/c0t50000396681AFF1Dd0"
+end
+add attr
+    set name="diskif0"
+    set type="string"
+    set value="scsi0"
+end
+add attr
+    set name="diskif1"
+    set type="string"
+   set value="scsi0"
+end
+add attr
+    set name="diskif2"
+    set type="string"
+    set value="scsi1"
+end
+add attr
+    set name="diskif3"
+    set type="string"
+    set value="scsi1"
+end
+.Ed
 .Sh SEE ALSO
 .Xr mdb 1 ,
 .Xr proc 1 ,
+.Xr bhyve_config 5 ,
 .Xr brands 7 ,
 .Xr privileges 7 ,
 .Xr resource_controls 7 ,
