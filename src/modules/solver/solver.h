@@ -26,6 +26,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #define inline __inline // compatible with MS VS 6.0
 #endif
 
+#include <stdbool.h>
 #include "vec.h"
 
 //=================================================================================================
