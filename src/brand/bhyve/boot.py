@@ -450,6 +450,12 @@ else:
 
 args.extend(['-s', '{0},lpc'.format(LPC_SLOT)])
 
+# LPC Serial Ports
+
+for i, v in z.build_devlist('com', 4):
+    if i > 1:
+        args.extend(['-l', 'com{0},{1}'.format(i, v)])
+
 # Console
 
 args.extend(['-l', 'com1,{0}'.format(opts['console'])])

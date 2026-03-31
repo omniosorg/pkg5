@@ -225,6 +225,35 @@ If a
 .Ar URL
 is provided, then that is passed to the guest system as the source of the
 full meta-data.
+.\" com
+.It Ic com Ns Ar N Ar options
+.Pp
+This parameter configures a LPC COM port, with valid values for
+.Ar N
+ranging from 2 to 4.
+.Pp
+The supported
+.Ar options
+are either
+.Cm socket , Ns Ar path ,
+which places a UNIX domain socket at
+.Ar path ,
+or
+.Pa /dev/ttyXX ,
+which attaches the COM port to a
+.Sy tty
+device.
+The latter format requires a
+.Sy device
+block to map
+.Pa /dev/ttyXX
+into the zone.
+.Pp
+A configuration for
+.Ic com Ns Ar 1
+will be silently ignored, the
+.Ic console
+parameter described below must be used instead.
 .\" console
 .It Ic console Ar options
 .Pp
