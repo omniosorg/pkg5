@@ -466,8 +466,17 @@ for i, v in z.build_devlist('cdrom', 8):
 
 try:
     bootdisk = z.findattr('bootdisk')
+    if (bootdiskif := z.findattr('bootdiskif')) is not None:
+        bootdiskif = bootdiskif.get('value').strip()
+        try:
+            bootdiskif = aliases['diskif'][bootdiskif]
+        except KeyError:
+            pass
+    else:
+        bootdiskif = opts['diskif']
+
     args.extend([
-        '-s', '{0}:0,{1},{2}'.format(BOOTDISK_SLOT, opts['diskif'],
+        '-s', '{0}:0,{1},{2}'.format(BOOTDISK_SLOT, bootdiskif,
             diskpath(bootdisk.get('value').strip()))
     ])
     add_bootoption('bootdisk', None, ('pci', f'{BOOTDISK_SLOT}.0'))
