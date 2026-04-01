@@ -21,13 +21,27 @@ bhyve_shutdown()
 {
 	typeset -i delay="${1:-60}"
 	log "Killing bhyve process - %d" $delay
-	pkill -z "$ZONENAME" bhyve
+	pkill -TERM -z "$ZONENAME" bhyve
 	while (( delay > 0 )) && pgrep -z "$ZONENAME" bhyve >/dev/null; do
 		((delay % 30 == 0)) && log "Waiting for bhyve to exit"
 		((delay = delay - 1))
 		sleep 1
 	done
 	log "bhyve shutdown done"
+}
+
+bhyve_halt()
+{
+	typeset -i force_halt=0
+	while pgrep -z "$ZONENAME" bhyve >/dev/null; do
+		force_halt=1
+		log "Force bhyve poweroff"
+		/usr/sbin/bhyvectl --vm=$ZONENAME --force-poweroff
+		sleep 5
+	done
+	if [ "$force_halt" -eq 1 ]; then
+		log "bhyve poweroff done"
+	fi
 }
 
 cmd="${1:?cmd}"; shift
@@ -50,7 +64,8 @@ case $cmd in
 		;;
 	    $ZONE_STATE_RUNNING:$ZONE_STATE_CMD_HALT)
 		# halting (even as part of rebooting)
-		bhyve_shutdown 1800
+		bhyve_shutdown 20
+		bhyve_halt
 		;;
 	esac
 	;;
