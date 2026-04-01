@@ -60,6 +60,17 @@ A suitable ZFS volume can be created using the
 command, for example:
 .Pp
 .Dl zfs create -V 30G rpool/bootdisk2
+.\" bootdiskif
+.It Ic bootdiskif Ar type
+.Pp
+Specifies the type of interface to which the boot disk will be attached.
+See the description of the
+.Ic diskif
+attribute for a list of available interface types.
+.Pp
+If unset, the value of the
+.Ic diskif
+attribute will be used.
 .\" bootorder
 .It Ic bootorder Ar option Ns Oo \&, Ns Ar option Ns \&... Oc
 .Pp
