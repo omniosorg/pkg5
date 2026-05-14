@@ -22,6 +22,7 @@
 
 #
 # Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
+# Copyright (c) 2010, 2026, Oracle and/or its affiliates.
 #
 
 from . import testutils
@@ -35,7 +36,7 @@ import os
 import pkg
 import pkg.catalog
 import pkg.manifest
-import pkg.depotcontroller as dc
+import depotcontroller as dc
 import pkg.fmri as fmri
 import pkg.json_wrapper as json
 import pkg.misc as misc
