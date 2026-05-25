@@ -88,7 +88,7 @@ class CurlTransportEngine(TransportEngine):
         self.__last_stall_check = 0
 
         # Set options on multi-handle
-        self.__mhandle.setopt(pycurl.M_PIPELINING, 0)
+        self.__mhandle.setopt(pycurl.M_PIPELINING, pycurl.PIPE_MULTIPLEX)
 
         # initialize easy handles
         for i in range(self.__max_handles):
@@ -198,8 +198,8 @@ class CurlTransportEngine(TransportEngine):
             if time_elapsed < 0:
                 h.starttime = current_time
                 time_elapsed = 0
-            size_xfrd = h.getinfo(pycurl.SIZE_DOWNLOAD) + h.getinfo(
-                pycurl.SIZE_UPLOAD
+            size_xfrd = h.getinfo(pycurl.SIZE_DOWNLOAD_T) + h.getinfo(
+                pycurl.SIZE_UPLOAD_T
             )
             time_list.append(time_elapsed)
             size_list.append(size_xfrd)
@@ -246,7 +246,7 @@ class CurlTransportEngine(TransportEngine):
             repostats = self.__xport.stats[(h.repourl, h.proxy)]
             visited_repos.add(repostats)
             repostats.record_tx()
-            nbytes = h.getinfo(pycurl.SIZE_DOWNLOAD)
+            nbytes = h.getinfo(pycurl.SIZE_DOWNLOAD_T)
             seconds = h.getinfo(pycurl.TOTAL_TIME)
             conn_count = h.getinfo(pycurl.NUM_CONNECTS)
             conn_time = h.getinfo(pycurl.CONNECT_TIME)
@@ -349,11 +349,11 @@ class CurlTransportEngine(TransportEngine):
             repostats = self.__xport.stats[(h.repourl, h.proxy)]
             visited_repos.add(repostats)
             repostats.record_tx()
-            nbytes = h.getinfo(pycurl.SIZE_DOWNLOAD)
+            nbytes = h.getinfo(pycurl.SIZE_DOWNLOAD_T)
             seconds = h.getinfo(pycurl.TOTAL_TIME)
             conn_count = h.getinfo(pycurl.NUM_CONNECTS)
             conn_time = h.getinfo(pycurl.CONNECT_TIME)
-            h.filetime = h.getinfo(pycurl.INFO_FILETIME)
+            h.filetime = h.getinfo(pycurl.FILETIME_T)
 
             url = h.url
             uuid = h.uuid
@@ -1000,13 +1000,13 @@ class CurlTransportEngine(TransportEngine):
             hdl.setopt(pycurl.FAILONERROR, True)
 
         if treq.progtrack and treq.progclass:
-            hdl.setopt(pycurl.NOPROGRESS, 0)
+            hdl.setopt(pycurl.NOPROGRESS, False)
             hdl.fileprog = treq.progclass(treq.progtrack)
-            hdl.setopt(pycurl.PROGRESSFUNCTION, hdl.fileprog.progress_callback)
+            hdl.setopt(pycurl.XFERINFOFUNCTION, hdl.fileprog.progress_callback)
         elif treq.progfunc:
             # For light-weight progress tracking / cancellation.
-            hdl.setopt(pycurl.NOPROGRESS, 0)
-            hdl.setopt(pycurl.PROGRESSFUNCTION, treq.progfunc)
+            hdl.setopt(pycurl.NOPROGRESS, False)
+            hdl.setopt(pycurl.XFERINFOFUNCTION, treq.progfunc)
 
         proto = urlsplit(treq.url)[0]
         if proto not in ("http", "https"):
@@ -1025,7 +1025,7 @@ class CurlTransportEngine(TransportEngine):
                 )
 
         if treq.compressible:
-            hdl.setopt(pycurl.ENCODING, "")
+            hdl.setopt(pycurl.ACCEPT_ENCODING, "")
 
         if treq.hdrfunc:
             hdl.setopt(pycurl.HEADERFUNCTION, treq.hdrfunc)
@@ -1043,7 +1043,8 @@ class CurlTransportEngine(TransportEngine):
                     hdl.r_fobj = treq.read_fobj
                 hdl.setopt(pycurl.READDATA, hdl.r_fobj)
                 hdl.setopt(
-                    pycurl.POSTFIELDSIZE, os.fstat(hdl.r_fobj.fileno()).st_size
+                    pycurl.POSTFIELDSIZE_LARGE,
+                    os.fstat(hdl.r_fobj.fileno()).st_size,
                 )
             else:
                 raise tx.TransportOperationError(
@@ -1059,7 +1060,8 @@ class CurlTransportEngine(TransportEngine):
                     hdl.r_fobj = treq.read_fobj
                 hdl.setopt(pycurl.READDATA, hdl.r_fobj)
                 hdl.setopt(
-                    pycurl.INFILESIZE, os.fstat(hdl.r_fobj.fileno()).st_size
+                    pycurl.INFILESIZE_LARGE,
+                    os.fstat(hdl.r_fobj.fileno()).st_size,
                 )
             else:
                 raise tx.TransportOperationError(

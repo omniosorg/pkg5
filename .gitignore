@@ -11,11 +11,13 @@
 /src/po/*.mo
 /src/po/i18n_errs.txt
 /src/po/pkg.pot
+/src/util/mkcert/mkcert
 /src/tests/multiplatform.pyc
 /src/zoneproxy/zoneproxy-adm/zoneproxy-adm
 /src/zoneproxy/zoneproxy-client/zoneproxy-client
 /src/zoneproxy/zoneproxyd/zoneproxyd
 /src/tests/.timing_history.txt
+/src/tests/timing_info.txt
 /src/tests/*.pyc
 /src/tests/*/*.pyc
 /src/cffi_src/src
