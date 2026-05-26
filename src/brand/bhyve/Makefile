@@ -13,8 +13,9 @@
 #
 
 BRAND = bhyve
-FILES = boot config.xml createzone init platform.xml socat support uninstall \
-	bootlib.py bundle.py uefi/__init__.py uefi/align.py uefi/vars.py
+FILES = boot config.xml createzone init platform.xml qemu-monitor-cmd socat \
+	support uninstall bootlib.py bundle.py \
+	uefi/__init__.py uefi/align.py uefi/vars.py
 BINS = init boot
 
 PYMODULES = $(PYVERSIONS:%=modules/%)

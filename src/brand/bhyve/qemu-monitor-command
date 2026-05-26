@@ -1,0 +1,202 @@
+#!/bin/ksh -p
+#
+# This file and its contents are supplied under the terms of the
+# Common Development and Distribution License ("CDDL"), version 1.0.
+# You may only use this file in accordance with the terms of version
+# 1.0 of the CDDL.
+#
+# A full copy of the text of the CDDL should have accompanied this
+# source. A copy of the CDDL is also available via the Internet at
+# http://www.illumos.org/license/CDDL.
+
+# Copyright 2026 EFit Partners
+
+_json_val() {
+    typeset v="$1"
+    case "$v" in
+        true|false|null)
+            print -- "$v" ;;
+        +([0-9])|+([0-9])\.+([0-9]))
+            print -- "$v" ;;
+        *)
+            v="${v//\\/\\\\}"; v="${v//\"/\\\"}"
+            print -- "\"${v}\"" ;;
+    esac
+}
+
+dot_to_json() {
+    typeset prefix="${1:-arguments}"
+    shift
+
+    typeset -A val cnt
+    typeset -a keys args
+    typeset arg key v json
+    typeset i=0 j=0 n c first=1
+
+    args=("$@")
+    n=${#args[@]}
+
+    while (( i < n )); do
+        arg="${args[i]}"
+        if [[ "$arg" == "--${prefix}."* ]]; then
+            key="${arg#--${prefix}.}"
+            (( i++ ))
+            if [[ -z "${cnt[$key]}" ]]; then
+                cnt[$key]=0                      # explicit init before arithmetic
+                keys[${#keys[@]}]="$key"
+            fi
+            val["${key}.${cnt[$key]}"]="${args[i]}"   # no :-0 needed anymore
+            (( cnt[$key] += 1 ))                 # clean arithmetic, no ${}
+        fi
+        (( i++ ))
+    done
+
+    json="{"
+    for key in "${keys[@]}"; do
+        c=${cnt[$key]}
+        (( first )) || json+=","
+        first=0
+        v="$key"; v="${v//\\/\\\\}"; v="${v//\"/\\\"}"
+        json+="\"${v}\":"
+        if (( c == 1 )); then
+            json+="$(_json_val "${val[${key}.0]}")"
+        else
+            json+="["
+            j=0
+            while (( j < c )); do
+                (( j )) && json+=","
+                json+="$(_json_val "${val[${key}.${j}]}")"
+                (( j++ ))
+            done
+            json+="]"
+        fi
+    done
+    json+="}"
+    print -- "$json"
+}
+
+get_zone_path() {
+    typeset zone="$1"
+    typeset zone_path
+    zone_path=$(zonecfg -z "${zone}" info zonepath 2>/dev/null | awk '{print $2}')
+    [[ -z ${zone_path} ]] && return 1
+    typeset socket_path
+    socket_path=$(zonecfg -z "${zone}" info attr name=com2 2>/dev/null | awk '/value/ {print $2}')
+    [[ -z ${socket_path} ]] && return 2
+    print "${zone_path}/root${socket_path#socket,}"
+}
+
+print_error() {
+    typeset zone=$1
+    typeset err_msg=$2
+    print -r -- "{\"error\":{\"class\":\"QA_CMD\",\"desc\":\"${1}: ${2}\"}}"
+}
+
+query_socket() {
+    typeset zone="$1"
+    typeset command=${2:-"guest-info"}
+    typeset args_json="${3:-}"
+    typeset socket_path
+    typeset retval
+
+    socket_path=$(get_zone_path "${zone}")
+    retval=$?
+    (( retval == 1 )) && print_error "${zone}" "No such zone configured"    && return 3
+    (( retval == 2 )) && print_error "${zone}" "No com2 serial configured"  && return 4
+
+    if [[ -n "$args_json" ]]; then
+        command='{"execute":"guest-'${command#guest-}'","arguments":'${args_json}'}'
+    else
+        command='{"execute":"guest-'${command#guest-}'"}'
+    fi
+
+    zoneadm -z "${zone}" list -v | grep running >/dev/null
+    (( $? != 0 )) && print_error "${zone}" "Not running" && return 5
+
+    echo "$command" | /usr/lib/brand/bhyve/socat "$socket_path" 0 -
+}
+
+usage() {
+    print "Usage: $0 -z|--zone <zone> -c|--command <command> (default: info)"
+    print "          [-j|--json <json>] [--arguments.<key> <value> ...]"
+    print "          [-f|--format]"
+    exit 2
+}
+
+ZONE=""
+COMMAND=""
+FORMAT=0
+ARGS_JSON=""
+typeset -a DOT_ARGS
+typeset -a SILENT_COMMANDS=(shutdown suspend-disk suspend-ram suspend-hybrid)
+
+while (( $# > 0 )); do
+    case "$1" in
+        -z|--zone)
+                [[ $# -ge 2 ]] || { print "Missing value for $1"; usage; }
+            ZONE="$2"
+            shift 2
+            ;;
+        -c|--command)
+                [[ $# -ge 2 ]] || { print "Missing value for $1"; usage; }
+            COMMAND="$2"
+            shift 2
+            ;;
+        -j|--json)
+            [[ $# -ge 2 ]] || { print "Missing value for $1"; usage; }
+            ARGS_JSON="$2"
+            shift 2
+            ;;
+        --arguments.*)
+            [[ $# -ge 2 ]] || { print "Missing value for $1"; usage; }
+            DOT_ARGS+=("$1" "$2")
+            shift 2
+            ;;
+        -f|--format)
+            if [[ -x /opt/ooce/bin/jq ]]; then
+                FORMAT=1
+            else
+                print "Please install ooce/util/jq to allow format option"
+            fi
+            shift
+            ;;
+        -h|--help)
+            usage
+            ;;
+        --)
+            shift
+            break
+            ;;
+        -*)
+            print "Unknown option: $1"
+            usage
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+
+[[ -z "$ZONE" ]] && usage
+
+# Dot notation takes precedence over --json if both are given
+if (( ${#DOT_ARGS[@]} > 0 )); then
+    [[ -n "$ARGS_JSON" ]] && print "Warning: --json ignored, using --arguments.* dot notation"
+    ARGS_JSON=$(dot_to_json arguments "${DOT_ARGS[@]}")
+fi
+
+RESULT=$(query_socket "$ZONE" "$COMMAND" "$ARGS_JSON")
+retval=$?
+
+if [[ -n "${RESULT//[$'\r\n\t ']/}" ]]; then
+    if (( FORMAT == 0 )); then
+        print "$RESULT"
+    else
+        print "$RESULT" | /opt/ooce/bin/jq
+    fi
+elif [[ " ${SILENT_COMMANDS[*]} " != *" ${COMMAND#guest-} "* ]]; then
+    print_error "${ZONE}" "Qemu Guest Agent does not seem to be running or configured"
+    exit 6
+fi
+
+exit ${retval}
