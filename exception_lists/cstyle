@@ -20,19 +20,8 @@
 #
 
 #
-# Copyright (c) 2009, 2024, Oracle and/or its affiliates.
+# Copyright (c) 2026, Oracle and/or its affiliates.
 #
 
-syntax: glob
-
-src/man/*.txt
-src/modules/solver/vec.h
-src/modules/solver/solver.*
-src/pkg/external_deps.txt
-src/tests/bandit-baseline.json
-src/tests/baseline.txt
-doc/*
-src/tests/*.txt
-src/po/LINGUAS
-src/po/POTFILES.*
-src/pkg/license_files/lic_*
+modules/solver/vec\.h$
+modules/solver/solver\.(c|h)$
