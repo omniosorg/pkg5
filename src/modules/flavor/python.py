@@ -21,9 +21,10 @@
 #
 
 #
-# Copyright (c) 2009, 2022, Oracle and/or its affiliates.
+# Copyright (c) 2009, 2026, Oracle and/or its affiliates.
 #
 
+import ast
 import os
 import re
 import subprocess
@@ -360,7 +361,7 @@ def process_python_dependencies(action, pkg_vars, script_path, run_paths):
         l = l.strip()
         if l.startswith("DEP "):
             try:
-                names, dirs = eval(l[4:])
+                names, dirs = ast.literal_eval(l[4:])
             except Exception:
                 bad_lines.append(l)
             else:
