@@ -22,7 +22,7 @@
 
 #
 # Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
-# Copyright (c) 2015, 2025, Oracle and/or its affiliates.
+# Copyright (c) 2015, 2026, Oracle and/or its affiliates.
 #
 
 
@@ -1753,11 +1753,11 @@ def __api_op(
             return __prepare_json(exit_code, data=data)
         if _api_inst.planned_nothingtodo():
             return __prepare_json(EXIT_NOP, data=data)
-        if _stage == API_STAGE_PLAN:
-            return __prepare_json(EXIT_OK, data=data)
         if _noexecute:
             exit_code = __verify_exit_status(_api_inst)
             return __prepare_json(exit_code, data=data)
+        if _stage == API_STAGE_PLAN:
+            return __prepare_json(EXIT_OK, data=data)
     else:
         assert _stage in [API_STAGE_PREPARE, API_STAGE_EXECUTE]
         __api_plan_load(_api_inst, _stage, _origins, logger=logger)
