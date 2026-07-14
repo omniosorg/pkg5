@@ -124,6 +124,7 @@ PPT_SLOT        = 9
 RNG_SLOT        = 10
 VIRTFS_SLOT     = 11
 NET_SLOT2       = 12
+CONSOLE_SLOT    = 17
 CINIT_SLOT      = 29
 VNC_SLOT        = 30
 LPC_SLOT_WIN    = 31
@@ -459,6 +460,13 @@ for i, v in z.build_devlist('com', 4):
 # Console
 
 args.extend(['-l', 'com1,{0}'.format(opts['console'])])
+
+# virtio-console/serial devices
+
+for i, v in z.build_devlist('virtio-console', 4):
+    args.extend([
+        '-s', '{0}:{1},virtio-console,{2}'.format(CONSOLE_SLOT, i, v)
+    ])
 
 # CDROM
 
