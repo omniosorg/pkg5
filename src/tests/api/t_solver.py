@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2026, Oracle and/or its affiliates.
 #
 
 from . import testutils
@@ -37,10 +37,10 @@ import sys
 
 class TestSolver(pkg5unittest.Pkg5TestCase):
     def test_no_solution(self):
-        cnf_test(failing_test_case.splitlines())
+        self.assertFalse(cnf_test(failing_test_case.splitlines()))
 
     def test_solution(self):
-        cnf_test(working_test_case.splitlines())
+        self.assertTrue(cnf_test(working_test_case.splitlines()))
 
 
 def cnf_test(lines):

@@ -20,7 +20,7 @@
  */
 
 /*
- * Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2026, Oracle and/or its affiliates.
  */
 
 #include <Python.h>
@@ -47,7 +47,7 @@ typedef struct
 static inline container_t *
 con_alloc(int initial_capacity)
 {
-	container_t *ptr = (container_t *) malloc(sizeof (container_t));
+	container_t *ptr = (container_t *)malloc(sizeof (container_t));
 	ptr->capacity = initial_capacity;
 	ptr->buffer = malloc(sizeof (void *) * ptr->capacity);
 	ptr->cnt = 0;
@@ -62,8 +62,8 @@ static inline void
 con_addptr(container_t *container, void *ptr)
 {
 	if (container->cnt == container->capacity)
-		container->buffer = realloc(container->buffer,
-		    sizeof (void *) * (container->capacity += 1000));
+		container->buffer = reallocarray(container->buffer,
+		    container->capacity += 1000, sizeof (void *));
 	container->buffer[container->cnt++] = ptr;
 }
 
@@ -90,7 +90,7 @@ con_delete(container_t *container)
 	free((void *) container);
 }
 
-/* 
+/*
  * allocate a ref-cnted pointer to a chunk of memory of specified size
  * returns w/ refcnt set to 1.  Be able to retrieve size.
  */
@@ -111,7 +111,7 @@ alloc_refcntptr(size_t size)
 static inline void *
 inc_refcntptr(void *ptr)
 {
-	long *lptr = (long *) ptr;
+	long *lptr = (long *)ptr;
 
 	lptr[-1]++;
 
@@ -125,7 +125,7 @@ inc_refcntptr(void *ptr)
 static inline void
 dec_refcntptr(void *ptr)
 {
-	long *lptr = (long *) ptr;
+	long *lptr = (long *)ptr;
 
 	if (--(lptr[-1]) == 0)
 		free((void*) (lptr - 2));
@@ -134,7 +134,7 @@ dec_refcntptr(void *ptr)
 static inline long
 size_refcntptr(void *ptr)
 {
-	long *lptr = (long *) ptr;
+	long *lptr = (long *)ptr;
 	return (lptr[-2]);
 }
 
@@ -150,7 +150,7 @@ size_refcntptr(void *ptr)
 static inline void
 cpyptr(void *ptr, void *usr)
 {
-	con_addptr((container_t *) usr, inc_refcntptr(ptr));
+	con_addptr((container_t *)usr, inc_refcntptr(ptr));
 }
 
 /*ARGSUSED*/
@@ -177,16 +177,18 @@ refcntcon_del(container_t *old)
 	}
 }
 
-#define RETURN_NEEDS_RESET BAILOUT(PyExc_RuntimeError, "msat_solver failed; reset needed")
-#define RETURN_NEEDS_INTLIST BAILOUT(PyExc_TypeError, "List of integers expected")
-#define RETURN_NOT_SOLVER BAILOUT(PyExc_TypeError, "msat_solver expected")
+#define	RETURN_NEEDS_RESET \
+	BAILOUT(PyExc_RuntimeError, "msat_solver failed; reset needed")
+#define	RETURN_NEEDS_INTLIST \
+	BAILOUT(PyExc_TypeError, "List of integers expected")
+#define	RETURN_NOT_SOLVER \
+	BAILOUT(PyExc_TypeError, "msat_solver expected")
 
-#define BAILOUT(exception, string) {PyErr_SetString(exception, string); return (NULL);}
+#define	BAILOUT(exception, string) do { \
+	PyErr_SetString(exception, string); \
+	return (NULL); \
+} while (0)
 
-
-#if PY_MAJOR_VERSION >= 3
-# define PyInt_AsLong PyLong_AsLong
-#endif
 
 typedef struct
 {
@@ -204,49 +206,16 @@ static PyObject *
 msat_new(PyTypeObject *type, PyObject *args, PyObject *kwds);
 
 static PyTypeObject minisat_solvertype = {
-#if PY_MAJOR_VERSION >= 3
-	PyVarObject_HEAD_INIT(NULL, 0)
-#else
-	PyObject_HEAD_INIT(NULL)
-	0, /*ob_size*/
-#endif
-	"solver.msat_solver", /*tp_name*/
-	sizeof (msat_solver), /*tp_basicsize*/
-	0, /*tp_itemsize*/
-	(destructor) msat_dealloc, /*tp_dealloc*/
-	0, /*tp_print*/
-	0, /*tp_getattr*/
-	0, /*tp_setattr*/
-	0, /*tp_compare*/
-	0, /*tp_repr*/
-	0, /*tp_as_number*/
-	0, /*tp_as_sequence*/
-	0, /*tp_as_mapping*/
-	0, /*tp_hash */
-	0, /*tp_call*/
-	0, /*tp_str*/
-	0, /*tp_getattro*/
-	0, /*tp_setattro*/
-	0, /*tp_as_buffer*/
-	Py_TPFLAGS_DEFAULT, /*tp_flags*/
-	"msat_solver object", /*tp_doc*/
-	0, /*tp_traverse*/
-	0, /*tp_clear*/
-	0, /*tp_richcompare*/
-	0, /*tp_weaklistoffset*/
-	0, /*tp_iter*/
-	0, /*tp_iternext*/
-	msat_methods, /*tp_methods*/
-	0, /*tp_members*/
-	0, /*tp_getset*/
-	0, /*tp_base*/
-	0, /*tp_dict*/
-	0, /*tp_descr_get*/
-	0, /*tp_descr_set*/
-	0, /*tp_dictoffset*/
-	(initproc) msat_init, /*tp_init*/
-	0, /*tp_alloc*/
-	msat_new /*tp_new*/
+	.ob_base = PyVarObject_HEAD_INIT(NULL, 0)
+	.tp_name = "solver.msat_solver",
+	.tp_doc = "msat_solver object",
+	.tp_basicsize = sizeof (msat_solver),
+	.tp_itemsize = 0,
+	.tp_dealloc = (destructor) msat_dealloc,
+	.tp_flags = Py_TPFLAGS_DEFAULT,
+	.tp_methods = msat_methods,
+	.tp_init = (initproc) msat_init,
+	.tp_new = msat_new,
 };
 
 /*ARGSUSED*/
@@ -254,24 +223,17 @@ static void
 msat_dealloc(msat_solver *self)
 {
 	refcntcon_del(self->msat_clauses);
-	if (self->msat_instance != NULL) 
+	if (self->msat_instance != NULL)
 		solver_delete(self->msat_instance);
-#if PY_MAJOR_VERSION >= 3
 	Py_TYPE(self)->tp_free((PyObject*) self);
-#else
-	self->ob_type->tp_free((PyObject*) self);
-#endif
 }
 
 static void
 add_clauses(void *ptr, void *arg)
 {
 	msat_solver *self = (msat_solver *) arg;
-	lbool ret = solver_addclause(self->msat_instance,
-	    (lit*) ptr, (lit*) ((char *) ptr + size_refcntptr(ptr)));
-
-	if (ret == l_False)
-		self->msat_needs_reset = 1;
+	solver_addclause(self->msat_instance,
+	    (lit*) ptr, (lit*) ((char *)ptr + size_refcntptr(ptr)));
 }
 
 /*ARGSUSED*/
@@ -284,7 +246,7 @@ msat_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 
 	if ((self = (msat_solver *) type->tp_alloc(type, 0)) == NULL)
 		return (NULL);
-	
+
 	/*
 	 * we optionally allow another server instance
 	 * to be passed in to initialize the new solver
@@ -298,7 +260,7 @@ msat_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 		self->msat_instance->verbosity = 0;
 		self->msat_needs_reset = 0;
 		self->msat_clauses = con_alloc(1000);
-		return (PyObject *) self;
+		return ((PyObject *)self);
 	case 1:
 		prototype_solver = (msat_solver *) PyTuple_GetItem(args, 0);
 		if (prototype_solver == NULL) {
@@ -321,7 +283,7 @@ msat_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 		    refcntcon_dup(prototype_solver->msat_clauses);
 		self->msat_needs_reset = 0;
 		con_iterptrs(self->msat_clauses, self, add_clauses);
-		return (PyObject *) self;
+		return ((PyObject *)self);
 	default:
 		RETURN_NOT_SOLVER;
 	}
@@ -401,7 +363,7 @@ msat_unpack_integers(PyObject *list, int *nout)
 
 	n = PyList_Size(list);
 
-	if ((is = (int *) alloc_refcntptr(n * sizeof (int))) == NULL) {
+	if ((is = (int *)alloc_refcntptr(n * sizeof (int))) == NULL) {
 		PyErr_NoMemory();
 		return (NULL);
 	}
@@ -411,8 +373,8 @@ msat_unpack_integers(PyObject *list, int *nout)
 		int l;
 		int v;
 
-		if ((l = PyInt_AsLong(PyList_GetItem(list, i))) == -1
-		&& PyErr_Occurred()) {
+		if ((l = PyLong_AsLong(PyList_GetItem(list, i))) == -1 &&
+		    PyErr_Occurred()) {
 			dec_refcntptr(is);
 			RETURN_NEEDS_INTLIST;
 		}
@@ -431,7 +393,6 @@ msat_add_clause(msat_solver *self, PyObject *args)
 {
 	int *is;
 	int n;
-	lbool ret;
 	PyObject *list;
 
 	if (self->msat_needs_reset)
@@ -450,35 +411,25 @@ msat_add_clause(msat_solver *self, PyObject *args)
 		RETURN_NEEDS_INTLIST;
 	}
 
-	ret = solver_addclause(self->msat_instance, is, &(is[n]));
-
-	if (ret == l_True)
+	if (solver_addclause(self->msat_instance, is, &(is[n])))
 		Py_RETURN_TRUE;
-	else if (ret == l_False) {
-		self->msat_needs_reset = 1;
-		Py_RETURN_FALSE;
-	}
 
 	Py_RETURN_NONE;
 }
 
 static PyObject *
-msat_solve(msat_solver *self, PyObject *args, PyObject *keywds)
+msat_solve(msat_solver *self, PyObject *args)
 {
 	int *as;
 	int *as_top;
 	int n;
 	PyObject *assume;
-	lbool ret;
-	int limit;
-
-	static char *kwlist[] = {"assume", "limit", NULL};
+	bool ret;
 
 	if (self->msat_needs_reset)
 		RETURN_NEEDS_RESET;
 
-	if (!PyArg_ParseTupleAndKeywords(args, keywds, "|Oi", kwlist,
-	&assume, &limit))
+	if (!PyArg_ParseTuple(args, "O", &assume))
 		return (NULL);
 
 	if ((as = msat_unpack_integers(assume, &n)) == NULL)
@@ -544,7 +495,7 @@ PyMethodDef msat_methods[] = {
 		METH_VARARGS,
 		"Add another clause (as list of integers) to solution space"},
 	{ "solve", (PyCFunction) msat_solve,
-		METH_VARARGS | METH_KEYWORDS,
+		METH_VARARGS,
 		"Attempt to satisfy current clauses and assumptions."},
 	{ "dereference", (PyCFunction) msat_dereference,
 		METH_VARARGS,
@@ -554,12 +505,10 @@ PyMethodDef msat_methods[] = {
 };
 
 
-static struct PyModuleDef solvermodule ={
-	PyModuleDef_HEAD_INIT,
-	"solver",
-	NULL,
-	-1,
-	msat_methods
+static struct PyModuleDef solvermodule = {
+	.m_base = PyModuleDef_HEAD_INIT,
+	.m_name = "solver",
+	.m_size = -1
 };
 
 static PyObject *
@@ -568,16 +517,15 @@ moduleinit(void)
 	PyObject *m;
 
 	if (PyType_Ready(&minisat_solvertype) < 0)
-		return NULL;
+		return (NULL);
 	m = PyModule_Create(&solvermodule);
 	Py_INCREF(&minisat_solvertype);
 	PyModule_AddObject(m, "msat_solver", (PyObject*) &minisat_solvertype);
-	return m;
+	return (m);
 }
 
 PyMODINIT_FUNC
 PyInit_solver(void)
 {
-	return moduleinit();
+	return (moduleinit());
 }
-
