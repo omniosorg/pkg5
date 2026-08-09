@@ -550,6 +550,26 @@ class ActionCache(object):
         for i in range(0, len(vals), _CHUNK):
             yield vals[i : i + _CHUNK]
 
+    def get_actions_by_aname(self, anames):
+        """Yield (action name, fmri string, key attribute value,
+        stripped action string) tuples for every cached action whose
+        action name is in 'anames'."""
+
+        con = self.__open_ro()
+        if con is None:
+            raise ActionCacheError(
+                "installed-action cache disappeared: {0}".format(self.__path)
+            )
+        anames = sorted(anames)
+        yield from con.execute(
+            "SELECT a.aname, p.fmri, a.keyval, a.act"
+            " FROM actions a"
+            " JOIN packages p ON p.pkg_id = a.pkg_id"
+            " WHERE a.aname IN ({0})"
+            " ORDER BY a.aname, p.fmri".format(",".join("?" * len(anames))),
+            anames,
+        )
+
     def get_actions(self, anames, keys):
         """Yield (key attribute value, fmri string, stripped action
         string) tuples for every cached action whose action name is in
