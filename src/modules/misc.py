@@ -30,7 +30,6 @@ Misc utility functions used by the packaging system.
 
 from __future__ import print_function
 
-import OpenSSL.crypto as osc
 import calendar
 import collections
 import datetime
@@ -60,8 +59,6 @@ from io import BytesIO
 from io import StringIO
 from itertools import zip_longest
 from operator import itemgetter
-from cryptography import x509
-from cryptography.hazmat.backends import default_backend
 
 from stat import (
     S_IFMT,
@@ -1307,6 +1304,11 @@ def build_cert(path, uri=None, pub=None):
     'pub' is an optional string value containing the name (prefix) of a
     related publisher."""
 
+    # Imported here (and in the other certificate helpers) rather than
+    # at module level so that the many pkg operations which never touch
+    # certificates don't pay the substantial import cost.
+    import OpenSSL.crypto as osc
+
     try:
         cf = open(path, "rb")
         certdata = cf.read()
@@ -1366,6 +1368,10 @@ def validate_ssl_cert(ssl_cert, prefix=None, uri=None):
 def load_trust_anchors(trust_anchor_loc, trust_anchors, bad_trust_anchors=[]):
     """Load all trust anchors in given directory; each
     certificate file may have multiple trust certificates."""
+
+    from cryptography import x509
+    from cryptography.hazmat.backends import default_backend
+
     ca_list = []
 
     for fn in os.listdir(trust_anchor_loc):

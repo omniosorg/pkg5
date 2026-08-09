@@ -31,12 +31,6 @@ import shutil
 import sys
 import tempfile
 
-from cryptography import __version__ as _cver
-from cryptography.exceptions import InvalidSignature
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import serialization, hashes
-from cryptography.hazmat.primitives.asymmetric import padding
-
 from pkg.actions import generic
 import pkg.actions
 import pkg.client.api_errors as apx
@@ -46,17 +40,35 @@ import pkg.misc as misc
 valid_hash_algs = ("sha256", "sha384", "sha512")
 valid_sig_algs = ("rsa",)
 
-if list(map(int, _cver.split("."))) >= [3, 4, 0]:
-    # In cryptography 3.4, the hash classes moved to subclasses of
-    # hashes.hashAlgorithm
-    hash_registry = hashes.HashAlgorithm.__subclasses__()
-else:
-    # For cryptography < 3.4.0
-    import abc
+# The list of hash algorithm classes provided by the cryptography
+# module, which is expensive to import and only needed when signatures
+# are actually made or verified, so populated on first use by
+# _get_hash_registry.
+hash_registry = None
 
-    hash_registry = [
-        ref() for ref in abc._get_dump(hashes.HashAlgorithm)[0] if ref()
-    ]
+
+def _get_hash_registry():
+    """Return the list of cryptography hash algorithm classes,
+    loading the cryptography module on first use."""
+
+    global hash_registry
+
+    if hash_registry is None:
+        from cryptography import __version__ as _cver
+        from cryptography.hazmat.primitives import hashes
+
+        if list(map(int, _cver.split("."))) >= [3, 4, 0]:
+            # In cryptography 3.4, the hash classes moved to
+            # subclasses of hashes.hashAlgorithm
+            hash_registry = hashes.HashAlgorithm.__subclasses__()
+        else:
+            # For cryptography < 3.4.0
+            import abc
+
+            hash_registry = [
+                ref() for ref in abc._get_dump(hashes.HashAlgorithm)[0] if ref()
+            ]
+    return hash_registry
 
 
 class SignatureAction(generic.Action):
@@ -211,9 +223,8 @@ class SignatureAction(generic.Action):
     def __get_hash_by_name(self, name):
         """Get the cryptopgraphy Hash() class based on the OpenSSL
         algorithm name."""
-        global hash_registry
 
-        for h in hash_registry:
+        for h in _get_hash_registry():
             if h.name == name:
                 return h
 
@@ -474,6 +485,9 @@ class SignatureAction(generic.Action):
         The 'required_names' parameter is a set of strings that must
         be seen as a CN in the chain of trust for the certificate."""
 
+        from cryptography.exceptions import InvalidSignature
+        from cryptography.hazmat.primitives.asymmetric import padding
+
         ver = int(self.attrs["version"])
         # If this signature is tagged with variants, if the version is
         # higher than one we know about, or it uses an unrecognized
@@ -590,6 +604,10 @@ class SignatureAction(generic.Action):
             )
             self.attrs["value"] = h.hexdigest()
         else:
+            from cryptography.hazmat.backends import default_backend
+            from cryptography.hazmat.primitives import serialization
+            from cryptography.hazmat.primitives.asymmetric import padding
+
             # If a private key is used, then the certificate it's
             # paired with must be provided.
             assert self.data is not None

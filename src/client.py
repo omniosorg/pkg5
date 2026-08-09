@@ -129,7 +129,6 @@ try:
     import textwrap
     import time
     import traceback
-    import pycurl
     import atexit
     import shutil
     from urllib.parse import urlparse, unquote
@@ -3314,6 +3313,8 @@ def apply_hot_fix(**args):
         or origin.startswith("ftp://")
     ):
         # Download file to temporary area
+
+        import pycurl
 
         if not args["quiet"]:
             msg("Downloading hot-fix from {0}".format(origin))

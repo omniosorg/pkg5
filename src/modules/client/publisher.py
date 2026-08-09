@@ -47,10 +47,10 @@ import tempfile
 import time
 import uuid
 
-from cryptography import x509
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import padding
+# NOTE: the cryptography module is expensive to import and is only
+# needed for certificate handling, so it is imported locally by the
+# functions that use it and the certificate policy tables below are
+# built on first use by _init_cert_tables.
 from io import BytesIO
 from urllib.parse import (
     urlsplit,
@@ -104,48 +104,87 @@ URI_SORT_POLICIES = {
     URI_SORT_PRIORITY: lambda obj: (obj.priority, obj.uri),
 }
 
-# The strings in the value field refer to the boolean properties of the
-# Cryptography extension classes. If a property has a value True set, it means
-# this property is added as an extension value in the certificate generation,
-# and vice versa.
-EXTENSIONS_VALUES = {
-    x509.BasicConstraints: ["ca", "path_length"],
-    x509.KeyUsage: [
-        "digital_signature",
-        "content_commitment",
-        "key_encipherment",
-        "data_encipherment",
-        "key_agreement",
-        "key_cert_sign",
-        "crl_sign",
-        "encipher_only",
-        "decipher_only",
-    ],
-}
+_CERT_TABLE_NAMES = (
+    "EXTENSIONS_VALUES",
+    "SUPPORTED_EXTENSION_VALUES",
+    "CODE_SIGNING_USE",
+    "CERT_SIGNING_USE",
+    "CRL_SIGNING_USE",
+    "POSSIBLE_USES",
+)
 
-# Only listed extension values (properties) here can have a value True set in a
-# certificate extension; any other properties with a value True set will be
-# treated as unsupported.
-SUPPORTED_EXTENSION_VALUES = {
-    x509.BasicConstraints: ("ca", "path_length"),
-    x509.KeyUsage: ("digital_signature", "key_cert_sign", "crl_sign"),
-}
 
-# These dictionaries map uses into their extensions.
-CODE_SIGNING_USE = {
-    x509.KeyUsage: ["digital_signature"],
-}
+def _init_cert_tables():
+    """Build the certificate policy tables, which are keyed by
+    cryptography extension classes; idempotent, and called from every
+    certificate verification entry point."""
 
-CERT_SIGNING_USE = {
-    x509.BasicConstraints: ["ca"],
-    x509.KeyUsage: ["key_cert_sign"],
-}
+    if "POSSIBLE_USES" in globals():
+        return
 
-CRL_SIGNING_USE = {
-    x509.KeyUsage: ["crl_sign"],
-}
+    from cryptography import x509
 
-POSSIBLE_USES = [CODE_SIGNING_USE, CERT_SIGNING_USE, CRL_SIGNING_USE]
+    g = globals()
+
+    # The strings in the value field refer to the boolean properties
+    # of the Cryptography extension classes. If a property has a value
+    # True set, it means this property is added as an extension value
+    # in the certificate generation, and vice versa.
+    g["EXTENSIONS_VALUES"] = {
+        x509.BasicConstraints: ["ca", "path_length"],
+        x509.KeyUsage: [
+            "digital_signature",
+            "content_commitment",
+            "key_encipherment",
+            "data_encipherment",
+            "key_agreement",
+            "key_cert_sign",
+            "crl_sign",
+            "encipher_only",
+            "decipher_only",
+        ],
+    }
+
+    # Only listed extension values (properties) here can have a value
+    # True set in a certificate extension; any other properties with a
+    # value True set will be treated as unsupported.
+    g["SUPPORTED_EXTENSION_VALUES"] = {
+        x509.BasicConstraints: ("ca", "path_length"),
+        x509.KeyUsage: ("digital_signature", "key_cert_sign", "crl_sign"),
+    }
+
+    # These dictionaries map uses into their extensions.
+    g["CODE_SIGNING_USE"] = {
+        x509.KeyUsage: ["digital_signature"],
+    }
+
+    g["CERT_SIGNING_USE"] = {
+        x509.BasicConstraints: ["ca"],
+        x509.KeyUsage: ["key_cert_sign"],
+    }
+
+    g["CRL_SIGNING_USE"] = {
+        x509.KeyUsage: ["crl_sign"],
+    }
+
+    g["POSSIBLE_USES"] = [
+        g["CODE_SIGNING_USE"],
+        g["CERT_SIGNING_USE"],
+        g["CRL_SIGNING_USE"],
+    ]
+
+
+def __getattr__(name):
+    """Serve the certificate policy tables to external consumers,
+    building them on first access."""
+
+    if name in _CERT_TABLE_NAMES:
+        _init_cert_tables()
+        return globals()[name]
+    raise AttributeError(
+        "module {0!r} has no attribute {1!r}".format(__name__, name)
+    )
+
 
 # A special token used in place of the system repository URL which is
 # replaced at runtime by the actual address and port of the
@@ -2797,6 +2836,8 @@ pkg unset-publisher {0}
 
     @staticmethod
     def __hash_cert(c):
+        from cryptography.hazmat.primitives import serialization
+
         # In order to interoperate with older images, we must use SHA-1
         # here.
         return hashlib.sha1(
@@ -2806,6 +2847,9 @@ pkg unset-publisher {0}
     @staticmethod
     def __string_to_cert(s, pkg_hash=None):
         """Convert a string to a X509 cert."""
+
+        from cryptography import x509
+        from cryptography.hazmat.backends import default_backend
 
         try:
             return x509.load_pem_x509_certificate(
@@ -2832,6 +2876,8 @@ pkg unset-publisher {0}
     def __add_cert(self, cert, pkg_hash=None):
         """Add the pem representation of the certificate 'cert' to the
         certificates this publisher knows about."""
+
+        from cryptography.hazmat.primitives import serialization
 
         self.create_meta_root()
         if not pkg_hash:
@@ -2946,6 +2992,9 @@ pkg unset-publisher {0}
         name_hsh = hashlib.sha1(misc.force_bytes(name)).hexdigest()
 
         def load_cert(pth):
+            from cryptography import x509
+            from cryptography.hazmat.backends import default_backend
+
             with open(pth, "rb") as f:
                 return x509.load_pem_x509_certificate(
                     f.read(), default_backend()
@@ -3078,6 +3127,9 @@ pkg unset-publisher {0}
         """Verify the signature of a certificate or CRL 'c' against a
         provided public key 'key'."""
 
+        from cryptography import x509
+        from cryptography.hazmat.primitives.asymmetric import padding
+
         if isinstance(c, x509.Certificate):
             data = c.tbs_certificate_bytes
         elif isinstance(c, x509.CertificateRevocationList):
@@ -3107,6 +3159,10 @@ pkg unset-publisher {0}
 
         The 'ca_dict' is a dictionary which maps subject hashes to
         certs treated as trust anchors."""
+
+        from cryptography import x509
+
+        _init_cert_tables()
 
         crl = None
         if self.transport:
@@ -3179,6 +3235,8 @@ pkg unset-publisher {0}
         The 'ca_dict' is a dictionary which maps subject hashes to
         certs treated as trust anchors."""
 
+        from cryptography import x509
+
         # If the certificate doesn't have a CRL location listed, treat
         # it as valid.
 
@@ -3236,6 +3294,10 @@ pkg unset-publisher {0}
     def __check_extensions(self, cert, usages, cur_pathlen):
         """Check whether the critical extensions in this certificate
         are supported and allow the provided use(s)."""
+
+        from cryptography import x509
+
+        _init_cert_tables()
 
         try:
             exts = cert.extensions
@@ -3321,6 +3383,10 @@ pkg unset-publisher {0}
 
         The 'required_names' parameter is a set of strings that must
         be seen as a CN in the chain of trust for the certificate."""
+
+        from cryptography import x509
+
+        _init_cert_tables()
 
         if required_names is None:
             required_names = set()
