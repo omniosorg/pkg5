@@ -36,8 +36,6 @@ import zlib
 from collections import defaultdict
 from functools import cmp_to_key
 from io import BytesIO
-from cryptography import x509
-from cryptography.hazmat.backends import default_backend
 from urllib.parse import (
     quote,
     urlparse,
@@ -49,7 +47,6 @@ import pkg.catalog as catalog
 import pkg.client.api_errors as apx
 import pkg.client.imageconfig as imageconfig
 import pkg.client.publisher as publisher
-import pkg.client.transport.engine as engine
 import pkg.client.transport.exception as tx
 import pkg.client.transport.mdetect as mdetect
 import pkg.client.transport.repo as trepo
@@ -602,6 +599,10 @@ class Transport(object):
         self.__bad_crls = set()
 
     def __setup(self):
+        # Deferred so that plan-only operations which never open a
+        # transport connection don't pay for loading pycurl.
+        import pkg.client.transport.engine as engine
+
         self.__engine = engine.CurlTransportEngine(self)
 
         # Configure engine's user agent
@@ -2137,6 +2138,9 @@ class Transport(object):
     def __format_safe_read_crl(self, pth):
         """CRLs seem to frequently come in DER format, so try reading
         the CRL using both of the formats before giving up."""
+
+        from cryptography import x509
+        from cryptography.hazmat.backends import default_backend
 
         with open(pth, "rb") as f:
             raw = f.read()

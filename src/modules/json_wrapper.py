@@ -21,9 +21,6 @@ json module abstraction for the packaging system.
 from pkg.client.debugvalues import DebugValues
 import pkg.misc as misc
 
-# Pass-through to jsonschema
-from jsonschema import validate, ValidationError
-
 import os, sys, time
 import rapidjson as _json
 
@@ -125,6 +122,20 @@ def dumps(obj, **kw):
         return ret
     else:
         return _json.dumps(obj, **kw)
+
+
+def __getattr__(name):
+    """Pass 'validate' and 'ValidationError' through to jsonschema,
+    which is loaded lazily as importing it is expensive and few
+    operations validate a schema."""
+
+    if name in ("validate", "ValidationError"):
+        import jsonschema
+
+        return getattr(jsonschema, name)
+    raise AttributeError(
+        "module {0!r} has no attribute {1!r}".format(__name__, name)
+    )
 
 
 # Vim hints

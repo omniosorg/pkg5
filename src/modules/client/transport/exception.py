@@ -26,7 +26,6 @@
 
 import errno
 import http.client
-import pycurl
 
 from functools import total_ordering
 
@@ -38,51 +37,74 @@ retryable_http_errors = set(
         http.client.NOT_FOUND,
     )
 )
-retryable_file_errors = set(
-    (pycurl.E_FILE_COULDNT_READ_FILE, errno.EAGAIN, errno.ENOENT)
-)
 
 import pkg.client.api_errors as api_errors
 
 # Errors that stats.py may include in a decay-able error rate
 decayable_http_errors = set((http.client.NOT_FOUND,))
-decayable_file_errors = set(
-    (pycurl.E_FILE_COULDNT_READ_FILE, errno.EAGAIN, errno.ENOENT)
-)
-decayable_pycurl_errors = set(
-    (pycurl.E_OPERATION_TIMEOUTED, pycurl.E_COULDNT_CONNECT)
-)
-
-# Different protocols may have different retryable errors.  Map proto
-# to set of retryable errors.
-
-retryable_proto_errors = {
-    "file": retryable_file_errors,
-    "http": retryable_http_errors,
-    "https": retryable_http_errors,
-}
-
-decayable_proto_errors = {
-    "file": decayable_file_errors,
-    "http": decayable_http_errors,
-    "https": decayable_http_errors,
-}
 
 proto_code_map = {"http": http.client.responses, "https": http.client.responses}
 
-retryable_pycurl_errors = set(
-    (
-        pycurl.E_COULDNT_CONNECT,
-        pycurl.E_PARTIAL_FILE,
-        pycurl.E_OPERATION_TIMEOUTED,
-        pycurl.E_GOT_NOTHING,
-        pycurl.E_SEND_ERROR,
-        pycurl.E_RECV_ERROR,
-        pycurl.E_COULDNT_RESOLVE_HOST,
-        pycurl.E_TOO_MANY_REDIRECTS,
-        pycurl.E_BAD_CONTENT_ENCODING,
+# The remaining classification tables are derived from pycurl error
+# constants. Loading pycurl is expensive and most pkg invocations
+# never classify a transport error, so they are populated on first
+# use by _init_error_tables.
+retryable_file_errors = None
+decayable_file_errors = None
+decayable_pycurl_errors = None
+retryable_pycurl_errors = None
+
+# Different protocols may have different retryable errors.  Map proto
+# to set of retryable errors.
+retryable_proto_errors = None
+decayable_proto_errors = None
+
+
+def _init_error_tables():
+    """Populate the pycurl-derived error classification tables;
+    idempotent, and called from every classification path."""
+
+    global retryable_file_errors, decayable_file_errors
+    global decayable_pycurl_errors, retryable_pycurl_errors
+    global retryable_proto_errors, decayable_proto_errors
+
+    if retryable_proto_errors is not None:
+        return
+
+    import pycurl
+
+    retryable_file_errors = set(
+        (pycurl.E_FILE_COULDNT_READ_FILE, errno.EAGAIN, errno.ENOENT)
     )
-)
+    decayable_file_errors = set(
+        (pycurl.E_FILE_COULDNT_READ_FILE, errno.EAGAIN, errno.ENOENT)
+    )
+    decayable_pycurl_errors = set(
+        (pycurl.E_OPERATION_TIMEOUTED, pycurl.E_COULDNT_CONNECT)
+    )
+    retryable_pycurl_errors = set(
+        (
+            pycurl.E_COULDNT_CONNECT,
+            pycurl.E_PARTIAL_FILE,
+            pycurl.E_OPERATION_TIMEOUTED,
+            pycurl.E_GOT_NOTHING,
+            pycurl.E_SEND_ERROR,
+            pycurl.E_RECV_ERROR,
+            pycurl.E_COULDNT_RESOLVE_HOST,
+            pycurl.E_TOO_MANY_REDIRECTS,
+            pycurl.E_BAD_CONTENT_ENCODING,
+        )
+    )
+    retryable_proto_errors = {
+        "file": retryable_file_errors,
+        "http": retryable_http_errors,
+        "https": retryable_http_errors,
+    }
+    decayable_proto_errors = {
+        "file": decayable_file_errors,
+        "http": decayable_http_errors,
+        "https": decayable_http_errors,
+    }
 
 
 class TransportException(api_errors.TransportError):
@@ -175,6 +197,9 @@ class TransportProtoError(TransportException):
         details=None,
         proxy=None,
     ):
+        import pycurl
+
+        _init_error_tables()
         TransportException.__init__(self)
         self.proto = proto
         self.code = code
@@ -244,6 +269,9 @@ class TransportFrameworkError(TransportException):
     def __init__(
         self, code, url=None, reason=None, repourl=None, uuid=None, proxy=None
     ):
+        import pycurl
+
+        _init_error_tables()
         TransportException.__init__(self)
         self.code = code
         self.url = url
