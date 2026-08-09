@@ -253,6 +253,8 @@ class PkgSolver(object):
         # have passed type validation
         self.__excludes = EmptyI  # solve-wide excludes, set by the
         # solve entry points; used for all cached action fetches
+        self.__pretrim_cache = {}  # trim-independent version
+        # comparison results, valid for the life of the solver
 
     def __str__(self):
         s = "Solver: ["
@@ -309,6 +311,7 @@ class PkgSolver(object):
         self.__dg_incorp_cache = None
         self.__nonmatch_cache = None
         self.__depvalid = None
+        self.__pretrim_cache = None
         self.__linked_pkgs = set()
 
         # Value 'DebugValues' is unsubscriptable;
@@ -1749,6 +1752,10 @@ class PkgSolver(object):
             self.__possible_dict[f.pkg_name].append(f)
         for name in self.__possible_dict:
             self.__possible_dict[name].sort()
+        # The pre-trim comparison sets can be large; they are no
+        # longer consulted once trimming completes (and are refilled
+        # if it restarts), so free them now.
+        self.__pretrim_cache.clear()
         self.__trimdone = True
 
     def __assign_fmri_ids(self, possible_set):
@@ -1808,9 +1815,44 @@ class PkgSolver(object):
 
         self.__progress()
 
+        if not self.__trimdone:
+            # While trimming is still underway the full result cannot
+            # be cached, but the version comparison and obsolete
+            # filtering are trim-independent and stable for the life
+            # of the solver, so cache that part and apply the current
+            # trim state to it on each call (mirroring
+            # __comb_older_fmris). N versions of a depending package
+            # issue identical calls here, so without this the pure
+            # version scans are quadratic.
+            ptp = (fmri, constraint, obsolete_ok)
+            try:
+                vmatch, vrem = self.__pretrim_cache[ptp]
+            except KeyError:
+                all_fmris = set(self.__get_catalog_fmris(fmri.pkg_name))
+                vmatch = frozenset(
+                    [
+                        f
+                        for f in all_fmris
+                        if not fmri.version
+                        or fmri.version == f.version
+                        or f.version.is_successor(
+                            fmri.version, constraint=constraint
+                        )
+                        if obsolete_ok or not self.__fmri_is_obsolete(f)
+                    ]
+                )
+                vrem = frozenset(all_fmris - vmatch)
+                self.__pretrim_cache[ptp] = (vmatch, vrem)
+
+            if not dotrim:
+                return vmatch, vrem
+            trimmed = set([f for f in vmatch if self.__trim_dict.get(f)])
+            if not trimmed:
+                return vmatch, vrem
+            return vmatch - trimmed, vrem | trimmed
+
         tp = (fmri, dotrim, constraint, obsolete_ok)  # cache index
-        # determine if the data is cacheable or cached:
-        if (not self.__trimdone and dotrim) or tp not in self.__cache:
+        if tp not in self.__cache:
             # use frozensets so callers don't inadvertently update
             # these sets (which may be cached).
             all_fmris = set(self.__get_catalog_fmris(fmri.pkg_name))
@@ -1828,11 +1870,6 @@ class PkgSolver(object):
                 ]
             )
             remaining = frozenset(all_fmris - matching)
-
-            # if we haven't finished trimming, don't cache this
-            if not self.__trimdone:
-                return matching, remaining
-            # cache the result
             self.__cache[tp] = (matching, remaining)
 
         return self.__cache[tp]
