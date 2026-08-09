@@ -248,6 +248,7 @@ class PkgSolver(object):
         self.__allowed_downgrades = set()  # allowed downrev FMRIs
         self.__dg_incorp_cache = {}  # cache for downgradable
         # incorp deps
+        self.__nonmatch_cache = {}  # cache for incorp nonmatch dicts
 
     def __str__(self):
         s = "Solver: ["
@@ -302,6 +303,7 @@ class PkgSolver(object):
         self.__firmware = None
         self.__allowed_downgrades = None
         self.__dg_incorp_cache = None
+        self.__nonmatch_cache = None
         self.__linked_pkgs = set()
 
         # Value 'DebugValues' is unsubscriptable;
@@ -2211,16 +2213,18 @@ class PkgSolver(object):
         # the versions.  This also handles obsoletions & renames.
         all_keys = reduce(set.intersection, (set(d.keys()) for d in dict_list))
 
+        # operator.or_/and_ rather than set.union/intersection as the
+        # cached per-fmri dictionaries hold frozensets.
         return dict(
             (
                 k,
                 (
                     reduce(
-                        set.union,
+                        operator.or_,
                         (d.get(k, (set(), set()))[0] for d in dict_list),
                     ),
                     reduce(
-                        set.intersection,
+                        operator.and_,
                         (d.get(k, (set(), set()))[1] for d in dict_list),
                     ),
                 ),
@@ -2234,6 +2238,14 @@ class PkgSolver(object):
         indexed by pkg name.  Note that some fmris may be
         incorporated more than once at different levels of
         specificity"""
+
+        # The result is trim-independent (the dependencies are parsed
+        # with dotrim=False) and excludes are fixed for the lifetime of
+        # a solver instance, so cache it; entire-style incorporations
+        # are re-walked from several places during a solve.
+        cached = self.__nonmatch_cache.get(fmri)
+        if cached is not None:
+            return cached
         ret = dict()
         for da in self.__get_dependency_actions(fmri, excludes=excludes):
             if da.attrs["type"] != "incorporate":
@@ -2252,12 +2264,14 @@ class PkgSolver(object):
 
         # For each of the packages constrained, combine multiple
         # incorporation dependencies.  Matches are intersected,
-        # non-matches form a union.
+        # non-matches form a union. Freeze the results so the cached
+        # dictionary cannot be mutated by callers.
         for pkg_name in ret:
             ret[pkg_name] = (
-                reduce(set.intersection, ret[pkg_name][0]),
-                reduce(set.union, ret[pkg_name][1]),
+                frozenset(reduce(set.intersection, ret[pkg_name][0])),
+                frozenset(reduce(set.union, ret[pkg_name][1])),
             )
+        self.__nonmatch_cache[fmri] = ret
         return ret
 
     def __parse_group_dependency(self, dotrim, obsolete_ok, fmris):
