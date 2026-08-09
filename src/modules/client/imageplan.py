@@ -48,6 +48,7 @@ logger = global_settings.logger
 
 import pkg.actions
 import pkg.actions.driver as driver
+import pkg.client.actioncache as actioncache
 import pkg.catalog
 import pkg.client.api_errors as api_errors
 import pkg.client.bootenv as bootenv
@@ -153,6 +154,7 @@ class ImagePlan(object):
         self.__licenses = None
         self.__legacy = None
         self.__cached_actions = {}
+        self.__actcache_skip = None
         self.__fixups = {}
         self.operations_pubs = None  # pubs being operated in hydrate
 
@@ -2677,9 +2679,129 @@ class ImagePlan(object):
                     if d not in dirs:
                         yield da(path=d, implicit="true"), pfmri
 
+    def __action_cache_fastpath(self):
+        """Return the installed-action cache when it can be used to
+        enumerate the unchanged portion of the future image, or None
+        when the caller must fall back to sweeping the manifests. The
+        cache reflects the current image configuration, so it cannot
+        be used when this operation changes variants or facets, or
+        when publishers are dehydrated (whose payload actions are
+        excluded from the future image by a filter the cache does not
+        model)."""
+
+        if self.pd._varcets_change or self.operations_pubs:
+            return None
+        try:
+            # No progress tracker: any cache reconciliation happens
+            # in the middle of the planning phases, whose progress
+            # rendering the fast-lookup job output would corrupt.
+            return self.image.get_action_cache()
+        except (actioncache.ActionCacheError, EnvironmentError):
+            return None
+
+    def __plan_skip_fmris(self):
+        """Return the set of fmri strings whose cached actions must
+        not be counted towards the future image: the packages leaving
+        the image and the destination versions of the packages being
+        touched, whose actions are generated from their manifests
+        instead. Mirrors the conflict checker."""
+
+        if self.__actcache_skip is None:
+            new_fmris = set(str(s) for s in self.gen_new_installed_pkgs())
+            old_fmris = set(str(s) for s in self.image.gen_installed_pkgs())
+            changing = set(
+                str(p.destination_fmri)
+                for p in self.pd.pkg_plans
+                if p.destination_fmri
+            )
+            self.__actcache_skip = (old_fmris - new_fmris) | changing
+        return self.__actcache_skip
+
+    def __gen_dest_actions_bytype(self, atype):
+        """Generate (action, fmri) pairs of type 'atype' from the
+        destination manifests of the packages touched by this plan."""
+
+        for p in self.pd.pkg_plans:
+            pfmri = p.destination_fmri
+            if not pfmri:
+                continue
+            m = self.image.get_manifest(pfmri, ignore_excludes=True)
+            for act in m.gen_actions_by_type(
+                atype, excludes=self.__new_excludes
+            ):
+                yield act, pfmri
+
+    def __cached_actions_bytype(self, atype):
+        """Return a generator of (action, fmri) pairs equivalent to
+        gen_new_installed_actions_bytype(atype) that draws the
+        unchanged portion of the image from the installed-action
+        cache, or None when that cannot be done."""
+
+        cache = self.__action_cache_fastpath()
+        if cache is None:
+            return None
+        skip = self.__plan_skip_fmris()
+
+        def gen():
+            fmridict = {}
+            for aname, fmristr, keyval, actstr in cache.get_actions_by_aname(
+                [atype]
+            ):
+                if fmristr in skip:
+                    continue
+                try:
+                    pfmri = fmridict[fmristr]
+                except KeyError:
+                    pfmri = pkg.fmri.PkgFmri(fmristr)
+                    fmridict[fmristr] = pfmri
+                yield pkg.actions.fromstr(actstr), pfmri
+            for act, pfmri in self.__gen_dest_actions_bytype(atype):
+                yield act, pfmri
+
+        return gen()
+
+    def __keyval_set(self, atype):
+        """Return the set of key attribute values of the 'atype'
+        actions in the future image, drawn from the installed-action
+        cache when possible so that the actions themselves need not
+        be materialised."""
+
+        key_attr = pkg.actions.types[atype].key_attr
+        cache = self.__action_cache_fastpath()
+        if cache is None:
+            return set(
+                a.attrs[key_attr]
+                for a, pfmri in self.gen_new_installed_actions_bytype(atype)
+            )
+        skip = self.__plan_skip_fmris()
+        kvs = set(
+            keyval
+            for aname, fmristr, keyval, actstr in cache.get_actions_by_aname(
+                [atype]
+            )
+            if fmristr not in skip
+        )
+        for act, pfmri in self.__gen_dest_actions_bytype(atype):
+            kvs.add(act.attrs[key_attr])
+        if DebugValues["imageplan-consolidate-verify"]:
+            slow = set(
+                a.attrs[key_attr]
+                for a, pfmri in self.gen_new_installed_actions_bytype(atype)
+            )
+            assert kvs == slow, (
+                "consolidate-verify {0}: only-cache={1} "
+                "only-sweep={2}".format(atype, kvs - slow, slow - kvs)
+            )
+        return kvs
+
     def __get_directories(self):
         """return set of all directories in target image"""
         # always consider var and the image directory fixed in image...
+        # This deliberately keeps the manifest sweep rather than
+        # deriving directories from the installed-action cache: the
+        # per-manifest dircache files hold this data precomputed and
+        # pre-expanded, which is faster than expanding several hundred
+        # thousand raw path rows.
         if self.__directories is None:
             # It's faster to build a large set and make a small
             # update to it than to do the reverse.
@@ -2705,53 +2827,25 @@ class ImagePlan(object):
     def __get_symlinks(self):
         """return a set of all symlinks in target image"""
         if self.__symlinks is None:
-            self.__symlinks = set(
-                (
-                    a.attrs["path"]
-                    for a, pfmri in self.gen_new_installed_actions_bytype(
-                        "link"
-                    )
-                )
-            )
+            self.__symlinks = self.__keyval_set("link")
         return self.__symlinks
 
     def __get_hardlinks(self):
         """return a set of all hardlinks in target image"""
         if self.__hardlinks is None:
-            self.__hardlinks = set(
-                (
-                    a.attrs["path"]
-                    for a, pfmri in self.gen_new_installed_actions_bytype(
-                        "hardlink"
-                    )
-                )
-            )
+            self.__hardlinks = self.__keyval_set("hardlink")
         return self.__hardlinks
 
     def __get_licenses(self):
         """return a set of all licenses in target image"""
         if self.__licenses is None:
-            self.__licenses = set(
-                (
-                    a.attrs["license"]
-                    for a, pfmri in self.gen_new_installed_actions_bytype(
-                        "license"
-                    )
-                )
-            )
+            self.__licenses = self.__keyval_set("license")
         return self.__licenses
 
     def __get_legacy(self):
         """return a set of all legacy actions in target image"""
         if self.__legacy is None:
-            self.__legacy = set(
-                (
-                    a.attrs["pkg"]
-                    for a, pfmri in self.gen_new_installed_actions_bytype(
-                        "legacy"
-                    )
-                )
-            )
+            self.__legacy = self.__keyval_set("legacy")
         return self.__legacy
 
     @staticmethod
@@ -3713,8 +3807,11 @@ class ImagePlan(object):
         if (name, key) in self.__cached_actions:
             return self.__cached_actions[(name, key)]
 
+        src = self.__cached_actions_bytype(name)
+        if src is None:
+            src = self.gen_new_installed_actions_bytype(name)
         d = {}
-        for act, pfmri in self.gen_new_installed_actions_bytype(name):
+        for act, pfmri in src:
             t = key(name, act)
             d.setdefault(t, []).append(act)
         self.__cached_actions[(name, key)] = d
@@ -4395,12 +4492,15 @@ class ImagePlan(object):
             # return the currently configured mediators
             return defaultdict(set, self.pd._cfg_mediators)
 
+        links = self.__cached_actions_bytype("link")
+        hardlinks = self.__cached_actions_bytype("hardlink")
+        if links is None or hardlinks is None:
+            links = self.gen_new_installed_actions_bytype("link")
+            hardlinks = self.gen_new_installed_actions_bytype("hardlink")
+
         prop_mediators = defaultdict(set)
         mediated_installed_paths = defaultdict(set)
-        for a, pfmri in itertools.chain(
-            self.gen_new_installed_actions_bytype("link"),
-            self.gen_new_installed_actions_bytype("hardlink"),
-        ):
+        for a, pfmri in itertools.chain(links, hardlinks):
             mediator = a.attrs.get("mediator")
             if not mediator:
                 # Link is not mediated.
