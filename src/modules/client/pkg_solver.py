@@ -249,6 +249,10 @@ class PkgSolver(object):
         self.__dg_incorp_cache = {}  # cache for downgradable
         # incorp deps
         self.__nonmatch_cache = {}  # cache for incorp nonmatch dicts
+        self.__depvalid = set()  # fmris whose dependency actions
+        # have passed type validation
+        self.__excludes = EmptyI  # solve-wide excludes, set by the
+        # solve entry points; used for all cached action fetches
 
     def __str__(self):
         s = "Solver: ["
@@ -304,6 +308,7 @@ class PkgSolver(object):
         self.__allowed_downgrades = None
         self.__dg_incorp_cache = None
         self.__nonmatch_cache = None
+        self.__depvalid = None
         self.__linked_pkgs = set()
 
         # Value 'DebugValues' is unsubscriptable;
@@ -1183,6 +1188,7 @@ class PkgSolver(object):
         installed FMRIs indexed by pkg_name. Used when exact_install
         is on."""
 
+        self.__excludes = excludes
         pt = self.__begin_solve()
 
         # reject_set is a frozenset(), need to make copy to modify
@@ -1553,6 +1559,7 @@ class PkgSolver(object):
         not be currently installed.)
         """
 
+        self.__excludes = excludes
         pt = self.__begin_solve()
 
         # Determine which packages are to be removed, rejected, and
@@ -1749,6 +1756,7 @@ class PkgSolver(object):
     ):
         """Compute changes needed for uninstall"""
 
+        self.__excludes = excludes
         self.__begin_solve()
 
         # generate list of installed pkgs w/ possible renames removed to
@@ -2067,11 +2075,8 @@ class PkgSolver(object):
             relevant = dict(
                 [
                     (a.attrs["name"], a.attrs["value"])
-                    for a in self.__catalog.get_entry_actions(
-                        fmri, [catalog.Catalog.DEPENDENCY], excludes=excludes
-                    )
-                    if a.name == "set"
-                    and a.attrs["name"] in ["pkg.renamed", "pkg.obsolete"]
+                    for a in self.__get_fmri_actlists(fmri)[1]
+                    if a.attrs["name"] in ["pkg.renamed", "pkg.obsolete"]
                 ]
             )
         except api_errors.InvalidPackageErrors:
@@ -2098,33 +2103,47 @@ class PkgSolver(object):
             self.__fmri_loadstate(fmri, excludes)
         return self.__fmri_state[fmri][1]
 
-    def __get_actions(self, fmri, name, excludes=EmptyI, trim_invalid=True):
-        """Return list of actions of type 'name' for this 'fmri' in
-        Catalog.DEPENDENCY section."""
+    def __get_fmri_actlists(self, fmri):
+        """Return a (depend actions, set actions) tuple for this
+        'fmri' from the Catalog.DEPENDENCY section, fetching and
+        parsing the section only once per fmri. The solve-wide
+        excludes are always applied so that the cached lists are
+        identical regardless of which caller populates them. Raises
+        InvalidPackageErrors when the action data cannot be parsed."""
 
         try:
-            return self.__actcache[(fmri, name)]
+            return self.__actcache[fmri]
         except KeyError:
             pass
 
-        try:
-            acts = [
-                a
-                for a in self.__catalog.get_entry_actions(
-                    fmri, [catalog.Catalog.DEPENDENCY], excludes=excludes
-                )
-                if a.name == name
-            ]
+        dep_acts = []
+        set_acts = []
+        for a in self.__catalog.get_entry_actions(
+            fmri, [catalog.Catalog.DEPENDENCY], excludes=self.__excludes
+        ):
+            if a.name == "depend":
+                dep_acts.append(a)
+            elif a.name == "set":
+                set_acts.append(a)
+        acts = (dep_acts, set_acts)
+        self.__actcache[fmri] = acts
+        return acts
 
-            if name == "depend":
+    def __get_dependency_actions(
+        self, fmri, excludes=EmptyI, trim_invalid=True
+    ):
+        """Return list of all dependency actions for this fmri."""
+
+        try:
+            acts = self.__get_fmri_actlists(fmri)[0]
+            if fmri not in self.__depvalid:
                 for a in acts:
                     if a.attrs["type"] in dep_types:
                         continue
                     raise api_errors.InvalidPackageErrors(
                         ["Unknown dependency type {0}".format(a.attrs["type"])]
                     )
-
-            self.__actcache[(fmri, name)] = acts
+                self.__depvalid.add(fmri)
             return acts
         except api_errors.InvalidPackageErrors:
             if not trim_invalid:
@@ -2136,29 +2155,35 @@ class PkgSolver(object):
             self.__trim_unsupported(fmri)
             return []
 
-    def __get_dependency_actions(
-        self, fmri, excludes=EmptyI, trim_invalid=True
-    ):
-        """Return list of all dependency actions for this fmri."""
-
-        return self.__get_actions(
-            fmri, "depend", excludes=excludes, trim_invalid=trim_invalid
-        )
-
     def __get_set_actions(self, fmri, excludes=EmptyI, trim_invalid=True):
         """Return list of all set actions for this fmri in
         Catalog.DEPENDENCY section."""
 
-        return self.__get_actions(
-            fmri, "set", excludes=excludes, trim_invalid=trim_invalid
-        )
+        try:
+            return self.__get_fmri_actlists(fmri)[1]
+        except api_errors.InvalidPackageErrors:
+            if not trim_invalid:
+                raise
+
+            # Trim package entries that have unparseable action
+            # data so that they can be filtered out later.
+            self.__fmri_state[fmri] = ("false", "false")
+            self.__trim_unsupported(fmri)
+            return []
 
     def __get_variant_dict(self, fmri):
         """Return dictionary of variants supported by fmri"""
         try:
             if fmri not in self.__variant_dict:
+                # Variant-defining set actions are never subject to
+                # exclude filtering, so deriving this from the cached
+                # DEPENDENCY-section actions matches what
+                # get_entry_all_variants would return while avoiding
+                # another fetch and parse of the same data.
                 self.__variant_dict[fmri] = dict(
-                    self.__catalog.get_entry_all_variants(fmri)
+                    (a.attrs["name"], a.attrs["value"])
+                    for a in self.__get_fmri_actlists(fmri)[1]
+                    if a.attrs["name"].startswith("variant")
                 )
         except api_errors.InvalidPackageErrors:
             # Trim package entries that have unparseable action data
@@ -3432,13 +3457,8 @@ class PkgSolver(object):
 
         installed_incs = []
         for f in self.__installed_fmris - self.__removal_fmris:
-            for d in self.__catalog.get_entry_actions(
-                f, [catalog.Catalog.DEPENDENCY], excludes=excludes
-            ):
-                if (
-                    d.name == "set"
-                    and d.attrs["name"] == "pkg.depend.install-hold"
-                ):
+            for d in self.__get_fmri_actlists(f)[1]:
+                if d.attrs["name"] == "pkg.depend.install-hold":
                     installed_incs.append(f)
 
         ret = []
@@ -3463,30 +3483,24 @@ class PkgSolver(object):
         # dependencies, those packages that are depended on by explicit
         # version, and those that have pkg.depend.install-hold values.
         for f in self.__installed_fmris - self.__removal_fmris:
-            for d in self.__catalog.get_entry_actions(
-                f, [catalog.Catalog.DEPENDENCY], excludes=excludes
-            ):
-                if d.name == "depend":
-                    fmris = []
-                    for fl in d.attrlist("fmri"):
-                        try:
-                            tmp = self.__fmridict[fl]
-                        except KeyError:
-                            tmp = pkg.fmri.PkgFmri(fl)
-                            self.__fmridict[fl] = tmp
-                        fmris.append(tmp)
-                    if d.attrs["type"] == "incorporate":
-                        incorps.add(f.pkg_name)
-                        pkg_cons.setdefault(f, []).append(fmris[0])
-                    versioned_dependents.update(
-                        fmri.pkg_name
-                        for fmri in fmris
-                        if fmri.version is not None
-                    )
-                elif (
-                    d.name == "set"
-                    and d.attrs["name"] == "pkg.depend.install-hold"
-                ):
+            dep_acts, set_acts = self.__get_fmri_actlists(f)
+            for d in dep_acts:
+                fmris = []
+                for fl in d.attrlist("fmri"):
+                    try:
+                        tmp = self.__fmridict[fl]
+                    except KeyError:
+                        tmp = pkg.fmri.PkgFmri(fl)
+                        self.__fmridict[fl] = tmp
+                    fmris.append(tmp)
+                if d.attrs["type"] == "incorporate":
+                    incorps.add(f.pkg_name)
+                    pkg_cons.setdefault(f, []).append(fmris[0])
+                versioned_dependents.update(
+                    fmri.pkg_name for fmri in fmris if fmri.version is not None
+                )
+            for d in set_acts:
+                if d.attrs["name"] == "pkg.depend.install-hold":
                     install_holds[f.pkg_name] = d.attrs["value"]
 
         # find install holds that appear on command line and are thus
@@ -3985,7 +3999,7 @@ class PkgSolver(object):
                 install_hold = False
                 for ha in [
                     sa
-                    for sa in self.__get_actions(df, "set")
+                    for sa in self.__get_set_actions(df)
                     if sa.attrs["name"] == "pkg.depend.install-hold"
                 ]:
                     install_hold = True
@@ -4028,7 +4042,7 @@ class PkgSolver(object):
         install_holds = set(
             [
                 sa.attrs["value"]
-                for sa in self.__get_actions(fmri, "set")
+                for sa in self.__get_set_actions(fmri)
                 if sa.attrs["name"] == "pkg.depend.install-hold"
             ]
         )
