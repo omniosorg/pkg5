@@ -315,9 +315,11 @@ adm:NP:6445::::::
         )
 
         index_dir = self.get_img_api_obj().img.index_dir
-        index_file = os.path.join(index_dir, "main_dict.ascii.v2")
-        orig_mtime = os.stat(index_file).st_mtime
-        time.sleep(1)
+        index_file = os.path.join(index_dir, "search.db")
+        # The operations below must update the search database
+        # in place rather than rebuilding it; a rebuild would
+        # replace the file, changing its inode.
+        orig_ino = os.stat(index_file).st_ino
 
         victim = "etc/amber2"
         # Initial size
@@ -344,8 +346,8 @@ adm:NP:6445::::::
         self.assertEqual(size1, size2)
 
         # check that we didn't reindex
-        new_mtime = os.stat(index_file).st_mtime
-        self.assertEqual(orig_mtime, new_mtime)
+        new_ino = os.stat(index_file).st_ino
+        self.assertEqual(orig_ino, new_ino)
 
         # Using the same methodology as above, verify that a corrupted
         # ELF file can be fixed (the corruption being such that libelf

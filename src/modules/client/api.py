@@ -80,7 +80,7 @@ import pkg.client.image as image
 import pkg.client.imageconfig as imgcfg
 import pkg.client.imageplan as imageplan
 import pkg.client.imagetypes as imgtypes
-import pkg.client.indexer as indexer
+import pkg.client.searchdb as searchdb
 import pkg.client.pkgdefs as pkgdefs
 import pkg.client.plandesc as plandesc
 import pkg.client.publisher as publisher
@@ -5771,14 +5771,14 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
         if not os.path.isdir(self._img.index_dir):
             self._img.mkdirs()
         try:
-            ind = indexer.Indexer(
-                self._img,
-                self._img.get_manifest,
+            searchdb.build(
+                self._img.index_dir,
+                self._img.gen_installed_pkgs(),
                 self._img.get_manifest_path,
-                self.__progresstracker,
-                self._img.list_excludes(),
+                excludes=self._img.list_excludes(),
+                progtrack=self.__progresstracker,
+                installed_names=self._img.gen_installed_pkg_names(),
             )
-            ind.rebuild_index_from_scratch(self._img.gen_installed_pkgs())
         except search_errors.ProblematicPermissionsIndexException as e:
             error = apx.ProblematicPermissionsIndexException(e)
             self.log_operation_end(error=error)

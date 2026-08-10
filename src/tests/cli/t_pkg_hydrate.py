@@ -175,9 +175,11 @@ class TestPkgHydrate(pkg5unittest.ManyDepotTestCase):
         self.pkg("rehydrate -p test1", exit=4)
 
         index_dir = self.get_img_api_obj().img.index_dir
-        index_file = os.path.join(index_dir, "main_dict.ascii.v2")
-        orig_mtime = os.stat(index_file).st_mtime
-        time.sleep(1)
+        index_file = os.path.join(index_dir, "search.db")
+        # The operations below must update the search database
+        # in place rather than rebuilding it; a rebuild would
+        # replace the file, changing its inode.
+        orig_ino = os.stat(index_file).st_ino
 
         some_files = [
             "dev/xxx",
@@ -278,8 +280,8 @@ class TestPkgHydrate(pkg5unittest.ManyDepotTestCase):
         self.pkg("verify")
 
         # Check that we didn't reindex.
-        new_mtime = os.stat(index_file).st_mtime
-        self.assertEqual(orig_mtime, new_mtime)
+        new_ino = os.stat(index_file).st_ino
+        self.assertEqual(orig_ino, new_ino)
 
         # Make sure it's the same size as the original.
         size2 = self.file_size(removed)

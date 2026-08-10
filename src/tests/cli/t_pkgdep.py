@@ -1560,28 +1560,28 @@ SYMBOL_SCOPE {
             py_ver_default
         )
 
-        self.pkgdepend_generate(
-            "-d {0} {1}".format(pkg5unittest.g_proto_area, tp), exit=1
-        )
-        self.check_res(
-            self.make_res_manf_1(pkg5unittest.g_proto_area, fp), self.output
-        )
-        self.check_res(
-            self.err_manf_1.format(pkg5unittest.g_proto_area), self.errout
-        )
+        # The analyzed python file is created in the test proto area
+        # with the content the expected results model; libcurses does
+        # not exist there yet, so its dependency error is reported.
+        self.make_proto_text_file(fp, self.python_text)
 
         self.pkgdepend_generate(
-            "-m -d {0} {1}".format(pkg5unittest.g_proto_area, tp), exit=1
+            "-d {0} {1}".format(self.test_proto_dir, tp), exit=1
         )
         self.check_res(
-            self.make_full_res_manf_1(pkg5unittest.g_proto_area, fp),
+            self.make_res_manf_1(self.test_proto_dir, fp), self.output
+        )
+        self.check_res(self.err_manf_1.format(self.test_proto_dir), self.errout)
+
+        self.pkgdepend_generate(
+            "-m -d {0} {1}".format(self.test_proto_dir, tp), exit=1
+        )
+        self.check_res(
+            self.make_full_res_manf_1(self.test_proto_dir, fp),
             self.output,
         )
-        self.check_res(
-            self.err_manf_1.format(pkg5unittest.g_proto_area), self.errout
-        )
+        self.check_res(self.err_manf_1.format(self.test_proto_dir), self.errout)
 
-        self.make_proto_text_file(fp, self.python_text)
         self.make_elf([], "usr/xpg4/lib/libcurses.so.1")
 
         self.pkgdepend_generate("-m -d {0} {1}".format(self.test_proto_dir, tp))
@@ -1729,7 +1729,12 @@ SYMBOL_SCOPE {
         dependencies analyzed correctly and that the correct path is
         used for internal dependency resolution."""
 
-        proto = pkg5unittest.g_proto_area
+        proto = self.test_proto_dir
+        self.make_proto_text_file(
+            "usr/lib/python{0}/vendor-packages/pkg/client/"
+            "indexer.py".format(py_ver_default),
+            self.python_text,
+        )
         tp = self.make_manifest(self.payload_manf)
         self.pkgdepend_generate("-d {0} {1}".format(proto, tp))
         self.check_res(

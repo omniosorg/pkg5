@@ -52,7 +52,8 @@ import pkg.client.actioncache as actioncache
 import pkg.catalog
 import pkg.client.api_errors as api_errors
 import pkg.client.bootenv as bootenv
-import pkg.client.indexer as indexer
+import pkg.client.searchdb as searchdb
+import sqlite3
 import pkg.client.linkedimage.zone as zone
 import pkg.client.pkg_solver as pkg_solver
 import pkg.client.pkgdefs as pkgdefs
@@ -5663,20 +5664,21 @@ image (there are configured exclusions):""")
         # for this BE so the user can boot into this BE and have a
         # correct index.
         if self.update_index:
-            ind = None
             try:
                 self.image.update_index_dir()
-                ind = indexer.Indexer(
-                    self.image,
-                    self.image.get_manifest,
-                    self.image.get_manifest_path,
-                    progtrack=self.__progtrack,
-                    excludes=self.__old_excludes,
-                )
-                if ind.check_index_existence():
+                sdb = searchdb.SearchDB(self.image.index_dir)
+                usable = sdb.usable()
+                stored = sdb.stored_hash()
+                sdb.close()
+                if usable and stored != searchdb.calc_hash(
+                    self.image.gen_installed_pkg_names()
+                ):
                     try:
-                        ind.check_index_has_exactly_fmris(
-                            self.image.gen_installed_pkg_names()
+                        raise se.IncorrectIndexFileHash(
+                            stored,
+                            searchdb.calc_hash(
+                                self.image.gen_installed_pkg_names()
+                            ),
                         )
                     except se.IncorrectIndexFileHash as e:
                         self.__preexecuted_indexing_error = (
@@ -5686,10 +5688,15 @@ image (there are configured exclusions):""")
                                 traceback.format_stack(),
                             )
                         )
-                        ind.rebuild_index_from_scratch(
-                            self.image.gen_installed_pkgs()
-                        )
-            except se.IndexingException as e:
+                    searchdb.build(
+                        self.image.index_dir,
+                        self.image.gen_installed_pkgs(),
+                        self.image.get_manifest_path,
+                        excludes=self.__old_excludes,
+                        progtrack=self.__progtrack,
+                        installed_names=self.image.gen_installed_pkg_names(),
+                    )
+            except (se.IndexingException, sqlite3.Error) as e:
                 # If there's a problem indexing, we want to
                 # attempt to finish the installation anyway. If
                 # there's a problem updating the index on the
@@ -5700,9 +5707,6 @@ image (there are configured exclusions):""")
                         e, traceback.format_exc(), traceback.format_stack()
                     )
                 )
-
-            # No longer needed.
-            del ind
 
         # check if we're going to have enough room
         # stat fs again just in case someone else is using space...
@@ -6094,21 +6098,36 @@ image (there are configured exclusions):""")
         # for all changed packages
         if self.update_index:
             self.image.update_index_dir()
-            ind = indexer.Indexer(
-                self.image,
-                self.image.get_manifest,
-                self.image.get_manifest_path,
-                progtrack=self.__progtrack,
-                excludes=self.__new_excludes,
-            )
             try:
-                if empty_image:
-                    ind.setup()
-                if empty_image or ind.check_index_existence():
-                    ind.client_update_index(([], executed_pp), self.image)
+                sdb = searchdb.SearchDB(self.image.index_dir)
+                usable = sdb.usable()
+                present = os.path.isfile(sdb.pathname)
+                sdb.close()
+                if empty_image or (present and not usable):
+                    # The first installation into an image creates
+                    # its search index; a database which exists but
+                    # cannot be used (an older schema, or damage) is
+                    # rebuilt.
+                    searchdb.build(
+                        self.image.index_dir,
+                        self.image.gen_installed_pkgs(),
+                        self.image.get_manifest_path,
+                        excludes=self.__new_excludes,
+                        progtrack=self.__progtrack,
+                        installed_names=self.image.gen_installed_pkg_names(),
+                    )
+                elif usable:
+                    searchdb.update(
+                        self.image.index_dir,
+                        executed_pp,
+                        self.image.get_manifest_path,
+                        excludes=self.__new_excludes,
+                        progtrack=self.__progtrack,
+                        installed_names=self.image.gen_installed_pkg_names(),
+                    )
             except KeyboardInterrupt:
                 raise
-            except se.ProblematicPermissionsIndexException:
+            except se.ProblematicPermissionsIndexException as e:
                 # ProblematicPermissionsIndexException
                 # is included here as there's little
                 # chance that trying again will fix this
@@ -6118,30 +6137,21 @@ image (there are configured exclusions):""")
                 )
             except Exception as e:
                 # It's important to delete and rebuild
-                # from scratch rather than using the
-                # existing indexer because otherwise the
-                # state will become confused.
-                del ind
-                # XXX Once we have a framework for
-                # emitting a message to the user in this
-                # spot in the code, we should tell them
-                # something has gone wrong so that we
-                # continue to get feedback to allow
-                # us to debug the code.
+                # from scratch rather than trying to continue
+                # with the existing database because otherwise
+                # the state will become confused.
                 try:
-                    ind = indexer.Indexer(
-                        self.image,
-                        self.image.get_manifest,
+                    searchdb.build(
+                        self.image.index_dir,
+                        self.image.gen_installed_pkgs(),
                         self.image.get_manifest_path,
-                        progtrack=self.__progtrack,
                         excludes=self.__new_excludes,
+                        progtrack=self.__progtrack,
+                        installed_names=self.image.gen_installed_pkg_names(),
                     )
-                    ind.rebuild_index_from_scratch(
-                        self.image.gen_installed_pkgs()
-                    )
-                except Exception as e:
+                except Exception as e2:
                     raise api_errors.WrapIndexingException(
-                        e, traceback.format_exc(), traceback.format_stack()
+                        e2, traceback.format_exc(), traceback.format_stack()
                     )
                 raise api_errors.WrapSuccessfulIndexingException(
                     e, traceback.format_exc(), traceback.format_stack()
