@@ -4804,6 +4804,23 @@ image (there are configured exclusions):""")
         removed = self.pd.find_removal(filepath)
         return removed
 
+    def __is_link_delivered(self, linkpath):
+        """Check to see if the plan delivers a link at the named
+        path. A mediated link which is replaced or repaired within
+        the plan is not left dangling by the removal of its old
+        target."""
+
+        for ap in itertools.chain(
+            self.pd.install_actions, self.pd.update_actions
+        ):
+            if (
+                ap
+                and ap.dst.name in ("link", "hardlink")
+                and ap.dst.attrs.get("path") == linkpath
+            ):
+                return True
+        return False
+
     def __finalize_mediation(self, prop_mediators, mediated_del_path_target):
         """Merge requested and previously configured mediators that are
         being set but don't affect the plan and update proposed image
@@ -4821,8 +4838,10 @@ image (there are configured exclusions):""")
             # do.
             if m in prop_mediators:
                 if m in mediated_del_path_target:
-                    for target in mediated_del_path_target[m]:
-                        if self.__is_target_removed(target):
+                    for binpath, target in mediated_del_path_target[m]:
+                        if self.__is_target_removed(
+                            target
+                        ) and not self.__is_link_delivered(binpath):
                             self.invalid_meds[m].add(target)
                 continue
 
@@ -5056,7 +5075,9 @@ image (there are configured exclusions):""")
                     ):
                         binpath = src.attrs["path"]
                         target = self.__full_target_path(binpath)
-                        mediated_del_path_target[mediator].add(target)
+                        mediated_del_path_target[mediator].add(
+                            (binpath, target)
+                        )
 
         self.pd.update_actions = []
         self.pd._rm_aliases = {}
