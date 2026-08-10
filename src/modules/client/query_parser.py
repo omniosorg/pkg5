@@ -21,13 +21,12 @@
 #
 # Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
 
+import errno
 import sys
-import threading
 import pkg.client.api_errors as api_errors
-import pkg.manifest as manifest
-import pkg.search_storage as ss
-import pkg.search_errors as se
+import pkg.client.searchdb as searchdb
 import pkg.fmri as fmri
+import pkg.manifest as manifest
 from pkg.choose import choose
 
 import pkg.query_parser as qp
@@ -36,7 +35,6 @@ from pkg.query_parser import (
     ParseError,
     QueryLengthExceeded,
 )
-import itertools
 
 
 class QueryLexer(qp.QueryLexer):
@@ -175,52 +173,25 @@ class TopQuery(qp.TopQuery):
 
 class TermQuery(qp.TermQuery):
     """This class handles the client specific search logic for searching
-    for a base query term."""
-
-    __client_dict_locks = {}
-    _global_data_dict = {}
+    for a base query term. Searches are performed against the client
+    search database rather than the flat-file index the depot server
+    uses; the database is always complete, so no overlay of packages
+    changed since the last index rebuild is needed."""
 
     def __init__(self, term):
         qp.TermQuery.__init__(self, term)
         self._impl_fmri_to_path = None
         self._efn = None
-        self._data_fast_remove = None
-        self.full_fmri_hash = None
-        self._data_fast_add = None
-
-    def __init_gdd(self, path):
-        gdd = self._global_data_dict
-        if path in gdd:
-            return
-
-        # Setup default global dictionary for this index path.
-        qp.TermQuery.__init_gdd(self, path)
-
-        # Client search needs to account for the packages which have
-        # been installed or removed since the last time the indexes
-        # were rebuilt. Add client-specific global data dictionaries
-        # for this index path.
-        tq_gdd = gdd[path]
-        tq_gdd["fast_add"] = ss.IndexStoreSet(ss.FAST_ADD)
-        tq_gdd["fast_remove"] = ss.IndexStoreSet(ss.FAST_REMOVE)
-        tq_gdd["fmri_hash"] = ss.IndexStoreSetHash(ss.FULL_FMRI_HASH_FILE)
-
-    def _lock_client_gdd(self, index_dir):
-        # This lock is used so that only one instance of a term query
-        # object is ever modifying the class wide variable for this
-        # index.
-        self.__client_dict_locks.setdefault(
-            index_dir, threading.Lock()
-        ).acquire()
-
-    def _unlock_client_gdd(self, index_dir):
-        self.__client_dict_locks[index_dir].release()
+        self.__sdb = None
 
     def set_info(
         self,
         gen_installed_pkg_names,
         get_use_slow_search,
         set_use_slow_search,
+        index_dir,
+        get_manifest_path,
+        case_sensitive,
         **kwargs,
     ):
         """This function provides the necessary information to the AST
@@ -238,32 +209,13 @@ class TermQuery(qp.TermQuery):
 
         self.get_use_slow_search = get_use_slow_search
         self._efn = gen_installed_pkg_names()
-        index_dir = kwargs["index_dir"]
-        self._lock_client_gdd(index_dir)
-        try:
-            try:
-                qp.TermQuery.set_info(
-                    self,
-                    gen_installed_pkg_names=gen_installed_pkg_names,
-                    get_use_slow_search=get_use_slow_search,
-                    set_use_slow_search=set_use_slow_search,
-                    **kwargs,
-                )
-                # Take local copies of the client-only
-                # dictionaries so that if another thread
-                # changes the shared data structure, this
-                # instance's objects won't be affected.
-                tq_gdd = self._get_gdd(index_dir)
-                self._data_fast_add = tq_gdd["fast_add"]
-                self._data_fast_remove = tq_gdd["fast_remove"]
-                self.full_fmri_hash = tq_gdd["fmri_hash"]
-                set_use_slow_search(False)
-            except se.NoIndexException:
-                # If no index was found, the slower version of
-                # search will be used.
-                set_use_slow_search(True)
-        finally:
-            self._unlock_client_gdd(index_dir)
+        self._dir_path = index_dir
+        self._manifest_path_func = get_manifest_path
+        self._case_sensitive = case_sensitive
+        self.__sdb = searchdb.SearchDB(index_dir)
+        # If no index is present, the slower version of search
+        # will be used.
+        set_use_slow_search(not self.__sdb.usable())
 
     def search(self, restriction, fmris, manifest_func, excludes):
         """This function performs performs local client side search.
@@ -286,43 +238,20 @@ class TermQuery(qp.TermQuery):
         if restriction:
             return self._restricted_search_internal(restriction)
         elif not self.get_use_slow_search():
-            try:
-                self.full_fmri_hash.check_against_file(self._efn)
-            except se.IncorrectIndexFileHash:
+            if self.__sdb.stored_hash() != searchdb.calc_hash(self._efn):
                 raise api_errors.IncorrectIndexFileHash()
-            base_res = self._search_internal(fmris)
-            client_res = self._search_fast_update(manifest_func, excludes)
-            base_res = self._check_fast_remove(base_res)
-            it = itertools.chain(
-                self._get_results(base_res), self._get_fast_results(client_res)
-            )
-            return it
+            return self._get_results(self.__db_search_internal())
         else:
             return self.slow_search(fmris, manifest_func, excludes)
 
-    def _check_fast_remove(self, res):
-        """This function removes any results from the generator "res"
-        (the search results) that are actions from packages known to
-        have been removed from the image since the last time the index
-        was built."""
-
-        return (
-            (p_str, o, a, s, f)
-            for p_str, o, a, s, f in res
-            if not self._data_fast_remove.has_entity(p_str)
-        )
-
-    def _search_fast_update(self, manifest_func, excludes):
-        """This function searches the packages which have been
-        installed since the last time the index was rebuilt.
-
-        The "manifest_func" parameter is a function which maps fmris to
-        the path to their manifests.
-
-        The "excludes" parameter is a list of variants defined in the
-        image."""
-
-        assert self._data_main_dict.get_file_handle() is not None
+    def __db_search_internal(self):
+        """Generate (fmri string, [offset, ...], action type, key,
+        displayed value) tuples for the occurrences matching this
+        term from the search database, applying the same matching
+        rules as the flat-file index: fnmatch globbing over tokens
+        (forced, with case folding, when the search is
+        case-insensitive), exact matching for the action type and
+        key, and glob matching of the package name."""
 
         glob = self._glob
         term = self._term
@@ -331,48 +260,67 @@ class TermQuery(qp.TermQuery):
         if not case_sensitive:
             glob = True
 
-        fast_update_dict = {}
-
-        fast_update_res = []
-
-        # self._data_fast_add holds the names of the fmris added
-        # since the last time the index was rebuilt.
-        for fmri_str in self._data_fast_add._set:
-            if not (self.pkg_name_wildcard or self.pkg_name_match(fmri_str)):
-                continue
-            f = fmri.PkgFmri(fmri_str)
-            path = manifest_func(f)
-            search_dict = manifest.Manifest.search_dict(
-                path, return_line=True, excludes=excludes
-            )
-            for tmp in search_dict:
-                tok, at, st, fv = tmp
-                if not (
-                    self.action_type_wildcard or at == self.action_type
-                ) or not (self.key_wildcard or st == self.key):
-                    continue
-                if tok not in fast_update_dict:
-                    fast_update_dict[tok] = []
-                fast_update_dict[tok].append(
-                    (at, st, fv, fmri_str, search_dict[tmp])
-                )
+        toks = None
         if glob:
-            keys = fast_update_dict.keys()
-            matches = choose(keys, term, case_sensitive)
-            fast_update_res = [fast_update_dict[m] for m in matches]
-
+            if self.has_non_wildcard_character.match(term):
+                toks = choose(self.__sdb.tokens(), term, case_sensitive)
+                if not toks:
+                    return
         else:
-            if term in fast_update_dict:
-                fast_update_res.append(fast_update_dict[term])
-        return fast_update_res
+            toks = [term]
 
-    def _get_fast_results(self, fast_update_res):
-        """This function transforms the output of _search_fast_update
-        to match that of _search_internal."""
+        pkg_ids = None
+        if not self.pkg_name_wildcard:
+            pkg_ids = [
+                pkg_id
+                for pkg_id, fmri_str in self.__sdb.fmris()
+                if self.pkg_name_match(fmri_str)
+            ]
+            if not pkg_ids:
+                return
 
-        for sub_list in fast_update_res:
-            for at, st, fv, fmri_str, line_list in sub_list:
-                for l in line_list:
+        atype = None if self.action_type_wildcard else self.action_type
+        key = None if self.key_wildcard else self.key
+        yield from self.__sdb.rows(toks, atype, key, pkg_ids)
+
+    def _get_results(self, res):
+        """Takes the results from the database search ("res") and
+        reads the lines from the manifest files at the provided
+        offsets. Unlike the shared implementation this opens each
+        package's manifest only once, however many results it
+        contributes, and tolerates a package whose manifest has gone
+        missing from the image by skipping its results, so that a
+        damaged image does not make search unusable."""
+
+        res = list(res)
+        wanted = {}
+        for fmri_str, offsets, at, st, fv in res:
+            wanted.setdefault(fmri_str, set()).update(offsets)
+
+        lines = {}
+        for fmri_str, offs in wanted.items():
+            f = fmri.PkgFmri(fmri_str)
+            try:
+                path = self._manifest_path_func(f)
+            except AssertionError:
+                # The package's publisher cannot be resolved, so it
+                # is no longer installed; skip the stale entry.
+                continue
+            try:
+                file_handle = open(path, "rb", buffering=512)
+            except EnvironmentError as e:
+                if e.errno == errno.ENOENT:
+                    continue
+                raise
+            for o in sorted(offs):
+                file_handle.seek(o)
+                lines[(fmri_str, o)] = file_handle.readline()
+            file_handle.close()
+
+        for fmri_str, offsets, at, st, fv in res:
+            for o in sorted(offsets):
+                l = lines.get((fmri_str, o))
+                if l is not None:
                     yield at, st, fmri_str, fv, l
 
     def slow_search(self, fmris, manifest_func, excludes):
@@ -427,17 +375,6 @@ class TermQuery(qp.TermQuery):
                 for at, st, fv, fmri_str, line_list in sub_list:
                     for l in line_list:
                         yield at, st, fmri_str, fv, l
-
-    def _read_pkg_dirs(self, fmris):
-        """Legacy function used to search indexes which have a pkg
-        directory with fmri offset information instead of the
-        fmri_offsets.v1 file.  This function is in this subclass to
-        translate the error from a search_error to an api_error."""
-
-        try:
-            return qp.TermQuery._read_pkg_dirs(self, fmris)
-        except se.InconsistentIndexException as e:
-            raise api_errors.InconsistentIndexException(e)
 
     def remove_root(self, img_root):
         if (
