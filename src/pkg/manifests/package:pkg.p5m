@@ -79,6 +79,7 @@ file path=$(PYDIRVP)/pkg/cfgfiles.py
 file path=$(PYDIRVP)/pkg/choose.py
 dir  path=$(PYDIRVP)/pkg/client
 file path=$(PYDIRVP)/pkg/client/__init__.py
+file path=$(PYDIRVP)/pkg/client/actioncache.py
 file path=$(PYDIRVP)/pkg/client/actuator.py
 file path=$(PYDIRVP)/pkg/client/api.py
 file path=$(PYDIRVP)/pkg/client/api_errors.py

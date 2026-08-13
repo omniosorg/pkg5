@@ -26,11 +26,9 @@
 #
 
 from collections import defaultdict, namedtuple
-import contextlib
 import errno
 import fnmatch
 import itertools
-import mmap
 import operator
 import os
 import shutil
@@ -3232,29 +3230,23 @@ class ImagePlan(object):
         keys,
         tgt,
         skip_dups,
-        offset_dict,
+        cache,
         action_classes,
-        sf,
         skip_fmris,
         fmri_dict,
     ):
-        """Update 'tgt' with action/fmri pairs from the stripped
+        """Update 'tgt' with action/fmri pairs from the installed
         action cache that are associated with the specified action
         'keys'.
 
         The 'skip_dups' parameter indicates if we should avoid adding
         duplicate action/pfmri pairs into 'tgt'.
 
-        The 'offset_dict' parameter contains a mapping from key to
-        offsets into the actions.stripped file and the number of lines
-        to read.
+        The 'cache' parameter is the image's installed-action cache
+        (see pkg.client.actioncache).
 
         The 'action_classes' parameter contains the list of action types
         where one action can conflict with another action.
-
-        The 'sf' parameter is the actions.stripped file from which we
-        read the actual actions indicated by the offset dictionary
-        'offset_dict.'
 
         The 'skip_fmris' parameter contains a set of strings
         representing the packages which we should not process actions
@@ -3264,54 +3256,33 @@ class ImagePlan(object):
         objects which is used so the same string isn't translated into
         the same PkgFmri object multiple times."""
 
-        for key in keys:
-            offsets = []
-            for klass in action_classes:
-                offset = offset_dict.get((klass.name, key), None)
-                if offset is not None:
-                    offsets.append(offset)
+        anames = [klass.name for klass in action_classes]
+        pns = None
+        for key, fmristr, actstr in cache.get_actions(anames, keys):
+            if fmristr in skip_fmris:
+                continue
+            act = pkg.actions.fromstr(actstr)
+            if act.attrs[act.key_attr] != key:
+                raise api_errors.InvalidPackageErrors(
+                    [
+                        "{} has invalid manifest line:".format(fmristr),
+                        "    '{}'".format(actstr),
+                        "    '{}' vs. '{}'".format(
+                            act.attrs[act.key_attr], key
+                        ),
+                    ]
+                )
+            assert pns is None or act.namespace_group == pns
+            pns = act.namespace_group
 
-            for offset, cnt in offsets:
-                sf.seek(offset)
-                pns = None
-                i = 0
-                while 1:
-                    # sf is reading in binary mode
-                    line = misc.force_str(sf.readline())
-                    i += 1
-                    if i > cnt:
-                        break
-                    line = line.rstrip()
-                    if line == "":
-                        break
-                    fmristr, actstr = line.split(None, 1)
-                    if fmristr in skip_fmris:
-                        continue
-                    act = pkg.actions.fromstr(actstr)
-                    if act.attrs[act.key_attr] != key:
-                        raise api_errors.InvalidPackageErrors(
-                            [
-                                "{} has invalid manifest "
-                                "line:".format(fmristr),
-                                "    '{}'".format(actstr),
-                                "    '{}' vs. '{}'".format(
-                                    act.attrs[act.key_attr], key
-                                ),
-                            ]
-                        )
-                    assert pns is None or act.namespace_group == pns
-                    pns = act.namespace_group
-
-                    try:
-                        pfmri = fmri_dict[fmristr]
-                    except KeyError:
-                        pfmri = pkg.fmri.PkgFmri(fmristr)
-                        fmri_dict[fmristr] = pfmri
-                    if skip_dups and self.__act_dup_check(
-                        tgt, key, actstr, fmristr
-                    ):
-                        continue
-                    tgt.setdefault(key, []).append((act, pfmri))
+            try:
+                pfmri = fmri_dict[fmristr]
+            except KeyError:
+                pfmri = pkg.fmri.PkgFmri(fmristr)
+                fmri_dict[fmristr] = pfmri
+            if skip_dups and self.__act_dup_check(tgt, key, actstr, fmristr):
+                continue
+            tgt.setdefault(key, []).append((act, pfmri))
 
     def __fast_check(self, new, old, ns):
         """Check whether actions being added and removed are
@@ -3517,43 +3488,36 @@ class ImagePlan(object):
                     continue
 
     @staticmethod
+    def _check_action_group(ns, actions):
+        """Return True if the action/pfmri pairs in 'actions', which
+        all deliver to the same key attribute value within the
+        namespace group 'ns', conflict with each other."""
+
+        if len(actions) == 1:
+            return False
+        if (
+            type(ns) != int
+            and ImagePlan.__check_inconsistent_types(actions, []) is not None
+        ):
+            return True
+        entry = actions[0][0]
+        if not entry.refcountable and entry.globally_identical:
+            return ImagePlan.__check_duplicate_actions(actions, []) is not None
+        if entry.globally_identical:
+            return ImagePlan.__check_inconsistent_attrs(actions, []) is not None
+        return False
+
+    @staticmethod
     def _check_actions(nsd):
         """Return the keys in the namespace dictionary ('nsd') which
         map to actions that conflict with each other."""
 
-        def noop(*args):
-            return None
-
-        bad_keys = set()
-        for ns, key_dict in nsd.items():
-            if type(ns) != int:
-                type_func = ImagePlan.__check_inconsistent_types
-            else:
-                type_func = noop
-            for key, actions in key_dict.items():
-                if len(actions) == 1:
-                    continue
-                if type_func(actions, []) is not None:
-                    bad_keys.add(key)
-                    continue
-                if (
-                    not actions[0][0].refcountable
-                    and actions[0][0].globally_identical
-                ):
-                    if (
-                        ImagePlan.__check_duplicate_actions(actions, [])
-                        is not None
-                    ):
-                        bad_keys.add(key)
-                        continue
-                elif (
-                    actions[0][0].globally_identical
-                    and ImagePlan.__check_inconsistent_attrs(actions, [])
-                    is not None
-                ):
-                    bad_keys.add(key)
-                    continue
-        return bad_keys
+        return set(
+            key
+            for ns, key_dict in nsd.items()
+            for key, actions in key_dict.items()
+            if ImagePlan._check_action_group(ns, actions)
+        )
 
     def __clear_pkg_plans(self):
         """Now that we're done reading the manifests, we can clear them
@@ -3640,11 +3604,13 @@ class ImagePlan(object):
         )
 
         pt.plan_add_progress(pt.PLAN_ACTION_CONFLICT)
-        # Load information about the actions currently on the system.
-        offset_dict = self.image._load_actdict(self.__progtrack)
-        sf = self.image._get_stripped_actions_file()
+        # Load information about the actions currently on the system,
+        # without a progress tracker: any cache reconciliation happens
+        # inside this planning phase, whose progress rendering the
+        # fast-lookup job output would corrupt.
+        cache = self.image.get_action_cache()
 
-        conflict_clean_image = self.image._load_conflicting_keys() == set()
+        conflict_clean_image = not cache.has_conflicts()
 
         fmri_dict = weakref.WeakValueDictionary()
         # Iterate over action types in namespace groups first; our first
@@ -3677,50 +3643,40 @@ class ImagePlan(object):
             if conflict_clean_image:
                 self.__fast_check(new, old, ns)
 
-            with contextlib.closing(
-                mmap.mmap(sf.fileno(), 0, access=mmap.ACCESS_READ)
-            ) as msf:
-                # Skip file header.
-                msf.readline()
-                msf.readline()
+            # Update 'old' with all actions from the action
+            # cache which could conflict with the new
+            # actions being installed, or with actions
+            # already installed, but not getting removed.
+            keys = set(itertools.chain(new.keys(), old.keys()))
+            self.__update_act(
+                keys,
+                old,
+                False,
+                cache,
+                action_classes,
+                gone_fmris,
+                fmri_dict,
+            )
 
-                # Update 'old' with all actions from the action
-                # cache which could conflict with the new
-                # actions being installed, or with actions
-                # already installed, but not getting removed.
-                keys = set(itertools.chain(new.keys(), old.keys()))
-                self.__update_act(
-                    keys,
-                    old,
-                    False,
-                    offset_dict,
-                    action_classes,
-                    msf,
-                    gone_fmris,
-                    fmri_dict,
-                )
-
-                # Now update 'new' with all actions from the
-                # action cache which are staying on the system,
-                # and could conflict with the actions being
-                # installed.
-                keys = set(old.keys())
-                self.__update_act(
-                    keys,
-                    new,
-                    True,
-                    offset_dict,
-                    action_classes,
-                    msf,
-                    gone_fmris | changing_fmris,
-                    fmri_dict,
-                )
+            # Now update 'new' with all actions from the
+            # action cache which are staying on the system,
+            # and could conflict with the actions being
+            # installed.
+            keys = set(old.keys())
+            self.__update_act(
+                keys,
+                new,
+                True,
+                cache,
+                action_classes,
+                gone_fmris | changing_fmris,
+                fmri_dict,
+            )
 
             self.__check_conflicts(new, old, action_classes, ns, errs)
 
         del fmri_dict
         self.__clear_pkg_plans()
-        sf.close()
         self.__evaluate_fixups()
         pt.plan_done(pt.PLAN_ACTION_CONFLICT)
 
@@ -5991,7 +5947,7 @@ image (there are configured exclusions):""")
         else:
             self.pd._actuators.exec_post_actuators(self.image)
 
-        self.image._create_fast_lookups(progtrack=self.__progtrack)
+        self.image._sync_fast_lookups(progtrack=self.__progtrack)
         self.__save_release_notes()
 
         # success
