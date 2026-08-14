@@ -26,7 +26,6 @@
 #
 
 
-import calendar
 import collections
 import datetime
 import errno
@@ -34,7 +33,6 @@ import getopt
 import os
 import re
 import sys
-import time
 import traceback
 
 
@@ -2545,20 +2543,8 @@ def _publisher_list(
                 errors.append(e)
                 c["valid"] = False
             else:
-                nb = cert.get_notBefore()
-                # strptime's first argument must be str
-                t = time.strptime(misc.force_str(nb), "%Y%m%d%H%M%SZ")
-                nb = datetime.datetime.fromtimestamp(
-                    calendar.timegm(t), datetime.UTC
-                )
-                times["effective"] = nb.strftime("%c")
-
-                na = cert.get_notAfter()
-                t = time.strptime(misc.force_str(na), "%Y%m%d%H%M%SZ")
-                na = datetime.datetime.fromtimestamp(
-                    calendar.timegm(t), datetime.UTC
-                )
-                times["expiration"] = na.strftime("%c")
+                times["effective"] = cert.not_valid_before_utc.strftime("%c")
+                times["expiration"] = cert.not_valid_after_utc.strftime("%c")
                 c["valid"] = True
 
         return cert_cache[ssl_cert]
