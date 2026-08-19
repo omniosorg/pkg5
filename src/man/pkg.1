@@ -1,7 +1,7 @@
 .\" Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
 .\" Copyright 2024 Oxide Computer Company
-.\" Copyright 2025 OmniOS Community Edition (OmniOSce) Association.
-.Dd September 8, 2025
+.\" Copyright 2026 OmniOS Community Edition (OmniOSce) Association.
+.Dd August 19, 2026
 .Dt PKG 1
 .Os
 .Sh NAME
@@ -545,6 +545,9 @@
 .Pp
 .Nm
 .Cm update-format
+.Oo Fl R | Fl r
+.Oo Oo Fl z Ar zonename Oc Ns ... | Oo Fl Z Ar zonename Oc Ns ... Oc
+.Oc
 .\" version
 .Pp
 .Nm
@@ -3204,12 +3207,40 @@ This is a recovery operation not intended for general use.
 .Pp
 .Nm
 .Cm update-format
+.Oo Fl R | Fl r
+.Oo Oo Fl z Ar zonename Oc Ns ... | Oo Fl Z Ar zonename Oc Ns ... Oc
+.Oc
 .Bd -ragged -offset Ds
 Update the format of the image to the current version.
 Once this operation has completed, the image can no longer be used with older
 versions of the
 .Xr pkg 7
 system.
+.Pp
+With
+.Fl r ,
+also update the format of any linked child images, such as installed
+non-global zones.
+The set of child images can be limited with the
+.Fl z
+option, which can be specified multiple times to select the zones to be
+updated, or the
+.Fl Z
+option, which can be specified multiple times to exclude zones from the
+update.
+.Pp
+Recursion can be enabled by default via the
+.Sy default-recurse
+image property; if this is set then it is not necessary to specify the
+.Fl r
+option manually, and the
+.Fl R
+option can be specified to disable recursion for this invocation.
+Refer to
+.Sy default-recurse
+in the
+.Sx Package Properties
+section for more information.
 .Ed
 .\" version
 .Pp
@@ -3612,8 +3643,11 @@ Default value:
 If set to
 .Sy True ,
 the package client will default to recursing into child images for
-.Nm Cm update
-operations, as if the
+.Nm Cm update ,
+.Nm Cm update-format
+and the other operations which accept the
+.Fl R
+option, as if the
 .Fl r
 option had been provided on the command line.
 This behaviour can be overriden on a per-case basis via the

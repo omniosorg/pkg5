@@ -697,6 +697,7 @@ def opts_table_cb_li_recurse(op, api_inst, opts, opts_new):
             pkgdefs.PKG_OP_SET_MEDIATOR,
             pkgdefs.PKG_OP_SET_PUBLISHER,
             pkgdefs.PKG_OP_UPDATE,
+            pkgdefs.PKG_OP_UPDATE_FORMAT,
         ]
         and api_inst.img.get_property(DEFAULT_RECURSE)
         and not opts[LI_ERECURSE_NONE]
@@ -1331,6 +1332,11 @@ opts_update = \
     opts_table_missing + \
     []
 
+# "update-format"
+opts_update_format = \
+    opts_table_li_recurse + \
+    []
+
 # "apply-hot-fix"
 opts_apply_hot_fix = \
     opts_table_beopts + \
@@ -1509,6 +1515,7 @@ pkg_op_opts = {
     pkgdefs.PKG_OP_UNINSTALL      : opts_uninstall,
     pkgdefs.PKG_OP_UNSET_PUBLISHER: None,
     pkgdefs.PKG_OP_UPDATE         : opts_update,
+    pkgdefs.PKG_OP_UPDATE_FORMAT  : opts_update_format,
     pkgdefs.PKG_OP_APPLY_HOT_FIX  : opts_apply_hot_fix,
     pkgdefs.PKG_OP_AUTOREMOVE     : opts_uninstall,
     pkgdefs.PKG_OP_HOTFIX_CLEANUP : [],

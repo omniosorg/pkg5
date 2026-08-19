@@ -274,6 +274,16 @@ def notes_block(release_url=None):
     msg("-" * 79 + "\n")
 
 
+def format_update_block():
+    logger.info(
+        _(
+            "\nNOTE: The format of this image is out of date.\n"
+            "Run 'pkg update-format' to update to the latest "
+            "format and improve performance."
+        )
+    )
+
+
 def format_update_error(e):
     # This message is displayed to the user whenever an
     # ImageFormatUpdateNeeded exception is encountered.
@@ -555,7 +565,7 @@ def usage(
     )
     adv_usage["purge-history"] = ""
     adv_usage["rebuild-index"] = ""
-    adv_usage["update-format"] = ""
+    adv_usage["update-format"] = "[-R | -r [-z zonename... | -Z zonename...]]"
     adv_usage["exact-install"] = _(
         "[-nvq] [-C n] [-g path_or_uri ...] [--accept]\n"
         "            [--licenses] [--no-index] [--no-refresh]\n"
@@ -1962,6 +1972,8 @@ def __api_execute_plan(operation, api_inst):
             rval = EXIT_ACTUATOR
         else:
             rval = EXIT_OK
+        if api_inst.format_update_available:
+            format_update_block()
     except RuntimeError as e:
         error(_("{operation} failed: {err}").format(operation=operation, err=e))
         rval = EXIT_OOPS
@@ -2834,7 +2846,9 @@ def change_facet(
     )
 
 
-def __handle_client_json_api_output(out_json, op, api_inst):
+def __handle_client_json_api_output(
+    out_json, op, api_inst, quiet=False, parsable=False, noexecute=False
+):
     """This is the main client_json_api output handling function used for
     install, update and uninstall and so on."""
 
@@ -2848,6 +2862,16 @@ def __handle_client_json_api_output(out_json, op, api_inst):
         display_repo_failures(out_json["data"]["repo_status"])
 
     __display_plan_messages(api_inst, frozenset([OP_STAGE_PREP, OP_STAGE_EXEC]))
+
+    if (
+        out_json["status"] in (EXIT_OK, EXIT_ACTUATOR)
+        and not quiet
+        and not parsable
+        and not noexecute
+        and api_inst.format_update_available
+    ):
+        format_update_block()
+
     if out_json["status"] == EXIT_NOP:
         return EXIT_NOP_VAL
     return out_json["status"]
@@ -3020,7 +3044,14 @@ def exact_install(
         logger=logger,
     )
 
-    return __handle_client_json_api_output(out_json, op, api_inst)
+    return __handle_client_json_api_output(
+        out_json,
+        op,
+        api_inst,
+        quiet=quiet,
+        parsable=parsable_version is not None,
+        noexecute=noexecute,
+    )
 
 
 def install(
@@ -3079,7 +3110,14 @@ def install(
         logger=logger,
     )
 
-    return __handle_client_json_api_output(out_json, op, api_inst)
+    return __handle_client_json_api_output(
+        out_json,
+        op,
+        api_inst,
+        quiet=quiet,
+        parsable=parsable_version is not None,
+        noexecute=noexecute,
+    )
 
 
 def update(
@@ -3199,7 +3237,14 @@ def update(
         logger=logger,
     )
 
-    return __handle_client_json_api_output(out_json, op, api_inst)
+    return __handle_client_json_api_output(
+        out_json,
+        op,
+        api_inst,
+        quiet=quiet,
+        parsable=parsable_version is not None,
+        noexecute=noexecute,
+    )
 
 
 def apply_hot_fix(**args):
@@ -3490,7 +3535,14 @@ def uninstall(
         logger=logger,
     )
 
-    return __handle_client_json_api_output(out_json, op, api_inst)
+    return __handle_client_json_api_output(
+        out_json,
+        op,
+        api_inst,
+        quiet=quiet,
+        parsable=parsable_version is not None,
+        noexecute=noexecute,
+    )
 
 
 def autoremove(
@@ -3579,7 +3631,14 @@ def autoremove(
         logger=logger,
     )
 
-    return __handle_client_json_api_output(out_json, op, api_inst)
+    return __handle_client_json_api_output(
+        out_json,
+        op,
+        api_inst,
+        quiet=quiet,
+        parsable=parsable_version is not None,
+        noexecute=noexecute,
+    )
 
 
 def clean_image(api_inst, args):
@@ -7206,21 +7265,60 @@ def print_proxy_config():
         logger.error(_("https_proxy: {0}\n").format(https_proxy))
 
 
-def update_format(api_inst, pargs):
+def update_format(op, api_inst, pargs, li_erecurse):
     """Update image to newest format."""
+
+    if pargs:
+        usage(
+            _("command does not take operands ('{0}')").format(" ".join(pargs)),
+            cmd=op,
+        )
 
     try:
         res = api_inst.update_format()
     except api_errors.ApiException as e:
-        error(str(e), cmd="update-format")
+        error(str(e), cmd=op)
         return EXIT_OOPS
 
     if res:
         logger.info(_("Image format updated."))
-        return EXIT_OK
+        rval = EXIT_OK
+    else:
+        logger.info(_("Image format already current."))
+        rval = EXIT_NOP_VAL
 
-    logger.info(_("Image format already current."))
-    return EXIT_NOP_VAL
+    if li_erecurse is None:
+        return rval
+
+    # Update the format of the selected linked child images (for
+    # example, non-global zones) as well.
+    for li_name, li_rel, li_path in api_inst.list_linked():
+        if li_rel != "child":
+            continue
+        if li_name not in li_erecurse:
+            continue
+        li_api = __api_alloc(li_path, True, False)
+        if not li_api:
+            rval = EXIT_OOPS
+            continue
+        try:
+            cres = li_api.update_format()
+        except api_errors.ApiException as e:
+            error(
+                _("{lin}: {err}").format(lin=li_name, err=e),
+                cmd=op,
+            )
+            rval = EXIT_OOPS
+            continue
+        if cres:
+            logger.info(_("Image format updated for {0}.").format(li_name))
+            if rval == EXIT_NOP_VAL:
+                rval = EXIT_OK
+        else:
+            logger.info(
+                _("Image format already current for {0}.").format(li_name)
+            )
+    return rval
 
 
 def print_version(pargs):

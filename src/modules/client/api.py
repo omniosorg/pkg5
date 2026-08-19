@@ -470,6 +470,12 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
         return self._img.list_excludes()
 
     @property
+    def format_update_available(self):
+        """A boolean indicating whether the image is using an older
+        on-disk format that can be updated with pkg update-format."""
+        return self._img.version < self._img.CURRENT_VERSION
+
+    @property
     def img(self):
         """Private; public access to this property will be removed at
         a later date.  Do not use."""
