@@ -34,6 +34,7 @@ import pkg5unittest
 import json
 import os
 import pkg.catalog as catalog
+import pkg.client.imagecatalog as imagecatalog
 import pkg.fmri as fmri
 import pkg.portable as portable
 import pkg.misc as misc
@@ -42,6 +43,20 @@ import shutil
 import stat
 import tempfile
 import unittest
+
+
+def installed_metadata(img_path, stem):
+    """Return the installed catalog metadata dict for the given
+    package stem, from the image state database."""
+    db = imagecatalog.ImageCatalog(
+        os.path.join(img_path, "var/pkg/state", imagecatalog.DB_BASENAME),
+        installed=True,
+    )
+    try:
+        pub, stem, ver = [t for t in db.tuples() if t[1] == stem][0]
+        return db.get_entry(pub=pub, stem=stem, ver=ver)["metadata"]
+    finally:
+        db.close()
 
 
 class TestPkgTempSources(pkg5unittest.ManyDepotTestCase):
@@ -617,10 +632,7 @@ Packaging Date: {signed10_pkg_date}
         self.pkg("info")
 
         os.environ["LC_ALL"] = "C"
-        path = os.path.join(
-            self.img_path(), "var/pkg/state/installed/catalog.base.C"
-        )
-        entry = json.load(open(path))["test"]["foo"][0]["metadata"]
+        entry = installed_metadata(self.img_path(), "foo")
         pkg_install = catalog.basic_ts_to_datetime(
             entry["last-install"]
         ).strftime("%c")

@@ -3740,7 +3740,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
         ren_stems, ren_inst_stems).
         """
 
-        img_cat = self._img.get_catalog(self._img.IMG_CATALOG_INSTALLED)
+        img_cat = self._img.get_list_catalog(self._img.IMG_CATALOG_INSTALLED)
         cat_info = frozenset([img_cat.DEPENDENCY])
 
         inst_stems = {}
@@ -3840,7 +3840,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
             return False
 
         if not known_cat:
-            known_cat = self._img.get_catalog(self._img.IMG_CATALOG_KNOWN)
+            known_cat = self._img.get_list_catalog(self._img.IMG_CATALOG_KNOWN)
 
         # Find terminal rename entry for all known packages not
         # rejected by check_stem().
@@ -4526,7 +4526,9 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
             if inst_cat:
                 pkg_cat = inst_cat
             else:
-                pkg_cat = self._img.get_catalog(self._img.IMG_CATALOG_INSTALLED)
+                pkg_cat = self._img.get_list_catalog(
+                    self._img.IMG_CATALOG_INSTALLED
+                )
 
             # Don't need to perform variant filtering if only
             # listing installed packages.
@@ -4534,7 +4536,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
         elif known_cat:
             pkg_cat = known_cat
         else:
-            pkg_cat = self._img.get_catalog(self._img.IMG_CATALOG_KNOWN)
+            pkg_cat = self._img.get_list_catalog(self._img.IMG_CATALOG_KNOWN)
 
         cat_info = frozenset([pkg_cat.DEPENDENCY, pkg_cat.SUMMARY])
 
@@ -4660,6 +4662,35 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
 
             pubs = sorted(pubs, key=pub_key)
 
+        # When patterns were provided, the set of stems that could
+        # possibly match can be computed up front using the same
+        # matching expressions applied to entries below, and pushed
+        # down so that iteration is restricted to candidate stems
+        # only.
+        stems = None
+        if pat_tuples:
+            all_stems = pkg_cat.names(pubs=pubs)
+            stems = set()
+            for pat in patterns:
+                (pat_pub, pat_stem, pat_ver), matcher = pat_tuples[pat]
+                if pat_stem is None:
+                    stems = None
+                    break
+                if matcher == self.MATCH_EXACT:
+                    if pat_stem in all_stems:
+                        stems.add(pat_stem)
+                elif matcher == self.MATCH_FMRI:
+                    sfx = "/" + pat_stem
+                    stems.update(
+                        s for s in all_stems if ("/" + s).endswith(sfx)
+                    )
+                else:
+                    stems.update(fnmatch.filter(all_stems, pat_stem))
+            if stems is not None and len(stems) > 900:
+                # Avoid unwieldy query restrictions; a scan is
+                # fine when most of the catalog matches anyway.
+                stems = None
+
         # Too many nested blocks;
         # pylint: disable=R0101
         ranked_stems = {}
@@ -4670,6 +4701,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
             last=use_last,
             ordered=True,
             pubs=pubs,
+            stems=stems,
         ):
             pub, stem, ver = t
 
@@ -5017,12 +5049,14 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
             else:
                 pkg_cat = known_cat
         elif local:
-            pkg_cat = self._img.get_catalog(self._img.IMG_CATALOG_INSTALLED)
+            pkg_cat = self._img.get_list_catalog(
+                self._img.IMG_CATALOG_INSTALLED
+            )
             if not fmri_strings and pkg_cat.package_count == 0:
                 self.log_operation_end(result=RESULT_NOTHING_TO_DO)
                 raise apx.NoPackagesInstalledException()
         else:
-            pkg_cat = self._img.get_catalog(self._img.IMG_CATALOG_KNOWN)
+            pkg_cat = self._img.get_list_catalog(self._img.IMG_CATALOG_KNOWN)
 
         excludes = self._img.list_excludes()
 

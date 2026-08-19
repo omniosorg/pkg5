@@ -40,6 +40,10 @@ from urllib.error import HTTPError
 from urllib.request import urlopen
 
 import pkg.catalog as catalog
+import sqlite3
+import pkg.client.imagecatalog as imagecatalog
+import pkg.version as version
+import json
 import pkg.client.pkgdefs as pkgdefs
 import pkg.fmri as fmri
 import pkg.indexer as indexer
@@ -756,16 +760,30 @@ adm:NP:6445::::::
         fh.write(self.bogus_pkg10)
         fh.close()
 
-        # Load the 'installed' catalog and add an entry for the
-        # new package version.
+        # Load the state database and add an entry for the new
+        # package version.
         img = self.get_img_api_obj().img
-        istate_dir = os.path.join(img._statedir, "installed")
-        cat = catalog.Catalog(meta_root=istate_dir)
-        mdata = {"states": [pkgdefs.PKG_STATE_INSTALLED]}
         bfmri = self.bogus_fmri.copy()
         bfmri.set_publisher("test")
-        cat.add_package(bfmri, metadata=mdata)
-        cat.save()
+        con = sqlite3.connect(
+            os.path.join(img._statedir, imagecatalog.DB_BASENAME)
+        )
+        con.execute(
+            "INSERT INTO packages"
+            " (pub, stem, version, sortkey, installed, base)"
+            " VALUES (?, ?, ?, ?, 1, ?)",
+            (
+                "test",
+                bfmri.pkg_name,
+                str(bfmri.version),
+                version.version_sortkey(str(bfmri.version)),
+                json.dumps(
+                    {"metadata": {"states": [pkgdefs.PKG_STATE_INSTALLED]}}
+                ),
+            ),
+        )
+        con.commit()
+        con.close()
 
         self.pkg("rebuild-index")
         self._search_op(False, "'*bogus*'", set(self.res_bogus_name_result))
