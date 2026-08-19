@@ -45,6 +45,7 @@ from urllib.parse import quote, unquote
 
 import pkg.actions
 import pkg.catalog
+import pkg.client.actioncache as actioncache
 import pkg.client.api_errors as apx
 import pkg.client.bootenv as bootenv
 import pkg.client.history as history
@@ -228,9 +229,9 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
         # dependency but removed because obsolete
         self.__group_obsolete = None
 
-        # The action dictionary that's returned by __load_actdict.
-        self.__actdict = None
-        self.__actdict_timestamp = None
+        # Memoized installed-action cache handle; see
+        # get_action_cache().
+        self.__actioncache = None
 
         self.__property_overrides = {"property": props}
 
@@ -3771,193 +3772,83 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                 if a.name == "depend" and a.attrs["type"] == "group":
                     yield (f, self.strtofmri(a.attrs["fmri"]).pkg_name)
 
-    def _create_fast_lookups(self, progtrack=None):
-        """Create an on-disk database mapping action name and key
-        attribute value to the action string comprising the unique
-        attributes of the action, for all installed actions.  This is
-        done with a file mapping the tuple to an offset into a second
-        file, where those actions are kept.  Once the offsets are loaded
-        into memory, it is simple to seek into the second file to the
-        given offset and read until you hit an action that doesn't
-        match."""
+    def get_action_cache(self, progtrack=None):
+        """Return an ActionCache open for reading and consistent with
+        the installed package catalog, creating or updating the
+        on-disk database as necessary. Unprivileged users receive a
+        private, temporary copy when the image's own cache is missing
+        or out of date."""
 
         if not progtrack:
             progtrack = progress.NullProgressTracker()
 
-        self.__actdict = None
-        self.__actdict_timestamp = None
-        stripped_path = os.path.join(
-            self.__action_cache_dir, "actions.stripped"
-        )
-        offsets_path = os.path.join(self.__action_cache_dir, "actions.offsets")
-        conflicting_keys_path = os.path.join(
-            self.__action_cache_dir, "keys.conflicting"
-        )
+        cache = self.__actioncache
+        if cache is None:
+            cache = actioncache.ActionCache(self, self.__action_cache_dir)
 
-        excludes = self.list_excludes()
-        heap = []
+        if cache.is_fresh():
+            self.__actioncache = cache
+            return cache
 
-        # nsd is the "name-space dictionary."  It maps action name
-        # spaces (see action.generic for more information) to
-        # dictionaries which map keys to pairs which contain an action
-        # with that key and the pfmri of the package which delivered the
-        # action.
-        nsd = {}
-
-        from heapq import heappush, heappop
-
-        progtrack.job_start(progtrack.JOB_FAST_LOOKUP)
-
-        for pfmri in self.gen_installed_pkgs():
-            progtrack.job_add_progress(progtrack.JOB_FAST_LOOKUP)
-            m = self.get_manifest(pfmri, ignore_excludes=True)
-            for act in m.gen_actions(excludes=excludes):
-                if not act.globally_identical:
-                    continue
-                act.strip()
-                heappush(heap, (act.name, act.attrs[act.key_attr], pfmri, act))
-                nsd.setdefault(act.namespace_group, {})
-                nsd[act.namespace_group].setdefault(act.attrs[act.key_attr], [])
-                nsd[act.namespace_group][act.attrs[act.key_attr]].append(
-                    (act, pfmri)
-                )
-
-        progtrack.job_add_progress(progtrack.JOB_FAST_LOOKUP)
-
-        # If we can't write the temporary files, then there's no point
-        # in producing actdict because it depends on a synchronized
-        # stripped actions file.
         try:
-            actdict = {}
-            sf, sp = self.temporary_file(close=False)
-            of, op = self.temporary_file(close=False)
-            bf, bp = self.temporary_file(close=False)
+            cache.update(progtrack=progtrack)
+            self.__actioncache = cache
+            return cache
+        except actioncache.ReadOnlyCacheError:
+            pass
+        except EnvironmentError as e:
+            if e.errno not in (errno.EACCES, errno.EROFS):
+                raise
 
-            sf = os.fdopen(sf, "w")
-            of = os.fdopen(of, "w")
-            bf = os.fdopen(bf, "w")
+        # The image's cache isn't writable; reconcile a private copy
+        # in a temporary directory instead.
+        cache.close()
+        cache = cache.copy_to(self.temporary_dir())
+        cache.update(progtrack=progtrack)
+        self.__actioncache = cache
+        return cache
 
-            # We need to make sure the files are coordinated.
-            timestamp = int(time.time())
-            sf.write("VERSION 1\n{0}\n".format(timestamp))
-            of.write("VERSION 2\n{0}\n".format(timestamp))
-            # The conflicting keys file doesn't need a timestamp
-            # because it's not coordinated with the stripped or
-            # offsets files and the result of loading it isn't
-            # reused by this class.
-            bf.write("VERSION 1\n")
+    def _create_fast_lookups(self, progtrack=None):
+        """Rebuild the installed-action cache database from scratch.
+        Most callers should use get_action_cache() instead, which
+        reconciles an existing database incrementally."""
 
-            cnt, offset_update_bytes = 0, 0
-            last_name, last_key, last_offset = None, None, sf.tell()
-            while heap:
-                # This is a tight loop, so try to avoid burning
-                # CPU calling into the progress tracker
-                # excessively.
-                if len(heap) % 100 == 0:
-                    progtrack.job_add_progress(progtrack.JOB_FAST_LOOKUP)
-                item = heappop(heap)
-                fmri, act = item[2:]
-                key = act.attrs[act.key_attr]
-                if act.name != last_name or key != last_key:
-                    if last_name is None:
-                        assert last_key is None
-                        cnt += 1
-                        last_name = act.name
-                        last_key = key
-                    else:
-                        assert cnt > 0
-                        of.write(
-                            "{0} {1} {2} {3}\n".format(
-                                last_name, last_offset, cnt, last_key
-                            )
-                        )
-                        actdict[(last_name, last_key)] = last_offset, cnt
-                        last_name, last_key = act.name, key
-                        last_offset += offset_update_bytes
-                        offset_update_bytes = 0
-                        cnt = 1
-                else:
-                    cnt += 1
-                sf_line = f"{fmri} {act}\n"
-                sf.write(sf_line)
-                offset_update_bytes += len(sf_line.encode("utf-8"))
-            if last_name is not None:
-                assert last_key is not None
-                assert last_offset is not None
-                assert cnt > 0
-                of.write(
-                    "{0} {1} {2} {3}\n".format(
-                        last_name, last_offset, cnt, last_key
-                    )
-                )
-                actdict[(last_name, last_key)] = last_offset, cnt
-
-            progtrack.job_add_progress(progtrack.JOB_FAST_LOOKUP)
-
-            bad_keys = imageplan.ImagePlan._check_actions(nsd)
-            for k in sorted(bad_keys):
-                bf.write("{0}\n".format(k))
-
-            progtrack.job_add_progress(progtrack.JOB_FAST_LOOKUP)
-            sf.close()
-            of.close()
-            bf.close()
-            os.chmod(sp, misc.PKG_FILE_MODE)
-            os.chmod(op, misc.PKG_FILE_MODE)
-            os.chmod(bp, misc.PKG_FILE_MODE)
-        except BaseException as e:
-            try:
-                os.unlink(sp)
-                os.unlink(op)
-                os.unlink(bp)
-            except:
-                pass
-            raise
-
-        progtrack.job_add_progress(progtrack.JOB_FAST_LOOKUP)
-
-        # Finally, rename the temporary files into their final place.
-        # If we have any problems, do our best to remove them, and we'll
-        # try to recreate them on the read-side.
+        self.__actioncache = None
+        cache = actioncache.ActionCache(self, self.__action_cache_dir)
         try:
-            if not os.path.exists(self.__action_cache_dir):
-                os.makedirs(self.__action_cache_dir)
-            portable.rename(sp, stripped_path)
-            portable.rename(op, offsets_path)
-            portable.rename(bp, conflicting_keys_path)
-        except EnvironmentError as err:
-            if err.errno == errno.EACCES or err.errno == errno.EROFS:
-                self.__action_cache_dir = self.temporary_dir()
-                stripped_path = os.path.join(
-                    self.__action_cache_dir, "actions.stripped"
-                )
-                offsets_path = os.path.join(
-                    self.__action_cache_dir, "actions.offsets"
-                )
-                conflicting_keys_path = os.path.join(
-                    self.__action_cache_dir, "keys.conflicting"
-                )
-                portable.rename(sp, stripped_path)
-                portable.rename(op, offsets_path)
-                portable.rename(bp, conflicting_keys_path)
-            else:
-                try:
-                    os.unlink(stripped_path)
-                    os.unlink(offsets_path)
-                    os.unlink(conflicting_keys_path)
-                except:
-                    pass
-                raise err
+            cache.rebuild(progtrack=progtrack)
+        except EnvironmentError as e:
+            if e.errno not in (errno.EACCES, errno.EROFS):
+                raise
+            self.__action_cache_dir = self.temporary_dir()
+            cache = actioncache.ActionCache(self, self.__action_cache_dir)
+            cache.rebuild(progtrack=progtrack)
+        self.__actioncache = cache
+        return cache
 
-        progtrack.job_add_progress(progtrack.JOB_FAST_LOOKUP)
-        progtrack.job_done(progtrack.JOB_FAST_LOOKUP)
-        return actdict, timestamp
+    def _sync_fast_lookups(self, progtrack=None):
+        """Bring the installed-action cache database into line with
+        the installed package catalog following an image-modifying
+        operation."""
+
+        cache = self.get_action_cache(progtrack=progtrack)
+        if DebugValues["actioncache-verify"]:
+            diff = cache.selfcheck()
+            if diff:
+                logger.error(
+                    "WARNING: installed-action cache does not match "
+                    "a full rebuild ({0}); rebuilding.".format(diff)
+                )
+                cache = self._create_fast_lookups(progtrack=progtrack)
+        return cache
 
     def _remove_fast_lookups(self):
-        """Remove on-disk database created by _create_fast_lookups.
-        Should be called before updating image state to prevent the
-        client from seeing stale state if _create_fast_lookups is
-        interrupted."""
+        """Remove the flat files that were used by older versions of
+        this code for the installed-action cache, so that an older
+        client sharing this image never trusts stale copies. The
+        sqlite database maintained by get_action_cache() is
+        deliberately left in place; it is reconciled against the
+        installed catalog on next use instead."""
 
         for fname in (
             "actions.stripped",
@@ -3970,105 +3861,6 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                 if e.errno == errno.ENOENT:
                     continue
                 raise apx._convert_error(e)
-
-    def _load_actdict(self, progtrack):
-        """Read the file of offsets created in _create_fast_lookups()
-        and return the dictionary mapping action name and key value to
-        offset."""
-
-        try:
-            of = open(
-                os.path.join(self.__action_cache_dir, "actions.offsets"), "r"
-            )
-        except IOError as e:
-            if e.errno != errno.ENOENT:
-                raise
-            actdict, otimestamp = self._create_fast_lookups()
-            assert actdict is not None
-            self.__actdict = actdict
-            self.__actdict_timestamp = otimestamp
-            return actdict
-
-        # Make sure the files are paired, and try to create them if not.
-        oversion = of.readline().rstrip()
-        otimestamp = of.readline().rstrip()
-
-        # The original action.offsets file existed and had the same
-        # timestamp as the stored actdict, so that actdict can be
-        # reused.
-        if self.__actdict and otimestamp == self.__actdict_timestamp:
-            return self.__actdict
-
-        sversion, stimestamp = self._get_stripped_actions_file(internal=True)
-
-        # If we recognize neither file's version or their timestamps
-        # don't match, then we blow them away and try again.
-        if (
-            oversion != "VERSION 2"
-            or sversion != "VERSION 1"
-            or stimestamp != otimestamp
-        ):
-            of.close()
-            actdict, otimestamp = self._create_fast_lookups()
-            assert actdict is not None
-            self.__actdict = actdict
-            self.__actdict_timestamp = otimestamp
-            return actdict
-
-        # At this point, the original actions.offsets file existed, no
-        # actdict was saved in the image, the versions matched what was
-        # expected, and the timestamps of the actions.offsets and
-        # actions.stripped files matched, so the actions.offsets file is
-        # parsed to generate actdict.
-        actdict = {}
-
-        for line in of:
-            actname, offset, cnt, key_attr = line.rstrip().split(None, 3)
-            off = int(offset)
-            actdict[(actname, key_attr)] = (off, int(cnt))
-
-            # This is a tight loop, so try to avoid burning
-            # CPU calling into the progress tracker excessively.
-            # Since we are already using the offset, we use that
-            # to damp calls back into the progress tracker.
-            if off % 500 == 0:
-                progtrack.plan_add_progress(progtrack.PLAN_ACTION_CONFLICT)
-
-        of.close()
-        self.__actdict = actdict
-        self.__actdict_timestamp = otimestamp
-        return actdict
-
-    def _get_stripped_actions_file(self, internal=False):
-        """Open the actions file described in _create_fast_lookups() and
-        return the corresponding file object."""
-
-        sf = open(
-            os.path.join(self.__action_cache_dir, "actions.stripped"), "r"
-        )
-        sversion = sf.readline().rstrip()
-        stimestamp = sf.readline().rstrip()
-        if internal:
-            sf.close()
-            return sversion, stimestamp
-
-        return sf
-
-    def _load_conflicting_keys(self):
-        """Load the list of keys which have conflicting actions in the
-        existing image.  If no such list exists, then return None."""
-
-        pth = os.path.join(self.__action_cache_dir, "keys.conflicting")
-        try:
-            with open(pth, "r") as fh:
-                version = fh.readline().rstrip()
-                if version != "VERSION 1":
-                    return None
-                return set(l.rstrip() for l in fh)
-        except EnvironmentError as e:
-            if e.errno == errno.ENOENT:
-                return None
-            raise
 
     def gen_installed_actions_bytype(self, atype, implicit_dirs=False):
         """Iterates through the installed actions of type 'atype'.  If
