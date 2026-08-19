@@ -829,8 +829,20 @@ class CatalogPart(CatalogPartBase):
         If neither 'pfmris' or 'pubs' is provided, all entries will be
         sorted."""
 
+        # Version objects are expensive to construct and the same
+        # version string commonly recurs across many stems (packages
+        # built and published together share branch and timestamp), so
+        # construct each distinct version only once per sort.
+        vcache = {}
+
         def key_func(item):
-            return pkg.version.Version(item["version"])
+            ver = item["version"]
+            try:
+                return vcache[ver]
+            except KeyError:
+                v = pkg.version.Version(ver)
+                vcache[ver] = v
+                return v
 
         self.load()
         if pfmris is not None:
