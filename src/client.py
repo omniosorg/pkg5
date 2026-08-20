@@ -2273,6 +2273,10 @@ def __api_plan(
     if _stage != API_STAGE_DEFAULT:
         kwargs["pubcheck"] = False
 
+    # display full solver rejection trees in error messages
+    if _verbose > 0:
+        DebugValues["plan-errors"] = "True"
+
     # display plan debugging information
     if _verbose > 2:
         DebugValues["plan"] = "True"
@@ -3914,6 +3918,8 @@ def set_mediator(
             cmd=op,
         )
 
+    if verbose > 0:
+        DebugValues["plan-errors"] = "True"
     if verbose > 2:
         DebugValues["plan"] = "True"
 
@@ -4024,6 +4030,8 @@ def unset_mediator(
 
     if not pargs:
         usage(_("at least one mediator must be specified"), cmd=op)
+    if verbose > 0:
+        DebugValues["plan-errors"] = "True"
     if verbose > 2:
         DebugValues["plan"] = "True"
 

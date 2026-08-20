@@ -31,7 +31,7 @@ should be installed, updated, or removed to perform a requested operation."""
 import operator
 import time
 
-from collections import defaultdict
+from collections import defaultdict, deque
 from functools import reduce
 from itertools import chain
 
@@ -374,6 +374,150 @@ class PkgSolver(object):
             solver_errors=solver_errors,
         )
 
+    def __verbose_errors(self):
+        """Whether error output should include the full rejection tree
+        for each package rather than the default root cause summary."""
+
+        # Value 'DebugValues' is unsubscriptable;
+        # pylint: disable=E1136
+        return bool(DebugValues["plan"] or DebugValues["plan-errors"])
+
+    def __verbose_hint(self):
+        """Common hint appended to summarised error output."""
+
+        return _(
+            "Re-run the operation with the -v option to see all of the "
+            "rejected\npackages and detailed reasons."
+        )
+
+    @staticmethod
+    def __name_list(names, limit=8):
+        """Return a bounded, indented list of package names for use in
+        summarised error output."""
+
+        names = sorted(names)
+        if len(names) > limit:
+            shown = names[:limit]
+            shown.append(_("... and {0:d} others").format(len(names) - limit))
+        else:
+            shown = names
+        return ["\t{0}".format(n) for n in shown]
+
+    def __rejection_summary(self, fmri_list):
+        """Walk the trim database starting from the given FMRIs,
+        mirroring the walk used to render the full rejection tree, and
+        distil the many reasons for rejection down to the root causes:
+        those which are not themselves just the consequence of another
+        package having been rejected.
+
+        Returns a tuple of a list of strings describing the root
+        causes and the number of rejected package versions considered,
+        or (None, 0) if no root causes could be identified, in which
+        case the caller should fall back to the full rejection tree."""
+
+        # These reasons reflect the requested operation or the
+        # installed image state rather than a cause of failure; the
+        # rejection tree omits them by default too.
+        uninteresting = frozenset(
+            [
+                _TRIM_INSTALLED_NEWER,
+                _TRIM_PROPOSED_PUB,
+                _TRIM_PROPOSED_VER,
+            ]
+        )
+
+        seen = set()
+        pending = deque(fmri_list)
+        # Root cause reason text -> extra carrier count
+        roots = {}
+        # First carrier fmri -> reason texts, in discovery order
+        carriers = {}
+        order = []
+        nrejected = 0
+
+        while pending:
+            f = pending.popleft()
+            if f in seen:
+                continue
+            seen.add(f)
+            self.__progress()
+
+            reasons = self.__trim_dict.get(f, EmptyI)
+            if reasons:
+                nrejected += 1
+            for reason_id, reason_t, fmris in sorted(reasons):
+                if reason_id in uninteresting:
+                    continue
+
+                if reason_id == _TRIM_DEP_TRIMMED:
+                    # A cascade: this package was rejected only
+                    # because packages it depends on were themselves
+                    # rejected.  Descend to find the root, except
+                    # through dependencies on incorporations that
+                    # don't specify a version, which the rejection
+                    # tree omits too; any version-specific
+                    # dependencies will lead to the same roots.
+                    if len(reason_t[1]) == 2:
+                        dtype, fstr = reason_t[1]
+                        if (
+                            dtype == "require"
+                            and "@" not in fstr
+                            and fstr in self.__known_incs
+                        ):
+                            continue
+                else:
+                    # A root cause.
+                    if isinstance(reason_t, tuple):
+                        reason = _(reason_t[0]).format(*reason_t[1])
+                    else:
+                        reason = _(reason_t)
+                    if reason in roots:
+                        roots[reason] += 1
+                    else:
+                        roots[reason] = 0
+                        if f not in carriers:
+                            carriers[f] = []
+                            order.append(f)
+                        carriers[f].append(reason)
+                pending.extend(fmris)
+
+        if not order:
+            return (None, 0)
+
+        ms = [_("This is due to the following root cause(s):"), ""]
+        for f in order:
+            if not self.__depend_ts:
+                # Exclude build and timestamp for brevity.
+                fstr = f.get_short_fmri()
+            else:
+                # Include timestamp for clarity if any dependency
+                # included a timestamp; exclude build for brevity.
+                fstr = f.get_fmri(include_build=False)
+            ms.append(_("  Package: {0}").format(fstr))
+            for reason in carriers[f]:
+                ms.append(_("  Reason:  {0}").format(reason))
+                extra = roots[reason]
+                if extra:
+                    ms.append(
+                        _(
+                            "           (and {0:d} other rejected "
+                            "package versions with the same reason)"
+                        ).format(extra)
+                    )
+            ms.append("")
+        if nrejected == 1:
+            ms.append(
+                _("The above led to the rejection of one package version.")
+            )
+        else:
+            ms.append(
+                _(
+                    "The above led to the rejection of {0:d} package "
+                    "versions in total."
+                ).format(nrejected)
+            )
+        return (ms, nrejected)
+
     def __trim_proposed(self, proposed_dict):
         """Remove any versions from proposed_dict that are in trim_dict
         and raise an exception if no matching version of a proposed
@@ -383,16 +527,49 @@ class PkgSolver(object):
             # Nothing to do.
             return
 
-        # Used to de-dup errors.
-        already_seen = set()
-
-        ret = []
+        # Trim proposed packages and collect those for which no
+        # matching version can now be installed.
+        failed = []
         for name in proposed_dict:
             tv = self.__dotrim(proposed_dict[name])
             if tv:
                 proposed_dict[name] = tv
                 continue
+            # continue processing and accumulate all errors
+            failed.append(name)
 
+        if not failed:
+            return
+
+        if not self.__verbose_errors():
+            summary, nrejected = self.__rejection_summary(
+                [f for name in failed for f in proposed_dict[name]]
+            )
+            if summary is not None:
+                if len(failed) == 1:
+                    ret = [
+                        _(
+                            "No matching version of {0} can be installed."
+                        ).format(failed[0])
+                    ]
+                else:
+                    ret = [
+                        _(
+                            "No matching version of the following\n"
+                            "{0:d} proposed packages can be installed:"
+                        ).format(len(failed))
+                    ]
+                    ret.extend(self.__name_list(failed))
+                ret.append("")
+                ret.extend(summary)
+                ret.append(self.__verbose_hint())
+                self.__raise_solution_error(no_version=ret)
+
+        # Used to de-dup errors.
+        already_seen = set()
+
+        ret = []
+        for name in failed:
             ret.extend(
                 [_("No matching version of {0} can be installed:").format(name)]
             )
@@ -401,9 +578,7 @@ class PkgSolver(object):
                     proposed_dict[name], already_seen=already_seen
                 )
             )
-            # continue processing and accumulate all errors
-        if ret:
-            self.__raise_solution_error(no_version=ret)
+        self.__raise_solution_error(no_version=ret)
 
     def __set_removed_and_required_packages(self, rejected, proposed=None):
         """Sets the list of package to be removed from the image, the
@@ -737,6 +912,7 @@ class PkgSolver(object):
         if ret:
             self.__raise_solution_error(no_version=ret)
 
+        flists = []
         for fmri in uninstall_fmris:
             flist = [fmri]
             if fmri in self.__linked_pkgs:
@@ -755,7 +931,31 @@ class PkgSolver(object):
                         # error messaging for clarity if
                         # different
                         flist.append(pf)
+            flists.append((fmri, flist))
 
+        if flists and not self.__verbose_errors():
+            summary, nrejected = self.__rejection_summary(
+                [f for ufmri, flist in flists for f in flist]
+            )
+            if summary is not None:
+                ret.append(
+                    _(
+                        "The following installed packages must be "
+                        "uninstalled or upgraded\nif the requested "
+                        "operation is to be performed:"
+                    )
+                )
+                ret.extend(
+                    self.__name_list(
+                        [ufmri.pkg_name for ufmri, flist in flists]
+                    )
+                )
+                ret.append("")
+                ret.extend(summary)
+                ret.append(self.__verbose_hint())
+                self.__raise_solution_error(no_version=ret)
+
+        for fmri, flist in flists:
             res = self.__fmri_list_errors(flist, already_seen=already_seen)
 
             # If no errors returned, that implies that all of the
@@ -877,6 +1077,10 @@ class PkgSolver(object):
             for s in ms:
                 info.append("  {0}".format(s))
 
+        if info and not self.__verbose_errors():
+            info.append("")
+            info.append(self.__verbose_hint())
+
         if not info:  # both error detection methods insufficient.
             info.append(
                 _(
@@ -889,7 +1093,7 @@ class PkgSolver(object):
             )
             info.append(
                 _(
-                    "Try running with -vv to "
+                    "Try running with -vvv to "
                     "obtain more detailed error messages."
                 )
             )
@@ -1518,14 +1722,17 @@ class PkgSolver(object):
             info.append(" ")
             for s in ms:
                 info.append("  {0}".format(s))
+            if not self.__verbose_errors():
+                info.append(" ")
+                info.append(self.__verbose_hint())
         else:
             info.append(
                 _("Dependency analysis is unable to determine the cause.")
             )
             info.append(
                 _(
-                    "Try running with -vv to "
-                    "obtain more detailed error messages."
+                    "Try running with -vv, which evaluates packages "
+                    "individually\nand can identify the specific cause."
                 )
             )
 
@@ -2728,6 +2935,14 @@ class PkgSolver(object):
             ret.extend(errors)
             already_processed.add(fmri)
             needs_processing |= newfmris - already_processed
+
+        if ret and not self.__verbose_errors():
+            # The walk above also populates the trim database for
+            # packages whose dependencies could not be satisfied, so
+            # this must happen afterwards.
+            summary = self.__rejection_summary(fmri_list)[0]
+            if summary is not None:
+                return summary
         return ret
 
     def get_trim_errors(self):
@@ -2749,10 +2964,8 @@ class PkgSolver(object):
         """Generate list of strings describing why currently
         installed packages cannot be installed, or empty list"""
 
-        # Used to de-dup errors.
-        already_seen = set()
-
         ret = []
+        failed = []
         for f in self.__installed_fmris - self.__removal_fmris:
             matching = self.__comb_newer_fmris(
                 f, dotrim=True, obsolete_ok=True
@@ -2763,10 +2976,36 @@ class PkgSolver(object):
             matching = self.__comb_newer_fmris(
                 f, dotrim=False, obsolete_ok=True
             )[0]
+            failed.append((f, matching))
 
+        if not failed:
+            return ret
+
+        if not self.__verbose_errors():
+            summary = self.__rejection_summary(
+                [m for pf, matching in failed for m in matching]
+            )[0]
+            if summary is not None:
+                ret.append(
+                    _(
+                        "No suitable version of the following "
+                        "installed packages could be found:"
+                    )
+                )
+                ret.extend(
+                    self.__name_list([pf.pkg_name for pf, matching in failed])
+                )
+                ret.append("")
+                ret.extend(summary)
+                return ret
+
+        # Used to de-dup errors.
+        already_seen = set()
+
+        for pf, matching in failed:
             ret.append(
                 _("No suitable version of installed package {0} found").format(
-                    f.pkg_name
+                    pf.pkg_name
                 )
             )
             ret.extend(

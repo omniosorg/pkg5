@@ -1445,6 +1445,10 @@ def __api_plan(
     if _stage != API_STAGE_DEFAULT:
         kwargs["pubcheck"] = False
 
+    # display full solver rejection trees in error messages
+    if _verbose > 0:
+        DebugValues["plan-errors"] = "True"
+
     # display plan debugging information
     if _verbose > 2:
         DebugValues["plan"] = "True"

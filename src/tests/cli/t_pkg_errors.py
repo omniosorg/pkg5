@@ -74,6 +74,19 @@ class TestPkgSolverErrors(pkg5unittest.SingleDepotTestCase):
         self.pkg("install perl-516 entire@1.0 osnet")
         self.pkg("install entire@latest", exit=1)
         self.assertFalse("No solution" in self.errout)
+        # The default output is the root cause summary.
+        self.assertTrue(
+            "installed packages must be uninstalled or upgraded" in self.errout
+        )
+        self.assertTrue("Package: pkg://test/osnet@1.0" in self.errout)
+        self.assertTrue(
+            "All acceptable versions of 'require' dependency on "
+            "perl-516 are obsolete" in self.errout
+        )
+
+        # With -v, the full rejection tree names each package.
+        self.pkg("install -v entire@latest", exit=1)
+        self.assertFalse("No solution" in self.errout)
         self.assertTrue(
             "Package 'osnet' must be uninstalled"
             " or upgraded if the requested operation is to be performed."
