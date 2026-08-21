@@ -219,7 +219,7 @@ class TestAsyncRPC(pkg5unittest.Pkg5TestCase):
         # test rpc call of a server function that raises an exception
         self.assertRaisesRegex(
             AsyncCallException,
-            "Server error: .* Exception: raise_ex()",
+            "Server error.*: .* Exception: raise_ex()",
             self.__server_setup_and_call,
             "raise_ex",
             http_enc=http_enc,

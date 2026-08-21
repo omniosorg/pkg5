@@ -71,6 +71,7 @@ A RPC client can be implemented as follows:
 import errno
 import http.client
 import fcntl
+import io
 import logging
 import os
 import socket
@@ -195,6 +196,27 @@ class PipeFile(object):
         """Required to support select.select()."""
         return self.__pipefd
 
+    def __recv_frame(self):
+        """Receive one message (a file descriptor passed over the
+        pipe) and return its contents wrapped in a file-like object,
+        or None if the other end of the pipe has been closed."""
+
+        fd = self.recvfd()
+        if fd == -1:
+            return None
+        si = os.fstat(fd)
+        if not stat.S_ISREG(si.st_mode):
+            # Not a regular file; use it directly.
+            return os.fdopen(fd)
+        buf = b""
+        while len(buf) < si.st_size:
+            data = os.pread(fd, si.st_size - len(buf), len(buf))
+            if not data:
+                break
+            buf += data
+        os.close(fd)
+        return io.TextIOWrapper(io.BytesIO(buf))
+
     def readline(self, *args):
         """Read one entire line from the pipe.
         Can block waiting for input."""
@@ -212,12 +234,12 @@ class PipeFile(object):
             # the fd we received over the pipe is empty
             self.__readfh = None
 
-        # recieve a file descriptor from the pipe
-        fd = self.recvfd()
-        if fd == -1:
+        # receive a message from the pipe
+        fh = self.__recv_frame()
+        if fh is None:
             return b"" if self.__http_enc else ""
-        self.__readfh = os.fdopen(fd)
-        # return data from the received fd
+        self.__readfh = fh
+        # return data from the received message
         return self.readline(*args)
 
     def read(self, size=-1):
@@ -228,16 +250,21 @@ class PipeFile(object):
             # read from the fd that we received over the pipe
             data = self.__readfh.read(size)
             if data != "":
-                return data
+                if self.__http_enc:
+                    # The HTTP machinery expects file objects to
+                    # return bytes, as readline() above does.
+                    return force_bytes(data, "iso-8859-1")
+                else:
+                    return data
             # the fd we received over the pipe is empty
             self.__readfh = None
 
-        # recieve a file descriptor from the pipe
-        fd = self.recvfd()
-        if fd == -1:
-            return ""
-        self.__readfh = os.fdopen(fd)
-        # return data from the received fd
+        # receive a message from the pipe
+        fh = self.__recv_frame()
+        if fh is None:
+            return b"" if self.__http_enc else ""
+        self.__readfh = fh
+        # return data from the received message
         return self.read(size)
 
     # For Python 3: self.fp requires a readinto method.
@@ -593,7 +620,14 @@ class PipedRPCServer(_PipedServer, SimpleRPCDispatcher):
 
     def __init__(self, addr, logRequests=False, encoding=None, http_enc=True):
         self.logRequests = logRequests
-        SimpleRPCDispatcher.__init__(self, encoding)
+        # This RPC channel is a pipe between two local processes owned
+        # by the same user, and the details of any server-side
+        # exception are needed on the client side for relaying to the
+        # user; jsonrpclib withholds them (and logs them instead) by
+        # default.
+        config = rpclib.config.DEFAULT.copy()
+        config.send_exception_details = True
+        SimpleRPCDispatcher.__init__(self, encoding, config)
 
         requestHandler = _PipedHTTPRequestHandler
         if not http_enc:
