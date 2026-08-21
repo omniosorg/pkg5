@@ -642,6 +642,68 @@ class Version(object):
         return (release, build_release, branch, timestr), short_ver
 
 
+def version_sortkey(version):
+    """Return a bytes value whose lexicographic (bytewise) ordering
+    over any set of versions is identical to the ordering defined by
+    Version's rich comparison methods, suitable for use as a stored
+    sort key (for example in a database index).
+
+    'version' may be a Version object or a version string.
+
+    Like Version comparison, the key ignores build_release, so two
+    versions differing only in their build release produce the same
+    key.
+
+    The encoding is:
+
+      - each DotSequence component is a length byte (>= 1) followed
+        by the component value as a minimal-length big-endian
+        integer; a numerically larger component never has a shorter
+        encoding, so bytewise comparison matches numeric comparison;
+
+      - each DotSequence is terminated by a NUL, which orders a
+        sequence before any of its extensions, matching Python list
+        comparison;
+
+      - the branch and timestamp sections are prefixed with a
+        presence byte so that an absent value orders before any
+        present one;
+
+      - the timestamp is the fixed-width ISO-8601 string, which
+        collates chronologically as bytes."""
+
+    if not isinstance(version, Version):
+        version = Version(version)
+
+    key = bytearray()
+
+    def encode(seq):
+        for x in seq:
+            n = (x.bit_length() + 7) // 8 or 1
+            if n > 255:
+                # No plausible version contains a component
+                # needing more than 255 bytes.
+                raise IllegalVersion(
+                    "DotSequence component too large to encode"
+                )
+            key.append(n)
+            key.extend(x.to_bytes(n, "big"))
+        key.append(0)
+
+    encode(version.release)
+    if version.branch is None:
+        key.append(0)
+    else:
+        key.append(1)
+        encode(version.branch)
+    if version.timestr is None:
+        key.append(0)
+    else:
+        key.append(1)
+        key += version.timestr.encode("ascii")
+    return bytes(key)
+
+
 class MatchingVersion(Version):
     """An alternative for Version with (much) weaker rules about its format.
     This is intended to accept user input with globbing characters."""

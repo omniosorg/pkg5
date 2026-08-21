@@ -439,11 +439,18 @@ class CatalogPart(CatalogPartBase):
         pub=None,
         stem=None,
         ver=None,
+        check_duplicate=True,
     ):
         """Add a catalog entry for a given FMRI or FMRI components.
 
         'metadata' is an optional dict containing the catalog
         metadata that should be stored for the specified FMRI.
+
+        'check_duplicate' may be set to False by callers that can
+        guarantee the entry is not already present, to skip the
+        linear scan of the stem's existing versions; the image
+        catalogue rebuild adds every entry of large catalogues
+        exactly once, making that scan quadratic in versions-per-stem.
 
         The dict representing the entry is returned to callers,
         but should not be modified.
@@ -464,13 +471,14 @@ class CatalogPart(CatalogPartBase):
 
         pkg_list = self.__data.setdefault(pub, {})
         ver_list = pkg_list.setdefault(stem, [])
-        for entry in ver_list:
-            if entry["version"] == ver:
-                if not pfmri:
-                    pfmri = "pkg://{0}/{1}@{2}".format(pub, stem, ver)
-                raise api_errors.DuplicateCatalogEntry(
-                    pfmri, operation="add", catalog_name=self.pathname
-                )
+        if check_duplicate:
+            for entry in ver_list:
+                if entry["version"] == ver:
+                    if not pfmri:
+                        pfmri = "pkg://{0}/{1}@{2}".format(pub, stem, ver)
+                    raise api_errors.DuplicateCatalogEntry(
+                        pfmri, operation="add", catalog_name=self.pathname
+                    )
 
         if metadata is not None:
             entry = metadata
@@ -652,6 +660,19 @@ class CatalogPart(CatalogPartBase):
         for entry in ver_list:
             if entry["version"] == ver:
                 return entry
+
+    def get_stem_entries(self, pub, stem):
+        """Return the list of entries for the given publisher and
+        package stem, in part order; an empty list if there are none.
+        The returned list must not be modified."""
+
+        if not self.loaded:
+            self.load()
+
+        pkg_list = self.__data.get(pub, None)
+        if not pkg_list:
+            return []
+        return pkg_list.get(stem, [])
 
     def get_package_counts(self):
         """Returns a tuple of integer values (package_count,
@@ -2624,6 +2645,7 @@ class Catalog(object):
         locales=None,
         ordered=False,
         pubs=EmptyI,
+        stems=None,
     ):
         """A generator function that produces tuples of the format
         ((pub, stem, version), entry, actions) as it iterates over
@@ -2685,7 +2707,17 @@ class Catalog(object):
         'pfmri' is an optional FMRI to limit the returned results to.
 
         'pubs' is an optional list of publisher prefixes to restrict
-        the results to."""
+        the results to.
+
+        'stems' is an optional set of package stems to restrict the
+        results to; entries for other stems are skipped before any
+        further processing."""
+
+        if stems is not None:
+            stem_cb = cb
+
+            def cb(t, entry):
+                return t[1] in stems and (stem_cb is None or stem_cb(t, entry))
 
         for r, entry in self.__entries(
             cb=cb,

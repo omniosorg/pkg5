@@ -267,6 +267,118 @@ class TestVersion(pkg5unittest.Pkg5TestCase):
         self.assertTrue(self.v9 is not None)
         self.assertTrue(not self.v9 != self.v9same)
 
+    # A corpus for version_sortkey exercising: release lists where one
+    # is a prefix of the other, multi-byte components, zero components,
+    # absent/present/prefix branches, absent/present timestamps, and
+    # versions differing only in build_release.
+    sortkey_corpus = [
+        "0.1,5.11-1",
+        "0.5.11",
+        "0.5.11,5.11-0.151054",
+        "0.5.11,5.11-0.151054:20260101T000000Z",
+        "0.5.11,5.11-0.151054:20260101T000001Z",
+        "0.5.11,5.11-0.175.3.35.0.2.0",
+        "1.0",
+        "1.0,5.11-1",
+        "1.0,5.12-1",
+        "1.0,5.11-1.2",
+        "1.0,5.11-1.2.3",
+        "1.0,5.11-2",
+        "1.0:20240101T000000Z",
+        "1.0.0",
+        "1.2",
+        "1.2.0.0.256",
+        "1.2.0.0.65536",
+        "1.2.0.0.151054",
+        "2.0-0",
+        "2.0-0.20240215120000",
+        "5.11-0.2",
+        "5.11-0.10",
+        "5.11.1-0.2",
+        "20.0.1.20240215",
+        "255.256.65535.65536",
+    ]
+
+    def testsortkey(self):
+        """version_sortkey byte ordering must agree exactly with
+        Version rich comparison over the corpus."""
+
+        import itertools
+
+        pairs = [
+            (version.Version(s), version.version_sortkey(s))
+            for s in self.sortkey_corpus
+        ]
+        for (v1, k1), (v2, k2) in itertools.combinations(pairs, 2):
+            self.assertEqual(
+                v1 < v2, k1 < k2, "{0} < {1} mismatch".format(v1, v2)
+            )
+            self.assertEqual(
+                v1 > v2, k1 > k2, "{0} > {1} mismatch".format(v1, v2)
+            )
+            self.assertEqual(
+                v1 == v2, k1 == k2, "{0} == {1} mismatch".format(v1, v2)
+            )
+
+    def testsortkeybuild(self):
+        """Like Version comparison, version_sortkey ignores the build
+        release."""
+
+        self.assertEqual(
+            version.version_sortkey("1.0,5.11-1"),
+            version.version_sortkey("1.0,5.12-1"),
+        )
+        self.assertNotEqual(
+            version.version_sortkey("1.0,5.11-1"),
+            version.version_sortkey("1.0,5.11-1.0"),
+        )
+
+    def testsortkeyversionobject(self):
+        """version_sortkey accepts a Version object and agrees with
+        the string form."""
+
+        self.assertEqual(
+            version.version_sortkey(self.v1),
+            version.version_sortkey(str(self.v1)),
+        )
+
+    def testsortkeyrandom(self):
+        """Randomised (seeded) agreement between version_sortkey and
+        Version comparison."""
+
+        import itertools
+        import random
+
+        rng = random.Random(20260808)
+        comps = [0, 1, 2, 5, 9, 10, 11, 99, 100, 255, 256, 65535, 151054]
+
+        def dotseq():
+            return ".".join(
+                str(rng.choice(comps)) for i in range(rng.randint(1, 4))
+            )
+
+        vers = set()
+        for i in range(150):
+            v = dotseq()
+            if rng.random() < 0.5:
+                v += "," + dotseq()
+            if rng.random() < 0.7:
+                v += "-" + dotseq()
+            if rng.random() < 0.5:
+                v += ":202608{0:02d}T{1:02d}0000Z".format(
+                    rng.randint(1, 28), rng.randint(0, 23)
+                )
+            vers.add(v)
+
+        pairs = [(version.Version(s), version.version_sortkey(s)) for s in vers]
+        for (v1, k1), (v2, k2) in itertools.combinations(pairs, 2):
+            self.assertEqual(
+                v1 < v2, k1 < k2, "{0} < {1} mismatch".format(v1, v2)
+            )
+            self.assertEqual(
+                v1 == v2, k1 == k2, "{0} == {1} mismatch".format(v1, v2)
+            )
+
     def testversionsuccessor1(self):
         self.assertTrue(
             self.v13.is_successor(self.v12, version.CONSTRAINT_BRANCH)

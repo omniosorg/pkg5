@@ -33,6 +33,7 @@ import pkg5unittest
 import os
 import pkg.portable
 import pkg.catalog
+import pkg.client.imagecatalog as imagecatalog
 import pkg.client.image as image
 import pkg.config as cfg
 import pkg.misc as misc
@@ -542,15 +543,26 @@ class TestPkgImageCreateBasics(pkg5unittest.ManyDepotTestCase):
         # The existing installed state has to be converted to v2.
         state_dir = os.path.join(img_root, "state")
         inst_state_dir = os.path.join(state_dir, "installed")
-        cat = pkg.catalog.Catalog(meta_root=inst_state_dir)
-        for f in cat.fmris():
+        icat = imagecatalog.ImageCatalog(
+            os.path.join(state_dir, imagecatalog.DB_BASENAME),
+            installed=True,
+        )
+        os.makedirs(inst_state_dir, exist_ok=True)
+        for f in icat.fmris():
             self.__add_install_file(img_root, f)
-        cat = None
+        icat.close()
 
-        # Now dump any v4 directories not found in v2 images.
+        # Now dump any v4/v5 directories and files not found in v2
+        # images.
         shutil.rmtree(pub_path)
         for entry in ("cache", "license", "ssl", "state/known"):
-            shutil.rmtree(os.path.join(img_root, entry))
+            shutil.rmtree(os.path.join(img_root, entry), ignore_errors=True)
+        try:
+            pkg.portable.remove(
+                os.path.join(state_dir, imagecatalog.DB_BASENAME)
+            )
+        except OSError:
+            pass
 
         for fname in sorted(os.listdir(inst_state_dir)):
             if fname.startswith("catalog"):
@@ -661,6 +673,20 @@ test2\ttrue\tfalse\ttrue\torigin\tonline\t{1}/\t-
         for entry in ("cache", "license", "ssl"):
             shutil.rmtree(os.path.join(img_root, entry))
 
+        # Regenerate the JSON state catalogs from the state database
+        # when one exists; version 3 images know nothing of the
+        # database. An automatically upgraded image stops at version
+        # 4 and keeps its JSON state, so there may be nothing to do.
+        state_dir = os.path.join(img_root, "state")
+        db_path = os.path.join(state_dir, imagecatalog.DB_BASENAME)
+        if os.path.exists(db_path):
+            for name, inst in (("known", False), ("installed", True)):
+                scat = imagecatalog.materialize(db_path, installed=inst)
+                scat.meta_root = os.path.join(state_dir, name)
+                os.makedirs(scat.meta_root, exist_ok=True)
+                scat.save()
+            pkg.portable.remove(db_path)
+
         # Next, revert image configuration.
         src = os.path.join(img_root, "pkg5.image")
         newcfg = cfg.FileConfig(src)
@@ -716,6 +742,16 @@ test2\ttrue\tfalse\ttrue\torigin\tonline\t{1}/\t-
         for entry in ("cache", "license", "ssl"):
             shutil.rmtree(os.path.join(img_root, entry))
 
+        # Regenerate the JSON state catalogs from the state
+        # database again, when one exists.
+        if os.path.exists(db_path):
+            for name, inst in (("known", False), ("installed", True)):
+                scat = imagecatalog.materialize(db_path, installed=inst)
+                scat.meta_root = os.path.join(state_dir, name)
+                os.makedirs(scat.meta_root, exist_ok=True)
+                scat.save()
+            pkg.portable.remove(db_path)
+
         # Next, revert image configuration.
         src = os.path.join(img_root, "pkg5.image")
         newcfg = cfg.FileConfig(src)
@@ -732,7 +768,8 @@ test2\ttrue\tfalse\ttrue\torigin\tonline\t{1}/\t-
         # update for a v3 image.
         self.pkg("refresh")
 
-        # Verify update-format will upgrade a v3 image to a v4 image.
+        # Verify update-format will upgrade a v3 image to the current
+        # format.
         self.pkg("update-format")
         self.assertFalse(os.path.exists(os.path.join(img_root, "index")))
         self.assertTrue(os.path.exists(os.path.join(img_root, "cache")))
@@ -774,33 +811,26 @@ test2\ttrue\tfalse\ttrue\torigin\tonline\t{1}/\t-
 
         # Now invalidate the existing image data.
         state_path = self.get_img_api_obj().img._statedir
-        kfile_path = os.path.join(state_path, "known", "catalog.attrs")
-        ifile_path = os.path.join(state_path, "installed", "catalog.attrs")
+        db_path = os.path.join(state_path, "catalog.db")
 
         self.pkg("install foo")
 
-        with open(kfile_path, "w") as f:
+        with open(db_path, "w") as f:
             f.write("InvalidCatalogFile")
             f.flush()
 
-        # Should work since known catalog file was corrupted, not the
-        # installed catalog file.
-        self.pkg("info foo")
-
-        # These should all fail as they depend on the known catalog
-        # file.
-        self.pkg("list -a", exit=1)
-        self.pkg("install -nv foo", exit=1)
-        self.pkg("update -nv", exit=1)
-        self.pkg("info -r foo", exit=1)
-
-        with open(ifile_path, "w") as f:
-            f.write("InvalidCatalogFile")
-            f.flush()
-
-        # Should fail since installed catalog file is corrupt.
+        # An unusable state database is treated as absent, so
+        # operations that require catalog data must fail gracefully.
         self.pkg("info foo", exit=1)
         self.pkg("list", exit=1)
+        self.pkg("list -a", exit=1)
+        self.pkg("install -nv foo", exit=1)
+
+        # A refresh rebuilds the state database, restoring normal
+        # operation (although installed state was lost with it).
+        self.pkg("refresh --full")
+        self.pkg("list -a")
+        self.pkg("info -r foo")
 
     def test_10_unprivileged(self):
         """Verify that pkg correctly handles permission errors during

@@ -74,6 +74,7 @@ PKG_OP_SYNC = "sync-linked"
 PKG_OP_UNINSTALL = "uninstall"
 PKG_OP_UNSET_PUBLISHER = "unset-publisher"
 PKG_OP_UPDATE = "update"
+PKG_OP_UPDATE_FORMAT = "update-format"
 PKG_OP_APPLY_HOT_FIX = "apply-hot-fix"
 PKG_OP_AUTOREMOVE = "autoremove"
 PKG_OP_HOTFIX_CLEANUP = "clean-up-hot-fix"
@@ -105,6 +106,7 @@ pkg_op_values = frozenset(
         PKG_OP_UNINSTALL,
         PKG_OP_UNSET_PUBLISHER,
         PKG_OP_UPDATE,
+        PKG_OP_UPDATE_FORMAT,
         PKG_OP_APPLY_HOT_FIX,
         PKG_OP_AUTOREMOVE,
         PKG_OP_HOTFIX_CLEANUP,

@@ -2788,6 +2788,11 @@ class CliTestCase(Pkg5TestCase):
         cmdline.extend(("-D", "plandesc_validate=1"))
         cmdline.extend(("-D", "manifest_validate=Always"))
 
+        # Pass through any run-wide debug values (see env_sanitize).
+        for dv in os.environ.get("PKG_TEST_DEBUG_VALUES", "").split(","):
+            if dv:
+                cmdline.extend(("-D", dv))
+
         if debug_smf and "smf_cmds_dir" not in cmdstr:
             cmdline.extend(
                 ("-D", "smf_cmds_dir={0}".format(DebugValues["smf_cmds_dir"]))
@@ -4890,9 +4895,19 @@ class SingleDepotTestCaseCorruptImage(SingleDepotTestCase):
             if "publisher_absent" in config or "publisher_empty" in config:
                 shutil.rmtree(os.path.join(tmpDir, "publisher"))
             if "known_absent" in config or "known_empty" in config:
-                shutil.rmtree(os.path.join(tmpDir, "state", "known"))
+                # Version 5 images keep known-package state in the
+                # state database; older layouts in state/known.
+                shutil.rmtree(
+                    os.path.join(tmpDir, "state", "known"),
+                    ignore_errors=True,
+                )
+                try:
+                    os.remove(os.path.join(tmpDir, "state", "catalog.db"))
+                except OSError:
+                    pass
             if "known_empty" in config:
                 os.mkdir(os.path.join(tmpDir, "state", "known"))
+                open(os.path.join(tmpDir, "state", "catalog.db"), "w").close()
             if "publisher_empty" in config:
                 os.mkdir(os.path.join(tmpDir, "publisher"))
             if "cfg_cache_absent" in config:
@@ -4970,6 +4985,16 @@ def env_sanitize(pkg_cmdpath, dv_keep=None):
 
     # always get detailed data from the solver
     DebugValues["plan"] = True
+
+    # Allow debug values to be set for an entire test run;
+    # PKG_TEST_DEBUG_VALUES is a comma-separated list of name=value
+    # pairs which is applied to every test and also passed to every
+    # spawned pkg(1) command.
+    for dv in os.environ.get("PKG_TEST_DEBUG_VALUES", "").split(","):
+        if not dv:
+            continue
+        name, _, value = dv.partition("=")
+        DebugValues[name] = value or "1"
 
 
 def fakeroot_create():

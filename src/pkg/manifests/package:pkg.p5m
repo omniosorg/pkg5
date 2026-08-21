@@ -89,6 +89,7 @@ file path=$(PYDIRVP)/pkg/client/debugvalues.py
 file path=$(PYDIRVP)/pkg/client/firmware.py
 file path=$(PYDIRVP)/pkg/client/history.py
 file path=$(PYDIRVP)/pkg/client/image.py
+file path=$(PYDIRVP)/pkg/client/imagecatalog.py
 file path=$(PYDIRVP)/pkg/client/imageconfig.py
 file path=$(PYDIRVP)/pkg/client/imageplan.py
 file path=$(PYDIRVP)/pkg/client/imagetypes.py
