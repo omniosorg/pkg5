@@ -54,6 +54,7 @@ opts = {
     'cpu':              None,
     'diskif':           'virtio',
     'netif':            'virtio',
+    'netopts':          None,
     'ram':              '1G',
     'rng':              'off',
     'rtc':              'base=utc',
@@ -298,12 +299,10 @@ for f in z.findall("./network[@physical]"):
     else:
         args.extend(["-device", f'{opts["netif"]},netdev=net{vlan},mac={mac}'])
 
-    args.extend(
-        [
-            "-netdev",
-            f"vnic,id=net{vlan},ifname={ifname}",
-        ]
-    )
+    netdev = f"vnic,id=net{vlan},ifname={ifname}"
+    if opts["netopts"]:
+        netdev += f',{opts["netopts"]}'
+    args.extend(["-netdev", netdev])
 
     vlan += 1
 
