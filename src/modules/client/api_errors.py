@@ -2428,7 +2428,8 @@ class UnsupportedRepositoryURI(PublisherError):
             illegals.append((u, scheme))
 
         supported = _("Supported schemes are {}, {}, and {}.").format(
-            "file://", "http://", "https://")
+            "file://", "http://", "https://"
+        )
         if len(illegals) > 1:
             msg = _(
                 "The following URIs use unsupported schemes.  {cont}"
@@ -2440,7 +2441,8 @@ class UnsupportedRepositoryURI(PublisherError):
             i, s = illegals[0]
             return _(
                 "The URI '{uri}' uses the unsupported scheme '{scheme}'.  "
-                "{cont}").format(uri=i, scheme=s, cont=supported)
+                "{cont}"
+            ).format(uri=i, scheme=s, cont=supported)
         return _(
             "The specified URI uses an unsupported scheme.  {cont}"
         ).format(cont=supported)

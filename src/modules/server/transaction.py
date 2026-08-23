@@ -636,8 +636,11 @@ class Transaction(object):
         # basename.
         if basename:
             if "/" in basename or "." in basename:
-                raise TransactionOperationError(_("The specified "
-                    "basename, '{0}', is invalid.").format(basename))
+                raise TransactionOperationError(
+                    _("The specified " "basename, '{0}', is invalid.").format(
+                        basename
+                    )
+                )
             fileneeded = True
             try:
                 dst_path = self.rstore.file(basename)

@@ -778,13 +778,17 @@ if __name__ == "__main__":
             except TypeError:
                 # The private key is encrypted.
                 pkey = serialization.load_pem_private_key(
-                    data, password=get_ssl_passphrase())
+                    data, password=get_ssl_passphrase()
+                )
 
             key_data = tempfile.NamedTemporaryFile(dir=pkg_root, delete=True)
-            key_data.write(pkey.private_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PrivateFormat.PKCS8,
-                encryption_algorithm=serialization.NoEncryption()))
+            key_data.write(
+                pkey.private_bytes(
+                    encoding=serialization.Encoding.PEM,
+                    format=serialization.PrivateFormat.PKCS8,
+                    encryption_algorithm=serialization.NoEncryption(),
+                )
+            )
             key_data.seek(0)
         except EnvironmentError as _e:
             emsg(

@@ -197,8 +197,11 @@ class PkgManifestChecker(base.ManifestChecker):
             # at install-time the solver may still be able to find a
             # non-obsolete version of a package.
             lint_id = "{0}{1}".format(self.name, pkglint_id)
-            report_errors = engine.get_param("{}.report_errors".format(
-                lint_id), action=action, manifest=manifest)
+            report_errors = engine.get_param(
+                "{}.report_errors".format(lint_id),
+                action=action,
+                manifest=manifest,
+            )
             # the parameter might not exist
             if not report_errors:
                 report_errors = False
@@ -209,7 +212,8 @@ class PkgManifestChecker(base.ManifestChecker):
             else:
                 lint_report = engine.warning
                 lint_subid = "3"
-            lint_report("obsolete package {pkg} is depended "
+            lint_report(
+                "obsolete package {pkg} is depended "
                 "upon by the following packages: "
                 "{deps}".format(
                     pkg=manifest.fmri,

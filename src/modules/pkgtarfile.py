@@ -28,6 +28,7 @@ import copy
 import os
 import stat
 import tarfile
+
 # Without the below statements, tarfile will trigger calls to getpwuid
 # and getgrgid for every file extracted.  This in turn leads to nscd
 # usage which slows down the install phase.  Setting these attributes
@@ -90,9 +91,12 @@ class PkgTarFile(tarfile.TarFile):
             except EnvironmentError:
                 pass
         try:
-            self._extract_member(filtered, os.path.join(path, filtered.name),
-                                 filter_function=filter_function,
-                                 extraction_root=path)
+            self._extract_member(
+                filtered,
+                os.path.join(path, filtered.name),
+                filter_function=filter_function,
+                extraction_root=path,
+            )
         except (OSError, UnicodeEncodeError) as e:
             self._handle_fatal_error(e)
         except tarfile.ExtractError as e:

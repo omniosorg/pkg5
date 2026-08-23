@@ -1796,8 +1796,14 @@ class SMFConfig(Config):
 
         cmd = ["/usr/bin/svcprop", "-c", "-t", self._target]
         try:
-            res = subprocess.run(cmd, check=True, env=env, text=True,
-                                 capture_output=True, encoding="utf-8")
+            res = subprocess.run(
+                cmd,
+                check=True,
+                env=env,
+                text=True,
+                capture_output=True,
+                encoding="utf-8",
+            )
         except subprocess.CalledProcessError as err:
             cmdstr = " ".join(err.cmd)
             errstr = err.stderr.strip("\n")
