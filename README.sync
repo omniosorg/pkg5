@@ -4,12 +4,11 @@
 The pkg5 components have been updated to the latest upstream solaris-ips
 as of:
 
-    commit 4a9340355072e296bf37c27f1c8aa90e7c1e57d3
+    commit e65612a93b6b39c3a23fa4d0920ed355f3247126
     Author: Jakub Kulik <jakub.kulik@oracle.com>
-    Date:   Tue Mar 10 04:41:17 2026 -0700
+    Date:   Fri Aug 14 02:42:11 2026 -0700
 
-       PSARC/2026/020 EOF Python ply and create its private copy in the IPS gate
-       38920215 introduce a private copy of ply
+       39875635 migrate from pyOpenSSL crypto module to cryptography
 
 -----------------------------------------------------------------------------
 
