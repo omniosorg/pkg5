@@ -359,12 +359,11 @@ certificate is being used and that the support contract for the product being
 accessed is still valid.
 """)
 
-        license_err_msg = _("""
+        license_err_msg = N_("""
 The license agreement required to access this repository has not been
-accepted yet or the license agreement for the product has changed. Please go to
-{} and accept the license for the product you are
-trying to access.
-""").format("https://pkg-register.oracle.com")
+accepted yet or the license agreement for the product has changed. Please
+contact the publisher of this repository to accept the required license.
+""")
 
         server_err_msg = N_("""
 Repository access is currently unavailable due to service issues. Please retry
