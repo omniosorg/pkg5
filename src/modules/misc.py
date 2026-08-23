@@ -351,6 +351,17 @@ def valid_pub_prefix(prefix):
     return False
 
 
+def valid_hash_value(hashval):
+    """Verify that a payload hash value, which may have been received
+    from an untrusted source but will be used to name a file, is safe
+    to use as a single path component."""
+
+    if not hashval or hashval in (os.curdir, os.pardir):
+        return False
+
+    return os.path.sep not in hashval and "\0" not in hashval
+
+
 def valid_pub_url(url, proxy=False):
     """Verify that the publisher URL contains only valid characters."""
 

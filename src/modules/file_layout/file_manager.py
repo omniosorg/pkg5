@@ -44,6 +44,7 @@ import errno
 import os
 
 import pkg.client.api_errors as apx
+import pkg.misc as misc
 import pkg.portable as portable
 import pkg.file_layout.layout as layout
 
@@ -87,6 +88,20 @@ class FMInsertionFailure(apx.ApiException):
             "{src} was removed while FileManager was attempting "
             "to insert it into the cache as {dest}."
         ).format(**self.__dict__)
+
+
+class FMInvalidHashError(apx.ApiException):
+    """Used to indicate that the given hash value is not valid for use
+    as a file name within the managed tree."""
+
+    def __init__(self, hashval):
+        apx.ApiException.__init__(self)
+        self.hashval = hashval
+
+    def __str__(self):
+        return _(
+            "'{0}' is not a valid name for a file managed by the cache."
+        ).format(self.hashval)
 
 
 class FMPermissionsException(apx.PermissionsException):
@@ -175,6 +190,9 @@ class FileManager(object):
         The "opener" parameter determines whether the function will
         return a path or an open file handle."""
 
+        if not misc.valid_hash_value(hashval):
+            return None
+
         cur_full_path, dest_full_path = self.__select_path(
             hashval, check_existence
         )
@@ -256,6 +274,8 @@ class FileManager(object):
 
         if self.readonly:
             raise NeedToModifyReadOnlyFileManager(hashval)
+        if not misc.valid_hash_value(hashval):
+            raise FMInvalidHashError(hashval)
         cur_full_path, dest_full_path = self.__select_path(hashval, True)
 
         if cur_full_path and cur_full_path != dest_full_path:
@@ -337,6 +357,8 @@ class FileManager(object):
 
         if self.readonly:
             raise NeedToModifyReadOnlyFileManager(hashval, "remove")
+        if not misc.valid_hash_value(hashval):
+            return
         for l in self.layouts:
             cur_path = l.lookup(hashval)
             cur_full_path = os.path.join(self.root, cur_path)
