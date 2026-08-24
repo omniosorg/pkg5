@@ -554,6 +554,8 @@ class BootEnv(object):
                 release_notes=self.img.imageplan.pd.release_notes_name
             )
 
+            self.img.close_databases()
+
             if be.beUnmount(self.be_name_clone) != 0:
                 logger.error(
                     _(
