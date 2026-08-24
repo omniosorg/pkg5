@@ -3648,7 +3648,7 @@ class Repository(object):
         def merge(src, dest):
             for k, v in src.items():
                 if k in dest:
-                    dest[k].extend(v)
+                    dest[k].extend(x for x in v if x not in dest[k])
                 else:
                     dest[k] = v
 
