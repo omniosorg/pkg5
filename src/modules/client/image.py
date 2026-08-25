@@ -4058,6 +4058,18 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                 if a.name == "depend" and a.attrs["type"] == "group":
                     yield (f, self.strtofmri(a.attrs["fmri"]).pkg_name)
 
+    def close_databases(self):
+        """Close any open connections to the image's sqlite databases"""
+
+        if self.__actioncache is not None:
+            self.__actioncache.close()
+            self.__actioncache = None
+        for cat in self.__catalogs.values():
+            close = getattr(cat, "close", None)
+            if close is not None:
+                close()
+        self.__catalogs = {}
+
     def get_action_cache(self, progtrack=None):
         """Return an ActionCache open for reading and consistent with
         the installed package catalog, creating or updating the
