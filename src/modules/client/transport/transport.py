@@ -3758,10 +3758,23 @@ class MultiFile(MultiXfr):
 
         # only retrieve the least preferred hash for this action
         hash_attr, hash_val, hash_func = digest.get_least_preferred_hash(action)
+        self._check_hash(hash_val)
         self.add_hash(hash_val, action)
         if action.name == "signature":
             for c in action.get_chain_certs(least_preferred=True):
+                self._check_hash(c)
                 self.add_hash(c, action)
+
+    @staticmethod
+    def _check_hash(hashval):
+        """Check that a hash value found in an action is safe to use
+        as the name of the file in which the retrieved content will
+        be stored."""
+
+        if not misc.valid_hash_value(hashval):
+            raise tx.InvalidContentException(
+                path=hashval, reason="invalid hash value"
+            )
 
     def add_hash(self, hashval, item):
         """Add 'item' to list of values that exist for
@@ -3873,6 +3886,7 @@ class MultiFileNI(MultiFile):
 
         cpath = self._transport._action_cached(action, self.get_publisher())
         hash_attr, hash_val, hash_func = digest.get_least_preferred_hash(action)
+        self._check_hash(hash_val)
 
         if cpath and self._final_dir:
             self._final_copy(hash_val, cpath)
@@ -3883,6 +3897,7 @@ class MultiFileNI(MultiFile):
             self.add_hash(hash_val, action)
         if action.name == "signature":
             for c in action.get_chain_certs(least_preferred=True):
+                self._check_hash(c)
                 cpath = self._transport._action_cached(
                     action, self.get_publisher(), in_hash=c
                 )

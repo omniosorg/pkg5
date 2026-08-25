@@ -22,7 +22,7 @@
 
 #
 # Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
-# Copyright (c) 2009, 2025, Oracle and/or its affiliates.
+# Copyright (c) 2009, 2026, Oracle and/or its affiliates.
 #
 
 import errno
@@ -361,9 +361,8 @@ accessed is still valid.
 
         license_err_msg = N_("""
 The license agreement required to access this repository has not been
-accepted yet or the license agreement for the product has changed. Please go to
-https://pkg-register.oracle.com and accept the license for the product you are
-trying to access.
+accepted yet or the license agreement for the product has changed. Please
+contact the publisher of this repository to accept the required license.
 """)
 
         server_err_msg = N_("""

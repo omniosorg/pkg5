@@ -26,6 +26,8 @@
 syntax: glob
 
 src/man/*.txt
+src/modules/solver/vec.h
+src/modules/solver/solver.*
 src/pkg/external_deps.txt
 src/tests/bandit-baseline.json
 src/tests/baseline.txt

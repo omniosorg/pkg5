@@ -40,10 +40,8 @@ elf.cpython-%.so		:= LDFLAGS = -lelf -lmd
 solver.cpython-%.so		:= SOURCES = solver/solver.c solver/py_solver.c
 solver.cpython-%.so		:= CPPFLAGS = -D_FILE_OFFSET_BITS=64
 solver.cpython-%.so		:= CERRWARN = \
-					-Wno-return-type \
 					-Wno-strict-aliasing \
-					-Wno-unused-function \
-					-Wno-unused-variable
+					-Wno-unused-function
 solver.cpython-%.so		:= LDFLAGS = -ztext -lm -lc
 
 all: $(SOBJ)

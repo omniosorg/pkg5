@@ -7,7 +7,6 @@
     pkg:/library/python-3/jsonschema-313
     pkg:/library/python-3/pybonjour-313
     pkg:/library/python-3/pycurl-313
-    pkg:/library/python-3/pyopenssl-313
     pkg:/library/python-3/rapidjson-313
     pkg:/library/python-3/setuptools-313
     #

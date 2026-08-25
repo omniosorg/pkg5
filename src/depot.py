@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2007, 2025, Oracle and/or its affiliates.
+# Copyright (c) 2007, 2026, Oracle and/or its affiliates.
 #
 
 try:
@@ -32,7 +32,6 @@ try:
     import logging
     import os
     import os.path
-    import OpenSSL.crypto as crypto
     import string
     import ssl
     import shlex
@@ -49,6 +48,9 @@ try:
     import cherrypy.process.servers
     from cherrypy.process.plugins import Daemonizer
     from cherrypy._cpdispatch import Dispatcher
+
+    from cryptography.exceptions import UnsupportedAlgorithm
+    from cryptography.hazmat.primitives import serialization
 
     from pkg.misc import msg, emsg, setlocale
     from pkg.client.debugvalues import DebugValues
@@ -770,12 +772,23 @@ if __name__ == "__main__":
         # to an un-named temporary file.
         try:
             with open(ssl_key_file, "rb") as key_file:
-                pkey = crypto.load_privatekey(
-                    crypto.FILETYPE_PEM, key_file.read(), get_ssl_passphrase
+                data = key_file.read()
+            try:
+                pkey = serialization.load_pem_private_key(data, password=None)
+            except TypeError:
+                # The private key is encrypted.
+                pkey = serialization.load_pem_private_key(
+                    data, password=get_ssl_passphrase()
                 )
 
             key_data = tempfile.NamedTemporaryFile(dir=pkg_root, delete=True)
-            key_data.write(crypto.dump_privatekey(crypto.FILETYPE_PEM, pkey))
+            key_data.write(
+                pkey.private_bytes(
+                    encoding=serialization.Encoding.PEM,
+                    format=serialization.PrivateFormat.PKCS8,
+                    encryption_algorithm=serialization.NoEncryption(),
+                )
+            )
             key_data.seek(0)
         except EnvironmentError as _e:
             emsg(
@@ -783,7 +796,7 @@ if __name__ == "__main__":
                 "file: {0}".format(_e)
             )
             sys.exit(EXIT_OOPS)
-        except crypto.Error as _e:
+        except (ValueError, TypeError, UnsupportedAlgorithm) as _e:
             emsg(
                 "pkg.depotd: authentication or cryptography "
                 "failure while attempting to decode\nthe SSL "

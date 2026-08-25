@@ -22,11 +22,10 @@
 
 #
 # Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
-# Copyright (c) 2015, 2025, Oracle and/or its affiliates.
+# Copyright (c) 2015, 2026, Oracle and/or its affiliates.
 #
 
 
-import calendar
 import collections
 import datetime
 import errno
@@ -34,7 +33,6 @@ import getopt
 import os
 import re
 import sys
-import time
 import traceback
 
 
@@ -1753,11 +1751,11 @@ def __api_op(
             return __prepare_json(exit_code, data=data)
         if _api_inst.planned_nothingtodo():
             return __prepare_json(EXIT_NOP, data=data)
-        if _stage == API_STAGE_PLAN:
-            return __prepare_json(EXIT_OK, data=data)
         if _noexecute:
             exit_code = __verify_exit_status(_api_inst)
             return __prepare_json(exit_code, data=data)
+        if _stage == API_STAGE_PLAN:
+            return __prepare_json(EXIT_OK, data=data)
     else:
         assert _stage in [API_STAGE_PREPARE, API_STAGE_EXECUTE]
         __api_plan_load(_api_inst, _stage, _origins, logger=logger)
@@ -2545,20 +2543,8 @@ def _publisher_list(
                 errors.append(e)
                 c["valid"] = False
             else:
-                nb = cert.get_notBefore()
-                # strptime's first argument must be str
-                t = time.strptime(misc.force_str(nb), "%Y%m%d%H%M%SZ")
-                nb = datetime.datetime.fromtimestamp(
-                    calendar.timegm(t), datetime.UTC
-                )
-                times["effective"] = nb.strftime("%c")
-
-                na = cert.get_notAfter()
-                t = time.strptime(misc.force_str(na), "%Y%m%d%H%M%SZ")
-                na = datetime.datetime.fromtimestamp(
-                    calendar.timegm(t), datetime.UTC
-                )
-                times["expiration"] = na.strftime("%c")
+                times["effective"] = cert.not_valid_before_utc.strftime("%c")
+                times["expiration"] = cert.not_valid_after_utc.strftime("%c")
                 c["valid"] = True
 
         return cert_cache[ssl_cert]
