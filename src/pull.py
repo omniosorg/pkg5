@@ -694,7 +694,7 @@ def get_matches(
 
         # Track anything that failed to match.
         any_unmatched.extend(unmatched)
-        any_matched.extend(set(p for p in refs.values()))
+        any_matched.extend(set(p for plist in refs.values() for p in plist))
         matches = list(set(f for m in matches.values() for f in m))
     else:
         matches = [f for f in src_cat.fmris()]

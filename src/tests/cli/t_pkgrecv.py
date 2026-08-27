@@ -440,6 +440,24 @@ class TestPkgrecvMulti(pkg5unittest.ManyDepotTestCase):
         self.pkgsend(self.durl2, "include -d {0} {1}".format(basedir, mpath))
         self.pkgsend(self.durl2, "close")
 
+    def test_1a_recv_overlapping_patterns(self):
+        """Verify that a package matched by more than one pattern in
+        the same operation is received without error. The pattern
+        references returned by catalog matching map each FMRI to a
+        list of patterns; pkgrecv must flatten those when tracking
+        which patterns matched."""
+
+        self.pkgrecv(self.durl1, "--raw -d {0} tree 'tr*'".format(self.tempdir))
+
+        # A pattern that matches nothing must still be reported as an
+        # error.
+        dest = tempfile.mkdtemp(dir=self.test_root)
+        self.pkgrecv(
+            self.durl1,
+            "--raw -d {0} tree 'tr*' nosuchpkg".format(dest),
+            exit=1,
+        )
+
     def test_2_recv_compare(self):
         """Verify that a received package is identical to the
         original source."""
