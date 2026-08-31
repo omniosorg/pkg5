@@ -56,6 +56,7 @@ FBUF_SIZE       = 16 * MiB
 # Default values
 opts = {
     'acpi':             'on',       # No effect on illumos bhyve
+    'bhyve':            '/usr/sbin/bhyve',
     'bootorder':        'path0,bootdisk,cdrom0',
     "bootnext":         None,
     'bootrom':          'BHYVE_RELEASE_CSM',
@@ -398,7 +399,8 @@ debug(f'Final uuid: {uuid}')
 
 ##############################################################################
 
-args = ['/usr/sbin/bhyve']
+args = []
+args.append(opts['bhyve'])
 
 ser = uuid
 
@@ -788,6 +790,21 @@ if not testmode:
         fatal(f'Could not create bhyve.cfg from temporary file: {e}')
     else:
         info(f'Successfully created {z.zoneroot}/etc/bhyve.cfg')
+
+if opts['bhyve'] != '/usr/sbin/bhyve':
+    if not (os.path.isabs(opts['bhyve'])
+        and os.path.isfile(opts['bhyve'])
+        and os.access(opts['bhyve'], os.X_OK)):
+        fatal(f'bhyve binary {opts["bhyve"]} not found or not executable')
+
+    if not testmode:
+        try:
+            subprocess.run(['/usr/sbin/mount', '-Flofs', '-r', opts['bhyve'],
+                f'{z.zoneroot}/usr/sbin/bhyve'], check=True)
+        except Exception as e:
+            fatal(f'Could not mount bhyve binary: {e}')
+        else:
+            debug(f'Mounted bhyve binary from {opts['bhyve']}')
 
 # Vim hints
 # vim:ts=4:sw=4:et:fdm=marker
