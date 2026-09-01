@@ -11,8 +11,9 @@
 .\" Copyright 2016, Joyent, Inc.
 .\" Copyright 2016, OmniTI Computer Consulting, Inc. All Rights Reserved.
 .\" Copyright 2023 OmniOS Community Edition (OmniOSce) Association.
+.\" Copyright 2026 EFit Partners
 .\"
-.Dd June 3, 2023
+.Dd August 27, 2026
 .Dt BHYVE 7
 .Os
 .Sh NAME
@@ -588,6 +589,19 @@ mount.
 See the
 .Sx EXAMPLES
 section below.
+.\" virtio-console
+.It Ic virtio-console Ns Oo Ar N Oc Ar name Ns = Ns path
+.Pp
+Configures a named virtio-console device.
+The
+.Ar name
+is the name of the device as seen by the guest,
+.Ar path
+is the path to a socket in the zone to be used for I/O.
+.Pp
+See the
+.Sx EXAMPLES
+section below.
 .\" vga
 .It Ic vga Ar off Ns | Ns Ar on Ns | Ns Ar io
 .Pp
@@ -729,6 +743,11 @@ add attr
     set name=cdrom
     set type=string
     set value=/rpool/iso/debian-9.4.0-amd64-netinst.iso
+end
+add attr
+    set name=virtio-console
+    set type=string
+    set value="org.qemu.guest_agent.0=/tmp/vm.qga.sock"
 end
 .Ed
 .Pp
