@@ -22,7 +22,7 @@
 
 #
 # Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
-# Copyright (c) 2009, 2024, Oracle and/or its affiliates.
+# Copyright (c) 2009, 2026, Oracle and/or its affiliates.
 #
 
 import copy
@@ -1526,14 +1526,10 @@ class Transport(object):
             )
             try:
                 resp = d.get_manifest(fmri, header, ccancel=ccancel, pub=pub)
-                # If resp is a StreamingFileObj obj, its read()
-                # methods will return bytes. We need str for
-                # manifest and here's the earliest point that
-                # we can convert it to str.
-                mcontent = misc.force_str(resp.read())
+                mcontent = resp.read()
 
-                verified = self._verify_manifest(
-                    fmri, content=mcontent, pub=pub
+                verified, mcontent = self.verify_manifest(
+                    fmri, content=mcontent, pub=pub, with_content=True
                 )
 
                 if content_only:
@@ -1779,7 +1775,9 @@ class Transport(object):
                 try:
                     # Verify manifest content.
                     fmri = mxfr[s][1]
-                    verified = self._verify_manifest(fmri, dl_path)
+                    verified, mcontent = self.verify_manifest(
+                        fmri, dl_path, with_content=True
+                    )
                 except tx.InvalidContentException as e:
                     e.request = s
                     repostats.record_error(content=True)
@@ -1787,9 +1785,6 @@ class Transport(object):
                     continue
 
                 try:
-                    mf = open(dl_path)
-                    mcontent = mf.read()
-                    mf.close()
                     manifest.FactoredManifest(
                         fmri,
                         self.cfg.get_pkg_dir(fmri),
@@ -1825,24 +1820,57 @@ class Transport(object):
             else:
                 return
 
-    def _verify_manifest(self, fmri, mfstpath=None, content=None, pub=None):
-        """Verify a manifest.  The caller must supply the FMRI
-        for the package in 'fmri', as well as the path to the
-        manifest file that will be verified.  If signature information
-        is not present, this routine returns False.  If signature
-        information is present, and the manifest verifies, this
-        method returns true.  If the manifest fails to verify,
-        this function throws an InvalidContentException.
+    def verify_manifest(
+        self, fmri, mfstpath=None, content=None, pub=None, with_content=False
+    ):
+        """Verify a manifest.  The caller must supply the FMRI for the
+        package, as well as either the path to the manifest file that
+        will be verified, or the content in bytes.  If signature information
+        is not present, this routine returns False.  If signature information
+        is present, and the manifest verifies, this method returns true.
+        If the manifest fails to verify, or is not a valid Unicode this
+        function throws an InvalidContentException."""
 
-        The caller may either specify a pathname to a file that
-        contains the manifest in 'mfstpath' or a string that contains
-        the manifest content in 'content'.  One of these arguments
-        must be used."""
+        if not ((mfstpath is None) ^ (content is None)):
+            raise ValueError(
+                "Caller must supply either mfstpath or content arguments."
+            )
+
+        if mfstpath:
+            with open(mfstpath, "rb") as mf:
+                content = mf.read()
+
+        try:
+            verified, strcontent = self._verify_manifest_internal(
+                fmri, content, pub
+            )
+        except tx.InvalidContentException as exc:
+            if mfstpath:
+                exc.path = mfstpath
+                exc.size = os.stat(mfstpath).st_size
+                portable.remove(mfstpath)
+            raise
+
+        if with_content:
+            return verified, strcontent
+        return verified
+
+    def _verify_manifest_internal(self, fmri, content, pub):
+        """Helper function for verify_manifest. It decodes and verifies
+        given manifest content, raising InvalidContentException if that
+        doesn't pass.
+        """
+        try:
+            strcontent = content.decode("utf-8")
+        except UnicodeDecodeError:
+            raise tx.InvalidContentException(
+                reason=f"manifest is not valid UTF-8: fmri: {fmri}"
+            )
 
         # Bail if manifest validation has been turned off for
         # debugging/testing purposes.
         if DebugValues.get("manifest_validate") == "Never":
-            return True
+            return True, strcontent
 
         must_verify = DebugValues.get("manifest_validate") == "Always"
 
@@ -1854,52 +1882,31 @@ class Transport(object):
                 if must_verify:
                     assert False, (
                         "Did not validate manifest; "
-                        "unknown publisher {0} ({1}).".format(
-                            fmri.publisher, fmri
-                        )
+                        f"unknown publisher {fmri.publisher} ({fmri})."
                     )
-                return False
+                return False, strcontent
 
         try:
             sigs = self.cfg.get_pkg_sigs(fmri, pub)
         except apx.UnknownCatalogEntry:
             if must_verify:
                 assert False, "Did not validate manifest; couldn't find sigs."
-            return False
+            return False, strcontent
 
         if sigs and "sha-1" in sigs:
             chash = sigs["sha-1"]
         else:
             if must_verify:
                 assert False, "Did not validate manifest; no sha-1 sig."
-            return False
+            return False, strcontent
 
-        if mfstpath:
-            mf = open(mfstpath)
-            mcontent = mf.read()
-            mf.close()
-        elif content is not None:
-            mcontent = content
-        else:
-            raise ValueError(
-                "Caller must supply either mfstpath or content arguments."
-            )
-
-        newhash = manifest.Manifest.hash_create(mcontent)
-
+        newhash = manifest.Manifest.hash_create(content)
         if chash != newhash:
-            if mfstpath:
-                sz = os.stat(mfstpath).st_size
-                portable.remove(mfstpath)
-            else:
-                sz = None
             raise tx.InvalidContentException(
-                mfstpath,
-                "manifest hash failure: fmri: {0} \n"
-                "expected: {1} computed: {2}".format(fmri, chash, newhash),
-                size=sz,
+                reason=f"manifest hash failure: fmri: {fmri} \n"
+                f"expected: {chash} computed: {newhash}"
             )
-        return True
+        return True, strcontent
 
     @staticmethod
     def __build_header(intent=None, uuid=None, variant=None):
