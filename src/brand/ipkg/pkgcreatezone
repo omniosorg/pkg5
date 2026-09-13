@@ -23,7 +23,7 @@
 #
 # Copyright (c) 2007, 2011, Oracle and/or its affiliates. All rights reserved.
 # Copyright (c) 2015, OmniTI Computer Consulting, Inc. All rights reserved.
-# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2026 OmniOS Community Edition (OmniOSce) Association.
 #
 
 #
@@ -334,6 +334,15 @@ if [ "`svcprop -p general/enabled system-log:rsyslog 2>/dev/null`" = true ]
 then
 	. /usr/lib/brand/shared/rsyslog.ksh
 	activate_rsyslog $ZONEROOT
+fi
+
+#
+# If the global zone enables address space layout randomisation by default,
+# do the same in the zone.
+#
+if [ "`svcprop -p default/aslr system/process-security 2>/dev/null`" = true ]
+then
+	cp /usr/lib/brand/shared/aslr.xml $ZONEROOT/etc/svc/profile/site/
 fi
 
 printf "$m_done\n"

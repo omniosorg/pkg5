@@ -9,12 +9,12 @@
 # http://www.illumos.org/license/CDDL.
 
 #
-# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2026 OmniOS Community Edition (OmniOSce) Association.
 #
 
 BRAND = shared
 SFILES = firewall image log rsyslog util vars vnic
-FILES = $(SFILES:%=%.ksh) rsyslog.xml
+FILES = $(SFILES:%=%.ksh) aslr.xml rsyslog.xml
 
 BRANDDIR = $(ROOTBRAND)/$(BRAND)
 BRANDFILES = $(FILES:%=$(BRANDDIR)/%)

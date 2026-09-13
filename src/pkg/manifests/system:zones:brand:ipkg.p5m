@@ -20,7 +20,7 @@
 #
 # Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 # Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
-# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2026 OmniOS Community Edition (OmniOSce) Association.
 #
 
 set name=pkg.fmri value=pkg:/system/zones/brand/ipkg@$(PKGVERS)
@@ -65,6 +65,7 @@ file path=usr/lib/brand/ipkg/support mode=0755
 file path=usr/lib/brand/ipkg/system-unconfigure mode=0755
 file path=usr/lib/brand/ipkg/uninstall mode=0755
 dir  path=usr/lib/brand/shared group=sys
+file path=usr/lib/brand/shared/aslr.xml
 file path=usr/lib/brand/shared/firewall.ksh
 file path=usr/lib/brand/shared/image.ksh
 file path=usr/lib/brand/shared/log.ksh
