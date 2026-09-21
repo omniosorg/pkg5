@@ -85,7 +85,8 @@ _TRIM_UNSUPPORTED = 20  # invalid or unsupported actions
 _TRIM_VARIANT = 21  # unsupported variant (e.g. i386 on sparc)
 _TRIM_EXPLICIT_INSTALL = 22  # pkg.depend.explicit-install is true.
 _TRIM_SYNCED_INC = 23  # incorporation must be in sync with parent
-_TRIM_MAX = 24  # number of trim constants
+_TRIM_PROPOSED_DEP = 24  # rejected by a proposed package's dependency
+_TRIM_MAX = 25  # number of trim constants
 
 
 class DependencyException(Exception):
@@ -413,6 +414,15 @@ class PkgSolver(object):
             shown = names
         return ["\t{0}".format(n) for n in shown]
 
+    def __summary_fmri(self, fmri):
+        """Format an FMRI for the summarised error output, including the
+        timestamp only if some dependency elsewhere in the output has
+        one. The build is always excluded, for brevity."""
+
+        if self.__depend_ts:
+            return fmri.get_fmri(include_build=False)
+        return fmri.get_short_fmri()
+
     def __rejection_summary(self, fmri_list):
         """Walk the trim database starting from the given FMRIs,
         mirroring the walk used to render the full rejection tree, and
@@ -436,13 +446,38 @@ class PkgSolver(object):
             ]
         )
 
+        def trims(f):
+            """The trim records for a package version, in a stable
+            order."""
+
+            return sorted(self.__trim_dict.get(f, EmptyI))
+
+        outright = {}
+
+        def rejected_outright(f):
+            """Whether this version was rejected in its own right
+            rather than because something that it depends on was
+            rejected, and for a reason which is worth reporting."""
+
+            if f not in outright:
+                reportable = False
+                for reason_id, reason_t, fmris in trims(f):
+                    if reason_id == _TRIM_DEP_TRIMMED:
+                        reportable = False
+                        break
+                    if reason_id not in uninteresting:
+                        reportable = True
+                outright[f] = reportable
+            return outright[f]
+
+        # Walk the tree of rejections breadth first, recording the
+        # order in which package versions are reached.
+        started = frozenset(fmri_list)
         seen = set()
-        pending = deque(fmri_list)
-        # Root cause reason text -> extra carrier count
-        roots = {}
-        # First carrier fmri -> reason texts, in discovery order
-        carriers = {}
         order = []
+        # Sorted, like the versions added below, so that the output
+        # does not depend on set iteration order.
+        pending = deque(sorted(started))
         nrejected = 0
 
         while pending:
@@ -450,69 +485,121 @@ class PkgSolver(object):
             if f in seen:
                 continue
             seen.add(f)
+            order.append(f)
             self.__progress()
 
-            reasons = self.__trim_dict.get(f, EmptyI)
+            reasons = trims(f)
             if reasons:
                 nrejected += 1
-            for reason_id, reason_t, fmris in sorted(reasons):
+            for reason_id, reason_t, fmris in reasons:
                 if reason_id in uninteresting:
                     continue
 
-                if reason_id == _TRIM_DEP_TRIMMED:
-                    # A cascade: this package was rejected only
-                    # because packages it depends on were themselves
-                    # rejected.  Descend to find the root, except
-                    # through dependencies on incorporations that
-                    # don't specify a version, which the rejection
-                    # tree omits too; any version-specific
-                    # dependencies will lead to the same roots.
-                    if len(reason_t[1]) == 2:
-                        dtype, fstr = reason_t[1]
-                        if (
-                            dtype == "require"
-                            and "@" not in fstr
-                            and fstr in self.__known_incs
-                        ):
-                            continue
-                else:
-                    # A root cause.
+                if reason_id == _TRIM_DEP_TRIMMED and len(reason_t[1]) == 2:
+                    # Don't descend through dependencies on
+                    # incorporations that don't specify a version; any
+                    # version-specific dependencies lead to the same
+                    # roots.
+                    dtype, fstr = reason_t[1]
+                    if (
+                        dtype == "require"
+                        and "@" not in fstr
+                        and fstr in self.__known_incs
+                    ):
+                        continue
+
+                pending.extend(sorted(fmris))
+
+        # A version rejected because one of its own dependencies could
+        # not be satisfied is a consequence, not a cause. The cascade
+        # ends at the dependencies for which every candidate version was
+        # rejected in its own right. Only those versions, and the ones
+        # the caller started from, can be root causes. The rest is
+        # collateral damage.
+        required_by = {}
+        for f in order:
+            for reason_id, reason_t, fmris in trims(f):
+                if reason_id != _TRIM_DEP_TRIMMED or not fmris:
+                    continue
+                if not all(rejected_outright(c) for c in fmris):
+                    continue
+                for c in sorted(fmris):
+                    required_by.setdefault(c, (f, reason_t[1]))
+
+        def collect(eligible):
+            """Group the reportable reasons of the eligible versions by
+            reason text, returning the carriers in discovery order."""
+
+            # (package name, reason text) -> extra carrier count.
+            # Grouping on the reason alone would hide the version that
+            # matters behind an unrelated package's count.
+            roots = {}
+            # First carrier fmri -> reason texts, in discovery order
+            carriers = {}
+            found = []
+
+            for f in order:
+                if not eligible(f):
+                    continue
+                for reason_id, reason_t, fmris in trims(f):
+                    if (
+                        reason_id in uninteresting
+                        or reason_id == _TRIM_DEP_TRIMMED
+                    ):
+                        continue
+
                     if isinstance(reason_t, tuple):
                         reason = _(reason_t[0]).format(*reason_t[1])
                     else:
                         reason = _(reason_t)
-                    if reason in roots:
-                        roots[reason] += 1
-                    else:
-                        roots[reason] = 0
-                        if f not in carriers:
-                            carriers[f] = []
-                            order.append(f)
-                        carriers[f].append(reason)
-                pending.extend(fmris)
 
-        if not order:
+                    key = (f.pkg_name, reason)
+                    if key in roots:
+                        roots[key] += 1
+                        continue
+
+                    roots[key] = 0
+                    if f not in carriers:
+                        carriers[f] = []
+                        found.append(f)
+                    carriers[f].append(reason)
+
+            return roots, carriers, found
+
+        roots, carriers, found = collect(
+            lambda f: f in started or f in required_by
+        )
+        if not found:
+            # Every dependency had a candidate whose own rejection
+            # needs explaining, as when the rejections form a cycle.
+            # Fall back to reporting each cause wherever it appears.
+            roots, carriers, found = collect(lambda f: True)
+        if not found:
             return (None, 0)
 
         ms = [_("This is due to the following root cause(s):"), ""]
-        for f in order:
-            if not self.__depend_ts:
-                # Exclude build and timestamp for brevity.
-                fstr = f.get_short_fmri()
-            else:
-                # Include timestamp for clarity if any dependency
-                # included a timestamp; exclude build for brevity.
-                fstr = f.get_fmri(include_build=False)
-            ms.append(_("  Package: {0}").format(fstr))
+        for f in found:
+            ms.append(_("  Package: {0}").format(self.__summary_fmri(f)))
             for reason in carriers[f]:
                 ms.append(_("  Reason:  {0}").format(reason))
-                extra = roots[reason]
+                extra = roots[f.pkg_name, reason]
                 if extra:
                     ms.append(
                         _(
                             "           (and {0:d} other rejected "
                             "package versions with the same reason)"
                         ).format(extra)
+                    )
+            dep = required_by.get(f)
+            if dep is not None:
+                ms.append(
+                    _("  Blocks:  {0}").format(self.__summary_fmri(dep[0]))
+                )
+                if len(dep[1]) == 2:
+                    ms.append(
+                        _("           ('{0}' dependency on {1})").format(
+                            *dep[1]
+                        )
                     )
             ms.append("")
         if nrejected == 1:
@@ -2929,7 +3016,7 @@ class PkgSolver(object):
             )[0]
             self.__trim(
                 nm,
-                _TRIM_DEP_TRIMMED,
+                _TRIM_PROPOSED_DEP,
                 (
                     N_(
                         "Rejected by '{0}' dependency in proposed "
