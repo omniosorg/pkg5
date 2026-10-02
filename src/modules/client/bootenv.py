@@ -29,6 +29,7 @@ import subprocess
 import tempfile
 
 from pkg.client import global_settings
+from pkg.client.debugvalues import DebugValues
 
 logger = global_settings.logger
 
@@ -520,6 +521,43 @@ class BootEnv(object):
                 ).format(cmd=" ".join(cmd), ret=ret)
             )
 
+    def __report_busy_mount(self):
+        """Log the files that this process has open within the clone
+        BE, which can prevent it from being unmounted. If the 'db-trace'
+        debug value is set, also log where any database connections
+        within the clone were opened."""
+
+        prefix = self.clone_dir + "/"
+        held = []
+        try:
+            entries = os.listdir("/proc/self/path")
+        except OSError:
+            entries = []
+        for entry in entries:
+            try:
+                path = os.readlink(os.path.join("/proc/self/path", entry))
+            except OSError:
+                continue
+            if path == self.clone_dir or path.startswith(prefix):
+                held.append((entry, path))
+
+        if not held:
+            return
+
+        logger.error(_("Files open within the BE:"))
+        for entry, path in sorted(held):
+            logger.error("    {0}: {1}".format(entry, path))
+
+        # DebugValues is a singleton, hence no 'self' arg; pylint: disable=E1120
+        if not DebugValues["db-trace"]:
+            return
+
+        for database, stack in misc.db_open_connections():
+            if prefix in database:
+                logger.error(
+                    _("Database {0} opened at:\n{1}").format(database, stack)
+                )
+
     def activate_image(self, set_active=True):
         """Activate a clone of the BE being operated on.
                 If were operating on a non-live BE then
@@ -562,6 +600,7 @@ class BootEnv(object):
                         "unable to unmount BE {be_name} mounted at {be_path}"
                     ).format(be_name=self.be_name_clone, be_path=self.clone_dir)
                 )
+                self.__report_busy_mount()
                 return
 
             os.rmdir(self.clone_dir)

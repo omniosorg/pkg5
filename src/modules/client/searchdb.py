@@ -41,7 +41,7 @@ import pkg.client.progress as progress
 import pkg.manifest
 import pkg.portable as portable
 import pkg.search_errors as search_errors
-from pkg.misc import EmptyI, force_bytes
+from pkg.misc import EmptyI, db_connect, force_bytes
 
 DB_BASENAME = "search.db"
 
@@ -174,7 +174,7 @@ class SearchDB(object):
         if not os.path.isfile(self.pathname):
             return None
         try:
-            con = sqlite3.connect(
+            con = db_connect(
                 "file:{0}?mode=ro".format(self.pathname),
                 uri=True,
                 isolation_level=None,
@@ -290,9 +290,7 @@ class SearchDB(object):
 
 
 def _connect_rw(pathname):
-    con = sqlite3.connect(
-        pathname, isolation_level=None, check_same_thread=False
-    )
+    con = db_connect(pathname, isolation_level=None, check_same_thread=False)
     con.execute("PRAGMA journal_mode = DELETE")
     con.execute("PRAGMA synchronous = NORMAL")
     return con

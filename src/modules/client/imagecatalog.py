@@ -38,7 +38,7 @@ import pkg.client.pkgdefs as pkgdefs
 import pkg.fmri
 import pkg.json_wrapper as json
 import pkg.version
-from pkg.misc import EmptyI
+from pkg.misc import EmptyI, db_connect
 
 DB_BASENAME = "catalog.db"
 
@@ -122,9 +122,7 @@ def build_db(pathname, kcat, icat):
     if os.path.exists(pathname):
         os.unlink(pathname)
 
-    con = sqlite3.connect(
-        pathname, isolation_level=None, check_same_thread=False
-    )
+    con = db_connect(pathname, isolation_level=None, check_same_thread=False)
     try:
         con.execute("PRAGMA journal_mode = OFF")
         con.execute("PRAGMA synchronous = OFF")
@@ -255,9 +253,7 @@ def sync_entries(pathname, kcat, icat, pfmris):
         build_db(pathname, kcat, icat)
         return
 
-    con = sqlite3.connect(
-        pathname, isolation_level=None, check_same_thread=False
-    )
+    con = db_connect(pathname, isolation_level=None, check_same_thread=False)
     try:
         con.execute("PRAGMA journal_mode = OFF")
         con.execute("PRAGMA synchronous = OFF")
@@ -372,7 +368,7 @@ class ImageCatalog(object):
         if self.__con:
             return self.__con
         try:
-            con = sqlite3.connect(
+            con = db_connect(
                 "file:{0}?mode=ro".format(quote(self.__path)),
                 uri=True,
                 check_same_thread=False,
@@ -1466,9 +1462,7 @@ def apply_state_save(pathname, cats):
     (a copy inside a temporary state directory), and advance its
     last-modified timestamp."""
 
-    con = sqlite3.connect(
-        pathname, isolation_level=None, check_same_thread=False
-    )
+    con = db_connect(pathname, isolation_level=None, check_same_thread=False)
     try:
         con.execute("PRAGMA journal_mode = OFF")
         con.execute("PRAGMA synchronous = OFF")
