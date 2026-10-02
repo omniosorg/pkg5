@@ -166,7 +166,7 @@ class ActionCache(object):
             self.close()
 
     def __connect(self, mode):
-        con = sqlite3.connect(
+        con = misc.db_connect(
             "file:{0}?mode={1}".format(quote(self.__path), mode),
             uri=True,
             check_same_thread=False,
@@ -385,7 +385,7 @@ class ActionCache(object):
         os.close(fd)
 
         progtrack.job_start(progtrack.JOB_FAST_LOOKUP)
-        con = sqlite3.connect(
+        con = misc.db_connect(
             tmp_path, check_same_thread=False, isolation_level=None
         )
         try:

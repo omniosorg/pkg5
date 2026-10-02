@@ -31,6 +31,7 @@ import collections
 import copy
 import datetime
 import errno
+import gc
 import hashlib
 import os
 import platform
@@ -286,8 +287,17 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
             return
 
         # This is used to cache image catalogs.
+        self.__close_catalogs()
         self.__catalogs = {}
         self.__alt_pkg_sources_loaded = False
+
+    def __close_catalogs(self):
+        """Close any cached catalogs that hold open resources."""
+
+        for cat in getattr(self, "_Image__catalogs", {}).values():
+            close = getattr(cat, "close", None)
+            if close is not None:
+                close()
 
     @staticmethod
     def alloc(*args, **kwargs):
@@ -4064,11 +4074,11 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
         if self.__actioncache is not None:
             self.__actioncache.close()
             self.__actioncache = None
-        for cat in self.__catalogs.values():
-            close = getattr(cat, "close", None)
-            if close is not None:
-                close()
+        self.__close_catalogs()
         self.__catalogs = {}
+        # Connections that have been dropped without being closed are
+        # only released by the cyclic garbage collector.
+        gc.collect()
 
     def get_action_cache(self, progtrack=None):
         """Return an ActionCache open for reading and consistent with
@@ -4111,6 +4121,8 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
         Most callers should use get_action_cache() instead, which
         reconciles an existing database incrementally."""
 
+        if self.__actioncache is not None:
+            self.__actioncache.close()
         self.__actioncache = None
         cache = actioncache.ActionCache(self, self.__action_cache_dir)
         try:

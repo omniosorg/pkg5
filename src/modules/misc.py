@@ -45,11 +45,13 @@ import resource
 import shutil
 import signal
 import socket
+import sqlite3
 import struct
 import sys
 import threading
 import time
 import traceback
+import weakref
 import zlib
 
 # ungrouped-imports: pylint: disable=C0412
@@ -3269,6 +3271,48 @@ def valid_varcet_name(name):
     """Check if the variant/facet name is valid. A valid variant/facet
     name cannot contain whitespace"""
     return _varcetname_re.search(name) is None
+
+
+# Connections opened by db_connect() while the 'db-trace' debug value is
+# set, keyed by id(), mapping to (weakref, database, stack).
+_db_connections = {}
+
+
+class _TracedConnection(sqlite3.Connection):
+    """A sqlite connection that stops being reported by
+    db_open_connections() once it has been closed."""
+
+    def close(self):
+        _db_connections.pop(id(self), None)
+        super().close()
+
+
+def db_connect(database, **kwargs):
+    """Open a sqlite connection to 'database', passing 'kwargs' to
+    sqlite3.connect(). With the 'db-trace' debug value set, the stack
+    at the point of each connection is recorded so that those left
+    open can be reported by db_open_connections()."""
+
+    # DebugValues is a singleton, hence no 'self' arg; pylint: disable=E1120
+    if not DebugValues["db-trace"]:
+        return sqlite3.connect(database, **kwargs)
+
+    con = sqlite3.connect(database, factory=_TracedConnection, **kwargs)
+    key = id(con)
+    _db_connections[key] = (
+        weakref.ref(con, lambda r: _db_connections.pop(key, None)),
+        str(database),
+        "".join(traceback.format_stack()[:-1]),
+    )
+    return con
+
+
+def db_open_connections():
+    return [
+        (database, stack)
+        for ref, database, stack in list(_db_connections.values())
+        if ref() is not None
+    ]
 
 
 # Vim hints
