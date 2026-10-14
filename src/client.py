@@ -177,6 +177,7 @@ try:
         api_stage_values,
         EXIT_ACTUATOR,
         EXIT_BADOPT,
+        EXIT_BE,
         EXIT_DIVERGED,
         EXIT_EACCESS,
         EXIT_FATAL,
@@ -2029,6 +2030,9 @@ def __api_execute_plan(operation, api_inst):
     except api_errors.ImageFormatUpdateNeeded as e:
         format_update_error(e)
         rval = EXIT_OOPS
+    except api_errors.UnableToActivateBE as e:
+        error(e)
+        rval = EXIT_BE
     except api_errors.BEException as e:
         error(e)
         rval = EXIT_OOPS

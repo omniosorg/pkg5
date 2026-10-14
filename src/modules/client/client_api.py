@@ -71,6 +71,7 @@ from pkg.client.pkgdefs import (
     API_STAGE_PREPARE,
     EXIT_ACTUATOR,
     EXIT_BADOPT,
+    EXIT_BE,
     EXIT_CONSTRAINED,
     EXIT_LICENSE,
     EXIT_LOCKED,
@@ -1210,6 +1211,9 @@ def __api_execute_plan(operation, api_inst):
     except api_errors.ImageFormatUpdateNeeded as e:
         _format_update_error(e, errors_json=errors_json)
         rval = __prepare_json(EXIT_OOPS, errors=errors_json)
+    except api_errors.UnableToActivateBE as e:
+        _error_json(e, errors_json=errors_json)
+        rval = __prepare_json(EXIT_BE, errors=errors_json)
     except api_errors.BEException as e:
         _error_json(e, errors_json=errors_json)
         rval = __prepare_json(EXIT_OOPS, errors=errors_json)
