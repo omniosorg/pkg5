@@ -53,7 +53,7 @@ CHMOD = /usr/bin/chmod
 
 CTFCONVERT_BIN = $(CTFCONVERT) -l pkg5
 POST_PROCESS = $(CTFCONVERT_BIN) $@; $(STRIP) -x $@
-PYCOMPILE_OPTS = -m compileall -j0 -f --invalidation-mode timestamp
+PYCOMPILE_OPTS = -P -m compileall -j0 -f --invalidation-mode timestamp
 
 PRE_HASH=	pre\#
 HASH=		$(PRE_HASH:pre\%=%)
