@@ -707,20 +707,29 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
             raise
 
         assert self._activity_lock._is_owned()
+
+        # Validate any requested BE names before the operation is
+        # logged. Failures here (e.g. a BE which already exists) must
+        # drop the locks taken above, otherwise later API calls in this
+        # process fail with a recursive activity lock acquire.
+        try:
+            for val in (be_name, backup_be_name):
+                if val is not None:
+                    self.check_be_name(val)
+                    if not self._img.is_liveroot():
+                        raise apx.BENameGivenOnDeadBE(val)
+        except:
+            self._img.unlock()
+            self._cancel_cleanup_exception()
+            self._activity_lock.release()
+            raise
+
         self.log_operation_start(operation)
         self.__backup_be = backup_be
         self.__backup_be_name = backup_be_name
         self.__new_be = new_be
         self.__be_activate = be_activate
         self.__be_name = be_name
-        for val in (self.__be_name, self.__backup_be_name):
-            if val is not None:
-                self.check_be_name(val)
-                if not self._img.is_liveroot():
-                    self._cancel_cleanup_exception()
-                    self._activity_lock.release()
-                    self._img.unlock()
-                    raise apx.BENameGivenOnDeadBE(val)
 
     def __plan_common_finish(self):
         """Finish planning an operation."""
