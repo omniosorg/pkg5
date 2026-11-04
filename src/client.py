@@ -188,6 +188,7 @@ try:
         EXIT_OK,
         EXIT_OOPS,
         EXIT_PARTIAL,
+        EXIT_PKG_OOD,
         MSG_ERROR,
         MSG_INFO,
         MSG_UNPACKAGED,
@@ -2155,7 +2156,7 @@ pkg:/package/pkg' as a privileged user and then retry the {op}.""").format(
                 **locals()
             )
         )
-        return EXIT_OOPS
+        return EXIT_PKG_OOD
     if e_type == api_errors.NonLeafPackageException:
         error("\n" + str(e), cmd=op)
         return EXIT_OOPS

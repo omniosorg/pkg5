@@ -21,7 +21,7 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2010, 2025, Oracle and/or its affiliates.
+# Copyright (c) 2010, 2026, Oracle and/or its affiliates.
 #
 
 from . import testutils
@@ -35,8 +35,11 @@ import logging
 import os
 import sys
 import unittest
+import unittest.mock
 
-from pkg.client import global_settings
+from pkg.client import global_settings, pkgdefs
+import pkg.client.api_errors as api_errors
+import pkg.client.client_api as client_api
 
 logger = global_settings.logger
 
@@ -99,6 +102,25 @@ class TestSettings(pkg5unittest.Pkg5TestCase):
         self.assertNotEqual(global_settings.error_log_handler, error_h)
 
         logging.shutdown()
+
+
+class TestExitStatus(pkg5unittest.Pkg5TestCase):
+    def test_json_api_pkg_out_of_date(self):
+        """Check the status reported when pkg(7) must be updated first."""
+
+        plan_exception = getattr(client_api, "__api_plan_exception")
+        api_inst = unittest.mock.Mock()
+        errors = []
+
+        try:
+            raise api_errors.IpkgOutOfDateException()
+        except api_errors.IpkgOutOfDateException:
+            result = plan_exception(
+                "update", False, 0, api_inst, errors_json=errors
+            )
+
+        self.assertEqual(result["status"], pkgdefs.EXIT_PKG_OOD)
+        self.assertIn("out of date", result["errors"][0]["info"])
 
 
 if __name__ == "__main__":

@@ -80,6 +80,7 @@ from pkg.client.pkgdefs import (
     EXIT_OK,
     EXIT_OOPS,
     EXIT_PARTIAL,
+    EXIT_PKG_OOD,
     MSG_ERROR,
     PKG_OP_ATTACH,
     PKG_OP_CHANGE_FACET,
@@ -1319,7 +1320,7 @@ pkg:/package/pkg' as a privileged user and then retry the {op}.""").format(
             )
         }
         errors_json.append(error)
-        return __prepare_json(EXIT_OOPS, errors=errors_json)
+        return __prepare_json(EXIT_PKG_OOD, errors=errors_json)
     if e_type == api_errors.CatalogRefreshException:
         _collect_catalog_failures(e, errors=errors_json)
         return __prepare_json(EXIT_OOPS, errors=errors_json)
