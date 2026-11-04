@@ -117,12 +117,8 @@ class TestBootEnvActivation(pkg5unittest.Pkg5TestCase):
         """Mock out the private image state handling of BootEnv."""
 
         return (
-            unittest.mock.patch.object(
-                backend, "_BootEnv__store_image_state"
-            ),
-            unittest.mock.patch.object(
-                backend, "_BootEnv__reset_image_state"
-            ),
+            unittest.mock.patch.object(backend, "_BootEnv__store_image_state"),
+            unittest.mock.patch.object(backend, "_BootEnv__reset_image_state"),
         )
 
     def _check_activation_failure(self, libbe, **kwargs):

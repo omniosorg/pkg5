@@ -1967,9 +1967,11 @@ class UnableToActivateBE(BEException):
         self.be_name = be_name
 
     def __str__(self):
-        return _("Unable to activate boot environment {0}. The updated "
+        return _(
+            "Unable to activate boot environment {0}. The updated "
             "boot environment remains available; activate it with "
-            "'beadm activate {0}'.").format(self.be_name)
+            "'beadm activate {0}'."
+        ).format(self.be_name)
 
 
 class UnableToRenameBE(BEException):
