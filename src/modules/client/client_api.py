@@ -71,6 +71,7 @@ from pkg.client.pkgdefs import (
     API_STAGE_PREPARE,
     EXIT_ACTUATOR,
     EXIT_BADOPT,
+    EXIT_BE,
     EXIT_CONSTRAINED,
     EXIT_LICENSE,
     EXIT_LOCKED,
@@ -79,6 +80,7 @@ from pkg.client.pkgdefs import (
     EXIT_OK,
     EXIT_OOPS,
     EXIT_PARTIAL,
+    EXIT_PKG_OOD,
     MSG_ERROR,
     PKG_OP_ATTACH,
     PKG_OP_CHANGE_FACET,
@@ -1210,6 +1212,9 @@ def __api_execute_plan(operation, api_inst):
     except api_errors.ImageFormatUpdateNeeded as e:
         _format_update_error(e, errors_json=errors_json)
         rval = __prepare_json(EXIT_OOPS, errors=errors_json)
+    except api_errors.UnableToActivateBE as e:
+        _error_json(e, errors_json=errors_json)
+        rval = __prepare_json(EXIT_BE, errors=errors_json)
     except api_errors.BEException as e:
         _error_json(e, errors_json=errors_json)
         rval = __prepare_json(EXIT_OOPS, errors=errors_json)
@@ -1315,7 +1320,7 @@ pkg:/package/pkg' as a privileged user and then retry the {op}.""").format(
             )
         }
         errors_json.append(error)
-        return __prepare_json(EXIT_OOPS, errors=errors_json)
+        return __prepare_json(EXIT_PKG_OOD, errors=errors_json)
     if e_type == api_errors.CatalogRefreshException:
         _collect_catalog_failures(e, errors=errors_json)
         return __prepare_json(EXIT_OOPS, errors=errors_json)

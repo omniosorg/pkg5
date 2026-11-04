@@ -177,6 +177,7 @@ try:
         api_stage_values,
         EXIT_ACTUATOR,
         EXIT_BADOPT,
+        EXIT_BE,
         EXIT_DIVERGED,
         EXIT_EACCESS,
         EXIT_FATAL,
@@ -187,6 +188,7 @@ try:
         EXIT_OK,
         EXIT_OOPS,
         EXIT_PARTIAL,
+        EXIT_PKG_OOD,
         MSG_ERROR,
         MSG_INFO,
         MSG_UNPACKAGED,
@@ -2029,6 +2031,9 @@ def __api_execute_plan(operation, api_inst):
     except api_errors.ImageFormatUpdateNeeded as e:
         format_update_error(e)
         rval = EXIT_OOPS
+    except api_errors.UnableToActivateBE as e:
+        error(e)
+        rval = EXIT_BE
     except api_errors.BEException as e:
         error(e)
         rval = EXIT_OOPS
@@ -2151,7 +2156,7 @@ pkg:/package/pkg' as a privileged user and then retry the {op}.""").format(
                 **locals()
             )
         )
-        return EXIT_OOPS
+        return EXIT_PKG_OOD
     if e_type == api_errors.NonLeafPackageException:
         error("\n" + str(e), cmd=op)
         return EXIT_OOPS

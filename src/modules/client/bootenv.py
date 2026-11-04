@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2008, 2021, Oracle and/or its affiliates.
+# Copyright (c) 2008, 2026, Oracle and/or its affiliates.
 # Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
 
 import os
@@ -571,17 +571,17 @@ class BootEnv(object):
 
         def activate_live_be():
             if set_active:
-                if set_active == "bootnext":
-                    ret = be.beActivate(self.be_name_clone, temporary=1)
-                else:
-                    ret = be.beActivate(self.be_name_clone)
+                try:
+                    if set_active == "bootnext":
+                        ret = be.beActivate(self.be_name_clone, temporary=1)
+                    else:
+                        ret = be.beActivate(self.be_name_clone)
+                except Exception as e:
+                    raise api_errors.UnableToActivateBE(
+                        self.be_name_clone
+                    ) from e
                 if ret != 0:
-                    logger.error(
-                        _("pkg: unable to activate {0}").format(
-                            self.be_name_clone
-                        )
-                    )
-                    return
+                    raise api_errors.UnableToActivateBE(self.be_name_clone)
 
             # Consider the last operation a success, and log it as
             # ending here so that it will be recorded in the new
@@ -671,7 +671,11 @@ beadm activate {be_name_clone}
             self.img.lock()
 
         if caught_exception:
-            self.img.history.log_operation_error(error=e)
+            # UnableToActivateBE will be re-raised in the caller
+            # after restoring the original BE state. So avoid logging it
+            # twice.
+            if not isinstance(caught_exception, api_errors.UnableToActivateBE):
+                self.img.history.log_operation_error(error=caught_exception)
             raise caught_exception
 
     def restore_image(self):

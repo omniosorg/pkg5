@@ -22,7 +22,7 @@
 
 #
 # Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
-# Copyright (c) 2008, 2025, Oracle and/or its affiliates.
+# Copyright (c) 2008, 2026, Oracle and/or its affiliates.
 #
 
 """This module provides the supported, documented interface for clients to
@@ -3567,7 +3567,11 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
         self._img.hotfix_origin_cleanup()
 
         if self.__new_be:
-            be.activate_image(set_active=self.__be_activate)
+            try:
+                be.activate_image(set_active=self.__be_activate)
+            except apx.UnableToActivateBE as e:
+                self.log_operation_end(error=e)
+                raise
         else:
             be.activate_install_uninstall()
         self._img.cleanup_cached_content(progtrack=self.__progresstracker)

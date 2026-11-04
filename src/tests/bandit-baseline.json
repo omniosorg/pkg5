@@ -1,6 +1,6 @@
 {
   "errors": [],
-  "generated_at": "2026-08-24T10:33:18Z",
+  "generated_at": "2026-11-04T15:18:57Z",
   "metrics": {
     "./brand/bhyve/boot.py": {
       "CONFIDENCE.HIGH": 7,
@@ -11,7 +11,7 @@
       "SEVERITY.LOW": 7,
       "SEVERITY.MEDIUM": 1,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 579,
+      "loc": 584,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -180,7 +180,7 @@
       "SEVERITY.LOW": 4,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 6591,
+      "loc": 6596,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -531,7 +531,7 @@
       "SEVERITY.LOW": 0,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 2922,
+      "loc": 2919,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -609,7 +609,7 @@
       "SEVERITY.LOW": 2,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 5134,
+      "loc": 5141,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -622,7 +622,7 @@
       "SEVERITY.LOW": 0,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 3068,
+      "loc": 3078,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -635,7 +635,7 @@
       "SEVERITY.LOW": 3,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 617,
+      "loc": 651,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -648,7 +648,7 @@
       "SEVERITY.LOW": 1,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 3428,
+      "loc": 3433,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -700,7 +700,7 @@
       "SEVERITY.LOW": 4,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 3809,
+      "loc": 3827,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -713,7 +713,7 @@
       "SEVERITY.LOW": 0,
       "SEVERITY.MEDIUM": 13,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 1268,
+      "loc": 1262,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -830,7 +830,7 @@
       "SEVERITY.LOW": 0,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 2922,
+      "loc": 2985,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -843,7 +843,7 @@
       "SEVERITY.LOW": 0,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 150,
+      "loc": 152,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -960,7 +960,7 @@
       "SEVERITY.LOW": 0,
       "SEVERITY.MEDIUM": 1,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 357,
+      "loc": 355,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -1077,7 +1077,7 @@
       "SEVERITY.LOW": 0,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 2953,
+      "loc": 2962,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -1493,7 +1493,7 @@
       "SEVERITY.LOW": 1,
       "SEVERITY.MEDIUM": 1,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 2288,
+      "loc": 2318,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -2221,7 +2221,7 @@
       "SEVERITY.LOW": 111,
       "SEVERITY.MEDIUM": 46,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 112308,
+      "loc": 112485,
       "nosec": 0,
       "skipped_tests": 0
     }
@@ -2248,7 +2248,7 @@
       "test_name": "blacklist"
     },
     {
-      "code": "207     try:\n208         os.unlink(f'{z.zoneroot}/tmp/init.log')\n209     except:\n",
+      "code": "208     try:\n209         os.unlink(f'{z.zoneroot}/tmp/init.log')\n210     except:\n",
       "col_offset": 32,
       "end_col_offset": 45,
       "filename": "./brand/bhyve/boot.py",
@@ -2259,16 +2259,16 @@
       },
       "issue_severity": "MEDIUM",
       "issue_text": "Probable insecure usage of temp file/directory.",
-      "line_number": 208,
+      "line_number": 209,
       "line_range": [
-        208
+        209
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b108_hardcoded_tmp_directory.html",
       "test_id": "B108",
       "test_name": "hardcoded_tmp_directory"
     },
     {
-      "code": "208         os.unlink(f'{z.zoneroot}/tmp/init.log')\n209     except:\n210         pass\n211     bootlib.log_file(f'{z.zonepath}/log/zone.log', logging.DEBUG)\n",
+      "code": "209         os.unlink(f'{z.zoneroot}/tmp/init.log')\n210     except:\n211         pass\n212     bootlib.log_file(f'{z.zonepath}/log/zone.log', logging.DEBUG)\n",
       "col_offset": 4,
       "end_col_offset": 12,
       "filename": "./brand/bhyve/boot.py",
@@ -2279,17 +2279,17 @@
       },
       "issue_severity": "LOW",
       "issue_text": "Try, Except, Pass detected.",
-      "line_number": 209,
+      "line_number": 210,
       "line_range": [
-        209,
-        210
+        210,
+        211
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
       "test_id": "B110",
       "test_name": "try_except_pass"
     },
     {
-      "code": "303 \n304     subprocess.run(['/usr/sbin/zonecfg', '-z', name,\n305         'remove attr name=bootnext'])\n306 \n",
+      "code": "304 \n305     subprocess.run(['/usr/sbin/zonecfg', '-z', name,\n306         'remove attr name=bootnext'])\n307 \n",
       "col_offset": 4,
       "end_col_offset": 37,
       "filename": "./brand/bhyve/boot.py",
@@ -2300,17 +2300,17 @@
       },
       "issue_severity": "LOW",
       "issue_text": "subprocess call - check for execution of untrusted input.",
-      "line_number": 304,
+      "line_number": 305,
       "line_range": [
-        304,
-        305
+        305,
+        306
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b603_subprocess_without_shell_equals_true.html",
       "test_id": "B603",
       "test_name": "subprocess_without_shell_equals_true"
     },
     {
-      "code": "336         debug(f'RAM change from {oldmem} to {mem} - {op} {delta}')\n337         ret = subprocess.run([RSRVRCTL, op, str(delta)],\n338             text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)\n339         for l in ret.stdout.splitlines():\n",
+      "code": "337         debug(f'RAM change from {oldmem} to {mem} - {op} {delta}')\n338         ret = subprocess.run([RSRVRCTL, op, str(delta)],\n339             text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)\n340         for l in ret.stdout.splitlines():\n",
       "col_offset": 14,
       "end_col_offset": 72,
       "filename": "./brand/bhyve/boot.py",
@@ -2321,17 +2321,17 @@
       },
       "issue_severity": "LOW",
       "issue_text": "subprocess call - check for execution of untrusted input.",
-      "line_number": 337,
+      "line_number": 338,
       "line_range": [
-        337,
-        338
+        338,
+        339
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b603_subprocess_without_shell_equals_true.html",
       "test_id": "B603",
       "test_name": "subprocess_without_shell_equals_true"
     },
     {
-      "code": "488     add_bootoption('bootdisk', None, ('pci', f'{BOOTDISK_SLOT}.0'))\n489 except:\n490     pass\n491 \n",
+      "code": "496     add_bootoption('bootdisk', None, ('pci', f'{BOOTDISK_SLOT}.0'))\n497 except:\n498     pass\n499 \n",
       "col_offset": 0,
       "end_col_offset": 8,
       "filename": "./brand/bhyve/boot.py",
@@ -2342,17 +2342,17 @@
       },
       "issue_severity": "LOW",
       "issue_text": "Try, Except, Pass detected.",
-      "line_number": 489,
+      "line_number": 497,
       "line_range": [
-        489,
-        490
+        497,
+        498
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
       "test_id": "B110",
       "test_name": "try_except_pass"
     },
     {
-      "code": "558     debug(f'Setting promisc-filtered for {nic} to {promisc}')\n559     p = subprocess.run(dladm_args, capture_output=True, text=True)\n560     if p.returncode > 0:\n",
+      "code": "566     debug(f'Setting promisc-filtered for {nic} to {promisc}')\n567     p = subprocess.run(dladm_args, capture_output=True, text=True)\n568     if p.returncode > 0:\n",
       "col_offset": 8,
       "end_col_offset": 66,
       "filename": "./brand/bhyve/boot.py",
@@ -2363,16 +2363,16 @@
       },
       "issue_severity": "LOW",
       "issue_text": "subprocess call - check for execution of untrusted input.",
-      "line_number": 559,
+      "line_number": 567,
       "line_range": [
-        559
+        567
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b603_subprocess_without_shell_equals_true.html",
       "test_id": "B603",
       "test_name": "subprocess_without_shell_equals_true"
     },
     {
-      "code": "694 \n695 p = subprocess.run(args, capture_output=True, text=True)\n696 # config.dump exits with a status code of 1. Other errors indicate a problem.\n",
+      "code": "702 \n703 p = subprocess.run(args, capture_output=True, text=True)\n704 # config.dump exits with a status code of 1. Other errors indicate a problem.\n",
       "col_offset": 4,
       "end_col_offset": 56,
       "filename": "./brand/bhyve/boot.py",
@@ -2383,9 +2383,9 @@
       },
       "issue_severity": "LOW",
       "issue_text": "subprocess call - check for execution of untrusted input.",
-      "line_number": 695,
+      "line_number": 703,
       "line_range": [
-        695
+        703
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b603_subprocess_without_shell_equals_true.html",
       "test_id": "B603",
@@ -2920,7 +2920,7 @@
       "test_name": "start_process_with_no_shell"
     },
     {
-      "code": "1413             return path\n1414         except Exception:\n1415             pass\n1416 \n",
+      "code": "1415             return path\n1416         except Exception:\n1417             pass\n1418 \n",
       "col_offset": 8,
       "end_col_offset": 16,
       "filename": "./client.py",
@@ -2931,17 +2931,17 @@
       },
       "issue_severity": "LOW",
       "issue_text": "Try, Except, Pass detected.",
-      "line_number": 1414,
+      "line_number": 1416,
       "line_range": [
-        1414,
-        1415
+        1416,
+        1417
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
       "test_id": "B110",
       "test_name": "try_except_pass"
     },
     {
-      "code": "3403                     msg(\"     {0} not installed, skipping.\".format(bfmri))\n3404             except:\n3405                 pass\n3406 \n",
+      "code": "3408                     msg(\"     {0} not installed, skipping.\".format(bfmri))\n3409             except:\n3410                 pass\n3411 \n",
       "col_offset": 12,
       "end_col_offset": 20,
       "filename": "./client.py",
@@ -2952,17 +2952,17 @@
       },
       "issue_severity": "LOW",
       "issue_text": "Try, Except, Pass detected.",
-      "line_number": 3404,
+      "line_number": 3409,
       "line_range": [
-        3404,
-        3405
+        3409,
+        3410
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
       "test_id": "B110",
       "test_name": "try_except_pass"
     },
     {
-      "code": "8151             _api_inst.abort(result=RESULT_CANCELED)\n8152     except:\n8153         # If history operation fails for some reason, drive on.\n8154         pass\n8155 \n",
+      "code": "8156             _api_inst.abort(result=RESULT_CANCELED)\n8157     except:\n8158         # If history operation fails for some reason, drive on.\n8159         pass\n8160 \n",
       "col_offset": 4,
       "end_col_offset": 12,
       "filename": "./client.py",
@@ -2973,11 +2973,11 @@
       },
       "issue_severity": "LOW",
       "issue_text": "Try, Except, Pass detected.",
-      "line_number": 8152,
+      "line_number": 8157,
       "line_range": [
-        8152,
-        8153,
-        8154
+        8157,
+        8158,
+        8159
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
       "test_id": "B110",
@@ -3496,7 +3496,7 @@
       "test_name": "hardcoded_sql_expressions"
     },
     {
-      "code": "862                 self.__progresstracker.flush()\n863         except:\n864             pass\n865 \n",
+      "code": "871                 self.__progresstracker.flush()\n872         except:\n873             pass\n874 \n",
       "col_offset": 8,
       "end_col_offset": 16,
       "filename": "./modules/client/api.py",
@@ -3507,17 +3507,17 @@
       },
       "issue_severity": "LOW",
       "issue_text": "Try, Except, Pass detected.",
-      "line_number": 863,
+      "line_number": 872,
       "line_range": [
-        863,
-        864
+        872,
+        873
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
       "test_id": "B110",
       "test_name": "try_except_pass"
     },
     {
-      "code": "6231                     portable.remove(path)\n6232                 except:\n6233                     continue\n6234 \n",
+      "code": "6244                     portable.remove(path)\n6245                 except:\n6246                     continue\n6247 \n",
       "col_offset": 16,
       "end_col_offset": 28,
       "filename": "./modules/client/api.py",
@@ -3528,10 +3528,10 @@
       },
       "issue_severity": "LOW",
       "issue_text": "Try, Except, Continue detected.",
-      "line_number": 6232,
+      "line_number": 6245,
       "line_range": [
-        6232,
-        6233
+        6245,
+        6246
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
       "test_id": "B112",
@@ -3558,7 +3558,7 @@
       "test_name": "blacklist"
     },
     {
-      "code": "294                     BootEnv.destroy_be(be_name)\n295                 except Exception as e:\n296                     pass\n297                 break\n",
+      "code": "295                     BootEnv.destroy_be(be_name)\n296                 except Exception as e:\n297                     pass\n298                 break\n",
       "col_offset": 16,
       "end_col_offset": 24,
       "filename": "./modules/client/bootenv.py",
@@ -3569,17 +3569,17 @@
       },
       "issue_severity": "LOW",
       "issue_text": "Try, Except, Pass detected.",
-      "line_number": 295,
+      "line_number": 296,
       "line_range": [
-        295,
-        296
+        296,
+        297
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
       "test_id": "B110",
       "test_name": "try_except_pass"
     },
     {
-      "code": "504         try:\n505             ret = subprocess.call(\n506                 cmd, stdout=open(os.devnull), stderr=subprocess.STDOUT\n507             )\n508         except OSError as e:\n",
+      "code": "505         try:\n506             ret = subprocess.call(\n507                 cmd, stdout=open(os.devnull), stderr=subprocess.STDOUT\n508             )\n509         except OSError as e:\n",
       "col_offset": 18,
       "end_col_offset": 13,
       "filename": "./modules/client/bootenv.py",
@@ -3590,18 +3590,18 @@
       },
       "issue_severity": "LOW",
       "issue_text": "subprocess call - check for execution of untrusted input.",
-      "line_number": 505,
+      "line_number": 506,
       "line_range": [
-        505,
         506,
-        507
+        507,
+        508
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b603_subprocess_without_shell_equals_true.html",
       "test_id": "B603",
       "test_name": "subprocess_without_shell_equals_true"
     },
     {
-      "code": "769 \n770         except:\n771             # Ignore the above error and just use what\n772             # already exists.\n773             pass\n774 \n",
+      "code": "771 \n772         except:\n773             # Ignore the above error and just use what\n774             # already exists.\n775             pass\n776 \n",
       "col_offset": 8,
       "end_col_offset": 16,
       "filename": "./modules/client/client_api.py",
@@ -3612,12 +3612,12 @@
       },
       "issue_severity": "LOW",
       "issue_text": "Try, Except, Pass detected.",
-      "line_number": 770,
+      "line_number": 772,
       "line_range": [
-        770,
-        771,
         772,
-        773
+        773,
+        774,
+        775
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
       "test_id": "B110",
@@ -3706,7 +3706,7 @@
       "test_name": "blacklist"
     },
     {
-      "code": "37 import shutil\n38 import subprocess\n39 import tempfile\n",
+      "code": "38 import shutil\n39 import subprocess\n40 import tempfile\n",
       "col_offset": 0,
       "end_col_offset": 17,
       "filename": "./modules/client/image.py",
@@ -3717,16 +3717,16 @@
       },
       "issue_severity": "LOW",
       "issue_text": "Consider possible security implications associated with the subprocess module.",
-      "line_number": 38,
+      "line_number": 39,
       "line_range": [
-        38
+        39
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/blacklists/blacklist_imports.html#b404-import-subprocess",
       "test_id": "B404",
       "test_name": "blacklist"
     },
     {
-      "code": "1132                 cmdargs = [\"/usr/bin/rm\", \"-rf\", orig_root]\n1133                 subprocess.Popen(cmdargs, stdout=nullf, stderr=nullf)\n1134             nullf.close()\n",
+      "code": "1142                 cmdargs = [\"/usr/bin/rm\", \"-rf\", orig_root]\n1143                 subprocess.Popen(cmdargs, stdout=nullf, stderr=nullf)\n1144             nullf.close()\n",
       "col_offset": 16,
       "end_col_offset": 69,
       "filename": "./modules/client/image.py",
@@ -3737,16 +3737,16 @@
       },
       "issue_severity": "LOW",
       "issue_text": "subprocess call - check for execution of untrusted input.",
-      "line_number": 1133,
+      "line_number": 1143,
       "line_range": [
-        1133
+        1143
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b603_subprocess_without_shell_equals_true.html",
       "test_id": "B603",
       "test_name": "subprocess_without_shell_equals_true"
     },
     {
-      "code": "3055                 os.rmdir(os.path.dirname(mcdir))\n3056             except:\n3057                 pass\n3058 \n",
+      "code": "3065                 os.rmdir(os.path.dirname(mcdir))\n3066             except:\n3067                 pass\n3068 \n",
       "col_offset": 12,
       "end_col_offset": 20,
       "filename": "./modules/client/image.py",
@@ -3757,17 +3757,17 @@
       },
       "issue_severity": "LOW",
       "issue_text": "Try, Except, Pass detected.",
-      "line_number": 3056,
+      "line_number": 3066,
       "line_range": [
-        3056,
-        3057
+        3066,
+        3067
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
       "test_id": "B110",
       "test_name": "try_except_pass"
     },
     {
-      "code": "3069                 os.rmdir(os.path.dirname(mpath))\n3070             except:\n3071                 pass\n3072             progtrack.job_add_progress(progtrack.JOB_PKG_CACHE)\n",
+      "code": "3079                 os.rmdir(os.path.dirname(mpath))\n3080             except:\n3081                 pass\n3082             progtrack.job_add_progress(progtrack.JOB_PKG_CACHE)\n",
       "col_offset": 12,
       "end_col_offset": 20,
       "filename": "./modules/client/image.py",
@@ -3778,17 +3778,17 @@
       },
       "issue_severity": "LOW",
       "issue_text": "Try, Except, Pass detected.",
-      "line_number": 3070,
+      "line_number": 3080,
       "line_range": [
-        3070,
-        3071
+        3080,
+        3081
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
       "test_id": "B110",
       "test_name": "try_except_pass"
     },
     {
-      "code": "460             sql = (\n461                 \"SELECT {0} FROM (SELECT *, row_number() OVER\"\n462                 \" (PARTITION BY pub, stem ORDER BY sortkey DESC)\"\n463                 \" AS rn FROM packages{1}) WHERE rn = 1\".format(cols, where)\n464             )\n",
+      "code": "456             sql = (\n457                 \"SELECT {0} FROM (SELECT *, row_number() OVER\"\n458                 \" (PARTITION BY pub, stem ORDER BY sortkey DESC)\"\n459                 \" AS rn FROM packages{1}) WHERE rn = 1\".format(cols, where)\n460             )\n",
       "col_offset": 16,
       "end_col_offset": 55,
       "filename": "./modules/client/imagecatalog.py",
@@ -3799,18 +3799,18 @@
       },
       "issue_severity": "MEDIUM",
       "issue_text": "Possible SQL injection vector through string-based query construction.",
-      "line_number": 461,
+      "line_number": 457,
       "line_range": [
-        461,
-        462,
-        463
+        457,
+        458,
+        459
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b608_hardcoded_sql_expressions.html",
       "test_id": "B608",
       "test_name": "hardcoded_sql_expressions"
     },
     {
-      "code": "465         else:\n466             sql = \"SELECT {0} FROM packages{1}\".format(cols, where)\n467         if ordered:\n",
+      "code": "461         else:\n462             sql = \"SELECT {0} FROM packages{1}\".format(cols, where)\n463         if ordered:\n",
       "col_offset": 18,
       "end_col_offset": 47,
       "filename": "./modules/client/imagecatalog.py",
@@ -3821,16 +3821,16 @@
       },
       "issue_severity": "MEDIUM",
       "issue_text": "Possible SQL injection vector through string-based query construction.",
-      "line_number": 466,
+      "line_number": 462,
       "line_range": [
-        466
+        462
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b608_hardcoded_sql_expressions.html",
       "test_id": "B608",
       "test_name": "hardcoded_sql_expressions"
     },
     {
-      "code": "504         rows = con.execute(\n505             \"SELECT version, pub FROM packages\"\n506             \" WHERE stem = ?{0}\"\n507             \" ORDER BY sortkey, version, pub\".format(where),\n508             [name] + params,\n",
+      "code": "500         rows = con.execute(\n501             \"SELECT version, pub FROM packages\"\n502             \" WHERE stem = ?{0}\"\n503             \" ORDER BY sortkey, version, pub\".format(where),\n504             [name] + params,\n",
       "col_offset": 12,
       "end_col_offset": 45,
       "filename": "./modules/client/imagecatalog.py",
@@ -3841,18 +3841,18 @@
       },
       "issue_severity": "MEDIUM",
       "issue_text": "Possible SQL injection vector through string-based query construction.",
-      "line_number": 505,
+      "line_number": 501,
       "line_range": [
-        505,
-        506,
-        507
+        501,
+        502,
+        503
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b608_hardcoded_sql_expressions.html",
       "test_id": "B608",
       "test_name": "hardcoded_sql_expressions"
     },
     {
-      "code": "532             for r in con.execute(\n533                 \"SELECT DISTINCT stem FROM packages{0}\".format(where), params\n534             )\n",
+      "code": "528             for r in con.execute(\n529                 \"SELECT DISTINCT stem FROM packages{0}\".format(where), params\n530             )\n",
       "col_offset": 16,
       "end_col_offset": 55,
       "filename": "./modules/client/imagecatalog.py",
@@ -3863,16 +3863,16 @@
       },
       "issue_severity": "MEDIUM",
       "issue_text": "Possible SQL injection vector through string-based query construction.",
-      "line_number": 533,
+      "line_number": 529,
       "line_range": [
-        533
+        529
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b608_hardcoded_sql_expressions.html",
       "test_id": "B608",
       "test_name": "hardcoded_sql_expressions"
     },
     {
-      "code": "544         yield from con.execute(\n545             \"SELECT DISTINCT pub, stem FROM packages{0}\"\n546             \" ORDER BY stem, pub\".format(where),\n547             params,\n",
+      "code": "540         yield from con.execute(\n541             \"SELECT DISTINCT pub, stem FROM packages{0}\"\n542             \" ORDER BY stem, pub\".format(where),\n543             params,\n",
       "col_offset": 12,
       "end_col_offset": 33,
       "filename": "./modules/client/imagecatalog.py",
@@ -3883,17 +3883,17 @@
       },
       "issue_severity": "MEDIUM",
       "issue_text": "Possible SQL injection vector through string-based query construction.",
-      "line_number": 545,
+      "line_number": 541,
       "line_range": [
-        545,
-        546
+        541,
+        542
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b608_hardcoded_sql_expressions.html",
       "test_id": "B608",
       "test_name": "hardcoded_sql_expressions"
     },
     {
-      "code": "559             for r in con.execute(\n560                 \"SELECT DISTINCT pub FROM packages{0}\".format(where), params\n561             )\n",
+      "code": "555             for r in con.execute(\n556                 \"SELECT DISTINCT pub FROM packages{0}\".format(where), params\n557             )\n",
       "col_offset": 16,
       "end_col_offset": 54,
       "filename": "./modules/client/imagecatalog.py",
@@ -3904,16 +3904,16 @@
       },
       "issue_severity": "MEDIUM",
       "issue_text": "Possible SQL injection vector through string-based query construction.",
-      "line_number": 560,
+      "line_number": 556,
       "line_range": [
-        560
+        556
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b608_hardcoded_sql_expressions.html",
       "test_id": "B608",
       "test_name": "hardcoded_sql_expressions"
     },
     {
-      "code": "572         pkgs = con.execute(\n573             \"SELECT count(DISTINCT pub || '!' || stem)\"\n574             \" FROM packages{0}\".format(where),\n575             params,\n",
+      "code": "568         pkgs = con.execute(\n569             \"SELECT count(DISTINCT pub || '!' || stem)\"\n570             \" FROM packages{0}\".format(where),\n571             params,\n",
       "col_offset": 12,
       "end_col_offset": 31,
       "filename": "./modules/client/imagecatalog.py",
@@ -3924,17 +3924,17 @@
       },
       "issue_severity": "MEDIUM",
       "issue_text": "Possible SQL injection vector through string-based query construction.",
-      "line_number": 573,
+      "line_number": 569,
       "line_range": [
-        573,
-        574
+        569,
+        570
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b608_hardcoded_sql_expressions.html",
       "test_id": "B608",
       "test_name": "hardcoded_sql_expressions"
     },
     {
-      "code": "577         vers = con.execute(\n578             \"SELECT count(*) FROM packages{0}\".format(where), params\n579         ).fetchone()[0]\n",
+      "code": "573         vers = con.execute(\n574             \"SELECT count(*) FROM packages{0}\".format(where), params\n575         ).fetchone()[0]\n",
       "col_offset": 12,
       "end_col_offset": 46,
       "filename": "./modules/client/imagecatalog.py",
@@ -3945,16 +3945,16 @@
       },
       "issue_severity": "MEDIUM",
       "issue_text": "Possible SQL injection vector through string-based query construction.",
-      "line_number": 578,
+      "line_number": 574,
       "line_range": [
-        578
+        574
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b608_hardcoded_sql_expressions.html",
       "test_id": "B608",
       "test_name": "hardcoded_sql_expressions"
     },
     {
-      "code": "590         yield from con.execute(\n591             \"SELECT pub, count(DISTINCT stem), count(*)\"\n592             \" FROM packages{0} GROUP BY pub\".format(where),\n593             params,\n",
+      "code": "586         yield from con.execute(\n587             \"SELECT pub, count(DISTINCT stem), count(*)\"\n588             \" FROM packages{0} GROUP BY pub\".format(where),\n589             params,\n",
       "col_offset": 12,
       "end_col_offset": 44,
       "filename": "./modules/client/imagecatalog.py",
@@ -3965,17 +3965,17 @@
       },
       "issue_severity": "MEDIUM",
       "issue_text": "Possible SQL injection vector through string-based query construction.",
-      "line_number": 591,
+      "line_number": 587,
       "line_range": [
-        591,
-        592
+        587,
+        588
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b608_hardcoded_sql_expressions.html",
       "test_id": "B608",
       "test_name": "hardcoded_sql_expressions"
     },
     {
-      "code": "611         row = con.execute(\n612             \"SELECT base FROM packages\"\n613             \" WHERE pub = ? AND stem = ? AND version = ?{0}\".format(where),\n614             [pub, stem, ver] + params,\n",
+      "code": "607         row = con.execute(\n608             \"SELECT base FROM packages\"\n609             \" WHERE pub = ? AND stem = ? AND version = ?{0}\".format(where),\n610             [pub, stem, ver] + params,\n",
       "col_offset": 12,
       "end_col_offset": 60,
       "filename": "./modules/client/imagecatalog.py",
@@ -3986,17 +3986,17 @@
       },
       "issue_severity": "MEDIUM",
       "issue_text": "Possible SQL injection vector through string-based query construction.",
-      "line_number": 612,
+      "line_number": 608,
       "line_range": [
-        612,
-        613
+        608,
+        609
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b608_hardcoded_sql_expressions.html",
       "test_id": "B608",
       "test_name": "hardcoded_sql_expressions"
     },
     {
-      "code": "658         for r in con.execute(\n659             \"SELECT a.acts FROM actions a\"\n660             \" JOIN packages p ON p.id = a.pkg\"\n661             \" WHERE p.pub = ? AND p.stem = ? AND p.version = ?{0}\"\n662             \" AND ({1})\"\n663             \" ORDER BY a.part, a.locale\".format(where, pf),\n664             [pub, stem, ver] + wparams + pparams,\n",
+      "code": "654         for r in con.execute(\n655             \"SELECT a.acts FROM actions a\"\n656             \" JOIN packages p ON p.id = a.pkg\"\n657             \" WHERE p.pub = ? AND p.stem = ? AND p.version = ?{0}\"\n658             \" AND ({1})\"\n659             \" ORDER BY a.part, a.locale\".format(where, pf),\n660             [pub, stem, ver] + wparams + pparams,\n",
       "col_offset": 12,
       "end_col_offset": 40,
       "filename": "./modules/client/imagecatalog.py",
@@ -4007,20 +4007,20 @@
       },
       "issue_severity": "MEDIUM",
       "issue_text": "Possible SQL injection vector through string-based query construction.",
-      "line_number": 659,
+      "line_number": 655,
       "line_range": [
-        659,
-        660,
-        661,
-        662,
-        663
+        655,
+        656,
+        657,
+        658,
+        659
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b608_hardcoded_sql_expressions.html",
       "test_id": "B608",
       "test_name": "hardcoded_sql_expressions"
     },
     {
-      "code": "695             for r in con.execute(\n696                 \"SELECT acts FROM actions a\"\n697                 \" WHERE a.pkg = ? AND ({0})\"\n698                 \" ORDER BY a.part, a.locale\".format(pf),\n699                 [pkg_id] + pparams,\n",
+      "code": "691             for r in con.execute(\n692                 \"SELECT acts FROM actions a\"\n693                 \" WHERE a.pkg = ? AND ({0})\"\n694                 \" ORDER BY a.part, a.locale\".format(pf),\n695                 [pkg_id] + pparams,\n",
       "col_offset": 16,
       "end_col_offset": 44,
       "filename": "./modules/client/imagecatalog.py",
@@ -4031,18 +4031,18 @@
       },
       "issue_severity": "MEDIUM",
       "issue_text": "Possible SQL injection vector through string-based query construction.",
-      "line_number": 696,
+      "line_number": 692,
       "line_range": [
-        696,
-        697,
-        698
+        692,
+        693,
+        694
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b608_hardcoded_sql_expressions.html",
       "test_id": "B608",
       "test_name": "hardcoded_sql_expressions"
     },
     {
-      "code": "1434         rows = con.execute(\n1435             \"SELECT p.pub, p.stem, p.version, a.part, a.locale,\"\n1436             \" a.acts FROM actions a\"\n1437             \" JOIN packages p ON p.id = a.pkg {0}\"\n1438             \" ORDER BY p.id, a.part, a.locale\".format(where)\n1439         )\n",
+      "code": "1430         rows = con.execute(\n1431             \"SELECT p.pub, p.stem, p.version, a.part, a.locale,\"\n1432             \" a.acts FROM actions a\"\n1433             \" JOIN packages p ON p.id = a.pkg {0}\"\n1434             \" ORDER BY p.id, a.part, a.locale\".format(where)\n1435         )\n",
       "col_offset": 12,
       "end_col_offset": 46,
       "filename": "./modules/client/imagecatalog.py",
@@ -4053,12 +4053,12 @@
       },
       "issue_severity": "MEDIUM",
       "issue_text": "Possible SQL injection vector through string-based query construction.",
-      "line_number": 1435,
+      "line_number": 1431,
       "line_range": [
-        1435,
-        1436,
-        1437,
-        1438
+        1431,
+        1432,
+        1433,
+        1434
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b608_hardcoded_sql_expressions.html",
       "test_id": "B608",
@@ -5051,7 +5051,7 @@
       "test_name": "try_except_pass"
     },
     {
-      "code": "97 # Default path where the temporary directories will be created.\n98 DEFAULT_TEMP_PATH = \"/var/tmp\"\n99 \n",
+      "code": "99 # Default path where the temporary directories will be created.\n100 DEFAULT_TEMP_PATH = \"/var/tmp\"\n101 \n",
       "col_offset": 20,
       "end_col_offset": 30,
       "filename": "./modules/misc.py",
@@ -5062,16 +5062,16 @@
       },
       "issue_severity": "MEDIUM",
       "issue_text": "Probable insecure usage of temp file/directory.",
-      "line_number": 98,
+      "line_number": 100,
       "line_range": [
-        98
+        100
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b108_hardcoded_tmp_directory.html",
       "test_id": "B108",
       "test_name": "hardcoded_tmp_directory"
     },
     {
-      "code": "1399             for trusted_ca in ca_list:\n1400                 s = hashlib.sha1(force_bytes(trusted_ca.subject)).hexdigest()\n1401                 trust_anchors.setdefault(s, [])\n",
+      "code": "1401             for trusted_ca in ca_list:\n1402                 s = hashlib.sha1(force_bytes(trusted_ca.subject)).hexdigest()\n1403                 trust_anchors.setdefault(s, [])\n",
       "col_offset": 20,
       "end_col_offset": 65,
       "filename": "./modules/misc.py",
@@ -5082,16 +5082,16 @@
       },
       "issue_severity": "HIGH",
       "issue_text": "Use of weak SHA1 hash for security. Consider usedforsecurity=False",
-      "line_number": 1400,
+      "line_number": 1402,
       "line_range": [
-        1400
+        1402
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b324_hashlib.html",
       "test_id": "B324",
       "test_name": "hashlib"
     },
     {
-      "code": "2835                 self.e.tb = traceback.format_exc()\n2836             except Exception:\n2837                 pass\n2838 \n",
+      "code": "2837                 self.e.tb = traceback.format_exc()\n2838             except Exception:\n2839                 pass\n2840 \n",
       "col_offset": 12,
       "end_col_offset": 20,
       "filename": "./modules/misc.py",
@@ -5102,10 +5102,10 @@
       },
       "issue_severity": "LOW",
       "issue_text": "Try, Except, Pass detected.",
-      "line_number": 2836,
+      "line_number": 2838,
       "line_range": [
-        2836,
-        2837
+        2838,
+        2839
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
       "test_id": "B110",

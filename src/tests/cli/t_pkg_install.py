@@ -22,8 +22,8 @@
 #
 
 #
-# Copyright (c) 2008, 2022, Oracle and/or its affiliates.
-# Copyright 2021 OmniOS Community Edition (OmniOSce) Association.
+# Copyright (c) 2008, 2026, Oracle and/or its affiliates.
+# Copyright 2026 OmniOS Community Edition (OmniOSce) Association.
 #
 
 from . import testutils
@@ -1734,6 +1734,49 @@ class TestPkgInstallRepoPerTest(pkg5unittest.SingleDepotTestCase):
 
         # Install the package
         self._api_install(api_inst, ["foo"])
+
+    def test_manifest_invalid_utf8(self):
+        """Test that a manifest which cannot be decoded is reported as
+        invalid content, both when it is retrieved from the repository
+        and when it is found in the image's cache."""
+
+        pfmri = fmri.PkgFmri(self.pkgsend_bulk(self.rurl, self.foo10)[0])
+        self.image_create(self.rurl)
+
+        badutf8 = b"\xff\xfe not a manifest\n"
+        errstr = "manifest is not valid UTF-8"
+
+        repo = self.dc.get_repo()
+        m_path = repo.manifest(pfmri)
+        with open(m_path, "rb") as fh:
+            goodmf = fh.read()
+        with open(m_path, "wb") as fh:
+            fh.write(badutf8)
+
+        # A single manifest retrieval.
+        self.pkg("contents -rm foo", exit=1, stderr=True)
+        self.assertTrue(errstr in self.errout, self.errout)
+        self.assertFalse("locale" in self.errout, self.errout)
+
+        # Manifest prefetch, which verifies a downloaded file.
+        self.pkg("install foo", exit=1, stderr=True)
+        self.assertTrue(errstr in self.errout, self.errout)
+        self.assertFalse("locale" in self.errout, self.errout)
+
+        with open(m_path, "wb") as fh:
+            fh.write(goodmf)
+
+        # A corrupt manifest in the image's cache is replaced by a good
+        # copy from the repository.
+        self.pkg("contents -rm foo")
+        c_path = self.get_img_manifest_path(pfmri)
+        with open(c_path, "wb") as fh:
+            fh.write(badutf8)
+        self.pkg("contents -rm foo")
+        with open(c_path, "rb") as fh:
+            self.assertEqual(fh.read(), goodmf)
+
+        self.pkg("install foo")
 
     def test_keep_installed_changed_manifest(self):
         """Test that if a manifest that has been installed is changed on

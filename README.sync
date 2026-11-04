@@ -4,11 +4,11 @@
 The pkg5 components have been updated to the latest upstream solaris-ips
 as of:
 
-    commit e65612a93b6b39c3a23fa4d0920ed355f3247126
-    Author: Jakub Kulik <jakub.kulik@oracle.com>
-    Date:   Fri Aug 14 02:42:11 2026 -0700
+    commit 10b85f4d699437d8744b7baf599891a1e76f1372
+    Author: Darren J Moffat <Darren.Moffat@Oracle.COM>
+    Date:   Wed Oct 14 06:41:16 2026 -0700
 
-       39875635 migrate from pyOpenSSL crypto module to cryptography
+       40134156 pkg should not exit with success if BE activation failed (Generated-By: codex_gpt-6.1-sol)
 
 -----------------------------------------------------------------------------
 

@@ -22,7 +22,7 @@
 
 #
 # Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
-# Copyright (c) 2007, 2025, Oracle and/or its affiliates.
+# Copyright (c) 2007, 2026, Oracle and/or its affiliates.
 #
 
 import atexit
@@ -2632,7 +2632,7 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
         manifest file that will be verified."""
 
         try:
-            return self.transport._verify_manifest(
+            return self.transport.verify_manifest(
                 fmri, mfstpath=mfstpath, pub=alt_pub
             )
         except InvalidContentException:
