@@ -1,6 +1,6 @@
 #
 # This file was automatically produced by tools/updatereqs
-# Generated on Fri Aug 21 17:06:32 UTC 2026
+# Generated on Thu Nov  5 13:51:03 UTC 2026
 # Do not edit directly
 #
 annotated-doc==0.0.5
@@ -10,26 +10,25 @@ jaraco.collections==5.2.1
 jaraco.context==6.1.2
 jaraco.functools==4.6.0
 jaraco.text==4.3.0
-Mako==1.4.1
+Mako==1.4.3
 markdown-it-py==4.2.0
-MarkupSafe==3.0.3
+MarkupSafe==3.0.4
 mdurl==0.1.2
-more-itertools==11.1.0
+more-itertools==11.2.1
 packaging==26.3
 ply==3.11
 portend==3.2.1
 prettytable==3.18.0
 pybonjour @ https://mirrors.omnios.org/pymodules/pybonjour/pybonjour-1.1.1-python3.tar.gz#sha256
 Pygments==2.21.0
-python-dateutil==2.9.0.post0
+python-dateutil==4.0.0
 rich==15.0.0
-setuptools==84.0.0
 shellingham==1.5.4
-six==1.17.0
-tempora==5.12.0
-typer==0.27.1
+tempora==5.13.0
+typer==0.27.3
 typer-slim==0.24.0
 typing_extensions==4.16.0
-wcwidth==0.8.2
+tzdata==2026.6
+wcwidth==0.9.4
 wheel==0.48.0
-zc.lockfile==4.0
+zc.lockfile==4.1
