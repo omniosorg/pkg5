@@ -1,0 +1,269 @@
+#!/bin/ksh -p
+#
+# This file and its contents are supplied under the terms of the
+# Common Development and Distribution License ("CDDL"), version 1.0.
+# You may only use this file in accordance with the terms of version
+# 1.0 of the CDDL.
+#
+# A full copy of the text of the CDDL should have accompanied this
+# source. A copy of the CDDL is also available via the Internet at
+# http://www.illumos.org/license/CDDL.
+
+# Copyright 2026 EFit Partners
+
+# Captured at top level on purpose: inside a ksh `function name { }` (as
+# opposed to POSIX `name() { }`), ksh93 sets $0 to the FUNCTION name, so any
+# in-function use of $0 would print e.g. "usage" instead of the script name.
+PROG="${0##*/}"
+
+function _json_val {
+    typeset v="$1"
+    case "$v" in
+        true|false|null)
+            print -- "$v" ;;
+        +([0-9])|+([0-9])\.+([0-9]))
+            print -- "$v" ;;
+        *)
+            v="${v//\\/\\\\}"; v="${v//\"/\\\"}"
+            print -- "\"${v}\"" ;;
+    esac
+}
+
+function dot_to_json {
+    typeset prefix="${1:-arguments}"
+    shift
+
+    typeset -A val cnt
+    typeset -a keys args
+    typeset arg key v json
+    typeset i=0 j=0 n c first=1
+
+    args=("$@")
+    n=${#args[@]}
+
+    while (( i < n )); do
+        arg="${args[i]}"
+        if [[ "$arg" == "--${prefix}."* ]]; then
+            key="${arg#--${prefix}.}"
+            (( i++ ))
+            if [[ -z "${cnt[$key]}" ]]; then
+                cnt[$key]=0                      # explicit init before arithmetic
+                keys[${#keys[@]}]="$key"
+            fi
+            val["${key}.${cnt[$key]}"]="${args[i]}"   # no :-0 needed anymore
+            (( cnt[$key] += 1 ))                 # clean arithmetic, no ${}
+        fi
+        (( i++ ))
+    done
+
+    json="{"
+    for key in "${keys[@]}"; do
+        c=${cnt[$key]}
+        (( first )) || json+=","
+        first=0
+        v="$key"; v="${v//\\/\\\\}"; v="${v//\"/\\\"}"
+        json+="\"${v}\":"
+        if (( c == 1 )); then
+            json+="$(_json_val "${val[${key}.0]}")"
+        else
+            json+="["
+            j=0
+            while (( j < c )); do
+                (( j )) && json+=","
+                json+="$(_json_val "${val[${key}.${j}]}")"
+                (( j++ ))
+            done
+            json+="]"
+        fi
+    done
+    json+="}"
+    print -- "$json"
+}
+
+function get_global_zone_socket {
+    typeset zone="$1"
+    typeset zone_path
+    zone_path=$(zonecfg -z "${zone}" info zonepath 2>/dev/null | awk '{print $2}')
+    [[ -z ${zone_path} ]] && return 1
+    typeset socket_path
+    typeset i                 # declare it, or the loop counter stays global
+    for i in '' 0 1 2 3; do
+        socket_path=$(zonecfg -z "${zone}" info attr name=virtio-console${i} 2>/dev/null | awk '/value/ {print $2}')
+        echo ${socket_path:-"none"} | grep 'org.qemu.guest_agent' >/dev/null
+        [[ $? -eq 0 ]] && break
+    done
+    [[ -z ${socket_path} ]] && socket_path=$(zonecfg -z "${zone}" info attr name=com2 2>/dev/null | awk '/value/ {print $2}')
+    [[ -z ${socket_path} ]] && return 2
+    print "${zone_path}/root${socket_path##*[,=]}"
+}
+
+function get_zone_socket {
+    cd /tmp
+    typeset first_socket=$(ls -t | while read file; do
+                       [ -S "./$file" ] && [[ "$file" != *vnc* ]] && { print "$file"; exit; }
+                   done)
+    [[ -z ${first_socket} ]] && return 2
+    print "/tmp/${first_socket}"
+}
+
+# -d|--debug tracing. Always stderr: stdout must stay parseable JSON.
+function _debug {
+    (( DEBUG )) || return 0
+    print -u2 "${PROG}: debug: $*"
+    return 0
+}
+
+function print_error {
+    typeset zone=$1
+    typeset err_msg=$2
+    print -r -- "{\"error\":{\"class\":\"QA_CMD\",\"desc\":\"${1}: ${2}\"}}"
+}
+
+function query_socket {
+    typeset zone="$1"
+    typeset command=${2:-"guest-info"}
+    typeset cmd_name="${command#guest-}"
+    typeset args_json="${3:-}"
+    typeset socket_path
+    typeset retval
+
+    [[ $(zonename) == 'global' ]] && socket_path=$(get_global_zone_socket "${zone}") \
+                                  || socket_path=$(get_zone_socket) \
+    retval=$?
+    (( retval == 1 )) && print_error "${zone}" "No such zone configured"    && return 3
+    (( retval == 2 )) && print_error "${zone}" "No virtual console/serial or com2 configured"  && return 4
+
+    if [[ -n "$args_json" ]]; then
+        command='{"execute":"guest-'${cmd_name}'","arguments":'${args_json}'}'
+    else
+        command='{"execute":"guest-'${cmd_name}'"}'
+    fi
+
+    zoneadm -z "${zone}" list -v | grep running >/dev/null
+    (( $? != 0 )) && print_error "${zone}" "Not running" && return 5
+
+    _debug "socket=${socket_path}"
+    _debug "payload=${command}"
+    echo "$command" | /usr/lib/brand/bhyve/socat "$socket_path" 0 -
+}
+
+function usage {
+    print "Usage: ${PROG} -z|--zone <zone> -c|--command <command> (default: info)"
+    print "          [-j|--json <json>] [--arguments.<key> <value> ...]"
+    print "          [-f|--format] [-d|--debug]"
+    exit 2
+}
+
+ZONE=""
+COMMAND=""
+FORMAT=0
+DEBUG=0
+ARGS_JSON=""
+typeset -a DOT_ARGS
+# https://qemu-project.gitlab.io/qemu/interop/qemu-ga-ref.html
+typeset -a SILENT_COMMANDS=(shutdown suspend-disk suspend-ram suspend-hybrid)
+
+while (( $# > 0 )); do
+    case "$1" in
+        -z|--zone)
+                [[ $# -ge 2 ]] || { print "Missing value for $1"; usage; }
+            ZONE="$2"
+            shift 2
+            ;;
+        -c|--command)
+                [[ $# -ge 2 ]] || { print "Missing value for $1"; usage; }
+            COMMAND="$2"
+            shift 2
+            ;;
+        -j|--json)
+            [[ $# -ge 2 ]] || { print "Missing value for $1"; usage; }
+            ARGS_JSON="$2"
+            shift 2
+            ;;
+        --arguments.*)
+            [[ $# -ge 2 ]] || { print "Missing value for $1"; usage; }
+            DOT_ARGS+=("$1" "$2")
+            shift 2
+            ;;
+        -f|--format)
+            if [[ -x /opt/ooce/bin/jq ]]; then
+                FORMAT=1
+            else
+                print "Please install ooce/util/jq to allow format option"
+            fi
+            shift
+            ;;
+        -d|--debug)
+            # Traces the socket, the payload and each reply to stderr.
+            # stdout stays pure JSON either way.
+            DEBUG=1
+            shift
+            ;;
+        -h|--help)
+            usage
+            ;;
+        --)
+            shift
+            break
+            ;;
+        -*)
+            print "Unknown option: $1"
+            usage
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+
+[[ -z "$ZONE" ]] && usage
+
+# Dot notation takes precedence over --json if both are given
+if (( ${#DOT_ARGS[@]} > 0 )); then
+    [[ -n "$ARGS_JSON" ]] && print "Warning: --json ignored, using --arguments.* dot notation"
+    ARGS_JSON=$(dot_to_json arguments "${DOT_ARGS[@]}")
+fi
+
+_debug "zone=${ZONE} command=${COMMAND:-guest-info} args_json=${ARGS_JSON:-<none>}"
+
+if [[ " ${SILENT_COMMANDS[*]} " == *" ${COMMAND#guest-} "* ]]; then
+    # A silent command answers nothing even on success, so it cannot confirm
+    # the socket by itself: ping first, and only send it if the agent replied.
+    # The ping is deliberately BARE — guest-ping takes no arguments and the
+    # agent rejects unexpected ones, so passing ${ARGS_JSON} here (e.g. from
+    # shutdown's --arguments.mode powerdown) makes the probe fail against a
+    # perfectly healthy socket.
+    _debug "silent command '${COMMAND#guest-}': probing with a bare guest-ping first"
+    RESULT=$(query_socket "$ZONE" ping)
+    retval=$?
+    _debug "probe reply: ${RESULT:-<nothing>}"
+    # Whitespace-stripped compare: agents emit both {"return": {}} and
+    # {"return":{}} depending on version.
+    if (( retval == 0 )) && [[ "${RESULT//[$'\r\n\t ']/}" == '{"return":{}}' ]]; then
+        # Assign the result — do NOT write this as a bare $(query_socket ...),
+        # which sits at command position and would execute whatever the agent
+        # replies as a shell command.
+        SILENT_RESULT=$(query_socket "$ZONE" "$COMMAND" "$ARGS_JSON")
+        retval=$?
+        _debug "reply to the real command: ${SILENT_RESULT:-<nothing>}"
+        # Normally empty; if the agent objected, surface that instead of the
+        # ping's reply.
+        [[ -n "${SILENT_RESULT//[$'\r\n\t ']/}" ]] && RESULT="$SILENT_RESULT"
+    fi
+else
+    RESULT=$(query_socket "$ZONE" "$COMMAND" "$ARGS_JSON")
+    retval=$?
+fi
+
+if [[ -n "${RESULT//[$'\r\n\t ']/}" ]]; then
+    if (( FORMAT == 0 )); then
+        print "$RESULT"
+    else
+        print "$RESULT" | /opt/ooce/bin/jq
+    fi
+else
+    print_error "${ZONE}" "Qemu Guest Agent does not seem to be running or configured"
+    exit 6
+fi
+
+exit ${retval}

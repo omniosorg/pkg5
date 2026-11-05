@@ -3,69 +3,107 @@
 use strict;
 use warnings;
 
+use IO::Handle;
 use IO::Socket::INET;
 use IO::Socket::UNIX qw(SOCK_STREAM);
 use IO::Select;
 
-my ($sock, $port) = @ARGV;
+my ($sock, $port, $client_input) = @ARGV;
 $port //= 5900;
-my $ip = '0.0.0.0';
 
-my $iosel = IO::Select->new;
-my %connection = ();
-my $socket;
-my $client;
-
-my $server = IO::Socket::INET->new(
-    LocalAddr => $ip,
-    LocalPort => $port,
-    ReuseAddr => 1,
-    Listen    => 1,
-    ) or die "ERROR: cannot listen on $ip:$port: $!\n";
-$iosel->add($server);
-
-print "Listening on $ip:$port...\n";
-
-while (1)
-{
-	for my $ready ($iosel->can_read)
-	{
-		if ($ready == $server)
-		{
-			$socket = IO::Socket::UNIX->new(
-			    Type => SOCK_STREAM,
-			    Peer => $sock,
-			);
-			if (!$socket)
-			{
-				print "ERROR: cannot open socket $sock: $!\n";
-				next;
-			}
-			$iosel->add($socket);
-
-			$client = $server->accept;
-			$iosel->add($client);
-			$connection{$client} = $socket;
-			$connection{$socket} = $client;
-		}
-		else
-		{
-			next if !exists $connection{$ready};
-			my $buffer;
-			if ($ready->sysread($buffer, 4096))
-			{
-				$connection{$ready}->syswrite($buffer);
-			}
-			else
-			{
-				$iosel->remove($client);
-				$iosel->remove($socket);
-				delete $connection{$client};
-				delete $connection{$socket};
-				$client->close;
-				$socket->close;
-			}
-		}
-	}
+if ($port <= 0 && !defined $client_input) {
+    die "ERROR: client_input is mandatory when port <= 0\n";
 }
 
+if ($port <= 0) {
+    my $socket = IO::Socket::UNIX->new(
+        Type => SOCK_STREAM,
+        Peer => $sock,
+    ) or die "ERROR: cannot connect to $sock: $!\n";
+
+    my $sel = IO::Select->new($socket);
+
+    if ($client_input eq '-') {
+        # Bidirectional relay between STDIN and socket, like socat
+        my $stdin = IO::Handle->new->fdopen(fileno(STDIN), 'r');
+        $sel->add($stdin);
+
+        while ($sel->count && (my @ready = $sel->can_read(1))) {
+            for my $fh (@ready) {
+                my $n = $fh->sysread(my $buf, 4096);
+                if (!$n) {
+                    $sel->remove($fh);
+                    next;
+                }
+                if ($fh == $stdin) {
+                    $socket->syswrite($buf);
+                } else {
+                    STDOUT->syswrite($buf);
+                }
+            }
+        }
+    } else {
+        # Send client_input then read response
+        $socket->syswrite($client_input);
+
+        while ($sel->can_read(1)) {
+            my $n = $socket->sysread(my $buf, 4096);
+            last unless $n;
+            STDOUT->syswrite($buf);
+        }
+    }
+
+    # 4. Close connection
+    $socket->close;
+} else {
+    my $iosel = IO::Select->new;
+    my %connection = ();
+
+    my $ip = '0.0.0.0';
+    my $server = IO::Socket::INET->new(
+        LocalAddr => $ip,
+        LocalPort => $port,
+        ReuseAddr => 1,
+        Listen    => 1,
+    ) or die "ERROR: cannot listen on $ip:$port: $!\n";
+    print "Listening on $ip:$port...\n";
+
+    $iosel->add($server);
+
+    while (1) {
+        for my $ready ($iosel->can_read) {
+            if ($ready == $server) {
+                my $client = $server->accept;
+                $iosel->add($client);
+
+                my $socket = IO::Socket::UNIX->new(
+                    Type => SOCK_STREAM,
+                    Peer => $sock,
+                );
+                if (!$socket) {
+                    print STDERR "ERROR: cannot open socket $sock: $!\n";
+                    $iosel->remove($client);
+                    $client->close;
+                    next;
+                }
+                $iosel->add($socket);
+                $connection{$client} = $socket;
+                $connection{$socket} = $client;
+            } else {
+                next if !exists $connection{$ready};
+                my $buffer;
+                if ($ready->sysread($buffer, 4096)) {
+                    $connection{$ready}->syswrite($buffer);
+                } else {
+                    my $peer = $connection{$ready};
+                    $iosel->remove($ready);
+                    $iosel->remove($peer);
+                    delete $connection{$peer};
+                    delete $connection{$ready};
+                    $ready->close;
+                    $peer->close;
+                }
+            }
+        }
+    }
+}
