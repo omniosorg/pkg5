@@ -50,10 +50,10 @@ case $ARCH in
         trap 'rm -rf $tmpd' EXIT
         $PYTHON -mvenv $tmpd
         . $tmpd/bin/activate
+        pip install --quiet --upgrade pip
         ;;
 esac
 
-pip install --quiet --upgrade pip
 pip install wheel
 pip install -r $REQS
 pip uninstall -y pip setuptools wheel
