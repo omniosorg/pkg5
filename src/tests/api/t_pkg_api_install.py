@@ -47,7 +47,7 @@ import shutil
 
 from pkg.client.debugvalues import DebugValues
 from urllib.parse import urlunparse
-from urllib.request import pathname2url
+from pkg.misc import pathname2url
 
 PKG_CLIENT_NAME = "pkg"
 

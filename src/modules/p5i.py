@@ -29,12 +29,13 @@ import os
 
 from urllib.error import HTTPError
 from urllib.parse import urlunparse
-from urllib.request import urlopen, pathname2url
+from urllib.request import urlopen
 
 import pkg.client.api_errors as api_errors
 import pkg.client.publisher as publisher
 import pkg.json_wrapper as json
 import pkg.fmri as fmri
+from pkg.misc import pathname2url
 
 CURRENT_VERSION = 1
 MIME_TYPE = "application/vnd.pkg5.info"

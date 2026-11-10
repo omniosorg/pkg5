@@ -29,7 +29,6 @@ try:
 
     pkg.site_paths.init()
     import argparse
-    import codecs
     import logging
     import sys
     import gettext
@@ -296,7 +295,7 @@ def read_manifests(names, lint_logger):
         linecnts = []  # tuples of starting line no., ending line no
         linecounter = 0  # running total
         try:
-            f = codecs.open(filename, "rb", "utf-8")
+            f = open(filename, encoding="utf-8", newline="")
             data = f.read()
         except UnicodeDecodeError as e:
             lint_logger.critical(

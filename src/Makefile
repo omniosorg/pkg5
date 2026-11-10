@@ -90,7 +90,8 @@ $(EXTMODULES):
 	    $(TARGET) $(ROOTPKGLIB) core $(REQUIREMENTS)
 
 $(PYTESTS): $(EXTMODULES)
-	-pfexec python$(@F) tests/run.py -t -j $(JOBS)
+	-pfexec ctrun -l child -o noorphan \
+	    python$(@F) tests/run.py -t -j $(JOBS)
 	-pfexec cp tests/failures.3 tests/failures.$(@F)
 	-pfexec cp tests/timing_info.txt tests/timing_info.$(@F)
 

@@ -326,9 +326,10 @@ class PipeFile(object):
             )
 
         try:
-            fcntl_args = struct.pack("i", -1)
+            # struct strrecvfd { int fd; uid_t uid; gid_t gid; char fill[8]; }
+            fcntl_args = struct.pack("iII8x", -1, 0, 0)
             fcntl_rv = fcntl.ioctl(self.__pipefd, fcntl.I_RECVFD, fcntl_args)
-            fd = struct.unpack("i", fcntl_rv)[0]
+            fd = struct.unpack_from("i", fcntl_rv)[0]
         except IOError as e:
             if e.errno == errno.ENXIO:
                 # other end of the connection was closed

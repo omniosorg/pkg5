@@ -47,7 +47,6 @@ manipulation of configuration data is needed.
 """
 
 import ast
-import codecs
 import configparser
 import copy
 import errno
@@ -1491,7 +1490,7 @@ class FileConfig(Config):
         cp.optionxform = lambda x: x
 
         try:
-            efile = codecs.open(self._target, mode="rb", encoding="utf-8")
+            efile = open(self._target, encoding="utf-8", newline="")
         except EnvironmentError as e:
             if e.errno == errno.ENOENT:
                 # Assume default configuration.

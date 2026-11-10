@@ -96,6 +96,11 @@ def usage(exitcode=2):
 
 
 if __name__ == "__main__":
+    # The test workers rely on state set up in this process, such as the
+    # suite name added to each test class, so they must be forked. Python
+    # 3.14 changed the default start method to forkserver.
+    multiprocessing.set_start_method("fork")
+
     #
     # Start coverage before proceeding so that reports are accurate.
     #
@@ -118,6 +123,14 @@ if __name__ == "__main__":
 
     # Suppress ResourceWarning: unclosed file.
     warnings.filterwarnings("ignore", category=ResourceWarning)
+
+    # The workers are forked from this process, which by then has threads
+    # started by multiprocessing.Queue.
+    warnings.filterwarnings(
+        "ignore",
+        message=r".* is multi-threaded, use of fork\(\) may lead to deadlocks",
+        category=DeprecationWarning,
+    )
 
     # Apply similar filters in subprocesses as well
     # os.environ["PYTHONWARNINGS"] = ",".join(
