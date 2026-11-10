@@ -38,6 +38,8 @@ import sysconfig
 import tempfile
 import unittest
 
+from importlib.machinery import EXTENSION_SUFFIXES
+
 import pkg.catalog as catalog
 import pkg.flavor.base as base
 import pkg.flavor.depthlimitedmf as dlmf
@@ -55,11 +57,9 @@ py_ver_default = sysconfig.get_config_var("py_version_short")  # 3.nn
 py_ver_lib = sysconfig.get_config_var("py_version_nodot")  # 3nn
 # .cpython-3nn-x86_64-pc-solaris2.so
 ext_suffix = sysconfig.get_config_var("EXT_SUFFIX")
-py_ver_lib_list = [
-    "{0}.abi3.so",
-    "{0}{1}".format("{0}", ext_suffix),
-    "64/{0}.abi3.so",
-    "64/{0}{1}".format("{0}", ext_suffix),
+# The plain .so suffix is covered by mod_pats below.
+py_ver_lib_list = ["{0}" + s for s in EXTENSION_SUFFIXES if s != ".so"] + [
+    "64/{0}" + s for s in EXTENSION_SUFFIXES if s != ".so"
 ]
 
 mod_pats = [

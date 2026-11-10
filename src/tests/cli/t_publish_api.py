@@ -32,7 +32,7 @@ import pkg5unittest
 
 import os
 from urllib.parse import urlunparse
-from urllib.request import pathname2url
+from pkg.misc import pathname2url
 
 import pkg.client.publisher as publisher
 import pkg.client.transport.transport as transport

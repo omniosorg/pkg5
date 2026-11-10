@@ -36,8 +36,10 @@ import sys
 import time
 
 from urllib.error import HTTPError, URLError
-from urllib.request import pathname2url, urlopen
+from urllib.request import urlopen
 from urllib.parse import urlunparse, urljoin
+
+from pkg.misc import pathname2url
 
 import pkg.server.repository as sr
 

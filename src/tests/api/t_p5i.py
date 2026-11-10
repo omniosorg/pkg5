@@ -43,7 +43,7 @@ import sys
 import tempfile
 
 from urllib.parse import urlparse, urlunparse
-from urllib.request import pathname2url
+from pkg.misc import pathname2url
 
 
 class TestP5I(pkg5unittest.Pkg5TestCase):

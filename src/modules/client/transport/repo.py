@@ -43,7 +43,7 @@ from urllib.parse import (
     urlunparse,
     urljoin,
 )
-from urllib.request import url2pathname, pathname2url
+from urllib.request import url2pathname
 
 import pkg
 import pkg.p5i as p5i
@@ -55,7 +55,7 @@ import pkg.p5p
 import pkg.server.repository as svr_repo
 import pkg.server.query_parser as sqp
 
-from pkg.misc import N_, compute_compressed_attrs, EmptyDict
+from pkg.misc import N_, compute_compressed_attrs, EmptyDict, pathname2url
 
 
 class TransportRepo(object):

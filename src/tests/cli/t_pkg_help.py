@@ -28,7 +28,6 @@ if __name__ == "__main__":
     testutils.setup_environment("../../../proto")
 import pkg5unittest
 
-import codecs
 import os
 import re
 import unittest
@@ -148,7 +147,7 @@ class TestPkgHelp(pkg5unittest.CliTestCase):
         eucJP_encode_file = os.path.join(
             self.ro_data_root, "pkg.help.eucJP.expected.out"
         )
-        f = codecs.open(eucJP_encode_file, encoding="eucJP")
+        f = open(eucJP_encode_file, encoding="eucJP", newline="")
 
         locale_env = {"LC_ALL": "ja_JP.eucJP"}
         ret, out, err = self.pkg(

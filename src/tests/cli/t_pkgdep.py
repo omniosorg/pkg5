@@ -36,6 +36,8 @@ import sys
 import sysconfig
 import unittest
 
+from importlib.machinery import EXTENSION_SUFFIXES
+
 import pkg.actions as actions
 import pkg.flavor.base as base
 import pkg.flavor.depthlimitedmf as mf
@@ -51,6 +53,11 @@ py3_ver = sysconfig.get_config_var("py_version_short")  # 3.nn
 py3_ext = sysconfig.get_config_var("py_version_nodot")  # 3nn
 # .cpython-3nn-x86_64-pc-solaris2.so
 py3_ext_suffix = sysconfig.get_config_var("EXT_SUFFIX")
+# Extension suffixes other than the version specific one and the plain .so,
+# such as .abi3.so and, from python 3.15, .abi3t.so
+py3_abi_suffixes = [
+    s for s in EXTENSION_SUFFIXES if s not in (py3_ext_suffix, ".so")
+]
 
 py_ver_default = py3_ver
 py_ver_other = py2_ver
@@ -798,6 +805,14 @@ depend fmri=pkg:/satisfying_manf type=require variant.foo=baz
                 + " {pfx}.reason={reason} "
                 "{pfx}.type=python type=require\n"
             )
+        res = re.sub(
+            r"\{pfx\}\.file=(\S+)\.abi3\.so ",
+            lambda m: "".join(
+                "{pfx}.file=" + m.group(1) + suffix + " "
+                for suffix in py3_abi_suffixes
+            ),
+            res,
+        )
         return res.format(
             pfx=base.Dependency.DEPEND_DEBUG_PREFIX,
             dummy_fmri=base.Dependency.DUMMY_FMRI,
@@ -865,10 +880,10 @@ file NOHASH group=bin mode=0755 owner=root path=usr/bin/python
         )
         if v3ext:
             patterns += (
-                "{0}.abi3.so",
-                "{0}{v3ext}",
-                "64/{0}.abi3.so",
-                "64/{0}{v3ext}",
+                tuple("{0}" + s for s in py3_abi_suffixes)
+                + ("{0}{v3ext}",)
+                + tuple("64/{0}" + s for s in py3_abi_suffixes)
+                + ("64/{0}{v3ext}",)
             )
         else:
             patterns += ("{0}module.so", "64/{0}module.so")

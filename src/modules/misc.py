@@ -82,7 +82,8 @@ from stat import (
 )
 
 from urllib.parse import urlsplit, urlparse, urlunparse
-from urllib.request import pathname2url, url2pathname
+from urllib.request import url2pathname
+from urllib.request import pathname2url as _pathname2url
 
 import pkg.client.api_errors as api_errors
 import pkg.json_wrapper as json
@@ -290,6 +291,19 @@ def expanddirs(dirs):
             out.add(p)
             p = os.path.dirname(p)
     return out
+
+
+def pathname2url(path):
+    """Return the URL path for 'path', as urllib.request.pathname2url() does.
+
+    From Python 3.14, pathname2url() adds an empty authority ('//') in front
+    of an absolute path. Remove it so that URLs built from the result, for
+    example with urlunparse(), are the same with all versions of Python."""
+
+    url = _pathname2url(path)
+    if url.startswith("///") and not path.startswith("//"):
+        url = url[2:]
+    return url
 
 
 def url_affix_trailing_slash(u):

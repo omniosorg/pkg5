@@ -39,7 +39,8 @@ import stat
 import tempfile
 import unittest
 from urllib.error import HTTPError
-from urllib.request import urlopen, Request, pathname2url
+from urllib.request import urlopen, Request
+from pkg.misc import pathname2url
 
 from pkg import misc
 from pkg.actions import fromstr
