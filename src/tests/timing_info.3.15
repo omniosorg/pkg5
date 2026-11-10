@@ -1,0 +1,3482 @@
+Tests run for 'api' Suite, broken down by class:
+
+  0.00 api.TestEmptyCatalog
+      0.00 test_03_actions
+      0.00 test_01_attrs
+      0.00 test_02_gen_packages
+
+  0.00 api.TestAltroot
+      0.00 test_ar_err_img_prefix
+      0.00 test_ar_err_eremote
+
+  0.00 api.TestFormatPair
+      0.00 test_format_pair
+
+  0.00 api.TestExitStatus
+      0.00 test_json_api_pkg_out_of_date
+
+  0.00 api.TestBootEnv
+      0.00 test_api_consistency
+
+  0.00 api.TestSettings
+      0.00 test_logging
+
+  0.00 api.TestPkgTarFile
+      0.00 testerrorlevelIsCorrect
+
+  0.00 api.TestPropertyTemplate
+      0.00 test_create_match
+      0.00 test_base
+
+  0.00 api.TestPropertySection
+      0.00 test_base
+      0.00 test_add_get_remove_props
+
+  0.00 api.TestVariants
+      0.00 test_vct
+      0.00 test_variant_combinations
+
+  0.00 api.TestLintEngineInternals
+      0.00 test_lint_fmri_successor
+
+  0.00 api.TestPropertySectionTemplate
+      0.00 test_create_match
+      0.00 test_base
+
+  0.00 api.TestIndexer
+      0.00 test_indexworkingsize
+
+  0.01 api.TestCatalogueFormats
+      0.00 test_catalogue_ascii_hex
+      0.00 test_catalogue_formats
+
+  0.01 api.TestMisc
+      0.00 test_pub_url
+      0.00 test_pub_prefix
+      0.00 test_out_of_memory
+      0.00 test_psinfo
+      0.00 testMakedirs
+
+  0.01 api.TestSpeedEstimator
+      0.00 test_format_speed
+      0.00 test_stall
+      0.00 test_basic
+
+  0.01 api.TestLinkedImageName
+      0.00 test_linked_name
+      0.01 test_linked_zone_binaries
+
+  0.01 api.TestFMRI
+      0.00 testfmrisimilar1
+      0.00 testfmrisimilar2
+      0.00 testfmrisimilar3
+      0.00 testfmrisuccessor4
+      0.00 testfmrisuccessor5
+      0.00 testfmrisuccessor3
+      0.00 testfmriissamepkg
+      0.00 testfmrisuccessor2
+      0.00 testfmrisuccessor6
+      0.00 testgoodfmris_unders
+      0.00 testgoodfmris_dots
+      0.00 testfmrihaspublisher
+      0.00 testgoodfmris_slashes
+      0.00 testfmricmp3
+      0.00 testfmricmp1
+      0.00 testfmrihash
+      0.00 testgoodfmris_dashes
+      0.00 testbadfmri9
+      0.00 testgoodfmris_pluses
+      0.00 testbadfmri8
+      0.00 testfmrisuccessor1
+      0.00 testbadfmri16
+      0.00 testbadfmri7
+      0.00 testbadfmri6
+      0.00 testbadfmri11
+      0.00 testbadfmri12
+      0.00 testbadfmri14
+      0.00 testbadfmri15
+      0.00 testfmrihasversion
+      0.00 testbadfmri4
+      0.00 testpartial
+      0.00 testgoodfmris_
+      0.00 testbadfmri2
+      0.00 testfmricmp2
+      0.00 testbadfmri5
+      0.00 testbadfmri13
+      0.00 testbadfmri10
+      0.00 testbadfmri18
+      0.00 testbadversionexception
+      0.00 testunsupported
+      0.00 testbadfmri3
+      0.00 testbadfmri17
+      0.00 testpublisher
+      0.00 testbadfmri1
+      0.00 testbadfmri_pkgname
+      0.00 test_pkgname_grammar
+
+  0.01 api.TestPlat
+      0.00 testUtils
+      0.00 testRenameOfRunningExecutable
+      0.00 testRemoveOfRunningExecutable
+      0.00 testAdmin
+      0.00 testRelease
+      0.00 testForcibleRename
+      0.00 testbasic
+
+  0.01 api.TestCorruptCatalog
+      0.00 test_corrupt_attrs2
+      0.00 test_corrupt_attrs1
+      0.00 test_corrupt_attrs3
+      0.00 test_corrupt_attrs6
+      0.00 test_corrupt_attrs5
+      0.00 test_corrupt_attrs4
+
+  0.01 api.TestP5I
+      0.00 test_parse_write_partial
+      0.01 test_parse_write
+
+  0.01 api.TestUserGroup
+      0.00 testUser4
+      0.00 testGroup3
+      0.00 testGroup4
+      0.00 testUser1
+      0.00 testUser2
+      0.00 testGroup2
+      0.00 testUser3
+      0.00 testGroup1
+
+  0.01 api.TestFileManager
+      0.00 test_2_reverse
+      0.00 test_1
+      0.00 test_3_replace
+
+  0.01 api.TestFactoredManifest
+      0.00 test_cached_gen_actions_by_type
+      0.00 test_clear_cache
+      0.00 test_store_to_disk
+      0.01 test_get_directories
+
+  0.02 api.TestHistory
+      0.00 test_02_clear
+      0.00 test_01_client_info
+      0.00 test_13_bug_11735
+      0.00 test_08_bug_3540
+      0.00 test_11_bug_8072
+      0.00 test_09_bug_5153
+      0.00 test_10_snapshots
+      0.00 test_00_valid_operation
+      0.00 test_06_purge_history
+      0.00 test_12_bug_9287
+      0.00 test_03_client_load
+      0.00 test_07_aborted_operations
+      0.00 test_04_stacked_operations
+      0.00 test_05_discarded_operations
+
+  0.02 api.TestManifest
+      0.00 test_diffs6
+      0.00 test_errors
+      0.00 test_diffs8
+      0.00 test_diffs5
+      0.00 test_dups1
+      0.00 test_diffs2
+      0.00 test_diffs7
+      0.00 test_diffs10
+      0.00 test_diffs9
+      0.00 test_diffs3
+      0.00 test_diffs4
+      0.00 test_validate
+      0.00 test_diffs1
+      0.00 test_set_content1
+
+  0.02 api.TestActions
+      0.00 test_action_license
+      0.00 test_action_parser
+      0.00 test_action_sig_str
+      0.00 test_action_errors
+      0.00 test_action_tostr
+      0.01 test_validate
+
+  0.02 api.TestBootEnvActivation
+      0.00 test_json_api_activation_status
+      0.00 test_libbe_activation_exception
+      0.00 test_other_exception_is_logged_and_raised
+      0.00 test_api_records_activation_failure
+      0.00 test_libbe_activation_disabled
+      0.00 test_libbe_activation_bootnext_failure
+      0.01 test_libbe_activation_failure
+
+  0.02 api.TestImageConfig
+      0.01 test_0_read
+      0.01 test_1_reread
+
+  0.02 api.TestProperty
+      0.00 test_publisher
+      0.00 test_defined
+      0.00 test_bool
+      0.00 test_int
+      0.00 test_simple_list
+      0.00 test_base
+      0.00 test_exceptions
+      0.00 test_puburi
+      0.00 test_list
+      0.00 test_puburi_list
+      0.00 test_uuid
+      0.00 test_simple_puburi_list
+
+  0.03 api.TestConfig
+      0.00 test_add_get_remove_sections
+      0.00 test_get_modify_properties
+      0.01 test_base
+      0.02 test_file_read_write
+
+  0.03 api.TestImageCatalogUnit
+      0.00 test_08_installed_view
+      0.00 test_01_meta
+      0.00 test_07_locales
+      0.00 test_04_fmris_by_version
+      0.00 test_03_names_counts
+      0.00 test_06_point_lookups
+      0.00 test_05_entries
+      0.01 test_02_tuples_and_fmris
+
+  0.08 api.TestCatalog
+      0.00 test_legacy_description
+      0.00 test_01_attrs
+      0.00 test_02_gen_packages
+      0.00 test_04_store_and_validate
+      0.00 test_06_operations
+      0.00 test_03_permissions
+      0.01 test_10_destroy
+      0.01 test_05_retrieval
+      0.01 test_07_updates
+      0.02 test_08_append
+      0.02 test_09_actions
+
+  0.11 api.TestVersion
+      0.00 testversionsuccessor4
+      0.00 testversionlt5
+      0.00 testversiongt2
+      0.00 testversiongt3
+      0.00 testversionsuccessor5
+      0.00 testversionlt6
+      0.00 testversionlt
+      0.00 testversionsuccessor3
+      0.00 testversionlt4
+      0.00 testversionlt3
+      0.00 testversionsuccessor7
+      0.00 testversionne
+      0.00 testversiongt4
+      0.00 testversionlt2
+      0.00 testversionsuccessor6
+      0.00 testversiongt6
+      0.00 testversionsuccessor9
+      0.00 testversioneq
+      0.00 testversionsuccessor2
+      0.00 testversionsuccessor8
+      0.00 testversiongt1
+      0.00 testversionbadversion
+      0.00 testversionbadtime3
+      0.00 testversionbadtime2
+      0.00 testversionbadtime6
+      0.00 testversionbadtime5
+      0.00 testversiongt5
+      0.00 testversionbadtime4
+      0.00 testversionsuccessor1
+      0.00 testversionbadtime1
+      0.00 testdotsequencecomparison
+      0.00 testversionbaddots
+      0.00 testsortkeyversionobject
+      0.00 teststr
+      0.00 testbogusversion4
+      0.00 testversionsettime
+      0.00 testsortkeybuild
+      0.00 testbogusversion3
+      0.00 testbogusversion5
+      0.00 testversiongettime
+      0.00 testbogusversion1
+      0.00 testsplit
+      0.00 testbogusdotsequence
+      0.00 testbogusversion2
+      0.00 testsortkey
+      0.00 testbogusversion6
+      0.09 testsortkeyrandom
+
+  0.16 api.TestPublisher
+      0.04 test_04_proxy_uri
+      0.04 test_03_publisher
+      0.04 test_01_repository_uri
+      0.04 test_02_repository
+
+  0.20 api.TestElf
+      0.03 test_non_elf
+      0.03 test_get_hashes_params
+      0.03 test_non_existent
+      0.04 test_valid_elf_hash
+      0.06 test_valid_elf
+
+  0.20 api.TestTrackerItem
+      0.00 test_str
+      0.00 test_reset
+      0.20 test_elapsed
+
+  0.21 api.TestGoalTrackerItem
+      0.00 test_metgoal
+      0.00 test_pair
+      0.00 test_pctdone
+      0.00 test_pairplus1
+      0.00 test_item_before_goal
+      0.00 test_done
+      0.20 test_elapsed
+
+  0.25 api.TestSysattr
+      0.00 test_1_supported_dict
+      0.00 test_0_bad_input
+      0.00 test_3_fgetattr
+      0.25 test_2_fsetattr
+
+  0.28 api.TestFastQuote
+      0.00 test_long
+      0.01 test_basic
+      0.27 test_random
+
+  0.34 api.TestP5P
+      0.00 test_06_get_index
+      0.00 test_00_create
+      0.00 test_01_add
+      0.02 test_05_invalid
+      0.02 test_03_add_repo_package
+      0.03 test_02_add_package
+      0.25 test_04_extract
+
+  0.57 api.TestPkgSha
+      0.57 test_basic
+
+  0.89 api.TestLintEngine
+      0.03 test_info_classification_data
+      0.86 test_lint_checks
+
+  0.96 api.TestPkgApiFix
+      0.96 test_01_basic
+
+  1.05 api.TestSMF
+      0.22 test_zone_actuators
+      0.83 test_smf
+
+  1.47 api.TestPkgApiRevert
+      1.47 test_changed_packages
+
+  1.48 api.TestPkgApiHydrate
+      0.49 test_bad_publishers
+      0.99 test_01_basic
+
+  1.65 api.TestDependencyAnalyzer
+      0.00 test_str_methods
+      0.00 test_symlinks
+      0.00 test_ext_script
+      0.00 test_runpath_3
+      0.00 test_runpath_1
+      0.00 test_runpath_2
+      0.00 test_ext_hardlink
+      0.00 test_delete_smf_manifest
+      0.00 test_int_hardlink
+      0.01 test_faildeps_smf_manifest
+      0.01 test_ext_smf_manifest
+      0.01 test_bypass_3
+      0.01 test_smf_manifest_parse
+      0.01 test_int_smf_manifest
+      0.01 test_bypass_2
+      0.01 test_req_any_smf_manifest
+      0.01 test_bypass_1
+      0.02 test_ext_python_abs_import_dep
+      0.02 test_ext_python_dep
+      0.03 test_ext_python_pkg_dep
+      0.03 test_python_relative_import_generation
+      0.06 test_ext_elf
+      0.07 test_variants_4
+      0.07 test_variants_2
+      0.07 test_variants_3
+      0.07 test_variants_1
+      0.07 test_int_script
+      0.12 test_int_elf
+      0.14 test_multi_proto_dirs
+      0.16 test_broken_manifest
+      0.16 test_python_imp_main
+      0.17 test_bug_18031
+      0.30 test_symlinked_proto
+
+  1.67 api.TestSMFConfig
+      0.00 test_exceptions
+      0.29 test_add_set_property
+      1.38 test_read
+
+  2.33 api.TestActionExecutionErrors
+      0.12 test_01_file_parent
+      0.46 test_00_directory
+      0.52 test_02_link
+      0.55 test_01_file
+      0.68 test_03_hardlink
+
+  2.86 api.TestApiRefresh
+      0.43 test_stale_image_catalog
+      1.03 test_no_origins_means_no_image_catalog_updates
+      1.39 test_stale_publisher_catalog
+
+  2.86 api.TestSolver
+      1.14 test_no_solution
+      1.72 test_solution
+
+  3.53 api.TestImageCatalogImage
+      1.15 test_02_solver
+      1.19 test_03_list
+      1.20 test_01_write_through
+
+  3.56 api.TestApiList
+      0.02 test_list_08_patterns
+      0.02 test_list_02_newest
+      0.06 test_list_01_full
+      0.08 test_list_03_cats
+      0.14 test_list_06b_removable
+      0.14 test_list_04_pubs
+      0.38 test_list_07_get_pkg_categories
+      0.79 test_list_05_installed
+      1.93 test_list_06_upgradable
+
+  5.25 api.TestApiInfo
+      0.79 test_1_bad_packages
+      1.78 test_2_renamed_packages
+      2.68 test_0_local_remote
+
+  7.71 api.TestMultiProgressTracker
+      0.00 test_multi_init
+      7.71 test_multi
+
+  8.65 api.TestPrintEngine
+      0.00 test_posix_printengine_notty
+      0.00 test_posix_printengine_badtty
+      0.01 test_logging_printengine
+      8.64 test_posix_printengine_tty
+
+  9.13 api.TestAsyncRPC
+      0.00 test_async_thread_errors
+      0.07 test_async_basics
+      0.56 test_rpc_basics
+      8.50 test_rpc_interruptions
+
+ 11.62 api.TestActionCache
+      1.89 test_02_stale_cache_reconciled
+      1.92 test_05_missing_and_corrupt
+      1.93 test_03_conflicts
+      1.93 test_04_variant_change
+      1.93 test_06_verify_debug
+      2.02 test_01_lifecycle
+
+ 13.59 api.TestVolatileLintEngineDepot
+     13.59 test_get_manifest
+
+ 24.88 api.TestPkgApi
+      0.01 test_snapdir
+      0.02 test_syspub_version_error
+      0.02 test_properties
+      0.83 test_publisher_apis
+      1.09 test_bad_orderings
+      1.41 test_deprecated
+      2.54 test_license
+      3.25 test_reset
+     15.70 test_refresh_transition
+
+ 28.55 api.TestApiLinked
+      0.34 test_err_toxic_pkg
+      0.37 test_sync_nosolver
+      0.39 test_solver_err_aggregation
+      0.51 test_linked_p2c_recurse_flags_1_no_refresh_via_attach
+      0.63 test_linked_p2c_recurse_flags_1_no_refresh_via_sync
+      0.73 test_corrupt_zone_metadata
+      0.77 test_attach_reject
+      0.88 test_unsynced_image_operations
+      0.91 test_linked_p2c_recurse_flags_2_no_refresh_via_attach
+      1.23 test_linked_hfo_cleanup
+      4.44 test_action_serialization
+      5.47 test_linked_p2c_recurse_flags_2_no_refresh_via_other
+     11.88 test_err_pubcheck
+
+ 29.44 api.TestProgressTrackers
+      0.00 test_fancy_unix_tracker_bad_tty
+      6.41 test_fancy_unix_tracker
+      6.73 test_fancy_unix_tracker_termdelay
+     16.30 test_basic_trackers
+
+ 38.42 api.TestApiSearchMulti
+     11.96 test_bug_2955
+     11.99 test_bug_8318
+     14.47 test_bug_12739
+
+ 77.67 api.TestLintEngineDepot
+      0.08 test_lint_mf_baseline
+      0.16 test_license_pkg_dup
+      1.70 test_relative_path
+      2.20 test_empty_lint_repo
+      6.60 test_lint_repo_basics
+     14.18 test_ref_file_move
+     24.85 test_versioning
+     27.91 test_broken_legacy_rename
+
+ 93.88 api.TestPkgApiInstall
+      0.03 test_bug_4109
+      0.39 test_bug_1338_4
+      0.42 test_basics_5
+      0.76 test_bug_1338_2
+      0.79 test_bug_1338_3
+      0.81 test_bad_fmris
+      0.82 test_bug_1338
+      1.10 test_multi_publisher
+      1.61 test_bug_2795
+      1.71 test_pkg_mancache
+      2.12 test_bad_package_actions
+      2.32 test_flag_basics_1
+      2.59 test_basics_1
+      2.89 test_pkg_file_errors
+      3.25 test_origin_depend
+      3.39 test_install_matching
+      3.82 test_basics_4
+      4.20 test_update_backwards
+      4.90 test_image_upgrade
+      5.15 test_freeze_basics_1
+      5.90 test_basics_2
+      6.85 test_ipkg_out_of_date
+      6.98 test_basics_3
+     13.15 test_needsdata
+     17.89 test_catalog_v0
+
+211.94 api.TestApiSearchBasicsP
+      0.00 test_bug_9845_05
+      0.00 test_bug_9845_07
+      0.00 test_bug_9845_04
+      0.00 test_bug_9845_06
+      0.00 test_bug_9845_09
+      0.01 test_bug_9845_08
+      0.01 test_bug_9845_03
+      0.01 test_bug_9845_10
+      0.01 test_bug_9845_01
+      0.01 test_bug_9845_02
+      0.02 test_bug_9845_11
+      2.50 test_030_degraded_local
+      2.66 test_050_local_case_sensitive
+      3.08 test_060_missing_files
+      3.13 test_110_bug_6712_sparc
+      3.13 test_100_bug_6712_i386
+      3.36 test_090_bug_7660
+      3.84 test_bug_2989_1
+      4.62 test_080_weird_patterns
+      4.71 test_070_mismatched_versions
+      4.82 test_bug_7628
+      4.96 test_bug_2989_2
+      5.81 test_040_repeated_install_uninstall
+      6.47 test_120_bug_3046
+      6.76 test_020_local_0
+      7.28 test_bug_7534
+      8.42 test_bug_2989_3
+      8.97 test_bug_2989_4
+      9.60 test_bug_14177
+      9.78 test_bug_2849
+     10.87 test_bug_8492
+     10.91 test_130_bug_1059
+     11.49 test_bug_983
+     12.18 test_bug_2863
+     30.15 test_010_remote
+     32.36 test_bug_4239
+
+449.98 api.TestApiSearchBasics_nonP
+      7.50 test_bug_8318
+     11.78 test_bug_13485
+     12.90 test_bug_17672
+     15.04 test_local_image_update
+     18.17 test_bug_7358_2
+     20.15 test_bug_7358_1
+     38.95 test_bug_6177
+     96.01 test_bug_9729_1
+    229.47 test_bug_9729_2
+
+1037.74 Total time
+
+============================================================
+
+Tests run for 'api' Suite, sorted by time taken:
+
+  0.00 TestHistory test_02_clear
+  0.00 TestHistory test_01_client_info
+  0.00 TestEmptyCatalog test_03_actions
+  0.00 TestHistory test_13_bug_11735
+  0.00 TestFMRI testfmrisimilar1
+  0.00 TestFMRI testfmrisimilar2
+  0.00 TestFMRI testfmrisimilar3
+  0.00 TestFMRI testfmrisuccessor4
+  0.00 TestEmptyCatalog test_01_attrs
+  0.00 TestFMRI testfmrisuccessor5
+  0.00 TestFMRI testfmrisuccessor3
+  0.00 TestFMRI testfmriissamepkg
+  0.00 TestFMRI testfmrisuccessor2
+  0.00 TestFMRI testfmrisuccessor6
+  0.00 TestFMRI testgoodfmris_unders
+  0.00 TestFMRI testgoodfmris_dots
+  0.00 TestFMRI testfmrihaspublisher
+  0.00 TestFMRI testgoodfmris_slashes
+  0.00 TestVersion testversionsuccessor4
+  0.00 TestVersion testversionlt5
+  0.00 TestVersion testversiongt2
+  0.00 TestFMRI testfmricmp3
+  0.00 TestVersion testversiongt3
+  0.00 TestVersion testversionsuccessor5
+  0.00 TestFMRI testfmricmp1
+  0.00 TestVersion testversionlt6
+  0.00 TestVersion testversionlt
+  0.00 TestFMRI testfmrihash
+  0.00 TestVersion testversionsuccessor3
+  0.00 TestVersion testversionlt4
+  0.00 TestVersion testversionlt3
+  0.00 TestVersion testversionsuccessor7
+  0.00 TestVersion testversionne
+  0.00 TestVersion testversiongt4
+  0.00 TestVersion testversionlt2
+  0.00 TestFMRI testgoodfmris_dashes
+  0.00 TestVersion testversionsuccessor6
+  0.00 TestVersion testversiongt6
+  0.00 TestVersion testversionsuccessor9
+  0.00 TestFMRI testbadfmri9
+  0.00 TestFMRI testgoodfmris_pluses
+  0.00 TestVersion testversioneq
+  0.00 TestFMRI testbadfmri8
+  0.00 TestVersion testversionsuccessor2
+  0.00 TestFMRI testfmrisuccessor1
+  0.00 TestVersion testversionsuccessor8
+  0.00 TestFMRI testbadfmri16
+  0.00 TestFMRI testbadfmri7
+  0.00 TestFMRI testbadfmri6
+  0.00 TestFMRI testbadfmri11
+  0.00 TestFMRI testbadfmri12
+  0.00 TestFMRI testbadfmri14
+  0.00 TestFMRI testbadfmri15
+  0.00 TestFMRI testfmrihasversion
+  0.00 TestFMRI testbadfmri4
+  0.00 TestFMRI testpartial
+  0.00 TestVersion testversiongt1
+  0.00 TestFMRI testgoodfmris_
+  0.00 TestVersion testversionbadversion
+  0.00 TestVersion testversionbadtime3
+  0.00 TestFMRI testbadfmri2
+  0.00 TestFMRI testfmricmp2
+  0.00 TestVersion testversionbadtime2
+  0.00 TestVersion testversionbadtime6
+  0.00 TestFMRI testbadfmri5
+  0.00 TestFMRI testbadfmri13
+  0.00 TestVersion testversionbadtime5
+  0.00 TestEmptyCatalog test_02_gen_packages
+  0.00 TestVersion testversiongt5
+  0.00 TestVersion testversionbadtime4
+  0.00 TestVersion testversionsuccessor1
+  0.00 TestFMRI testbadfmri10
+  0.00 TestFMRI testbadfmri18
+  0.00 TestFMRI testbadversionexception
+  0.00 TestFMRI testunsupported
+  0.00 TestVersion testversionbadtime1
+  0.00 TestFMRI testbadfmri3
+  0.00 TestFMRI testbadfmri17
+  0.00 TestVersion testdotsequencecomparison
+  0.00 TestVersion testversionbaddots
+  0.00 TestVersion testsortkeyversionobject
+  0.00 TestFMRI testpublisher
+  0.00 TestVersion teststr
+  0.00 TestFMRI testbadfmri1
+  0.00 TestFMRI testbadfmri_pkgname
+  0.00 TestVersion testbogusversion4
+  0.00 TestVersion testversionsettime
+  0.00 TestVersion testsortkeybuild
+  0.00 TestVersion testbogusversion3
+  0.00 TestVersion testbogusversion5
+  0.00 TestVersion testversiongettime
+  0.00 TestAltroot test_ar_err_img_prefix
+  0.00 TestHistory test_08_bug_3540
+  0.00 TestVersion testbogusversion1
+  0.00 TestSysattr test_1_supported_dict
+  0.00 TestHistory test_11_bug_8072
+  0.00 TestVersion testsplit
+  0.00 TestHistory test_09_bug_5153
+  0.00 TestHistory test_10_snapshots
+  0.00 TestHistory test_00_valid_operation
+  0.00 TestHistory test_06_purge_history
+  0.00 TestVersion testbogusdotsequence
+  0.00 TestAltroot test_ar_err_eremote
+  0.00 TestSysattr test_0_bad_input
+  0.00 TestMisc test_pub_url
+  0.00 TestMisc test_pub_prefix
+  0.00 TestTrackerItem test_str
+  0.00 TestActions test_action_license
+  0.00 TestManifest test_diffs6
+  0.00 TestVariants test_vct
+  0.00 TestPropertyTemplate test_create_match
+  0.00 TestSpeedEstimator test_format_speed
+  0.00 TestDependencyAnalyzer test_str_methods
+  0.00 TestManifest test_errors
+  0.00 TestManifest test_diffs8
+  0.00 TestVersion testbogusversion2
+  0.00 TestTrackerItem test_reset
+  0.00 TestPropertySection test_base
+  0.00 TestP5P test_06_get_index
+  0.00 TestPlat testUtils
+  0.00 TestManifest test_diffs5
+  0.00 TestUserGroup testUser4
+  0.00 TestPlat testRenameOfRunningExecutable
+  0.00 TestManifest test_dups1
+  0.00 TestUserGroup testGroup3
+  0.00 TestCorruptCatalog test_corrupt_attrs2
+  0.00 TestPlat testRemoveOfRunningExecutable
+  0.00 TestUserGroup testGroup4
+  0.00 TestManifest test_diffs2
+  0.00 TestUserGroup testUser1
+  0.00 TestManifest test_diffs7
+  0.00 TestManifest test_diffs10
+  0.00 TestUserGroup testUser2
+  0.00 TestPlat testAdmin
+  0.00 TestUserGroup testGroup2
+  0.00 TestLinkedImageName test_linked_name
+  0.00 TestPlat testRelease
+  0.00 TestUserGroup testUser3
+  0.00 TestProperty test_publisher
+  0.00 TestPrintEngine test_posix_printengine_notty
+  0.00 TestMisc test_out_of_memory
+  0.00 TestProperty test_defined
+  0.00 TestCorruptCatalog test_corrupt_attrs1
+  0.00 TestPlat testForcibleRename
+  0.00 TestPlat testbasic
+  0.00 TestManifest test_diffs9
+  0.00 TestProperty test_bool
+  0.00 TestProperty test_int
+  0.00 TestBootEnvActivation test_json_api_activation_status
+  0.00 TestManifest test_diffs3
+  0.00 TestActions test_action_parser
+  0.00 TestManifest test_diffs4
+  0.00 TestFormatPair test_format_pair
+  0.00 TestMisc test_psinfo
+  0.00 TestManifest test_validate
+  0.00 TestUserGroup testGroup1
+  0.00 TestProperty test_simple_list
+  0.00 TestSpeedEstimator test_stall
+  0.00 TestCorruptCatalog test_corrupt_attrs3
+  0.00 TestPropertyTemplate test_base
+  0.00 TestPropertySection test_add_get_remove_props
+  0.00 TestCorruptCatalog test_corrupt_attrs6
+  0.00 TestExitStatus test_json_api_pkg_out_of_date
+  0.00 TestBootEnv test_api_consistency
+  0.00 TestP5I test_parse_write_partial
+  0.00 TestPropertySectionTemplate test_create_match
+  0.00 TestFastQuote test_long
+  0.00 TestMisc testMakedirs
+  0.00 TestSMFConfig test_exceptions
+  0.00 TestCorruptCatalog test_corrupt_attrs5
+  0.00 TestSettings test_logging
+  0.00 TestProperty test_base
+  0.00 TestManifest test_diffs1
+  0.00 TestProperty test_exceptions
+  0.00 TestProperty test_puburi
+  0.00 TestVariants test_variant_combinations
+  0.00 TestDependencyAnalyzer test_symlinks
+  0.00 TestGoalTrackerItem test_metgoal
+  0.00 TestHistory test_12_bug_9287
+  0.00 TestCorruptCatalog test_corrupt_attrs4
+  0.00 TestGoalTrackerItem test_pair
+  0.00 TestHistory test_03_client_load
+  0.00 TestGoalTrackerItem test_pctdone
+  0.00 TestGoalTrackerItem test_pairplus1
+  0.00 TestPropertySectionTemplate test_base
+  0.00 TestManifest test_set_content1
+  0.00 TestDependencyAnalyzer test_ext_script
+  0.00 TestConfig test_add_get_remove_sections
+  0.00 TestFMRI test_pkgname_grammar
+  0.00 TestMultiProgressTracker test_multi_init
+  0.00 TestGoalTrackerItem test_item_before_goal
+  0.00 TestProperty test_list
+  0.00 TestBootEnvActivation test_libbe_activation_exception
+  0.00 TestCatalog test_legacy_description
+  0.00 TestProperty test_puburi_list
+  0.00 TestCatalogueFormats test_catalogue_ascii_hex
+  0.00 TestGoalTrackerItem test_done
+  0.00 TestAsyncRPC test_async_thread_errors
+  0.00 TestHistory test_07_aborted_operations
+  0.00 TestActions test_action_sig_str
+  0.00 TestFactoredManifest test_cached_gen_actions_by_type
+  0.00 TestPkgTarFile testerrorlevelIsCorrect
+  0.00 TestBootEnvActivation test_other_exception_is_logged_and_raised
+  0.00 TestFactoredManifest test_clear_cache
+  0.00 TestActions test_action_errors
+  0.00 TestDependencyAnalyzer test_runpath_3
+  0.00 TestConfig test_get_modify_properties
+  0.00 TestPrintEngine test_posix_printengine_badtty
+  0.00 TestCatalog test_01_attrs
+  0.00 TestFactoredManifest test_store_to_disk
+  0.00 TestBootEnvActivation test_api_records_activation_failure
+  0.00 TestCatalogueFormats test_catalogue_formats
+  0.00 TestBootEnvActivation test_libbe_activation_disabled
+  0.00 TestHistory test_04_stacked_operations
+  0.00 TestLintEngineInternals test_lint_fmri_successor
+  0.00 TestBootEnvActivation test_libbe_activation_bootnext_failure
+  0.00 TestCatalog test_02_gen_packages
+  0.00 TestProgressTrackers test_fancy_unix_tracker_bad_tty
+  0.00 TestFileManager test_2_reverse
+  0.00 TestProperty test_uuid
+  0.00 TestActions test_action_tostr
+  0.00 TestP5P test_00_create
+  0.00 TestApiSearchBasicsP test_bug_9845_05
+  0.00 TestDependencyAnalyzer test_runpath_1
+  0.00 TestSysattr test_3_fgetattr
+  0.00 TestDependencyAnalyzer test_runpath_2
+  0.00 TestDependencyAnalyzer test_ext_hardlink
+  0.00 TestCatalog test_04_store_and_validate
+  0.00 TestFileManager test_1
+  0.00 TestImageCatalogUnit test_08_installed_view
+  0.00 TestVersion testsortkey
+  0.00 TestImageCatalogUnit test_01_meta
+  0.00 TestImageCatalogUnit test_07_locales
+  0.00 TestFileManager test_3_replace
+  0.00 TestIndexer test_indexworkingsize
+  0.00 TestCatalog test_06_operations
+  0.00 TestVersion testbogusversion6
+  0.00 TestImageCatalogUnit test_04_fmris_by_version
+  0.00 TestImageCatalogUnit test_03_names_counts
+  0.00 TestDependencyAnalyzer test_delete_smf_manifest
+  0.00 TestSpeedEstimator test_basic
+  0.00 TestDependencyAnalyzer test_int_hardlink
+  0.00 TestCatalog test_03_permissions
+  0.00 TestApiSearchBasicsP test_bug_9845_07
+  0.00 TestImageCatalogUnit test_06_point_lookups
+  0.00 TestApiSearchBasicsP test_bug_9845_04
+  0.00 TestP5P test_01_add
+  0.00 TestImageCatalogUnit test_05_entries
+  0.00 TestHistory test_05_discarded_operations
+  0.00 TestProperty test_simple_puburi_list
+  0.00 TestApiSearchBasicsP test_bug_9845_06
+  0.00 TestApiSearchBasicsP test_bug_9845_09
+  0.01 TestApiSearchBasicsP test_bug_9845_08
+  0.01 TestImageCatalogUnit test_02_tuples_and_fmris
+  0.01 TestDependencyAnalyzer test_faildeps_smf_manifest
+  0.01 TestDependencyAnalyzer test_ext_smf_manifest
+  0.01 TestApiSearchBasicsP test_bug_9845_03
+  0.01 TestApiSearchBasicsP test_bug_9845_10
+  0.01 TestCatalog test_10_destroy
+  0.01 TestDependencyAnalyzer test_bypass_3
+  0.01 TestCatalog test_05_retrieval
+  0.01 TestApiSearchBasicsP test_bug_9845_01
+  0.01 TestLinkedImageName test_linked_zone_binaries
+  0.01 TestApiSearchBasicsP test_bug_9845_02
+  0.01 TestBootEnvActivation test_libbe_activation_failure
+  0.01 TestPrintEngine test_logging_printengine
+  0.01 TestImageConfig test_0_read
+  0.01 TestFactoredManifest test_get_directories
+  0.01 TestDependencyAnalyzer test_smf_manifest_parse
+  0.01 TestConfig test_base
+  0.01 TestDependencyAnalyzer test_int_smf_manifest
+  0.01 TestActions test_validate
+  0.01 TestP5I test_parse_write
+  0.01 TestCatalog test_07_updates
+  0.01 TestDependencyAnalyzer test_bypass_2
+  0.01 TestPkgApi test_snapdir
+  0.01 TestDependencyAnalyzer test_req_any_smf_manifest
+  0.01 TestDependencyAnalyzer test_bypass_1
+  0.01 TestFastQuote test_basic
+  0.01 TestImageConfig test_1_reread
+  0.02 TestCatalog test_08_append
+  0.02 TestConfig test_file_read_write
+  0.02 TestPkgApi test_syspub_version_error
+  0.02 TestCatalog test_09_actions
+  0.02 TestApiSearchBasicsP test_bug_9845_11
+  0.02 TestP5P test_05_invalid
+  0.02 TestDependencyAnalyzer test_ext_python_abs_import_dep
+  0.02 TestApiList test_list_08_patterns
+  0.02 TestP5P test_03_add_repo_package
+  0.02 TestDependencyAnalyzer test_ext_python_dep
+  0.02 TestPkgApi test_properties
+  0.02 TestApiList test_list_02_newest
+  0.03 TestDependencyAnalyzer test_ext_python_pkg_dep
+  0.03 TestP5P test_02_add_package
+  0.03 TestLintEngine test_info_classification_data
+  0.03 TestElf test_non_elf
+  0.03 TestPkgApiInstall test_bug_4109
+  0.03 TestElf test_get_hashes_params
+  0.03 TestDependencyAnalyzer test_python_relative_import_generation
+  0.03 TestElf test_non_existent
+  0.04 TestPublisher test_04_proxy_uri
+  0.04 TestElf test_valid_elf_hash
+  0.04 TestPublisher test_03_publisher
+  0.04 TestPublisher test_01_repository_uri
+  0.04 TestPublisher test_02_repository
+  0.06 TestApiList test_list_01_full
+  0.06 TestDependencyAnalyzer test_ext_elf
+  0.06 TestElf test_valid_elf
+  0.07 TestAsyncRPC test_async_basics
+  0.07 TestDependencyAnalyzer test_variants_4
+  0.07 TestDependencyAnalyzer test_variants_2
+  0.07 TestDependencyAnalyzer test_variants_3
+  0.07 TestDependencyAnalyzer test_variants_1
+  0.07 TestDependencyAnalyzer test_int_script
+  0.08 TestLintEngineDepot test_lint_mf_baseline
+  0.08 TestApiList test_list_03_cats
+  0.09 TestVersion testsortkeyrandom
+  0.12 TestDependencyAnalyzer test_int_elf
+  0.12 TestActionExecutionErrors test_01_file_parent
+  0.14 TestApiList test_list_06b_removable
+  0.14 TestDependencyAnalyzer test_multi_proto_dirs
+  0.14 TestApiList test_list_04_pubs
+  0.16 TestLintEngineDepot test_license_pkg_dup
+  0.16 TestDependencyAnalyzer test_broken_manifest
+  0.16 TestDependencyAnalyzer test_python_imp_main
+  0.17 TestDependencyAnalyzer test_bug_18031
+  0.20 TestTrackerItem test_elapsed
+  0.20 TestGoalTrackerItem test_elapsed
+  0.22 TestSMF test_zone_actuators
+  0.25 TestSysattr test_2_fsetattr
+  0.25 TestP5P test_04_extract
+  0.27 TestFastQuote test_random
+  0.29 TestSMFConfig test_add_set_property
+  0.30 TestDependencyAnalyzer test_symlinked_proto
+  0.34 TestApiLinked test_err_toxic_pkg
+  0.37 TestApiLinked test_sync_nosolver
+  0.38 TestApiList test_list_07_get_pkg_categories
+  0.39 TestApiLinked test_solver_err_aggregation
+  0.39 TestPkgApiInstall test_bug_1338_4
+  0.42 TestPkgApiInstall test_basics_5
+  0.43 TestApiRefresh test_stale_image_catalog
+  0.46 TestActionExecutionErrors test_00_directory
+  0.49 TestPkgApiHydrate test_bad_publishers
+  0.51 TestApiLinked test_linked_p2c_recurse_flags_1_no_refresh_via_attach
+  0.52 TestActionExecutionErrors test_02_link
+  0.55 TestActionExecutionErrors test_01_file
+  0.56 TestAsyncRPC test_rpc_basics
+  0.57 TestPkgSha test_basic
+  0.63 TestApiLinked test_linked_p2c_recurse_flags_1_no_refresh_via_sync
+  0.68 TestActionExecutionErrors test_03_hardlink
+  0.73 TestApiLinked test_corrupt_zone_metadata
+  0.76 TestPkgApiInstall test_bug_1338_2
+  0.77 TestApiLinked test_attach_reject
+  0.79 TestApiInfo test_1_bad_packages
+  0.79 TestApiList test_list_05_installed
+  0.79 TestPkgApiInstall test_bug_1338_3
+  0.81 TestPkgApiInstall test_bad_fmris
+  0.82 TestPkgApiInstall test_bug_1338
+  0.83 TestPkgApi test_publisher_apis
+  0.83 TestSMF test_smf
+  0.86 TestLintEngine test_lint_checks
+  0.88 TestApiLinked test_unsynced_image_operations
+  0.91 TestApiLinked test_linked_p2c_recurse_flags_2_no_refresh_via_attach
+  0.96 TestPkgApiFix test_01_basic
+  0.99 TestPkgApiHydrate test_01_basic
+  1.03 TestApiRefresh test_no_origins_means_no_image_catalog_updates
+  1.09 TestPkgApi test_bad_orderings
+  1.10 TestPkgApiInstall test_multi_publisher
+  1.14 TestSolver test_no_solution
+  1.15 TestImageCatalogImage test_02_solver
+  1.19 TestImageCatalogImage test_03_list
+  1.20 TestImageCatalogImage test_01_write_through
+  1.23 TestApiLinked test_linked_hfo_cleanup
+  1.38 TestSMFConfig test_read
+  1.39 TestApiRefresh test_stale_publisher_catalog
+  1.41 TestPkgApi test_deprecated
+  1.47 TestPkgApiRevert test_changed_packages
+  1.61 TestPkgApiInstall test_bug_2795
+  1.70 TestLintEngineDepot test_relative_path
+  1.71 TestPkgApiInstall test_pkg_mancache
+  1.72 TestSolver test_solution
+  1.78 TestApiInfo test_2_renamed_packages
+  1.89 TestActionCache test_02_stale_cache_reconciled
+  1.92 TestActionCache test_05_missing_and_corrupt
+  1.93 TestActionCache test_03_conflicts
+  1.93 TestActionCache test_04_variant_change
+  1.93 TestApiList test_list_06_upgradable
+  1.93 TestActionCache test_06_verify_debug
+  2.02 TestActionCache test_01_lifecycle
+  2.12 TestPkgApiInstall test_bad_package_actions
+  2.20 TestLintEngineDepot test_empty_lint_repo
+  2.32 TestPkgApiInstall test_flag_basics_1
+  2.50 TestApiSearchBasicsP test_030_degraded_local
+  2.54 TestPkgApi test_license
+  2.59 TestPkgApiInstall test_basics_1
+  2.66 TestApiSearchBasicsP test_050_local_case_sensitive
+  2.68 TestApiInfo test_0_local_remote
+  2.89 TestPkgApiInstall test_pkg_file_errors
+  3.08 TestApiSearchBasicsP test_060_missing_files
+  3.13 TestApiSearchBasicsP test_110_bug_6712_sparc
+  3.13 TestApiSearchBasicsP test_100_bug_6712_i386
+  3.25 TestPkgApi test_reset
+  3.25 TestPkgApiInstall test_origin_depend
+  3.36 TestApiSearchBasicsP test_090_bug_7660
+  3.39 TestPkgApiInstall test_install_matching
+  3.82 TestPkgApiInstall test_basics_4
+  3.84 TestApiSearchBasicsP test_bug_2989_1
+  4.20 TestPkgApiInstall test_update_backwards
+  4.44 TestApiLinked test_action_serialization
+  4.62 TestApiSearchBasicsP test_080_weird_patterns
+  4.71 TestApiSearchBasicsP test_070_mismatched_versions
+  4.82 TestApiSearchBasicsP test_bug_7628
+  4.90 TestPkgApiInstall test_image_upgrade
+  4.96 TestApiSearchBasicsP test_bug_2989_2
+  5.15 TestPkgApiInstall test_freeze_basics_1
+  5.47 TestApiLinked test_linked_p2c_recurse_flags_2_no_refresh_via_other
+  5.81 TestApiSearchBasicsP test_040_repeated_install_uninstall
+  5.90 TestPkgApiInstall test_basics_2
+  6.41 TestProgressTrackers test_fancy_unix_tracker
+  6.47 TestApiSearchBasicsP test_120_bug_3046
+  6.60 TestLintEngineDepot test_lint_repo_basics
+  6.73 TestProgressTrackers test_fancy_unix_tracker_termdelay
+  6.76 TestApiSearchBasicsP test_020_local_0
+  6.85 TestPkgApiInstall test_ipkg_out_of_date
+  6.98 TestPkgApiInstall test_basics_3
+  7.28 TestApiSearchBasicsP test_bug_7534
+  7.50 TestApiSearchBasics_nonP test_bug_8318
+  7.71 TestMultiProgressTracker test_multi
+  8.42 TestApiSearchBasicsP test_bug_2989_3
+  8.50 TestAsyncRPC test_rpc_interruptions
+  8.64 TestPrintEngine test_posix_printengine_tty
+  8.97 TestApiSearchBasicsP test_bug_2989_4
+  9.60 TestApiSearchBasicsP test_bug_14177
+  9.78 TestApiSearchBasicsP test_bug_2849
+ 10.87 TestApiSearchBasicsP test_bug_8492
+ 10.91 TestApiSearchBasicsP test_130_bug_1059
+ 11.49 TestApiSearchBasicsP test_bug_983
+ 11.78 TestApiSearchBasics_nonP test_bug_13485
+ 11.88 TestApiLinked test_err_pubcheck
+ 11.96 TestApiSearchMulti test_bug_2955
+ 11.99 TestApiSearchMulti test_bug_8318
+ 12.18 TestApiSearchBasicsP test_bug_2863
+ 12.90 TestApiSearchBasics_nonP test_bug_17672
+ 13.15 TestPkgApiInstall test_needsdata
+ 13.59 TestVolatileLintEngineDepot test_get_manifest
+ 14.18 TestLintEngineDepot test_ref_file_move
+ 14.47 TestApiSearchMulti test_bug_12739
+ 15.04 TestApiSearchBasics_nonP test_local_image_update
+ 15.70 TestPkgApi test_refresh_transition
+ 16.30 TestProgressTrackers test_basic_trackers
+ 17.89 TestPkgApiInstall test_catalog_v0
+ 18.17 TestApiSearchBasics_nonP test_bug_7358_2
+ 20.15 TestApiSearchBasics_nonP test_bug_7358_1
+ 24.85 TestLintEngineDepot test_versioning
+ 27.91 TestLintEngineDepot test_broken_legacy_rename
+ 30.15 TestApiSearchBasicsP test_010_remote
+ 32.36 TestApiSearchBasicsP test_bug_4239
+ 38.95 TestApiSearchBasics_nonP test_bug_6177
+ 96.01 TestApiSearchBasics_nonP test_bug_9729_1
+229.47 TestApiSearchBasics_nonP test_bug_9729_2
+1037.74 Total time
+
+============================================================
+
+Tests run for 'cli' Suite, broken down by class:
+
+  0.00 cli.TestPkgVarcetErrors
+      0.00 test_02_variant_error_checking
+      0.00 test_01_facet_error_checking
+
+  1.10 cli.TestFileManager
+      0.38 test_1
+      0.72 test_opts
+
+  1.25 cli.TestPkgVersion
+      1.25 test_pkg_version_bad_opts
+
+  1.36 cli.TestPkgInitInstall
+      1.36 test_init_install
+
+  1.52 cli.TestPkgSolverErrors
+      1.52 test_incorporation_mixes
+
+  2.05 cli.TestPkgPublisherCACerts
+      0.99 test_new_publisher_ca_certs_no_refresh
+      1.06 test_new_publisher_ca_certs_with_refresh
+
+  2.91 cli.TestPkgChangeVariantPerTestRepo
+      2.91 test_change_variants_with_changed_manifest
+
+  3.13 cli.TestPkgRebuildIndex
+      0.90 test_rebuild_index_bad_perms
+      0.91 test_rebuild_index_stale_index_old_dir
+      1.32 test_rebuild_index_bad_opts
+
+  3.34 cli.TestImageCreateNoDepot
+      0.40 test_763c
+      0.47 test_bad_image_create
+      0.47 test_765
+      2.00 test_bad_publisher_options
+
+  3.53 cli.TestMultiPublisherRepo
+      1.46 test_multiple_p_option
+      2.08 test_multi_publisher_search_before
+
+  4.04 cli.TestPkgListSingle
+      0.85 test_01_empty_image
+      3.19 test_02_unsupported
+
+  4.35 cli.TestPkgInfoPerTestRepo
+      1.73 test_info_uninstalled_changed_manifest
+      2.62 test_info_installed_changed_manifest
+
+  4.36 cli.TestPkgOSDowngrade
+      4.36 test_downgrade_update
+
+  4.68 cli.TestPkgCollidingLinks
+      4.68 test_1
+
+  4.70 cli.TestPkgApi
+      0.92 test_api_locking
+      1.63 test_symlink_lock
+      2.15 test_process_locking
+
+  4.87 cli.TestClientApi
+      0.00 test_01_invalid_pkg_invoke_args
+      0.05 test_03_list_json_args_opts
+      0.10 test_08_publisher_args_opts
+      0.13 test_00_noexecute_plan_stage_error_status
+      0.15 test_10_exact_install_json_args_opts
+      0.18 test_04_install_json_args_opts
+      0.22 test_11_verify_json_args_opts
+      0.25 test_13_ClientInterface
+      0.25 test_12_fix_json_args_opts
+      0.55 test_02_valid_pkg_invoke_args
+      0.64 test_06_uninstall_args_opts
+      0.67 test_09_info_args_opts
+      0.71 test_05_update_json_args_opts
+      0.95 test_07_set_publisher_args_opts
+
+  4.99 cli.TestPkgContentsPerTestRepo
+      2.26 test_contents_uninstalled_changed_manifest
+      2.74 test_contents_installed_changed_manifest
+
+  5.00 cli.TestPkgFmt
+      0.27 test_3_handle_comments
+      0.78 test_2_unprivileged
+      0.82 test_1_difference
+      3.14 test_0_checkfmt
+
+  5.05 cli.TestPkgHelp
+      0.12 test_help_character_encoding
+      4.94 test_help
+
+  5.58 cli.TestNastySig
+      5.58 test_00_sig
+
+  5.69 cli.TestPkgInstallRepoPerTest
+      0.94 test_keep_installed_changed_manifest
+      1.91 test_install_changed_manifest
+      2.84 test_manifest_invalid_utf8
+
+  5.81 cli.TestNotInstalledIncorp
+      5.81 test_31762523
+
+  5.83 cli.TestIDROps
+      5.83 test_idr_application
+
+  6.27 cli.TestPkgCollidingHardLinks
+      6.27 test_1
+
+  6.49 cli.TestObsoletionNestedIncorporations
+      6.49 test_15713570
+
+  6.72 cli.TestPkgTerminal
+      3.07 test_pkg_pty
+      3.65 test_pkg_bad_term
+
+  6.85 cli.TestPkgInstallMultiIncorp
+      3.19 test_1_incorp_latest_older
+      3.66 test_2_incorp_multi_pub
+
+  7.41 cli.TestPkgsendHardlinks
+      7.41 test_bundle_dir_hardlinks
+
+  7.60 cli.TestPkgInstallUpdateSolverOutput
+      2.01 test_output_two_issues
+      2.10 test_output_root_cause_summary
+      3.50 test_output_root_cause_collateral
+
+  7.91 cli.TestPkgFlag
+      2.60 test_bad_input
+      5.32 test_flag_m
+
+ 10.01 cli.TestPkgInstallCircularDependencies
+      4.91 test_anchored_circular_dependencies
+      5.09 test_unanchored_circular_dependencies
+
+ 10.02 cli.TestPkgInstallMultiObsolete
+      4.94 test_02
+      5.08 test_01
+
+ 10.09 cli.TestPkgAutoremove
+      1.74 test_cli_badoptions
+      2.20 test_autoremove_basics
+      2.64 test_autoremove_install_dep
+      3.51 test_autoremove_update
+
+ 10.55 cli.TestPkgLinkedIncorpDowngrade
+     10.55 test_incorp_downgrade
+
+ 11.12 cli.TestPkgFWDependencies
+     11.12 test_fw_dependency
+
+ 11.12 cli.TestROption
+      2.06 test_bad_cli_options
+      2.15 test_2_implicit
+      6.91 test_1_explicit
+
+ 13.12 cli.TestPkglintBasics
+      0.36 test_4_manifests
+      0.36 test_1_usage
+      0.69 test_13_linted_ignore
+      0.71 test_3_list
+      0.71 test_5_broken_manifest
+      0.71 test_9_order
+      1.00 test_11_broken_missing_rcfile
+      1.05 test_12_pkg_versions
+      1.19 test_2_badopts
+      1.40 test_7_linted
+      1.43 test_8_verbose
+      1.75 test_10_rcfile_params
+      1.77 test_6_rcfile
+
+ 13.57 cli.TestApiDependencies
+      0.03 test_bug_19029
+      0.03 test_simple_variants_2
+      0.03 test_bug_17756
+      0.03 test_two_variants
+      0.03 test_bug_19009_no_links_unvarianted
+      0.03 test_bug_19009_simple_1
+      0.03 test_bug_19009_simple_4
+      0.03 test_bug_18315_1
+      0.03 test_bug_19009_simple_6
+      0.03 test_bug_19009_simple_3
+      0.03 test_bug_19009_remove_paths_4
+      0.03 test_bug_19009_inexpressible_with_variants_2
+      0.03 test_resolve_cross_package
+      0.03 test_bug_19009_simple_5
+      0.03 test_bug_18359
+      0.03 test_bug_19009_remove_paths_6
+      0.03 test_bug_19009_remove_paths_5
+      0.03 test_bug_19009_simple_2
+      0.03 test_bug_19009_remove_paths_3
+      0.03 test_bug_19009_inexpressible_5
+      0.03 test_bug_19009_conditional_collapsing_corner_cases
+      0.03 test_bug_19009_inexpressible_4
+      0.03 test_bug_19009_inexpressible_3
+      0.03 test_bug_19009_inexpressible_1
+      0.03 test_bug_19009_remove_paths_1
+      0.03 test_simple_variants_1
+      0.03 test_bug_19009_inexpressible_with_variants_3
+      0.03 test_bug_18315_2
+      0.03 test_bug_19009_no_links_one_variant
+      0.03 test_bug_18318_1
+      0.04 test_broken_manifests
+      0.04 test_bug_18884_2
+      0.04 test_bug_19009_inexpressible_with_variants_1
+      0.04 test_bug_19009_remove_paths_2
+      0.04 test_bug_19009_inexpressible_2
+      0.04 test_bug_18318_4
+      0.04 test_bug_19009_two_paths
+      0.04 test_bug_18884_1
+      0.04 test_bug_18318_3
+      0.04 test_bug_18318_2
+      0.05 test_bug_19009_collapsing_conditional_to_require_any
+      0.06 test_multi_file_dependencies
+      0.06 test_bug_12697_and_12896
+      0.07 test_bug_18130
+      0.10 test_bug_18172
+      0.37 test_bug_18077
+      0.37 test_bug_18019
+      0.39 test_variant_empty_intersection
+      0.45 test_bug_18045_mixed
+      0.46 test_bug_11518
+      0.46 test_bug_18045_reverse
+      0.46 test_resolve_mix
+      0.47 test_bug_18173
+      0.48 test_bug_18045_normal
+      0.49 test_bug_15647
+      0.77 test_duplicate_require_any
+      0.79 test_resolve_permissions
+      0.84 test_bug_17700
+      2.15 test_bug_16849
+      2.95 test_constraint_files
+
+ 13.70 cli.TestPkgMogrify
+      0.21 test_10
+      0.21 test_4
+      0.23 test_2
+      0.23 test_6
+      0.24 test_9
+      0.66 test_8
+      0.82 test_5
+      0.85 test_1
+      1.05 test_3
+      1.06 test_7
+      1.06 test_11
+      1.11 test_13
+      2.76 test_14
+      3.21 test_12
+
+ 15.29 cli.NoTestPkgUpdateOverlappingPatterns
+      1.68 test_overlapping_patterns_one_stem_update
+      2.94 test_overlapping_patterns_multi_stems_update
+     10.67 test_overlapping_patterns_multi_publisher_update
+
+ 17.02 cli.TestPkgsurf
+      0.00 test_4_unsigned_option
+      1.78 test_3_override_pkgs
+      2.10 test_0_options
+      4.93 test_2_publishers
+      8.20 test_1_basics
+
+ 17.86 cli.TestDepotHTTPS
+      1.92 test_02_accepted_tls
+     15.93 test_01_basics
+
+ 17.92 cli.TestCommandLine
+      0.98 test_ignore_missing
+      1.32 test_rmdir_cwd
+      1.41 test_uninstall_implicit
+      2.23 test_pkg_bogus_opts
+      3.22 test_uninstall_missing_manifest
+      3.61 test_dependencies
+      5.15 test_uninstalled_state
+
+ 17.93 cli.TestPkgInstallOverlappingPatterns
+      0.98 test_overlapping_one_package_available
+      4.12 test_overlapping_multiple_packages
+      5.84 test_overlapping_multiple_publishers
+      6.99 test_overlapping_conflicting_versions_no_wildcard_match
+
+ 18.19 cli.TestPkgReleaseNotes
+      1.05 test_release_note_8
+      1.05 test_release_note_bad_encoding
+      1.44 test_release_note_6
+      1.60 test_release_note_4
+      1.61 test_release_note_5
+      2.04 test_release_note_7
+      2.83 test_release_note_1
+      3.13 test_release_note_2
+      3.44 test_release_note_3
+
+ 20.86 cli.TestPkgInstallAmbiguousPatterns
+      1.24 test_bug_6874
+      2.33 test_ambiguous_pattern_install
+      3.69 test_bug_4204
+      6.10 test_non_ambiguous_fragment
+      7.51 test_ambiguous_pattern_depend
+
+ 21.71 cli.TestActionErrors
+      2.34 test_00_directory
+      2.41 test_02_hardlink
+      2.81 test_01_file
+      5.25 test_04_loop
+      8.90 test_03_unsupported
+
+ 22.14 cli.TestPkgModified
+     22.14 test_modified
+
+ 22.19 cli.TestImageCreateCorruptImage
+      1.35 test_var_pkg_missing_cfg_cache
+      1.36 test_empty_ospkg
+      1.37 test_var_pkg_missing_publisher
+      1.38 test_empty_var_pkg
+      1.38 test_ospkg_missing_cfg_cache
+      1.39 test_var_pkg_missing_index
+      1.40 test_ospkg_missing_index
+      1.41 test_ospkg_left_alone
+      1.42 test_ospkg_missing_publisher_empty
+      1.45 test_var_pkg_left_alone
+      1.46 test_ospkg_missing_publisher
+      1.96 test_var_pkg_missing_publisher_empty
+      2.32 test_var_pkg_missing_publisher_empty_hit_then_refreshed_then_hit
+      2.52 test_ospkg_missing_publisher_empty_hit_then_refreshed_then_hit
+
+ 22.45 cli.TestPkgLinkedScale
+     22.45 test_li_scale
+
+ 22.48 cli.TestPkgFreeze
+      3.26 test_bad_input
+      4.63 test_timestamp_freezes
+      4.81 test_unprived_operation
+      9.79 test_cli_operations
+
+ 23.43 cli.TestPkgTerminalTesters
+      0.18 test_runprintengine_notty
+      0.22 test_runprogress_fancy_notty
+      0.41 test_runprintengine_badterm
+      0.51 test_runprogress_badterm
+      6.59 test_runprogress
+      6.67 test_runprogress_slowterm
+      8.84 test_runprintengine
+
+ 24.36 cli.TestPkgUpdateDowngradeIncorp
+      2.82 test_incorp_downgrade_pubswitch
+      3.34 test_incorp_downgrade_installhold
+      7.39 test_exact_install_downgrade
+     10.81 test_incorp_downgrade
+
+ 24.61 cli.TestPkgActuators
+      1.09 test_multimatch_reject
+      1.64 test_multimatch_trigger
+     21.88 test_basics
+
+ 25.73 cli.TestPkgContentsBasics
+      0.48 test_bug_4315
+      0.87 test_contents_failures
+      0.88 test_contents_empty_image
+      0.92 test_contents_3
+      1.33 test_contents_2
+      1.34 test_contents_1
+      1.35 test_contents_dash_t
+      2.19 test_contents_dash_a
+      3.10 test_contents_default_attrs
+      3.16 test_contents_dash_o
+      4.61 test_contents_bad_opts
+      5.51 test_ranked
+
+ 26.35 cli.TestPkgPropertyBasics
+      2.16 test_missing_permissions
+      3.86 test_pkg_property_keyfiles
+      5.06 test_pkg_property_excludes
+     15.27 test_pkg_properties
+
+ 27.92 cli.TestDepotController
+      1.05 test_cfg_file
+      4.15 test_disable_ops
+      4.86 testBadArgs
+      5.23 testStartStop
+     12.62 test_writable_root
+
+ 35.35 cli.TestPkgVariants
+      2.74 test_variant_2_matching
+      3.20 test_variant_4_indirect
+      4.11 test_variant_3_latest
+     12.57 test_old_zones_pkgs
+     12.74 test_variant_1
+
+ 37.95 cli.TestLinkedInstallHoldRelax
+      3.04 test_linked_install_hold_relax_constrained_4
+      4.97 test_linked_install_hold_relax_constrained_3
+      5.32 test_linked_install_hold_relax_all
+     12.17 test_linked_install_hold_relax_constrained_1
+     12.44 test_linked_install_hold_relax_constrained_2
+
+ 38.17 cli.TestPkgChangeFacet
+      0.46 test_07_invalid_facet_name
+      3.36 test_03_slashed_facets
+      3.70 test_04_no_accidental_changes
+      4.30 test_02_removing_facets
+      6.11 test_06_facet_all
+      9.74 test_01_facets
+     10.50 test_05_reset_facet
+
+ 38.20 cli.TestPkgrepoMultiRepo
+     38.20 test_01_diff
+
+ 39.14 cli.TestPkgSMFActuators
+      6.50 test_actuator_plan_display
+      8.07 test_zone_actuators
+     24.56 test_actuators
+
+ 40.39 cli.TestPkgCompositePublishers
+      2.21 test_05_empty
+      3.74 test_04_search
+      6.25 test_02_contents
+      6.29 test_01_info
+      8.55 test_00_list
+     13.35 test_03_install_update
+
+ 40.77 cli.TestPkgRevert
+      2.38 test_revert_3
+     12.47 test_revert_2
+     25.92 test_revert
+
+ 40.81 cli.TestPkgInstallUpdateReject
+      5.69 test_update
+      6.61 test_idr_removal
+      9.21 test_exact_install
+      9.23 test_idr
+     10.08 test_install
+
+ 41.66 cli.TestDepotOutput
+      0.79 test_log_depot_daemon
+      1.05 test_address
+      1.05 test_1_depot_publisher
+      5.48 test_bug_15482
+      6.15 test_3_headers
+     12.46 test_2_depot_p5i
+     14.67 test_0_depot_bui_output
+
+ 41.73 cli.TestConcurrentFacetChange
+      4.49 test_concurrent_facet_change_via_detach
+      4.96 test_concurrent_facet_change_via_change_facets
+      4.99 test_concurrent_facet_change_via_change_variant
+      5.38 test_concurrent_facet_change_via_update
+      5.40 test_concurrent_facet_change_via_update_pkg
+      5.48 test_concurrent_facet_change_via_sync
+      5.50 test_concurrent_facet_change_via_install
+      5.52 test_concurrent_facet_change_via_uninstall
+
+ 41.78 cli.TestPkgInstallLicense
+      4.23 test_02_bug_7127117_C
+      8.61 test_01_install_update
+     12.64 test_02_bug_7127117_ISO8859
+     16.31 test_02_bug_7127117_UTF8
+
+ 43.74 cli.TestPkgHistory
+      0.42 test_7_bug_5153
+      0.42 test_6_bug_3540
+      0.46 test_13_bug_17418
+      0.51 test_14_history_unicode_locale
+      0.84 test_3_purge_history
+      1.84 test_4_bug_4639
+      2.16 test_12_history_range
+      3.67 test_8_failed_record
+      3.75 test_9_history_limit
+      3.85 test_11_history_events
+      3.94 test_5_bug_5024
+      7.15 test_1_history_options
+      7.19 test_10_history_columns
+      7.53 test_2_history_record
+
+ 45.95 cli.TestPkgImageCreateBasics
+      0.48 test_10_unprivileged
+      0.94 test_basic
+      0.99 test_6_relative_root_create
+      2.05 test_7_image_create_no_refresh
+      2.36 test_5_bad_values_no_image
+      3.92 test_force
+      4.56 test_image_create_bad_opts
+      4.92 test_9_bad_image_state
+      9.94 test_4_options
+     15.79 test_8_image_upgrade
+
+ 48.86 cli.TestPkgFreezeDisplay
+     13.99 test_change_origin_display
+     14.53 test_remove_origin_display
+     20.35 test_package_not_in_catalog_display
+
+ 49.08 cli.TestPkgIntent
+      4.57 test_0_info
+      6.66 test_1_install_uninstall
+      8.53 test_3_dependencies
+     10.09 test_2_upgrade
+     19.24 test_4_image_upgrade
+
+ 53.27 cli.TestPkgLinkedPropertyRecurse
+      9.78 test_recursive_install
+     12.21 test_recursive_variant
+     13.31 test_recursive_update
+     17.96 test_recursive_facet
+
+ 53.82 cli.TestUtilMerge
+      0.32 test_5_blend
+      0.33 test_8_mediators
+      0.34 test_4_blend
+      0.38 test_6_blend
+      1.14 test_2_multi_merge
+      1.33 test_9_dependency
+      1.73 test_1_single_merge
+      2.28 test_3_cross_merge
+      2.62 test_7_multipub_merge
+      3.00 test_0_options
+     40.34 test_0_merge
+
+ 54.51 cli.TestPkgAvoid
+      1.33 test_corrupted_avoid_file
+      1.99 test_group_reject_2
+      2.76 test_unavoid
+      3.86 test_group_obsolete_ok
+      4.59 test_group_require
+      4.87 test_group_trim
+      7.41 test_group_update
+      7.59 test_group_reject_1
+      8.20 test_group_basics
+     11.92 test_group_any_trim
+
+ 57.70 cli.TestPkgTempSources
+      3.48 test_05_staged_execution
+      3.82 test_06_appropriate_license_files
+      5.82 test_04_change_varcets
+      7.02 test_02_contents
+      9.77 test_01_info
+     10.34 test_00_list
+     17.46 test_03_install_update
+
+ 57.96 cli.NoTestImageUpdate
+      0.86 test_image_update_bad_opts
+      0.97 test_ignore_missing
+      1.18 test_display_removed_pkgs
+      1.57 test_upgrade_sticky
+      5.13 test_dueling_incs
+      6.00 test_02_update_multi_publisher
+      6.41 test_01_after_pub_removal
+     10.81 test_03_update_specific_packages
+     11.65 test_content_policy
+     13.37 test_nothingtodo
+
+ 59.85 cli.TestPkgdepBasics
+      0.49 test_bug_16013_varianted_dependency_resolution
+      0.49 test_bug_16013_internal_links_and_variants
+      0.50 test_bug_16013_variants_filtered_by_links
+      0.50 test_bug_16013_variants_base
+      0.50 test_bug_19029
+      0.50 test_bug_16013_meaningless_files_ok
+      0.51 test_bug_16013_two_d_internal
+      0.51 test_bug_16013_variants_due_to_links_filtered
+      0.51 test_bug_16013_internal_variants
+      0.51 test_bug_16013_internal_resolution
+      0.53 test_bug_16271
+      0.53 test_bug_16013_two_d_external
+      0.54 test_bug_16013_links_restricted
+      0.59 test_bug_17808
+      0.83 test_bug_14116
+      0.84 test_bug_18640960
+      0.84 test_bug_15958
+      0.84 test_bug_18101
+      0.85 test_bug_11805
+      0.85 test_multiple_run_paths
+      0.86 test_bug_18011
+      0.86 test_bug_11517
+      0.86 test_PEP_3149
+      0.87 test_bug_16808
+      0.89 test_relative_run_path
+      0.91 test_elf_warning
+      0.92 test_bypass_full_paths
+      0.97 test_bug_16013_base
+      1.03 test_elf_dependency_tags
+      1.16 test_bug_11829
+      1.22 test_bug_10518
+      1.45 test_resolve_screen_out
+      1.55 test_missing_payload
+      1.58 test_bug_16013_packages_delivering_links
+      1.66 test_bug_15777
+      1.91 test_unsatisfied_deps
+      2.11 test_bug_13059
+      2.22 test_bug_15843
+      2.91 test_opts
+      3.01 test_output
+      3.25 test_bug_16013_installed_combinations
+      4.53 test_python_combinations
+      4.70 test_bug_12697
+      6.14 test_bug_14118
+
+ 66.79 cli.TestPkgInstallExplicitInstall
+      3.42 test_06_refresh_manual
+      4.16 test_05_exact_install_downgrade
+      8.15 test_04_linked_upgrade
+      8.36 test_02_update_reject
+     18.37 test_03_linked
+     24.32 test_01_install
+
+ 68.25 cli.TestPkgVerify
+      0.86 test_00_bad_opts
+      1.49 test_verify_invalid_fmri
+      1.99 test_02_installed
+      1.99 test_03_editable
+      2.39 test_verify_perms_py3
+      2.43 test_03_invalid
+      2.68 test_sysattrs
+      3.19 test_verify_parsable_output
+      3.24 test_links
+      3.44 test_verify_changed_manifest
+      4.00 test_verify_user
+      4.96 test_multi_var_grp
+      6.63 test_multiple_paths_input
+      6.65 test_unpackaged
+      6.81 test_mix_verify_input
+     15.50 test_01_basics
+
+ 73.64 cli.TestPkgList
+      0.41 test_03
+      0.82 test_06
+      0.83 test_05
+      0.84 test_13_multi_name
+      0.84 test_01
+      0.86 test_02
+      0.87 test_04
+      0.87 test_07
+      0.97 test_symlink_last_refreshed
+      1.23 test_17_verbose
+      1.74 test_00
+      1.77 test_19_format
+      2.11 test_15_latest
+      2.32 test_10_all_known_failed_refresh
+      2.79 test_16c_manual
+      3.17 test_16_upgradable
+      3.50 test_14_invalid_input
+      3.57 test_16d_installable
+      3.59 test_16b_removable
+      4.22 test_pkg_list_cli_opts
+      4.39 test_18_options
+      4.59 test_09_needs_refresh
+      5.77 test_08_after_pub_update_removal
+      7.68 test_12_matching
+     13.92 test_11_v0_repo
+
+ 73.68 cli.TestPkgInfoBasics
+      0.42 test_info_empty_image
+      0.88 test_human_version
+      2.78 test_info_bad_packages
+      2.85 test_legacy_packages
+      3.51 test_info_update_install
+      3.55 test_renamed_packages
+      4.65 test_appropriate_license_files
+      5.16 test_info_attribute
+      5.90 test_ranked
+      6.03 test_bug_2274
+      7.79 test_pkg_info_bad_fmri
+     30.16 test_info_local_remote
+
+ 74.34 cli.TestPkgLinked3
+      1.37 test_staged_noop
+      6.19 test_parent_sync_1_nosync
+      6.27 test_verify
+      6.30 test_missing_parent_pkgs_metadata_1
+      6.33 test_missing_parent_publisher_metadata_2
+      6.42 test_install_group
+      7.42 test_missing_parent_publisher_metadata_1
+      9.48 test_missing_parent_pkgs_metadata_2
+     11.67 test_install_frozen
+     12.87 test_install_constrainted
+
+ 75.07 cli.TestPkgDepot
+      0.01 test_face_root
+      0.01 test_depot_ping
+      0.02 test_bug_3739
+      1.37 test_publisher_prefix
+      1.68 test_root_link
+      2.36 test_bug_4489
+      2.38 test_bug_5366
+      3.37 test_info
+      4.02 test_bug_3365
+      4.04 test_bad_fmris
+      4.78 test_empty_incorp_depend
+      5.08 test_nonsig_append
+      5.21 test_append_reopen
+      5.85 test_repo_create
+      6.46 testStartStop
+     13.54 test_bug_5707
+     14.90 test_bug_1876
+
+ 82.53 cli.TestMultipleDepots
+      0.97 test_19_refresh_failure
+      1.51 test_09_uninstall_from_wrong_publisher
+      1.77 test_03_basics
+      1.79 test_11_uninstall_after_preferred_publisher_change
+      1.88 test_02_basics
+      2.35 test_07_upgrade_non_preferred_to_preferred_incorporated
+      2.41 test_05_upgrade_non_preferred_to_preferred
+      2.42 test_04_upgrade_preferred_to_non_preferred
+      3.36 test_17_dependency_is_from_deleted_publisher
+      3.42 test_06_upgrade_preferred_to_non_preferred_incorporated
+      4.31 test_16_disabled_nonsticky
+      4.68 test_15_nonsticky_update
+      4.83 test_01_basics
+      5.24 test_18_upgrade_across_publishers
+      6.70 test_08_install_repository_access
+      6.84 test_13_non_preferred_multimatch
+      7.71 test_12_uninstall_after_publisher_removal
+      9.40 test_14_nonsticky_publisher
+     10.95 test_10_install_after_publisher_removal
+
+ 84.14 cli.TestPkgPublisherBasics
+      1.04 test_old_publisher_ca_certs
+      1.40 test_publisher_special_repo_name
+      1.91 test_publisher_tsv_format
+      2.27 test_publisher_uuid
+      3.03 test_pkg_publisher_bogus_opts
+      3.69 test_publisher_properties
+      3.74 test_remove_unused_cert_key
+      4.01 test_publisher_validation
+      5.97 test_bug_7141684
+      6.86 test_publisher_uri
+      7.03 test_missing_perms
+      8.69 test_publisher_add_remove
+     15.17 test_publisher_proxies
+     19.33 test_publisher_bad_opts
+
+ 96.64 cli.TestPkgSignMultiDepot
+      1.24 test_sign_pkgrecv_delivered_cert
+      1.26 test_sign_pkgrecv_delivered_intermediate_cert
+      2.09 test_bug_16861_recv
+      3.40 test_bug_18463
+      4.49 test_sign_pkgrecv_a
+      7.02 test_sign_pkgrecv
+     30.17 test_sign_pkgrecv_across_repositories
+     46.97 test_sign_pkgrecv_cache_sign_interaction
+
+109.82 cli.TestPkgVarcet
+      1.95 test_user_facet
+      3.26 test_group_var
+      3.72 test_03_variant_globbing
+      4.60 test_02_varcet_reject
+     35.73 test_00_facet
+     60.57 test_01_variant
+
+118.76 cli.TestSearchMultiPublisher
+     14.60 test_search_multi_hash_2
+     14.67 test_search_multi_hash_1
+     17.22 test_search_ignore_publisher_with_no_origin
+     17.84 test_search_indices
+     22.00 test_7140657
+     32.43 test_16190165
+
+122.69 cli.TestFix
+      1.15 test_02_hardlinks
+      2.24 test_05_driver
+      2.89 test_fix_changed_manifest
+      3.23 test_fix_with_ftpuser
+      3.29 test_03_license
+      4.70 test_fix_output
+      7.34 test_01_basics
+     11.68 test_04_permissions
+     17.37 test_fix_overlay
+     22.11 test_verify_fix_overlay_attributes
+     46.70 test_06_download
+
+132.53 cli.TestPkgInstallObsolete
+      2.89 test_basic_6a
+      2.95 test_basic_8a
+      3.13 test_basic_11a
+      3.30 test_basic_13a
+      3.34 test_basic_12
+      3.43 test_incorp_1
+      3.78 test_basic_7c
+      3.78 test_basic_6b
+      3.84 test_incorp_2
+      4.13 test_basic_7b
+      4.15 test_basic_11
+      4.17 test_basic_7a
+      5.36 test_remove_renamed
+      5.64 test_basic_11b
+      8.62 test_chained_renames
+     14.06 test_basic_exact_install
+     15.98 test_basic_install
+     39.98 test_unobsoleted
+
+132.57 cli.TestPkgMediated
+      6.27 test_03_obsoleted_mediator
+     17.82 test_02_hardlink_mediation
+     21.27 test_00_mediator
+     87.21 test_01_symlink_mediation
+
+151.78 cli.TestPkgPublicationApi
+      1.05 test_stress_file_publish
+    150.73 test_stress_http_publish
+
+160.02 cli.TestDependencies
+      1.49 test_optional_nosolution
+      1.86 test_rename_matching
+      3.79 test_optional_dependencies_exact_install
+      3.92 test_require_dependencies
+      4.16 test_optional_dependencies_install
+      4.73 test_cond_depend_nonexist
+      5.21 test_exclude_group_install
+      5.52 test_conditional_dependencies_exact_install
+      6.77 test_exclude_dependencies_exact_install
+      7.19 test_cond_depend_uninstall
+      7.58 test_incorporation_dependencies_exact_install
+      8.19 test_require_any_dependencies_exact_install
+     10.21 test_exclude_dependencies_install
+     11.48 test_conditional_dependencies_install
+     13.48 test_require_any_dependencies_install
+     15.30 test_incorporation_dependencies_install
+     22.50 test_origin_dependencies
+     26.65 test_parent_dependencies
+
+161.60 cli.TestConflictingActions
+      2.01 test_multiple_drivers
+      2.05 test_varianted_types
+      2.46 test_change_varcet
+      2.47 test_change_variant_removes_package
+      2.82 test_conflictgroupid_install
+      4.08 test_multiple_depend
+      4.66 test_conflicting_uninstall_publisher
+      5.54 test_conflicting_attrs_fs_varcets
+      9.10 test_mismatch_overlay_files_install
+     15.56 test_multiple_users_install
+     17.76 test_different_types_install
+     29.13 test_conflicting_attrs_fs_install
+     31.07 test_overlay_files_install
+     32.87 test_multiple_files_install
+
+176.88 cli.TestPkgChangeVariant
+      0.92 test_cv_15_invalid_variant_name
+      0.98 test_cv_13_parsable
+      1.04 test_cv_14_invalid_variant
+      4.01 test_cv_12_unknown
+      4.32 test_cv_04_arch_2
+      4.34 test_cv_04_arch_1
+      5.15 test_cv_02_arch_2
+      5.24 test_cv_03_arch_1
+      5.27 test_cv_03_arch_2
+      5.28 test_cv_02_arch_1
+      6.02 test_cv_05_arch_1
+      6.15 test_cv_05_arch_2
+      6.92 test_cv_01_none_2
+      6.97 test_cv_11_arch_and_zone_2
+      6.97 test_cv_01_none_1
+      6.98 test_cv_11_arch_and_zone_1
+      6.98 test_cv_08_zone_1
+      6.99 test_cv_08_zone_2
+      7.01 test_cv_06_arch_2
+      7.02 test_cv_10_arch_and_zone_1
+      7.02 test_cv_01_none_6
+      7.03 test_cv_01_none_5
+      7.05 test_cv_09_zone_2
+      7.05 test_cv_09_zone_1
+      7.06 test_cv_01_none_3
+      7.08 test_cv_06_arch_1
+      7.12 test_cv_10_arch_and_zone_2
+      7.20 test_cv_01_none_4
+      7.82 test_cv_07_arch_2
+      7.91 test_cv_07_arch_1
+
+181.38 cli.TestPkgLinkedRecurse
+      7.78 test_recursive_sync_update_pkg
+      7.85 test_recursive_uninstall_synced_pkg
+      7.88 test_recursive_sync_update
+      7.92 test_recursive_sync_install
+     11.80 test_recursive_variant
+     12.88 test_recursive_uninstall
+     12.91 test_recursive_install
+     13.12 test_recursive_update
+     17.47 test_recursive_facet
+     22.14 test_image_selection
+     59.65 test_recursive_idr_removal
+
+190.73 cli.TestPkgLinked1
+      0.00 test_no_pkg_updates_3_fail_via_set_property_linked_TODO
+      0.00 test_no_pkg_updates_3_sync_via_set_property_linked_TODO
+      0.00 test_no_pkg_updates_2_foo_via_set_property_linked_TODO
+      0.00 test_no_pkg_updates_1_empty_via_set_property_linked_TODO
+      0.48 test_ignore_1_no_children
+      1.30 test_opts_3_all
+      1.34 test_parent_ops_error
+      1.40 test_no_pkg_updates_1_empty_via_attach
+      1.78 test_not_linked
+      2.04 test_attach_c2p_1
+      3.14 test_ignore_2_ok
+      3.22 test_attach_already_linked_1_err
+      3.23 test_attach_already_linked_2_relink
+      3.31 test_zone_attach_detach
+      3.32 test_detach_c2p_1
+      3.73 test_no_pkg_updates_1_empty_via_sync
+      3.75 test_attach_p2c_1
+      4.18 test_no_pkg_updates_2_foo_via_attach
+      4.19 test_no_pkg_updates_3_sync_via_attach
+      4.34 test_no_pkg_updates_3_fail_via_attach
+      5.34 test_detach_p2c_1
+      5.38 test_eaccess_1_parent
+      5.60 test_audit_synced_1
+      5.77 test_detach_p2c_2
+      6.57 test_audit_synced_3
+      7.12 test_audit_diverged_1
+      7.24 test_no_pkg_updates_3_fail_via_sync
+      7.36 test_no_pkg_updates_2_foo_via_sync
+      7.49 test_no_pkg_updates_3_sync_via_sync
+      7.99 test_audit_synced_2
+      8.03 test_audit_synced_4
+      8.08 test_audit_diverged_2
+     11.18 test_eaccess_1_child
+     14.89 test_opts_4_noop
+     17.63 test_opts_2_invalid_bad_child
+     20.31 test_opts_1_invalid
+
+201.49 cli.TestPkglintCliDepot
+     14.05 test_3_badrelease
+     14.39 test_5_file_paths
+     15.91 test_2_badcache
+     16.13 test_4_fancy_unix_progress_tracking
+     54.75 test_1_invalid_uri
+     86.26 test_6_multiple_repos
+
+204.56 cli.TestFacetInheritance
+      1.86 test_facet_inheritance_masked_system
+     11.09 test_facet_inheritance_via_uninstall
+     11.13 test_facet_inheritance_via_noop_install
+     11.20 test_facet_inheritance_via_noop_change_facet
+     11.26 test_facet_inheritance_via_noop_update
+     12.88 test_facet_inheritance_globs
+     15.86 test_missing_facet_inheritance_metadata_1
+     18.49 test_missing_facet_inheritance_metadata_2
+     23.00 test_facet_inheritance_cleanup_via_detach
+     23.16 test_facet_inheritance_masked_preserve
+     26.24 test_facet_inheritance
+     38.40 test_facet_inheritance_masked_update
+
+213.05 cli.TestPkgHydrate
+      7.17 test_03_hardlinks
+      7.43 test_12_zone_files
+      7.61 test_08_pkg_fix
+      7.65 test_07_pkg_verify
+      7.79 test_13_existing_file
+      8.50 test_09_pkg_revert
+     10.35 test_11_pkg_change_variant
+     10.42 test_10_pkg_change_facet
+     14.55 test_05_pkg_update
+     17.27 test_06_pkg_uninstall
+     26.18 test_04_pkg_install
+     27.37 test_01_basics
+     27.51 test_02_multiple_publishers
+     33.24 test_14_mediator
+
+219.92 cli.TestPkgRefreshMulti
+      6.15 test_refresh_certificate_problems
+      8.64 test_refresh_cli_options
+      9.65 test_ignore_network_cache_2
+     11.57 test_ignore_network_cache_1
+     12.98 test_ignore_network_cache_3
+     13.87 test_general_refresh
+     19.54 test_set_publisher_induces_delayed_full_refresh
+     20.71 test_set_publisher_induces_full_refresh
+     22.48 test_multi_origin_refresh
+     23.85 test_specific_refresh
+     24.16 test_implicit_multi_origin_refresh
+     46.32 test_catalog_v1
+
+258.27 cli.TestPkgInstallActions
+      0.88 test_hardlink_chain
+      2.16 test_primordial_usergroup_exact_install
+      2.23 test_primordial_usergroup_install
+      3.46 test_minugid
+      3.59 test_user_in_grouplist
+      3.62 test_bad_hardlinks
+      3.92 test_grouptest_exact_install
+      3.93 test_grouptest_install
+      3.93 test_basics_0_exact_install
+      4.26 test_driver_aliases_move
+      4.42 test_basics_0_install
+      4.76 test_legacy
+      5.17 test_driver_aliases_upgrade
+      5.91 test_groupverify_install
+      6.95 test_usertest_exact_install
+      7.02 test_preexisting_group_install
+      7.07 test_usertest_install
+      9.13 test_ftpuser_install
+     10.60 test_upgrade_with_user
+     11.48 test_missing_ownergroup_install
+     12.17 test_invalid_open
+     14.07 test_valid_open
+     14.25 test_bug_3222
+     14.96 test_devlink
+     17.39 test_upgrade_garbage_passwd
+     25.30 test_userverify_install
+     55.63 test_uninstall_without_perms
+
+265.91 cli.TestPkgInstallUpgrade
+      1.45 test_special_salvage
+      1.98 test_newbe_liveroot
+      2.23 test_directory_salvage
+      2.80 test_file_preserve_version_undefined
+      2.83 test_file_preserve_version_defined
+      2.89 test_upgrade4
+      3.31 test_link_preserve
+      3.99 test_upgrade5
+      4.00 test_directory_salvage_persistent
+      4.14 test_content_hash_ignore
+      4.57 test_driver_policy_removal
+      4.84 test_incorp_install
+      6.17 test_file_preserve_version_overlay
+      6.59 test_upgrade_driver_conflicts
+      6.69 test_upgrade_liveroot
+      7.65 test_file_preserve_version
+      8.06 test_salvage_nested
+      8.08 test_upgrade1
+      9.03 test_file_preserve_legacy
+     10.95 test_upgrade2
+     11.58 test_file_preserve_renameold
+     12.18 test_file_preserve_renamenew
+     12.83 test_link_preserve_true
+     13.70 test_upgrade3
+     14.62 test_content_hash_install
+     21.19 test_many_hashalgs
+     24.14 test_file_preserve_abandon
+     26.27 test_file_preserve
+     27.16 test_file_preserve_install_only
+
+267.41 cli.TestNastyInstall
+    267.41 test_install_nasty_looping
+
+267.52 cli.TestPkgInstallBasics
+      0.84 test_basics_7_install
+      0.89 test_basics_7_exact_install
+      0.89 test_bug_1338_4
+      1.17 test_bug_2795
+      1.22 test_basics_8_exact_install
+      1.25 test_bug_3770
+      1.26 test_bug_1338_3
+      1.32 test_bug_1338
+      1.74 test_bug_1338_2
+      1.76 test_bug_16189
+      2.50 test_dependent_uninstall
+      2.54 test_bug_6018
+      2.60 test_update_to_reserved_directories
+      2.72 test_readonly_files
+      3.10 test_install_fuzz
+      3.39 test_basics_9_exact_install
+      3.46 test_basics_1_install
+      3.91 test_basics_1_exact_install
+      3.94 test_basics_mdns
+      4.36 test_install_to_reserved_directories
+      4.84 test_basics_5_exact_install
+      5.21 test_basics_5_install
+      5.97 test_error_messages
+      6.52 test_basics_6_install
+      6.82 test_freeze_exact_install
+      6.95 test_basics_6_exact_install
+      6.95 test_cli
+      7.49 test_bug_9929
+      7.73 test_sysattrs
+     11.63 test_install_matching
+     12.27 test_basics_ipv6
+     15.17 test_image_upgrade
+     27.90 test_bad_package_actions
+     31.02 test_basics_3
+     31.46 test_basics_4
+     34.73 test_basics_2
+
+312.66 cli.TestPkgsendBasics
+      1.08 test_27_ownership
+      1.09 test_20_multi_pkg_bundle
+      1.09 test_23_pkgsend_no_version
+      1.13 test_3_bad_transaction
+      2.03 test_24_pkgsend_publish_payloaded_link
+      2.05 test_25_pkgsend_publish_nohash_license
+      2.27 test_6_help
+      2.79 test_21_uri_paths
+      3.41 test_5_bad_open
+      3.55 test_28_content_attrs
+      3.72 test_17_include_errors
+      3.73 test_0_pkgsend_bad_opts
+      4.47 test_15_test_no_catalog_option
+      5.81 test_19_broken_sysv_datastream
+      6.46 test_8_bug_7908
+      6.97 test_2_invalid_url
+      7.35 test_26_pkgsend_multihash
+      7.51 test_16_multiple_manifests
+      7.61 test_9_multiple_dirs
+      7.64 test_7_create_repo
+      8.72 test_1_pkgsend_abandon
+      8.78 test_18_broken_sysv_dir
+     14.47 test_13_pkgsend_indexcontrol
+     15.17 test_12_bundle_sysv_datastream
+     17.11 test_11_bundle_sysv_dir_nonrelocatable
+     17.61 test_11_bundle_sysv_dir
+     18.70 test_4_bad_actions
+     34.77 test_22_publish
+     39.70 test_10_bundle_dir
+     55.87 test_14_obsolete
+
+319.03 cli.TestPkgPublisherMany
+     10.24 test_publishers_only_from_installed_packages
+     10.81 test_enable_disable
+     11.24 test_bug_18283
+     18.96 test_search_order
+     26.05 test_set_auto
+    104.79 test_set_mirrors_origins
+    136.94 test_origins_enable_disable
+
+332.02 cli.TestNastyPkgUtils
+    138.54 test_pkgrepo_nasty_looping
+    193.47 test_pkgrecv_nasty_looping
+
+352.94 cli.TestNastyTempPub
+    352.94 test_temppub_nasty_looping
+
+387.97 cli.TestPkgSign
+      0.04 test_crl_0
+      0.05 test_bogus_inter_certs
+      0.96 test_bug_19114_1
+      1.27 test_bug_19055
+      1.33 test_sign_2
+      1.34 test_bug_16867_almost_identical
+      1.36 test_using_default_cert_loc
+      1.40 test_bug_16861_1
+      1.58 test_bug_19114_2
+      1.58 test_multiple_cert_files
+      1.77 test_unsupported_critical_extension_2
+      1.80 test_dry_run_option
+      1.82 test_big_pathlen
+      1.85 test_unsupported_critical_extension_3
+      1.86 test_sign_4
+      1.86 test_sign_3
+      1.87 test_unset_keyUsage_for_code_signing
+      1.87 test_expired_chain_certs
+      1.88 test_future_chain_certs
+      1.88 test_unset_keyUsage_for_cert_signing
+      1.90 test_future_certs
+      1.91 test_manual_pub_cert_approval
+      1.92 test_expired_certs
+      1.96 test_variant_sigs
+      2.15 test_bug_16867_hashes_1
+      2.20 test_bug_17740_alternate_pub
+      2.25 test_bad_opts_2
+      2.25 test_no_empty_chain
+      2.26 test_bug_17740_default_pub
+      2.32 test_bug_16867_1
+      2.35 test_higher_signature_version
+      2.44 test_signing_all
+      2.45 test_small_pathlen
+      2.50 test_signed_mediators
+      2.55 test_bug_17740_name_collision_2
+      2.66 test_bug_17740_name_collision_1
+      2.72 test_bogus_client_certs
+      2.72 test_inappropriate_use_of_code_signing_cert
+      2.76 test_multiple_hash_algs
+      2.86 test_18620
+      2.94 test_var_pkg
+      2.95 test_bug_17740_anarchistic_pkg
+      2.97 test_bug_18880_hash
+      2.98 test_facet_pkg
+      3.01 test_bug_18880_sig
+      3.15 test_bug_16861_2
+      3.23 test_invalid_extension_1
+      3.28 test_conflicting_pkgs
+      3.29 test_unknown_value_for_non_critical_extension
+      3.32 test_unknown_value_for_critical_extension
+      3.33 test_inappropriate_use_of_cert_signing_cert
+      3.37 test_unsupported_critical_extension_1
+      3.38 test_sign_no_server_update
+      3.48 test_fix_revert_pkg
+      3.78 test_mismatched_sigs
+      3.81 test_invalid_extension_2
+      3.92 test_length_two_chains_two
+      4.20 test_using_pkg_image_cert_loc
+      4.28 test_disabled_add
+      4.41 test_mismatched_hashes
+      4.46 test_length_two_chains
+      4.60 test_bug_16867_2
+      4.79 test_unknown_sig_alg
+      4.90 test_cert_retrieval_failure
+      5.42 test_no_crlsign_on_revoking_ca
+      6.01 test_disabled_append
+      6.16 test_mediator_pkg
+      6.24 test_crl_2
+      6.30 test_crl_4
+      6.49 test_crl_3
+      7.10 test_reverting_signed_packages
+      8.08 test_crl_8
+      9.63 test_multiple_signatures
+      9.72 test_crl_1
+     10.29 test_crl_7
+     11.80 test_disabled_file
+     12.42 test_sign_0
+     17.39 test_crl_5
+     17.42 test_crl_6
+     22.99 test_sign_1
+     24.01 test_bad_opts_1
+     36.23 test_sign_5
+
+394.25 cli.TestPkgSearchBasics
+      2.55 test_missing_manifest
+      3.47 test_15807844
+      6.97 test_bug_1873
+      7.09 test_fmri_output
+     10.19 test_bug_12271_14088
+     10.46 test_bug_8098
+     11.97 test_versionless_incorp
+     13.61 test_empty_attrs_new
+     17.08 test_bug_10515
+     19.10 test_bug_6177
+     23.06 test_pkg_search_cli
+     27.68 test_local_0
+     40.23 test_bug_7835
+     55.82 test_remote
+    144.97 test_empty_attrs_additional
+
+413.86 cli.TestPkgRepo
+      0.04 test_38_invalid_repo
+      0.23 test_04_dependency
+      0.40 test_42_verify_zero_timeout
+      0.83 test_verify_truncated_file
+      0.91 test_verify_ignore_non_certificate_file_or_directory
+      1.09 test_09a_remove_duplicate_fmri
+      1.10 test_06_version
+      1.20 test_17_verify_empty_pub
+      1.29 test_16_verify_warn_openperms
+      1.32 test_00_base
+      1.47 test_35_fix_unsupported_repo
+      1.60 test_01_input
+      1.63 test_36_fix_empty_missing_pub
+      1.65 test_13_verify_nofile
+      1.68 test_41_verify_multiple_cert_files
+      1.75 test_03_hash
+      1.97 test_21_verify_exclude_dependency
+      2.20 test_02_type_filter
+      2.43 test_01_create
+      2.52 test_34_fix_brokenperm
+      2.77 test_12_verify_badmanifest
+      2.85 test_32_fix_brokenmanifest
+      2.88 test_18_verify_invalid_repos
+      3.12 test_00_base
+      3.32 test_33_fix_brokenfile
+      3.38 test_19_verify_valid_dependency
+      3.45 test_14_verify_permissions
+      3.95 test_07_add_publisher
+      4.15 test_27_verify_publisher_merge
+      4.65 test_22_verify_illegal_dependency
+      4.69 test_29_verify_parent_and_special_dep
+      4.85 test_26_verify_require_any_dependency
+      5.25 test_24_verify_provided_publisher
+      6.11 test_28_verify_ignore_dep_attr
+      6.12 test_23_verify_no_install_hold
+      6.19 test_37_fix_dependency
+      6.21 test_15_verify_badsig
+      6.96 test_40_contents
+      8.33 test_20_verify_missing_nonincorp_dependency
+      9.07 test_11_verify_badhash
+     11.62 test_09_remove_packages
+     11.67 test_10_list
+     15.43 test_39_remove_publisher
+     22.96 test_02_get_set_property
+     32.74 test_30_verify_ignore_pkgs
+     35.66 test_03_info
+     36.32 test_04_rebuild
+     37.35 test_05_refresh
+     40.74 test_31_verify_ignore_deps
+     43.73 test_25_verify_missing_incorp_dependency
+
+418.66 cli.TestPkgLinked2
+      6.17 test_sync_2_via_attach
+     17.29 test_sync_fail
+     29.43 test_sync_1
+     38.41 test_linked_sync_via_change_facet
+     38.46 test_linked_sync_via_change_variant
+     39.43 test_linked_sync_via_sync
+     62.17 test_linked_sync_via_uninstall
+     62.23 test_linked_sync_via_install
+     62.44 test_linked_sync_via_update_pkg
+     62.62 test_linked_sync_via_update
+
+500.96 cli.TestPkgLinkedPaths
+      2.30 test_linked_paths_bad_zoneadm_list_output
+      2.32 test_linked_paths_zone_paths_with_colon
+      2.61 test_linked_paths_no_self_link
+      2.64 test_linked_paths_no_nested_parent
+      2.68 test_linked_paths_no_liveroot_child
+      2.69 test_pull_child_moving_and_parent_staying_fixed
+      3.61 test_linked_paths_no_intermediate_imgs
+      4.88 test_linked_paths_guess_path_transform
+      5.06 test_linked_paths_no_attach_in_temporary_location
+      7.36 test_linked_paths_BE_cloning
+      7.58 test_linked_paths_staged_with_zones
+     11.70 test_linked_paths_staged
+     14.16 test_linked_paths_list_and_props
+    431.37 test_linked_paths_moves
+
+1495.76 cli.TestPkgrecvMulti
+     50.38 test_5_recv_env
+     51.55 test_15_content_attrs
+     52.25 test_1a_recv_overlapping_patterns
+     53.69 test_13_output
+     60.84 test_16_recv_old_republish
+     61.34 test_0_opts
+     61.48 test_1_recv_pkgsend
+     62.49 test_6_recv_republish_preexisting
+     65.15 test_2_recv_compare
+     65.41 test_4_timever
+     66.36 test_3_recursive
+     69.75 test_9_dryruns
+     82.32 test_8_archive
+     83.12 test_11_clone
+     86.03 test_17_multiple_publishers
+     91.68 test_12_multihash
+     92.14 test_7_recv_multipublisher
+    116.35 test_14_mog_manifest
+    223.42 test_10_unsupported_actions
+
+10746.90 Total time
+
+============================================================
+
+Tests run for 'cli' Suite, sorted by time taken:
+
+  0.00 TestPkgLinked1 test_no_pkg_updates_3_fail_via_set_property_linked_TODO
+  0.00 TestPkgLinked1 test_no_pkg_updates_3_sync_via_set_property_linked_TODO
+  0.00 TestPkgLinked1 test_no_pkg_updates_2_foo_via_set_property_linked_TODO
+  0.00 TestPkgLinked1 test_no_pkg_updates_1_empty_via_set_property_linked_TODO
+  0.00 TestPkgsurf test_4_unsigned_option
+  0.00 TestClientApi test_01_invalid_pkg_invoke_args
+  0.00 TestPkgVarcetErrors test_02_variant_error_checking
+  0.00 TestPkgVarcetErrors test_01_facet_error_checking
+  0.01 TestPkgDepot test_face_root
+  0.01 TestPkgDepot test_depot_ping
+  0.02 TestPkgDepot test_bug_3739
+  0.03 TestApiDependencies test_bug_19029
+  0.03 TestApiDependencies test_simple_variants_2
+  0.03 TestApiDependencies test_bug_17756
+  0.03 TestApiDependencies test_two_variants
+  0.03 TestApiDependencies test_bug_19009_no_links_unvarianted
+  0.03 TestApiDependencies test_bug_19009_simple_1
+  0.03 TestApiDependencies test_bug_19009_simple_4
+  0.03 TestApiDependencies test_bug_18315_1
+  0.03 TestApiDependencies test_bug_19009_simple_6
+  0.03 TestApiDependencies test_bug_19009_simple_3
+  0.03 TestApiDependencies test_bug_19009_remove_paths_4
+  0.03 TestApiDependencies test_bug_19009_inexpressible_with_variants_2
+  0.03 TestApiDependencies test_resolve_cross_package
+  0.03 TestApiDependencies test_bug_19009_simple_5
+  0.03 TestApiDependencies test_bug_18359
+  0.03 TestApiDependencies test_bug_19009_remove_paths_6
+  0.03 TestApiDependencies test_bug_19009_remove_paths_5
+  0.03 TestApiDependencies test_bug_19009_simple_2
+  0.03 TestApiDependencies test_bug_19009_remove_paths_3
+  0.03 TestApiDependencies test_bug_19009_inexpressible_5
+  0.03 TestApiDependencies test_bug_19009_conditional_collapsing_corner_cases
+  0.03 TestApiDependencies test_bug_19009_inexpressible_4
+  0.03 TestApiDependencies test_bug_19009_inexpressible_3
+  0.03 TestApiDependencies test_bug_19009_inexpressible_1
+  0.03 TestApiDependencies test_bug_19009_remove_paths_1
+  0.03 TestApiDependencies test_simple_variants_1
+  0.03 TestApiDependencies test_bug_19009_inexpressible_with_variants_3
+  0.03 TestApiDependencies test_bug_18315_2
+  0.03 TestApiDependencies test_bug_19009_no_links_one_variant
+  0.03 TestApiDependencies test_bug_18318_1
+  0.04 TestPkgSign test_crl_0
+  0.04 TestApiDependencies test_broken_manifests
+  0.04 TestApiDependencies test_bug_18884_2
+  0.04 TestApiDependencies test_bug_19009_inexpressible_with_variants_1
+  0.04 TestApiDependencies test_bug_19009_remove_paths_2
+  0.04 TestPkgRepo test_38_invalid_repo
+  0.04 TestApiDependencies test_bug_19009_inexpressible_2
+  0.04 TestApiDependencies test_bug_18318_4
+  0.04 TestApiDependencies test_bug_19009_two_paths
+  0.04 TestApiDependencies test_bug_18884_1
+  0.04 TestApiDependencies test_bug_18318_3
+  0.04 TestApiDependencies test_bug_18318_2
+  0.05 TestApiDependencies test_bug_19009_collapsing_conditional_to_require_any
+  0.05 TestPkgSign test_bogus_inter_certs
+  0.05 TestClientApi test_03_list_json_args_opts
+  0.06 TestApiDependencies test_multi_file_dependencies
+  0.06 TestApiDependencies test_bug_12697_and_12896
+  0.07 TestApiDependencies test_bug_18130
+  0.10 TestClientApi test_08_publisher_args_opts
+  0.10 TestApiDependencies test_bug_18172
+  0.12 TestPkgHelp test_help_character_encoding
+  0.13 TestClientApi test_00_noexecute_plan_stage_error_status
+  0.15 TestClientApi test_10_exact_install_json_args_opts
+  0.18 TestClientApi test_04_install_json_args_opts
+  0.18 TestPkgTerminalTesters test_runprintengine_notty
+  0.21 TestPkgMogrify test_10
+  0.21 TestPkgMogrify test_4
+  0.22 TestPkgTerminalTesters test_runprogress_fancy_notty
+  0.22 TestClientApi test_11_verify_json_args_opts
+  0.23 TestPkgMogrify test_2
+  0.23 TestPkgMogrify test_6
+  0.23 TestPkgRepo test_04_dependency
+  0.24 TestPkgMogrify test_9
+  0.25 TestClientApi test_13_ClientInterface
+  0.25 TestClientApi test_12_fix_json_args_opts
+  0.27 TestPkgFmt test_3_handle_comments
+  0.32 TestUtilMerge test_5_blend
+  0.33 TestUtilMerge test_8_mediators
+  0.34 TestUtilMerge test_4_blend
+  0.36 TestPkglintBasics test_4_manifests
+  0.36 TestPkglintBasics test_1_usage
+  0.37 TestApiDependencies test_bug_18077
+  0.37 TestApiDependencies test_bug_18019
+  0.38 TestFileManager test_1
+  0.38 TestUtilMerge test_6_blend
+  0.39 TestApiDependencies test_variant_empty_intersection
+  0.40 TestImageCreateNoDepot test_763c
+  0.40 TestPkgRepo test_42_verify_zero_timeout
+  0.41 TestPkgList test_03
+  0.41 TestPkgTerminalTesters test_runprintengine_badterm
+  0.42 TestPkgHistory test_7_bug_5153
+  0.42 TestPkgHistory test_6_bug_3540
+  0.42 TestPkgInfoBasics test_info_empty_image
+  0.45 TestApiDependencies test_bug_18045_mixed
+  0.46 TestPkgChangeFacet test_07_invalid_facet_name
+  0.46 TestApiDependencies test_bug_11518
+  0.46 TestApiDependencies test_bug_18045_reverse
+  0.46 TestPkgHistory test_13_bug_17418
+  0.46 TestApiDependencies test_resolve_mix
+  0.47 TestImageCreateNoDepot test_bad_image_create
+  0.47 TestImageCreateNoDepot test_765
+  0.47 TestApiDependencies test_bug_18173
+  0.48 TestPkgImageCreateBasics test_10_unprivileged
+  0.48 TestPkgContentsBasics test_bug_4315
+  0.48 TestPkgLinked1 test_ignore_1_no_children
+  0.48 TestApiDependencies test_bug_18045_normal
+  0.49 TestPkgdepBasics test_bug_16013_varianted_dependency_resolution
+  0.49 TestPkgdepBasics test_bug_16013_internal_links_and_variants
+  0.49 TestApiDependencies test_bug_15647
+  0.50 TestPkgdepBasics test_bug_16013_variants_filtered_by_links
+  0.50 TestPkgdepBasics test_bug_16013_variants_base
+  0.50 TestPkgdepBasics test_bug_19029
+  0.50 TestPkgdepBasics test_bug_16013_meaningless_files_ok
+  0.51 TestPkgdepBasics test_bug_16013_two_d_internal
+  0.51 TestPkgdepBasics test_bug_16013_variants_due_to_links_filtered
+  0.51 TestPkgdepBasics test_bug_16013_internal_variants
+  0.51 TestPkgTerminalTesters test_runprogress_badterm
+  0.51 TestPkgdepBasics test_bug_16013_internal_resolution
+  0.51 TestPkgHistory test_14_history_unicode_locale
+  0.53 TestPkgdepBasics test_bug_16271
+  0.53 TestPkgdepBasics test_bug_16013_two_d_external
+  0.54 TestPkgdepBasics test_bug_16013_links_restricted
+  0.55 TestClientApi test_02_valid_pkg_invoke_args
+  0.59 TestPkgdepBasics test_bug_17808
+  0.64 TestClientApi test_06_uninstall_args_opts
+  0.66 TestPkgMogrify test_8
+  0.67 TestClientApi test_09_info_args_opts
+  0.69 TestPkglintBasics test_13_linted_ignore
+  0.71 TestPkglintBasics test_3_list
+  0.71 TestPkglintBasics test_5_broken_manifest
+  0.71 TestClientApi test_05_update_json_args_opts
+  0.71 TestPkglintBasics test_9_order
+  0.72 TestFileManager test_opts
+  0.77 TestApiDependencies test_duplicate_require_any
+  0.78 TestPkgFmt test_2_unprivileged
+  0.79 TestApiDependencies test_resolve_permissions
+  0.79 TestDepotOutput test_log_depot_daemon
+  0.82 TestPkgFmt test_1_difference
+  0.82 TestPkgMogrify test_5
+  0.82 TestPkgList test_06
+  0.83 TestPkgList test_05
+  0.83 TestPkgRepo test_verify_truncated_file
+  0.83 TestPkgdepBasics test_bug_14116
+  0.84 TestPkgList test_13_multi_name
+  0.84 TestApiDependencies test_bug_17700
+  0.84 TestPkgdepBasics test_bug_18640960
+  0.84 TestPkgList test_01
+  0.84 TestPkgdepBasics test_bug_15958
+  0.84 TestPkgdepBasics test_bug_18101
+  0.84 TestPkgHistory test_3_purge_history
+  0.84 TestPkgInstallBasics test_basics_7_install
+  0.85 TestPkgdepBasics test_bug_11805
+  0.85 TestPkgListSingle test_01_empty_image
+  0.85 TestPkgMogrify test_1
+  0.85 TestPkgdepBasics test_multiple_run_paths
+  0.86 TestPkgList test_02
+  0.86 TestPkgdepBasics test_bug_18011
+  0.86 TestPkgdepBasics test_bug_11517
+  0.86 TestPkgdepBasics test_PEP_3149
+  0.86 NoTestImageUpdate test_image_update_bad_opts
+  0.86 TestPkgVerify test_00_bad_opts
+  0.87 TestPkgList test_04
+  0.87 TestPkgdepBasics test_bug_16808
+  0.87 TestPkgList test_07
+  0.87 TestPkgContentsBasics test_contents_failures
+  0.88 TestPkgInfoBasics test_human_version
+  0.88 TestPkgContentsBasics test_contents_empty_image
+  0.88 TestPkgInstallActions test_hardlink_chain
+  0.89 TestPkgInstallBasics test_basics_7_exact_install
+  0.89 TestPkgInstallBasics test_bug_1338_4
+  0.89 TestPkgdepBasics test_relative_run_path
+  0.90 TestPkgRebuildIndex test_rebuild_index_bad_perms
+  0.91 TestPkgdepBasics test_elf_warning
+  0.91 TestPkgRepo test_verify_ignore_non_certificate_file_or_directory
+  0.91 TestPkgRebuildIndex test_rebuild_index_stale_index_old_dir
+  0.92 TestPkgContentsBasics test_contents_3
+  0.92 TestPkgChangeVariant test_cv_15_invalid_variant_name
+  0.92 TestPkgApi test_api_locking
+  0.92 TestPkgdepBasics test_bypass_full_paths
+  0.94 TestPkgImageCreateBasics test_basic
+  0.94 TestPkgInstallRepoPerTest test_keep_installed_changed_manifest
+  0.95 TestClientApi test_07_set_publisher_args_opts
+  0.96 TestPkgSign test_bug_19114_1
+  0.97 TestMultipleDepots test_19_refresh_failure
+  0.97 NoTestImageUpdate test_ignore_missing
+  0.97 TestPkgdepBasics test_bug_16013_base
+  0.97 TestPkgList test_symlink_last_refreshed
+  0.98 TestCommandLine test_ignore_missing
+  0.98 TestPkgChangeVariant test_cv_13_parsable
+  0.98 TestPkgInstallOverlappingPatterns test_overlapping_one_package_available
+  0.99 TestPkgImageCreateBasics test_6_relative_root_create
+  0.99 TestPkgPublisherCACerts test_new_publisher_ca_certs_no_refresh
+  1.00 TestPkglintBasics test_11_broken_missing_rcfile
+  1.03 TestPkgdepBasics test_elf_dependency_tags
+  1.04 TestPkgChangeVariant test_cv_14_invalid_variant
+  1.04 TestPkgPublisherBasics test_old_publisher_ca_certs
+  1.05 TestPkgReleaseNotes test_release_note_8
+  1.05 TestDepotController test_cfg_file
+  1.05 TestPkgMogrify test_3
+  1.05 TestPkgPublicationApi test_stress_file_publish
+  1.05 TestDepotOutput test_address
+  1.05 TestDepotOutput test_1_depot_publisher
+  1.05 TestPkgReleaseNotes test_release_note_bad_encoding
+  1.05 TestPkglintBasics test_12_pkg_versions
+  1.06 TestPkgPublisherCACerts test_new_publisher_ca_certs_with_refresh
+  1.06 TestPkgMogrify test_7
+  1.06 TestPkgMogrify test_11
+  1.08 TestPkgsendBasics test_27_ownership
+  1.09 TestPkgsendBasics test_20_multi_pkg_bundle
+  1.09 TestPkgsendBasics test_23_pkgsend_no_version
+  1.09 TestPkgActuators test_multimatch_reject
+  1.09 TestPkgRepo test_09a_remove_duplicate_fmri
+  1.10 TestPkgRepo test_06_version
+  1.11 TestPkgMogrify test_13
+  1.13 TestPkgsendBasics test_3_bad_transaction
+  1.14 TestUtilMerge test_2_multi_merge
+  1.15 TestFix test_02_hardlinks
+  1.16 TestPkgdepBasics test_bug_11829
+  1.17 TestPkgInstallBasics test_bug_2795
+  1.18 NoTestImageUpdate test_display_removed_pkgs
+  1.19 TestPkglintBasics test_2_badopts
+  1.20 TestPkgRepo test_17_verify_empty_pub
+  1.22 TestPkgInstallBasics test_basics_8_exact_install
+  1.22 TestPkgdepBasics test_bug_10518
+  1.23 TestPkgList test_17_verbose
+  1.24 TestPkgInstallAmbiguousPatterns test_bug_6874
+  1.24 TestPkgSignMultiDepot test_sign_pkgrecv_delivered_cert
+  1.25 TestPkgVersion test_pkg_version_bad_opts
+  1.25 TestPkgInstallBasics test_bug_3770
+  1.26 TestPkgInstallBasics test_bug_1338_3
+  1.26 TestPkgSignMultiDepot test_sign_pkgrecv_delivered_intermediate_cert
+  1.27 TestPkgSign test_bug_19055
+  1.29 TestPkgRepo test_16_verify_warn_openperms
+  1.30 TestPkgLinked1 test_opts_3_all
+  1.32 TestPkgInstallBasics test_bug_1338
+  1.32 TestCommandLine test_rmdir_cwd
+  1.32 TestPkgRebuildIndex test_rebuild_index_bad_opts
+  1.32 TestPkgRepo test_00_base
+  1.33 TestPkgSign test_sign_2
+  1.33 TestPkgContentsBasics test_contents_2
+  1.33 TestPkgAvoid test_corrupted_avoid_file
+  1.33 TestUtilMerge test_9_dependency
+  1.34 TestPkgContentsBasics test_contents_1
+  1.34 TestPkgSign test_bug_16867_almost_identical
+  1.34 TestPkgLinked1 test_parent_ops_error
+  1.35 TestPkgContentsBasics test_contents_dash_t
+  1.35 TestImageCreateCorruptImage test_var_pkg_missing_cfg_cache
+  1.36 TestPkgSign test_using_default_cert_loc
+  1.36 TestPkgInitInstall test_init_install
+  1.36 TestImageCreateCorruptImage test_empty_ospkg
+  1.37 TestImageCreateCorruptImage test_var_pkg_missing_publisher
+  1.37 TestPkgLinked3 test_staged_noop
+  1.37 TestPkgDepot test_publisher_prefix
+  1.38 TestImageCreateCorruptImage test_empty_var_pkg
+  1.38 TestImageCreateCorruptImage test_ospkg_missing_cfg_cache
+  1.39 TestImageCreateCorruptImage test_var_pkg_missing_index
+  1.40 TestPkgLinked1 test_no_pkg_updates_1_empty_via_attach
+  1.40 TestPkgPublisherBasics test_publisher_special_repo_name
+  1.40 TestPkglintBasics test_7_linted
+  1.40 TestPkgSign test_bug_16861_1
+  1.40 TestImageCreateCorruptImage test_ospkg_missing_index
+  1.41 TestCommandLine test_uninstall_implicit
+  1.41 TestImageCreateCorruptImage test_ospkg_left_alone
+  1.42 TestImageCreateCorruptImage test_ospkg_missing_publisher_empty
+  1.43 TestPkglintBasics test_8_verbose
+  1.44 TestPkgReleaseNotes test_release_note_6
+  1.45 TestPkgInstallUpgrade test_special_salvage
+  1.45 TestPkgdepBasics test_resolve_screen_out
+  1.45 TestImageCreateCorruptImage test_var_pkg_left_alone
+  1.46 TestMultiPublisherRepo test_multiple_p_option
+  1.46 TestImageCreateCorruptImage test_ospkg_missing_publisher
+  1.47 TestPkgRepo test_35_fix_unsupported_repo
+  1.49 TestDependencies test_optional_nosolution
+  1.49 TestPkgVerify test_verify_invalid_fmri
+  1.51 TestMultipleDepots test_09_uninstall_from_wrong_publisher
+  1.52 TestPkgSolverErrors test_incorporation_mixes
+  1.55 TestPkgdepBasics test_missing_payload
+  1.57 NoTestImageUpdate test_upgrade_sticky
+  1.58 TestPkgSign test_bug_19114_2
+  1.58 TestPkgSign test_multiple_cert_files
+  1.58 TestPkgdepBasics test_bug_16013_packages_delivering_links
+  1.60 TestPkgRepo test_01_input
+  1.60 TestPkgReleaseNotes test_release_note_4
+  1.61 TestPkgReleaseNotes test_release_note_5
+  1.63 TestPkgApi test_symlink_lock
+  1.63 TestPkgRepo test_36_fix_empty_missing_pub
+  1.64 TestPkgActuators test_multimatch_trigger
+  1.65 TestPkgRepo test_13_verify_nofile
+  1.66 TestPkgdepBasics test_bug_15777
+  1.68 TestPkgRepo test_41_verify_multiple_cert_files
+  1.68 TestPkgDepot test_root_link
+  1.68 NoTestPkgUpdateOverlappingPatterns test_overlapping_patterns_one_stem_update
+  1.73 TestPkgInfoPerTestRepo test_info_uninstalled_changed_manifest
+  1.73 TestUtilMerge test_1_single_merge
+  1.74 TestPkgList test_00
+  1.74 TestPkgAutoremove test_cli_badoptions
+  1.74 TestPkgInstallBasics test_bug_1338_2
+  1.75 TestPkglintBasics test_10_rcfile_params
+  1.75 TestPkgRepo test_03_hash
+  1.76 TestPkgInstallBasics test_bug_16189
+  1.77 TestPkglintBasics test_6_rcfile
+  1.77 TestPkgList test_19_format
+  1.77 TestPkgSign test_unsupported_critical_extension_2
+  1.77 TestMultipleDepots test_03_basics
+  1.78 TestPkgsurf test_3_override_pkgs
+  1.78 TestPkgLinked1 test_not_linked
+  1.79 TestMultipleDepots test_11_uninstall_after_preferred_publisher_change
+  1.80 TestPkgSign test_dry_run_option
+  1.82 TestPkgSign test_big_pathlen
+  1.84 TestPkgHistory test_4_bug_4639
+  1.85 TestPkgSign test_unsupported_critical_extension_3
+  1.86 TestPkgSign test_sign_4
+  1.86 TestFacetInheritance test_facet_inheritance_masked_system
+  1.86 TestPkgSign test_sign_3
+  1.86 TestDependencies test_rename_matching
+  1.87 TestPkgSign test_unset_keyUsage_for_code_signing
+  1.87 TestPkgSign test_expired_chain_certs
+  1.88 TestPkgSign test_future_chain_certs
+  1.88 TestPkgSign test_unset_keyUsage_for_cert_signing
+  1.88 TestMultipleDepots test_02_basics
+  1.90 TestPkgSign test_future_certs
+  1.91 TestPkgSign test_manual_pub_cert_approval
+  1.91 TestPkgPublisherBasics test_publisher_tsv_format
+  1.91 TestPkgdepBasics test_unsatisfied_deps
+  1.91 TestPkgInstallRepoPerTest test_install_changed_manifest
+  1.92 TestPkgSign test_expired_certs
+  1.92 TestDepotHTTPS test_02_accepted_tls
+  1.95 TestPkgVarcet test_user_facet
+  1.96 TestImageCreateCorruptImage test_var_pkg_missing_publisher_empty
+  1.96 TestPkgSign test_variant_sigs
+  1.97 TestPkgRepo test_21_verify_exclude_dependency
+  1.98 TestPkgInstallUpgrade test_newbe_liveroot
+  1.99 TestPkgAvoid test_group_reject_2
+  1.99 TestPkgVerify test_02_installed
+  1.99 TestPkgVerify test_03_editable
+  2.00 TestImageCreateNoDepot test_bad_publisher_options
+  2.01 TestPkgInstallUpdateSolverOutput test_output_two_issues
+  2.01 TestConflictingActions test_multiple_drivers
+  2.03 TestPkgsendBasics test_24_pkgsend_publish_payloaded_link
+  2.04 TestPkgLinked1 test_attach_c2p_1
+  2.04 TestPkgReleaseNotes test_release_note_7
+  2.05 TestConflictingActions test_varianted_types
+  2.05 TestPkgsendBasics test_25_pkgsend_publish_nohash_license
+  2.05 TestPkgImageCreateBasics test_7_image_create_no_refresh
+  2.06 TestROption test_bad_cli_options
+  2.08 TestMultiPublisherRepo test_multi_publisher_search_before
+  2.09 TestPkgSignMultiDepot test_bug_16861_recv
+  2.10 TestPkgInstallUpdateSolverOutput test_output_root_cause_summary
+  2.10 TestPkgsurf test_0_options
+  2.11 TestPkgdepBasics test_bug_13059
+  2.11 TestPkgList test_15_latest
+  2.15 TestROption test_2_implicit
+  2.15 TestPkgSign test_bug_16867_hashes_1
+  2.15 TestApiDependencies test_bug_16849
+  2.15 TestPkgApi test_process_locking
+  2.16 TestPkgPropertyBasics test_missing_permissions
+  2.16 TestPkgInstallActions test_primordial_usergroup_exact_install
+  2.16 TestPkgHistory test_12_history_range
+  2.19 TestPkgContentsBasics test_contents_dash_a
+  2.20 TestPkgSign test_bug_17740_alternate_pub
+  2.20 TestPkgRepo test_02_type_filter
+  2.20 TestPkgAutoremove test_autoremove_basics
+  2.21 TestPkgCompositePublishers test_05_empty
+  2.22 TestPkgdepBasics test_bug_15843
+  2.23 TestPkgInstallActions test_primordial_usergroup_install
+  2.23 TestPkgInstallUpgrade test_directory_salvage
+  2.23 TestCommandLine test_pkg_bogus_opts
+  2.24 TestFix test_05_driver
+  2.25 TestPkgSign test_bad_opts_2
+  2.25 TestPkgSign test_no_empty_chain
+  2.26 TestPkgSign test_bug_17740_default_pub
+  2.26 TestPkgContentsPerTestRepo test_contents_uninstalled_changed_manifest
+  2.27 TestPkgPublisherBasics test_publisher_uuid
+  2.27 TestPkgsendBasics test_6_help
+  2.28 TestUtilMerge test_3_cross_merge
+  2.30 TestPkgLinkedPaths test_linked_paths_bad_zoneadm_list_output
+  2.32 TestPkgList test_10_all_known_failed_refresh
+  2.32 TestPkgLinkedPaths test_linked_paths_zone_paths_with_colon
+  2.32 TestPkgSign test_bug_16867_1
+  2.32 TestImageCreateCorruptImage test_var_pkg_missing_publisher_empty_hit_then_refreshed_then_hit
+  2.33 TestPkgInstallAmbiguousPatterns test_ambiguous_pattern_install
+  2.34 TestActionErrors test_00_directory
+  2.35 TestPkgSign test_higher_signature_version
+  2.35 TestMultipleDepots test_07_upgrade_non_preferred_to_preferred_incorporated
+  2.36 TestPkgImageCreateBasics test_5_bad_values_no_image
+  2.36 TestPkgDepot test_bug_4489
+  2.38 TestPkgDepot test_bug_5366
+  2.38 TestPkgRevert test_revert_3
+  2.39 TestPkgVerify test_verify_perms_py3
+  2.41 TestMultipleDepots test_05_upgrade_non_preferred_to_preferred
+  2.41 TestActionErrors test_02_hardlink
+  2.42 TestMultipleDepots test_04_upgrade_preferred_to_non_preferred
+  2.43 TestPkgRepo test_01_create
+  2.43 TestPkgVerify test_03_invalid
+  2.44 TestPkgSign test_signing_all
+  2.45 TestPkgSign test_small_pathlen
+  2.46 TestConflictingActions test_change_varcet
+  2.47 TestConflictingActions test_change_variant_removes_package
+  2.50 TestPkgSign test_signed_mediators
+  2.50 TestPkgInstallBasics test_dependent_uninstall
+  2.52 TestPkgRepo test_34_fix_brokenperm
+  2.52 TestImageCreateCorruptImage test_ospkg_missing_publisher_empty_hit_then_refreshed_then_hit
+  2.54 TestPkgInstallBasics test_bug_6018
+  2.55 TestPkgSign test_bug_17740_name_collision_2
+  2.55 TestPkgSearchBasics test_missing_manifest
+  2.60 TestPkgFlag test_bad_input
+  2.60 TestPkgInstallBasics test_update_to_reserved_directories
+  2.61 TestPkgLinkedPaths test_linked_paths_no_self_link
+  2.62 TestUtilMerge test_7_multipub_merge
+  2.62 TestPkgInfoPerTestRepo test_info_installed_changed_manifest
+  2.64 TestPkgAutoremove test_autoremove_install_dep
+  2.64 TestPkgLinkedPaths test_linked_paths_no_nested_parent
+  2.66 TestPkgSign test_bug_17740_name_collision_1
+  2.68 TestPkgVerify test_sysattrs
+  2.68 TestPkgLinkedPaths test_linked_paths_no_liveroot_child
+  2.69 TestPkgLinkedPaths test_pull_child_moving_and_parent_staying_fixed
+  2.72 TestPkgInstallBasics test_readonly_files
+  2.72 TestPkgSign test_bogus_client_certs
+  2.72 TestPkgSign test_inappropriate_use_of_code_signing_cert
+  2.74 TestPkgContentsPerTestRepo test_contents_installed_changed_manifest
+  2.74 TestPkgVariants test_variant_2_matching
+  2.76 TestPkgSign test_multiple_hash_algs
+  2.76 TestPkgAvoid test_unavoid
+  2.76 TestPkgMogrify test_14
+  2.77 TestPkgRepo test_12_verify_badmanifest
+  2.78 TestPkgInfoBasics test_info_bad_packages
+  2.79 TestPkgList test_16c_manual
+  2.79 TestPkgsendBasics test_21_uri_paths
+  2.80 TestPkgInstallUpgrade test_file_preserve_version_undefined
+  2.81 TestActionErrors test_01_file
+  2.82 TestPkgUpdateDowngradeIncorp test_incorp_downgrade_pubswitch
+  2.82 TestConflictingActions test_conflictgroupid_install
+  2.83 TestPkgInstallUpgrade test_file_preserve_version_defined
+  2.83 TestPkgReleaseNotes test_release_note_1
+  2.84 TestPkgInstallRepoPerTest test_manifest_invalid_utf8
+  2.85 TestPkgRepo test_32_fix_brokenmanifest
+  2.85 TestPkgInfoBasics test_legacy_packages
+  2.86 TestPkgSign test_18620
+  2.88 TestPkgRepo test_18_verify_invalid_repos
+  2.89 TestPkgInstallUpgrade test_upgrade4
+  2.89 TestFix test_fix_changed_manifest
+  2.89 TestPkgInstallObsolete test_basic_6a
+  2.91 TestPkgdepBasics test_opts
+  2.91 TestPkgChangeVariantPerTestRepo test_change_variants_with_changed_manifest
+  2.94 NoTestPkgUpdateOverlappingPatterns test_overlapping_patterns_multi_stems_update
+  2.94 TestPkgSign test_var_pkg
+  2.95 TestPkgSign test_bug_17740_anarchistic_pkg
+  2.95 TestPkgInstallObsolete test_basic_8a
+  2.95 TestApiDependencies test_constraint_files
+  2.97 TestPkgSign test_bug_18880_hash
+  2.98 TestPkgSign test_facet_pkg
+  3.00 TestUtilMerge test_0_options
+  3.01 TestPkgdepBasics test_output
+  3.01 TestPkgSign test_bug_18880_sig
+  3.03 TestPkgPublisherBasics test_pkg_publisher_bogus_opts
+  3.04 TestLinkedInstallHoldRelax test_linked_install_hold_relax_constrained_4
+  3.07 TestPkgTerminal test_pkg_pty
+  3.10 TestPkgInstallBasics test_install_fuzz
+  3.10 TestPkgContentsBasics test_contents_default_attrs
+  3.12 TestPkgRepo test_00_base
+  3.13 TestPkgReleaseNotes test_release_note_2
+  3.13 TestPkgInstallObsolete test_basic_11a
+  3.14 TestPkgFmt test_0_checkfmt
+  3.14 TestPkgLinked1 test_ignore_2_ok
+  3.15 TestPkgSign test_bug_16861_2
+  3.16 TestPkgContentsBasics test_contents_dash_o
+  3.17 TestPkgList test_16_upgradable
+  3.19 TestPkgVerify test_verify_parsable_output
+  3.19 TestPkgInstallMultiIncorp test_1_incorp_latest_older
+  3.19 TestPkgListSingle test_02_unsupported
+  3.20 TestPkgVariants test_variant_4_indirect
+  3.21 TestPkgMogrify test_12
+  3.22 TestCommandLine test_uninstall_missing_manifest
+  3.22 TestPkgLinked1 test_attach_already_linked_1_err
+  3.23 TestPkgSign test_invalid_extension_1
+  3.23 TestFix test_fix_with_ftpuser
+  3.23 TestPkgLinked1 test_attach_already_linked_2_relink
+  3.24 TestPkgVerify test_links
+  3.25 TestPkgdepBasics test_bug_16013_installed_combinations
+  3.26 TestPkgVarcet test_group_var
+  3.26 TestPkgFreeze test_bad_input
+  3.28 TestPkgSign test_conflicting_pkgs
+  3.29 TestPkgSign test_unknown_value_for_non_critical_extension
+  3.29 TestFix test_03_license
+  3.30 TestPkgInstallObsolete test_basic_13a
+  3.31 TestPkgLinked1 test_zone_attach_detach
+  3.31 TestPkgInstallUpgrade test_link_preserve
+  3.32 TestPkgLinked1 test_detach_c2p_1
+  3.32 TestPkgSign test_unknown_value_for_critical_extension
+  3.32 TestPkgRepo test_33_fix_brokenfile
+  3.33 TestPkgSign test_inappropriate_use_of_cert_signing_cert
+  3.34 TestPkgInstallObsolete test_basic_12
+  3.34 TestPkgUpdateDowngradeIncorp test_incorp_downgrade_installhold
+  3.36 TestMultipleDepots test_17_dependency_is_from_deleted_publisher
+  3.36 TestPkgChangeFacet test_03_slashed_facets
+  3.37 TestPkgSign test_unsupported_critical_extension_1
+  3.37 TestPkgDepot test_info
+  3.38 TestPkgSign test_sign_no_server_update
+  3.38 TestPkgRepo test_19_verify_valid_dependency
+  3.39 TestPkgInstallBasics test_basics_9_exact_install
+  3.40 TestPkgSignMultiDepot test_bug_18463
+  3.41 TestPkgsendBasics test_5_bad_open
+  3.42 TestMultipleDepots test_06_upgrade_preferred_to_non_preferred_incorporated
+  3.42 TestPkgInstallExplicitInstall test_06_refresh_manual
+  3.43 TestPkgInstallObsolete test_incorp_1
+  3.44 TestPkgVerify test_verify_changed_manifest
+  3.44 TestPkgReleaseNotes test_release_note_3
+  3.45 TestPkgRepo test_14_verify_permissions
+  3.46 TestPkgInstallBasics test_basics_1_install
+  3.46 TestPkgInstallActions test_minugid
+  3.47 TestPkgSearchBasics test_15807844
+  3.48 TestPkgTempSources test_05_staged_execution
+  3.48 TestPkgSign test_fix_revert_pkg
+  3.50 TestPkgInstallUpdateSolverOutput test_output_root_cause_collateral
+  3.50 TestPkgList test_14_invalid_input
+  3.51 TestPkgAutoremove test_autoremove_update
+  3.51 TestPkgInfoBasics test_info_update_install
+  3.55 TestPkgInfoBasics test_renamed_packages
+  3.55 TestPkgsendBasics test_28_content_attrs
+  3.57 TestPkgList test_16d_installable
+  3.59 TestPkgList test_16b_removable
+  3.59 TestPkgInstallActions test_user_in_grouplist
+  3.61 TestPkgLinkedPaths test_linked_paths_no_intermediate_imgs
+  3.61 TestCommandLine test_dependencies
+  3.62 TestPkgInstallActions test_bad_hardlinks
+  3.65 TestPkgTerminal test_pkg_bad_term
+  3.66 TestPkgInstallMultiIncorp test_2_incorp_multi_pub
+  3.67 TestPkgHistory test_8_failed_record
+  3.69 TestPkgInstallAmbiguousPatterns test_bug_4204
+  3.69 TestPkgPublisherBasics test_publisher_properties
+  3.70 TestPkgChangeFacet test_04_no_accidental_changes
+  3.72 TestPkgVarcet test_03_variant_globbing
+  3.72 TestPkgsendBasics test_17_include_errors
+  3.73 TestPkgsendBasics test_0_pkgsend_bad_opts
+  3.73 TestPkgLinked1 test_no_pkg_updates_1_empty_via_sync
+  3.74 TestPkgCompositePublishers test_04_search
+  3.74 TestPkgPublisherBasics test_remove_unused_cert_key
+  3.75 TestPkgHistory test_9_history_limit
+  3.75 TestPkgLinked1 test_attach_p2c_1
+  3.78 TestPkgSign test_mismatched_sigs
+  3.78 TestPkgInstallObsolete test_basic_7c
+  3.78 TestPkgInstallObsolete test_basic_6b
+  3.79 TestDependencies test_optional_dependencies_exact_install
+  3.81 TestPkgSign test_invalid_extension_2
+  3.82 TestPkgTempSources test_06_appropriate_license_files
+  3.84 TestPkgInstallObsolete test_incorp_2
+  3.85 TestPkgHistory test_11_history_events
+  3.86 TestPkgAvoid test_group_obsolete_ok
+  3.86 TestPkgPropertyBasics test_pkg_property_keyfiles
+  3.91 TestPkgInstallBasics test_basics_1_exact_install
+  3.92 TestPkgImageCreateBasics test_force
+  3.92 TestPkgInstallActions test_grouptest_exact_install
+  3.92 TestDependencies test_require_dependencies
+  3.92 TestPkgSign test_length_two_chains_two
+  3.93 TestPkgInstallActions test_grouptest_install
+  3.93 TestPkgInstallActions test_basics_0_exact_install
+  3.94 TestPkgHistory test_5_bug_5024
+  3.94 TestPkgInstallBasics test_basics_mdns
+  3.95 TestPkgRepo test_07_add_publisher
+  3.99 TestPkgInstallUpgrade test_upgrade5
+  4.00 TestPkgInstallUpgrade test_directory_salvage_persistent
+  4.00 TestPkgVerify test_verify_user
+  4.01 TestPkgChangeVariant test_cv_12_unknown
+  4.01 TestPkgPublisherBasics test_publisher_validation
+  4.02 TestPkgDepot test_bug_3365
+  4.04 TestPkgDepot test_bad_fmris
+  4.08 TestConflictingActions test_multiple_depend
+  4.11 TestPkgVariants test_variant_3_latest
+  4.12 TestPkgInstallOverlappingPatterns test_overlapping_multiple_packages
+  4.13 TestPkgInstallObsolete test_basic_7b
+  4.14 TestPkgInstallUpgrade test_content_hash_ignore
+  4.15 TestDepotController test_disable_ops
+  4.15 TestPkgInstallObsolete test_basic_11
+  4.15 TestPkgRepo test_27_verify_publisher_merge
+  4.16 TestPkgInstallExplicitInstall test_05_exact_install_downgrade
+  4.16 TestDependencies test_optional_dependencies_install
+  4.17 TestPkgInstallObsolete test_basic_7a
+  4.18 TestPkgLinked1 test_no_pkg_updates_2_foo_via_attach
+  4.19 TestPkgLinked1 test_no_pkg_updates_3_sync_via_attach
+  4.20 TestPkgSign test_using_pkg_image_cert_loc
+  4.22 TestPkgList test_pkg_list_cli_opts
+  4.23 TestPkgInstallLicense test_02_bug_7127117_C
+  4.26 TestPkgInstallActions test_driver_aliases_move
+  4.28 TestPkgSign test_disabled_add
+  4.30 TestPkgChangeFacet test_02_removing_facets
+  4.31 TestMultipleDepots test_16_disabled_nonsticky
+  4.32 TestPkgChangeVariant test_cv_04_arch_2
+  4.34 TestPkgChangeVariant test_cv_04_arch_1
+  4.34 TestPkgLinked1 test_no_pkg_updates_3_fail_via_attach
+  4.36 TestPkgInstallBasics test_install_to_reserved_directories
+  4.36 TestPkgOSDowngrade test_downgrade_update
+  4.39 TestPkgList test_18_options
+  4.41 TestPkgSign test_mismatched_hashes
+  4.42 TestPkgInstallActions test_basics_0_install
+  4.46 TestPkgSign test_length_two_chains
+  4.47 TestPkgsendBasics test_15_test_no_catalog_option
+  4.49 TestPkgSignMultiDepot test_sign_pkgrecv_a
+  4.49 TestConcurrentFacetChange test_concurrent_facet_change_via_detach
+  4.53 TestPkgdepBasics test_python_combinations
+  4.56 TestPkgImageCreateBasics test_image_create_bad_opts
+  4.57 TestPkgIntent test_0_info
+  4.57 TestPkgInstallUpgrade test_driver_policy_removal
+  4.59 TestPkgList test_09_needs_refresh
+  4.59 TestPkgAvoid test_group_require
+  4.60 TestPkgSign test_bug_16867_2
+  4.60 TestPkgVarcet test_02_varcet_reject
+  4.61 TestPkgContentsBasics test_contents_bad_opts
+  4.63 TestPkgFreeze test_timestamp_freezes
+  4.65 TestPkgInfoBasics test_appropriate_license_files
+  4.65 TestPkgRepo test_22_verify_illegal_dependency
+  4.66 TestConflictingActions test_conflicting_uninstall_publisher
+  4.68 TestPkgCollidingLinks test_1
+  4.68 TestMultipleDepots test_15_nonsticky_update
+  4.69 TestPkgRepo test_29_verify_parent_and_special_dep
+  4.70 TestFix test_fix_output
+  4.70 TestPkgdepBasics test_bug_12697
+  4.73 TestDependencies test_cond_depend_nonexist
+  4.76 TestPkgInstallActions test_legacy
+  4.78 TestPkgDepot test_empty_incorp_depend
+  4.79 TestPkgSign test_unknown_sig_alg
+  4.81 TestPkgFreeze test_unprived_operation
+  4.83 TestMultipleDepots test_01_basics
+  4.84 TestPkgInstallBasics test_basics_5_exact_install
+  4.84 TestPkgInstallUpgrade test_incorp_install
+  4.85 TestPkgRepo test_26_verify_require_any_dependency
+  4.86 TestDepotController testBadArgs
+  4.87 TestPkgAvoid test_group_trim
+  4.88 TestPkgLinkedPaths test_linked_paths_guess_path_transform
+  4.90 TestPkgSign test_cert_retrieval_failure
+  4.91 TestPkgInstallCircularDependencies test_anchored_circular_dependencies
+  4.92 TestPkgImageCreateBasics test_9_bad_image_state
+  4.93 TestPkgsurf test_2_publishers
+  4.94 TestPkgHelp test_help
+  4.94 TestPkgInstallMultiObsolete test_02
+  4.96 TestPkgVerify test_multi_var_grp
+  4.96 TestConcurrentFacetChange test_concurrent_facet_change_via_change_facets
+  4.97 TestLinkedInstallHoldRelax test_linked_install_hold_relax_constrained_3
+  4.99 TestConcurrentFacetChange test_concurrent_facet_change_via_change_variant
+  5.06 TestPkgPropertyBasics test_pkg_property_excludes
+  5.06 TestPkgLinkedPaths test_linked_paths_no_attach_in_temporary_location
+  5.08 TestPkgInstallMultiObsolete test_01
+  5.08 TestPkgDepot test_nonsig_append
+  5.09 TestPkgInstallCircularDependencies test_unanchored_circular_dependencies
+  5.13 NoTestImageUpdate test_dueling_incs
+  5.15 TestCommandLine test_uninstalled_state
+  5.15 TestPkgChangeVariant test_cv_02_arch_2
+  5.16 TestPkgInfoBasics test_info_attribute
+  5.17 TestPkgInstallActions test_driver_aliases_upgrade
+  5.21 TestDependencies test_exclude_group_install
+  5.21 TestPkgDepot test_append_reopen
+  5.21 TestPkgInstallBasics test_basics_5_install
+  5.23 TestDepotController testStartStop
+  5.24 TestPkgChangeVariant test_cv_03_arch_1
+  5.24 TestMultipleDepots test_18_upgrade_across_publishers
+  5.25 TestActionErrors test_04_loop
+  5.25 TestPkgRepo test_24_verify_provided_publisher
+  5.27 TestPkgChangeVariant test_cv_03_arch_2
+  5.28 TestPkgChangeVariant test_cv_02_arch_1
+  5.32 TestPkgFlag test_flag_m
+  5.32 TestLinkedInstallHoldRelax test_linked_install_hold_relax_all
+  5.34 TestPkgLinked1 test_detach_p2c_1
+  5.36 TestPkgInstallObsolete test_remove_renamed
+  5.38 TestPkgLinked1 test_eaccess_1_parent
+  5.38 TestConcurrentFacetChange test_concurrent_facet_change_via_update
+  5.40 TestConcurrentFacetChange test_concurrent_facet_change_via_update_pkg
+  5.42 TestPkgSign test_no_crlsign_on_revoking_ca
+  5.48 TestConcurrentFacetChange test_concurrent_facet_change_via_sync
+  5.48 TestDepotOutput test_bug_15482
+  5.50 TestConcurrentFacetChange test_concurrent_facet_change_via_install
+  5.51 TestPkgContentsBasics test_ranked
+  5.52 TestConcurrentFacetChange test_concurrent_facet_change_via_uninstall
+  5.52 TestDependencies test_conditional_dependencies_exact_install
+  5.54 TestConflictingActions test_conflicting_attrs_fs_varcets
+  5.58 TestNastySig test_00_sig
+  5.60 TestPkgLinked1 test_audit_synced_1
+  5.64 TestPkgInstallObsolete test_basic_11b
+  5.69 TestPkgInstallUpdateReject test_update
+  5.77 TestPkgList test_08_after_pub_update_removal
+  5.77 TestPkgLinked1 test_detach_p2c_2
+  5.81 TestPkgsendBasics test_19_broken_sysv_datastream
+  5.81 TestNotInstalledIncorp test_31762523
+  5.82 TestPkgTempSources test_04_change_varcets
+  5.83 TestIDROps test_idr_application
+  5.84 TestPkgInstallOverlappingPatterns test_overlapping_multiple_publishers
+  5.85 TestPkgDepot test_repo_create
+  5.90 TestPkgInfoBasics test_ranked
+  5.91 TestPkgInstallActions test_groupverify_install
+  5.97 TestPkgPublisherBasics test_bug_7141684
+  5.97 TestPkgInstallBasics test_error_messages
+  6.00 NoTestImageUpdate test_02_update_multi_publisher
+  6.01 TestPkgSign test_disabled_append
+  6.02 TestPkgChangeVariant test_cv_05_arch_1
+  6.03 TestPkgInfoBasics test_bug_2274
+  6.10 TestPkgInstallAmbiguousPatterns test_non_ambiguous_fragment
+  6.11 TestPkgChangeFacet test_06_facet_all
+  6.11 TestPkgRepo test_28_verify_ignore_dep_attr
+  6.12 TestPkgRepo test_23_verify_no_install_hold
+  6.14 TestPkgdepBasics test_bug_14118
+  6.15 TestPkgChangeVariant test_cv_05_arch_2
+  6.15 TestDepotOutput test_3_headers
+  6.15 TestPkgRefreshMulti test_refresh_certificate_problems
+  6.16 TestPkgSign test_mediator_pkg
+  6.17 TestPkgInstallUpgrade test_file_preserve_version_overlay
+  6.17 TestPkgLinked2 test_sync_2_via_attach
+  6.19 TestPkgLinked3 test_parent_sync_1_nosync
+  6.19 TestPkgRepo test_37_fix_dependency
+  6.21 TestPkgRepo test_15_verify_badsig
+  6.24 TestPkgSign test_crl_2
+  6.25 TestPkgCompositePublishers test_02_contents
+  6.27 TestPkgCollidingHardLinks test_1
+  6.27 TestPkgLinked3 test_verify
+  6.27 TestPkgMediated test_03_obsoleted_mediator
+  6.29 TestPkgCompositePublishers test_01_info
+  6.30 TestPkgSign test_crl_4
+  6.30 TestPkgLinked3 test_missing_parent_pkgs_metadata_1
+  6.33 TestPkgLinked3 test_missing_parent_publisher_metadata_2
+  6.41 NoTestImageUpdate test_01_after_pub_removal
+  6.42 TestPkgLinked3 test_install_group
+  6.46 TestPkgDepot testStartStop
+  6.46 TestPkgsendBasics test_8_bug_7908
+  6.49 TestPkgSign test_crl_3
+  6.49 TestObsoletionNestedIncorporations test_15713570
+  6.50 TestPkgSMFActuators test_actuator_plan_display
+  6.52 TestPkgInstallBasics test_basics_6_install
+  6.57 TestPkgLinked1 test_audit_synced_3
+  6.59 TestPkgTerminalTesters test_runprogress
+  6.59 TestPkgInstallUpgrade test_upgrade_driver_conflicts
+  6.61 TestPkgInstallUpdateReject test_idr_removal
+  6.63 TestPkgVerify test_multiple_paths_input
+  6.65 TestPkgVerify test_unpackaged
+  6.66 TestPkgIntent test_1_install_uninstall
+  6.67 TestPkgTerminalTesters test_runprogress_slowterm
+  6.69 TestPkgInstallUpgrade test_upgrade_liveroot
+  6.70 TestMultipleDepots test_08_install_repository_access
+  6.77 TestDependencies test_exclude_dependencies_exact_install
+  6.81 TestPkgVerify test_mix_verify_input
+  6.82 TestPkgInstallBasics test_freeze_exact_install
+  6.84 TestMultipleDepots test_13_non_preferred_multimatch
+  6.86 TestPkgPublisherBasics test_publisher_uri
+  6.91 TestROption test_1_explicit
+  6.92 TestPkgChangeVariant test_cv_01_none_2
+  6.95 TestPkgInstallActions test_usertest_exact_install
+  6.95 TestPkgInstallBasics test_basics_6_exact_install
+  6.95 TestPkgInstallBasics test_cli
+  6.96 TestPkgRepo test_40_contents
+  6.97 TestPkgChangeVariant test_cv_11_arch_and_zone_2
+  6.97 TestPkgsendBasics test_2_invalid_url
+  6.97 TestPkgChangeVariant test_cv_01_none_1
+  6.97 TestPkgSearchBasics test_bug_1873
+  6.98 TestPkgChangeVariant test_cv_11_arch_and_zone_1
+  6.98 TestPkgChangeVariant test_cv_08_zone_1
+  6.99 TestPkgInstallOverlappingPatterns test_overlapping_conflicting_versions_no_wildcard_match
+  6.99 TestPkgChangeVariant test_cv_08_zone_2
+  7.01 TestPkgChangeVariant test_cv_06_arch_2
+  7.02 TestPkgChangeVariant test_cv_10_arch_and_zone_1
+  7.02 TestPkgSignMultiDepot test_sign_pkgrecv
+  7.02 TestPkgInstallActions test_preexisting_group_install
+  7.02 TestPkgTempSources test_02_contents
+  7.02 TestPkgChangeVariant test_cv_01_none_6
+  7.03 TestPkgChangeVariant test_cv_01_none_5
+  7.03 TestPkgPublisherBasics test_missing_perms
+  7.05 TestPkgChangeVariant test_cv_09_zone_2
+  7.05 TestPkgChangeVariant test_cv_09_zone_1
+  7.06 TestPkgChangeVariant test_cv_01_none_3
+  7.07 TestPkgInstallActions test_usertest_install
+  7.08 TestPkgChangeVariant test_cv_06_arch_1
+  7.09 TestPkgSearchBasics test_fmri_output
+  7.10 TestPkgSign test_reverting_signed_packages
+  7.12 TestPkgLinked1 test_audit_diverged_1
+  7.12 TestPkgChangeVariant test_cv_10_arch_and_zone_2
+  7.15 TestPkgHistory test_1_history_options
+  7.17 TestPkgHydrate test_03_hardlinks
+  7.19 TestPkgHistory test_10_history_columns
+  7.19 TestDependencies test_cond_depend_uninstall
+  7.20 TestPkgChangeVariant test_cv_01_none_4
+  7.24 TestPkgLinked1 test_no_pkg_updates_3_fail_via_sync
+  7.34 TestFix test_01_basics
+  7.35 TestPkgsendBasics test_26_pkgsend_multihash
+  7.36 TestPkgLinkedPaths test_linked_paths_BE_cloning
+  7.36 TestPkgLinked1 test_no_pkg_updates_2_foo_via_sync
+  7.39 TestPkgUpdateDowngradeIncorp test_exact_install_downgrade
+  7.41 TestPkgAvoid test_group_update
+  7.41 TestPkgsendHardlinks test_bundle_dir_hardlinks
+  7.42 TestPkgLinked3 test_missing_parent_publisher_metadata_1
+  7.43 TestPkgHydrate test_12_zone_files
+  7.49 TestPkgInstallBasics test_bug_9929
+  7.49 TestPkgLinked1 test_no_pkg_updates_3_sync_via_sync
+  7.51 TestPkgsendBasics test_16_multiple_manifests
+  7.51 TestPkgInstallAmbiguousPatterns test_ambiguous_pattern_depend
+  7.53 TestPkgHistory test_2_history_record
+  7.58 TestDependencies test_incorporation_dependencies_exact_install
+  7.58 TestPkgLinkedPaths test_linked_paths_staged_with_zones
+  7.59 TestPkgAvoid test_group_reject_1
+  7.61 TestPkgsendBasics test_9_multiple_dirs
+  7.61 TestPkgHydrate test_08_pkg_fix
+  7.64 TestPkgsendBasics test_7_create_repo
+  7.65 TestPkgInstallUpgrade test_file_preserve_version
+  7.65 TestPkgHydrate test_07_pkg_verify
+  7.68 TestPkgList test_12_matching
+  7.71 TestMultipleDepots test_12_uninstall_after_publisher_removal
+  7.73 TestPkgInstallBasics test_sysattrs
+  7.78 TestPkgLinkedRecurse test_recursive_sync_update_pkg
+  7.79 TestPkgInfoBasics test_pkg_info_bad_fmri
+  7.79 TestPkgHydrate test_13_existing_file
+  7.82 TestPkgChangeVariant test_cv_07_arch_2
+  7.85 TestPkgLinkedRecurse test_recursive_uninstall_synced_pkg
+  7.88 TestPkgLinkedRecurse test_recursive_sync_update
+  7.91 TestPkgChangeVariant test_cv_07_arch_1
+  7.92 TestPkgLinkedRecurse test_recursive_sync_install
+  7.99 TestPkgLinked1 test_audit_synced_2
+  8.03 TestPkgLinked1 test_audit_synced_4
+  8.06 TestPkgInstallUpgrade test_salvage_nested
+  8.07 TestPkgSMFActuators test_zone_actuators
+  8.08 TestPkgSign test_crl_8
+  8.08 TestPkgLinked1 test_audit_diverged_2
+  8.08 TestPkgInstallUpgrade test_upgrade1
+  8.15 TestPkgInstallExplicitInstall test_04_linked_upgrade
+  8.19 TestDependencies test_require_any_dependencies_exact_install
+  8.20 TestPkgAvoid test_group_basics
+  8.20 TestPkgsurf test_1_basics
+  8.33 TestPkgRepo test_20_verify_missing_nonincorp_dependency
+  8.36 TestPkgInstallExplicitInstall test_02_update_reject
+  8.50 TestPkgHydrate test_09_pkg_revert
+  8.53 TestPkgIntent test_3_dependencies
+  8.55 TestPkgCompositePublishers test_00_list
+  8.61 TestPkgInstallLicense test_01_install_update
+  8.62 TestPkgInstallObsolete test_chained_renames
+  8.64 TestPkgRefreshMulti test_refresh_cli_options
+  8.69 TestPkgPublisherBasics test_publisher_add_remove
+  8.72 TestPkgsendBasics test_1_pkgsend_abandon
+  8.78 TestPkgsendBasics test_18_broken_sysv_dir
+  8.84 TestPkgTerminalTesters test_runprintengine
+  8.90 TestActionErrors test_03_unsupported
+  9.03 TestPkgInstallUpgrade test_file_preserve_legacy
+  9.07 TestPkgRepo test_11_verify_badhash
+  9.10 TestConflictingActions test_mismatch_overlay_files_install
+  9.13 TestPkgInstallActions test_ftpuser_install
+  9.21 TestPkgInstallUpdateReject test_exact_install
+  9.23 TestPkgInstallUpdateReject test_idr
+  9.40 TestMultipleDepots test_14_nonsticky_publisher
+  9.48 TestPkgLinked3 test_missing_parent_pkgs_metadata_2
+  9.63 TestPkgSign test_multiple_signatures
+  9.65 TestPkgRefreshMulti test_ignore_network_cache_2
+  9.72 TestPkgSign test_crl_1
+  9.74 TestPkgChangeFacet test_01_facets
+  9.77 TestPkgTempSources test_01_info
+  9.78 TestPkgLinkedPropertyRecurse test_recursive_install
+  9.79 TestPkgFreeze test_cli_operations
+  9.94 TestPkgImageCreateBasics test_4_options
+ 10.08 TestPkgInstallUpdateReject test_install
+ 10.09 TestPkgIntent test_2_upgrade
+ 10.19 TestPkgSearchBasics test_bug_12271_14088
+ 10.21 TestDependencies test_exclude_dependencies_install
+ 10.24 TestPkgPublisherMany test_publishers_only_from_installed_packages
+ 10.29 TestPkgSign test_crl_7
+ 10.34 TestPkgTempSources test_00_list
+ 10.35 TestPkgHydrate test_11_pkg_change_variant
+ 10.42 TestPkgHydrate test_10_pkg_change_facet
+ 10.46 TestPkgSearchBasics test_bug_8098
+ 10.50 TestPkgChangeFacet test_05_reset_facet
+ 10.55 TestPkgLinkedIncorpDowngrade test_incorp_downgrade
+ 10.60 TestPkgInstallActions test_upgrade_with_user
+ 10.67 NoTestPkgUpdateOverlappingPatterns test_overlapping_patterns_multi_publisher_update
+ 10.81 TestPkgUpdateDowngradeIncorp test_incorp_downgrade
+ 10.81 NoTestImageUpdate test_03_update_specific_packages
+ 10.81 TestPkgPublisherMany test_enable_disable
+ 10.95 TestMultipleDepots test_10_install_after_publisher_removal
+ 10.95 TestPkgInstallUpgrade test_upgrade2
+ 11.09 TestFacetInheritance test_facet_inheritance_via_uninstall
+ 11.12 TestPkgFWDependencies test_fw_dependency
+ 11.13 TestFacetInheritance test_facet_inheritance_via_noop_install
+ 11.18 TestPkgLinked1 test_eaccess_1_child
+ 11.20 TestFacetInheritance test_facet_inheritance_via_noop_change_facet
+ 11.24 TestPkgPublisherMany test_bug_18283
+ 11.26 TestFacetInheritance test_facet_inheritance_via_noop_update
+ 11.48 TestDependencies test_conditional_dependencies_install
+ 11.48 TestPkgInstallActions test_missing_ownergroup_install
+ 11.57 TestPkgRefreshMulti test_ignore_network_cache_1
+ 11.58 TestPkgInstallUpgrade test_file_preserve_renameold
+ 11.62 TestPkgRepo test_09_remove_packages
+ 11.63 TestPkgInstallBasics test_install_matching
+ 11.65 NoTestImageUpdate test_content_policy
+ 11.67 TestPkgLinked3 test_install_frozen
+ 11.67 TestPkgRepo test_10_list
+ 11.68 TestFix test_04_permissions
+ 11.70 TestPkgLinkedPaths test_linked_paths_staged
+ 11.80 TestPkgSign test_disabled_file
+ 11.80 TestPkgLinkedRecurse test_recursive_variant
+ 11.92 TestPkgAvoid test_group_any_trim
+ 11.97 TestPkgSearchBasics test_versionless_incorp
+ 12.17 TestLinkedInstallHoldRelax test_linked_install_hold_relax_constrained_1
+ 12.17 TestPkgInstallActions test_invalid_open
+ 12.18 TestPkgInstallUpgrade test_file_preserve_renamenew
+ 12.21 TestPkgLinkedPropertyRecurse test_recursive_variant
+ 12.27 TestPkgInstallBasics test_basics_ipv6
+ 12.42 TestPkgSign test_sign_0
+ 12.44 TestLinkedInstallHoldRelax test_linked_install_hold_relax_constrained_2
+ 12.46 TestDepotOutput test_2_depot_p5i
+ 12.47 TestPkgRevert test_revert_2
+ 12.57 TestPkgVariants test_old_zones_pkgs
+ 12.62 TestDepotController test_writable_root
+ 12.64 TestPkgInstallLicense test_02_bug_7127117_ISO8859
+ 12.74 TestPkgVariants test_variant_1
+ 12.83 TestPkgInstallUpgrade test_link_preserve_true
+ 12.87 TestPkgLinked3 test_install_constrainted
+ 12.88 TestFacetInheritance test_facet_inheritance_globs
+ 12.88 TestPkgLinkedRecurse test_recursive_uninstall
+ 12.91 TestPkgLinkedRecurse test_recursive_install
+ 12.98 TestPkgRefreshMulti test_ignore_network_cache_3
+ 13.12 TestPkgLinkedRecurse test_recursive_update
+ 13.31 TestPkgLinkedPropertyRecurse test_recursive_update
+ 13.35 TestPkgCompositePublishers test_03_install_update
+ 13.37 NoTestImageUpdate test_nothingtodo
+ 13.48 TestDependencies test_require_any_dependencies_install
+ 13.54 TestPkgDepot test_bug_5707
+ 13.61 TestPkgSearchBasics test_empty_attrs_new
+ 13.70 TestPkgInstallUpgrade test_upgrade3
+ 13.87 TestPkgRefreshMulti test_general_refresh
+ 13.92 TestPkgList test_11_v0_repo
+ 13.99 TestPkgFreezeDisplay test_change_origin_display
+ 14.05 TestPkglintCliDepot test_3_badrelease
+ 14.06 TestPkgInstallObsolete test_basic_exact_install
+ 14.07 TestPkgInstallActions test_valid_open
+ 14.16 TestPkgLinkedPaths test_linked_paths_list_and_props
+ 14.25 TestPkgInstallActions test_bug_3222
+ 14.39 TestPkglintCliDepot test_5_file_paths
+ 14.47 TestPkgsendBasics test_13_pkgsend_indexcontrol
+ 14.53 TestPkgFreezeDisplay test_remove_origin_display
+ 14.55 TestPkgHydrate test_05_pkg_update
+ 14.60 TestSearchMultiPublisher test_search_multi_hash_2
+ 14.62 TestPkgInstallUpgrade test_content_hash_install
+ 14.67 TestDepotOutput test_0_depot_bui_output
+ 14.67 TestSearchMultiPublisher test_search_multi_hash_1
+ 14.89 TestPkgLinked1 test_opts_4_noop
+ 14.90 TestPkgDepot test_bug_1876
+ 14.96 TestPkgInstallActions test_devlink
+ 15.17 TestPkgPublisherBasics test_publisher_proxies
+ 15.17 TestPkgsendBasics test_12_bundle_sysv_datastream
+ 15.17 TestPkgInstallBasics test_image_upgrade
+ 15.27 TestPkgPropertyBasics test_pkg_properties
+ 15.30 TestDependencies test_incorporation_dependencies_install
+ 15.43 TestPkgRepo test_39_remove_publisher
+ 15.50 TestPkgVerify test_01_basics
+ 15.56 TestConflictingActions test_multiple_users_install
+ 15.79 TestPkgImageCreateBasics test_8_image_upgrade
+ 15.86 TestFacetInheritance test_missing_facet_inheritance_metadata_1
+ 15.91 TestPkglintCliDepot test_2_badcache
+ 15.93 TestDepotHTTPS test_01_basics
+ 15.98 TestPkgInstallObsolete test_basic_install
+ 16.13 TestPkglintCliDepot test_4_fancy_unix_progress_tracking
+ 16.31 TestPkgInstallLicense test_02_bug_7127117_UTF8
+ 17.08 TestPkgSearchBasics test_bug_10515
+ 17.11 TestPkgsendBasics test_11_bundle_sysv_dir_nonrelocatable
+ 17.22 TestSearchMultiPublisher test_search_ignore_publisher_with_no_origin
+ 17.27 TestPkgHydrate test_06_pkg_uninstall
+ 17.29 TestPkgLinked2 test_sync_fail
+ 17.37 TestFix test_fix_overlay
+ 17.39 TestPkgInstallActions test_upgrade_garbage_passwd
+ 17.39 TestPkgSign test_crl_5
+ 17.42 TestPkgSign test_crl_6
+ 17.46 TestPkgTempSources test_03_install_update
+ 17.47 TestPkgLinkedRecurse test_recursive_facet
+ 17.61 TestPkgsendBasics test_11_bundle_sysv_dir
+ 17.63 TestPkgLinked1 test_opts_2_invalid_bad_child
+ 17.76 TestConflictingActions test_different_types_install
+ 17.82 TestPkgMediated test_02_hardlink_mediation
+ 17.84 TestSearchMultiPublisher test_search_indices
+ 17.96 TestPkgLinkedPropertyRecurse test_recursive_facet
+ 18.37 TestPkgInstallExplicitInstall test_03_linked
+ 18.49 TestFacetInheritance test_missing_facet_inheritance_metadata_2
+ 18.70 TestPkgsendBasics test_4_bad_actions
+ 18.96 TestPkgPublisherMany test_search_order
+ 19.10 TestPkgSearchBasics test_bug_6177
+ 19.24 TestPkgIntent test_4_image_upgrade
+ 19.33 TestPkgPublisherBasics test_publisher_bad_opts
+ 19.54 TestPkgRefreshMulti test_set_publisher_induces_delayed_full_refresh
+ 20.31 TestPkgLinked1 test_opts_1_invalid
+ 20.35 TestPkgFreezeDisplay test_package_not_in_catalog_display
+ 20.71 TestPkgRefreshMulti test_set_publisher_induces_full_refresh
+ 21.19 TestPkgInstallUpgrade test_many_hashalgs
+ 21.27 TestPkgMediated test_00_mediator
+ 21.88 TestPkgActuators test_basics
+ 22.00 TestSearchMultiPublisher test_7140657
+ 22.11 TestFix test_verify_fix_overlay_attributes
+ 22.14 TestPkgLinkedRecurse test_image_selection
+ 22.14 TestPkgModified test_modified
+ 22.45 TestPkgLinkedScale test_li_scale
+ 22.48 TestPkgRefreshMulti test_multi_origin_refresh
+ 22.50 TestDependencies test_origin_dependencies
+ 22.96 TestPkgRepo test_02_get_set_property
+ 22.99 TestPkgSign test_sign_1
+ 23.00 TestFacetInheritance test_facet_inheritance_cleanup_via_detach
+ 23.06 TestPkgSearchBasics test_pkg_search_cli
+ 23.16 TestFacetInheritance test_facet_inheritance_masked_preserve
+ 23.85 TestPkgRefreshMulti test_specific_refresh
+ 24.01 TestPkgSign test_bad_opts_1
+ 24.14 TestPkgInstallUpgrade test_file_preserve_abandon
+ 24.16 TestPkgRefreshMulti test_implicit_multi_origin_refresh
+ 24.32 TestPkgInstallExplicitInstall test_01_install
+ 24.56 TestPkgSMFActuators test_actuators
+ 25.30 TestPkgInstallActions test_userverify_install
+ 25.92 TestPkgRevert test_revert
+ 26.05 TestPkgPublisherMany test_set_auto
+ 26.18 TestPkgHydrate test_04_pkg_install
+ 26.24 TestFacetInheritance test_facet_inheritance
+ 26.27 TestPkgInstallUpgrade test_file_preserve
+ 26.65 TestDependencies test_parent_dependencies
+ 27.16 TestPkgInstallUpgrade test_file_preserve_install_only
+ 27.37 TestPkgHydrate test_01_basics
+ 27.51 TestPkgHydrate test_02_multiple_publishers
+ 27.68 TestPkgSearchBasics test_local_0
+ 27.90 TestPkgInstallBasics test_bad_package_actions
+ 29.13 TestConflictingActions test_conflicting_attrs_fs_install
+ 29.43 TestPkgLinked2 test_sync_1
+ 30.16 TestPkgInfoBasics test_info_local_remote
+ 30.17 TestPkgSignMultiDepot test_sign_pkgrecv_across_repositories
+ 31.02 TestPkgInstallBasics test_basics_3
+ 31.07 TestConflictingActions test_overlay_files_install
+ 31.46 TestPkgInstallBasics test_basics_4
+ 32.43 TestSearchMultiPublisher test_16190165
+ 32.74 TestPkgRepo test_30_verify_ignore_pkgs
+ 32.87 TestConflictingActions test_multiple_files_install
+ 33.24 TestPkgHydrate test_14_mediator
+ 34.73 TestPkgInstallBasics test_basics_2
+ 34.77 TestPkgsendBasics test_22_publish
+ 35.66 TestPkgRepo test_03_info
+ 35.73 TestPkgVarcet test_00_facet
+ 36.23 TestPkgSign test_sign_5
+ 36.32 TestPkgRepo test_04_rebuild
+ 37.35 TestPkgRepo test_05_refresh
+ 38.20 TestPkgrepoMultiRepo test_01_diff
+ 38.40 TestFacetInheritance test_facet_inheritance_masked_update
+ 38.41 TestPkgLinked2 test_linked_sync_via_change_facet
+ 38.46 TestPkgLinked2 test_linked_sync_via_change_variant
+ 39.43 TestPkgLinked2 test_linked_sync_via_sync
+ 39.70 TestPkgsendBasics test_10_bundle_dir
+ 39.98 TestPkgInstallObsolete test_unobsoleted
+ 40.23 TestPkgSearchBasics test_bug_7835
+ 40.34 TestUtilMerge test_0_merge
+ 40.74 TestPkgRepo test_31_verify_ignore_deps
+ 43.73 TestPkgRepo test_25_verify_missing_incorp_dependency
+ 46.32 TestPkgRefreshMulti test_catalog_v1
+ 46.70 TestFix test_06_download
+ 46.97 TestPkgSignMultiDepot test_sign_pkgrecv_cache_sign_interaction
+ 50.38 TestPkgrecvMulti test_5_recv_env
+ 51.55 TestPkgrecvMulti test_15_content_attrs
+ 52.25 TestPkgrecvMulti test_1a_recv_overlapping_patterns
+ 53.69 TestPkgrecvMulti test_13_output
+ 54.75 TestPkglintCliDepot test_1_invalid_uri
+ 55.63 TestPkgInstallActions test_uninstall_without_perms
+ 55.82 TestPkgSearchBasics test_remote
+ 55.87 TestPkgsendBasics test_14_obsolete
+ 59.65 TestPkgLinkedRecurse test_recursive_idr_removal
+ 60.57 TestPkgVarcet test_01_variant
+ 60.84 TestPkgrecvMulti test_16_recv_old_republish
+ 61.34 TestPkgrecvMulti test_0_opts
+ 61.48 TestPkgrecvMulti test_1_recv_pkgsend
+ 62.17 TestPkgLinked2 test_linked_sync_via_uninstall
+ 62.23 TestPkgLinked2 test_linked_sync_via_install
+ 62.44 TestPkgLinked2 test_linked_sync_via_update_pkg
+ 62.49 TestPkgrecvMulti test_6_recv_republish_preexisting
+ 62.62 TestPkgLinked2 test_linked_sync_via_update
+ 65.15 TestPkgrecvMulti test_2_recv_compare
+ 65.41 TestPkgrecvMulti test_4_timever
+ 66.36 TestPkgrecvMulti test_3_recursive
+ 69.75 TestPkgrecvMulti test_9_dryruns
+ 82.32 TestPkgrecvMulti test_8_archive
+ 83.12 TestPkgrecvMulti test_11_clone
+ 86.03 TestPkgrecvMulti test_17_multiple_publishers
+ 86.26 TestPkglintCliDepot test_6_multiple_repos
+ 87.21 TestPkgMediated test_01_symlink_mediation
+ 91.68 TestPkgrecvMulti test_12_multihash
+ 92.14 TestPkgrecvMulti test_7_recv_multipublisher
+104.79 TestPkgPublisherMany test_set_mirrors_origins
+116.35 TestPkgrecvMulti test_14_mog_manifest
+136.94 TestPkgPublisherMany test_origins_enable_disable
+138.54 TestNastyPkgUtils test_pkgrepo_nasty_looping
+144.97 TestPkgSearchBasics test_empty_attrs_additional
+150.73 TestPkgPublicationApi test_stress_http_publish
+193.47 TestNastyPkgUtils test_pkgrecv_nasty_looping
+223.42 TestPkgrecvMulti test_10_unsupported_actions
+267.41 TestNastyInstall test_install_nasty_looping
+352.94 TestNastyTempPub test_temppub_nasty_looping
+431.37 TestPkgLinkedPaths test_linked_paths_moves
+10746.90 Total time
+
+============================================================
+

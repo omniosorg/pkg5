@@ -36,7 +36,7 @@ CFLAGS = $(CFLAGS_$(MACH)) -Wall -Werror -Wextra -gdwarf-2 -gstrict-dwarf \
 CPPFLAGS = -D_REENTRANT -D_POSIX_PTHREAD_SEMANTICS
 
 # Whitespace separated list of versions to build and test.
-PYVERSIONS = 3.13
+PYVERSIONS = 3.13 3.15
 # The single version used for shebang lines and packaging.
 PYVER = 3.13
 
