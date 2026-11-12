@@ -14,11 +14,13 @@
 # }}}
 
 # Copyright 2023 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2026 Chris Fraire <cfraire@me.com>
 
 import logging
 import os
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -190,10 +192,24 @@ class Zone:
             "disable_root": False,
         }
 
+        has_password = False
+        has_passfile = False
         if (v := self.findattr("password")) is not None:
             user_data["password"] = file_or_string(v.get("value"))
+            has_password = True
+        if (v := self.findattr("passfile")) is not None:
+            f = v.get("value")
+            pw = file_read(f, self.zoneroot, stat.S_IRUSR | stat.S_IWUSR)
+            if pw == "":
+                fatal(f'{f}: passfile is empty')
+            user_data["password"] = pw
+            has_passfile = True
+        if has_password or has_passfile:
             user_data["chpasswd"] = {"expire": False}
             user_data["ssh_pwauth"] = True
+        if has_password and has_passfile:
+            fatal("cloud-init 'password' and 'passfile' cannot be used " +
+                "together")
 
         if (v := self.findattr("sshkey")) is not None:
             v = file_or_string(v.get("value"))
@@ -331,6 +347,28 @@ def file_or_string(f):
             fatal(f"Could not read from {f}: {e}")
     return f.strip()
 
+
+def file_read(f, root_for_relative, allow_mode_mask=0):
+    if not os.path.isabs(f):
+        f = root_for_relative + "/" + f
+
+    if os.path.isfile(f):
+        try:
+            if allow_mode_mask != 0:
+                sta = os.stat(f)
+                if ((sta.st_mode & ~allow_mode_mask & (stat.S_IRWXU |
+                    stat.S_IRWXG | stat.S_IRWXO)) != 0):
+                    o = stat.filemode(sta.st_mode)
+                    k = stat.filemode(allow_mode_mask)
+                    fatal(f'{f}: invalid mode {o} vs allowed mask {k}')
+            with open(f) as fh:
+                res = fh.read()
+        except Exception as e:
+            fatal(f"Could not read from {f}: {e}")
+    else:
+        fatal(f"{f} does not exist")
+
+    return res.strip()
 
 def expandopts(opt):
     """Expand a comma-separated option string out into a dictionary.
