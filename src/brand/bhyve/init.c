@@ -142,7 +142,6 @@ int
 main(int argc __unused, char **argv __unused)
 {
 	char zonename[ZONENAME_MAX];
-
 	char *args[] = {
 		NULL,
 		"-k", "/etc/bhyve.cfg",
@@ -159,7 +158,7 @@ main(int argc __unused, char **argv __unused)
 	if (asprintf(&args[0], "bhyve-%s", zonename) == -1)
 		args[0] = "bhyve";
 
-	(void) execv("/usr/sbin/bhyve", args);
+	(void) execv("/tmp/bhyve", args);
 	err(EXIT_FAILURE, "execv failed");
 
 	/* NOTREACHED */
