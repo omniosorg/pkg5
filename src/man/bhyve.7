@@ -13,7 +13,7 @@
 .\" Copyright 2023 OmniOS Community Edition (OmniOSce) Association.
 .\" Copyright 2026 EFit Partners
 .\"
-.Dd August 27, 2026
+.Dd November 12, 2026
 .Dt BHYVE 7
 .Os
 .Sh NAME
@@ -41,6 +41,13 @@ Supported attributes are:
 .Xc
 .Pp
 This is a legacy option that no longer has any effect.
+.\" bhyve
+.It Xo Ic bhyve Pa path Xc
+.Pp
+The path to the bhyve binary to use.
+If not given,
+.Sq Pa /usr/sbin/bhyve
+will be used. 
 .\" bootdisk
 .It Ic bootdisk Ar path Ns Op , Ns Cm serial Ns = Ns Ar serial
 .Pp
