@@ -13711,6 +13711,296 @@ class TestPkgUpdateDowngradeIncorp(pkg5unittest.ManyDepotTestCase):
         self.pkg("update p_incorp@2", exit=1)
 
 
+class TestPkgSupersedes(pkg5unittest.SingleDepotTestCase):
+    """Tests for packages which are withdrawn by an older version that
+    carries a pkg.depend.supersedes attribute."""
+
+    persistent_setup = True
+
+    pkgs = (
+        # A: versions 2.0 and 2.1 are superseded by 1.1-1.
+        """
+                    open A@1.0,5.11-0:20200101T000000Z
+                    close """,
+        """
+                    open A@1.1,5.11-0:20200102T000000Z
+                    close """,
+        """
+                    open A@2.0,5.11-0:20200103T000000Z
+                    close """,
+        """
+                    open A@2.1,5.11-0:20200104T000000Z
+                    close """,
+        """
+                    open A@1.1,5.11-1:20200105T000000Z
+                    add set pkg.depend.supersedes=2.1
+                    close """,
+        # B requires a superseded version of A.
+        """
+                    open B@1.0,5.11-0:20200101T000000Z
+                    add depend type=require fmri=A@2.0
+                    close """,
+        """
+                    open C@1.0,5.11-0:20200101T000000Z
+                    close """,
+        """
+                    open C@2.0,5.11-0:20200102T000000Z
+                    close """,
+        # X also requires a superseded version of A, and is rebuilt
+        # against the superseding one by test_supersede_dependent.
+        """
+                    open X@1.0,5.11-0:20200101T000000Z
+                    add depend type=require fmri=A@2.0
+                    close """,
+        # D: version 2.0 was republished after being superseded.
+        """
+                    open D@1.0,5.11-0:20200101T000000Z
+                    close """,
+        """
+                    open D@2.0,5.11-0:20200102T000000Z
+                    close """,
+        """
+                    open D@1.0,5.11-1:20200103T000000Z
+                    add set pkg.depend.supersedes=2.0
+                    close """,
+        """
+                    open D@2.0,5.11-0:20200104T000000Z
+                    close """,
+        # E: a version newer than the superseded range is available.
+        """
+                    open E@1.0,5.11-0:20200101T000000Z
+                    close """,
+        """
+                    open E@2.0,5.11-0:20200102T000000Z
+                    close """,
+        """
+                    open E@1.0,5.11-1:20200103T000000Z
+                    add set pkg.depend.supersedes=2.0
+                    close """,
+        """
+                    open E@3.0,5.11-0:20200104T000000Z
+                    close """,
+        # H: the superseded version is removed from the repository by
+        # test_supersede_pruned.
+        """
+                    open H@1.0,5.11-0:20200101T000000Z
+                    close """,
+        """
+                    open H@2.0,5.11-0:20200102T000000Z
+                    close """,
+        """
+                    open H@1.0,5.11-1:20200103T000000Z
+                    add set pkg.depend.supersedes=2.0
+                    close """,
+        # F: the attribute is ignored unless it is on a package that was
+        # published after the versions it names.
+        """
+                    open F@1.0,5.11-0:20200101T000000Z
+                    add set pkg.depend.supersedes=2.0
+                    close """,
+        """
+                    open F@2.0,5.11-0:20200102T000000Z
+                    close """,
+    )
+
+    def setUp(self):
+        pkg5unittest.SingleDepotTestCase.setUp(self)
+        self.pkgsend_bulk(self.rurl, self.pkgs)
+
+    def test_supersede_install(self):
+        """Superseded versions are not chosen for a new install, but
+        can be requested explicitly."""
+
+        self.image_create(self.rurl)
+        self.pkg("install A")
+        self.pkg("list A@1.1-1")
+        self.pkg("uninstall A")
+
+        # A request which also matches other versions avoids the
+        # superseded ones.
+        self.pkg("install A@1")
+        self.pkg("list A@1.1-1")
+        self.pkg("uninstall A")
+
+        # The latest version is the newest one which has not been
+        # superseded.
+        self.pkg("install A@latest")
+        self.pkg("list A@1.1-1")
+        self.pkg("uninstall A")
+
+        # A request which can only be satisfied by superseded versions
+        # is honoured.
+        self.pkg("install A@2")
+        self.pkg("list A@2.1-0")
+        self.pkg("update A@2.0")
+        self.pkg("list A@2.0-0")
+
+        # A dependency which needs a superseded version cannot bring
+        # one in.
+        self.pkg("uninstall A")
+        self.pkg("install B", exit=1)
+
+    def test_supersede_update(self):
+        """An installed superseded version is moved back by an update
+        of all packages or of that package, but not otherwise."""
+
+        self.image_create(self.rurl)
+        self.pkg("install A@2.1 C@1")
+
+        # Operating on another package leaves A alone.
+        self.pkg("update C")
+        self.pkg("list A@2.1-0 C@2.0")
+
+        self.pkg("update -nv")
+        self.pkg("update")
+        self.pkg("list A@1.1-1")
+        self.pkg("update", exit=4)
+
+        # Now by name.
+        self.pkg("install A@2.0")
+        self.pkg("update A")
+        self.pkg("list A@1.1-1")
+
+        # And by asking for the latest version.
+        self.pkg("install A@2.1")
+        self.pkg("update A@latest")
+        self.pkg("list A@1.1-1")
+
+        # Older versions move forward to the superseding version.
+        self.pkg("install A@1.0")
+        self.pkg("update")
+        self.pkg("list A@1.1-1")
+
+    def test_supersede_list(self):
+        """The list of upgradable packages reflects what an update
+        would do."""
+
+        self.image_create(self.rurl)
+
+        # An installed superseded version can be updated; the version
+        # which supersedes it cannot.
+        self.pkg("install A@2.1 C@1")
+        self.pkg("list -u A C")
+        self.pkg("update")
+        self.pkg("list -u A", exit=1)
+        self.pkg("list -u", exit=1)
+
+        # Older versions can be updated.
+        self.pkg("install A@1.0")
+        self.pkg("list -u A")
+
+        # Versions published after the superseding package.
+        self.pkg("install D")
+        self.pkg("list -u D", exit=1)
+        self.pkg("install E@2")
+        self.pkg("list -u E")
+        self.pkg("update E")
+        self.pkg("list -u E", exit=1)
+
+    def test_supersede_freeze(self):
+        """A frozen package is not affected."""
+
+        self.image_create(self.rurl)
+        self.pkg("install A@2.1")
+        self.pkg("freeze A")
+        self.pkg("update", exit=4)
+        self.pkg("list A@2.1-0")
+        self.pkg("unfreeze A")
+        self.pkg("update")
+        self.pkg("list A@1.1-1")
+
+    def test_supersede_fallback(self):
+        """A package which cannot be moved back to the superseding
+        version does not prevent other packages from being updated."""
+
+        self.image_create(self.rurl)
+        self.pkg("install A@2.1 B C@1")
+        self.pkg("update")
+        self.assertTrue("superseded" in self.errout, self.errout)
+        self.pkg("list A@2.1-0 B C@2.0")
+
+        # With nothing else to update, there is nothing to do.
+        self.pkg("update", exit=4)
+        self.assertTrue("superseded" in self.errout, self.errout)
+
+        # Naming the package is an error.
+        self.pkg("update A", exit=1)
+
+    def test_supersede_dependent(self):
+        """A package which depends on a superseded version holds it in
+        place until a version of that package which can use the
+        superseding one is available, and then both move together."""
+
+        self.image_create(self.rurl)
+        self.pkg("install A@2.1 X")
+        self.pkg("update", exit=4)
+        self.assertTrue("superseded" in self.errout, self.errout)
+        self.pkg("list A@2.1-0 X@1.0-0")
+
+        self.pkgsend_bulk(
+            self.rurl,
+            """
+                    open X@1.1,5.11-0:20200106T000000Z
+                    add depend type=require fmri=A@1.1
+                    close """,
+        )
+        self.pkg("update")
+        self.assertTrue("superseded" not in self.errout, self.errout)
+        self.pkg("list A@1.1-1 X@1.1-0")
+
+    def test_supersede_pruned(self):
+        """An installed superseded version is still moved back once it
+        is no longer in the repository."""
+
+        self.image_create(self.rurl)
+        self.pkg("install H@2.0")
+        self.pkgrepo("remove -s {0} H@2.0".format(self.rurl))
+        self.pkg("refresh")
+        self.pkg("list -u H")
+        self.pkg("update")
+        self.pkg("list -u H", exit=1)
+        self.pkg("list H@1.0-1")
+
+    def test_supersede_later(self):
+        """Versions published after the superseding package are not
+        affected by it."""
+
+        self.image_create(self.rurl)
+
+        # A superseded version which was republished.
+        self.pkg("install D")
+        self.pkg("list D@2.0-0")
+        self.pkg("update", exit=4)
+
+        # A newer version.
+        self.pkg("install E@2")
+        self.pkg("list E@2.0-0")
+        self.pkg("update")
+        self.pkg("list E@3.0-0")
+        self.pkg("install E@1.0-1")
+        self.pkg("update E")
+        self.pkg("list E@3.0-0")
+
+        # The attribute on a package which predates the named versions.
+        self.pkg("install F")
+        self.pkg("list F@2.0-0")
+        self.pkg("update", exit=4)
+
+    def test_supersede_publish(self):
+        """The superseded version must be valid and higher than that of
+        the package."""
+
+        for val in ("1.0", "0.5", "banana"):
+            self.pkgsend_bulk(
+                self.rurl,
+                """
+                    open G@1.0,5.11-0
+                    add set pkg.depend.supersedes={0}
+                    close """.format(val),
+                exit=1,
+            )
+
+
 if __name__ == "__main__":
     unittest.main()
 

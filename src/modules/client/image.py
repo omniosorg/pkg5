@@ -33,6 +33,7 @@ import datetime
 import errno
 import gc
 import hashlib
+import operator
 import os
 import platform
 import shutil
@@ -3470,12 +3471,79 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
         # consolidated here.  This comparison is also cross-publisher,
         # as it used to be.  In the future, it could likely be improved
         # by usage of the SAT solver.
+        #
+        # A version which has been withdrawn by its publisher, by way
+        # of pkg.depend.supersedes on an older version, is not a
+        # candidate for the newest version. A package can only have
+        # withdrawn versions if its highest version is not the one most
+        # recently published, so those are found first in order to
+        # avoid looking at the attributes of everything else.
+        superseded = {}
+        for pfx, cat in pub_cats:
+            if cat.get_part("catalog.dependency.C", must_exist=True) is None:
+                # Client hasn't retrieved this part.
+                continue
+
+            def set_actions(f, cat=cat):
+                try:
+                    return [
+                        a
+                        for a in cat.get_entry_actions(f, [cat.DEPENDENCY])
+                        if a.name == "set"
+                    ]
+                except apx.UnknownCatalogEntry:
+                    return []
+
+            published = {}
+            for (pub, stem, ver), entry in cat.tuple_entries(pubs=[pfx]):
+                ts = ver.rpartition(":")[2]
+                if ts > published.get(stem, ""):
+                    published[stem] = ts
+
+            # The highest version of each package, including installed
+            # versions which are no longer in the publisher's catalogue.
+            highest = {}
+            for c in (cat, old_icat):
+                for f in c.fmris(last=True, pubs=[pfx]):
+                    stem = f.pkg_name
+                    if stem not in highest or f.version > highest[stem].version:
+                        highest[stem] = f
+
+            for stem, f in highest.items():
+                ts = f.version.timestr
+                if not ts or ts >= published.get(stem, ""):
+                    continue
+                flist = set(
+                    g
+                    for c in (cat, old_icat)
+                    for ver, fmris in c.fmris_by_version(stem, pubs=[pfx])
+                    for g in fmris
+                )
+                found = pkg.catalog.find_superseded(flist, set_actions)
+                if found:
+                    superseded.setdefault(stem, set()).update(found)
+
         newest = {}
         for pfx, cat in [(None, old_icat)] + pub_cats:
-            for f in cat.fmris(last=True, pubs=pfx and [pfx] or EmptyI):
-                nver, snver = newest.get(f.pkg_name, (None, None))
+            pubs = pfx and [pfx] or EmptyI
+            for f in cat.fmris(last=True, pubs=pubs):
+                stem = f.pkg_name
+                if stem in superseded:
+                    # Use the highest version which has not been
+                    # withdrawn, if there is one.
+                    current = [
+                        g
+                        for ver, fmris in cat.fmris_by_version(stem, pubs=pubs)
+                        for g in fmris
+                        if g not in superseded[stem]
+                    ]
+                    if current:
+                        f = max(current, key=operator.attrgetter("version"))
+                    elif cat is old_icat:
+                        continue
+                nver, snver = newest.get(stem, (None, None))
                 if f.version > nver:
-                    newest[f.pkg_name] = (f.version, str(f.version))
+                    newest[stem] = (f.version, str(f.version))
 
         # Next, copy all of the entries for the catalogue parts that
         # currently exist into the image 'known' catalog.

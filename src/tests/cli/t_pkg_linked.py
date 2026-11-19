@@ -3198,6 +3198,94 @@ class TestPkgLinkedIncorpDowngrade(TestPkgLinked):
         self._pkg([0, 1, 2], "list A@1")
 
 
+class TestPkgLinkedSupersedes(TestPkgLinked):
+    """Test that packages which have been superseded by an older version
+    are handled correctly in linked images."""
+
+    pkgs = (
+        # A is not kept in sync with the parent image.
+        """
+                    open A@1.0,5.11-0:20200101T000000Z
+                    close """,
+        """
+                    open A@2.0,5.11-0:20200102T000000Z
+                    close """,
+        """
+                    open A@1.0,5.11-1:20200103T000000Z
+                    add set pkg.depend.supersedes=2.0
+                    close """,
+        # S is.
+        """
+                    open S@1.0,5.11-0:20200101T000000Z
+                    add depend type=parent fmri={0}
+                    close """.format(pkg.actions.depend.DEPEND_SELF),
+        """
+                    open S@2.0,5.11-0:20200102T000000Z
+                    add depend type=parent fmri={0}
+                    close """.format(pkg.actions.depend.DEPEND_SELF),
+        """
+                    open S@1.0,5.11-1:20200103T000000Z
+                    add set pkg.depend.supersedes=2.0
+                    add depend type=parent fmri={0}
+                    close """.format(pkg.actions.depend.DEPEND_SELF),
+    )
+
+    def setUp(self):
+        self.i_count = 3
+        pkg5unittest.ManyDepotTestCase.setUp(
+            self, ["test"], image_count=self.i_count
+        )
+
+        # get repo url
+        self.rurl1 = self.dcs[1].get_repo_url()
+
+        # setup image names and paths
+        self.i_name = []
+        self.i_path = []
+        self.i_api = []
+        self.i_api_reset = []
+        for i in range(self.i_count):
+            name = "system:img{0:d}".format(i)
+            self.i_name.insert(i, name)
+            self.i_path.insert(i, self.img_path(i))
+
+        self.pkgsend_bulk(self.rurl1, self.pkgs)
+
+    def test_supersede_sync(self):
+        """Updating the parent moves a synced package back in the
+        children too, but leaves their other packages alone until they
+        are updated themselves."""
+
+        # create parent (0), push child (1, 2)
+        self._imgs_create(3)
+        self._attach_child(0, [1, 2])
+
+        self._pkg([0, 1, 2], "install -v A@2.0 S@2.0")
+        self._pkg([0], "update -v")
+        self._pkg([0], "list A@1.0-1")
+        self._pkg([0, 1, 2], "list S@1.0-1")
+        self._pkg([1, 2], "list A@2.0-0")
+
+        # Other operations in a child still work.
+        self._pkg([1], "uninstall -v A")
+        self._pkg([1], "install -v A")
+        self._pkg([1], "list A@1.0-1")
+
+        self._pkg([2], "update -v")
+        self._pkg([2], "list A@1.0-1")
+
+    def test_supersede_recursive(self):
+        """A recursive update moves the packages back everywhere."""
+
+        # create parent (0), push child (1, 2)
+        self._imgs_create(3)
+        self._attach_child(0, [1, 2])
+
+        self._pkg([0, 1, 2], "install -v A@2.0 S@2.0")
+        self._pkg([0], "update -r -v")
+        self._pkg([0, 1, 2], "list A@1.0-1 S@1.0-1")
+
+
 class TestFacetInheritance(TestPkgLinked):
     """Class to test facet inheritance between images.
 

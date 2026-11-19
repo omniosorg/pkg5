@@ -310,7 +310,7 @@ class TransportTransaction(object):
         try:
             # Perform additional publication-time validation of
             # actions before further processing is done.
-            action.validate()
+            action.validate(fmri=self.pkg_name)
         except actions.ActionError as e:
             raise TransactionOperationError(
                 "add", trans_id=self.trans_id, msg=str(e)

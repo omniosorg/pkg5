@@ -25,7 +25,7 @@
 # Copyright 2020 OmniOS Community Edition (OmniOSce) Association.
 #
 
-from pkg.lint.engine import lint_fmri_successor
+from pkg.lint.engine import lint_fmri_successor, lint_manifest_supersedes
 
 import collections
 import copy
@@ -149,13 +149,13 @@ class PkgDupActionChecker(base.ActionChecker):
         # avoid seeding the reference dictionary for any packages
         # that have new versions available in the lint repository, or
         # lint manifests given on the command line.
-        lint_fmris = {}
+        lint_mfs = {}
         for m in engine.gen_manifests(
             engine.lint_api_inst, release=engine.release, pattern=engine.pattern
         ):
-            lint_fmris.setdefault(m.fmri.get_name(), []).append(m.fmri)
+            lint_mfs.setdefault(m.fmri.get_name(), []).append(m)
         for m in engine.lint_manifests:
-            lint_fmris.setdefault(m.fmri.get_name(), []).append(m.fmri)
+            lint_mfs.setdefault(m.fmri.get_name(), []).append(m)
 
         engine.logger.debug(
             _("Seeding reference action duplicates dictionaries.")
@@ -165,10 +165,12 @@ class PkgDupActionChecker(base.ActionChecker):
             engine.ref_api_inst, release=engine.release
         ):
             # Only put this manifest into the reference dictionary
-            # if it's not an older version of the same package.
+            # if it isn't an older version of the same package, or a
+            # newer version which is being superseded.
             if any(
-                lint_fmri_successor(fmri, manifest.fmri)
-                for fmri in lint_fmris.get(manifest.fmri.get_name(), [])
+                lint_fmri_successor(m.fmri, manifest.fmri)
+                or lint_manifest_supersedes(m, manifest.fmri)
+                for m in lint_mfs.get(manifest.fmri.get_name(), [])
             ):
                 continue
             else:

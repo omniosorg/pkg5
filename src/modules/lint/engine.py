@@ -31,6 +31,7 @@ import pkg.client.publisher as publisher
 import pkg.lint.base as base
 import pkg.lint.config
 import pkg.fmri
+import pkg.version
 from pkg.client.api_errors import ApiException
 from pkg.version import DotSequence, Version
 
@@ -1274,6 +1275,40 @@ class LintEngine(object):
         except base.DuplicateLintedAttrException as err:
             self.error(err, msgid="pkglint001.6")
         return ret
+
+
+def lint_manifest_supersedes(manifest, old):
+    """Determine if 'manifest' withdraws the package version given by the
+    FMRI 'old' by way of a pkg.depend.supersedes attribute. That is the
+    case when 'old' is the same package at a version in the range
+    (ver, limit], where 'ver' is the version of the manifest and 'limit'
+    is the value of the attribute.
+
+    Timestamps are not considered. The manifest is assumed to be about to
+    be published, which will make it newer than anything already present
+    in a repository."""
+
+    new = manifest.fmri
+    if new.get_name() != old.get_name():
+        return False
+    if not new.has_version() or not old.has_version():
+        return False
+    if not old.version > new.version:
+        return False
+
+    vals = manifest.get("pkg.depend.supersedes", [])
+    if isinstance(vals, str):
+        vals = [vals]
+    for val in vals:
+        try:
+            limit = Version(val)
+        except pkg.version.VersionError:
+            continue
+        if old.version < limit or old.version.is_successor(
+            limit, pkg.version.CONSTRAINT_AUTO
+        ):
+            return True
+    return False
 
 
 def lint_fmri_successor(new, old, ignore_pubs=True, ignore_timestamps=True):

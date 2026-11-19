@@ -86,7 +86,8 @@ _TRIM_VARIANT = 21  # unsupported variant (e.g. i386 on sparc)
 _TRIM_EXPLICIT_INSTALL = 22  # pkg.depend.explicit-install is true.
 _TRIM_SYNCED_INC = 23  # incorporation must be in sync with parent
 _TRIM_PROPOSED_DEP = 24  # rejected by a proposed package's dependency
-_TRIM_MAX = 25  # number of trim constants
+_TRIM_SUPERSEDED = 25  # withdrawn by pkg.depend.supersedes
+_TRIM_MAX = 26  # number of trim constants
 
 
 class DependencyException(Exception):
@@ -257,6 +258,23 @@ class PkgSolver(object):
         self.__pretrim_cache = {}  # trim-independent version
         # comparison results, valid for the life of the solver
 
+        # State for pkg.depend.supersedes handling; see __get_superseded().
+        self.__supersede_cache = {}  # stem -> {fmri: superseding fmris}
+        self.__supersede_done = set()  # stems already processed
+        self.__supersede_skip = set()  # stems exempt (frozen)
+        # fmris explicitly requested stems whose installed version may be moved
+        # back
+        self.__supersede_keep = set()
+        self.__supersede_names = set()
+        self.__supersede_all = False  # as above, but for every stem
+        # replacement fmris for superseded installed packages. These are kept
+        # apart from __allowed_downgrades as they are only exempt from being
+        # trimmed as older than the installed version; the solver must still
+        # prefer any newer version which can be installed.
+        self.__supersede_downgrades = set()
+        # superseded installed fmri -> newest replacement
+        self.__supersede_installed = {}
+
     def __str__(self):
         s = "Solver: ["
         if self.__state in [SOLVER_FAIL, SOLVER_SUCCESS]:
@@ -313,6 +331,8 @@ class PkgSolver(object):
         self.__nonmatch_cache = None
         self.__depvalid = None
         self.__pretrim_cache = None
+        self.__supersede_cache = None
+        self.__supersede_downgrades = None
         self.__linked_pkgs = set()
 
         # Value 'DebugValues' is unsubscriptable;
@@ -1281,6 +1301,20 @@ class PkgSolver(object):
         self.__excludes = excludes
         pt = self.__begin_solve()
 
+        # Packages which are frozen are not affected by superseded
+        # versions. The installed version of a package is only moved
+        # back to a superseding version if the package was named, and
+        # if every version that was requested has been superseded then
+        # assume that this is deliberate and allow them.
+        self.__supersede_skip = set(
+            f.pkg_name for f, _r, _t in existing_freezes
+        )
+        self.__supersede_names = set(proposed_dict)
+        for name, flist in proposed_dict.items():
+            superseded = self.__get_superseded(name)
+            if superseded and all(f in superseded for f in flist):
+                self.__supersede_keep.update(flist)
+
         # reject_set is a frozenset(), need to make copy to modify
         r_set = set(reject_set)
         for f in self.__triggered_ops[PKG_OP_UNINSTALL][PKG_OP_UPDATE]:
@@ -1390,6 +1424,7 @@ class PkgSolver(object):
                 )
 
         possible_set |= self.__allowed_downgrades
+        possible_set |= self.__supersede_downgrades
 
         self.__start_subphase(3)
         # If requested, trim any proposed fmris older than those of
@@ -1633,7 +1668,11 @@ class PkgSolver(object):
         return self.__end_solve(solution, excludes)
 
     def solve_update_all(
-        self, existing_freezes, excludes=EmptyI, reject_set=frozenset()
+        self,
+        existing_freezes,
+        excludes=EmptyI,
+        reject_set=frozenset(),
+        supersede_installed=True,
     ):
         """Logic to update all packages within an image to the latest
         versions possible.
@@ -1647,10 +1686,21 @@ class PkgSolver(object):
         'reject_set' contains user specified FMRIs that should not be
         present within the final image.  (These packages may or may
         not be currently installed.)
+
+        'supersede_installed' indicates whether installed packages
+        should be moved back to an older version if the publisher has
+        marked that version as superseding the installed one.
         """
 
         self.__excludes = excludes
         pt = self.__begin_solve()
+
+        # Packages which are frozen are not affected by superseded
+        # versions.
+        self.__supersede_skip = set(
+            f.pkg_name for f, _r, _t in existing_freezes
+        )
+        self.__supersede_all = supersede_installed
 
         # Determine which packages are to be removed, rejected, and
         # avoided and also determine which ones must not be removed
@@ -1681,6 +1731,7 @@ class PkgSolver(object):
                 f, excludes=excludes, relax_all=True
             )
         possible_set |= self.__allowed_downgrades
+        possible_set |= self.__supersede_downgrades
 
         # trim fmris we cannot install because they're older
         for f in self.__installed_fmris:
@@ -2087,6 +2138,8 @@ class PkgSolver(object):
         """return the list of fmris in catalog for this pkg name"""
         if pkg_name not in self.__pub_trim:
             self.__filter_publishers(pkg_name)
+        if pkg_name not in self.__supersede_done:
+            self.__trim_superseded(pkg_name)
 
         if self.__trimdone:
             return self.__possible_dict.get(pkg_name, [])
@@ -3804,10 +3857,91 @@ class PkgSolver(object):
         reason = (N_("Newer version {0} is already installed"), (fmri,))
         self.__trim(
             self.__comb_newer_fmris(fmri, dotrim=False)[1]
-            - self.__allowed_downgrades,
+            - self.__allowed_downgrades
+            - self.__supersede_downgrades,
             _TRIM_INSTALLED_NEWER,
             reason,
         )
+
+    def __get_superseded(self, pkg_name):
+        """Return a dictionary of the versions of the package 'pkg_name'
+        which have been withdrawn by their publisher, mapped to the set
+        of FMRIs which supersede them; see find_superseded()."""
+
+        try:
+            return self.__supersede_cache[pkg_name]
+        except KeyError:
+            pass
+
+        ret = catalog.find_superseded(
+            (
+                f
+                for _ver, fmris in self.__get_fmris_by_version(pkg_name)
+                for f in fmris
+            ),
+            self.__get_set_actions,
+        )
+        self.__supersede_cache[pkg_name] = ret
+        return ret
+
+    def __trim_superseded(self, pkg_name):
+        """Trim the versions of the package 'pkg_name' which have been
+        superseded by an older version; see __get_superseded(). This
+        is done once, when a package is first considered.
+
+        The installed version of a package is only trimmed, allowing
+        the package to be moved back to the version which supersedes
+        it, when updating all packages or when the package itself is
+        being operated on. Other operations leave it alone."""
+
+        self.__supersede_done.add(pkg_name)
+        if pkg_name in self.__supersede_skip:
+            return
+
+        superseded = self.__get_superseded(pkg_name)
+        if not superseded:
+            return
+
+        inst = self.__installed_dict.get(pkg_name)
+        parent = self.__parent_dict.get(pkg_name)
+
+        for f, replacements in superseded.items():
+            if f in self.__supersede_keep:
+                continue
+            if parent and f.version == parent.version:
+                # Remain able to match the parent image.
+                continue
+
+            newest = max(replacements, key=operator.attrgetter("version"))
+            if f == inst:
+                if f in self.__removal_fmris:
+                    continue
+                if (
+                    not self.__supersede_all
+                    and pkg_name not in self.__supersede_names
+                ):
+                    if parent in replacements:
+                        # The parent image has already moved back,
+                        # so allow this one to follow if the
+                        # package has to be kept in sync with it.
+                        self.__supersede_downgrades.add(parent)
+                    continue
+                self.__supersede_downgrades |= replacements
+                self.__supersede_installed[f] = newest
+
+            reason = (
+                N_("This version has been superseded by {0}"),
+                (newest,),
+            )
+            self.__trim((f,), _TRIM_SUPERSEDED, reason)
+
+    def get_superseded_installed(self):
+        """Return a list of (installed fmri, replacement fmri) tuples
+        for each installed package that this solver attempted to move
+        back to an older version because its publisher has superseded
+        the installed version."""
+
+        return sorted(self.__supersede_installed.items())
 
     def __trim_nonmatching_variants(self, fmri):
         """Trim packages that don't support image architecture or other

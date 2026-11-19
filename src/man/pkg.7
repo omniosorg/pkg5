@@ -2,7 +2,7 @@
 .\" Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
 .\" Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
 .\" Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
-.Dd November 14, 2024
+.Dd November 18, 2026
 .Dt PKG 7
 .Os
 .Sh NAME
@@ -1307,6 +1307,47 @@ any number of set actions.
 When
 .Sy true ,
 the package is marked legacy, meaning that it will be removed in the future.
+.It Sy pkg.depend.supersedes
+Withdraws newer versions of the package in favour of this one.
+Use it to take a package back to an older version when a newer one turns out
+to be defective.
+The value is the highest version to withdraw.
+For example, if version 2.6.4 of a package delivers:
+.Pp
+.Dl set name=pkg.depend.supersedes value=2.6.11
+.Pp
+then every version newer than 2.6.4, up to and including 2.6.11, is withdrawn.
+Only versions from the same publisher that were published before the
+superseding package are withdrawn.
+A version published afterwards is not affected, whether it is newer than the
+range, such as 2.6.12, or is a withdrawn version that has been published
+again.
+.Pp
+A withdrawn version is treated as follows:
+.Bl -bullet
+.It
+It is not selected for installation unless exactly that version is requested.
+A request for the
+.Sy latest
+version selects the newest version that has not been withdrawn.
+.It
+If it is installed,
+.Sy pkg update
+replaces it with the superseding version, both when updating all packages and
+when the package is named.
+Other operations leave it in place.
+.It
+If it is installed,
+.Sy pkg list -u
+shows the package as having an update available.
+The superseding version is not shown as having one on account of the
+withdrawn versions.
+.It
+If it cannot be replaced, for example because another installed package
+requires it, an update of all packages leaves it in place and emits a warning.
+.It
+If the package is frozen, it is not affected.
+.El
 .It Sy pkg.summary
 A short, one-line description of the package.
 .El

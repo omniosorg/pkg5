@@ -37,7 +37,7 @@ import stat
 import threading
 
 from collections import OrderedDict
-from operator import itemgetter
+from operator import attrgetter, itemgetter
 
 import pkg.actions
 import pkg.client.api_errors as api_errors
@@ -4016,6 +4016,65 @@ class Catalog(object):
 
 
 # Methods used by external callers
+def find_superseded(fmris, get_set_actions):
+    """Given the FMRIs of all known versions of a package, return a
+    dictionary of those which have been withdrawn by their publisher,
+    mapped to the set of FMRIs which supersede them.
+
+    A package at version 'ver' which carries the attribute
+    pkg.depend.supersedes=<limit> withdraws the versions of itself in
+    the range (ver, limit], where a version which matches 'limit' as a
+    prefix is within the range. Only versions from the same publisher
+    which were published before the superseding package are withdrawn.
+
+    The publication condition means that a package can never withdraw
+    something published after it. It also means that a superseding
+    package is always newer than something with a higher version, so
+    those are the only packages whose attributes have to be retrieved to
+    find them.
+
+    'get_set_actions' is a function which returns the set actions for
+    an FMRI."""
+
+    ret = {}
+    by_pub = collections.defaultdict(list)
+    for f in fmris:
+        if f.version.timestr:
+            by_pub[f.publisher].append(f)
+
+    for flist in by_pub.values():
+        flist.sort(key=attrgetter("version"), reverse=True)
+        # The publication time of the oldest package seen so far; all of
+        # those have a higher version than the current one.
+        oldest = None
+        for i, f in enumerate(flist):
+            ts = f.version.timestr
+            if oldest is None or ts <= oldest:
+                oldest = ts
+                continue
+
+            for sa in get_set_actions(f):
+                if sa.attrs["name"] != "pkg.depend.supersedes":
+                    continue
+                for val in sa.attrlist("value"):
+                    try:
+                        limit = pkg.version.Version(val)
+                    except pkg.version.VersionError:
+                        # Ignore values we can't interpret.
+                        continue
+                    for g in flist[:i]:
+                        gv = g.version
+                        if gv.timestr < ts and (
+                            gv < limit
+                            or gv.is_successor(
+                                limit, pkg.version.CONSTRAINT_AUTO
+                            )
+                        ):
+                            ret.setdefault(g, set()).add(f)
+
+    return ret
+
+
 def verify(filename):
     """Convert the catalog part named by filename into the correct
     type of Catalog object and then call its validate method to ensure

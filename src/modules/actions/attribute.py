@@ -33,6 +33,7 @@ possible types are: XXX."""
 from pkg.actions import generic
 import pkg.fmri
 import pkg.actions
+import pkg.version
 
 
 class AttributeAction(generic.Action):
@@ -165,6 +166,39 @@ class AttributeAction(generic.Action):
             # If set action is for any of the above, only a single
             # value is permitted.
             generic.Action._validate(self, fmri=fmri, single_attrs=("value",))
+        elif name == "pkg.depend.supersedes":
+            # The value is the highest version of this package which
+            # is superseded by the package delivering the attribute,
+            # so it must be a single, valid version which is higher
+            # than that of the package itself.
+            generic.Action._validate(self, fmri=fmri, single_attrs=("value",))
+            errors = []
+            try:
+                limit = pkg.version.Version(self.attrs["value"])
+            except pkg.version.VersionError as e:
+                errors.append((name, str(e)))
+            else:
+                if isinstance(fmri, str):
+                    try:
+                        fmri = pkg.fmri.PkgFmri(fmri)
+                    except pkg.fmri.IllegalFmri:
+                        fmri = None
+                if (
+                    fmri is not None
+                    and fmri.version
+                    and not fmri.version < limit
+                ):
+                    errors.append(
+                        (
+                            name,
+                            "the superseded version must be higher than "
+                            "the version of the package",
+                        )
+                    )
+            if errors:
+                raise pkg.actions.InvalidActionAttributesError(
+                    self, errors, fmri=fmri
+                )
         elif name.startswith("pkg.additional-"):
             # For pkg actuators, just test that the values are valid
             # FMRIs. We want to prevent the system from failing when
