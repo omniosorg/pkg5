@@ -65,7 +65,7 @@ main(int argc __unused, char **argv __unused)
 {
 	X509 *cert;
 	EVP_PKEY *pkey;
-	X509_NAME *name = NULL;
+	X509_NAME *name;
 
 	cert = X509_new();
 	if (cert == NULL) {
@@ -81,11 +81,15 @@ main(int argc __unused, char **argv __unused)
 
 	X509_set_version(cert, 2);
 	ASN1_INTEGER_set(X509_get_serialNumber(cert), 1);
-	X509_gmtime_adj(X509_get_notBefore(cert), 0);
-	X509_gmtime_adj(X509_get_notAfter(cert), (long)60*60*24*365);
+	X509_gmtime_adj(X509_getm_notBefore(cert), 0);
+	X509_gmtime_adj(X509_getm_notAfter(cert), (long)60*60*24*365);
 	X509_set_pubkey(cert, pkey);
 
-	name = X509_get_subject_name(cert);
+	name = X509_NAME_new();
+	if (name == NULL) {
+		fprintf(stderr, "X509_NAME_new() failed\n");
+		abort();
+	}
 
 	/*
 	 * This function creates and adds the entry, working out the
@@ -104,11 +108,11 @@ main(int argc __unused, char **argv __unused)
 	    MBSTRING_ASC, (unsigned char *)"IPS Gate Test", -1, -1, 0);
 
 	/*
-	 * Its self signed so set the issuer name to be the same as the
-	 * subject.
+	 * It's self signed so the issuer name is the same as the subject.
 	 */
+	X509_set_subject_name(cert, name);
 	X509_set_issuer_name(cert, name);
-
+	X509_NAME_free(name);
 
 	/* Add our own custom extension */
 	int nid;
