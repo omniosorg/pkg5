@@ -213,6 +213,10 @@ PKG_STATE_LEGACY = 12
 # This state indicates that this package was manually installed
 PKG_STATE_MANUAL = 13
 
+# This state indicates that this version of the package has been withdrawn
+# by its publisher in favour of an older one; see pkg.depend.supersedes.
+PKG_STATE_SUPERSEDED = 14
+
 # This is a transient state used in the list of orphaned packages, indicating
 # that there is an 'optional' dependency on this package. This state must not
 # be written to disk.

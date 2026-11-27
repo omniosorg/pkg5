@@ -822,7 +822,12 @@ def list_inventory(
         state_map = [
             [("installed", "i")],
             [("frozen", "f"), ("optional", "S"), ("manual", "m")],
-            [("obsolete", "o"), ("renamed", "r"), ("legacy", "l")],
+            [
+                ("obsolete", "o"),
+                ("renamed", "r"),
+                ("legacy", "l"),
+                ("superseded", "s"),
+            ],
         ]
 
         if quiet:

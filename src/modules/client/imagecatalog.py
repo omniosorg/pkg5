@@ -47,6 +47,11 @@ DB_BASENAME = "catalog.db"
 # rebuilt.
 SCHEMA_VERSION = 1
 
+# Bump this whenever the way in which the stored package states are
+# derived changes.
+#  1 - PKG_STATE_SUPERSEDED, and its effect on PKG_STATE_UPGRADABLE.
+STATE_VERSION = 1
+
 # Part identifiers for the actions table; these deliberately match
 # pkg.catalog.Catalog.DEPENDENCY and pkg.catalog.Catalog.SUMMARY.
 DEPENDENCY = pkg.catalog.Catalog.DEPENDENCY
@@ -204,6 +209,10 @@ def build_db(pathname, kcat, icat):
         if lm is not None:
             lm = pkg.catalog.datetime_to_basic_ts(lm)
         cur.execute("INSERT INTO meta VALUES ('last-modified', ?)", (lm or "",))
+        cur.execute(
+            "INSERT INTO meta VALUES ('state-version', ?)",
+            (str(STATE_VERSION),),
+        )
         cur.execute("INSERT INTO meta VALUES ('complete', '1')")
         con.execute("PRAGMA user_version = {0:d}".format(SCHEMA_VERSION))
         con.execute("COMMIT")
@@ -408,6 +417,22 @@ class ImageCatalog(object):
         except (sqlite3.Error, EnvironmentError):
             return False
         return meta.get("complete") == "1"
+
+    def state_current(self):
+        """Return False if the package states in the database were
+        derived by an older version of this code, in which case it
+        should be rebuilt; see STATE_VERSION."""
+
+        try:
+            con = self.__open()
+            if con is None:
+                return True
+            row = con.execute(
+                "SELECT value FROM meta WHERE name = 'state-version'"
+            ).fetchone()
+            return row is not None and int(row[0]) >= STATE_VERSION
+        except (sqlite3.Error, EnvironmentError, ValueError):
+            return True
 
     def last_modified(self):
         """The recorded last-modified timestamp (basic_ts format) of

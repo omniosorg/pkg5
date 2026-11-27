@@ -13897,6 +13897,143 @@ class TestPkgSupersedes(pkg5unittest.SingleDepotTestCase):
         self.pkg("update E")
         self.pkg("list -u E", exit=1)
 
+    def test_supersede_display(self):
+        """Superseded versions are marked as such by list and info."""
+
+        self.image_create(self.rurl)
+
+        # The newest version of a package which is not installed is
+        # one which has not been superseded.
+        self.pkg("list -Ha A")
+        self.assertTrue("1.1-1" in self.output, self.output)
+        self.pkg("list -Ha A@2")
+        self.assertTrue("2.1-0" in self.output, self.output)
+
+        self.pkg("install A@2.1")
+
+        def flags(pat):
+            """Return a sorted list of (version, timestamp, flags) for
+            each version of the package."""
+            self.pkg("list -Hafv {0}".format(pat))
+            ret = []
+            for line in self.output.splitlines():
+                pfmri, fl = line.split()
+                ver, ts = pfmri.split("@")[1].split(":")
+                ret.append((ver, ts[:8], fl))
+            return sorted(ret)
+
+        self.assertEqual(
+            flags("A"),
+            [
+                ("1.0-0", "20200101", "---"),
+                ("1.1-0", "20200102", "---"),
+                ("1.1-1", "20200105", "---"),
+                ("2.0-0", "20200103", "--s"),
+                ("2.1-0", "20200104", "ims"),
+            ],
+        )
+        # A version published again after the superseding package.
+        self.assertEqual(
+            flags("D"),
+            [
+                ("1.0-0", "20200101", "---"),
+                ("1.0-1", "20200103", "---"),
+                ("2.0-0", "20200102", "--s"),
+                ("2.0-0", "20200104", "---"),
+            ],
+        )
+        # A newer version published after the superseding package.
+        self.assertEqual(
+            flags("E"),
+            [
+                ("1.0-0", "20200101", "---"),
+                ("1.0-1", "20200103", "---"),
+                ("2.0-0", "20200102", "--s"),
+                ("3.0-0", "20200104", "---"),
+            ],
+        )
+
+        self.pkg("info A")
+        self.assertTrue(
+            "State: Installed (Superseded, Manually installed)\n" in self.output
+        )
+        self.assertTrue("Supersedes:" not in self.output)
+        self.pkg("info -r A@2.0")
+        self.assertTrue("State: Not installed (Superseded)" in self.output)
+        self.pkg("info -r A@1.1-1")
+        self.assertTrue("State: Not installed\n" in self.output)
+        self.assertTrue("Supersedes: Versions up to 2.1\n" in self.output)
+
+        # The newest version is one which has not been superseded,
+        # unless a specific version was asked for.
+        self.pkg("list -Hn A")
+        self.assertTrue("1.1-1" in self.output, self.output)
+        self.pkg("list -Hn A@latest")
+        self.assertTrue("1.1-1" in self.output, self.output)
+        self.pkg("list -Hn A@2")
+        self.assertTrue("2.1-0" in self.output, self.output)
+        self.pkg("list -Ha A")
+        self.assertTrue("2.1-0" in self.output, self.output)
+        for pat in ("D", "E"):
+            self.pkg("list -Ha {0}".format(pat))
+            ver = {"D": "2.0-0", "E": "3.0-0"}[pat]
+            self.assertTrue(ver in self.output, self.output)
+            self.assertTrue("--s" not in self.output, self.output)
+        self.pkg("info -r A")
+        self.assertTrue("Version: 1.1\n" in self.output, self.output)
+        self.assertTrue("Branch: 1\n" in self.output, self.output)
+        self.pkg("info -r E")
+        self.assertTrue("Version: 3.0\n" in self.output, self.output)
+        self.pkg("info -r E@2")
+        self.assertTrue("(Superseded)" in self.output, self.output)
+
+        self.pkg("update")
+        fl = flags("A")
+        self.assertTrue(("1.1-1", "20200105", "im-") in fl)
+        self.assertTrue(("2.1-0", "20200104", "--s") in fl)
+        self.pkg("info A")
+        self.assertTrue(
+            "State: Installed (Manually installed)\n" in self.output
+        )
+        self.assertTrue("Supersedes: Versions up to 2.1\n" in self.output)
+
+    def test_supersede_outdated(self):
+        """An image catalogue which was built by a version of pkg that
+        did not record superseded packages is rebuilt when publisher
+        metadata is next refreshed, even if nothing has changed."""
+
+        import json
+        import sqlite3
+
+        self.image_create(self.rurl)
+        self.pkg("list -Hafv A@2.1")
+        self.assertTrue("--s" in self.output, self.output)
+
+        # Make the image state look like one from an older pkg.
+        dbpath = self.get_img_file_path("var/pkg/state/catalog.db")
+        con = sqlite3.connect(dbpath)
+        rows = con.execute(
+            "SELECT id, base FROM packages WHERE stem = 'A'"
+        ).fetchall()
+        for pkgid, base in rows:
+            base = json.loads(base)
+            states = base["metadata"]["states"]
+            if 14 in states:
+                states.remove(14)
+            con.execute(
+                "UPDATE packages SET base = ? WHERE id = ?",
+                (json.dumps(base), pkgid),
+            )
+        con.execute("DELETE FROM meta WHERE name = 'state-version'")
+        con.commit()
+        con.close()
+
+        self.pkg("list -Hafv --no-refresh A@2.1")
+        self.assertTrue("---" in self.output, self.output)
+        # The implicit refresh done by list is enough.
+        self.pkg("list -Hafv A@2.1")
+        self.assertTrue("--s" in self.output, self.output)
+
     def test_supersede_freeze(self):
         """A frozen package is not affected."""
 
@@ -13957,6 +14094,8 @@ class TestPkgSupersedes(pkg5unittest.SingleDepotTestCase):
         self.pkgrepo("remove -s {0} H@2.0".format(self.rurl))
         self.pkg("refresh")
         self.pkg("list -u H")
+        self.pkg("list -H H")
+        self.assertTrue("ims" in self.output)
         self.pkg("update")
         self.pkg("list -u H", exit=1)
         self.pkg("list H@1.0-1")

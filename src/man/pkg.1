@@ -1,7 +1,7 @@
 .\" Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
 .\" Copyright 2024 Oxide Computer Company
 .\" Copyright 2026 OmniOS Community Edition (OmniOSce) Association.
-.Dd November 4, 2026
+.Dd November 27, 2026
 .Dt PKG 1
 .Os
 .Sh NAME
@@ -1425,6 +1425,13 @@ The package has been renamed (a form of obsoletion).
 The package is
 .Em legacy
 and will be removed in a future release.
+.It Sy s
+This version of the package has been superseded.
+It was withdrawn by its publisher in favour of an older version; see
+.Sy pkg.depend.supersedes
+in the
+.Xr pkg 7
+man page.
 .El
 .El
 .Bl -tag -width Ds

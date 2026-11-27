@@ -2,7 +2,7 @@
 .\" Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
 .\" Copyright (c) 2012, OmniTI Computer Consulting, Inc. All rights reserved.
 .\" Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
-.Dd November 18, 2026
+.Dd November 27, 2026
 .Dt PKG 7
 .Os
 .Sh NAME
@@ -1347,6 +1347,15 @@ If it cannot be replaced, for example because another installed package
 requires it, an update of all packages leaves it in place and emits a warning.
 .It
 If the package is frozen, it is not affected.
+.It
+.Sy pkg list
+shows it with
+.Sy s
+in the
+.Sy O
+column, and
+.Sy pkg info
+shows its state as superseded.
 .El
 .It Sy pkg.summary
 A short, one-line description of the package.
