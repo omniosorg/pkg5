@@ -1445,7 +1445,7 @@ class ImagePlan(object):
             )
             self.__match_update = references
 
-        def solver_cb(ignore_inst_parent_deps):
+        def new_solver():
             # instantiate solver
             solver = pkg_solver.PkgSolver(
                 self.image.get_solver_catalog(),
@@ -1464,6 +1464,11 @@ class ImagePlan(object):
                     reject_list, pkgdefs.PKG_OP_UNINSTALL, solver
                 )
 
+            return solver
+
+        def solver_cb(ignore_inst_parent_deps):
+            solver = new_solver()
+
             # run solver
             if pkgs_update:
                 new_vector, new_avoid_obs = solver.solve_install(
@@ -1474,14 +1479,52 @@ class ImagePlan(object):
                     trim_proposed_installed=False,
                     ignore_inst_parent_deps=ignore_inst_parent_deps,
                 )
-            else:
-                # Updating all installed packages requires a
-                # different solution path.
+                return solver, new_vector, new_avoid_obs
+
+            # Updating all installed packages requires a different
+            # solution path.
+            try:
                 new_vector, new_avoid_obs = solver.solve_update_all(
                     self.image.get_frozen_list(),
                     excludes=self.__new_excludes,
                     reject_set=reject_set,
                 )
+                return solver, new_vector, new_avoid_obs
+            except api_errors.PlanCreationException:
+                superseded = solver.get_superseded_installed()
+                if not superseded:
+                    raise
+
+            # No solution was found, but the solver was attempting to
+            # move one or more installed packages back to an older
+            # version at their publisher's request. A package which
+            # cannot be moved back mustn't prevent the rest of the
+            # image from being updated, so try again leaving those
+            # packages as they are. If that also fails then it is
+            # reported as an error.
+            solver = new_solver()
+            new_vector, new_avoid_obs = solver.solve_update_all(
+                self.image.get_frozen_list(),
+                excludes=self.__new_excludes,
+                reject_set=reject_set,
+                supersede_installed=False,
+            )
+            logger.warning(
+                _(
+                    "The following installed packages have been "
+                    "superseded by an older version, but\ncould not "
+                    "be replaced with it and have been left as they "
+                    "are:\n\n{0}\n"
+                ).format(
+                    "\n".join(
+                        "  {0}\n    superseded by {1}".format(
+                            old.get_fmri(include_build=False),
+                            new.get_fmri(include_build=False),
+                        )
+                        for old, new in superseded
+                    )
+                )
+            )
 
             return solver, new_vector, new_avoid_obs
 
@@ -6880,6 +6923,26 @@ image (there are configured exclusions):""")
                 if references[platest] not in latest_pats:
                     # Nothing to do.
                     continue
+
+                # The latest version is the newest one that has not
+                # been withdrawn by its publisher.
+                if info_needed:
+                    superseded = pkg.catalog.find_superseded(
+                        (
+                            f
+                            for _ver, fmris in cat.fmris_by_version(pname)
+                            for f in fmris
+                        ),
+                        lambda f: (
+                            a
+                            for a in cat.get_entry_actions(f, info_needed)
+                            if a.name == "set"
+                        ),
+                    )
+                    current = [f for f in flist if f not in superseded]
+                    if current:
+                        flist = current
+                        platest = sorted(flist, key=sort_key)[-1]
 
                 # Filter out all versions except the latest for
                 # each matching package.  Allow for multiple

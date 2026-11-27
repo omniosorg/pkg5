@@ -454,7 +454,7 @@ class Transaction(object):
         # Perform additional publication-time validation of actions
         # before further processing is done.
         try:
-            action.validate()
+            action.validate(fmri=self.fmri)
         except actions.ActionError as e:
             raise TransactionOperationError(e)
 

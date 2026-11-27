@@ -895,6 +895,39 @@ dir group=sys mode=0755 owner=root path=etc
         self.assertTrue(self.output.count(durl5) == 1)
         shutil.rmtree(self.cache_dir)
 
+    def test_7_supersedes(self):
+        """An older version of a package which supersedes the one in the
+        reference repository replaces it, rather than being treated as
+        a second package delivering the same content."""
+
+        older = self.ref_mf["ref-sample3.mf"].replace(
+            "more@0.5.11", "more@0.5.10"
+        )
+        mpath = self.make_manifest(older)
+        ret, out, err = self.pkglint(
+            "-c {0} -r {1} {2}".format(self.cache_dir, self.ref_uri, mpath),
+            exit=1,
+        )
+        self.assertTrue("pkglint.dupaction001.1" in err, err)
+
+        # A range which does not reach the reference version.
+        mpath = self.make_manifest(
+            older + "set name=pkg.depend.supersedes value=0.5.10.1\n"
+        )
+        ret, out, err = self.pkglint(
+            "-c {0} -r {1} {2}".format(self.cache_dir, self.ref_uri, mpath),
+            exit=1,
+        )
+        self.assertTrue("pkglint.dupaction001.1" in err, err)
+
+        mpath = self.make_manifest(
+            older + "set name=pkg.depend.supersedes value=0.5.11\n"
+        )
+        ret, out, err = self.pkglint(
+            "-c {0} -r {1} {2}".format(self.cache_dir, self.ref_uri, mpath)
+        )
+        self.assertTrue("pkglint.dupaction001.1" not in err, err)
+
 
 if __name__ == "__main__":
     unittest.main()
