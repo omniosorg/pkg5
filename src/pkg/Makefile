@@ -108,7 +108,7 @@ INCORP            = consolidation\:ips\:ips-incorporation
 
 PM_TRANSFORMS     = defaults
 # For python version migrations
-PM_TRANSFORMS     += pynext
+#PM_TRANSFORMS     += pynext
 
 i386_DEFINES      = \
 	i386_ONLY=''    \
