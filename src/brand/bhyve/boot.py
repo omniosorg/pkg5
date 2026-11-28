@@ -14,6 +14,7 @@
 # }}}
 
 # Copyright 2023 OmniOS Community Edition (OmniOSce) Association.
+# Copyright 2026 Chris Fraire <cfraire@me.com>
 
 import bundle
 import bootlib
@@ -35,6 +36,7 @@ import re
 import shlex
 import shutil
 import subprocess
+import stat
 import sys
 import tempfile
 import time
@@ -576,8 +578,11 @@ if v is not False:
     if v is True:
         opts['vnc'] = 'on'
 
-    # The VNC options need to be processed in order to extract and mask
-    # the 'password' attribute and to handle aliases for other elements.
+    # The VNC options need to be processed in order to extract and mask the
+    # 'password' and 'passfile' attributes and to handle aliases for other
+    # elements.
+    has_password = False
+    has_passfile = False
     vopts = expandopts(opts['vnc'])
     for k, v in list(vopts.items()):
         if not len(v):
@@ -594,6 +599,17 @@ if v is not False:
         elif k == 'password':
             vncpassword = bootlib.file_or_string(v)
             del vopts[k]
+            has_password = True
+        elif k == 'passfile':
+            vncpassword = bootlib.file_read(v, z.zoneroot,
+                stat.S_IRUSR | stat.S_IWUSR)
+            if vncpassword == "":
+                fatal(f'{v}: passfile is empty')
+            del vopts[k]
+            has_passfile = True
+
+    if has_password and has_passfile:
+        fatal("vnc 'password' and 'passfile' cannot be used together")
 
     opts['vnc'] = collapseopts(vopts)
 
