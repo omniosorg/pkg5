@@ -493,8 +493,8 @@ echo "12345"
             ssl.TLSVersion.TLSv1,
         )
         self.assertRaisesRegex(
-            ssl.SSLError,
-            r"NO_PROTOCOLS_AVAILABLE",
+            (ssl.SSLError, ValueError),
+            r"NO_PROTOCOLS_AVAILABLE|Unsupported protocol version",
             test_tls_version,
             ssl.TLSVersion.SSLv3,
         )

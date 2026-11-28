@@ -783,6 +783,7 @@ def _list_inventory(
             (api.PackageInfo.OBSOLETE, "obsolete"),
             (api.PackageInfo.LEGACY, "legacy"),
             (api.PackageInfo.RENAMED, "renamed"),
+            (api.PackageInfo.SUPERSEDED, "superseded"),
         ],
     ]
 
@@ -2949,6 +2950,8 @@ def _info(
             states.append(_("Renamed"))
         elif api.PackageInfo.LEGACY in pi.states:
             states.append(_("Legacy"))
+        if api.PackageInfo.SUPERSEDED in pi.states:
+            states.append(_("Superseded"))
         if api.PackageInfo.FROZEN in pi.states:
             states.append(_("Frozen"))
         if api.PackageInfo.MANUAL in pi.states:
@@ -3004,6 +3007,12 @@ def _info(
             __append_attr_lists(_("Version"), str(pi.version))
 
         __append_attr_lists(_("Branch"), str(pi.branch))
+        supersedes = pi.get_attr_values("pkg.depend.supersedes")
+        if supersedes:
+            __append_attr_lists(
+                _("Supersedes"),
+                [_("Versions up to {0}").format(v) for v in supersedes],
+            )
         __append_attr_lists(_("Packaging Date"), pi.packaging_date)
         if pi.last_install:
             __append_attr_lists(_("Last Install Time"), pi.last_install)

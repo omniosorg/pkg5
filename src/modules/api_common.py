@@ -127,6 +127,7 @@ class PackageInfo(object):
     FROZEN = pkgdefs.PKG_STATE_FROZEN
     OPTIONAL = pkgdefs.PKG_STATE_OPTIONAL
     MANUAL = pkgdefs.PKG_STATE_MANUAL
+    SUPERSEDED = pkgdefs.PKG_STATE_SUPERSEDED
 
     __NUM_PROPS = 13
     (

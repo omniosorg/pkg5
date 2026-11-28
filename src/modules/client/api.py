@@ -4655,11 +4655,13 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
         matched_pats = set()
         pkg_matching_pats = None
 
-        # Retrieve only the newest package versions for LIST_NEWEST if
-        # none of the patterns have version information and variants are
-        # included.  (This cuts down on the number of entries that have
-        # to be filtered.)
-        use_last = newest and not pat_versioned and variants
+        # When looking for the newest version of a package, versions
+        # which have been superseded are passed over unless a specific
+        # version was asked for. This means that all versions have to
+        # be retrieved since the highest may be one of those.
+        skip_superseded = (newest or inst_newest) and not any(
+            "@" in pat and pat not in latest_pats for pat in patterns
+        )
 
         if ranked:
             # If caller requested results to be ranked by publisher,
@@ -4717,7 +4719,6 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
             cat_info,
             cb=filter_cb,
             excludes=excludes,
-            last=use_last,
             ordered=True,
             pubs=pubs,
             stems=stems,
@@ -4743,6 +4744,19 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                 omit_package = True
             else:
                 nlist[pkg_stem] += 1
+
+            if not omit_package and skip_superseded:
+                states = entry["metadata"]["states"]
+                if pkgdefs.PKG_STATE_SUPERSEDED in states and (
+                    newest or pkgdefs.PKG_STATE_INSTALLED not in states
+                ):
+                    # Discard the tracking entry so that an older
+                    # version will be listed.
+                    nlist[pkg_stem] -= 1
+                    if not nlist[pkg_stem]:
+                        del nlist[pkg_stem]
+                    slist.discard(stem)
+                    continue
 
             if raise_unmatched:
                 pkg_matching_pats = set()

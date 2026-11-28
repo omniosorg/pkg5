@@ -3385,6 +3385,16 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
             raise
         return False
 
+    def __state_outdated(self):
+        dbpath = os.path.join(self._statedir, imagecatalog.DB_BASENAME)
+        if not os.path.exists(dbpath):
+            return False
+        db = imagecatalog.ImageCatalog(dbpath)
+        try:
+            return db.usable() and not db.state_current()
+        finally:
+            db.close()
+
     def __end_state_update(self):
         """Called when we're done updating the image catalog."""
 
@@ -3494,25 +3504,33 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                 except apx.UnknownCatalogEntry:
                     return []
 
+            # Entries are in version order, so a package has an
+            # older version that was published after a newer one if
+            # its publication times are ever seen to go backwards.
             published = {}
+            candidates = set()
             for (pub, stem, ver), entry in cat.tuple_entries(pubs=[pfx]):
                 ts = ver.rpartition(":")[2]
-                if ts > published.get(stem, ""):
+                if ts >= published.get(stem, ""):
                     published[stem] = ts
+                else:
+                    candidates.add(stem)
 
-            # The highest version of each package, including installed
-            # versions which are no longer in the publisher's catalogue.
-            highest = {}
-            for c in (cat, old_icat):
-                for f in c.fmris(last=True, pubs=[pfx]):
-                    stem = f.pkg_name
-                    if stem not in highest or f.version > highest[stem].version:
-                        highest[stem] = f
+            # Installed versions which are no longer in the publisher's
+            # catalogue also need to be considered.
+            highest = {
+                f.pkg_name: f.version for f in cat.fmris(last=True, pubs=[pfx])
+            }
+            for f in old_icat.fmris(pubs=[pfx]):
+                stem = f.pkg_name
+                if (
+                    stem in highest
+                    and f.version > highest[stem]
+                    and f.version.timestr < published.get(stem, "")
+                ):
+                    candidates.add(stem)
 
-            for stem, f in highest.items():
-                ts = f.version.timestr
-                if not ts or ts >= published.get(stem, ""):
-                    continue
+            for stem in candidates:
                 flist = set(
                     g
                     for c in (cat, old_icat)
@@ -3522,6 +3540,12 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                 found = pkg.catalog.find_superseded(flist, set_actions)
                 if found:
                     superseded.setdefault(stem, set()).update(found)
+
+        withdrawn = set(
+            (f.publisher, f.pkg_name, str(f.version))
+            for fmris in superseded.values()
+            for f in fmris
+        )
 
         newest = {}
         for pfx, cat in [(None, old_icat)] + pub_cats:
@@ -3670,6 +3694,9 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                 if snver is not None and ver != snver:
                     states.append(pkgdefs.PKG_STATE_UPGRADABLE)
 
+                if t in withdrawn:
+                    states.append(pkgdefs.PKG_STATE_SUPERSEDED)
+
                 # Check if the package is frozen.
                 if stem in frozen_pkgs:
                     f_ver = frozen_pkgs[stem].version
@@ -3791,6 +3818,10 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
                         states.discard(pkgdefs.PKG_STATE_UPGRADABLE)
                     elif snver is not None:
                         states.add(pkgdefs.PKG_STATE_UPGRADABLE)
+                    if (pub, stem, ver) in withdrawn:
+                        states.add(pkgdefs.PKG_STATE_SUPERSEDED)
+                    else:
+                        states.discard(pkgdefs.PKG_STATE_SUPERSEDED)
                     # Check if the package is frozen.
                     if stem in frozen_pkgs:
                         f_ver = frozen_pkgs[stem].version
@@ -3951,7 +3982,8 @@ in the environment or by setting simulate_cmdpath in DebugValues.""")
         failed = []
         total = 0
         succeeded = set()
-        updated = self.__start_state_update()
+        outdated = self.__state_outdated()
+        updated = self.__start_state_update() or outdated
         for pub in pubs_to_refresh:
             total += 1
             progtrack.refresh_start_pub(pub)
